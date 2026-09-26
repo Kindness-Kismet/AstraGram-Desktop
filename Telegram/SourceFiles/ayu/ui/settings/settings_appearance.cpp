@@ -181,6 +181,15 @@ void BuildAvatarCorners(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 	builder.addSkip();
 }
 
+WindowMaterial supportedWindowMaterial(WindowMaterial material) {
+	for (const auto mode : AyuFeatures::WindowMaterial::availableModes()) {
+		if (mode == material) {
+			return material;
+		}
+	}
+	return WindowMaterial::Off;
+}
+
 QString windowMaterialLabel(WindowMaterial material) {
 	switch (material) {
 	case WindowMaterial::Off: return tr::ayu_WindowMaterialOff(tr::now);
@@ -198,13 +207,15 @@ void buildWindowMaterial(SectionBuilder &builder) {
 		.title = tr::ayu_WindowMaterial(),
 		.st = &st::settingsButtonNoIcon,
 		.label = AyuSettings::getInstance().windowMaterialValue()
+			| rpl::map(supportedWindowMaterial)
 			| rpl::map(windowMaterialLabel),
 		.onClick = [=] {
 			controller->show(Box([](not_null<Ui::GenericBox*> box) {
 				const auto modes = AyuFeatures::WindowMaterial::availableModes();
 				auto labels = std::vector<QString>();
-				auto selected = -1;
-				const auto current = AyuSettings::getInstance().windowMaterial();
+				auto selected = 0;
+				const auto current = supportedWindowMaterial(
+					AyuSettings::getInstance().windowMaterial());
 				for (const auto mode : modes) {
 					if (mode == current) {
 						selected = int(labels.size());
