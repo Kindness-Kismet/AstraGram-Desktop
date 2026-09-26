@@ -222,6 +222,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/ayu_settings.h"
+#include "ayu/ui/components/chat_frosted_background.h"
 #include "ayu/features/filters/filters_cache_controller.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "ayu/features/message_shot/message_shot.h"
@@ -247,6 +248,7 @@ HistoryWidget::HistoryWidget(
 , _scroll(
 	this,
 	controller->chatStyle()->value(lifetime(), st::historyScroll))
+, _composeSurface(this)
 , _updateHistoryItems([=] { updateHistoryItemsByTimer(); })
 , _cornerButtons(
 	_scroll.data(),
@@ -549,10 +551,12 @@ HistoryWidget::HistoryWidget(
 	_topBar->hide();
 	_scroll->hide();
 	_kbScroll->hide();
+	setupFrostedBackground();
 
 	controller->chatStyle()->paletteChanged(
 	) | rpl::on_next([=] {
 		_scroll->updateBars();
+		resetFrostedBackground();
 	}, lifetime());
 
 	_forwardPanel->itemsUpdated(

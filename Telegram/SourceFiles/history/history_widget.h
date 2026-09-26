@@ -25,6 +25,10 @@ enum class SendMediaType;
 class MessageLinksParser;
 struct InlineBotQuery;
 
+namespace AyuUi {
+class ChatFrostedBackground;
+} // namespace AyuUi
+
 namespace MTP {
 class Error;
 } // namespace MTP
@@ -348,6 +352,7 @@ public:
 	bool notify_switchInlineBotButtonReceived(const QString &query, UserData *samePeerBot, MsgId samePeerReplyTo);
 
 	void tryProcessKeyInput(not_null<QKeyEvent*> e);
+	void invalidateFrostedBackground(QRect area = {});
 
 	~HistoryWidget();
 
@@ -719,7 +724,13 @@ private:
 	[[nodiscard]] int visibleScrollBottom() const;
 	[[nodiscard]] int physicalScrollTop(int visibleTop) const;
 	[[nodiscard]] QRect visibleScrollGeometry() const;
-	void updateScrollMask(QRect capsule);
+	void setupFrostedBackground();
+	void setupPinnedFrostedBackground(not_null<Ui::PinnedBar*> bar);
+	void updateComposeSurface(QRect capsule);
+	void updateComposeSurfaceVisibility();
+	void updateFrostedAreas();
+	void resetFrostedBackground();
+	void paintFrostedBackground(QPainter &p, QRect area, QColor tint);
 	[[nodiscard]] bool fieldOrDisabledShown() const;
 	[[nodiscard]] bool fieldHasSendText() const;
 	[[nodiscard]] bool hasSendableContent() const;
@@ -884,6 +895,9 @@ private:
 
 	object_ptr<HistoryView::TopBarWidget> _topBar;
 	object_ptr<Ui::ElasticScroll> _scroll;
+	object_ptr<Ui::RpWidget> _composeSurface;
+	std::unique_ptr<AyuUi::ChatFrostedBackground> _frostedBackground;
+	QRect _composeSurfaceRect;
 	int _composeOverlap = 0;
 	int _lastTopBarsOverlap = 0;
 	int _lastScrollAreaY = 0;

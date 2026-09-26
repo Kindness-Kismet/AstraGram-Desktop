@@ -202,6 +202,8 @@ set(ayugram_files
         ayu/ui/boxes/plugin_info_box.h
         ayu/ui/components/image_view.cpp
         ayu/ui/components/image_view.h
+        ayu/ui/components/chat_frosted_background.cpp
+        ayu/ui/components/chat_frosted_background.h
         ayu/ui/components/icon_picker.cpp
         ayu/ui/components/icon_picker.h
         ayu/ui/components/avatar_corners_preview.cpp
@@ -1380,6 +1382,7 @@ PRIVATE
     history/history_widget_internal.h
     history/history_widget_navigation.cpp
     history/history_widget_paint.cpp
+    history/history_widget_frosted.cpp
     history/history_widget_reply.cpp
     history/history_widget_sending.cpp
     history/history_widget_view.cpp

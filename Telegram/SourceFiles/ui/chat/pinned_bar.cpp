@@ -35,6 +35,10 @@ PinnedBar::PinnedBar(
 	_wrap.entity()->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(_wrap.entity());
+		if (_backgroundPainter) {
+			_backgroundPainter(p, _wrap.entity()->rect());
+			return;
+		}
 		PaintChatBar(
 			p,
 			_wrap.entity()->rect(),
@@ -52,6 +56,20 @@ PinnedBar::PinnedBar(
 
 PinnedBar::~PinnedBar() {
 	_right.button.destroy();
+}
+
+void PinnedBar::setBackgroundPainter(Fn<void(QPainter&, QRect)> painter) {
+	_backgroundPainter = std::move(painter);
+	updateBackground();
+}
+
+QRect PinnedBar::backgroundRect(QWidget *relativeTo) const {
+	return QRect(_wrap.entity()->mapTo(relativeTo, QPoint()),
+		_wrap.entity()->size());
+}
+
+void PinnedBar::updateBackground() {
+	_wrap.entity()->update();
 }
 
 void PinnedBar::setContent(rpl::producer<Ui::MessageBarContent> content) {

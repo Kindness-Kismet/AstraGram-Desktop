@@ -722,6 +722,7 @@ void HistoryWidget::delayedShowAt(
 }
 
 void HistoryWidget::handleScroll() {
+	invalidateFrostedBackground();
 	if (!_itemsRevealHeight) {
 		preloadHistoryIfNeeded();
 	}
@@ -804,25 +805,6 @@ QRect HistoryWidget::visibleScrollGeometry() const {
 	const auto available = std::max(0, _scroll->height() - _composeOverlap);
 	return _scroll->geometry().marginsRemoved({
 		0, std::min(topBarsOverlap(), available), 0, _composeOverlap });
-}
-
-void HistoryWidget::updateScrollMask(QRect capsule) {
-	// 胶囊由本控件绘制在列表下层，需要从列表中抠掉，否则会被消息盖住并抢走点击。
-	capsule.translate(-_scroll->pos());
-	if (!capsule.intersects(_scroll->rect())) {
-		_scroll->clearMask();
-		return;
-	}
-	const auto radius = std::min(
-		qreal(st::historyComposeCapsuleRadius),
-		capsule.height() / 2.);
-	auto path = QPainterPath();
-	path.addRoundedRect(QRectF(capsule), radius, radius);
-	const auto mask = QRegion(_scroll->rect())
-		- QRegion(path.toFillPolygon().toPolygon());
-	if (_scroll->mask() != mask) {
-		_scroll->setMask(mask);
-	}
 }
 
 void HistoryWidget::visibleAreaUpdated() {
@@ -1153,6 +1135,7 @@ void HistoryWidget::updateControlsGeometry() {
 		_topBar->bottomNoMargins(),
 		width - topShadowLeft - topShadowRight,
 		0);
+	updateFrostedAreas();
 }
 
 void HistoryWidget::itemRemoved(not_null<const HistoryItem*> item) {
@@ -1476,7 +1459,7 @@ void HistoryWidget::updateHistoryGeometry(
 	if (needResize) {
 		_scroll->resize(newScrollWidth, newScrollHeight);
 	}
-	updateScrollMask(capsule);
+	updateComposeSurface(capsule);
 	// on initial updateListSize we didn't put the _scroll->scrollTop
 	// correctly yet so visibleAreaUpdated() call will erase it
 	// with the new (undefined) value
