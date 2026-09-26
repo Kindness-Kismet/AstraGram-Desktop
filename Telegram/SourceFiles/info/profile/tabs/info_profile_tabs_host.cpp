@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/tabs/info_profile_tabs_host.h"
 
+#include "ayu/features/window_material/window_material.h"
 #include "info/profile/tabs/info_profile_tabs_strip.h"
 #include "info/profile/tabs/adapters/info_profile_tab_media.h"
 #include "apiwrap.h"
@@ -59,6 +60,12 @@ TabsHost::TabsHost(not_null<QWidget*> parent, Descriptor descriptor)
 , _strip(Ui::CreateChild<TabsStrip>(this, st::infoProfileTabsStrip))
 , _stripWeak(_strip)
 , _body(Ui::CreateChild<Ui::RpWidget>(this)) {
+	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+		if (_slideAnimation) {
+			_slideAnimation = nullptr;
+			_body->show();
+		}
+	}, lifetime());
 	_strip->setTextContext(Core::TextContext({
 		.session = &_context.peer->session(),
 		.customEmojiLoopLimit = 1,
@@ -753,7 +760,7 @@ void TabsHost::paintEvent(QPaintEvent *e) {
 	if (!_slideAnimation) {
 		return;
 	}
-	p.fillRect(_slideRect, st::windowBg);
+	p.fillRect(_slideRect, AyuFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c));
 	_slideAnimation->paintFrame(
 		p,
 		_slideRect.x(),

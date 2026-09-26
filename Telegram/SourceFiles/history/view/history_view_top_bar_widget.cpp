@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_top_bar_widget.h"
 
+#include "ayu/features/window_material/window_material.h"
 #include "ui/chat/floating_bar.h"
 #include "history/history.h"
 #include "history/view/history_view_send_action.h"
@@ -145,6 +146,7 @@ TopBarWidget::TopBarWidget(
 , _admins(this, st::topBarAdmins)
 , _titlePeerText(st::windowMinWidth / 3)
 , _onlineUpdater([=] { updateOnlineDisplay(); }) {
+	AyuFeatures::WindowMaterial::watchSurface(this);
 	setAttribute(Qt::WA_OpaquePaintEvent, false);
 
 	_clear->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
@@ -571,7 +573,7 @@ void TopBarWidget::paintEvent(QPaintEvent *e) {
 		: -st::topBarHeight;
 	const auto slidingTop = std::max(selectedButtonsTop, searchFieldTop);
 
-	p.fillRect(rect(), st::topBarBg);
+	p.fillRect(rect(), AyuFeatures::WindowMaterial::surfaceColor(this, st::topBarBg->c));
 	p.fillRect(0, height() - st::lineWidth, width(), st::lineWidth,
 		st::windowDividerFg);
 	if (slidingTop < 0) {

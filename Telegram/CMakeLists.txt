@@ -222,6 +222,12 @@ set(ayugram_files
         ayu/features/streamer_mode/platform/win/streamer_mode_win.cpp
         ayu/features/streamer_mode/platform/win/streamer_mode_win.h
         ayu/features/streamer_mode/platform/platform_streamer_mode.h
+        ayu/features/window_material/window_material.cpp
+        ayu/features/window_material/window_material.h
+        ayu/features/window_material/platform/window_material_platform.h
+        ayu/features/window_material/platform/win/window_material_win.cpp
+        ayu/features/window_material/platform/mac/window_material_mac.mm
+        ayu/features/window_material/platform/linux/window_material_linux.cpp
         ayu/features/streamer_mode/streamer_mode.cpp
         ayu/features/streamer_mode/streamer_mode.h
         ayu/features/message_shot/message_shot.cpp

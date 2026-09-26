@@ -3,6 +3,7 @@
 #include "lang_auto.h"
 #include "ayu/ayu_settings.h"
 #include "ayu/ayu_ui_settings.h"
+#include "ayu/features/window_material/window_material.h"
 #include "ayu/ui/boxes/font_selector.h"
 #include "ayu/ui/components/avatar_corners_preview.h"
 #include "ayu/ui/components/icon_picker.h"
@@ -19,6 +20,7 @@
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
+#include "ui/boxes/single_choice_box.h"
 #include "ui/painter.h"
 #include "ui/widgets/labels.h"
 #include "ui/wrap/padding_wrap.h"
@@ -179,10 +181,57 @@ void BuildAvatarCorners(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 	builder.addSkip();
 }
 
+QString windowMaterialLabel(WindowMaterial material) {
+	switch (material) {
+	case WindowMaterial::Off: return tr::ayu_WindowMaterialOff(tr::now);
+	case WindowMaterial::Mica: return tr::ayu_WindowMaterialMica(tr::now);
+	case WindowMaterial::Acrylic: return tr::ayu_WindowMaterialAcrylic(tr::now);
+	case WindowMaterial::Blur: return tr::ayu_WindowMaterialBlur(tr::now);
+	}
+	Unexpected("Invalid window material");
+}
+
+void buildWindowMaterial(SectionBuilder &builder) {
+	const auto controller = builder.controller();
+	builder.addButton({
+		.id = u"ayu/windowMaterial"_q,
+		.title = tr::ayu_WindowMaterial(),
+		.st = &st::settingsButtonNoIcon,
+		.label = AyuSettings::getInstance().windowMaterialValue()
+			| rpl::map(windowMaterialLabel),
+		.onClick = [=] {
+			controller->show(Box([](not_null<Ui::GenericBox*> box) {
+				const auto modes = AyuFeatures::WindowMaterial::availableModes();
+				auto labels = std::vector<QString>();
+				auto selected = -1;
+				const auto current = AyuSettings::getInstance().windowMaterial();
+				for (const auto mode : modes) {
+					if (mode == current) {
+						selected = int(labels.size());
+					}
+					labels.push_back(windowMaterialLabel(mode));
+				}
+				SingleChoiceBox(box, {
+					.title = tr::ayu_WindowMaterial(),
+					.options = labels,
+					.initialSelection = selected,
+					.callback = [=](int index) {
+						AyuSettings::getInstance().setWindowMaterial(modes[index]);
+					},
+				});
+			}));
+		},
+	});
+	builder.addSkip();
+	builder.addDividerText(tr::ayu_WindowMaterialDescription());
+	builder.addSkip();
+}
+
 void BuildAppearance(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 	auto *settings = &AyuSettings::getInstance();
 
 	builder.addSubsectionTitle(tr::ayu_CategoryAppearance());
+	buildWindowMaterial(builder);
 
 	ayu.addSettingToggle({
 		.id = u"ayu/materialSwitches"_q,

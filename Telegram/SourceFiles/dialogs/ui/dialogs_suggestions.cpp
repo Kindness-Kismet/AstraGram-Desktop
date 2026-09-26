@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/ui/dialogs_suggestions.h"
 
+#include "ayu/features/window_material/window_material.h"
 #include "api/api_chat_participants.h"
 #include "apiwrap.h"
 #include "base/unixtime.h"
@@ -748,7 +749,8 @@ void Suggestions::ObjectListController::setupPlainDivider(
 		label->moveToLeft(x, y, size.width());
 	}, raw->lifetime());
 	raw->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(raw).fillRect(clip, st::searchedBarBg);
+		QPainter(raw).fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(
+			raw, st::searchedBarBg->c));
 	}, raw->lifetime());
 
 	delegate()->peerListSetAboveWidget(std::move(result));
@@ -815,7 +817,8 @@ void Suggestions::ObjectListController::setupExpandDivider(
 	}, raw->lifetime());
 
 	raw->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(raw).fillRect(clip, st::searchedBarBg);
+		QPainter(raw).fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(
+			raw, st::searchedBarBg->c));
 	}, raw->lifetime());
 
 	delegate()->peerListSetAboveWidget(std::move(result));
@@ -936,7 +939,8 @@ void RecentsController::setupDivider() {
 		label->moveToLeft(x, y, size.width());
 	}, raw->lifetime());
 	raw->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(raw).fillRect(clip, st::searchedBarBg);
+		QPainter(raw).fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(
+			raw, st::searchedBarBg->c));
 	}, raw->lifetime());
 
 	delegate()->peerListSetAboveWidget(std::move(result));
@@ -1401,6 +1405,12 @@ Suggestions::Suggestions(
 , _recentApps(setupRecentApps())
 , _popularApps(setupPopularApps())
 , _searchQueryTimer([=] { applySearchQuery(); }) {
+	AyuFeatures::WindowMaterial::watchSurface(this);
+	AyuFeatures::WindowMaterial::changes(this) | rpl::skip(1) | rpl::on_next([=] {
+		if (!_cache.isNull() || !_slideLeft.isNull()) {
+			finishShownAnimation();
+		}
+	}, lifetime());
 	setupTabs();
 	setupChats();
 	setupChannels();
@@ -2238,13 +2248,11 @@ void Suggestions::startSlideAnimation(Key was, Key now) {
 void Suggestions::startShownAnimation(bool shown, Fn<void()> finish) {
 	const auto from = shown ? 0. : 1.;
 	const auto to = shown ? 1. : 0.;
+	_showFinished = std::move(finish);
 	_shownAnimation.start([=] {
 		update();
-		if (!_shownAnimation.animating() && finish) {
-			finish();
-			if (shown) {
-				finishShow();
-			}
+		if (!_shownAnimation.animating()) {
+			finishShownAnimation();
 		}
 	}, from, to, st::slideDuration, anim::easeOutQuint);
 	if (_cache.isNull()) {
@@ -2268,7 +2276,25 @@ void Suggestions::startShownAnimation(bool shown, Fn<void()> finish) {
 	_slideAnimation.stop();
 }
 
+void Suggestions::finishShownAnimation() {
+	auto finish = base::take(_showFinished);
+	if (_hidden) {
+		_slideAnimation.stop();
+		_shownAnimation.stop();
+		_slideLeft = _slideRight = _cache = QPixmap();
+		_slideLeftTop = _slideRightTop = 0;
+		RpWidget::hide();
+	} else {
+		finishShow();
+	}
+	// 完成回调可能销毁建议页，所有界面收尾必须先完成。
+	if (finish) {
+		finish();
+	}
+}
+
 void Suggestions::finishShow() {
+	_showFinished = nullptr;
 	_slideAnimation.stop();
 	_slideLeft = _slideRight = QPixmap();
 	_slideLeftTop = _slideRightTop = 0;
@@ -2328,7 +2354,7 @@ std::vector<Suggestions::Key> Suggestions::TabKeysFor(
 
 void Suggestions::paintEvent(QPaintEvent *e) {
 	const auto opacity = shownOpacity();
-	auto color = st::windowBg->c;
+	auto color = AyuFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c);
 	color.setAlphaF(color.alphaF() * opacity);
 
 	auto p = QPainter(this);

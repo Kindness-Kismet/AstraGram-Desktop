@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/sections/settings_information.h"
 
+#include "ayu/features/window_material/window_material.h"
+
 #include "settings/sections/settings_main.h"
 #include "settings/settings_builder.h"
 #include "settings/settings_common_session.h"
@@ -254,7 +256,8 @@ class AccountsList final {
 public:
 	AccountsList(
 		not_null<Ui::VerticalLayout*> container,
-		not_null<Window::SessionController*> controller);
+		not_null<Window::SessionController*> controller,
+		bool materialSurface);
 
 	[[nodiscard]] rpl::producer<> closeRequests() const;
 	[[nodiscard]] Ui::RpWidget *addAccountButton() const;
@@ -267,6 +270,7 @@ private:
 
 	const not_null<Window::SessionController*> _controller;
 	const not_null<Ui::VerticalLayout*> _outer;
+	const bool _materialSurface;
 	int _outerIndex = 0;
 
 	Ui::SlideWrap<Ui::SettingsButton> *_addAccount = nullptr;
@@ -1015,9 +1019,11 @@ void SetupAccountsWrap(
 
 AccountsList::AccountsList(
 	not_null<Ui::VerticalLayout*> container,
-	not_null<Window::SessionController*> controller)
+	not_null<Window::SessionController*> controller,
+	bool materialSurface)
 : _controller(controller)
 , _outer(container)
+, _materialSurface(materialSurface)
 , _outerIndex(container->count()) {
 	setup();
 }
@@ -1087,6 +1093,9 @@ not_null<Ui::SlideWrap<Ui::SettingsButton>*> AccountsList::setupAdd() {
 					&st::windowBgActive
 				})))->setDuration(0);
 	const auto button = result->entity();
+	if (_materialSurface) {
+		AyuFeatures::WindowMaterial::watchSurface(button);
+	}
 
 	using Environment = MTP::Environment;
 	const auto add = [=](Environment environment, bool newWindow = false) {
@@ -1223,6 +1232,9 @@ void AccountsList::rebuild() {
 				account,
 				std::move(callback),
 				nextIsLocked)));
+			if (_materialSurface) {
+				AyuFeatures::WindowMaterial::watchSurface(button.get());
+			}
 		}
 	}
 	inner->resizeToWidth(_outer->width());
@@ -1512,10 +1524,12 @@ Type InformationId() {
 
 AccountsEvents SetupAccounts(
 		not_null<Ui::VerticalLayout*> container,
-		not_null<Window::SessionController*> controller) {
+		not_null<Window::SessionController*> controller,
+		bool materialSurface) {
 	const auto list = container->lifetime().make_state<AccountsList>(
 		container,
-		controller);
+		controller,
+		materialSurface);
 	return {
 		.closeRequests = list->closeRequests(),
 		.addAccountButton = list->addAccountButton(),

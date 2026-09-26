@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/controls/history_view_compose_controls.h"
 
+#include "ayu/features/window_material/window_material.h"
+
 #include "base/call_delayed.h"
 #include "base/event_filter.h"
 #include "base/options.h"
@@ -5720,7 +5722,8 @@ void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
 		const auto radius = std::min(
 			qreal(st::historyComposeCapsuleRadius), outline.height() / 2.);
 		auto hq = PainterHighQualityEnabler(p);
-		p.setBrush(flat ? st::windowBgOver : _st.bg);
+		p.setBrush(AyuFeatures::WindowMaterial::cardColor(
+			_wrap.get(), (flat ? st::windowBgOver : _st.bg)->c));
 		p.setPen(QPen((flat ? st::filterInputBorderFg : st::windowDividerFg)->c,
 			st::lineWidth));
 		p.drawRoundedRect(outline, radius, radius);

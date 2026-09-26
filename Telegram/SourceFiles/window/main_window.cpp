@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/main_window.h"
+#include "ayu/features/window_material/window_material.h"
 
 #include "api/api_updates.h"
 #include "storage/localstorage.h"
@@ -411,7 +412,10 @@ QImage WithSmallCounter(QImage image, CounterLayerArgs &&args) {
 }
 
 MainWindow::MainWindow(not_null<Controller*> controller)
-: _controller(controller)
+: Ui::RpWindow(AyuFeatures::WindowMaterial::availableModes().size() > 1
+	? Ui::RpWindow::Surface::NativeMaterial
+	: Ui::RpWindow::Surface::Opaque)
+, _controller(controller)
 , _positionUpdatedTimer([=] { savePosition(); })
 , _outdated(Ui::CreateOutdatedBar(body(), cWorkingDir()))
 , _screenReaderBar(Ui::CreateScreenReaderBar(body(), [=] {
@@ -429,6 +433,7 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 	}));
 }))
 , _body(body()) {
+	AyuFeatures::WindowMaterial::initialize(this);
 	style::PaletteChanged(
 	) | rpl::on_next([=] {
 		updatePalette();

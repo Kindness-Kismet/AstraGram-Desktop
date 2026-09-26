@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/peer_list_box.h"
 
+#include "ayu/features/window_material/window_material.h"
 #include "boxes/peer_list_section_headers.h"
 #include "boxes/peer_list_section_index.h"
 #include "history/history.h" // chatListNameSortKey.
@@ -1204,6 +1205,10 @@ PeerListContent::PeerListContent(
 , _controller(controller)
 , _rowHeight(_st.item.height)
 , _rowsScrollCache([this] { update(); }) {
+	AyuFeatures::WindowMaterial::watchSurface(this);
+	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+		_rowsScrollCache.clear();
+	}, lifetime());
 	_controller->session().downloaderTaskFinished(
 	) | rpl::on_next([=] {
 		invalidateLoadedUserpics();
@@ -1715,7 +1720,8 @@ void PeerListContent::paintEvent(QPaintEvent *e) {
 			}
 		}
 		for (const auto &rect : fill) {
-			p.fillRect(rect, _st.item.button.textBg);
+			p.fillRect(rect, AyuFeatures::WindowMaterial::surfaceColor(
+				this, _st.item.button.textBg->c));
 		}
 	}
 	p.translate(0, rowsTopCached);
@@ -2076,6 +2082,7 @@ crl::time PeerListContent::paintRow(
 
 	const auto activeElement = (active.index == index) ? active.element : 0;
 	if (_rowsScrollCache.scrolling()
+		&& !AyuFeatures::WindowMaterial::isActive(this)
 		&& !selected
 		&& !activeElement
 		&& !row->elementsAnimating()
@@ -2130,7 +2137,9 @@ void PeerListContent::paintRowContent(
 		}
 	});
 
-	p.fillRect(0, 0, outerWidth, _rowHeight, bg);
+	p.fillRect(0, 0, outerWidth, _rowHeight, selected
+		? bg->c
+		: AyuFeatures::WindowMaterial::surfaceColor(this, bg->c));
 	row->paintRipple(p, st, 0, 0, outerWidth);
 	row->paintUserpic(
 		p,

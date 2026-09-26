@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_filters_menu.h"
 
+#include "ayu/features/window_material/window_material.h"
 #include "menu/menu_mark_as_read.h"
 #include "mainwindow.h"
 #include "window/window_session_controller.h"
@@ -123,6 +124,8 @@ void FiltersMenu::setup() {
 	_menu.setAccessibleName(tr::lng_main_menu(tr::now));
 
 	_outer.setAttribute(Qt::WA_OpaquePaintEvent);
+	AyuFeatures::WindowMaterial::watchSurface(&_outer);
+	AyuFeatures::WindowMaterial::watchSurface(&_menu);
 	_outer.show();
 
 	// 菜单、文件夹、收藏与设置的焦点顺序跟随视觉排列。
@@ -141,9 +144,11 @@ void FiltersMenu::setup() {
 	}, _outer.lifetime());
 	_outer.paintRequest() | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(&_outer);
-		p.fillRect(clip, ShellBackgroundColor(&_outer));
+		p.fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(
+			&_outer, ShellBackgroundColor(&_outer)->c));
 		p.fillRect(QRect(gap, gap, _outer.width() - gap,
-			_outer.height() - 2 * gap), st::windowBg);
+			_outer.height() - 2 * gap), AyuFeatures::WindowMaterial::surfaceColor(
+				&_outer, st::windowBg->c));
 	}, _outer.lifetime());
 
 	// 菜单悬停会重绘不透明按钮，圆角遮罩必须跟随按钮一起绘制。
@@ -158,7 +163,13 @@ void FiltersMenu::setup() {
 		rounded.addEllipse(QRect(0, 0, radius * 2, radius * 2));
 		auto p = QPainter(corner);
 		p.setRenderHint(QPainter::Antialiasing);
-		p.fillPath(square.subtracted(rounded), ShellBackgroundColor(&_outer));
+		const auto material = AyuFeatures::WindowMaterial::isActive(&_outer);
+		if (material) {
+			p.setCompositionMode(QPainter::CompositionMode_Source);
+		}
+		p.fillPath(square.subtracted(rounded), material
+			? AyuFeatures::WindowMaterial::rootTintColor(&_outer)
+			: ShellBackgroundColor(&_outer)->c);
 	}, corner->lifetime());
 	corner->show();
 
@@ -582,6 +593,7 @@ base::unique_qptr<Ui::SideBarButton> FiltersMenu::prepareButton(
 	prepared->setShowText(mode != Ui::ChatsFiltersTabsMode::IconsOnly);
 	auto added = container->add(std::move(prepared));
 	auto button = base::unique_qptr<Ui::SideBarButton>(std::move(added));
+	AyuFeatures::WindowMaterial::watchSurface(button.get());
 	const auto raw = button.get();
 	raw->setObjectName(u"chatFolders.folder.%1"_q.arg(id));
 	const auto nameText = id

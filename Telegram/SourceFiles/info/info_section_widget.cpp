@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/info_section_widget.h"
 
+#include "ayu/features/window_material/window_material.h"
 #include "window/window_adaptive.h"
 #include "window/window_connecting_widget.h"
 #include "window/window_session_controller.h"
@@ -104,7 +105,8 @@ void SectionWidget::showAnimatedHook(
 void SectionWidget::paintEvent(QPaintEvent *e) {
 	Window::SectionWidget::paintEvent(e);
 	if (!animatingShow()) {
-		QPainter(this).fillRect(e->rect(), st::windowBg);
+		QPainter(this).fillRect(e->rect(),
+			AyuFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c));
 	}
 }
 

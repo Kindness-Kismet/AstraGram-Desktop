@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "mainwindow.h"
+#include "ayu/features/window_material/window_material.h"
 
 #include "data/data_document.h"
 #include "data/data_session.h"
@@ -104,6 +105,7 @@ MainWindow::MainWindow(not_null<Window::Controller*> controller)
 	}, lifetime());
 
 	setAttribute(Qt::WA_OpaquePaintEvent);
+	AyuFeatures::WindowMaterial::watchSurface(this);
 }
 
 void MainWindow::initHook() {

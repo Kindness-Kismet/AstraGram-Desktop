@@ -14,6 +14,13 @@ namespace Main {
 class Session;
 }
 
+enum class WindowMaterial {
+	Off = 0,
+	Mica = 1,
+	Acrylic = 2,
+	Blur = 3,
+};
+
 enum class PeerIdDisplay {
 	Hidden = 0,
 	TelegramApi = 1,
@@ -285,6 +292,7 @@ public:
 	[[nodiscard]] bool spoofWebviewAsAndroid() const { return _spoofWebviewAsAndroid.current(); }
 	[[nodiscard]] bool increaseWebviewHeight() const { return _increaseWebviewHeight.current(); }
 	[[nodiscard]] bool increaseWebviewWidth() const { return _increaseWebviewWidth.current(); }
+	[[nodiscard]] WindowMaterial windowMaterial() const { return _windowMaterial.current(); }
 	[[nodiscard]] bool materialSwitches() const { return _materialSwitches.current(); }
 	[[nodiscard]] bool removeMessageTail() const { return _removeMessageTail.current(); }
 	[[nodiscard]] bool disableNotificationsDelay() const { return _disableNotificationsDelay.current(); }
@@ -385,6 +393,7 @@ public:
 	void setSpoofWebviewAsAndroid(bool val);
 	void setIncreaseWebviewHeight(bool val);
 	void setIncreaseWebviewWidth(bool val);
+	void setWindowMaterial(WindowMaterial val);
 	void setMaterialSwitches(bool val);
 	void setRemoveMessageTail(bool val);
 	void setDisableNotificationsDelay(bool val);
@@ -509,6 +518,8 @@ public:
 	[[nodiscard]] rpl::producer<bool> increaseWebviewHeightChanges() const { return _increaseWebviewHeight.changes(); }
 	[[nodiscard]] rpl::producer<bool> increaseWebviewWidthValue() const { return _increaseWebviewWidth.value(); }
 	[[nodiscard]] rpl::producer<bool> increaseWebviewWidthChanges() const { return _increaseWebviewWidth.changes(); }
+	[[nodiscard]] rpl::producer<WindowMaterial> windowMaterialValue() const { return _windowMaterial.value(); }
+	[[nodiscard]] rpl::producer<WindowMaterial> windowMaterialChanges() const { return _windowMaterial.changes(); }
 	[[nodiscard]] rpl::producer<bool> materialSwitchesValue() const { return _materialSwitches.value(); }
 	[[nodiscard]] rpl::producer<bool> materialSwitchesChanges() const { return _materialSwitches.changes(); }
 	[[nodiscard]] rpl::producer<bool> removeMessageTailValue() const { return _removeMessageTail.value(); }
@@ -689,6 +700,7 @@ private:
 	rpl::variable<bool> _spoofWebviewAsAndroid = false;
 	rpl::variable<bool> _increaseWebviewHeight = false;
 	rpl::variable<bool> _increaseWebviewWidth = false;
+	rpl::variable<WindowMaterial> _windowMaterial = WindowMaterial::Off;
 	rpl::variable<bool> _materialSwitches = true;
 	rpl::variable<bool> _removeMessageTail = false;
 	rpl::variable<bool> _disableNotificationsDelay = false;

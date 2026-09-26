@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_inner_widget.h"
 
+#include "ayu/features/window_material/window_material.h"
 #include "dialogs/dialogs_three_state_icon.h"
 #include "dialogs/ui/chat_search_empty.h"
 #include "dialogs/ui/chat_search_in.h"
@@ -345,6 +346,10 @@ InnerWidget::InnerWidget(
 , _childListShown(std::move(childListShown))
 , _freezeTimer([=] { _shownList->unfreeze(); update(); }) {
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
+	AyuFeatures::WindowMaterial::watchSurface(this);
+	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+		_rowsScrollCache.clear();
+	}, lifetime());
 	setAccessibleName(tr::lng_recent_chats(tr::now));
 
 	_communityViewable.setRepaint([=] { update(); });
@@ -1121,6 +1126,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			? (row->key() == _chatPreviewRow.key)
 			: selected;
 		const auto cacheAllowed = _rowsScrollCache.scrolling()
+			&& !AyuFeatures::WindowMaterial::isActive(this)
 			&& (!videoUserpic || !context.narrow)
 			&& !active
 			&& !cacheSelected
@@ -2061,10 +2067,10 @@ void InnerWidget::paintPeerSearchResult(
 }
 
 QBrush InnerWidget::currentBg() const {
-	return anim::brush(
+	return AyuFeatures::WindowMaterial::surfaceColor(this, anim::brush(
 		st::dialogsBg,
 		st::dialogsBgOver,
-		_childListShown.current().shown);
+		_childListShown.current().shown).color());
 }
 
 void InnerWidget::paintSearchTags(

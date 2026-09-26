@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+
+#include "ayu/features/window_material/window_material.h"
 #include "ui/chat/floating_bar.h"
 
 #include "api/api_compose_with_ai.h"
@@ -571,6 +573,11 @@ HistoryWidget::HistoryWidget(
 	});
 	CenterMessageFieldText(_field);
 	InitMessageFieldFade(_field, st::historyComposeField.textBg);
+	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+		if (_showAnimation) {
+			showFinished();
+		}
+	}, lifetime());
 
 	setupFastButtonMode();
 	initAiButton();

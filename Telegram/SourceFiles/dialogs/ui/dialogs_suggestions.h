@@ -213,6 +213,7 @@ private:
 	void startSlideAnimation(Key was, Key now);
 	void ensureContent(Key key);
 	void finishShow();
+	void finishShownAnimation();
 
 	void handlePressForChatPreview(PeerId id, Fn<void(bool)> callback);
 	void updateControlsGeometry();

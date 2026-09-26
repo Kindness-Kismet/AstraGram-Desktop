@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_main_menu_helpers.h"
 
+#include "ayu/features/window_material/window_material.h"
+
 #include "apiwrap.h"
 #include "base/platform/base_platform_info.h"
 #include "data/data_channel.h"
@@ -318,6 +320,7 @@ void SetupMenuBots(
 				wrap,
 				rpl::single(bot.name),
 				st::mainMenuButton));
+			AyuFeatures::WindowMaterial::watchSurface(button);
 			const auto menu = button->lifetime().make_state<
 				base::unique_qptr<Ui::PopupMenu>
 			>();

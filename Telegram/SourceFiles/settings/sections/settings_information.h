@@ -36,7 +36,8 @@ struct AccountsEvents {
 };
 AccountsEvents SetupAccounts(
 	not_null<Ui::VerticalLayout*> container,
-	not_null<Window::SessionController*> controller);
+	not_null<Window::SessionController*> controller,
+	bool materialSurface = false);
 
 void UpdatePhotoLocally(not_null<UserData*> user, const QImage &image);
 

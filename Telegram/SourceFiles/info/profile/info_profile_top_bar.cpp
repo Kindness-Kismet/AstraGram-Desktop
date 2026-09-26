@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_top_bar.h"
 
+#include "ayu/features/window_material/window_material.h"
 #include "api/api_peer_colors.h"
 #include "api/api_peer_photo.h"
 #include "api/api_user_privacy.h"
@@ -1896,7 +1897,7 @@ void TopBar::paintEdges(
 
 void TopBar::paintEdges(QPainter &p, const QRect &clip) const {
 	if (!_solidBg) {
-		paintEdges(p, clip, st::windowBg);
+		paintEdges(p, clip, AyuFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c));
 	} else {
 		paintEdges(p, clip, *_solidBg);
 	}

@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/section_widget.h"
 
+#include "ayu/features/window_material/window_material.h"
 #include "mainwidget.h"
 #include "mainwindow.h"
 #include "ui/ui_utility.h"
@@ -228,6 +229,7 @@ AbstractSectionWidget::AbstractSectionWidget(
 	rpl::producer<PeerData*> peerForBackground)
 : RpWidget(parent)
 , _controller(controller) {
+	AyuFeatures::WindowMaterial::watchSurface(this);
 	std::move(
 		peerForBackground
 	) | rpl::map([=](PeerData *peer) -> rpl::producer<> {
@@ -266,6 +268,11 @@ SectionWidget::SectionWidget(
 	not_null<Window::SessionController*> controller,
 	rpl::producer<PeerData*> peerForBackground)
 : AbstractSectionWidget(parent, controller, std::move(peerForBackground)) {
+	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+		if (_showAnimation) {
+			showFinished();
+		}
+	}, lifetime());
 }
 
 SectionWidget::SectionWidget(
@@ -276,6 +283,11 @@ SectionWidget::SectionWidget(
 	parent,
 	controller,
 	rpl::single(peerForBackground.get())) {
+	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+		if (_showAnimation) {
+			showFinished();
+		}
+	}, lifetime());
 }
 
 void SectionWidget::setGeometryWithTopMoved(
@@ -381,6 +393,11 @@ void SectionWidget::PaintBackground(
 		int fromy,
 		QRect clip,
 		bool paused) {
+	// 只替换主聊天区壁纸，预览和离屏导出保留原背景。
+	if (dynamic_cast<AbstractSectionWidget*>(widget.get())
+		&& AyuFeatures::WindowMaterial::isActive(widget.get())) {
+		return;
+	}
 	auto p = QPainter(widget);
 	if (fromy) {
 		p.translate(0, fromy);

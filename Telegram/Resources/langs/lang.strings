@@ -8913,6 +8913,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_SettingsUnlimitedRecentStickers" = "Unlimited Recent Stickers";
 "ayu_SettingsRecentStickersCount" = "Recent Stickers Count";
 "ayu_SettingsCustomizationHint" = "You must restart the application after making changes in the \"Customization\" section.";
+"ayu_WindowMaterial" = "Window Background";
+"ayu_WindowMaterialOff" = "Off";
+"ayu_WindowMaterialMica" = "Mica";
+"ayu_WindowMaterialAcrylic" = "Acrylic";
+"ayu_WindowMaterialBlur" = "Blur";
+"ayu_WindowMaterialDescription" = "Use a system background throughout the window. While active, it temporarily replaces your chat wallpaper. Turning it off restores your saved wallpaper. Effects depend on your system and transparency settings.";
 "ayu_MaterialSwitches" = "MD3 Switch Style";
 "ayu_RemoveMessageTail" = "Remove Message Tail";
 "ayu_HideShareButton" = "Hide Side \"Share\" Button";

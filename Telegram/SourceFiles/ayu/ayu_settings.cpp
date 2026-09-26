@@ -698,6 +698,17 @@ void AyuSettings::setIncreaseWebviewWidth(bool val) {
 	save();
 }
 
+void AyuSettings::setWindowMaterial(WindowMaterial val) {
+	if (val < WindowMaterial::Off || val > WindowMaterial::Blur) {
+		val = WindowMaterial::Off;
+	}
+	if (_windowMaterial.current() == val) {
+		return;
+	}
+	_windowMaterial = val;
+	save();
+}
+
 void AyuSettings::setMaterialSwitches(bool val) {
 	if (_materialSwitches.current() == val) return;
 	_materialSwitches = val;
@@ -1200,6 +1211,7 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"spoofWebviewAsAndroid", s._spoofWebviewAsAndroid.current()},
 		{"increaseWebviewHeight", s._increaseWebviewHeight.current()},
 		{"increaseWebviewWidth", s._increaseWebviewWidth.current()},
+		{"windowMaterial", static_cast<int>(s._windowMaterial.current())},
 		{"materialSwitches", s._materialSwitches.current()},
 		{"removeMessageTail", s._removeMessageTail.current()},
 		{"disableNotificationsDelay", s._disableNotificationsDelay.current()},
@@ -1317,6 +1329,13 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 	s._spoofWebviewAsAndroid = j.value("spoofWebviewAsAndroid", defaults._spoofWebviewAsAndroid.current());
 	s._increaseWebviewHeight = j.value("increaseWebviewHeight", defaults._increaseWebviewHeight.current());
 	s._increaseWebviewWidth = j.value("increaseWebviewWidth", defaults._increaseWebviewWidth.current());
+	const auto material = j.find("windowMaterial");
+	s._windowMaterial = (material != j.end()
+		&& material->is_number_integer()
+		&& *material >= 0
+		&& *material <= static_cast<int>(WindowMaterial::Blur))
+		? static_cast<WindowMaterial>(material->get<int>())
+		: WindowMaterial::Off;
 	s._materialSwitches = j.value("materialSwitches", defaults._materialSwitches.current());
 	s._removeMessageTail = j.value("removeMessageTail", defaults._removeMessageTail.current());
 	s._disableNotificationsDelay = j.value("disableNotificationsDelay", defaults._disableNotificationsDelay.current());

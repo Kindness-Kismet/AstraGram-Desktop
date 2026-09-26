@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
 
+#include "ayu/features/window_material/window_material.h"
+
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
 #include "api/api_bot.h"
@@ -269,9 +271,9 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 		p.setPen(QPen((flatBackground
 			? st::filterInputBorderFg
 			: st::windowDividerFg)->c, st::lineWidth));
-		p.setBrush(flatBackground
+		p.setBrush(AyuFeatures::WindowMaterial::cardColor(this, (flatBackground
 			? st::windowBgOver
-			: st::historyComposeAreaBg);
+			: st::historyComposeAreaBg)->c));
 		p.drawRoundedRect(capsuleOutline, capsuleRadius, capsuleRadius);
 	}
 	// 回复/编辑/转发条的内容整体右移,落进胶囊内部

@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_widget.h"
 
+#include "ayu/features/window_material/window_material.h"
 #include "base/call_delayed.h"
 #include "base/qt/qt_key_modifiers.h"
 #include "base/options.h"
@@ -534,6 +535,16 @@ Widget::Widget(
 	const auto makeChildListShown = [](PeerId peerId, float64 shown) {
 		return InnerWidget::ChildListShown{ peerId, shown };
 	};
+	AyuFeatures::WindowMaterial::watchSurface(this);
+	AyuFeatures::WindowMaterial::changes(this) | rpl::skip(1) | rpl::on_next([=] {
+		if (_showAnimation) {
+			slideFinished();
+		}
+		if (!_widthAnimationCache.isNull()) {
+			stopWidthAnimation();
+		}
+		_chatsFilterSlideCanvas = nullptr;
+	}, lifetime());
 	using OverscrollType = Ui::ElasticScroll::OverscrollType;
 	_scroll->setOverscrollTypes(
 		_stories ? OverscrollType::Virtual : OverscrollType::Real,
@@ -1568,7 +1579,8 @@ void Widget::updateCommunityAddChatButton() {
 		object_ptr<Ui::RpWidget>(_innerList)));
 	const auto placeholder = _communityAddChatPlaceholder.get();
 	placeholder->paintOn([placeholder](QPainter &p) {
-		p.fillRect(placeholder->rect(), st::dialogsBg);
+		p.fillRect(placeholder->rect(), AyuFeatures::WindowMaterial::surfaceColor(
+			placeholder, st::dialogsBg->c));
 	});
 
 	raw->setParent(_scroll);
@@ -2711,10 +2723,12 @@ QPixmap Widget::grabForChatsFilterSlide() {
 	if (!hidden) {
 		_scrollToTop->hide();
 	}
-	auto result = Ui::GrabOpaque(
-		_scroll.data(),
-		_scroll->rect(),
-		st::dialogsBg->c);
+	auto result = AyuFeatures::WindowMaterial::isActive(this)
+		? Ui::GrabWidget(_scroll.data())
+		: Ui::GrabOpaque(
+			_scroll.data(),
+			_scroll->rect(),
+			st::dialogsBg->c);
 	if (!hidden) {
 		_scrollToTop->show();
 	}
@@ -2730,12 +2744,14 @@ void Widget::startChatsFilterSlide(
 	const auto canvas = _chatsFilterSlideCanvas.get();
 	canvas->setAttribute(Qt::WA_TransparentForMouseEvents);
 	canvas->setAttribute(Qt::WA_OpaquePaintEvent);
+	AyuFeatures::WindowMaterial::watchSurface(canvas);
 	canvas->setGeometry(_scroll->geometry());
 	const auto animation
 		= canvas->lifetime().make_state<Ui::SlideAnimation>();
 	animation->setSnapshots(std::move(wasCache), std::move(nowCache));
 	canvas->paintOn([=](QPainter &p) {
-		p.fillRect(canvas->rect(), st::dialogsBg);
+		p.fillRect(canvas->rect(), AyuFeatures::WindowMaterial::surfaceColor(
+			canvas, st::dialogsBg->c));
 		animation->paintFrame(p, 0, 0, canvas->width());
 	});
 	canvas->show();
@@ -5104,10 +5120,10 @@ void Widget::paintEvent(QPaintEvent *e) {
 		_showAnimation->paintContents(p);
 		return;
 	}
-	const auto bg = anim::brush(
+	const auto bg = AyuFeatures::WindowMaterial::surfaceColor(this, anim::brush(
 		st::dialogsBg,
 		st::dialogsBgOver,
-		_childListShown.current());
+		_childListShown.current()).color());
 	auto above = QRect(0, 0, width(), _scroll->y());
 	if (above.intersects(r)) {
 		p.fillRect(above.intersected(r), bg);

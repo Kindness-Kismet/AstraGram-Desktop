@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "mainwidget.h"
 
+#include "ayu/features/window_material/window_material.h"
 #include "api/api_updates.h"
 #include "api/api_views.h"
 #include "data/components/scheduled_messages.h"
@@ -449,6 +450,12 @@ MainWidget::MainWidget(
 	}
 
 	// 卡片圆角与描边遮罩层:透明鼠标事件、始终置顶,统一画各栏圆角和边框
+	AyuFeatures::WindowMaterial::watchSurface(this);
+	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+		if (_showAnimation) {
+			showFinished();
+		}
+	}, lifetime());
 	_cardOverlay.create(this);
 	_cardOverlay->setAttribute(Qt::WA_TransparentForMouseEvents);
 	_cardOverlay->paintRequest(
@@ -2566,7 +2573,8 @@ void MainWidget::paintEvent(QPaintEvent *e) {
 		checkChatBackground();
 	}
 	auto p = QPainter(this);
-	p.fillRect(e->rect(), Window::ShellBackgroundColor(this));
+	p.fillRect(e->rect(), AyuFeatures::WindowMaterial::surfaceColor(
+		this, Window::ShellBackgroundColor(this)->c));
 	if (_showAnimation) {
 		_showAnimation->paintContents(p);
 	}
@@ -2597,7 +2605,13 @@ void MainWidget::paintCardOverlay(QRect clip) {
 	auto p = QPainter(_cardOverlay.data());
 	p.setRenderHint(QPainter::Antialiasing);
 
-	const auto fill = Window::ShellBackgroundColor(this)->c;
+	const auto material = AyuFeatures::WindowMaterial::isActive(this);
+	const auto fill = material
+		? AyuFeatures::WindowMaterial::rootTintColor(this)
+		: Window::ShellBackgroundColor(this)->c;
+	if (material) {
+		p.setCompositionMode(QPainter::CompositionMode_Source);
+	}
 	const auto radius = st::windowCardRadius;
 
 	for (const auto &r : rects) {
