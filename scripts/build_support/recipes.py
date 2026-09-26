@@ -6,6 +6,7 @@
 
 from build_support import recipes_arm64
 from build_support.recipe import Stage
+from build_support.qt_native_backdrop_patch import PATCH_SCRIPT, patch_command
 
 # Qt 版本决定补丁目录与产物前缀，随上游 qt_version 同步
 QT_VERSION = "5.15.19"
@@ -515,7 +516,7 @@ cmake --build out --config Release
         name=f"qt_{QT_VERSION}",
         location="Libraries",
         version="0",
-        dependencies=[f"patches/qtbase_{QT_VERSION}/*.patch"],
+        dependencies=[f"patches/qtbase_{QT_VERSION}/*.patch", str(PATCH_SCRIPT)],
         commands=r"""git clone -b v$QT-lts-lgpl https://github.com/qt/qt5.git qt_$QT
 cd qt_$QT
 git submodule update --init --recursive --progress qtbase qtimageformats qtsvg
@@ -528,6 +529,7 @@ echo ERROR: Applying patch %%~nxi failed!
 exit /b 1
 )
 )
+__QT_NATIVE_BACKDROP_PATCH__
 rem jom 1.1.3 在命令行超过 1000 字符时崩溃（0xC0000409），bootstrap 换 nmake；
 rem 主构建的 qmake Makefile 本身用响应文件链接，不受影响
 %THIRDPARTY_DIR%\msys64\usr\bin\sed.exe -i "s/set MAKE=jom/set MAKE=nmake/" configure.bat
@@ -584,7 +586,7 @@ rem directory due to a race in qmake's mkpath under parallel builds; the
 rem build is incremental, so simply retrying picks up where it stopped.
 jom -j%NUMBER_OF_PROCESSORS% || jom -j%NUMBER_OF_PROCESSORS%
 jom -j%NUMBER_OF_PROCESSORS% install
-""",
+""".replace("__QT_NATIVE_BACKDROP_PATCH__", patch_command()),
     ),
     Stage(
         name="tg_owt",
