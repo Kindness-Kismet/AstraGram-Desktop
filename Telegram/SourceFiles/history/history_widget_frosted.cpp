@@ -2,8 +2,11 @@
 
 #include "ayu/ui/components/chat_frosted_background.h"
 #include "history/history_inner_widget.h"
+#include "history/view/history_view_translate_bar.h"
 #include "mainwidget.h"
+#include "ui/chat/floating_bar.h"
 #include "ui/chat/pinned_bar.h"
+#include "ui/chat/requests_bar.h"
 #include "ui/painter.h"
 #include "ui/widgets/elastic_scroll.h"
 #include "styles/style_chat_helpers.h"
@@ -45,11 +48,22 @@ void HistoryWidget::setupFrostedBackground() {
 		},
 		[=] {
 			_composeSurface->update();
+			for (const auto &surface : _frostedSurfaces) {
+				if (surface) {
+					surface->update();
+				}
+			}
 			if (_pinnedBar) {
 				_pinnedBar->updateBackground();
 			}
 			if (_hidingPinnedBar) {
 				_hidingPinnedBar->updateBackground();
+			}
+			if (_translateBar) {
+				_translateBar->updateBackground();
+			}
+			if (_requestsBar) {
+				_requestsBar->updateBackground();
 			}
 		});
 	_composeSurface->paintRequest(
@@ -65,15 +79,36 @@ void HistoryWidget::setupFrostedBackground() {
 	}, lifetime());
 }
 
-void HistoryWidget::setupPinnedFrostedBackground(not_null<Ui::PinnedBar*> bar) {
-	bar->setBackgroundPainter([=](QPainter &p, QRect rect) {
-		const auto area = bar->backgroundRect(this);
+void HistoryWidget::setupFrostedSurface(not_null<Ui::RpWidget*> surface) {
+	const auto effect = dynamic_cast<Ui::ChatControlSurface*>(
+		surface->graphicsEffect());
+	Expects(effect != nullptr);
+	effect->setBackgroundPainter([=](QPainter &p, QRect rect, QColor tint) {
+		const auto offset = surface->mapTo(this, QPoint());
+		p.save();
+		p.translate(-offset);
+		paintFrostedBackground(p, rect.translated(offset), tint);
+		p.restore();
+	});
+	_frostedSurfaces.push_back(surface.get());
+	surface->geometryValue() | rpl::on_next([=] {
+		updateFrostedAreas();
+	}, surface->lifetime());
+	surface->shownValue() | rpl::on_next([=] {
+		updateFrostedAreas();
+	}, surface->lifetime());
+}
+
+Fn<void(QPainter&, QRect)> HistoryWidget::createFrostedBarPainter(
+		Fn<QRect()> geometry) {
+	return [=, geometry = std::move(geometry)](QPainter &p, QRect rect) {
+		const auto area = geometry();
 		p.save();
 		p.translate(-area.topLeft());
 		paintFrostedBackground(p, rect.translated(area.topLeft()),
 			st::historyPinnedBg->c);
 		p.restore();
-	});
+	};
 }
 
 void HistoryWidget::updateComposeSurface(QRect capsule) {
@@ -110,11 +145,26 @@ void HistoryWidget::updateFrostedAreas() {
 		return;
 	}
 	auto areas = std::vector<QRect>();
+	_frostedSurfaces.erase(std::remove_if(
+		_frostedSurfaces.begin(), _frostedSurfaces.end(),
+		[](const auto &surface) { return surface.isNull(); }),
+		_frostedSurfaces.end());
+	for (const auto &surface : _frostedSurfaces) {
+		if (surface->isVisibleTo(this)) {
+			areas.emplace_back(surface->mapTo(this, QPoint()), surface->size());
+		}
+	}
 	if (!_composeSurface->isHidden()) {
 		areas.push_back(_composeSurfaceRect);
 	}
 	if (_pinnedBar && _pinnedBar->height()) {
 		areas.push_back(_pinnedBar->backgroundRect(this));
+	}
+	if (_translateBar && _translateBar->height()) {
+		areas.push_back(_translateBar->backgroundRect(this));
+	}
+	if (_requestsBar && _requestsBar->height()) {
+		areas.push_back(_requestsBar->backgroundRect(this));
 	}
 	_frostedBackground->setAreas(std::move(areas));
 }

@@ -725,7 +725,9 @@ private:
 	[[nodiscard]] int physicalScrollTop(int visibleTop) const;
 	[[nodiscard]] QRect visibleScrollGeometry() const;
 	void setupFrostedBackground();
-	void setupPinnedFrostedBackground(not_null<Ui::PinnedBar*> bar);
+	void setupFrostedSurface(not_null<Ui::RpWidget*> surface);
+	[[nodiscard]] Fn<void(QPainter&, QRect)> createFrostedBarPainter(
+		Fn<QRect()> geometry);
 	void updateComposeSurface(QRect capsule);
 	void updateComposeSurfaceVisibility();
 	void updateFrostedAreas();
@@ -897,6 +899,7 @@ private:
 	object_ptr<Ui::ElasticScroll> _scroll;
 	object_ptr<Ui::RpWidget> _composeSurface;
 	std::unique_ptr<AyuUi::ChatFrostedBackground> _frostedBackground;
+	std::vector<QPointer<Ui::RpWidget>> _frostedSurfaces;
 	QRect _composeSurfaceRect;
 	int _composeOverlap = 0;
 	int _lastTopBarsOverlap = 0;

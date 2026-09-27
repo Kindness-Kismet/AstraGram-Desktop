@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
 
+#include "ayu/ui/components/chat_surface_button.h"
 #include "ayu/features/window_material/window_material.h"
 #include "ui/chat/floating_bar.h"
 
@@ -276,26 +277,27 @@ HistoryWidget::HistoryWidget(
 , _discardRichDraft(Ui::CreateChild<Ui::IconButton>(
 	this,
 	st::historyDiscardRichDraftButton))
-, _unblock(
+, _unblock(AyuUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_unblock_button(tr::now).toUpper(),
-	st::historyUnblock)
-, _botStart(
+	st::historyUnblock))
+, _botStart(AyuUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_bot_start(tr::now).toUpper(),
-	st::historyComposeButton)
-, _joinChannel(
+	st::historyComposeButton))
+, _joinChannel(AyuUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_profile_join_channel(tr::now).toUpper(),
-	st::historyComposeButton)
-, _muteUnmute(
+	st::historyComposeButton))
+, _muteUnmute(AyuUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_channel_mute(tr::now).toUpper(),
-	st::historyComposeButton)
-, _discuss(this,
+	st::historyComposeButton))
+, _discuss(AyuUi::CreateChatSurfaceButton(this,
 	tr::ayu_ChannelBottomButtonDiscuss(tr::now).toUpper(),
-	st::historyComposeButton)
-, _reportMessages(this, QString(), st::historyComposeButton)
+	st::historyComposeButton))
+, _reportMessages(AyuUi::CreateChatSurfaceButton(
+	this, QString(), st::historyComposeButton))
 , _attachToggle(this, st::historyAttach)
 , _tabbedSelectorToggle(this, st::historyAttachEmoji)
 , _botKeyboardShow(this, st::historyBotKeyboardShow)
@@ -447,6 +449,7 @@ HistoryWidget::HistoryWidget(
 			std::pair{ _reportMessages.data(), u"chatAction.report"_q } }) {
 		button->setObjectName(name);
 		Ui::ApplyChatControlSurface(button, st::historyComposeCapsuleRadius);
+		setupFrostedSurface(button);
 	}
 	_botStart->setAcceptBoth(true);
 	_botStart->clicks() | rpl::on_next(

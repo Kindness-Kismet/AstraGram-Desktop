@@ -444,6 +444,7 @@ void HistoryWidget::showHistory(
 			_topBars.get(),
 			_peer,
 			false);
+		setupFrostedSurface(_contactStatus->bar().backgroundWidget());
 		_contactStatus->bar().heightValue(
 		) | rpl::on_next([=] {
 			updateControlsGeometry();
@@ -456,6 +457,7 @@ void HistoryWidget::showHistory(
 				controller(),
 				_topBars.get(),
 				user);
+			setupFrostedSurface(_paysStatus->bar().backgroundWidget());
 			_paysStatus->bar().heightValue(
 			) | rpl::on_next([=] {
 				updateControlsGeometry();
@@ -464,6 +466,7 @@ void HistoryWidget::showHistory(
 				controller(),
 				_topBars.get(),
 				user);
+			setupFrostedSurface(_businessBotStatus->bar().backgroundWidget());
 			_businessBotStatus->bar().heightValue(
 			) | rpl::on_next([=] {
 				updateControlsGeometry();

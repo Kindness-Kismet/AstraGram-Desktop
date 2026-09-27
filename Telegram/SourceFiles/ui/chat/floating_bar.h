@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "ui/painter.h"
+#include "base/basic_types.h"
 #include "styles/palette.h"
 #include "styles/style_window.h"
 
@@ -50,9 +51,20 @@ private:
 
 class ChatControlSurface final : public QGraphicsEffect {
 public:
+	using BackgroundPainter = Fn<void(QPainter&, QRect, QColor)>;
+
 	ChatControlSurface(int radius, bool outline)
 	: _radius(radius)
 	, _outline(outline) {
+	}
+
+	void setBackgroundPainter(BackgroundPainter painter) {
+		_backgroundPainter = std::move(painter);
+		update();
+	}
+
+	[[nodiscard]] const BackgroundPainter &backgroundPainter() const {
+		return _backgroundPainter;
 	}
 
 protected:
@@ -92,6 +104,7 @@ protected:
 private:
 	const int _radius;
 	const bool _outline;
+	BackgroundPainter _backgroundPainter;
 };
 
 inline void ApplyChatControlSurface(
@@ -110,6 +123,28 @@ inline void PaintChatBar(
 		return;
 	}
 	p.fillRect(rect, fill);
+}
+
+inline void PaintChatBar(
+		QPainter &p,
+		QWidget *widget,
+		const QRect &rect,
+		const QColor &fill) {
+	for (auto parent = widget; parent; parent = parent->parentWidget()) {
+		const auto surface = dynamic_cast<ChatControlSurface*>(
+			parent->graphicsEffect());
+		if (!surface || !surface->backgroundPainter()) {
+			continue;
+		}
+		// 子按钮按所属悬浮栏的坐标取背景，保留各自的文字和交互反馈。
+		const auto offset = widget->mapTo(parent, QPoint());
+		p.save();
+		p.translate(-offset);
+		surface->backgroundPainter()(p, rect.translated(offset), fill);
+		p.restore();
+		return;
+	}
+	PaintChatBar(p, rect, fill);
 }
 
 } // namespace Ui

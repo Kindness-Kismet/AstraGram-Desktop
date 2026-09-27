@@ -765,13 +765,10 @@ int HistoryWidget::composeOverlap() const {
 }
 
 int HistoryWidget::topBarsOverlap() const {
-	if (!_pinnedBar || !_pinnedBar->height()) {
-		return 0;
-	}
 	auto bars = Ui::ChatBarStack();
 	bars.add(_groupCallBar ? _groupCallBar->height() : 0);
 	bars.add(_requestsBar ? _requestsBar->height() : 0);
-	bars.add(_pinnedBar->height());
+	bars.add(_pinnedBar ? _pinnedBar->height() : 0);
 	bars.add(_sponsoredMessageBar ? _sponsoredMessageBar->height() : 0);
 	bars.add(_translateBar ? _translateBar->height() : 0);
 	bars.add(_paysStatus ? _paysStatus->bar().height() : 0);
@@ -1085,9 +1082,7 @@ void HistoryWidget::updateControlsGeometry() {
 	if (_businessBotStatus) {
 		_businessBotStatus->bar().move(0, businessBotTop);
 	}
-	const auto overlap = _pinnedBar && _pinnedBar->height()
-		? stack.height()
-		: 0;
+	const auto overlap = topBarsOverlap();
 	const auto scrollAreaTop = _topBars->y() + stack.height() - overlap;
 	_topBars->resize(innerWidth, stack.height());
 	if (overlap) {
@@ -1335,6 +1330,7 @@ void HistoryWidget::updateSendRestriction() {
 		_sendRestriction->setObjectName(u"chatAction.restriction"_q);
 		Ui::ApplyChatControlSurface(
 			_sendRestriction.get(), st::historyComposeCapsuleRadius);
+		setupFrostedSurface(_sendRestriction.get());
 		_sendRestriction->show();
 		moveFieldControls();
 	}

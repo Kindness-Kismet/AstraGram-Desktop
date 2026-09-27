@@ -206,6 +206,8 @@ set(ayugram_files
         ayu/ui/components/image_view.h
         ayu/ui/components/chat_frosted_background.cpp
         ayu/ui/components/chat_frosted_background.h
+        ayu/ui/components/chat_surface_button.cpp
+        ayu/ui/components/chat_surface_button.h
         ayu/ui/components/icon_picker.cpp
         ayu/ui/components/icon_picker.h
         ayu/ui/components/avatar_corners_preview.cpp

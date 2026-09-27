@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_contact_status.h"
 
+#include "ayu/ui/components/chat_surface_button.h"
 #include "ui/chat/floating_bar.h"
 #include "lang/lang_keys.h"
 #include "ui/controls/userpic_button.h"
@@ -155,7 +156,8 @@ void FinalizeSetBotPhotoFirstOpenState(not_null<PeerData*> peer) {
 	raw->paintRequest(
 	) | rpl::on_next([=, &icon] {
 		auto p = QPainter(raw);
-		p.fillRect(raw->rect(), st::historyContactStatusButton.bgColor);
+		Ui::PaintChatBar(p, raw, raw->rect(),
+			st::historyContactStatusButton.bgColor->c);
 		raw->paintRipple(p, 0, 0);
 		icon.paintInCenter(p, raw->rect());
 	}, raw->lifetime());
@@ -249,6 +251,7 @@ public:
 
 private:
 	int resizeGetHeight(int newWidth) override;
+	void paintEvent(QPaintEvent *e) override;
 
 	void refreshAddText(int newWidth);
 	void showAddTooltip();
@@ -298,6 +301,7 @@ void ContactStatus::BgButton::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 	Ui::PaintChatBar(
 		p,
+		this,
 		rect(),
 		isOver() ? _st.overBgColor->c : _st.bgColor->c);
 	paintRipple(p, 0, 0);
@@ -310,27 +314,27 @@ ContactStatus::Bar::Bar(
 : RpWidget(parent)
 , _tooltipParent(tooltipParent)
 , _name(name)
-, _add(
+, _add(AyuUi::CreateChatSurfaceButton(
 	this,
 	QString(),
-	st::historyContactStatusButton)
-, _unarchive(
+	st::historyContactStatusButton))
+, _unarchive(AyuUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_new_contact_unarchive(tr::now).toUpper(),
-	st::historyContactStatusButton)
+	st::historyContactStatusButton))
 , _unarchiveIcon(MakeIconButton(this, st::menuIconUnarchive))
-, _block(
+, _block(AyuUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_new_contact_block(tr::now).toUpper(),
-	st::historyContactStatusBlock)
-, _share(
+	st::historyContactStatusBlock))
+, _share(AyuUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_new_contact_share(tr::now).toUpper(),
-	st::historyContactStatusButton)
-, _report(
+	st::historyContactStatusButton))
+, _report(AyuUi::CreateChatSurfaceButton(
 	this,
 	QString(),
-	st::historyContactStatusBlock)
+	st::historyContactStatusBlock))
 , _reportIcon(MakeIconButton(this, st::menuIconReportAttention))
 , _close(this, st::historyReplyCancel)
 , _requestChatBg(this, st::historyContactStatusButton)
@@ -372,8 +376,17 @@ ContactStatus::Bar::Bar(
 	_emojiStatusInfo->paintRequest(
 	) | rpl::on_next([=, raw = _emojiStatusInfo.data()](QRect clip) {
 		_emojiStatusRepaintScheduled = false;
-		QPainter(raw).fillRect(clip, st::historyComposeButtonBg);
+		auto p = QPainter(raw);
+		Ui::PaintChatBar(p, raw, clip, st::historyComposeButtonBg->c);
 	}, lifetime());
+}
+
+void ContactStatus::Bar::paintEvent(QPaintEvent *e) {
+	const auto surface = dynamic_cast<Ui::ChatControlSurface*>(graphicsEffect());
+	if (surface && surface->backgroundPainter()) {
+		auto p = QPainter(this);
+		Ui::PaintChatBar(p, this, rect(), st::historyComposeButtonBg->c);
+	}
 }
 
 void ContactStatus::Bar::showState(
@@ -701,6 +714,10 @@ void SlidingBar::toggleContent(bool visible) {
 	if (_shown) {
 		_wrapped.toggle(visible, anim::type::normal);
 	}
+}
+
+Ui::RpWidget *SlidingBar::backgroundWidget() const {
+	return _wrapped.entity();
 }
 
 void SlidingBar::raise() {
@@ -1201,6 +1218,7 @@ void BusinessBotStatus::Bar::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 	Ui::PaintChatBar(
 		p,
+		this,
 		rect(),
 		st::historyContactStatusButton.bgColor->c);
 }
@@ -1401,6 +1419,7 @@ void PaysStatus::Bar::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 	Ui::PaintChatBar(
 		p,
+		this,
 		rect(),
 		st::historyContactStatusButton.bgColor->c);
 }

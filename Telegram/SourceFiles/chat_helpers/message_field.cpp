@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/message_field.h"
 
+#include "ayu/ui/components/chat_surface_button.h"
+#include "ui/chat/floating_bar.h"
 #include "history/history_widget.h"
 #include "history/history.h" // History::session
 #include "history/history_item.h" // HistoryItem::originalText
@@ -1375,7 +1377,8 @@ std::unique_ptr<Ui::RpWidget> TextErrorSendRestriction(
 		st::historySendPremiumRequired);
 	label->setAttribute(Qt::WA_TransparentForMouseEvents);
 	raw->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(raw).fillRect(clip, st::windowBg);
+		auto p = QPainter(raw);
+		Ui::PaintChatBar(p, raw, clip, st::windowBg->c);
 	}, raw->lifetime());
 	raw->sizeValue(
 	) | rpl::on_next([=](QSize size) {
@@ -1410,7 +1413,8 @@ std::unique_ptr<Ui::RpWidget> PremiumRequiredSendRestriction(
 		result.get(),
 		tr::lng_restricted_send_non_premium_more(tr::now));
 	raw->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(raw).fillRect(clip, st::windowBg);
+		auto p = QPainter(raw);
+		Ui::PaintChatBar(p, raw, clip, st::windowBg->c);
 	}, raw->lifetime());
 	raw->widthValue(
 	) | rpl::on_next([=](int width) {
@@ -1436,8 +1440,8 @@ std::unique_ptr<Ui::AbstractButton> BoostsToLiftWriteRestriction(
 		std::shared_ptr<ChatHelpers::Show> show,
 		not_null<PeerData*> peer,
 		int boosts) {
-	auto result = std::make_unique<Ui::FlatButton>(
-		parent,
+	auto result = std::make_unique<AyuUi::ChatSurfaceButton>(
+		parent.get(),
 		tr::lng_restricted_boost_group(tr::now),
 		st::historyComposeButton);
 	result->setClickedCallback([=] {
@@ -1456,8 +1460,8 @@ std::unique_ptr<Ui::AbstractButton> AyuForwardWriteRestriction(
 	// status and part
 	const auto pair = AyuForward::stateName(peer);
 
-	auto result = std::make_unique<FlatButton>(
-		parent,
+	auto result = std::make_unique<AyuUi::ChatSurfaceButton>(
+		parent.get(),
 		QString(),
 		st::historyComposeButton);
 	const auto raw = result.get();
@@ -1517,8 +1521,8 @@ std::unique_ptr<Ui::AbstractButton> FrozenWriteRestriction(
 		FreezeInfoStyleOverride st) {
 	using namespace Ui;
 
-	auto result = std::make_unique<FlatButton>(
-		parent,
+	auto result = std::make_unique<AyuUi::ChatSurfaceButton>(
+		parent.get(),
 		QString(),
 		st::historyComposeButton);
 	const auto raw = result.get();

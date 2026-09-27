@@ -127,6 +127,7 @@ GroupCallBar::GroupCallBar(
 		auto p = QPainter(_wrap.entity());
 		PaintChatBar(
 			p,
+			_wrap.entity(),
 			_wrap.entity()->rect(),
 			st::historyPinnedBg->c);
 	}, lifetime());
@@ -165,6 +166,10 @@ GroupCallBar::GroupCallBar(
 }
 
 GroupCallBar::~GroupCallBar() = default;
+
+RpWidget *GroupCallBar::backgroundWidget() const {
+	return _wrap.entity();
+}
 
 void GroupCallBar::refreshScheduledProcess() {
 	const auto date = _content.scheduleDate;
