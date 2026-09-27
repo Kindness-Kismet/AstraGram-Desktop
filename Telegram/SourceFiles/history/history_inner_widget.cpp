@@ -5137,7 +5137,8 @@ void HistoryInner::updateSize() {
 	const auto itemsHeight = historyHeight() - _revealHeight + collapseGapTotal;
 	const auto aboutAboveHistory = _aboutView && _aboutView->aboveHistory();
 	const auto aboutBelowHistory = _aboutView && !aboutAboveHistory;
-	auto newHistoryMarginBottom = st::historyPaddingBottom;
+	// 悬浮输入区已预留间距，不再叠加列表底部留白。
+	auto newHistoryMarginBottom = overlap ? 0 : st::historyPaddingBottom;
 	if (aboutBelowHistory) {
 		accumulate_max(newHistoryMarginBottom, _aboutView->height);
 	}
