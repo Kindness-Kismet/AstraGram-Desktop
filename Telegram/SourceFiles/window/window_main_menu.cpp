@@ -374,7 +374,11 @@ MainMenu::MainMenu(
 	object_ptr<Ui::VerticalLayout>(_inner.get()),
 	{ st::mainMenuContentMargin, st::mainMenuSkip,
 		st::mainMenuContentMargin, 0 }))
-, _footer(_inner->add(object_ptr<Ui::RpWidget>(_inner.get())))
+, _footer(_inner->add(
+	object_ptr<Ui::FixedHeightWidget>(
+		_inner.get(),
+		st::mainMenuFooterHeight),
+	{ 0, st::mainMenuSkip, 0, 0 }))
 , _telegram(
 	Ui::CreateChild<Ui::FlatLabel>(_footer.get(), st::mainMenuTelegramLabel))
 , _version(AddVersionLabel(_footer)) {
@@ -400,7 +404,10 @@ MainMenu::MainMenu(
 		}
 	});
 
-	_footer->heightValue(
+	rpl::combine(
+		_footer->heightValue(),
+		_telegram->heightValue(),
+		_version->heightValue()
 	) | rpl::on_next([=] {
 		_telegram->moveToLeft(st::mainMenuFooterLeft, _footer->height() - st::mainMenuTelegramBottom - _telegram->height());
 		_version->moveToLeft(st::mainMenuFooterLeft, _footer->height() - st::mainMenuVersionBottom - _version->height());
@@ -410,18 +417,11 @@ MainMenu::MainMenu(
 		auto p = QPainter(_footer);
 		p.fillRect(
 			st::mainMenuFooterLeft,
-			_footer->height() - st::mainMenuFooterHeightMin,
+			0,
 			_footer->width() - 2 * st::mainMenuFooterLeft,
 			st::lineWidth,
 			st::windowDividerFg);
 	}, _footer->lifetime());
-
-	rpl::combine(
-		heightValue(),
-		_inner->heightValue()
-	) | rpl::on_next([=] {
-		updateInnerControlsGeometry();
-	}, _inner->lifetime());
 
 	parentResized();
 
@@ -1051,21 +1051,6 @@ void MainMenu::updateControlsGeometry() {
 		width());
 	const auto top = st::mainMenuCoverHeight - st::lineWidth;
 	_scroll->setGeometry(0, top, width(), height() - top);
-	updateInnerControlsGeometry();
-}
-
-void MainMenu::updateInnerControlsGeometry() {
-	const auto contentHeight = _accounts->height()
-		+ _shadow->height()
-		+ st::mainMenuSkip
-		+ _menu->height();
-	const auto available = height() - st::mainMenuCoverHeight - contentHeight;
-	const auto footerHeight = std::max(
-		available,
-		st::mainMenuFooterHeightMin);
-	if (_footer->height() != footerHeight) {
-		_footer->resize(_footer->width(), footerHeight);
-	}
 }
 
 void MainMenu::chooseEmojiStatus() {

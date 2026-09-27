@@ -42,7 +42,7 @@ mainMenuScroll: ScrollArea(defaultSolidScroll) {
 mainMenuSkip: 6px;
 mainMenuContentMargin: 4px;
 mainMenuSeparatorPadding: margins(20px, 6px, 20px, 6px);
-mainMenuFooterHeightMin: 72px;
+mainMenuFooterHeight: 72px;
 mainMenu: Menu(defaultMenu) {
 	itemFg: windowBoldFg;
 	itemFgOver: windowBoldFgOver;
