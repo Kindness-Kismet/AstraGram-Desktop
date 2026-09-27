@@ -376,20 +376,22 @@ fork's own revision on that base.
 Releasing is driven entirely by the version file:
 
 1. Bump `Telegram/build/version`, the only place the app version lives (CMake
-   generates the values for the code and Windows resources from it), and write
-   the notes into `.github/CHANGELOG.md`.
+   generates the values for the code and Windows resources from it), and
+   rewrite `.github/CHANGELOG.md` with the changes in this version: English
+   entries first, then a `---` line, then the matching Simplified Chinese
+   entries.
 2. Push to `main`. The **Version tag** workflow notices the version change,
-   checks that release notes for it exist, and creates the `v<version>` tag.
+   validates the release notes, and creates the `v<version>` tag.
 3. The **Release** workflow picks the tag up, dispatches the platform build
    repositories in parallel, and publishes only artifacts that trace back to
    that exact commit and workflow run. Every artifact carries a provenance
    manifest; the publish job verifies source run, builder run, version, file
    set, size and hash before anything goes out.
 
-Both workflows refuse to go further if the version has no section in
-`.github/CHANGELOG.md`, and that same section becomes the GitHub release notes
-— so the notes can never drift from the version being shipped. If the tag
-already exists, the tagging job reports it and stops instead of moving it.
+Both workflows refuse to go further if `.github/CHANGELOG.md` does not follow
+that bilingual format, and the whole file becomes the GitHub release notes.
+If the tag already exists, the tagging job reports it and stops instead of
+moving it.
 
 <br>
 
