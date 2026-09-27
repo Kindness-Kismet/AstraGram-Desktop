@@ -9,6 +9,7 @@ from pathlib import Path
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from build_support.changelog import validate_changelog
 from build_support.paths import ROOT, VERSION_FILE
 
 _PATTERN = re.compile(r"^\s*(\d+)\.(\d+)\.(\d+)(?:\.(\d+|beta))?\s*$")
@@ -126,7 +127,7 @@ def apply_version(version: Version, check_changelog: bool = True) -> list[str]:
     if version.text != upstream:
         raise SystemExit(f"Version {version.text_small} must use the official baseline {upstream} as its first three parts.")
     if check_changelog:
-        _check_changelog(version)
+        _check_changelog()
 
     # 版本文件是唯一来源，代码与 Windows 资源在 CMake 配置阶段从它生成。
     return _replace(VERSION_FILE, [
@@ -144,16 +145,11 @@ def apply_version(version: Version, check_changelog: bool = True) -> list[str]:
     ])
 
 
-def _check_changelog(version: Version) -> None:
+def _check_changelog() -> None:
     if not _CHANGELOG.is_file():
         raise SystemExit(f"{_CHANGELOG} not found.")
-    # 发布正文按二级标题提取，与 scripts/release_notes.py 的规则一致。
-    heading = re.compile(rf"^##[ \t]+{re.escape(version.text_small)}[ \t]*$")
-    count = sum(1 for line in _CHANGELOG.read_text(encoding="utf-8").splitlines() if heading.match(line))
-    if count == 0:
-        raise SystemExit(f"Changelog section '## {version.text_small}' not found in {_CHANGELOG}.")
-    if count > 1:
-        raise SystemExit(f"Found {count} changelog sections for {version.text_small}, expected one.")
+    # 与 scripts/release_notes.py 使用同一套规则，发版前就拦下格式错误。
+    validate_changelog(_CHANGELOG.read_text(encoding="utf-8"))
 
 
 def _replace(path: Path, rules: list[tuple[str, str]]) -> list[str]:
@@ -193,7 +189,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--skip-changelog",
         action="store_true",
-        help="Do not require a matching section in .github/CHANGELOG.md",
+        help="Do not validate .github/CHANGELOG.md",
     )
     args = parser.parse_args(argv)
 

@@ -68,12 +68,10 @@ jobs:
           echo "appversion=${appversion}" >> "$GITHUB_OUTPUT"
 
       - name: Validate release inputs.
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
           python3 scripts/release_notes.py \
-            .github/CHANGELOG.md "$VERSION" "$RUNNER_TEMP/release-notes.md"
+            .github/CHANGELOG.md "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md"
 
       # 一个版本号只对应一个提交；重跑时 tag 已指向本提交则直接沿用。
@@ -492,12 +490,10 @@ jobs:
           find release-artifacts -maxdepth 1 -type f -printf '%f\n' | sort
 
       - name: Generate release notes.
-        env:
-          VERSION: ${{ needs.validate.outputs.version }}
         run: |
           set -euo pipefail
           python3 scripts/release_notes.py \
-            .github/CHANGELOG.md "$VERSION" "$RUNNER_TEMP/release-notes.md"
+            .github/CHANGELOG.md "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md"
 
       - name: Verify release target.
