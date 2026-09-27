@@ -801,10 +801,10 @@ defaultEmojiPan: EmojiPan {
 	pathBg: windowBgRipple;
 	pathFg: windowBgOver;
 	textFg: windowFg;
-	categoriesBg: emojiPanCategories;
+	categoriesBg: emojiPanBg;
 	categoriesBgOver: windowBgRipple;
-	fadeLeft: icon {{ "fade_horizontal-flip_horizontal", emojiPanCategories }};
-	fadeRight: icon {{ "fade_horizontal", emojiPanCategories }};
+	fadeLeft: icon {{ "fade_horizontal-flip_horizontal", emojiPanBg }};
+	fadeRight: icon {{ "fade_horizontal", emojiPanBg }};
 	menu: popupMenuWithIcons;
 	menuAttention: menuWithIconsAttention;
 	expandedSeparator: MenuSeparator(defaultMenuSeparator) {
