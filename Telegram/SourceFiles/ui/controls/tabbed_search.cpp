@@ -6,6 +6,9 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/controls/tabbed_search.h"
+#include "ayu/features/window_material/window_material.h"
+
+#include <QtGui/QPainterPath>
 
 #include "base/qt_signal_producer.h"
 #include "lang/lang_keys.h"
@@ -429,6 +432,19 @@ void SearchWithGroups::scrollGroupsTo(int left) {
 }
 
 void SearchWithGroups::initEdges() {
+	rpl::combine(
+		sizeValue(),
+		AyuFeatures::WindowMaterial::changes(this)
+	) | rpl::on_next([=](QSize size, bool material) {
+		if (!material) {
+			clearMask();
+			return;
+		}
+		auto path = QPainterPath();
+		path.addRoundedRect(QRectF(QPointF(), QSizeF(size)),
+			size.height() / 2., size.height() / 2.);
+		setMask(QRegion(path.toFillPolygon().toPolygon()));
+	}, lifetime());
 	paintRequest() | rpl::on_next([=](QRect clip) {
 		QPainter(this).fillRect(clip, _st.bg);
 	}, lifetime());
@@ -445,6 +461,9 @@ void SearchWithGroups::initEdges() {
 		}
 		edge->paintRequest(
 		) | rpl::on_next([=] {
+			if (AyuFeatures::WindowMaterial::isActive(this)) {
+				return;
+			}
 			const auto ratio = edge->devicePixelRatioF();
 			ensureRounding(height(), ratio);
 			const auto size = _rounding.height();

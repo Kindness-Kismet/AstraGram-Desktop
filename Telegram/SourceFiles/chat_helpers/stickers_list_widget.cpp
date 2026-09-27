@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/stickers_list_widget.h"
+#include "ayu/features/window_material/window_material.h"
 
 #include "base/options.h"
 #include "base/timer_rpl.h"
@@ -264,6 +265,7 @@ StickersListWidget::StickersListWidget(
 	if (st().bg->c.alpha() > 0) {
 		setAttribute(Qt::WA_OpaquePaintEvent);
 	}
+	AyuFeatures::WindowMaterial::watchSurface(this);
 
 	if (!_isMasks && !_isEffects) {
 		setupSearch();
@@ -1452,7 +1454,7 @@ void StickersListWidget::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 	auto clip = e->rect();
 	if (st().bg->c.alpha() > 0) {
-		p.fillRect(clip, st().bg);
+		p.fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(this, st().bg->c));
 	}
 
 	if (_searchSwapAnimation.animating()) {
