@@ -160,7 +160,7 @@ private:
 	const std::shared_ptr<Show> _show;
 	const not_null<Main::Session*> _session;
 	const style::EmojiPan &_st;
-	QPixmap _cache;
+	QPixmap _foregroundCache;
 	MentionRows _mrows;
 	HashtagRows _hrows;
 	BotCommandRows _brows;

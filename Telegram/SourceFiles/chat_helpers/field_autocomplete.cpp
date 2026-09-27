@@ -39,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/clip/media_clip_reader.h"
 #include "menu/menu_send.h" // SendMenu::FillSendMenu
 #include "storage/storage_account.h"
+#include "ui/chat/floating_bar.h"
 #include "ui/effects/message_sending_animation_common.h"
 #include "ui/effects/path_shift_gradient.h"
 #include "ui/image/image.h"
@@ -141,7 +142,6 @@ private:
 	void paintEvent(QPaintEvent *e) override;
 	void paintStickers(Painter &p, QRect clip);
 	void paintRows(Painter &p, QRect clip);
-	void paintShadow(QPainter &p, int top);
 	void resizeEvent(QResizeEvent *e) override;
 
 	void enterEventHook(QEnterEvent *e) override;
@@ -193,7 +193,6 @@ private:
 	bool _mouseSelection = false;
 	bool _overDelete = false;
 	bool _previewShown = false;
-	bool _adjustShadowLeft = false;
 
 	const std::unique_ptr<Ui::PathShiftGradient> _pathGradient;
 	StickerPremiumMark _premiumMark;
@@ -258,6 +257,16 @@ FieldAutocomplete::FieldAutocomplete(
 , _ephemeralHintTimer([=] { showPendingEphemeralHint(); }) {
 	hide();
 
+	setObjectName(u"chatPopup.autocomplete"_q);
+	AyuUi::FloatingSurface::attach(this, {
+		.radius = st::windowCardRadius,
+		.background = [=] { return _st.bg->c; },
+		.border = [] { return st::windowDividerFg->c; },
+		.borderWidth = st::lineWidth,
+		.maskInput = true,
+		.opacity = [=] { return _opacityAnimation.value(_hiding ? 0. : 1.); },
+	});
+	_scroll->setAutoFillBackground(false);
 	_scroll->setGeometry(rect());
 
 	_inner = _scroll->setOwnedWidget(
@@ -368,18 +377,10 @@ auto FieldAutocomplete::choosingProcesses() const
 FieldAutocomplete::~FieldAutocomplete() = default;
 
 void FieldAutocomplete::paintEvent(QPaintEvent *e) {
-	auto p = Painter(this);
-
-	const auto opacity = _opacityAnimation.value(_hiding ? 0. : 1.);
-	if (opacity < 1.) {
-		if (opacity > 0.) {
-			p.setOpacity(opacity);
-			p.drawPixmap(0, 0, _cache);
-		}
-		return;
+	if (!_foregroundCache.isNull()) {
+		auto p = Painter(this);
+		p.drawPixmap(0, 0, _foregroundCache);
 	}
-
-	p.fillRect(rect(), _st.bg);
 }
 
 void FieldAutocomplete::showFiltered(
@@ -844,6 +845,7 @@ void FieldAutocomplete::rowsUpdated(
 
 		const auto hidden = _hiding || isHidden();
 		if (hidden) {
+			_foregroundCache = QPixmap();
 			show();
 			_scroll->show();
 		}
@@ -968,22 +970,24 @@ void FieldAutocomplete::hideAnimated() {
 	}
 	hideEphemeralHint();
 
-	if (_cache.isNull()) {
+	if (_foregroundCache.isNull()) {
 		_scroll->show();
-		_cache = Ui::GrabWidget(this);
+		// 动画只缓存列表前景，磨砂背景和透明度由公共表面绘制。
+		_foregroundCache = Ui::GrabWidget(_scroll.data());
 	}
 	_scroll->hide();
+	update();
 	_hiding = true;
 	_opacityAnimation.start(
 		[=] { animationCallback(); },
 		1.,
 		0.,
 		st::emojiPanDuration);
-	setAttribute(Qt::WA_OpaquePaintEvent, false);
 }
 
 void FieldAutocomplete::hideFinish() {
 	hide();
+	_foregroundCache = QPixmap();
 	_hiding = false;
 	_filter = u"-"_q;
 	_inner->clearSel(true);
@@ -993,12 +997,14 @@ void FieldAutocomplete::showAnimated() {
 	if (!isHidden() && !_hiding) {
 		return;
 	}
-	if (_cache.isNull()) {
+	if (_foregroundCache.isNull()) {
 		_stickersSeed = base::RandomValue<uint64>();
 		_scroll->show();
-		_cache = Ui::GrabWidget(this);
+		// 动画只缓存列表前景，磨砂背景和透明度由公共表面绘制。
+		_foregroundCache = Ui::GrabWidget(_scroll.data());
 	}
 	_scroll->hide();
+	update();
 	_hiding = false;
 	show();
 	_opacityAnimation.start(
@@ -1006,14 +1012,13 @@ void FieldAutocomplete::showAnimated() {
 		0.,
 		1.,
 		st::emojiPanDuration);
-	setAttribute(Qt::WA_OpaquePaintEvent, false);
 }
 
 void FieldAutocomplete::animationCallback() {
-	update();
+	graphicsEffect()->update();
 	if (!_opacityAnimation.animating()) {
-		_cache = QPixmap();
-		setAttribute(Qt::WA_OpaquePaintEvent);
+		_foregroundCache = QPixmap();
+		update();
 		if (_hiding) {
 			hideFinish();
 		} else {
@@ -1119,12 +1124,6 @@ FieldAutocomplete::Inner::Inner(
 	) | rpl::on_next([=] {
 		update();
 	}, lifetime());
-
-	_show->adjustShadowLeft(
-	) | rpl::on_next([=](bool adjust) {
-		_adjustShadowLeft = adjust;
-		update();
-	}, lifetime());
 }
 
 void FieldAutocomplete::Inner::paintEvent(QPaintEvent *e) {
@@ -1139,14 +1138,7 @@ void FieldAutocomplete::Inner::paintEvent(QPaintEvent *e) {
 		paintStickers(p, clip);
 	} else {
 		paintRows(p, clip);
-		paintShadow(p, _parent->innerBottom() - st::lineWidth);
 	}
-	paintShadow(p, _parent->innerTop());
-}
-
-void FieldAutocomplete::Inner::paintShadow(QPainter &p, int top) {
-	const auto left = _adjustShadowLeft ? st::lineWidth : 0;
-	p.fillRect(left, top, width() - left, st::lineWidth, st::shadowFg);
 }
 
 void FieldAutocomplete::Inner::paintStickers(Painter &p, QRect clip) {
@@ -1282,12 +1274,9 @@ void FieldAutocomplete::Inner::paintRows(Painter &p, QRect clip) {
 		const auto textTop = top + st::mentionTop;
 		const auto selected = (i == _sel);
 		if (selected) {
-			p.fillRect(
-				0,
-				top,
-				width(),
-				st::mentionHeight,
-				st::mentionBgOver);
+			Ui::PaintChatBar(p, this,
+				QRect(0, top, width(), st::mentionHeight),
+				_st.bg->c, st::mentionBgOver->c);
 			if (!_hrows->empty() || isRemovableMentionRow(i)) {
 				const auto &icon = st::smallCloseIconOver;
 				const auto skip = (st::mentionHeight - icon.height()) / 2;
