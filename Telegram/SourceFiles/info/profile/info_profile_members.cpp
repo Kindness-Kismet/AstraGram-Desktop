@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_members.h"
+#include "ayu/features/window_material/window_material.h"
 
 #include <rpl/combine.h>
 #include "info/profile/info_profile_widget.h"
@@ -147,6 +148,7 @@ void Members::setupHeader() {
 		parent,
 		rpl::single(QString()));
 	_openMembers->setObjectName(u"profile.members"_q);
+	AyuFeatures::WindowMaterial::watchSurface(_openMembers);
 
 	object_ptr<FloatingIcon>(
 		parent,
