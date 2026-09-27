@@ -7,7 +7,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_main_menu.h"
 
-#include "ayu/features/window_material/window_material.h"
 #include "apiwrap.h"
 #include "base/event_filter.h"
 #include "base/qt_signal_producer.h"
@@ -363,7 +362,6 @@ MainMenu::MainMenu(
 	Ui::CreateChild<Ui::FlatLabel>(_footer.get(), st::mainMenuTelegramLabel))
 , _version(AddVersionLabel(_footer)) {
 	setAttribute(Qt::WA_OpaquePaintEvent);
-	AyuFeatures::WindowMaterial::allowMaterialLayer(this);
 	setObjectName(u"mainMenu"_q);
 	_scroll->setObjectName(u"mainMenu.scroll"_q);
 	_toggleAccounts->setObjectName(u"mainMenu.accounts"_q);
@@ -499,7 +497,7 @@ MainMenu::MainMenu(
 			snowRaw->paintRequest(
 			) | rpl::on_next([=](const QRect &r) {
 				auto p = Painter(snowRaw);
-				p.fillRect(r, AyuFeatures::WindowMaterial::surfaceColor(this, st::mainMenuBg->c));
+				p.fillRect(r, st::mainMenuBg);
 				drawCover(p);
 				drawName(p);
 				snow->paint(p, snowRaw->rect());
@@ -604,7 +602,6 @@ void MainMenu::setupArchive() {
 		tr::lng_archived_name(),
 		st::mainMenuButton,
 		{ &st::menuIconArchiveOpen });
-	AyuFeatures::WindowMaterial::watchSurface(button);
 	inner->add(
 		object_ptr<Ui::PlainShadow>(inner, st::windowDividerFg),
 		st::mainMenuSeparatorPadding);
@@ -762,7 +759,6 @@ void MainMenu::setupMenu() {
 			std::move(text),
 			st::mainMenuButton,
 			std::move(descriptor));
-		AyuFeatures::WindowMaterial::watchSurface(button);
 		// name 是调试服务端的语义寻址标识（control.click menu.xxx），空则不打。
 		if (!name.isEmpty()) {
 			button->setObjectName(u"menu."_q + std::move(name));
@@ -1103,7 +1099,7 @@ void MainMenu::paintEvent(QPaintEvent *e) {
 	const auto clip = e->rect();
 	const auto cover = QRect(0, 0, width(), st::mainMenuCoverHeight);
 
-	p.fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(this, st::mainMenuBg->c));
+	p.fillRect(clip, st::mainMenuBg);
 	if (cover.intersects(clip)) {
 		drawCover(p);
 		drawName(p);
@@ -1113,7 +1109,7 @@ void MainMenu::paintEvent(QPaintEvent *e) {
 void MainMenu::drawCover(Painter &p) {
 	auto hq = PainterHighQualityEnabler(p);
 	p.setPen(Qt::NoPen);
-	p.setBrush(AyuFeatures::WindowMaterial::cardColor(this, st::windowBgOver->c));
+	p.setBrush(st::windowBgOver);
 	p.drawRoundedRect(
 		QRect(0, 0, width(), st::mainMenuCoverHeight).marginsRemoved(
 			QMargins(st::mainMenuCoverMargin, st::mainMenuCoverMargin,

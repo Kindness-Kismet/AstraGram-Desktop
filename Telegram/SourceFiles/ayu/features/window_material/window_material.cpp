@@ -88,7 +88,7 @@ private:
 			rebind();
 		} else if (event->type() == QEvent::DynamicPropertyChange) {
 			const auto name = static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName();
-			if (name == kRevisionProperty || name == "AyuWindowMaterialAllowedLayer") {
+			if (name == kRevisionProperty) {
 				refresh();
 			}
 		}
@@ -194,8 +194,7 @@ bool isActive(const QWidget *widget) {
 		return false;
 	}
 	for (auto ancestor = widget; ancestor; ancestor = ancestor->parentWidget()) {
-		if (dynamic_cast<const Ui::LayerWidget*>(ancestor)
-			&& !ancestor->property("AyuWindowMaterialAllowedLayer").toBool()) {
+		if (dynamic_cast<const Ui::LayerWidget*>(ancestor)) {
 			return false;
 		}
 	}
@@ -214,11 +213,6 @@ void watchSurface(not_null<QWidget*> widget) {
 		widget->setProperty(kWatchProperty, true);
 		new SurfaceWatcher(widget);
 	}
-}
-
-void allowMaterialLayer(not_null<Ui::LayerWidget*> widget) {
-	widget->setProperty("AyuWindowMaterialAllowedLayer", true);
-	watchSurface(widget);
 }
 
 rpl::producer<bool> changes(not_null<QWidget*> widget) {
