@@ -130,11 +130,11 @@ protected:
 private:
 	void paint(Painter &&p) {
 		const auto selected = isSelected();
-		if (selected && _st.itemBgOver->c.alpha() < 255) {
-			p.fillRect(0, 0, width(), _height, _st.itemBg);
-		}
-		const auto bg = selected ? _st.itemBgOver : _st.itemBg;
-		p.fillRect(0, 0, width(), _height, bg);
+		Ui::Menu::PaintItemBackground(
+			p,
+			_st,
+			QRect(0, 0, width(), _height),
+			selected);
 		if (isEnabled()) {
 			paintRipple(p, 0, 0);
 		}
@@ -210,11 +210,11 @@ protected:
 private:
 	void paint(Painter &&p) {
 		const auto selected = isSelected();
-		if (selected && _st.itemBgOver->c.alpha() < 255) {
-			p.fillRect(0, 0, width(), _height, _st.itemBg);
-		}
-		const auto bg = selected ? _st.itemBgOver : _st.itemBg;
-		p.fillRect(0, 0, width(), _height, bg);
+		Ui::Menu::PaintItemBackground(
+			p,
+			_st,
+			QRect(0, 0, width(), _height),
+			selected);
 		if (isEnabled()) {
 			paintRipple(p, 0, 0);
 		}

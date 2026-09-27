@@ -35,6 +35,9 @@ public:
 	void finishAnimating();
 
 	void setShadowGeometryPostprocess(Fn<QRect(QRect)> postprocess);
+	void setBackgroundPainter(Fn<void(QPainter&, QRect)> painter);
+	[[nodiscard]] QRect backgroundRect(QWidget *relativeTo) const;
+	void updateBackground();
 
 	void setContent(rpl::producer<Ui::MessageBarContent> content);
 	void setRightButton(object_ptr<Ui::RpWidget> button);
@@ -71,6 +74,7 @@ private:
 	rpl::event_stream<> _barRightClicks;
 	rpl::event_stream<> _contextMenuRequested;
 	Fn<QRect(QRect)> _shadowGeometryPostprocess;
+	Fn<void(QPainter&, QRect)> _backgroundPainter;
 	bool _shouldBeShown = false;
 	bool _forceHidden = false;
 

@@ -741,10 +741,11 @@ BotAction::BotAction(
 
 void BotAction::paint(Painter &p) {
 	const auto selected = isSelected();
-	if (selected && _st.itemBgOver->c.alpha() < 255) {
-		p.fillRect(0, 0, width(), _height, _st.itemBg);
-	}
-	p.fillRect(0, 0, width(), _height, selected ? _st.itemBgOver : _st.itemBg);
+	Ui::Menu::PaintItemBackground(
+		p,
+		_st,
+		QRect(0, 0, width(), _height),
+		selected);
 	if (isEnabled()) {
 		paintRipple(p, 0, 0);
 	}
@@ -805,7 +806,7 @@ QPoint BotAction::prepareRippleStartPosition() const {
 }
 
 QImage BotAction::prepareRippleMask() const {
-	return Ui::RippleAnimation::RectMask(size());
+	return Ui::Menu::ItemRippleMask(_st, size());
 }
 
 int BotAction::contentHeight() const {
@@ -878,10 +879,20 @@ MenuBotIcon::MenuBotIcon(
 	show();
 }
 
+void MenuBotIcon::setColor(const style::color &color) {
+	_color = &color;
+	_image = QImage();
+	update();
+}
+
 void MenuBotIcon::paintEvent(QPaintEvent *e) {
 	if (_icon) {
 		auto p = QPainter(this);
-		_icon->paint(p, 0, 0, width());
+		if (_color) {
+			_icon->paint(p, 0, 0, width(), (*_color)->c);
+		} else {
+			_icon->paint(p, 0, 0, width());
+		}
 		return;
 	}
 	validate();
@@ -910,7 +921,9 @@ void MenuBotIcon::validate() {
 		}
 	}
 	if (_image.isNull()) {
-		_image = style::colorizeImage(_mask, st::menuIconColor);
+		_image = style::colorizeImage(
+			_mask,
+			_color ? *_color : st::menuIconColor);
 	}
 }
 

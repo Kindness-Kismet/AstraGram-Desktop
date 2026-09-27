@@ -521,6 +521,9 @@ public:
 		QWidget *parent,
 		const style::icon *icon);
 
+	// 替换图标颜色，未设置时使用菜单图标色。
+	void setColor(const style::color &color);
+
 private:
 	void paintEvent(QPaintEvent *e) override;
 
@@ -528,6 +531,7 @@ private:
 
 	std::shared_ptr<Data::DocumentMedia> _media;
 	const style::icon *_icon = nullptr;
+	const style::color *_color = nullptr;
 	QImage _image;
 	QImage _mask;
 

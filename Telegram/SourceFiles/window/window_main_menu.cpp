@@ -69,6 +69,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_peer_menu.h"
 #include "window/window_session_controller.h"
 #include "styles/style_chat.h" // popupMenuExpandedSeparator
+#include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 #include "styles/style_window.h"
@@ -107,6 +108,22 @@ constexpr auto kPlayStatusLimit = 12;
 	const auto now = QDate::currentDate();
 	return (now.month() == 12 && now.day() >= 24)
 		|| (now.month() == 1 && now.day() == 1);
+}
+
+// 外侧上下两角按 boxRadius 留空；贴窗口一侧的两角移出可见区域，保持直角。
+void FillBackground(QPainter &p, QSize size) {
+	const auto radius = st::boxRadius;
+	auto path = QPainterPath();
+	path.addRoundedRect(
+		QRect(
+			style::RightToLeft() ? 0 : -radius,
+			0,
+			size.width() + radius,
+			size.height()),
+		radius,
+		radius);
+	auto hq = PainterHighQualityEnabler(p);
+	p.fillPath(path, st::mainMenuBg);
 }
 
 [[nodiscard]] rpl::producer<TextWithEntities> PreferencesLabel() {
@@ -340,7 +357,7 @@ MainMenu::MainMenu(
 	[=] { return controller->isGifPausedAtLeastFor(GifPauseReason::Layer); },
 	0,
 	Info::Profile::BadgeType::Extera | Info::Profile::BadgeType::ExteraSupporter | Info::Profile::BadgeType::ExteraCustom))
-, _scroll(this, st::defaultSolidScroll)
+, _scroll(this, st::mainMenuScroll)
 , _inner(_scroll->setOwnedWidget(
 	object_ptr<Ui::VerticalLayout>(_scroll.data())))
 , _topShadowSkip(_inner->add(
@@ -361,7 +378,6 @@ MainMenu::MainMenu(
 , _telegram(
 	Ui::CreateChild<Ui::FlatLabel>(_footer.get(), st::mainMenuTelegramLabel))
 , _version(AddVersionLabel(_footer)) {
-	setAttribute(Qt::WA_OpaquePaintEvent);
 	setObjectName(u"mainMenu"_q);
 	_scroll->setObjectName(u"mainMenu.scroll"_q);
 	_toggleAccounts->setObjectName(u"mainMenu.accounts"_q);
@@ -497,7 +513,7 @@ MainMenu::MainMenu(
 			snowRaw->paintRequest(
 			) | rpl::on_next([=](const QRect &r) {
 				auto p = Painter(snowRaw);
-				p.fillRect(r, st::mainMenuBg);
+				FillBackground(p, size());
 				drawCover(p);
 				drawName(p);
 				snow->paint(p, snowRaw->rect());
@@ -601,7 +617,7 @@ void MainMenu::setupArchive() {
 		inner,
 		tr::lng_archived_name(),
 		st::mainMenuButton,
-		{ &st::menuIconArchiveOpen });
+		{ .icon = &st::menuIconArchiveOpen, .color = &st::menuIconFg });
 	inner->add(
 		object_ptr<Ui::PlainShadow>(inner, st::windowDividerFg),
 		st::mainMenuSeparatorPadding);
@@ -754,6 +770,7 @@ void MainMenu::setupMenu() {
 			rpl::producer<QString> text,
 			IconDescriptor &&descriptor,
 			QString name = {}) {
+		descriptor.color = &st::menuIconFg;
 		const auto button = AddButtonWithIcon(
 			section,
 			std::move(text),
@@ -1099,7 +1116,7 @@ void MainMenu::paintEvent(QPaintEvent *e) {
 	const auto clip = e->rect();
 	const auto cover = QRect(0, 0, width(), st::mainMenuCoverHeight);
 
-	p.fillRect(clip, st::mainMenuBg);
+	FillBackground(p, size());
 	if (cover.intersects(clip)) {
 		drawCover(p);
 		drawName(p);

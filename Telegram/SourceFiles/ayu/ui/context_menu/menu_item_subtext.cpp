@@ -10,7 +10,6 @@
 #include "styles/style_chat.h"
 #include "styles/style_menu_icons.h"
 #include "ui/painter.h"
-#include "ui/effects/ripple_animation.h"
 #include "ui/widgets/menu/menu_action.h"
 #include "window/window_session_controller.h"
 
@@ -107,10 +106,11 @@ ActionWithSubText::ActionWithSubText(
 
 void ActionWithSubText::paint(Painter &p) {
 	const auto selected = isSelected();
-	if (selected && _st.itemBgOver->c.alpha() < 255) {
-		p.fillRect(0, 0, width(), _height, _st.itemBg);
-	}
-	p.fillRect(0, 0, width(), _height, selected ? _st.itemBgOver : _st.itemBg);
+	Ui::Menu::PaintItemBackground(
+		p,
+		_st,
+		QRect(0, 0, width(), _height),
+		selected);
 	if (isEnabled()) {
 		paintRipple(p, 0, 0);
 	}
@@ -178,7 +178,7 @@ QPoint ActionWithSubText::prepareRippleStartPosition() const {
 }
 
 QImage ActionWithSubText::prepareRippleMask() const {
-	return Ui::RippleAnimation::RectMask(size());
+	return Ui::Menu::ItemRippleMask(_st, size());
 }
 
 int ActionWithSubText::contentHeight() const {

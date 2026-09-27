@@ -1496,7 +1496,26 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 	}
 
 	Painter p(this);
-	auto clip = e->rect();
+	paintHistory(p, e->rect(), false);
+	_widget->invalidateFrostedBackground(
+		e->rect().translated(mapTo(_widget.get(), QPoint())));
+}
+
+bool HistoryInner::paintBackdrop(Painter &p, const QRect &clip) {
+	if (hasPendingResizedItems()) {
+		return false;
+	}
+	p.save();
+	p.setClipRect(clip, Qt::IntersectClip);
+	paintHistory(p, clip, true);
+	p.restore();
+	return true;
+}
+
+void HistoryInner::paintHistory(
+		Painter &p,
+		const QRect &clip,
+		bool backdrop) {
 
 	auto context = preparePaintContext(clip);
 	context.gestureHorizontal = _gestureHorizontal;
@@ -1534,8 +1553,10 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 		return;
 	}
 
-	_translateTracker->startBunch();
-	const auto metricsStale = base::take(_readMetricsStale);
+	if (!backdrop) {
+		_translateTracker->startBunch();
+	}
+	const auto metricsStale = !backdrop && base::take(_readMetricsStale);
 	if (metricsStale) {
 		_readMetricsTracker->startBatch(_visibleAreaTop, _visibleAreaBottom);
 	}
@@ -1545,6 +1566,10 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 	auto startInteractions = base::flat_set<not_null<const Element*>>();
 	const auto markingAsViewed = _widget->markingContentsRead();
 	const auto guard = gsl::finally([&] {
+		// 模糊采样只绘制，不改变已读、翻译或播放状态。
+		if (backdrop) {
+			return;
+		}
 		if (_pinnedItem) {
 			_translateTracker->add(_pinnedItem);
 		}
@@ -1576,6 +1601,9 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 			not_null<Element*> view,
 			int top,
 			int height) {
+		if (backdrop) {
+			return;
+		}
 		_translateTracker->add(view);
 		const auto item = view->data();
 		if (metricsStale
@@ -1693,8 +1721,9 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 			}
 
 			const auto height = view->height();
-			context.reactionInfo
-				= _reactionsManager->currentReactionPaintInfo();
+			context.reactionInfo = backdrop
+				? nullptr
+				: _reactionsManager->currentReactionPaintInfo().get();
 			context.outbg = view->hasOutLayout();
 			const auto selection = itemRenderSelection(
 				view,
@@ -1762,8 +1791,9 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 			if ((context.clip.y() < height)
 				&& (hdrawtop < top + height)
 				&& !sendingAnimation.hasAnimatedMessage(item)) {
-				context.reactionInfo
-					= _reactionsManager->currentReactionPaintInfo();
+				context.reactionInfo = backdrop
+					? nullptr
+					: _reactionsManager->currentReactionPaintInfo().get();
 				context.outbg = view->hasOutLayout();
 				const auto selection = itemRenderSelection(
 					view,
@@ -1808,12 +1838,13 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 				item->id.bare);
 			if (shift) {
 				p.translate(shift, 0);
-				update(
-					QRect(
+				if (!backdrop) {
+					update(QRect(
 						st::historyPhotoLeft + std::min(shift, 0),
 						userpicTop,
 						st::msgPhotoSize + std::abs(shift),
 						st::msgPhotoSize));
+				}
 			}
 			if (const auto from = item->displayFrom()) {
 				Dialogs::Ui::PaintUserpic(
@@ -1929,8 +1960,10 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 		return true;
 	});
 
-	_replyButtonManager->paint(p, context);
-	_reactionsManager->paint(p, context);
+	if (!backdrop) {
+		_replyButtonManager->paint(p, context);
+		_reactionsManager->paint(p, context);
+	}
 }
 
 bool HistoryInner::eventHook(QEvent *e) {

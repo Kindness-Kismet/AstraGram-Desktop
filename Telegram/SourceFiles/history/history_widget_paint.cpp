@@ -7,7 +7,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
 
-#include "ayu/features/window_material/window_material.h"
 
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
@@ -220,6 +219,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtGui/QWindow>
 #include <QtCore/QMimeData>
+#include <QtGui/QPainterPath>
 
 // AyuGram includes
 #include "ayu/ayu_settings.h"
@@ -268,12 +268,18 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 		capsuleOutline.height() / 2.);
 	{
 		auto hq = PainterHighQualityEnabler(p);
+		auto path = QPainterPath();
+		path.addRoundedRect(capsuleOutline, capsuleRadius, capsuleRadius);
+		p.save();
+		p.setClipPath(path, Qt::IntersectClip);
+		paintFrostedBackground(p, capsuleRect, (flatBackground
+			? st::windowBgOver
+			: st::historyComposeAreaBg)->c);
+		p.restore();
 		p.setPen(QPen((flatBackground
 			? st::filterInputBorderFg
 			: st::windowDividerFg)->c, st::lineWidth));
-		p.setBrush(AyuFeatures::WindowMaterial::cardColor(this, (flatBackground
-			? st::windowBgOver
-			: st::historyComposeAreaBg)->c));
+		p.setBrush(Qt::NoBrush);
 		p.drawRoundedRect(capsuleOutline, capsuleRadius, capsuleRadius);
 	}
 	// 回复/编辑/转发条的内容整体右移,落进胶囊内部
@@ -556,6 +562,7 @@ void HistoryWidget::paintEvent(QPaintEvent *e) {
 		controller()->currentChatTheme(),
 		this,
 		e->rect());
+	invalidateFrostedBackground(e->rect());
 
 	Painter p(this);
 	const auto clip = e->rect();
@@ -567,7 +574,7 @@ void HistoryWidget::paintEvent(QPaintEvent *e) {
 			|| readyToForward()
 			|| _kbShown
 			|| _suggestOptions) {
-			if (!isSearching()) {
+			if (!isSearching() && _composeSurface->isHidden()) {
 				drawField(p, clip);
 			}
 		}

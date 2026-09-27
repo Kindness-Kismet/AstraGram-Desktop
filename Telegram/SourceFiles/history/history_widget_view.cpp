@@ -241,6 +241,7 @@ void HistoryWidget::updateControlsVisibility() {
 		if (fieldDisabledRemoved) {
 			_fieldDisabled = nullptr;
 		}
+		updateComposeSurfaceVisibility();
 	});
 	const auto hideField = [&] {
 		if (!_field->isHidden()) {

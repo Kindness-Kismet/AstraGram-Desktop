@@ -330,6 +330,7 @@ void SetupMenuBots(
 				: Ui::CreateChild<InlineBots::MenuBotIcon>(
 					button,
 					bot.media);
+			icon->setColor(st::menuIconFg);
 			button->heightValue(
 			) | rpl::on_next([=](int height) {
 				icon->move(

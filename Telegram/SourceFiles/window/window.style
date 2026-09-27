@@ -114,14 +114,16 @@ mainMenuUserpic: UserpicButton(defaultUserpicButton) {
 	size: size(48px, 48px);
 	photoSize: 48px;
 }
+// 透明底色，滚动到右下角时由菜单自己画出圆角。
 mainMenuButton: SettingsButton(defaultSettingsButton) {
 	style: defaultTextStyle;
-	textBg: mainMenuBg;
+	textBg: transparent;
 	padding: margins(56px, 11px, 20px, 9px);
 	toggleSkip: 20px;
 	iconLeft: 20px;
 }
 mainMenuAddAccountButton: SettingsButton(mainMenuButton) {
+	textBg: mainMenuBg;
 	padding: margins(60px, 11px, 24px, 9px);
 	toggleSkip: 24px;
 	iconLeft: 24px;
