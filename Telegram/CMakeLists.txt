@@ -2053,6 +2053,8 @@ PRIVATE
     settings/sections/settings_active_sessions.h
     settings/sections/settings_advanced.cpp
     settings/sections/settings_advanced.h
+    settings/sections/settings_update.cpp
+    settings/sections/settings_update.h
     settings/sections/settings_chat.cpp
     settings/sections/settings_chat.h
     settings/sections/settings_blocked_peers.cpp

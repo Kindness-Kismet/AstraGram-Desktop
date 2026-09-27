@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_advanced.h"
 #include "settings/sections/settings_main.h"
 #include "settings/sections/settings_chat.h"
+#include "settings/sections/settings_update.h"
 #include "settings/settings_codes.h"
 #include "ui/basic_click_handlers.h"
 #include "ui/wrap/fade_wrap.h"

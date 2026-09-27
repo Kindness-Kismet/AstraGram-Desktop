@@ -59,6 +59,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/settings_power_saving.h"
 #include "settings/sections/settings_premium.h"
 #include "settings/sections/settings_privacy_security.h"
+#include "settings/sections/settings_update.h"
 #include "settings/settings_scale_preview.h"
 #include "storage/localstorage.h"
 #include "ui/basic_click_handlers.h"
@@ -623,16 +624,6 @@ void BuildHelpSection(SectionBuilder &builder) {
 	});
 
 	builder.addButton({
-		.id = u"main/features"_q,
-		.title = tr::lng_settings_features(),
-		.icon = { &st::menuIconEmojiObjects },
-		.onClick = [] {
-			UrlClickHandler::Open(tr::lng_telegram_features_url(tr::now));
-		},
-		.keywords = { u"tips"_q, u"tutorial"_q },
-	});
-
-	builder.addButton({
 		.id = u"main/ask-question"_q,
 		.title = tr::lng_settings_ask_question(),
 		.icon = { &st::menuIconDiscussion },
@@ -640,6 +631,18 @@ void BuildHelpSection(SectionBuilder &builder) {
 		.keywords = { u"contact"_q, u"feedback"_q },
 	});
 
+	builder.addSkip();
+}
+
+void BuildAppSection(SectionBuilder &builder) {
+	builder.addDivider();
+
+	BuildUpdateSection(builder);
+	if (!HasUpdate()) {
+		builder.addSkip();
+	}
+
+	const auto controller = builder.controller();
 	builder.addButton({
 		.id = u"main/about"_q,
 		.title = tr::lng_menu_about(),
@@ -766,6 +769,7 @@ void Main::setupContent() {
 		BuildInterfaceScale(builder);
 		BuildPremiumSection(builder);
 		BuildHelpSection(builder);
+		BuildAppSection(builder);
 
 		std::move(showFinished) | rpl::on_next([=] {
 			for (const auto &[id, entry] : *highlights) {
@@ -841,6 +845,7 @@ const auto kMeta = BuildHelper({
 	BuildInterfaceScale(builder);
 	BuildPremiumSection(builder);
 	BuildHelpSection(builder);
+	BuildAppSection(builder);
 });
 
 } // namespace

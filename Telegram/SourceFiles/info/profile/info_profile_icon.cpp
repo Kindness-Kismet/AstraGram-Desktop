@@ -14,21 +14,19 @@ FloatingIcon::FloatingIcon(
 	RpWidget *parent,
 	const style::icon &icon,
 	QPoint position)
-: FloatingIcon(parent, icon, position, Tag{}) {
-}
-
-FloatingIcon::FloatingIcon(
-	RpWidget *parent,
-	const style::icon &icon,
-	QPoint position,
-	const Tag &)
 : RpWidget(parent)
 , _icon(&icon)
-, _point(position) {
+, _point(position.x(), std::max(position.y(), 0)) {
 	setGeometry(QRect(
 		QPoint(0, 0),
 		QSize(_point.x() + _icon->width(), _point.y() + _icon->height())));
 	setAttribute(Qt::WA_TransparentForMouseEvents);
+	if (position.y() < 0) {
+		parent->heightValue(
+		) | rpl::on_next([=](int height) {
+			move(0, (height - _icon->height()) / 2);
+		}, lifetime());
+	}
 }
 
 void FloatingIcon::paintEvent(QPaintEvent *e) {

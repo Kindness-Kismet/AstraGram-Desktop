@@ -553,21 +553,21 @@ infoIconMediaFile: icon {{ "info/info_media_file", infoIconFg }};
 infoIconMediaAudio: icon {{ "info/info_media_audio", infoIconFg }};
 infoIconMediaLink: icon {{ "info/info_media_link", infoIconFg }};
 infoIconMediaGroup: icon {{ "info/info_common_groups", infoIconFg }};
-infoIconMediaChannel: icon {{ "menu/channel", infoIconFg, point(4px, 4px) }};
-infoIconMediaBot: icon {{ "menu/bot", infoIconFg, point(4px, 4px) }};
+infoIconMediaChannel: icon {{ "menu/channel", infoIconFg, margins(4px, 4px, 4px, 4px) }};
+infoIconMediaBot: icon {{ "menu/bot", infoIconFg, margins(4px, 4px, 4px, 4px) }};
 infoIconMediaVoice: icon {{ "info/info_media_voice", infoIconFg }};
-infoIconMediaPoll: icon {{ "menu/create_poll", infoIconFg, point(4px, 4px) }};
+infoIconMediaPoll: icon {{ "menu/create_poll", infoIconFg, margins(4px, 4px, 4px, 4px) }};
 infoIconMediaStories: icon {{ "info/info_media_stories", infoIconFg }};
 infoIconMediaSaved: icon {{ "info/info_media_saved", infoIconFg }};
 infoIconMediaStoriesArchive: icon {{ "info/info_stories_archive", infoIconFg }};
 infoIconMediaStoriesRecent: icon {{ "info/info_stories_recent", infoIconFg }};
-infoIconMediaGifts: icon {{ "menu/gift_premium", infoIconFg, point(4px, 4px) }};
+infoIconMediaGifts: icon {{ "menu/gift_premium", infoIconFg, margins(4px, 4px, 4px, 4px) }};
 
 infoIconDeleteRed: icon {{ "info/info_delete", attentionButtonFg }};
 infoIconReport: icon {{ "info/info_report", attentionButtonFg }};
 infoIconBlock: icon {{ "info/info_block", attentionButtonFg }};
 infoIconMembers: icon {{ "info/info_members", infoIconFg }};
-infoSharedMediaButtonIconPosition: point(20px, 3px);
+infoSharedMediaButtonIconPosition: point(20px, -1px);
 infoGroupMembersIconPosition: point(20px, 10px);
 
 infoOpenApp: RoundButton(defaultActiveButton) {

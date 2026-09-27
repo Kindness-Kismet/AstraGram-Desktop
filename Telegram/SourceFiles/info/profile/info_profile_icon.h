@@ -14,6 +14,7 @@ namespace Profile {
 
 class FloatingIcon : public Ui::RpWidget {
 public:
+	// 纵坐标为负时，图标随父控件高度垂直居中。
 	FloatingIcon(
 		RpWidget *parent,
 		const style::icon &icon,
@@ -23,14 +24,6 @@ protected:
 	void paintEvent(QPaintEvent *e) override;
 
 private:
-	struct Tag {
-	};
-	FloatingIcon(
-		RpWidget *parent,
-		const style::icon &icon,
-		QPoint position,
-		const Tag &);
-
 	not_null<const style::icon*> _icon;
 	QPoint _point;
 
