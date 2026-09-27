@@ -368,7 +368,9 @@ void AbstractSection::setNavigationAnchor(not_null<QWidget*> widget) {
 	_keyNavigation->anchorTo(widget);
 }
 
-Icon::Icon(IconDescriptor descriptor) : _icon(descriptor.icon) {
+Icon::Icon(IconDescriptor descriptor)
+: _icon(descriptor.icon)
+, _color(descriptor.color) {
 	const auto background = [&]() -> const style::color* {
 		if (descriptor.type == IconType::Simple) {
 			return nullptr;
@@ -404,7 +406,12 @@ void Icon::paint(QPainter &p, int x, int y) const {
 			_backgroundBrush->first,
 			_backgroundBrush->first);
 	}
-	_icon->paint(p, { x, y }, 2 * x + _icon->width());
+	const auto outerw = 2 * x + _icon->width();
+	if (_color) {
+		_icon->paint(p, { x, y }, outerw, (*_color)->c);
+	} else {
+		_icon->paint(p, { x, y }, outerw);
+	}
 }
 
 int Icon::width() const {

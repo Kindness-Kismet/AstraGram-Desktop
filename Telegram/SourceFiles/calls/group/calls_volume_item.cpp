@@ -100,7 +100,7 @@ MenuVolumeItem::MenuVolumeItem(
 			= _crossLineAnimation.value((!volume) ? 1. : 0.);
 
 		const auto selected = isSelected();
-		p.fillRect(clip, selected ? st.itemBgOver : st.itemBg);
+		Ui::Menu::PaintItemBackground(p, st, rect(), selected);
 
 		const auto mutePen = anim::color(
 			unmuteColor(),

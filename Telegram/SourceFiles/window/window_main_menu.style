@@ -35,6 +35,10 @@ mainMenuCoverStatusTop: 58px;
 mainMenuStatusLabel: FlatLabel(defaultFlatLabel) {
 	maxHeight: 20px;
 }
+// 不操作时自动隐藏；滚动条末端落在右下圆角的弧线以内。
+mainMenuScroll: ScrollArea(defaultSolidScroll) {
+	hiding: 1000;
+}
 mainMenuSkip: 6px;
 mainMenuContentMargin: 4px;
 mainMenuSeparatorPadding: margins(20px, 6px, 20px, 6px);

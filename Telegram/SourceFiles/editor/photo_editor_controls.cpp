@@ -107,7 +107,7 @@ int CheckAction::contentHeight() const {
 void CheckAction::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 	const auto selected = isSelected();
-	p.fillRect(rect(), selected ? _st.itemBgOver : _st.itemBg);
+	Ui::Menu::PaintItemBackground(p, _st, rect(), selected);
 	RippleButton::paintRipple(p, 0, 0);
 	const auto size = _check.getSize();
 	_check.paint(

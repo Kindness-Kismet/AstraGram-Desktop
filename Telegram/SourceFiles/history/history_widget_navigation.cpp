@@ -700,6 +700,9 @@ void HistoryWidget::setHistory(History *history) {
 	if (_history == history) {
 		return;
 	}
+	_composeSurface->hide();
+	_composeSurfaceRect = QRect();
+	resetFrostedBackground();
 	_pullToNext->setHistory(history);
 
 	const auto &settings = AyuSettings::getInstance();

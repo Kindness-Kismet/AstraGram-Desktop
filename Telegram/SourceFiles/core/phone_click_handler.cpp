@@ -183,10 +183,11 @@ QString ResolvePhoneAction::lastName() const {
 void ResolvePhoneAction::paint(Painter &p) {
 	const auto selected = isSelected() && _peer.current();
 	const auto height = contentHeight();
-	if (selected && _st.itemBgOver->c.alpha() < 255) {
-		p.fillRect(0, 0, width(), height, _st.itemBg);
-	}
-	p.fillRect(0, 0, width(), height, selected ? _st.itemBgOver : _st.itemBg);
+	Ui::Menu::PaintItemBackground(
+		p,
+		_st,
+		QRect(0, 0, width(), height),
+		selected);
 	if (isEnabled()) {
 		paintRipple(p, 0, 0);
 	}
@@ -301,7 +302,7 @@ QPoint ResolvePhoneAction::prepareRippleStartPosition() const {
 }
 
 QImage ResolvePhoneAction::prepareRippleMask() const {
-	return Ui::RippleAnimation::RectMask(size());
+	return Ui::Menu::ItemRippleMask(_st, size());
 }
 
 int ResolvePhoneAction::contentHeight() const {

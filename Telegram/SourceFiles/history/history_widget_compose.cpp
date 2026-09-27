@@ -892,6 +892,7 @@ void HistoryWidget::applyInlineBotQuery(UserData *bot, const QString &query) {
 }
 
 void HistoryWidget::orderWidgets() {
+	_fieldBarCancel->raise();
 	_voiceRecordBar->raise();
 	_send->raise();
 	_aiButton->raise();

@@ -98,10 +98,11 @@ ActionWithTimer::ActionWithTimer(
 
 void ActionWithTimer::paint(Painter &p) {
 	const auto selected = isSelected();
-	if (selected && _st.itemBgOver->c.alpha() < 255) {
-		p.fillRect(0, 0, width(), _height, _st.itemBg);
-	}
-	p.fillRect(0, 0, width(), _height, selected ? _st.itemBgOver : _st.itemBg);
+	Ui::Menu::PaintItemBackground(
+		p,
+		_st,
+		QRect(0, 0, width(), _height),
+		selected);
 	if (isEnabled()) {
 		paintRipple(p, 0, 0);
 	}
@@ -212,7 +213,7 @@ QPoint ActionWithTimer::prepareRippleStartPosition() const {
 }
 
 QImage ActionWithTimer::prepareRippleMask() const {
-	return Ui::RippleAnimation::RectMask(size());
+	return Ui::Menu::ItemRippleMask(_st, size());
 }
 
 int ActionWithTimer::contentHeight() const {

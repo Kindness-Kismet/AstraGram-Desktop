@@ -148,6 +148,7 @@ public:
 	}
 
 	Ui::ChatPaintContext preparePaintContext(const QRect &clip) const;
+	bool paintBackdrop(Painter &p, const QRect &clip);
 
 	using CollapseGap = Ui::CollapseGap;
 
@@ -310,6 +311,7 @@ protected:
 	void contextMenuEvent(QContextMenuEvent *e) override;
 
 private:
+	void paintHistory(Painter &p, const QRect &clip, bool backdrop);
 	[[nodiscard]] std::vector<Element*> accessibleElements() const;
 	[[nodiscard]] int accessibilityUnreadBarIndex() const;
 	[[nodiscard]] HistoryItem *accessibilityItemAtIndex(

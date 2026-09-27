@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/premium_graphics.h"
 #include "ui/painter.h"
 #include "ui/widgets/fields/input_field.h"
+#include "ui/widgets/menu/menu_item_base.h"
 #include "ui/widgets/scroll_area.h"
 
 #include "styles/palette.h"
@@ -459,9 +460,11 @@ void InsertSuggestions::Inner::paintEvent(QPaintEvent *e) {
 		const auto entry = _entries[i];
 		const auto top = i * _rowHeight;
 		const auto selected = (i == shown);
-		p.fillRect(
+		Ui::Menu::PaintItemBackground(
+			p,
+			_st,
 			QRect(0, top, width(), _rowHeight),
-			selected ? _st.itemBgOver : _st.itemBg);
+			selected);
 		entry->icon->paint(
 			p,
 			_st.itemIconPosition + QPoint(0, top),
