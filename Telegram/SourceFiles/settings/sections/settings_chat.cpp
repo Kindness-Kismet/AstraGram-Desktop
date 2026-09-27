@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_chat.h"
 
 #include "settings/settings_common_session.h"
+#include "ayu/ui/settings/settings_window_material.h"
 
 #include "base/timer_rpl.h"
 #include "settings/settings_builder.h"
@@ -874,6 +875,8 @@ void BuildThemeSettingsSection(SectionBuilder &builder) {
 			.icon = { &st::menuIconFont },
 		};
 	});
+	buildWindowMaterial(builder);
+	builder.addSkip(st::settingsCheckboxesSkip);
 }
 
 void BuildCloudThemesSection(SectionBuilder &builder) {
@@ -2946,8 +2949,6 @@ void SetupThemeSettings(
 			{ fontButton.get(), { .rippleShape = true } },
 		});
 	}
-
-	Ui::AddSkip(container, st::settingsCheckboxesSkip);
 }
 
 void SetupSupport(
