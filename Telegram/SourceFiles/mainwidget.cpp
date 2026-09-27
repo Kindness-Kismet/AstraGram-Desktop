@@ -449,7 +449,7 @@ MainWidget::MainWidget(
 		_history->show();
 	}
 
-	// 卡片圆角与描边遮罩层:透明鼠标事件、始终置顶,统一画各栏圆角和边框
+	// 遮罩只裁剪面板外侧顶角，不影响内容区交互。
 	AyuFeatures::WindowMaterial::watchSurface(this);
 	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
 		if (_showAnimation) {
@@ -2597,44 +2597,37 @@ std::vector<QRect> MainWidget::cardRects() const {
 }
 
 void MainWidget::paintCardOverlay(QRect clip) {
-	// 绘制时实时收集：栏的显隐与位移会重绘所在区域，遮罩随之画对。
-	const auto rects = cardRects();
-	if (rects.empty()) {
+	if (AyuFeatures::WindowMaterial::isActive(this)) {
 		return;
 	}
 	auto p = QPainter(_cardOverlay.data());
 	p.setRenderHint(QPainter::Antialiasing);
-
-	const auto material = AyuFeatures::WindowMaterial::isActive(this);
-	const auto fill = material
-		? AyuFeatures::WindowMaterial::rootTintColor(this)
-		: Window::ShellBackgroundColor(this)->c;
-	if (material) {
-		p.setCompositionMode(QPainter::CompositionMode_Source);
-	}
+	p.setClipRect(clip);
+	const auto fill = Window::ShellBackgroundColor(this)->c;
 	const auto radius = st::windowCardRadius;
+	auto square = QPainterPath();
+	square.addRect(QRect(0, 0, radius, radius));
+	auto rounded = QPainterPath();
+	rounded.addEllipse(QRect(0, 0, 2 * radius, 2 * radius));
+	const auto corner = square.subtracted(rounded);
 
-	for (const auto &r : rects) {
+	for (const auto &r : cardRects()) {
 		if (!r.intersects(clip)) {
 			continue;
 		}
-		// 只遮住顶部方角，让各栏底边保持直角。
-		auto square = QPainterPath();
-		square.addRect(r);
-		auto rounded = QPainterPath();
-		rounded.addRoundedRect(r, radius, radius);
-		p.save();
-		p.setClipRect(QRect(r.x(), r.y(), r.width(), radius));
-		// 连接处不裁圆角，遮罩只覆盖面板外角。
-		if (_controller->filtersWidth()
-			&& (isOneColumn()
-				|| (_dialogs && !_dialogs->isHidden()
-					&& r == _dialogs->geometry()))) {
-			p.setClipRect(QRect(r.center().x(), r.y(),
-				r.width(), r.height()), Qt::IntersectClip);
+		if (r.left() == 0 && !_controller->filtersWidth()) {
+			p.save();
+			p.translate(r.topLeft());
+			p.fillPath(corner, fill);
+			p.restore();
 		}
-		p.fillPath(square.subtracted(rounded), fill);
-		p.restore();
+		if (r.right() + 1 == width()) {
+			p.save();
+			p.translate(r.right() + 1, r.top());
+			p.scale(-1., 1.);
+			p.fillPath(corner, fill);
+			p.restore();
+		}
 	}
 }
 

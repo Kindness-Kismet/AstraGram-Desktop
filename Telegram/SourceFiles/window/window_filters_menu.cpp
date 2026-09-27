@@ -155,6 +155,9 @@ void FiltersMenu::setup() {
 	corner->setAttribute(Qt::WA_TransparentForMouseEvents);
 	corner->resize(st::windowCardRadius, st::windowCardRadius);
 	corner->paintRequest() | rpl::on_next([=] {
+		if (AyuFeatures::WindowMaterial::isActive(&_outer)) {
+			return;
+		}
 		const auto radius = st::windowCardRadius;
 		auto square = QPainterPath();
 		square.addRect(QRect(0, 0, radius, radius));
@@ -162,13 +165,7 @@ void FiltersMenu::setup() {
 		rounded.addEllipse(QRect(0, 0, radius * 2, radius * 2));
 		auto p = QPainter(corner);
 		p.setRenderHint(QPainter::Antialiasing);
-		const auto material = AyuFeatures::WindowMaterial::isActive(&_outer);
-		if (material) {
-			p.setCompositionMode(QPainter::CompositionMode_Source);
-		}
-		p.fillPath(square.subtracted(rounded), material
-			? AyuFeatures::WindowMaterial::rootTintColor(&_outer)
-			: ShellBackgroundColor(&_outer)->c);
+		p.fillPath(square.subtracted(rounded), ShellBackgroundColor(&_outer)->c);
 	}, corner->lifetime());
 	corner->show();
 
@@ -180,8 +177,9 @@ void FiltersMenu::setup() {
 	}, overlay->lifetime());
 	overlay->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(overlay);
-		p.fillRect(_outer.width() - st::lineWidth, gap, st::lineWidth,
-			_outer.height() - gap, st::windowDividerFg);
+		const auto top = AyuFeatures::WindowMaterial::isActive(&_outer) ? 0 : gap;
+		p.fillRect(_outer.width() - st::lineWidth, top, st::lineWidth,
+			_outer.height() - top, st::windowDividerFg);
 	}, overlay->lifetime());
 	overlay->show();
 

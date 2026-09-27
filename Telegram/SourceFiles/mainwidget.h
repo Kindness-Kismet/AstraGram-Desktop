@@ -246,7 +246,7 @@ private:
 	void updateControlsGeometry();
 	// 按各栏当前位置与可见性收集卡片矩形，隐藏的栏不参与。
 	[[nodiscard]] std::vector<QRect> cardRects() const;
-	// 在 overlay 上画各卡片的圆角遮罩与描边
+	// 只裁剪面板外侧的顶部圆角。
 	void paintCardOverlay(QRect clip);
 	void updateMainSectionShown();
 	void updateDialogsWidthAnimated();
