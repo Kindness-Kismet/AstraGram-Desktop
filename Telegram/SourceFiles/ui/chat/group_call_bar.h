@@ -72,7 +72,6 @@ public:
 	void finishAnimating();
 
 	void setShadowGeometryPostprocess(Fn<QRect(QRect)> postprocess);
-	[[nodiscard]] RpWidget *backgroundWidget() const;
 
 	void move(int x, int y);
 	void resizeToWidth(int width);

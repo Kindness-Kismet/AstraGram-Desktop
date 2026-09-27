@@ -225,7 +225,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/ayu_settings.h"
-#include "ayu/ui/components/chat_frosted_background.h"
+#include "ayu/ui/components/floating_surface_host.h"
 #include "ayu/features/filters/filters_cache_controller.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "ayu/features/message_shot/message_shot.h"
@@ -448,8 +448,11 @@ HistoryWidget::HistoryWidget(
 			std::pair{ _discuss.data(), u"chatAction.discuss"_q },
 			std::pair{ _reportMessages.data(), u"chatAction.report"_q } }) {
 		button->setObjectName(name);
-		Ui::ApplyChatControlSurface(button, st::historyComposeCapsuleRadius);
-		setupFrostedSurface(button);
+		Ui::ApplyChatControlSurface(
+			button, st::historyComposeCapsuleRadius, true, [=] {
+				return (button->isOver()
+					? st::historyComposeButtonBgOver : st::historyComposeButtonBg)->c;
+			});
 	}
 	_botStart->setAcceptBoth(true);
 	_botStart->clicks() | rpl::on_next(

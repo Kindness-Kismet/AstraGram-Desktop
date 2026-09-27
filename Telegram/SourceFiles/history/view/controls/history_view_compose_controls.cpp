@@ -1332,7 +1332,9 @@ ComposeControls::ComposeControls(
 	}
 	if (ComposeOuterMargin(_st)) {
 		Ui::ApplyChatControlSurface(
-			_wrap.get(), st::historyComposeCapsuleRadius, false);
+			_wrap.get(), st::historyComposeCapsuleRadius, false, [] {
+				return QColor(Qt::transparent);
+			});
 	}
 	rpl::combine(
 		replyingToMessageValue(),
@@ -4358,7 +4360,9 @@ void ComposeControls::initWriteRestriction() {
 	_writeRestricted = std::make_unique<Ui::RpWidget>(_parent);
 	if (ComposeOuterMargin(_st)) {
 		Ui::ApplyChatControlSurface(
-			_writeRestricted.get(), st::historyComposeCapsuleRadius, false);
+			_writeRestricted.get(), st::historyComposeCapsuleRadius, false, [] {
+				return QColor(Qt::transparent);
+			});
 	}
 	_writeRestricted->move(_wrap->pos());
 	_writeRestricted->resizeToWidth(_wrap->widthNoMargins());

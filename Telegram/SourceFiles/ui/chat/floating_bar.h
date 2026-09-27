@@ -7,13 +7,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+#include "ayu/ui/components/floating_surface.h"
 #include "ui/painter.h"
 #include "base/basic_types.h"
 #include "styles/palette.h"
 #include "styles/style_window.h"
 
 #include <QtGui/QRegion>
-#include <QtWidgets/QGraphicsEffect>
+#include <QtWidgets/QWidget>
 
 #include <utility>
 #include <vector>
@@ -49,102 +50,40 @@ private:
 	std::vector<std::pair<int, int>> _cards;
 };
 
-class ChatControlSurface final : public QGraphicsEffect {
-public:
-	using BackgroundPainter = Fn<void(QPainter&, QRect, QColor)>;
-
-	ChatControlSurface(int radius, bool outline)
-	: _radius(radius)
-	, _outline(outline) {
-	}
-
-	void setBackgroundPainter(BackgroundPainter painter) {
-		_backgroundPainter = std::move(painter);
-		update();
-	}
-
-	[[nodiscard]] const BackgroundPainter &backgroundPainter() const {
-		return _backgroundPainter;
-	}
-
-protected:
-	void draw(QPainter *p) override {
-		auto offset = QPoint();
-		const auto source = sourcePixmap(Qt::LogicalCoordinates, &offset, NoPad);
-		if (source.isNull()) {
-			return;
-		}
-		auto surface = QPixmap(source.size());
-		surface.setDevicePixelRatio(source.devicePixelRatio());
-		surface.fill(Qt::transparent);
-		const auto rect = QRectF(QPointF(),
-			QSizeF(source.size()) / source.devicePixelRatio());
-		const auto radius = std::min(qreal(_radius), rect.height() / 2.);
-		{
-			auto painter = QPainter(&surface);
-			painter.setRenderHint(QPainter::Antialiasing);
-			painter.setPen(Qt::NoPen);
-			painter.setBrush(Qt::white);
-			painter.drawRoundedRect(rect, radius, radius);
-			painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-			painter.drawPixmap(0, 0, source);
-			if (_outline) {
-				painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-				const auto halfStroke = st::lineWidth / 2.;
-				painter.setPen(QPen(st::windowDividerFg->c, st::lineWidth));
-				painter.setBrush(Qt::NoBrush);
-				painter.drawRoundedRect(rect.adjusted(
-					halfStroke, halfStroke, -halfStroke, -halfStroke),
-					radius - halfStroke, radius - halfStroke);
-			}
-		}
-		p->drawPixmap(offset, surface);
-	}
-
-private:
-	const int _radius;
-	const bool _outline;
-	BackgroundPainter _backgroundPainter;
-};
-
 inline void ApplyChatControlSurface(
 		not_null<QWidget*> widget,
 		int radius,
-		bool outline = true) {
-	widget->setGraphicsEffect(new ChatControlSurface(radius, outline));
-}
-
-// 背景和子控件统一由圆角表面裁切。
-inline void PaintChatBar(
-		QPainter &p,
-		const QRect &rect,
-		const QColor &fill) {
-	if (rect.isEmpty()) {
-		return;
+		bool outline = true,
+		Fn<QColor()> background = nullptr) {
+	if (!background) {
+		background = [] { return st::historyPinnedBg->c; };
 	}
-	p.fillRect(rect, fill);
+	auto border = Fn<QColor()>();
+	if (outline) {
+		border = [] { return st::windowDividerFg->c; };
+	}
+	AyuUi::FloatingSurface::attach(widget.get(), {
+		.radius = radius,
+		.background = std::move(background),
+		.border = std::move(border),
+		.borderWidth = st::lineWidth,
+	});
 }
 
+// 独立控件保留底色；已处于公共表面的子控件只画交互反馈。
 inline void PaintChatBar(
 		QPainter &p,
 		QWidget *widget,
 		const QRect &rect,
-		const QColor &fill) {
-	for (auto parent = widget; parent; parent = parent->parentWidget()) {
-		const auto surface = dynamic_cast<ChatControlSurface*>(
-			parent->graphicsEffect());
-		if (!surface || !surface->backgroundPainter()) {
-			continue;
-		}
-		// 子按钮按所属悬浮栏的坐标取背景，保留各自的文字和交互反馈。
-		const auto offset = widget->mapTo(parent, QPoint());
-		p.save();
-		p.translate(-offset);
-		surface->backgroundPainter()(p, rect.translated(offset), fill);
-		p.restore();
-		return;
+		const QColor &fill,
+		QColor hover = {}) {
+	const auto surface = AyuUi::FloatingSurface::find(widget);
+	if (!surface || !surface->hasBackdrop()) {
+		p.fillRect(rect, hover.isValid() ? hover : fill);
+	} else if (surface->widget() != widget && hover.isValid() && hover != fill) {
+		hover.setAlphaF(hover.alphaF() * 0.16);
+		p.fillRect(rect, hover);
 	}
-	PaintChatBar(p, rect, fill);
 }
 
 } // namespace Ui

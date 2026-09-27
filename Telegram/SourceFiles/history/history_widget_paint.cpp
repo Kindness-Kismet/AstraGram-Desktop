@@ -219,7 +219,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtGui/QWindow>
 #include <QtCore/QMimeData>
-#include <QtGui/QPainterPath>
 
 // AyuGram includes
 #include "ayu/ayu_settings.h"
@@ -237,7 +236,6 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 	_repaintFieldScheduled = false;
 
 	auto backy = _field->y() - st::historySendPadding;
-	auto backh = fieldHeight() + 2 * st::historySendPadding;
 	auto hasForward = readyToForward();
 	auto drawMsgText = (_editMsgId || _replyTo) ? _replyEditMsg : _kbReplyTo;
 	if (_editMsgId
@@ -247,41 +245,10 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 		|| _previewDrawPreview
 		|| _suggestOptions) {
 		backy -= st::historyReplyHeight;
-		backh += st::historyReplyHeight;
 	}
 	p.setInactive(
 		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
-	// 无壁纸时用独立底色区分输入区，四周保留悬浮间距。
-	const auto flatBackground = AyuSettings::getInstance().disableChatBackground();
 	const auto capsuleMargin = st::historyComposeCapsuleMargin;
-	const auto capsuleRect = myrtlrect(
-		capsuleMargin,
-		backy,
-		width() - 2 * capsuleMargin,
-		backh);
-	const auto halfStroke = st::lineWidth / 2.;
-	const auto capsuleOutline = QRectF(capsuleRect).adjusted(
-		halfStroke, halfStroke, -halfStroke, -halfStroke);
-	// 同步限制两个方向的半径，避免单行高度被截成椭圆弧。
-	const auto capsuleRadius = std::min(
-		qreal(st::historyComposeCapsuleRadius),
-		capsuleOutline.height() / 2.);
-	{
-		auto hq = PainterHighQualityEnabler(p);
-		auto path = QPainterPath();
-		path.addRoundedRect(capsuleOutline, capsuleRadius, capsuleRadius);
-		p.save();
-		p.setClipPath(path, Qt::IntersectClip);
-		paintFrostedBackground(p, capsuleRect, (flatBackground
-			? st::windowBgOver
-			: st::historyComposeAreaBg)->c);
-		p.restore();
-		p.setPen(QPen((flatBackground
-			? st::filterInputBorderFg
-			: st::windowDividerFg)->c, st::lineWidth));
-		p.setBrush(Qt::NoBrush);
-		p.drawRoundedRect(capsuleOutline, capsuleRadius, capsuleRadius);
-	}
 	// 回复/编辑/转发条的内容整体右移,落进胶囊内部
 	p.translate(capsuleMargin, 0);
 	const auto fullWidth = width() - 2 * capsuleMargin;
@@ -565,20 +532,7 @@ void HistoryWidget::paintEvent(QPaintEvent *e) {
 	invalidateFrostedBackground(e->rect());
 
 	Painter p(this);
-	const auto clip = e->rect();
-	if (_list) {
-		const auto restrictionHidden = fieldOrDisabledShown()
-			|| isRecording();
-		if (restrictionHidden
-			|| replyTo()
-			|| readyToForward()
-			|| _kbShown
-			|| _suggestOptions) {
-			if (!isSearching() && _composeSurface->isHidden()) {
-				drawField(p, clip);
-			}
-		}
-	} else {
+	if (!_list) {
 		const auto w = 0
 			+ st::msgServiceFont->width(tr::lng_willbe_history(tr::now))
 			+ st::msgPadding.left()

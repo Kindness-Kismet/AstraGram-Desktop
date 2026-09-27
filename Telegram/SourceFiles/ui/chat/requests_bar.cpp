@@ -37,19 +37,6 @@ RequestsBar::RequestsBar(
 	_wrap.hide(anim::type::instant);
 	_shadow->hide();
 
-	_wrap.entity()->paintRequest(
-	) | rpl::on_next([=](QRect clip) {
-		auto p = QPainter(_wrap.entity());
-		if (_backgroundPainter) {
-			_backgroundPainter(p, _wrap.entity()->rect());
-		} else {
-			PaintChatBar(
-				p,
-				_wrap.entity()->rect(),
-				st::historyPinnedBg->c);
-		}
-	}, lifetime());
-
 	auto copy = std::move(
 		content
 	) | rpl::start_spawning(_wrap.lifetime());
@@ -112,20 +99,6 @@ RequestsBar::RequestsBar(
 }
 
 RequestsBar::~RequestsBar() = default;
-
-void RequestsBar::setBackgroundPainter(Fn<void(QPainter&, QRect)> painter) {
-	_backgroundPainter = std::move(painter);
-	updateBackground();
-}
-
-QRect RequestsBar::backgroundRect(QWidget *relativeTo) const {
-	const auto inner = _wrap.entity();
-	return QRect(inner->mapTo(relativeTo, QPoint()), inner->size());
-}
-
-void RequestsBar::updateBackground() {
-	_wrap.entity()->update();
-}
 
 void RequestsBar::setupInner() {
 	_inner->resize(0, st::historyRequestsHeight);

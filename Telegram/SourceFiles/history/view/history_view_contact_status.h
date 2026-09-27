@@ -39,7 +39,6 @@ public:
 	[[nodiscard]] int height() const;
 	[[nodiscard]] rpl::producer<int> heightValue() const;
 	void toggleContent(bool visible);
-	[[nodiscard]] Ui::RpWidget *backgroundWidget() const;
 
 	void show() {
 		setVisible(true);

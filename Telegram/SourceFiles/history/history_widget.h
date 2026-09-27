@@ -26,7 +26,7 @@ class MessageLinksParser;
 struct InlineBotQuery;
 
 namespace AyuUi {
-class ChatFrostedBackground;
+class FloatingSurfaceHost;
 } // namespace AyuUi
 
 namespace MTP {
@@ -725,14 +725,9 @@ private:
 	[[nodiscard]] int physicalScrollTop(int visibleTop) const;
 	[[nodiscard]] QRect visibleScrollGeometry() const;
 	void setupFrostedBackground();
-	void setupFrostedSurface(not_null<Ui::RpWidget*> surface);
-	[[nodiscard]] Fn<void(QPainter&, QRect)> createFrostedBarPainter(
-		Fn<QRect()> geometry);
-	void updateComposeSurface(QRect capsule);
+	void updateComposeSurface();
 	void updateComposeSurfaceVisibility();
-	void updateFrostedAreas();
 	void resetFrostedBackground();
-	void paintFrostedBackground(QPainter &p, QRect area, QColor tint);
 	[[nodiscard]] bool fieldOrDisabledShown() const;
 	[[nodiscard]] bool fieldHasSendText() const;
 	[[nodiscard]] bool hasSendableContent() const;
@@ -898,9 +893,7 @@ private:
 	object_ptr<HistoryView::TopBarWidget> _topBar;
 	object_ptr<Ui::ElasticScroll> _scroll;
 	object_ptr<Ui::RpWidget> _composeSurface;
-	std::unique_ptr<AyuUi::ChatFrostedBackground> _frostedBackground;
-	std::vector<QPointer<Ui::RpWidget>> _frostedSurfaces;
-	QRect _composeSurfaceRect;
+	std::unique_ptr<AyuUi::FloatingSurfaceHost> _floatingSurfaceHost;
 	int _composeOverlap = 0;
 	int _lastTopBarsOverlap = 0;
 	int _lastScrollAreaY = 0;

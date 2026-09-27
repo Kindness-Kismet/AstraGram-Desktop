@@ -122,16 +122,6 @@ GroupCallBar::GroupCallBar(
 	_wrap.hide(anim::type::instant);
 	_shadow->hide();
 
-	_wrap.entity()->paintRequest(
-	) | rpl::on_next([=](QRect clip) {
-		auto p = QPainter(_wrap.entity());
-		PaintChatBar(
-			p,
-			_wrap.entity(),
-			_wrap.entity()->rect(),
-			st::historyPinnedBg->c);
-	}, lifetime());
-
 	auto copy = std::move(
 		content
 	) | rpl::start_spawning(_wrap.lifetime());
@@ -166,10 +156,6 @@ GroupCallBar::GroupCallBar(
 }
 
 GroupCallBar::~GroupCallBar() = default;
-
-RpWidget *GroupCallBar::backgroundWidget() const {
-	return _wrap.entity();
-}
 
 void GroupCallBar::refreshScheduledProcess() {
 	const auto date = _content.scheduleDate;

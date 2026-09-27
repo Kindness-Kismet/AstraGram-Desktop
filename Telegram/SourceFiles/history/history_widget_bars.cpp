@@ -299,8 +299,6 @@ void HistoryWidget::setupTranslateBar() {
 		_topBars.get(),
 		controller(),
 		_history);
-	_translateBar->setBackgroundPainter(createFrostedBarPainter(
-		[=, bar = _translateBar.get()] { return bar->backgroundRect(this); }));
 
 	controller()->adaptive().oneColumnValue(
 	) | rpl::on_next([=, raw = _translateBar.get()](bool one) {
@@ -375,8 +373,6 @@ void HistoryWidget::checkPinnedBarState() {
 		return controller()->isGifPausedAtLeastFor(
 			Window::GifPauseReason::Any);
 	}, controller()->gifPauseLevelChanged());
-	_pinnedBar->setBackgroundPainter(createFrostedBarPainter(
-		[=, bar = _pinnedBar.get()] { return bar->backgroundRect(this); }));
 	auto pinnedRefreshed = Info::Profile::SharedMediaCountValue(
 		_peer,
 		MsgId(0), // topicRootId
@@ -644,7 +640,6 @@ void HistoryWidget::setupGroupCallBar() {
 			st::historyGroupCallUserpics.size,
 			false),
 		Core::App().appDeactivatedValue());
-	setupFrostedSurface(_groupCallBar->backgroundWidget());
 
 	controller()->adaptive().oneColumnValue(
 	) | rpl::on_next([=](bool one) {
@@ -693,8 +688,6 @@ void HistoryWidget::setupRequestsBar() {
 			peer,
 			st::historyRequestsUserpics.size,
 			false));
-	_requestsBar->setBackgroundPainter(createFrostedBarPainter(
-		[=, bar = _requestsBar.get()] { return bar->backgroundRect(this); }));
 
 	controller()->adaptive().oneColumnValue(
 	) | rpl::on_next([=](bool one) {
@@ -806,9 +799,6 @@ void HistoryWidget::createSponsoredMessageBar() {
 	const auto maybeFullId = session().sponsoredMessages().fillTopBar(
 		_history,
 		_sponsoredMessageBar->entity());
-	if (maybeFullId) {
-		setupFrostedSurface(_sponsoredMessageBar->entity());
-	}
 	session().sponsoredMessages().itemRemoved(
 		maybeFullId
 	) | rpl::on_next([this] {

@@ -251,7 +251,6 @@ public:
 
 private:
 	int resizeGetHeight(int newWidth) override;
-	void paintEvent(QPaintEvent *e) override;
 
 	void refreshAddText(int newWidth);
 	void showAddTooltip();
@@ -303,7 +302,8 @@ void ContactStatus::BgButton::paintEvent(QPaintEvent *e) {
 		p,
 		this,
 		rect(),
-		isOver() ? _st.overBgColor->c : _st.bgColor->c);
+		_st.bgColor->c,
+		isOver() ? _st.overBgColor->c : QColor());
 	paintRipple(p, 0, 0);
 }
 
@@ -379,14 +379,6 @@ ContactStatus::Bar::Bar(
 		auto p = QPainter(raw);
 		Ui::PaintChatBar(p, raw, clip, st::historyComposeButtonBg->c);
 	}, lifetime());
-}
-
-void ContactStatus::Bar::paintEvent(QPaintEvent *e) {
-	const auto surface = dynamic_cast<Ui::ChatControlSurface*>(graphicsEffect());
-	if (surface && surface->backgroundPainter()) {
-		auto p = QPainter(this);
-		Ui::PaintChatBar(p, this, rect(), st::historyComposeButtonBg->c);
-	}
 }
 
 void ContactStatus::Bar::showState(
@@ -695,7 +687,10 @@ SlidingBar::SlidingBar(
 	not_null<Ui::RpWidget*> parent,
 	object_ptr<Ui::RpWidget> wrapped)
 : _wrapped(parent, std::move(wrapped)) {
-	Ui::ApplyChatControlSurface(_wrapped.entity(), st::windowCardRadius);
+	Ui::ApplyChatControlSurface(
+		_wrapped.entity(), st::windowCardRadius, true, [] {
+			return st::historyContactStatusButton.bgColor->c;
+		});
 	_wrapped.entity()->setObjectName(u"chatBar.status"_q);
 	setup(parent);
 	_wrapped.hide(anim::type::instant);
@@ -714,10 +709,6 @@ void SlidingBar::toggleContent(bool visible) {
 	if (_shown) {
 		_wrapped.toggle(visible, anim::type::normal);
 	}
-}
-
-Ui::RpWidget *SlidingBar::backgroundWidget() const {
-	return _wrapped.entity();
 }
 
 void SlidingBar::raise() {
@@ -1098,7 +1089,6 @@ public:
 	[[nodiscard]] rpl::producer<> manageClicks() const;
 
 private:
-	void paintEvent(QPaintEvent *e) override;
 	int resizeGetHeight(int newWidth) override;
 
 	void showMenu();
@@ -1212,15 +1202,6 @@ void BusinessBotStatus::Bar::showMenu() {
 	_menu->popup(mapToGlobal(QPoint(
 		width() + st::topBarMenuPosition.x(),
 		st::topBarMenuPosition.y())));
-}
-
-void BusinessBotStatus::Bar::paintEvent(QPaintEvent *e) {
-	auto p = QPainter(this);
-	Ui::PaintChatBar(
-		p,
-		this,
-		rect(),
-		st::historyContactStatusButton.bgColor->c);
 }
 
 int BusinessBotStatus::Bar::resizeGetHeight(int newWidth) {
@@ -1382,7 +1363,6 @@ public:
 	[[nodiscard]] rpl::producer<> removeClicks() const;
 
 private:
-	void paintEvent(QPaintEvent *e) override;
 	int resizeGetHeight(int newWidth) override;
 
 	not_null<PeerData*> _peer;
@@ -1413,15 +1393,6 @@ void PaysStatus::Bar::showState(State state) {
 
 rpl::producer<> PaysStatus::Bar::removeClicks() const {
 	return _remove->clicks() | rpl::to_empty;
-}
-
-void PaysStatus::Bar::paintEvent(QPaintEvent *e) {
-	auto p = QPainter(this);
-	Ui::PaintChatBar(
-		p,
-		this,
-		rect(),
-		st::historyContactStatusButton.bgColor->c);
 }
 
 int PaysStatus::Bar::resizeGetHeight(int newWidth) {

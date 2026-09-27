@@ -43,7 +43,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ayu_settings.h"
 
-
 namespace HistoryView {
 namespace {
 
@@ -257,20 +256,6 @@ TranslateBar::TranslateBar(
 
 TranslateBar::~TranslateBar() = default;
 
-void TranslateBar::setBackgroundPainter(Fn<void(QPainter&, QRect)> painter) {
-	_backgroundPainter = std::move(painter);
-	updateBackground();
-}
-
-QRect TranslateBar::backgroundRect(QWidget *relativeTo) const {
-	const auto inner = _wrap.entity();
-	return QRect(inner->mapTo(relativeTo, QPoint()), inner->size());
-}
-
-void TranslateBar::updateBackground() {
-	_wrap.entity()->update();
-}
-
 void TranslateBar::setShadowGeometryPostprocess(
 		Fn<QRect(QRect)> postprocess) {
 	_shadowGeometryPostprocess = std::move(postprocess);
@@ -302,19 +287,6 @@ void TranslateBar::setup(not_null<History*> history) {
 	};
 	const auto button = static_cast<Ui::AbstractButton*>(_wrap.entity());
 	button->resize(0, st::historyTranslateBarHeight);
-
-	button->paintRequest(
-	) | rpl::on_next([=](QRect clip) {
-		auto p = QPainter(button);
-		if (_backgroundPainter) {
-			_backgroundPainter(p, button->rect());
-		} else {
-			Ui::PaintChatBar(
-				p,
-				button->rect(),
-				st::historyComposeButtonBg->c);
-		}
-	}, button->lifetime());
 
 	button->setClickedCallback([=] {
 		translateTo(history->translatedTo() ? LanguageId() : _to.current());

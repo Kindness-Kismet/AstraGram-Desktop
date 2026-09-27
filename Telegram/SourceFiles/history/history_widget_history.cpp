@@ -1130,7 +1130,6 @@ void HistoryWidget::updateControlsGeometry() {
 		_topBar->bottomNoMargins(),
 		width - topShadowLeft - topShadowRight,
 		0);
-	updateFrostedAreas();
 }
 
 void HistoryWidget::itemRemoved(not_null<const HistoryItem*> item) {
@@ -1328,9 +1327,14 @@ void HistoryWidget::updateSendRestriction() {
 	}
 	if (_sendRestriction) {
 		_sendRestriction->setObjectName(u"chatAction.restriction"_q);
+		const auto button = dynamic_cast<Ui::FlatButton*>(_sendRestriction.get());
 		Ui::ApplyChatControlSurface(
-			_sendRestriction.get(), st::historyComposeCapsuleRadius);
-		setupFrostedSurface(_sendRestriction.get());
+			_sendRestriction.get(), st::historyComposeCapsuleRadius, true, [=] {
+				return (button
+					? (button->isOver()
+						? st::historyComposeButtonBgOver : st::historyComposeButtonBg)
+					: st::windowBg)->c;
+			});
 		_sendRestriction->show();
 		moveFieldControls();
 	}
@@ -1373,7 +1377,6 @@ void HistoryWidget::updateHistoryGeometry(
 	// 输入区悬浮在列表底部之上，四周留白透出消息，只有胶囊本身遮挡。
 	const auto margin = st::historyComposeCapsuleMargin;
 	auto composeHeight = 0;
-	auto capsule = QRect();
 	if (isChoosingTheme()) {
 		newScrollHeight -= _chooseTheme->height();
 	} else if (!editingMessage()
@@ -1402,32 +1405,11 @@ void HistoryWidget::updateHistoryGeometry(
 		if (_kbShown) {
 			newScrollHeight -= _kbScroll->height();
 		}
-		if (editingMessage() || _canSendMessages) {
-			// 与 drawField 的胶囊范围一致。
-			const auto header = _editMsgId
-				|| _replyTo
-				|| readyToForward()
-				|| _kbReplyTo
-				|| _previewDrawPreview
-				|| _suggestOptions;
-			const auto capsuleHeight = fieldHeight()
-				+ 2 * st::historySendPadding
-				+ (header ? st::historyReplyHeight : 0);
-			const auto capsuleBottom = height()
-				- (_kbShown ? _kbScroll->height() : 0)
-				- margin;
-			capsule = QRect(
-				margin,
-				capsuleBottom - capsuleHeight,
-				width() - 2 * margin,
-				capsuleHeight);
-		}
 	}
 	if (_subsectionTabs && _subsectionTabs->bottomSkip()) {
 		// 底部标签栏夹在列表与输入区之间，此时不重叠。
 		newScrollHeight -= composeHeight;
 		composeHeight = 0;
-		capsule = QRect();
 	}
 	if (newScrollHeight - composeHeight - topBarsOverlap() <= 0) {
 		return;
@@ -1455,7 +1437,7 @@ void HistoryWidget::updateHistoryGeometry(
 	if (needResize) {
 		_scroll->resize(newScrollWidth, newScrollHeight);
 	}
-	updateComposeSurface(capsule);
+	updateComposeSurfaceVisibility();
 	// on initial updateListSize we didn't put the _scroll->scrollTop
 	// correctly yet so visibleAreaUpdated() call will erase it
 	// with the new (undefined) value

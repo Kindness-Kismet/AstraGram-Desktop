@@ -208,6 +208,10 @@ set(ayugram_files
         ayu/ui/components/chat_frosted_background.h
         ayu/ui/components/chat_surface_button.cpp
         ayu/ui/components/chat_surface_button.h
+        ayu/ui/components/floating_surface.cpp
+        ayu/ui/components/floating_surface.h
+        ayu/ui/components/floating_surface_host.cpp
+        ayu/ui/components/floating_surface_host.h
         ayu/ui/components/icon_picker.cpp
         ayu/ui/components/icon_picker.h
         ayu/ui/components/avatar_corners_preview.cpp

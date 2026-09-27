@@ -42,9 +42,6 @@ public:
 	void finishAnimating();
 
 	void setShadowGeometryPostprocess(Fn<QRect(QRect)> postprocess);
-	void setBackgroundPainter(Fn<void(QPainter&, QRect)> painter);
-	[[nodiscard]] QRect backgroundRect(QWidget *relativeTo) const;
-	void updateBackground();
 
 	void move(int x, int y);
 	void resizeToWidth(int width);
@@ -70,7 +67,6 @@ private:
 	std::unique_ptr<PlainShadow> _shadow;
 	rpl::event_stream<> _barClicks;
 	Fn<QRect(QRect)> _shadowGeometryPostprocess;
-	Fn<void(QPainter&, QRect)> _backgroundPainter;
 	bool _shouldBeShown = false;
 	bool _forceHidden = false;
 

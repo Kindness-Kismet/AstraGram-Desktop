@@ -41,7 +41,8 @@ void ChatSurfaceButton::paintEvent(QPaintEvent *e) {
 		const auto &st = _styles->source;
 		Ui::PaintChatBar(p, this,
 			QRect(0, height() - st.height, width(), st.height),
-			(isOver() ? st.overBgColor : st.bgColor)->c);
+			st.bgColor->c,
+			isOver() ? st.overBgColor->c : QColor());
 	}
 	// 保留原按钮的文字和涟漪绘制。
 	FlatButton::paintEvent(e);

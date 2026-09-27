@@ -39,9 +39,6 @@ public:
 	void finishAnimating();
 
 	void setShadowGeometryPostprocess(Fn<QRect(QRect)> postprocess);
-	void setBackgroundPainter(Fn<void(QPainter&, QRect)> painter);
-	[[nodiscard]] QRect backgroundRect(QWidget *relativeTo) const;
-	void updateBackground();
 
 	void move(int x, int y);
 	void resizeToWidth(int width);
@@ -71,7 +68,6 @@ private:
 	Ui::SlideWrap<> _wrap;
 	std::unique_ptr<Ui::PlainShadow> _shadow;
 	Fn<QRect(QRect)> _shadowGeometryPostprocess;
-	Fn<void(QPainter&, QRect)> _backgroundPainter;
 	base::unique_qptr<Ui::PopupMenu> _menu;
 	rpl::variable<LanguageId> _overridenTo;
 	rpl::variable<LanguageId> _to;
