@@ -41,6 +41,7 @@ columnMaximalWidthThird: 392px;
 windowCardGap: 2px;
 windowColumnGap: 1px;
 windowCardRadius: 12px;
+chatFloatingBarGap: 4px;
 
 adaptiveChatWideWidth: 880px;
 

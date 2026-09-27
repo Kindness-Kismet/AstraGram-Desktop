@@ -26,14 +26,14 @@ public:
 		if (!contentHeight) {
 			return _height;
 		}
-		const auto top = _height + st::windowCardGap / 2;
+		const auto top = _height + st::chatFloatingBarGap;
 		_height = top + contentHeight;
 		_cards.emplace_back(top, contentHeight);
 		return top;
 	}
 
 	[[nodiscard]] int height() const {
-		return _height ? (_height + st::windowCardGap / 2) : 0;
+		return _height ? (_height + st::chatFloatingBarGap) : 0;
 	}
 
 	[[nodiscard]] QRegion cardRegion(int width) const {
