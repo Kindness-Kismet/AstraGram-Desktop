@@ -38,6 +38,7 @@ public:
 	rpl::producer<> ready() const;
 
 	void start(bool forceWait = false);
+	void checkNow();
 	void stop();
 	void test();
 

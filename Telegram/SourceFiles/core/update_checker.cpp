@@ -1782,7 +1782,7 @@ public:
 	rpl::producer<> failed() const;
 	rpl::producer<> ready() const;
 
-	void start(bool forceWait);
+	void start(bool forceWait, bool manual = false);
 	void stop();
 	void test();
 
@@ -1948,6 +1948,8 @@ bool Updater::percent() const {
 }
 
 void Updater::stop() {
+	_timer.cancel();
+	_retryTimer.cancel();
 	_httpImplementation = Implementation();
 	_mtpImplementation = Implementation();
 	_flatpakImplementation = Implementation{
@@ -1957,13 +1959,13 @@ void Updater::stop() {
 	_action = Action::Waiting;
 }
 
-void Updater::start(bool forceWait) {
+void Updater::start(bool forceWait, bool manual) {
 	if (cExeName().isEmpty()) {
 		return;
 	}
 
 	_timer.cancel();
-	if (!cAutoUpdate() || _action != Action::Waiting) {
+	if ((!manual && !cAutoUpdate()) || _action != Action::Waiting) {
 		return;
 	}
 
@@ -1974,7 +1976,7 @@ void Updater::start(bool forceWait) {
 		+ constDelay
 		+ int(rand() % randDelay)
 		- base::unixtime::now();
-	auto sendRequest = (updateInSecs <= 0)
+	auto sendRequest = manual || (updateInSecs <= 0)
 		|| (updateInSecs > constDelay + randDelay);
 	if (!sendRequest && !forceWait) {
 		if (!FindUpdateFile().isEmpty()) {
@@ -2070,8 +2072,7 @@ void Updater::checkerFail(not_null<Implementation*> which) {
 
 void Updater::test() {
 	_testing = true;
-	cSetLastUpdateCheck(0);
-	start(false);
+	start(false, true);
 }
 
 void Updater::setMtproto(base::weak_ptr<Main::Session> session) {
@@ -2209,6 +2210,11 @@ rpl::producer<> UpdateChecker::ready() const {
 
 void UpdateChecker::start(bool forceWait) {
 	_updater->start(forceWait);
+}
+
+void UpdateChecker::checkNow() {
+	// 单次检查不修改自动检查偏好，结束后仍按原偏好决定是否定时检查。
+	_updater->start(false, true);
 }
 
 void UpdateChecker::test() {
@@ -2414,7 +2420,6 @@ void UpdateApplication() {
 		}();
 		UrlClickHandler::Open(url);
 	} else {
-		cSetAutoUpdate(true);
 		const auto window = Core::IsAppLaunched()
 			? Core::App().activePrimaryWindow()
 			: nullptr;
@@ -2432,8 +2437,7 @@ void UpdateApplication() {
 			}
 			window->widget()->showFromTray();
 		}
-		cSetLastUpdateCheck(0);
-		Core::UpdateChecker().start();
+		Core::UpdateChecker().checkNow();
 	}
 }
 

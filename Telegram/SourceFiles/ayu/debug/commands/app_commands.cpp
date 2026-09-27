@@ -43,7 +43,7 @@ using json = nlohmann::json;
 		return Result::Err(u"updater is disabled"_q);
 	}
 	// 检查是异步的，这里只负责触发，结果看 tupdates 目录与日志。
-	Core::UpdateChecker().test();
+	Core::UpdateChecker().checkNow();
 	return Result::Ok(u"update check started"_q);
 }
 
@@ -62,6 +62,7 @@ using json = nlohmann::json;
 		content = QString::fromUtf8(f.readAll()).trimmed();
 	}
 	return Result::Ok(Compact(json{
+		{ "autoCheckUpdates", cAutoUpdate() },
 		{ "prefixFile", file.toStdString() },
 		{ "prefixFileContent", content.toStdString() },
 		{ "resolvedPrefix", Local::readAutoupdatePrefix().toStdString() },

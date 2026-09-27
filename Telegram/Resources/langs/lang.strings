@@ -8914,6 +8914,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_SettingsRecentStickersCount" = "Recent Stickers Count";
 "ayu_SettingsCustomizationHint" = "You must restart the application after making changes in the \"Customization\" section.";
 "ayu_WindowMaterial" = "Window Background";
+"ayu_AutoCheckUpdates" = "Check for updates automatically";
 "ayu_WindowMaterialOff" = "Off";
 "ayu_WindowMaterialMica" = "Mica";
 "ayu_WindowMaterialAcrylic" = "Acrylic";

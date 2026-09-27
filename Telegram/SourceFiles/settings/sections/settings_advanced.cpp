@@ -1017,15 +1017,12 @@ void BuildSpellcheckerSection(SectionBuilder &builder) {
 #endif // !TDESKTOP_DISABLE_SPELLCHECK
 }
 
-void BuildUpdateSection(SectionBuilder &builder, bool atTop) {
+void BuildUpdateSection(SectionBuilder &builder) {
 	if (!HasUpdate()) {
 		return;
 	}
 	const auto container = builder.container();
 
-	if (!atTop) {
-		builder.addDivider();
-	}
 	builder.addSkip();
 	builder.addSubsectionTitle({
 		.id = u"advanced/version"_q,
@@ -1047,7 +1044,7 @@ void BuildUpdateSection(SectionBuilder &builder, bool atTop) {
 
 	const auto toggle = builder.addButton({
 		.id = u"advanced/auto_update"_q,
-		.title = tr::lng_settings_update_automatically(),
+		.title = tr::ayu_AutoCheckUpdates(),
 		.st = &st::settingsUpdateToggle,
 		.toggled = rpl::single(cAutoUpdate()),
 		.keywords = { u"update"_q, u"automatic"_q, u"version"_q },
@@ -1073,12 +1070,10 @@ void BuildUpdateSection(SectionBuilder &builder, bool atTop) {
 	auto optionsShown = rpl::producer<bool>(nullptr);
 	if (toggle) {
 		Core::UpdateChecker checker;
-		optionsShown = rpl::combine(
-			toggle->toggledValue(),
-			downloading->events_starting_with(
-				checker.state() == Core::UpdateChecker::State::Download)
-		) | rpl::map([](bool check, bool downloading) {
-			return check && !downloading;
+		optionsShown = downloading->events_starting_with(
+			checker.state() == Core::UpdateChecker::State::Download
+		) | rpl::map([](bool downloading) {
+			return !downloading;
 		});
 	}
 	auto options = (Ui::SlideWrap<Ui::VerticalLayout>*)nullptr;
@@ -1100,9 +1095,7 @@ void BuildUpdateSection(SectionBuilder &builder, bool atTop) {
 			.title = tr::lng_settings_check_now(),
 			.st = &st::settingsButtonNoIcon,
 			.onClick = [] {
-				Core::UpdateChecker checker;
-				cSetLastUpdateCheck(0);
-				checker.start();
+				Core::UpdateChecker().checkNow();
 			},
 			.keywords = { u"check"_q, u"update"_q, u"version"_q },
 		});
@@ -1181,6 +1174,8 @@ void BuildUpdateSection(SectionBuilder &builder, bool atTop) {
 				checker.start();
 			} else {
 				checker.stop();
+				options->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+				downloading->fire(false);
 				setDefaultStatus(checker);
 			}
 		}, toggle->lifetime());
@@ -1243,9 +1238,7 @@ void BuildUpdateSection(SectionBuilder &builder, bool atTop) {
 	}
 
 	builder.addSkip();
-	if (atTop) {
-		builder.addDivider();
-	}
+	builder.addDivider();
 }
 
 void BuildExportSection(SectionBuilder &builder) {
@@ -1337,11 +1330,7 @@ const auto kMeta = BuildHelper({
 	.title = &tr::lng_settings_advanced,
 	.icon = &st::menuIconManage,
 }, [](SectionBuilder &builder) {
-	const auto autoUpdate = cAutoUpdate();
-
-	if (!autoUpdate) {
-		BuildUpdateSection(builder, true);
-	}
+	BuildUpdateSection(builder);
 	BuildDataStorageSection(builder);
 	BuildAutoDownloadSection(builder);
 	BuildWindowTitleSection(builder);
@@ -1352,9 +1341,6 @@ const auto kMeta = BuildHelper({
 	BuildPerformanceSection(builder);
 	BuildSpellcheckerSection(builder);
 	BuildScreenReaderSection(builder);
-	if (autoUpdate) {
-		BuildUpdateSection(builder, false);
-	}
 	BuildExportSection(builder);
 });
 
@@ -1430,7 +1416,7 @@ void SetupUpdate(not_null<Ui::VerticalLayout*> container) {
 		currentVersionText());
 	const auto toggle = container->add(object_ptr<Button>(
 		container,
-		tr::lng_settings_update_automatically(),
+		tr::ayu_AutoCheckUpdates(),
 		st::settingsUpdateToggle));
 	const auto label = Ui::CreateChild<Ui::FlatLabel>(
 		toggle,
@@ -1534,6 +1520,8 @@ void SetupUpdate(not_null<Ui::VerticalLayout*> container) {
 			checker.start();
 		} else {
 			checker.stop();
+			options->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+			downloading->fire(false);
 			setDefaultStatus(checker);
 		}
 	}, toggle->lifetime());
@@ -1557,12 +1545,10 @@ void SetupUpdate(not_null<Ui::VerticalLayout*> container) {
 	}
 
 	Core::UpdateChecker checker;
-	options->toggleOn(rpl::combine(
-		toggle->toggledValue(),
-		downloading->events_starting_with(
-			checker.state() == Core::UpdateChecker::State::Download)
-	) | rpl::map([](bool check, bool downloading) {
-		return check && !downloading;
+	options->toggleOn(downloading->events_starting_with(
+		checker.state() == Core::UpdateChecker::State::Download
+	) | rpl::map([](bool downloading) {
+		return !downloading;
 	}));
 
 	checker.checking() | rpl::on_next([=] {
@@ -1597,10 +1583,7 @@ void SetupUpdate(not_null<Ui::VerticalLayout*> container) {
 	setDefaultStatus(checker);
 
 	check->addClickHandler([] {
-		Core::UpdateChecker checker;
-
-		cSetLastUpdateCheck(0);
-		checker.start();
+		Core::UpdateChecker().checkNow();
 	});
 	update->addClickHandler([] {
 		if (!Core::UpdaterDisabled()) {

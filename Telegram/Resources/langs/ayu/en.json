@@ -131,6 +131,7 @@
   "SettingsUnlimitedRecentStickers": "Unlimited Recent Stickers",
   "SettingsCustomizationHint": "You must restart the application after making changes in the \"Customization\" section.",
   "WindowMaterial": "Window Background",
+  "AutoCheckUpdates": "Check for updates automatically",
   "WindowMaterialOff": "Off",
   "WindowMaterialMica": "Mica",
   "WindowMaterialAcrylic": "Acrylic",

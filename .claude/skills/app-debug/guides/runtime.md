@@ -6,8 +6,8 @@
 |---|---|---|
 | `app.ping` | 空 | 心跳检测，返回 `pong`，验证服务端连通性。 |
 | `app.info` | 空 | 返回版本、配置、工作目录、会话与窗口状态 JSON。 |
-| `app.check-update` | 空 | 触发一次更新检查，上游链接与包校验按当前构建的发布语义走。 |
-| `app.update-info` | 空 | 报告更新源前缀：`tdata/prefix` 的内容与内存里解析出的地址。 |
+| `app.check-update` | 空 | 手动触发一次更新检查，不修改自动检查偏好，链接与包校验按当前构建的发布语义走。 |
+| `app.update-info` | 空 | 报告自动检查偏好 `autoCheckUpdates`，以及 `tdata/prefix` 的内容与内存里解析出的地址。 |
 | `app.help` | 空 | 列出服务端已注册的全部指令名。 |
 | `app.quit` | 空 | 让应用走正常退出流程；退出动作排在事件循环尾部，确保 `OK` 写完 socket 再退。 |
 | `window.resize` | `[width height]` | 报告窗口尺寸与最大化状态；给出尺寸时按逻辑像素调整窗口。 |
