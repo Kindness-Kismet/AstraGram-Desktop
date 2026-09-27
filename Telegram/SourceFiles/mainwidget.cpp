@@ -2834,7 +2834,7 @@ void MainWidget::updateControlsGeometry() {
 		}
 	} else {
 		const auto gap = st::windowCardGap;
-		const auto half = st::windowColumnGap;
+		const auto columnGap = st::windowColumnGap;
 		auto thirdSectionWidth = _thirdSection ? _thirdColumnWidth : 0;
 		if (_dialogs) {
 			accumulate_min(
@@ -2842,17 +2842,17 @@ void MainWidget::updateControlsGeometry() {
 				width() - st::columnMinimalWidthMain);
 		}
 		const auto thirdTop = getThirdSectionTop();
-		// 仅在相邻内容栏之间留出间隙，外侧贴齐窗口。
-		const auto historyLeft = _dialogs ? dialogsWidth + half : 0;
+		// 相邻栏之间只由中间栏让出 columnGap，外侧贴齐窗口。
+		const auto historyLeft = _dialogs ? dialogsWidth + columnGap : 0;
 		const auto historyRight = _thirdSection
-			? (width() - thirdSectionWidth - half)
+			? (width() - thirdSectionWidth - columnGap)
 			: width();
 		const auto historyWidth = historyRight - historyLeft;
 		if (_thirdSection) {
 			_thirdSection->setGeometry(
-				width() - thirdSectionWidth + half,
+				width() - thirdSectionWidth,
 				thirdTop + gap,
-				thirdSectionWidth - half,
+				thirdSectionWidth,
 				height() - thirdTop - gap);
 		}
 		if (_dialogs) {
