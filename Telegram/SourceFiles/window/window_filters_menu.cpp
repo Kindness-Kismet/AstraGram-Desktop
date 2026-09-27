@@ -134,20 +134,19 @@ void FiltersMenu::setup() {
 	const auto gap = st::windowCardGap;
 	_parent->heightValue() | rpl::on_next([=](int height) {
 		const auto width = st::windowFiltersWidth;
-		const auto innerWidth = width - gap;
 		_outer.setGeometry(0, 0, width, height);
-		_menu.resizeToWidth(innerWidth);
-		_menu.move(gap, gap);
-		_scroll.setGeometry(gap, gap + _menu.height(), innerWidth,
-			std::max(0, height - gap * 2 - _menu.height()));
-		_container->resizeToWidth(innerWidth);
+		_menu.resizeToWidth(width);
+		_menu.move(0, gap);
+		_scroll.setGeometry(0, gap + _menu.height(), width,
+			std::max(0, height - gap - _menu.height()));
+		_container->resizeToWidth(width);
 	}, _outer.lifetime());
 	_outer.paintRequest() | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(&_outer);
 		p.fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(
 			&_outer, ShellBackgroundColor(&_outer)->c));
-		p.fillRect(QRect(gap, gap, _outer.width() - gap,
-			_outer.height() - 2 * gap), AyuFeatures::WindowMaterial::surfaceColor(
+		p.fillRect(QRect(0, gap, _outer.width(),
+			_outer.height() - gap), AyuFeatures::WindowMaterial::surfaceColor(
 				&_outer, st::windowBg->c));
 	}, _outer.lifetime());
 
@@ -182,7 +181,7 @@ void FiltersMenu::setup() {
 	overlay->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(overlay);
 		p.fillRect(_outer.width() - st::lineWidth, gap, st::lineWidth,
-			_outer.height() - 2 * gap, st::windowDividerFg);
+			_outer.height() - gap, st::windowDividerFg);
 	}, overlay->lifetime());
 	overlay->show();
 
@@ -440,7 +439,7 @@ void FiltersMenu::refresh() {
 	}
 	_reorder->start();
 
-	_container->resizeToWidth(_outer.width() - st::windowCardGap);
+	_container->resizeToWidth(_outer.width());
 
 	// 刷新会重置滚动位置，需要恢复。
 	_scroll.scrollToY(oldTop);

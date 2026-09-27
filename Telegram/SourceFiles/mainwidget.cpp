@@ -2808,27 +2808,26 @@ void MainWidget::updateControlsGeometry() {
 		: 0;
 	if (isOneColumn()) {
 		const auto gap = st::windowCardGap;
-		const auto left = _controller->filtersWidth() ? 0 : gap;
-		const auto contentWidth = width() - left - gap;
+		const auto contentWidth = width();
 		if (_callTopBar) {
 			_callTopBar->resizeToWidth(contentWidth);
-			_callTopBar->moveToLeft(left, gap);
+			_callTopBar->moveToLeft(0, gap);
 		}
 		if (_exportTopBar) {
 			_exportTopBar->resizeToWidth(contentWidth);
-			_exportTopBar->moveToLeft(left, gap + _callTopBarHeight);
+			_exportTopBar->moveToLeft(0, gap + _callTopBarHeight);
 		}
 		if (_player) {
 			_player->resizeToWidth(contentWidth);
 			_player->moveToLeft(
-				left,
+				0,
 				gap + _callTopBarHeight + _exportTopBarHeight);
 		}
 		const auto mainSectionGeometry = QRect(
-			left,
+			0,
 			mainSectionTop + gap,
 			contentWidth,
-			height() - mainSectionTop - gap * 2);
+			height() - mainSectionTop - gap);
 		if (_dialogs) {
 			_dialogs->setGeometryWithTopMoved(
 				mainSectionGeometry,
@@ -2838,7 +2837,7 @@ void MainWidget::updateControlsGeometry() {
 			mainSectionGeometry,
 			_contentScrollAddToY);
 		if (_hider) {
-			_hider->setGeometry(left, gap, contentWidth, height() - gap * 2);
+			_hider->setGeometry(0, gap, contentWidth, height() - gap);
 		}
 	} else {
 		const auto gap = st::windowCardGap;
@@ -2850,26 +2849,25 @@ void MainWidget::updateControlsGeometry() {
 				width() - st::columnMinimalWidthMain);
 		}
 		const auto thirdTop = getThirdSectionTop();
-		// 三栏内缩留出间隙,间隙里露出 MainWidget 铺的底色
-		const auto historyLeft = dialogsWidth + half;
+		// 仅在相邻内容栏之间留出间隙，外侧贴齐窗口。
+		const auto historyLeft = _dialogs ? dialogsWidth + half : 0;
 		const auto historyRight = _thirdSection
 			? (width() - thirdSectionWidth - half)
-			: (width() - gap);
+			: width();
 		const auto historyWidth = historyRight - historyLeft;
 		if (_thirdSection) {
 			_thirdSection->setGeometry(
 				width() - thirdSectionWidth + half,
 				thirdTop + gap,
-				thirdSectionWidth - gap - half,
-				height() - thirdTop - gap * 2);
+				thirdSectionWidth - half,
+				height() - thirdTop - gap);
 		}
 		if (_dialogs) {
-			const auto left = _controller->filtersWidth() ? 0 : gap;
 			_dialogs->setGeometryToLeft(
-				left,
+				0,
 				gap,
-				dialogsWidth - left,
-				height() - gap * 2);
+				dialogsWidth,
+				height() - gap);
 		}
 		// 卡片间隙已经区分各栏,两条 1px 竖直分隔线设零宽隐藏
 		if (_sideShadow) {
@@ -2901,18 +2899,18 @@ void MainWidget::updateControlsGeometry() {
 			historyLeft,
 			mainSectionTop + gap,
 			mainSectionWidth,
-			height() - mainSectionTop - gap * 2
+			height() - mainSectionTop - gap
 		), _contentScrollAddToY);
 		if (_hider) {
 			_hider->setGeometryToLeft(
 				historyLeft,
 				gap,
 				mainSectionWidth,
-				height() - gap * 2);
+				height() - gap);
 		}
 	}
 	if (_mainSection) {
-		// 内容区 section 与 history 卡片几何对齐(已内缩 gap)
+		// 内容区与聊天面板使用相同的边界。
 		_mainSection->setGeometryWithTopMoved(
 			_history->geometry(),
 			_contentScrollAddToY);
