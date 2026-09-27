@@ -101,3 +101,4 @@ Telegram/SourceFiles/_other/packer_private.h
 
 # Session exports (local conversation dumps)
 pi-session*.html
+codex-session*
