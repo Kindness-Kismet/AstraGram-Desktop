@@ -1,13 +1,13 @@
-# Changelog
+- Added window background materials, so you can now choose Mica or Acrylic on Windows 11 22H2 and later, or Blur on macOS, from Window Background below Font family in Chat Settings
+- Added a frosted background to the message input and the pinned message bar, so you can now see messages scrolling beneath them
+- Changed how chat panels are laid out; they now reach the left, right and bottom edges of the window, with equal gaps on both sides of the chat column
+- Changed how the main menu footer is placed; it now sits right below the menu items instead of at the bottom of the menu
+- Changed how automatic update checks work; they are now off by default for new installs, and Check for updates is always available at the top of Advanced settings
 
-## 7.2.9.9
+---
 
-- 主菜单外侧改为圆角，菜单项的悬停高亮跟着变成圆角，右键菜单、通话菜单、机器人菜单和 AyuGram 自己的菜单项与系统托盘菜单保持一致。
-- 主菜单图标改用弹出菜单的配色，比原先的深色更轻，浅色和夜间主题都已确认。
-- 主菜单滚动条在一秒无操作后自动隐藏，滚动或悬停时重新出现。
-- 主菜单的分组分隔线改为随面板一起滑入，不再等面板停住之后才出现。
-- 聊天、会话列表、侧边栏和右侧面板的底部不再有圆角，顶部圆角保留。
-- 侧边栏左上角圆角在鼠标悬停和窗口缩放时保持完整。
-- 菜单图标统一到 MingCute 的 24 像素画布：线条粗细一致，竖排图标的水平中心对齐；通知子菜单里「永久静音」与上面三项不居中的问题已修复。
-- 已编辑消息的标记改用 MingCute 的 save 2 线性图标。
-- 输入框的自动删除按钮恢复为官方图标。
+- 新增了窗口背景材质，现在可以在聊天设置中字体选项下方的“窗口背景”里选择云母、亚克力（Windows 11 22H2 及以上）或磨砂玻璃（macOS）
+- 新增了输入框和置顶消息栏的磨砂背景，现在可以透过它们看到下方滚动的消息
+- 调整了聊天面板的布局，现在面板直接贴合窗口左右两侧和底部，聊天栏两侧的间隙也保持一致
+- 调整了主菜单底部信息的位置，现在它紧跟在菜单项下方，不再固定在菜单最底部
+- 调整了自动检查更新的行为，现在新安装默认关闭，并且始终可以在高级设置顶部手动检查更新
