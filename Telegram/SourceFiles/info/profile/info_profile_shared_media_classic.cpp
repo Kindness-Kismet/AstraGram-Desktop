@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_shared_media_classic.h"
+#include "ayu/features/window_material/window_material.h"
 
 #include "core/ui_integration.h"
 #include "data/components/recent_shared_media_gifts.h"
@@ -369,6 +370,11 @@ object_ptr<Ui::SlideWrap<Ui::RpWidget>> SetupSharedMediaClassic(
 		addCommonGroupsButton(user, st::infoIconMediaGroup);
 	}
 
+	for (const auto child : content->findChildren<QWidget*>()) {
+		if (const auto button = dynamic_cast<Ui::SettingsButton*>(child)) {
+			AyuFeatures::WindowMaterial::watchSurface(button);
+		}
+	}
 	auto result = object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 		parent,
 		object_ptr<Ui::VerticalLayout>(parent));

@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_actions.h"
+#include "ayu/features/window_material/window_material.h"
 
 #include "api/api_blocked_peers.h"
 #include "api/api_chat_participants.h"
@@ -1033,6 +1034,7 @@ auto AddActionButton(
 		std::move(toggleOn)
 	)->entity()->addClickHandler(std::move(callback));
 	result->finishAnimating();
+	AyuFeatures::WindowMaterial::watchSurface(result->entity());
 	if (icon) {
 		object_ptr<Profile::FloatingIcon>(
 			result,
@@ -2453,6 +2455,7 @@ Section DetailsFiller::makeBotPermissions(not_null<UserData*> user) {
 			inner,
 			tr::lng_profile_bot_emoji_status_access(),
 			st::infoSharedMediaButton));
+	AyuFeatures::WindowMaterial::watchSurface(emoji);
 	object_ptr<Profile::FloatingIcon>(
 		emoji,
 		st::infoIconEmojiStatusAccess,
@@ -3110,6 +3113,7 @@ void ActionsFiller::addFastButtonsMode(not_null<UserData*> user) {
 		_wrap,
 		rpl::single(u"Fast buttons mode"_q),
 		st::infoSharedMediaButton));
+	AyuFeatures::WindowMaterial::watchSurface(button);
 	object_ptr<Info::Profile::FloatingIcon>(
 		button,
 		st::infoIconMediaBot,
