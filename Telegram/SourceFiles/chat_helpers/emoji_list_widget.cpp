@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/emoji_list_widget.h"
+#include "ayu/features/window_material/window_material.h"
 
 #include "window/window_media_preview.h"
 #include "api/api_peer_photo.h"
@@ -525,6 +526,7 @@ EmojiListWidget::EmojiListWidget(
 	if (st().bg->c.alpha() > 0) {
 		setAttribute(Qt::WA_OpaquePaintEvent);
 	}
+	AyuFeatures::WindowMaterial::watchSurface(this);
 
 	if (_mode != Mode::RecentReactions
 		&& _mode != Mode::BackgroundEmoji
@@ -2153,7 +2155,7 @@ void EmojiListWidget::paintEvent(QPaintEvent *e) {
 		p.fillRect(clip, Qt::transparent);
 		p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 	} else if (st().bg->c.alpha() > 0) {
-		p.fillRect(clip, st().bg);
+		p.fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(this, st().bg->c));
 	}
 	if (!_searchExpandCache.isNull()) {
 		_searchExpandCache = QImage();

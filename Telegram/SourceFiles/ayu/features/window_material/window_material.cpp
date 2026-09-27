@@ -1,6 +1,7 @@
 #include "ayu/features/window_material/window_material.h"
 
 #include "ayu/ayu_settings.h"
+#include "chat_helpers/tabbed_panel.h"
 #include "ayu/features/window_material/platform/window_material_platform.h"
 #include "ui/layers/layer_widget.h"
 #include "rpl/map.h"
@@ -194,7 +195,8 @@ bool isActive(const QWidget *widget) {
 		return false;
 	}
 	for (auto ancestor = widget; ancestor; ancestor = ancestor->parentWidget()) {
-		if (dynamic_cast<const Ui::LayerWidget*>(ancestor)) {
+		if (dynamic_cast<const Ui::LayerWidget*>(ancestor)
+			|| dynamic_cast<const ChatHelpers::TabbedPanel*>(ancestor)) {
 			return false;
 		}
 	}

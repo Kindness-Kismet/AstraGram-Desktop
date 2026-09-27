@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/tabbed_selector.h"
+#include "ayu/features/window_material/window_material.h"
 
 #include "chat_helpers/emoji_list_widget.h"
 #include "chat_helpers/stickers_list_widget.h"
@@ -52,7 +53,7 @@ public:
 	void setFinalImages(Direction direction, QImage &&left, QImage &&right, QRect inner, bool wasSectionIcons);
 
 	void start();
-	void paintFrame(QPainter &p, const style::EmojiPan &st, float64 dt, float64 opacity);
+	void paintFrame(QPainter &p, const style::EmojiPan &st, float64 dt, float64 opacity, bool material);
 
 private:
 	Direction _direction = Direction::LeftToRight;
@@ -137,7 +138,8 @@ void TabbedSelector::SlideAnimation::paintFrame(
 		QPainter &p,
 		const style::EmojiPan &st,
 		float64 dt,
-		float64 opacity) {
+		float64 opacity,
+		bool material) {
 	Expects(started());
 	Expects(dt >= 0.);
 
@@ -168,14 +170,16 @@ void TabbedSelector::SlideAnimation::paintFrame(
 		+ std::clamp(_innerWidth + leftCoord, 0, _innerWidth);
 	auto rightFrom = _innerLeft + std::clamp(rightCoord, 0, _innerWidth);
 	auto painterRightFrom = rightFrom / style::DevicePixelRatio();
-	if (opacity < 1.) {
+	if (opacity < 1. || material) {
 		_frame.fill(Qt::transparent);
 	}
 	{
 		auto p = QPainter(&_frame);
 		p.setOpacity(opacity);
-		p.fillRect(_painterInnerLeft, _painterInnerTop, _painterInnerWidth, _painterCategoriesTop - _painterInnerTop, st.bg);
-		p.fillRect(_painterInnerLeft, _painterCategoriesTop, _painterInnerWidth, _painterInnerBottom - _painterCategoriesTop, _wasSectionIcons ? st.categoriesBg : st.bg);
+		if (!material) {
+			p.fillRect(_painterInnerLeft, _painterInnerTop, _painterInnerWidth, _painterCategoriesTop - _painterInnerTop, st.bg);
+			p.fillRect(_painterInnerLeft, _painterCategoriesTop, _painterInnerWidth, _painterInnerBottom - _painterCategoriesTop, _wasSectionIcons ? st.categoriesBg : st.bg);
+		}
 		p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 		if (leftTo > _innerLeft) {
 			p.setOpacity(opacity * leftAlpha);
@@ -541,6 +545,7 @@ TabbedSelector::TabbedSelector(
 		setSearchRightReserved(descriptor.searchRightReserved);
 	}
 	setAttribute(Qt::WA_OpaquePaintEvent, false);
+	AyuFeatures::WindowMaterial::watchSurface(this);
 	showAll();
 	hide();
 }
@@ -896,13 +901,18 @@ void TabbedSelector::paintSlideFrame(QPainter &p) {
 	if (_roundRadius > 0) {
 		paintBgRoundedPart(p);
 	} else if (_tabsSlider) {
-		p.fillRect(0, 0, width(), _tabsSlider->height(), _st.bg);
+		p.fillRect(0, 0, width(), _tabsSlider->height(),
+			AyuFeatures::WindowMaterial::surfaceColor(this, _st.bg->c));
 	}
 	auto slideDt = _a_slide.value(1.);
-	_slideAnimation->paintFrame(p, _st, slideDt, 1.);
+	_slideAnimation->paintFrame(p, _st, slideDt, 1.,
+		AyuFeatures::WindowMaterial::isActive(this));
 }
 
 void TabbedSelector::paintBgRoundedPart(QPainter &p) {
+	if (AyuFeatures::WindowMaterial::isActive(this)) {
+		return;
+	}
 	const auto fill = _dropDown
 		? QRect(0, height() - _roundRadius, width(), _roundRadius)
 		: _tabsSlider
@@ -925,6 +935,9 @@ void TabbedSelector::paintBgRoundedPart(QPainter &p) {
 }
 
 void TabbedSelector::paintContent(QPainter &p) {
+	if (AyuFeatures::WindowMaterial::isActive(this)) {
+		return;
+	}
 	const auto &footerBg = hasSectionIcons() ? _st.categoriesBg : _st.bg;
 	if (_roundRadius > 0) {
 		paintBgRoundedPart(p);
@@ -1050,7 +1063,10 @@ QImage TabbedSelector::grabForAnimation() {
 		QImage::Format_ARGB32_Premultiplied);
 	result.setDevicePixelRatio(style::DevicePixelRatio());
 	result.fill(Qt::transparent);
-	render(&result);
+	render(&result, QPoint(), QRegion(), QWidget::DrawChildren
+		| (AyuFeatures::WindowMaterial::isActive(this)
+			? QWidget::RenderFlags()
+			: QWidget::RenderFlags(QWidget::DrawWindowBackground)));
 
 	_a_slide = base::take(slideAnimation);
 	_slideAnimation = base::take(slideAnimationData);

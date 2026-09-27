@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/gifs_list_widget.h"
+#include "ayu/features/window_material/window_material.h"
 
 #include "api/api_toggling_media.h" // Api::ToggleSavedGif
 #include "base/const_string.h"
@@ -120,6 +121,7 @@ GifsListWidget::GifsListWidget(
 , _previewTimer([=] { showPreview(); }) {
 	setMouseTracking(true);
 	setAttribute(Qt::WA_OpaquePaintEvent);
+	AyuFeatures::WindowMaterial::watchSurface(this);
 
 	setupSearch();
 
@@ -348,7 +350,7 @@ void GifsListWidget::inlineResultsDone(const MTPmessages_BotResults &result) {
 void GifsListWidget::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 	auto clip = e->rect();
-	p.fillRect(clip, st().bg);
+	p.fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(this, st().bg->c));
 
 	paintInlineItems(p, clip);
 }
