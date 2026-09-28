@@ -14,14 +14,7 @@ namespace {
 
 using json = nlohmann::json;
 
-// 造一个只在本地存在的 self 用户，绕过登录直接进主界面。
-//
-// 走的是 tdesktop 恢复本地会话的同一条路径（main_account.cpp:145 也是这样拼
-// MTPUser），所以界面联动天然成立：createSession 赋值 _sessionValue，
-// window_controller.cpp:175 收到非空会话就建 SessionController 并 setupMain。
-//
-// 代价是这个会话没有任何服务端数据，聊天列表是空的，任何联网操作都会失败。
-// 只适合验证界面、设置项和入口可达性，测消息级功能要用 session.test-mode 走测试服。
+// 与登录页共用初始化入口，场景数据随会话创建，不依赖客户端环境变量。
 [[nodiscard]] Result FakeSession(const QStringList &args) {
 	if (args.size() > 1) {
 		return Result::Err(u"usage: session.fake [userId]"_q);

@@ -1,5 +1,7 @@
 #ifdef _DEBUG
 #include "ayu/debug/debug_login.h"
+#include "ayu/ayu_settings.h"
+#include "ayu/debug/commands/commands_internal.h"
 
 #include "core/application.h"
 #include "main/main_account.h"
@@ -20,12 +22,7 @@ bool isFakeSession(not_null<Main::Session*> session) {
 	return FakeSession.get() == session.get();
 }
 
-// 走的是 tdesktop 恢复本地会话的同一条路径（main_account.cpp:145 也是这样拼
-// MTPUser），所以界面联动天然成立：createSession 赋值 _sessionValue，
-// window_controller.cpp:175 收到非空会话就建 SessionController 并 setupMain。
-//
-// 代价是这个会话没有任何服务端数据，聊天列表是空的，任何联网操作都会失败。
-// 只适合验证界面、设置项和入口可达性，测消息级功能要用测试服。
+// 复用原生会话恢复流程，每次进入自动生成本地场景；身份与场景消息不持久化。
 QString CreateFakeSession(int64 userId) {
 	// mtp() 直接解引用 _mtp，没有公开的就绪查询；domain.started() 是 tdesktop
 	// 自己在 settings_codes.cpp:152 用的同一前提。
@@ -69,6 +66,8 @@ QString CreateFakeSession(int64 userId) {
 		MTPlong(), // send_paid_messages_stars
 		MTPlong())); // linked_community_id
 	FakeSession = base::make_weak(&account.session());
+	AyuSettings::getInstance().setDevFeaturesEnabled(true);
+	Commands::seedFakeScenarios(&account.session());
 
 	return QString();
 }

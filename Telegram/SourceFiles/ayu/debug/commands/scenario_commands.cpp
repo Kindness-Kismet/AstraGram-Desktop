@@ -308,23 +308,6 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 	}
 }
 
-[[nodiscard]] Result seedScenarios(const QStringList &args) {
-	if (!args.empty()) {
-		return Result::Err(u"usage: scenario.seed"_q);
-	}
-	const auto session = ActiveSession();
-	if (!session || !isFakeSession(session)) {
-		return Result::Err(u"an in-process fake session is required"_q);
-	}
-	if (SeededSession.get() != session) {
-		for (auto i = 0; i != kScenarios.size(); ++i) {
-			seedScenario(session, i);
-		}
-		SeededSession = base::make_weak(session);
-	}
-	return Result::Ok(Compact(scenarioList()));
-}
-
 [[nodiscard]] Result listScenarios(const QStringList &args) {
 	if (!args.empty()) {
 		return Result::Err(u"usage: scenario.list"_q);
@@ -363,7 +346,7 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 	}
 	const auto session = ActiveSession();
 	if (!session || SeededSession.get() != session) {
-		return Result::Err(u"run scenario.seed in a fake session first"_q);
+		return Result::Err(u"an in-process fake session is required"_q);
 	}
 	const auto controller = session->tryResolveWindow();
 	if (!controller) {
@@ -464,9 +447,19 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 
 } // namespace
 
+void seedFakeScenarios(not_null<Main::Session*> session) {
+	Expects(isFakeSession(session));
+	if (SeededSession.get() == session) {
+		return;
+	}
+	for (auto i = 0; i != kScenarios.size(); ++i) {
+		seedScenario(session, i);
+	}
+	SeededSession = base::make_weak(session);
+}
+
 const HandlerMap &ScenarioHandlers() {
 	static const auto result = HandlerMap{
-		{ u"scenario.seed"_q, &seedScenarios },
 		{ u"scenario.list"_q, &listScenarios },
 		{ u"scenario.open"_q, &openScenario },
 	};

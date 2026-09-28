@@ -385,7 +385,8 @@ void QrWidget::setupControls() {
 	// 扫码页是启动首见页，调试入口挂在这里而不是手机号页。
 	const auto offline = Ui::CreateChild<Ui::LinkButton>(
 		this,
-		u"Enter without logging in"_q);
+		tr::ayu_DebugEnterFakeSession(tr::now));
+	offline->setObjectName(u"debugFakeSession"_q);
 	offline->show();
 	rpl::combine(
 		sizeValue(),
@@ -399,20 +400,11 @@ void QrWidget::setupControls() {
 	}, offline->lifetime());
 
 	offline->setClickedCallback([=] {
-		Ui::show(Ui::MakeConfirmBox({
-			.text = u"Create an offline fake session?\n\n"
-				u"The chat list stays empty and every network request fails. "
-				u"Use it to check the interface and settings only.\n\n"
-				u"Nothing is written to tdata, so a restart clears it."_q,
-			.confirmed = [=](Fn<void()> &&close) {
-				close();
-				const auto error = AyuDebug::CreateFakeSession();
-				if (!error.isEmpty()) {
-					showError(rpl::single(error));
-				}
-			},
-			.confirmText = rpl::single(u"Enter"_q),
-		}));
+		const auto error = AyuDebug::CreateFakeSession();
+		if (!error.isEmpty()) {
+			LOG(("Debug: Could not create fake session: %1").arg(error));
+			showError(tr::ayu_DebugFakeSessionFailed());
+		}
 	});
 #endif
 }

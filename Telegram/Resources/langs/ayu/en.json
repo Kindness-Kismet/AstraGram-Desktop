@@ -1,5 +1,7 @@
 {
   "AyuPreferences": "AyuGram Preferences",
+  "DebugEnterFakeSession": "Enter test session",
+  "DebugFakeSessionFailed": "Could not enter the test session. Check the application log.",
   "DocsText": "Documentation",
   "CategoryGeneral": "General",
   "CategoryAppearance": "Appearance",

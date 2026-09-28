@@ -9215,6 +9215,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_SettingsDescription" = "Telegram Desktop fork focused on customization.";
 "ayu_ArchiveChatsInMenu" = "Archived Chats";
 "ayu_DebugEnvironment" = "Environment";
+"ayu_DebugEnterFakeSession" = "Enter test session";
+"ayu_DebugFakeSessionFailed" = "Could not enter the test session. Check the application log.";
 "ayu_DebugCopied" = "Copied";
 "ayu_DebugVersion" = "Version";
 "ayu_DebugWorkingDirectory" = "Working directory";

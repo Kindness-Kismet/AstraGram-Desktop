@@ -30,6 +30,9 @@ using HandlerMap = std::map<QString, Handler>;
 [[nodiscard]] const HandlerMap &MessageHandlers();
 [[nodiscard]] const HandlerMap &WindowHandlers();
 
+// 界面登录入口与命令入口共用同一份本地场景。
+void seedFakeScenarios(not_null<Main::Session*> session);
+
 // json 序列化为单行字符串，所有 payload 的统一出口。
 [[nodiscard]] inline QString Compact(const nlohmann::json &value) {
 	return QString::fromStdString(value.dump());

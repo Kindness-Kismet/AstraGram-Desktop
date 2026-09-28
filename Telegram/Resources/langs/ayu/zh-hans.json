@@ -513,6 +513,8 @@
   "TitleMultipleForward": "转发到...",
   "UseQuickForwardMenu": "使用快速转发菜单",
   "DebugEnvironment": "环境",
+  "DebugEnterFakeSession": "进入假会话",
+  "DebugFakeSessionFailed": "无法进入假会话，请查看应用日志。",
   "DebugCopied": "已复制",
   "DebugVersion": "版本",
   "DebugWorkingDirectory": "工作目录",
