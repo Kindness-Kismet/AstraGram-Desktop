@@ -6,7 +6,6 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
-#include "ui/chat/floating_bar.h"
 
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"

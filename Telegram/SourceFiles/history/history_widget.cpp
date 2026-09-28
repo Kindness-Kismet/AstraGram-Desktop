@@ -9,7 +9,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "ayu/ui/components/chat_surface_button.h"
 #include "ayu/features/window_material/window_material.h"
-#include "ui/chat/floating_bar.h"
 
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
