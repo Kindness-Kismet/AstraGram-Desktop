@@ -47,7 +47,7 @@ GENERIC_COMMANDS = {
     "settings.schema": "列出设置值、类型与完整键名：[前缀]",
     "page.list": "查询全部官方与定制设置入口：[关键词]",
     "action.list": "列出官方快捷动作",
-    "action.run": "执行当前界面支持的官方动作：<名称>",
+    "action.run": "按绑定按键触发官方快捷动作，应用窗口须在前台：<名称>",
     "control.get": "查询控件当前值、状态与动作：<目标>",
     "control.set": "修改控件值并触发业务回调：<目标> <值>",
     "control.action": "执行控件公开的动作：<目标> <动作>",
@@ -64,7 +64,6 @@ GENERIC_COMMANDS = {
     "message.edit-local": "在假会话触发原生编辑流程：<会话编号> <消息编号> <文字>",
     "message.delete-local": "在假会话触发原生删除流程：<会话编号> <消息编号>",
     "message.hide": "按右键菜单流程隐藏消息及所在相册：<会话编号> <消息编号>",
-    "message.shot": "打开消息截图预览：<会话编号> <消息编号>...",
     "text.process": "验证文本处理与实体偏移：<send|edit|receive|auto-space|zalgo> <文字> [实体 JSON]",
     "translate.start": "按当前翻译服务发起请求：<语言> <文字>",
     "translate.clear-cache": "清空应用翻译缓存",
@@ -252,7 +251,7 @@ def register_commands(sub) -> None:
     command = sub.add_parser("control.list", help="列出活动窗口的控件树：标识、类名、几何、可见性")
     command.add_argument("filter", nargs="?", help="子串过滤，匹配 objectName/类名/accessibleName/文本")
     command.add_argument("--all", action="store_true", help="扫全部顶层窗口（含菜单、弹层）")
-    command = sub.add_parser("control.click", help="合成鼠标点击：按 objectName/accessibleName 或 #序号 寻址，进程内分发")
+    command = sub.add_parser("control.click", help="点击控件：按钮直接执行控件动作，其余控件投递鼠标事件；按 objectName/accessibleName 或 #序号 寻址")
     command.add_argument("target", help="objectName（如 mainMenuButton）、accessibleName 或 #序号")
     command.add_argument("--all", action="store_true", help="#序号 按 control.list --all 的全顶层序号寻址")
     command.add_argument("--mouse", action="store_true", help="从窗口命中测试后投递鼠标事件，检查按钮是否被遮挡")

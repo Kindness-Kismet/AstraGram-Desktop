@@ -21,7 +21,8 @@ python .codex/skills/app-debug/scripts/cli.py control.get '<控件编号或名�
 
 ## 动作
 
-`action.list` 列出官方快捷动作；`action.run <name>` 经原生快捷指令分发执行。
+`action.list` 列出官方快捷动作；`action.run <name>` 按当前绑定的按键走 Qt 快捷键匹配，与真实按键一致。
+应用窗口不在前台时 Qt 不匹配快捷键，指令直接报错，不会抢占焦点；自动流程切换页面改用 `chat.open`、`page.open`。
 涵盖账号／聊天／文件夹切换、收藏夹、联系人、归档、搜索、计划消息、消息发送方式、
 录音、视频消息、已读、媒体播放、聊天菜单、管理日志和客服动作。
 当前页面没有处理该动作时返回错误，不伪造成功。

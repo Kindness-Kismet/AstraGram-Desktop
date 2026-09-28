@@ -23,6 +23,8 @@ python .codex/skills/app-debug/scripts/cli.py settings.get streamerMode + screen
 
 ## 验证方式
 
+指令分三类：业务逻辑直接执行；界面交互通过控件指令操作；除页面切换外，不提供直接打开界面的指令。
+
 - 设置和业务状态：用 `settings.*`、`ghost.status`、`storage.stats` 查询。
 - 官方页面先用 `page.list` 查询真实索引，再用 `page.open` 定位；控件值用 `control.get/set`。
 - 实际业务动作使用 `action.list/run` 或原生界面的控件和菜单，异步任务用 `job.status` 查询结果。

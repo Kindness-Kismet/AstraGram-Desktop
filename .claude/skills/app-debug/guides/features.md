@@ -37,8 +37,9 @@
 
 ## 消息截图与转发
 
-`message.shot <peerId> <messageId>...` 打开原生消息截图预览，
-后续使用控件命令调整并保存；截图设置可通过 `messageShotSettings.*` 修改。
+消息截图从消息右键菜单进入：按截图找到消息位置，用 `control.mouse "#0" <x> <y> right` 打开菜单，
+再用 `control.click` 点击截图菜单项。截图像素是设备像素，按截图宽度与 `#0` 宽度之比换算坐标。
+预览打开后用控件指令调整并保存；截图设置可通过 `messageShotSettings.*` 修改。
 
 `forward.status <peerId>` 查询转发任务，`forward.cancel <peerId>` 取消正在进行的任务。
 发起转发、重复发送和更多消息动作可通过消息右键菜单操作，保留原有选项与目标确认流程。

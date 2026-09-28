@@ -82,8 +82,8 @@ id 即 objectName，如 `ayu/search`、`ayu/cat/ghost`）。没有 objectName �
 
 ## `control.click <objectName | #序号> [--all]`
 
-合成鼠标点击：在目标控件中心做命中测试，找到最深子控件，沿 Enter → Press → Release →
-Leave 顺序 `sendEvent`，走与真实点击相同的事件分发路径。不依赖窗口前台与真实光标。
+点击控件。按钮直接执行控件动作，不经过系统输入和命中测试；其余控件在中心做命中测试，
+沿 Enter → Press → Release → Leave 顺序投递鼠标事件。不依赖窗口前台与真实光标。
 
 ```bash
 python .claude/skills/app-debug/scripts/cli.py control.click mainMenuButton
@@ -94,9 +94,8 @@ python .claude/skills/app-debug/scripts/cli.py control.click "#42"
 - 寻址：objectName（先活动窗口，再全部顶层）或 `#序号`（对应默认 `control.list` 的
   `index`，UI 变化后序号会漂移，需重新 list）。objectName 找不到时按 accessibleName
   精确匹配作为备选。
-- 语义触发优先：目标是 AbstractButton 时直接调 `clicked()`（等价真实点击的最终出口）；
-  其余控件改用合成鼠标事件。
-- 单选和复选控件必须加 `--mouse`，普通语义触发只通知回调，不会执行控件内部的状态切换。
+- 按钮的控件动作与鼠标松开的顺序一致：复选框先切换选中状态，单选框只会被选中，再通知点击回调。
+- 直接执行不能证明鼠标点得到；检查遮挡、事件过滤等点击路径时加 `--mouse`。
 - 目标不可见或被禁用时报错；被隐藏页里的控件先导航到对应页面。
 - 回调可能销毁控件自身（如菜单项点击后 PopupMenu 整体销毁），返回前已拷贝取值并确认控件存活，
   点击后 `control.list` 可能因控件销毁找不到目标，属正常。

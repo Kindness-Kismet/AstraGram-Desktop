@@ -206,10 +206,10 @@ def verify(profile):
 
         pages = command("page.list")
         require(pages and len(command("action.list")) >= 60, "官方入口缺失")
-        command("action.run", "chat-self")
+        command("chat.open")
         command("page.open", "ayu")
         report["pageCount"] = len(pages)
-        passed(f"官方快捷动作与 {len(pages)} 个设置索引入口")
+        passed(f"官方快捷动作清单与 {len(pages)} 个设置索引入口")
 
         require(command("privacy.get")["localOnly"], "隐私状态未标识本地缓存")
         rejected("privacy.set", "hideReadTime", "true")

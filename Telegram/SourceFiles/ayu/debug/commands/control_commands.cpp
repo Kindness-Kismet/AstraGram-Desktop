@@ -204,6 +204,22 @@ struct WidgetInfo {
 	return nullptr;
 }
 
+// 与鼠标松开的顺序一致：复选框先切换、单选框只选中，再通知点击回调。
+void activateButton(not_null<Ui::AbstractButton*> button) {
+	const auto alive = QPointer<QWidget>(button.get());
+	// Radiobutton 隐藏了同名接口，经基类访问，与它自身的 handlePress 相同。
+	if (const auto checkbox = dynamic_cast<Ui::Checkbox*>(button.get())) {
+		if (!dynamic_cast<Ui::Radiobutton*>(button.get())) {
+			checkbox->setChecked(!checkbox->checked());
+		} else if (!checkbox->checked()) {
+			checkbox->setChecked(true);
+		}
+	}
+	if (alive) {
+		button->clicked({}, Qt::LeftButton);
+	}
+}
+
 [[nodiscard]] Result ControlClick(const QStringList &args) {
 	auto selector = QString();
 	auto all = false;
@@ -236,8 +252,7 @@ struct WidgetInfo {
 	if (!target->isEnabled()) {
 		return Result::Err(u"widget is disabled: "_q + selector);
 	}
-	// 语义触发优先：AbstractButton 走 clicked()，直接执行回调与信号流，
-	// 与真实点击的最终出口等价，不受命中偏移和子控件遮挡影响。
+	// 语义触发优先：AbstractButton 直接执行控件动作，不受命中偏移和遮挡影响。
 	// lib_ui 不挂 Q_OBJECT，qobject_cast 不可用，dynamic_cast 走 RTTI。
 	if (const auto button = dynamic_cast<Ui::AbstractButton*>(target)
 		; button && !mouse) {
@@ -246,7 +261,7 @@ struct WidgetInfo {
 		const auto className = QString::fromLatin1(
 			target->metaObject()->className()).toStdString();
 		const auto objectName = target->objectName().toStdString();
-		button->clicked({}, Qt::LeftButton);
+		activateButton(button);
 		return Result::Ok(Compact(json{
 			{ "class", className },
 			{ "name", objectName },
@@ -524,7 +539,7 @@ struct WidgetInfo {
 			}
 			const auto button = dynamic_cast<Ui::AbstractButton*>(rp);
 			if (!button) return Result::Err(u"control has no click handler"_q);
-			button->clicked({}, Qt::LeftButton);
+			activateButton(button);
 		}
 	} else if (const auto combo = qobject_cast<QComboBox*>(target.data())) {
 		auto ok = false;

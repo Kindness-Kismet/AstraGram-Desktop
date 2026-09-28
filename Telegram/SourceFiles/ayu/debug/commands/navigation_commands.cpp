@@ -11,6 +11,10 @@
 #include "window/window_session_controller.h"
 #include "main/main_session.h"
 
+#include <QApplication>
+#include <QWindow>
+#include <qpa/qwindowsysteminterface.h>
+
 namespace AyuDebug::Commands {
 namespace {
 
@@ -138,12 +142,34 @@ Result listActions(const QStringList &args) {
 	return Result::Ok(Compact(result));
 }
 
+// 按绑定的按键走 Qt 快捷键匹配，与真实按键一致；Qt 只在应用有活动窗口时匹配。
 Result runAction(const QStringList &args) {
 	if (args.size() != 1) return Result::Err(u"usage: action.run <name>"_q);
 	const auto i = actions().find(args.front());
 	if (i == actions().end()) return Result::Err(u"unknown action; use action.list"_q);
-	return Shortcuts::Launch(i->second) ? Result::Ok()
-		: Result::Err(u"action unavailable in the current view"_q);
+	const auto window = QApplication::activeWindow();
+	if (!window || !window->windowHandle()) {
+		return Result::Err(u"application window is not active; shortcuts need focus"_q);
+	}
+	for (const auto &[keys, commands] : Shortcuts::KeysCurrents()) {
+		if (!commands.contains(i->second)) continue;
+		const auto text = keys.toString(QKeySequence::PortableText);
+		auto handled = true;
+		for (auto k = 0; handled && k != int(keys.count()); ++k) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+			const auto key = int(keys[k].key());
+			const auto modifiers = keys[k].keyboardModifiers();
+#else // Qt >= 6.0.0
+			const auto key = int(keys[k] & ~Qt::KeyboardModifierMask);
+			const auto modifiers = Qt::KeyboardModifiers(keys[k] & Qt::KeyboardModifierMask);
+#endif // Qt < 6.0.0
+			handled = QWindowSystemInterface::handleShortcutEvent(
+				window->windowHandle(), 0, key, modifiers, 0, 0, 0);
+		}
+		return handled ? Result::Ok(text)
+			: Result::Err(u"shortcut "_q + text + u" is unavailable in the current view"_q);
+	}
+	return Result::Err(u"no key is bound to this action"_q);
 }
 
 } // namespace

@@ -8,15 +8,12 @@
 #include "ayu/features/translator/ayu_translator.h"
 #include "ayu/features/window_material/window_material.h"
 #include "ayu/features/forward/ayu_forward.h"
-#include "ayu/features/message_shot/message_shot.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "core/application.h"
-#include "history/history_item.h"
 #include "main/main_session.h"
 #include "ui/emoji_config.h"
 #include "ui/text/text_entity.h"
 #include "window/window_controller.h"
-#include "window/window_session_controller.h"
 
 #include <QFileInfo>
 
@@ -199,21 +196,6 @@ Result cancelEmoji(const QStringList &args) {
 	return Result::Ok();
 }
 
-Result shotMessages(const QStringList &args) {
-	if (args.size() < 2) return Result::Err(u"usage: message.shot <peerId> <messageId>..."_q);
-	const auto session = ActiveSession();
-	const auto controller = session ? session->tryResolveWindow() : nullptr;
-	if (!controller) return Result::Err(u"no active session window"_q);
-	auto ids = MessageIdsList();
-	for (auto i = 1; i < args.size(); ++i) {
-		const auto message = findMessage(args[0], args[i]);
-		if (!message) return Result::Err(u"message not found"_q);
-		ids.push_back(message->fullId());
-	}
-	AyuFeatures::MessageShot::Show(controller, ids, [] {});
-	return Result::Ok();
-}
-
 Result featureStatus(const QStringList &args) {
 	if (!args.empty()) return Result::Err(u"usage: feature.status"_q);
 	const auto window = Core::App().activeWindow();
@@ -254,7 +236,7 @@ const HandlerMap &FeatureHandlers() {
 		{u"translate.clear-cache"_q, &clearTranslationCache},
 		{u"emoji.list"_q, &emojiList}, {u"emoji.import"_q, &importEmoji},
 		{u"emoji.install"_q, &installEmoji}, {u"emoji.select"_q, &selectEmoji},
-		{u"emoji.cancel"_q, &cancelEmoji}, {u"message.shot"_q, &shotMessages},
+		{u"emoji.cancel"_q, &cancelEmoji},
 		{u"feature.status"_q, &featureStatus}, {u"forward.status"_q, &forwardStatus},
 		{u"forward.cancel"_q, &cancelForward},
 	};
