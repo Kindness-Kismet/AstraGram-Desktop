@@ -56,11 +56,11 @@ inline void ApplyChatControlSurface(
 		bool outline = true,
 		Fn<QColor()> background = nullptr) {
 	if (!background) {
-		background = [] { return st::historyPinnedBg->c; };
+		background = AyuUi::ChatSurfaceBackground;
 	}
 	auto border = Fn<QColor()>();
 	if (outline) {
-		border = [] { return st::windowDividerFg->c; };
+		border = AyuUi::ChatSurfaceBorder;
 	}
 	AyuUi::FloatingSurface::attach(widget.get(), {
 		.radius = radius,

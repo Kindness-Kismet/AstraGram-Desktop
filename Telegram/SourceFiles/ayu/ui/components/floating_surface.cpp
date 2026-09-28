@@ -1,6 +1,8 @@
 #include "ayu/ui/components/floating_surface.h"
 
+#include "ayu/ayu_settings.h"
 #include "ayu/ui/components/floating_surface_host.h"
+#include "styles/palette.h"
 
 #include <QtCore/QEvent>
 #include <QtGui/QPainter>
@@ -11,6 +13,25 @@
 #include <utility>
 
 namespace AyuUi {
+
+QColor ChatSurfaceBackground() {
+	return (AyuSettings::getInstance().disableChatBackground()
+		? st::windowBgOver
+		: st::historyComposeAreaBg)->c;
+}
+
+// 扁平配色的常态底色已是 windowBgOver，悬停再加深一级才能区分。
+QColor ChatSurfaceBackgroundOver() {
+	return (AyuSettings::getInstance().disableChatBackground()
+		? st::windowBgRipple
+		: st::historyComposeButtonBgOver)->c;
+}
+
+QColor ChatSurfaceBorder() {
+	return (AyuSettings::getInstance().disableChatBackground()
+		? st::filterInputBorderFg
+		: st::windowDividerFg)->c;
+}
 
 void FloatingSurface::attach(QWidget *widget, FloatingSurfaceStyle style) {
 	Expects(widget != nullptr);

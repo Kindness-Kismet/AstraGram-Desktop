@@ -687,10 +687,7 @@ SlidingBar::SlidingBar(
 	not_null<Ui::RpWidget*> parent,
 	object_ptr<Ui::RpWidget> wrapped)
 : _wrapped(parent, std::move(wrapped)) {
-	Ui::ApplyChatControlSurface(
-		_wrapped.entity(), st::windowCardRadius, true, [] {
-			return st::historyContactStatusButton.bgColor->c;
-		});
+	Ui::ApplyChatControlSurface(_wrapped.entity(), st::windowCardRadius);
 	_wrapped.entity()->setObjectName(u"chatBar.status"_q);
 	setup(parent);
 	_wrapped.hide(anim::type::instant);

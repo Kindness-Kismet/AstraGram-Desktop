@@ -1,6 +1,5 @@
 #include "history/history_widget.h"
 
-#include "ayu/ayu_settings.h"
 #include "ayu/ui/components/floating_surface_host.h"
 #include "history/history_inner_widget.h"
 #include "mainwidget.h"
@@ -9,7 +8,6 @@
 #include "ui/widgets/elastic_scroll.h"
 #include "ui/widgets/fields/input_field.h"
 #include "styles/style_chat_helpers.h"
-#include "styles/palette.h"
 
 void HistoryWidget::setupFrostedBackground() {
 	_composeSurface->setObjectName(u"chatBar.compose"_q);
@@ -17,14 +15,8 @@ void HistoryWidget::setupFrostedBackground() {
 	_composeSurface->hide();
 	AyuUi::FloatingSurface::attach(_composeSurface.data(), {
 		.radius = st::historyComposeCapsuleRadius,
-		.background = [] {
-			return (AyuSettings::getInstance().disableChatBackground()
-				? st::windowBgOver : st::historyComposeAreaBg)->c;
-		},
-		.border = [] {
-			return (AyuSettings::getInstance().disableChatBackground()
-				? st::filterInputBorderFg : st::windowDividerFg)->c;
-		},
+		.background = AyuUi::ChatSurfaceBackground,
+		.border = AyuUi::ChatSurfaceBorder,
 		.borderWidth = st::lineWidth,
 		.maskInput = true,
 	});

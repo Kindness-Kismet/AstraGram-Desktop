@@ -25,6 +25,11 @@ struct FloatingSurfaceStyle {
 	Fn<std::vector<QRect>()> rects;
 };
 
+// 聊天磨砂表面统一沿用输入框配色，关闭聊天背景时改用扁平配色。
+[[nodiscard]] QColor ChatSurfaceBackground();
+[[nodiscard]] QColor ChatSurfaceBackgroundOver();
+[[nodiscard]] QColor ChatSurfaceBorder();
+
 class FloatingSurface final : public QGraphicsEffect {
 public:
 	static void attach(QWidget *widget, FloatingSurfaceStyle style);

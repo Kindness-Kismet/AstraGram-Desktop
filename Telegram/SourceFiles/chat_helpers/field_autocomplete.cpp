@@ -258,10 +258,21 @@ FieldAutocomplete::FieldAutocomplete(
 	hide();
 
 	setObjectName(u"chatPopup.autocomplete"_q);
+	// 只有聊天磨砂背景上沿用输入框配色，弹窗和故事回复保留自身样式。
+	const auto frosted = [=] {
+		const auto surface = AyuUi::FloatingSurface::find(this);
+		return surface && surface->hasBackdrop();
+	};
 	AyuUi::FloatingSurface::attach(this, {
 		.radius = st::windowCardRadius,
-		.background = [=] { return _st.bg->c; },
-		.border = [] { return st::windowDividerFg->c; },
+		.background = [=] {
+			return frosted() ? AyuUi::ChatSurfaceBackground() : _st.bg->c;
+		},
+		.border = [=] {
+			return frosted()
+				? AyuUi::ChatSurfaceBorder()
+				: st::windowDividerFg->c;
+		},
 		.borderWidth = st::lineWidth,
 		.maskInput = true,
 		.opacity = [=] { return _opacityAnimation.value(_hiding ? 0. : 1.); },

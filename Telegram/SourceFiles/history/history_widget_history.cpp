@@ -1330,10 +1330,9 @@ void HistoryWidget::updateSendRestriction() {
 		const auto button = dynamic_cast<Ui::FlatButton*>(_sendRestriction.get());
 		Ui::ApplyChatControlSurface(
 			_sendRestriction.get(), st::historyComposeCapsuleRadius, true, [=] {
-				return (button
-					? (button->isOver()
-						? st::historyComposeButtonBgOver : st::historyComposeButtonBg)
-					: st::windowBg)->c;
+				return (button && button->isOver())
+					? AyuUi::ChatSurfaceBackgroundOver()
+					: AyuUi::ChatSurfaceBackground();
 			});
 		_sendRestriction->show();
 		moveFieldControls();

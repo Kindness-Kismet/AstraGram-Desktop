@@ -450,8 +450,9 @@ HistoryWidget::HistoryWidget(
 		button->setObjectName(name);
 		Ui::ApplyChatControlSurface(
 			button, st::historyComposeCapsuleRadius, true, [=] {
-				return (button->isOver()
-					? st::historyComposeButtonBgOver : st::historyComposeButtonBg)->c;
+				return button->isOver()
+					? AyuUi::ChatSurfaceBackgroundOver()
+					: AyuUi::ChatSurfaceBackground();
 			});
 	}
 	_botStart->setAcceptBoth(true);
