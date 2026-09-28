@@ -362,6 +362,8 @@
   "ClearDeletedMessagesActionText": "Clear",
   "DeleteOwnMessages": "Delete own messages",
   "DeleteOwnMessagesConfirmation": "Are you sure you want to delete all your messages from this group?",
+  "DeleteOwnMessagesPending": "About to delete all your messages in {chat}",
+  "DeleteOwnMessagesUndo": "Undo ({seconds})",
   "SuggestGhostModeTitle": "Ghost Mode",
   "SuggestGhostModeStoryText": "Do you want to enable **Ghost Mode** before viewing the story?",
   "SuggestGhostModeStoryActionTextYes": "Yes",

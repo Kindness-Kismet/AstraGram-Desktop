@@ -7,6 +7,7 @@
 #include "ayu/ayu_settings.h"
 #include "ayu/ayu_state.h"
 #include "ayu/data/messages_storage.h"
+#include "ayu/features/delete_messages/delete_own_messages.h"
 #include "ayu/features/filters/filters_controller.h"
 #include "ayu/features/forward/ayu_forward.h"
 #include "ayu/features/forward/ayu_forward_rich.h"
@@ -223,8 +224,10 @@ Fn<void()> DeleteMyMessagesHandler(not_null<Window::SessionController*> controll
 				.confirmed =
 				[=](Fn<void()> &&close)
 				{
-					DeleteMyMessagesAfterConfirm(peer);
 					close();
+					AyuDeleteMessages::scheduleDeleteOwnMessages(controller, peer, [=] {
+						DeleteMyMessagesAfterConfirm(peer);
+					});
 				},
 				.confirmText = tr::lng_box_delete(),
 				.cancelText = tr::lng_cancel(),

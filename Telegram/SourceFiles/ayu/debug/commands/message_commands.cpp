@@ -353,19 +353,36 @@ using json = nlohmann::json;
 	}));
 }
 
-// 逐个报告 Saved Messages 里指定 id 的消息状态，诊断数据层与 view 层
-// 是否一致（exists/regular/hidden/mainView 四元组足以定位断点）。
+// 逐个报告指定对话的消息状态，缺省查询收藏夹。
 [[nodiscard]] Result HistoryStats(const QStringList &args) {
 	if (args.isEmpty()) {
-		return Result::Err(u"usage: chat.history-stats <msgId> [<msgId>...]"_q);
+		return Result::Err(u"usage: chat.history-stats <msgId>... [--peer <peerId>]"_q);
 	}
 	const auto session = ActiveSession();
 	if (!session) {
 		return Result::Err(u"no active session"_q);
 	}
-	const auto peerId = session->userPeerId();
+	auto peerId = session->userPeerId();
+	auto messageIds = QStringList();
+	for (auto i = 0; i < args.size(); ++i) {
+		if (args[i] != u"--peer"_q) {
+			messageIds.push_back(args[i]);
+			continue;
+		}
+		if (++i == args.size()) {
+			return Result::Err(u"expected peerId after --peer"_q);
+		}
+		const auto peer = findPeer(args[i]);
+		if (!peer) {
+			return Result::Err(u"peer not found"_q);
+		}
+		peerId = peer->id;
+	}
+	if (messageIds.isEmpty()) {
+		return Result::Err(u"at least one msgId is required"_q);
+	}
 	auto items = json::array();
-	for (const auto &arg : args) {
+	for (const auto &arg : messageIds) {
 		auto ok = false;
 		const auto id = arg.toLongLong(&ok);
 		if (!ok || id <= 0) {

@@ -250,6 +250,8 @@ set(ayugram_files
         ayu/features/emoji_packs/emoji_packs.h
         ayu/features/message_shot/message_shot_theme_state.cpp
         ayu/features/message_shot/message_shot_theme_state.h
+        ayu/features/delete_messages/delete_own_messages.cpp
+        ayu/features/delete_messages/delete_own_messages.h
         ayu/features/forward/ayu_forward.cpp
         ayu/features/forward/ayu_forward.h
         ayu/features/forward/ayu_forward_rich.cpp

@@ -358,6 +358,8 @@
   "ClearDeletedMessagesActionText": "清除",
   "DeleteOwnMessages": "删除自己所有消息",
   "DeleteOwnMessagesConfirmation": "确定要删除您在此群组中发送的所有消息吗？",
+  "DeleteOwnMessagesPending": "即将删除你在「{chat}」发送的所有消息",
+  "DeleteOwnMessagesUndo": "撤销（{seconds}）",
   "SuggestGhostModeTitle": "隐身模式",
   "SuggestGhostModeStoryText": "要在查看动态前启用**隐身模式**吗？",
   "SuggestGhostModeStoryActionTextYes": "是",

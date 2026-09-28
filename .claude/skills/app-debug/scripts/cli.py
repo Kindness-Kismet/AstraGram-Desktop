@@ -234,8 +234,9 @@ def register_commands(sub) -> None:
     command.add_argument("text", nargs="?", help="消息文本，多个参数以空格拼接")
     command.add_argument("extraText", nargs="*", help=argparse.SUPPRESS)
     command.add_argument("--file", dest="text_file", help="发送 UTF-8 文件内容，保留换行与引号")
-    command = sub.add_parser("chat.history-stats", help="报告 Saved Messages 里指定 id 消息的存在/隐藏/视图状态，诊断断点")
+    command = sub.add_parser("chat.history-stats", help="查询指定消息的存在、隐藏与视图状态，默认收藏夹")
     command.add_argument("msgIds", nargs="+", metavar="MSG_ID")
+    command.add_argument("--peer", help="查询指定对话，默认收藏夹")
     command = sub.add_parser("window.resize", help="读或设窗口尺寸（Qt 逻辑像素）；最大化的窗口先还原再设尺寸")
     command.add_argument("size", nargs="*", type=int, metavar="WIDTH HEIGHT", help="省略则只报告当前尺寸，给出时须成对")
     command = sub.add_parser("window.maximize", help="最大化或还原窗口")
@@ -432,7 +433,8 @@ def build_server_command(args: argparse.Namespace) -> str:
         text = " ".join([args.text, *args.extraText])
         return f"message.send {args.peerId} {quote_arg(text)}"
     if command == "chat.history-stats":
-        return "chat.history-stats " + " ".join(args.msgIds)
+        result = "chat.history-stats " + " ".join(args.msgIds)
+        return result + (f" --peer {quote_arg(args.peer)}" if args.peer else "")
     if command == "window.resize":
         if not args.size:
             return "window.resize"
