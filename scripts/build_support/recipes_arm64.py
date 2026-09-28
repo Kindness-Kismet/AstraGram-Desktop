@@ -39,7 +39,7 @@ for /r %%i in (..\patches\libvpx\*) do git apply %%i
 SET PATH=%THIRDPARTY_DIR%\msys64\usr\bin;%PATH%
 SET CHERE_INVOKING=enabled_from_arguments
 SET MSYS2_PATH_TYPE=inherit
-SET "TOOLCHAIN=arm64-win64-vs17"
+SET "TOOLCHAIN=arm64-win64-vs17-v145"
 bash --login ../patches/build_libvpx_win.sh
 """,
 	"dav1d": r"""git clone -b 1.5.4 https://code.videolan.org/videolan/dav1d.git
