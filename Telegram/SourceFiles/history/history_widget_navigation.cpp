@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
 
+#include "ayu/ui/controls/attach_menu.h"
+
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
 #include "api/api_bot.h"
@@ -704,17 +706,6 @@ void HistoryWidget::setHistory(History *history) {
 	resetFrostedBackground();
 	_pullToNext->setHistory(history);
 
-	const auto &settings = AyuSettings::getInstance();
-
-	const auto was = _attachBotsMenu && _history && _history->peer->isUser();
-	const auto now = _attachBotsMenu && history && history->peer->isUser() && settings.showAttachPopup();
-	if (was && !now) {
-		_attachToggle->removeEventFilter(_attachBotsMenu.get());
-		_attachBotsMenu->hideFast();
-	} else if (now && !was) {
-		_attachToggle->installEventFilter(_attachBotsMenu.get());
-	}
-
 	const auto unloadHeavyViewParts = [](History *history) {
 		if (history) {
 			history->owner().unloadHeavyViewParts(
@@ -796,8 +787,6 @@ void HistoryWidget::refreshAttachBotsMenu() {
 		return;
 	}
 
-	const auto &settings = AyuSettings::getInstance();
-
 	_attachBotsMenu = InlineBots::MakeAttachBotsMenu(
 		this,
 		controller(),
@@ -814,11 +803,7 @@ void HistoryWidget::refreshAttachBotsMenu() {
 	if (!_attachBotsMenu) {
 		return;
 	}
-	_attachBotsMenu->setOrigin(
-		Ui::PanelAnimation::Origin::BottomLeft);
-	if (settings.showAttachPopup()) {
-		_attachToggle->installEventFilter(_attachBotsMenu.get());
-	}
+	AyuUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get());
 	_attachBotsMenu->heightValue(
 	) | rpl::on_next([=] {
 		moveFieldControls();

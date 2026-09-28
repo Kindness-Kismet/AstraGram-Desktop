@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/controls/history_view_compose_controls.h"
 
 #include "ayu/features/window_material/window_material.h"
+#include "ayu/ui/controls/attach_menu.h"
 
 #include "base/call_delayed.h"
 #include "base/event_filter.h"
@@ -2247,10 +2248,7 @@ rpl::producer<MessageToEdit> ComposeControls::editRequests() const {
 }
 
 rpl::producer<std::optional<bool>> ComposeControls::attachRequests() const {
-	return rpl::merge(
-		_attachToggle->clicks() | rpl::map_to(std::optional<bool>()),
-		_attachRequests.events()
-	) | rpl::filter([=] {
+	return _attachRequests.events() | rpl::filter([=] {
 		if (isEditingMessage()) {
 			_show->showBox(
 				Ui::MakeInformBox(tr::lng_edit_caption_attach()));
@@ -2929,7 +2927,9 @@ void ComposeControls::init() {
 		updateSubmitSettings();
 	}, _wrap->lifetime());
 
-	session().attachWebView().attachBotsUpdates(
+	rpl::merge(
+		session().attachWebView().attachBotsUpdates(),
+		AyuSettings::getInstance().showAttachPopupChanges() | rpl::to_empty
 	) | rpl::on_next([=] {
 		updateAttachBotsMenu();
 	}, _wrap->lifetime());
@@ -5613,35 +5613,39 @@ bool ComposeControls::updateSendAsButton(
 
 void ComposeControls::updateAttachBotsMenu() {
 	_attachBotsMenu = nullptr;
-	if (!_features.attachBotsMenu
-		|| !_features.attachments
-		|| !_history
-		|| !_sendActionFactory
-		|| !_regularWindow
-		|| (_mode != Mode::Normal)) {
+	if (!_features.attachments) {
 		return;
 	}
-	_attachBotsMenu = InlineBots::MakeAttachBotsMenu(
-		_panelsParent,
-		_regularWindow,
-		_history->peer,
-		_sendActionFactory,
-		[=] { return sendMenuDetails(); },
-		[=](bool compress) { _attachRequests.fire_copy(compress); },
-		crl::guard(_wrap.get(), [=] {
-			return getTextWithAppliedMarkdown();
-		}),
-		crl::guard(_wrap.get(), [=] {
-			migrateFieldToRichEditor();
-		}));
+	if (_features.attachBotsMenu && _history && _sendActionFactory
+		&& _regularWindow && (_mode == Mode::Normal)) {
+		_attachBotsMenu = InlineBots::MakeAttachBotsMenu(
+			_panelsParent,
+			_regularWindow,
+			_history->peer,
+			_sendActionFactory,
+			[=] { return sendMenuDetails(); },
+			[=](bool compress) { _attachRequests.fire_copy(compress); },
+			crl::guard(_wrap.get(), [=] {
+				return getTextWithAppliedMarkdown();
+			}),
+			crl::guard(_wrap.get(), [=] {
+				migrateFieldToRichEditor();
+			}));
+	} else {
+		// 计划消息、快捷回复等输入区只提供照片和文件选项。
+		_attachBotsMenu = std::make_unique<Ui::DropdownMenu>(
+			_panelsParent, st::dropdownMenuWithIcons);
+		_attachBotsMenu->addAction(tr::lng_attach_photo_or_video(tr::now), [=] {
+			_attachRequests.fire_copy(true);
+		}, &st::menuIconPhoto);
+		_attachBotsMenu->addAction(tr::lng_attach_document(tr::now), [=] {
+			_attachRequests.fire_copy(false);
+		}, &st::menuIconFile);
+	}
 	if (!_attachBotsMenu) {
 		return;
 	}
-	_attachBotsMenu->setOrigin(
-		Ui::PanelAnimation::Origin::BottomLeft);
-	if (!ChatHelpers::ShowPanelOnClick()) {
-		_attachToggle->installEventFilter(_attachBotsMenu.get());
-	}
+	AyuUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get());
 	_attachBotsMenu->heightValue(
 	) | rpl::on_next([=] {
 		updateOuterGeometry(_wrap->geometry());

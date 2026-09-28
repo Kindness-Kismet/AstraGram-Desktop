@@ -174,6 +174,8 @@ set(ayugram_files
         ayu/ui/settings/filters/per_dialog_filter.h
         ayu/ui/settings/filters/edit_filter.cpp
         ayu/ui/settings/filters/edit_filter.h
+        ayu/ui/controls/attach_menu.cpp
+        ayu/ui/controls/attach_menu.h
         ayu/ui/context_menu/context_menu.cpp
         ayu/ui/context_menu/context_menu.h
         ayu/ui/context_menu/menu_item_subtext.cpp

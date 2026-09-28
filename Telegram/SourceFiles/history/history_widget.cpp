@@ -73,7 +73,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/qt_signal_producer.h"
 #include "base/qt/qt_key_modifiers.h"
 #include "base/unixtime.h"
-#include "base/call_delayed.h"
 #include "data/business/data_shortcut_messages.h"
 #include "data/components/credits.h"
 #include "data/components/ephemeral_messages.h"
@@ -523,20 +522,6 @@ HistoryWidget::HistoryWidget(
 	}, lifetime());
 
 	initTabbedSelector();
-
-	_attachToggle->setClickedCallback([=] {
-		const auto toggle = _attachBotsMenu && _attachBotsMenu->isHidden();
-		base::call_delayed(st::historyAttach.ripple.hideDuration, this, [=] {
-			if (_attachBotsMenu && toggle) {
-				_attachBotsMenu->showAnimated();
-			} else {
-				chooseAttach();
-				if (_attachBotsMenu) {
-					_attachBotsMenu->hideAnimated();
-				}
-			}
-		});
-	});
 
 	const auto rawTextEdit = _field->rawTextEdit().get();
 	rpl::merge(
