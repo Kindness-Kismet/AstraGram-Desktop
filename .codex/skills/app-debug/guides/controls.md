@@ -1,5 +1,17 @@
 # 控件树与合成交互
 
+## 值与动作
+
+`control.get <target>` 查询当前值、类型、文字、启用状态及辅助功能动作。
+`control.set <target> <value>` 修改输入框、开关、单选项、选择框或滑块，并调用原有业务回调。
+滑块值为 0 至 1；输入字符串保留原文。单选项通过选择另一个选项切换，不直接取消选中。
+
+`control.action <target> <action>` 执行 `control.get` 返回的辅助功能动作。
+`control.mouse <target> <x> <y> [left|right|double]` 在控件内部指定位置投递点击、右键或双击，
+适用于消息气泡等自绘区域。所有事件都在本应用内，不移动系统光标。
+
+目标可使用控件标识、可见文字或 `control.list` 的全树序号。文字重复时使用标识或序号。
+
 ## `control.scroll <objectName | #序号> [top]`
 
 读取普通或弹性滚动区的位置；传入整数时滚动到该位置，用于历史消息、设置页和菜单。

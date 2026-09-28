@@ -17,6 +17,9 @@ using json = nlohmann::json;
 	const auto &account = AyuSettings::ghost(session);
 	return Result::Ok(Compact(json{
 		{ "useGlobalGhostMode", settings.useGlobalGhostMode() },
+		{ "enabled", account.isGhostModeActive() },
+		{ "sendWithoutSound", account.shouldSendWithoutSound() },
+		{ "scheduledMessages", account.isUseScheduledMessages() },
 		{ "account", json(account) },
 	}));
 }

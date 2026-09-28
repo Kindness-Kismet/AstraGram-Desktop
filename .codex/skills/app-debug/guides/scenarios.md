@@ -1,13 +1,12 @@
 # 固定会话场景
 
-先在独立配置中创建假会话，再生成固定列表：
+进入假会话时自动生成固定列表。自动测试可先选择一次独立配置：
 
 ```bash
-AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py app.ensure + session.fake + scenario.seed
-AYUGRAM_DEBUG_PROFILE=scenarios python .codex/skills/app-debug/scripts/cli.py scenario.open discussion + screenshot.take
+python .codex/skills/app-debug/scripts/cli.py app.ensure --profile scenarios + session.fake
+python .codex/skills/app-debug/scripts/cli.py scenario.open discussion + screenshot.take
 ```
 
-- `scenario.seed`：向本进程创建的假会话注入固定数据，重复调用复用同一列表。
 - `scenario.list`：返回场景的 `key`、`name`、`peerId`，可在初始化前查看。
 - `scenario.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions] [--input keep|empty|reply|edit]`：打开列表中的场景，话题场景先在左栏展开话题列表，再进入真实话题输入区。
 - `app.info` 的 `fakeSession` 表示当前会话是否由本进程创建，重启后失效。

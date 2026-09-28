@@ -292,6 +292,13 @@ set(ayugram_files
         ayu/debug/commands/session_commands.cpp
         ayu/debug/commands/scenario_commands.cpp
         ayu/debug/commands/settings_commands.cpp
+        ayu/debug/commands/settings_registry.h
+        ayu/debug/commands/settings_ayu.cpp
+        ayu/debug/commands/settings_native.cpp
+        ayu/debug/commands/navigation_commands.cpp
+        ayu/debug/commands/filter_commands.cpp
+        ayu/debug/commands/feature_commands.cpp
+        ayu/debug/commands/account_commands.cpp
         ayu/debug/commands/ghost_commands.cpp
         ayu/debug/commands/storage_commands.cpp
         ayu/debug/commands/screenshot_commands.cpp

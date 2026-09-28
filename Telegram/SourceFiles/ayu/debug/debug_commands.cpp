@@ -3,11 +3,30 @@
 
 #include "core/application.h"
 #include "main/main_session.h"
+#include "data/data_session.h"
+#include "data/data_user.h"
+#include "history/history_item.h"
 
 namespace AyuDebug::Commands {
 
 Main::Session *ActiveSession() {
 	return Core::App().maybePrimarySession();
+}
+
+PeerData *findPeer(const QString &id) {
+	const auto session = ActiveSession();
+	if (!session) return nullptr;
+	if (id == u"self"_q || id == u"0"_q) return session->user();
+	auto ok = false;
+	const auto value = id.toULongLong(&ok);
+	return ok ? session->data().peerLoaded(PeerId(value)) : nullptr;
+}
+
+HistoryItem *findMessage(const QString &peerId, const QString &messageId) {
+	const auto peer = findPeer(peerId);
+	auto ok = false;
+	const auto id = messageId.toInt(&ok);
+	return peer && ok ? peer->owner().message(peer->id, MsgId(id)) : nullptr;
 }
 
 } // namespace AyuDebug::Commands
@@ -30,6 +49,10 @@ namespace {
 			&Commands::ControlHandlers(),
 			&Commands::MessageHandlers(),
 			&Commands::WindowHandlers(),
+			&Commands::NavigationHandlers(),
+			&Commands::FilterHandlers(),
+			&Commands::FeatureHandlers(),
+			&Commands::AccountHandlers(),
 		}) {
 			all.insert(part->begin(), part->end());
 		}

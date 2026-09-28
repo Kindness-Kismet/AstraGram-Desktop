@@ -15,6 +15,18 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_widgets.h"
 
 namespace Ui {
+
+#ifdef _DEBUG
+void ContinuousSlider::setValueForDebug(float64 value) {
+	const auto adjusted = _adjustCallback ? _adjustCallback(value) : value;
+	const auto progress = _changeProgressCallback;
+	const auto finished = _changeFinishedCallback;
+	const auto alive = QPointer<ContinuousSlider>(this);
+	setValue(adjusted);
+	if (progress) progress(adjusted);
+	if (alive && finished) finished(adjusted);
+}
+#endif
 namespace {
 
 constexpr auto kByWheelFinishedTimeout = 1000;

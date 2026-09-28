@@ -18,6 +18,13 @@
 #include <QMouseEvent>
 #include <QPointer>
 #include <QWidget>
+#include <QAccessible>
+#include <QContextMenuEvent>
+#include <cmath>
+#include <QLineEdit>
+#include <QComboBox>
+#include "ui/widgets/checkbox.h"
+#include "ui/widgets/continuous_sliders.h"
 
 namespace AyuDebug::Commands {
 namespace {
@@ -74,6 +81,8 @@ struct WidgetInfo {
 		return button->text();
 	} else if (const auto label = qobject_cast<const QLabel*>(widget)) {
 		return label->text();
+	} else if (const auto rp = dynamic_cast<const Ui::RpWidget*>(widget)) {
+		return const_cast<Ui::RpWidget*>(rp)->accessibilityName();
 	}
 	return QString();
 }
@@ -186,7 +195,13 @@ struct WidgetInfo {
 	if (const auto widget = named(topLevels, false)) {
 		return widget;
 	}
-	return named(topLevels, true);
+	if (const auto widget = named(topLevels, true)) return widget;
+	for (const auto &info : topLevels) {
+		if (info.widget && info.widget->isVisible() && WidgetText(info.widget) == selector) {
+			return info.widget;
+		}
+	}
+	return nullptr;
 }
 
 [[nodiscard]] Result ControlClick(const QStringList &args) {
@@ -439,6 +454,140 @@ struct WidgetInfo {
 	}));
 }
 
+
+[[nodiscard]] Result describeControlValue(QWidget *target) {
+	auto data = json{{"name", target->objectName().toStdString()}, {"text", WidgetText(target).toStdString()},
+		{"enabled", target->isEnabled()}};
+	if (const auto slider = dynamic_cast<Ui::ContinuousSlider*>(target)) {
+		data["value"] = slider->value();
+		data["kind"] = "slider";
+		data["minimum"] = 0;
+		data["maximum"] = 1;
+	} else if (const auto field = dynamic_cast<Ui::InputField*>(target)) {
+		data["value"] = field->getLastText().toStdString();
+		data["kind"] = "text";
+	} else if (const auto line = qobject_cast<QLineEdit*>(target)) {
+		data["value"] = line->text().toStdString();
+		data["kind"] = "text";
+	} else if (const auto rp = dynamic_cast<Ui::RpWidget*>(target); rp && rp->accessibilityState().checkable) {
+		data["value"] = rp->accessibilityState().checked;
+		data["kind"] = "check";
+	} else if (const auto combo = qobject_cast<QComboBox*>(target)) {
+		data["value"] = combo->currentIndex();
+		data["kind"] = "choice";
+		auto choices = json::array();
+		for (auto i = 0; i != combo->count(); ++i) choices.push_back(combo->itemText(i).toStdString());
+		data["choices"] = choices;
+	}
+	if (const auto interface = QAccessible::queryAccessibleInterface(target)) {
+		data["accessibleValue"] = interface->text(QAccessible::Value).toStdString();
+		auto actions = json::array();
+		if (const auto action = interface->actionInterface()) {
+			for (const auto &name : action->actionNames()) actions.push_back(name.toStdString());
+		}
+		data["actions"] = actions;
+	}
+	return Result::Ok(Compact(data));
+}
+
+[[nodiscard]] Result controlGet(const QStringList &args) {
+	if (args.size() != 1) return Result::Err(u"usage: control.get <target>"_q);
+	const auto target = findControl(args.front());
+	if (!target || !target->isVisible()) return Result::Err(u"visible control not found"_q);
+	return describeControlValue(target);
+}
+
+[[nodiscard]] Result controlSet(const QStringList &args) {
+	if (args.size() != 2) return Result::Err(u"usage: control.set <target> <value>"_q);
+	const auto target = QPointer<QWidget>(findControl(args[0]));
+	if (!target || !target->isVisible() || !target->isEnabled()) {
+		return Result::Err(u"visible enabled control not found"_q);
+	}
+	if (const auto slider = dynamic_cast<Ui::ContinuousSlider*>(target.data())) {
+		auto ok = false;
+		const auto value = args[1].toDouble(&ok);
+		if (!ok || !std::isfinite(value) || value < 0 || value > 1 || slider->isDisabled()) {
+			return Result::Err(u"expected an enabled slider and a value between 0 and 1"_q);
+		}
+		slider->setValueForDebug(value);
+	} else if (const auto field = dynamic_cast<Ui::InputField*>(target.data())) {
+		field->setTextWithTags({args[1], {}});
+	} else if (const auto line = qobject_cast<QLineEdit*>(target.data())) {
+		if (line->isReadOnly()) return Result::Err(u"input is read only"_q);
+		line->setText(args[1]);
+	} else if (const auto rp = dynamic_cast<Ui::RpWidget*>(target.data()); rp && rp->accessibilityState().checkable) {
+		if (args[1] != u"true"_q && args[1] != u"false"_q) return Result::Err(u"expected true or false"_q);
+		const auto checked = args[1] == u"true"_q;
+		if (rp->accessibilityState().checked != checked) {
+			if (dynamic_cast<Ui::Radiobutton*>(rp) && !checked) {
+				return Result::Err(u"select another radio button to change this value"_q);
+			}
+			const auto button = dynamic_cast<Ui::AbstractButton*>(rp);
+			if (!button) return Result::Err(u"control has no click handler"_q);
+			button->clicked({}, Qt::LeftButton);
+		}
+	} else if (const auto combo = qobject_cast<QComboBox*>(target.data())) {
+		auto ok = false;
+		const auto index = args[1].toInt(&ok);
+		if (!ok || index < 0 || index >= combo->count()) return Result::Err(u"choice index out of range"_q);
+		combo->setCurrentIndex(index);
+		if (target) Q_EMIT combo->activated(index);
+	} else {
+		return Result::Err(u"control has no editable value; use control.get or control.click"_q);
+	}
+	return target ? describeControlValue(target) : Result::Ok(u"control closed after applying the value"_q);
+}
+
+[[nodiscard]] Result controlAction(const QStringList &args) {
+	if (args.size() != 2) return Result::Err(u"usage: control.action <target> <action>"_q);
+	const auto target = findControl(args[0]);
+	if (!target || !target->isVisible() || !target->isEnabled()) return Result::Err(u"visible enabled control not found"_q);
+	const auto interface = QAccessible::queryAccessibleInterface(target);
+	const auto action = interface ? interface->actionInterface() : nullptr;
+	if (!action || !action->actionNames().contains(args[1])) return Result::Err(u"action not available; inspect control.get"_q);
+	action->doAction(args[1]);
+	return Result::Ok();
+}
+
+
+[[nodiscard]] Result controlMouse(const QStringList &args) {
+	if (args.size() < 3 || args.size() > 4) return Result::Err(u"usage: control.mouse <target> <x> <y> [left|right|double]"_q);
+	const auto target = QPointer<QWidget>(findControl(args[0]));
+	if (!target || !target->isVisible() || !target->isEnabled()) return Result::Err(u"visible enabled control not found"_q);
+	auto xOk = false;
+	auto yOk = false;
+	const auto point = QPoint(args[1].toInt(&xOk), args[2].toInt(&yOk));
+	const auto mode = args.size() == 4 ? args[3] : u"left"_q;
+	if (!xOk || !yOk || !target->rect().contains(point)) return Result::Err(u"expected coordinates inside the control"_q);
+	if (mode != u"left"_q && mode != u"right"_q && mode != u"double"_q) return Result::Err(u"unknown mouse action"_q);
+	const auto global = target->mapToGlobal(point);
+	const auto root = target->window();
+	auto receiver = QPointer<QWidget>(root->childAt(root->mapFromGlobal(global)));
+	if (!receiver) receiver = root;
+	if (receiver != target && !target->isAncestorOf(receiver)) return Result::Err(u"control is covered at the requested point"_q);
+	const auto local = receiver->mapFromGlobal(global);
+	const auto button = mode == u"right"_q ? Qt::RightButton : Qt::LeftButton;
+	auto press = QMouseEvent(QEvent::MouseButtonPress, local, global, button, button, Qt::NoModifier);
+	QApplication::sendEvent(receiver, &press);
+	if (receiver) {
+		auto release = QMouseEvent(QEvent::MouseButtonRelease, local, global, button, Qt::NoButton, Qt::NoModifier);
+		QApplication::sendEvent(receiver, &release);
+	}
+	if (receiver && mode == u"double"_q) {
+		auto doubleClick = QMouseEvent(QEvent::MouseButtonDblClick, local, global, button, button, Qt::NoModifier);
+		QApplication::sendEvent(receiver, &doubleClick);
+		if (receiver) {
+			auto release = QMouseEvent(QEvent::MouseButtonRelease, local, global, button, Qt::NoButton, Qt::NoModifier);
+			QApplication::sendEvent(receiver, &release);
+		}
+	}
+	if (receiver && mode == u"right"_q) {
+		auto context = QContextMenuEvent(QContextMenuEvent::Mouse, local, global);
+		QApplication::sendEvent(receiver, &context);
+	}
+	return Result::Ok();
+}
+
 } // namespace
 
 const HandlerMap &ControlHandlers() {
@@ -450,6 +599,10 @@ const HandlerMap &ControlHandlers() {
 		{ u"control.hover"_q, &controlHover },
 		{ u"control.pointer"_q, &controlPointer },
 		{ u"control.key"_q, &controlKey },
+		{ u"control.get"_q, &controlGet },
+		{ u"control.set"_q, &controlSet },
+		{ u"control.action"_q, &controlAction },
+		{ u"control.mouse"_q, &controlMouse },
 	};
 	return result;
 }

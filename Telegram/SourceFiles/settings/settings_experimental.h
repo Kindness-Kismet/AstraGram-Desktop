@@ -9,12 +9,23 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "settings/settings_common_session.h"
 
+#ifdef _DEBUG
+namespace base::options::details {
+class BasicOption;
+} // namespace base::options::details
+#endif
+
 namespace Ui {
 class InputField;
 class SearchFieldController;
 } // namespace Ui
 
 namespace Settings {
+
+#ifdef _DEBUG
+// 调试命令与实验设置页共用选项清单。
+[[nodiscard]] std::vector<not_null<base::options::details::BasicOption*>> experimentalOptionsForDebug();
+#endif
 
 class Experimental : public Section<Experimental> {
 public:

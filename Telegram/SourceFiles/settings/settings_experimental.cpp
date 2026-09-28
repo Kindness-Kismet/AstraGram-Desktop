@@ -400,61 +400,12 @@ QString AddFavoriteLinkButton(
 	return searchable;
 }
 
-void SetupExperimental(
-		not_null<Window::Controller*> window,
-		not_null<Window::SessionController*> controller,
-		not_null<Ui::VerticalLayout*> container,
-		rpl::producer<> reloadOptionsRequests,
-		rpl::producer<QString> query,
-		Fn<void(const QString&, not_null<QWidget*>)> registerHighlight) {
-	const auto headerWrap = container->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			container,
-			object_ptr<Ui::VerticalLayout>(container)));
-	const auto header = headerWrap->entity();
-
-	Ui::AddSkip(header, st::settingsCheckboxesSkip);
-
-	header->add(
-		object_ptr<Ui::FlatLabel>(
-			header,
-			tr::lng_settings_experimental_about(),
-			st::boxLabel),
-		st::defaultBoxDividerLabelPadding);
-
-	auto reset = (Button*)nullptr;
-	if (base::options::changed()) {
-		const auto wrap = header->add(
-			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-				header,
-				object_ptr<Ui::VerticalLayout>(header)));
-		const auto inner = wrap->entity();
-		Ui::AddDivider(inner);
-		Ui::AddSkip(inner, st::settingsCheckboxesSkip);
-		reset = inner->add(object_ptr<Button>(
-			inner,
-			tr::lng_settings_experimental_restore(),
-			st::settingsButtonNoIcon));
-		reset->addClickHandler([=] {
-			base::options::reset();
-			wrap->hide(anim::type::normal);
-		});
-		Ui::AddSkip(inner, st::settingsCheckboxesSkip);
-	}
-
-	Ui::AddDivider(header);
-
-	rpl::duplicate(
-		query
-	) | rpl::on_next([=](const QString &text) {
-		headerWrap->toggle(text.trimmed().isEmpty(), anim::type::instant);
-	}, headerWrap->lifetime());
-
-	struct Category {
-		QString title;
-		std::vector<const char*> options;
-	};
-	const auto categories = std::vector<Category>{
+struct Category {
+	QString title;
+	std::vector<const char*> options;
+};
+std::vector<Category> experimentalCategories() {
+	return {
 		{
 			u"Chats"_q,
 			{
@@ -537,6 +488,59 @@ void SetupExperimental(
 			}
 		},
 	};
+}
+
+void SetupExperimental(
+		not_null<Window::Controller*> window,
+		not_null<Window::SessionController*> controller,
+		not_null<Ui::VerticalLayout*> container,
+		rpl::producer<> reloadOptionsRequests,
+		rpl::producer<QString> query,
+		Fn<void(const QString&, not_null<QWidget*>)> registerHighlight) {
+	const auto headerWrap = container->add(
+		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+			container,
+			object_ptr<Ui::VerticalLayout>(container)));
+	const auto header = headerWrap->entity();
+
+	Ui::AddSkip(header, st::settingsCheckboxesSkip);
+
+	header->add(
+		object_ptr<Ui::FlatLabel>(
+			header,
+			tr::lng_settings_experimental_about(),
+			st::boxLabel),
+		st::defaultBoxDividerLabelPadding);
+
+	auto reset = (Button*)nullptr;
+	if (base::options::changed()) {
+		const auto wrap = header->add(
+			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+				header,
+				object_ptr<Ui::VerticalLayout>(header)));
+		const auto inner = wrap->entity();
+		Ui::AddDivider(inner);
+		Ui::AddSkip(inner, st::settingsCheckboxesSkip);
+		reset = inner->add(object_ptr<Button>(
+			inner,
+			tr::lng_settings_experimental_restore(),
+			st::settingsButtonNoIcon));
+		reset->addClickHandler([=] {
+			base::options::reset();
+			wrap->hide(anim::type::normal);
+		});
+		Ui::AddSkip(inner, st::settingsCheckboxesSkip);
+	}
+
+	Ui::AddDivider(header);
+
+	rpl::duplicate(
+		query
+	) | rpl::on_next([=](const QString &text) {
+		headerWrap->toggle(text.trimmed().isEmpty(), anim::type::instant);
+	}, headerWrap->lifetime());
+
+	const auto categories = experimentalCategories();
 
 	const auto addOption = [&](
 			not_null<Ui::VerticalLayout*> inner,
@@ -609,6 +613,21 @@ void SetupExperimental(
 }
 
 } // namespace
+
+#ifdef _DEBUG
+std::vector<not_null<base::options::details::BasicOption*>> experimentalOptionsForDebug() {
+	auto result = std::vector<not_null<base::options::details::BasicOption*>>();
+	for (const auto &category : experimentalCategories()) {
+		for (const auto name : category.options) {
+			if (!OptionReferrer(base::options::lookup<bool>(name)).isEmpty()) continue;
+			result.push_back(&base::options::details::Lookup(name));
+		}
+	}
+	result.push_back(&base::options::details::Lookup(kOptionFastButtonsMode));
+	result.push_back(&base::options::details::Lookup(Window::kOptionFolderFavoriteLink));
+	return result;
+}
+#endif
 
 Experimental::Experimental(
 	QWidget *parent,

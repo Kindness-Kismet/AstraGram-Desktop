@@ -268,8 +268,8 @@ Debug 构建会在 `AyuInfra::init()` 里启动 `QTcpServer`，监听 `127.0.0.1
 | `app.ping` / `app.info` / `app.help` | 探活、应用信息、指令清单 |
 | `app.quit` | 走 `Core::Quit()` 正常退出（`app.stop` 内部先用它） |
 | `crash.log` | 读取崩溃日志 |
-| `session.fake [userId]` | 构造本地假会话绕过登录，默认 999999999 |
-| `message.fake <text> [--from <userId>] [--blocked] [--shadow-ban]` | 往 Saved Messages 插入本地文本消息，用于验证渲染与隐藏逻辑 |
+| `session.fake [userId]` | 构造本地假会话绕过登录并自动生成固定场景，默认 999999999 |
+| `message.fake <text> [--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban]` | 往假会话插入本地文本消息（缺省 Saved Messages），用于验证渲染与隐藏逻辑 |
 | `chat.list [filter]` | 列出会话的 peerId 与名称，供 message.send / chat.open 定位目标 |
 | `message.send <peerId> <text\|--file path>` | 真实发送文本到指定对话（`--file` 按 UTF-8 读文件原样发送），走官方发送链路，仅发往自己掌控的测试对话 |
 | `chat.open [peerId]` | 打开指定聊天，缺省为 Saved Messages |
@@ -279,12 +279,13 @@ Debug 构建会在 `AyuInfra::init()` 里启动 `QTcpServer`，监听 `127.0.0.1
 | `theme.reset-background` | 重置聊天背景 |
 | `settings.keys` / `settings.dump` | 设置键名清单、全量 JSON 导出 |
 | `settings.get <key>` / `settings.set <key> <value>` | 读写单个设置 |
-| `page.open <section>` | 打开指定设置页 |
+| `page.list [filter]` / `page.open <id>` | 查询官方与定制设置索引，按编号打开设置页 |
 | `ghost.status` | 幽灵模式状态（需要已登录） |
 | `storage.stats` | 留档数据库的路径与大小 |
 | `screenshot.take` | 截取活动窗口，保存到 `build/screenshots/` |
 | `control.list [filter] [--all]` | 列出控件树（objectName、类名、几何、可见性） |
 | `control.click <objectName \| #序号>` | 进程内合成点击，按真实事件路径投递 |
+| `filter.*` / `storage.*` / `text.process` / `action.*` / `control.get\|set` 等 | 过滤、留档、文本处理、官方快捷动作与控件值，完整清单见技能指南 |
 
 命令行工具封装（另含本地实现的 `app.ensure` / `app.restart` / `app.stop`）：
 
@@ -293,7 +294,8 @@ python .claude/skills/app-debug/scripts/cli.py app.info
 python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true
 ```
 
-- 绕过登录：登录界面的 "Debug mode" 按钮（仅 `_DEBUG` 构建可见）
+- 绕过登录：登录页的“进入假会话”按钮（仅 `_DEBUG` 构建可见），每次进入自动生成固定场景
+- 自动测试用独立配置：`app.ensure --profile <名称>`，数据在 `build/debug-profiles/`，跳过链接协议注册等系统集成
 - 服务端代码全部在 `#ifdef _DEBUG` 内，Release 二进制里不存在
 - 指令在主线程同步执行，耗时指令会导致界面暂时无响应
 - `app.stop` 按可执行文件绝对路径校验进程，不按进程名结束进程，避免误杀正式安装版

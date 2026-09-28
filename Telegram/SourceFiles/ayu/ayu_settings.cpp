@@ -469,6 +469,17 @@ GhostModeAccountSettings &AyuSettings::ghost() {
 	return ghost(0);
 }
 
+#ifdef _DEBUG
+GhostModeAccountSettings &AyuSettings::ghostForDebug(uint64 userId) {
+	auto &accounts = getInstance()._ghostAccounts;
+	auto &account = accounts[userId];
+	if (!account) {
+		account = std::make_unique<GhostModeAccountSettings>();
+	}
+	return *account;
+}
+#endif
+
 void AyuSettings::setUseGlobalGhostMode(bool val) {
 	if (_useGlobalGhostMode.current() == val) return;
 	_useGlobalGhostMode = val;

@@ -73,9 +73,13 @@ using json = nlohmann::json;
 	auto fromUserId = int64(0); // 0 = self
 	auto blocked = false;
 	auto shadowBan = false;
+	auto targetPeer = QString();
 	for (auto i = 0; i < args.size(); ++i) {
 		const auto &arg = args.at(i);
-		if (arg == u"--from"_q) {
+		if (arg == u"--peer"_q) {
+			if (++i >= args.size()) return Result::Err(u"usage: --peer <peerId>"_q);
+			targetPeer = args.at(i);
+		} else if (arg == u"--from"_q) {
 			if (++i >= args.size()) {
 				return Result::Err(u"usage: --from <userId>"_q);
 			}
@@ -94,13 +98,13 @@ using json = nlohmann::json;
 		} else {
 			return Result::Err(
 				u"usage: message.fake <text> "
-				u"[--from <userId>] [--blocked] [--shadow-ban]"_q);
+				u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban]"_q);
 		}
 	}
 	if (text.isEmpty()) {
 		return Result::Err(
 			u"usage: message.fake <text> "
-			u"[--from <userId>] [--blocked] [--shadow-ban]"_q);
+			u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban]"_q);
 	}
 
 	const auto session = ActiveSession();
@@ -108,6 +112,8 @@ using json = nlohmann::json;
 		return Result::Err(u"an in-process fake session is required"_q);
 	}
 	const auto selfPeer = session->userPeerId();
+	const auto peer = targetPeer.isEmpty() ? static_cast<PeerData*>(session->user()) : findPeer(targetPeer);
+	if (!peer) return Result::Err(u"peer not found"_q);
 	auto fromUser = not_null<UserData*>(session->user());
 	if (fromUserId > 0) {
 		fromUser = FakeUser(session, fromUserId);
@@ -130,14 +136,15 @@ using json = nlohmann::json;
 	const auto fromPeer = fromUser->id;
 
 	const auto media = MTPMessageMedia();
-	const auto flags = MTPDmessage::Flag::f_from_id;
+	const auto flags = MTPDmessage::Flag::f_from_id
+		| (fromPeer == selfPeer ? MTPDmessage::Flag::f_out : MTPDmessage::Flag());
 	const auto message = MTP_message(
 		MTP_flags(flags),
 		MTP_int(NextFakeMsgId()),
 		peerToMTP(fromPeer), // from_id
 		MTPint(), // from_boosts_applied
 		MTPstring(), // from_rank
-		peerToMTP(selfPeer), // peer_id：Saved Messages
+		peerToMTP(peer->id),
 		MTPPeer(), // saved_peer_id
 		MTPMessageFwdHeader(), // fwd_from
 		MTPlong(), // via_bot_id
@@ -176,7 +183,7 @@ using json = nlohmann::json;
 	}
 	return Result::Ok(Compact(json{
 		{ "msgId", item->id.bare },
-		{ "chat", "Saved Messages" },
+		{ "peerId", peer->id.value },
 		{ "fromUserId", (fromUserId > 0) ? json(fromUserId) : json(nullptr) },
 		{ "blocked", blocked },
 		{ "shadowBanned", shadowBan },
@@ -235,10 +242,7 @@ using json = nlohmann::json;
 			return history->peer;
 		}
 	}
-	// 正数兼容旧 userId 写法
-	return (idValue > 0)
-		? session->data().peerLoaded(peerFromUser(idValue))
-		: nullptr;
+	return nullptr;
 }
 
 // 真实发送文本，走官方发送链路，auto_space 等钩子均生效。
@@ -269,8 +273,8 @@ using json = nlohmann::json;
 		return Result::Err(u"text must not be empty"_q);
 	}
 	const auto session = ActiveSession();
-	if (!session) {
-		return Result::Err(u"no active session"_q);
+	if (!session || isFakeSession(session)) {
+		return Result::Err(u"an authenticated session is required"_q);
 	}
 	const auto peer = ResolvePeer(session, peerIdValue);
 	if (!peer) {
@@ -294,10 +298,10 @@ using json = nlohmann::json;
 }
 
 // 打开对话并清空导航栈；参数取 chat.list 输出的 peerId，
-// 正数也兼容旧 userId 写法，缺省 self 即 Saved Messages。
+// 不指定会话时打开收藏夹。
 [[nodiscard]] Result OpenChat(const QStringList &args) {
 	if (args.size() > 1) {
-		return Result::Err(u"usage: chat.open [peerId|userId]"_q);
+		return Result::Err(u"usage: chat.open [peerId]"_q);
 	}
 	auto idValue = int64(0);
 	if (args.size() == 1) {

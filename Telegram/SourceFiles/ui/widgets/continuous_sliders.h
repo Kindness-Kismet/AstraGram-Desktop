@@ -37,6 +37,9 @@ public:
 	float64 value() const;
 	void setValue(float64 value);
 	void setValue(float64 value, float64 receivedTill);
+#ifdef _DEBUG
+	void setValueForDebug(float64 value);
+#endif
 	void setFadeOpacity(float64 opacity);
 	void setDisabled(bool disabled);
 	bool isDisabled() const {

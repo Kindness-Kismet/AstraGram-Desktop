@@ -31,10 +31,61 @@ COMMAND_SEPARATOR = "+"
 BOOLEAN_CHOICES = ("true", "false")
 
 VERSION_FILE = ROOT / "Telegram" / "build" / "version"
+PROFILE_FILE = ROOT / "build" / "app-debug-profile.json"
+PROFILE_OVERRIDE = None
+
+GENERIC_COMMANDS = {
+    "session.thread-settings": "查询或修改话题与子会话配置：<会话编号> <话题编号> <子会话编号> [键 值]",
+    "control.mouse": "在应用控件内部点击或打开菜单：<目标> <横坐标> <纵坐标> [left|right|double]",
+    "crash.log": "读取当前调试配置的崩溃日志",
+    "session.list": "列出本地账号与当前激活账号",
+    "session.activate": "切换本地账号：<索引>",
+    "session.peer-settings": "查询或修改会话级设置：<会话编号> [键 值]",
+    "privacy.get": "查询已加载的服务端隐私配置",
+    "privacy.set": "提交服务端隐私配置：<键> <值>，需要真实登录",
+    "privacy.reload": "重新请求服务端隐私配置，需要真实登录",
+    "settings.schema": "列出设置值、类型与完整键名：[前缀]",
+    "page.list": "查询全部官方与定制设置入口：[关键词]",
+    "action.list": "列出官方快捷动作",
+    "action.run": "执行当前界面支持的官方动作：<名称>",
+    "control.get": "查询控件当前值、状态与动作：<目标>",
+    "control.set": "修改控件值并触发业务回调：<目标> <值>",
+    "control.action": "执行控件公开的动作：<目标> <动作>",
+    "filter.list": "列出全部过滤规则",
+    "filter.put": "添加或更新过滤规则：<规则 JSON>",
+    "filter.remove": "移除指定过滤规则：<编号>",
+    "filter.exclusions": "列出全局规则的会话排除项",
+    "filter.exclude": "修改全局规则排除项：<规则编号> <会话编号> <true|false>",
+    "filter.check": "检查消息实际过滤结果：<会话编号> <消息编号>",
+    "filter.visible": "查询或修改过滤消息显示状态：<会话编号> [true|false]",
+    "storage.deleted": "查询本地已删除消息：<会话编号> [条数] [关键词]",
+    "storage.edits": "查询本地编辑历史：<会话编号> <消息编号> [条数]",
+    "message.inspect": "查询消息正文与删除、过滤、视图状态：<会话编号> <消息编号>",
+    "message.edit-local": "在假会话触发原生编辑流程：<会话编号> <消息编号> <文字>",
+    "message.delete-local": "在假会话触发原生删除流程：<会话编号> <消息编号>",
+    "message.hide": "按右键菜单流程隐藏消息及所在相册：<会话编号> <消息编号>",
+    "message.shot": "打开消息截图预览：<会话编号> <消息编号>...",
+    "text.process": "验证文本处理与实体偏移：<send|edit|receive|auto-space|zalgo> <文字> [实体 JSON]",
+    "translate.start": "按当前翻译服务发起请求：<语言> <文字>",
+    "translate.clear-cache": "清空应用翻译缓存",
+    "emoji.list": "查询当前表情包、已安装包与预设",
+    "emoji.import": "导入字体表情包：<字体路径>",
+    "emoji.install": "下载并安装预设表情包：<预设编号>",
+    "emoji.select": "切换已安装表情包：<编号>",
+    "emoji.cancel": "取消预设表情包下载：<预设编号>",
+    "feature.status": "查询窗口材质、隐私遮挡、翻译与表情包状态",
+    "forward.status": "查询转发任务进度：<会话编号>",
+    "forward.cancel": "取消正在运行的转发任务：<会话编号>",
+    "job.status": "查询异步任务结果：<任务编号>",
+    "job.forget": "移除已结束任务的查询记录：<任务编号>",
+    "app.quit": "正常退出调试应用",
+}
 
 
 def working_dir() -> Path:
-    profile = os.environ.get("AYUGRAM_DEBUG_PROFILE", "")
+    profile = PROFILE_OVERRIDE
+    if profile is None:
+        profile = json.loads(PROFILE_FILE.read_text(encoding="utf-8"))["profile"] if PROFILE_FILE.exists() else ""
     if not profile:
         return debug_dir()
     if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,47}", profile):
@@ -82,6 +133,16 @@ def is_debug_app_exe(path: Path) -> bool:
 PORT_WAIT_SECONDS = 60
 
 COMMAND_CATEGORY_LABELS = {
+    "action": "官方快捷动作",
+    "crash": "崩溃信息",
+    "emoji": "字体表情包",
+    "feature": "定制功能状态",
+    "filter": "消息过滤规则",
+    "forward": "转发任务",
+    "job": "异步任务",
+    "privacy": "服务端隐私设置",
+    "text": "文本处理",
+    "translate": "文本翻译",
     "app": "应用生命周期",
     "session": "会话与测试环境",
     "chat": "会话导航与消息统计",
@@ -117,8 +178,13 @@ def print_command_help(subparsers) -> None:
 
 
 def register_commands(sub) -> None:
-    sub.add_parser("app.ensure", help="确保 Debug 应用在运行，未运行则拉起并等到端口就绪")
-    sub.add_parser("app.restart", help="重启 Debug 应用")
+    for name, description in GENERIC_COMMANDS.items():
+        command = sub.add_parser(name, help=description, description=description)
+        command.add_argument("params", nargs=argparse.REMAINDER)
+    command = sub.add_parser("app.ensure", help="确保 Debug 应用在运行，未运行则拉起并等到端口就绪")
+    command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
+    command = sub.add_parser("app.restart", help="重启 Debug 应用")
+    command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
     sub.add_parser("app.stop", help="停止 Debug 应用，只认端口 PID 或本仓库 dev 产物路径")
     sub.add_parser("app.ping", help="探活，返回 pong")
     sub.add_parser("app.info", help="查询版本、配置目录、会话和窗口状态")
@@ -126,8 +192,10 @@ def register_commands(sub) -> None:
     sub.add_parser("app.update-info", help="查询更新源前缀：文件内容与内存里解析出的地址")
     sub.add_parser("app.help", help="列出服务端已注册的全部指令名")
 
-    sub.add_parser("settings.keys", help="列出全部设置键名")
-    sub.add_parser("settings.dump", help="导出全部设置为 JSON")
+    command = sub.add_parser("settings.keys", help="列出全部设置键名")
+    command.add_argument("prefix", nargs="?")
+    command = sub.add_parser("settings.dump", help="导出全部设置为 JSON")
+    command.add_argument("prefix", nargs="?")
     command = sub.add_parser("settings.get", help="查询单个设置值")
     command.add_argument("key")
     command = sub.add_parser("settings.set", help="修改设置，按当前类型解析取值")
@@ -143,20 +211,20 @@ def register_commands(sub) -> None:
     command.add_argument("userId", nargs="?")
     sub.add_parser("session.test-mode", help="在生产环境与官方测试数据中心之间切换")
 
-    sub.add_parser("scenario.seed", help="在当前假会话中创建固定场景列表，可重复调用")
     sub.add_parser("scenario.list", help="列出固定场景的名称、键名与会话编号")
-    command = sub.add_parser("scenario.open", help="打开固定场景，先执行 scenario.seed")
+    command = sub.add_parser("scenario.open", help="打开假会话自动生成的固定场景")
     command.add_argument("key")
     command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts", "pinned", "actions"), default="main", help="主聊天、另一套聊天、计划消息、快捷回复、置顶消息列表或最近操作")
 
     command.add_argument("--input", choices=("keep", "empty", "reply", "edit"), default="keep", help="保留、清空、回复或编辑输入状态，仅用于普通私聊和话题")
 
-    command = sub.add_parser("message.fake", help="往假会话的 Saved Messages 塞本地文本消息，验证渲染与隐藏逻辑")
+    command = sub.add_parser("message.fake", help="往假会话插入本地文本消息，默认收藏夹，验证渲染与隐藏逻辑")
     command.add_argument("text", help="消息文本")
     command.add_argument("--from", dest="from_user", metavar="USER_ID", help="指定另一个假用户作为发送者")
     command.add_argument("--blocked", action="store_true", help="把发送者标记为已拉黑（真拉黑）")
     command.add_argument("--shadow-ban", action="store_true", help="把发送者加入 AyuGram 影子拉黑名单")
-    command = sub.add_parser("chat.open", help="打开指定对话并清空导航栈；参数取 chat.list 的 peerId，正数兼容旧 userId，缺省 Saved Messages")
+    command.add_argument("--peer", help="插入到指定假会话，默认收藏夹")
+    command = sub.add_parser("chat.open", help="打开指定对话并清空导航栈；参数取 chat.list 的 peerId，缺省 Saved Messages")
     command.add_argument("peerId", nargs="?")
     command = sub.add_parser("chat.open-archive", help="打开归档文件夹")
     command = sub.add_parser("chat.list", help="列出已加载对话的 peerId 与名称，filter 为名称子串")
@@ -244,15 +312,24 @@ def split_command_segments(argv: list[str]) -> list[list[str]]:
 
 
 def execute_command(args: argparse.Namespace) -> None:
+    global PROFILE_OVERRIDE
     command = args.command
+    profile = getattr(args, "profile", None)
+    if profile is not None:
+        PROFILE_OVERRIDE = "" if profile == "default" else profile
+        working_dir()
 
     # 生命周期指令由 CLI 自己完成，不进服务端。
     if command == "app.ensure":
         ensure_debug_app()
+        if profile is not None:
+            PROFILE_FILE.write_text(json.dumps({"profile": PROFILE_OVERRIDE}), encoding="utf-8")
         print("应用已就绪。")
         return
     if command == "app.restart":
         restart_debug_app()
+        if profile is not None:
+            PROFILE_FILE.write_text(json.dumps({"profile": PROFILE_OVERRIDE}), encoding="utf-8")
         print("应用已重启。")
         return
     if command == "app.stop":
@@ -276,6 +353,10 @@ def execute_command(args: argparse.Namespace) -> None:
 
 def build_server_command(args: argparse.Namespace) -> str:
     command = args.command
+    if command in GENERIC_COMMANDS:
+        return " ".join([command, *map(quote_arg, args.params)])
+    if command in ("settings.keys", "settings.dump"):
+        return command + (" " + quote_arg(args.prefix) if args.prefix is not None else "")
     if command == "scenario.open":
         return f"scenario.open {quote_arg(args.key)} --view {args.view} --input {args.input}"
     if command == "control.hover":
@@ -329,6 +410,8 @@ def build_server_command(args: argparse.Namespace) -> str:
             parts.append("--blocked")
         if args.shadow_ban:
             parts.append("--shadow-ban")
+        if args.peer:
+            parts.extend(["--peer", args.peer])
         return " ".join(parts)
     if command == "chat.open":
         return ("chat.open" if args.peerId is None
@@ -374,6 +457,8 @@ def ensure_debug_app() -> None:
         actual = Path(info["workingDir"]).resolve()
         if actual != working_dir().resolve():
             raise RuntimeError(f"当前数据目录为 {actual}，目标为 {working_dir()}。请先用 app.stop 退出当前调试应用。")
+        if actual != debug_dir().resolve() and not info.get("isolatedDebug"):
+            raise RuntimeError("独立配置未启用测试隔离，请重新构建并重启调试应用。")
         return
     if not app_exe().is_file():
         raise SystemExit(
@@ -389,6 +474,8 @@ def launch_app() -> None:
     directory = working_dir()
     directory.mkdir(parents=True, exist_ok=True)
     command = [str(app_exe()), "-workdir", str(directory)]
+    if directory.resolve() != debug_dir().resolve():
+        command.append("-testagent")
     if sys.platform == "win32":
         subprocess.Popen(command, cwd=directory, creationflags=subprocess.DETACHED_PROCESS)
     else:

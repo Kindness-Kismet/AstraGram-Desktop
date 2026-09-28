@@ -26,6 +26,7 @@ using json = nlohmann::json;
 		{ "debugLogs", Logs::DebugEnabled() },
 		{ "hasSession", session != nullptr },
 		{ "fakeSession", session && isFakeSession(session) },
+		{ "isolatedDebug", cTestAgent() },
 		{ "hasWindow", window != nullptr },
 	};
 	if (session) {
@@ -87,6 +88,13 @@ using json = nlohmann::json;
 	return Result::Ok(Compact(names));
 }
 
+[[nodiscard]] Result crashLog(const QStringList &args) {
+	if (!args.empty()) return Result::Err(u"usage: crash.log"_q);
+	auto file = QFile(cWorkingDir() + u"crash.log"_q);
+	if (!file.open(QIODevice::ReadOnly)) return Result::Err(u"crash log not found"_q);
+	return Result::Ok(Compact(json{{"text", QString::fromUtf8(file.readAll()).toStdString()}}));
+}
+
 } // namespace
 
 const HandlerMap &AppHandlers() {
@@ -97,6 +105,7 @@ const HandlerMap &AppHandlers() {
 		{ u"app.check-update"_q, &CheckUpdate },
 		{ u"app.update-info"_q, &UpdateInfo },
 		{ u"app.help"_q, &Help },
+		{ u"crash.log"_q, &crashLog },
 	};
 	return result;
 }

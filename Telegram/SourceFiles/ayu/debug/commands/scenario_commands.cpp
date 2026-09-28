@@ -128,7 +128,8 @@ void initialiseUser(
 		bool pinned,
 		bool topic,
 		int shortcutId = 0,
-		bool keyboard = false) {
+		bool keyboard = false,
+		bool edited = false) {
 	using Flag = MTPDmessage::Flag;
 	using ReplyFlag = MTPDmessageReplyHeader::Flag;
 	const auto reply = topic ? MTP_messageReplyHeader(
@@ -158,6 +159,7 @@ void initialiseUser(
 			| (topic ? Flag::f_reply_to : Flag())
 			| (shortcutId ? Flag::f_quick_reply_shortcut_id : Flag())
 			| (keyboard ? Flag::f_reply_markup : Flag())
+			| (edited ? Flag::f_edit_date : Flag())
 			| (peer->isBroadcast() ? Flag::f_post : Flag())),
 		MTP_int(id), peerToMTP(sender), MTPint(), MTPstring(),
 		peerToMTP(peer->id), MTPPeer(), MTPMessageFwdHeader(),
@@ -165,7 +167,7 @@ void initialiseUser(
 		MTP_int(base::unixtime::now() - 300 + (id % 100)),
 		MTP_string(text), MTPMessageMedia(), markup,
 		MTPVector<MTPMessageEntity>(), MTPint(), MTPint(),
-		MTPMessageReplies(), MTPint(), MTPstring(), MTPlong(),
+		MTPMessageReplies(), MTP_int(edited ? base::unixtime::now() : 0), MTPstring(), MTPlong(),
 		MTPMessageReactions(), MTPVector<MTPRestrictionReason>(),
 		MTPint(), MTP_int(shortcutId), MTPlong(), MTPFactCheck(), MTPint(),
 		MTPlong(), MTPSuggestedPost(), MTPint(), MTPstring(),
@@ -456,6 +458,11 @@ void seedFakeScenarios(not_null<Main::Session*> session) {
 		seedScenario(session, i);
 	}
 	SeededSession = base::make_weak(session);
+}
+
+MTPMessage fakeTextMessage(not_null<PeerData*> peer, PeerId sender,
+		int id, const QString &text, bool edited) {
+	return makeMessage(peer, sender, id, text, false, false, 0, false, edited);
 }
 
 const HandlerMap &ScenarioHandlers() {
