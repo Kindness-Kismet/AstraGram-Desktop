@@ -107,60 +107,42 @@ void ImageView::paintEvent(QPaintEvent *e) {
 
 	p.fillPath(path, brush);
 
-	if (!baseImage.isNull()) {
+	// 按图片尺寸居中到内边距以内的区域。
+	const auto centered = [&](const QImage &source) {
 		const auto realRect = rect().marginsRemoved(st::imageViewInnerPadding);
+		const auto ratio = style::DevicePixelRatio();
+		return QRect(
+			(realRect.width() - source.width() / ratio) / 2 + st::imageViewInnerPadding.left(),
+			(realRect.height() - source.height() / ratio) / 2 + st::imageViewInnerPadding.top(),
+			source.width() / ratio,
+			source.height() / ratio);
+	};
+	const auto t = animation.value(1.0);
 
-		const auto resizedRect = QRect(
-			(realRect.width() - image.width() / style::DevicePixelRatio()) / 2 + st::imageViewInnerPadding.left(),
-			(realRect.height() - image.height() / style::DevicePixelRatio()) / 2 + st::imageViewInnerPadding.top(),
-			image.width() / style::DevicePixelRatio(),
-			image.height() / style::DevicePixelRatio());
-
-		p.drawImage(resizedRect, baseImage);
-
-		const auto t = animation.value(1.0);
-
-		if (t < 1.0) {
-			p.setOpacity(1.0 - t);
-			p.drawImage(resizedRect, prevDiffImage);
-			p.setOpacity(1.0);
-		}
-
-		if (t > 0.0) {
-			p.setOpacity(t);
-			p.drawImage(resizedRect, newDiffImage);
-			p.setOpacity(1.0);
-		}
-	} else {
+	if (baseImage.isNull()) {
 		if (!prevImage.isNull()) {
-			const auto realRect = rect().marginsRemoved(st::imageViewInnerPadding);
-
-			const auto resizedRect = QRect(
-				(realRect.width() - prevImage.width() / style::DevicePixelRatio()) / 2 + st::imageViewInnerPadding.left(),
-				(realRect.height() - prevImage.height() / style::DevicePixelRatio()) / 2 + st::imageViewInnerPadding.top(),
-				prevImage.width() / style::DevicePixelRatio(),
-				prevImage.height() / style::DevicePixelRatio());
-
-			const auto opacity = 1.0 - animation.value(1.0);
-			p.setOpacity(opacity);
-			p.drawImage(resizedRect, prevImage);
-			p.setOpacity(1.0);
+			p.setOpacity(1.0 - t);
+			p.drawImage(centered(prevImage), prevImage);
 		}
-
 		if (!image.isNull()) {
-			const auto realRect = rect().marginsRemoved(st::imageViewInnerPadding);
-
-			const auto resizedRect = QRect(
-				(realRect.width() - image.width() / style::DevicePixelRatio()) / 2 + st::imageViewInnerPadding.left(),
-				(realRect.height() - image.height() / style::DevicePixelRatio()) / 2 + st::imageViewInnerPadding.top(),
-				image.width() / style::DevicePixelRatio(),
-				image.height() / style::DevicePixelRatio());
-
-			const auto opacity = animation.value(1.0);
-			p.setOpacity(opacity);
-			p.drawImage(resizedRect, image);
-			p.setOpacity(1.0);
+			p.setOpacity(t);
+			p.drawImage(centered(image), image);
 		}
+		p.setOpacity(1.0);
+		return;
+	}
+
+	const auto resizedRect = centered(image);
+	p.drawImage(resizedRect, baseImage);
+	if (t < 1.0) {
+		p.setOpacity(1.0 - t);
+		p.drawImage(resizedRect, prevDiffImage);
+		p.setOpacity(1.0);
+	}
+	if (t > 0.0) {
+		p.setOpacity(t);
+		p.drawImage(resizedRect, newDiffImage);
+		p.setOpacity(1.0);
 	}
 }
 

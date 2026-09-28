@@ -172,25 +172,26 @@ void MessagePreview::paintEvent(QPaintEvent *e) {
 		view->draw(p, context);
 	}
 
-	if (!AyuSettings::getInstance().hideFastShare()) {
-		const auto size = st::historyFastShareSize;
-		const auto g = view->innerGeometry();
-		const auto shareLeft = g.x() + g.width()
-			+ st::historyFastShareLeft;
-		const auto shareTop = g.y() + g.height()
-			- st::historyFastShareBottom - size;
-		const auto shareRect = QRect(
-			shareLeft,
-			shareTop,
-			size,
-			size);
-		p.setPen(Qt::NoPen);
-		p.setBrush(context.st->msgServiceBg());
-		p.drawEllipse(shareRect);
-		context.st->historyFastShareIcon().paintInCenter(
-			p,
-			shareRect);
+	if (AyuSettings::getInstance().hideFastShare()) {
+		return;
 	}
+	const auto size = st::historyFastShareSize;
+	const auto g = view->innerGeometry();
+	const auto shareLeft = g.x() + g.width()
+		+ st::historyFastShareLeft;
+	const auto shareTop = g.y() + g.height()
+		- st::historyFastShareBottom - size;
+	const auto shareRect = QRect(
+		shareLeft,
+		shareTop,
+		size,
+		size);
+	p.setPen(Qt::NoPen);
+	p.setBrush(context.st->msgServiceBg());
+	p.drawEllipse(shareRect);
+	context.st->historyFastShareIcon().paintInCenter(
+		p,
+		shareRect);
 }
 
 void MessagePreview::setBubbleRadius(int radius) {

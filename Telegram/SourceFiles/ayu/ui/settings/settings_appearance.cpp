@@ -83,7 +83,8 @@ void BuildAvatarCorners(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 	{
 		if (val == 0) {
 			return tr::ayu_AvatarCornersSquare(tr::now).toUpper();
-		} else if (val == AyuUiSettings::kMaxAvatarCorners) {
+		}
+		if (val == AyuUiSettings::kMaxAvatarCorners) {
 			return tr::ayu_AvatarCornersCircle(tr::now).toUpper();
 		}
 		return QString::number(val);

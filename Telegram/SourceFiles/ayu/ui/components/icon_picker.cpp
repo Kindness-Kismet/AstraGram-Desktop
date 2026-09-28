@@ -126,51 +126,40 @@ void IconPicker::paintEvent(QPaintEvent *e) {
 }
 
 void IconPicker::mousePressEvent(QMouseEvent *e) {
-	const auto &settings = AyuSettings::getInstance();
-	auto changed = false;
-
 	const auto cell = cellWidth();
 	const auto iconSize = st::iconPickerIconSize;
-
-	for (int row = 0; row < rows; row++) {
-		const auto columns = std::min(kColumns, static_cast<int>(icons.size()) - row * kColumns);
-		for (int i = 0; i < columns; i++) {
-			auto const idx = i + row * kColumns;
-
-			const auto x = i * cell + (cell - iconSize) / 2;
-			const auto y = row * cell;
-
-			if (e->pos().x() >= x && e->pos().x() <= x + iconSize
-				&& e->pos().y() >= y && e->pos().y() <= y + iconSize) {
-				const auto &iconName = icons[idx];
-				if (iconName.isEmpty()) {
-					break;
-				}
-
-				if (settings.appIcon() != iconName) {
-					_wasSelected = settings.appIcon();
-					_animation.start(
-						[=]
-						{
-							update();
-						},
-						0.0,
-						1.0,
-						200,
-						anim::easeOutCubic
-					);
-
-					AyuSettings::getInstance().setAppIcon(iconName);
-					changed = true;
-					break;
+	const auto pos = e->pos();
+	const auto iconName = [&] {
+		for (int row = 0; row < rows; row++) {
+			const auto columns = std::min(kColumns, static_cast<int>(icons.size()) - row * kColumns);
+			for (int i = 0; i < columns; i++) {
+				const auto x = i * cell + (cell - iconSize) / 2;
+				const auto y = row * cell;
+				if (pos.x() >= x && pos.x() <= x + iconSize
+					&& pos.y() >= y && pos.y() <= y + iconSize) {
+					return icons[i + row * kColumns];
 				}
 			}
 		}
-	}
+		return QString();
+	}();
 
-	if (changed) {
-		applyIcon();
-
-		repaint();
+	auto &settings = AyuSettings::getInstance();
+	if (iconName.isEmpty() || settings.appIcon() == iconName) {
+		return;
 	}
+	_wasSelected = settings.appIcon();
+	_animation.start(
+		[=]
+		{
+			update();
+		},
+		0.0,
+		1.0,
+		200,
+		anim::easeOutCubic
+	);
+	settings.setAppIcon(iconName);
+	applyIcon();
+	repaint();
 }

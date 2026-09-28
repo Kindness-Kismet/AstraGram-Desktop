@@ -93,16 +93,17 @@ void FloatingSurface::refreshGeometry() {
 		? _style.rects()
 		: std::vector<QRect>{ _widget->rect() };
 	std::erase_if(rects, [](QRect rect) { return rect.isEmpty(); });
-	if (_rects != rects) {
-		_rects = std::move(rects);
-		_mask = QPixmap();
-		updateInputMask();
-		if (_host) {
-			_host->scheduleAreas();
-		}
-		_widget->update();
-		update();
+	if (_rects == rects) {
+		return;
 	}
+	_rects = std::move(rects);
+	_mask = QPixmap();
+	updateInputMask();
+	if (_host) {
+		_host->scheduleAreas();
+	}
+	_widget->update();
+	update();
 }
 
 void FloatingSurface::setHost(FloatingSurfaceHost *host) {

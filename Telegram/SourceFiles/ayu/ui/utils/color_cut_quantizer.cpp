@@ -277,11 +277,11 @@ int ColorCutQuantizer::Vbox::longestColorDimension() const {
 
 	if (redLength >= greenLength && redLength >= blueLength) {
 		return COMPONENT_RED;
-	} else if (greenLength >= redLength && greenLength >= blueLength) {
-		return COMPONENT_GREEN;
-	} else {
-		return COMPONENT_BLUE;
 	}
+	if (greenLength >= redLength && greenLength >= blueLength) {
+		return COMPONENT_GREEN;
+	}
+	return COMPONENT_BLUE;
 }
 
 int ColorCutQuantizer::Vbox::findSplitPoint() {

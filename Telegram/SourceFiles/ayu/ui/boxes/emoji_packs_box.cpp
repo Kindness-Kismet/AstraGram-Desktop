@@ -39,7 +39,8 @@ struct PresetState {
 QString stateText(const PresetState &state, int64 size) {
 	if (state.converting) {
 		return tr::ayu_EmojiPackImporting(tr::now);
-	} else if (state.downloading) {
+	}
+	if (state.downloading) {
 		const auto total = state.progress.total;
 		const auto percent = (total > 0)
 			? std::clamp((state.progress.already * 100) / float64(total), 0., 100.)

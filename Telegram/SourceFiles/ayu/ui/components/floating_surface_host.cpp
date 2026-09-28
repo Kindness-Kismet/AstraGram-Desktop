@@ -31,16 +31,17 @@ FloatingSurfaceHost::FloatingSurfaceHost(
 FloatingSurfaceHost::~FloatingSurfaceHost() {
 	_areasTimer.stop();
 	for (const auto &surface : _surfaces) {
-		if (surface) {
-			surface->_host = nullptr;
-			if (const auto widget = surface->widget()) {
-				widget->update();
-			}
-			surface->update();
-			QTimer::singleShot(0, surface.data(), [surface] {
-				surface->rebind();
-			});
+		if (!surface) {
+			continue;
 		}
+		surface->_host = nullptr;
+		if (const auto widget = surface->widget()) {
+			widget->update();
+		}
+		surface->update();
+		QTimer::singleShot(0, surface.data(), [surface] {
+			surface->rebind();
+		});
 	}
 }
 
@@ -80,11 +81,9 @@ void FloatingSurfaceHost::scheduleAreas() {
 void FloatingSurfaceHost::refreshAreas() {
 	auto areas = std::vector<QRect>();
 	for (const auto &surface : _surfaces) {
-		if (surface) {
-			const auto area = surface->visibleArea(_root);
-			if (!area.isEmpty()) {
-				areas.push_back(area);
-			}
+		const auto area = surface ? surface->visibleArea(_root) : QRect();
+		if (!area.isEmpty()) {
+			areas.push_back(area);
 		}
 	}
 	_background.setAreas(std::move(areas));

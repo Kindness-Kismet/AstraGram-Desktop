@@ -26,6 +26,105 @@
 #include <QFileDialog>
 #include <QGuiApplication>
 
+namespace {
+
+[[nodiscard]] bool hasSpoilerEntity(const TextWithEntities &text) {
+	return ranges::any_of(text.entities, [](const EntityInText &entity) {
+		return entity.type() == EntityType::Spoiler;
+	});
+}
+
+[[nodiscard]] bool messageHasSpoilers(not_null<HistoryItem*> item) {
+	if (hasSpoilerEntity(item->originalText())) {
+		return true;
+	}
+	const auto media = item->media();
+	if (!media) {
+		return false;
+	}
+	if (media->hasSpoiler()) {
+		return true;
+	}
+	const auto todoList = media->todolist();
+	if (!todoList) {
+		return false;
+	}
+	return hasSpoilerEntity(todoList->title)
+		|| ranges::any_of(todoList->items, [](const auto &task) {
+			return hasSpoilerEntity(task.text);
+		});
+}
+
+// 与消息头部的频道标识一致：讨论帖总显示，带署名的群组匿名消息不显示。
+[[nodiscard]] bool drawsChannelBadge(not_null<HistoryItem*> item) {
+	if (item->isDiscussionPost()) {
+		return true;
+	}
+	if (item->author()->isMegagroup()) {
+		const auto signedInfo = item->Get<HistoryMessageSigned>();
+		if (signedInfo && !signedInfo->viaBusinessBot) {
+			return false;
+		}
+	}
+	return item->history()->peer->isMegagroup()
+		&& item->author()->isChannel()
+		&& !item->out();
+}
+
+[[nodiscard]] QString megagroupBadgeText(
+		not_null<ChannelData*> channel,
+		not_null<UserData*> user,
+		not_null<HistoryItem*> item) {
+	const auto info = channel->mgInfo.get();
+	const auto userId = peerToUser(user->id);
+	const auto isCreator = info && (info->creator == user);
+	const auto isAdmin = info && info->admins.contains(userId);
+	if (!isCreator && !isAdmin) {
+		return item->fromRank();
+	}
+	const auto rank = info->memberRanks.find(userId);
+	if (rank != info->memberRanks.end() && !rank->second.isEmpty()) {
+		return rank->second;
+	}
+	return isCreator
+		? tr::lng_owner_badge(tr::now)
+		: tr::lng_admin_badge(tr::now);
+}
+
+[[nodiscard]] QString headerBadgeText(
+		not_null<HistoryItem*> item,
+		bool channelBadge) {
+	if (item->isDiscussionPost()) {
+		return tr::lng_channel_badge(tr::now);
+	}
+	if (item->author()->isMegagroup()) {
+		const auto signedInfo = item->Get<HistoryMessageSigned>();
+		return (signedInfo && !signedInfo->viaBusinessBot)
+			? signedInfo->author
+			: QString();
+	}
+	if (channelBadge) {
+		return tr::lng_channel_badge(tr::now);
+	}
+	const auto user = item->author()->asUser();
+	if (!user) {
+		return QString();
+	}
+	if (const auto chat = item->history()->peer->asChat()) {
+		const auto rank = chat->memberRanks.find(peerToUser(user->id));
+		if (rank == chat->memberRanks.end()) {
+			return QString();
+		}
+		return rank->second;
+	}
+	if (const auto channel = item->history()->peer->asMegagroup()) {
+		return megagroupBadgeText(channel, user, item);
+	}
+	return QString();
+}
+
+} // namespace
+
 MessageShotBox::MessageShotBox(
 	QWidget *parent,
 	AyuFeatures::MessageShot::ShotConfig config)
@@ -89,103 +188,15 @@ void MessageShotBox::setupContent() {
 	auto hasHeaderDecorations = false;
 	auto hasSpoilers = false;
 	for (const auto &item : _config.messages) {
-		if (!hasReactions && !item->reactions().empty()) {
-			hasReactions = true;
-		}
-		if (!hasReplies) {
-			if (item->replyTo().replying()
-				|| (item->media() && item->media()->webpage())) {
-				hasReplies = true;
-			}
-		}
-		if (!hasSpoilers) {
-			for (const auto &entity : item->originalText().entities) {
-				if (entity.type() == EntityType::Spoiler) {
-					hasSpoilers = true;
-					break;
-				}
-			}
-			if (!hasSpoilers && item->media()) {
-				if (item->media()->hasSpoiler()) {
-					hasSpoilers = true;
-				} else if (const auto todoList = item->media()->todolist()) {
-					for (const auto &entity : todoList->title.entities) {
-						if (entity.type() == EntityType::Spoiler) {
-							hasSpoilers = true;
-							break;
-						}
-					}
-					if (!hasSpoilers) {
-						for (const auto &task : todoList->items) {
-							for (const auto &entity : task.text.entities) {
-								if (entity.type() == EntityType::Spoiler) {
-									hasSpoilers = true;
-									break;
-								}
-							}
-							if (hasSpoilers) break;
-						}
-					}
-				}
-			}
-		}
+		hasReactions = hasReactions || !item->reactions().empty();
+		hasReplies = hasReplies
+			|| item->replyTo().replying()
+			|| (item->media() && item->media()->webpage());
+		hasSpoilers = hasSpoilers || messageHasSpoilers(item);
 		if (!hasHeaderDecorations) {
-			const auto drawChannelBadge = [&] {
-				if (item->isDiscussionPost()) {
-					return true;
-				} else if (item->author()->isMegagroup()) {
-					if (const auto signedInfo = item->Get<HistoryMessageSigned>()) {
-						if (!signedInfo->viaBusinessBot) {
-							return false;
-						}
-					}
-				}
-				return item->history()->peer->isMegagroup()
-					&& item->author()->isChannel()
-					&& !item->out();
-			}();
-
-			auto badgeText = QString();
-			if (item->isDiscussionPost()) {
-				badgeText = tr::lng_channel_badge(tr::now);
-			} else if (item->author()->isMegagroup()) {
-				if (const auto signedInfo = item->Get<HistoryMessageSigned>()) {
-					if (!signedInfo->viaBusinessBot) {
-						badgeText = signedInfo->author;
-					}
-				}
-			} else if (drawChannelBadge) {
-				badgeText = tr::lng_channel_badge(tr::now);
-			} else if (const auto chat = item->history()->peer->asChat()) {
-				if (const auto user = item->author()->asUser()) {
-					const auto rank = chat->memberRanks.find(peerToUser(user->id));
-					if (rank != chat->memberRanks.end()) {
-						badgeText = rank->second;
-					}
-				}
-			} else if (const auto channel = item->history()->peer->asMegagroup()) {
-				if (const auto user = item->author()->asUser()) {
-					const auto info = channel->mgInfo.get();
-					const auto userId = peerToUser(user->id);
-					const auto isCreator = info && (info->creator == user);
-					const auto isAdmin = info && info->admins.contains(userId);
-					if (isCreator || isAdmin) {
-						const auto rank = info->memberRanks.find(userId);
-						if (rank != info->memberRanks.end() && !rank->second.isEmpty()) {
-							badgeText = rank->second;
-						} else if (isCreator) {
-							badgeText = tr::lng_owner_badge(tr::now);
-						} else {
-							badgeText = tr::lng_admin_badge(tr::now);
-						}
-					} else {
-						badgeText = item->fromRank();
-					}
-				}
-			}
-
-			hasHeaderDecorations = drawChannelBadge
-				|| !badgeText.isEmpty()
+			const auto channelBadge = drawsChannelBadge(item);
+			hasHeaderDecorations = channelBadge
+				|| !headerBadgeText(item, channelBadge).isEmpty()
 				|| (item->boostsApplied() > 0);
 		}
 		if (hasReactions && hasReplies && hasHeaderDecorations

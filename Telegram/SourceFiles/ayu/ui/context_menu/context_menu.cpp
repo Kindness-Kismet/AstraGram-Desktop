@@ -218,22 +218,23 @@ void DeleteMyMessagesAfterConfirm(not_null<PeerData*> peer) {
 Fn<void()> DeleteMyMessagesHandler(not_null<Window::SessionController*> controller, not_null<PeerData*> peer) {
 	return [=]
 	{
-		if (!controller->showFrozenError()) {
-			controller->show(Ui::MakeConfirmBox({
-				.text = tr::ayu_DeleteOwnMessagesConfirmation(tr::now),
-				.confirmed =
-				[=](Fn<void()> &&close)
-				{
-					close();
-					AyuDeleteMessages::scheduleDeleteOwnMessages(controller, peer, [=] {
-						DeleteMyMessagesAfterConfirm(peer);
-					});
-				},
-				.confirmText = tr::lng_box_delete(),
-				.cancelText = tr::lng_cancel(),
-				.confirmStyle = &st::attentionBoxButton,
-			}));
+		if (controller->showFrozenError()) {
+			return;
 		}
+		controller->show(Ui::MakeConfirmBox({
+			.text = tr::ayu_DeleteOwnMessagesConfirmation(tr::now),
+			.confirmed =
+			[=](Fn<void()> &&close)
+			{
+				close();
+				AyuDeleteMessages::scheduleDeleteOwnMessages(controller, peer, [=] {
+					DeleteMyMessagesAfterConfirm(peer);
+				});
+			},
+			.confirmText = tr::lng_box_delete(),
+			.cancelText = tr::lng_cancel(),
+			.confirmStyle = &st::attentionBoxButton,
+		}));
 	};
 }
 
@@ -296,27 +297,28 @@ void AddAyuGramActions(PeerData *peerData,
 						? &st::menuIconCaptionHide
 						: &st::menuIconCaptionShow);
 			}
-			if (saveDeletedMessages) {
-				addAction(
-					tr::ayu_ViewDeletedMenuText(tr::now),
-					[=]
-					{
-						if (const auto window = sessionController->session().tryResolveWindow()) {
-							window->showSection(std::make_shared<MessageHistory::SectionMemento>(
-								peerData,
-								nullptr,
-								topicId));
-						}
-					},
-					&st::menuIconArchive);
-				if (showFilters || filteredToggleShown.value_or(false)) addAction({ .isSeparator = true });
-				addAction({
-					.text = tr::ayu_ClearDeletedMenuText(tr::now),
-					.handler = ClearDeletedMessagesHandler(sessionController, peerData, topicId),
-					.icon = &st::menuIconClearAttention,
-					.isAttention = true,
-				});
+			if (!saveDeletedMessages) {
+				return;
 			}
+			addAction(
+				tr::ayu_ViewDeletedMenuText(tr::now),
+				[=]
+				{
+					if (const auto window = sessionController->session().tryResolveWindow()) {
+						window->showSection(std::make_shared<MessageHistory::SectionMemento>(
+							peerData,
+							nullptr,
+							topicId));
+					}
+				},
+				&st::menuIconArchive);
+			if (showFilters || filteredToggleShown.value_or(false)) addAction({ .isSeparator = true });
+			addAction({
+				.text = tr::ayu_ClearDeletedMenuText(tr::now),
+				.handler = ClearDeletedMessagesHandler(sessionController, peerData, topicId),
+				.icon = &st::menuIconClearAttention,
+				.isAttention = true,
+			});
 		},
 	});
 }
@@ -349,13 +351,14 @@ void AddJumpToBeginningAction(PeerData *peerData,
 			QDate(2013, 8, 1),
 			[=](not_null<PeerData*> peer, MsgId id)
 			{
-				if (weak.get()) {
-					// API returns 0 if message "Channel created" (ID: 1) was deleted, which scrolls to the bottom
-					if (id.bare == 0) {
-						id = MsgId(2);
-					}
-					callback(peer, id);
+				if (!weak.get()) {
+					return;
 				}
+				// “频道已创建”（ID 1）被删除时接口返回 0，会滚到底部，改为跳到 ID 2。
+				if (id.bare == 0) {
+					id = MsgId(2);
+				}
+				callback(peer, id);
 			});
 	};
 
@@ -548,23 +551,26 @@ void AddUserMessagesAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 		return;
 	}
 
-	if (item->history()->peer->isChat() || item->history()->peer->isMegagroup()) {
-		menu->addAction(
-			tr::ayu_UserMessagesMenuText(tr::now),
-			[=]
-			{
-				if (const auto controller = item->history()->session().tryResolveWindow()) {
-					const auto peer = item->history()->peer;
-					const auto key = (peer && !peer->isUser())
-										 ? item->topic()
-											   ? Dialogs::Key{item->topic()}
-											   : Dialogs::Key{item->history()}
-										 : Dialogs::Key{item->history()};
-					controller->searchInChat(key, item->from());
-				}
-			},
-			&st::menuIconTTL);
+	if (!item->history()->peer->isChat() && !item->history()->peer->isMegagroup()) {
+		return;
 	}
+	menu->addAction(
+		tr::ayu_UserMessagesMenuText(tr::now),
+		[=]
+		{
+			const auto controller = item->history()->session().tryResolveWindow();
+			if (!controller) {
+				return;
+			}
+			const auto peer = item->history()->peer;
+			const auto key = (peer && !peer->isUser())
+				? item->topic()
+					? Dialogs::Key{item->topic()}
+					: Dialogs::Key{item->history()}
+				: Dialogs::Key{item->history()};
+			controller->searchInChat(key, item->from());
+		},
+		&st::menuIconTTL);
 }
 
 void AddMessageDetailsAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
@@ -640,6 +646,18 @@ void AddMessageDetailsAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 		.icon = &st::menuIconInfo,
 		.fillSubmenu = [&](not_null<Ui::PopupMenu*> menu2)
 		{
+			const auto addPackAuthor = [&](uint64 packId) {
+				const auto authorId = getUserIdFromPackId(packId);
+				if (authorId == 0) {
+					return;
+				}
+				menu2->addAction(Ui::ContextActionStickerAuthor(
+					menu2->menu(),
+					&item->history()->session(),
+					authorId
+				));
+			};
+
 			if (hasAnyPostField) {
 				if (!messageViews.isEmpty()) {
 					menu2->addAction(Ui::ContextActionWithSubText(
@@ -751,28 +769,12 @@ void AddMessageDetailsAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 				}
 
 				if (isSticker) {
-					const auto authorId = getUserIdFromPackId(media->document()->sticker()->set.id);
-
-					if (authorId != 0) {
-						menu2->addAction(Ui::ContextActionStickerAuthor(
-							menu2->menu(),
-							&item->history()->session(),
-							authorId
-						));
-					}
+					addPackAuthor(media->document()->sticker()->set.id);
 				}
 			}
 
 			if (containsSingleCustomEmojiPack) {
-				const auto authorId = getUserIdFromPackId(emojiPacks.front().id);
-
-				if (authorId != 0) {
-					menu2->addAction(Ui::ContextActionStickerAuthor(
-						menu2->menu(),
-						&item->history()->session(),
-						authorId
-					));
-				}
+				addPackAuthor(emojiPacks.front().id);
 			}
 		},
 	});

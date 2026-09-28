@@ -318,16 +318,13 @@ void Rows::ensureRippleBySelection(not_null<Row*> row, Selection selected) {
 void Rows::mouseReleaseEvent(QMouseEvent *e) {
 	const auto pressed = _pressed;
 	updatePressed({});
-	if (pressed == _selected) {
-		v::match(pressed,
-				 [&](RowSelection data)
-				 {
-					 activateByIndex(data.index);
-				 },
-				 [](v::null_t)
-				 {
-				 });
+	if (pressed != _selected) {
+		return;
 	}
+	v::match(pressed, [&](RowSelection data) {
+		activateByIndex(data.index);
+	}, [](v::null_t) {
+	});
 }
 
 void Rows::restore(not_null<Row*> row) {
@@ -603,7 +600,8 @@ void Rows::paintEvent(QPaintEvent *e) {
 		const auto &row = rowByIndex(i);
 		if (row.top + row.height <= clip.y()) {
 			continue;
-		} else if (row.top >= clip.y() + clip.height()) {
+		}
+		if (row.top >= clip.y() + clip.height()) {
 			break;
 		}
 		p.setOpacity(row.removed ? st::stickersRowDisabledOpacity : 1.);
@@ -968,11 +966,14 @@ void AyuUi::FontSelectorBox::keyPressEvent(QKeyEvent *e) {
 	{
 		if (key == Qt::Key_Up) {
 			return _jump(-1);
-		} else if (key == Qt::Key_Down) {
+		}
+		if (key == Qt::Key_Down) {
 			return _jump(1);
-		} else if (key == Qt::Key_PageUp) {
+		}
+		if (key == Qt::Key_PageUp) {
 			return _jump(-rowsInPage());
-		} else if (key == Qt::Key_PageDown) {
+		}
+		if (key == Qt::Key_PageDown) {
 			return _jump(rowsInPage());
 		}
 		return Ui::ScrollToRequest(-1, -1);

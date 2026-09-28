@@ -72,16 +72,17 @@ void AvatarCornersPreview::paintEvent(QPaintEvent *e) {
 }
 
 void AvatarCornersPreview::mousePressEvent(QMouseEvent *e) {
-	if (e->button() == Qt::LeftButton) {
-		if (!_ripple) {
-			auto mask = Ui::RippleAnimation::RectMask(size());
-			_ripple = std::make_unique<Ui::RippleAnimation>(
-				st::defaultRippleAnimation,
-				std::move(mask),
-				[=] { update(); });
-		}
-		_ripple->add(e->pos());
+	if (e->button() != Qt::LeftButton) {
+		return;
 	}
+	if (!_ripple) {
+		auto mask = Ui::RippleAnimation::RectMask(size());
+		_ripple = std::make_unique<Ui::RippleAnimation>(
+			st::defaultRippleAnimation,
+			std::move(mask),
+			[=] { update(); });
+	}
+	_ripple->add(e->pos());
 }
 
 void AvatarCornersPreview::mouseReleaseEvent(QMouseEvent *e) {
@@ -109,17 +110,19 @@ void AvatarCornersPreview::resolveChannel() {
 		MTP_string(u"AyuGramReleases"_q),
 		MTP_string()
 	)).done([=](const MTPcontacts_ResolvedPeer &result) {
-		if (const auto strong = weak.get()) {
-			session->data().processUsers(result.data().vusers());
-			session->data().processChats(result.data().vchats());
-			strong->_peer = session->data().peerLoaded(
-				peerFromMTP(result.data().vpeer()));
-			if (strong->_peer) {
-				strong->_peer->loadUserpic();
-				strong->subscribeToUpdates();
-			}
-			strong->update();
+		const auto strong = weak.get();
+		if (!strong) {
+			return;
 		}
+		session->data().processUsers(result.data().vusers());
+		session->data().processChats(result.data().vchats());
+		strong->_peer = session->data().peerLoaded(
+			peerFromMTP(result.data().vpeer()));
+		if (strong->_peer) {
+			strong->_peer->loadUserpic();
+			strong->subscribeToUpdates();
+		}
+		strong->update();
 	}).send();
 }
 
