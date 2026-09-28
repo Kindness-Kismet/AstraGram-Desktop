@@ -16,7 +16,6 @@ ayuContactsMutualIconOver: icon {{ "ayu/contacts_mutual", contactsStatusFgOver }
 ayuWalletBotIcon: icon {{ "ayu/wallet_bot", menuIconColor }};
 
 messageFieldAttachIcon: icon {{ "ayu/message_field/attach", menuIconColor }};
-messageFieldCommandsIcon: icon {{ "ayu/message_field/commands", menuIconColor }};
 messageFieldEmojiIcon: icon {{ "ayu/message_field/emoji", menuIconColor }};
 messageFieldVoiceIcon: icon {{ "ayu/message_field/voice", menuIconColor }};
 messageFieldTTLIcon: icon {{ "ayu/message_field/ttl", menuIconColor }};

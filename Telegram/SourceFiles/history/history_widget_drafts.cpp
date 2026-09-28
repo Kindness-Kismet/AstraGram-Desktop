@@ -261,7 +261,7 @@ void HistoryWidget::fieldChanged() {
 			toggleKeyboard();
 		}
 	}
-	if (updateCmdStartShown()) {
+	if (refreshBotMenuButton()) {
 		updateControlsVisibility();
 		updateControlsGeometry();
 	}
@@ -847,7 +847,7 @@ bool HistoryWidget::applyDraft(FieldHistoryAction fieldHistoryAction) {
 		if (_preview) {
 			_preview->apply({ .removed = true });
 		}
-		updateCmdStartShown();
+		refreshBotMenuButton();
 		updateControlsVisibility();
 		updateControlsGeometry();
 		return true;
@@ -907,7 +907,7 @@ bool HistoryWidget::applyDraft(FieldHistoryAction fieldHistoryAction) {
 		}
 		_textUpdateEvents = TextUpdateEvent::SaveDraft
 			| TextUpdateEvent::SendTyping;
-		updateCmdStartShown();
+		refreshBotMenuButton();
 		updateControlsVisibility();
 		updateControlsGeometry();
 		refreshTopBarActiveChat();
@@ -943,7 +943,7 @@ bool HistoryWidget::applyDraft(FieldHistoryAction fieldHistoryAction) {
 	_processingReplyItem = _replyEditMsg = nullptr;
 	_processingReplyTo = _replyTo = FullReplyTo();
 	setEditMsgId(editMsgId);
-	updateCmdStartShown();
+	refreshBotMenuButton();
 	updateControlsVisibility();
 	updateControlsGeometry();
 	refreshTopBarActiveChat();

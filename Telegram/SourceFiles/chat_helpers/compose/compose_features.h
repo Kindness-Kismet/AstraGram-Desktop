@@ -14,7 +14,6 @@ struct ComposeFeatures {
 	bool sendAs : 1 = true;
 	bool ttlInfo : 1 = true;
 	bool attachments : 1 = true;
-	bool botCommandSend : 1 = true;
 	bool silentBroadcastToggle : 1 = true;
 	bool attachBotsMenu : 1 = true;
 	bool inlineBots : 1 = true;

@@ -474,8 +474,6 @@ ChatWidget::ChatWidget(
 			= _botKeyboardShownToggleShown.value(),
 		.botKeyboardHideToggleShown
 			= _botKeyboardHideToggleShown.value(),
-		.botCommandStartShownExtraGuard
-			= _botCommandStartExtraGuard.value(),
 	}))
 , _bottom(std::make_unique<BottomControls>(
 	this,
@@ -3524,7 +3522,6 @@ void ChatWidget::updateKeyboardUiState(bool hasMarkup, bool suppress) {
 	_botKeyboardHideToggleShown = rowsVisible
 		&& !suppress
 		&& (!_peer->isUser() || !_keyboard->persistent());
-	_botCommandStartExtraGuard = !hasMarkup && !replyVisible;
 	_botKeyboardPlaceholder = ((rowsVisible || replyVisible)
 		&& !suppress
 		&& !_keyboard->placeholder().isEmpty())

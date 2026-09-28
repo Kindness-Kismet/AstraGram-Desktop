@@ -8935,7 +8935,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_MessageFieldElementsHeader" = "Message Field Elements";
 "ayu_MessageFieldPopupsHeader" = "Message Field Popups";
 "ayu_MessageFieldElementAttach" = "Attach";
-"ayu_MessageFieldElementCommands" = "Commands";
 "ayu_MessageFieldElementTTL" = "TTL";
 "ayu_MessageFieldElementEmoji" = "Emoji";
 "ayu_MessageFieldElementVoice" = "Voice";

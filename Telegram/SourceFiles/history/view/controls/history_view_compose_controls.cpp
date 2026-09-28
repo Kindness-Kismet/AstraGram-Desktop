@@ -1297,11 +1297,6 @@ ComposeControls::ComposeControls(
 	[=] {
 		updateControlsGeometry(_wrap->size());
 	}))
-, _botCommandStart(_features.botCommandSend
-	? Ui::CreateChild<Ui::IconButton>(
-		_wrap.get(),
-		st::historyBotCommandStart)
-	: nullptr)
 , _header(std::make_unique<FieldHeader>(
 	_wrap.get(),
 	_show,
@@ -1459,19 +1454,6 @@ ComposeControls::ComposeControls(
 			}
 		}, _wrap->lifetime());
 	}
-	if (descriptor.botCommandStartShownExtraGuard) {
-		std::move(
-			descriptor.botCommandStartShownExtraGuard
-		) | rpl::on_next([=](bool allow) {
-			_botCommandStartExtraGuard = allow;
-			const auto commandShown = updateBotCommandShown();
-			const auto menuRefreshed = refreshBotMenuButton();
-			if (commandShown || menuRefreshed) {
-				updateControlsVisibility();
-				updateControlsGeometry(_wrap->size());
-			}
-		}, _wrap->lifetime());
-	}
 	init();
 }
 
@@ -1554,7 +1536,6 @@ void ComposeControls::setHistory(SetHistoryArgs &&args) {
 	initWebpageProcess();
 	initWriteRestriction();
 	initForwardProcess();
-	updateBotCommandShown();
 	refreshBotMenuButton();
 	updateLikeShown();
 	updateMessagesTTLShown();
@@ -2780,11 +2761,6 @@ void ComposeControls::init() {
 		updateControlsGeometry(_wrap->size());
 	}, _wrap->lifetime());
 
-	if (_botCommandStart) {
-		_botCommandStart->setAccessibleName(tr::lng_bot_commands_start(tr::now));
-		_botCommandStart->setClickedCallback([=] { setText({ "/" }); });
-	}
-
 	initLikeButton();
 
 	_wrap->sizeValue(
@@ -2960,7 +2936,6 @@ void ComposeControls::init() {
 
 	rpl::merge(
 		AyuSettings::getInstance().showAttachButtonInMessageFieldChanges() | rpl::to_empty,
-		AyuSettings::getInstance().showCommandsButtonInMessageFieldChanges() | rpl::to_empty,
 		AyuSettings::getInstance().showEmojiButtonInMessageFieldChanges() | rpl::to_empty,
 		AyuSettings::getInstance().showMicrophoneButtonInMessageFieldChanges() | rpl::to_empty,
 		AyuSettings::getInstance().showAutoDeleteButtonInMessageFieldChanges() | rpl::to_empty,
@@ -3429,7 +3404,6 @@ void ComposeControls::fieldChanged() {
 	const auto ttlVisible = _ttlInfo && _ttlInfo->isVisible();
 	updateSendButtonType();
 	_hasSendText = _field->isVisible() && HasSendText(_field);
-	const auto commandShown = updateBotCommandShown();
 	const auto menuRefreshed = refreshBotMenuButton();
 	const auto likeShown = updateLikeShown();
 	_fieldCharsCountManager.setCount(Ui::ComputeFieldCharacterCount(_field));
@@ -3437,8 +3411,7 @@ void ComposeControls::fieldChanged() {
 	const auto hideExtra = hideExtraButtons()
 		|| isEditingMessage()
 		|| textExceedsMaxSize();
-	const auto refreshControls = commandShown
-		|| menuRefreshed
+	const auto refreshControls = menuRefreshed
 		|| likeShown
 		|| (giftToUserVisible != (_giftToUser
 			&& (_mode == Mode::Normal)
@@ -3709,7 +3682,6 @@ void ComposeControls::updateFieldVisibility() {
 			_richDraftPreview->hide();
 		}
 	}
-	updateBotCommandShown();
 	updateLikeShown();
 	updateSendLockBadge();
 	updateDiscardRichDraftVisibility();
@@ -4977,9 +4949,6 @@ void ComposeControls::finishAnimating() {
 }
 
 void ComposeControls::updateControlsGeometry(QSize size) {
-	// (_commentsShown) (_attachToggle|_replaceMedia) (_sendAs) -- _inlineResults ------ _tabbedPanel -- _fieldBarCancel (_starsReaction)
-	// (_attachDocument|_attachPhoto) _field (_ttlInfo) (_scheduled) (_silent|_botCommandStart) _tabbedSelectorToggle _send
-
 	const auto &settings = AyuSettings::getInstance();
 
 	const auto oldComposeHeight = composeFieldHeight();
@@ -5014,7 +4983,6 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 			? 0
 			: _tabbedSelectorToggle->width())
 		- (_likeShown ? _like->width() : 0)
-		- (_botCommandShown && settings.showCommandsButtonInMessageField() ? _botCommandStart->width() : 0)
 		- ((_silent && !_silent->isHidden()) ? _silent->width() : 0)
 		- ((_toggleSuggestPost && !_toggleSuggestPost->isHidden())
 			? _toggleSuggestPost->width()
@@ -5120,12 +5088,6 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 			}
 		}
 	}
-	if (_botCommandStart) {
-		_botCommandStart->moveToRight(right, buttonsTop);
-		if (_botCommandShown && settings.showCommandsButtonInMessageField()) {
-			right += _botCommandStart->width();
-		}
-	}
 	if (_silent) {
 		_silent->moveToRight(right, buttonsTop);
 		if (!_silent->isHidden()) {
@@ -5177,9 +5139,6 @@ void ComposeControls::updateControlsVisibility() {
 		|| isEditingMessage()
 		|| textExceedsMaxSize();
 	const auto showGiftToUser = (_mode == Mode::Normal) && !hide;
-	if (_botCommandStart) {
-		SWITCH_BUTTON(_botCommandStart, _botCommandShown && settings.showCommandsButtonInMessageField());
-	}
 	if (_silent) {
 		_silent->setVisible(!hide);
 	}
@@ -5456,34 +5415,6 @@ bool ComposeControls::textExceedsMaxSize() const {
 		&& !_recording.current()
 		&& (_field->getLastText().size()
 			> Data::PremiumLimits(&session()).messageLengthCurrent());
-}
-
-bool ComposeControls::updateBotCommandShown() {
-	auto shown = false;
-	const auto peer = _history ? _history->peer.get() : nullptr;
-	if (_botCommandStart
-			&& peer
-			&& _botCommandStartExtraGuard.current()
-			&& !isEditingMessage()) {
-		const auto hasBotCommands = [&] {
-			if (peer->isChat()) {
-				return !peer->asChat()->botCommands().empty();
-			} else if (peer->isMegagroup()) {
-				return !peer->asChannel()->mgInfo->botCommands().empty();
-			} else if (peer->isUser()) {
-				return (_mode != Mode::Normal) && peer->asUser()->isBot();
-			}
-			return false;
-		}();
-		if (hasBotCommands && !hasSendableContent()) {
-			shown = true;
-		}
-	}
-	if (_botCommandShown != shown) {
-		_botCommandShown = shown;
-		return true;
-	}
-	return false;
 }
 
 bool ComposeControls::hasVisibleSendText() const {
@@ -6189,9 +6120,8 @@ void ComposeControls::initWebpageProcess() {
 		}
 		if (flags & Data::PeerUpdate::Flag::FullInfo) {
 			updateSendButtonType();
-			const auto commandShown = updateBotCommandShown();
 			const auto menuRefreshed = refreshBotMenuButton();
-			if (commandShown || menuRefreshed) {
+			if (menuRefreshed) {
 				updateControlsVisibility();
 				updateControlsGeometry(_wrap->size());
 			}
@@ -6202,9 +6132,8 @@ void ComposeControls::initWebpageProcess() {
 	) | rpl::filter([peer = _history->peer](not_null<PeerData*> p) {
 		return (p == peer);
 	}) | rpl::on_next([=] {
-		const auto commandShown = updateBotCommandShown();
 		const auto menuRefreshed = refreshBotMenuButton();
-		if (commandShown || menuRefreshed) {
+		if (menuRefreshed) {
 			updateControlsVisibility();
 			updateControlsGeometry(_wrap->size());
 		}

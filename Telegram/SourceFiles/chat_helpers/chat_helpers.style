@@ -1359,10 +1359,6 @@ historyBotKeyboardHide: IconButton(historyAttach) {
 	icon: icon {{ "chat/input_bot_keyboard_hide", historyComposeIconFg }};
 	iconOver: icon {{ "chat/input_bot_keyboard_hide", historyComposeIconFgOver }};
 }
-historyBotCommandStart: IconButton(historyAttach) {
-	icon: icon {{ "chat/input_bot_command", historyComposeIconFg }};
-	iconOver: icon {{ "chat/input_bot_command", historyComposeIconFgOver }};
-}
 historyScheduledToggle: IconButton(historyAttach) {
 	icon: icon {
 		{ "chat/input_scheduled", historyComposeIconFg },

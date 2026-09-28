@@ -128,7 +128,6 @@ void addAyuSettings(SettingsMap &entries) {
 	addSetting(entries, u"showRepeatMessageInContextMenu"_q, [&] { return settings.showRepeatMessageInContextMenu(); }, settings, &AyuSettings::setShowRepeatMessageInContextMenu);
 	addSetting(entries, u"showAddFilterInContextMenu"_q, [&] { return settings.showAddFilterInContextMenu(); }, settings, &AyuSettings::setShowAddFilterInContextMenu);
 	addSetting(entries, u"showAttachButtonInMessageField"_q, [&] { return settings.showAttachButtonInMessageField(); }, settings, &AyuSettings::setShowAttachButtonInMessageField);
-	addSetting(entries, u"showCommandsButtonInMessageField"_q, [&] { return settings.showCommandsButtonInMessageField(); }, settings, &AyuSettings::setShowCommandsButtonInMessageField);
 	addSetting(entries, u"showEmojiButtonInMessageField"_q, [&] { return settings.showEmojiButtonInMessageField(); }, settings, &AyuSettings::setShowEmojiButtonInMessageField);
 	addSetting(entries, u"showMicrophoneButtonInMessageField"_q, [&] { return settings.showMicrophoneButtonInMessageField(); }, settings, &AyuSettings::setShowMicrophoneButtonInMessageField);
 	addSetting(entries, u"showAutoDeleteButtonInMessageField"_q, [&] { return settings.showAutoDeleteButtonInMessageField(); }, settings, &AyuSettings::setShowAutoDeleteButtonInMessageField);

@@ -478,13 +478,6 @@ void BuildMessageFieldElements(SectionBuilder &builder, AyuSectionBuilder &ayu) 
 		.icon = { &st::messageFieldAttachIcon },
 	});
 	ayu.addSettingToggle({
-		.id = u"ayu/showCommandsButtonInMessageField"_q,
-		.title = tr::ayu_MessageFieldElementCommands(),
-		.getter = &AyuSettings::showCommandsButtonInMessageField,
-		.setter = &AyuSettings::setShowCommandsButtonInMessageField,
-		.icon = { &st::messageFieldCommandsIcon },
-	});
-	ayu.addSettingToggle({
 		.id = u"ayu/showAutoDeleteButtonInMessageField"_q,
 		.title = tr::ayu_MessageFieldElementTTL(),
 		.getter = &AyuSettings::showAutoDeleteButtonInMessageField,

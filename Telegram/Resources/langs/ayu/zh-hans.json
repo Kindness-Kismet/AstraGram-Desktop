@@ -150,7 +150,6 @@
   "MessageFieldElementsHeader": "消息输入框控件",
   "MessageFieldPopupsHeader": "消息输入框弹出面板",
   "MessageFieldElementAttach": "附件",
-  "MessageFieldElementCommands": "命令",
   "MessageFieldElementTTL": "TTL",
   "MessageFieldElementEmoji": "Emoji",
   "MessageFieldElementVoice": "语音",

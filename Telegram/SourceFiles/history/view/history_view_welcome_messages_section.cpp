@@ -116,7 +116,6 @@ WelcomeMessagesWidget::WelcomeMessagesWidget(
 			.sendAs = false,
 			.ttlInfo = false,
 			.attachments = true,
-			.botCommandSend = false,
 			.silentBroadcastToggle = false,
 			.attachBotsMenu = false,
 			.inlineBots = false,

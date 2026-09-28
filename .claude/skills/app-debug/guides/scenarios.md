@@ -27,7 +27,7 @@ python .codex/skills/app-debug/scripts/cli.py scenario.open discussion + screens
 | call | 计划通话、申请与置顶堆叠 |
 | business | 商业机器人提示 |
 | paid | 付费消息提示 |
-| keyboard | 机器人键盘与输入区 |
+| keyboard | 机器人键盘、命令补全与输入区 |
 | sponsored | 本地广告样本与顶部条 |
 | pinned | 多条置顶消息，可取消全部置顶的群组 |
 
@@ -39,4 +39,4 @@ python .codex/skills/app-debug/scripts/cli.py scenario.open discussion + screens
 
 `--view shortcuts` 打开本地快捷回复输入区。`--view pinned` 打开置顶消息列表，场景须含置顶消息：`pinned` 显示“取消置顶所有消息”，`channel` 显示“隐藏置顶消息”。`--view actions` 打开最近操作，仅限有管理权限的 `requests`、`call`；假会话没有服务器日志，只用于检查外框和底部按钮。`--input reply` 和 `--input edit` 为普通私聊或话题安装本地回复／编辑草稿，`empty` 清空，默认 `keep` 保留。草稿状态只用于主聊天和另一套聊天组件。机器人每次打开时恢复启动参数。
 
-机器人键盘使用真实消息标记。广告布局样本在假会话中固定显示，只使用本地数据，便于单独检查广告条；广告开关的真实业务验证另行安排。
+机器人键盘使用真实消息标记，并内置 `/help` 命令，可输入 `/` 检查补全列表。广告布局样本在假会话中固定显示，只使用本地数据，便于单独检查广告条；广告开关的真实业务验证另行安排。

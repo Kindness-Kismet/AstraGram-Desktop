@@ -149,7 +149,6 @@ struct ComposeControlsDescriptor {
 	rpl::producer<bool> suggestPostToggleActive;
 	rpl::producer<bool> botKeyboardShownToggleShown;
 	rpl::producer<bool> botKeyboardHideToggleShown;
-	rpl::producer<bool> botCommandStartShownExtraGuard;
 };
 
 class ComposeControls final {
@@ -440,7 +439,6 @@ private:
 	[[nodiscard]] bool showEditStarsButton() const;
 	[[nodiscard]] bool showStopButton() const;
 	[[nodiscard]] int shownStarsPerMessage() const;
-	bool updateBotCommandShown();
 	bool refreshBotMenuButton();
 	bool updateLikeShown();
 	[[nodiscard]] bool hasVisibleSendText() const;
@@ -575,7 +573,6 @@ private:
 	const not_null<Ui::InputField*> _field;
 	std::unique_ptr<Controls::RichDraftPreview> _richDraftPreview;
 	base::unique_qptr<Ui::RpWidget> _fieldDisabled;
-	Ui::IconButton * const _botCommandStart = nullptr;
 	struct {
 		object_ptr<Ui::RoundButton> button = { nullptr };
 		QString text;
@@ -593,7 +590,6 @@ private:
 	bool _suggestPostActive = false;
 	base::unique_qptr<Ui::IconButton> _botKeyboardShow;
 	base::unique_qptr<Ui::IconButton> _botKeyboardHide;
-	rpl::variable<bool> _botCommandStartExtraGuard = true;
 
 	std::unique_ptr<InlineBots::Layout::Widget> _inlineResults;
 	std::unique_ptr<ChatHelpers::TabbedPanel> _tabbedPanel;
@@ -656,7 +652,6 @@ private:
 	bool _inlineLookingUpBot = false;
 	mtpRequestId _inlineBotResolveRequestId = 0;
 	bool _isInlineBot = false;
-	bool _botCommandShown = false;
 	bool _likeShown = false;
 	Webrtc::RecordAvailability _recordAvailability = {};
 

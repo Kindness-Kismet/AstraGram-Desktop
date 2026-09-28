@@ -705,7 +705,7 @@ void HistoryWidget::sendRichDraft(
 	}
 	saveDraftWithTextNow();
 	if (session().supportMode()) {
-		updateCmdStartShown();
+		refreshBotMenuButton();
 		updateControlsVisibility();
 		updateControlsGeometry();
 	} else {

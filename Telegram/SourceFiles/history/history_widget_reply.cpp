@@ -710,7 +710,7 @@ void HistoryWidget::fullInfoUpdated() {
 		refreshGiftToChannelShown();
 		refreshDirectMessageShown();
 	}
-	if (updateCmdStartShown()) {
+	if (refreshBotMenuButton()) {
 		refresh = true;
 	} else if (!_scroll->isHidden() && _unblock->isHidden() == isBlocked()) {
 		refresh = true;

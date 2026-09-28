@@ -892,7 +892,7 @@ void HistoryWidget::trackThreadFieldVisibility() {
 		}
 		unregisterDraftSources();
 		registerDraftSource();
-		updateCmdStartShown();
+		refreshBotMenuButton();
 		updateSendButtonType();
 		updateControlsVisibility();
 		updateControlsGeometry();

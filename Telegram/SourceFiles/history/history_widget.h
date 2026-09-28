@@ -504,7 +504,6 @@ private:
 	void reportSelectedMessages();
 	void showKeyboardHideButton();
 	void toggleKeyboard(bool manual = true);
-	void startBotCommand();
 	void hidePinnedMessage();
 	void cancelFieldAreaState();
 	void unblockUser();
@@ -781,7 +780,7 @@ private:
 	[[nodiscard]] bool isJoinChannel() const;
 	[[nodiscard]] bool isMuteUnmute() const;
 	[[nodiscard]] bool isReportMessages() const;
-	bool updateCmdStartShown();
+	bool refreshBotMenuButton();
 	void updateSendButtonType();
 	[[nodiscard]] bool showRecordButton() const;
 	[[nodiscard]] bool showStopButton() const;
@@ -963,7 +962,6 @@ private:
 	object_ptr<Ui::EmojiButton> _tabbedSelectorToggle;
 	object_ptr<Ui::IconButton> _botKeyboardShow;
 	object_ptr<Ui::IconButton> _botKeyboardHide;
-	object_ptr<Ui::IconButton> _botCommandStart;
 	object_ptr<Ui::IconButton> _toggleSuggestPost = { nullptr };
 	object_ptr<Ui::IconButton> _giftToUser = { nullptr };
 	object_ptr<Ui::SilentToggle> _silent = { nullptr };
@@ -979,7 +977,6 @@ private:
 	std::unique_ptr<HistoryView::Controls::AiTooltipManager> _aiTooltipManager;
 	std::unique_ptr<HistoryView::Controls::AiTooltipManager> _sendAsFileTooltipManager;
 	std::shared_ptr<Ui::ChatStyle> _fieldChatStyle;
-	bool _cmdStartShown = false;
 	object_ptr<Ui::InputField> _field;
 	std::unique_ptr<HistoryView::Controls::RichDraftPreview> _richDraftPreview;
 	base::unique_qptr<Ui::RpWidget> _fieldDisabled;

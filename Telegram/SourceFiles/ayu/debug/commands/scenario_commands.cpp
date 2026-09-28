@@ -9,6 +9,7 @@
 #include "data/data_drafts.h"
 #include "data/data_forum.h"
 #include "data/data_forum_topic.h"
+#include "data/data_peer_bot_command.h"
 #include "data/data_replies_list.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
@@ -252,6 +253,11 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 			user->botInfo->startToken = (spec.kind == Kind::Bot)
 				? u"layout"_q : QString();
 			user->botInfo->inited = true;
+			if (spec.kind == Kind::Keyboard) {
+				user->botInfo->commands = {
+					{ u"help"_q, u"查看本地命令补全示例"_q },
+				};
+			}
 		} else if (spec.kind == Kind::Business || spec.kind == Kind::Paid) {
 			using Flag = MTPDpeerSettings::Flag;
 			const auto business = spec.kind == Kind::Business;

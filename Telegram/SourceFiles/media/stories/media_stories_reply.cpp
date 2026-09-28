@@ -117,7 +117,6 @@ namespace {
 		.sendAs = videoStream,
 		.ttlInfo = false,
 		.attachments = !videoStream,
-		.botCommandSend = false,
 		.silentBroadcastToggle = false,
 		.attachBotsMenu = false,
 		.inlineBots = false,

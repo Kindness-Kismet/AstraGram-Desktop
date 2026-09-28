@@ -301,7 +301,6 @@ HistoryWidget::HistoryWidget(
 , _tabbedSelectorToggle(this, st::historyAttachEmoji)
 , _botKeyboardShow(this, st::historyBotKeyboardShow)
 , _botKeyboardHide(this, st::historyBotKeyboardHide)
-, _botCommandStart(this, st::historyBotCommandStart)
 , _voiceRecordBar(std::make_unique<VoiceRecordBar>(
 	this,
 	controller->uiShow(),
@@ -677,7 +676,6 @@ HistoryWidget::HistoryWidget(
 	_tabbedSelectorToggle->hide();
 	_botKeyboardShow->hide();
 	_botKeyboardHide->hide();
-	_botCommandStart->hide();
 
 	session().attachWebView().requestBots();
 	rpl::merge(
@@ -694,7 +692,6 @@ HistoryWidget::HistoryWidget(
 
 	_botKeyboardShow->addClickHandler([=] { toggleKeyboard(); });
 	_botKeyboardHide->addClickHandler([=] { toggleKeyboard(); });
-	_botCommandStart->addClickHandler([=] { startBotCommand(); });
 
 	_topShadow->hide();
 
@@ -860,7 +857,7 @@ HistoryWidget::HistoryWidget(
 	) | rpl::filter([=](not_null<PeerData*> peer) {
 		return _peer && (_peer == peer);
 	}) | rpl::on_next([=] {
-		if (updateCmdStartShown()) {
+		if (refreshBotMenuButton()) {
 			updateControlsVisibility();
 			updateControlsGeometry();
 		}
@@ -929,7 +926,6 @@ HistoryWidget::HistoryWidget(
 
 	rpl::merge(
 		AyuSettings::getInstance().showAttachButtonInMessageFieldChanges() | rpl::to_empty,
-		AyuSettings::getInstance().showCommandsButtonInMessageFieldChanges() | rpl::to_empty,
 		AyuSettings::getInstance().showEmojiButtonInMessageFieldChanges() | rpl::to_empty,
 		AyuSettings::getInstance().showMicrophoneButtonInMessageFieldChanges() | rpl::to_empty,
 		AyuSettings::getInstance().showAutoDeleteButtonInMessageFieldChanges() | rpl::to_empty,
@@ -1311,7 +1307,6 @@ HistoryWidget::HistoryWidget(
 	_tabbedSelectorToggle->setAccessibleName(tr::lng_emoji_sticker_gif(tr::now));
 	_botKeyboardShow->setAccessibleName(tr::lng_bot_keyboard_show(tr::now));
 	_botKeyboardHide->setAccessibleName(tr::lng_bot_keyboard_hide(tr::now));
-	_botCommandStart->setAccessibleName(tr::lng_bot_commands_start(tr::now));
 	_fieldBarCancel->setAccessibleName(tr::lng_cancel(tr::now));
 
 }

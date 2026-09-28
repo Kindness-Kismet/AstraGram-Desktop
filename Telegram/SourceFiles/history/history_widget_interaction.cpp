@@ -877,29 +877,11 @@ void HistoryWidget::updateSendButtonType() {
 	}
 }
 
-bool HistoryWidget::updateCmdStartShown() {
+bool HistoryWidget::refreshBotMenuButton() {
 	const auto bot = (_peer && _peer->isUser() && _peer->asUser()->isBot())
 		? _peer->asUser()
 		: nullptr;
-	auto cmdStartShown = false;
-	if (_history
-		&& _peer
-		&& (false
-			|| (_peer->isChat() && !_peer->asChat()->botCommands().empty())
-			|| (_peer->isMegagroup()
-				&& !_peer->asChannel()->mgInfo->botCommands().empty()))) {
-		if (!isBotStart()
-			&& !isBlocked()
-			&& !_keyboard->hasMarkup()
-			&& !_keyboard->forceReply()
-			&& !_editMsgId) {
-			if (!hasSendableContent()) {
-				cmdStartShown = true;
-			}
-		}
-	}
 	constexpr auto kSmallMenuAfter = 10;
-	const auto commandsChanged = (_cmdStartShown != cmdStartShown);
 	auto buttonChanged = false;
 	if (!bot
 		|| (bot->botInfo->botMenuButtonUrl.isEmpty()
@@ -966,8 +948,7 @@ bool HistoryWidget::updateCmdStartShown() {
 			? tr::lng_bot_menu_button()
 			: rpl::single(_botMenu.text));
 	}
-	_cmdStartShown = cmdStartShown;
-	return commandsChanged || buttonChanged || textChanged;
+	return buttonChanged || textChanged;
 }
 
 void HistoryWidget::mousePressEvent(QMouseEvent *e) {

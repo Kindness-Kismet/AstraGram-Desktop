@@ -399,7 +399,6 @@ void HistoryWidget::updateControlsVisibility() {
 		_tabbedSelectorToggle->hide();
 		_botKeyboardShow->hide();
 		_botKeyboardHide->hide();
-		_botCommandStart->hide();
 		if (_botMenu.button) {
 			_botMenu.button->hide();
 		}
@@ -458,23 +457,19 @@ void HistoryWidget::updateControlsVisibility() {
 			_tabbedSelectorToggle->hide();
 			showKeyboardHideButton();
 			_botKeyboardShow->hide();
-			_botCommandStart->hide();
 		} else if (_kbReplyTo) {
 			_kbScroll->hide();
 			SWITCH_BUTTON(_tabbedSelectorToggle, settings.showEmojiButtonInMessageField());
 			_botKeyboardHide->hide();
 			_botKeyboardShow->hide();
-			_botCommandStart->hide();
 		} else {
 			_kbScroll->hide();
 			SWITCH_BUTTON(_tabbedSelectorToggle, settings.showEmojiButtonInMessageField());
 			_botKeyboardHide->hide();
 			if (_keyboard->hasMarkup()) {
 				_botKeyboardShow->show();
-				_botCommandStart->hide();
 			} else {
 				_botKeyboardShow->hide();
-				_botCommandStart->setVisible(_cmdStartShown && settings.showCommandsButtonInMessageField());
 			}
 		}
 		if (_replaceMedia) {
@@ -607,7 +602,6 @@ void HistoryWidget::updateControlsVisibility() {
 		_tabbedSelectorToggle->hide();
 		_botKeyboardShow->hide();
 		_botKeyboardHide->hide();
-		_botCommandStart->hide();
 		if (_tabbedPanel) {
 			_tabbedPanel->hide();
 		}

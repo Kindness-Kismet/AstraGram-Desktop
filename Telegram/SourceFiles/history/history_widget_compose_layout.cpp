@@ -456,9 +456,6 @@ void HistoryWidget::toggleKeyboard(bool manual) {
 	} else if (!_keyboard->hasMarkup() && _keyboard->forceReply()) {
 		_botKeyboardHide->hide();
 		_botKeyboardShow->hide();
-		if (fieldEnabled) {
-			SWITCH_BUTTON(_botCommandStart, settings.showCommandsButtonInMessageField());
-		}
 		_kbScroll->hide();
 		_kbShown = false;
 
@@ -512,13 +509,6 @@ void HistoryWidget::toggleKeyboard(bool manual) {
 		&& canWriteMessage()
 		&& !_showAnimation && settings.showEmojiButtonInMessageField());
 	updateField();
-}
-
-void HistoryWidget::startBotCommand() {
-	setFieldText(
-		{ u"/"_q, TextWithTags::Tags() },
-		0,
-		Ui::InputField::HistoryAction::NewEntry);
 }
 
 void HistoryWidget::setMembersShowAreaActive(bool active) {
@@ -879,13 +869,12 @@ void HistoryWidget::moveFieldControls() {
 	_botKeyboardHide->moveToRight(right, buttonsBottom);
 	right += settings.showEmojiButtonInMessageField() || !_botKeyboardHide->isHidden() ? _botKeyboardHide->width() : 0;
 	_botKeyboardShow->moveToRight(right, buttonsBottom);
-	_botCommandStart->moveToRight(right, buttonsBottom);
 	if (_silent) {
 		_silent->moveToRight(right, buttonsBottom);
 	}
 	const auto kbShowShown = _history && !_kbShown && _keyboard->hasMarkup();
-	if (kbShowShown || (_cmdStartShown && settings.showCommandsButtonInMessageField()) || _silent) {
-		right += _botCommandStart->width();
+	if (kbShowShown || _silent) {
+		right += _botKeyboardShow->width();
 	}
 	if (_toggleSuggestPost) {
 		_toggleSuggestPost->moveToRight(right, buttonsBottom);
@@ -955,9 +944,6 @@ void HistoryWidget::updateFieldSize() {
 	}
 	if (kbShowShown) {
 		fieldWidth -= _botKeyboardShow->width();
-	}
-	if (_cmdStartShown && settings.showCommandsButtonInMessageField()) {
-		fieldWidth -= _botCommandStart->width();
 	}
 	if (_silent && !_silent->isHidden()) {
 		fieldWidth -= _silent->width();
@@ -1127,7 +1113,7 @@ void HistoryWidget::updateBotKeyboard(History *h, bool force) {
 			: nullptr;
 		changed = _keyboard->updateMarkup(keyboardItem, force);
 	}
-	const auto controlsChanged = updateCmdStartShown();
+	const auto controlsChanged = refreshBotMenuButton();
 	if (!changed) {
 		if (controlsChanged) {
 			updateControlsGeometry();
@@ -1166,7 +1152,6 @@ void HistoryWidget::updateBotKeyboard(History *h, bool force) {
 					_botKeyboardHide->hide();
 				}
 				_botKeyboardShow->hide();
-				_botCommandStart->hide();
 			}
 			const auto maxheight = computeMaxFieldHeight();
 			const auto kbheight = hasMarkup
@@ -1189,7 +1174,6 @@ void HistoryWidget::updateBotKeyboard(History *h, bool force) {
 				SWITCH_BUTTON(_tabbedSelectorToggle, settings.showEmojiButtonInMessageField());
 				_botKeyboardHide->hide();
 				_botKeyboardShow->show();
-				_botCommandStart->hide();
 			}
 			_field->setMaxHeight(computeMaxFieldHeight());
 			_kbShown = false;
@@ -1209,7 +1193,6 @@ void HistoryWidget::updateBotKeyboard(History *h, bool force) {
 			_tabbedSelectorToggle->show();
 			_botKeyboardHide->hide();
 			_botKeyboardShow->hide();
-			_botCommandStart->setVisible(!_editMsgId && settings.showCommandsButtonInMessageField());
 		}
 		_field->setMaxHeight(computeMaxFieldHeight());
 		_kbShown = false;

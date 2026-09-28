@@ -819,7 +819,6 @@ base::weak_qptr<Ui::RpWidget> ShortcutMessages::createPinnedToBottom(
 			.features = {
 				.sendAs = false,
 				.ttlInfo = false,
-				.botCommandSend = false,
 				.silentBroadcastToggle = false,
 				.attachBotsMenu = false,
 				.megagroupSet = false,

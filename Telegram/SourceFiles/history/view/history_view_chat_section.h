@@ -566,7 +566,6 @@ private:
 	rpl::variable<bool> _suggestPostToggleActive = false;
 	rpl::variable<bool> _botKeyboardShownToggleShown = false;
 	rpl::variable<bool> _botKeyboardHideToggleShown = false;
-	rpl::variable<bool> _botCommandStartExtraGuard = true;
 	rpl::variable<QString> _botKeyboardPlaceholder;
 	std::unique_ptr<ComposeControls> _composeControls;
 	std::unique_ptr<SuggestOptionsBar> _suggestOptions;
