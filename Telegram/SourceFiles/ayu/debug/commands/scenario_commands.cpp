@@ -323,6 +323,112 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 	return Result::Ok(Compact(scenarioList()));
 }
 
+[[nodiscard]] int findScenario(const QString &key) {
+	for (auto i = 0; i != kScenarios.size(); ++i) {
+		if (key == QLatin1String(kScenarios[i].key)) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+// 先离开当前聊天，完成原草稿保存后再安装场景草稿；keep 保留现有草稿。
+void installScenarioDraft(
+		not_null<Window::SessionController*> controller,
+		int index,
+		const QString &view,
+		const QString &input) {
+	if (input == u"keep"_q) {
+		return;
+	}
+	const auto session = &controller->session();
+	const auto peer = session->data().peer(scenarioPeerId(index));
+	const auto history = session->data().history(peer);
+	controller->showPeerHistory(session->userPeerId(),
+		Window::SectionShow(Window::SectionShow::Way::ClearStack, anim::type::instant));
+	const auto topicId = (kScenarios[index].kind == Kind::Topic && view == u"main"_q)
+		? MsgId(kTopicRootId) : MsgId();
+	history->clearLocalDraft(topicId, {});
+	history->clearLocalEditDraft(topicId, {});
+	if (input == u"empty"_q) {
+		return;
+	}
+	auto draft = std::make_unique<Data::Draft>();
+	draft->reply = {
+		.messageId = FullMsgId(peer->id, kFirstMessageId + 100 * index
+			+ ((input == u"edit"_q) ? 5 : 0)),
+		.topicRootId = topicId,
+	};
+	draft->textWithTags.text = u"本地输入区布局验证"_q;
+	if (input == u"edit"_q) {
+		history->setLocalEditDraft(std::move(draft));
+	} else {
+		history->setLocalDraft(std::move(draft));
+	}
+}
+
+[[nodiscard]] Result showScenarioView(
+		not_null<Window::SessionController*> controller,
+		int index,
+		const QString &view) {
+	const auto session = &controller->session();
+	const auto peer = session->data().peer(scenarioPeerId(index));
+	const auto history = session->data().history(peer);
+	const auto kind = kScenarios[index].kind;
+	const auto way = Window::SectionShow::Way::ClearStack;
+	if (view == u"shortcuts"_q) {
+		auto &messages = session->data().shortcutMessages();
+		constexpr auto kShortcutMessageId = kFirstMessageId + 2000;
+		messages.apply(MTP_updateQuickReplyMessage(makeMessage(
+			session->user(), session->userPeerId(), kShortcutMessageId,
+			u"快捷回复样本：检查独立设置页的输入区。"_q,
+			false, false, 1)).c_updateQuickReplyMessage());
+		messages.apply(MTP_updateQuickReplies(MTP_vector<MTPQuickReply>({
+			MTP_quickReply(MTP_int(1), MTP_string("layout"),
+				MTP_int(kShortcutMessageId), MTP_int(1)),
+		})).c_updateQuickReplies());
+		controller->showSettings(Settings::ShortcutMessagesId(1));
+		return Result::Ok();
+	}
+	if (view == u"pinned"_q) {
+		const auto thread = (kind == Kind::Topic)
+			? static_cast<Data::Thread*>(peer->forum()->topicFor(kTopicRootId))
+			: history.get();
+		// 置顶列表为空时分区会立即退回，先在这里给出明确错误。
+		if (!thread->hasPinnedMessages()) {
+			return Result::Err(u"scenario has no pinned messages"_q);
+		}
+		controller->showSection(std::make_shared<HistoryView::PinnedMemento>(thread), way);
+		return Result::Ok();
+	}
+	if (view == u"actions"_q) {
+		// 假会话拿不到服务器日志，只用于检查分区外框与底部按钮。
+		const auto channel = peer->asChannel();
+		if (!channel || !(channel->hasAdminRights() || channel->amCreator())) {
+			return Result::Err(u"scenario has no recent actions"_q);
+		}
+		controller->showSection(std::make_shared<AdminLog::SectionMemento>(channel), way);
+		return Result::Ok();
+	}
+	if (view == u"scheduled"_q) {
+		controller->showSection(std::make_shared<HistoryView::ScheduledMemento>(history), way);
+		return Result::Ok();
+	}
+	if (view == u"alternate"_q) {
+		controller->showSection(std::make_shared<HistoryView::ChatMemento>(
+			HistoryView::ChatViewId{ .history = history }), way);
+		return Result::Ok();
+	}
+	if (kind == Kind::Topic) {
+		// 与在会话列表里点开论坛一致：先在左栏展开话题列表，再进入话题。
+		controller->showForum(peer->forum(), Window::SectionShow(way).withChildColumn());
+		controller->showTopic(peer->forum()->topicFor(kTopicRootId), ShowAtTheEndMsgId, way);
+		return Result::Ok();
+	}
+	controller->showPeerHistory(peer, way, ShowAtTheEndMsgId);
+	return Result::Ok();
+}
+
 [[nodiscard]] Result openScenario(const QStringList &args) {
 	if (args.empty() || !(args.size() % 2)) {
 		return Result::Err(u"usage: scenario.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions] [--input keep|empty|reply|edit]"_q);
@@ -360,97 +466,25 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 	if (!controller) {
 		return Result::Err(u"no window controller"_q);
 	}
-	for (auto i = 0; i != kScenarios.size(); ++i) {
-		if (args.front() != QLatin1String(kScenarios[i].key)) {
-			continue;
-		}
-		const auto peer = session->data().peer(scenarioPeerId(i));
-		const auto history = session->data().history(peer);
-		const auto kind = kScenarios[i].kind;
-		if (input != u"keep"_q) {
-			if (kind != Kind::Private && kind != Kind::Topic) {
-				return Result::Err(u"input states require private or topic scenario"_q);
-			}
-			// 先离开当前聊天，完成原草稿保存后再安装场景草稿。
-			controller->showPeerHistory(session->userPeerId(),
-				Window::SectionShow(Window::SectionShow::Way::ClearStack, anim::type::instant));
-			const auto topicId = (kind == Kind::Topic && view == u"main"_q)
-				? MsgId(kTopicRootId) : MsgId();
-			history->clearLocalDraft(topicId, {});
-			history->clearLocalEditDraft(topicId, {});
-			if (input != u"empty"_q) {
-				auto draft = std::make_unique<Data::Draft>();
-				draft->reply = {
-					.messageId = FullMsgId(peer->id, kFirstMessageId + 100 * i
-						+ ((input == u"edit"_q) ? 5 : 0)),
-					.topicRootId = topicId,
-				};
-				draft->textWithTags.text = u"本地输入区布局验证"_q;
-				if (input == u"edit"_q) {
-					history->setLocalEditDraft(std::move(draft));
-				} else {
-					history->setLocalDraft(std::move(draft));
-				}
-			}
-		}
-		if (kind == Kind::Bot) {
-			peer->asUser()->botInfo->startToken = u"layout"_q;
-		}
-		if (view == u"shortcuts"_q) {
-			auto &messages = session->data().shortcutMessages();
-			constexpr auto kShortcutMessageId = kFirstMessageId + 2000;
-			messages.apply(MTP_updateQuickReplyMessage(makeMessage(
-				session->user(), session->userPeerId(), kShortcutMessageId,
-				u"快捷回复样本：检查独立设置页的输入区。"_q,
-				false, false, 1)).c_updateQuickReplyMessage());
-			messages.apply(MTP_updateQuickReplies(MTP_vector<MTPQuickReply>({
-				MTP_quickReply(MTP_int(1), MTP_string("layout"),
-					MTP_int(kShortcutMessageId), MTP_int(1)),
-			})).c_updateQuickReplies());
-			controller->showSettings(Settings::ShortcutMessagesId(1));
-		} else if (view == u"pinned"_q) {
-			const auto thread = (kind == Kind::Topic)
-				? static_cast<Data::Thread*>(peer->forum()->topicFor(kTopicRootId))
-				: history.get();
-			// 置顶列表为空时分区会立即退回，先在这里给出明确错误。
-			if (!thread->hasPinnedMessages()) {
-				return Result::Err(u"scenario has no pinned messages"_q);
-			}
-			controller->showSection(
-				std::make_shared<HistoryView::PinnedMemento>(thread),
-				Window::SectionShow::Way::ClearStack);
-		} else if (view == u"actions"_q) {
-			// 假会话拿不到服务器日志，只用于检查分区外框与底部按钮。
-			const auto channel = peer->asChannel();
-			if (!channel || !(channel->hasAdminRights() || channel->amCreator())) {
-				return Result::Err(u"scenario has no recent actions"_q);
-			}
-			controller->showSection(
-				std::make_shared<AdminLog::SectionMemento>(channel),
-				Window::SectionShow::Way::ClearStack);
-		} else if (view == u"scheduled"_q) {
-			controller->showSection(
-				std::make_shared<HistoryView::ScheduledMemento>(history),
-				Window::SectionShow::Way::ClearStack);
-		} else if (view == u"alternate"_q) {
-			controller->showSection(std::make_shared<HistoryView::ChatMemento>(
-				HistoryView::ChatViewId{ .history = history }),
-				Window::SectionShow::Way::ClearStack);
-		} else if (kScenarios[i].kind == Kind::Topic) {
-			// 与在会话列表里点开论坛一致：先在左栏展开话题列表，再进入话题。
-			controller->showForum(peer->forum(), Window::SectionShow(
-				Window::SectionShow::Way::ClearStack).withChildColumn());
-			controller->showTopic(peer->forum()->topicFor(kTopicRootId),
-				ShowAtTheEndMsgId, Window::SectionShow::Way::ClearStack);
-		} else {
-			controller->showPeerHistory(peer,
-				Window::SectionShow::Way::ClearStack, ShowAtTheEndMsgId);
-		}
-		return Result::Ok(Compact({ { "key", kScenarios[i].key },
-			{ "peerId", peer->id.value }, { "view", view.toStdString() },
-			{ "input", input.toStdString() } }));
+	const auto index = findScenario(args.front());
+	if (index < 0) {
+		return Result::Err(u"unknown scenario, use scenario.list"_q);
 	}
-	return Result::Err(u"unknown scenario, use scenario.list"_q);
+	const auto kind = kScenarios[index].kind;
+	if (input != u"keep"_q && kind != Kind::Private && kind != Kind::Topic) {
+		return Result::Err(u"input states require private or topic scenario"_q);
+	}
+	installScenarioDraft(controller, index, view, input);
+	const auto peer = session->data().peer(scenarioPeerId(index));
+	if (kind == Kind::Bot) {
+		peer->asUser()->botInfo->startToken = u"layout"_q;
+	}
+	if (auto result = showScenarioView(controller, index, view); !result.ok) {
+		return result;
+	}
+	return Result::Ok(Compact({ { "key", kScenarios[index].key },
+		{ "peerId", peer->id.value }, { "view", view.toStdString() },
+		{ "input", input.toStdString() } }));
 }
 
 } // namespace

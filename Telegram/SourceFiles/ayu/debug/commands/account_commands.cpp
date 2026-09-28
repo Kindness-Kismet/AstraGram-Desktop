@@ -44,44 +44,56 @@ Result activateAccount(const QStringList &args) {
 	return Result::Err(u"account not found"_q);
 }
 
-Result peerSettings(const QStringList &args) {
-	if (args.empty() || args.size() > 3 || args.size() == 2) {
-		return Result::Err(u"usage: session.peer-settings <peerId> [key value]"_q);
-	}
-	const auto peer = findPeer(args[0]);
-	if (!peer) return Result::Err(u"peer not found"_q);
+Result describePeerSettings(not_null<PeerData*> peer) {
 	auto &settings = peer->session().settings();
-	if (args.size() == 3) {
-		const auto &key = args[1];
-		if (key == u"autoDownload"_q || key == u"subsectionTabsMode"_q) {
-			auto ok = false;
-			const auto value = args[2].toInt(&ok);
-			if (!ok) return Result::Err(u"expected an integer"_q);
-			if (key == u"autoDownload"_q) {
-				if (value < 0 || value > 2) return Result::Err(u"autoDownload override must be between 0 and 2"_q);
-				settings.autoDownload().setPeerOverride(peer->id, Data::AutoDownload::Override(value));
-			} else {
-				settings.setSubsectionTabsMode(peer->id, value);
-			}
-		} else if (key == u"groupStickersHidden"_q || key == u"groupEmojiHidden"_q) {
-			if (args[2] != u"true"_q && args[2] != u"false"_q) return Result::Err(u"expected true or false"_q);
-			const auto hidden = args[2] == u"true"_q;
-			if (key == u"groupStickersHidden"_q) {
-				if (hidden) settings.setGroupStickersSectionHidden(peer->id);
-				else settings.removeGroupStickersSectionHidden(peer->id);
-			} else {
-				if (hidden) settings.setGroupEmojiSectionHidden(peer->id);
-				else settings.removeGroupEmojiSectionHidden(peer->id);
-			}
-		} else return Result::Err(u"unknown peer setting"_q);
-		peer->session().saveSettings();
-	}
 	return Result::Ok(Compact(Json{
 		{"autoDownload", int(settings.autoDownload().peerOverride(peer->id))},
 		{"subsectionTabsMode", settings.subsectionTabsMode(peer->id)},
 		{"groupStickersHidden", settings.isGroupStickersSectionHidden(peer->id)},
 		{"groupEmojiHidden", settings.isGroupEmojiSectionHidden(peer->id)},
 	}));
+}
+
+// 只修改内存中的会话设置，由调用方保存。
+Result applyPeerSetting(not_null<PeerData*> peer, const QString &key, const QString &value) {
+	auto &settings = peer->session().settings();
+	auto ok = false;
+	const auto number = value.toInt(&ok);
+	if (key == u"autoDownload"_q) {
+		if (!ok) return Result::Err(u"expected an integer"_q);
+		if (number < 0 || number > 2) return Result::Err(u"autoDownload override must be between 0 and 2"_q);
+		settings.autoDownload().setPeerOverride(peer->id, Data::AutoDownload::Override(number));
+		return Result::Ok();
+	}
+	if (key == u"subsectionTabsMode"_q) {
+		if (!ok) return Result::Err(u"expected an integer"_q);
+		settings.setSubsectionTabsMode(peer->id, number);
+		return Result::Ok();
+	}
+	if (key != u"groupStickersHidden"_q && key != u"groupEmojiHidden"_q) return Result::Err(u"unknown peer setting"_q);
+	if (value != u"true"_q && value != u"false"_q) return Result::Err(u"expected true or false"_q);
+	const auto hidden = (value == u"true"_q);
+	if (key == u"groupStickersHidden"_q) {
+		if (hidden) settings.setGroupStickersSectionHidden(peer->id);
+		else settings.removeGroupStickersSectionHidden(peer->id);
+	} else if (hidden) {
+		settings.setGroupEmojiSectionHidden(peer->id);
+	} else {
+		settings.removeGroupEmojiSectionHidden(peer->id);
+	}
+	return Result::Ok();
+}
+
+Result peerSettings(const QStringList &args) {
+	if (args.empty() || args.size() > 3 || args.size() == 2) {
+		return Result::Err(u"usage: session.peer-settings <peerId> [key value]"_q);
+	}
+	const auto peer = findPeer(args[0]);
+	if (!peer) return Result::Err(u"peer not found"_q);
+	if (args.size() == 1) return describePeerSettings(peer);
+	if (auto result = applyPeerSetting(peer, args[1], args[2]); !result.ok) return result;
+	peer->session().saveSettings();
+	return describePeerSettings(peer);
 }
 
 
@@ -94,22 +106,26 @@ Result threadSettings(const QStringList &args) {
 	const auto subpeer = args[2].toULongLong(&subpeerOk);
 	if (!peer || !topicOk || topic < 0 || !subpeerOk) return Result::Err(u"invalid peer or thread id"_q);
 	auto &settings = peer->session().settings();
-	if (args.size() == 5) {
-		auto ok = false;
-		const auto value = args[4].toInt(&ok);
-		if (!ok || value < 0) return Result::Err(u"expected a non-negative integer"_q);
-		if (args[3] == u"hiddenPinnedMessageId"_q) {
-			settings.setHiddenPinnedMessageId(peer->id, MsgId(topic), PeerId(subpeer), MsgId(value));
-		} else if (args[3] == u"ringtoneVolume"_q) {
-			if (value > 100) return Result::Err(u"volume must be between 0 and 100"_q);
-			settings.setRingtoneVolume(peer->id, MsgId(topic), PeerId(subpeer), ushort(value));
-		} else return Result::Err(u"unknown thread setting"_q);
-		peer->session().saveSettings();
+	const auto describe = [&] {
+		return Result::Ok(Compact(Json{
+			{"hiddenPinnedMessageId", settings.hiddenPinnedMessageId(peer->id, MsgId(topic), PeerId(subpeer)).bare},
+			{"ringtoneVolume", settings.ringtoneVolume(peer->id, MsgId(topic), PeerId(subpeer))},
+		}));
+	};
+	if (args.size() == 3) return describe();
+	auto ok = false;
+	const auto value = args[4].toInt(&ok);
+	if (!ok || value < 0) return Result::Err(u"expected a non-negative integer"_q);
+	if (args[3] == u"hiddenPinnedMessageId"_q) {
+		settings.setHiddenPinnedMessageId(peer->id, MsgId(topic), PeerId(subpeer), MsgId(value));
+	} else if (args[3] == u"ringtoneVolume"_q) {
+		if (value > 100) return Result::Err(u"volume must be between 0 and 100"_q);
+		settings.setRingtoneVolume(peer->id, MsgId(topic), PeerId(subpeer), ushort(value));
+	} else {
+		return Result::Err(u"unknown thread setting"_q);
 	}
-	return Result::Ok(Compact(Json{
-		{"hiddenPinnedMessageId", settings.hiddenPinnedMessageId(peer->id, MsgId(topic), PeerId(subpeer)).bare},
-		{"ringtoneVolume", settings.ringtoneVolume(peer->id, MsgId(topic), PeerId(subpeer))},
-	}));
+	peer->session().saveSettings();
+	return describe();
 }
 
 Result globalPrivacy(const QStringList &args) {
@@ -158,7 +174,9 @@ Result setPrivacy(const QStringList &args) {
 	} else if (key == u"paidReactionShownPeer"_q) {
 		if (!value.is_number_unsigned() && (!value.is_number_integer() || value.get<int64>() < 0)) return Result::Err(u"invalid peer id"_q);
 		privacy.updatePaidReactionShownPeer(PeerId(value.get<uint64>()));
-	} else return Result::Err(u"unknown privacy setting"_q);
+	} else {
+		return Result::Err(u"unknown privacy setting"_q);
+	}
 	return Result::Ok(u"request submitted; use privacy.reload and privacy.get to check server state"_q);
 }
 

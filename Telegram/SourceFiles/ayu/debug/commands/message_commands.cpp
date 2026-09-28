@@ -388,21 +388,21 @@ using json = nlohmann::json;
 		if (!ok || id <= 0) {
 			return Result::Err(u"expected positive msgId, got "_q + arg);
 		}
-		auto node = json{
-			{ "msgId", id },
-		};
-		if (const auto item = session->data().message(
-					FullMsgId(peerId, MsgId(BareId(id))))) {
-			node["exists"] = true;
-			node["isRegular"] = item->isRegular();
-			node["out"] = item->out();
-			node["fromId"] = item->from()->id.value;
-			node["hidden"] = isMessageHidden(item);
-			node["hasMainView"] = item->mainView() != nullptr;
-		} else {
-			node["exists"] = false;
+		const auto item = session->data().message(
+			FullMsgId(peerId, MsgId(BareId(id))));
+		if (!item) {
+			items.push_back({ { "msgId", id }, { "exists", false } });
+			continue;
 		}
-		items.push_back(std::move(node));
+		items.push_back({
+			{ "msgId", id },
+			{ "exists", true },
+			{ "isRegular", item->isRegular() },
+			{ "out", item->out() },
+			{ "fromId", item->from()->id.value },
+			{ "hidden", isMessageHidden(item) },
+			{ "hasMainView", item->mainView() != nullptr },
+		});
 	}
 	return Result::Ok(Compact(std::move(items)));
 }

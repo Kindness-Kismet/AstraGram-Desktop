@@ -150,9 +150,9 @@ Result emojiList(const QStringList &args) {
 void finishEmoji(uint64 id, Ayu::EmojiPacks::ImportResult result) {
 	if (result.error != Ayu::EmojiPacks::ImportError::None) {
 		finishJob(id, false, Json{{"importError", int(result.error)}});
-	} else {
-		finishJob(id, true, Json{{"id", result.pack.id}, {"name", result.pack.name.toStdString()}});
+		return;
 	}
+	finishJob(id, true, Json{{"id", result.pack.id}, {"name", result.pack.name.toStdString()}});
 }
 
 Result importEmoji(const QStringList &args) {

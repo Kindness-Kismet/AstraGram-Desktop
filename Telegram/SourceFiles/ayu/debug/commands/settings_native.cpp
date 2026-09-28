@@ -123,10 +123,9 @@ void addCoreSettings(SettingsMap &entries) {
 			bool enabled = false;
 			if (const auto error = readSetting(value, enabled); !error.isEmpty()) return Result::Err(error);
 			cSetAutoUpdate(enabled);
-			if (!Core::UpdaterDisabled()) {
-				if (enabled) Core::UpdateChecker().start();
-				else Core::UpdateChecker().stop();
-			}
+			if (Core::UpdaterDisabled()) return Result::Ok();
+			if (enabled) Core::UpdateChecker().start();
+			else Core::UpdateChecker().stop();
 			return Result::Ok();
 		},
 	});

@@ -79,9 +79,11 @@ struct WidgetInfo {
 [[nodiscard]] QString WidgetText(const QWidget *widget) {
 	if (const auto button = qobject_cast<const QAbstractButton*>(widget)) {
 		return button->text();
-	} else if (const auto label = qobject_cast<const QLabel*>(widget)) {
+	}
+	if (const auto label = qobject_cast<const QLabel*>(widget)) {
 		return label->text();
-	} else if (const auto rp = dynamic_cast<const Ui::RpWidget*>(widget)) {
+	}
+	if (const auto rp = dynamic_cast<const Ui::RpWidget*>(widget)) {
 		return const_cast<Ui::RpWidget*>(rp)->accessibilityName();
 	}
 	return QString();
@@ -114,7 +116,8 @@ struct WidgetInfo {
 	if (filter == u"@scroll"_q) {
 		return dynamic_cast<Ui::ScrollArea*>(widget)
 			|| dynamic_cast<Ui::ElasticScroll*>(widget);
-	} else if (filter == u"@menu"_q) {
+	}
+	if (filter == u"@menu"_q) {
 		return dynamic_cast<Ui::PopupMenu*>(widget);
 	}
 	return widget->objectName().contains(filter, Qt::CaseInsensitive)
@@ -204,16 +207,18 @@ struct WidgetInfo {
 	return nullptr;
 }
 
+// 事件回调可能销毁控件；控件已销毁时跳过发送并返回 false。
+bool sendIfAlive(const QPointer<QWidget> &widget, QEvent &&event) {
+	return widget && QApplication::sendEvent(widget, &event);
+}
+
 // 与鼠标松开的顺序一致：复选框先切换、单选框只选中，再通知点击回调。
 void activateButton(not_null<Ui::AbstractButton*> button) {
 	const auto alive = QPointer<QWidget>(button.get());
-	// Radiobutton 隐藏了同名接口，经基类访问，与它自身的 handlePress 相同。
+	// Radiobutton 隐藏了同名接口，经基类访问；值不变时 setChecked 不通知。
 	if (const auto checkbox = dynamic_cast<Ui::Checkbox*>(button.get())) {
-		if (!dynamic_cast<Ui::Radiobutton*>(button.get())) {
-			checkbox->setChecked(!checkbox->checked());
-		} else if (!checkbox->checked()) {
-			checkbox->setChecked(true);
-		}
+		const auto radio = dynamic_cast<Ui::Radiobutton*>(button.get());
+		checkbox->setChecked(radio || !checkbox->checked());
 	}
 	if (alive) {
 		button->clicked({}, Qt::LeftButton);
@@ -291,32 +296,24 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	const auto receiverName = receiver->objectName().toStdString();
 	const auto alive = QPointer<QWidget>(receiver);
 
-	auto hover = QEnterEvent(local, windowPos, global);
-	QApplication::sendEvent(receiver, &hover);
-	auto press = QMouseEvent(
+	sendIfAlive(alive, QEnterEvent(local, windowPos, global));
+	const auto handled = sendIfAlive(alive, QMouseEvent(
 		QEvent::MouseButtonPress,
 		local,
 		windowPos,
 		global,
 		Qt::LeftButton,
 		Qt::LeftButton,
-		Qt::NoModifier);
-	const auto handled = QApplication::sendEvent(receiver, &press);
-	if (alive) {
-		auto release = QMouseEvent(
-			QEvent::MouseButtonRelease,
-			local,
-			windowPos,
-			global,
-			Qt::LeftButton,
-			Qt::NoButton,
-			Qt::NoModifier);
-		QApplication::sendEvent(receiver, &release);
-	}
-	if (alive) {
-		auto leave = QEvent(QEvent::Leave);
-		QApplication::sendEvent(receiver, &leave);
-	}
+		Qt::NoModifier));
+	sendIfAlive(alive, QMouseEvent(
+		QEvent::MouseButtonRelease,
+		local,
+		windowPos,
+		global,
+		Qt::LeftButton,
+		Qt::NoButton,
+		Qt::NoModifier));
+	sendIfAlive(alive, QEvent(QEvent::Leave));
 	return Result::Ok(Compact(json{
 		{ "class", targetClass },
 		{ "name", targetName },
@@ -367,12 +364,8 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	if (key == keys.cend() || !target || !target->isVisible() || !target->isEnabled()) {
 		return Result::Err(u"expected a visible enabled control and a supported key"_q);
 	}
-	auto press = QKeyEvent(QEvent::KeyPress, *key, Qt::NoModifier);
-	QApplication::sendEvent(target, &press);
-	if (target) {
-		auto release = QKeyEvent(QEvent::KeyRelease, *key, Qt::NoModifier);
-		QApplication::sendEvent(target, &release);
-	}
+	sendIfAlive(target, QKeyEvent(QEvent::KeyPress, *key, Qt::NoModifier));
+	sendIfAlive(target, QKeyEvent(QEvent::KeyRelease, *key, Qt::NoModifier));
 	return Result::Ok(u"sent"_q);
 }
 
@@ -400,11 +393,8 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	// 只保留弱引用；合成事件不改变系统光标位置。
 	static auto pointed = QPointer<QWidget>();
 	if (args.size() == 1) {
-		if (pointed) {
-			auto leave = QEvent(QEvent::Leave);
-			QApplication::sendEvent(pointed, &leave);
-			pointed.clear();
-		}
+		sendIfAlive(pointed, QEvent(QEvent::Leave));
+		pointed.clear();
 		return Result::Ok(u"left"_q);
 	}
 	auto xOk = false;
@@ -421,19 +411,12 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	}
 	const auto local = receiver->mapFromGlobal(global);
 	if (pointed != receiver) {
-		if (pointed) {
-			auto leave = QEvent(QEvent::Leave);
-			QApplication::sendEvent(pointed, &leave);
-		}
+		sendIfAlive(pointed, QEvent(QEvent::Leave));
 		pointed = receiver;
-		auto enter = QEnterEvent(local, root->mapFromGlobal(global), global);
-		QApplication::sendEvent(pointed, &enter);
+		sendIfAlive(pointed, QEnterEvent(local, root->mapFromGlobal(global), global));
 	}
-	if (pointed) {
-		auto move = QMouseEvent(QEvent::MouseMove, local, global,
-			Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-		QApplication::sendEvent(pointed, &move);
-	}
+	sendIfAlive(pointed, QMouseEvent(QEvent::MouseMove, local, global,
+		Qt::NoButton, Qt::NoButton, Qt::NoModifier));
 	return Result::Ok(Compact(json{
 		{ "receiver", pointed ? pointed->metaObject()->className() : "" },
 		{ "point", json{ point.x(), point.y() } },
@@ -450,23 +433,27 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	if ((!scroll && !area) || !target->isVisible()) {
 		return Result::Err(u"visible scroll area not found"_q);
 	}
-	if (args.size() == 2) {
-		auto ok = false;
-		const auto top = args[1].toInt(&ok);
-		if (!ok) {
-			return Result::Err(u"expected integer scroll position"_q);
-		}
-		if (scroll) {
-			scroll->scrollToY(top);
-		} else {
-			area->scrollToY(top);
-		}
+	const auto describe = [&] {
+		return Result::Ok(Compact(json{
+			{ "top", scroll ? scroll->scrollTop() : area->scrollTop() },
+			{ "maximum", scroll ? scroll->scrollTopMax() : area->scrollTopMax() },
+			{ "height", target->height() },
+		}));
+	};
+	if (args.size() == 1) {
+		return describe();
 	}
-	return Result::Ok(Compact(json{
-		{ "top", scroll ? scroll->scrollTop() : area->scrollTop() },
-		{ "maximum", scroll ? scroll->scrollTopMax() : area->scrollTopMax() },
-		{ "height", target->height() },
-	}));
+	auto ok = false;
+	const auto top = args[1].toInt(&ok);
+	if (!ok) {
+		return Result::Err(u"expected integer scroll position"_q);
+	}
+	if (scroll) {
+		scroll->scrollToY(top);
+	} else {
+		area->scrollToY(top);
+	}
+	return describe();
 }
 
 
@@ -512,6 +499,20 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	return describeControlValue(target);
 }
 
+// 勾选类控件经点击改值；单选框不能直接取消，要选中同组的其他选项。
+[[nodiscard]] Result setCheckValue(not_null<Ui::RpWidget*> widget, const QString &value) {
+	if (value != u"true"_q && value != u"false"_q) return Result::Err(u"expected true or false"_q);
+	const auto checked = (value == u"true"_q);
+	if (widget->accessibilityState().checked == checked) return Result::Ok();
+	if (!checked && dynamic_cast<Ui::Radiobutton*>(widget.get())) {
+		return Result::Err(u"select another radio button to change this value"_q);
+	}
+	const auto button = dynamic_cast<Ui::AbstractButton*>(widget.get());
+	if (!button) return Result::Err(u"control has no click handler"_q);
+	activateButton(button);
+	return Result::Ok();
+}
+
 [[nodiscard]] Result controlSet(const QStringList &args) {
 	if (args.size() != 2) return Result::Err(u"usage: control.set <target> <value>"_q);
 	const auto target = QPointer<QWidget>(findControl(args[0]));
@@ -531,16 +532,7 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 		if (line->isReadOnly()) return Result::Err(u"input is read only"_q);
 		line->setText(args[1]);
 	} else if (const auto rp = dynamic_cast<Ui::RpWidget*>(target.data()); rp && rp->accessibilityState().checkable) {
-		if (args[1] != u"true"_q && args[1] != u"false"_q) return Result::Err(u"expected true or false"_q);
-		const auto checked = args[1] == u"true"_q;
-		if (rp->accessibilityState().checked != checked) {
-			if (dynamic_cast<Ui::Radiobutton*>(rp) && !checked) {
-				return Result::Err(u"select another radio button to change this value"_q);
-			}
-			const auto button = dynamic_cast<Ui::AbstractButton*>(rp);
-			if (!button) return Result::Err(u"control has no click handler"_q);
-			activateButton(button);
-		}
+		if (auto result = setCheckValue(rp, args[1]); !result.ok) return result;
 	} else if (const auto combo = qobject_cast<QComboBox*>(target.data())) {
 		auto ok = false;
 		const auto index = args[1].toInt(&ok);
@@ -582,23 +574,13 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	if (receiver != target && !target->isAncestorOf(receiver)) return Result::Err(u"control is covered at the requested point"_q);
 	const auto local = receiver->mapFromGlobal(global);
 	const auto button = mode == u"right"_q ? Qt::RightButton : Qt::LeftButton;
-	auto press = QMouseEvent(QEvent::MouseButtonPress, local, global, button, button, Qt::NoModifier);
-	QApplication::sendEvent(receiver, &press);
-	if (receiver) {
-		auto release = QMouseEvent(QEvent::MouseButtonRelease, local, global, button, Qt::NoButton, Qt::NoModifier);
-		QApplication::sendEvent(receiver, &release);
-	}
-	if (receiver && mode == u"double"_q) {
-		auto doubleClick = QMouseEvent(QEvent::MouseButtonDblClick, local, global, button, button, Qt::NoModifier);
-		QApplication::sendEvent(receiver, &doubleClick);
-		if (receiver) {
-			auto release = QMouseEvent(QEvent::MouseButtonRelease, local, global, button, Qt::NoButton, Qt::NoModifier);
-			QApplication::sendEvent(receiver, &release);
-		}
-	}
-	if (receiver && mode == u"right"_q) {
-		auto context = QContextMenuEvent(QContextMenuEvent::Mouse, local, global);
-		QApplication::sendEvent(receiver, &context);
+	sendIfAlive(receiver, QMouseEvent(QEvent::MouseButtonPress, local, global, button, button, Qt::NoModifier));
+	sendIfAlive(receiver, QMouseEvent(QEvent::MouseButtonRelease, local, global, button, Qt::NoButton, Qt::NoModifier));
+	if (mode == u"double"_q) {
+		sendIfAlive(receiver, QMouseEvent(QEvent::MouseButtonDblClick, local, global, button, button, Qt::NoModifier));
+		sendIfAlive(receiver, QMouseEvent(QEvent::MouseButtonRelease, local, global, button, Qt::NoButton, Qt::NoModifier));
+	} else if (mode == u"right"_q) {
+		sendIfAlive(receiver, QContextMenuEvent(QContextMenuEvent::Mouse, local, global));
 	}
 	return Result::Ok();
 }
