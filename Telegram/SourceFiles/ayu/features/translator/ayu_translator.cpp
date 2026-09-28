@@ -118,9 +118,10 @@ mtpRequestId TranslateManager::performTranslation(Builder &req) {
 		uncachedTexts.push_back(text);
 	};
 
-	const auto peerData = req.ids().v.isEmpty()
-		? nullptr
-		: Data::PeerFromInputMTP(&req.session()->data(), req.peer());
+	// 文本请求不解析会话，避免无谓创建会话数据。
+	const auto peerData = (req.texts().v.isEmpty() && !req.ids().v.isEmpty())
+		? Data::PeerFromInputMTP(&req.session()->data(), req.peer())
+		: nullptr;
 	if (!req.texts().v.isEmpty()) {
 		for (int i = 0; i < req.texts().v.size(); ++i) {
 			const auto &data = req.texts().v[i].data();
