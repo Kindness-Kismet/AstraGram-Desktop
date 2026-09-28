@@ -39,6 +39,12 @@ QColor makeDefaultBackgroundColor();
 
 void Make(not_null<QWidget*> box, const ShotConfig &config, const Fn<void(QImage&,bool)>& callback);
 
+// 打开截图预览并沿用已保存的截图主题；截图完成后调用 clearSelected。
+void Show(
+	not_null<Window::SessionController*> controller,
+	const MessageIdsList &ids,
+	Fn<void()> clearSelected);
+
 void Wrapper(not_null<HistoryView::ListWidget*> widget, Fn<void()> clearSelected);
 void Wrapper(not_null<HistoryInner*> widget, Fn<void()> clearSelected);
 

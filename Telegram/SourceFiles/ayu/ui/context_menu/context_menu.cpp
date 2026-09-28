@@ -517,22 +517,22 @@ void AddHideMessageAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 		return;
 	}
 
-	const auto history = item->history();
-	const auto owner = &history->owner();
 	menu->addAction(
 		tr::ayu_ContextHideMessage(tr::now),
-		[=]()
-		{
-			const auto ids = owner->itemOrItsGroup(item);
-			for (const auto &fullId : ids) {
-				if (const auto current = owner->message(fullId)) {
-					AyuState::hide(current);
-					current->destroy();
-				}
-			}
-			history->requestChatListMessage();
-		},
+		[=] { HideMessage(item); },
 		&st::menuIconClear);
+}
+
+void HideMessage(not_null<HistoryItem*> item) {
+	const auto history = item->history();
+	const auto owner = &history->owner();
+	for (const auto &fullId : owner->itemOrItsGroup(item)) {
+		if (const auto current = owner->message(fullId)) {
+			AyuState::hide(current);
+			current->destroy();
+		}
+	}
+	history->requestChatListMessage();
 }
 
 void AddUserMessagesAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {

@@ -457,16 +457,34 @@ std::shared_ptr<Ui::ChatStyle> BuildShotChatStyle(
 	return std::make_shared<Ui::ChatStyle>(controller->chatStyle());
 }
 
-template <typename ResolveMessage>
-void ShowMessageShotBox(
-		ResolveMessage resolveMessage,
+template <typename Widget, typename GetIds>
+void WrapperImpl(
+		not_null<Widget*> widget,
+		GetIds getIds,
+		Fn<void()> clearSelected) {
+	const auto items = getIds(widget);
+	if (items.empty()) {
+		return;
+	}
+
+	const auto controller = widget->session().tryResolveWindow();
+	if (!controller) {
+		return;
+	}
+
+	Show(controller, items, std::move(clearSelected));
+}
+
+}
+
+void Show(
 		not_null<Window::SessionController*> controller,
 		const MessageIdsList &ids,
 		Fn<void()> clearSelected) {
 	auto messages = std::vector<not_null<HistoryItem*>>();
 	messages.reserve(ids.size());
 	for (const auto item : ids) {
-		if (const auto message = resolveMessage(item)) {
+		if (const auto message = controller->session().data().message(item)) {
 			messages.push_back(message);
 		}
 	}
@@ -474,7 +492,7 @@ void ShowMessageShotBox(
 		return;
 	}
 
-	const AyuFeatures::MessageShot::ShotConfig config = {
+	const ShotConfig config = {
 		controller,
 		BuildShotChatStyle(controller),
 		messages,
@@ -486,31 +504,6 @@ void ShowMessageShotBox(
 		if (raw->tookShot()) clearSelected();
 	}, raw->lifetime());
 	Ui::show(std::move(box));
-}
-
-template <typename Widget, typename GetIds>
-void WrapperImpl(
-		not_null<Widget*> widget,
-		GetIds getIds,
-		Fn<void()> clearSelected) {
-	const auto items = getIds(widget);
-	if (items.empty()) {
-		return;
-	}
-
-	const auto session = &widget->session();
-	const auto controller = widget->session().tryResolveWindow();
-	if (!controller) {
-		return;
-	}
-
-	ShowMessageShotBox(
-		[=](const auto item) { return session->data().message(item); },
-		controller,
-		items,
-		std::move(clearSelected));
-}
-
 }
 
 void Wrapper(not_null<HistoryView::ListWidget*> widget, Fn<void()> clearSelected) {
