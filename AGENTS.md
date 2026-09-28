@@ -185,6 +185,12 @@ void Process(const TextWithEntities &text) {
 }
 ```
 
+- 分支以 `return`、`continue`、`break` 结尾时，后面不接 `else`，下一个判断直接左对齐
+- 循环里先用 `continue` 跳过不相关的项；查找类逻辑先找到目标，再在循环外处理
+- 同一个函数既能查询又能修改时，先处理只查询的情况并返回，修改流程不包在 `if` 里
+- 分支里还有校验、嵌套超过两层时，把分支抽成返回 `Result` 或 `std::optional` 的小函数
+- 二选一的对称分支（显示或隐藏、新建或更新）保留 `if/else`，不为了套卫语句强行改写
+
 ### 不要过度防御
 
 - 上游核心代码（`data_session.cpp`、`history.cpp` 等）完全没有 `try/catch`——**异常不是这个项目的错误处理方式**，不要引入
@@ -382,7 +388,7 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 - [ ] 新设置项在 `ayu_settings` 的成员、`to_json`、`from_json` 三处同步？
 - [ ] rpl 订阅绑定了 `lifetime()`？
 - [ ] 跨线程调用走了 `dispatchToMainThread`？
-- [ ] 优先用卫语句，没有深层嵌套，没有过度防御？
+- [ ] 优先用卫语句，`return` 后不接 `else`，嵌套不超过两层，没有过度防御？
 - [ ] 注释是中文、不超过两行、不用行话？
 - [ ] 改了 lib_ui 等 fork 子模块，已推到 fork 仓库再更新指针？
 - [ ] 提交前 `git diff --cached` 确认内容都属于本次改动？
