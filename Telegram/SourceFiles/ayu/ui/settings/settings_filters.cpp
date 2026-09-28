@@ -191,27 +191,30 @@ void AyuFilters::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 	addAction(
 		tr::ayu_FiltersMenuSelectChat(tr::now),
 		[=] {
-			if (const auto window = Core::App().activeWindow()) {
-				if (const auto controller = window->sessionController()) {
-					auto types = InlineBots::PeerTypes();
-					types |= InlineBots::PeerType::Bot;
-					types |= InlineBots::PeerType::Group;
-					types |= InlineBots::PeerType::Broadcast;
-
-					Window::ShowChooseRecipientBox(
-						controller,
-						[=](not_null<Data::Thread*> thread) {
-							const auto peer = thread->peer();
-							controller->dialogId = getDialogIdFromPeer(peer);
-							controller->showExclude = true;
-							controller->showSettings(AyuFiltersList::Id());
-							return true;
-						},
-						tr::ayu_FiltersMenuSelectChat(),
-						nullptr,
-						types);
-				}
+			const auto window = Core::App().activeWindow();
+			const auto controller = window
+				? window->sessionController()
+				: nullptr;
+			if (!controller) {
+				return;
 			}
+			auto types = InlineBots::PeerTypes();
+			types |= InlineBots::PeerType::Bot;
+			types |= InlineBots::PeerType::Group;
+			types |= InlineBots::PeerType::Broadcast;
+
+			Window::ShowChooseRecipientBox(
+				controller,
+				[=](not_null<Data::Thread*> thread) {
+					const auto peer = thread->peer();
+					controller->dialogId = getDialogIdFromPeer(peer);
+					controller->showExclude = true;
+					controller->showSettings(AyuFiltersList::Id());
+					return true;
+				},
+				tr::ayu_FiltersMenuSelectChat(),
+				nullptr,
+				types);
 		},
 		&st::menuIconSearch);
 	addAction({ .isSeparator = true });

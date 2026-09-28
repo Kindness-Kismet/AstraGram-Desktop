@@ -55,9 +55,13 @@ Fn<void()> ClearDeletedMessagesHandler(not_null<Window::SessionController*> cont
 				for (const auto &block : peer->owner().history(peer)->blocks) {
 					for (const auto &view : block->messages) {
 						const auto item = view->data();
-						if (item->isDeleted() && (!topicId || (item->topicRootId().bare == topicId))) {
-							items.push_back(item);
+						if (!item->isDeleted()) {
+							continue;
 						}
+						if (topicId && item->topicRootId().bare != topicId) {
+							continue;
+						}
+						items.push_back(item);
 					}
 				}
 				AyuMessages::clearDeletedMessages(peer, topicId);
@@ -809,10 +813,8 @@ void AddRepeatMessageAction(
 		if (!chat->amIn()) return;
 	}
 
-	if (const auto topic = item->topic()) {
-		if (topic->closed()) {
-			return;
-		}
+	if (const auto topic = item->topic(); topic && topic->closed()) {
+		return;
 	}
 
 	const auto itemId = item->fullId();
@@ -861,44 +863,7 @@ void AddRepeatMessageAction(
 				action.replyTo.messageId = replyTo.messageId;
 			}
 
-			if (useNoQuote) {
-				if (currentItem->richPage() && session->premium() && !noForwards) {
-					if (preserveReply) {
-						crl::async([=] {
-							AyuForward::forwardRichMessage(session, itemId, action);
-						});
-					} else {
-						const auto forwardDraft = Data::ForwardDraft{
-							.ids = MessageIdsList{ itemId },
-							.options = Data::ForwardOptions::NoSenderNames,
-						};
-						auto resolvedDraft = history->resolveForwardDraft(forwardDraft);
-						session->api().forwardMessages(
-							std::move(resolvedDraft),
-							action,
-							[] {});
-					}
-				} else {
-					auto message = ApiWrap::MessageToSend(action);
-					const auto media = currentItem->media();
-					if (!currentItem->originalText().text.isEmpty()) {
-						message.textWithTags = {
-							currentItem->originalText().text,
-							TextUtilities::ConvertEntitiesToTextTags(
-								currentItem->originalText().entities),
-						};
-					}
-					if (media) {
-						if (const auto photo = media->photo()) {
-							Api::SendExistingPhoto(std::move(message), photo);
-						} else if (const auto document = media->document()) {
-							Api::SendExistingDocument(std::move(message), document);
-						}
-					} else {
-						session->api().sendMessage(std::move(message));
-					}
-				}
-			} else {
+			if (!useNoQuote) {
 				const auto forwardDraft = Data::ForwardDraft{
 					.ids = MessageIdsList{ itemId },
 					.options = Data::ForwardOptions::PreserveInfo,
@@ -918,6 +883,46 @@ void AddRepeatMessageAction(
 				} else {
 					session->api().forwardMessages(std::move(resolvedDraft), action, [] {});
 				}
+				return;
+			}
+
+			if (currentItem->richPage() && session->premium() && !noForwards) {
+				if (preserveReply) {
+					crl::async([=] {
+						AyuForward::forwardRichMessage(session, itemId, action);
+					});
+					return;
+				}
+				const auto forwardDraft = Data::ForwardDraft{
+					.ids = MessageIdsList{ itemId },
+					.options = Data::ForwardOptions::NoSenderNames,
+				};
+				auto resolvedDraft = history->resolveForwardDraft(forwardDraft);
+				session->api().forwardMessages(
+					std::move(resolvedDraft),
+					action,
+					[] {});
+				return;
+			}
+
+			// 其余情况按原文与原媒体重新发送一条消息。
+			auto message = ApiWrap::MessageToSend(action);
+			if (!currentItem->originalText().text.isEmpty()) {
+				message.textWithTags = {
+					currentItem->originalText().text,
+					TextUtilities::ConvertEntitiesToTextTags(
+						currentItem->originalText().entities),
+				};
+			}
+			const auto media = currentItem->media();
+			if (!media) {
+				session->api().sendMessage(std::move(message));
+				return;
+			}
+			if (const auto photo = media->photo()) {
+				Api::SendExistingPhoto(std::move(message), photo);
+			} else if (const auto document = media->document()) {
+				Api::SendExistingDocument(std::move(message), document);
 			}
 		},
 		&st::ayuRepeatMenuIcon);

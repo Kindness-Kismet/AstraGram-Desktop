@@ -29,6 +29,24 @@ QString randomDesktopUserAgent() {
 	return desktopUserAgents[base::RandomIndex(static_cast<int>(desktopUserAgents.size()))];
 }
 
+namespace {
+
+// 字符串原样返回，对象优先取 trans 字段，其次取 text 字段。
+QString textOf(const QJsonValue &value) {
+	if (value.isString()) {
+		return value.toString();
+	}
+	if (!value.isObject()) {
+		return {};
+	}
+	const auto object = value.toObject();
+	return object.contains("trans")
+		? object.value("trans").toString()
+		: object.value("text").toString();
+}
+
+} // namespace
+
 bool shouldWrapInHtml() {
 	// todo: make an option
 	return true;
@@ -71,23 +89,19 @@ QString parseJsonPath(const QByteArray &body, const QString &jsonPath, bool *ok)
 	};
 
 	const auto parts = jsonPath.split('.', Qt::SkipEmptyParts);
-	for (const auto &partRaw : parts) {
-		QString part = partRaw;
+	for (const auto &part : parts) {
+		// 每段形如 key[0][1]，键可省略。
+		const int bracket = part.indexOf('[');
+		const auto key = (bracket >= 0) ? part.left(bracket) : part;
+		int pos = key.size();
 
-		int pos = 0;
-		if (!part.isEmpty() && part[0] != '[') {
-			const int bracket = part.indexOf('[');
-			QString key = (bracket >= 0) ? part.left(bracket) : part;
-			pos = key.size();
-
-			if (!key.isEmpty()) {
-				if (!current.isObject()) {
-					return {};
-				}
-				current = current.toObject().value(key);
-				if (current.isUndefined() || current.isNull()) {
-					return {};
-				}
+		if (!key.isEmpty()) {
+			if (!current.isObject()) {
+				return {};
+			}
+			current = current.toObject().value(key);
+			if (current.isUndefined() || current.isNull()) {
+				return {};
 			}
 		}
 
@@ -107,30 +121,14 @@ QString parseJsonPath(const QByteArray &body, const QString &jsonPath, bool *ok)
 	}
 
 	QString result;
-	if (current.isString()) {
-		result = current.toString();
-	} else if (current.isArray()) {
-		const auto arr = current.toArray();
+	if (current.isArray()) {
+		// 预留容量后结果不再为空值，数组即使全部跳过也算解析成功。
 		result.reserve(256);
-		for (const auto &v : arr) {
-			if (v.isObject()) {
-				const auto o = v.toObject();
-				if (o.contains("trans")) {
-					result += o.value("trans").toString();
-				} else if (o.contains("text")) {
-					result += o.value("text").toString();
-				}
-			} else if (v.isString()) {
-				result += v.toString();
-			}
+		for (const auto &v : current.toArray()) {
+			result += textOf(v);
 		}
-	} else if (current.isObject()) {
-		const auto o = current.toObject();
-		if (o.contains("trans")) {
-			result = o.value("trans").toString();
-		} else if (o.contains("text")) {
-			result = o.value("text").toString();
-		}
+	} else {
+		result = textOf(current);
 	}
 
 	if (ok) *ok = !result.isNull();

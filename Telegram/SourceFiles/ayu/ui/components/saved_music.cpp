@@ -252,18 +252,18 @@ void AyuMusicButton::makeCover() {
 
 			auto cover = GetCurrentCover(mediaView, QSize(size, size));
 
-			if (cover.noCover) {
-				const auto pix = Ayu::Ui::Itunes::FetchCover(performerText, titleText, size);
-				if (!pix.isNull()) {
-					const auto img = Image(pix.toImage());
-					const auto args = Images::PrepareArgs{
-						.options = Images::Option::RoundSmall,
-						.outer = QSize(size, size),
-					};
-					cover.pixToDraw = img.pix(QSize(size, size), args);
-					cover.pixToBg = pix;
-					cover.noCover = false;
-				}
+			const auto pix = cover.noCover
+				? Ayu::Ui::Itunes::FetchCover(performerText, titleText, size)
+				: QPixmap();
+			if (!pix.isNull()) {
+				const auto img = Image(pix.toImage());
+				const auto args = Images::PrepareArgs{
+					.options = Images::Option::RoundSmall,
+					.outer = QSize(size, size),
+				};
+				cover.pixToDraw = img.pix(QSize(size, size), args);
+				cover.pixToBg = pix;
+				cover.noCover = false;
 			}
 
 			QColor bgColor;

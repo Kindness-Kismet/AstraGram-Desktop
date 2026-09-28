@@ -53,25 +53,27 @@ void FillImportFiltersBox(not_null<Ui::GenericBox*> box, bool import) {
 				st::settingsSendType),
 			st::settingsSendTypePadding);
 
-		if (import && value) {
-			importURLWrap = inner->add(
-				object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-					inner,
-					object_ptr<Ui::VerticalLayout>(inner),
-					st::giveawayGiftCodeBox.buttonPadding
-				)
-			);
-			importURLField = importURLWrap->entity()->add(
-				object_ptr<Ui::InputField>(
-					container,
-					st::defaultInputField,
-					rpl::single(QString("URL")),
-					clipboardHasUrl ? clipboardText : QString()
-				)
-			);
-			if (!clipboardHasUrl) {
-				importURLWrap->hide(anim::type::instant);
-			}
+		// 只有“从链接导入”选项下方带网址输入框。
+		if (!import || !value) {
+			return;
+		}
+		importURLWrap = inner->add(
+			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+				inner,
+				object_ptr<Ui::VerticalLayout>(inner),
+				st::giveawayGiftCodeBox.buttonPadding
+			)
+		);
+		importURLField = importURLWrap->entity()->add(
+			object_ptr<Ui::InputField>(
+				container,
+				st::defaultInputField,
+				rpl::single(QString("URL")),
+				clipboardHasUrl ? clipboardText : QString()
+			)
+		);
+		if (!clipboardHasUrl) {
+			importURLWrap->hide(anim::type::instant);
 		}
 	};
 	addOption(false, import ? tr::ayu_FiltersImportClipboard(tr::now) : tr::ayu_FiltersExportClipboard(tr::now));

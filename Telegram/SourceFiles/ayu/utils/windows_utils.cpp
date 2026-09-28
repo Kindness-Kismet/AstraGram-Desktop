@@ -111,14 +111,13 @@ void processNewPinned(const QString &iconPath) {
 		hr = shellLink->GetPath(dst, MAX_PATH, nullptr, 0);
 		if (!SUCCEEDED(hr)) continue;
 
-		if (Platform::AppUserModelId::GetUniqueFileId(dst) == srcid) {
-			auto propertyStore = shellLink.try_as<IPropertyStore>();
-			if (!propertyStore) {
-				continue;
-			}
-
-			processIcon(filePath, iconPath);
+		if (Platform::AppUserModelId::GetUniqueFileId(dst) != srcid) {
+			continue;
 		}
+		if (!shellLink.try_as<IPropertyStore>()) {
+			continue;
+		}
+		processIcon(filePath, iconPath);
 	} while (FindNextFile(findHandle, &findData));
 	DWORD errorCode = GetLastError();
 	if (errorCode && errorCode != ERROR_NO_MORE_FILES) {

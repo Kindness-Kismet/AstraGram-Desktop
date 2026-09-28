@@ -213,27 +213,28 @@ void RegexEditBuilder(
 				}
 				FiltersCacheController::fireUpdate();
 
-				if (showToast) {
-					auto config = Ui::Toast::Config{
-						.text = tr::ayu_RegexFilterBulletinText(
-							tr::now,
-							tr::rich),
-						.adaptive = true,
-					};
-					if (dialogId.has_value()) {
-						Ayu::Ui::ShowToastWithAction(
-							std::move(config),
-							tr::ayu_RegexFilterBulletinAction(tr::now),
-							[=]() mutable {
-								newFilter.dialogId = dialogId;
+				if (!showToast) {
+					return;
+				}
+				auto config = Ui::Toast::Config{
+					.text = tr::ayu_RegexFilterBulletinText(
+						tr::now,
+						tr::rich),
+					.adaptive = true,
+				};
+				if (dialogId.has_value()) {
+					Ayu::Ui::ShowToastWithAction(
+						std::move(config),
+						tr::ayu_RegexFilterBulletinAction(tr::now),
+						[=]() mutable {
+							newFilter.dialogId = dialogId;
 
-								AyuDatabase::updateRegexFilter(newFilter);
-								FiltersCacheController::rebuildCache();
-								FiltersCacheController::fireUpdate();
-							});
-					} else {
-						Ui::Toast::Show(std::move(config));
-					}
+							AyuDatabase::updateRegexFilter(newFilter);
+							FiltersCacheController::rebuildCache();
+							FiltersCacheController::fireUpdate();
+						});
+				} else {
+					Ui::Toast::Show(std::move(config));
 				}
 			});
 		});

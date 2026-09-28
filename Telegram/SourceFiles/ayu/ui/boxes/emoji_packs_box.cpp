@@ -92,12 +92,13 @@ void addPresetRows(not_null<Ui::VerticalLayout*> content, Fn<void()> refresh) {
 			*state = PresetState{ .downloading = true };
 			installPreset(preset,
 				crl::guard(content, [=](DownloadProgress progress) {
-					if (state->current().downloading) {
-						*state = PresetState{
-							.downloading = true,
-							.progress = progress,
-						};
+					if (!state->current().downloading) {
+						return;
 					}
+					*state = PresetState{
+						.downloading = true,
+						.progress = progress,
+					};
 				}),
 				crl::guard(content, [=](ImportResult result) {
 					if (result.error != ImportError::None) {

@@ -999,13 +999,12 @@ TextWithTags extractText(not_null<HistoryItem*> item) {
 	TextWithTags result;
 
 	QString text;
-	if (const auto media = item->media()) {
-		if (const auto poll = media->poll()) {
-			text.append("\xF0\x9F\x93\x8A ") // 📊
-				.append(poll->question.text).append("\n");
-			for (const auto &answer : poll->answers) {
-				text.append("• ").append(answer.text.text).append("\n");
-			}
+	const auto media = item->media();
+	if (const auto poll = media ? media->poll() : nullptr) {
+		text.append("\xF0\x9F\x93\x8A ") // 📊
+			.append(poll->question.text).append("\n");
+		for (const auto &answer : poll->answers) {
+			text.append("• ").append(answer.text.text).append("\n");
 		}
 	}
 
@@ -1098,20 +1097,19 @@ static bool prependPseudoReplyImpl(
 			QString()
 		});
 
-		if (const auto user = from->asUser()) {
-			if (const auto accessHash = user->accessHash()) {
-				const auto mentionData = QStringLiteral("%1.%2:%3")
-					.arg(user->id.value)
-					.arg(accessHash)
-					.arg(session->userId().bare);
+		const auto user = from->asUser();
+		if (const auto accessHash = user ? user->accessHash() : 0) {
+			const auto mentionData = QStringLiteral("%1.%2:%3")
+				.arg(user->id.value)
+				.arg(accessHash)
+				.arg(session->userId().bare);
 
-				newEntities.push_back(EntityInText{
-					EntityType::MentionName,
-					0,
-					nameLength,
-					mentionData
-				});
-			}
+			newEntities.push_back(EntityInText{
+				EntityType::MentionName,
+				0,
+				nameLength,
+				mentionData
+			});
 		}
 	}
 
@@ -1187,13 +1185,14 @@ TextWithEntities reverseLocalPremiumEmoji(const TextWithEntities &text, not_null
 				&& !history->peer->isSelf()
 				&& !premium
 				&& !emojiAllowed(entity));
-		if (shouldConvert) {
-			entity = EntityInText(
-				EntityType::CustomUrl,
-				entity.offset(),
-				entity.length(),
-				u"tg://emoji?id="_q + entity.data());
+		if (!shouldConvert) {
+			continue;
 		}
+		entity = EntityInText(
+			EntityType::CustomUrl,
+			entity.offset(),
+			entity.length(),
+			u"tg://emoji?id="_q + entity.data());
 	}
 	return result;
 }
@@ -1203,29 +1202,33 @@ void applyLocalPremiumEmoji(TextWithEntities &text) {
 		QStringLiteral("^tg://emoji\\?id=(\\d+)$"));
 
 	for (auto &entity : text.entities) {
-		if (entity.type() == EntityType::CustomUrl) {
-			const auto match = kLocalPremiumEmojiRegex.match(entity.data());
-			if (match.hasMatch()) {
-				const auto entityText = text.text.mid(
-					entity.offset(),
-					entity.length());
-				auto emojiLength = 0;
-				const auto emoji = Ui::Emoji::Find(entityText, &emojiLength);
-				if (emoji && emojiLength == entityText.size()) {
-					const auto emojiId = match.captured(1);
-					auto ok = false;
-					emojiId.toULongLong(&ok);
-					if (ok) {
-						entity = EntityInText(
-							EntityType::CustomEmoji,
-							entity.offset(),
-							entity.length(),
-							emojiId);
-						entity.setLocal();
-					}
-				}
-			}
+		if (entity.type() != EntityType::CustomUrl) {
+			continue;
 		}
+		const auto match = kLocalPremiumEmojiRegex.match(entity.data());
+		if (!match.hasMatch()) {
+			continue;
+		}
+		const auto entityText = text.text.mid(
+			entity.offset(),
+			entity.length());
+		auto emojiLength = 0;
+		const auto emoji = Ui::Emoji::Find(entityText, &emojiLength);
+		if (!emoji || emojiLength != entityText.size()) {
+			continue;
+		}
+		const auto emojiId = match.captured(1);
+		auto ok = false;
+		emojiId.toULongLong(&ok);
+		if (!ok) {
+			continue;
+		}
+		entity = EntityInText(
+			EntityType::CustomEmoji,
+			entity.offset(),
+			entity.length(),
+			emojiId);
+		entity.setLocal();
 	}
 }
 
@@ -1236,18 +1239,19 @@ not_null<Main::Session*> currentSession() {
 template<typename T>
 PeerData *getPeerFromDialogId(T id) {
 	for (const auto &[index, account] : Core::App().domain().accounts()) {
-		if (const auto session = account->maybeSession()) {
-			PeerData *from = session->data().userLoaded(id);
-			if (!from) {
-				from = session->data().channelLoaded(id);
-			}
-			if (!from) {
-				from = reinterpret_cast<PeerData*>(session->data().chatLoaded(id));
-			}
-
-			if (from) {
-				return from;
-			}
+		const auto session = account->maybeSession();
+		if (!session) {
+			continue;
+		}
+		const auto data = &session->data();
+		if (const auto user = data->userLoaded(id)) {
+			return user;
+		}
+		if (const auto channel = data->channelLoaded(id)) {
+			return channel;
+		}
+		if (const auto chat = data->chatLoaded(id)) {
+			return chat;
 		}
 	}
 
@@ -1575,10 +1579,11 @@ void applyGhostScheduling(
 		Api::SendOptions &options,
 		int delaySeconds) {
 	const auto &ghost = AyuSettings::ghost(session);
-	if (ghost.isUseScheduledMessages() && !options.scheduled) {
-		const auto delay = Core::App().settings().proxy().isEnabled()
-			? (delaySeconds * 6 + 4) / 5 //ceil(delaySeconds * 1.2)
-			: delaySeconds;
-		options.scheduled = base::unixtime::now() + delay;
+	if (!ghost.isUseScheduledMessages() || options.scheduled) {
+		return;
 	}
+	const auto delay = Core::App().settings().proxy().isEnabled()
+		? (delaySeconds * 6 + 4) / 5 //ceil(delaySeconds * 1.2)
+		: delaySeconds;
+	options.scheduled = base::unixtime::now() + delay;
 }

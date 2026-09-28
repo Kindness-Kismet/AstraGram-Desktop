@@ -78,30 +78,32 @@ void BuildTranslator(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 		.st = &st::settingsButtonNoIcon,
 		.label = std::move(currentVal),
 		.onClick = [=] {
-			if (const auto controller = Core::App().activeWindow()->sessionController()) {
-				controller->show(Box(
-						[=](not_null<Ui::GenericBox*> box) {
-							const auto save = [=](int index) {
-								const auto option = availableOptions[index].first;
-								AyuSettings::getInstance().setTranslationProvider(option);
-
-								if constexpr (Platform::IsMac()) {
-									if (option == TranslationProvider::Native) {
-										controller->showToast(Ui::Toast::Config{
-											.text = tr::lng_translate_settings_use_platform_mac_about(tr::now, tr::rich),
-											.duration = 6 * crl::time(1000)
-										});
-									}
-								}
-							};
-							SingleChoiceBox(box, {
-								.title = tr::ayu_TranslationProvider(),
-								.options = optionLabels,
-								.initialSelection = getIndex(settings->translationProvider()),
-								.callback = save,
-							});
-						}));
+			const auto controller = Core::App().activeWindow()->sessionController();
+			if (!controller) {
+				return;
 			}
+			controller->show(Box(
+					[=](not_null<Ui::GenericBox*> box) {
+						const auto save = [=](int index) {
+							const auto option = availableOptions[index].first;
+							AyuSettings::getInstance().setTranslationProvider(option);
+
+							if constexpr (Platform::IsMac()) {
+								if (option == TranslationProvider::Native) {
+									controller->showToast(Ui::Toast::Config{
+										.text = tr::lng_translate_settings_use_platform_mac_about(tr::now, tr::rich),
+										.duration = 6 * crl::time(1000)
+									});
+								}
+							}
+						};
+						SingleChoiceBox(box, {
+							.title = tr::ayu_TranslationProvider(),
+							.options = optionLabels,
+							.initialSelection = getIndex(settings->translationProvider()),
+							.callback = save,
+						});
+					}));
 		},
 	});
 	if (button) {

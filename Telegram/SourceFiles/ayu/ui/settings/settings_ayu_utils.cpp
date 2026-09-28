@@ -33,6 +33,20 @@
 class PainterHighQualityEnabler;
 
 namespace Settings {
+namespace {
+
+// 锁定的条目半透明显示。
+void applyLockLook(not_null<Ui::Checkbox*> checkbox, bool locked) {
+	if (!locked) {
+		checkbox->setGraphicsEffect(nullptr);
+		return;
+	}
+	const auto effect = new QGraphicsOpacityEffect(checkbox);
+	effect->setOpacity(0.4);
+	checkbox->setGraphicsEffect(effect);
+}
+
+} // namespace
 
 void ShowRestartPrompt(not_null<Window::SessionController*> controller) {
 	crl::on_main([=] {
@@ -390,6 +404,29 @@ CollapsibleToggleResult AddCollapsibleToggle(not_null<Ui::VerticalLayout*> conta
 		return e.lockGetter != nullptr;
 	});
 
+	// Shift 点击切换锁定，至少保留一个未锁定的条目。
+	const auto toggleLock = [=](unsigned index) {
+		const auto &e = cState->checkboxes[index];
+		const auto locked = e.lockGetter();
+		const auto lockedCount = ranges::count_if(cState->checkboxes, [](const NestedEntry &entry) {
+			return entry.lockGetter && entry.lockGetter();
+		});
+		if (!locked && lockedCount + 1 >= std::ssize(cState->checkboxes)) {
+			return;
+		}
+		e.lockSetter(!locked);
+		applyLockLook(cState->entries[index].checkbox, !locked);
+		cState->lockChanges.fire({});
+	};
+	const auto refreshLockLooks = [cState] {
+		for (auto i = 0u; i < cState->entries.size(); ++i) {
+			const auto &entry = cState->checkboxes[i];
+			if (entry.lockGetter) {
+				applyLockLook(cState->entries[i].checkbox, entry.lockGetter());
+			}
+		}
+	};
+
 	for (auto i = 0u; i < cState->checkboxes.size(); ++i) {
 		const auto &entry = cState->checkboxes[i];
 		const auto checkbox = verticalLayout->add(
@@ -418,38 +455,14 @@ CollapsibleToggleResult AddCollapsibleToggle(not_null<Ui::VerticalLayout*> conta
 		button->setClickedCallback([=]
 		{
 			const auto &e = cState->checkboxes[idx];
-			if (e.lockGetter && e.lockSetter) {
-				if (button->clickModifiers() & Qt::ShiftModifier) {
-					const auto currentlyLocked = e.lockGetter();
-					if (!currentlyLocked) {
-						// Count already locked entries, deny if would lock all.
-						auto lockedCount = 0;
-						for (const auto &ce : cState->checkboxes) {
-							if (ce.lockGetter && ce.lockGetter()) {
-								++lockedCount;
-							}
-						}
-						if (lockedCount + 1 >= static_cast<int>(cState->checkboxes.size())) {
-							return;
-						}
-					}
-					e.lockSetter(!currentlyLocked);
-					// Update opacity.
-					const auto &ce = cState->entries[idx];
-					if (!currentlyLocked) {
-						auto *effect = new QGraphicsOpacityEffect(ce.checkbox);
-						effect->setOpacity(0.4);
-						ce.checkbox->setGraphicsEffect(effect);
-					} else {
-						ce.checkbox->setGraphicsEffect(nullptr);
-					}
-					cState->lockChanges.fire({});
-					return;
-				}
-				// Normal click on locked entry: ignore.
-				if (e.lockGetter()) {
-					return;
-				}
+			const auto lockable = e.lockGetter && e.lockSetter;
+			if (lockable && (button->clickModifiers() & Qt::ShiftModifier)) {
+				toggleLock(idx);
+				return;
+			}
+			// 锁定的条目忽略普通点击。
+			if (lockable && e.lockGetter()) {
+				return;
 			}
 			checkView->setChecked(
 				!checkView->checked(),
@@ -478,15 +491,7 @@ CollapsibleToggleResult AddCollapsibleToggle(not_null<Ui::VerticalLayout*> conta
 		Ui::AddSkip(verticalLayout);
 	}
 
-	// Apply initial lock visuals.
-	for (auto i = 0u; i < cState->entries.size(); ++i) {
-		const auto &entry = cState->checkboxes[i];
-		if (entry.lockGetter && entry.lockGetter()) {
-			auto *effect = new QGraphicsOpacityEffect(cState->entries[i].checkbox);
-			effect->setOpacity(0.4);
-			cState->entries[i].checkbox->setGraphicsEffect(effect);
-		}
-	}
+	refreshLockLooks();
 
 	const auto raw = wrap.data();
 	raw->hide(anim::type::instant);
@@ -508,22 +513,12 @@ CollapsibleToggleResult AddCollapsibleToggle(not_null<Ui::VerticalLayout*> conta
 						raw->lifetime());
 
 	return {
-		.refresh = [cState] {
+		.refresh = [cState, refreshLockLooks] {
 			for (auto i = 0u; i < cState->entries.size(); ++i) {
 				cState->entries[i].checkView->setChecked(
 					cState->checkboxes[i].getter(), anim::type::normal);
-				// Refresh lock visuals.
-				const auto &entry = cState->checkboxes[i];
-				if (entry.lockGetter) {
-					if (entry.lockGetter()) {
-						auto *effect = new QGraphicsOpacityEffect(cState->entries[i].checkbox);
-						effect->setOpacity(0.4);
-						cState->entries[i].checkbox->setGraphicsEffect(effect);
-					} else {
-						cState->entries[i].checkbox->setGraphicsEffect(nullptr);
-					}
-				}
 			}
+			refreshLockLooks();
 		},
 		.widget = toggleWidget,
 	};

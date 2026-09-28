@@ -1,6 +1,5 @@
 #include "ayu/ui/context_menu/menu_item_subtext.h"
 
-#include "mainwindow.h"
 #include "qguiapplication.h"
 #include "ayu/data/entities.h"
 #include "ayu/utils/telegram_helpers.h"
@@ -237,9 +236,7 @@ void ActionStickerPackAuthor::searchAuthor(ID authorId) {
 					{
 						QGuiApplication::clipboard()->setText(QString::number(authorId));
 						if (const auto window = session->tryResolveWindow()) {
-							if (const auto mainWidget = window->widget()->sessionController()) {
-								mainWidget->showToast(tr::ayu_IDCopiedToast(tr::now));
-							}
+							window->showToast(tr::ayu_IDCopiedToast(tr::now));
 						}
 					});
 
@@ -256,14 +253,12 @@ void ActionStickerPackAuthor::searchAuthor(ID authorId) {
 			const auto title = username.isEmpty() ? (user ? user->name() : QString()) : username;
 			const auto callback = [user, title, session]
 			{
-				if (user) {
-					if (const auto window = session->tryResolveWindow()) {
-						if (const auto mainWidget = window->widget()->sessionController()) {
-							mainWidget->showPeer(user);
-						}
-					}
-				} else {
+				if (!user) {
 					QGuiApplication::clipboard()->setText(title);
+					return;
+				}
+				if (const auto window = session->tryResolveWindow()) {
+					window->showPeer(user);
 				}
 			};
 

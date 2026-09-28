@@ -40,17 +40,18 @@ void BuildLogo(SectionBuilder &builder) {
 		logoRaw->setNaturalWidth(st::settingsCloudPasswordIconSize);
 		logoRaw->paintRequest(
 		) | rpl::on_next([=] {
-			auto p = QPainter(logoRaw);
 			const auto image = AyuAssets::currentAppLogoPad();
-			if (!image.isNull()) {
-				const auto size = st::settingsCloudPasswordIconSize;
-				const auto scaled = image.scaled(
-					size * style::DevicePixelRatio(),
-					size * style::DevicePixelRatio(),
-					Qt::KeepAspectRatio,
-					Qt::SmoothTransformation);
-				p.drawImage(QRect(0, 0, size, size), scaled);
+			if (image.isNull()) {
+				return;
 			}
+			auto p = QPainter(logoRaw);
+			const auto size = st::settingsCloudPasswordIconSize;
+			const auto scaled = image.scaled(
+				size * style::DevicePixelRatio(),
+				size * style::DevicePixelRatio(),
+				Qt::KeepAspectRatio,
+				Qt::SmoothTransformation);
+			p.drawImage(QRect(0, 0, size, size), scaled);
 		}, logoRaw->lifetime());
 		return { .widget = std::move(logo), .align = style::al_top };
 	});

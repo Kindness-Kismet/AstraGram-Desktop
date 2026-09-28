@@ -60,47 +60,48 @@ QColor Swatch::bodyTextColor() const {
 }
 
 void Swatch::ensureTextColorsGenerated() const {
-	if (!_generatedTextColors) {
-		const auto lightBodyAlpha = ColorUtils::calculateMinimumAlpha(
-			qRgb(255, 255, 255),
-			_rgb,
-			Palette::MIN_CONTRAST_BODY_TEXT);
-		const auto lightTitleAlpha = ColorUtils::calculateMinimumAlpha(
-			qRgb(255, 255, 255),
-			_rgb,
-			Palette::MIN_CONTRAST_TITLE_TEXT);
-
-		if (lightBodyAlpha != -1 && lightTitleAlpha != -1) {
-			_bodyTextColor = QColor(255, 255, 255, lightBodyAlpha);
-			_titleTextColor = QColor(255, 255, 255, lightTitleAlpha);
-			_generatedTextColors = true;
-			return;
-		}
-
-		const auto darkBodyAlpha = ColorUtils::calculateMinimumAlpha(
-			qRgb(0, 0, 0),
-			_rgb,
-			Palette::MIN_CONTRAST_BODY_TEXT);
-		const auto darkTitleAlpha = ColorUtils::calculateMinimumAlpha(
-			qRgb(0, 0, 0),
-			_rgb,
-			Palette::MIN_CONTRAST_TITLE_TEXT);
-
-		if (darkBodyAlpha != -1 && darkTitleAlpha != -1) {
-			_bodyTextColor = QColor(0, 0, 0, darkBodyAlpha);
-			_titleTextColor = QColor(0, 0, 0, darkTitleAlpha);
-			_generatedTextColors = true;
-			return;
-		}
-
-		_bodyTextColor = lightBodyAlpha != -1
-							 ? QColor(255, 255, 255, lightBodyAlpha)
-							 : QColor(0, 0, 0, darkBodyAlpha);
-		_titleTextColor = lightTitleAlpha != -1
-							  ? QColor(255, 255, 255, lightTitleAlpha)
-							  : QColor(0, 0, 0, darkTitleAlpha);
-		_generatedTextColors = true;
+	if (_generatedTextColors) {
+		return;
 	}
+	const auto lightBodyAlpha = ColorUtils::calculateMinimumAlpha(
+		qRgb(255, 255, 255),
+		_rgb,
+		Palette::MIN_CONTRAST_BODY_TEXT);
+	const auto lightTitleAlpha = ColorUtils::calculateMinimumAlpha(
+		qRgb(255, 255, 255),
+		_rgb,
+		Palette::MIN_CONTRAST_TITLE_TEXT);
+
+	if (lightBodyAlpha != -1 && lightTitleAlpha != -1) {
+		_bodyTextColor = QColor(255, 255, 255, lightBodyAlpha);
+		_titleTextColor = QColor(255, 255, 255, lightTitleAlpha);
+		_generatedTextColors = true;
+		return;
+	}
+
+	const auto darkBodyAlpha = ColorUtils::calculateMinimumAlpha(
+		qRgb(0, 0, 0),
+		_rgb,
+		Palette::MIN_CONTRAST_BODY_TEXT);
+	const auto darkTitleAlpha = ColorUtils::calculateMinimumAlpha(
+		qRgb(0, 0, 0),
+		_rgb,
+		Palette::MIN_CONTRAST_TITLE_TEXT);
+
+	if (darkBodyAlpha != -1 && darkTitleAlpha != -1) {
+		_bodyTextColor = QColor(0, 0, 0, darkBodyAlpha);
+		_titleTextColor = QColor(0, 0, 0, darkTitleAlpha);
+		_generatedTextColors = true;
+		return;
+	}
+
+	_bodyTextColor = lightBodyAlpha != -1
+						 ? QColor(255, 255, 255, lightBodyAlpha)
+						 : QColor(0, 0, 0, darkBodyAlpha);
+	_titleTextColor = lightTitleAlpha != -1
+						  ? QColor(255, 255, 255, lightTitleAlpha)
+						  : QColor(0, 0, 0, darkTitleAlpha);
+	_generatedTextColors = true;
 }
 
 const Target Target::LIGHT_VIBRANT = []()
@@ -221,11 +222,12 @@ void Target::normalizeWeights() {
 			sum += weight;
 		}
 	}
-	if (sum != 0.0f) {
-		for (int i = 0; i < _weights.size(); i++) {
-			if (_weights[i] > 0) {
-				_weights[i] /= sum;
-			}
+	if (sum == 0.0f) {
+		return;
+	}
+	for (int i = 0; i < _weights.size(); i++) {
+		if (_weights[i] > 0) {
+			_weights[i] /= sum;
 		}
 	}
 }
@@ -379,12 +381,13 @@ const Swatch *Palette::getMaxScoredSwatchForTarget(const Target &target) {
 	const Swatch *maxScoreSwatch = nullptr;
 
 	for (const auto &swatch : _swatches) {
-		if (shouldBeScoredForTarget(swatch, target)) {
-			const auto score = generateScore(swatch, target);
-			if (!maxScoreSwatch || score > maxScore) {
-				maxScoreSwatch = &swatch;
-				maxScore = score;
-			}
+		if (!shouldBeScoredForTarget(swatch, target)) {
+			continue;
+		}
+		const auto score = generateScore(swatch, target);
+		if (!maxScoreSwatch || score > maxScore) {
+			maxScoreSwatch = &swatch;
+			maxScore = score;
 		}
 	}
 

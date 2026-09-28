@@ -205,29 +205,25 @@ void AyuFiltersList::addNewFilter(const RegexFilter &filter, bool exclusion) {
 
 void AyuFiltersList::initializeSharedFilters(
 	not_null<Ui::VerticalLayout*> container) {
-	if (dialogId.has_value() && _controller->showExclude.has_value() && _controller->showExclude.value()) {
+	const auto exclude = _controller->showExclude;
+	if (dialogId.has_value() && exclude.has_value() && *exclude) {
 		filters = AyuDatabase::getByDialogId(dialogId.value());
 		exclusions = AyuDatabase::getExcludedByDialogId(dialogId.value());
 	} else {
 		filters = AyuDatabase::getShared();
+	}
 
-		// remove shared filters that already excluded for that peer exclusion
-		if (dialogId.has_value() && _controller->showExclude.has_value() && !_controller->showExclude.value()) {
-			const auto excludedForDialogId = AyuDatabase::getExcludedByDialogId(dialogId.value());
+	// 共享规则里去掉已对该对话排除的项。
+	if (dialogId.has_value() && exclude.has_value() && !*exclude) {
+		const auto excludedForDialogId = AyuDatabase::getExcludedByDialogId(dialogId.value());
 
-			auto rangeToRemove = std::ranges::remove_if(
-				filters,
-				[&](const RegexFilter &filter)
-				{
-					for (const auto &excluded : excludedForDialogId) {
-						if (excluded == filter) {
-							return true;
-						}
-					}
-					return false;
-				});
-			filters.erase(rangeToRemove.begin(), rangeToRemove.end());
-		}
+		auto rangeToRemove = std::ranges::remove_if(
+			filters,
+			[&](const RegexFilter &filter)
+			{
+				return ranges::contains(excludedForDialogId, filter);
+			});
+		filters.erase(rangeToRemove.begin(), rangeToRemove.end());
 	}
 
 	if (!filters.empty()) {
