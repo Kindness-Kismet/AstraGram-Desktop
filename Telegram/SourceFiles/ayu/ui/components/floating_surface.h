@@ -27,8 +27,10 @@ struct FloatingSurfaceStyle {
 
 // 聊天磨砂表面统一沿用输入框配色，关闭聊天背景时改用扁平配色。
 [[nodiscard]] QColor ChatSurfaceBackground();
-[[nodiscard]] QColor ChatSurfaceBackgroundOver();
 [[nodiscard]] QColor ChatSurfaceBorder();
+
+// 悬停时在表面上叠加半透明前景色，深浅主题下都能看清，磨砂仍可透出。
+[[nodiscard]] QColor ChatSurfaceHover();
 
 class FloatingSurface final : public QGraphicsEffect {
 public:

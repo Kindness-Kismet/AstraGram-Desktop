@@ -13,6 +13,11 @@
 #include <utility>
 
 namespace AyuUi {
+namespace {
+
+constexpr auto kHoverOpacity = 0.08;
+
+} // namespace
 
 QColor ChatSurfaceBackground() {
 	return (AyuSettings::getInstance().disableChatBackground()
@@ -20,17 +25,16 @@ QColor ChatSurfaceBackground() {
 		: st::historyComposeAreaBg)->c;
 }
 
-// 扁平配色的常态底色已是 windowBgOver，悬停再加深一级才能区分。
-QColor ChatSurfaceBackgroundOver() {
-	return (AyuSettings::getInstance().disableChatBackground()
-		? st::windowBgRipple
-		: st::historyComposeButtonBgOver)->c;
-}
-
 QColor ChatSurfaceBorder() {
 	return (AyuSettings::getInstance().disableChatBackground()
 		? st::filterInputBorderFg
 		: st::windowDividerFg)->c;
+}
+
+QColor ChatSurfaceHover() {
+	auto result = st::windowFg->c;
+	result.setAlphaF(kHoverOpacity);
+	return result;
 }
 
 void FloatingSurface::attach(QWidget *widget, FloatingSurfaceStyle style) {

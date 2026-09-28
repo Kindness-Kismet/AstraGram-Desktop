@@ -447,12 +447,7 @@ HistoryWidget::HistoryWidget(
 			std::pair{ _discuss.data(), u"chatAction.discuss"_q },
 			std::pair{ _reportMessages.data(), u"chatAction.report"_q } }) {
 		button->setObjectName(name);
-		Ui::ApplyChatControlSurface(
-			button, st::historyComposeCapsuleRadius, true, [=] {
-				return button->isOver()
-					? AyuUi::ChatSurfaceBackgroundOver()
-					: AyuUi::ChatSurfaceBackground();
-			});
+		Ui::ApplyChatControlSurface(button, st::historyComposeCapsuleRadius);
 	}
 	_botStart->setAcceptBoth(true);
 	_botStart->clicks() | rpl::on_next(

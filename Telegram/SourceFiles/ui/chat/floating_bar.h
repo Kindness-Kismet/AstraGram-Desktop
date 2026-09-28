@@ -70,19 +70,18 @@ inline void ApplyChatControlSurface(
 	});
 }
 
-// 独立控件保留底色；已处于公共表面的子控件只画交互反馈。
+// 没有磨砂背景时保留原底色；磨砂表面的底色由表面绘制，控件只叠加悬停层。
 inline void PaintChatBar(
 		QPainter &p,
 		QWidget *widget,
 		const QRect &rect,
 		const QColor &fill,
-		QColor hover = {}) {
+		const QColor &hover = {}) {
 	const auto surface = AyuUi::FloatingSurface::find(widget);
 	if (!surface || !surface->hasBackdrop()) {
 		p.fillRect(rect, hover.isValid() ? hover : fill);
-	} else if (surface->widget() != widget && hover.isValid() && hover != fill) {
-		hover.setAlphaF(hover.alphaF() * 0.16);
-		p.fillRect(rect, hover);
+	} else if (hover.isValid() && hover != fill) {
+		p.fillRect(rect, AyuUi::ChatSurfaceHover());
 	}
 }
 
