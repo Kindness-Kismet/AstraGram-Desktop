@@ -153,13 +153,7 @@ struct ResolvedSetting {
 		if (!entry.section) {
 			continue;
 		}
-		if (entry.id == controlId) {
-			return {
-				.controlId = entry.id,
-				.section = entry.section,
-			};
-		}
-		if (entry.altIds.contains(controlId)) {
+		if (entry.id == controlId || entry.altIds.contains(controlId)) {
 			return {
 				.controlId = entry.id,
 				.section = entry.section,

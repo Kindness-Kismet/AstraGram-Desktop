@@ -138,12 +138,12 @@ void GhostModeAccountSettings::setGhostModeEnabled(bool val) {
 	if (!_sendOfflinePacketAfterOnlineLocked.current()) _sendOfflinePacketAfterOnline = val;
 	AyuSettings::save();
 
-	if (val) {
-		if (const auto window = Core::App().activeWindow()) {
-			if (const auto session = window->maybeSession()) {
-				AyuWorker::markAsOnline(session);
-			}
-		}
+	if (!val) {
+		return;
+	}
+	const auto window = Core::App().activeWindow();
+	if (const auto session = window ? window->maybeSession() : nullptr) {
+		AyuWorker::markAsOnline(session);
 	}
 }
 

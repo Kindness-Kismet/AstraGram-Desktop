@@ -509,12 +509,11 @@ QString FilterUtils::exportFilters() {
 		if (!item.dialogId.has_value()) {
 			continue;
 		}
-		if (const auto peer = LoadedPeerFromDialogId(&session->data(), item.dialogId.value())) {
-			if (!peer->username().isEmpty()) {
-				QString key = QString::number(item.dialogId.value());
-				peers[key] = peer->username();
-			}
+		const auto peer = LoadedPeerFromDialogId(&session->data(), item.dialogId.value());
+		if (!peer || peer->username().isEmpty()) {
+			continue;
 		}
+		peers[QString::number(item.dialogId.value())] = peer->username();
 	}
 	jsonObject["peers"] = peers;
 
@@ -526,6 +525,147 @@ QString FilterUtils::exportFilters() {
 
 // for compatibility with Android version
 
+namespace {
+
+[[nodiscard]] int regularMessageType(not_null<const HistoryItem*> item) {
+	if (item->richPage()) {
+		return 36; // TYPE_ARTICLE
+	}
+	const auto media = item->media();
+	if (!media) {
+		return item->isOnlyEmojiAndSpaces()
+			? 19 // TYPE_EMOJIS
+			: 0; // TYPE_TEXT
+	}
+	if (const auto invoice = media->invoice()) {
+		if (invoice->isPaidMedia) {
+			return 29; // TYPE_PAID_MEDIA
+		}
+		if (Data::HasUnpaidMedia(*invoice)) {
+			return 20; // TYPE_EXTENDED_MEDIA_PREVIEW
+		}
+	}
+	if (media->giveawayStart()) {
+		return 26; // TYPE_GIVEAWAY
+	}
+	if (media->giveawayResults()) {
+		return 28; // TYPE_GIVEAWAY_RESULTS
+	}
+	if (dynamic_cast<Data::MediaDice*>(media)) {
+		return 15; // TYPE_ANIMATED_STICKER
+	}
+	if (media->photo()) {
+		return 1; // TYPE_PHOTO
+	}
+	if (media->location()) {
+		return 4; // TYPE_GEO
+	}
+	if (media->sharedContact()) {
+		return 12; // TYPE_CONTACT
+	}
+	if (media->poll() || media->todolist()) {
+		return 17; // TYPE_POLL
+	}
+	if (media->storyId().valid()) {
+		if (media->storyMention()) {
+			return 24; // TYPE_STORY_MENTION
+		}
+		return 23; // TYPE_STORY
+	}
+	if (const auto document = media->document()) {
+		if (document->round()) {
+			return 5; // TYPE_ROUND_VIDEO
+		}
+		if (document->isVideoFile()) {
+			return 3; // TYPE_VIDEO
+		}
+		if (document->isVoiceMessage()) {
+			return 2; // TYPE_VOICE
+		}
+		if (document->isAudioFile()) {
+			return 14; // TYPE_MUSIC
+		}
+		if (document->isAnimation()) {
+			return 8; // TYPE_GIF
+		}
+		if (document->sticker()) {
+			if (document->isAnimation()) {
+				return 15; // TYPE_ANIMATED_STICKER
+			}
+			return 13; // TYPE_STICKER
+		}
+		return 9; // TYPE_FILE
+	}
+	// 游戏、账单、网页预览等其余媒体按文本处理。
+	return 0; // TYPE_TEXT
+}
+
+// 未列出的服务消息媒体返回空，交给服务消息组件继续判断。
+[[nodiscard]] std::optional<int> serviceMediaType(
+		not_null<const HistoryItem*> item,
+		not_null<Data::Media*> media) {
+	if (media->call()) {
+		return 16; // TYPE_PHONE_CALL
+	}
+	if (media->photo()) {
+		return item->isUserpicSuggestion()
+			? 21 // TYPE_SUGGEST_PHOTO
+			: 11; // TYPE_ACTION_PHOTO
+	}
+	if (media->paper()) {
+		return 22; // TYPE_ACTION_WALLPAPER
+	}
+	const auto gift = media->gift();
+	if (!gift) {
+		return std::nullopt;
+	}
+	if (gift->type == Data::GiftType::Premium) {
+		return gift->channel
+			? 25 // TYPE_GIFT_PREMIUM_CHANNEL
+			: 18; // TYPE_GIFT_PREMIUM
+	}
+	if (gift->type == Data::GiftType::Credits
+		|| gift->type == Data::GiftType::StarGift
+		|| gift->type == Data::GiftType::Ton) {
+		return 30; // TYPE_GIFT_STARS
+	}
+	if (gift->type == Data::GiftType::ChatTheme) {
+		return 31; // TYPE_GIFT_THEME_UPDATE
+	}
+	if (gift->type == Data::GiftType::BirthdaySuggest) {
+		return 32; // TYPE_SUGGEST_BIRTHDAY
+	}
+	if (gift->type == Data::GiftType::GiftOffer) {
+		return 33; // TYPE_GIFT_OFFER
+	}
+	return std::nullopt;
+}
+
+[[nodiscard]] int serviceMessageType(not_null<const HistoryItem*> item) {
+	const auto media = item->media();
+	if (const auto type = media ? serviceMediaType(item, media) : std::nullopt) {
+		return *type;
+	}
+	if (item->Get<HistoryServiceGiveawayResults>()) {
+		return 28; // TYPE_GIVEAWAY_RESULTS
+	}
+	if (item->Get<HistoryServiceNoForwardsRequest>()) {
+		return 35; // TYPE_SHARING_OFFER
+	}
+	if (item->Get<HistoryServiceCommunityAdded>()) {
+		return 37; // TYPE_COMMUNITY_CHANGED
+	}
+	if (const auto finish = item->Get<HistoryServiceSuggestFinish>();
+		finish
+		&& finish->refundType != SuggestRefundType::None
+		&& !finish->price.empty()) {
+		return 34; // TYPE_GIFT_OFFER_REJECTED
+	}
+	return 10; // TYPE_DATE
+}
+
+} // namespace
+
 int typeOfMessage(const HistoryItem *item) {
 	if (item->isSponsored()) {
 		return 0; // TYPE_TEXT
@@ -535,151 +675,23 @@ int typeOfMessage(const HistoryItem *item) {
 		return 27; // TYPE_JOINED_CHANNEL
 	}
 
-	if (!item->isService()) {
-		if (item->richPage()) {
-			return 36; // TYPE_ARTICLE
-		}
-		if (const auto media = item->media()) {
-			if (const auto invoice = media->invoice()) {
-				if (invoice->isPaidMedia) {
-					return 29; // TYPE_PAID_MEDIA
-				}
-				if (Data::HasUnpaidMedia(*invoice)) {
-					return 20; // TYPE_EXTENDED_MEDIA_PREVIEW
-				}
-			}
-			if (media->giveawayStart()) {
-				return 26; // TYPE_GIVEAWAY
-			}
-			if (media->giveawayResults()) {
-				return 28; // TYPE_GIVEAWAY_RESULTS
-			}
-			if (dynamic_cast<Data::MediaDice*>(media)) {
-				return 15; // TYPE_ANIMATED_STICKER
-			}
-			if (media->photo()) {
-				return 1; // TYPE_PHOTO
-			}
-			if (media->location()) {
-				return 4; // TYPE_GEO
-			}
-			if (media->sharedContact()) {
-				return 12; // TYPE_CONTACT
-			}
-			if (media->poll() || media->todolist()) {
-				return 17; // TYPE_POLL
-			}
-			if (media->storyId().valid()) {
-				if (media->storyMention()) {
-					return 24; // TYPE_STORY_MENTION
-				}
-				return 23; // TYPE_STORY
-			}
-			if (const auto document = media->document()) {
-				if (document->round()) {
-					return 5; // TYPE_ROUND_VIDEO
-				}
-				if (document->isVideoFile()) {
-					return 3; // TYPE_VIDEO
-				}
-				if (document->isVoiceMessage()) {
-					return 2; // TYPE_VOICE
-				}
-				if (document->isAudioFile()) {
-					return 14; // TYPE_MUSIC
-				}
-				if (document->isAnimation()) {
-					return 8; // TYPE_GIF
-				}
-				if (document->sticker()) {
-					if (document->isAnimation()) {
-						return 15; // TYPE_ANIMATED_STICKER
-					}
-					return 13; // TYPE_STICKER
-				}
-				return 9; // TYPE_FILE
-			}
-			if (media->game() || media->invoice() || media->webpage()) {
-				return 0; // TYPE_TEXT
-			}
-		} else {
-			if (item->isOnlyEmojiAndSpaces()) {
-				return 19; // TYPE_EMOJIS
-			}
-			return 0; // TYPE_TEXT
-		}
-	} else {
-		if (const auto media = item->media()) {
-			if (media->call()) {
-				return 16; // TYPE_PHONE_CALL
-			}
-			if (media->photo() && !item->isUserpicSuggestion()) {
-				return 11; // TYPE_ACTION_PHOTO
-			}
-			if (media->photo() && item->isUserpicSuggestion()) {
-				return 21; // TYPE_SUGGEST_PHOTO
-			}
-			if (media->paper()) {
-				return 22; // TYPE_ACTION_WALLPAPER
-			}
-			if (const auto gift = media->gift()) {
-				if (gift->type == Data::GiftType::Premium) {
-					if (gift->channel) {
-						return 25; // TYPE_GIFT_PREMIUM_CHANNEL
-					}
-					return 18; // TYPE_GIFT_PREMIUM
-				}
-				if (gift->type == Data::GiftType::Credits
-					|| gift->type == Data::GiftType::StarGift
-					|| gift->type == Data::GiftType::Ton) {
-					return 30; // TYPE_GIFT_STARS
-				}
-				if (gift->type == Data::GiftType::ChatTheme) {
-					return 31; // TYPE_GIFT_THEME_UPDATE
-				}
-				if (gift->type == Data::GiftType::BirthdaySuggest) {
-					return 32; // TYPE_SUGGEST_BIRTHDAY
-				}
-				if (gift->type == Data::GiftType::GiftOffer) {
-					return 33; // TYPE_GIFT_OFFER
-				}
-			}
-		}
-		if (item->Get<HistoryServiceGiveawayResults>()) {
-			return 28; // TYPE_GIVEAWAY_RESULTS
-		}
-		if (item->Get<HistoryServiceNoForwardsRequest>()) {
-			return 35; // TYPE_SHARING_OFFER
-		}
-		if (item->Get<HistoryServiceCommunityAdded>()) {
-			return 37; // TYPE_COMMUNITY_CHANGED
-		}
-		if (const auto finish = item->Get<HistoryServiceSuggestFinish>();
-			finish
-			&& finish->refundType != SuggestRefundType::None
-			&& !finish->price.empty()) {
-			return 34; // TYPE_GIFT_OFFER_REJECTED
-		}
-		return 10; // TYPE_DATE
-	}
-	return 0; // TYPE_TEXT
+	return item->isService()
+		? serviceMessageType(item)
+		: regularMessageType(item);
 }
 
 QString extractSingle(const not_null<HistoryItem*> item) {
 	const auto original = item->originalText();
 	QString text(original.text);
-	if (!original.entities.empty()) {
-		for (const auto &entity : original.entities) {
-			if (entity.type() == EntityType::Url) {
-				text.append("\n");
-				text.append(original.text.mid(entity.offset(), entity.length()));
-			} else if (entity.type() == EntityType::CustomUrl) {
-				text.append("\n");
-				text.append(entity.data());
-			}
+	for (const auto &entity : original.entities) {
+		if (entity.type() == EntityType::Url) {
+			text.append("\n");
+			text.append(original.text.mid(entity.offset(), entity.length()));
+		} else if (entity.type() == EntityType::CustomUrl) {
+			text.append("\n");
+			text.append(entity.data());
 		}
 	}
-
 	return text;
 }
 
@@ -696,13 +708,12 @@ QString FilterUtils::extractAllText(const not_null<HistoryItem*> item, const Dat
 		text = extractSingle(item).trimmed();
 	}
 
-	if (const auto markup = item->Get<HistoryMessageReplyMarkup>()) {
-		if (!markup->data.isNull()) {
-			for (const auto &row : markup->data.rows) {
-				for (const auto &button : row) {
-					text.append("<button>").append(button.text).append(" ").append(qs(button.data)).append("</button>");
-					text.append("\n");
-				}
+	const auto markup = item->Get<HistoryMessageReplyMarkup>();
+	if (markup && !markup->data.isNull()) {
+		for (const auto &row : markup->data.rows) {
+			for (const auto &button : row) {
+				text.append("<button>").append(button.text).append(" ").append(qs(button.data)).append("</button>");
+				text.append("\n");
 			}
 		}
 	}
@@ -726,6 +737,24 @@ void FilterUtils::gotFailure(const QNetworkReply::NetworkError &error) {
 	Ui::Toast::Show(tr::ayu_FiltersToastFailFetch(tr::now));
 }
 
+namespace {
+
+// 在所有已登录账号里查找已加载的会话，找不到返回空。
+[[nodiscard]] PeerData *findLoadedPeer(ID dialogId) {
+	for (const auto &[index, account] : Core::App().domain().accounts()) {
+		const auto session = account->maybeSession();
+		if (!session) {
+			continue;
+		}
+		if (const auto peer = LoadedPeerFromDialogId(&session->data(), dialogId)) {
+			return peer;
+		}
+	}
+	return nullptr;
+}
+
+} // namespace
+
 ApplyChanges FilterUtils::prepareChanges(const QJsonObject &root) {
 	const auto version = root.value("version");
 
@@ -745,139 +774,101 @@ ApplyChanges FilterUtils::prepareChanges(const QJsonObject &root) {
 	std::vector<QString> peersToBeResolved;
 
 
-	if (const auto &filters = root.value("filters").toArray(); !filters.isEmpty()) {
-		for (const auto &filterRef : filters) {
-			if (const auto filter = filterRef.toObject(); !filter.isEmpty()) {
-				RegexFilter regex;
-				regex.caseInsensitive = filter.value("caseInsensitive").toBool();
+	for (const auto &filterRef : root.value("filters").toArray()) {
+		const auto filter = filterRef.toObject();
+		if (filter.isEmpty()) {
+			continue;
+		}
+		RegexFilter regex;
+		regex.caseInsensitive = filter.value("caseInsensitive").toBool();
 
-				const auto dialogIdValue = filter.value("dialogId");
-				if (!dialogIdValue.isNull()) {
-					regex.dialogId = filter.value("dialogId").toVariant().toLongLong();
-				} else {
-					regex.dialogId = std::nullopt;
-				}
-				regex.enabled = filter.value("enabled").toBool();
+		const auto dialogIdValue = filter.value("dialogId");
+		if (!dialogIdValue.isNull()) {
+			regex.dialogId = filter.value("dialogId").toVariant().toLongLong();
+		} else {
+			regex.dialogId = std::nullopt;
+		}
+		regex.enabled = filter.value("enabled").toBool();
 
-				regex.id = ParseFilterId(filter.value("id").toString());
-				if (regex.id.empty()) {
-					continue;
-				}
+		regex.id = ParseFilterId(filter.value("id").toString());
+		if (regex.id.empty()) {
+			continue;
+		}
 
-				regex.reversed = filter.value("reversed").toBool();
-				regex.text = filter.value("text").toString().toStdString();
+		regex.reversed = filter.value("reversed").toBool();
+		regex.text = filter.value("text").toString().toStdString();
 
-
-				auto it = std::ranges::find_if(existingFilters,
-											   [&regex](const RegexFilter &f)
-											   {
-												   return f.id == regex.id;
-											   });
-				if (it != existingFilters.end()) {
-					const RegexFilter &existing = *it;
-					if (existing != regex) {
-						filtersOverrides.push_back(std::move(regex));
-					}
-				} else {
-					newFilters[regex.id] = std::move(regex);
-				}
-			}
+		const auto it = std::ranges::find_if(
+			existingFilters,
+			[&regex](const RegexFilter &f) { return f.id == regex.id; });
+		if (it == existingFilters.end()) {
+			newFilters[regex.id] = std::move(regex);
+		} else if (*it != regex) {
+			filtersOverrides.push_back(std::move(regex));
 		}
 	}
 
-	if (const auto exclusions = root.value("exclusions").toArray(); !exclusions.isEmpty()) {
-		for (const auto &exclusionRef : exclusions) {
-			if (const auto exclusion = exclusionRef.toObject(); !exclusion.isEmpty()) {
-				RegexFilterGlobalExclusion regex;
-
-				regex.dialogId = exclusion.value("dialogId").toVariant().toLongLong();
-
-				regex.filterId = ParseFilterId(exclusion.value("filterId").toString());
-				if (regex.filterId.empty()) {
-					continue;
-				}
-
-				auto it = std::ranges::find_if(
-					existingExclusions,
-					[&regex](const RegexFilterGlobalExclusion &f)
-					{
-						return f.dialogId == regex.dialogId && f.filterId == regex.filterId;
-					});
-
-				if (it == existingExclusions.end()) {
-					newExclusions.push_back(std::move(regex));
-				}
-			}
+	for (const auto &exclusionRef : root.value("exclusions").toArray()) {
+		const auto exclusion = exclusionRef.toObject();
+		if (exclusion.isEmpty()) {
+			continue;
+		}
+		RegexFilterGlobalExclusion regex;
+		regex.dialogId = exclusion.value("dialogId").toVariant().toLongLong();
+		regex.filterId = ParseFilterId(exclusion.value("filterId").toString());
+		if (regex.filterId.empty()) {
+			continue;
+		}
+		const auto exists = std::ranges::any_of(
+			existingExclusions,
+			[&regex](const RegexFilterGlobalExclusion &f) {
+				return f.dialogId == regex.dialogId && f.filterId == regex.filterId;
+			});
+		if (!exists) {
+			newExclusions.push_back(std::move(regex));
 		}
 	}
 
-	if (const auto removeFiltersByIdJson = root.value("removeFiltersById").toArray(); !removeFiltersByIdJson.
-		isEmpty()) {
-		for (const auto &filterRef : removeFiltersByIdJson) {
-			const auto filterId = ParseFilterId(filterRef.toString());
-			if (filterId.empty()) {
-				continue;
-			}
-
-			const auto exists = std::ranges::any_of(
-				existingFilters,
-				[&](const RegexFilter &f)
-				{
-					return f.id == filterId;
-				});
-			if (exists) {
-				removeFiltersById.push_back(filterId);
-			}
+	for (const auto &filterRef : root.value("removeFiltersById").toArray()) {
+		const auto filterId = ParseFilterId(filterRef.toString());
+		if (filterId.empty()) {
+			continue;
+		}
+		const auto exists = std::ranges::any_of(
+			existingFilters,
+			[&](const RegexFilter &f) { return f.id == filterId; });
+		if (exists) {
+			removeFiltersById.push_back(filterId);
 		}
 	}
 
-	if (const auto removeExclusionsJson = root.value("removeExclusions").toArray(); !removeExclusionsJson.isEmpty()) {
-		for (const auto &exclusionRef : removeExclusionsJson) {
-			const auto exclusionObj = exclusionRef.toObject();
-			const qint64 dialogId = exclusionObj.value("dialogId").toVariant().toLongLong();
-
-			const auto filterId = ParseFilterId(exclusionObj.value("filterId").toString());
-			if (filterId.empty()) {
-				continue;
-			}
-
-			const bool exists = std::ranges::any_of(
-				existingExclusions,
-				[&](const RegexFilterGlobalExclusion &x)
-				{
-					return x.filterId == filterId && x.dialogId == dialogId;
-				});
-
-			if (exists) {
-				RegexFilterGlobalExclusion regex;
-				regex.dialogId = dialogId;
-				regex.filterId = filterId;
-				removeExclusions.push_back(regex);
-			}
+	for (const auto &exclusionRef : root.value("removeExclusions").toArray()) {
+		const auto exclusionObj = exclusionRef.toObject();
+		const qint64 dialogId = exclusionObj.value("dialogId").toVariant().toLongLong();
+		const auto filterId = ParseFilterId(exclusionObj.value("filterId").toString());
+		if (filterId.empty()) {
+			continue;
 		}
+		const auto exists = std::ranges::any_of(
+			existingExclusions,
+			[&](const RegexFilterGlobalExclusion &x) {
+				return x.filterId == filterId && x.dialogId == dialogId;
+			});
+		if (!exists) {
+			continue;
+		}
+		RegexFilterGlobalExclusion regex;
+		regex.dialogId = dialogId;
+		regex.filterId = filterId;
+		removeExclusions.push_back(regex);
 	}
 
-	if (const auto peersJson = root.value("peers").toObject(); !peersJson.isEmpty()) {
-		for (const auto &dialogIdStr : peersJson.keys()) {
-			bool parsed;
-			const auto dialogId = dialogIdStr.toLongLong(&parsed);
-
-			PeerData *peerMaybe = nullptr;
-			if (parsed) {
-				for (const auto &[index, account] : Core::App().domain().accounts()) {
-					if (const auto session = account->maybeSession()) {
-						if (const auto peer = LoadedPeerFromDialogId(&session->data(), dialogId)) {
-							peerMaybe = peer;
-							break;
-						}
-					}
-				}
-			}
-
-			if (!peerMaybe) {
-				const auto resolverHint = peersJson.value(dialogIdStr).toString();
-				peersToBeResolved.push_back(resolverHint);
-			}
+	const auto peersJson = root.value("peers").toObject();
+	for (const auto &dialogIdStr : peersJson.keys()) {
+		auto parsed = false;
+		const auto dialogId = dialogIdStr.toLongLong(&parsed);
+		if (!parsed || !findLoadedPeer(dialogId)) {
+			peersToBeResolved.push_back(peersJson.value(dialogIdStr).toString());
 		}
 	}
 
@@ -895,37 +886,22 @@ ApplyChanges FilterUtils::prepareChanges(const QJsonObject &root) {
 }
 
 void FilterUtils::applyChanges(const ApplyChanges &changes) {
-	if (!changes.newFilters.empty()) {
-		for (const auto &filter : changes.newFilters) {
-			AyuDatabase::addRegexFilter(filter);
-		}
+	for (const auto &filter : changes.newFilters) {
+		AyuDatabase::addRegexFilter(filter);
 	}
-
-	if (!changes.removeFiltersById.empty()) {
-		for (const auto &id : changes.removeFiltersById) {
-			AyuDatabase::deleteExclusionsByFilterId(id);
-			AyuDatabase::deleteFilter(id);
-		}
+	for (const auto &id : changes.removeFiltersById) {
+		AyuDatabase::deleteExclusionsByFilterId(id);
+		AyuDatabase::deleteFilter(id);
 	}
-
-	if (!changes.filtersOverrides.empty()) {
-		for (const auto &filter : changes.filtersOverrides) {
-			AyuDatabase::updateRegexFilter(filter);
-		}
+	for (const auto &filter : changes.filtersOverrides) {
+		AyuDatabase::updateRegexFilter(filter);
 	}
-
-	if (!changes.newExclusions.empty()) {
-		for (const auto &exclusion : changes.newExclusions) {
-			AyuDatabase::addRegexExclusion(exclusion);
-		}
+	for (const auto &exclusion : changes.newExclusions) {
+		AyuDatabase::addRegexExclusion(exclusion);
 	}
-
-	if (!changes.removeExclusions.empty()) {
-		for (const auto &exclusion : changes.removeExclusions) {
-			AyuDatabase::deleteExclusion(exclusion.dialogId, exclusion.filterId);
-		}
+	for (const auto &exclusion : changes.removeExclusions) {
+		AyuDatabase::deleteExclusion(exclusion.dialogId, exclusion.filterId);
 	}
-
 	if (!changes.peersToBeResolved.empty()) {
 		ResolveFilterBackupPeers(changes.peersToBeResolved);
 	}

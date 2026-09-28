@@ -32,14 +32,16 @@ Failure transparencyFailure() {
 	HIGHCONTRASTW contrast{ sizeof(HIGHCONTRASTW) };
 	if (!SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0)) {
 		return { "high-contrast-query", GetLastError() };
-	} else if (contrast.dwFlags & HCF_HIGHCONTRASTON) {
+	}
+	if (contrast.dwFlags & HCF_HIGHCONTRASTON) {
 		return { "high-contrast-enabled" };
 	}
 	BOOL composition = FALSE;
 	const auto hr = DwmIsCompositionEnabled(&composition);
 	if (FAILED(hr)) {
 		return { "composition-query", hr };
-	} else if (!composition) {
+	}
+	if (!composition) {
 		return { "composition-disabled" };
 	}
 	DWORD enabled = 1;
@@ -50,7 +52,8 @@ Failure transparencyFailure() {
 		L"EnableTransparency", RRF_RT_REG_DWORD, nullptr, &enabled, &size);
 	if (result == ERROR_FILE_NOT_FOUND) {
 		return {};
-	} else if (result != ERROR_SUCCESS) {
+	}
+	if (result != ERROR_SUCCESS) {
 		return { "transparency-query", result };
 	}
 	return enabled ? Failure() : Failure{ "transparency-disabled" };
@@ -148,7 +151,8 @@ private:
 		}
 		if (window->format().alphaBufferSize() <= 0) {
 			return { "alpha-buffer-missing" };
-		} else if (window->opacity() != 1.
+		}
+		if (window->opacity() != 1.
 			|| window->flags().testFlag(Qt::WindowTransparentForInput)) {
 			return { "layered-window-required" };
 		}
@@ -175,7 +179,8 @@ private:
 			const auto actual = GetWindowLongPtrW(_handle, GWL_EXSTYLE);
 			if (!actual && GetLastError() != ERROR_SUCCESS) {
 				return { "verify-window-style", GetLastError() };
-			} else if (actual & WS_EX_LAYERED) {
+			}
+			if (actual & WS_EX_LAYERED) {
 				return { "layered-style-remained" };
 			}
 			_frameChangePending = false;

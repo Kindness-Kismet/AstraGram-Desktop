@@ -323,12 +323,13 @@ void pruneBlocks(not_null<Main::Session*> session, std::vector<Block> &blocks, c
 void pruneBlocks(not_null<Main::Session*> session, std::vector<Block> &blocks, const RichMedia &remap) {
 	auto write = blocks.begin();
 	for (auto read = blocks.begin(); read != blocks.end(); ++read) {
-		if (prepareBlock(session, *read, remap)) {
-			if (write != read) {
-				*write = std::move(*read);
-			}
-			++write;
+		if (!prepareBlock(session, *read, remap)) {
+			continue;
 		}
+		if (write != read) {
+			*write = std::move(*read);
+		}
+		++write;
 	}
 	blocks.erase(write, blocks.end());
 }

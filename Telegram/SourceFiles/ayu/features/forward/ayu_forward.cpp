@@ -55,6 +55,9 @@ std::pair<QString, QString> stateName(const PeerId &id) {
 	}
 
 	const auto state = fwState->second;
+	if (state->state == ForwardState::State::Downloading) {
+		return std::make_pair(tr::ayu_AyuForwardStatusLoadingMedia(tr::now), QString());
+	}
 
 	QString messagesString = tr::ayu_AyuForwardStatusSentCount(tr::now,
 															   lt_count1,
@@ -78,8 +81,6 @@ std::pair<QString, QString> stateName(const PeerId &id) {
 
 	if (state->state == ForwardState::State::Preparing) {
 		status = tr::ayu_AyuForwardStatusPreparing(tr::now);
-	} else if (state->state == ForwardState::State::Downloading) {
-		return std::make_pair(tr::ayu_AyuForwardStatusLoadingMedia(tr::now), "");
 	} else if (state->state == ForwardState::State::Sending) {
 		status = tr::ayu_AyuForwardStatusForwarding(tr::now);
 	} else {
@@ -166,19 +167,21 @@ void sendMedia(
 
 	auto mediaType = [&]
 	{
-		if (const auto document = primaryMedia->document()) {
-			if (document->isVoiceMessage()) {
-				return SendMediaType::Audio;
-			} else if (document->isVideoMessage()) {
-				return SendMediaType::Round;
-			} else if (document->isVideoFile() || document->isGifv()) {
-				// to send video as video need to pass it as 'photo'
-				// ref: `void HistoryWidget::sendingFilesConfirmed`
-				return SendMediaType::Photo;
-			}
-			return SendMediaType::File;
+		const auto document = primaryMedia->document();
+		if (!document) {
+			return SendMediaType::Photo;
 		}
-		return SendMediaType::Photo;
+		if (document->isVoiceMessage()) {
+			return SendMediaType::Audio;
+		}
+		if (document->isVideoMessage()) {
+			return SendMediaType::Round;
+		}
+		// 视频按 Photo 类型发送才会保持视频形式，参见 HistoryWidget::sendingFilesConfirmed。
+		if (document->isVideoFile() || document->isGifv()) {
+			return SendMediaType::Photo;
+		}
+		return SendMediaType::File;
 	}();
 
 	if (mediaType == SendMediaType::Round || mediaType == SendMediaType::Audio) {
@@ -347,12 +350,12 @@ void forwardMessages(
 			toBeDownloaded.push_back(item);
 		}
 
-		if (item->groupId()) {
-			const auto currentId = groupIds.find(item->groupId().value);
-
-			if (currentId == groupIds.end()) {
-				groupIds[item->groupId().value] = base::RandomValue<uint64>();
-			}
+		if (!item->groupId()) {
+			continue;
+		}
+		const auto groupId = item->groupId().value;
+		if (!groupIds.contains(groupId)) {
+			groupIds[groupId] = base::RandomValue<uint64>();
 		}
 	}
 	state->totalMessages = items.size();

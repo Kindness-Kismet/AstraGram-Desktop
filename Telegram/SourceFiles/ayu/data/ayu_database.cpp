@@ -179,23 +179,24 @@ void runMigrations(decltype(storage) &storage) {
 	LOG(("Database version: %1. Latest version: %2.").arg(currentVersion).arg(kLatestVersion));
 
 	for (int v = currentVersion + 1; v <= kLatestVersion; ++v) {
-		if (migrations.contains(v)) {
-			try {
-				LOG(("Migration for version: %1").arg(v));
-				storage.begin_transaction();
+		if (!migrations.contains(v)) {
+			continue;
+		}
+		try {
+			LOG(("Migration for version: %1").arg(v));
+			storage.begin_transaction();
 
-				migrations.at(v)(storage);
+			migrations.at(v)(storage);
 
-				storage.update_all(set(c(&SchemaVersion::version) = v), where(c(&SchemaVersion::id) == 1));
-				storage.commit();
-				LOG(("Applied migration for version: %1.").arg(v));
-			} catch (...) {
-				storage.rollback();
-				LOG(("Failed to apply migration for version: %1.").arg(v));
-				AyuDatabase::moveCurrentDatabase();
+			storage.update_all(set(c(&SchemaVersion::version) = v), where(c(&SchemaVersion::id) == 1));
+			storage.commit();
+			LOG(("Applied migration for version: %1.").arg(v));
+		} catch (...) {
+			storage.rollback();
+			LOG(("Failed to apply migration for version: %1.").arg(v));
+			AyuDatabase::moveCurrentDatabase();
 
-				return;
-			}
+			return;
 		}
 	}
 }

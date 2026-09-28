@@ -326,13 +326,12 @@ SavedThemeApplyResult applySavedThemePalette(
 		return SavedThemeApplyResult::Failed;
 	}
 
-	if (const auto fromList = findCloudThemeById(session, shot.cloudThemeId())) {
-		if (tryApplyCloudThemePalette(session, *fromList, palette)) {
-			if (onApplied) {
-				onApplied();
-			}
-			return SavedThemeApplyResult::AppliedSync;
+	const auto fromList = findCloudThemeById(session, shot.cloudThemeId());
+	if (fromList && tryApplyCloudThemePalette(session, *fromList, palette)) {
+		if (onApplied) {
+			onApplied();
 		}
+		return SavedThemeApplyResult::AppliedSync;
 	}
 
 	Data::CloudTheme saved;

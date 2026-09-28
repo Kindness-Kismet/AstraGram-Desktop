@@ -291,11 +291,12 @@ void MultiThreadTranslator::startTranslation(const StartTranslationArgs &args) {
 		};
 
 		const auto reply = state->self->startSingleTranslation(singleArgs);
-		if (!*attemptCompleted) {
-			state->replies[i] = reply;
-			if (!reply && !state->finished) {
-				singleArgs.onFail();
-			}
+		if (*attemptCompleted) {
+			return;
+		}
+		state->replies[i] = reply;
+		if (!reply && !state->finished) {
+			singleArgs.onFail();
 		}
 	};
 

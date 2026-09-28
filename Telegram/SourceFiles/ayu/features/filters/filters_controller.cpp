@@ -122,18 +122,19 @@ bool isBlocked(const not_null<HistoryItem*> item) {
 			return item->from()->asUser()->id != item->history()->peer->id;
 		}
 
-		if (const auto forwarded = item->Get<HistoryMessageForwarded>()) {
-			if (const auto originalSender = forwarded->originalSender) {
-				const auto originalShadowBanned = isShadowBanned(originalSender);
-				if (originalShadowBanned
-					|| (originalSender->isUser()
-						&& originalSender->asUser()->isBlocked())) {
-					shadowBanMatched = originalShadowBanned;
-					return true;
-				}
-			}
+		const auto forwarded = item->Get<HistoryMessageForwarded>();
+		const auto originalSender = forwarded ? forwarded->originalSender : nullptr;
+		if (!originalSender) {
+			return false;
 		}
-		return false;
+		const auto originalShadowBanned = isShadowBanned(originalSender);
+		const auto originalBlocked = originalSender->isUser()
+			&& originalSender->asUser()->isBlocked();
+		if (!originalShadowBanned && !originalBlocked) {
+			return false;
+		}
+		shadowBanMatched = originalShadowBanned;
+		return true;
 	}();
 
 	return settings.filtersEnabled()

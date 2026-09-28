@@ -51,28 +51,28 @@ void runOnce() {
 	const auto t = base::unixtime::now();
 
 	for (const auto &[index, account] : Core::App().domain().accounts()) {
-		if (account) {
-			if (const auto session = account->maybeSession()) {
-				const auto id = session->userId().bare;
-				if (!state.contains(id)) {
-					state[id] = true;
-				}
-
-				const auto &ghost = AyuSettings::ghost(session);
-				if (!ghost.sendOfflinePacketAfterOnline()) {
-					continue;
-				}
-
-				if (state[id] || session->user()->lastseen().isOnline(t)) {
-					session->api().request(MTPaccount_UpdateStatus(
-						MTP_bool(true)
-					)).send();
-					state[id] = false;
-
-					DEBUG_LOG(("[AyuGram] Sent offline for account with id %1").arg(id));
-				}
-			}
+		const auto session = account ? account->maybeSession() : nullptr;
+		if (!session) {
+			continue;
 		}
+		const auto id = session->userId().bare;
+		if (!state.contains(id)) {
+			state[id] = true;
+		}
+
+		const auto &ghost = AyuSettings::ghost(session);
+		if (!ghost.sendOfflinePacketAfterOnline()) {
+			continue;
+		}
+		if (!state[id] && !session->user()->lastseen().isOnline(t)) {
+			continue;
+		}
+		session->api().request(MTPaccount_UpdateStatus(
+			MTP_bool(true)
+		)).send();
+		state[id] = false;
+
+		DEBUG_LOG(("[AyuGram] Sent offline for account with id %1").arg(id));
 	}
 }
 

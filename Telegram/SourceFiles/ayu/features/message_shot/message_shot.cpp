@@ -125,18 +125,17 @@ HistoryView::Context MessageShotDelegate::elementContext() {
 }
 
 bool MessageShotDelegate::elementHideReply(not_null<const HistoryView::Element*> view) {
-	if (const auto reply = view->data()->Get<HistoryMessageReply>()) {
-		const auto replyToPeerId = reply->externalPeerId()
-									   ? reply->externalPeerId()
-									   : _history->peer->id;
-
-		if (reply->fields().manualQuote) {
-			return false;
-		} else if (replyToPeerId == _history->peer->id) {
-			return _history->asForum() && _history->asForum()->topicFor(reply->messageId());
-		}
+	const auto reply = view->data()->Get<HistoryMessageReply>();
+	if (!reply || reply->fields().manualQuote) {
+		return false;
 	}
-	return false;
+	const auto replyToPeerId = reply->externalPeerId()
+		? reply->externalPeerId()
+		: _history->peer->id;
+	if (replyToPeerId != _history->peer->id) {
+		return false;
+	}
+	return _history->asForum() && _history->asForum()->topicFor(reply->messageId());
 }
 
 HistoryView::ElementChatMode MessageShotDelegate::elementChatMode() {
@@ -156,12 +155,13 @@ QImage removeEmptySpaceAround(const QImage &original) {
 
 	for (int x = 0; x < original.width(); ++x) {
 		for (int y = 0; y < original.height(); ++y) {
-			if (qAlpha(original.pixel(x, y)) != 0) {
-				minX = std::min(minX, x);
-				minY = std::min(minY, y);
-				maxX = std::max(maxX, x);
-				maxY = std::max(maxY, y);
+			if (qAlpha(original.pixel(x, y)) == 0) {
+				continue;
 			}
+			minX = std::min(minX, x);
+			minY = std::min(minY, y);
+			maxX = std::max(maxX, x);
+			maxY = std::max(maxY, y);
 		}
 	}
 
@@ -288,16 +288,15 @@ void Make(not_null<QWidget*> box, const ShotConfig &config, const Fn<void(QImage
 				photo->load(origin, LoadFromCloudOrLocal, false);
 			}
 			preload->photos.push_back(std::move(media));
-		} else if (const auto document = message->media()->document()) {
-			if (document->hasThumbnail()) {
-				auto media = document->activeMediaView()
-					? document->activeMediaView()
-					: document->createMediaView();
-				if (!media->thumbnail()) {
-					document->loadThumbnail(origin);
-				}
-				preload->documents.push_back(std::move(media));
+		} else if (const auto document = message->media()->document();
+				document && document->hasThumbnail()) {
+			auto media = document->activeMediaView()
+				? document->activeMediaView()
+				: document->createMediaView();
+			if (!media->thumbnail()) {
+				document->loadThumbnail(origin);
 			}
+			preload->documents.push_back(std::move(media));
 		}
 	}
 
@@ -372,15 +371,14 @@ void Make(not_null<QWidget*> box, const ShotConfig &config, const Fn<void(QImage
 						width,
 						st::msgPhotoSize,
 						context.paused);
-				} else if (const auto info = message->displayHiddenSenderInfo()) {
-					if (info->customUserpic.empty()) {
-						info->emptyUserpic.paintCircle(
-							p,
-							picX,
-							picY,
-							width,
-							st::msgPhotoSize);
-					}
+				} else if (const auto info = message->displayHiddenSenderInfo();
+						info && info->customUserpic.empty()) {
+					info->emptyUserpic.paintCircle(
+						p,
+						picX,
+						picY,
+						width,
+						st::msgPhotoSize);
 				}
 			}
 

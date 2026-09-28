@@ -570,17 +570,12 @@ QString getMediaMime(not_null<HistoryItem*> message) {
 	const auto photo = media->photo();
 
 	if (document) {
-		// any file
 		return document->mimeString();
-	} else if (photo && photo->hasVideo()) {
-		// video
-		return "video/mp4";
-	} else if (photo && !photo->hasVideo()) {
-		// photo
-		return "image/jpeg";
 	}
-
-	return {};
+	if (!photo) {
+		return {};
+	}
+	return photo->hasVideo() ? u"video/mp4"_q : u"image/jpeg"_q;
 }
 
 QString getMediaName(not_null<HistoryItem*> message) {
@@ -618,7 +613,8 @@ QString getMediaResolution(not_null<HistoryItem*> message) {
 
 	if (document) {
 		return formatQSize(document->dimensions);
-	} else if (photo) {
+	}
+	if (photo) {
 		auto result = photo->size(Data::PhotoSize::Large);
 		if (!result.has_value()) {
 			result = photo->size(Data::PhotoSize::Small);
@@ -644,7 +640,8 @@ QString getMediaDC(not_null<HistoryItem*> message) {
 
 	if (document) {
 		return getDCName(document->getDC());
-	} else if (photo) {
+	}
+	if (photo) {
 		return getDCName(photo->getDC());
 	}
 

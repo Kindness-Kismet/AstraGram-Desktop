@@ -105,53 +105,47 @@ mtpRequestId TranslateManager::performTranslation(Builder &req) {
 	const auto toLang = qs(req._toLang);
 	const auto fromLang = QStringLiteral("auto");
 
+	// 命中缓存的直接使用译文，其余记下下标等待翻译。
+	const auto addText = [&](int index, const TextWithEntities &text, const QString &key) {
+		texts.push_back(text);
+		cacheKeys.push_back(key);
+		if (const auto cached = getFromCache(key)) {
+			resultTexts.push_back(cached->translatedText);
+			return;
+		}
+		resultTexts.push_back({});
+		uncachedIndices.push_back(index);
+		uncachedTexts.push_back(text);
+	};
+
+	const auto peerData = req.ids().v.isEmpty()
+		? nullptr
+		: Data::PeerFromInputMTP(&req.session()->data(), req.peer());
 	if (!req.texts().v.isEmpty()) {
 		for (int i = 0; i < req.texts().v.size(); ++i) {
-			const auto text = qs(req.texts().v[i].data().vtext());
-			const auto entities = Api::EntitiesFromMTP(req.session(), req.texts().v[i].data().ventities().v);
-			const auto textWithEntities = TextWithEntities{
-				.text = text,
-				.entities = entities
+			const auto &data = req.texts().v[i].data();
+			const auto text = TextWithEntities{
+				.text = qs(data.vtext()),
+				.entities = Api::EntitiesFromMTP(req.session(), data.ventities().v),
 			};
-			texts.push_back(textWithEntities);
-
-			// todo: entities are not considered in cache key
-			const auto key = generateCacheKey(text, fromLang, toLang);
-			cacheKeys.push_back(key);
-
-			if (const auto cached = getFromCache(key)) {
-				resultTexts.push_back(cached->translatedText);
-			} else {
-				resultTexts.push_back({});
-				uncachedIndices.push_back(i);
-				uncachedTexts.push_back(textWithEntities);
-			}
+			// 缓存键暂不包含实体。
+			addText(i, text, generateCacheKey(text.text, fromLang, toLang));
 		}
-	} else if (!req.ids().v.isEmpty()) {
-		if (const auto peerData = Data::PeerFromInputMTP(&req.session()->data(), req.peer())) {
-			for (int i = 0; i < req.ids().v.size(); ++i) {
-				const auto msgId = req.ids().v[i].v;
-				if (const auto message = req.session()->data().message(peerData->id, msgId)) {
-					const auto textWithEntities = message->originalText();
-					texts.push_back(textWithEntities);
-
-					const auto key = generateMessageCacheKey(peerData->id, msgId, fromLang, toLang);
-					cacheKeys.push_back(key);
-
-					if (const auto cached = getFromCache(key)) {
-						resultTexts.push_back(cached->translatedText);
-					} else {
-						resultTexts.push_back({});
-						uncachedIndices.push_back(i);
-						uncachedTexts.push_back(textWithEntities);
-					}
-				} else {
-					// todo: ??
-					texts.push_back({});
-					cacheKeys.push_back(QString());
-					resultTexts.push_back({});
-				}
+	} else if (peerData) {
+		for (int i = 0; i < req.ids().v.size(); ++i) {
+			const auto msgId = req.ids().v[i].v;
+			const auto message = req.session()->data().message(peerData->id, msgId);
+			if (!message) {
+				// 本地找不到的消息占位，保持下标与请求一致。
+				texts.push_back({});
+				cacheKeys.push_back(QString());
+				resultTexts.push_back({});
+				continue;
 			}
+			addText(
+				i,
+				message->originalText(),
+				generateMessageCacheKey(peerData->id, msgId, fromLang, toLang));
 		}
 	}
 
@@ -181,17 +175,18 @@ mtpRequestId TranslateManager::performTranslation(Builder &req) {
 			resultTexts[index] = translated[i];
 
 			const auto &key = cacheKeys[index];
-			if (!key.isEmpty()) {
-				insertToCache(
-					key,
-					CacheEntry{
-						.originalText = texts[index],
-						.translatedText = translated[i],
-						.fromLang = fromLang,
-						.toLang = toLang
-					}
-				);
+			if (key.isEmpty()) {
+				continue;
 			}
+			insertToCache(
+				key,
+				CacheEntry{
+					.originalText = texts[index],
+					.translatedText = translated[i],
+					.fromLang = fromLang,
+					.toLang = toLang
+				}
+			);
 		}
 
 		auto vec = QVector<MTPTextWithEntities>();

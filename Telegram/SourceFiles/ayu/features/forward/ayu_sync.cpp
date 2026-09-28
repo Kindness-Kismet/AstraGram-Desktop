@@ -97,20 +97,21 @@ void FinishDocumentDownload(
 void ReleaseDocumentDownloadConsumer(
 		DocumentData *document,
 		const std::shared_ptr<ActiveDocumentDownload> &state) {
-	auto released = false;
-	{
+	// 只在持锁期间修改登记表，计数归零后再在锁外唤醒等待方。
+	const auto released = [&] {
 		const auto lock = std::lock_guard(DocumentDownloadsMutex());
 		Expects(state->consumers > 0);
-		--state->consumers;
-		if (state->consumers == 0) {
-			auto &active = DocumentDownloads();
-			const auto i = active.find(document);
-			if (i != active.end() && i->second == state) {
-				active.erase(i);
-				released = true;
-			}
+		if (--state->consumers > 0) {
+			return false;
 		}
-	}
+		auto &active = DocumentDownloads();
+		const auto i = active.find(document);
+		if (i == active.end() || i->second != state) {
+			return false;
+		}
+		active.erase(i);
+		return true;
+	}();
 	if (released) {
 		state->done.countDown();
 	}

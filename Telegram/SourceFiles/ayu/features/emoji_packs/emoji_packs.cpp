@@ -328,11 +328,13 @@ void installPreset(const Preset &preset,
 			file->cancelWriting();
 			done({ .error = ImportError::Write });
 			return;
-		} else if (error == QNetworkReply::OperationCanceledError) {
+		}
+		if (error == QNetworkReply::OperationCanceledError) {
 			file->cancelWriting();
 			done({ .error = ImportError::Cancelled });
 			return;
-		} else if (error != QNetworkReply::NoError
+		}
+		if (error != QNetworkReply::NoError
 			|| !hashOk
 			|| !file->commit()) {
 			file->cancelWriting();
