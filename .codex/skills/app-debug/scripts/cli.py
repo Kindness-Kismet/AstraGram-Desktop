@@ -191,6 +191,7 @@ def register_commands(sub) -> None:
     sub.add_parser("app.check-update", help="触发一次更新检查，结果看 tupdates 目录与日志")
     sub.add_parser("app.update-info", help="查询更新源前缀：文件内容与内存里解析出的地址")
     sub.add_parser("app.help", help="列出服务端已注册的全部指令名")
+    sub.add_parser("player.state", help="查询音乐播放位置、长度、循环模式及当前消息")
 
     command = sub.add_parser("settings.keys", help="列出全部设置键名")
     command.add_argument("prefix", nargs="?")

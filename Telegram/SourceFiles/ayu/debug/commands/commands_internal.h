@@ -36,6 +36,7 @@ using HandlerMap = std::map<QString, Handler>;
 [[nodiscard]] const HandlerMap &FilterHandlers();
 [[nodiscard]] const HandlerMap &FeatureHandlers();
 [[nodiscard]] const HandlerMap &AccountHandlers();
+[[nodiscard]] const HandlerMap &playerHandlers();
 
 // 界面登录入口与命令入口共用同一份本地场景。
 void seedFakeScenarios(not_null<Main::Session*> session);

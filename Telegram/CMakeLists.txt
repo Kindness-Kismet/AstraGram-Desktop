@@ -305,6 +305,7 @@ set(ayugram_files
         ayu/debug/commands/filter_commands.cpp
         ayu/debug/commands/feature_commands.cpp
         ayu/debug/commands/account_commands.cpp
+        ayu/debug/commands/player_commands.cpp
         ayu/debug/commands/ghost_commands.cpp
         ayu/debug/commands/storage_commands.cpp
         ayu/debug/commands/screenshot_commands.cpp

@@ -32,6 +32,8 @@ python .claude/skills/app-debug/scripts/cli.py window.resize 1300 900 + screensh
 python .claude/skills/app-debug/scripts/cli.py window.maximize true + screenshot.take
 ```
 
+`player.state` 查询当前音乐的 `messageId`、播放状态 `playing`、位置 `position`、长度 `length`、时间单位 `frequency` 和循环模式 `repeat`（0 关闭、1 单曲、2 列表）。连续采样可验证自然结束后的重播，控制操作仍通过播放器控件执行。
+
 ## CLI 本地指令
 
 不进服务端，由 CLI 自己完成。

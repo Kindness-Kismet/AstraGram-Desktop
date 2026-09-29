@@ -53,6 +53,7 @@ namespace {
 			&Commands::FilterHandlers(),
 			&Commands::FeatureHandlers(),
 			&Commands::AccountHandlers(),
+			&Commands::playerHandlers(),
 		}) {
 			all.insert(part->begin(), part->end());
 		}
