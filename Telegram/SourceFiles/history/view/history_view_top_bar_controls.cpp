@@ -6,6 +6,7 @@
 #include "ui/widgets/tooltip.h"
 #include "ui/ui_utility.h"
 #include "window/window_session_controller.h"
+#include "styles/style_ayu_styles.h"
 #include "styles/style_chat.h"
 #include "styles/style_dialogs.h"
 #include "styles/style_info.h"
@@ -15,10 +16,46 @@
 namespace HistoryView {
 namespace {
 
+// Ui::InstallTooltip 会忽略样式参数，这里自行指定提示样式。
+class TooltipShower final : public Ui::AbstractTooltipShower {
+public:
+	TooltipShower(not_null<Ui::RpWidget*> widget, Fn<QString()> text)
+	: _widget(widget)
+	, _text(std::move(text)) {
+	}
+
+	QString tooltipText() const override {
+		return _text();
+	}
+	QPoint tooltipPos() const override {
+		return QCursor::pos();
+	}
+	bool tooltipWindowActive() const override {
+		return _widget->window()->isActiveWindow();
+	}
+	const style::Tooltip *tooltipSt() const override {
+		return &st::topBarTooltip;
+	}
+
+private:
+	const not_null<Ui::RpWidget*> _widget;
+	const Fn<QString()> _text;
+
+};
+
 // 提示文字在显示时读取，切换语言后自动更新。
 template <typename Phrase>
 void installTooltip(not_null<Ui::RpWidget*> widget, Phrase phrase) {
-	Ui::InstallTooltip(widget, [=] { return phrase(tr::now); });
+	const auto shower = widget->lifetime().make_state<TooltipShower>(
+		widget,
+		[=] { return phrase(tr::now); });
+	widget->events() | rpl::on_next([=](not_null<QEvent*> e) {
+		if (e->type() == QEvent::Enter) {
+			Ui::Tooltip::Show(1000, shower);
+		} else if (e->type() == QEvent::Leave) {
+			Ui::Tooltip::Hide();
+		}
+	}, widget->lifetime());
 }
 
 } // namespace

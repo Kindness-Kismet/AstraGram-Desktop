@@ -116,6 +116,10 @@ ayuServiceTimeBadgeGap: 8px;
 ayuServiceTimeBadgeTrailingInset: 3px;
 ayuServiceTimeBadgeLastLineWidthAdd: 9px;
 
+// 提示放在鼠标指针下方足够远处，避免被指针遮住。
+topBarTooltip: Tooltip(defaultTooltip) {
+	shift: point(-20px, 32px);
+}
 topBarSelectionForward: IconButton(topBarSearch) {
 	icon: icon {{ "menu/forward", menuIconFg }};
 	iconOver: icon {{ "menu/forward", menuIconFgOver }};
