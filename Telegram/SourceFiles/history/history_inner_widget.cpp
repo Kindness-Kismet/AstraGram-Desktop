@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_inner_widget.h"
 
+#include "ayu/features/message_selection/selection_range.h"
+
 #include "api/api_polls.h"
 #include "chat_helpers/stickers_emoji_pack.h"
 #include "core/application.h"
@@ -5640,6 +5642,8 @@ auto HistoryInner::getSelectionState() const
 			|| AyuForward::isAyuForwardNeeded(forwardItems));
 	result.textSelected = hasSelectedText()
 		&& !_selectedTextSelection.empty();
+	result.canSelectBetween = !hasSelectRestriction()
+		&& AyuFeatures::MessageSelection::findEndpoints(forwardItems).has_value();
 	return result;
 }
 

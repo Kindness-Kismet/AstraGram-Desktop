@@ -174,6 +174,10 @@ PinnedWidget::PinnedWidget(
 	) | rpl::on_next([=] {
 		clearSelected();
 	}, _topBar->lifetime());
+	_topBar->selectBetweenRequest(
+	) | rpl::on_next([=] {
+		_inner->selectItemsBetween();
+	}, _topBar->lifetime());
 	_topBar->searchRequest(
 	) | rpl::on_next([=] {
 		searchInPinned();
@@ -723,6 +727,7 @@ bool PinnedWidget::listIsLessInOrder(
 void PinnedWidget::listSelectionChanged(SelectedItems &&items) {
 	HistoryView::TopBarWidget::SelectedState state;
 	state.count = items.size();
+	state.canSelectBetween = _inner->canSelectItemsBetween();
 	auto forwardItems = HistoryItemsList();
 	forwardItems.reserve(items.size());
 	for (const auto &item : items) {

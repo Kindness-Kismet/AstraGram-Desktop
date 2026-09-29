@@ -554,6 +554,10 @@ ChatWidget::ChatWidget(
 	) | rpl::on_next([=] {
 		clearSelected();
 	}, _topBar->lifetime());
+	_topBar->selectBetweenRequest(
+	) | rpl::on_next([=] {
+		_inner->selectItemsBetween();
+	}, _topBar->lifetime());
 	_topBar->cancelChooseForReportRequest(
 	) | rpl::on_next([=] {
 		this->controller()->clearChooseReportMessages();
@@ -5177,6 +5181,7 @@ bool ChatWidget::listIsLessInOrder(
 void ChatWidget::listSelectionChanged(SelectedItems &&items) {
 	HistoryView::TopBarWidget::SelectedState state;
 	state.count = items.size();
+	state.canSelectBetween = _inner->canSelectItemsBetween();
 	auto forwardItems = HistoryItemsList();
 	forwardItems.reserve(items.size());
 	for (const auto &item : items) {

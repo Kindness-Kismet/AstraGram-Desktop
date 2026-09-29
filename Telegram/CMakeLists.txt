@@ -254,6 +254,8 @@ set(ayugram_files
         ayu/features/message_shot/message_shot_theme_state.h
         ayu/features/delete_messages/delete_own_messages.cpp
         ayu/features/delete_messages/delete_own_messages.h
+        ayu/features/message_selection/selection_range.cpp
+        ayu/features/message_selection/selection_range.h
         ayu/features/forward/ayu_forward.cpp
         ayu/features/forward/ayu_forward.h
         ayu/features/forward/ayu_forward_rich.cpp
@@ -1306,6 +1308,7 @@ PRIVATE
     history/view/history_view_keyboard_text_selection.h
     history/view/history_view_list_widget.cpp
     history/view/history_view_list_widget.h
+    history/view/history_view_list_selection.cpp
     history/view/history_view_message.cpp
     history/view/history_view_message.h
     history/view/history_view_object.h
@@ -1382,6 +1385,7 @@ PRIVATE
     history/history_item_text.h
     history/history_inner_widget.cpp
     history/history_inner_widget.h
+    history/history_inner_widget_selection.cpp
     history/history_inner_widget_accessibility.cpp
     history/history_inner_widget_accessibility.h
     history/history_location_manager.cpp

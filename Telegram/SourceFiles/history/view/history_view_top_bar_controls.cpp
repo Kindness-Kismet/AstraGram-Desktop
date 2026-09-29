@@ -53,6 +53,7 @@ void TopBarWidget::setupSelection() {
 	setup(_sendNow.data(), u"selection.sendNow"_q, tr::lng_selected_send_now, _sendNowSelection);
 	setup(_delete.data(), u"selection.delete"_q, tr::lng_selected_delete, _deleteSelection);
 	setup(_messageShot.data(), u"selection.messageShot"_q, tr::ayu_SelectionMessageShot, _messageShotSelection);
+	setup(_selectBetween.data(), u"selection.between"_q, tr::ayu_SelectBetweenText, _selectBetweenSelection);
 
 	_selectionCount->setAttribute(Qt::WA_TransparentForMouseEvents);
 	_selectionCount->paintRequest() | rpl::on_next([=] {
@@ -81,6 +82,7 @@ void TopBarWidget::updateSelectionGeometry(int selectedButtonsTop) {
 		_sendNow.data(),
 		_delete.data(),
 		_messageShot.data(),
+		_selectBetween.data(),
 	};
 	auto right = width() - st::topBarActionSkip;
 	for (const auto button : buttons | ranges::views::reverse) {
@@ -106,7 +108,8 @@ bool TopBarWidget::showSelectedState() const {
 	const auto &settings = AyuSettings::getInstance();
 
 	return (_selectedCount > 0)
-		&& (_canDelete || _canForward || _canSendNow || settings.showMessageShot());
+		&& (_canDelete || _canForward || _canSendNow
+			|| _canSelectBetween || settings.showMessageShot());
 }
 
 void TopBarWidget::showSelected(SelectedState state) {
@@ -116,12 +119,15 @@ void TopBarWidget::showSelected(SelectedState state) {
 	auto canForward = (state.count > 0 && state.count == state.canForwardCount);
 	auto canSendNow = (state.count > 0 && state.count == state.canSendNowCount);
 	const auto hideNoQuote = state.hideNoQuote;
-	auto count = (!canDelete && !canForward && !canSendNow && !settings.showMessageShot()) ? 0 : state.count;
+	auto canSelectBetween = state.canSelectBetween;
+	auto count = (!canDelete && !canForward && !canSendNow
+		&& !canSelectBetween && !settings.showMessageShot()) ? 0 : state.count;
 	if (_selectedCount == count
 		&& _canDelete == canDelete
 		&& _canForward == canForward
 		&& _canSendNow == canSendNow
-		&& _hideNoQuote == hideNoQuote) {
+		&& _hideNoQuote == hideNoQuote
+		&& _canSelectBetween == canSelectBetween) {
 		return;
 	}
 	if (count == 0) {
@@ -129,18 +135,21 @@ void TopBarWidget::showSelected(SelectedState state) {
 		canDelete = _canDelete;
 		canForward = _canForward;
 		canSendNow = _canSendNow;
+		canSelectBetween = _canSelectBetween;
 	}
 
 	const auto wasSelectedState = showSelectedState();
 	const auto visibilityChanged = (_canDelete != canDelete)
 		|| (_canForward != canForward)
 		|| (_canSendNow != canSendNow)
-		|| (_hideNoQuote != hideNoQuote);
+		|| (_hideNoQuote != hideNoQuote)
+		|| (_canSelectBetween != canSelectBetween);
 	_selectedCount = count;
 	_canDelete = canDelete;
 	_canForward = canForward;
 	_canSendNow = canSendNow;
 	_hideNoQuote = hideNoQuote;
+	_canSelectBetween = canSelectBetween;
 	const auto nowSelectedState = showSelectedState();
 	if (nowSelectedState) {
 		// 取消选择时保留原数量，直到选择栏滑出。
@@ -239,6 +248,7 @@ void TopBarWidget::updateSelectionVisibility() {
 	_forward->setVisible(_canForward && visible);
 	_noQuote->setVisible(_canForward && !_canSendNow && !_hideNoQuote && visible);
 	_sendNow->setVisible(_canSendNow && visible);
+	_selectBetween->setVisible(_canSelectBetween && visible);
 }
 
 void TopBarWidget::refreshLang() {

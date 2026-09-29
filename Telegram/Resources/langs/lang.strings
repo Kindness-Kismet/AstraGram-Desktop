@@ -9130,6 +9130,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_CustomizeFontTitle" = "Customize Font";
 "ayu_MessageShotTopBarText" = "Shot";
 "ayu_SelectionMessageShot" = "Message Shot";
+"ayu_SelectBetweenText" = "Select between";
+"ayu_SelectBetweenLimit" = "You can select up to {limit} messages. Your selection has not changed.";
+"ayu_SelectBetweenNotLoaded" = "Some messages in this range are not loaded. Scroll through the range and try again.";
 "ayu_MessageShotPreview" = "Preview";
 "ayu_MessageShotPreferences" = "Preferences";
 "ayu_MessageShotCopy" = "Copy";

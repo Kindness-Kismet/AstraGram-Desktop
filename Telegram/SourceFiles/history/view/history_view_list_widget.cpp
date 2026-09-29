@@ -1723,7 +1723,14 @@ MessageIdsList ListWidget::collectSelectedIds() const {
 }
 
 void ListWidget::pushSelectedItems() {
+	const auto expand = !_selected.empty() && _idsLimit < MaxSelectedItems;
+	if (expand) {
+		_idsLimit = MaxSelectedItems;
+	}
 	_delegate->listSelectionChanged(collectSelectedItems());
+	if (expand) {
+		InvokeQueued(this, [=] { refreshViewer(); });
+	}
 }
 
 void ListWidget::removeItemSelection(
@@ -2400,7 +2407,9 @@ void ListWidget::checkMoveToOtherViewer() {
 			preloadRequired = (delta >= minUniversalIdDelta);
 		}
 		if (preloadRequired) {
-			_idsLimit = preloadIdsLimit;
+			_idsLimit = _selected.empty()
+				? preloadIdsLimit
+				: std::max(preloadIdsLimit, int(MaxSelectedItems));
 			_aroundPosition = itemPosition;
 			_aroundIndex = index;
 			refreshViewer();

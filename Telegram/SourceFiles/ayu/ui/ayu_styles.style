@@ -137,3 +137,7 @@ topBarSelectionShot: IconButton(topBarSelectionForward) {
 	icon: icon {{ "menu/image", menuIconFg }};
 	iconOver: icon {{ "menu/image", menuIconFgOver }};
 }
+topBarSelectionBetween: IconButton(topBarSelectionForward) {
+	icon: icon {{ "menu/select", menuIconFg }};
+	iconOver: icon {{ "menu/select", menuIconFgOver }};
+}

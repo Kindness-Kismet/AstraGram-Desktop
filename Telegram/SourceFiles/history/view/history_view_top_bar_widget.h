@@ -59,6 +59,7 @@ public:
 		int canForwardCount = 0;
 		int canSendNowCount = 0;
 		bool hideNoQuote = false;
+		bool canSelectBetween = false;
 	};
 	using ActiveChat = Dialogs::EntryState;
 	using Section = ActiveChat::Section;
@@ -122,6 +123,9 @@ public:
 	}
 	[[nodiscard]] rpl::producer<> clearSelectionRequest() const {
 		return _clearSelection.events();
+	}
+	[[nodiscard]] rpl::producer<> selectBetweenRequest() const {
+		return _selectBetweenSelection.events();
 	}
 	[[nodiscard]] rpl::producer<> cancelChooseForReportRequest() const {
 		return _cancelChooseForReport.events();
@@ -243,6 +247,7 @@ private:
 	bool _canForward = false;
 	bool _canSendNow = false;
 	bool _hideNoQuote = false;
+	bool _canSelectBetween = false;
 	bool _searchMode = false;
 
 	Ui::Animations::Simple _selectedShown;
@@ -250,6 +255,7 @@ private:
 
 	object_ptr<Ui::IconButton> _clear;
 	object_ptr<Ui::IconButton> _forward, _noQuote, _sendNow, _delete, _messageShot;
+	object_ptr<Ui::IconButton> _selectBetween;
 	object_ptr<Ui::RpWidget> _selectionCount;
 	int _selectionCountShown = 0;
 	object_ptr<Ui::InputField> _searchField = { nullptr };
@@ -309,6 +315,7 @@ private:
 	rpl::event_stream<> _deleteSelection;
 	rpl::event_stream<> _messageShotSelection;
 	rpl::event_stream<> _clearSelection;
+	rpl::event_stream<> _selectBetweenSelection;
 	rpl::event_stream<> _cancelChooseForReport;
 
 	rpl::lifetime _backLifetime;

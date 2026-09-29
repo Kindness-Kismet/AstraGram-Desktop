@@ -164,6 +164,10 @@ WelcomeMessagesWidget::WelcomeMessagesWidget(
 	) | rpl::on_next([=] {
 		clearSelected();
 	}, _topBar->lifetime());
+	_topBar->selectBetweenRequest(
+	) | rpl::on_next([=] {
+		_inner->selectItemsBetween();
+	}, _topBar->lifetime());
 
 	_topBarShadow->raise();
 	controller->adaptive().value(
@@ -1029,6 +1033,7 @@ bool WelcomeMessagesWidget::listIsLessInOrder(
 void WelcomeMessagesWidget::listSelectionChanged(SelectedItems &&items) {
 	HistoryView::TopBarWidget::SelectedState state;
 	state.count = items.size();
+	state.canSelectBetween = _inner->canSelectItemsBetween();
 	for (const auto &item : items) {
 		if (item.canDelete) {
 			++state.canDeleteCount;

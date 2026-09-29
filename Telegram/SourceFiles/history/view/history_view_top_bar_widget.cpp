@@ -134,6 +134,7 @@ TopBarWidget::TopBarWidget(
 , _sendNow(this, st::topBarSelectionSendNow)
 , _delete(this, st::topBarSelectionDelete)
 , _messageShot(this, st::topBarSelectionShot)
+, _selectBetween(this, st::topBarSelectionBetween)
 , _selectionCount(this)
 , _back(this, st::historyTopBarBack)
 , _cancelChoose(this, st::topBarCloseChoose)

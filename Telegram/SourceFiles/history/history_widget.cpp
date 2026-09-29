@@ -1202,6 +1202,12 @@ HistoryWidget::HistoryWidget(
 	) | rpl::on_next([=] {
 		clearSelected();
 	}, _topBar->lifetime());
+	_topBar->selectBetweenRequest(
+	) | rpl::on_next([=] {
+		if (_list) {
+			_list->selectItemsBetween();
+		}
+	}, _topBar->lifetime());
 	_topBar->cancelChooseForReportRequest(
 	) | rpl::on_next([=] {
 		setChooseReportMessagesDetails({}, nullptr);

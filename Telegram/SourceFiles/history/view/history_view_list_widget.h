@@ -380,6 +380,8 @@ public:
 	void selectItem(not_null<HistoryItem*> item);
 	void selectItemAsGroup(not_null<HistoryItem*> item);
 	void selectItemsUpTo(not_null<HistoryItem*> item);
+	void selectItemsBetween();
+	[[nodiscard]] bool canSelectItemsBetween() const;
 	[[nodiscard]] bool canSelectItemsUpTo(
 		not_null<HistoryItem*> item) const;
 	void showEditCaptionUploadLayer(not_null<HistoryItem*> item);
@@ -790,6 +792,7 @@ private:
 	void switchToWordSelection();
 	void validateTrippleClickStartTime();
 	SelectedItems collectSelectedItems() const;
+	[[nodiscard]] HistoryItemsList selectedRangeItems() const;
 	MessageIdsList collectSelectedIds() const;
 	void pushSelectedItems();
 	void removeItemSelection(
