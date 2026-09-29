@@ -57,7 +57,6 @@ public:
 		int outerWidth = 0;
 		const style::icon *verified = nullptr;
 		const style::icon *exteraOfficial = nullptr;
-		const style::icon *exteraSupporter = nullptr;
 		const style::icon *premium = nullptr;
 		const style::color *scam = nullptr;
 		const style::color *direct = nullptr;
@@ -99,12 +98,9 @@ private:
 	int drawPremiumEmojiStatus(Painter &p, const Descriptor &descriptor);
 	int drawPremiumStar(Painter &p, const Descriptor &descriptor);
 
-	int drawExteraCustom(Painter &p, const Descriptor &descriptor);
 	int drawExteraOfficial(Painter &p, const Descriptor &descriptor);
-	int drawExteraSupporter(Painter &p, const Descriptor &descriptor);
 
 	std::unique_ptr<EmojiStatus> _emojiStatus;
-	std::unique_ptr<EmojiStatus> _exteraCustomStatus;
 	mutable std::unique_ptr<BotVerifiedData> _botVerifiedData;
 
 };

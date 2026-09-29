@@ -521,10 +521,8 @@ TopBar::TopBar(
 			_botVerify->updated());
 	}
 	if (_exteraBadge) {
-		const auto isCustomBadge = isCustomBadgePeer(getBareID(_peer));
 		const auto isExtera = isExteraPeer(getBareID(_peer));
-		const auto isSupporter = isSupporterPeer(getBareID(_peer));
-		if (isExtera || isSupporter || isCustomBadge) {
+		if (isExtera) {
 			_exteraBadge->setPremiumClickCallback(badgeClickHandler(_peer));
 		}
 		badgeUpdates = rpl::merge(

@@ -60,7 +60,6 @@ exteraBadgeToastBadge: InfoPeerBadge(infoPeerBadge) {
 	premiumFg: toastFg;
 }
 
-supportLogoSize: 96px;
 
 unreadPillPadding: 12px;
 

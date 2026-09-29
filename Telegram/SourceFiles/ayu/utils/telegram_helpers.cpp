@@ -9,8 +9,6 @@
 #include "ayu/data/entities.h"
 #include "ayu/data/messages_storage.h"
 #include "ayu/features/filters/filters_controller.h"
-#include "ayu/ui/boxes/donate_info_box.h"
-#include "ayu/ui/toasts.h"
 #include "ayu/utils/rc_manager.h"
 #include "core/core_settings.h"
 #include "core/application.h"
@@ -41,11 +39,9 @@
 #include "styles/style_ayu_styles.h"
 #include "styles/style_info.h"
 #include "ui/emoji_config.h"
-#include "ui/layers/generic_box.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_entity.h"
 #include "ui/toast/toast.h"
-#include "window/window_controller.h"
 
 #include <atomic>
 #include <functional>
@@ -60,11 +56,8 @@ constexpr auto usernameResolverBotId = 7424190611L;
 const auto usernameResolverBotUsername = QString("tgdb_search_bot");
 const auto usernameResolverEmpty = QString("Error, username or id invalid/not found.");
 
-constexpr auto regDateBotId = 8083294286L;
-const auto regDateBotUsername = QString("exteraAuthBot");
-
-constexpr auto regDateBotFallbackId = 6247153446L;
-const auto regDateBotFallbackUsername = QString("ayugrambot");
+constexpr auto regDateBotId = 6247153446L;
+const auto regDateBotUsername = QString("ayugrambot");
 
 const auto kZalgoPattern = QStringLiteral(
 	"\\p{Mn}{3,}|[\\x{202A}-\\x{202E}\\x{2066}-\\x{2069}\\x{200E}\\x{200F}\\x{061C}]");
@@ -96,9 +89,7 @@ BadgeToastIcon::BadgeToastIcon(
 	nullptr,
 	[] { return false; },
 	0,
-	Info::Profile::BadgeType::Extera
-		| Info::Profile::BadgeType::ExteraSupporter
-		| Info::Profile::BadgeType::ExteraCustom) {
+	Info::Profile::BadgeType::Extera) {
 	setAttribute(Qt::WA_TransparentForMouseEvents);
 	_badge.setOverrideStyle(&st::exteraBadgeToastBadge);
 	_badge.updated() | rpl::on_next([=] {
@@ -173,117 +164,38 @@ bool isExteraPeer(ID peerId) {
 		contains(peerId);
 }
 
-bool isSupporterPeer(ID peerId) {
-	return RCManager::getInstance().supporters().contains(peerId) || RCManager::getInstance().supporterChannels().
-		contains(peerId);
-}
-
-bool isCustomBadgePeer(ID peerId) {
-	return RCManager::getInstance().supporterCustomBadges().contains(peerId);
-}
-
-CustomBadge getCustomBadge(ID peerId) {
-	const auto &badges = RCManager::getInstance().supporterCustomBadges();
-	if (const auto it = badges.find(peerId); it != badges.end()) {
-		return it->second;
-	}
-	return {};
-}
-
-[[nodiscard]] Info::Profile::Badge::Content ComputeExteraBadgeContent(
+[[nodiscard]] Info::Profile::Badge::Content computeExteraBadgeContent(
 		not_null<PeerData*> peer) {
-	if (isCustomBadgePeer(getBareID(peer))) {
-		return Info::Profile::Badge::Content{
-			.badge = Info::Profile::BadgeType::ExteraCustom,
-			.emojiStatusId = getCustomBadge(getBareID(peer)).emojiStatusId,
-		};
-	} else if (isExteraPeer(getBareID(peer))) {
-		return Info::Profile::Badge::Content{
+	return isExteraPeer(getBareID(peer))
+		? Info::Profile::Badge::Content{
 			.badge = Info::Profile::BadgeType::Extera,
-		};
-	} else if (isSupporterPeer(getBareID(peer))) {
-		return Info::Profile::Badge::Content{
-			.badge = Info::Profile::BadgeType::ExteraSupporter,
-		};
-	}
-	return {};
+		}
+		: Info::Profile::Badge::Content{};
 }
 
 rpl::producer<Info::Profile::Badge::Content> ExteraBadgeTypeFromPeer(not_null<PeerData*> peer) {
-	return rpl::single(ComputeExteraBadgeContent(peer));
+	return rpl::single(computeExteraBadgeContent(peer));
 }
 
 Fn<void()> badgeClickHandler(not_null<PeerData*> peer) {
-	return [=]
-	{
-		const auto badge = ComputeExteraBadgeContent(peer);
-		const auto isCustomBadge = isCustomBadgePeer(getBareID(peer));
-		const auto isExtera = isExteraPeer(getBareID(peer));
-		const auto isSupporter = isSupporterPeer(getBareID(peer));
-
-		TextWithEntities text;
-		if (isCustomBadge) {
-			const auto custom = getCustomBadge(getBareID(peer));
-			text = custom.text.isEmpty()
-					   ? (isExtera
-							  ? tr::ayu_DeveloperPopup(
-								  tr::now,
-								  lt_item,
-								  TextWithEntities{peer->name()},
-								  tr::rich)
-							  : tr::ayu_SupporterPopup(
-								  tr::now,
-								  lt_item,
-								  TextWithEntities{peer->name()},
-								  tr::rich))
-					   : tr::rich(custom.text);
-		} else if (isExtera) {
-			text = peer->isUser()
-					   ? tr::ayu_DeveloperPopup(
-						   tr::now,
-						   lt_item,
-						   TextWithEntities{peer->name()},
-						   tr::rich)
-					   : tr::ayu_OfficialResourcePopup(
-						   tr::now,
-						   lt_item,
-						   TextWithEntities{peer->name()},
-						   tr::rich);
-		} else if (isSupporter) {
-			text = tr::ayu_SupporterPopup(
+	return [=] {
+		if (!isExteraPeer(getBareID(peer))) {
+			return;
+		}
+		const auto text = (peer->isUser()
+			? tr::ayu_DeveloperPopup
+			: tr::ayu_OfficialResourcePopup)(
 				tr::now,
 				lt_item,
 				TextWithEntities{peer->name()},
 				tr::rich);
-		} else {
-			return;
-		}
-
-		auto config = Ui::Toast::Config{
+		Ui::Toast::Show(Ui::Toast::Config{
 			.text = text,
-			.iconContent = MakeBadgeToastIcon(peer, badge),
+			.iconContent = MakeBadgeToastIcon(peer, computeExteraBadgeContent(peer)),
 			.st = &st::exteraBadgeToast,
 			.adaptive = true,
 			.duration = 3 * crl::time(1000),
-		};
-		if (badge.badge == Info::Profile::BadgeType::ExteraSupporter) {
-			Ayu::Ui::ShowToastWithAction(
-				std::move(config),
-				tr::lng_collectible_learn_more(tr::now),
-				[=] {
-					const auto window = Core::App().activeWindow();
-					const auto controller = window
-						? window->sessionController()
-						: nullptr;
-					if (!controller) {
-						return;
-					}
-					controller->show(Box(Ui::FillDonateInfoBox, controller));
-					window->activate();
-				});
-		} else {
-			Ui::Toast::Show(std::move(config));
-		}
+		});
 	};
 }
 
@@ -1459,24 +1371,17 @@ void getUserRegistrationDateInner(
 
 void getUserRegistrationDate(not_null<UserData*> user, Fn<void(TextWithEntities)> callback) {
 	const auto session = &user->session();
-	const auto selfId = getDialogIdFromPeer(session->user());
-	const auto isSupporter = isSupporterPeer(selfId) || isExteraPeer(selfId);
-
-	const auto botId = isSupporter ? regDateBotId : regDateBotFallbackId;
-	const auto botUsername = isSupporter ? regDateBotUsername : regDateBotFallbackUsername;
-
-	if (session->data().userLoaded(botId)) {
-		getUserRegistrationDateInner(user, botId, callback);
-	} else {
-		resolvePeer(
-			QString::number(botId),
-			botUsername,
-			session,
-			[=](const QString &title, PeerData *data)
-			{
-				getUserRegistrationDateInner(user, botId, callback);
-			});
+	if (session->data().userLoaded(regDateBotId)) {
+		getUserRegistrationDateInner(user, regDateBotId, callback);
+		return;
 	}
+	resolvePeer(
+		QString::number(regDateBotId),
+		regDateBotUsername,
+		session,
+		[=](const QString &title, PeerData *data) {
+			getUserRegistrationDateInner(user, regDateBotId, callback);
+		});
 }
 
 void getChannelJoinOrCreateDate(not_null<ChannelData*> channel, Fn<void(TextWithEntities)> callback) {

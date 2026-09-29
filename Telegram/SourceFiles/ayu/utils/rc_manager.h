@@ -7,12 +7,6 @@
 extern std::unordered_set<ID> default_developers;
 extern std::unordered_set<ID> default_channels;
 
-struct CustomBadge
-{
-	EmojiStatusId emojiStatusId;
-	QString text;
-};
-
 class RCManager final : public QObject
 {
 	Q_OBJECT
@@ -43,34 +37,6 @@ public:
 		return _officialChannels;
 	}
 
-	[[nodiscard]] const std::unordered_set<ID> &supporters() const {
-		return _supporters;
-	}
-
-	[[nodiscard]] const std::unordered_set<ID> &supporterChannels() const {
-		return _supporterChannels;
-	}
-
-	[[nodiscard]] const std::unordered_map<ID, CustomBadge> &supporterCustomBadges() const {
-		return _customBadges;
-	}
-
-	[[nodiscard]] QString donateUsername() const {
-		return _donateUsername;
-	}
-
-	[[nodiscard]] QString donateAmountUsd() const {
-		return _donateAmountUsd;
-	}
-
-	[[nodiscard]] QString donateAmountTon() const {
-		return _donateAmountTon;
-	}
-
-	[[nodiscard]] QString donateAmountRub() const {
-		return _donateAmountRub;
-	}
-
 private:
 	RCManager() = default;
 	~RCManager();
@@ -89,15 +55,6 @@ private:
 
 	std::unordered_set<ID> _developers = {};
 	std::unordered_set<ID> _officialChannels = {};
-	std::unordered_set<ID> _supporters = {};
-	std::unordered_set<ID> _supporterChannels = {};
-	std::unordered_map<ID, CustomBadge> _customBadges = {};
-
-	QString _donateUsername = QString("@ayugramOwner");
-	QString _donateAmountUsd = QString("5.00");
-	QString _donateAmountTon = QString("3.50");
-	QString _donateAmountRub = QString("386");
-
 	QTimer* _timer = nullptr;
 
 	std::unique_ptr<QNetworkAccessManager> _manager = nullptr;

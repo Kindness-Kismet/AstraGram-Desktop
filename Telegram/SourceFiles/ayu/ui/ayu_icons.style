@@ -32,7 +32,6 @@ outChannelBadgeIcon: icon {{ "ayu/channel", msgOutDateFg }};
 outChannelBadgeSelectedIcon: icon {{ "ayu/channel", msgOutDateFgSelected }};
 
 infoExteraOfficialBadge: icon {{ "ayu/extera_official", profileVerifiedCheckBg }};
-infoExteraSupporterBadge: icon {{ "ayu/extera_badge", profileVerifiedCheckBg }};
 
 winEnterWithGuestIcon: icon {{ "ayu/ghost_tray", windowFg }};
 
@@ -58,11 +57,6 @@ dialogsExteraOfficialIcon: ThreeStateIcon {
 	icon: icon {{ "ayu/dialogs_extera_official", dialogsVerifiedIconBg }};
 	over: icon {{ "ayu/dialogs_extera_official", dialogsVerifiedIconBgOver }};
 	active: icon {{ "ayu/dialogs_extera_official", dialogsVerifiedIconBgActive }};
-}
-dialogsExteraSupporterIcon: ThreeStateIcon {
-	icon: icon {{ "ayu/dialogs_extera_supporter", dialogsVerifiedIconBg }};
-	over: icon {{ "ayu/dialogs_extera_supporter", dialogsVerifiedIconBgOver }};
-	active: icon {{ "ayu/dialogs_extera_supporter", dialogsVerifiedIconBgActive }};
 }
 
 ayuHistoryFileInPlugin: icon {{ "ayu/history_file_plugin", historyFileInIconFg }};

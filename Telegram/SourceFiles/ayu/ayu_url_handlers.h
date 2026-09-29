@@ -22,11 +22,6 @@ bool HandleAyu(
 	const Match &match,
 	const QVariant &context);
 
-bool HandleSupport(
-	Window::SessionController *controller,
-	const Match &match,
-	const QVariant &context);
-
 bool HandleAyuSettings(
 	Window::SessionController *controller,
 	const Match &match,

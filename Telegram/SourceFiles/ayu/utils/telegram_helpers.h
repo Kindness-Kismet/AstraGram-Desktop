@@ -2,7 +2,6 @@
 
 #include "api/api_common.h"
 #include "ayu/data/entities.h"
-#include "ayu/utils/rc_manager.h"
 #include "core/application.h"
 #include "data/data_media_types.h"
 #include "dialogs/dialogs_main_list.h"
@@ -55,9 +54,6 @@ ID getDialogIdFromPeer(not_null<PeerData*> peer);
 ID getBareID(not_null<PeerData*> peer);
 
 bool isExteraPeer(ID peerId);
-bool isSupporterPeer(ID peerId);
-bool isCustomBadgePeer(ID peerId);
-CustomBadge getCustomBadge(ID peerId);
 
 rpl::producer<Info::Profile::Badge::Content> ExteraBadgeTypeFromPeer(not_null<PeerData*> peer);
 Fn<void()> badgeClickHandler(not_null<PeerData *> peer);

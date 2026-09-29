@@ -690,7 +690,6 @@ void TopBarWidget::paintTopBar(Painter &p) {
 			.outerWidth = width(),
 			.verified = &st::dialogsVerifiedIcon,
 			.exteraOfficial = &st::dialogsExteraOfficialIcon.icon,
-			.exteraSupporter = &st::dialogsExteraSupporterIcon.icon,
 			.premium = &st::dialogsPremiumIcon.icon,
 			.scam = &st::attentionButtonFg,
 			.direct = &st::windowSubTextFg,

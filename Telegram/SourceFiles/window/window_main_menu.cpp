@@ -356,7 +356,7 @@ MainMenu::MainMenu(
 	nullptr,
 	[=] { return controller->isGifPausedAtLeastFor(GifPauseReason::Layer); },
 	0,
-	Info::Profile::BadgeType::Extera | Info::Profile::BadgeType::ExteraSupporter | Info::Profile::BadgeType::ExteraCustom))
+	Info::Profile::BadgeType::Extera))
 , _scroll(this, st::mainMenuScroll)
 , _inner(_scroll->setOwnedWidget(
 	object_ptr<Ui::VerticalLayout>(_scroll.data())))
@@ -484,10 +484,8 @@ MainMenu::MainMenu(
 	});
 	{
 		const auto user = controller->session().user();
-		const auto isCustomBadge = isCustomBadgePeer(getBareID(user));
 		const auto isExtera = isExteraPeer(getBareID(user));
-		const auto isSupporter = isSupporterPeer(getBareID(user));
-		if (isExtera || isSupporter || isCustomBadge) {
+		if (isExtera) {
 			_exteraBadge->setPremiumClickCallback(badgeClickHandler(user));
 		}
 	}

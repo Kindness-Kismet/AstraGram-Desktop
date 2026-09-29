@@ -33,9 +33,7 @@ namespace {
 [[nodiscard]] bool HasPremiumClick(const Badge::Content &content) {
 	return content.badge == BadgeType::Premium
 		|| (content.badge == BadgeType::Verified && content.emojiStatusId)
-		|| (content.badge == BadgeType::Extera)
-		|| (content.badge == BadgeType::ExteraSupporter)
-		|| (content.badge == BadgeType::ExteraCustom);
+		|| (content.badge == BadgeType::Extera);
 }
 
 } // namespace
@@ -112,7 +110,6 @@ void Badge::setContent(Content content) {
 	}());
 	_view->show();
 	switch (_content.badge) {
-	case BadgeType::ExteraCustom:
 	case BadgeType::Verified:
 	case BadgeType::BotVerified:
 	case BadgeType::Premium: {
@@ -217,11 +214,8 @@ void Badge::setContent(Content content) {
 						: st::attentionButtonFg));
 			}, _view->lifetime());
 	} break;
-	case BadgeType::Extera:
-	case BadgeType::ExteraSupporter: {
-		const auto icon = (_content.badge == BadgeType::Extera
-							   ? &st::infoExteraOfficialBadge
-							   : &st::infoExteraSupporterBadge);
+	case BadgeType::Extera: {
+		const auto icon = &st::infoExteraOfficialBadge;
 		const auto skip = st::infoVerifiedCheckPosition.x();
 		_view->resize(
 			icon->width() + skip,
