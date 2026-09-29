@@ -1357,6 +1357,7 @@ PRIVATE
     history/view/history_view_translate_tracker.h
     history/view/history_view_top_bar_widget.cpp
     history/view/history_view_top_bar_widget.h
+    history/view/history_view_top_bar_controls.cpp
     history/view/history_view_view_button.cpp
     history/view/history_view_view_button.h
     history/view/history_view_webpage_preview.cpp

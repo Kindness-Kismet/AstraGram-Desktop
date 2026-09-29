@@ -168,6 +168,9 @@ private:
 	void updateChooseFromUserGeometry();
 	void updateSearchAdditionalMargins();
 	void updateControlsGeometry();
+	void setupSelection();
+	void updateSelectionGeometry(int selectedButtonsTop);
+	void updateSelectionVisibility();
 	void slideAnimationCallback();
 	void updateInfoToggleActive();
 	void setupDragOnBackButton();
