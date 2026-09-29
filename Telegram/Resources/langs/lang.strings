@@ -9257,3 +9257,18 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_SearchFilterFile" = "Files";
 "ayu_SearchFilterMusic" = "Music";
 "ayu_SearchFilterGif" = "GIFs";
+
+"ayu_MusicPlayer" = "Music player";
+"ayu_MusicExpand" = "Expand music player";
+"ayu_MusicCollapse" = "Collapse";
+"ayu_MusicSaveCover" = "Save cover";
+"ayu_MusicSaveFailed" = "Could not save the cover. Please choose another location.";
+"ayu_MusicProgress" = "Playback progress";
+"ayu_MusicRepeatOff" = "Repeat off";
+"ayu_MusicRepeatOne" = "Repeat track";
+"ayu_MusicRepeatAll" = "Repeat playlist";
+"ayu_MusicPrevious" = "Previous track";
+"ayu_MusicNext" = "Next track";
+"ayu_MusicPlay" = "Play";
+"ayu_MusicPause" = "Pause";
+"ayu_MusicOrderDefault" = "Forward order";

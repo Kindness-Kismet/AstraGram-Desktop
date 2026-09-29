@@ -7,6 +7,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "media/player/media_player_widget.h"
 
+#include "ayu/features/music_player/music_player_box.h"
+#include "styles/style_ayu_styles.h"
+
 #include "platform/platform_specific.h"
 #include "data/data_document.h"
 #include "data/data_session.h"
@@ -53,6 +56,7 @@ Widget::Widget(
 , _timeLabel(rightControls(), st::mediaPlayerTime)
 , _playPause(this, st::mediaPlayerPlayButton)
 , _volumeToggle(rightControls(), st::mediaPlayerVolumeToggle)
+, _expandToggle(this, st::ayuMusicExpand)
 , _repeatToggle(rightControls(), st::mediaPlayerRepeatButton)
 , _orderToggle(rightControls(), st::mediaPlayerOrderButton)
 , _speedToggle(rightControls(), st::mediaPlayerSpeedButton)
@@ -95,7 +99,14 @@ Widget::Widget(
 	_volumeToggle->setAccessibleName(tr::lng_ringtones_box_volume(tr::now));
 	_repeatToggle->setAccessibleName(tr::lng_schedule_repeat_label(tr::now));
 	_orderToggle->setAccessibleName(tr::lng_sr_playback_order(tr::now));
+	_orderToggle->setObjectName(u"music.order"_q);
 	_close->setAccessibleName(tr::lng_sr_player_close(tr::now));
+	_expandToggle->setObjectName(u"music.expand"_q);
+	_expandToggle->setAccessibleName(tr::ayu_MusicExpand(tr::now));
+	_expandToggle->setClickedCallback([=] {
+		updateOverLabelsState(false);
+		Ayu::MusicPlayer::show(_controller);
+	});
 
 	_nameLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
 	_timeLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -214,6 +225,7 @@ Widget::Widget(
 	}, _volume->lifetime());
 
 	hidePlaylistOn(_playPause);
+	hidePlaylistOn(_expandToggle);
 	hidePlaylistOn(_close);
 	hidePlaylistOn(_rightControls);
 
@@ -366,6 +378,8 @@ void Widget::resizeEvent(QResizeEvent *e) {
 
 void Widget::updateControlsGeometry() {
 	_close->moveToRight(st::mediaPlayerCloseRight, st::mediaPlayerPlayTop);
+	_expandToggle->moveToRight(st::mediaPlayerCloseRight + _close->width(),
+		st::mediaPlayerPlayTop);
 	auto right = 0;
 	if (hasPlaybackSpeedControl()) {
 		_speedToggle->moveToRight(right, 0); right += _speedToggle->width();
@@ -394,7 +408,8 @@ void Widget::updateControlsWrapGeometry() {
 	const auto controls = getTimeRight() + _timeLabel->width() + fade;
 	rightControls()->resize(controls, _repeatToggle->height());
 	_rightControls->move(
-		width() - st::mediaPlayerCloseRight - _close->width() - controls,
+		width() - st::mediaPlayerCloseRight - _close->width()
+			- (_type == AudioMsgId::Type::Song ? _expandToggle->width() : 0) - controls,
 		st::mediaPlayerPlayTop);
 }
 
@@ -536,6 +551,7 @@ int Widget::getNameLeft() const {
 int Widget::getNameRight() const {
 	return st::mediaPlayerCloseRight
 		+ _close->width()
+		+ (_type == AudioMsgId::Type::Song ? _expandToggle->width() : 0)
 		+ st::mediaPlayerPadding;
 }
 
@@ -608,6 +624,7 @@ bool Widget::hasPlaybackSpeedControl() const {
 
 void Widget::updateControlsVisibility() {
 	_repeatToggle->setVisible(_type == AudioMsgId::Type::Song);
+	_expandToggle->setVisible(_type == AudioMsgId::Type::Song);
 	_orderToggle->setVisible(_type == AudioMsgId::Type::Song);
 	_speedToggle->setVisible(hasPlaybackSpeedControl());
 	if (!_shadow->isHidden()) {

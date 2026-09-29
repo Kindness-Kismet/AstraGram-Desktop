@@ -524,5 +524,19 @@
   "DebugCrashReportingNote": "下次启动时显示的崩溃编号就是报告问题所需的编号。",
   "ArchiveChatsInMenu": "归档会话",
   "DisableChatBackground": "禁用聊天壁纸",
-  "ShowBubbleOutline": "显示气泡描边"
+  "ShowBubbleOutline": "显示气泡描边",
+  "MusicPlayer": "音乐播放器",
+  "MusicExpand": "展开音乐播放器",
+  "MusicCollapse": "收起",
+  "MusicSaveCover": "保存封面",
+  "MusicSaveFailed": "封面保存失败，请换个位置重试。",
+  "MusicProgress": "播放进度",
+  "MusicRepeatOff": "关闭循环",
+  "MusicRepeatOne": "单曲循环",
+  "MusicRepeatAll": "列表循环",
+  "MusicPrevious": "上一首",
+  "MusicNext": "下一首",
+  "MusicPlay": "播放",
+  "MusicPause": "暂停",
+  "MusicOrderDefault": "正序播放"
 }

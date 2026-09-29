@@ -147,6 +147,7 @@ private:
 	object_ptr<Ui::IconButton> _playPause;
 	object_ptr<Ui::IconButton> _nextTrack = { nullptr };
 	object_ptr<Ui::IconButton> _volumeToggle;
+	object_ptr<Ui::IconButton> _expandToggle;
 	object_ptr<Ui::IconButton> _repeatToggle;
 	object_ptr<Ui::IconButton> _orderToggle;
 	object_ptr<SpeedButton> _speedToggle;

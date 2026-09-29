@@ -242,6 +242,8 @@ set(ayugram_files
         ayu/features/window_material/platform/linux/window_material_linux.cpp
         ayu/features/streamer_mode/streamer_mode.cpp
         ayu/features/streamer_mode/streamer_mode.h
+        ayu/features/music_player/music_player_box.cpp
+        ayu/features/music_player/music_player_box.h
         ayu/features/message_shot/message_shot.cpp
         ayu/features/message_shot/message_shot.h
         ayu/features/auto_space/auto_space.cpp

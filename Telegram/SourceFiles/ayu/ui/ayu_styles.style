@@ -3,6 +3,57 @@ using "ui/colors.palette";
 using "ui/widgets/widgets.style";
 using "info/info.style";
 using "settings/settings.style";
+using "media/player/media_player.style";
+
+ayuMusicWidth: 420px;
+ayuMusicHeight: 480px;
+ayuMusicPadding: 24px;
+ayuMusicCoverSize: 272px;
+ayuMusicCoverRadius: 12px;
+ayuMusicDetailsHeight: 236px;
+ayuMusicTitleFont: font(18px semibold);
+ayuMusicTitleTop: 12px;
+ayuMusicTitleHeight: 26px;
+ayuMusicArtistTop: 40px;
+ayuMusicProgressTop: 76px;
+ayuMusicSliderHeight: 16px;
+ayuMusicTimeTop: 94px;
+ayuMusicControlsTop: 126px;
+ayuMusicVolumeTop: 176px;
+ayuMusicPlaceholder: icon {{ "menu/rich/audio", windowSubTextFg }};
+
+ayuMusicExpand: IconButton(mediaPlayerRepeatButton) {
+	icon: icon {{ "player/player_expand", menuIconFg }};
+	iconOver: icon {{ "player/player_expand", menuIconFgOver }};
+}
+ayuMusicPlay: IconButton(mediaPlayerPlayButton) {
+	icon: icon {{ "player/player_play", mediaPlayerActiveFg }};
+	width: 48px;
+	height: 44px;
+	iconPosition: point(12px, 10px);
+	rippleAreaPosition: point(4px, 2px);
+	rippleAreaSize: 40px;
+}
+ayuMusicPauseIcon: icon {{ "player/player_pause", mediaPlayerActiveFg }};
+ayuMusicPrevious: IconButton(mediaPlayerPreviousButton) {
+	icon: icon {{ "player/player_backward", mediaPlayerActiveFg }};
+	width: 40px;
+	height: 44px;
+	iconPosition: point(8px, 10px);
+	rippleAreaPosition: point(0px, 2px);
+	rippleAreaSize: 40px;
+}
+ayuMusicNext: IconButton(ayuMusicPrevious) {
+	icon: icon {{ "player/player_forward", mediaPlayerActiveFg }};
+}
+ayuMusicRepeat: IconButton(mediaPlayerRepeatButton) {
+	icon: icon {{ "player/player_repeat", mediaPlayerActiveFg }};
+	width: 36px;
+	height: 44px;
+	iconPosition: point(6px, 10px);
+	rippleAreaPosition: point(0px, 4px);
+	rippleAreaSize: 36px;
+}
 
 iconPickerSelectedPadding: 2px;
 iconPickerSelectedRounding: 12px;

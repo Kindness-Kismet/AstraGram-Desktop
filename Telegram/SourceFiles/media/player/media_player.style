@@ -128,11 +128,11 @@ mediaPlayerRepeatOneIcon: icon {
 mediaPlayerReverseIcon: icon {
 	{ "player/player_order", mediaPlayerActiveFg }
 };
-mediaPlayerReverseDisabledIcon: icon {
-	{ "player/player_order", menuIconFg }
+mediaPlayerDefaultIcon: icon {
+	{ "player/player_order_default", menuIconFg }
 };
-mediaPlayerReverseDisabledIconOver: icon {
-	{ "player/player_order", menuIconFgOver }
+mediaPlayerDefaultIconOver: icon {
+	{ "player/player_order_default", menuIconFgOver }
 };
 mediaPlayerShuffleIcon: icon {
 	{ "player/player_shuffle", mediaPlayerActiveFg }
@@ -220,7 +220,7 @@ mediaPlayerSpeedButton: MediaSpeedButton {
 	fg: menuIconFg;
 	overFg: menuIconFgOver;
 	activeFg: mediaPlayerActiveFg;
-	icon: icon{{ "player/player_speed", menuIconFg }};
+	icon: icon {};
 	ripple: RippleAnimation(defaultRippleAnimation) {
 		color: windowBgOver;
 	}
@@ -328,6 +328,8 @@ mediaPlayerOrderMenuActive: Menu(mediaPlayerOrderMenu) {
 	itemFg: windowActiveTextFg;
 	itemFgOver: windowActiveTextFg;
 }
+mediaPlayerOrderIconDefault: icon{{ "player/player_order_default", windowFg }};
+mediaPlayerOrderIconDefaultActive: icon{{ "player/player_order_default", windowActiveTextFg }};
 mediaPlayerOrderIconReverse: icon{{ "player/player_order", windowFg }};
 mediaPlayerOrderIconReverseActive: icon{{ "player/player_order", windowActiveTextFg }};
 mediaPlayerOrderIconShuffle: icon{{ "player/player_shuffle", windowFg }};

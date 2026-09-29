@@ -474,5 +474,19 @@
   "LoginCompatFailed": "Compatibility mode didn't work",
   "IntroAbout": "Welcome to the AyuGram Desktop.\nMake Telegram your own.",
   "UpdateAyuGram": "Update AyuGram",
-  "UtilityRestartRequired": "The app will close in 5 seconds."
+  "UtilityRestartRequired": "The app will close in 5 seconds.",
+  "MusicPlayer": "Music player",
+  "MusicExpand": "Expand music player",
+  "MusicCollapse": "Collapse",
+  "MusicSaveCover": "Save cover",
+  "MusicSaveFailed": "Could not save the cover. Please choose another location.",
+  "MusicProgress": "Playback progress",
+  "MusicRepeatOff": "Repeat off",
+  "MusicRepeatOne": "Repeat track",
+  "MusicRepeatAll": "Repeat playlist",
+  "MusicPrevious": "Previous track",
+  "MusicNext": "Next track",
+  "MusicPlay": "Play",
+  "MusicPause": "Pause",
+  "MusicOrderDefault": "Forward order"
 }

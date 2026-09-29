@@ -661,11 +661,16 @@ void OrderController::fillMenu(not_null<Ui::DropdownMenu*> menu) {
 			const style::icon &activeIcon;
 		};
 		const auto active = (_appOrder.current() == mode);
-		const auto callback = [change = _change, mode, active] {
-			change(active ? OrderMode::Default : mode);
+		const auto callback = [change = _change, mode] {
+			change(mode);
 		};
 		const auto fields = [&]() -> Fields {
 			switch (mode) {
+			case OrderMode::Default: return {
+				.label = tr::ayu_MusicOrderDefault(tr::now),
+				.icon = st::mediaPlayerOrderIconDefault,
+				.activeIcon = st::mediaPlayerOrderIconDefaultActive,
+			};
 			case OrderMode::Reverse: return {
 				.label = tr::lng_audio_player_reverse(tr::now),
 				.icon = st::mediaPlayerOrderIconReverse,
@@ -688,6 +693,7 @@ void OrderController::fillMenu(not_null<Ui::DropdownMenu*> menu) {
 			&(active ? fields.activeIcon : fields.icon),
 			&(active ? fields.activeIcon : fields.icon)));
 	};
+	addOrderAction(OrderMode::Default);
 	addOrderAction(OrderMode::Reverse);
 	addOrderAction(OrderMode::Shuffle);
 }
@@ -696,8 +702,8 @@ void OrderController::updateIcon() {
 	switch (_appOrder.current()) {
 	case OrderMode::Default:
 		_button->setIconOverride(
-			&st::mediaPlayerReverseDisabledIcon,
-			&st::mediaPlayerReverseDisabledIconOver);
+			&st::mediaPlayerDefaultIcon,
+			&st::mediaPlayerDefaultIconOver);
 		_button->setRippleColorOverride(
 			&st::mediaPlayerRepeatDisabledRippleBg);
 		break;
