@@ -878,7 +878,10 @@ void Widget::updateControlsGeometry() {
 			height() - st::introTermsBottom - _terms->height());
 	}
 
-	_footer->move((width() - _footer->width()) / 2, height() - _footer->height() - st::lineWidth * 6);
+	// 底部中间留给各步骤自己的链接，版本号放左下角。
+	_footer->moveToLeft(
+		st::lineWidth * 6,
+		height() - _footer->height() - st::lineWidth * 6);
 }
 
 void Widget::keyPressEvent(QKeyEvent *e) {

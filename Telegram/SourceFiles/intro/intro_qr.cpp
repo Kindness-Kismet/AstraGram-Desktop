@@ -383,6 +383,7 @@ void QrWidget::setupControls() {
 
 #ifdef _DEBUG
 	// 扫码页是启动首见页，调试入口挂在这里而不是手机号页。
+	// 底部是登录链接与版本号，调试入口放在它们上方。
 	const auto offline = Ui::CreateChild<Ui::LinkButton>(
 		this,
 		tr::extras_DebugEnterFakeSession(tr::now));
@@ -396,7 +397,7 @@ void QrWidget::setupControls() {
 			(size.width() - offlineWidth) / 2,
 			(contentTop()
 				+ st::introQrSkipTop
-				+ 3.0 * st::normalFont->height));
+				- 1.5 * st::normalFont->height));
 	}, offline->lifetime());
 
 	offline->setClickedCallback([=] {
