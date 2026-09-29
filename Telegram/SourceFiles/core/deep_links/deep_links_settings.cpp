@@ -2157,7 +2157,7 @@ QString SettingsDeepLink(
 	const auto extrasPrefix = u"extras/"_q;
 	if (controlId.size() > extrasPrefix.size()
 		&& controlId.startsWith(extrasPrefix)) {
-		return u"https://t.me/extrasSettings?s="_q
+		return u"https://t.me/extras_settings?s="_q
 			+ controlId.mid(extrasPrefix.size());
 	}
 	const auto &router = Router::Instance();

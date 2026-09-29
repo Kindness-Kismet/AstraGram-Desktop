@@ -1858,11 +1858,11 @@ const std::vector<LocalUrlHandler> &LocalUrlHandlers() {
 			ExtrasUrlHandlers::ResolveChat
 		},
 		{
-			u"^extrassettings/?\\?(.+)(#|$)"_q,
+			u"^extras_settings/?\\?(.+)(#|$)"_q,
 			ExtrasUrlHandlers::HandleExtrasSettings
 		},
 		{
-			u"^extrassettings/?$"_q,
+			u"^extras_settings/?$"_q,
 			ExtrasUrlHandlers::HandleExtrasSettings
 		},
 		{
@@ -2081,8 +2081,8 @@ QString TryConvertUrlToLocal(QString url) {
 			}
 			return base + added + (params.isEmpty() ? QString() : '&' + params);
 		} else if (const auto extrasSettingsMatch = regex_match(
-			u"^(?:extrasSettings|exteraSettings)/?\\?(.+)$"_q, query, matchOptions)) {
-			return u"tg://extrassettings?"_q + extrasSettingsMatch->captured(1);
+			u"^extras_settings/?\\?(.+)$"_q, query, matchOptions)) {
+			return u"tg://extras_settings?"_q + extrasSettingsMatch->captured(1);
 		} else if (const auto usernameMatch = regex_match(u"^"
 			"([a-zA-Z0-9\\.\\_]+)"
 			"("
