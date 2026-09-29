@@ -1,7 +1,9 @@
 #include "history/view/history_view_top_bar_widget.h"
 
 #include "ayu/ayu_settings.h"
+#include "lang/lang_keys.h"
 #include "ui/widgets/buttons.h"
+#include "ui/widgets/tooltip.h"
 #include "ui/ui_utility.h"
 #include "window/window_session_controller.h"
 #include "styles/style_chat.h"
@@ -11,6 +13,28 @@
 #include "styles/style_window.h"
 
 namespace HistoryView {
+namespace {
+
+// 提示文字在显示时读取，切换语言后自动更新。
+template <typename Phrase>
+void installTooltip(not_null<Ui::RpWidget*> widget, Phrase phrase) {
+	Ui::InstallTooltip(widget, [=] { return phrase(tr::now); });
+}
+
+} // namespace
+
+void TopBarWidget::setupTooltips() {
+	installTooltip(_back.data(), tr::lng_go_back);
+	installTooltip(_cancelChoose.data(), tr::lng_cancel);
+	installTooltip(_call.data(), tr::lng_profile_action_short_call);
+	installTooltip(_videoCall.data(), tr::lng_call_start_video);
+	installTooltip(_groupCall.data(), tr::lng_group_call_title);
+	installTooltip(_search.data(), tr::lng_shortcuts_search);
+	installTooltip(_infoToggle.data(), tr::lng_settings_section_info);
+	installTooltip(_menuToggle.data(), tr::lng_chat_menu);
+	installTooltip(_recentActions.data(), tr::lng_manage_peer_recent_actions);
+	installTooltip(_admins.data(), tr::lng_channel_admins);
+}
 
 void TopBarWidget::setupSelection() {
 	_clear->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);

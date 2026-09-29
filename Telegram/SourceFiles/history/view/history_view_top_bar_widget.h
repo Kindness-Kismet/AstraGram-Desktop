@@ -168,6 +168,7 @@ private:
 	void updateChooseFromUserGeometry();
 	void updateSearchAdditionalMargins();
 	void updateControlsGeometry();
+	void setupTooltips();
 	void setupSelection();
 	void updateSelectionGeometry(int selectedButtonsTop);
 	void updateSelectionVisibility();

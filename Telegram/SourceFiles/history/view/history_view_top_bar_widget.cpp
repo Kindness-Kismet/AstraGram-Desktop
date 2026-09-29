@@ -299,6 +299,7 @@ TopBarWidget::TopBarWidget(
 	_menuToggle->setAccessibleName(tr::lng_chat_menu(tr::now));
 	_back->setAccessibleName(tr::lng_go_back(tr::now));
 	_cancelChoose->setAccessibleName(tr::lng_cancel(tr::now));
+	setupTooltips();
 }
 
 TopBarWidget::~TopBarWidget() = default;
