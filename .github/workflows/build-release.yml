@@ -1,6 +1,6 @@
 name: Build-release
 
-# 版本文件变化即发版：先按版本号打 tag，再构建并发布。
+# 版本文件变化即发版：构建并校验产物后，在上传前创建标签。
 on:
   push:
     branches:
@@ -21,8 +21,6 @@ jobs:
     name: Tests and static checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: write
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
@@ -73,26 +71,6 @@ jobs:
           python3 scripts/release_notes.py \
             .github/CHANGELOG.md "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md"
-
-      # 一个版本号只对应一个提交；重跑时 tag 已指向本提交则直接沿用。
-      - name: Create the release tag.
-        env:
-          TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          set -euo pipefail
-          direct=$(git ls-remote --refs origin "refs/tags/$TAG" | cut -f1)
-          peeled=$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)
-          existing=${peeled:-$direct}
-          if test -z "$existing"; then
-            git tag "$TAG" "$GITHUB_SHA"
-            git push origin "refs/tags/$TAG"
-            echo "::notice::Created $TAG at $GITHUB_SHA."
-          elif test "$existing" = "$GITHUB_SHA"; then
-            echo "::notice::$TAG already points at this commit."
-          else
-            echo "::error::$TAG already points at $existing; bump the version for a new release."
-            exit 1
-          fi
 
   windows-x64:
     name: Windows x64 remote build
@@ -496,7 +474,8 @@ jobs:
             .github/CHANGELOG.md "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md"
 
-      - name: Verify release target.
+      # 一个版本号只对应一个提交；重跑时标签已指向本提交则直接沿用。
+      - name: Create the release tag.
         env:
           TAG: ${{ needs.validate.outputs.tag }}
         run: |
@@ -504,11 +483,16 @@ jobs:
           direct=$(git ls-remote --refs origin "refs/tags/$TAG" | cut -f1)
           peeled=$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)
           existing=${peeled:-$direct}
-          if test -n "$existing" && test "$existing" != "$GITHUB_SHA"; then
-            echo "Refusing to overwrite $TAG from $existing with $GITHUB_SHA"
+          if test -z "$existing"; then
+            git tag "$TAG" "$GITHUB_SHA"
+            git push origin "refs/tags/$TAG"
+            echo "::notice::Created $TAG at $GITHUB_SHA."
+          elif test "$existing" = "$GITHUB_SHA"; then
+            echo "::notice::$TAG already points at this commit."
+          else
+            echo "::error::$TAG already points at $existing; bump the version for a new release."
             exit 1
           fi
-          echo "$TAG is absent or already points to $GITHUB_SHA"
 
       - name: Publish release.
         uses: softprops/action-gh-release@v3

@@ -46,7 +46,7 @@ minutes.
   - [macOS](#macos)
 - [AI-Assisted Development](#-ai-assisted-development)
 - [Repository Layout](#-repository-layout)
-- [Releases and Versioning](#-releases-and-versioning)
+- [发布与版本号](#-发布与版本号)
 - [License](#-license)
 - [Acknowledgements](#-acknowledgements)
 
@@ -365,33 +365,25 @@ AGENTS.md                  the specification (CLAUDE.md imports it)
 
 ---
 
-## 🚀 Releases and Versioning
+## 🚀 发布与版本号
 
-<sub>[↑ Back to Navigation](#navigation)</sub>
+<sub>[↑ 返回导航](#navigation)</sub>
 
-Version numbers look like `7.2.9.5`. The first three components match the
-upstream Telegram Desktop release this fork is adapted to; the fourth is the
-fork's own revision on that base.
+版本号采用 `7.2.9.5` 这样的格式。前三段对应本项目已适配的官方 Telegram Desktop
+版本，第四段是基于该版本的本项目修订号。
 
-Releasing is driven entirely by the version file:
+发布完全由版本文件驱动：
 
-1. Bump `Telegram/build/version`, the only place the app version lives (CMake
-   generates the values for the code and Windows resources from it), and
-   rewrite `.github/CHANGELOG.md` with the changes in this version: English
-   entries first, then a `---` line, then the matching Simplified Chinese
-   entries.
-2. Push to `main`. The **Version tag** workflow notices the version change,
-   validates the release notes, and creates the `v<version>` tag.
-3. The **Release** workflow picks the tag up, dispatches the platform build
-   repositories in parallel, and publishes only artifacts that trace back to
-   that exact commit and workflow run. Every artifact carries a provenance
-   manifest; the publish job verifies source run, builder run, version, file
-   set, size and hash before anything goes out.
+1. 更新唯一的版本文件 `Telegram/build/version`，CMake 会据此生成代码和 Windows
+   资源中的版本值。同时重写 `.github/CHANGELOG.md`，先写英文条目，再写独立的
+   `---` 分隔行，最后写一一对应的简体中文条目。
+2. 推送到 `main` 后，**Build-release** 工作流校验更新说明，并行调度各平台构建仓库，
+   按本次推送的提交编号获取源码。
+3. 构建完成后，发布任务校验产物的来源运行、构建运行、版本、文件集合、大小和哈希值。
+   所有校验通过后，在上传发布资产的前一步创建指向该提交的 `v<版本号>` 标签。
 
-Both workflows refuse to go further if `.github/CHANGELOG.md` does not follow
-that bilingual format, and the whole file becomes the GitHub release notes.
-If the tag already exists, the tagging job reports it and stops instead of
-moving it.
+更新说明不符合双语格式时，工作流会停止；整个文件会作为发布正文。
+重跑时，已指向同一提交的标签可以复用；标签指向其他提交时拒绝发布，不移动已有标签。
 
 <br>
 
