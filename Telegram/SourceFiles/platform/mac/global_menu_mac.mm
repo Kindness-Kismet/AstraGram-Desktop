@@ -418,7 +418,7 @@ void Manager::buildAppleMenu(QMenu *main) {
 			});
 		};
 		const auto about = main->addAction(
-			u"About AyuGram"_q,
+			u"About AstraGram"_q,
 			std::move(callback));
 		about->setMenuRole(QAction::AboutQtRole);
 	}
@@ -720,7 +720,7 @@ void Manager::buildWindowMenu(QMenu *window) {
 }
 
 void Manager::buildMenu() {
-	buildAppleMenu(_menuBar->addMenu(u"AyuGram"_q));
+	buildAppleMenu(_menuBar->addMenu(u"AstraGram"_q));
 	buildFileMenu(_menuBar->addMenu(u"File"_q));
 	buildEditMenu(_menuBar->addMenu(u"Edit"_q));
 

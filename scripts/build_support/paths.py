@@ -8,7 +8,7 @@ TMP_DIR = BUILD_DIR / "tmp"
 LOGS_DIR = BUILD_DIR / "logs"
 
 # 产物目录带版本号：build/<APP_NAME>-v<版本>-win-<架构>-<profile>
-APP_NAME = "AyuGram"
+APP_NAME = "AstraGram"
 
 # 依赖与中间产物一律收在 build/tmp，不外溢到仓库同级目录
 LIBRARIES_DIR = TMP_DIR / "Libraries"
@@ -45,7 +45,7 @@ DEFAULT_API_ID = "2040"
 DEFAULT_API_HASH = "b18441a1ff607e10a989891a5462e627"
 
 # 构建产物，Updater 缺失不视为失败
-PRODUCT_BINARIES = ("AyuGram.exe", "Updater.exe")
+PRODUCT_BINARIES = ("AstraGram.exe", "Updater.exe")
 
 # 仅 Debug 收集，符号文件缺失不视为失败
-DEBUG_SYMBOLS = ("AyuGram.pdb",)
+DEBUG_SYMBOLS = ("AstraGram.pdb",)

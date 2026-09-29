@@ -5136,7 +5136,7 @@ void Widget::paintEvent(QPaintEvent *e) {
 					: _headingMenu->width() + st::dialogsFilterSkip);
 			p.drawTextLeft(left,
 				(header - st::dialogsHeadingFont->height) / 2,
-				width(), u"AyuGram"_q);
+				width(), u"AstraGram"_q);
 		}
 	}
 

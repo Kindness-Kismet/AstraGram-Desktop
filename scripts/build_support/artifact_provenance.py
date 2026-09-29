@@ -113,7 +113,7 @@ def _target_key(platform: str, arch: str) -> str:
 def _expected_filenames(platform: str, arch: str, version: str, appupdateversion: int) -> set[str]:
     target = TARGETS[_target_key(platform, arch)]
     return {
-        f"AyuGram-v{version}-{target['archive_platform']}-{arch}.zip",
+        f"AstraGram-v{version}-{target['archive_platform']}-{arch}.zip",
         *(f"{prefix}{appupdateversion}" for prefix in target["updater_prefixes"]),
     }
 

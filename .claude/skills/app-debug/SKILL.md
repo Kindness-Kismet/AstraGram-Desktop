@@ -1,6 +1,6 @@
 ---
 name: app-debug
-description: Use this skill when the user asks to debug, test, or verify AyuGram functionality, take a screenshot, read or change settings, inspect ghost mode, check deleted-message storage, control the running Debug app, restart or stop the app, or says phrases like "调试", "测试", "验证", "截图", "看一下设置", "改个设置", "幽灵模式", "已删除消息", "重启应用", "停掉应用", "观察界面" in this AyuGram Desktop project.
+description: Use this skill when the user asks to debug, test, or verify AstraGram functionality, take a screenshot, read or change settings, inspect ghost mode, check deleted-message storage, control the running Debug app, restart or stop the app, or says phrases like "调试", "测试", "验证", "截图", "看一下设置", "改个设置", "幽灵模式", "已删除消息", "重启应用", "停掉应用", "观察界面" in this AstraGram project.
 ---
 
 # 应用调试
@@ -78,7 +78,7 @@ CLI 会核对已有进程的可执行文件路径和工作目录。恢复原调�
 ## 构建与验证
 
 C++ 修改后先 `app.stop`，再运行 `python scripts/build.py --dev --jobs 16`。
-产物位于 `build/AyuGram-v<版本>-win-x64-dev/`，包括程序和符号文件。
+产物位于 `build/AstraGram-v<版本>-win-x64-dev/`，包括程序和符号文件。
 构建成功后 `app.ensure` 启动已有产物，最多等待 60 秒；单条服务端指令超时为 180 秒。
 
 假会话身份与场景消息在重启后消失，重新进入假会话即恢复场景；设置、草稿与留档仍写入调试配置。

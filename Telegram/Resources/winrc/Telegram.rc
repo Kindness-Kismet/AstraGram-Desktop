@@ -64,10 +64,10 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "Radolyn Labs"
-            VALUE "FileDescription", "AyuGram Desktop"
+            VALUE "FileDescription", "AstraGram"
             VALUE "FileVersion", AYUGRAM_FILE_VERSION_STR
             VALUE "LegalCopyright", "Copyright (C) 2014-2026"
-            VALUE "ProductName", "AyuGram Desktop"
+            VALUE "ProductName", "AstraGram"
             VALUE "ProductVersion", AYUGRAM_FILE_VERSION_STR
         END
     END

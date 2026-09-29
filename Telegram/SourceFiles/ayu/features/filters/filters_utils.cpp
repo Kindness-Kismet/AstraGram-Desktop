@@ -351,7 +351,7 @@ void FilterUtils::publishFilters() {
 
 	QHttpPart titlePart;
 	titlePart.setHeader(QNetworkRequest::ContentDispositionHeader, QVariant("form-data; name=\"title\""));
-	titlePart.setBody("AyuGram Filters");
+	titlePart.setBody("AstraGram Filters");
 
 	multiPart->append(contentPart);
 	multiPart->append(syntaxPart);

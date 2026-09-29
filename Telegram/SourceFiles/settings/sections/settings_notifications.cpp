@@ -518,7 +518,7 @@ void NotificationsCount::prepareNotificationSampleLarge() {
 		p.setPen(st::dialogsNameFg);
 		p.setFont(st::semiboldFont);
 
-		auto notifyTitle = st::semiboldFont->elided(u"AyuGram Desktop"_q, rectForName.width());
+		auto notifyTitle = st::semiboldFont->elided(u"AstraGram"_q, rectForName.width());
 		p.drawText(rectForName.left(), rectForName.top() + st::semiboldFont->ascent, notifyTitle);
 	}
 

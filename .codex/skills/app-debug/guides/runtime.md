@@ -42,7 +42,7 @@ python .claude/skills/app-debug/scripts/cli.py window.maximize true + screenshot
 |---|---|---|
 | `app.ensure` | 空 | 检查 Debug 应用是否运行，未运行时启动并等待端口就绪（最多 60 秒）。 |
 | `app.restart` | 空 | 先停止再启动，等到端口就绪。改完 C++ 重新编译后用它启动新构建。 |
-| `app.stop` | 空 | 校验端口 PID 的可执行文件路径必须匹配本仓库 `build/AyuGram-v*-win-x64-dev/AyuGram.exe`，再让应用自行退出；失败才回落到强制结束。端口未建立时只枚举路径匹配同一形态的进程。 |
+| `app.stop` | 空 | 校验端口 PID 的可执行文件路径必须匹配本仓库 `build/AstraGram-v*-win-x64-dev/AstraGram.exe`，再让应用自行退出；失败才回落到强制结束。端口未建立时只枚举路径匹配同一形态的进程。 |
 
 ```bash
 python .claude/skills/app-debug/scripts/cli.py app.ensure
@@ -58,7 +58,7 @@ Debug 构建装了未处理异常过滤器：进程崩溃时把异常码与符�
 
 ```bash
 python .claude/skills/app-debug/scripts/cli.py page.open ayu   # 复现操作
-cat build/AyuGram-v*-win-x64-dev/crash.log                     # 读调用栈定位
+cat build/AstraGram-v*-win-x64-dev/crash.log                   # 读调用栈定位
 ```
 
 复现崩溃后先查看 crash.log 的调用栈，定位文件与行号。

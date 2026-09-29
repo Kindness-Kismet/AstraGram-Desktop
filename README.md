@@ -1,6 +1,6 @@
 <div align="center">
 
-# AyuGram Desktop Plus
+# AstraGram
 
 <br>
 
@@ -15,7 +15,7 @@
 
 <br>
 
-AyuGram Desktop Plus is a desktop client for Windows, Linux, and macOS, built on
+AstraGram is a desktop client for Windows, Linux, and macOS, built on
 [Telegram Desktop](https://github.com/telegramdesktop/tdesktop) by way of
 [AyuGram](https://github.com/AyuGram/AyuGramDesktop) and
 [re-zero001/AyuGramDesktop](https://github.com/re-zero001/AyuGramDesktop).
@@ -140,12 +140,12 @@ Grab the archive for your platform from the
 
 | Platform | File |
 |---|---|
-| Windows · x64 | `AyuGram-v<version>-win-x64.zip` |
-| Windows · arm64 | `AyuGram-v<version>-win-arm64.zip` |
-| Linux · x64 | `AyuGram-v<version>-linux-x64.zip` |
-| Linux · arm64 | `AyuGram-v<version>-linux-arm64.zip` |
-| macOS · Intel | `AyuGram-v<version>-macos-x64.zip` |
-| macOS · Apple Silicon | `AyuGram-v<version>-macos-arm64.zip` |
+| Windows · x64 | `AstraGram-v<version>-win-x64.zip` |
+| Windows · arm64 | `AstraGram-v<version>-win-arm64.zip` |
+| Linux · x64 | `AstraGram-v<version>-linux-x64.zip` |
+| Linux · arm64 | `AstraGram-v<version>-linux-arm64.zip` |
+| macOS · Intel | `AstraGram-v<version>-macos-x64.zip` |
+| macOS · Apple Silicon | `AstraGram-v<version>-macos-arm64.zip` |
 
 The archives are portable — unpack anywhere and run. Releases also carry the
 update packages the built-in updater uses, so an installed copy can upgrade
@@ -189,8 +189,8 @@ python scripts/build.py --dev        # Debug, also collects the PDB
 python scripts/build.py --jobs 8     # fewer parallel jobs, see the memory note
 ```
 
-Output lands in `build/AyuGram-v<version>-win-x64-{release|dev}/`. Adding
-`--pack` also produces `build/AyuGram-v<version>-win-x64.zip` with just the
+Output lands in `build/AstraGram-v<version>-win-x64-{release|dev}/`. Adding
+`--pack` also produces `build/AstraGram-v<version>-win-x64.zip` with just the
 executables; `--clean-pack` clears runtime leftovers (tdata, logs) from the
 output directory first.
 

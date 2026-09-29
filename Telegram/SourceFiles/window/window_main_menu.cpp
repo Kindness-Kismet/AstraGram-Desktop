@@ -426,7 +426,7 @@ MainMenu::MainMenu(
 	parentResized();
 
 	_telegram->setMarkedText(tr::link(
-		u"AyuGram Desktop"_q,
+		u"AstraGram"_q,
 		u"https://ayugram.one"_q));
 	_telegram->setLink(1, std::make_shared<LambdaClickHandler>([=] {
 		static auto clicks = 0;

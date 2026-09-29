@@ -21,7 +21,7 @@ endif()
 project(Telegram
     LANGUAGES C CXX
     VERSION ${desktop_app_version_cmake}
-    DESCRIPTION "AyuGram Desktop"
+    DESCRIPTION "AstraGram"
     HOMEPAGE_URL "https://ayugram.one"
 )
 

@@ -245,14 +245,14 @@ python scripts/prebuild.py --clean    # 清空依赖缓存
 
 ```bash
 python scripts/build.py               # Release，默认
-python scripts/build.py --dev         # Debug（同时收集 AyuGram.pdb）
+python scripts/build.py --dev         # Debug（同时收集 AstraGram.pdb）
 python scripts/build.py --all         # 两个配置都构建
 python scripts/build.py --jobs 32     # 协作使用 32；默认 32，上限 128
 python scripts/build.py --reconfigure # 丢弃 CMake 缓存重新配置
 python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 ```
 
-- 产物在带版本号的目录：`build/AyuGram-v<版本>-win-x64-release|dev/`（版本号读取 `Telegram/build/version`）
+- 产物在带版本号的目录：`build/AstraGram-v<版本>-win-x64-release|dev/`（版本号读取 `Telegram/build/version`）
 - 脚本自己完成配置和构建两步，**不要手动执行 cmake**
 - 收集产物前会自动停止占用目标可执行文件的进程（按绝对路径匹配，不按进程名）
 - Release 不生成调试信息和 pdb，只有 Debug 带符号
@@ -312,7 +312,7 @@ python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true
 
 ### Debug 设置页
 
-Settings → AyuGram Preferences → Debug，可见条件是 `#ifdef _DEBUG` 或 `Logs::DebugEnabled()`。实现在 `ayu/ui/settings/settings_debug.{h,cpp}`。
+Settings → AstraGram Preferences → Debug，可见条件是 `#ifdef _DEBUG` 或 `Logs::DebugEnabled()`。实现在 `ayu/ui/settings/settings_debug.{h,cpp}`。
 
 ---
 
@@ -367,7 +367,7 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 ## 禁止事项
 
 1. Release 构建里保留调试代码——调试服务端、假会话、测试数据中心开关全部要在 `#ifdef _DEBUG` 内
-2. 按进程名结束 `AyuGram.exe`——应按可执行文件绝对路径或端口占用 PID 校验
+2. 按进程名结束 `AstraGram.exe`——应按可执行文件绝对路径或端口占用 PID 校验
 3. 在主线程调用阻塞接口——`AyuSync::*Sync` 系列会运行事件循环等待 MTProto 响应，导致界面无响应
 4. 在 `Telegram/lib_ui/` 之外引用 `ayu/ayu_ui_settings.h`——codegen 硬编码了该 include 路径（`codegen/style/generator.cpp:676`）
 5. 提交 `build/`、`tdata/`、`.user` 文件

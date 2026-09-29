@@ -81,8 +81,8 @@ def get_tool_version(command: list[str]) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Build AyuGram Desktop into versioned directories under build/.\n"
-            "Builds Release by default; Debug also collects AyuGram.pdb."
+            "Build AstraGram into versioned directories under build/.\n"
+            "Builds Release by default; Debug also collects AstraGram.pdb."
         ),
         formatter_class=MultilineHelpFormatter,
     )

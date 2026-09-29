@@ -129,7 +129,9 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>@output_name@</string>
+	<string>AstraGram</string>
+	<key>CFBundleDisplayName</key>
+	<string>AstraGram</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

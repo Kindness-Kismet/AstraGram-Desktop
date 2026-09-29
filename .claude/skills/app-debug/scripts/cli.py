@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""app-debug CLI，用 domain.action 指令控制正在运行的 AyuGram Debug 构建。"""
+"""app-debug CLI，用 domain.action 指令控制正在运行的 AstraGram Debug 构建。"""
 import argparse
 import base64
 import json
@@ -23,6 +23,11 @@ for _stream in (sys.stdout, sys.stderr):
     _stream.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = Path(os.environ.get("AYUGRAM_DEBUG_ROOT", Path(__file__).resolve().parents[4])).resolve()
+
+# 产物名以构建脚本为准，改名时只需要改 scripts/build_support/paths.py。
+sys.path.insert(0, str(ROOT / "scripts"))
+from build_support.paths import APP_NAME
+
 PORT = 20100
 COMMAND_TIMEOUT_SECONDS = 180
 SCREENSHOT_DIR = ROOT / "build" / "screenshots"
@@ -108,11 +113,11 @@ def current_platform() -> str:
 
 def debug_dir() -> Path:
     # 产物目录带版本号，与 scripts/build.py 的 output_dir 保持一致
-    return ROOT / "build" / f"AyuGram-v{read_app_version()}-{current_platform()}-dev"
+    return ROOT / "build" / f"{APP_NAME}-v{read_app_version()}-{current_platform()}-dev"
 
 
 def app_exe() -> Path:
-    return debug_dir() / ("AyuGram.exe" if sys.platform == "win32" else "AyuGram")
+    return debug_dir() / (f"{APP_NAME}.exe" if sys.platform == "win32" else APP_NAME)
 
 
 def is_debug_app_exe(path: Path) -> bool:
@@ -121,11 +126,11 @@ def is_debug_app_exe(path: Path) -> bool:
     resolved = path.resolve()
     directory = resolved.parent.name
     return (
-        resolved.name == ("AyuGram.exe" if sys.platform == "win32" else "AyuGram")
+        resolved.name == (f"{APP_NAME}.exe" if sys.platform == "win32" else APP_NAME)
         and resolved.parent.parent.resolve() == (ROOT / "build").resolve()
-        and directory.startswith("AyuGram-v")
+        and directory.startswith(f"{APP_NAME}-v")
         and directory.endswith(suffix)
-        and len(directory) > len("AyuGram-v") + len(suffix)
+        and len(directory) > len(f"{APP_NAME}-v") + len(suffix)
     )
 
 # 启动到监听之间要过 Qt 初始化、账号加载和主窗口构造，冷启动比较慢。
@@ -223,7 +228,7 @@ def register_commands(sub) -> None:
     command.add_argument("text", help="消息文本")
     command.add_argument("--from", dest="from_user", metavar="USER_ID", help="指定另一个假用户作为发送者")
     command.add_argument("--blocked", action="store_true", help="把发送者标记为已拉黑（真拉黑）")
-    command.add_argument("--shadow-ban", action="store_true", help="把发送者加入 AyuGram 影子拉黑名单")
+    command.add_argument("--shadow-ban", action="store_true", help="把发送者加入 AstraGram 影子拉黑名单")
     command.add_argument("--peer", help="插入到指定假会话，默认收藏夹")
     command = sub.add_parser("notification.test", help="让假用户发一条消息，触发系统或应用自带通知；原生通知需默认配置")
     command.add_argument("text", nargs="?", help="消息文本，默认 Debug 通知测试")
