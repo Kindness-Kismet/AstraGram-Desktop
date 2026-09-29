@@ -1372,18 +1372,24 @@ void Instance::emitUpdate(AudioMsgId::Type type, CheckCallback check) {
 			_listenTracker->update(state);
 		}
 
+		const auto wasPlaying = data->isPlaying;
+		data->isPlaying = !IsStopped(state.state);
 		auto finished = false;
 		_updatedNotifier.fire_copy({state});
-		if (data->isPlaying && state.state == State::StoppedAtEnd) {
+		if (wasPlaying
+			&& state.state == State::StoppedAtEnd
+			&& data->streamed
+			&& data->streamed->instance.player().finished()) {
 			if (repeat(data) == RepeatMode::One) {
-				play(data->current);
+				// 重播复用当前流并从零开始，结束通知不能覆盖新一轮的状态。
+				data->streamed->instance.play(streamingOptions(data->current, 0));
+				emitUpdate(type);
 			} else if (OptionDisableAutoplayNext.value()) {
 				finished = true;
 			} else if (!moveInPlaylist(data, 1, true)) {
 				finished = true;
 			}
 		}
-		data->isPlaying = !IsStopped(state.state);
 		if (finished) {
 			_tracksFinished.fire_copy(type);
 		}
