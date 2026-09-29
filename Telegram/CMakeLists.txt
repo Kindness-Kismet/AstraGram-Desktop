@@ -65,7 +65,11 @@ if (DESKTOP_APP_TEST_APPS OR DESKTOP_APP_SPECIAL_TARGET)
     include(cmake/test_update_verify.cmake)
 endif()
 
-set_target_properties(Telegram PROPERTIES AUTOMOC ON)
+# 各构建配置分别跟踪资源产物，避免切换配置时沿用旧语言包。
+set_target_properties(Telegram PROPERTIES
+    AUTOMOC ON
+    AUTOGEN_BETTER_GRAPH_MULTI_CONFIG ON
+)
 
 target_link_libraries(Telegram
 PRIVATE
