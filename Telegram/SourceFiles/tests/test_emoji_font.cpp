@@ -1,4 +1,4 @@
-#include "ayu/features/emoji_packs/emoji_font.h"
+#include "extras/features/emoji_packs/emoji_font.h"
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QFile>
@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	const auto bytes = file.readAll();
-	Ayu::EmojiPacks::EmojiFont font(bytes);
+	Extras::EmojiPacks::EmojiFont font(bytes);
 	if (!font.valid()) {
 		std::cerr << "测试字体无法加载。\n";
 		return 1;
@@ -63,9 +63,9 @@ int main(int argc, char **argv) {
 		|| !font.render(QString::fromUtf8("A"), 72).isNull()
 		|| !font.render(QString::fromUtf8("abc"), 72).isNull()
 		|| !font.render(QString::fromUtf8("\xF4\x8F\xBF\xBF"), 72).isNull()
-		|| Ayu::EmojiPacks::EmojiFont(QByteArray("broken font")).valid()
-		|| Ayu::EmojiPacks::EmojiFont(bytes.left(128)).valid()
-		|| !Ayu::EmojiPacks::EmojiFont(QByteArray()).render(samples.front(), 72).isNull()) {
+		|| Extras::EmojiPacks::EmojiFont(QByteArray("broken font")).valid()
+		|| Extras::EmojiPacks::EmojiFont(bytes.left(128)).valid()
+		|| !Extras::EmojiPacks::EmojiFont(QByteArray()).render(samples.front(), 72).isNull()) {
 		std::cerr << "缺失字符或损坏字体校验失败。\n";
 		return 1;
 	}

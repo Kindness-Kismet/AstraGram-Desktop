@@ -22,7 +22,7 @@ class NativeBackdropPatchTests(unittest.TestCase):
                     source = fixture(alpha, newline)
                     result = backdrop.patch_source(source)
                     self.assertEqual(backdrop.patch_source(result), result)
-                    self.assertIn(b'GetPropW(hwnd, L"AyuGramNativeBackdrop")', result)
+                    self.assertIn(b'GetPropW(hwnd, L"ExtrasNativeBackdrop")', result)
                     self.assertIn(b"Qt::WindowTransparentForInput", result)
                     self.assertIn(b"|| opacity < 1.0;", result)
                     self.assertIn(backdrop._CAPABILITY.encode().replace(b"\n", newline), result)

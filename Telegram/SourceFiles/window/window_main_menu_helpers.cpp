@@ -31,7 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/ui_utility.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
-#include "styles/style_ayu_icons.h"
+#include "styles/style_extras_icons.h"
 #include "styles/style_chat.h"
 #include "styles/style_info.h"
 #include "styles/style_menu_icons.h"
@@ -326,7 +326,7 @@ void SetupMenuBots(
 			const auto icon = walletBot
 				? Ui::CreateChild<InlineBots::MenuBotIcon>(
 					button,
-					&st::ayuWalletBotIcon)
+					&st::extrasWalletBotIcon)
 				: Ui::CreateChild<InlineBots::MenuBotIcon>(
 					button,
 					bot.media);

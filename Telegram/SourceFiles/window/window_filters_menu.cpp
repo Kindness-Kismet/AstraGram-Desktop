@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_filters_menu.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 #include "menu/menu_mark_as_read.h"
 #include "mainwindow.h"
 #include "window/window_session_controller.h"
@@ -53,7 +53,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QtEvents>
 #include <QtGui/QPainterPath>
 
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 
 namespace Window {
@@ -124,8 +124,8 @@ void FiltersMenu::setup() {
 	_menu.setAccessibleName(tr::lng_main_menu(tr::now));
 
 	_outer.setAttribute(Qt::WA_OpaquePaintEvent);
-	AyuFeatures::WindowMaterial::watchSurface(&_outer);
-	AyuFeatures::WindowMaterial::watchSurface(&_menu);
+	ExtrasFeatures::WindowMaterial::watchSurface(&_outer);
+	ExtrasFeatures::WindowMaterial::watchSurface(&_menu);
 	_outer.show();
 
 	// 菜单、文件夹、收藏与设置的焦点顺序跟随视觉排列。
@@ -143,10 +143,10 @@ void FiltersMenu::setup() {
 	}, _outer.lifetime());
 	_outer.paintRequest() | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(&_outer);
-		p.fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(
+		p.fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(
 			&_outer, ShellBackgroundColor(&_outer)->c));
 		p.fillRect(QRect(0, gap, _outer.width(),
-			_outer.height() - gap), AyuFeatures::WindowMaterial::surfaceColor(
+			_outer.height() - gap), ExtrasFeatures::WindowMaterial::surfaceColor(
 				&_outer, st::windowBg->c));
 	}, _outer.lifetime());
 
@@ -155,7 +155,7 @@ void FiltersMenu::setup() {
 	corner->setAttribute(Qt::WA_TransparentForMouseEvents);
 	corner->resize(st::windowCardRadius, st::windowCardRadius);
 	corner->paintRequest() | rpl::on_next([=] {
-		if (AyuFeatures::WindowMaterial::isActive(&_outer)) {
+		if (ExtrasFeatures::WindowMaterial::isActive(&_outer)) {
 			return;
 		}
 		const auto radius = st::windowCardRadius;
@@ -177,7 +177,7 @@ void FiltersMenu::setup() {
 	}, overlay->lifetime());
 	overlay->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(overlay);
-		const auto top = AyuFeatures::WindowMaterial::isActive(&_outer) ? 0 : gap;
+		const auto top = ExtrasFeatures::WindowMaterial::isActive(&_outer) ? 0 : gap;
 		p.fillRect(_outer.width() - st::lineWidth, top, st::lineWidth,
 			_outer.height() - top, st::windowDividerFg);
 	}, overlay->lifetime());
@@ -271,7 +271,7 @@ void FiltersMenu::setupMainMenuIcon() {
 			? &st::windowFiltersMainMenuUnread
 			: &st::windowFiltersMainMenuUnreadMuted;
 
-		const auto &settings = AyuSettings::getInstance();
+		const auto &settings = ExtrasSettings::getInstance();
 		if (settings.hideNotificationCounters()) {
 			icon = nullptr;
 		}
@@ -371,7 +371,7 @@ bool FiltersMenu::listFocused() const {
 
 void FiltersMenu::refresh() {
 	// 隐藏全部聊天时不保留对应入口。
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 
 	const auto filters = &_session->session().data().chatsFilters();
 	if (!filters->has() || _ignoreRefresh) {
@@ -590,7 +590,7 @@ base::unique_qptr<Ui::SideBarButton> FiltersMenu::prepareButton(
 	prepared->setShowText(mode != Ui::ChatsFiltersTabsMode::IconsOnly);
 	auto added = container->add(std::move(prepared));
 	auto button = base::unique_qptr<Ui::SideBarButton>(std::move(added));
-	AyuFeatures::WindowMaterial::watchSurface(button.get());
+	ExtrasFeatures::WindowMaterial::watchSurface(button.get());
 	const auto raw = button.get();
 	raw->setObjectName(u"chatFolders.folder.%1"_q.arg(id));
 	const auto nameText = id
@@ -611,7 +611,7 @@ base::unique_qptr<Ui::SideBarButton> FiltersMenu::prepareButton(
 		rpl::combine(
 			Data::UnreadStateValue(&_session->session(), id),
 			Data::IncludeMutedCounterFoldersValue(),
-			AyuSettings::getInstance().hideNotificationCountersValue()
+			ExtrasSettings::getInstance().hideNotificationCountersValue()
 		) | rpl::on_next([=](
 				const Dialogs::UnreadState &state,
 				bool includeMuted,
@@ -811,7 +811,7 @@ void FiltersMenu::applyReorder(
 	}
 
 	// 隐藏全部聊天时不保留对应入口。
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 
 	const auto filters = &_session->session().data().chatsFilters();
 	const auto &list = filters->list();

@@ -19,8 +19,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/platform_translate_provider.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/features/translator/ayu_translate_provider.h"
+#include "extras/extras_settings.h"
+#include "extras/features/translator/extras_translate_provider.h"
 
 
 namespace {
@@ -33,7 +33,7 @@ base::options::option<QString> OptionTranslateUrlTemplate({
 });
 
 [[nodiscard]] TranslationProvider ResolveTranslateProvider() {
-	const auto provider = AyuSettings::getInstance().translationProvider();
+	const auto provider = ExtrasSettings::getInstance().translationProvider();
 	if ((provider == TranslationProvider::Native)
 		&& !Platform::IsTranslateProviderAvailable()) {
 		return TranslationProvider::Telegram;
@@ -56,7 +56,7 @@ std::unique_ptr<TranslateProvider> CreateTranslateProvider(
 	switch (provider) {
 	case TranslationProvider::Google:
 	case TranslationProvider::Yandex:
-		return CreateAyuTranslateProvider(session, provider);
+		return CreateExtrasTranslateProvider(session, provider);
 	case TranslationProvider::Native:
 		if (auto native = Platform::CreateTranslateProvider()) {
 			return native;

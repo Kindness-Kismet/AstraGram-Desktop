@@ -93,9 +93,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QWindow>
 
 // AyuGram includes
-#include "ayu/ui/settings/settings_main.h"
-#include "ayu/ui/utils/ayu_profile_values.h"
-#include "ayu/utils/telegram_helpers.h"
+#include "extras/ui/settings/settings_main.h"
+#include "extras/ui/utils/extras_profile_values.h"
+#include "extras/utils/telegram_helpers.h"
 
 
 namespace Settings {
@@ -192,7 +192,7 @@ Cover::Cover(
 	_name->setContextCopyText(tr::lng_profile_copy_fullname(tr::now));
 
 	_id->setSelectable(true);
-	_id->setContextCopyText(tr::ayu_ContextCopyID(tr::now));
+	_id->setContextCopyText(tr::extras_ContextCopyID(tr::now));
 	const auto hook = [=](Ui::FlatLabel::ContextMenuRequest request) {
 		if (request.selection.empty()) {
 			const auto callback = [=] {
@@ -200,7 +200,7 @@ Cover::Cover(
 				TextUtilities::SetClipboardText({ id });
 			};
 			request.menu->addAction(
-				tr::ayu_ContextCopyID(tr::now),
+				tr::extras_ContextCopyID(tr::now),
 				callback,
 				&st::menuIconCopy);
 		} else {
@@ -391,10 +391,10 @@ void BuildSectionButtons(SectionBuilder &builder) {
 	const auto showOther = builder.showOther();
 
 	builder.addSectionButton({
-		.title = tr::ayu_AyuPreferences(),
-		.targetSection = AyuMain::Id(),
+		.title = tr::extras_Preferences(),
+		.targetSection = ExtrasMain::Id(),
 		.icon = { &st::menuIconPremium },
-		.keywords = { u"ayu"_q },
+		.keywords = { u"extras"_q },
 	});
 	builder.addSkip();
 	builder.addDivider();

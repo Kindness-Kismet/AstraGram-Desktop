@@ -6,7 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/tabbed_section.h"
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "chat_helpers/tabbed_selector.h"
 #include "ui/ui_utility.h"
@@ -41,7 +41,7 @@ TabbedSection::TabbedSection(
 	_selector->setBeforeHidingCallback(nullptr);
 
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
-	AyuFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
 }
 
 void TabbedSection::beforeHiding() {

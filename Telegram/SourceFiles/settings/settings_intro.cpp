@@ -27,7 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_layers.h"
 #include "styles/style_info.h"
 #ifdef _DEBUG
-#include "ayu/debug/debug_login.h"
+#include "extras/debug/debug_login.h"
 #include "ui/boxes/confirm_box.h"
 #include "styles/style_menu_icons.h"
 #endif
@@ -81,7 +81,7 @@ void SetupDebugLogin(
 				"Nothing is written to tdata, so a restart clears it."_q,
 			.confirmed = [=](Fn<void()> &&close) {
 				close();
-				const auto error = AyuDebug::CreateFakeSession();
+				const auto error = ExtrasDebug::CreateFakeSession();
 				if (!error.isEmpty()) {
 					window->show(Ui::MakeInformBox(error));
 				}
@@ -102,7 +102,7 @@ void SetupDebugLogin(
 				"session with real message events."_q,
 			.confirmed = [=](Fn<void()> &&close) {
 				close();
-				const auto error = AyuDebug::SwitchTestEnvironment();
+				const auto error = ExtrasDebug::SwitchTestEnvironment();
 				if (!error.isEmpty()) {
 					window->show(Ui::MakeInformBox(error));
 				}

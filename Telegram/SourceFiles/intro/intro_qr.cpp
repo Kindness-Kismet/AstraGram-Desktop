@@ -36,7 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "main/main_domain.h"
 #ifdef _DEBUG
-#include "ayu/debug/debug_login.h"
+#include "extras/debug/debug_login.h"
 #endif
 
 
@@ -385,7 +385,7 @@ void QrWidget::setupControls() {
 	// 扫码页是启动首见页，调试入口挂在这里而不是手机号页。
 	const auto offline = Ui::CreateChild<Ui::LinkButton>(
 		this,
-		tr::ayu_DebugEnterFakeSession(tr::now));
+		tr::extras_DebugEnterFakeSession(tr::now));
 	offline->setObjectName(u"debugFakeSession"_q);
 	offline->show();
 	rpl::combine(
@@ -400,10 +400,10 @@ void QrWidget::setupControls() {
 	}, offline->lifetime());
 
 	offline->setClickedCallback([=] {
-		const auto error = AyuDebug::CreateFakeSession();
+		const auto error = ExtrasDebug::CreateFakeSession();
 		if (!error.isEmpty()) {
 			LOG(("Debug: Could not create fake session: %1").arg(error));
-			showError(tr::ayu_DebugFakeSessionFailed());
+			showError(tr::extras_DebugFakeSessionFailed());
 		}
 	});
 #endif

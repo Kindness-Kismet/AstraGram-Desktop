@@ -1,12 +1,12 @@
 #include "history/view/history_view_top_bar_widget.h"
 
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 #include "lang/lang_keys.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/tooltip.h"
 #include "ui/ui_utility.h"
 #include "window/window_session_controller.h"
-#include "styles/style_ayu_styles.h"
+#include "styles/style_extras_styles.h"
 #include "styles/style_chat.h"
 #include "styles/style_dialogs.h"
 #include "styles/style_info.h"
@@ -86,11 +86,11 @@ void TopBarWidget::setupSelection() {
 	};
 	setup(_clear.data(), u"selection.clear"_q, tr::lng_selected_clear, _clearSelection);
 	setup(_forward.data(), u"selection.forward"_q, tr::lng_selected_forward, _forwardSelection);
-	setup(_noQuote.data(), u"selection.noQuote"_q, tr::ayu_SelectedForwardNoQuote, _noQuoteSelection);
+	setup(_noQuote.data(), u"selection.noQuote"_q, tr::extras_SelectedForwardNoQuote, _noQuoteSelection);
 	setup(_sendNow.data(), u"selection.sendNow"_q, tr::lng_selected_send_now, _sendNowSelection);
 	setup(_delete.data(), u"selection.delete"_q, tr::lng_selected_delete, _deleteSelection);
-	setup(_messageShot.data(), u"selection.messageShot"_q, tr::ayu_SelectionMessageShot, _messageShotSelection);
-	setup(_selectBetween.data(), u"selection.between"_q, tr::ayu_SelectBetweenText, _selectBetweenSelection);
+	setup(_messageShot.data(), u"selection.messageShot"_q, tr::extras_SelectionMessageShot, _messageShotSelection);
+	setup(_selectBetween.data(), u"selection.between"_q, tr::extras_SelectBetweenText, _selectBetweenSelection);
 
 	_selectionCount->setAttribute(Qt::WA_TransparentForMouseEvents);
 	_selectionCount->paintRequest() | rpl::on_next([=] {
@@ -142,7 +142,7 @@ int TopBarWidget::countSelectedButtonsTop(float64 selectedShown) {
 }
 
 bool TopBarWidget::showSelectedState() const {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 
 	return (_selectedCount > 0)
 		&& (_canDelete || _canForward || _canSendNow
@@ -150,7 +150,7 @@ bool TopBarWidget::showSelectedState() const {
 }
 
 void TopBarWidget::showSelected(SelectedState state) {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 
 	auto canDelete = (state.count > 0 && state.count == state.canDeleteCount);
 	auto canForward = (state.count > 0 && state.count == state.canForwardCount);
@@ -275,7 +275,7 @@ void TopBarWidget::setChooseForReportReason(
 }
 
 void TopBarWidget::updateSelectionVisibility() {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 
 	const auto visible = showSelectedState() || _selectedShown.animating();
 	_clear->setVisible(visible);

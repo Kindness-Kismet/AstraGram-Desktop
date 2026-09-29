@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_contact_status.h"
 
-#include "ayu/ui/components/chat_surface_button.h"
+#include "extras/ui/components/chat_surface_button.h"
 #include "ui/chat/floating_bar.h"
 #include "lang/lang_keys.h"
 #include "ui/controls/userpic_button.h"
@@ -314,24 +314,24 @@ ContactStatus::Bar::Bar(
 : RpWidget(parent)
 , _tooltipParent(tooltipParent)
 , _name(name)
-, _add(AyuUi::CreateChatSurfaceButton(
+, _add(ExtrasUi::CreateChatSurfaceButton(
 	this,
 	QString(),
 	st::historyContactStatusButton))
-, _unarchive(AyuUi::CreateChatSurfaceButton(
+, _unarchive(ExtrasUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_new_contact_unarchive(tr::now).toUpper(),
 	st::historyContactStatusButton))
 , _unarchiveIcon(MakeIconButton(this, st::menuIconUnarchive))
-, _block(AyuUi::CreateChatSurfaceButton(
+, _block(ExtrasUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_new_contact_block(tr::now).toUpper(),
 	st::historyContactStatusBlock))
-, _share(AyuUi::CreateChatSurfaceButton(
+, _share(ExtrasUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_new_contact_share(tr::now).toUpper(),
 	st::historyContactStatusButton))
-, _report(AyuUi::CreateChatSurfaceButton(
+, _report(ExtrasUi::CreateChatSurfaceButton(
 	this,
 	QString(),
 	st::historyContactStatusBlock))

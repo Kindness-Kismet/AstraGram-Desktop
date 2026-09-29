@@ -62,7 +62,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtWidgets/QApplication>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 
 namespace ChatHelpers {
@@ -260,17 +260,17 @@ FieldAutocomplete::FieldAutocomplete(
 	setObjectName(u"chatPopup.autocomplete"_q);
 	// 只有聊天磨砂背景上沿用输入框配色，弹窗和故事回复保留自身样式。
 	const auto frosted = [=] {
-		const auto surface = AyuUi::FloatingSurface::find(this);
+		const auto surface = ExtrasUi::FloatingSurface::find(this);
 		return surface && surface->hasBackdrop();
 	};
-	AyuUi::FloatingSurface::attach(this, {
+	ExtrasUi::FloatingSurface::attach(this, {
 		.radius = st::windowCardRadius,
 		.background = [=] {
-			return frosted() ? AyuUi::ChatSurfaceBackground() : _st.bg->c;
+			return frosted() ? ExtrasUi::ChatSurfaceBackground() : _st.bg->c;
 		},
 		.border = [=] {
 			return frosted()
-				? AyuUi::ChatSurfaceBorder()
+				? ExtrasUi::ChatSurfaceBorder()
 				: st::windowDividerFg->c;
 		},
 		.borderWidth = st::lineWidth,
@@ -478,7 +478,7 @@ bool FieldAutocomplete::clearFilteredBotCommands() {
 FieldAutocomplete::StickerRows FieldAutocomplete::getStickerSuggestions() {
 	const auto data = &_session->data().stickers();
 	const auto list = data->getListByEmoji({ _emoji }, _stickersSeed);
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	auto result = ranges::views::all(
 		list
 	) | ranges::views::filter([&](not_null<DocumentData*> sticker) {

@@ -15,7 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_messages_search.h"
 #include "data/data_forum_topic.h"
 #include "data/data_chat_participant_status.h"
-#include "ayu/features/forward/ayu_forward.h"
+#include "extras/features/forward/extras_forward.h"
 #include "history/history.h"
 #include "history/history_item_components.h"
 #include "history/history_item.h"
@@ -61,7 +61,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QMimeData>
 
 // AyuGram includes
-#include "ayu/features/message_shot/message_shot.h"
+#include "extras/features/message_shot/message_shot.h"
 
 
 namespace HistoryView {
@@ -160,7 +160,7 @@ PinnedWidget::PinnedWidget(
 	}, _topBar->lifetime());
 	_topBar->messageShotSelectionRequest(
 	) | rpl::on_next([=] {
-		AyuFeatures::MessageShot::Wrapper(_inner, [=] { clearSelected(); });
+		ExtrasFeatures::MessageShot::Wrapper(_inner, [=] { clearSelected(); });
 	}, _topBar->lifetime());
 	_topBar->forwardSelectionRequest(
 	) | rpl::on_next([=] {
@@ -742,8 +742,8 @@ void PinnedWidget::listSelectionChanged(SelectedItems &&items) {
 		}
 	}
 	state.hideNoQuote = !forwardItems.empty()
-		&& (AyuForward::isFullAyuForwardNeeded(forwardItems.front())
-			|| AyuForward::isAyuForwardNeeded(forwardItems));
+		&& (ExtrasForward::isFullExtrasForwardNeeded(forwardItems.front())
+			|| ExtrasForward::isExtrasForwardNeeded(forwardItems));
 	_topBar->showSelected(state);
 }
 

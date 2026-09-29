@@ -33,8 +33,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QScreen>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/ui/ayu_userpic.h"
+#include "extras/extras_settings.h"
+#include "extras/ui/extras_userpic.h"
 #include "ui/chat/chat_style_radius.h"
 
 
@@ -707,7 +707,7 @@ void Preview::paintReply(Painter &p, QRect clip) {
 			outline,
 			_replyRect.height());
 		p.drawRoundedRect(_replyRect, radius, radius);
-		if (!AyuSettings::getInstance().simpleQuotesAndReplies()) {
+		if (!ExtrasSettings::getInstance().simpleQuotesAndReplies()) {
 			p.setOpacity(Ui::kDefaultBgOpacity);
 			p.setClipRect(
 				_replyRect.x() + outline,
@@ -758,10 +758,10 @@ void Preview::validateUserpicCache() {
 		_userpic.size() * _ratio,
 		Qt::IgnoreAspectRatio,
 		Qt::SmoothTransformation);
-	if (AyuUserpic::IsCircle()) {
+	if (ExtrasUserpic::IsCircle()) {
 		_userpicImage = Images::Circle(std::move(scaled));
 	} else {
-		const auto r = AyuUserpic::ComputeRadius(
+		const auto r = ExtrasUserpic::ComputeRadius(
 			std::min(scaled.width(), scaled.height()));
 		_userpicImage = Images::Round(
 			std::move(scaled),

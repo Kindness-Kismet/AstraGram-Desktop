@@ -6,7 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/tabbed_selector.h"
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "chat_helpers/emoji_list_widget.h"
 #include "chat_helpers/stickers_list_widget.h"
@@ -545,7 +545,7 @@ TabbedSelector::TabbedSelector(
 		setSearchRightReserved(descriptor.searchRightReserved);
 	}
 	setAttribute(Qt::WA_OpaquePaintEvent, false);
-	AyuFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	showAll();
 	hide();
 }
@@ -902,15 +902,15 @@ void TabbedSelector::paintSlideFrame(QPainter &p) {
 		paintBgRoundedPart(p);
 	} else if (_tabsSlider) {
 		p.fillRect(0, 0, width(), _tabsSlider->height(),
-			AyuFeatures::WindowMaterial::surfaceColor(this, _st.bg->c));
+			ExtrasFeatures::WindowMaterial::surfaceColor(this, _st.bg->c));
 	}
 	auto slideDt = _a_slide.value(1.);
 	_slideAnimation->paintFrame(p, _st, slideDt, 1.,
-		AyuFeatures::WindowMaterial::isActive(this));
+		ExtrasFeatures::WindowMaterial::isActive(this));
 }
 
 void TabbedSelector::paintBgRoundedPart(QPainter &p) {
-	if (AyuFeatures::WindowMaterial::isActive(this)) {
+	if (ExtrasFeatures::WindowMaterial::isActive(this)) {
 		return;
 	}
 	const auto fill = _dropDown
@@ -935,7 +935,7 @@ void TabbedSelector::paintBgRoundedPart(QPainter &p) {
 }
 
 void TabbedSelector::paintContent(QPainter &p) {
-	if (AyuFeatures::WindowMaterial::isActive(this)) {
+	if (ExtrasFeatures::WindowMaterial::isActive(this)) {
 		return;
 	}
 	const auto &footerBg = hasSectionIcons() ? _st.categoriesBg : _st.bg;
@@ -1064,7 +1064,7 @@ QImage TabbedSelector::grabForAnimation() {
 	result.setDevicePixelRatio(style::DevicePixelRatio());
 	result.fill(Qt::transparent);
 	render(&result, QPoint(), QRegion(), QWidget::DrawChildren
-		| (AyuFeatures::WindowMaterial::isActive(this)
+		| (ExtrasFeatures::WindowMaterial::isActive(this)
 			? QWidget::RenderFlags()
 			: QWidget::RenderFlags(QWidget::DrawWindowBackground)));
 

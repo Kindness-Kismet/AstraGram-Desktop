@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_inner_widget.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 #include "dialogs/dialogs_three_state_icon.h"
 #include "dialogs/ui/chat_search_empty.h"
 #include "dialogs/ui/chat_search_in.h"
@@ -104,9 +104,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <unordered_map>
 
 // AyuGram includes
-#include "ayu/ui/ayu_userpic.h"
-#include "ayu/utils/telegram_helpers.h"
-#include "styles/style_ayu_icons.h"
+#include "extras/ui/extras_userpic.h"
+#include "extras/utils/telegram_helpers.h"
+#include "styles/style_extras_icons.h"
 
 
 namespace Dialogs {
@@ -346,8 +346,8 @@ InnerWidget::InnerWidget(
 , _childListShown(std::move(childListShown))
 , _freezeTimer([=] { _shownList->unfreeze(); update(); }) {
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
-	AyuFeatures::WindowMaterial::watchSurface(this);
-	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
 		_rowsScrollCache.clear();
 	}, lifetime());
 	setAccessibleName(tr::lng_recent_chats(tr::now));
@@ -1126,7 +1126,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			? (row->key() == _chatPreviewRow.key)
 			: selected;
 		const auto cacheAllowed = _rowsScrollCache.scrolling()
-			&& !AyuFeatures::WindowMaterial::isActive(this)
+			&& !ExtrasFeatures::WindowMaterial::isActive(this)
 			&& (!videoUserpic || !context.narrow)
 			&& !active
 			&& !cacheSelected
@@ -1520,7 +1520,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			p.fillRect(0, 0, fullWidth, st::searchedBarHeight, st::searchedBarBg);
 			p.setFont(st::searchedBarFont);
 			p.setPen(st::searchedBarFg);
-			p.drawTextLeft(st::searchedBarPosition.x(), st::searchedBarPosition.y(), width(), tr::ayu_SearchByIDResults(tr::now));
+			p.drawTextLeft(st::searchedBarPosition.x(), st::searchedBarPosition.y(), width(), tr::extras_SearchByIDResults(tr::now));
 			p.translate(0, st::searchedBarHeight);
 
 			auto skip = idSearchOffset();
@@ -2063,7 +2063,7 @@ void InnerWidget::paintPeerSearchResult(
 }
 
 QBrush InnerWidget::currentBg() const {
-	return AyuFeatures::WindowMaterial::surfaceColor(this, anim::brush(
+	return ExtrasFeatures::WindowMaterial::surfaceColor(this, anim::brush(
 		st::dialogsBg,
 		st::dialogsBgOver,
 		_childListShown.current().shown).color());
@@ -5412,33 +5412,33 @@ void InnerWidget::updateSearchIn() {
 
 	const auto typeIcon = Ui::MakeIconThumbnail(
 		SearchFilterIcon(_searchState.typeFilter));
-	auto typeName = tr::ayu_SearchFilterAll(tr::now);
+	auto typeName = tr::extras_SearchFilterAll(tr::now);
 	switch (_searchState.typeFilter) {
 	case Api::SearchFilter::NoFilter: break;
 	case Api::SearchFilter::Pinned: Unexpected("Pinned in type filter.");
 	case Api::SearchFilter::Text:
-		typeName = tr::ayu_SearchFilterText(tr::now);
+		typeName = tr::extras_SearchFilterText(tr::now);
 		break;
 	case Api::SearchFilter::Photo:
-		typeName = tr::ayu_SearchFilterPhoto(tr::now);
+		typeName = tr::extras_SearchFilterPhoto(tr::now);
 		break;
 	case Api::SearchFilter::Video:
-		typeName = tr::ayu_SearchFilterVideo(tr::now);
+		typeName = tr::extras_SearchFilterVideo(tr::now);
 		break;
 	case Api::SearchFilter::Voice:
-		typeName = tr::ayu_SearchFilterVoice(tr::now);
+		typeName = tr::extras_SearchFilterVoice(tr::now);
 		break;
 	case Api::SearchFilter::Round:
-		typeName = tr::ayu_SearchFilterRound(tr::now);
+		typeName = tr::extras_SearchFilterRound(tr::now);
 		break;
 	case Api::SearchFilter::File:
-		typeName = tr::ayu_SearchFilterFile(tr::now);
+		typeName = tr::extras_SearchFilterFile(tr::now);
 		break;
 	case Api::SearchFilter::Music:
-		typeName = tr::ayu_SearchFilterMusic(tr::now);
+		typeName = tr::extras_SearchFilterMusic(tr::now);
 		break;
 	case Api::SearchFilter::Gif:
-		typeName = tr::ayu_SearchFilterGif(tr::now);
+		typeName = tr::extras_SearchFilterGif(tr::now);
 		break;
 	}
 	_searchIn->updateType(
@@ -6311,7 +6311,7 @@ void InnerWidget::repaintDialogRowCornerStatus(not_null<History*> history) {
 		? st::dialogsOnlineBadgeSize
 		: st::dialogsCallBadgeSize;
 	const auto stroke = st::dialogsOnlineBadgeStroke;
-	const auto updateRect = AyuUserpic::OnlineBadgeRect(
+	const auto updateRect = ExtrasUserpic::OnlineBadgeRect(
 		_st->photoSize,
 		size,
 		stroke

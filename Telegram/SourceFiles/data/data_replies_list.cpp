@@ -24,10 +24,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 #ifdef _DEBUG
-#include "ayu/debug/debug_login.h"
+#include "extras/debug/debug_login.h"
 #endif
 
 
@@ -101,7 +101,7 @@ RepliesList::~RepliesList() {
 
 #ifdef _DEBUG
 void RepliesList::setLocalMessagesForDebug(std::vector<MsgId> ids) {
-	Expects(AyuDebug::isFakeSession(&_history->session()));
+	Expects(ExtrasDebug::isFakeSession(&_history->session()));
 	_list = std::move(ids);
 	ranges::sort(_list, std::greater<>());
 	_skippedBefore = _skippedAfter = 0;
@@ -1025,7 +1025,7 @@ void RepliesList::sendReadTillRequest() {
 	const auto api = &_history->session().api();
 	api->request(base::take(_readRequestId)).cancel();
 
-	const auto &ghost = AyuSettings::ghost(&_history->session());
+	const auto &ghost = ExtrasSettings::ghost(&_history->session());
 	if (!ghost.sendReadMessages()) {
 		return;
 	}

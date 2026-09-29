@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/info_content_widget.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 #include "api/api_who_reacted.h"
 #include "boxes/peer_list_box.h"
 #include "data/data_chat.h"
@@ -85,7 +85,7 @@ ContentWidget::ContentWidget(
 	using namespace rpl::mappers;
 
 	setAttribute(Qt::WA_OpaquePaintEvent);
-	AyuFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	_controller->wrapValue(
 	) | rpl::on_next([this](Wrap value) {
 		if (value != Wrap::Layer) {
@@ -162,7 +162,7 @@ bool ContentWidget::isStackBottom() const {
 void ContentWidget::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 	if (_paintPadding.isNull()) {
-		p.fillRect(e->rect(), AyuFeatures::WindowMaterial::surfaceColor(this, _bg->c));
+		p.fillRect(e->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(this, _bg->c));
 	} else {
 		const auto &r = e->rect();
 		const auto padding = QMargins(
@@ -170,7 +170,7 @@ void ContentWidget::paintEvent(QPaintEvent *e) {
 			std::min(0, (r.top() - _paintPadding.top())),
 			0,
 			std::min(0, (r.bottom() - _paintPadding.bottom())));
-		p.fillRect(r + padding, AyuFeatures::WindowMaterial::surfaceColor(this, _bg->c));
+		p.fillRect(r + padding, ExtrasFeatures::WindowMaterial::surfaceColor(this, _bg->c));
 	}
 }
 

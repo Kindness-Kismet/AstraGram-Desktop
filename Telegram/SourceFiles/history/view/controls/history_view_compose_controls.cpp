@@ -7,8 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/controls/history_view_compose_controls.h"
 
-#include "ayu/features/window_material/window_material.h"
-#include "ayu/ui/controls/attach_menu.h"
+#include "extras/features/window_material/window_material.h"
+#include "extras/ui/controls/attach_menu.h"
 
 #include "base/call_delayed.h"
 #include "base/event_filter.h"
@@ -146,7 +146,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "data/data_ai_compose_tones.h"
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 
 namespace HistoryView {
@@ -2929,24 +2929,24 @@ void ComposeControls::init() {
 
 	rpl::merge(
 		session().attachWebView().attachBotsUpdates(),
-		AyuSettings::getInstance().showAttachPopupChanges() | rpl::to_empty
+		ExtrasSettings::getInstance().showAttachPopupChanges() | rpl::to_empty
 	) | rpl::on_next([=] {
 		updateAttachBotsMenu();
 	}, _wrap->lifetime());
 
 	rpl::merge(
-		AyuSettings::getInstance().showAttachButtonInMessageFieldChanges() | rpl::to_empty,
-		AyuSettings::getInstance().showEmojiButtonInMessageFieldChanges() | rpl::to_empty,
-		AyuSettings::getInstance().showMicrophoneButtonInMessageFieldChanges() | rpl::to_empty,
-		AyuSettings::getInstance().showAutoDeleteButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showAttachButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showEmojiButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showMicrophoneButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showAutoDeleteButtonInMessageFieldChanges() | rpl::to_empty,
 		session().data().aiComposeTones().updated() | rpl::to_empty,
-		AyuSettings::getInstance().showAiEditorButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showAiEditorButtonInMessageFieldChanges() | rpl::to_empty,
 		base::options::lookup<bool>(Ui::kOptionHideAiButton).changes(),
 		session().data().aiComposeTones().updated(),
-		AyuSettings::getInstance().showAttachPopupChanges() | rpl::to_empty,
-		AyuSettings::getInstance().showEmojiPopupChanges() | rpl::to_empty,
-		AyuSettings::getInstance().channelBottomButtonChanges() | rpl::to_empty,
-		AyuSettings::getInstance().removeMessageTailChanges() | rpl::to_empty
+		ExtrasSettings::getInstance().showAttachPopupChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showEmojiPopupChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().channelBottomButtonChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().removeMessageTailChanges() | rpl::to_empty
 	) | rpl::on_next([=] {
 		updateSendButtonType();
 		updateControlsVisibility();
@@ -2954,7 +2954,7 @@ void ComposeControls::init() {
 		orderControls();
 	}, _wrap->lifetime());
 
-	AyuSettings::getInstance().translationProviderChanges(
+	ExtrasSettings::getInstance().translationProviderChanges(
 	) | rpl::on_next([=](TranslationProvider) {
 		if (_history) {
 			for (const auto &block : _history->blocks) {
@@ -2978,7 +2978,7 @@ void ComposeControls::orderControls() {
 }
 
 bool ComposeControls::showRecordButton() const {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (!settings.showMicrophoneButtonInMessageField()) {
 		return false;
 	}
@@ -4949,7 +4949,7 @@ void ComposeControls::finishAnimating() {
 }
 
 void ComposeControls::updateControlsGeometry(QSize size) {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 
 	const auto oldComposeHeight = composeFieldHeight();
 	const auto commentsShown = _commentsShown
@@ -5133,7 +5133,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 }
 
 void ComposeControls::updateControlsVisibility() {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 
 	const auto hide = hideExtraButtons()
 		|| isEditingMessage()
@@ -5645,7 +5645,7 @@ void ComposeControls::updateAttachBotsMenu() {
 	if (!_attachBotsMenu) {
 		return;
 	}
-	AyuUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get());
+	ExtrasUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get());
 	_attachBotsMenu->heightValue(
 	) | rpl::on_next([=] {
 		updateOuterGeometry(_wrap->geometry());
@@ -5654,14 +5654,14 @@ void ComposeControls::updateAttachBotsMenu() {
 
 void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
 	if (ComposeOuterMargin(_st)) {
-		const auto flat = AyuSettings::getInstance().disableChatBackground();
+		const auto flat = ExtrasSettings::getInstance().disableChatBackground();
 		const auto halfStroke = st::lineWidth / 2.;
 		const auto outline = QRectF(full).adjusted(
 			halfStroke, halfStroke, -halfStroke, -halfStroke);
 		const auto radius = std::min(
 			qreal(st::historyComposeCapsuleRadius), outline.height() / 2.);
 		auto hq = PainterHighQualityEnabler(p);
-		p.setBrush(AyuFeatures::WindowMaterial::cardColor(
+		p.setBrush(ExtrasFeatures::WindowMaterial::cardColor(
 			_wrap.get(), (flat ? st::windowBgOver : _st.bg)->c));
 		p.setPen(QPen((flat ? st::filterInputBorderFg : st::windowDividerFg)->c,
 			st::lineWidth));

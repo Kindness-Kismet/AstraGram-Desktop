@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_widget.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 #include "base/call_delayed.h"
 #include "base/qt/qt_key_modifiers.h"
 #include "base/options.h"
@@ -112,8 +112,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtWidgets/QTextEdit>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/utils/telegram_helpers.h"
+#include "extras/extras_settings.h"
+#include "extras/utils/telegram_helpers.h"
 #include "base/platform/base_platform_haptic.h"
 
 
@@ -535,8 +535,8 @@ Widget::Widget(
 	const auto makeChildListShown = [](PeerId peerId, float64 shown) {
 		return InnerWidget::ChildListShown{ peerId, shown };
 	};
-	AyuFeatures::WindowMaterial::watchSurface(this);
-	AyuFeatures::WindowMaterial::changes(this) | rpl::skip(1) | rpl::on_next([=] {
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::changes(this) | rpl::skip(1) | rpl::on_next([=] {
 		if (_showAnimation) {
 			slideFinished();
 		}
@@ -837,7 +837,7 @@ Widget::Widget(
 	_chooseSearchType->entity()->setClickedCallback(
 		[=] { showSearchType(); });
 	_chooseSearchType->entity()->setAccessibleName(
-		tr::ayu_SearchFilterType(tr::now));
+		tr::extras_SearchFilterType(tr::now));
 	_searchForNarrowLayout->setClickedCallback([=] {
 		_search->setFocusFast();
 		if (_childList) {
@@ -1200,7 +1200,7 @@ void Widget::chosenRow(const ChosenRow &row) {
 		&& (row.message.fullId.msg == ShowAtUnreadMsgId)
 		&& history->peer->hasActiveStories()
 		&& !history->peer->isSelf()
-		&& !AyuSettings::getInstance().disableStories()) {
+		&& !ExtrasSettings::getInstance().disableStories()) {
 		controller()->openPeerStories(history->peer->id);
 		return;
 	} else if (userpicCommunity) {
@@ -1579,7 +1579,7 @@ void Widget::updateCommunityAddChatButton() {
 		object_ptr<Ui::RpWidget>(_innerList)));
 	const auto placeholder = _communityAddChatPlaceholder.get();
 	placeholder->paintOn([placeholder](QPainter &p) {
-		p.fillRect(placeholder->rect(), AyuFeatures::WindowMaterial::surfaceColor(
+		p.fillRect(placeholder->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(
 			placeholder, st::dialogsBg->c));
 	});
 
@@ -1850,7 +1850,7 @@ void Widget::setupMainMenuToggle() {
 			? &st::dialogsMenuToggleUnread
 			: &st::dialogsMenuToggleUnreadMuted;
 
-		const auto &settings = AyuSettings::getInstance();
+		const auto &settings = ExtrasSettings::getInstance();
 		if (settings.hideNotificationCounters()) {
 			icon = nullptr;
 		}
@@ -1867,7 +1867,7 @@ void Widget::setupMainMenuToggle() {
 
 void Widget::setupStories() {
 	// AyuGram disableStories
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.disableStories()) {
 		return;
 	}
@@ -2723,7 +2723,7 @@ QPixmap Widget::grabForChatsFilterSlide() {
 	if (!hidden) {
 		_scrollToTop->hide();
 	}
-	auto result = AyuFeatures::WindowMaterial::isActive(this)
+	auto result = ExtrasFeatures::WindowMaterial::isActive(this)
 		? Ui::GrabWidget(_scroll.data())
 		: Ui::GrabOpaque(
 			_scroll.data(),
@@ -2744,13 +2744,13 @@ void Widget::startChatsFilterSlide(
 	const auto canvas = _chatsFilterSlideCanvas.get();
 	canvas->setAttribute(Qt::WA_TransparentForMouseEvents);
 	canvas->setAttribute(Qt::WA_OpaquePaintEvent);
-	AyuFeatures::WindowMaterial::watchSurface(canvas);
+	ExtrasFeatures::WindowMaterial::watchSurface(canvas);
 	canvas->setGeometry(_scroll->geometry());
 	const auto animation
 		= canvas->lifetime().make_state<Ui::SlideAnimation>();
 	animation->setSnapshots(std::move(wasCache), std::move(nowCache));
 	canvas->paintOn([=](QPainter &p) {
-		p.fillRect(canvas->rect(), AyuFeatures::WindowMaterial::surfaceColor(
+		p.fillRect(canvas->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(
 			canvas, st::dialogsBg->c));
 		animation->paintFrame(p, 0, 0, canvas->width());
 	});
@@ -2796,7 +2796,7 @@ void Widget::checkUpdateStatus() {
 		}
 		_updateTelegram.create(
 			this,
-			tr::ayu_UpdateAyuGram(tr::now),
+			tr::extras_Update(tr::now),
 			st::dialogsUpdateButton,
 			st::dialogsInstallUpdate,
 			st::dialogsInstallUpdateOver,
@@ -3006,7 +3006,7 @@ void Widget::updateStoriesVisibility() {
 		return;
 	}
 
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.disableStories()) {
 		_stories->setVisible(false);
 		return;
@@ -5120,7 +5120,7 @@ void Widget::paintEvent(QPaintEvent *e) {
 		_showAnimation->paintContents(p);
 		return;
 	}
-	const auto bg = AyuFeatures::WindowMaterial::surfaceColor(this, anim::brush(
+	const auto bg = ExtrasFeatures::WindowMaterial::surfaceColor(this, anim::brush(
 		st::dialogsBg,
 		st::dialogsBgOver,
 		_childListShown.current()).color());

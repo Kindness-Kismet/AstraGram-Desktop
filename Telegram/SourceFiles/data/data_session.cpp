@@ -94,10 +94,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "spellcheck/spellcheck_highlight_syntax.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/data/messages_storage.h"
-#include "ayu/features/filters/filters_controller.h"
-#include "ayu/utils/telegram_helpers.h"
+#include "extras/extras_settings.h"
+#include "extras/data/messages_storage.h"
+#include "extras/features/filters/filters_controller.h"
+#include "extras/utils/telegram_helpers.h"
 
 
 namespace Data {
@@ -427,7 +427,7 @@ Session::Session(not_null<Main::Session*> session)
 		}, _lifetime);
 
 		// AyuGram disableStories
-		const auto &settings = AyuSettings::getInstance();
+		const auto &settings = ExtrasSettings::getInstance();
 		if (!settings.disableStories()) {
 			_stories->loadMore(Data::StorySourcesList::NotHidden);
 		}
@@ -1009,7 +1009,7 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 			| Flag::CallActive
 			| Flag::CallNotEmpty
 			| Flag::NoForwards
-			| Flag::AyuNoForwards;
+			| Flag::ExtrasNoForwards;
 		const auto flagsSet = (data.is_left() ? Flag::Left : Flag())
 			| (data.is_creator() ? Flag::Creator : Flag())
 			| (data.is_deactivated() ? Flag::Deactivated : Flag())
@@ -1020,7 +1020,7 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 				? Flag::CallNotEmpty
 				: Flag())
 			| (data.is_noforwards() ? Flag::NoForwards : Flag())
-			| (data.is_ayuNoforwards() ? Flag::AyuNoForwards : Flag());
+			| (data.is_extrasNoforwards() ? Flag::ExtrasNoForwards : Flag());
 		chat->setFlags((chat->flags() & ~flagsMask) | flagsSet);
 		chat->count = data.vparticipants_count().v;
 
@@ -1133,7 +1133,7 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 				? (Flag::Left | Flag::Creator)
 				: Flag())
 			| Flag::NoForwards
-			| Flag::AyuNoForwards
+			| Flag::ExtrasNoForwards
 			| Flag::JoinToWrite
 			| Flag::RequestToJoin
 			| Flag::Forum
@@ -1184,7 +1184,7 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 					| (data.is_creator() ? Flag::Creator : Flag()))
 				: Flag())
 			| (data.is_noforwards() ? Flag::NoForwards : Flag())
-			| (data.is_ayuNoforwards() ? Flag::AyuNoForwards : Flag())
+			| (data.is_extrasNoforwards() ? Flag::ExtrasNoForwards : Flag())
 			| (data.is_join_to_send() ? Flag::JoinToWrite : Flag())
 			| (data.is_join_request() ? Flag::RequestToJoin : Flag())
 			| ((data.is_forum() && data.is_megagroup())
@@ -3094,7 +3094,7 @@ void Session::updateEditedMessage(const MTPMessage &data) {
 	}
 
 	// AyuGram saveMessagesHistory
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	HistoryMessageEdition edit;
 
 	if (data.type() != mtpc_message) {
@@ -3110,7 +3110,7 @@ void Session::updateEditedMessage(const MTPMessage &data) {
 			goto proceed;
 		}
 
-		AyuMessages::addEditedMessage(existing);
+		ExtrasMessages::addEditedMessage(existing);
 	}
 
 	FiltersController::invalidate(existing);

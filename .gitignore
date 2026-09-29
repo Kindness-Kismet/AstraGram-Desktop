@@ -3,8 +3,8 @@
 Debug/
 Release/
 # 上面两条是 MSVC 输出目录，但 Windows/macOS 的 git 大小写不敏感，会一并吞掉
-# 源码里的 ayu/debug/。目录必须显式放行，放行目录内的单个文件是无效的。
-!/Telegram/SourceFiles/ayu/debug/
+# 源码里的 extras/debug/。目录必须显式放行，放行目录内的单个文件是无效的。
+!/Telegram/SourceFiles/extras/debug/
 /ThirdParty/
 /Telegram/build/target
 /Telegram/build/ai-machine-tag

@@ -45,7 +45,7 @@ void BuildUpdateSection(SectionBuilder &builder) {
 	const auto toggle = builder.addButton({
 		.id = u"main/updates/auto_update"_q,
 		.altIds = { u"advanced/auto_update"_q },
-		.title = tr::ayu_AutoCheckUpdates(),
+		.title = tr::extras_AutoCheckUpdates(),
 		.st = &st::settingsUpdateToggle,
 		.toggled = rpl::single(cAutoUpdate()),
 		.keywords = { u"update"_q, u"automatic"_q, u"version"_q },
@@ -262,7 +262,7 @@ void SetupUpdate(not_null<Ui::VerticalLayout*> container) {
 		currentVersionText());
 	const auto toggle = container->add(object_ptr<Button>(
 		container,
-		tr::ayu_AutoCheckUpdates(),
+		tr::extras_AutoCheckUpdates(),
 		st::settingsUpdateToggle));
 	const auto label = Ui::CreateChild<Ui::FlatLabel>(
 		toggle,

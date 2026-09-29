@@ -57,7 +57,7 @@ Debug 构建装了未处理异常过滤器：进程崩溃时把异常码与符�
 工作目录 `crash.log`（工作目录见 `app.info` 的 workingDir）。
 
 ```bash
-python .claude/skills/app-debug/scripts/cli.py page.open ayu   # 复现操作
+python .claude/skills/app-debug/scripts/cli.py page.open extras   # 复现操作
 cat build/AstraGram-v*-win-x64-dev/crash.log                   # 读调用栈定位
 ```
 

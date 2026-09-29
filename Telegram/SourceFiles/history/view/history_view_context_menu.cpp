@@ -122,9 +122,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QClipboard>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/features/forward/ayu_forward.h"
-#include "ayu/ui/context_menu/context_menu.h"
+#include "extras/extras_settings.h"
+#include "extras/features/forward/extras_forward.h"
+#include "extras/ui/context_menu/context_menu.h"
 
 
 namespace HistoryView {
@@ -603,11 +603,11 @@ std::vector<not_null<HistoryItem*>> CollectForwardItemsForItem(
 	return items;
 }
 
-bool IsAyuForwardForItems(const std::vector<not_null<HistoryItem*>> &items) {
+bool IsExtrasForwardForItems(const std::vector<not_null<HistoryItem*>> &items) {
 	if (items.empty()) {
 		return false;
 	}
-	return AyuForward::isAyuForwardNeeded(items);
+	return ExtrasForward::isExtrasForwardNeeded(items);
 }
 
 bool HasCaptionsForItems(const std::vector<not_null<HistoryItem*>> &items) {
@@ -628,8 +628,8 @@ bool AddForwardSelectedAction(
 	}
 	const std::vector<not_null<HistoryItem*>> items =
 		CollectForwardItemsFromSelection(request, list);
-	const bool isAyuForward = IsAyuForwardForItems(items);
-	if (!isAyuForward) {
+	const bool isExtrasForward = IsExtrasForwardForItems(items);
+	if (!isExtrasForward) {
 		menu->addAction(tr::lng_context_forward_selected(tr::now), [=] {
 			const auto weak = base::make_weak(list);
 			Window::ShowNewForwardMessagesBox(
@@ -644,7 +644,7 @@ bool AddForwardSelectedAction(
 				});
 		}, &st::menuIconForward);
 	}
-	menu->addAction(tr::ayu_ContextForwardSelectedNoQuote(tr::now), [=] {
+	menu->addAction(tr::extras_ContextForwardSelectedNoQuote(tr::now), [=] {
 		const auto weak = base::make_weak(list);
 		Window::ShowNewForwardMessagesBox(
 				request.navigation,
@@ -658,7 +658,7 @@ bool AddForwardSelectedAction(
 				});
 	}, &st::menuIconUserHide);
 	if (HasCaptionsForItems(items)) {
-		menu->addAction(tr::ayu_ContextForwardSelectedNoCaption(tr::now), [=] {
+		menu->addAction(tr::extras_ContextForwardSelectedNoCaption(tr::now), [=] {
 			const auto weak = base::make_weak(list);
 			Window::ShowNewForwardMessagesBox(
 					request.navigation,
@@ -697,10 +697,10 @@ bool AddForwardMessageAction(
 	}
 	const std::vector<not_null<HistoryItem*>> items =
 		CollectForwardItemsForItem(item, asGroup);
-	const bool isAyuForward = IsAyuForwardForItems(items);
+	const bool isExtrasForward = IsExtrasForwardForItems(items);
 	const auto itemId = item->fullId();
 	auto fwdSubmenu = std::make_unique<Ui::PopupMenu>(list, st::popupMenuWithIcons);
-	if (!isAyuForward) {
+	if (!isExtrasForward) {
 		fwdSubmenu->addAction(tr::lng_context_forward_msg(tr::now), [=] {
 			if (const auto item = owner->message(itemId)) {
 				const auto weak = base::make_weak(list);
@@ -719,7 +719,7 @@ bool AddForwardMessageAction(
 			}
 		}, &st::menuIconForward);
 	}
-	fwdSubmenu->addAction(tr::ayu_ContextForwardMsgNoQuote(tr::now), [=] {
+	fwdSubmenu->addAction(tr::extras_ContextForwardMsgNoQuote(tr::now), [=] {
 		if (const auto item = owner->message(itemId)) {
 			const auto weak = base::make_weak(list);
 			Window::ShowNewForwardMessagesBox(
@@ -737,7 +737,7 @@ bool AddForwardMessageAction(
 		}
 	}, &st::menuIconUserHide);
 	if (HasCaptionsForItems(items)) {
-		fwdSubmenu->addAction(tr::ayu_ContextForwardMsgNoCaption(tr::now), [=] {
+		fwdSubmenu->addAction(tr::extras_ContextForwardMsgNoCaption(tr::now), [=] {
 			if (const auto item = owner->message(itemId)) {
 				const auto weak = base::make_weak(list);
 				Window::ShowNewForwardMessagesBox(
@@ -756,7 +756,7 @@ bool AddForwardMessageAction(
 		}, &st::menuIconCaptionHide);
 	}
 	fwdSubmenu->addAction(
-		tr::ayu_ForwardToSavedMessage(tr::now),
+		tr::extras_ForwardToSavedMessage(tr::now),
 		[owner, itemId] {
 			const auto item = owner->message(itemId);
 			if (!item || !IsServerMsgId(item->id)) {
@@ -777,7 +777,7 @@ bool AddForwardMessageAction(
 		},
 		&st::menuIconFave);
 	if (!fwdSubmenu->empty()) {
-		menu->addAction(tr::ayu_ContextForward(tr::now), std::move(fwdSubmenu), &st::menuIconForward);
+		menu->addAction(tr::extras_ContextForward(tr::now), std::move(fwdSubmenu), &st::menuIconForward);
 	}
 	return true;
 }
@@ -1564,17 +1564,17 @@ void AddMessageActions(
 		const ContextMenuRequest &request,
 		not_null<ListWidget*> list) {
 	if (request.item) {
-		AyuUi::AddHistoryAction(menu, request.item);
-		AyuUi::AddHideMessageAction(menu, request.item);
-		AyuUi::AddUserMessagesAction(menu, request.item);
-		AyuUi::AddMessageDetailsAction(menu, request.item);
+		ExtrasUi::AddHistoryAction(menu, request.item);
+		ExtrasUi::AddHideMessageAction(menu, request.item);
+		ExtrasUi::AddUserMessagesAction(menu, request.item);
+		ExtrasUi::AddMessageDetailsAction(menu, request.item);
 	}
 
 	AddPostLinkAction(menu, request);
 	AddForwardAction(menu, request, list);
 	if (request.item) {
 		const auto context = request.view ? request.view->context() : Context::History;
-		AyuUi::AddRepeatMessageAction(menu, request.item, context);
+		ExtrasUi::AddRepeatMessageAction(menu, request.item, context);
 	}
 	AddOfferAction(menu, request, list);
 	AddSendNowAction(menu, request, list);
@@ -1596,8 +1596,8 @@ void AddMessageActions(
 	AddRescheduleAction(menu, request, list);
 
 	if (request.item) {
-		AyuUi::AddReadUntilAction(menu, request.item);
-		AyuUi::AddBurnAction(menu, request.item);
+		ExtrasUi::AddReadUntilAction(menu, request.item);
+		ExtrasUi::AddBurnAction(menu, request.item);
 	}
 }
 
@@ -2713,8 +2713,8 @@ void AddWhoReactedAction(
 		not_null<HistoryItem*> item,
 		not_null<Window::SessionController*> controller,
 		bool separateInfoDetails) {
-	const auto &settings = AyuSettings::getInstance();
-	if (!AyuUi::ShouldShowContextMenuItem(settings.showViewsPanelInContextMenu())) {
+	const auto &settings = ExtrasSettings::getInstance();
+	if (!ExtrasUi::ShouldShowContextMenuItem(settings.showViewsPanelInContextMenu())) {
 		return;
 	}
 
@@ -3219,7 +3219,7 @@ void AddSelectRestrictionAction(
 		not_null<HistoryItem*> item,
 		bool addIcon) {
 	const auto peer = item->history()->peer;
-	if ((!peer->isAyuNoForwards() && !AyuForward::isAyuForwardNeeded(item))
+	if ((!peer->isExtrasNoForwards() && !ExtrasForward::isExtrasForwardNeeded(item))
 		|| item->isSponsored()) {
 		return;
 	}
@@ -3234,7 +3234,7 @@ void AddSelectRestrictionAction(
 		((addIcon && !user)
 			? st::historySponsoredAboutMenuLabelPosition
 			: st::historyHasCustomEmojiPosition),
-		tr::ayu_UnforwardableContextMenuText(
+		tr::extras_UnforwardableContextMenuText(
 			tr::now,
 			tr::rich),
 		(addIcon && !user) ? &st::menuIconCopyright : nullptr);

@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/info_top_bar.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 #include "dialogs/ui/dialogs_stories_list.h"
 #include "lang/lang_keys.h"
 #include "info/info_wrap_widget.h"
@@ -31,7 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_info.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 
 namespace Info {
@@ -49,7 +49,7 @@ TopBar::TopBar(
 		_roundRect.emplace(_st.radius, _st.bg);
 	}
 	setAttribute(Qt::WA_OpaquePaintEvent, !_roundRect);
-	AyuFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	setSelectedItems(std::move(selectedItems));
 	updateControlsVisibility(anim::type::instant);
 }
@@ -486,7 +486,7 @@ void TopBar::paintEvent(QPaintEvent *e) {
 	}
 	if (!_roundRect) {
 		const auto brush = anim::brush(_st.bg, _st.highlightBg, highlight);
-		p.fillRect(e->rect(), AyuFeatures::WindowMaterial::surfaceColor(
+		p.fillRect(e->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(
 			this, brush.color(), int(255 * highlight)));
 	} else if (highlight > 0.) {
 		p.setPen(Qt::NoPen);
@@ -529,7 +529,7 @@ void TopBar::updateControlsVisibility(anim::type animated) {
 
 void TopBar::setStories(rpl::producer<Dialogs::Stories::Content> content) {
 	// AyuGram disableStories
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.disableStories()) {
 		return;
 	}

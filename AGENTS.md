@@ -28,7 +28,7 @@ AyuGram Desktop 是 Telegram Desktop 的 fork。本文档面向协作者和 AI �
 AyuGramDesktop/
 ├── Telegram/                # 全部产品源码
 │   ├── SourceFiles/         # 主源码（41 个顶层目录，见下）
-│   ├── CMakeLists.txt       # 源文件在此逐个登记（ayu/ 同样逐文件列出）
+│   ├── CMakeLists.txt       # 源文件在此逐个登记（extras/ 同样逐文件列出）
 │   ├── cmake/               # 平台与依赖的 CMake 模块
 │   ├── codegen/             # 样式、emoji、TL scheme 的代码生成器
 │   ├── Resources/           # 图标、音频、翻译等资源
@@ -94,22 +94,22 @@ AyuGramDesktop/
 | `lang` | 翻译加载（`tr::lng_*`） |
 | `countries` / `ffmpeg` / `menu` / `codegen` / `test(s)` | 国家码、FFmpeg 封装、菜单、内嵌生成、测试 |
 
-### ayu/ 定制层
+### extras/ 定制层
 
-AyuGram 新增的代码集中在 `Telegram/SourceFiles/ayu/`：
+AyuGram 新增的代码集中在 `Telegram/SourceFiles/extras/`：
 
 ```
-ayu/
-├── ayu_infra.cpp              # 初始化入口（翻译/数据库/界面/工作线程/翻译器/调试服务端）
-├── ayu_settings.{h,cpp}       # 全部设置项（rpl::variable + JSON 序列化）
-├── ayu_state.{h,cpp}          # 跨组件的运行时状态
+extras/
+├── extras_infra.cpp              # 初始化入口（翻译/数据库/界面/工作线程/翻译器/调试服务端）
+├── extras_settings.{h,cpp}       # 全部设置项（rpl::variable + JSON 序列化）
+├── extras_state.{h,cpp}          # 跨组件的运行时状态
 ├── data/                      # SQLite 留档库与上层封装
 ├── features/                  # 业务功能，一个功能一个子目录
 │   ├── auto_space/            # 中英文之间自动加空格
 │   ├── filters/               # 正则过滤与隐藏（含幽灵拉黑名单）
 │   ├── forward/ message_shot/ streamer_mode/ translator/
 ├── debug/                     # 调试服务端（仅 _DEBUG 编译），commands/ 一个领域一个文件
-├── ui/                        # ayu 的控件与设置页
+├── ui/                        # extras 的控件与设置页
 ├── utils/                     # Session / Peer 转换、远程配置
 └── libs/sqlite/               # 内嵌 SQLite
 ```
@@ -118,11 +118,11 @@ ayu/
 
 | 要做的事 | 放在哪里 | 附加要求 |
 |---|---|---|
-| 新增 AyuGram 功能 | `ayu/features/<名称>/`，并在 `Telegram/CMakeLists.txt` 的 `ayugram_files` 逐文件添加 | — |
-| 新增设置项 | `ayu_settings.{h,cpp}`：成员、`to_json`、`from_json` 三处同步 | — |
-| 设置项的界面 | `ayu/ui/settings/`，入口注册在 `settings_main.cpp` | — |
-| 需要持久化的数据 | `ayu/data/` | — |
-| 新增调试指令 | `ayu/debug/commands/<领域>_commands.cpp` + CMake 登记 | 必须包在 `#ifdef _DEBUG` 里 |
+| 新增定制功能 | `extras/features/<名称>/`，并在 `Telegram/CMakeLists.txt` 的 `extras_files` 逐文件添加 | — |
+| 新增设置项 | `extras_settings.{h,cpp}`：成员、`to_json`、`from_json` 三处同步 | — |
+| 设置项的界面 | `extras/ui/settings/`，入口注册在 `settings_main.cpp` | — |
+| 需要持久化的数据 | `extras/data/` | — |
+| 新增调试指令 | `extras/debug/commands/<领域>_commands.cpp` + CMake 登记 | 必须包在 `#ifdef _DEBUG` 里 |
 | 修改上游行为（渲染、菜单等） | 直接改上游文件 | — |
 | 界面基础控件改动 | `Telegram/lib_ui/` | 先推 fork 仓库，再更新主仓库子模块指针 |
 
@@ -145,8 +145,8 @@ ayu/
 | 成员变量 | 小驼峰加 `_` 前缀 | `_lastseen`、`_peerGiftsCount` |
 | 常量 | `k` 前缀加大驼峰 | `kWideIdsTag` |
 | 类与结构体 | 大驼峰 | `HistoryItem` |
-| 函数 | 小驼峰（ayu 代码必须遵守；上游风格混杂，不做统一改造） | `processUser` |
-| 命名空间 | 大驼峰或匿名 | `AyuInfra`、`namespace { ... }` |
+| 函数 | 小驼峰（extras 代码必须遵守；上游风格混杂，不做统一改造） | `processUser` |
+| 命名空间 | 大驼峰或匿名 | `ExtrasInfra`、`namespace { ... }` |
 | 文件名 | 小写加下划线，前缀与所属领域一致 | `data_user.cpp`、`history_item.cpp` |
 
 ### 注释
@@ -207,8 +207,8 @@ void Process(const TextWithEntities &text) {
 ### 线程
 
 - 所有界面操作以及 `Data::Session`、`History`、`PeerData` 的访问都在主线程
-- 工作线程需要访问主线程对象时，用 `dispatchToMainThread`（`ayu/utils/telegram_helpers.h`）
-- 不要在工作线程调用 `AyuSettings::getInstance()` 或 `Core::App()`
+- 工作线程需要访问主线程对象时，用 `dispatchToMainThread`（`extras/utils/telegram_helpers.h`）
+- 不要在工作线程调用 `ExtrasSettings::getInstance()` 或 `Core::App()`
 - Qt 对象有线程归属：`QTcpServer` 在主线程创建，信号槽就在主线程回调，无需额外调度；跨线程信号要显式指定 `Qt::QueuedConnection`
 
 ### 错误处理与日志
@@ -267,7 +267,7 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 
 ## 调试（app-debug skill）
 
-Debug 构建会在 `AyuInfra::init()` 里启动 `QTcpServer`，监听 `127.0.0.1:20100`。服务端指令通过 `app.help` 查询，命令行工具另有应用生命周期指令：
+Debug 构建会在 `ExtrasInfra::init()` 里启动 `QTcpServer`，监听 `127.0.0.1:20100`。服务端指令通过 `app.help` 查询，命令行工具另有应用生命周期指令：
 
 | 指令 | 说明 |
 |---|---|
@@ -312,7 +312,7 @@ python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true
 
 ### Debug 设置页
 
-Settings → AstraGram Preferences → Debug，可见条件是 `#ifdef _DEBUG` 或 `Logs::DebugEnabled()`。实现在 `ayu/ui/settings/settings_debug.{h,cpp}`。
+Settings → AstraGram Preferences → Debug，可见条件是 `#ifdef _DEBUG` 或 `Logs::DebugEnabled()`。实现在 `extras/ui/settings/settings_debug.{h,cpp}`。
 
 ---
 
@@ -357,7 +357,7 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 1. **nlohmann::json 临时对象**：`for (const auto &[k, v] : SettingsJson().items())` 会产生悬空引用，range-for 的生命周期延长不覆盖 `items()` 返回的代理对象。先把结果存进具名变量再调用 `.items()`。
 2. **`value()` 与 `current()`**：前者返回数据流用于订阅，后者返回引用用于一次性读取。不要在 lambda 里捕获 `current()` 返回的引用。
 3. **`not_null<T*>`**：GSL 类型，不能隐式转换成 `T*`，需要调用 `.get()`。不要让它指向栈上对象之后返回。
-4. **`.gitignore` 大小写**：Windows 文件系统大小写不敏感，`Debug/` 规则会连带忽略 `ayu/debug/`（已显式放行）。新增路径前先跑 `git check-ignore -v <path>`。
+4. **`.gitignore` 大小写**：Windows 文件系统大小写不敏感，`Debug/` 规则会连带忽略 `extras/debug/`（已显式放行）。新增路径前先跑 `git check-ignore -v <path>`。
 5. **配置与构建**：`build.py` 自己处理配置步骤；改 `CMakeLists.txt` 会自动重新配置，不需要删除 build 目录。
 6. **静态持有 QObject**：任何静态或全局的 QObject 都无法安全存活到 QApplication 析构之后，在析构阶段操作 Qt 对象是未定义行为。见调试章节最后一条。
 7. **字符串字面量拼接**：`"(" kPattern ")"` 这种写法要求 `kPattern` 是宏，`constexpr` 变量不能参与字面量拼接。同理 `QStringLiteral` 本身是宏，参数里不能拼接标识符，这种场合改用 `QLatin1String`。
@@ -368,8 +368,8 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 
 1. Release 构建里保留调试代码——调试服务端、假会话、测试数据中心开关全部要在 `#ifdef _DEBUG` 内
 2. 按进程名结束 `AstraGram.exe`——应按可执行文件绝对路径或端口占用 PID 校验
-3. 在主线程调用阻塞接口——`AyuSync::*Sync` 系列会运行事件循环等待 MTProto 响应，导致界面无响应
-4. 在 `Telegram/lib_ui/` 之外引用 `ayu/ayu_ui_settings.h`——codegen 硬编码了该 include 路径（`codegen/style/generator.cpp:676`）
+3. 在主线程调用阻塞接口——`ExtrasSync::*Sync` 系列会运行事件循环等待 MTProto 响应，导致界面无响应
+4. 在 `Telegram/lib_ui/` 之外引用 `extras/extras_ui_settings.h`——codegen 硬编码了该 include 路径（`codegen/style/generator.cpp:676`）
 5. 提交 `build/`、`tdata/`、`.user` 文件
 6. 只在本地提交 fork 依赖（`lib_ui` / `lib_tl` 等）的改动就更新主仓库指针——子模块提交必须先推到 fork 仓库
 7. 用异常做错误处理——见"不要过度防御"
@@ -381,11 +381,11 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 改代码前自查：
 
 - [ ] 新代码放在正确的目录？（见"改动位置对照表"）
-- [ ] 新文件登记进 `Telegram/CMakeLists.txt` 的 `ayugram_files`？
+- [ ] 新文件登记进 `Telegram/CMakeLists.txt` 的 `extras_files`？
 - [ ] 新增或拆分后的 `.cpp` 文件不超过 2000 行？
-- [ ] `ayu/debug/` 下的新文件没有被 `.gitignore` 误拦？
+- [ ] `extras/debug/` 下的新文件没有被 `.gitignore` 误拦？
 - [ ] 调试代码包在 `#ifdef _DEBUG` 内？
-- [ ] 新设置项在 `ayu_settings` 的成员、`to_json`、`from_json` 三处同步？
+- [ ] 新设置项在 `extras_settings` 的成员、`to_json`、`from_json` 三处同步？
 - [ ] rpl 订阅绑定了 `lifetime()`？
 - [ ] 跨线程调用走了 `dispatchToMainThread`？
 - [ ] 优先用卫语句，`return` 后不接 `else`，嵌套不超过两层，没有过度防御？

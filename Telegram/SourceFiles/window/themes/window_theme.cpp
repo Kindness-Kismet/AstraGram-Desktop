@@ -39,7 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/background_box.h"
 #include "core/application.h"
 #include "webview/webview_common.h"
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 #include <QtCore/QBuffer>
 #include <QtCore/QJsonDocument>
@@ -538,7 +538,7 @@ void ChatBackground::start() {
 	initialRead();
 
 	// 开关改变了染色前提,运行中切换时先还原调色板再按当前壁纸重算。
-	AyuSettings::getInstance().disableChatBackgroundValue(
+	ExtrasSettings::getInstance().disableChatBackgroundValue(
 	) | rpl::skip(1) | rpl::on_next([=] {
 		restoreAdjustableColors();
 		adjustPaletteUsingPaper(_prepared);
@@ -835,7 +835,7 @@ bool ChatBackground::adjustPaletteRequired() {
 	};
 
 	// 禁用聊天壁纸时不画壁纸,再按壁纸主色染 msgServiceBg 等键只会串色。
-	if (AyuSettings::getInstance().disableChatBackground()) {
+	if (ExtrasSettings::getInstance().disableChatBackground()) {
 		return false;
 	}
 	if (_editingTheme.has_value()) {

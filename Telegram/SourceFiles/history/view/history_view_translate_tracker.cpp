@@ -27,7 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "spellcheck/platform/platform_language.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 
 namespace HistoryView {
@@ -84,7 +84,7 @@ void TranslateTracker::setup() {
 		}
 	}, _lifetime);
 
-	AyuSettings::getInstance().translationProviderChanges(
+	ExtrasSettings::getInstance().translationProviderChanges(
 	) | rpl::on_next([=](TranslationProvider) {
 		resetProvider();
 	}, _lifetime);

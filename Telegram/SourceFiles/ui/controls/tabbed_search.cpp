@@ -6,7 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/controls/tabbed_search.h"
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 
 #include <QtGui/QPainterPath>
 
@@ -434,7 +434,7 @@ void SearchWithGroups::scrollGroupsTo(int left) {
 void SearchWithGroups::initEdges() {
 	rpl::combine(
 		sizeValue(),
-		AyuFeatures::WindowMaterial::changes(this)
+		ExtrasFeatures::WindowMaterial::changes(this)
 	) | rpl::on_next([=](QSize size, bool material) {
 		if (!material) {
 			clearMask();
@@ -461,7 +461,7 @@ void SearchWithGroups::initEdges() {
 		}
 		edge->paintRequest(
 		) | rpl::on_next([=] {
-			if (AyuFeatures::WindowMaterial::isActive(this)) {
+			if (ExtrasFeatures::WindowMaterial::isActive(this)) {
 				return;
 			}
 			const auto ratio = edge->devicePixelRatioF();

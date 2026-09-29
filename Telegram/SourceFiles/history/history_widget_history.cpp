@@ -220,12 +220,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QMimeData>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/features/filters/filters_cache_controller.h"
-#include "ayu/utils/telegram_helpers.h"
-#include "ayu/features/message_shot/message_shot.h"
-#include "ayu/features/forward/ayu_forward.h"
-#include "ayu/features/auto_space/auto_space.h"
+#include "extras/extras_settings.h"
+#include "extras/features/filters/filters_cache_controller.h"
+#include "extras/utils/telegram_helpers.h"
+#include "extras/features/message_shot/message_shot.h"
+#include "extras/features/forward/extras_forward.h"
+#include "extras/features/auto_space/auto_space.h"
 #include "boxes/abstract_box.h"
 #include "history/history_widget_internal.h"
 
@@ -1299,8 +1299,8 @@ void HistoryWidget::updateSendRestriction() {
 		return;
 	}
 	_sendRestrictionKey = restriction.text;
-	if (AyuForward::isForwarding(_peer->id)) {
-		_sendRestriction = AyuForwardWriteRestriction(this, _peer->id, session());
+	if (ExtrasForward::isForwarding(_peer->id)) {
+		_sendRestriction = ExtrasForwardWriteRestriction(this, _peer->id, session());
 	} else if (!restriction) {
 		_sendRestriction = nullptr;
 	} else if (restriction.frozen) {

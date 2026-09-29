@@ -21,7 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_calls.h"
 
 // AyuGram includes
-#include "ayu/ui/ayu_userpic.h"
+#include "extras/ui/extras_userpic.h"
 
 
 namespace Calls::Group {
@@ -411,7 +411,7 @@ void MembersRow::paintBlobs(
 			st::groupCallMemberInactiveStatus,
 			st::groupCallMemberActiveStatus,
 			_speakingAnimation.value(_speaking ? 1. : 0.));
-	if (AyuUserpic::IsCircle()) {
+	if (ExtrasUserpic::IsCircle()) {
 		_blobsAnimation->blobs.paint(p, brush);
 	} else {
 		const auto level = _blobsAnimation->blobs.currentLevel();
@@ -420,7 +420,7 @@ void MembersRow::paintBlobs(
 			const auto scale = blob.minScale + (1. - blob.minScale) * level;
 			const auto radius = blob.maxRadius;
 			const auto rectSize = 2. * radius;
-			const auto cornerRadius = AyuUserpic::ComputeRadiusF(rectSize);
+			const auto cornerRadius = ExtrasUserpic::ComputeRadiusF(rectSize);
 			p.save();
 			p.scale(scale, scale);
 			p.setOpacity(p.opacity() * blob.alpha);

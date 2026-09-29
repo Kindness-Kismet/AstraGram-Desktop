@@ -296,39 +296,39 @@ void FillSearchTypeMenu(
 	addAction(
 		Api::SearchFilter::NoFilter,
 		st::menuIconTagFilter,
-		tr::ayu_SearchFilterAll(tr::now));
+		tr::extras_SearchFilterAll(tr::now));
 	addAction(
 		Api::SearchFilter::Text,
 		st::menuIconChatBubble,
-		tr::ayu_SearchFilterText(tr::now));
+		tr::extras_SearchFilterText(tr::now));
 	addAction(
 		Api::SearchFilter::Photo,
 		st::menuIconPhoto,
-		tr::ayu_SearchFilterPhoto(tr::now));
+		tr::extras_SearchFilterPhoto(tr::now));
 	addAction(
 		Api::SearchFilter::Video,
 		st::menuIconVideoChat,
-		tr::ayu_SearchFilterVideo(tr::now));
+		tr::extras_SearchFilterVideo(tr::now));
 	addAction(
 		Api::SearchFilter::Voice,
 		st::menuIconSoundOn,
-		tr::ayu_SearchFilterVoice(tr::now));
+		tr::extras_SearchFilterVoice(tr::now));
 	addAction(
 		Api::SearchFilter::Round,
 		st::menuIconVideoChat,
-		tr::ayu_SearchFilterRound(tr::now));
+		tr::extras_SearchFilterRound(tr::now));
 	addAction(
 		Api::SearchFilter::File,
 		st::menuIconFile,
-		tr::ayu_SearchFilterFile(tr::now));
+		tr::extras_SearchFilterFile(tr::now));
 	addAction(
 		Api::SearchFilter::Music,
 		st::menuIconSoundSelect,
-		tr::ayu_SearchFilterMusic(tr::now));
+		tr::extras_SearchFilterMusic(tr::now));
 	addAction(
 		Api::SearchFilter::Gif,
 		st::menuIconGif,
-		tr::ayu_SearchFilterGif(tr::now));
+		tr::extras_SearchFilterGif(tr::now));
 }
 
 ChatSearchIn::~ChatSearchIn() = default;
@@ -389,7 +389,7 @@ void ChatSearchIn::updateType(
 		std::shared_ptr<Ui::DynamicImage> icon,
 		QString name) {
 	_typeFilter = filter;
-	const auto accessibleName = tr::ayu_SearchFilterType(tr::now)
+	const auto accessibleName = tr::extras_SearchFilterType(tr::now)
 		+ u": "_q
 		+ name;
 	updateSection(

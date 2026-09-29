@@ -1,0 +1,67 @@
+using "ui/colors.palette";
+using "ui/chat/chat.style";
+using "ui/widgets/widgets.style";
+using "dialogs/dialogs.style";
+
+extrasGhostIcon: icon {{ "extras/ghost", menuIconColor }};
+extrasGhostModeGlobalIcon: icon {{ "extras/ghost_mode_global", historyPeerUserpicFg }};
+extrasEditsHistoryIcon: icon {{ "extras/edits_history", menuIconColor }};
+extrasLReadMenuIcon: icon {{ "extras/lread", menuIconColor }};
+extrasSReadMenuIcon: icon {{ "extras/sread", menuIconColor }};
+extrasStreamerModeMenuIcon: icon {{ "extras/streamer", menuIconColor }};
+extrasToBeginningMenuIcon: icon {{ "extras/to_beginning", menuIconColor }};
+extrasRepeatMenuIcon: icon {{ "extras/repeat", menuIconColor }};
+extrasContactsMutualIcon: icon {{ "extras/contacts_mutual", contactsStatusFg }};
+extrasContactsMutualIconOver: icon {{ "extras/contacts_mutual", contactsStatusFgOver }};
+extrasWalletBotIcon: icon {{ "extras/wallet_bot", menuIconColor }};
+
+messageFieldAttachIcon: icon {{ "extras/message_field/attach", menuIconColor }};
+messageFieldEmojiIcon: icon {{ "extras/message_field/emoji", menuIconColor }};
+messageFieldVoiceIcon: icon {{ "extras/message_field/voice", menuIconColor }};
+messageFieldTTLIcon: icon {{ "extras/message_field/ttl", menuIconColor }};
+messageFieldCocoonAiIcon: icon{
+	{ size(24px, 24px), transparent },
+	{ "chat/ai_letters-20x20", menuIconColor, point(2px, 2px) },
+	{ "chat/ai_star1-20x20", menuIconColor, point(2px, 2px) },
+	{ "chat/ai_star2-20x20", menuIconColor, point(2px, 2px) },
+};
+
+inChannelBadgeIcon: icon {{ "extras/channel", msgInDateFg }};
+inChannelBadgeSelectedIcon: icon {{ "extras/channel", msgInDateFgSelected }};
+outChannelBadgeIcon: icon {{ "extras/channel", msgOutDateFg }};
+outChannelBadgeSelectedIcon: icon {{ "extras/channel", msgOutDateFgSelected }};
+
+infoExteraOfficialBadge: icon {{ "extras/extera_official", profileVerifiedCheckBg }};
+
+winEnterWithGuestIcon: icon {{ "extras/ghost_tray", windowFg }};
+
+editedIcon: IconEmoji{
+    icon: icon{{ "extras/edited", windowFg }};
+    padding: margins(0px, 0px, 0px, 0px);
+    useIconColor: false;
+}
+
+deletedIcon: IconEmoji{
+    icon: icon{{ "extras/trash_bin", windowFg }};
+    padding: margins(0px, 0px, 0px, 0px);
+    useIconColor: false;
+}
+
+burntIcon: IconEmoji{
+    icon: icon{{ "extras/burnt", windowFg }};
+    padding: margins(0px, 0px, 0px, 0px);
+    useIconColor: false;
+}
+
+dialogsExteraOfficialIcon: ThreeStateIcon {
+	icon: icon {{ "extras/dialogs_extera_official", dialogsVerifiedIconBg }};
+	over: icon {{ "extras/dialogs_extera_official", dialogsVerifiedIconBgOver }};
+	active: icon {{ "extras/dialogs_extera_official", dialogsVerifiedIconBgActive }};
+}
+
+extrasHistoryFileInPlugin: icon {{ "extras/history_file_plugin", historyFileInIconFg }};
+extrasHistoryFileInPluginSelected: icon {{ "extras/history_file_plugin", historyFileInIconFgSelected }};
+extrasHistoryFileOutPlugin: icon {{ "extras/history_file_plugin", historyFileOutIconFg }};
+extrasHistoryFileOutPluginSelected: icon {{ "extras/history_file_plugin", historyFileOutIconFgSelected }};
+
+menuIconClearAttention: icon {{ "menu/clear", menuIconAttentionColor }};

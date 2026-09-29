@@ -219,7 +219,7 @@ public:
 	void setRealShortcutId(BusinessShortcutId id);
 	void setCustomServiceLink(ClickHandlerPtr link);
 
-	[[nodiscard]] bool isAyuNoForwards() const;
+	[[nodiscard]] bool isExtrasNoForwards() const;
 
 	void addLogEntryOriginal(
 		WebPageId localId,
@@ -474,7 +474,7 @@ public:
 	[[nodiscard]] bool wasDeletedAnimated() const;
 	void markDeletedAnimated();
 	void applyTTL(TimeId destroyAt);
-	void setAyuHint(const QString &hint);
+	void setExtrasHint(const QString &hint);
 	void setRealId(MsgId newId);
 	void markEphemeralSent();
 	void markTextAppearingStarted();

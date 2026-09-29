@@ -8,7 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_chat.h"
 
 #include "settings/settings_common_session.h"
-#include "ayu/ui/settings/settings_window_material.h"
+#include "extras/ui/settings/settings_window_material.h"
 
 #include "base/timer_rpl.h"
 #include "settings/settings_builder.h"
@@ -92,9 +92,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QAction>
 
 // AyuGram includes
-#include "ayu/features/message_shot/message_shot.h"
-#include "ayu/ayu_settings.h"
-#include "ayu/ui/settings/ayu_builder.h"
+#include "extras/features/message_shot/message_shot.h"
+#include "extras/extras_settings.h"
+#include "extras/ui/settings/extras_builder.h"
 #include "window/themes/window_theme_preview.h"
 
 
@@ -291,8 +291,8 @@ void ColorsPalette::show(Type type) {
 	}
 	list.insert(list.begin(), scheme->accentColor);
 	const auto &settings = Core::App().settings();
-	const auto messageShotSelected = AyuFeatures::MessageShot::isChoosingTheme()
-		? AyuFeatures::MessageShot::getSelectedColorFromDefault()
+	const auto messageShotSelected = ExtrasFeatures::MessageShot::isChoosingTheme()
+		? ExtrasFeatures::MessageShot::getSelectedColorFromDefault()
 		: std::optional<QColor>();
 	const auto color = messageShotSelected.has_value()
 		? messageShotSelected
@@ -912,20 +912,20 @@ void BuildChatBackgroundSection(SectionBuilder &builder) {
 	});
 
 	// 禁用后聊天背景纯色化，跟随会话列表背景色，随主题联动
-	AyuBuilder::AyuSectionBuilder(builder).addSettingToggle({
+	ExtrasBuilder::ExtrasSectionBuilder(builder).addSettingToggle({
 		.id = u"chat/disable-wallpaper"_q,
-		.title = tr::ayu_DisableChatBackground(),
-		.getter = &AyuSettings::disableChatBackground,
-		.setter = &AyuSettings::setDisableChatBackground,
+		.title = tr::extras_DisableChatBackground(),
+		.getter = &ExtrasSettings::disableChatBackground,
+		.setter = &ExtrasSettings::setDisableChatBackground,
 		.icon = { &st::menuIconBlock },
 		.keywords = { u"background"_q, u"wallpaper"_q, u"solid"_q, u"color"_q },
 	});
 	// 纯色背景下白气泡边界发虚，描边一圈阴影色补足
-	AyuBuilder::AyuSectionBuilder(builder).addSettingToggle({
+	ExtrasBuilder::ExtrasSectionBuilder(builder).addSettingToggle({
 		.id = u"chat/bubble-outline"_q,
-		.title = tr::ayu_ShowBubbleOutline(),
-		.getter = &AyuSettings::showBubbleOutline,
-		.setter = &AyuSettings::setShowBubbleOutline,
+		.title = tr::extras_ShowBubbleOutline(),
+		.getter = &ExtrasSettings::showBubbleOutline,
+		.setter = &ExtrasSettings::setShowBubbleOutline,
 		.icon = { &st::menuIconSelect },
 		.keywords = { u"bubble"_q, u"outline"_q, u"border"_q, u"edge"_q },
 	});
@@ -2406,32 +2406,32 @@ void SetupDefaultThemes(
 	{
 		if (path.isEmpty()) { // for Default theme (otherwise doesn't dispaly name properly)
 			style::palette embeddedPalette;
-			const auto color = AyuFeatures::MessageShot::getSelectedColorFromDefault();
+			const auto color = ExtrasFeatures::MessageShot::getSelectedColorFromDefault();
 			Window::Theme::PreparePaletteCallback(false, color)(embeddedPalette);
-			AyuFeatures::MessageShot::setPalette(embeddedPalette);
+			ExtrasFeatures::MessageShot::setPalette(embeddedPalette);
 			return;
 		}
-		if (const auto color = AyuFeatures::MessageShot::getSelectedColorFromDefault()) {
-			const auto type = AyuFeatures::MessageShot::getSelectedFromDefault();
+		if (const auto color = ExtrasFeatures::MessageShot::getSelectedColorFromDefault()) {
+			const auto type = ExtrasFeatures::MessageShot::getSelectedFromDefault();
 			const auto scheme = ranges::find(kSchemesList, type, &Scheme::type);
 			if (scheme != end(kSchemesList)) {
 				const auto colorizer = ColorizerFrom(*scheme, *color);
 				auto instance = Window::Theme::Instance();
 				if (Window::Theme::LoadFromFile(path, &instance, nullptr, nullptr, colorizer)) {
-					AyuFeatures::MessageShot::setPalette(instance.palette);
+					ExtrasFeatures::MessageShot::setPalette(instance.palette);
 					return;
 				}
 			}
 		}
 		const Data::CloudTheme theme;
 		if (const auto preview = PreviewFromFile(QByteArray(), path, theme)) {
-			AyuFeatures::MessageShot::setPalette(preview->instance.palette);
+			ExtrasFeatures::MessageShot::setPalette(preview->instance.palette);
 		}
 	};
 
 	const auto chosen = [] {
-		if (AyuFeatures::MessageShot::isChoosingTheme()) {
-			return AyuFeatures::MessageShot::getSelectedFromDefault();
+		if (ExtrasFeatures::MessageShot::isChoosingTheme()) {
+			return ExtrasFeatures::MessageShot::getSelectedFromDefault();
 		}
 
 		const auto &object = Background()->themeObject();
@@ -2471,8 +2471,8 @@ void SetupDefaultThemes(
 	const auto schemeClicked = [=](
 			const Scheme &scheme,
 			Qt::KeyboardModifiers modifiers) {
-		if (AyuFeatures::MessageShot::isChoosingTheme()) {
-			AyuFeatures::MessageShot::setDefaultSelected(scheme.type);
+		if (ExtrasFeatures::MessageShot::isChoosingTheme()) {
+			ExtrasFeatures::MessageShot::setDefaultSelected(scheme.type);
 			updateMessageShotPalette(scheme.path);
 			return;
 		}
@@ -2523,8 +2523,8 @@ void SetupDefaultThemes(
 			? Window::Theme::SystemAccentColor()
 			: settings.themesAccentColors().get(type);
 		if (i != end(checks)) {
-			if (AyuFeatures::MessageShot::isChoosingTheme()) {
-				if (const auto color = AyuFeatures::MessageShot::getSelectedColorFromDefault()) {
+			if (ExtrasFeatures::MessageShot::isChoosingTheme()) {
+				if (const auto color = ExtrasFeatures::MessageShot::getSelectedColorFromDefault()) {
 					const auto colorizer = ColorizerFrom(*scheme, color.value());
 					i->second->setColors(ColorsFromScheme(*scheme, colorizer));
 				} else {
@@ -2547,11 +2547,11 @@ void SetupDefaultThemes(
 			anim::type::instant);
 	};
 	group->setChangedCallback([=, raw = group.get()](Type type) {
-		if (AyuFeatures::MessageShot::isChoosingTheme()) {
+		if (ExtrasFeatures::MessageShot::isChoosingTheme()) {
 			palette->show(type);
 			refreshColorizer(type);
 			raw->setValue(type);
-			AyuFeatures::MessageShot::setDefaultSelected(type);
+			ExtrasFeatures::MessageShot::setDefaultSelected(type);
 
 			const auto scheme = ranges::find(kSchemesList, type, &Scheme::type);
 			if (scheme == end(kSchemesList)) {
@@ -2654,12 +2654,12 @@ void SetupDefaultThemes(
 		}
 	}, block->lifetime());
 
-	if (AyuFeatures::MessageShot::isChoosingTheme()) {
+	if (ExtrasFeatures::MessageShot::isChoosingTheme()) {
 		palette->selected() | rpl::on_next(
 			[=](QColor color)
 			{
-				AyuFeatures::MessageShot::setDefaultSelectedColor(color);
-				refreshColorizer(AyuFeatures::MessageShot::getSelectedFromDefault());
+				ExtrasFeatures::MessageShot::setDefaultSelectedColor(color);
+				refreshColorizer(ExtrasFeatures::MessageShot::getSelectedFromDefault());
 
 				const auto type = chosen();
 				const auto scheme = ranges::find(kSchemesList, type, &Scheme::type);
@@ -2671,9 +2671,9 @@ void SetupDefaultThemes(
 			},
 			container->lifetime());
 
-		AyuFeatures::MessageShot::resetDefaultSelectedEvents() | rpl::on_next([=]
+		ExtrasFeatures::MessageShot::resetDefaultSelectedEvents() | rpl::on_next([=]
 			{
-				refreshColorizer(AyuFeatures::MessageShot::getSelectedFromDefault()); // hide colorizer
+				refreshColorizer(ExtrasFeatures::MessageShot::getSelectedFromDefault()); // hide colorizer
 				group->setValue(Type(-1));
 			},
 			container->lifetime());
@@ -2681,7 +2681,7 @@ void SetupDefaultThemes(
 
 	palette->selected(
 	) | rpl::on_next([=](QColor color) {
-		if (AyuFeatures::MessageShot::isChoosingTheme()) {
+		if (ExtrasFeatures::MessageShot::isChoosingTheme()) {
 			return;
 		}
 		if (Background()->editingTheme()) {

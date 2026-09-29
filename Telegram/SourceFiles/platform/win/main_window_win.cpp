@@ -47,8 +47,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <VersionHelpers.h>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/ui/ayu_logo.h"
+#include "extras/extras_settings.h"
+#include "extras/ui/extras_logo.h"
 #include "platform/win/windows_app_user_model_id.h"
 #include <QtCore/QDir>
 #include <propkey.h>
@@ -136,7 +136,7 @@ void UpdateTaskbarRelaunchIcon(HWND hWnd) {
 	setString(AppUserModelId::Key(), AppUserModelId::Id());
 	setString(
 		PKEY_AppUserModel_RelaunchIconResource,
-		QDir::toNativeSeparators(AyuAssets::appIcoPath()).toStdWString()
+		QDir::toNativeSeparators(ExtrasAssets::appIcoPath()).toStdWString()
 			+ L",0");
 	propertyStore->Commit();
 }
@@ -635,7 +635,7 @@ void MainWindow::unreadCounterChangedHook() {
 }
 
 void MainWindow::updateTaskbarAndIconCounters() {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 
 	const auto counter = settings.hideNotificationBadge() ? 0 : Core::App().unreadBadge();
 	const auto muted = settings.hideNotificationBadge() ? 0 : Core::App().unreadBadgeMuted();

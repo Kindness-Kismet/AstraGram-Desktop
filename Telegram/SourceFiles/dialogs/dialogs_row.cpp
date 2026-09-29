@@ -38,9 +38,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_dialogs.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/features/filters/filters_controller.h"
-#include "ayu/ui/ayu_userpic.h"
+#include "extras/extras_settings.h"
+#include "extras/features/filters/filters_controller.h"
+#include "extras/ui/extras_userpic.h"
 
 
 namespace Dialogs {
@@ -267,7 +267,7 @@ constexpr auto kBlurRadius = 24;
 } // namespace
 
 QRect CornerBadgeTTLRect(int photoSize) {
-	return AyuUserpic::OnlineBadgeRect(photoSize, st::dialogsTTLBadgeSize);
+	return ExtrasUserpic::OnlineBadgeRect(photoSize, st::dialogsTTLBadgeSize);
 }
 
 QImage BlurredDarkenedPart(QImage image, QRect part) {
@@ -584,10 +584,10 @@ void Row::PaintCornerBadgeFrame(
 			}
 		}
 		if (peer && (peer->forum() || peer->monoforum())) {
-			const auto &settings = AyuSettings::getInstance();
+			const auto &settings = ExtrasSettings::getInstance();
 			const auto singleRadius = settings.singleCornerRadius();
 			const auto radius = singleRadius
-				? AyuUserpic::ComputeRadiusF(context.st->photoSize)
+				? ExtrasUserpic::ComputeRadiusF(context.st->photoSize)
 				: (context.st->photoSize * Ui::ForumUserpicRadiusMultiplier());
 			Ui::PaintOutlineSegments(q, outline, radius, segments);
 		} else {
@@ -706,7 +706,7 @@ void Row::PaintCornerBadgeFrame(
 	q.setBrush(data->active
 		? st::dialogsOnlineBadgeFgActive
 		: st::dialogsOnlineBadgeFg);
-	const auto badge = AyuUserpic::OnlineBadgeRect(photoSize, size, stroke);
+	const auto badge = ExtrasUserpic::OnlineBadgeRect(photoSize, size, stroke);
 	q.drawEllipse(QRectF(badge).marginsRemoved({
 		shrink,
 		shrink,
@@ -751,7 +751,7 @@ void Row::paintUserpic(
 			hidden);
 	}
 
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 
 	const auto cornerBadgeShown = !_cornerBadgeUserpic
 		? _cornerBadgeShown
@@ -887,7 +887,7 @@ void Row::paintUserpic(
 		: st::dialogsBg;
 	const auto size = st::dialogsCallBadgeSize;
 	const auto stroke = st::dialogsOnlineBadgeStroke;
-	const auto badge = AyuUserpic::OnlineBadgeRect(
+	const auto badge = ExtrasUserpic::OnlineBadgeRect(
 		context.st->photoSize,
 		size,
 		stroke);

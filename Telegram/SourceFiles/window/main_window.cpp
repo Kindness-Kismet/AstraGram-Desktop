@@ -6,7 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/main_window.h"
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "api/api_updates.h"
 #include "storage/localstorage.h"
@@ -63,7 +63,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <kurlmimedata.h>
 
 // AyuGram includes
-#include "ayu/ui/ayu_logo.h"
+#include "extras/ui/extras_logo.h"
 
 
 namespace Window {
@@ -143,11 +143,11 @@ const char kOptionNewWindowsSizeAsFirst[] = "new-windows-size-as-first";
 const char kOptionDisableTouchbar[] = "touchbar-disabled";
 
 QImage Logo() {
-	return AyuAssets::currentAppLogo();
+	return ExtrasAssets::currentAppLogo();
 }
 
 QImage LogoNoMargin() {
-	return AyuAssets::currentAppLogo();
+	return ExtrasAssets::currentAppLogo();
 }
 
 const QImage &LogoTelegramDefault() {
@@ -412,7 +412,7 @@ QImage WithSmallCounter(QImage image, CounterLayerArgs &&args) {
 }
 
 MainWindow::MainWindow(not_null<Controller*> controller)
-: Ui::RpWindow(AyuFeatures::WindowMaterial::availableModes().size() > 1
+: Ui::RpWindow(ExtrasFeatures::WindowMaterial::availableModes().size() > 1
 	? Ui::RpWindow::Surface::NativeMaterial
 	: Ui::RpWindow::Surface::Opaque)
 , _controller(controller)
@@ -433,7 +433,7 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 	}));
 }))
 , _body(body()) {
-	AyuFeatures::WindowMaterial::initialize(this);
+	ExtrasFeatures::WindowMaterial::initialize(this);
 	style::PaletteChanged(
 	) | rpl::on_next([=] {
 		updatePalette();

@@ -29,7 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_translate_tracker.h"
 #include "history/view/history_view_self_forwards_tagger.h"
 #include "history/view/history_view_draw_to_reply.h"
-#include "ayu/features/forward/ayu_forward.h"
+#include "extras/features/forward/extras_forward.h"
 #include "history/history.h"
 #include "history/history_drag_area.h"
 #include "history/history_inner_widget.h"
@@ -135,8 +135,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QMimeData>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/features/message_shot/message_shot.h"
+#include "extras/extras_settings.h"
+#include "extras/features/message_shot/message_shot.h"
 #include "base/unixtime.h"
 
 
@@ -540,7 +540,7 @@ ChatWidget::ChatWidget(
 	}, _topBar->lifetime());
 	_topBar->messageShotSelectionRequest(
 	) | rpl::on_next([=] {
-		AyuFeatures::MessageShot::Wrapper(_inner, [=] { clearSelected(); });
+		ExtrasFeatures::MessageShot::Wrapper(_inner, [=] { clearSelected(); });
 	}, _topBar->lifetime());
 	_topBar->forwardSelectionRequest(
 	) | rpl::on_next([=] {
@@ -776,7 +776,7 @@ ChatWidget::ChatWidget(
 		}) | rpl::on_next([=](const Api::SendAction &action) {
 			if (action.options.scheduled) {
 				_composeControls->cancelReplyMessage();
-				const auto &ghost = AyuSettings::ghost(&session());
+				const auto &ghost = ExtrasSettings::ghost(&session());
 				if (!ghost.isUseScheduledMessages()) {
 					crl::on_main(this, [=, t = _topic] {
 						controller->showSection(
@@ -5196,8 +5196,8 @@ void ChatWidget::listSelectionChanged(SelectedItems &&items) {
 		}
 	}
 	state.hideNoQuote = !forwardItems.empty()
-		&& (AyuForward::isFullAyuForwardNeeded(forwardItems.front())
-			|| AyuForward::isAyuForwardNeeded(forwardItems));
+		&& (ExtrasForward::isFullExtrasForwardNeeded(forwardItems.front())
+			|| ExtrasForward::isExtrasForwardNeeded(forwardItems));
 	_topBar->showSelected(state);
 	if (_chooseForReport && _chooseForReport->active) {
 		_bottom->updateReportMessagesText(state.count);

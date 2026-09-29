@@ -1,0 +1,22 @@
+#pragma once
+
+#include "extras/data/entities.h"
+#include "settings/settings_common_session.h"
+
+#include "boxes/premium_limits_box.h"
+#include "base/unixtime.h"
+
+class BoxContent;
+
+namespace Window {
+class Controller;
+class SessionController;
+} // namespace Window
+
+namespace Settings {
+
+object_ptr<Ui::GenericBox> RegexEditBox(RegexFilter *filter,
+										const Fn<void(RegexFilter)> &onDone,
+										std::optional<long long> dialogId = std::nullopt,
+										bool showToast = false);
+} // namespace Settings

@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_top_bar_widget.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 #include "ui/chat/floating_bar.h"
 #include "history/history.h"
 #include "history/view/history_view_send_action.h"
@@ -75,12 +75,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QWindow>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 #include "boxes/peers/edit_participants_box.h"
 #include "data/data_chat_filters.h"
 #include "history/admin_log/history_admin_log_section.h"
-#include "styles/style_ayu_styles.h"
-#include "styles/style_ayu_icons.h"
+#include "styles/style_extras_styles.h"
+#include "styles/style_extras_icons.h"
 
 
 namespace HistoryView {
@@ -148,7 +148,7 @@ TopBarWidget::TopBarWidget(
 , _admins(this, st::topBarAdmins)
 , _titlePeerText(st::windowMinWidth / 3)
 , _onlineUpdater([=] { updateOnlineDisplay(); }) {
-	AyuFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	setAttribute(Qt::WA_OpaquePaintEvent, false);
 
 	setupSelection();
@@ -190,7 +190,7 @@ TopBarWidget::TopBarWidget(
 		);
 	});
 
-	AyuSettings::getInstance().quickAdminShortcutsChanges(
+	ExtrasSettings::getInstance().quickAdminShortcutsChanges(
 	) | rpl::on_next([=](bool) {
 		updateControlsVisibility();
 	}, lifetime());
@@ -529,7 +529,7 @@ void TopBarWidget::paintEvent(QPaintEvent *e) {
 		: -st::topBarHeight;
 	const auto slidingTop = std::max(selectedButtonsTop, searchFieldTop);
 
-	p.fillRect(rect(), AyuFeatures::WindowMaterial::surfaceColor(this, st::topBarBg->c));
+	p.fillRect(rect(), ExtrasFeatures::WindowMaterial::surfaceColor(this, st::topBarBg->c));
 	p.fillRect(0, height() - st::lineWidth, width(), st::lineWidth,
 		st::windowDividerFg);
 	if (slidingTop < 0) {
@@ -867,7 +867,7 @@ void TopBarWidget::infoClicked() {
 
 void TopBarWidget::backClicked() {
 	if (_activeChat.key.folder()) {
-		const auto &settings = AyuSettings::getInstance();
+		const auto &settings = ExtrasSettings::getInstance();
 		if (settings.hideAllChatsFolder()) {
 			const auto filters = &_controller->session().data().chatsFilters();
 			const auto lookupId = filters->lookupId(_controller->session().premium() ? 0 : 1);
@@ -1336,7 +1336,7 @@ void TopBarWidget::updateControlsVisibility() {
 
 	const auto showRecentActions = [&]
 	{
-		const auto &settings = AyuSettings::getInstance();
+		const auto &settings = ExtrasSettings::getInstance();
 		if (!settings.quickAdminShortcuts()) {
 			return false;
 		}
@@ -1354,7 +1354,7 @@ void TopBarWidget::updateControlsVisibility() {
 	_recentActions->setVisible(showRecentActions);
 	const auto showAdmins = [&]
 	{
-		const auto &settings = AyuSettings::getInstance();
+		const auto &settings = ExtrasSettings::getInstance();
 		if (!settings.quickAdminShortcuts()) {
 			return false;
 		}
@@ -1641,7 +1641,7 @@ void TopBarWidget::searchEnableChooseType(bool enable, bool visible) {
 			this,
 			object_ptr<Ui::IconButton>(this, st::dialogsSearchTypeTopBar));
 		_chooseType->entity()->setAccessibleName(
-			tr::ayu_SearchFilterType(tr::now));
+			tr::extras_SearchFilterType(tr::now));
 		_chooseType->setUpdatedCallback([=](float64) {
 			updateSearchAdditionalMargins();
 			updateChooseFromUserGeometry();

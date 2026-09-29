@@ -667,7 +667,7 @@ void OrderController::fillMenu(not_null<Ui::DropdownMenu*> menu) {
 		const auto fields = [&]() -> Fields {
 			switch (mode) {
 			case OrderMode::Default: return {
-				.label = tr::ayu_MusicOrderDefault(tr::now),
+				.label = tr::extras_MusicOrderDefault(tr::now),
 				.icon = st::mediaPlayerOrderIconDefault,
 				.activeIcon = st::mediaPlayerOrderIconDefaultActive,
 			};

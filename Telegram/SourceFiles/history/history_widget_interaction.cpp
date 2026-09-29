@@ -220,12 +220,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QMimeData>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/features/filters/filters_cache_controller.h"
-#include "ayu/utils/telegram_helpers.h"
-#include "ayu/features/message_shot/message_shot.h"
-#include "ayu/features/forward/ayu_forward.h"
-#include "ayu/features/auto_space/auto_space.h"
+#include "extras/extras_settings.h"
+#include "extras/features/filters/filters_cache_controller.h"
+#include "extras/utils/telegram_helpers.h"
+#include "extras/features/message_shot/message_shot.h"
+#include "extras/features/forward/extras_forward.h"
+#include "extras/features/auto_space/auto_space.h"
 #include "boxes/abstract_box.h"
 #include "history/history_widget_internal.h"
 
@@ -716,7 +716,7 @@ bool HistoryWidget::isChoosingTheme() const {
 }
 
 bool HistoryWidget::isMuteUnmute() const {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.channelBottomButton() == ChannelBottomButton::Hidden) {
 		return false;
 	}
@@ -774,7 +774,7 @@ SendMenu::Details HistoryWidget::sendButtonMenuDetails() const {
 }
 
 bool HistoryWidget::showRecordButton() const {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (!settings.showMicrophoneButtonInMessageField()) {
 		return false;
 	}
@@ -1353,7 +1353,7 @@ void HistoryWidget::messageShotSelected() {
 		return;
 	}
 
-	AyuFeatures::MessageShot::Wrapper(
+	ExtrasFeatures::MessageShot::Wrapper(
 		_list.data(),
 		[=] { clearSelected(); });
 }

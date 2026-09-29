@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/section_widget.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 #include "mainwidget.h"
 #include "mainwindow.h"
 #include "ui/ui_utility.h"
@@ -41,7 +41,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <rpl/range.h>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 
 namespace Window {
@@ -229,7 +229,7 @@ AbstractSectionWidget::AbstractSectionWidget(
 	rpl::producer<PeerData*> peerForBackground)
 : RpWidget(parent)
 , _controller(controller) {
-	AyuFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	std::move(
 		peerForBackground
 	) | rpl::map([=](PeerData *peer) -> rpl::producer<> {
@@ -268,7 +268,7 @@ SectionWidget::SectionWidget(
 	not_null<Window::SessionController*> controller,
 	rpl::producer<PeerData*> peerForBackground)
 : AbstractSectionWidget(parent, controller, std::move(peerForBackground)) {
-	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
 		if (_showAnimation) {
 			showFinished();
 		}
@@ -283,7 +283,7 @@ SectionWidget::SectionWidget(
 	parent,
 	controller,
 	rpl::single(peerForBackground.get())) {
-	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
 		if (_showAnimation) {
 			showFinished();
 		}
@@ -395,7 +395,7 @@ void SectionWidget::PaintBackground(
 		bool paused) {
 	// 只替换主聊天区壁纸，预览和离屏导出保留原背景。
 	if (dynamic_cast<AbstractSectionWidget*>(widget.get())
-		&& AyuFeatures::WindowMaterial::isActive(widget.get())) {
+		&& ExtrasFeatures::WindowMaterial::isActive(widget.get())) {
 		return;
 	}
 	auto p = QPainter(widget);
@@ -415,7 +415,7 @@ void SectionWidget::PaintBackground(
 		bool paused) {
 	const auto &background = theme->background();
 	// 禁用聊天壁纸时背景跟会话列表同色，直接纯色填充
-	if (AyuSettings::getInstance().disableChatBackground()) {
+	if (ExtrasSettings::getInstance().disableChatBackground()) {
 		p.fillRect(clip, st::dialogsBg->c);
 		return;
 	}
@@ -579,7 +579,7 @@ auto ChatThemeValueFromPeer(
 -> rpl::producer<std::shared_ptr<Ui::ChatTheme>> {
 	auto cloud = rpl::combine(
 		MaybeCloudThemeValueFromPeer(peer),
-		AyuSettings::getInstance().disableCustomBackgroundsValue()
+		ExtrasSettings::getInstance().disableCustomBackgroundsValue()
 	) | rpl::map([=](ResolvedTheme resolved, bool disableCustomBackgrounds)
 	-> rpl::producer<std::shared_ptr<Ui::ChatTheme>> {
 		// this check ensures that background is not a pattern wallpaper in a private chat

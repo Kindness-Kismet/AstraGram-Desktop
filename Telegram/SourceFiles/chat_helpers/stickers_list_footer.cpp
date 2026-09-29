@@ -6,7 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/stickers_list_footer.h"
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "chat_helpers/emoji_keywords.h"
 #include "chat_helpers/stickers_emoji_pack.h"
@@ -724,7 +724,7 @@ void StickersListFooter::paintSelectionBg(
 void StickersListFooter::paintLeftRightFading(
 		QPainter &p,
 		const ExpandingContext &context) const {
-	if (AyuFeatures::WindowMaterial::isActive(this)) {
+	if (ExtrasFeatures::WindowMaterial::isActive(this)) {
 		return;
 	}
 	const auto o_left_normal = std::clamp(

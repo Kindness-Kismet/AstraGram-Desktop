@@ -20,7 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <set>
 
 // AyuGram includes
-#include "ayu/ui/ayu_userpic.h"
+#include "extras/ui/extras_userpic.h"
 
 
 namespace Ui {
@@ -182,7 +182,7 @@ void Item::paintOnce(Painter &p, int x, int y, int outerWidth) {
 	}
 
 	auto radius = std::min(
-		AyuUserpic::ComputeRadius(_st.height),
+		ExtrasUserpic::ComputeRadius(_st.height),
 		_st.height / 2);
 	auto inner = style::rtlrect(
 		x + radius,
@@ -244,7 +244,7 @@ void Item::paintDeleteButton(
 		PainterHighQualityEnabler hq(p);
 		const auto rect = style::rtlrect(
 			x, y, _st.height, _st.height, outerWidth);
-		AyuUserpic::PaintShape(p, rect);
+		ExtrasUserpic::PaintShape(p, rect);
 	}
 
 	CrossAnimation::paint(

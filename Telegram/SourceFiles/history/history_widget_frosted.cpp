@@ -1,6 +1,6 @@
 #include "history/history_widget.h"
 
-#include "ayu/ui/components/floating_surface_host.h"
+#include "extras/ui/components/floating_surface_host.h"
 #include "history/history_inner_widget.h"
 #include "mainwidget.h"
 #include "ui/chat/floating_bar.h"
@@ -13,14 +13,14 @@ void HistoryWidget::setupFrostedBackground() {
 	_composeSurface->setObjectName(u"chatBar.compose"_q);
 	_composeSurface->setMouseTracking(true);
 	_composeSurface->hide();
-	AyuUi::FloatingSurface::attach(_composeSurface.data(), {
+	ExtrasUi::FloatingSurface::attach(_composeSurface.data(), {
 		.radius = st::historyComposeCapsuleRadius,
-		.background = AyuUi::ChatSurfaceBackground,
-		.border = AyuUi::ChatSurfaceBorder,
+		.background = ExtrasUi::ChatSurfaceBackground,
+		.border = ExtrasUi::ChatSurfaceBorder,
 		.borderWidth = st::lineWidth,
 		.maskInput = true,
 	});
-	_floatingSurfaceHost = std::make_unique<AyuUi::FloatingSurfaceHost>(
+	_floatingSurfaceHost = std::make_unique<ExtrasUi::FloatingSurfaceHost>(
 		this,
 		[=](Painter &p, QRect area) {
 			if (!_list || _scroll->isHidden() || _firstLoadRequest

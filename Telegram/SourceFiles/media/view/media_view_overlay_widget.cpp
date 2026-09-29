@@ -135,9 +135,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <kurlmimedata.h>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/ayu_state.h"
-#include "ayu/features/streamer_mode/streamer_mode.h"
+#include "extras/extras_settings.h"
+#include "extras/extras_state.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 
 
 namespace Media {
@@ -4523,10 +4523,10 @@ void OverlayWidget::activate() {
 	QApplication::setActiveWindow(_window);
 	setFocus();
 
-	if (AyuSettings::getInstance().streamerMode()) {
-		AyuFeatures::StreamerMode::hideWidgetWindow(_window);
+	if (ExtrasSettings::getInstance().streamerMode()) {
+		ExtrasFeatures::StreamerMode::hideWidgetWindow(_window);
 	} else {
-		AyuFeatures::StreamerMode::showWidgetWindow(_window);
+		ExtrasFeatures::StreamerMode::showWidgetWindow(_window);
 	}
 }
 
@@ -8848,7 +8848,7 @@ Window::SessionController *OverlayWidget::findWindow(bool switchTo) const {
 
 // #TODO unite and check
 void OverlayWidget::clearBeforeHide() {
-	AyuState::disableGhostModeOnStoryClose(_storiesSession);
+	ExtrasState::disableGhostModeOnStoryClose(_storiesSession);
 	checkSingleViewMediaBurn();
 	_message = nullptr;
 	_sharedMedia = nullptr;

@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/peer_list_box.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 #include "boxes/peer_list_section_headers.h"
 #include "boxes/peer_list_section_index.h"
 #include "history/history.h" // chatListNameSortKey.
@@ -46,8 +46,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtWidgets/QApplication>
 
 // AyuGram includes
-#include "styles/style_ayu_icons.h"
-#include "ayu/ui/ayu_userpic.h"
+#include "styles/style_extras_icons.h"
+#include "extras/ui/extras_userpic.h"
 
 
 [[nodiscard]] PeerListRowId UniqueRowIdFromString(const QString &d) {
@@ -1122,7 +1122,7 @@ void PeerListRow::paintDisabledCheckUserpic(
 				* Ui::ForumUserpicRadiusMultiplier();
 			p.drawRoundedRect(userpicEllipse, radius, radius);
 		} else {
-			AyuUserpic::PaintShape(p, userpicEllipse);
+			ExtrasUserpic::PaintShape(p, userpicEllipse);
 		}
 
 		p.setPen(iconBorderPen);
@@ -1202,8 +1202,8 @@ PeerListContent::PeerListContent(
 , _controller(controller)
 , _rowHeight(_st.item.height)
 , _rowsScrollCache([this] { update(); }) {
-	AyuFeatures::WindowMaterial::watchSurface(this);
-	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
 		_rowsScrollCache.clear();
 	}, lifetime());
 	_controller->session().downloaderTaskFinished(
@@ -1717,7 +1717,7 @@ void PeerListContent::paintEvent(QPaintEvent *e) {
 			}
 		}
 		for (const auto &rect : fill) {
-			p.fillRect(rect, AyuFeatures::WindowMaterial::surfaceColor(
+			p.fillRect(rect, ExtrasFeatures::WindowMaterial::surfaceColor(
 				this, _st.item.button.textBg->c));
 		}
 	}
@@ -2079,7 +2079,7 @@ crl::time PeerListContent::paintRow(
 
 	const auto activeElement = (active.index == index) ? active.element : 0;
 	if (_rowsScrollCache.scrolling()
-		&& !AyuFeatures::WindowMaterial::isActive(this)
+		&& !ExtrasFeatures::WindowMaterial::isActive(this)
 		&& !selected
 		&& !activeElement
 		&& !row->elementsAnimating()
@@ -2136,7 +2136,7 @@ void PeerListContent::paintRowContent(
 
 	p.fillRect(0, 0, outerWidth, _rowHeight, selected
 		? bg->c
-		: AyuFeatures::WindowMaterial::surfaceColor(this, bg->c));
+		: ExtrasFeatures::WindowMaterial::surfaceColor(this, bg->c));
 	row->paintRipple(p, st, 0, 0, outerWidth);
 	row->paintUserpic(
 		p,

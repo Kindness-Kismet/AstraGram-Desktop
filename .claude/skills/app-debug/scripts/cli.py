@@ -207,7 +207,7 @@ def register_commands(sub) -> None:
     command = sub.add_parser("settings.set", help="修改设置，按当前类型解析取值")
     command.add_argument("key")
     command.add_argument("value")
-    command = sub.add_parser("page.open", help="打开设置页：settings / ayu / search")
+    command = sub.add_parser("page.open", help="打开设置页：settings / extras / search")
     command.add_argument("section")
     sub.add_parser("theme.reset-background", help="重置聊天背景到默认壁纸")
     command = sub.add_parser("theme.set", help="切换浅色或暗色主题")

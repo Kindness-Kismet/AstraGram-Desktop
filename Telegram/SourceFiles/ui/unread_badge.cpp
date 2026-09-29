@@ -22,8 +22,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_dialogs.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/utils/telegram_helpers.h"
+#include "extras/extras_settings.h"
+#include "extras/utils/telegram_helpers.h"
 #include "styles/style_info.h"
 
 
@@ -244,7 +244,7 @@ PeerBadge::~PeerBadge() = default;
 int PeerBadge::drawGetWidth(Painter &p, Descriptor &&descriptor) {
 	Expects(descriptor.customEmojiRepaint != nullptr);
 
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	const auto hidePremiumStatuses = settings.hidePremiumStatuses();
 
 	const auto peer = descriptor.peer;

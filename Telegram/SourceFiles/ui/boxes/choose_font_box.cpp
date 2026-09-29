@@ -29,7 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QFontDatabase>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 #include "ui/chat/chat_style_radius.h"
 
 
@@ -672,7 +672,7 @@ void PreviewPainter::paintReply(Painter &p) {
 			outline,
 			_replyRect.height());
 		p.drawRoundedRect(_replyRect, radius, radius);
-		if (!AyuSettings::getInstance().simpleQuotesAndReplies()) {
+		if (!ExtrasSettings::getInstance().simpleQuotesAndReplies()) {
 			p.setOpacity(Ui::kDefaultBgOpacity);
 			p.setClipRect(
 				_replyRect.x() + outline,

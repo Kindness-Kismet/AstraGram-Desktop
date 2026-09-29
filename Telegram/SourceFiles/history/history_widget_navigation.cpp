@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
 
-#include "ayu/ui/controls/attach_menu.h"
+#include "extras/ui/controls/attach_menu.h"
 
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
@@ -222,12 +222,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QMimeData>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/features/filters/filters_cache_controller.h"
-#include "ayu/utils/telegram_helpers.h"
-#include "ayu/features/message_shot/message_shot.h"
-#include "ayu/features/forward/ayu_forward.h"
-#include "ayu/features/auto_space/auto_space.h"
+#include "extras/extras_settings.h"
+#include "extras/features/filters/filters_cache_controller.h"
+#include "extras/utils/telegram_helpers.h"
+#include "extras/features/message_shot/message_shot.h"
+#include "extras/features/forward/extras_forward.h"
+#include "extras/features/auto_space/auto_space.h"
 #include "boxes/abstract_box.h"
 #include "history/history_widget_internal.h"
 
@@ -803,7 +803,7 @@ void HistoryWidget::refreshAttachBotsMenu() {
 	if (!_attachBotsMenu) {
 		return;
 	}
-	AyuUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get());
+	ExtrasUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get());
 	_attachBotsMenu->heightValue(
 	) | rpl::on_next([=] {
 		moveFieldControls();
@@ -1084,7 +1084,7 @@ void HistoryWidget::refreshScheduledToggle() {
 void HistoryWidget::refreshSendGiftToggle() {
 	using Type = Api::DisallowedGiftType;
 
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	const auto user = _peer ? _peer->asUser() : nullptr;
 	const auto disallowed = user ? user->disallowedGiftTypes() : Type();
 	const auto all = Type::Premium

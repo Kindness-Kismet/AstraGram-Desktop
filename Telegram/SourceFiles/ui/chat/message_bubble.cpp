@@ -15,7 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat_style.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 #include <QtGui/QPainterPath>
 
@@ -29,7 +29,7 @@ using Corner = BubbleCornerRounding;
 		const QRectF &rect,
 		const BubbleRounding &rounding,
 		QSize tailSize) {
-	const auto removeTail = AyuSettings::getInstance().removeMessageTail();
+	const auto removeTail = ExtrasSettings::getInstance().removeMessageTail();
 	const auto radiusOf = [&](BubbleCornerRounding corner) {
 		if (removeTail && corner == Corner::Tail) {
 			corner = Corner::Large;
@@ -173,7 +173,7 @@ void PaintBubbleGeneric(
 		return;
 	}
 
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.removeMessageTail()) {
 		if (bottomWithTailLeft == Corner::Tail) {
 			bottomWithTailLeft = Corner::Large;
@@ -387,7 +387,7 @@ void PaintSolidBubble(QPainter &p, const SimpleBubble &args) {
 		return tail.width();
 	});
 
-	if (AyuSettings::getInstance().showBubbleOutline()) {
+	if (ExtrasSettings::getInstance().showBubbleOutline()) {
 		auto color = st.msgShadow->c;
 		color.setAlphaF(0.35);
 		p.save();

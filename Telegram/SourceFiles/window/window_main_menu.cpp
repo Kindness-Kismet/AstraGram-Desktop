@@ -82,12 +82,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QClipboard>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/utils/telegram_helpers.h"
+#include "extras/extras_settings.h"
+#include "extras/utils/telegram_helpers.h"
 #include "boxes/abstract_box.h"
-#include "styles/style_ayu_icons.h"
+#include "styles/style_extras_icons.h"
 #include "lang_auto.h"
-#include "ayu/ui/settings/settings_main.h"
+#include "extras/ui/settings/settings_main.h"
 #include "styles/style_info.h"
 
 
@@ -127,7 +127,7 @@ void FillBackground(QPainter &p, QSize size) {
 }
 
 [[nodiscard]] rpl::producer<TextWithEntities> PreferencesLabel() {
-	return tr::ayu_AyuPreferences() | rpl::map([](const QString& text) {
+	return tr::extras_Preferences() | rpl::map([](const QString& text) {
 		return tr::link(text);
 	});
 }
@@ -439,10 +439,10 @@ MainMenu::MainMenu(
 		const auto count = ++clicks;
 		if (count == 20) {
 			clicks = 0;
-			if (!AyuSettings::getInstance().devFeaturesEnabled()) {
-				AyuSettings::getInstance().setDevFeaturesEnabled(true);
+			if (!ExtrasSettings::getInstance().devFeaturesEnabled()) {
+				ExtrasSettings::getInstance().setDevFeaturesEnabled(true);
 			}
-			controller->showToast(tr::ayu_DevFeaturesUnlocked(tr::now));
+			controller->showToast(tr::extras_DevFeaturesUnlocked(tr::now));
 			return;
 		}
 		// 每 5 次逗一句，其余点击不给反馈，第 20 次才真的解锁。
@@ -450,10 +450,10 @@ MainMenu::MainMenu(
 			return;
 		}
 		const auto hint = (count == 5)
-			? tr::ayu_DevFeaturesHint1(tr::now)
+			? tr::extras_DevFeaturesHint1(tr::now)
 			: (count == 10)
-			? tr::ayu_DevFeaturesHint2(tr::now)
-			: tr::ayu_DevFeaturesHint3(tr::now);
+			? tr::extras_DevFeaturesHint2(tr::now)
+			: tr::extras_DevFeaturesHint3(tr::now);
 		controller->showToast(hint);
 	}));
 	// The canary version is too long for the "Version {version}" form.
@@ -724,7 +724,7 @@ void MainMenu::setupAccountsToggle() {
 
 void MainMenu::setupSetEmojiStatus() {
 	_setEmojiStatus->overrideLinkClickHandler([=] {
-		_controller->showSettings(Settings::AyuMain::Id());
+		_controller->showSettings(Settings::ExtrasMain::Id());
 	});
 }
 
@@ -747,7 +747,7 @@ void MainMenu::showFinished() {
 void MainMenu::setupMenu() {
 	using namespace Settings;
 
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 
 	const auto controller = _controller;
 	auto section = _menu->add(object_ptr<Ui::VerticalLayout>(_menu));
@@ -846,7 +846,7 @@ void MainMenu::setupMenu() {
 
 		if (settings.showArchiveInDrawer()) {
 			addAction(
-				tr::ayu_ArchiveChatsInMenu(),
+				tr::extras_ArchiveChatsInMenu(),
 				{ &st::menuIconArchive },
 				u"archiveChats"_q
 		)->setClickedCallback([=] {
@@ -860,12 +860,12 @@ void MainMenu::setupMenu() {
 
 		if (settings.showLReadToggleInDrawer()) {
 			addAction(
-				tr::ayu_LReadMessages(),
-				{&st::ayuLReadMenuIcon},
+				tr::extras_LReadMessages(),
+				{&st::extrasLReadMenuIcon},
 				u"lRead"_q
 			)->setClickedCallback([=]() mutable
 			{
-				auto &ghost = AyuSettings::ghost(&controller->session());
+				auto &ghost = ExtrasSettings::ghost(&controller->session());
 				const auto prev = ghost.sendReadMessages();
 				ghost.setSendReadMessages(false);
 
@@ -878,7 +878,7 @@ void MainMenu::setupMenu() {
 
 		if (settings.showSReadToggleInDrawer()) {
 			auto callback = [=](Fn<void()> &&close) mutable {
-				auto &ghost = AyuSettings::ghost(&controller->session());
+				auto &ghost = ExtrasSettings::ghost(&controller->session());
 				const auto prev = ghost.sendReadMessages();
 				ghost.setSendReadMessages(true);
 
@@ -887,22 +887,22 @@ void MainMenu::setupMenu() {
 
 				// slight delay for forums to send packets
 				dispatchToMainThread(crl::guard(controller, [=] {
-					auto &ghost = AyuSettings::ghost(&controller->session());
+					auto &ghost = ExtrasSettings::ghost(&controller->session());
 					ghost.setSendReadMessages(prev);
 				}), 200);
 				close();
 			};
 
 			addAction(
-				tr::ayu_SReadMessages(),
-				{&st::ayuSReadMenuIcon},
+				tr::extras_SReadMessages(),
+				{&st::extrasSReadMenuIcon},
 				u"sRead"_q
 			)->setClickedCallback([=]
 			{
 				auto box = Ui::MakeConfirmBox({
-					.text = tr::ayu_ReadConfirmationBoxQuestion(),
+					.text = tr::extras_ReadConfirmationBoxQuestion(),
 					.confirmed = callback,
-					.confirmText = tr::ayu_ReadConfirmationBoxActionText()
+					.confirmText = tr::extras_ReadConfirmationBoxActionText()
 				});
 				Ui::show(std::move(box));
 			});
@@ -984,15 +984,15 @@ void MainMenu::setupMenu() {
 	}
 
 	if (settings.showGhostToggleInDrawer()) {
-		auto ghostActiveChanges = AyuSettings::getInstance().useGlobalGhostModeValue()
+		auto ghostActiveChanges = ExtrasSettings::getInstance().useGlobalGhostModeValue()
 			| rpl::map([controller = _controller](bool) {
-				return AyuSettings::ghost(&controller->session()).ghostModeActiveValue();
+				return ExtrasSettings::ghost(&controller->session()).ghostModeActiveValue();
 			})
 			| rpl::flatten_latest();
 
 		const auto ghostModeToggle = addAction(
-			tr::ayu_GhostModeToggle(),
-			{&st::ayuGhostIcon},
+			tr::extras_GhostModeToggle(),
+			{&st::extrasGhostIcon},
 			u"ghostMode"_q
 		)->toggleOn(std::move(ghostActiveChanges));
 
@@ -1000,7 +1000,7 @@ void MainMenu::setupMenu() {
 		) | rpl::on_next(
 			[controller = _controller](bool ghostMode)
 			{
-				auto &ghost = AyuSettings::ghost(&controller->session());
+				auto &ghost = ExtrasSettings::ghost(&controller->session());
 				ghost.setGhostModeEnabled(ghostMode);
 			},
 			ghostModeToggle->lifetime());
@@ -1008,16 +1008,16 @@ void MainMenu::setupMenu() {
 
 	if (settings.showStreamerToggleInDrawer()) {
 		const auto streamerModeToggle = addAction(
-			tr::ayu_StreamerModeToggle(),
-			{&st::ayuStreamerModeMenuIcon},
+			tr::extras_StreamerModeToggle(),
+			{&st::extrasStreamerModeMenuIcon},
 			u"streamerMode"_q
-		)->toggleOn(AyuSettings::getInstance().streamerModeValue());
+		)->toggleOn(ExtrasSettings::getInstance().streamerModeValue());
 
 		streamerModeToggle->toggledChanges(
 		) | rpl::on_next(
 			[=](bool enabled)
 			{
-				AyuSettings::getInstance().setStreamerMode(enabled);
+				ExtrasSettings::getInstance().setStreamerMode(enabled);
 			},
 			streamerModeToggle->lifetime());
 	}

@@ -1,0 +1,197 @@
+using "ui/basic.style";
+using "ui/colors.palette";
+using "ui/widgets/widgets.style";
+using "info/info.style";
+using "settings/settings.style";
+using "media/player/media_player.style";
+
+extrasMusicWidth: 420px;
+extrasMusicHeight: 480px;
+extrasMusicPadding: 24px;
+extrasMusicCoverSize: 272px;
+extrasMusicCoverRadius: 12px;
+extrasMusicDetailsHeight: 236px;
+extrasMusicTitleFont: font(18px semibold);
+extrasMusicTitleTop: 12px;
+extrasMusicTitleHeight: 26px;
+extrasMusicArtistTop: 40px;
+extrasMusicProgressTop: 76px;
+extrasMusicSliderHeight: 16px;
+extrasMusicTimeTop: 94px;
+extrasMusicControlsTop: 126px;
+extrasMusicVolumeTop: 176px;
+extrasMusicPlaceholder: icon {{ "menu/rich/audio", windowSubTextFg }};
+
+extrasMusicExpand: IconButton(mediaPlayerRepeatButton) {
+	icon: icon {{ "player/player_expand", menuIconFg }};
+	iconOver: icon {{ "player/player_expand", menuIconFgOver }};
+}
+extrasMusicPlay: IconButton(mediaPlayerPlayButton) {
+	icon: icon {{ "player/player_play", mediaPlayerActiveFg }};
+	width: 48px;
+	height: 44px;
+	iconPosition: point(12px, 10px);
+	rippleAreaPosition: point(4px, 2px);
+	rippleAreaSize: 40px;
+}
+extrasMusicPauseIcon: icon {{ "player/player_pause", mediaPlayerActiveFg }};
+extrasMusicPrevious: IconButton(mediaPlayerPreviousButton) {
+	icon: icon {{ "player/player_backward", mediaPlayerActiveFg }};
+	width: 40px;
+	height: 44px;
+	iconPosition: point(8px, 10px);
+	rippleAreaPosition: point(0px, 2px);
+	rippleAreaSize: 40px;
+}
+extrasMusicNext: IconButton(extrasMusicPrevious) {
+	icon: icon {{ "player/player_forward", mediaPlayerActiveFg }};
+}
+extrasMusicRepeat: IconButton(mediaPlayerRepeatButton) {
+	icon: icon {{ "player/player_repeat", mediaPlayerActiveFg }};
+	width: 36px;
+	height: 44px;
+	iconPosition: point(6px, 10px);
+	rippleAreaPosition: point(0px, 4px);
+	rippleAreaSize: 36px;
+}
+
+iconPickerSelectedPadding: 2px;
+iconPickerSelectedRounding: 12px;
+iconPickerImagePadding: 4px;
+iconPickerIconSize: 64px;
+
+recentStickersLimitPadding: margins(22px, 4px, 22px, 8px);
+imageViewPadding: margins(22px, 10px, 22px, 10px);
+imageViewInnerPadding: margins(16px, 16px, 16px, 16px);
+
+botWebViewPanelHeightIncreased: 782px;
+botWebViewPanelWidthIncreased: 512px;
+
+stickerRoundingSize: 5px;
+
+messageShotPadding: 4px;
+
+topBarAdmins: IconButton {
+	width: 40px;
+	height: topBarHeight;
+
+	icon: icon {{ "extras/top_bar_admins", menuIconFg }};
+	iconOver: icon {{ "extras/top_bar_admins", menuIconFgOver }};
+	iconPosition: point(4px, 11px);
+
+	rippleAreaPosition: point(0px, 7px);
+	rippleAreaSize: 40px;
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: windowBgOver;
+	}
+}
+
+topBarRecentActions: IconButton {
+	width: 40px;
+	height: topBarHeight;
+
+	icon: icon {{ "extras/top_bar_recent_actions", menuIconFg }};
+	iconOver: icon {{ "extras/top_bar_recent_actions", menuIconFgOver }};
+	iconPosition: point(4px, 11px);
+
+	rippleAreaPosition: point(0px, 7px);
+	rippleAreaSize: 40px;
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: windowBgOver;
+	}
+}
+
+exteraBadgeToast: Toast(defaultToast) {
+	minWidth: 40px;
+	maxWidth: 480px;
+	padding: margins(54px, 13px, 19px, 12px);
+}
+
+exteraBadgeToastBadge: InfoPeerBadge(infoPeerBadge) {
+	premiumFg: toastFg;
+}
+
+
+unreadPillPadding: 12px;
+
+infoProfileLabeledButtonRegistrationDate: IconButton(defaultIconButton) {
+	width: 34px;
+	height: 34px;
+	icon: icon {{ "menu/calendar", windowActiveTextFg }};
+	iconOver: icon {{ "menu/calendar", windowActiveTextFg }};
+	rippleAreaPosition: point(0px, 0px);
+	rippleAreaSize: 34px;
+	ripple: defaultRippleAnimation;
+}
+registrationDateImportantTooltipLabel: FlatLabel(defaultImportantTooltipLabel) {
+	style: TextStyle(defaultTextStyle) {
+		font: font(12px);
+	}
+}
+
+pluginShowInFolderIcon: icon {{ "menu/show_in_folder", boxTitleCloseFg }};
+pluginShowInFolderIconOver: icon {{ "menu/show_in_folder", boxTitleCloseFgOver }};
+pluginShowInFolder: IconButton(defaultIconButton) {
+	width: boxTitleHeight;
+	height: boxTitleHeight;
+
+	icon: pluginShowInFolderIcon;
+	iconOver: pluginShowInFolderIconOver;
+
+	rippleAreaPosition: point(4px, 4px);
+	rippleAreaSize: 40px;
+	ripple: defaultRippleAnimationBgOver;
+}
+maxPluginDescriptionHeight: 400px;
+pluginVersionAuthorLabel: FlatLabel(boxLabel) {
+    align: align(center);
+}
+pluginChipSkip: 6px;
+
+ghostPickerArrow: icon{{ "info/edit/expand_arrow_small", windowActiveTextFg }};
+
+ghostPickerButton: LinkButton(defaultLinkButton) {
+	color: windowActiveTextFg;
+	overColor: windowActiveTextFg;
+	font: font(boxFontSize);
+	overFont: font(boxFontSize);
+}
+
+extrasBetaBadgePadding: margins(4px, 1px, 4px, 1px);
+
+extrasServiceTimeBadgeFont: font(11px semibold);
+extrasServiceTimeBadgeHorizontalPadding: 7px;
+extrasServiceTimeBadgeVerticalPadding: 2px;
+extrasServiceTimeBadgeGap: 8px;
+extrasServiceTimeBadgeTrailingInset: 3px;
+extrasServiceTimeBadgeLastLineWidthAdd: 9px;
+
+// 提示放在鼠标指针下方足够远处，避免被指针遮住。
+topBarTooltip: Tooltip(defaultTooltip) {
+	shift: point(-20px, 32px);
+}
+topBarSelectionForward: IconButton(topBarSearch) {
+	icon: icon {{ "menu/forward", menuIconFg }};
+	iconOver: icon {{ "menu/forward", menuIconFgOver }};
+	iconPosition: point(-1px, -1px);
+}
+topBarSelectionNoQuote: IconButton(topBarSelectionForward) {
+	icon: icon {{ "menu/name_hide", menuIconFg }};
+	iconOver: icon {{ "menu/name_hide", menuIconFgOver }};
+}
+topBarSelectionSendNow: IconButton(topBarSelectionForward) {
+	icon: icon {{ "menu/send", menuIconFg }};
+	iconOver: icon {{ "menu/send", menuIconFgOver }};
+}
+topBarSelectionDelete: IconButton(topBarSelectionForward) {
+	icon: icon {{ "menu/delete", menuIconFg }};
+	iconOver: icon {{ "menu/delete", menuIconFgOver }};
+}
+topBarSelectionShot: IconButton(topBarSelectionForward) {
+	icon: icon {{ "menu/image", menuIconFg }};
+	iconOver: icon {{ "menu/image", menuIconFgOver }};
+}
+topBarSelectionBetween: IconButton(topBarSelectionForward) {
+	icon: icon {{ "menu/select", menuIconFg }};
+	iconOver: icon {{ "menu/select", menuIconFgOver }};
+}

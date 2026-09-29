@@ -37,7 +37,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <IOKit/hidsystem/ev_keymap.h>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 
 using Platform::Q2NSString;
@@ -188,7 +188,7 @@ ApplicationDelegate *_sharedDelegate = nil;
 namespace Platform {
 
 void SetApplicationIcon(const QIcon &icon) {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
     if (settings.appIcon().isEmpty()) {
         return;
     }

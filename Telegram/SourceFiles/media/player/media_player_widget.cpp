@@ -7,8 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "media/player/media_player_widget.h"
 
-#include "ayu/features/music_player/music_player_box.h"
-#include "styles/style_ayu_styles.h"
+#include "extras/features/music_player/music_player_box.h"
+#include "styles/style_extras_styles.h"
 
 #include "platform/platform_specific.h"
 #include "data/data_document.h"
@@ -56,7 +56,7 @@ Widget::Widget(
 , _timeLabel(rightControls(), st::mediaPlayerTime)
 , _playPause(this, st::mediaPlayerPlayButton)
 , _volumeToggle(rightControls(), st::mediaPlayerVolumeToggle)
-, _expandToggle(this, st::ayuMusicExpand)
+, _expandToggle(this, st::extrasMusicExpand)
 , _repeatToggle(rightControls(), st::mediaPlayerRepeatButton)
 , _orderToggle(rightControls(), st::mediaPlayerOrderButton)
 , _speedToggle(rightControls(), st::mediaPlayerSpeedButton)
@@ -102,10 +102,10 @@ Widget::Widget(
 	_orderToggle->setObjectName(u"music.order"_q);
 	_close->setAccessibleName(tr::lng_sr_player_close(tr::now));
 	_expandToggle->setObjectName(u"music.expand"_q);
-	_expandToggle->setAccessibleName(tr::ayu_MusicExpand(tr::now));
+	_expandToggle->setAccessibleName(tr::extras_MusicExpand(tr::now));
 	_expandToggle->setClickedCallback([=] {
 		updateOverLabelsState(false);
-		Ayu::MusicPlayer::show(_controller);
+		Extras::MusicPlayer::show(_controller);
 	});
 
 	_nameLabel->setAttribute(Qt::WA_TransparentForMouseEvents);

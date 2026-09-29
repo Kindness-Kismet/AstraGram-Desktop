@@ -61,7 +61,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QGuiApplication>
 
 // AyuGram includes
-#include "ayu/ui/ayu_userpic.h"
+#include "extras/ui/extras_userpic.h"
 
 
 namespace Ui {
@@ -151,7 +151,7 @@ void SetupSubButtonBackground(
 		auto hq = PainterHighQualityEnabler(p);
 		p.setBrush(st::boxBg);
 		p.setPen(Qt::NoPen);
-		AyuUserpic::PaintShape(p, QRectF(background->rect()));
+		ExtrasUserpic::PaintShape(p, QRectF(background->rect()));
 	}, background->lifetime());
 
 	upload->positionValue(
@@ -730,9 +730,9 @@ void UserpicButton::paintUserpicFrame(Painter &p, QPoint photoPosition) {
 		auto size = QSize{ _st.photoSize, _st.photoSize };
 		const auto ratio = style::DevicePixelRatio();
 		request.outer = request.resize = size * ratio;
-		const auto ayuOverride = AyuUserpic::ShouldOverrideShape(_shape);
-		if (ayuOverride) {
-			AyuUserpic::ApplyFrameRounding(
+		const auto extrasOverride = ExtrasUserpic::ShouldOverrideShape(_shape);
+		if (extrasOverride) {
+			ExtrasUserpic::ApplyFrameRounding(
 				request,
 				_roundingCorners,
 				_ellipseMask,
@@ -1140,10 +1140,10 @@ void UserpicButton::showCustom(QImage &&image) {
 			size * style::DevicePixelRatio(),
 			Qt::IgnoreAspectRatio,
 			Qt::SmoothTransformation);
-		const auto ayuOverride = AyuUserpic::ShouldOverrideShape(_shape);
+		const auto extrasOverride = ExtrasUserpic::ShouldOverrideShape(_shape);
 		_userpic = Ui::PixmapFromImage(
-			ayuOverride
-			? Images::Round(std::move(small), ImageRoundRadius::AyuUserpic)
+			extrasOverride
+			? Images::Round(std::move(small), ImageRoundRadius::ExtrasUserpic)
 			: useForumShape()
 			? Images::Round(
 				std::move(small),
@@ -1235,9 +1235,9 @@ void UserpicButton::fillShape(QPainter &p, QBrush brush) const {
 	p.setPen(Qt::NoPen);
 	p.setBrush(brush);
 	const auto size = _st.photoSize;
-	const auto ayuOverride = AyuUserpic::ShouldOverrideShape(_shape);
-	if (ayuOverride) {
-		AyuUserpic::PaintShape(p, 0, 0, size);
+	const auto extrasOverride = ExtrasUserpic::ShouldOverrideShape(_shape);
+	if (extrasOverride) {
+		ExtrasUserpic::PaintShape(p, 0, 0, size);
 	} else if (useForumShape()) {
 		const auto radius = size * Ui::ForumUserpicRadiusMultiplier();
 		p.drawRoundedRect(0, 0, size, size, radius, radius);
@@ -1274,11 +1274,11 @@ void UserpicButton::prepareUserpicPixmap() {
 						QSize(size, size) * ratio,
 						Qt::IgnoreAspectRatio,
 						Qt::SmoothTransformation);
-					const auto ayuNP = AyuUserpic::ShouldOverrideShape(_shape);
-					if (ayuNP) {
+					const auto extrasNP = ExtrasUserpic::ShouldOverrideShape(_shape);
+					if (extrasNP) {
 						image = Images::Round(
 							std::move(image),
-							ImageRoundRadius::AyuUserpic);
+							ImageRoundRadius::ExtrasUserpic);
 					} else if (useForumShape()) {
 						image = Images::Round(
 							std::move(image),

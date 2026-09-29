@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/message_field.h"
 
-#include "ayu/ui/components/chat_surface_button.h"
+#include "extras/ui/components/chat_surface_button.h"
 #include "ui/chat/floating_bar.h"
 #include "history/history_widget.h"
 #include "history/history.h" // History::session
@@ -71,7 +71,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <cmath>
 
 // AyuGram includes
-#include "ayu/features/forward/ayu_forward.h"
+#include "extras/features/forward/extras_forward.h"
 
 
 namespace {
@@ -1440,7 +1440,7 @@ std::unique_ptr<Ui::AbstractButton> BoostsToLiftWriteRestriction(
 		std::shared_ptr<ChatHelpers::Show> show,
 		not_null<PeerData*> peer,
 		int boosts) {
-	auto result = std::make_unique<AyuUi::ChatSurfaceButton>(
+	auto result = std::make_unique<ExtrasUi::ChatSurfaceButton>(
 		parent.get(),
 		tr::lng_restricted_boost_group(tr::now),
 		st::historyComposeButton);
@@ -1451,16 +1451,16 @@ std::unique_ptr<Ui::AbstractButton> BoostsToLiftWriteRestriction(
 	return result;
 }
 
-std::unique_ptr<Ui::AbstractButton> AyuForwardWriteRestriction(
+std::unique_ptr<Ui::AbstractButton> ExtrasForwardWriteRestriction(
 	not_null<QWidget *> parent,
 	const PeerId &peer,
 	const Main::Session &session) {
 	using namespace Ui;
 
 	// status and part
-	const auto pair = AyuForward::stateName(peer);
+	const auto pair = ExtrasForward::stateName(peer);
 
-	auto result = std::make_unique<AyuUi::ChatSurfaceButton>(
+	auto result = std::make_unique<ExtrasUi::ChatSurfaceButton>(
 		parent.get(),
 		QString(),
 		st::historyComposeButton);
@@ -1508,7 +1508,7 @@ std::unique_ptr<Ui::AbstractButton> AyuForwardWriteRestriction(
 	}, title->lifetime());
 
 	raw->setClickedCallback([&] {
-		AyuForward::cancelForward(peer, session);
+		ExtrasForward::cancelForward(peer, session);
 	});
 
 	return result;
@@ -1521,7 +1521,7 @@ std::unique_ptr<Ui::AbstractButton> FrozenWriteRestriction(
 		FreezeInfoStyleOverride st) {
 	using namespace Ui;
 
-	auto result = std::make_unique<AyuUi::ChatSurfaceButton>(
+	auto result = std::make_unique<ExtrasUi::ChatSurfaceButton>(
 		parent.get(),
 		QString(),
 		st::historyComposeButton);

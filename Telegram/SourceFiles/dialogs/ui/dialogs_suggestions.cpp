@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/ui/dialogs_suggestions.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 #include "api/api_chat_participants.h"
 #include "apiwrap.h"
 #include "base/unixtime.h"
@@ -749,7 +749,7 @@ void Suggestions::ObjectListController::setupPlainDivider(
 		label->moveToLeft(x, y, size.width());
 	}, raw->lifetime());
 	raw->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(raw).fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(
+		QPainter(raw).fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(
 			raw, st::searchedBarBg->c));
 	}, raw->lifetime());
 
@@ -817,7 +817,7 @@ void Suggestions::ObjectListController::setupExpandDivider(
 	}, raw->lifetime());
 
 	raw->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(raw).fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(
+		QPainter(raw).fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(
 			raw, st::searchedBarBg->c));
 	}, raw->lifetime());
 
@@ -939,7 +939,7 @@ void RecentsController::setupDivider() {
 		label->moveToLeft(x, y, size.width());
 	}, raw->lifetime());
 	raw->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(raw).fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(
+		QPainter(raw).fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(
 			raw, st::searchedBarBg->c));
 	}, raw->lifetime());
 
@@ -1405,8 +1405,8 @@ Suggestions::Suggestions(
 , _recentApps(setupRecentApps())
 , _popularApps(setupPopularApps())
 , _searchQueryTimer([=] { applySearchQuery(); }) {
-	AyuFeatures::WindowMaterial::watchSurface(this);
-	AyuFeatures::WindowMaterial::changes(this) | rpl::skip(1) | rpl::on_next([=] {
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::changes(this) | rpl::skip(1) | rpl::on_next([=] {
 		if (!_cache.isNull() || !_slideLeft.isNull()) {
 			finishShownAnimation();
 		}
@@ -2354,7 +2354,7 @@ std::vector<Suggestions::Key> Suggestions::TabKeysFor(
 
 void Suggestions::paintEvent(QPaintEvent *e) {
 	const auto opacity = shownOpacity();
-	auto color = AyuFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c);
+	auto color = ExtrasFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c);
 	color.setAlphaF(color.alphaF() * opacity);
 
 	auto p = QPainter(this);

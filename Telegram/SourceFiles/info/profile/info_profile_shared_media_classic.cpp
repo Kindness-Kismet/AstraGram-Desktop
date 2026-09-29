@@ -6,7 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_shared_media_classic.h"
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "core/ui_integration.h"
 #include "data/components/recent_shared_media_gifts.h"
@@ -36,7 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_info.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 
 namespace Info::Profile {
@@ -292,7 +292,7 @@ object_ptr<Ui::SlideWrap<Ui::RpWidget>> SetupSharedMediaClassic(
 	const auto addSimilarPeersButton = [&](
 			not_null<PeerData*> peer,
 			const style::icon &icon) {
-		if (AyuSettings::getInstance().hideSimilarChannels()) {
+		if (ExtrasSettings::getInstance().hideSimilarChannels()) {
 			return;
 		}
 		auto result = AddSimilarPeersButton(
@@ -372,7 +372,7 @@ object_ptr<Ui::SlideWrap<Ui::RpWidget>> SetupSharedMediaClassic(
 
 	for (const auto child : content->findChildren<QWidget*>()) {
 		if (const auto button = dynamic_cast<Ui::SettingsButton*>(child)) {
-			AyuFeatures::WindowMaterial::watchSurface(button);
+			ExtrasFeatures::WindowMaterial::watchSurface(button);
 		}
 	}
 	auto result = object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(

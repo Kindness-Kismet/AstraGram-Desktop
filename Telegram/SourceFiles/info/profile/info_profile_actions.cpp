@@ -6,7 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_actions.h"
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "api/api_blocked_peers.h"
 #include "api/api_chat_participants.h"
@@ -119,9 +119,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QClipboard>
 
 // AyuGram includes
-#include "ayu/ui/utils/ayu_profile_values.h"
-#include "ayu/utils/telegram_helpers.h"
-#include "styles/style_ayu_styles.h"
+#include "extras/ui/utils/extras_profile_values.h"
+#include "extras/utils/telegram_helpers.h"
+#include "styles/style_extras_styles.h"
 #include "ui/widgets/tooltip.h"
 #include "ui/text/text_entity.h"
 
@@ -1034,7 +1034,7 @@ auto AddActionButton(
 		std::move(toggleOn)
 	)->entity()->addClickHandler(std::move(callback));
 	result->finishAnimating();
-	AyuFeatures::WindowMaterial::watchSurface(result->entity());
+	ExtrasFeatures::WindowMaterial::watchSurface(result->entity());
 	if (icon) {
 		object_ptr<Profile::FloatingIcon>(
 			result,
@@ -1872,7 +1872,7 @@ Section DetailsFiller::makeInfo() {
 			auto idInfo = addInfoOneLine(
 				rpl::single(idLabel),
 				std::move(idDrawableText),
-				tr::ayu_ContextCopyID(tr::now)
+				tr::extras_ContextCopyID(tr::now)
 			);
 
 			idInfo.text->setClickHandlerFilter([=](auto &&...)
@@ -1880,7 +1880,7 @@ Section DetailsFiller::makeInfo() {
 				const auto idText = IDString(user);
 				if (!idText.isEmpty()) {
 					QGuiApplication::clipboard()->setText(idText);
-					controller->showToast(tr::ayu_IDCopiedToast(tr::now));
+					controller->showToast(tr::extras_IDCopiedToast(tr::now));
 				}
 				return false;
 			});
@@ -1988,7 +1988,7 @@ Section DetailsFiller::makeInfo() {
 			auto idInfo = addInfoOneLine(
 				idLabel,
 				std::move(idDrawableText),
-				tr::ayu_ContextCopyID(tr::now)
+				tr::extras_ContextCopyID(tr::now)
 			);
 
 			idInfo.text->setClickHandlerFilter([=, peer = _peer](auto &&...)
@@ -1996,7 +1996,7 @@ Section DetailsFiller::makeInfo() {
 				const auto idText = IDString(peer);
 				if (!idText.isEmpty()) {
 					QGuiApplication::clipboard()->setText(idText);
-					controller->showToast(tr::ayu_IDCopiedToast(tr::now));
+					controller->showToast(tr::extras_IDCopiedToast(tr::now));
 				}
 				return false;
 			});
@@ -2013,7 +2013,7 @@ Section DetailsFiller::makeInfo() {
 			auto idInfo = addInfoOneLine(
 				rpl::single(u"ID"_q),
 				std::move(idDrawableText),
-				tr::ayu_ContextCopyID(tr::now)
+				tr::extras_ContextCopyID(tr::now)
 			);
 
 			idInfo.text->setClickHandlerFilter([=, peer = _peer](auto &&...)
@@ -2021,7 +2021,7 @@ Section DetailsFiller::makeInfo() {
 				const auto idText = IDString(peer->forumTopicFor(topicRootId)->topicRootId());
 				if (!idText.isEmpty()) {
 					QGuiApplication::clipboard()->setText(idText);
-					controller->showToast(tr::ayu_IDCopiedToast(tr::now));
+					controller->showToast(tr::extras_IDCopiedToast(tr::now));
 				}
 				return false;
 			});
@@ -2455,7 +2455,7 @@ Section DetailsFiller::makeBotPermissions(not_null<UserData*> user) {
 			inner,
 			tr::lng_profile_bot_emoji_status_access(),
 			st::infoSharedMediaButton));
-	AyuFeatures::WindowMaterial::watchSurface(emoji);
+	ExtrasFeatures::WindowMaterial::watchSurface(emoji);
 	object_ptr<Profile::FloatingIcon>(
 		emoji,
 		st::infoIconEmojiStatusAccess,
@@ -3113,7 +3113,7 @@ void ActionsFiller::addFastButtonsMode(not_null<UserData*> user) {
 		_wrap,
 		rpl::single(u"Fast buttons mode"_q),
 		st::infoSharedMediaButton));
-	AyuFeatures::WindowMaterial::watchSurface(button);
+	ExtrasFeatures::WindowMaterial::watchSurface(button);
 	object_ptr<Info::Profile::FloatingIcon>(
 		button,
 		st::infoIconMediaBot,

@@ -140,11 +140,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtWidgets/QApplication>
 
 // AyuGram includes
-#include "ayu/utils/telegram_helpers.h"
-#include "ayu/ayu_settings.h"
-#include "styles/style_ayu_icons.h"
-#include "ayu/ui/context_menu/context_menu.h"
-#include "ayu/features/forward/ayu_forward.h"
+#include "extras/utils/telegram_helpers.h"
+#include "extras/extras_settings.h"
+#include "styles/style_extras_icons.h"
+#include "extras/ui/context_menu/context_menu.h"
+#include "extras/features/forward/extras_forward.h"
 
 
 namespace Window {
@@ -1608,7 +1608,7 @@ void Filler::addToggleNoForwards() {
 			}
 		}).send();
 	};
-	const auto disabledNow = user->isAyuNoForwards();
+	const auto disabledNow = user->isExtrasNoForwards();
 	_addAction(disabledNow
 		? tr::lng_enable_sharing(tr::now)
 		: tr::lng_disable_sharing(tr::now), [=] {
@@ -1858,7 +1858,7 @@ void Filler::addRestorePinnedMessages() {
 	const auto controller = _controller;
 	const auto peer = _peer;
 	const auto thread = _thread;
-	_addAction(tr::ayu_ShowPinnedMessages(tr::now), [=] {
+	_addAction(tr::extras_ShowPinnedMessages(tr::now), [=] {
 		peer->session().settings().setHiddenPinnedMessageId(
 			peer->id,
 			topicRootId,
@@ -1963,7 +1963,7 @@ void Filler::fillContextMenuActions() {
 	}
 	addBanFromChannel();
 	addClearHistory();
-	AyuUi::AddDeleteOwnMessagesAction(_peer, _topic, _controller, _addAction);
+	ExtrasUi::AddDeleteOwnMessagesAction(_peer, _topic, _controller, _addAction);
 	addDeleteChat();
 	addLeaveChat();
 	addDeleteTopic();
@@ -1971,12 +1971,12 @@ void Filler::fillContextMenuActions() {
 
 void Filler::fillHistoryActions() {
 	addToggleMuteSubmenu(true);
-	AyuUi::AddAyuGramActions(_peer, _thread, _controller, _addAction);
+	ExtrasUi::AddExtrasActions(_peer, _thread, _controller, _addAction);
 	addCreateTopic();
 	addInfo();
 	addRestorePinnedMessages();
-	AyuUi::AddJumpToBeginningAction(_peer, _thread, _controller, _addAction);
-	AyuUi::AddOpenChannelAction(_peer, _controller, _addAction);
+	ExtrasUi::AddJumpToBeginningAction(_peer, _thread, _controller, _addAction);
+	ExtrasUi::AddOpenChannelAction(_peer, _controller, _addAction);
 	addViewAsTopics();
 	addManageChat();
 	addStoryArchive();
@@ -1992,7 +1992,7 @@ void Filler::fillHistoryActions() {
 	addTranslate();
 	addReport();
 	addClearHistory();
-	AyuUi::AddDeleteOwnMessagesAction(_peer, _topic, _controller, _addAction);
+	ExtrasUi::AddDeleteOwnMessagesAction(_peer, _topic, _controller, _addAction);
 	addDeleteChat();
 	addLeaveChat();
 }
@@ -2013,8 +2013,8 @@ void Filler::fillProfileActions() {
 	addTopicLink();
 	addManageTopic();
 	addToggleTopicClosed();
-	AyuUi::AddOpenChannelAction(_peer, _controller, _addAction);
-	AyuUi::AddShadowBanAction(_peer, _addAction);
+	ExtrasUi::AddOpenChannelAction(_peer, _controller, _addAction);
+	ExtrasUi::AddShadowBanAction(_peer, _addAction);
 	addViewDiscussion();
 	addDirectMessages();
 	addExportChat();
@@ -2029,10 +2029,10 @@ void Filler::fillProfileActions() {
 }
 
 void Filler::fillRepliesActions() {
-	AyuUi::AddAyuGramActions(_peer, _thread, _controller, _addAction);
+	ExtrasUi::AddExtrasActions(_peer, _thread, _controller, _addAction);
 	if (_topic) {
 		addInfo();
-		AyuUi::AddJumpToBeginningAction(_peer, _thread, _controller, _addAction);
+		ExtrasUi::AddJumpToBeginningAction(_peer, _thread, _controller, _addAction);
 		addManageTopic();
 	}
 	addBoostChat();
@@ -3164,7 +3164,7 @@ QPointer<Ui::BoxContent> ShowNewForwardMessagesBox(
 		bool no_quote,
 		bool no_caption,
 		FnMut<void()>&& successCallback) {
-	if (!AyuSettings::getInstance().useQuickForwardMenu()) {
+	if (!ExtrasSettings::getInstance().useQuickForwardMenu()) {
 		auto shared = std::make_shared<FnMut<void()>>(std::move(successCallback));
 		ShowForwardMessagesBox(navigation, std::move(msgIds), [shared]() {
 			if (*shared) { (*shared)(); }
@@ -3218,7 +3218,7 @@ QPointer<Ui::BoxContent> ShowNewForwardMessagesBox(
 		std::move(successCallback));
 
 	desc.filterCallback = std::move(filterCallback);
-	desc.titleOverride = (no_quote || no_caption) ? tr::ayu_TitleForwardAsCopy() : tr::ayu_TitleMultipleForward();
+	desc.titleOverride = (no_quote || no_caption) ? tr::extras_TitleForwardAsCopy() : tr::extras_TitleMultipleForward();
 	desc.forwardOptions.sendersCount = ItemsForwardSendersCount(items);
 	desc.forwardOptions.captionsCount = ItemsForwardCaptionsCount(items);
 	desc.forwardOptions.show = !hasOnlyForcedForwardedInfo && !no_caption;
@@ -3788,10 +3788,10 @@ base::weak_qptr<Ui::BoxContent> ShowForwardMessagesBox(
 			options,
 			forwardOptions);
 		const auto items = history->owner().idsToItems(msgIds);
-		const auto ayuForwarding = AyuForward::isAyuForwardNeeded(items)
-			|| AyuForward::isFullAyuForwardNeeded(items.front());
+		const auto extrasForwarding = ExtrasForward::isExtrasForwardNeeded(items)
+			|| ExtrasForward::isFullExtrasForwardNeeded(items.front());
 
-		if ((!state->submit || ayuForwarding) && successCallback) {
+		if ((!state->submit || extrasForwarding) && successCallback) {
 			successCallback();
 		}
 		// AyuGram-changed

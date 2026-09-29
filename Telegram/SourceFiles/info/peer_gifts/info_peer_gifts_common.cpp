@@ -43,8 +43,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_overview.h"
 
 // AyuGram includes
-#include "ayu/ayu_ui_settings.h"
-#include "ayu/ui/ayu_userpic.h"
+#include "extras/extras_ui_settings.h"
+#include "extras/ui/extras_userpic.h"
 
 
 namespace Info::PeerGifts {
@@ -823,8 +823,8 @@ void GiftButton::paint(QPainter &p, float64 craftProgress) {
 			_userpic->subscribeToUpdates([=] { update(); });
 		}
 		const auto image = _userpic->image(st::giftBoxUserpicSize);
-		const auto corners = AyuUiSettings::getAvatarCorners();
-		const auto extraSkip = int(double(AyuUiSettings::kMaxAvatarCorners - corners) / AyuUiSettings::kMaxAvatarCorners * 6.0);
+		const auto corners = ExtrasUiSettings::getAvatarCorners();
+		const auto extraSkip = int(double(ExtrasUiSettings::kMaxAvatarCorners - corners) / ExtrasUiSettings::kMaxAvatarCorners * 6.0);
 		const auto skip = st::giftBoxUserpicSkip + extraSkip;
 		p.drawImage(extend.left() + skip, extend.top() + skip, image);
 	} else if (_check) {

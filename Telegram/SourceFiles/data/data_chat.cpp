@@ -21,8 +21,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_invite_links.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/utils/telegram_helpers.h"
+#include "extras/extras_settings.h"
+#include "extras/utils/telegram_helpers.h"
 
 
 namespace {
@@ -69,8 +69,8 @@ ChatAdminRightsInfo ChatData::defaultAdminRights(not_null<UserData*> user) {
 		| (isCreator ? Flag::AddAdmins : Flag(0)));
 }
 
-bool ChatData::isAyuNoForwards() const {
-	return flags() & Flag::AyuNoForwards;
+bool ChatData::isExtrasNoForwards() const {
+	return flags() & Flag::ExtrasNoForwards;
 }
 
 bool ChatData::allowsForwarding() const {
@@ -119,7 +119,7 @@ bool ChatData::anyoneCanAddMembers() const {
 
 void ChatData::setName(const QString &newName) {
 	auto filteredName = newName;
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.filterZalgo()) {
 		filteredName = filterZalgo(filteredName);
 	}

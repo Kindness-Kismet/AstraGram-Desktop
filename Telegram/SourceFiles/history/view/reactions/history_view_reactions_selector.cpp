@@ -41,9 +41,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat.h"
 
 // AyuGram includes
-#include "ayu/ui/context_menu/context_menu.h"
-#include "ayu/ayu_settings.h"
-#include "ayu/utils/qt_key_modifiers_extended.h"
+#include "extras/ui/context_menu/context_menu.h"
+#include "extras/extras_settings.h"
+#include "extras/utils/qt_key_modifiers_extended.h"
 
 
 namespace HistoryView::Reactions {
@@ -1437,8 +1437,8 @@ AttachSelectorResult AttachSelectorToMenu(
 		Fn<void(ChosenReaction)> chosen,
 		TextWithEntities about,
 		IconFactory iconFactory) {
-	const auto &settings = AyuSettings::getInstance();
-	if (!AyuUi::ShouldShowContextMenuItem(settings.showReactionsPanelInContextMenu())) {
+	const auto &settings = ExtrasSettings::getInstance();
+	if (!ExtrasUi::ShouldShowContextMenuItem(settings.showReactionsPanelInContextMenu())) {
 		return AttachSelectorResult::Skipped;
 	}
 
@@ -1498,8 +1498,8 @@ auto AttachSelectorToMenu(
 	IconFactory iconFactory,
 	Fn<bool()> paused)
 -> base::expected<not_null<Selector*>, AttachSelectorResult> {
-	const auto &settings = AyuSettings::getInstance();
-	if (!AyuUi::ShouldShowContextMenuItem(settings.showReactionsPanelInContextMenu())) {
+	const auto &settings = ExtrasSettings::getInstance();
+	if (!ExtrasUi::ShouldShowContextMenuItem(settings.showReactionsPanelInContextMenu())) {
 		return base::make_unexpected(AttachSelectorResult::Skipped);
 	}
 

@@ -84,8 +84,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_dialogs.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/ayu_state.h"
+#include "extras/extras_settings.h"
+#include "extras/extras_state.h"
 
 
 namespace {
@@ -2833,7 +2833,7 @@ Dialogs::UnreadState History::computeUnreadState() const {
 	result.marks = mark ? 1 : 0;
 	result.mentions = unreadMentions().has() ? 1 : 0;
 	const auto peer = this->peer.get();
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	const auto hideReactions = (peer->isChannel() && !peer->isMegagroup() && !settings.showChannelReactions())
 		|| (peer->isMegagroup() && !settings.showGroupReactions())
 		|| (peer->isUser() && !settings.showPrivateChatReactions());

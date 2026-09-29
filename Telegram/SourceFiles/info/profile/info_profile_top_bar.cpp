@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_top_bar.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 #include "api/api_peer_colors.h"
 #include "api/api_peer_photo.h"
 #include "api/api_user_privacy.h"
@@ -112,8 +112,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QGuiApplication>
 
 // AyuGram includes
-#include "ayu/ui/ayu_userpic.h"
-#include "ayu/utils/telegram_helpers.h"
+#include "extras/ui/extras_userpic.h"
+#include "extras/utils/telegram_helpers.h"
 
 
 namespace Info::Profile {
@@ -1895,7 +1895,7 @@ void TopBar::paintEdges(
 
 void TopBar::paintEdges(QPainter &p, const QRect &clip) const {
 	if (!_solidBg) {
-		paintEdges(p, clip, AyuFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c));
+		paintEdges(p, clip, ExtrasFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c));
 	} else {
 		paintEdges(p, clip, *_solidBg);
 	}
@@ -2840,31 +2840,31 @@ void TopBar::paintUserpic(QPainter &p, const QRect &geometry) {
 		}
 	}
 	const auto key = _peer->userpicUniqueKey(_userpicView);
-	const auto ayuState = AyuUserpic::PackedState();
+	const auto extrasState = ExtrasUserpic::PackedState();
 	const auto overlayActive = _uploadOverlay && _uploadOverlay->shown();
 	const auto awaitingCloud = _waitingUserpicCloudLoad
 		&& !_peer->userpicCloudImage(_userpicView);
 	if (!overlayActive
 		&& !awaitingCloud
-		&& (_userpicUniqueKey != key || _userpicAyuState != ayuState)) {
+		&& (_userpicUniqueKey != key || _userpicExtrasState != extrasState)) {
 		_waitingUserpicCloudLoad = false;
 		_userpicUniqueKey = key;
-		_userpicAyuState = ayuState;
+		_userpicExtrasState = extrasState;
 		const auto fullSize = st::infoProfileTopBarPhotoSize;
 		const auto scaled = fullSize * style::DevicePixelRatio();
 		auto image = QImage();
 		if (const auto broadcast = _peer->monoforumBroadcast()) {
-			const auto ayuOverride = AyuUserpic::ShouldOverrideShape(
+			const auto extrasOverride = ExtrasUserpic::ShouldOverrideShape(
 				Ui::PeerUserpicShape::Monoforum);
 			image = PeerData::GenerateUserpicImage(
 				broadcast,
 				_userpicView,
 				scaled,
-				ayuOverride
+				extrasOverride
 					? std::optional<int>(
-						AyuUserpic::ComputeRadius(scaled))
+						ExtrasUserpic::ComputeRadius(scaled))
 					: std::optional<int>(0));
-			if (!ayuOverride) {
+			if (!extrasOverride) {
 				if (_monoforumMask.isNull()) {
 					_monoforumMask = Ui::MonoforumShapeMask(Size(scaled));
 				}
@@ -2883,9 +2883,9 @@ void TopBar::paintUserpic(QPainter &p, const QRect &geometry) {
 		} else {
 			const auto radius = (_source == Source::Community)
 				? std::optional<int>(
-					AyuUserpic::ShouldOverrideShape(
+					ExtrasUserpic::ShouldOverrideShape(
 						Ui::PeerUserpicShape::Forum)
-						? AyuUserpic::ComputeRadius(scaled)
+						? ExtrasUserpic::ComputeRadius(scaled)
 						: int(
 							scaled
 							* Ui::ForumUserpicRadiusMultiplier()))

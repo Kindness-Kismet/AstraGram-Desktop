@@ -2154,11 +2154,11 @@ void RegisterSettingsHandlers(Router &router) {
 QString SettingsDeepLink(
 		::Settings::Type section,
 		const QString &controlId) {
-	const auto ayuPrefix = u"ayu/"_q;
-	if (controlId.size() > ayuPrefix.size()
-		&& controlId.startsWith(ayuPrefix)) {
-		return u"https://t.me/ayuSettings?s="_q
-			+ controlId.mid(ayuPrefix.size());
+	const auto extrasPrefix = u"extras/"_q;
+	if (controlId.size() > extrasPrefix.size()
+		&& controlId.startsWith(extrasPrefix)) {
+		return u"https://t.me/extrasSettings?s="_q
+			+ controlId.mid(extrasPrefix.size());
 	}
 	const auto &router = Router::Instance();
 	const auto sectionPath = [&] {

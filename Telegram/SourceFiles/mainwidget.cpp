@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "mainwidget.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 #include "api/api_updates.h"
 #include "api/api_views.h"
 #include "data/components/scheduled_messages.h"
@@ -107,7 +107,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QMimeData>
 
 // AyuGram includes
-#include "ayu/features/forward/ayu_forward.h"
+#include "extras/features/forward/extras_forward.h"
 
 
 namespace {
@@ -450,8 +450,8 @@ MainWidget::MainWidget(
 	}
 
 	// 遮罩只裁剪面板外侧顶角，不影响内容区交互。
-	AyuFeatures::WindowMaterial::watchSurface(this);
-	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
 		if (_showAnimation) {
 			showFinished();
 		}
@@ -629,7 +629,7 @@ bool MainWidget::setForwardDraft(
 		});
 	// allow opening chat that
 	// already have some forward task
-	if (error && !AyuForward::isForwarding(history->peer->id)) {
+	if (error && !ExtrasForward::isForwarding(history->peer->id)) {
 		Data::ShowSendErrorToast(_controller, history->peer, error);
 		return false;
 	}
@@ -2573,7 +2573,7 @@ void MainWidget::paintEvent(QPaintEvent *e) {
 		checkChatBackground();
 	}
 	auto p = QPainter(this);
-	p.fillRect(e->rect(), AyuFeatures::WindowMaterial::surfaceColor(
+	p.fillRect(e->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(
 		this, Window::ShellBackgroundColor(this)->c));
 	if (_showAnimation) {
 		_showAnimation->paintContents(p);
@@ -2597,7 +2597,7 @@ std::vector<QRect> MainWidget::cardRects() const {
 }
 
 void MainWidget::paintCardOverlay(QRect clip) {
-	if (AyuFeatures::WindowMaterial::isActive(this)) {
+	if (ExtrasFeatures::WindowMaterial::isActive(this)) {
 		return;
 	}
 	auto p = QPainter(_cardOverlay.data());

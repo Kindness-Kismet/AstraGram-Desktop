@@ -9,7 +9,7 @@ import cli
 
 def audit():
     source = cli.ROOT / "Telegram" / "SourceFiles"
-    directory = source / "ayu" / "debug" / "commands"
+    directory = source / "extras" / "debug" / "commands"
     files = list(directory.glob("*.cpp"))
     handlers = "\n".join(path.read_text(encoding="utf-8") for path in files)
     exceptions = {
@@ -20,7 +20,7 @@ def audit():
     }
     missing = []
     coverage = {}
-    for name in ("ayu/ayu_settings.h", "core/core_settings.h", "main/main_session_settings.h"):
+    for name in ("extras/extras_settings.h", "core/core_settings.h", "main/main_session_settings.h"):
         text = (source / name).read_text(encoding="utf-8")
         setters = set(re.findall(r"\bvoid\s+((?:set|update)[A-Z]\w*)\s*\(", text))
         uncovered = sorted(key for key in setters if key not in handlers and key not in exceptions)

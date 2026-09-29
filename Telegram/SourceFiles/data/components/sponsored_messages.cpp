@@ -27,10 +27,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h" // tr::rich.
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 #ifdef _DEBUG
-#include "ayu/debug/debug_login.h"
+#include "extras/debug/debug_login.h"
 #endif
 
 
@@ -311,11 +311,11 @@ HistoryItem *SponsoredMessages::injectItem(
 
 bool SponsoredMessages::canHaveFor(not_null<History*> history) const {
 #ifdef _DEBUG
-	if (AyuDebug::isFakeSession(_session) && _data.contains(history)) {
+	if (ExtrasDebug::isFakeSession(_session) && _data.contains(history)) {
 		return true;
 	}
 #endif
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.disableAds()) {
 		return false;
 	}
@@ -329,7 +329,7 @@ bool SponsoredMessages::canHaveFor(not_null<History*> history) const {
 }
 
 bool SponsoredMessages::canHaveFor(not_null<HistoryItem*> item) const {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.disableAds()) {
 		return false;
 	}
@@ -345,7 +345,7 @@ bool SponsoredMessages::isTopBarFor(not_null<History*> history) const {
 
 #ifdef _DEBUG
 void SponsoredMessages::setLocalForDebug(not_null<History*> history) {
-	Expects(AyuDebug::isFakeSession(_session));
+	Expects(ExtrasDebug::isFakeSession(_session));
 	auto &list = _data[history];
 	list.entries.clear();
 	list.state = State::AppendToTopBar;
@@ -356,12 +356,12 @@ void SponsoredMessages::setLocalForDebug(not_null<History*> history) {
 			.randomId = QByteArray("local-layout"),
 			.from = {
 				.title = u"本地广告样本"_q,
-				.link = u"https://example.invalid/ayu-layout"_q,
+				.link = u"https://example.invalid/extras-layout"_q,
 				.buttonText = u"查看"_q,
 			},
 			.textWithEntities = { u"用于检查顶部广告条的布局与换行。"_q },
 			.history = history,
-			.link = u"https://example.invalid/ayu-layout"_q,
+			.link = u"https://example.invalid/extras-layout"_q,
 		},
 	});
 }
@@ -372,7 +372,7 @@ void SponsoredMessages::request(not_null<History*> history, Fn<void()> done) {
 		return;
 	}
 #ifdef _DEBUG
-	if (AyuDebug::isFakeSession(_session)) {
+	if (ExtrasDebug::isFakeSession(_session)) {
 		if (done) {
 			crl::on_main(_session, std::move(done));
 		}
@@ -550,7 +550,7 @@ void SponsoredMessages::parseForVideo(
 
 SponsoredForVideo SponsoredMessages::prepareForVideo(
 		not_null<PeerData*> peer) {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.disableAds()) {
 		return {};
 	}

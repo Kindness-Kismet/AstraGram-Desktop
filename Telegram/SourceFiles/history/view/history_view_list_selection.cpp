@@ -1,7 +1,7 @@
 #include "history/view/history_view_list_widget.h"
 
-#include "ayu/utils/telegram_helpers.h"
-#include "ayu/features/message_selection/selection_range.h"
+#include "extras/utils/telegram_helpers.h"
+#include "extras/features/message_selection/selection_range.h"
 #include "data/data_session.h"
 #include "history/history_item.h"
 #include "history/view/history_view_element.h"
@@ -23,11 +23,11 @@ HistoryItemsList ListWidget::selectedRangeItems() const {
 
 bool ListWidget::canSelectItemsBetween() const {
 	return !hasSelectRestriction()
-		&& AyuFeatures::MessageSelection::findEndpoints(selectedRangeItems()).has_value();
+		&& ExtrasFeatures::MessageSelection::findEndpoints(selectedRangeItems()).has_value();
 }
 
 void ListWidget::selectItemsBetween() {
-	using namespace AyuFeatures::MessageSelection;
+	using namespace ExtrasFeatures::MessageSelection;
 	if (hasSelectRestriction()) {
 		return;
 	}

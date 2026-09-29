@@ -11,11 +11,11 @@ _INCLUDE = '#include "qwindowswindow.h"\n'
 _VARIANT = '#include <QtCore/qvariant.h>'
 _ADDED_VARIANT = _VARIANT + ' // 窗口原生背景能力。\n'
 _CONSTRUCTOR = "    QWindowsContext::instance()->addWindow(m_data.hwnd, this);\n"
-_CAPABILITY = '    aWindow->setProperty("_q_ayuNativeBackdropSupported", true);\n'
+_CAPABILITY = '    aWindow->setProperty("_q_extrasNativeBackdropSupported", true);\n'
 _PREFIX = "    const bool needsLayered = (flags & Qt::WindowTransparentForInput)\n        || ("
 _SUFFIX = ") || opacity < 1.0;"
 _ALPHA = ("hasAlpha", "hasAlpha && hasNoNativeFrame(hwnd, flags)")
-_OPT_IN = '!GetPropW(hwnd, L"AyuGramNativeBackdrop") && '
+_OPT_IN = '!GetPropW(hwnd, L"ExtrasNativeBackdrop") && '
 
 
 def patch_command() -> str:
@@ -32,8 +32,8 @@ def patch_source(source: bytes) -> bytes:
         raise SystemExit("Qt native backdrop: constructor/include anchor changed.")
     before = sum(text.count(block) for block in original)
     after = sum(text.count(block) for block in patched)
-    capabilities = text.count("_q_ayuNativeBackdropSupported")
-    switches = text.count("AyuGramNativeBackdrop")
+    capabilities = text.count("_q_extrasNativeBackdropSupported")
+    switches = text.count("ExtrasNativeBackdrop")
     added_include = text.count(_ADDED_VARIANT)
     if after == 1 and before == 0 and capabilities == 1 and switches == 1:
         if (_CONSTRUCTOR + _CAPABILITY not in text

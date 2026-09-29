@@ -19,7 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 
 namespace Api {
@@ -46,7 +46,7 @@ bool UnreadThings::trackReactions(Data::Thread *thread) const {
 	if (!peer) {
 		return false;
 	}
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (peer->isChannel() && !peer->isMegagroup() && !settings.showChannelReactions()) {
 		return false;
 	}

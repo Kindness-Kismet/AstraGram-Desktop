@@ -1,0 +1,32 @@
+<RCC>
+    <qresource prefix="/gui">
+        <file alias="art/extras/alt/app.svg">../../art/extras/alt/app.svg</file>
+        <file alias="art/extras/alt/app_icon.ico">../../art/extras/alt/app_icon.ico</file>
+        <file alias="art/extras/bard/app.svg">../../art/extras/bard/app.svg</file>
+        <file alias="art/extras/bard/app_icon.ico">../../art/extras/bard/app_icon.ico</file>
+        <file alias="art/extras/chibi/app.png">../../art/extras/chibi/app.png</file>
+        <file alias="art/extras/chibi/app_icon.ico">../../art/extras/chibi/app_icon.ico</file>
+        <file alias="art/extras/chibi2/app.png">../../art/extras/chibi2/app.png</file>
+        <file alias="art/extras/chibi2/app_icon.ico">../../art/extras/chibi2/app_icon.ico</file>
+        <file alias="art/extras/default/app.svg">../../art/extras/default/app.svg</file>
+        <file alias="art/extras/default/app_icon.ico">../../art/extras/default/app_icon.ico</file>
+        <file alias="art/extras/discord/app.svg">../../art/extras/discord/app.svg</file>
+        <file alias="art/extras/discord/app_icon.ico">../../art/extras/discord/app_icon.ico</file>
+        <file alias="art/extras/extera/app.svg">../../art/extras/extera/app.svg</file>
+        <file alias="art/extras/extera/app_icon.ico">../../art/extras/extera/app_icon.ico</file>
+        <file alias="art/extras/extera2/app.svg">../../art/extras/extera2/app.svg</file>
+        <file alias="art/extras/extera2/app_icon.ico">../../art/extras/extera2/app_icon.ico</file>
+        <file alias="art/extras/nothing/app.svg">../../art/extras/nothing/app.svg</file>
+        <file alias="art/extras/nothing/app_icon.ico">../../art/extras/nothing/app_icon.ico</file>
+        <file alias="art/extras/spotify/app.svg">../../art/extras/spotify/app.svg</file>
+        <file alias="art/extras/spotify/app_icon.ico">../../art/extras/spotify/app_icon.ico</file>
+        <file alias="art/extras/win95/app.png">../../art/extras/win95/app.png</file>
+        <file alias="art/extras/win95/app_icon.ico">../../art/extras/win95/app_icon.ico</file>
+        <file alias="art/extras/yaplus/app.svg">../../art/extras/yaplus/app.svg</file>
+        <file alias="art/extras/yaplus/app_icon.ico">../../art/extras/yaplus/app_icon.ico</file>
+        <file alias="icons/extras/nocover.svg">../../icons/extras/nocover.svg</file>
+        <file alias="emoji/emoji_presets.json">../../emoji/emoji_presets.json</file>
+        <file alias="langs/extras/en.json">../../langs/extras/en.json</file>
+        <file alias="langs/extras/zh-hans.json">../../langs/extras/zh-hans.json</file>
+    </qresource>
+</RCC>

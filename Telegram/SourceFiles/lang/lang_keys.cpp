@@ -126,9 +126,9 @@ QString langDayOfMonthFull(const QDate &date) {
 QString langDateForChat(const QDate &date) {
 	const auto current = QDate::currentDate();
 	if (date == current) {
-		return tr::ayu_ChatDateToday(tr::now);
+		return tr::extras_ChatDateToday(tr::now);
 	} else if (date == current.addDays(-1)) {
-		return tr::ayu_ChatDateYesterday(tr::now);
+		return tr::extras_ChatDateYesterday(tr::now);
 	}
 	return langDayOfMonthFull(date);
 }

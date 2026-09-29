@@ -7,8 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
 
-#include "ayu/ui/components/chat_surface_button.h"
-#include "ayu/features/window_material/window_material.h"
+#include "extras/ui/components/chat_surface_button.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
@@ -222,13 +222,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QMimeData>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/ui/components/floating_surface_host.h"
-#include "ayu/features/filters/filters_cache_controller.h"
-#include "ayu/utils/telegram_helpers.h"
-#include "ayu/features/message_shot/message_shot.h"
-#include "ayu/features/forward/ayu_forward.h"
-#include "ayu/features/auto_space/auto_space.h"
+#include "extras/extras_settings.h"
+#include "extras/ui/components/floating_surface_host.h"
+#include "extras/features/filters/filters_cache_controller.h"
+#include "extras/utils/telegram_helpers.h"
+#include "extras/features/message_shot/message_shot.h"
+#include "extras/features/forward/extras_forward.h"
+#include "extras/features/auto_space/auto_space.h"
 #include "boxes/abstract_box.h"
 #include "history/history_widget_internal.h"
 
@@ -275,26 +275,26 @@ HistoryWidget::HistoryWidget(
 , _discardRichDraft(Ui::CreateChild<Ui::IconButton>(
 	this,
 	st::historyDiscardRichDraftButton))
-, _unblock(AyuUi::CreateChatSurfaceButton(
+, _unblock(ExtrasUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_unblock_button(tr::now).toUpper(),
 	st::historyUnblock))
-, _botStart(AyuUi::CreateChatSurfaceButton(
+, _botStart(ExtrasUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_bot_start(tr::now).toUpper(),
 	st::historyComposeButton))
-, _joinChannel(AyuUi::CreateChatSurfaceButton(
+, _joinChannel(ExtrasUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_profile_join_channel(tr::now).toUpper(),
 	st::historyComposeButton))
-, _muteUnmute(AyuUi::CreateChatSurfaceButton(
+, _muteUnmute(ExtrasUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_channel_mute(tr::now).toUpper(),
 	st::historyComposeButton))
-, _discuss(AyuUi::CreateChatSurfaceButton(this,
-	tr::ayu_ChannelBottomButtonDiscuss(tr::now).toUpper(),
+, _discuss(ExtrasUi::CreateChatSurfaceButton(this,
+	tr::extras_ChannelBottomButtonDiscuss(tr::now).toUpper(),
 	st::historyComposeButton))
-, _reportMessages(AyuUi::CreateChatSurfaceButton(
+, _reportMessages(ExtrasUi::CreateChatSurfaceButton(
 	this, QString(), st::historyComposeButton))
 , _attachToggle(this, st::historyAttach)
 , _tabbedSelectorToggle(this, st::historyAttachEmoji)
@@ -562,7 +562,7 @@ HistoryWidget::HistoryWidget(
 	});
 	CenterMessageFieldText(_field);
 	InitMessageFieldFade(_field, st::historyComposeField.textBg);
-	AyuFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
 		if (_showAnimation) {
 			showFinished();
 		}
@@ -576,7 +576,7 @@ HistoryWidget::HistoryWidget(
 
 	_fieldCharsCountManager.limitExceeds(
 	) | rpl::on_next([=] {
-		const auto &settings = AyuSettings::getInstance();
+		const auto &settings = ExtrasSettings::getInstance();
 		const auto hide = _fieldCharsCountManager.isLimitExceeded();
 		if (_silent) {
 			_silent->setVisible(!hide);
@@ -910,18 +910,18 @@ HistoryWidget::HistoryWidget(
 	}, lifetime());
 
 	rpl::merge(
-		AyuSettings::getInstance().showAttachButtonInMessageFieldChanges() | rpl::to_empty,
-		AyuSettings::getInstance().showEmojiButtonInMessageFieldChanges() | rpl::to_empty,
-		AyuSettings::getInstance().showMicrophoneButtonInMessageFieldChanges() | rpl::to_empty,
-		AyuSettings::getInstance().showAutoDeleteButtonInMessageFieldChanges() | rpl::to_empty,
-		AyuSettings::getInstance().showGiftButtonInMessageFieldChanges() | rpl::to_empty,
-		AyuSettings::getInstance().showAiEditorButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showAttachButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showEmojiButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showMicrophoneButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showAutoDeleteButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showGiftButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showAiEditorButtonInMessageFieldChanges() | rpl::to_empty,
 		base::options::lookup<bool>(Ui::kOptionHideAiButton).changes(),
 		session().data().aiComposeTones().updated(),
-		AyuSettings::getInstance().showAttachPopupChanges() | rpl::to_empty,
-		AyuSettings::getInstance().showEmojiPopupChanges() | rpl::to_empty,
-		AyuSettings::getInstance().channelBottomButtonChanges() | rpl::to_empty,
-		AyuSettings::getInstance().removeMessageTailChanges() | rpl::to_empty
+		ExtrasSettings::getInstance().showAttachPopupChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showEmojiPopupChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().channelBottomButtonChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().removeMessageTailChanges() | rpl::to_empty
 	) | rpl::on_next([=] {
 		refreshSendGiftToggle();
 		refreshAttachBotsMenu();
@@ -931,7 +931,7 @@ HistoryWidget::HistoryWidget(
 		this->update();
 	}, lifetime());
 
-	AyuSettings::getInstance().translationProviderChanges(
+	ExtrasSettings::getInstance().translationProviderChanges(
 	) | rpl::on_next([=](TranslationProvider) {
 		if (_history) {
 			for (const auto &block : _history->blocks) {
@@ -1249,7 +1249,7 @@ HistoryWidget::HistoryWidget(
 		if (action.replaceMediaOf) {
 		} else if (action.options.scheduled) {
 			cancelReplyOrSuggest(lastKeyboardUsed);
-			const auto &ghost = AyuSettings::ghost(&controller->session());
+			const auto &ghost = ExtrasSettings::ghost(&controller->session());
 			if (!ghost.isUseScheduledMessages()) {
 				crl::on_main(this, [=, history = action.history]
 				{

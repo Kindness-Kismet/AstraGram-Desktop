@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
-#include "ayu/ui/components/floating_surface.h"
+#include "extras/ui/components/floating_surface.h"
 #include "ui/painter.h"
 #include "base/basic_types.h"
 #include "styles/palette.h"
@@ -56,13 +56,13 @@ inline void ApplyChatControlSurface(
 		bool outline = true,
 		Fn<QColor()> background = nullptr) {
 	if (!background) {
-		background = AyuUi::ChatSurfaceBackground;
+		background = ExtrasUi::ChatSurfaceBackground;
 	}
 	auto border = Fn<QColor()>();
 	if (outline) {
-		border = AyuUi::ChatSurfaceBorder;
+		border = ExtrasUi::ChatSurfaceBorder;
 	}
-	AyuUi::FloatingSurface::attach(widget.get(), {
+	ExtrasUi::FloatingSurface::attach(widget.get(), {
 		.radius = radius,
 		.background = std::move(background),
 		.border = std::move(border),
@@ -77,11 +77,11 @@ inline void PaintChatBar(
 		const QRect &rect,
 		const QColor &fill,
 		const QColor &hover = {}) {
-	const auto surface = AyuUi::FloatingSurface::find(widget);
+	const auto surface = ExtrasUi::FloatingSurface::find(widget);
 	if (!surface || !surface->hasBackdrop()) {
 		p.fillRect(rect, hover.isValid() ? hover : fill);
 	} else if (hover.isValid() && hover != fill) {
-		p.fillRect(rect, AyuUi::ChatSurfaceHover());
+		p.fillRect(rect, ExtrasUi::ChatSurfaceHover());
 	}
 }
 

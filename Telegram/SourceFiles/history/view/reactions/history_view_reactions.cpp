@@ -33,10 +33,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat_helpers.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/features/message_shot/message_shot.h"
-#include "ayu/ui/ayu_userpic.h"
-#include "ayu/features/filters/filters_controller.h"
+#include "extras/extras_settings.h"
+#include "extras/features/message_shot/message_shot.h"
+#include "extras/ui/extras_userpic.h"
+#include "extras/features/filters/filters_controller.h"
 
 
 namespace HistoryView::Reactions {
@@ -639,7 +639,7 @@ void InlineList::paint(
 	}
 	if (!animations.empty()
 		&& context.reactionInfo
-		&& !AyuFeatures::MessageShot::isTakingShot()) {
+		&& !ExtrasFeatures::MessageShot::isTakingShot()) {
 		const auto now = context.now;
 		context.reactionInfo->effectPaint = [
 			now,
@@ -725,7 +725,7 @@ void InlineList::paintSingleBg(
 		float64 opacity) const {
 	p.setOpacity(opacity);
 	if (!areTags()) {
-		const auto radius = AyuUserpic::ComputeRadiusF(fill.height());
+		const auto radius = ExtrasUserpic::ComputeRadiusF(fill.height());
 		p.setBrush(color);
 		p.drawRoundedRect(fill, radius, radius);
 		return;
@@ -925,7 +925,7 @@ void InlineList::continueAnimations(base::flat_map<
 InlineListData InlineListDataFromMessage(not_null<Element*> view) {
 	using Flag = InlineListData::Flag;
 	const auto item = view->data();
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (!settings.showChannelReactions()
 		&& item->history()->peer->isChannel()
 		&& !item->history()->peer->isMegagroup()) {
@@ -1011,7 +1011,7 @@ InlineListData InlineListDataFromMessage(not_null<Element*> view) {
 			}
 		}
 	}
-	if (AyuSettings::getInstance().filtersEnabled()) {
+	if (ExtrasSettings::getInstance().filtersEnabled()) {
 		for (auto &[id, peers] : result.recent) {
 			peers.erase(ranges::remove_if(peers, [](not_null<PeerData*> peer) {
 				return FiltersController::isBlocked(peer);

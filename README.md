@@ -347,7 +347,7 @@ fork was verified.
 ```
 scripts/                   prebuild.py, build.py and their support package
 Telegram/
-  SourceFiles/ayu/         everything this fork adds, one directory per
+  SourceFiles/extras/         everything this fork adds, one directory per
                            feature under features/
   SourceFiles/…            upstream Telegram Desktop source
   lib_ui, lib_tl, codegen  forked submodules; the other lib_* modules are

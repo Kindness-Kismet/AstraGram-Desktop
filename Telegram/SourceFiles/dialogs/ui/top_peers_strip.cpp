@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/ui/top_peers_strip.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 #include "base/event_filter.h"
 #include "lang/lang_keys.h"
 #include "ui/effects/ripple_animation.h"
@@ -26,7 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtWidgets/QApplication>
 
 // AyuGram includes
-#include "ayu/ui/ayu_userpic.h"
+#include "extras/ui/extras_userpic.h"
 
 
 namespace Dialogs {
@@ -141,7 +141,7 @@ void TopPeersStrip::setupHeader() {
 	}, _header.lifetime());
 
 	_header.paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(&_header).fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(
+		QPainter(&_header).fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(
 			&_header, st::searchedBarBg->c));
 	}, _header.lifetime());
 }
@@ -843,7 +843,7 @@ void TopPeersStrip::paintUserpic(
 		pen.setWidthF(stroke * online);
 		q.setPen(pen);
 		q.setBrush(st::dialogsOnlineBadgeFg);
-		const auto badge = AyuUserpic::OnlineBadgePosition(size, onlineSize, stroke);
+		const auto badge = ExtrasUserpic::OnlineBadgePosition(size, onlineSize, stroke);
 		q.drawEllipse(QRectF(
 			badge.x(),
 			badge.y(),

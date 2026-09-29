@@ -25,9 +25,9 @@ enum class SendMediaType;
 class MessageLinksParser;
 struct InlineBotQuery;
 
-namespace AyuUi {
+namespace ExtrasUi {
 class FloatingSurfaceHost;
-} // namespace AyuUi
+} // namespace ExtrasUi
 
 namespace MTP {
 class Error;
@@ -892,7 +892,7 @@ private:
 	object_ptr<HistoryView::TopBarWidget> _topBar;
 	object_ptr<Ui::ElasticScroll> _scroll;
 	object_ptr<Ui::RpWidget> _composeSurface;
-	std::unique_ptr<AyuUi::FloatingSurfaceHost> _floatingSurfaceHost;
+	std::unique_ptr<ExtrasUi::FloatingSurfaceHost> _floatingSurfaceHost;
 	int _composeOverlap = 0;
 	int _lastTopBarsOverlap = 0;
 	int _lastScrollAreaY = 0;

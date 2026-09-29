@@ -67,7 +67,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QGuiApplication>
 
 // AyuGram includes
-#include "ayu/ui/settings/settings_main.h"
+#include "extras/ui/settings/settings_main.h"
 #include "settings/settings_builder.h"
 
 
@@ -83,7 +83,7 @@ struct DecodeOptionsResult {
 
 struct ResolvedReferrer {
 	QString controlId;
-	Type section = AyuMain::Id();
+	Type section = ExtrasMain::Id();
 };
 
 [[nodiscard]] QString EncodeOptionsToText(const QString &json) {
@@ -152,15 +152,15 @@ struct ResolvedReferrer {
 [[nodiscard]] QString OptionReferrer(const base::options::option<bool> &option) {
 	const auto &id = option.id();
 	if (id == u"tabbed-panel-show-on-click"_q) {
-		return u"ayu/showEmojiPopup"_q;
+		return u"extras/showEmojiPopup"_q;
 	} else if (id == u"show-peer-id-below-about"_q) {
-		return u"ayu/showPeerId"_q;
+		return u"extras/showPeerId"_q;
 	} else if (id == u"unlimited-recent-stickers"_q) {
-		return u"ayu/unlimitedRecentStickers"_q;
+		return u"extras/unlimitedRecentStickers"_q;
 	} else if (id == u"hide-ai-button"_q) {
-		return u"ayu/showAiEditorButtonInMessageField"_q;
+		return u"extras/showAiEditorButtonInMessageField"_q;
 	} else if (id == u"unlimited-message-width"_q) {
-		return u"ayu/wideMultiplier"_q;
+		return u"extras/wideMultiplier"_q;
 	}
 	return QString();
 }

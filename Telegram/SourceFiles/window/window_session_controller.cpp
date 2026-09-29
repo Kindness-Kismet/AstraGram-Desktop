@@ -131,7 +131,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_layers.h" // st::boxLabel
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 
 namespace Window {
@@ -2062,7 +2062,7 @@ void SessionController::activateFirstChatsFilter() {
 	}
 	_filtersActivated = true;
 
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (!settings.hideAllChatsFolder()) {
 		setActiveChatsFilter(session().data().chatsFilters().defaultId());
 	}

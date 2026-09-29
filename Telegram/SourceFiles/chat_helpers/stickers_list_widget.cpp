@@ -6,7 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/stickers_list_widget.h"
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "base/options.h"
 #include "base/timer_rpl.h"
@@ -62,8 +62,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtWidgets/QApplication>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "styles/style_ayu_styles.h"
+#include "extras/extras_settings.h"
+#include "styles/style_extras_styles.h"
 
 
 namespace ChatHelpers {
@@ -265,7 +265,7 @@ StickersListWidget::StickersListWidget(
 	if (st().bg->c.alpha() > 0) {
 		setAttribute(Qt::WA_OpaquePaintEvent);
 	}
-	AyuFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
 
 	if (!_isMasks && !_isEffects) {
 		setupSearch();
@@ -328,7 +328,7 @@ StickersListWidget::StickersListWidget(
 	}
 
 	if (_mode == Mode::Full) {
-		AyuSettings::getInstance().stickerPanelScaleChanges(
+		ExtrasSettings::getInstance().stickerPanelScaleChanges(
 		) | rpl::on_next([=] {
 			clearSavedStickerFrames();
 			resizeToWidth(width());
@@ -604,7 +604,7 @@ int StickersListWidget::countDesiredHeight(int newWidth) {
 	if (_mode == Mode::Full) {
 		targetSize = qMax(
 			minSize,
-			qRound(minSize * AyuSettings::getInstance().stickerPanelScale()));
+			qRound(minSize * ExtrasSettings::getInstance().stickerPanelScale()));
 	}
 	auto columnCount = qMax(1, availableWidth / targetSize);
 	auto singleWidth = availableWidth / columnCount;
@@ -892,7 +892,7 @@ void StickersListWidget::fillLocalSearchShortcuts(const QString &query) {
 }
 
 bool StickersListWidget::addSearchShortcut(not_null<StickersSet*> set) {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.showOnlyAddedEmojisAndStickers()
 		&& !SetInMyList(set->flags)) {
 		return false;
@@ -1454,7 +1454,7 @@ void StickersListWidget::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 	auto clip = e->rect();
 	if (st().bg->c.alpha() > 0) {
-		p.fillRect(clip, AyuFeatures::WindowMaterial::surfaceColor(this, st().bg->c));
+		p.fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(this, st().bg->c));
 	}
 
 	if (_searchSwapAnimation.animating()) {
@@ -2931,7 +2931,7 @@ void StickersListWidget::mouseReleaseEvent(QMouseEvent *e) {
 				&& (e->modifiers() & Qt::ControlModifier)) {
 				showStickerSetBox(document, set.id);
 			} else {
-				const auto &settings = AyuSettings::getInstance();
+				const auto &settings = ExtrasSettings::getInstance();
 				auto from = messageSentAnimationInfo(
 					sticker->section,
 					sticker->index,
@@ -2951,7 +2951,7 @@ void StickersListWidget::mouseReleaseEvent(QMouseEvent *e) {
 
 				if (settings.stickerConfirmation() && (_mode == Mode::Full || _mode == Mode::ChatIntro) && _requireConfirmation) {
 					_show->showBox(Ui::MakeConfirmBox({
-						.text = tr::ayu_ConfirmationSticker(),
+						.text = tr::extras_ConfirmationSticker(),
 						.confirmed = sendStickerCallback,
 						.confirmText = tr::lng_send_button()
 					}));
@@ -3437,7 +3437,7 @@ auto StickersListWidget::collectRecentStickers() -> std::vector<Sticker> {
 
 	auto add = [&](not_null<DocumentData*> document, bool custom) {
 		if (result.size() >= kRecentDisplayLimit
-			&& !AyuSettings::getInstance().unlimitedRecentStickers()) {
+			&& !ExtrasSettings::getInstance().unlimitedRecentStickers()) {
 			return;
 		}
 		const auto i = ranges::find(result, document, &Sticker::document);

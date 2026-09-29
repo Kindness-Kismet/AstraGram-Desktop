@@ -68,9 +68,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QClipboard>
 
 // AyuGram includes
-#include "ayu/features/forward/ayu_forward.h"
-#include "ayu/ayu_settings.h"
-#include "ayu/utils/telegram_helpers.h"
+#include "extras/features/forward/extras_forward.h"
+#include "extras/extras_settings.h"
+#include "extras/utils/telegram_helpers.h"
 
 
 class ShareBox::Inner final : public Ui::RpWidget {
@@ -1895,10 +1895,10 @@ ShareBox::SubmitCallback ShareBox::DefaultForwardCallback(
 			? Data::ForwardOptions::NoNamesAndCaptions
 			: forwardOptions;
 
-		if (AyuForward::isFullAyuForwardNeeded(items.front())) {
+		if (ExtrasForward::isFullExtrasForwardNeeded(items.front())) {
 			crl::async([=]{
 				for (const auto thread : result) {
-					AyuForward::forwardMessages(
+					ExtrasForward::forwardMessages(
 					&history->owner().session(),
 					Api::SendAction(thread, options),
 					false,
@@ -1908,11 +1908,11 @@ ShareBox::SubmitCallback ShareBox::DefaultForwardCallback(
 
 			dismiss();
 			return;
-		} else if (AyuForward::isAyuForwardNeeded(items)) {
+		} else if (ExtrasForward::isExtrasForwardNeeded(items)) {
 			crl::async([=]
 			{
 				for (const auto thread : result) {
-					AyuForward::intelligentForward(
+					ExtrasForward::intelligentForward(
 						&history->owner().session(),
 						Api::SendAction(thread, options),
 						Data::ResolvedForwardDraft(items, effectiveForwardOptions));
@@ -1942,7 +1942,7 @@ ShareBox::SubmitCallback ShareBox::DefaultForwardCallback(
 			}();
 
 			const auto sendCommentAfter = !comment.text.isEmpty()
-				&& AyuSettings::getInstance().sendForwardFirst();
+				&& ExtrasSettings::getInstance().sendForwardFirst();
 
 			if (!comment.text.isEmpty() && !sendCommentAfter) {
 				auto message = Api::MessageToSend(

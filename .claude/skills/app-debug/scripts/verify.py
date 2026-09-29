@@ -207,7 +207,7 @@ def verify(profile):
         pages = command("page.list")
         require(pages and len(command("action.list")) >= 60, "官方入口缺失")
         command("chat.open")
-        command("page.open", "ayu")
+        command("page.open", "extras")
         report["pageCount"] = len(pages)
         passed(f"官方快捷动作清单与 {len(pages)} 个设置索引入口")
 

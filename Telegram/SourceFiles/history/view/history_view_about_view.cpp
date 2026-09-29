@@ -11,7 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_premium.h"
 #include "api/api_sending.h"
 #include "apiwrap.h"
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 #include "base/random.h"
 #include "base/unixtime.h"
 #include "ui/effects/premium_stars.h"
@@ -61,7 +61,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_menu_icons.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 
 namespace HistoryView {
@@ -274,7 +274,7 @@ auto GenerateChatIntro(
 				st::defaultTextStyle,
 				links));
 		};
-		const auto disableGreeting = AyuSettings::getInstance().disableGreetingSticker();
+		const auto disableGreeting = ExtrasSettings::getInstance().disableGreetingSticker();
 		const auto title = data.customPhrases()
 			? data.title
 			: tr::lng_chat_intro_default_title(tr::now);
@@ -774,7 +774,7 @@ bool AboutView::refresh() {
 				makeIntro(user);
 			} else if (const auto stars = user->starsPerMessageChecked()) {
 				setItem(makeStarsPerMessage(stars), nullptr);
-			} else if (!AyuSettings::getInstance().disableGreetingSticker()) {
+			} else if (!ExtrasSettings::getInstance().disableGreetingSticker()) {
 				makeIntro(user);
 			}
 			return true;

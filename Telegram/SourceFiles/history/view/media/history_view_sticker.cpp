@@ -39,7 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_menu_icons.h"
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 #include "history/view/media/history_view_media.h"
 #include "ui/chat/message_bubble.h"
 
@@ -115,7 +115,7 @@ Sticker::Sticker(
 , _cachingTag(ChatHelpers::StickerLottieSize::MessageHistory)
 , _skipPremiumEffect(skipPremiumEffect)
 , _sensitiveBlurred(parent->data()->isMediaSensitive()) {
-	AyuSettings::getInstance().messageStickerScaleChanges(
+	ExtrasSettings::getInstance().messageStickerScaleChanges(
 	) | rpl::on_next([=] {
 		if (_customSize > 0 || emojiSticker() || _diceIndex >= 0) {
 			return;
@@ -236,7 +236,7 @@ bool Sticker::readyToDrawAnimationFrame() {
 }
 
 QSize Sticker::Size() {
-	const auto scale = AyuSettings::getInstance().messageStickerScale();
+	const auto scale = ExtrasSettings::getInstance().messageStickerScale();
 	const auto base = BaseStickerSize();
 	const auto width = std::clamp(
 		qRound(base.width() * scale),

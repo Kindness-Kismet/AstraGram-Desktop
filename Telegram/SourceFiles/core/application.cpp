@@ -109,9 +109,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <ksandbox.h>
 
 // AyuGram includes
-#include "ayu/ayu_infra.h"
-#include "ayu/ayu_settings.h"
-#include "ayu/features/streamer_mode/streamer_mode.h"
+#include "extras/extras_infra.h"
+#include "extras/extras_settings.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 
 
 namespace Core {
@@ -343,7 +343,7 @@ void Application::run() {
 	_translator = std::make_unique<Lang::Translator>();
 	QCoreApplication::instance()->installTranslator(_translator.get());
 
-	AyuInfra::init();
+	ExtrasInfra::init();
 	style::StartManager(cScale());
 	Ui::Accessible::Init();
 	Ui::InitTextOptions();
@@ -605,8 +605,8 @@ void Application::processCreatedWindow(
 	window->openInMediaViewRequests(
 	) | rpl::start_to_stream(_openInMediaViewRequests, window->lifetime());
 
-	if (AyuSettings::getInstance().streamerMode()) {
-		AyuFeatures::StreamerMode::hideWidgetWindow(window->widget());
+	if (ExtrasSettings::getInstance().streamerMode()) {
+		ExtrasFeatures::StreamerMode::hideWidgetWindow(window->widget());
 	}
 }
 

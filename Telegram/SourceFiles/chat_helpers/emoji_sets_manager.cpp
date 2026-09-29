@@ -7,8 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/emoji_sets_manager.h"
 
-#include "ayu/features/emoji_packs/emoji_packs.h"
-#include "ayu/ui/boxes/emoji_packs_box.h"
+#include "extras/features/emoji_packs/emoji_packs.h"
+#include "extras/ui/boxes/emoji_packs_box.h"
 #include "mtproto/dedicated_file_loader.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/fade_wrap.h"
@@ -149,7 +149,7 @@ SetState ComputeState(int id) {
 		return Active();
 	} else if (SetIsReady(id)) {
 		return Ready();
-	} else if (Ayu::EmojiPacks::isCustom(id)) {
+	} else if (Extras::EmojiPacks::isCustom(id)) {
 		return Failed();
 	}
 	return Available{ GetDownloadSize(id) };
@@ -226,11 +226,11 @@ void Inner::setupContent() {
 		content->add(object_ptr<Row>(content, _session, set));
 	}
 	// 已安装的表情包都带预览，统一用官方样式的行；预设行只列出未下载的。
-	for (const auto &pack : Ayu::EmojiPacks::installed()) {
+	for (const auto &pack : Extras::EmojiPacks::installed()) {
 		content->add(object_ptr<Row>(content, _session,
 			Set{ { pack.id, 0, 0, pack.name }, pack.previewPath }));
 	}
-	Ayu::EmojiPacks::addPresetRows(content, _refresh);
+	Extras::EmojiPacks::addPresetRows(content, _refresh);
 
 	content->resizeToWidth(st::boxWidth);
 	Ui::ResizeFitChild(this, content);
@@ -417,8 +417,8 @@ void Row::setupHandler() {
 		SwitchToSet(_id, crl::guard(this, [=](bool success) {
 			_switching = false;
 			if (!success) {
-				if (Ayu::EmojiPacks::isCustom(_id)) {
-					Ui::Toast::Show(tr::ayu_EmojiPackSwitchError(tr::now));
+				if (Extras::EmojiPacks::isCustom(_id)) {
+					Ui::Toast::Show(tr::extras_EmojiPackSwitchError(tr::now));
 				} else {
 					load();
 				}
@@ -581,7 +581,7 @@ void ManageSetsBox::prepare() {
 	setTitle(tr::lng_emoji_manage_sets());
 
 	addButton(tr::lng_close(), [=] { closeBox(); });
-	Ayu::EmojiPacks::addImportButton(this, *refresh);
+	Extras::EmojiPacks::addImportButton(this, *refresh);
 }
 
 void LoadAndSwitchTo(not_null<Main::Session*> session, int id) {

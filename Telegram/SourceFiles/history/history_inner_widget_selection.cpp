@@ -1,7 +1,7 @@
 #include "history/history_inner_widget.h"
 
-#include "ayu/utils/telegram_helpers.h"
-#include "ayu/features/message_selection/selection_range.h"
+#include "extras/utils/telegram_helpers.h"
+#include "extras/features/message_selection/selection_range.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/history_widget.h"
@@ -9,7 +9,7 @@
 #include "window/window_session_controller.h"
 
 void HistoryInner::selectItemsBetween() {
-	using namespace AyuFeatures::MessageSelection;
+	using namespace ExtrasFeatures::MessageSelection;
 	if (hasSelectRestriction()) {
 		return;
 	}

@@ -26,7 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_boxes.h"
 
 // AyuGram includes
-#include "ayu/ui/ayu_userpic.h"
+#include "extras/ui/extras_userpic.h"
 
 
 namespace {
@@ -358,7 +358,7 @@ void PaintFilterChatsTypeIcon(
 	auto hq = PainterHighQualityEnabler(p);
 	p.setBrush(color);
 	p.setPen(Qt::NoPen);
-	AyuUserpic::PaintShape(p, rect);
+	ExtrasUserpic::PaintShape(p, rect);
 	icon.paintInCenter(p, rect);
 }
 

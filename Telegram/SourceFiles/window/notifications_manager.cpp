@@ -55,8 +55,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #endif // __has_include(<gio/gio.hpp>)
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/utils/telegram_helpers.h"
+#include "extras/extras_settings.h"
+#include "extras/utils/telegram_helpers.h"
 
 
 namespace Window {
@@ -411,7 +411,7 @@ System::Timing System::countTiming(
 		delay = config.notifyDefaultDelay;
 	}
 
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.disableNotificationsDelay()) {
 		delay = minimalDelay;
 	}

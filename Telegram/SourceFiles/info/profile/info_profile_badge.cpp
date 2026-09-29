@@ -24,7 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_info.h"
 
 // AyuGram includes
-#include "styles/style_ayu_icons.h"
+#include "styles/style_extras_icons.h"
 
 
 namespace Info::Profile {

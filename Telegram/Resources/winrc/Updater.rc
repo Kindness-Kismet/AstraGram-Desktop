@@ -35,11 +35,11 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 // 版本数值由 Telegram/build/version 在配置阶段生成。
-#include "ayugram_app_version.h"
+#include "extras_app_version.h"
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION AYUGRAM_FILE_VERSION_COMMA
- PRODUCTVERSION AYUGRAM_FILE_VERSION_COMMA
+ FILEVERSION EXTRAS_FILE_VERSION_COMMA
+ PRODUCTVERSION EXTRAS_FILE_VERSION_COMMA
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -56,10 +56,10 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Radolyn Labs"
             VALUE "FileDescription", "AstraGram Updater"
-            VALUE "FileVersion", AYUGRAM_FILE_VERSION_STR
+            VALUE "FileVersion", EXTRAS_FILE_VERSION_STR
             VALUE "LegalCopyright", "Copyright (C) 2014-2026"
             VALUE "ProductName", "AstraGram"
-            VALUE "ProductVersion", AYUGRAM_FILE_VERSION_STR
+            VALUE "ProductVersion", EXTRAS_FILE_VERSION_STR
         END
     END
     BLOCK "VarFileInfo"

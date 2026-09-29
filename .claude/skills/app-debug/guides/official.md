@@ -6,7 +6,7 @@
 ## 页面和值
 
 `page.list [filter]` 从应用实时设置索引返回编号、标题、页面路径和勾选状态。
-`page.open <id>` 打开该入口所在页面并定位控件；`settings/ayu/search` 分别打开三个主页。
+`page.open <id>` 打开该入口所在页面并定位控件；`settings/extras/search` 分别打开三个主页。
 索引随当前账号、功能开关和平台变化。
 
 ```bash

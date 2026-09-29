@@ -1,0 +1,14 @@
+// 由 Telegram/build/version 在配置阶段生成，不要手改。
+// 只写 #define，供 C++ 与 Windows 资源编译器共用。
+#ifndef EXTRAS_APP_VERSION_H
+#define EXTRAS_APP_VERSION_H
+
+#define EXTRAS_APP_VERSION @app_version@
+#define EXTRAS_APP_UPDATE_VERSION @update_version@
+#define EXTRAS_APP_STORAGE_READ_VERSION @storage_read_version@
+#define EXTRAS_APP_VERSION_STR "@display@"
+#define EXTRAS_APP_BETA_VERSION @beta@
+#define EXTRAS_FILE_VERSION_STR "@file_version@"
+#define EXTRAS_FILE_VERSION_COMMA @comma_version@
+
+#endif // EXTRAS_APP_VERSION_H

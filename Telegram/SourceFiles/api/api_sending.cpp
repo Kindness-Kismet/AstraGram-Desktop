@@ -38,9 +38,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 
 // AyuGram includes
-#include "ayu/utils/telegram_helpers.h"
-#include "ayu/ayu_settings.h"
-#include "ayu/features/auto_space/auto_space.h"
+#include "extras/utils/telegram_helpers.h"
+#include "extras/extras_settings.h"
+#include "extras/features/auto_space/auto_space.h"
 
 
 namespace Api {
@@ -1044,9 +1044,9 @@ struct ConfirmedLocalFile {
 		session->user()).flags;
 	TextUtilities::PrepareForSending(caption, prepareFlags);
 	TextUtilities::Trim(caption);
-	// ayu: 发送 caption 时在中英文间自动插空格
-	if (AyuSettings::getInstance().autoSpaceSending()) {
-		Ayu::AutoSpace::processText(caption);
+	// extras: 发送 caption 时在中英文间自动插空格
+	if (ExtrasSettings::getInstance().autoSpaceSending()) {
+		Extras::AutoSpace::processText(caption);
 	}
 	return caption;
 }

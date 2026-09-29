@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/sections/settings_information.h"
 
-#include "ayu/features/window_material/window_material.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "settings/sections/settings_main.h"
 #include "settings/settings_builder.h"
@@ -78,8 +78,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QBuffer>
 
 // AyuGram includes
-#include "ayu/ui/ayu_userpic.h"
-#include "ayu/utils/telegram_helpers.h"
+#include "extras/ui/extras_userpic.h"
+#include "extras/utils/telegram_helpers.h"
 #include "styles/style_info.h"
 
 
@@ -947,7 +947,7 @@ void SetupAccountsWrap(
 			pen.setWidthF(line);
 			p.setPen(pen);
 			p.setBrush(Qt::NoBrush);
-			AyuUserpic::PaintShape(p, rect);
+			ExtrasUserpic::PaintShape(p, rect);
 		}
 	}, state->userpic.lifetime());
 
@@ -1094,7 +1094,7 @@ not_null<Ui::SlideWrap<Ui::SettingsButton>*> AccountsList::setupAdd() {
 				})))->setDuration(0);
 	const auto button = result->entity();
 	if (_materialSurface) {
-		AyuFeatures::WindowMaterial::watchSurface(button);
+		ExtrasFeatures::WindowMaterial::watchSurface(button);
 	}
 
 	using Environment = MTP::Environment;
@@ -1233,7 +1233,7 @@ void AccountsList::rebuild() {
 				std::move(callback),
 				nextIsLocked)));
 			if (_materialSurface) {
-				AyuFeatures::WindowMaterial::watchSurface(button.get());
+				ExtrasFeatures::WindowMaterial::watchSurface(button.get());
 			}
 		}
 	}

@@ -220,12 +220,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QMimeData>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
-#include "ayu/features/filters/filters_cache_controller.h"
-#include "ayu/utils/telegram_helpers.h"
-#include "ayu/features/message_shot/message_shot.h"
-#include "ayu/features/forward/ayu_forward.h"
-#include "ayu/features/auto_space/auto_space.h"
+#include "extras/extras_settings.h"
+#include "extras/features/filters/filters_cache_controller.h"
+#include "extras/utils/telegram_helpers.h"
+#include "extras/features/message_shot/message_shot.h"
+#include "extras/features/forward/extras_forward.h"
+#include "extras/features/auto_space/auto_space.h"
 #include "boxes/abstract_box.h"
 #include "history/history_widget_internal.h"
 
@@ -260,9 +260,9 @@ TextWithEntities HistoryWidget::prepareTextForEditMsg() const {
 		textWithTags.text,
 		TextUtilities::ConvertTextTagsToEntities(textWithTags.tags) };
 	TextUtilities::PrepareForSending(left, prepareFlags);
-	// ayu: 编辑时在中英文间自动插空格
-	if (AyuSettings::getInstance().autoSpaceEditing()) {
-		Ayu::AutoSpace::processText(left);
+	// extras: 编辑时在中英文间自动插空格
+	if (ExtrasSettings::getInstance().autoSpaceEditing()) {
+		Extras::AutoSpace::processText(left);
 	}
 	return left;
 }
@@ -943,7 +943,7 @@ void HistoryWidget::goToDiscussionGroup() {
 }
 
 bool HistoryWidget::hasDiscussionGroup() const {
-	const auto &settings = AyuSettings::getInstance();
+	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.channelBottomButton() != ChannelBottomButton::DiscussWithFallback) {
 		return false;
 	}

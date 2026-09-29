@@ -46,7 +46,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QLocale>
 
 // AyuGram includes
-#include "ayu/ayu_settings.h"
+#include "extras/extras_settings.h"
 
 
 namespace {
@@ -315,7 +315,7 @@ void HiddenUrlClickHandler::Open(QString url, QVariant context) {
 			|| (confirmAfterIvFallback && !canTryIv)
 			|| (HiddenUrlRequiresConfirmation(parsedUrl)
 				&& !skipConfirmation);
-		if (!AyuSettings::getInstance().disableOpenLinkWarning()
+		if (!ExtrasSettings::getInstance().disableOpenLinkWarning()
 			&& requiresConfirmation) {
 			if (!my.show) {
 				Core::App().hideMediaView();
