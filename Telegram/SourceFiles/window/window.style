@@ -45,13 +45,31 @@ chatFloatingBarGap: 4px;
 
 adaptiveChatWideWidth: 880px;
 
-notifyBorder: windowShadowFgFallback;
+// 圆角卡片：窗口四周为阴影留边，卡片本体是 notifyWidth × notifyMinHeight。
+notifyShadow: BoxShadow {
+	blurRadius: 12px;
+	offset: point(0px, 4px);
+	opacity: 0.5;
+}
+notifyRadius: 16px;
 notifyBorderWidth: 1px;
 notifySlowHide: 4000;
-notifyPhotoSize: 62px;
+notifyPhotoSize: 40px;
 notifyMacPhotoSize: 64px;
-notifyPhotoPos: point(9px, 9px);
-notifyClosePos: point(1px, 2px);
+notifyPhotoPos: point(13px, 17px);
+notifyTextLeft: 11px;
+notifyTextTop: 12px;
+notifyDotSize: 7px;
+notifyDotSkip: 6px;
+notifyRightSkip: 12px;
+notifyWaitLongHide: 3000;
+notifyFastAnim: 150;
+notifyWidth: 312px;
+notifyMinHeight: 74px;
+notifyDeltaX: 10px;
+notifyDeltaY: 10px;
+notifyActionsDuration: 150;
+
 notifyClose: IconButton {
 	width: 30px;
 	height: 30px;
@@ -65,42 +83,45 @@ notifyClose: IconButton {
 	rippleAreaSize: 20px;
 	ripple: defaultRippleAnimationBgOver;
 }
-notifyItemTop: 12px;
-notifyTextLeft: 12px;
-notifyTextTop: 7px;
-notifyWaitLongHide: 3000;
-notifyFastAnim: 150;
-notifyWidth: 320px;
-notifyMinHeight: 80px;
-notifyDeltaX: 6px;
-notifyDeltaY: 7px;
-notifyActionsDuration: 200;
+notifyActionSize: 22px;
+notifyActionsPos: point(8px, 6px);
+// 图标颜色由代码按主题指定，这里的颜色只是占位。
+notifyCloseIcon: icon {{ "simple_close", windowFg }};
+notifyReplyButtonPos: point(8px, 7px);
+notifyFadeRight: icon {{ "fade_horizontal", notificationBg }};
 
-notifyHideAllHeight: 36px;
+notifyHideAllHeight: 30px;
 
+notifyReplyPadding: margins(10px, 0px, 8px, 9px);
+notifyReplySkip: 6px;
 notifyReplyArea: InputField(defaultInputField) {
 	style: defaultTextStyle;
-	textMargins: margins(8px, 8px, 8px, 6px);
-	heightMin: 36px;
+	textBg: windowBgOver;
+	textBgActive: windowBgOver;
+	textMargins: margins(12px, 7px, 12px, 7px);
+	heightMin: 32px;
 	heightMax: 72px;
 	placeholderFg: placeholderFg;
 	placeholderFgActive: placeholderFgActive;
 	placeholderFgError: placeholderFgActive;
-	placeholderMargins: margins(2px, 0px, 2px, 0px);
+	placeholderMargins: margins(0px, 0px, 0px, 0px);
 	placeholderScale: 0.;
 	placeholderFont: normalFont;
-	border: 0px;
+	border: 1px;
 	borderActive: 0px;
+	borderFg: windowBgOver;
+	borderFgActive: activeLineFg;
+	borderFgError: activeLineFgError;
+	borderRadius: 11px;
 }
 notifySendReply: IconButton {
-	width: 36px;
-	height: 36px;
+	width: 32px;
+	height: 32px;
 
 	icon: historySendIcon;
 	iconOver: historySendIconOver;
-	iconPosition: point(6px, 6px);
+	iconPosition: point(4px, 4px);
 }
-notifyFadeRight: icon {{ "fade_horizontal", notificationBg }};
 
 titleUnreadCounterTop: 6px;
 

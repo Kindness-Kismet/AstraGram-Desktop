@@ -7,21 +7,30 @@
 #include "ayu/utils/telegram_helpers.h"
 #include "api/api_common.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "data/data_folder.h"
 #include "data/data_msg_id.h"
 #include "data/data_peer.h"
 #include "data/data_session.h"
+#include "data/data_thread.h"
 #include "data/data_types.h"
 #include "data/data_user.h"
+#include "data/notify/data_notify_settings.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "main/main_account.h"
+#include "main/main_domain.h"
 #include "main/main_session.h"
+#include "platform/platform_notifications_manager.h"
 #include "ui/text/text_entity.h"
 #include "window/window_session_controller.h"
 
 #include "base/unixtime.h"
 
 #include <QFile>
+#include <QtGui/QEnterEvent>
+#include <QtGui/QMouseEvent>
+#include <QtWidgets/QWidget>
 
 namespace AyuDebug::Commands {
 namespace {
@@ -189,6 +198,75 @@ using json = nlohmann::json;
 		{ "shadowBanned", shadowBan },
 		{ "note", "local fake message, no server data" },
 	}));
+}
+
+// 假会话没有服务端下发的通知设置，通知会被判为“未知”而跳过；
+// 先本地标记为已知且未静音，再借 message.fake 触发真实的通知链路。
+[[nodiscard]] Result notificationTest(const QStringList &args) {
+	auto text = u"Debug 通知测试"_q;
+	auto userId = int64(830000001);
+	for (auto i = 0; i < args.size(); ++i) {
+		if (args.at(i) != u"--peer"_q) {
+			text = args.at(i);
+			continue;
+		}
+		auto ok = false;
+		userId = (++i < args.size()) ? args.at(i).toLongLong(&ok) : 0;
+		if (!ok || userId <= 0) {
+			return Result::Err(
+				u"usage: notification.test [text] [--peer <userId>]"_q);
+		}
+	}
+
+	const auto session = ActiveSession();
+	if (!session || !isFakeSession(session)) {
+		return Result::Err(u"an in-process fake session is required"_q);
+	}
+	// 必须显式带 mute_until，缺省会被当成静音。
+	const auto known = MTP_peerNotifySettings(
+		MTP_flags(MTPDpeerNotifySettings::Flag::f_mute_until),
+		MTPBool(),
+		MTPBool(),
+		MTP_int(0),
+		MTPNotificationSound(),
+		MTPNotificationSound(),
+		MTPNotificationSound(),
+		MTPBool(),
+		MTPBool(),
+		MTPNotificationSound(),
+		MTPNotificationSound(),
+		MTPNotificationSound());
+	const auto user = FakeUser(session, userId);
+	auto &notify = session->data().notifySettings();
+	notify.apply(user, known);
+	notify.apply(Data::DefaultNotify::User, known);
+
+	const auto id = QString::number(userId);
+	const auto result = FakeMessage({ text, u"--peer"_q, id, u"--from"_q, id });
+	if (!result.ok) {
+		return result;
+	}
+
+	// 返回通知的各项判断结果，便于定位未弹出的原因。
+	auto payload = json::parse(result.payload.toStdString());
+	const auto msgId = QString::number(payload["msgId"].get<int64>());
+	const auto item = findMessage(id, msgId);
+	Expects(item != nullptr);
+	const auto thread = item->notificationThread();
+	const auto &settings = Core::App().settings();
+	payload["unread"] = item->unread(thread);
+	payload["showNotification"] = item->showNotification();
+	payload["hasNotification"] = thread->hasNotification();
+	payload["muteUnknown"] = notify.muteUnknown(thread);
+	payload["muted"] = notify.isMuted(thread);
+	payload["desktopNotify"] = settings.desktopNotify();
+	payload["nativeNotifications"] = settings.nativeNotifications();
+	payload["nativeSupported"] = Platform::Notifications::Supported();
+	payload["managerType"] = int(Core::App().notifications().manager().type());
+	payload["activeAccount"] = (&session->account()
+		== &Core::App().domain().active());
+	payload["notifyFromAll"] = settings.notifyFromAll();
+	return Result::Ok(Compact(payload));
 }
 
 // 列出已加载对话的 peerId 与名称，filter 为名称子串，忽略大小写。
@@ -407,11 +485,84 @@ using json = nlohmann::json;
 	return Result::Ok(Compact(std::move(items)));
 }
 
+// 给自绘通知窗口发合成的进入／离开事件，不移动真实光标。
+[[nodiscard]] Result notificationHover(const QStringList &args) {
+	if (args.size() != 1 || (args[0] != u"on"_q && args[0] != u"off"_q)) {
+		return Result::Err(u"usage: notification.hover <on|off>"_q);
+	}
+	const auto enter = (args[0] == u"on"_q);
+	const auto windows = notificationWindows();
+	for (const auto widget : windows) {
+		const auto center = widget->rect().center();
+		auto entered = QEnterEvent(
+			QPointF(center),
+			QPointF(center),
+			QPointF(widget->mapToGlobal(center)));
+		auto left = QEvent(QEvent::Leave);
+		QCoreApplication::sendEvent(
+			widget.get(),
+			enter ? static_cast<QEvent*>(&entered) : &left);
+	}
+	return Result::Ok(Compact(json{
+		{ "count", int(windows.size()) },
+	}));
+}
+
+// 按固定标识向可见的通知按钮投递合成点击。
+[[nodiscard]] Result notificationClick(const QStringList &args) {
+	if (args.size() != 1 || (args[0] != u"reply"_q && args[0] != u"close"_q)) {
+		return Result::Err(u"usage: notification.click <reply|close>"_q);
+	}
+	const auto name = u"notification."_q + args[0];
+	auto targets = std::vector<not_null<QWidget*>>();
+	for (const auto window : notificationWindows()) {
+		const auto button = window->findChild<QWidget*>(
+			name,
+			Qt::FindDirectChildrenOnly);
+		if (!button || !button->isVisible() || !button->isEnabled()) {
+			continue;
+		}
+		targets.push_back(button);
+	}
+	if (targets.empty()) {
+		return Result::Err(u"no visible notification action button"_q);
+	}
+	for (const auto button : targets) {
+		const auto center = button->rect().center();
+		const auto local = QPointF(center);
+		const auto global = QPointF(button->mapToGlobal(center));
+		auto entered = QEnterEvent(local, local, global);
+		auto press = QMouseEvent(
+			QEvent::MouseButtonPress,
+			local,
+			global,
+			Qt::LeftButton,
+			Qt::LeftButton,
+			Qt::NoModifier);
+		auto release = QMouseEvent(
+			QEvent::MouseButtonRelease,
+			local,
+			global,
+			Qt::LeftButton,
+			Qt::NoButton,
+			Qt::NoModifier);
+		QCoreApplication::sendEvent(button.get(), &entered);
+		QCoreApplication::sendEvent(button.get(), &press);
+		QCoreApplication::sendEvent(button.get(), &release);
+	}
+	return Result::Ok(Compact(json{
+		{ "count", int(targets.size()) },
+	}));
+}
+
 } // namespace
 
 const HandlerMap &MessageHandlers() {
 	static const auto result = HandlerMap{
 		{ u"message.fake"_q, &FakeMessage },
+		{ u"notification.test"_q, &notificationTest },
+		{ u"notification.hover"_q, &notificationHover },
+		{ u"notification.click"_q, &notificationClick },
 		{ u"chat.list"_q, &Chats },
 		{ u"message.send"_q, &SendTextMessage },
 		{ u"chat.open"_q, &OpenChat },

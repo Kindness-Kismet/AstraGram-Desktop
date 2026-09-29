@@ -146,6 +146,7 @@ COMMAND_CATEGORY_LABELS = {
     "session": "会话与测试环境",
     "chat": "会话导航与消息统计",
     "message": "消息样本与发送",
+    "notification": "通知触发",
     "window": "窗口尺寸与状态",
     "theme": "主题与聊天背景",
     "page": "页面导航",
@@ -223,6 +224,13 @@ def register_commands(sub) -> None:
     command.add_argument("--blocked", action="store_true", help="把发送者标记为已拉黑（真拉黑）")
     command.add_argument("--shadow-ban", action="store_true", help="把发送者加入 AyuGram 影子拉黑名单")
     command.add_argument("--peer", help="插入到指定假会话，默认收藏夹")
+    command = sub.add_parser("notification.test", help="让假用户发一条消息，触发系统或应用自带通知；原生通知需默认配置")
+    command.add_argument("text", nargs="?", help="消息文本，默认 Debug 通知测试")
+    command.add_argument("--peer", metavar="USER_ID", help="发送通知的假用户编号，默认 830000001")
+    command = sub.add_parser("notification.hover", help="给自绘通知窗口发合成的进入／离开事件，模拟鼠标悬停")
+    command.add_argument("state", choices=["on", "off"], help="on 进入，off 离开")
+    command = sub.add_parser("notification.click", help="点击自绘通知中可见的按钮：reply 展开回复输入框，close 关闭")
+    command.add_argument("button", choices=["reply", "close"], help="要点击的按钮")
     command = sub.add_parser("chat.open", help="打开指定对话并清空导航栈；参数取 chat.list 的 peerId，缺省 Saved Messages")
     command.add_argument("peerId", nargs="?")
     command = sub.add_parser("chat.open-archive", help="打开归档文件夹")
@@ -246,7 +254,10 @@ def register_commands(sub) -> None:
     sub.add_parser("storage.stats", help="读保存开关与数据库文件大小")
 
     command = sub.add_parser("screenshot.take", help="截图当前活动窗口到 build/screenshots/")
-    command.add_argument("--popup", action="store_true", help="改为截取活动浮动菜单")
+    mode = command.add_mutually_exclusive_group()
+    mode.add_argument("--popup", action="store_true", help="改为截取活动浮动菜单")
+    mode.add_argument("--notification", action="store_true", help="改为截取应用自绘通知，合成到底色上保存为 PNG")
+    command.add_argument("--bg", default="#5b6b7f", help="--notification 的底色，格式 #RRGGBB")
 
     command = sub.add_parser("control.list", help="列出活动窗口的控件树：标识、类名、几何、可见性")
     command.add_argument("filter", nargs="?", help="子串过滤，匹配 objectName/类名/accessibleName/文本")
@@ -340,8 +351,13 @@ def execute_command(args: argparse.Namespace) -> None:
     if command == "screenshot.take":
         ensure_debug_app()
         SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
-        target = SCREENSHOT_DIR / datetime.now().strftime("shot-%Y%m%d-%H%M%S-%f.jpg")
-        suffix = " popup" if args.popup else ""
+        extension = "png" if args.notification else "jpg"
+        target = SCREENSHOT_DIR / datetime.now().strftime(f"shot-%Y%m%d-%H%M%S-%f.{extension}")
+        suffix = ""
+        if args.popup:
+            suffix = " popup"
+        elif args.notification:
+            suffix = f" notification {quote_arg(args.bg)}"
         print(send_command(f"screenshot.take {quote_arg(str(target))}{suffix}"))
         return
 
@@ -413,6 +429,17 @@ def build_server_command(args: argparse.Namespace) -> str:
         if args.peer:
             parts.extend(["--peer", args.peer])
         return " ".join(parts)
+    if command == "notification.test":
+        parts = ["notification.test"]
+        if args.text:
+            parts.append(quote_arg(args.text))
+        if args.peer:
+            parts.extend(["--peer", args.peer])
+        return " ".join(parts)
+    if command == "notification.hover":
+        return f"notification.hover {args.state}"
+    if command == "notification.click":
+        return f"notification.click {args.button}"
     if command == "chat.open":
         return ("chat.open" if args.peerId is None
                 else f"chat.open {quote_arg(args.peerId)}")

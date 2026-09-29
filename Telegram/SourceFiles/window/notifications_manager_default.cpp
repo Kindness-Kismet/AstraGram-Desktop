@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
+#include "ui/widgets/shadow.h"
 #include "ui/emoji_config.h"
 #include "ui/empty_userpic.h"
 #include "ui/painter.h"
@@ -44,6 +45,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_window.h"
 
 #include <QtGui/QGuiApplication>
+#include <QtGui/QPainterPath>
 #include <QtGui/QScreen>
 
 // AyuGram includes
@@ -62,18 +64,29 @@ namespace {
 	return Core::Settings::IsTopCenterCorner(corner) ? st::notifyWidth * 1.5 : st::notifyWidth;
 }
 
+// 窗口尺寸 = 卡片尺寸 + 四周阴影边距。
+[[nodiscard]] int windowWidth() {
+	return notifyWidth() + 2 * ShadowSkip();
+}
+
+[[nodiscard]] int windowHeight(int cardHeight) {
+	return cardHeight + 2 * ShadowSkip();
+}
+
+// 起点按卡片边缘对齐屏幕，所以要抵掉窗口里的阴影边距。
 [[nodiscard]] QPoint notificationStartPosition() {
 	const auto corner = Core::App().settings().notificationsCorner();
 	const auto r = NotificationDisplayRect(Core::App().activePrimaryWindow());
 	const auto isLeft = Core::Settings::IsLeftCorner(corner);
 	const auto isTop = Core::Settings::IsTopCorner(corner);
+	const auto skip = ShadowSkip();
 	auto x = (isLeft == rtl())
-		? (r.x() + r.width() - notifyWidth() - st::notifyDeltaX)
-		: (r.x() + st::notifyDeltaX);
+		? (r.x() + r.width() - windowWidth() - st::notifyDeltaX + skip)
+		: (r.x() + st::notifyDeltaX - skip);
 	const auto y = isTop ? r.y() : (r.y() + r.height());
 
 	if (Core::Settings::IsTopCenterCorner(corner)) {
-		x = (r.x() + r.width() / 2 - notifyWidth() / 2);
+		x = (r.x() + r.width() / 2 - windowWidth() / 2);
 	}
 
 	return QPoint(x, y);
@@ -88,6 +101,38 @@ internal::Widget::Direction notificationShiftDirection() {
 
 std::unique_ptr<Manager> Create(System *system) {
 	return std::make_unique<Manager>(system);
+}
+
+int ShadowSkip() {
+	const auto extend = Ui::BoxShadow::ExtendFor(st::notifyShadow);
+	return std::max({
+		extend.left(),
+		extend.top(),
+		extend.right(),
+		extend.bottom(),
+	});
+}
+
+// 底色取主题窗口色；描边是白色高光，暗色下压低。
+void PaintCard(QPainter &p, const QRect &card, bool highlighted) {
+	static const auto shadow = Ui::BoxShadow(st::notifyShadow);
+	const auto radius = std::min(st::notifyRadius, card.height() / 2);
+	shadow.paint(p, card, radius);
+
+	const auto dark = st::notificationBg->c.lightness() < 128;
+	const auto border = QColor(255, 255, 255, dark ? 31 : 178);
+	const auto half = st::notifyBorderWidth / 2.;
+
+	auto hq = PainterHighQualityEnabler(p);
+	p.setPen(Qt::NoPen);
+	p.setBrush(highlighted ? st::lightButtonBgOver : st::notificationBg);
+	p.drawRoundedRect(card, radius, radius);
+	p.setPen(QPen(border, st::notifyBorderWidth));
+	p.setBrush(Qt::NoBrush);
+	p.drawRoundedRect(
+		QRectF(card).marginsRemoved({ half, half, half, half }),
+		radius - half,
+		radius - half);
 }
 
 Manager::Manager(System *system)
@@ -298,14 +343,17 @@ void Manager::subscribeToSession(not_null<Main::Session*> session) {
 }
 
 void Manager::moveWidgets() {
-	auto shift = st::notifyDeltaY;
+	// 窗口带阴影边距，起点与间距都要扣掉，卡片才能保持 notifyDeltaY。
+	const auto skip = ShadowSkip();
+	const auto step = st::notifyDeltaY - 2 * skip;
+	auto shift = st::notifyDeltaY - skip;
 	int lastShift = 0, lastShiftCurrent = 0, count = 0;
 	for (int i = _notifications.size(); i != 0;) {
 		const auto &notification = _notifications[--i];
 		if (notification->isUnlinked()) continue;
 
 		notification->changeShift(shift);
-		shift += notification->height() + st::notifyDeltaY;
+		shift += notification->height() + step;
 
 		lastShiftCurrent = notification->currentShift();
 		lastShift = shift;
@@ -518,11 +566,23 @@ Widget::Widget(
 		| Qt::NoDropShadowWindowHint
 		| Qt::Tool);
 	setAttribute(Qt::WA_MacAlwaysShowToolWindow);
-	setAttribute(Qt::WA_OpaquePaintEvent);
+	setAttribute(Qt::WA_TranslucentBackground);
+#ifdef _DEBUG
+	setObjectName(u"notification"_q);
+#endif
 
 	Ui::Platform::InitOnTopPanel(this);
 
 	_a_opacity.start([this] { opacityAnimationCallback(); }, 0., 1., st::notifyFastAnim);
+}
+
+QRect Widget::cardRect() const {
+	const auto skip = ShadowSkip();
+	return rect().marginsRemoved({ skip, skip, skip, skip });
+}
+
+void Widget::paintCard(QPainter &p, bool highlighted) const {
+	PaintCard(p, cardRect(), highlighted);
 }
 
 void Widget::opacityAnimationCallback() {
@@ -636,17 +696,42 @@ QPoint Widget::computePosition(int height) const {
 	return QPoint(_startPosition.x(), _startPosition.y() + realShift);
 }
 
-Background::Background(QWidget *parent) : RpWidget(parent) {
-	setAttribute(Qt::WA_OpaquePaintEvent);
+ActionButton::ActionButton(QWidget *parent, const style::icon &icon)
+: AbstractButton(parent)
+, _icon(icon) {
+	resize(st::notifyActionSize, st::notifyActionSize);
+	setCursor(style::cur_pointer);
+	hide();
 }
 
-void Background::paintEvent(QPaintEvent *e) {
-	Painter p(this);
+void ActionButton::setShown(float64 shown) {
+	if (_shown == shown) {
+		return;
+	}
+	_shown = shown;
+	setVisible(_shown > 0.);
+	update();
+}
 
-	p.fillRect(rect(), st::notificationBg);
-	p.fillRect(0, 0, st::notifyBorderWidth, height(), st::notifyBorder);
-	p.fillRect(width() - st::notifyBorderWidth, 0, st::notifyBorderWidth, height(), st::notifyBorder);
-	p.fillRect(st::notifyBorderWidth, height() - st::notifyBorderWidth, width() - 2 * st::notifyBorderWidth, st::notifyBorderWidth, st::notifyBorder);
+void ActionButton::paintEvent(QPaintEvent *e) {
+	if (_shown <= 0.) {
+		return;
+	}
+	Painter p(this);
+	p.setOpacity(_shown);
+
+	// 图标与圆底同色：暗色纯白，亮色深灰，悬停时圆底加深。
+	const auto dark = st::notificationBg->c.lightness() < 128;
+	const auto color = dark ? QColor(255, 255, 255) : QColor(0x21, 0x21, 0x21);
+	auto bg = color;
+	bg.setAlpha(isOver() ? 41 : 23);
+	{
+		auto hq = PainterHighQualityEnabler(p);
+		p.setPen(Qt::NoPen);
+		p.setBrush(bg);
+		p.drawEllipse(rect());
+	}
+	_icon.paintInCenter(p, rect(), color);
 }
 
 Notification::Notification(
@@ -677,13 +762,20 @@ Notification::Notification(
 , _item(item)
 , _forwardedCount(forwardedCount)
 , _fromScheduled(fromScheduled)
-, _close(this, st::notifyClose)
+, _close(this, st::notifyCloseIcon)
 , _reply(this, tr::lng_notification_reply(), st::defaultBoxButton) {
 	_reply->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
-
+#ifdef _DEBUG
+	_close->setObjectName(u"notification.close"_q);
+	_reply->setObjectName(u"notification.reply"_q);
+#endif
 	Lang::Updated(
 	) | rpl::on_next([=] {
-		refreshLang();
+		InvokeQueued(this, [=] {
+			updateActionsGeometry();
+			prepareReplyCache();
+			update();
+		});
 	}, lifetime());
 
 	if (_topic) {
@@ -693,8 +785,9 @@ Notification::Notification(
 		}, lifetime());
 	}
 
-	auto position = computePosition(st::notifyMinHeight);
-	updateGeometry(position.x(), position.y(), notifyWidth(), st::notifyMinHeight);
+	const auto minHeight = windowHeight(st::notifyMinHeight);
+	auto position = computePosition(minHeight);
+	updateGeometry(position.x(), position.y(), windowWidth(), minHeight);
 
 	_userpicLoaded = !Ui::PeerUserpicLoading(_userpicView);
 	updateNotifyDisplay();
@@ -706,28 +799,18 @@ Notification::Notification(
 		unlinkHistoryInManager();
 	});
 	_close->setAcceptBoth(true);
-	_close->moveToRight(st::notifyClosePos.x(), st::notifyClosePos.y());
-	_close->show();
-
 	_reply->setClickedCallback([this] {
 		showReplyField();
 	});
-	_replyPadding = st::notifyMinHeight - st::notifyPhotoPos.y() - st::notifyPhotoSize;
-	updateReplyGeometry();
+	updateActionsGeometry();
 	_reply->hide();
-
-	prepareActionsCache();
+	prepareReplyCache();
 
 	style::PaletteChanged(
 	) | rpl::on_next([=] {
 		updateNotifyDisplay();
-		if (!_buttonsCache.isNull()) {
-			prepareActionsCache();
-		}
+		prepareReplyCache();
 		update();
-		if (_background) {
-			_background->update();
-		}
 	}, lifetime());
 
 	show();
@@ -737,34 +820,41 @@ Notification::Notification(
 	}
 }
 
-void Notification::updateReplyGeometry() {
-	_reply->moveToRight(_replyPadding, height() - _reply->height() - _replyPadding);
+// 关闭按钮在右上角，回复文字按钮在右下角。
+void Notification::updateActionsGeometry() {
+	const auto skip = ShadowSkip();
+	const auto right = skip + st::notifyActionsPos.x();
+	const auto top = skip + st::notifyActionsPos.y();
+	_close->moveToRight(right, top);
+	_reply->moveToRight(
+		skip + st::notifyReplyButtonPos.x(),
+		skip + st::notifyMinHeight
+			- st::notifyReplyButtonPos.y()
+			- _reply->height());
 }
 
-void Notification::refreshLang() {
-	InvokeQueued(this, [this] { updateReplyGeometry(); });
-}
-
-void Notification::prepareActionsCache() {
-	auto replyCache = Ui::GrabWidget(_reply);
-	auto fadeWidth = st::notifyFadeRight.width();
-	auto actionsTop = st::notifyTextTop + st::semiboldFont->height;
-	auto replyRight = _replyPadding - st::notifyBorderWidth;
-	auto actionsCacheWidth = _reply->width() + replyRight + fadeWidth;
-	auto actionsCacheHeight = height() - actionsTop - st::notifyBorderWidth;
-	auto actionsCacheImg = QImage(
-		QSize(actionsCacheWidth, actionsCacheHeight)
-			* style::DevicePixelRatio(),
+// 回复按钮淡入时，先用渐变底色遮住它下方的正文。
+void Notification::prepareReplyCache() {
+	const auto reply = Ui::GrabWidget(_reply);
+	const auto fadeWidth = st::notifyFadeRight.width();
+	const auto top = st::notifyTextTop + st::semiboldFont->height;
+	const auto right = st::notifyReplyButtonPos.x() - st::notifyBorderWidth;
+	const auto w = _reply->width() + right + fadeWidth;
+	const auto h = st::notifyMinHeight - top - st::notifyBorderWidth;
+	auto image = QImage(
+		QSize(w, h) * style::DevicePixelRatio(),
 		QImage::Format_ARGB32_Premultiplied);
-	actionsCacheImg.setDevicePixelRatio(style::DevicePixelRatio());
-	actionsCacheImg.fill(Qt::transparent);
+	image.setDevicePixelRatio(style::DevicePixelRatio());
+	image.fill(Qt::transparent);
 	{
-		Painter p(&actionsCacheImg);
-		st::notifyFadeRight.fill(p, style::rtlrect(0, 0, fadeWidth, actionsCacheHeight, actionsCacheWidth));
-		p.fillRect(style::rtlrect(fadeWidth, 0, actionsCacheWidth - fadeWidth, actionsCacheHeight, actionsCacheWidth), st::notificationBg);
-		p.drawPixmapRight(replyRight, _reply->y() - actionsTop, actionsCacheWidth, replyCache);
+		Painter p(&image);
+		st::notifyFadeRight.fill(p, style::rtlrect(0, 0, fadeWidth, h, w));
+		p.fillRect(
+			style::rtlrect(fadeWidth, 0, w - fadeWidth, h, w),
+			st::notificationBg);
+		p.drawPixmapRight(right, _reply->y() - ShadowSkip() - top, w, reply);
 	}
-	_buttonsCache = Ui::PixmapFromImage(std::move(actionsCacheImg));
+	_replyCache = Ui::PixmapFromImage(std::move(image));
 }
 
 bool Notification::checkLastInput(
@@ -788,23 +878,16 @@ bool Notification::checkLastInput(
 }
 
 void Notification::replyResized() {
-	changeHeight(st::notifyMinHeight + _replyArea->height() + st::notifyBorderWidth);
+	const auto padding = st::notifyReplyPadding;
+	changeHeight(windowHeight(
+		st::notifyMinHeight
+			+ padding.top()
+			+ _replyArea->height()
+			+ padding.bottom()));
 }
 
 void Notification::replyCancel() {
 	unlinkHistoryInManager();
-}
-
-void Notification::updateGeometry(int x, int y, int width, int height) {
-	if (height > st::notifyMinHeight) {
-		if (!_background) {
-			_background.create(this);
-		}
-		_background->setGeometry(0, st::notifyMinHeight, width, height - st::notifyMinHeight);
-	} else if (_background) {
-		_background.destroy();
-	}
-	Widget::updateGeometry(x, y, width, height);
 }
 
 void Notification::paintEvent(QPaintEvent *e) {
@@ -812,22 +895,38 @@ void Notification::paintEvent(QPaintEvent *e) {
 
 	Painter p(this);
 	p.setClipRect(e->rect());
-	p.drawImage(0, 0, _cache);
+	paintCard(p);
+	p.drawImage(cardRect().topLeft(), _cache);
 
-	auto buttonsTop = st::notifyTextTop + st::semiboldFont->height;
-	if (a_actionsOpacity.animating()) {
-		p.setOpacity(a_actionsOpacity.value(1.));
-		p.drawPixmapRight(st::notifyBorderWidth, buttonsTop, width(), _buttonsCache);
-	} else if (_actionsVisible) {
-		p.drawPixmapRight(st::notifyBorderWidth, buttonsTop, width(), _buttonsCache);
+	const auto shown = a_actionsOpacity.value(_actionsVisible ? 1. : 0.);
+	if (!canReply() || _replyArea || shown <= 0.) {
+		return;
 	}
+	const auto border = st::notifyBorderWidth;
+	const auto radius = st::notifyRadius - border;
+	auto clip = QPainterPath();
+	clip.addRoundedRect(
+		cardRect().marginsRemoved({ border, border, border, border }),
+		radius,
+		radius);
+	p.setClipPath(clip, Qt::IntersectClip);
+	p.setOpacity(shown);
+	p.drawPixmapRight(
+		ShadowSkip() + border,
+		ShadowSkip() + st::notifyTextTop + st::semiboldFont->height,
+		width(),
+		_replyCache);
 }
 
+// 回复入口只在能回复且没有展开输入框时显示。
 void Notification::actionsOpacityCallback() {
+	const auto shown = a_actionsOpacity.value(_actionsVisible ? 1. : 0.);
+	_close->setShown(shown);
+	_reply->setVisible(_actionsVisible
+		&& !a_actionsOpacity.animating()
+		&& canReply()
+		&& !_replyArea);
 	update();
-	if (!a_actionsOpacity.animating() && _actionsVisible) {
-		_reply->show();
-	}
 }
 
 void Notification::customEmojiCallback() {
@@ -850,8 +949,10 @@ void Notification::repaintText() {
 	const auto adjusted = Ui::Text::AdjustCustomEmojiSize(st::emojiSize);
 	const auto skip = (adjusted - st::emojiSize + 1) / 2;
 	const auto margin = QMargins{ skip, skip, skip, skip };
-	p.fillRect(_titleRect.marginsAdded(margin), st::notificationBg);
-	p.fillRect(_textRect.marginsAdded(margin), st::notificationBg);
+	p.setCompositionMode(QPainter::CompositionMode_Clear);
+	p.fillRect(_titleRect.marginsAdded(margin), Qt::transparent);
+	p.fillRect(_textRect.marginsAdded(margin), Qt::transparent);
+	p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 	paintTitle(p);
 	paintText(p);
 	update();
@@ -869,6 +970,21 @@ void Notification::paintTitle(Painter &p) {
 		.pausedSpoiler = On(PowerSaving::kChatSpoiler),
 		.elisionLines = 1,
 	});
+
+	// 昵称右侧的小圆点，昵称占满一行时不画。
+	const auto size = st::notifyDotSize;
+	const auto left = _titleRect.x() + _titleCache.maxWidth() + st::notifyDotSkip;
+	if (left + size > _titleRect.x() + _titleRect.width()) {
+		return;
+	}
+	auto hq = PainterHighQualityEnabler(p);
+	p.setPen(Qt::NoPen);
+	p.setBrush(st::dialogsUnreadBg);
+	p.drawEllipse(QRect(
+		left,
+		_titleRect.y() + (_titleRect.height() - size) / 2,
+		size,
+		size));
 }
 
 void Notification::paintText(Painter &p) {
@@ -897,40 +1013,41 @@ void Notification::updateNotifyDisplay() {
 			: Data::ItemNotificationType::Reaction));
 	_hideReplyButton = options.hideReplyButton;
 
-	int32 w = width(), h = height();
+	// 内容层只覆盖卡片的最小高度，背景与阴影由 paintCard 负责。
+	const auto w = cardRect().width();
 	auto img = QImage(
-		size() * style::DevicePixelRatio(),
+		QSize(w, st::notifyMinHeight) * style::DevicePixelRatio(),
 		QImage::Format_ARGB32_Premultiplied);
 	img.setDevicePixelRatio(style::DevicePixelRatio());
-	img.fill(st::notificationBg->c);
+	img.fill(Qt::transparent);
 
 	{
 		Painter p(&img);
-		p.fillRect(0, 0, w - st::notifyBorderWidth, st::notifyBorderWidth, st::notifyBorder);
-		p.fillRect(w - st::notifyBorderWidth, 0, st::notifyBorderWidth, h - st::notifyBorderWidth, st::notifyBorder);
-		p.fillRect(st::notifyBorderWidth, h - st::notifyBorderWidth, w - st::notifyBorderWidth, st::notifyBorderWidth, st::notifyBorder);
-		p.fillRect(0, st::notifyBorderWidth, st::notifyBorderWidth, h - st::notifyBorderWidth, st::notifyBorder);
 
 		if (!options.hideNameAndPhoto) {
 			if (_fromScheduled && _history->peer->isSelf()) {
-				Ui::EmptyUserpic::PaintSavedMessages(p, st::notifyPhotoPos.x(), st::notifyPhotoPos.y(), width(), st::notifyPhotoSize);
+				Ui::EmptyUserpic::PaintSavedMessages(p, st::notifyPhotoPos.x(), st::notifyPhotoPos.y(), w, st::notifyPhotoSize);
 				_userpicLoaded = true;
 			} else if (_history->peer->isRepliesChat()) {
-				Ui::EmptyUserpic::PaintRepliesMessages(p, st::notifyPhotoPos.x(), st::notifyPhotoPos.y(), width(), st::notifyPhotoSize);
+				Ui::EmptyUserpic::PaintRepliesMessages(p, st::notifyPhotoPos.x(), st::notifyPhotoPos.y(), w, st::notifyPhotoSize);
 				_userpicLoaded = true;
 			} else {
 				_userpicView = _history->peer->createUserpicView();
 				_history->peer->loadUserpic();
-				_history->peer->paintUserpicLeft(p, _userpicView, st::notifyPhotoPos.x(), st::notifyPhotoPos.y(), width(), st::notifyPhotoSize);
+				_history->peer->paintUserpicLeft(p, _userpicView, st::notifyPhotoPos.x(), st::notifyPhotoPos.y(), w, st::notifyPhotoSize);
 			}
 		} else {
 			p.drawPixmap(st::notifyPhotoPos.x(), st::notifyPhotoPos.y(), manager()->hiddenUserpicPlaceholder());
 			_userpicLoaded = true;
 		}
 
-		int32 itemWidth = w - st::notifyPhotoPos.x() - st::notifyPhotoSize - st::notifyTextLeft - st::notifyClosePos.x() - st::notifyClose.width;
+		const auto textLeft = st::notifyPhotoPos.x() + st::notifyPhotoSize + st::notifyTextLeft;
+		const auto itemWidth = w - textLeft - st::notifyRightSkip;
+		// 昵称一行为关闭按钮留出位置。
+		const auto actionsWidth = st::notifyActionSize;
+		const auto textTop = st::notifyTextTop + st::semiboldFont->height;
 
-		QRect rectForName(st::notifyPhotoPos.x() + st::notifyPhotoSize + st::notifyTextLeft, st::notifyTextTop, itemWidth, st::semiboldFont->height);
+		QRect rectForName(textLeft, st::notifyTextTop, itemWidth - actionsWidth, st::semiboldFont->height);
 		const auto reminder = _fromScheduled && _history->peer->isSelf();
 		if (!options.hideNameAndPhoto) {
 			if (_fromScheduled) {
@@ -958,8 +1075,8 @@ void Notification::updateNotifyDisplay() {
 			auto old = base::take(_textCache);
 			_textCache = Ui::Text::String(itemWidth);
 			auto r = QRect(
-				st::notifyPhotoPos.x() + st::notifyPhotoSize + st::notifyTextLeft,
-				st::notifyItemTop + st::semiboldFont->height,
+				textLeft,
+				textTop,
 				itemWidth,
 				2 * st::dialogsTextFont->height);
 			const auto text = !_reaction.empty()
@@ -1011,8 +1128,8 @@ void Notification::updateNotifyDisplay() {
 			p.setFont(st::dialogsTextFont);
 			p.setPen(st::dialogsTextFgService);
 			p.drawText(
-				st::notifyPhotoPos.x() + st::notifyPhotoSize + st::notifyTextLeft,
-				st::notifyItemTop + st::semiboldFont->height + st::dialogsTextFont->ascent,
+				textLeft,
+				textTop + st::dialogsTextFont->ascent,
 				st::dialogsTextFont->elided(
 					tr::lng_notification_preview(tr::now),
 					itemWidth));
@@ -1046,9 +1163,7 @@ void Notification::updateNotifyDisplay() {
 	}
 
 	_cache = std::move(img);
-	if (!canReply()) {
-		toggleActionButtons(false);
-	}
+	actionsOpacityCallback();
 	update();
 }
 
@@ -1062,20 +1177,23 @@ void Notification::updatePeerPhoto() {
 	}
 	_userpicLoaded = true;
 
+	const auto outerWidth = cardRect().width();
 	Painter p(&_cache);
+	p.setCompositionMode(QPainter::CompositionMode_Clear);
 	p.fillRect(
 		style::rtlrect(
 			QRect(
 				st::notifyPhotoPos,
 				QSize(st::notifyPhotoSize, st::notifyPhotoSize)),
-			width()),
-		st::notificationBg);
+			outerWidth),
+		Qt::transparent);
+	p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 	_peer->paintUserpicLeft(
 		p,
 		_userpicView,
 		st::notifyPhotoPos.x(),
 		st::notifyPhotoPos.y(),
-		width(),
+		outerWidth,
 		st::notifyPhotoSize);
 	_userpicView = {};
 	update();
@@ -1105,14 +1223,15 @@ void Notification::unlinkHistoryInManager() {
 void Notification::toggleActionButtons(bool visible) {
 	if (_actionsVisible != visible) {
 		_actionsVisible = visible;
-		a_actionsOpacity.start([this] { actionsOpacityCallback(); }, _actionsVisible ? 0. : 1., _actionsVisible ? 1. : 0., st::notifyActionsDuration);
+		_close->clearState();
 		_reply->clearState();
 		_reply->hide();
+		a_actionsOpacity.start([this] { actionsOpacityCallback(); }, _actionsVisible ? 0. : 1., _actionsVisible ? 1. : 0., st::notifyActionsDuration);
 	}
 }
 
 void Notification::showReplyField() {
-	if (!_item) {
+	if (!canReply()) {
 		return;
 	}
 	raise();
@@ -1124,17 +1243,23 @@ void Notification::showReplyField() {
 	}
 	stopHiding();
 
-	_background.create(this);
-	_background->setGeometry(0, st::notifyMinHeight, width(), st::notifySendReply.height + st::notifyBorderWidth);
-	_background->show();
+	const auto skip = ShadowSkip();
+	const auto padding = st::notifyReplyPadding;
+	const auto top = skip + st::notifyMinHeight + padding.top();
 
 	_replyArea.create(
 		this,
 		st::notifyReplyArea,
 		Ui::InputField::Mode::MultiLine,
 		tr::lng_message_ph());
-	_replyArea->resize(width() - st::notifySendReply.width - 2 * st::notifyBorderWidth, st::notifySendReply.height);
-	_replyArea->moveToLeft(st::notifyBorderWidth, st::notifyMinHeight);
+	_replyArea->resize(
+		cardRect().width()
+			- padding.left()
+			- padding.right()
+			- st::notifyReplySkip
+			- st::notifySendReply.width,
+		st::notifySendReply.height);
+	_replyArea->moveToLeft(skip + padding.left(), top);
 	_replyArea->show();
 	_replyArea->setFocus();
 	_replyArea->setMaxLength(
@@ -1172,11 +1297,11 @@ void Notification::showReplyField() {
 	}, _replyArea->lifetime());
 
 	_replySend.create(this, st::notifySendReply);
-	_replySend->moveToRight(st::notifyBorderWidth, st::notifyMinHeight);
+	_replySend->moveToRight(skip + padding.right(), top);
 	_replySend->show();
 	_replySend->setClickedCallback([this] { sendReply(); });
 
-	toggleActionButtons(false);
+	actionsOpacityCallback();
 
 	replyResized();
 	update();
@@ -1248,9 +1373,7 @@ void Notification::enterEventHook(QEnterEvent *e) {
 		return;
 	}
 	manager()->stopAllHiding();
-	if (!_replyArea && canReply()) {
-		toggleActionButtons(true);
-	}
+	toggleActionButtons(true);
 }
 
 void Notification::leaveEventHook(QEvent *e) {
@@ -1267,7 +1390,7 @@ void Notification::startHiding() {
 }
 
 void Notification::mousePressEvent(QMouseEvent *e) {
-	if (!_history) return;
+	if (!_history || !cardRect().contains(e->pos())) return;
 
 	if (e->button() == Qt::RightButton) {
 		unlinkHistoryInManager();
@@ -1305,8 +1428,9 @@ HideAllButton::HideAllButton(
 : Widget(manager, startPosition, shift, shiftDirection) {
 	setCursor(style::cur_pointer);
 
-	auto position = computePosition(st::notifyHideAllHeight);
-	updateGeometry(position.x(), position.y(), notifyWidth(), st::notifyHideAllHeight);
+	const auto height = windowHeight(st::notifyHideAllHeight);
+	auto position = computePosition(height);
+	updateGeometry(position.x(), position.y(), windowWidth(), height);
 
 	style::PaletteChanged(
 	) | rpl::on_next([=] {
@@ -1356,16 +1480,11 @@ void HideAllButton::mouseReleaseEvent(QMouseEvent *e) {
 void HideAllButton::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 	p.setClipRect(e->rect());
-
-	p.fillRect(rect(), _mouseOver ? st::lightButtonBgOver : st::lightButtonBg);
-	p.fillRect(0, 0, width(), st::notifyBorderWidth, st::notifyBorder);
-	p.fillRect(0, height() - st::notifyBorderWidth, width(), st::notifyBorderWidth, st::notifyBorder);
-	p.fillRect(0, st::notifyBorderWidth, st::notifyBorderWidth, height() - 2 * st::notifyBorderWidth, st::notifyBorder);
-	p.fillRect(width() - st::notifyBorderWidth, st::notifyBorderWidth, st::notifyBorderWidth, height() - 2 * st::notifyBorderWidth, st::notifyBorder);
+	paintCard(p, _mouseOver);
 
 	p.setFont(st::defaultLinkButton.font);
 	p.setPen(_mouseOver ? st::lightButtonFgOver : st::lightButtonFg);
-	p.drawText(rect(), tr::lng_notification_hide_all(tr::now), style::al_center);
+	p.drawText(cardRect(), tr::lng_notification_hide_all(tr::now), style::al_center);
 }
 
 } // namespace internal

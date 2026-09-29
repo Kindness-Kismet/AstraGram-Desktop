@@ -8,6 +8,9 @@
 #include <QStringList>
 
 #include <map>
+#include <vector>
+
+class QWidget;
 
 namespace Main {
 class Session;
@@ -43,6 +46,9 @@ void seedFakeScenarios(not_null<Main::Session*> session);
 [[nodiscard]] inline QString Compact(const nlohmann::json &value) {
 	return QString::fromStdString(value.dump());
 }
+
+// 按通知窗口标识收集可见窗口；定义在 screenshot_commands.cpp。
+[[nodiscard]] std::vector<not_null<QWidget*>> notificationWindows();
 
 // 当前活跃会话，无会话时为空；定义在 debug_commands.cpp。
 [[nodiscard]] Main::Session *ActiveSession();

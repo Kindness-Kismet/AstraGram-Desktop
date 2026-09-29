@@ -46,7 +46,7 @@ OpenGL 区域可能缺失。消息气泡等自绘内容主要通过图片观察�
 | 任务 | 指南 |
 |---|---|
 | 应用启动、停止、版本、更新、窗口、崩溃 | [运行控制](guides/runtime.md) |
-| 假会话、消息、打开聊天、测试环境 | [会话与消息](guides/session.md) |
+| 假会话、消息、通知、打开聊天、测试环境 | [会话与消息](guides/session.md) |
 | 固定会话列表、顶部条、底部动作、各种输入区 | [场景](guides/scenarios.md) |
 | 设置值、主题、设置页面 | [设置](guides/settings.md) |
 | 官方业务、账号、隐私、设置索引、快捷动作 | [官方业务](guides/official.md) |
@@ -54,7 +54,7 @@ OpenGL 区域可能缺失。消息气泡等自绘内容主要通过图片观察�
 | 幽灵模式 | [幽灵模式](guides/ghost.md) |
 | 消息留档 | [存储](guides/storage.md) |
 | 控件树、点击、输入、按键、悬停、滚动 | [控件](guides/controls.md) |
-| 主窗口与菜单截图 | [截图](guides/screenshot.md) |
+| 主窗口、菜单与通知截图 | [截图](guides/screenshot.md) |
 
 `cli.py --help` 查看客户端清单，`app.help` 查看当前构建的服务端清单。
 

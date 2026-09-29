@@ -117,10 +117,12 @@ bool init() {
 			LOG(("App Error: Object registration failed."));
 		}
 	}
+#ifndef _DEBUG // Debug 构建不创建开始菜单快捷方式
 	if (!AppUserModelId::ValidateShortcut()) {
 		LOG(("App Error: Shortcut validation failed."));
 		return false;
 	}
+#endif
 
 	PWSTR appUserModelId = {};
 	if (!SUCCEEDED(GetCurrentProcessExplicitAppUserModelID(&appUserModelId))) {

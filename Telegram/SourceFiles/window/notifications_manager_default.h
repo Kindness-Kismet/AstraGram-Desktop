@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/notifications_manager.h"
 #include "ui/effects/animations.h"
 #include "ui/text/text.h"
+#include "ui/abstract_button.h"
 #include "ui/rp_widget.h"
 #include "ui/userpic_view.h"
 #include "base/timer.h"
@@ -20,8 +21,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Ui {
 class IconButton;
-class RoundButton;
 class InputField;
+class RoundButton;
 } // namespace Ui
 
 namespace Window {
@@ -35,6 +36,11 @@ class HideAllButton;
 
 class Manager;
 std::unique_ptr<Manager> Create(System *system);
+
+// 窗口四周为阴影预留的透明边距，卡片本体位于其内侧。
+[[nodiscard]] int ShadowSkip();
+// 绘制卡片的阴影、底色与描边，设置页的演示样图共用。
+void PaintCard(QPainter &p, const QRect &card, bool highlighted = false);
 
 class Manager final : public Notifications::Manager {
 public:
@@ -163,6 +169,8 @@ protected:
 	void hideFast();
 	void hideStop();
 	QPoint computePosition(int height) const;
+	[[nodiscard]] QRect cardRect() const;
+	void paintCard(QPainter &p, bool highlighted = false) const;
 
 	virtual void updateGeometry(int x, int y, int width, int height);
 
@@ -190,12 +198,19 @@ private:
 
 };
 
-class Background : public Ui::RpWidget {
+// 悬停时淡入的圆形图标按钮。
+class ActionButton final : public Ui::AbstractButton {
 public:
-	Background(QWidget *parent);
+	ActionButton(QWidget *parent, const style::icon &icon);
+
+	void setShown(float64 shown);
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
+
+private:
+	const style::icon &_icon;
+	float64 _shown = 0.;
 
 };
 
@@ -251,19 +266,17 @@ protected:
 	bool eventFilter(QObject *o, QEvent *e) override;
 
 private:
-	void refreshLang();
-	void updateReplyGeometry();
+	void updateActionsGeometry();
+	void prepareReplyCache();
 	bool canReply() const;
 	void replyResized();
 	void replyCancel();
 
 	void unlinkHistoryInManager();
 	void toggleActionButtons(bool visible);
-	void prepareActionsCache();
 	void showReplyField();
 	void sendReply();
 	void changeHeight(int newHeight);
-	void updateGeometry(int x, int y, int width, int height) override;
 	void actionsOpacityCallback();
 	void repaintText();
 	void paintTitle(Painter &p);
@@ -284,7 +297,7 @@ private:
 	bool _actionsVisible = false;
 	bool _textsRepaintScheduled = false;
 	Ui::Animations::Simple a_actionsOpacity;
-	QPixmap _buttonsCache;
+	QPixmap _replyCache;
 
 	crl::time _started;
 
@@ -299,16 +312,13 @@ private:
 	HistoryItem *_item = nullptr;
 	int _forwardedCount = 0;
 	bool _fromScheduled = false;
-	object_ptr<Ui::IconButton> _close;
+	object_ptr<ActionButton> _close;
 	object_ptr<Ui::RoundButton> _reply;
-	object_ptr<Background> _background = { nullptr };
 	object_ptr<Ui::InputField> _replyArea = { nullptr };
 	object_ptr<Ui::IconButton> _replySend = { nullptr };
 	bool _waitingForInput = true;
 
 	QTimer _hideTimer;
-
-	int _replyPadding = 0;
 
 	bool _userpicLoaded = false;
 

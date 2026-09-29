@@ -47,6 +47,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/notifications_manager.h"
+#include "window/notifications_manager_default.h"
 #include "window/section_widget.h"
 #include "window/themes/window_theme.h"
 #include "window/window_session_controller.h"
@@ -488,39 +489,37 @@ void NotificationsCount::prepareNotificationSampleUserpic() {
 }
 
 void NotificationsCount::prepareNotificationSampleLarge() {
-	int w = st::notifyWidth, h = st::notifyMinHeight;
+	using namespace Window::Notifications::Default;
+	const auto skip = ShadowSkip();
+	const auto w = st::notifyWidth;
+	const auto h = st::notifyMinHeight;
 	auto sampleImage = QImage(
-		w * style::DevicePixelRatio(),
-		h * style::DevicePixelRatio(),
+		QSize(w + 2 * skip, h + 2 * skip) * style::DevicePixelRatio(),
 		QImage::Format_ARGB32_Premultiplied);
 	sampleImage.setDevicePixelRatio(style::DevicePixelRatio());
-	sampleImage.fill(st::notificationBg->c);
+	sampleImage.fill(Qt::transparent);
 	{
 		Painter p(&sampleImage);
-		p.fillRect(0, 0, w - st::notifyBorderWidth, st::notifyBorderWidth, st::notifyBorder->b);
-		p.fillRect(w - st::notifyBorderWidth, 0, st::notifyBorderWidth, h - st::notifyBorderWidth, st::notifyBorder->b);
-		p.fillRect(st::notifyBorderWidth, h - st::notifyBorderWidth, w - st::notifyBorderWidth, st::notifyBorderWidth, st::notifyBorder->b);
-		p.fillRect(0, st::notifyBorderWidth, st::notifyBorderWidth, h - st::notifyBorderWidth, st::notifyBorder->b);
+		PaintCard(p, QRect(skip, skip, w, h));
+		p.translate(skip, skip);
 
 		prepareNotificationSampleUserpic();
 		p.drawPixmap(st::notifyPhotoPos.x(), st::notifyPhotoPos.y(), _notificationSampleUserpic);
 
-		int itemWidth = w - st::notifyPhotoPos.x() - st::notifyPhotoSize - st::notifyTextLeft - st::notifyClosePos.x() - st::notifyClose.width;
-
-		auto rectForName = style::rtlrect(st::notifyPhotoPos.x() + st::notifyPhotoSize + st::notifyTextLeft, st::notifyTextTop, itemWidth, st::msgNameFont->height, w);
+		const auto textLeft = st::notifyPhotoPos.x() + st::notifyPhotoSize + st::notifyTextLeft;
+		const auto itemWidth = w - textLeft - st::notifyRightSkip;
+		const auto rectForName = style::rtlrect(textLeft, st::notifyTextTop, itemWidth, st::semiboldFont->height, w);
 
 		auto notifyText = st::dialogsTextFont->elided(tr::lng_notification_sample(tr::now), itemWidth);
 		p.setFont(st::dialogsTextFont);
 		p.setPen(st::dialogsTextFgService);
-		p.drawText(st::notifyPhotoPos.x() + st::notifyPhotoSize + st::notifyTextLeft, st::notifyItemTop + st::msgNameFont->height + st::dialogsTextFont->ascent, notifyText);
+		p.drawText(textLeft, st::notifyTextTop + st::semiboldFont->height + st::dialogsTextFont->ascent, notifyText);
 
 		p.setPen(st::dialogsNameFg);
-		p.setFont(st::msgNameFont);
+		p.setFont(st::semiboldFont);
 
-		auto notifyTitle = st::msgNameFont->elided(u"AyuGram Desktop"_q, rectForName.width());
-		p.drawText(rectForName.left(), rectForName.top() + st::msgNameFont->ascent, notifyTitle);
-
-		st::notifyClose.icon.paint(p, w - st::notifyClosePos.x() - st::notifyClose.width + st::notifyClose.iconPosition.x(), st::notifyClosePos.y() + st::notifyClose.iconPosition.y(), w);
+		auto notifyTitle = st::semiboldFont->elided(u"AyuGram Desktop"_q, rectForName.width());
+		p.drawText(rectForName.left(), rectForName.top() + st::semiboldFont->ascent, notifyTitle);
 	}
 
 	_notificationSampleLarge = Ui::PixmapFromImage(std::move(sampleImage));
@@ -597,11 +596,13 @@ void NotificationsCount::setOverCorner(ScreenCorner corner) {
 			&_controller->window());
 		auto isLeft = Core::Settings::IsLeftCorner(_overCorner);
 		auto isTop = Core::Settings::IsTopCorner(_overCorner);
-		auto sampleLeft = (isLeft == rtl()) ? (r.x() + r.width() - st::notifyWidth - st::notifyDeltaX) : (r.x() + st::notifyDeltaX);
-		auto sampleTop = isTop ? (r.y() + st::notifyDeltaY) : (r.y() + r.height() - st::notifyDeltaY - st::notifyMinHeight);
+		// 样图窗口带阴影边距，按卡片边缘对齐要扣掉。
+		const auto skip = Window::Notifications::Default::ShadowSkip();
+		auto sampleLeft = ((isLeft == rtl()) ? (r.x() + r.width() - st::notifyWidth - st::notifyDeltaX) : (r.x() + st::notifyDeltaX)) - skip;
+		auto sampleTop = (isTop ? (r.y() + st::notifyDeltaY) : (r.y() + r.height() - st::notifyDeltaY - st::notifyMinHeight)) - skip;
 
 		if (Core::Settings::IsTopCenterCorner(_overCorner)) {
-			sampleLeft = (r.x() + r.width() / 2 - st::notifyWidth / 2);
+			sampleLeft = (r.x() + r.width() / 2 - st::notifyWidth / 2) - skip;
 		}
 
 		for (int i = samplesLeave; i != samplesNeeded; ++i) {
@@ -680,7 +681,7 @@ NotificationsCount::SampleWidget::SampleWidget(
 		| Qt::Tool);
 	setAttribute(Qt::WA_MacAlwaysShowToolWindow);
 	setAttribute(Qt::WA_TransparentForMouseEvents);
-	setAttribute(Qt::WA_OpaquePaintEvent);
+	setAttribute(Qt::WA_TranslucentBackground);
 
 	setWindowOpacity(0.);
 	show();

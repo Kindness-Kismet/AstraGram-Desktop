@@ -34,6 +34,26 @@
 - `--blocked` 走 `hideFromBlocked` 真拉黑路线：需同时开 `filtersEnabled` + `hideFromBlocked`。
 - `--shadow-ban` 走影子拉黑路线：只需 `filtersEnabled`，名单可用 `settings.set` 独立维护。
 
+## `notification.test [text] [--peer <userId>]`
+
+让假用户发一条消息，触发真实的通知链路。假会话的对话没有服务端下发的通知设置，
+通知会被判为“未知”而跳过；本指令先在本地把该用户与用户默认设置标记为已知、未静音，
+再走 `message.fake`。`--peer` 缺省为假用户 `830000001`，`text` 缺省为 `Debug 通知测试`。
+
+- 需要假会话；应用自带通知可在独立配置中验证，原生通知需使用默认配置。
+- 走 Windows 系统通知先 `settings.set core.nativeNotifications true`；设为 `false` 则用应用自带通知。
+- 该对话正打开且窗口在前台时，消息会立刻变成已读而不再通知，验证时打开别的对话或让窗口失焦。
+
+## `notification.hover <on|off>`
+
+给所有自绘通知窗口发合成的进入／离开事件，模拟鼠标悬停，不移动真实光标。`on` 之后右下角的回复文字按钮和右上角的关闭按钮淡入，
+`off` 恢复；配合 `screenshot.take --notification` 检查悬停态。悬停期间通知不会自动消失。
+
+## `notification.click <reply|close>`
+
+给所有自绘通知中可见的按钮投递合成点击（按真实的进入、按下、抬起事件），`reply` 展开回复输入框，
+`close` 关闭该通知。先用 `notification.hover on` 显示按钮；展开回复后仍可关闭通知，隐藏或不可回复时拒绝点击回复按钮。
+
 ## `chat.list [filter]`
 
 列出当前账号已加载对话的 peerId 与名称，`filter` 为名称子串、忽略大小写。
