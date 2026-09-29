@@ -26,7 +26,6 @@ class Session;
 
 namespace Ui {
 class AbstractButton;
-class RoundButton;
 class IconButton;
 class PopupMenu;
 class UnreadBadge;
@@ -249,8 +248,10 @@ private:
 	Ui::Animations::Simple _selectedShown;
 	Ui::Animations::Simple _searchShown;
 
-	object_ptr<Ui::RoundButton> _clear;
-	object_ptr<Ui::RoundButton> _forward, _noQuote, _sendNow, _delete, _messageShot;
+	object_ptr<Ui::IconButton> _clear;
+	object_ptr<Ui::IconButton> _forward, _noQuote, _sendNow, _delete, _messageShot;
+	object_ptr<Ui::RpWidget> _selectionCount;
+	int _selectionCountShown = 0;
 	object_ptr<Ui::InputField> _searchField = { nullptr };
 	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _chooseFromUser
 		= { nullptr };

@@ -9129,6 +9129,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_FontDefault" = "Default";
 "ayu_CustomizeFontTitle" = "Customize Font";
 "ayu_MessageShotTopBarText" = "Shot";
+"ayu_SelectionMessageShot" = "Message Shot";
 "ayu_MessageShotPreview" = "Preview";
 "ayu_MessageShotPreferences" = "Preferences";
 "ayu_MessageShotCopy" = "Copy";
@@ -9244,7 +9245,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_ChatDateYesterday" = "Yesterday";
 "ayu_ContextForwardSelectedNoQuote" = "Forward Selected Without Quote";
 "ayu_SelectedForwardNoQuote" = "Forward Without Quote";
-"ayu_SelectedNoQuote" = "Copy";
 "ayu_ContextForwardMsgNoQuote" = "Forward Without Quote";
 "ayu_ContextForwardMsgNoCaption" = "Forward Without Caption";
 "ayu_ContextForwardSelectedNoCaption" = "Forward Selected Without Caption";

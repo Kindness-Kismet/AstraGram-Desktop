@@ -115,3 +115,25 @@ ayuServiceTimeBadgeVerticalPadding: 2px;
 ayuServiceTimeBadgeGap: 8px;
 ayuServiceTimeBadgeTrailingInset: 3px;
 ayuServiceTimeBadgeLastLineWidthAdd: 9px;
+
+topBarSelectionForward: IconButton(topBarSearch) {
+	icon: icon {{ "menu/forward", menuIconFg }};
+	iconOver: icon {{ "menu/forward", menuIconFgOver }};
+	iconPosition: point(-1px, -1px);
+}
+topBarSelectionNoQuote: IconButton(topBarSelectionForward) {
+	icon: icon {{ "menu/name_hide", menuIconFg }};
+	iconOver: icon {{ "menu/name_hide", menuIconFgOver }};
+}
+topBarSelectionSendNow: IconButton(topBarSelectionForward) {
+	icon: icon {{ "menu/send", menuIconFg }};
+	iconOver: icon {{ "menu/send", menuIconFgOver }};
+}
+topBarSelectionDelete: IconButton(topBarSelectionForward) {
+	icon: icon {{ "menu/delete", menuIconFg }};
+	iconOver: icon {{ "menu/delete", menuIconFgOver }};
+}
+topBarSelectionShot: IconButton(topBarSelectionForward) {
+	icon: icon {{ "menu/image", menuIconFg }};
+	iconOver: icon {{ "menu/image", menuIconFgOver }};
+}

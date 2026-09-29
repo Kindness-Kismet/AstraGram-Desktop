@@ -383,6 +383,7 @@
   "FontDefault": "Default",
   "CustomizeFontTitle": "Customize Font",
   "MessageShotTopBarText": "Shot",
+  "SelectionMessageShot": "Message Shot",
   "MessageShotPreview": "Preview",
   "MessageShotPreferences": "Preferences",
   "MessageShotCopy": "Copy",

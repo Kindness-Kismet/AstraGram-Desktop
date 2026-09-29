@@ -37,101 +37,65 @@ void TopBarWidget::setupTooltips() {
 }
 
 void TopBarWidget::setupSelection() {
-	_clear->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
-	_forward->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
-	_sendNow->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
-	_delete->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
-	_messageShot->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
+	const auto setup = [&](
+			not_null<Ui::IconButton*> button,
+			const QString &name,
+			tr::phrase<> phrase,
+			rpl::event_stream<> &requests) {
+		button->setClickedCallback([&requests] { requests.fire({}); });
+		button->setAccessibleName(phrase(tr::now));
+		button->setObjectName(name);
+		installTooltip(button, phrase);
+	};
+	setup(_clear.data(), u"selection.clear"_q, tr::lng_selected_clear, _clearSelection);
+	setup(_forward.data(), u"selection.forward"_q, tr::lng_selected_forward, _forwardSelection);
+	setup(_noQuote.data(), u"selection.noQuote"_q, tr::ayu_SelectedForwardNoQuote, _noQuoteSelection);
+	setup(_sendNow.data(), u"selection.sendNow"_q, tr::lng_selected_send_now, _sendNowSelection);
+	setup(_delete.data(), u"selection.delete"_q, tr::lng_selected_delete, _deleteSelection);
+	setup(_messageShot.data(), u"selection.messageShot"_q, tr::ayu_SelectionMessageShot, _messageShotSelection);
 
-	_forward->setClickedCallback([=] { _forwardSelection.fire({}); });
-	_forward->setWidthChangedCallback([=] { updateControlsGeometry(); });
-	_noQuote->setClickedCallback([=] { _noQuoteSelection.fire({}); });
-	_noQuote->setWidthChangedCallback([=] { updateControlsGeometry(); });
-	_sendNow->setClickedCallback([=] { _sendNowSelection.fire({}); });
-	_sendNow->setWidthChangedCallback([=] { updateControlsGeometry(); });
-	_delete->setClickedCallback([=] { _deleteSelection.fire({}); });
-	_delete->setWidthChangedCallback([=] { updateControlsGeometry(); });
-	_messageShot->setClickedCallback([=] { _messageShotSelection.fire({}); });
-	_messageShot->setWidthChangedCallback([=] { updateControlsGeometry(); });
-	_clear->setClickedCallback([=] { _clearSelection.fire({}); });
+	_selectionCount->setAttribute(Qt::WA_TransparentForMouseEvents);
+	_selectionCount->paintRequest() | rpl::on_next([=] {
+		auto p = QPainter(_selectionCount.data());
+		const auto &font = st::semiboldFont;
+		const auto text = tr::lng_media_selected_message(
+			tr::now,
+			lt_count,
+			_selectionCountShown);
+		p.setFont(font);
+		p.setPen(st::dialogsNameFg);
+		p.drawText(
+			_selectionCount->rect(),
+			font->elided(text, _selectionCount->width()),
+			style::al_left);
+	}, _selectionCount->lifetime());
 }
 
+// 取消按钮和数量靠左，操作图标从右向左排列。
 void TopBarWidget::updateSelectionGeometry(int selectedButtonsTop) {
-	auto buttonsLeft = st::topBarActionSkip
-		+ (_controller->adaptive().isOneColumn() ? 0 : st::lineWidth);
-	auto buttonsWidth = (_forward->isHidden() ? 0 : _forward->contentWidth())
-		+ (_noQuote->isHidden() ? 0 : _noQuote->contentWidth())
-		+ (_sendNow->isHidden() ? 0 : _sendNow->contentWidth())
-		+ (_delete->isHidden() ? 0 : _delete->contentWidth())
-		+ (_messageShot->isHidden() ? 0 : _messageShot->contentWidth())
-		+ _clear->width();
-	buttonsWidth += buttonsLeft + st::topBarActionSkip * 4;
-
-	auto widthLeft = std::min(
-		width() - buttonsWidth,
-		-2 * st::defaultActiveButton.width);
-	auto buttonFullWidth = std::min(-(widthLeft / 2), 0);
-	_forward->setFullWidth(buttonFullWidth);
-	_noQuote->setFullWidth(buttonFullWidth);
-	_sendNow->setFullWidth(buttonFullWidth);
-	_delete->setFullWidth(buttonFullWidth);
-	_messageShot->setFullWidth(buttonFullWidth);
-
-	selectedButtonsTop += (height() - _forward->height()) / 2;
-
-	_forward->moveToLeft(buttonsLeft, selectedButtonsTop);
-	if (!_forward->isHidden()) {
-		buttonsLeft += _forward->width() + st::topBarActionSkip;
-	}
-
-	_noQuote->moveToLeft(buttonsLeft, selectedButtonsTop);
-	if (!_noQuote->isHidden()) {
-		buttonsLeft += _noQuote->width() + st::topBarActionSkip;
-	}
-
-	_sendNow->moveToLeft(buttonsLeft, selectedButtonsTop);
-	if (!_sendNow->isHidden()) {
-		buttonsLeft += _sendNow->width() + st::topBarActionSkip;
-	}
-
-	_delete->moveToLeft(buttonsLeft, selectedButtonsTop);
-	if (!_delete->isHidden()) {
-		buttonsLeft += _delete->width() + st::topBarActionSkip;
-	}
-
-	_messageShot->moveToLeft(buttonsLeft, selectedButtonsTop);
-	{
-		const auto large = st::topBarActionButtonLargeRadius;
-		const auto &buttonSt = st::defaultActiveButton;
-		const auto small = buttonSt.radius
-			? buttonSt.radius
-			: st::buttonRadius;
-		const auto buttons = std::array{
-			_forward.data(),
-			_sendNow.data(),
-			_delete.data(),
-			_messageShot.data(),
-		};
-		auto first = (Ui::RoundButton*)(nullptr);
-		auto last = (Ui::RoundButton*)(nullptr);
-		for (const auto button : buttons) {
-			if (!button->isHidden()) {
-				if (!first) {
-					first = button;
-				}
-				last = button;
-			}
+	const auto top = selectedButtonsTop + (height() - _clear->height()) / 2;
+	_clear->moveToLeft(0, top);
+	const auto buttons = std::array{
+		_forward.data(),
+		_noQuote.data(),
+		_sendNow.data(),
+		_delete.data(),
+		_messageShot.data(),
+	};
+	auto right = width() - st::topBarActionSkip;
+	for (const auto button : buttons | ranges::views::reverse) {
+		if (button->isHidden()) {
+			continue;
 		}
-		for (const auto button : buttons) {
-			if (button->isHidden()) {
-				continue;
-			}
-			const auto left = (button == first) ? large : small;
-			const auto right = (button == last) ? large : small;
-			button->setCornerRadii(left, right, left, right);
-		}
+		right -= button->width();
+		button->moveToLeft(right, top);
 	}
-	_clear->moveToRight(st::topBarActionSkip, selectedButtonsTop);
+	const auto left = _clear->width();
+	_selectionCount->setGeometry(
+		left,
+		top,
+		std::max(right - left, 0),
+		_clear->height());
 }
 
 int TopBarWidget::countSelectedButtonsTop(float64 selectedShown) {
@@ -179,18 +143,9 @@ void TopBarWidget::showSelected(SelectedState state) {
 	_hideNoQuote = hideNoQuote;
 	const auto nowSelectedState = showSelectedState();
 	if (nowSelectedState) {
-		_forward->setNumbersText(_selectedCount);
-		_noQuote->setNumbersText(_selectedCount);
-		_sendNow->setNumbersText(_selectedCount);
-		_delete->setNumbersText(_selectedCount);
-		_messageShot->setNumbersText(_selectedCount);
-		if (!wasSelectedState) {
-			_forward->finishNumbersAnimation();
-			_noQuote->finishNumbersAnimation();
-			_sendNow->finishNumbersAnimation();
-			_delete->finishNumbersAnimation();
-			_messageShot->finishNumbersAnimation();
-		}
+		// 取消选择时保留原数量，直到选择栏滑出。
+		_selectionCountShown = _selectedCount;
+		_selectionCount->update();
 	}
 	if (visibilityChanged
 		|| (!wasSelectedState && nowSelectedState)) {
@@ -278,6 +233,7 @@ void TopBarWidget::updateSelectionVisibility() {
 
 	const auto visible = showSelectedState() || _selectedShown.animating();
 	_clear->setVisible(visible);
+	_selectionCount->setVisible(visible);
 	_delete->setVisible(_canDelete && visible);
 	_messageShot->setVisible(settings.showMessageShot() && visible);
 	_forward->setVisible(_canForward && visible);
@@ -286,7 +242,10 @@ void TopBarWidget::updateSelectionVisibility() {
 }
 
 void TopBarWidget::refreshLang() {
-	InvokeQueued(this, [this] { updateControlsGeometry(); });
+	InvokeQueued(this, [this] {
+		updateControlsGeometry();
+		_selectionCount->update();
+	});
 }
 
 void TopBarWidget::resizeEvent(QResizeEvent *e) {
