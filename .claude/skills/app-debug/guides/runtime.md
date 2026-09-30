@@ -32,7 +32,7 @@ python .claude/skills/app-debug/scripts/cli.py window.resize 1300 900 + screensh
 python .claude/skills/app-debug/scripts/cli.py window.maximize true + screenshot.take
 ```
 
-`player.state` 查询当前音乐的 `messageId`、播放状态 `playing`、位置 `position`、长度 `length`、时间单位 `frequency` 和循环模式 `repeat`（0 关闭、1 单曲、2 列表）。连续采样可验证自然结束后的重播，控制操作仍通过播放器控件执行。
+`player.state [song|voice]` 查询指定类型或当前活动媒体的 `messageId`、播放状态 `playing`、位置 `position`、长度 `length`、时间单位 `frequency` 和循环模式 `repeat`（0 关闭、1 单曲、2 列表）。连续采样可验证自然结束后的重播，控制操作仍通过播放器控件执行。
 
 ## CLI 本地指令
 
@@ -77,3 +77,7 @@ python .codex/skills/app-debug/scripts/cli.py session.fake
 配置名允许 1 至 48 个小写字母、数字、下划线或连字符，首位为字母或数字。
 端口已有进程时，CLI 核对可执行路径和工作目录；目录不符会报告并停止执行。
 恢复原配置：先 `app.stop`，再 `app.start --profile default`。
+
+`player.fake <song|voice|video> <path> <seconds>` 仅在本进程假会话中注入本地媒体消息并播放，不上传文件。
+文件限制为 16 MiB，时长为 1 至 600 秒；音乐和语音使用音频文件，圆形视频使用 320 × 320 的视频文件。
+播放、暂停、跳转、倍速、收起和关闭仍通过播放器控件操作，`player.state` 中的 `type` 与 `video` 可核对当前类型。

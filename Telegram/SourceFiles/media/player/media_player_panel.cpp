@@ -135,8 +135,27 @@ void Panel::updateSize() {
 			+ st::mediaPlayerListMarginBottom)
 		: 0;
 	height += scrollHeight + contentBottom();
+	if (_availableSize.isValid()) {
+		width = std::min(width, _availableSize.width());
+		height = std::min(height, _availableSize.height());
+	}
 	resize(width, height);
 	_scroll->setVisible(scrollVisible);
+}
+
+void Panel::setAvailableSize(QSize size) {
+	if (_availableSize == size) {
+		return;
+	}
+	_availableSize = size;
+	updateSize();
+}
+
+void Panel::setAutoHiding(bool enabled) {
+	_autoHiding = enabled;
+	if (!enabled) {
+		_hideTimer.cancel();
+	}
 }
 
 style::color Panel::listBackground() const {
@@ -185,6 +204,9 @@ void Panel::enterEventHook(QEnterEvent *e) {
 }
 
 void Panel::leaveEventHook(QEvent *e) {
+	if (!_autoHiding) {
+		return RpWidget::leaveEventHook(e);
+	}
 	if (preventAutoHide()) {
 		return;
 	}
@@ -199,6 +221,10 @@ void Panel::leaveEventHook(QEvent *e) {
 
 void Panel::showFromOther() {
 	_hideTimer.cancel();
+	if (!_autoHiding) {
+		startShow();
+		return;
+	}
 	if (_a_appearance.animating()) {
 		startShow();
 	} else {

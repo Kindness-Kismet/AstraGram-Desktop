@@ -475,8 +475,7 @@
   "IntroAbout": "Welcome to the AstraGram.\nMake Telegram your own.",
   "Update": "Update AstraGram",
   "UtilityRestartRequired": "The app will close in 5 seconds.",
-  "MusicPlayer": "Music player",
-  "MusicExpand": "Expand music player",
+  "MusicExpand": "Expand player",
   "MusicCollapse": "Collapse",
   "MusicSaveCover": "Save cover",
   "MusicSaveFailed": "Could not save the cover. Please choose another location.",
@@ -488,5 +487,15 @@
   "MusicNext": "Next track",
   "MusicPlay": "Play",
   "MusicPause": "Pause",
-  "MusicOrderDefault": "Forward order"
+  "MusicOrderDefault": "Forward order",
+  "MusicClose": "Stop and close",
+  "MusicPlaylist": "Playlist",
+  "MusicSource": "Go to message",
+  "MusicPlaying": "Now playing",
+  "MusicPaused": "Paused",
+  "MusicVoice": "Voice message",
+  "MusicVideo": "Video message",
+  "MediaPrevious": "Previous message",
+  "MediaNext": "Next message",
+  "MediaSpeed": "Playback speed"
 }

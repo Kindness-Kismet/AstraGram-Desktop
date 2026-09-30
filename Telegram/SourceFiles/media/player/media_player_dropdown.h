@@ -7,10 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
-#include "base/timer.h"
 #include "media/media_common.h"
 #include "ui/rp_widget.h"
-#include "ui/effects/animations.h"
 
 namespace style {
 struct MediaSpeedMenu;
@@ -29,42 +27,6 @@ class Menu;
 } // namespace Ui::Menu
 
 namespace Media::Player {
-
-class Dropdown final : public Ui::RpWidget {
-public:
-	explicit Dropdown(QWidget *parent);
-
-	bool overlaps(const QRect &globalRect);
-
-	QMargins getMargin() const;
-
-protected:
-	void paintEvent(QPaintEvent *e) override;
-	void enterEventHook(QEnterEvent *e) override;
-	void leaveEventHook(QEvent *e) override;
-
-	bool eventFilter(QObject *obj, QEvent *e) override;
-
-private:
-	void startHide();
-	void startShow();
-
-	void otherEnter();
-	void otherLeave();
-
-	void appearanceCallback();
-	void hidingFinished();
-	void startAnimation();
-
-	bool _hiding = false;
-
-	QPixmap _cache;
-	Ui::Animations::Simple _a_appearance;
-
-	base::Timer _hideTimer;
-	base::Timer _showTimer;
-
-};
 
 class WithDropdownController {
 public:

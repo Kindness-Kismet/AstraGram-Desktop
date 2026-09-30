@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_widget.h"
+#include "extras/features/music_player/music_player_floating.h"
 
 #include "extras/features/window_material/window_material.h"
 #include "base/call_delayed.h"
@@ -952,6 +953,13 @@ Widget::Widget(
 
 	setupFrozenAccountBar();
 	setupTopBarSuggestions();
+	if (_layout == Layout::Main) {
+		_musicPlayer = std::make_unique<Extras::MusicPlayer::FloatingPlayer>(
+			this, controller);
+		_musicPlayer->expandedChanges(
+		) | rpl::on_next([=] { updateForceDisplayWide(); }, lifetime());
+		updateControlsGeometry();
+	}
 #ifdef _DEBUG
 	setupTopBarSuggestionTestHotkeys();
 #endif // _DEBUG
@@ -4036,6 +4044,10 @@ void Widget::applySearchUpdate() {
 }
 
 void Widget::updateForceDisplayWide() {
+	if (_musicPlayer && _musicPlayer->expanded()) {
+		controller()->setChatsForceDisplayWide(true);
+		return;
+	}
 	if (_childList) {
 		_childList->updateForceDisplayWide();
 		return;
@@ -4952,6 +4964,15 @@ void Widget::updateControlsGeometry() {
 		const auto scrollHeight = height() - scrollTop - bottomSkip;
 		const auto wasScrollHeight = _scroll->height();
 		_scroll->setGeometry(0, scrollTop, scrollWidth, scrollHeight);
+		if (_musicPlayer) {
+			// 底部连接提示可横向展开，音乐入口始终避开整条状态区。
+			const auto reserved = std::max(
+				st::connectingLeft.height() + st::connectingMargin.bottom(),
+				_scrollToTop->height()) + st::connectingMargin.top();
+			_musicPlayer->setAvailableRect(QRect(
+				0, int(scrollTop), barw, std::max(0, int(scrollHeight) - reserved)));
+			_musicPlayer->raise();
+		}
 		if (_chatsFilterSlideCanvas) {
 			_chatsFilterSlideCanvas->setGeometry(_scroll->geometry());
 		}
@@ -5358,6 +5379,7 @@ bool Widget::cancelSearch(CancelSearchOptions options) {
 }
 
 Widget::~Widget() {
+	_musicPlayer = nullptr;
 	cancelSearchRequest();
 
 	// Destructor may hide the bar and attempt to double-destroy it.

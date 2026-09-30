@@ -198,7 +198,12 @@ def register_commands(sub) -> None:
     sub.add_parser("app.check-update", help="触发一次更新检查，结果看 tupdates 目录与日志")
     sub.add_parser("app.update-info", help="查询更新源前缀：文件内容与内存里解析出的地址")
     sub.add_parser("app.help", help="列出服务端已注册的全部指令名")
-    sub.add_parser("player.state", help="查询音乐播放位置、长度、循环模式及当前消息")
+    command = sub.add_parser("player.state", help="查询当前媒体的播放状态")
+    command.add_argument("kind", nargs="?", choices=("song", "voice"))
+    command = sub.add_parser("player.fake", help="在假会话中播放本地音乐、语音或圆形视频")
+    command.add_argument("kind", choices=("song", "voice", "video"))
+    command.add_argument("path")
+    command.add_argument("seconds", type=int)
 
     command = sub.add_parser("settings.keys", help="列出全部设置键名")
     command.add_argument("prefix", nargs="?")
@@ -382,6 +387,10 @@ def build_server_command(args: argparse.Namespace) -> str:
         return " ".join([command, *map(quote_arg, args.params)])
     if command in ("settings.keys", "settings.dump"):
         return command + (" " + quote_arg(args.prefix) if args.prefix is not None else "")
+    if command == "player.state":
+        return command + (" " + args.kind if args.kind else "")
+    if command == "player.fake":
+        return f"{command} {args.kind} {quote_arg(str(Path(args.path).resolve()))} {args.seconds}"
     if command == "scenario.open":
         return f"scenario.open {quote_arg(args.key)} --view {args.view} --input {args.input}"
     if command == "control.hover":

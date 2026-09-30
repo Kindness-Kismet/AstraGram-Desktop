@@ -518,8 +518,7 @@
   "ArchiveChatsInMenu": "归档会话",
   "DisableChatBackground": "禁用聊天壁纸",
   "ShowBubbleOutline": "显示气泡描边",
-  "MusicPlayer": "音乐播放器",
-  "MusicExpand": "展开音乐播放器",
+  "MusicExpand": "展开播放器",
   "MusicCollapse": "收起",
   "MusicSaveCover": "保存封面",
   "MusicSaveFailed": "封面保存失败，请换个位置重试。",
@@ -531,5 +530,15 @@
   "MusicNext": "下一首",
   "MusicPlay": "播放",
   "MusicPause": "暂停",
-  "MusicOrderDefault": "正序播放"
+  "MusicOrderDefault": "正序播放",
+  "MusicClose": "停止并关闭",
+  "MusicPlaylist": "播放列表",
+  "MusicSource": "跳转到消息",
+  "MusicPlaying": "正在播放",
+  "MusicPaused": "已暂停",
+  "MusicVoice": "语音消息",
+  "MusicVideo": "视频消息",
+  "MediaPrevious": "上一条",
+  "MediaNext": "下一条",
+  "MediaSpeed": "播放速度"
 }

@@ -244,8 +244,12 @@ set(extras_files
         extras/features/window_material/platform/linux/window_material_linux.cpp
         extras/features/streamer_mode/streamer_mode.cpp
         extras/features/streamer_mode/streamer_mode.h
-        extras/features/music_player/music_player_box.cpp
-        extras/features/music_player/music_player_box.h
+        extras/features/music_player/music_player_cover.cpp
+        extras/features/music_player/music_player_cover.h
+        extras/features/music_player/music_player_floating.cpp
+        extras/features/music_player/music_player_floating.h
+        extras/features/music_player/music_player_panel.cpp
+        extras/features/music_player/music_player_panel.h
         extras/features/message_shot/message_shot.cpp
         extras/features/message_shot/message_shot.h
         extras/features/auto_space/auto_space.cpp
@@ -1730,10 +1734,6 @@ PRIVATE
     media/player/media_player_listen_tracker.h
     media/player/media_player_panel.cpp
     media/player/media_player_panel.h
-    media/player/media_player_volume_controller.cpp
-    media/player/media_player_volume_controller.h
-    media/player/media_player_widget.cpp
-    media/player/media_player_widget.h
     media/stories/media_stories_caption_full_view.cpp
     media/stories/media_stories_caption_full_view.h
     media/stories/media_stories_controller.cpp

@@ -21,6 +21,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 class ChannelData;
 
+namespace Extras::MusicPlayer {
+class FloatingPlayer;
+} // namespace Extras::MusicPlayer
+
 namespace MTP {
 class Error;
 } // namespace MTP
@@ -389,6 +393,7 @@ private:
 	object_ptr<BottomButton> _loadMoreChats = { nullptr };
 	std::unique_ptr<Ui::DownloadBar> _downloadBar;
 	std::unique_ptr<Window::ConnectionState> _connecting;
+	std::unique_ptr<Extras::MusicPlayer::FloatingPlayer> _musicPlayer;
 
 	Ui::Animations::Simple _scrollToAnimation;
 	int _scrollAnimationTo = 0;

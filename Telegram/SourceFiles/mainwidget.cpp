@@ -73,9 +73,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/storage_account.h"
 #include "main/main_domain.h"
 #include "media/audio/media_audio.h"
-#include "media/player/media_player_panel.h"
-#include "media/player/media_player_widget.h"
-#include "media/player/media_player_dropdown.h"
 #include "media/player/media_player_instance.h"
 #include "base/qthelp_regex.h"
 #include "base/options.h"
@@ -108,7 +105,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/features/forward/extras_forward.h"
-
 
 namespace {
 
@@ -290,7 +286,6 @@ MainWidget::MainWidget(
 , _sideShadow(_dialogs
 	? base::make_unique_q<Ui::PlainShadow>(this)
 	: nullptr)
-, _playerPlaylist(this, _controller)
 , _changelogs(Core::Changelogs::Create(&controller->session())) {
 	if (_dialogs) {
 		setupConnectingWidget();
@@ -329,20 +324,12 @@ MainWidget::MainWidget(
 		_exportTopBar->finishAnimating();
 	}
 
-	Media::Player::instance()->closePlayerRequests(
-	) | rpl::on_next([=] {
-		closeBothPlayers();
-	}, lifetime());
-
 	Media::Player::instance()->updatedNotifier(
 	) | rpl::on_next([=](const Media::Player::TrackState &state) {
 		handleAudioUpdate(state);
 	}, lifetime());
 	handleAudioUpdate(Media::Player::instance()->getState(AudioMsgId::Type::Song));
 	handleAudioUpdate(Media::Player::instance()->getState(AudioMsgId::Type::Voice));
-	if (_player) {
-		_player->finishAnimating();
-	}
 
 	_controller->chatsForceDisplayWideChanges(
 	) | rpl::on_next([=] {
@@ -599,12 +586,9 @@ bool MainWidget::floatPlayerIsVisible(not_null<HistoryItem*> item) {
 }
 
 void MainWidget::floatPlayerClosed(FullMsgId itemId) {
-	if (_player) {
-		const auto voiceData = Media::Player::instance()->current(
-			AudioMsgId::Type::Voice);
-		if (voiceData.contextId() == itemId) {
-			stopAndClosePlayer();
-		}
+	const auto player = Media::Player::instance();
+	if (player->current(AudioMsgId::Type::Voice).contextId() == itemId) {
+		player->stop(AudioMsgId::Type::Voice);
 	}
 }
 
@@ -926,7 +910,7 @@ void MainWidget::handleAudioUpdate(const Media::Player::TrackState &state) {
 			&& item->media()
 			&& item->media()->ttlSeconds();
 		if (!ttlSeconds) {
-			createPlayer();
+			Shortcuts::ToggleMediaShortcuts(true);
 		}
 	} else if (state.state == State::StoppedAtStart) {
 		Media::Player::instance()->stopAndClose();
@@ -946,96 +930,8 @@ void MainWidget::handleAudioUpdate(const Media::Player::TrackState &state) {
 	}
 }
 
-void MainWidget::closeBothPlayers() {
-	if (_player) {
-		_player->hide(anim::type::normal);
-	}
-	_playerPlaylist->hideIgnoringEnterEvents();
-}
-
 void MainWidget::stopAndClosePlayer() {
-	if (_player) {
-		_player->entity()->stopAndClose();
-	}
-}
-
-void MainWidget::createPlayer() {
-	if (!_player) {
-		_player.create(
-			this,
-			object_ptr<Media::Player::Widget>(this, this, _controller),
-			_controller->adaptive().oneColumnValue());
-		rpl::merge(
-			_player->heightValue() | rpl::map_to(true),
-			_player->shownValue()
-		) | rpl::on_next(
-			[this] { playerHeightUpdated(); },
-			_player->lifetime());
-		_player->entity()->setCloseCallback([=] {
-			Media::Player::instance()->stopAndClose();
-		});
-		_player->entity()->setShowItemCallback([=](
-				not_null<const HistoryItem*> item) {
-			const auto peer = item->history()->peer;
-			if (const auto window = Core::App().windowFor(peer)) {
-				if (const auto controller = window->sessionController()) {
-					controller->showMessage(item);
-					return;
-				}
-			}
-			_controller->showMessage(item);
-		});
-
-		_player->entity()->togglePlaylistRequests(
-		) | rpl::on_next([=](bool shown) {
-			if (!shown) {
-				_playerPlaylist->hideFromOther();
-				return;
-			} else if (_playerPlaylist->isHidden()) {
-				auto position = mapFromGlobal(QCursor::pos()).x();
-				auto bestPosition = _playerPlaylist->bestPositionFor(position);
-				if (rtl()) bestPosition = position + 2 * (position - bestPosition) - _playerPlaylist->width();
-				updateMediaPlaylistPosition(bestPosition);
-			}
-			_playerPlaylist->showFromOther();
-		}, _player->lifetime());
-
-		orderWidgets();
-		if (_showAnimation) {
-			_player->show(anim::type::instant);
-			_player->setVisible(false);
-			Shortcuts::ToggleMediaShortcuts(true);
-		} else {
-			_player->hide(anim::type::instant);
-		}
-	}
-	if (_player && !_player->toggled()) {
-		if (!_showAnimation) {
-			_player->show(anim::type::normal);
-			_playerHeight = _contentScrollAddToY = _player->contentHeight();
-			updateControlsGeometry();
-			Shortcuts::ToggleMediaShortcuts(true);
-		}
-	}
-}
-
-void MainWidget::playerHeightUpdated() {
-	if (!_player) {
-		// Player could be already "destroyDelayed", but still handle events.
-		return;
-	}
-	auto playerHeight = _player->contentHeight();
-	if (playerHeight != _playerHeight) {
-		_contentScrollAddToY += playerHeight - _playerHeight;
-		_playerHeight = playerHeight;
-		updateControlsGeometry();
-	}
-	if (!_playerHeight && _player->isHidden()) {
-		const auto state = Media::Player::instance()->getState(Media::Player::instance()->getActiveType());
-		if (!state.id || Media::Player::IsStoppedOrStopping(state.state)) {
-			_player.destroyDelayed();
-		}
-	}
+	Media::Player::instance()->stopAndClose();
 }
 
 void MainWidget::setCurrentCall(Calls::Call *call) {
@@ -1958,13 +1854,6 @@ Window::SectionSlideParams MainWidget::prepareShowAnimation(
 	result.fromBottom = fromBottom;
 
 	floatPlayerHideAll();
-	if (_player) {
-		_player->entity()->hideShadowAndDropdowns();
-	}
-	const auto playerPlaylistVisible = !_playerPlaylist->isHidden();
-	if (playerPlaylistVisible) {
-		_playerPlaylist->hide();
-	}
 	const auto hiderVisible = (_hider && !_hider->isHidden());
 	if (hiderVisible) {
 		_hider->hide();
@@ -1985,12 +1874,6 @@ Window::SectionSlideParams MainWidget::prepareShowAnimation(
 
 	if (_hider && hiderVisible) {
 		_hider->show();
-	}
-	if (playerPlaylistVisible) {
-		_playerPlaylist->show();
-	}
-	if (_player) {
-		_player->entity()->showShadowAndDropdowns();
 	}
 	floatPlayerShowVisible();
 
@@ -2434,9 +2317,6 @@ void MainWidget::orderWidgets() {
 	if (_dialogs) {
 		_dialogs->raiseWithTooltip();
 	}
-	if (_player) {
-		_player->raise();
-	}
 	if (_exportTopBar) {
 		_exportTopBar->raise();
 	}
@@ -2459,10 +2339,6 @@ void MainWidget::orderWidgets() {
 		_connecting->raise();
 	}
 	floatPlayerRaiseAll();
-	_playerPlaylist->raise();
-	if (_player) {
-		_player->entity()->raiseDropdowns();
-	}
 	if (_hider) _hider->raise();
 	if (_cardOverlay) {
 		_cardOverlay->raise();
@@ -2472,13 +2348,6 @@ void MainWidget::orderWidgets() {
 QPixmap MainWidget::grabForShowAnimation(const Window::SectionSlideParams &params) {
 	QPixmap result;
 	floatPlayerHideAll();
-	if (_player) {
-		_player->entity()->hideShadowAndDropdowns();
-	}
-	const auto playerPlaylistVisible = !_playerPlaylist->isHidden();
-	if (playerPlaylistVisible) {
-		_playerPlaylist->hide();
-	}
 	const auto hiderVisible = (_hider && !_hider->isHidden());
 	if (hiderVisible) {
 		_hider->hide();
@@ -2512,12 +2381,6 @@ QPixmap MainWidget::grabForShowAnimation(const Window::SectionSlideParams &param
 	}
 	if (_hider && hiderVisible) {
 		_hider->show();
-	}
-	if (playerPlaylistVisible) {
-		_playerPlaylist->show();
-	}
-	if (_player) {
-		_player->entity()->showShadowAndDropdowns();
 	}
 	floatPlayerShowVisible();
 	return result;
@@ -2632,7 +2495,7 @@ void MainWidget::paintCardOverlay(QRect clip) {
 }
 
 int MainWidget::getMainSectionTop() const {
-	return _callTopBarHeight + _exportTopBarHeight + _playerHeight;
+	return _callTopBarHeight + _exportTopBarHeight;
 }
 
 int MainWidget::getThirdSectionTop() const {
@@ -2655,10 +2518,6 @@ void MainWidget::hideAll() {
 	}
 	if (_thirdShadow) {
 		_thirdShadow->hide();
-	}
-	if (_player) {
-		_player->setVisible(false);
-		_playerHeight = 0;
 	}
 	if (_callTopBar) {
 		_callTopBar->setVisible(false);
@@ -2714,10 +2573,6 @@ void MainWidget::showAll() {
 		if (_thirdShadow) {
 			_thirdShadow->show();
 		}
-	}
-	if (_player) {
-		_player->setVisible(true);
-		_playerHeight = _player->contentHeight();
 	}
 	if (_callTopBar) {
 		_callTopBar->setVisible(true);
@@ -2810,12 +2665,6 @@ void MainWidget::updateControlsGeometry() {
 			_exportTopBar->resizeToWidth(contentWidth);
 			_exportTopBar->moveToLeft(0, gap + _callTopBarHeight);
 		}
-		if (_player) {
-			_player->resizeToWidth(contentWidth);
-			_player->moveToLeft(
-				0,
-				gap + _callTopBarHeight + _exportTopBarHeight);
-		}
 		const auto mainSectionGeometry = QRect(
 			0,
 			mainSectionTop + gap,
@@ -2882,12 +2731,6 @@ void MainWidget::updateControlsGeometry() {
 			_exportTopBar->resizeToWidth(mainSectionWidth);
 			_exportTopBar->moveToLeft(historyLeft, gap + _callTopBarHeight);
 		}
-		if (_player) {
-			_player->resizeToWidth(mainSectionWidth);
-			_player->moveToLeft(
-				historyLeft,
-				gap + _callTopBarHeight + _exportTopBarHeight);
-		}
 		_history->setGeometryWithTopMoved(QRect(
 			historyLeft,
 			mainSectionTop + gap,
@@ -2909,10 +2752,6 @@ void MainWidget::updateControlsGeometry() {
 			_contentScrollAddToY);
 	}
 	refreshResizeAreas();
-	if (_player) {
-		_player->entity()->updateDropdownsGeometry();
-	}
-	updateMediaPlaylistPosition(_playerPlaylist->x());
 	_contentScrollAddToY = 0;
 
 	if (_cardOverlay) {
@@ -3135,21 +2974,6 @@ void MainWidget::updateThirdColumnToCurrentChat(
 	}
 }
 
-void MainWidget::updateMediaPlaylistPosition(int x) {
-	if (_player) {
-		auto playlistLeft = x;
-		auto playlistWidth = _playerPlaylist->width();
-		auto playlistTop = _player->y() + _player->height();
-		auto rightEdge = width();
-		if (playlistLeft + playlistWidth > rightEdge) {
-			playlistLeft = rightEdge - playlistWidth;
-		} else if (playlistLeft < 0) {
-			playlistLeft = 0;
-		}
-		_playerPlaylist->move(playlistLeft, playlistTop);
-	}
-}
-
 void MainWidget::returnTabbedSelector() {
 	if (!_mainSection || !_mainSection->returnTabbedSelector()) {
 		_history->returnTabbedSelector();
@@ -3219,9 +3043,6 @@ void MainWidget::handleAdaptiveLayoutUpdate() {
 	showAll();
 	if (_sideShadow) {
 		_sideShadow->setVisible(!isOneColumn());
-	}
-	if (_player) {
-		_player->updateAdaptiveLayout();
 	}
 }
 
@@ -3333,8 +3154,7 @@ int MainWidget::backgroundFromY() const {
 
 bool MainWidget::contentOverlapped(const QRect &globalRect) {
 	return _history->contentOverlapped(globalRect)
-		|| (_mainSection && _mainSection->contentOverlapped(globalRect))
-		/*|| _playerPlaylist->overlaps(globalRect)*/;
+		|| (_mainSection && _mainSection->contentOverlapped(globalRect));
 }
 
 void MainWidget::activate() {

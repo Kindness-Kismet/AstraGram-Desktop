@@ -9251,8 +9251,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SearchFilterMusic" = "Music";
 "extras_SearchFilterGif" = "GIFs";
 
-"extras_MusicPlayer" = "Music player";
-"extras_MusicExpand" = "Expand music player";
+"extras_MusicExpand" = "Expand player";
 "extras_MusicCollapse" = "Collapse";
 "extras_MusicSaveCover" = "Save cover";
 "extras_MusicSaveFailed" = "Could not save the cover. Please choose another location.";
@@ -9265,3 +9264,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_MusicPlay" = "Play";
 "extras_MusicPause" = "Pause";
 "extras_MusicOrderDefault" = "Forward order";
+"extras_MusicClose" = "Stop and close";
+"extras_MusicPlaylist" = "Playlist";
+"extras_MusicSource" = "Go to message";
+"extras_MusicPlaying" = "Now playing";
+"extras_MusicPaused" = "Paused";
+"extras_MusicVoice" = "Voice message";
+"extras_MusicVideo" = "Video message";
+"extras_MediaPrevious" = "Previous message";
+"extras_MediaNext" = "Next message";
+"extras_MediaSpeed" = "Playback speed";

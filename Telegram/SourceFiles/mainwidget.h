@@ -50,8 +50,6 @@ class Widget;
 
 namespace Media {
 namespace Player {
-class Widget;
-class Panel;
 struct TrackState;
 } // namespace Player
 } // namespace Media
@@ -242,7 +240,6 @@ private:
 	void handleAdaptiveLayoutUpdate();
 	void updateWindowAdaptiveLayout();
 	void handleAudioUpdate(const Media::Player::TrackState &state);
-	void updateMediaPlaylistPosition(int x);
 	void updateControlsGeometry();
 	// 按各栏当前位置与可见性收集卡片矩形，隐藏的栏不参与。
 	[[nodiscard]] std::vector<QRect> cardRects() const;
@@ -258,8 +255,6 @@ private:
 		-> std::shared_ptr<Window::SectionMemento>;
 
 	void setupConnectingWidget();
-	void createPlayer();
-	void playerHeightUpdated();
 
 	void setCurrentCall(Calls::Call *call);
 	void setCurrentGroupCall(Calls::GroupCall *call);
@@ -300,8 +295,6 @@ private:
 	void showAll();
 	void hiderLayer(base::unique_qptr<Window::HistoryHider> h);
 	void clearHider(not_null<Window::HistoryHider*> instance);
-
-	void closeBothPlayers();
 
 	[[nodiscard]] auto floatPlayerDelegate()
 		-> not_null<Media::Player::FloatDelegate*>;
@@ -375,14 +368,9 @@ private:
 		= { nullptr };
 	rpl::lifetime _exportViewLifetime;
 
-	object_ptr<Window::TopBarWrapWidget<Media::Player::Widget>> _player
-		= { nullptr };
-	object_ptr<Media::Player::Panel> _playerPlaylist;
-
 	base::unique_qptr<Window::HistoryHider> _hider;
 	std::vector<std::unique_ptr<StackItem>> _stack;
 
-	int _playerHeight = 0;
 	int _callTopBarHeight = 0;
 	int _exportTopBarHeight = 0;
 	int _contentScrollAddToY = 0;

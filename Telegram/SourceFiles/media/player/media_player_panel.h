@@ -40,6 +40,8 @@ public:
 	void hideFromOther();
 
 	int bestPositionFor(int left) const;
+	void setAvailableSize(QSize size);
+	void setAutoHiding(bool enabled);
 
 protected:
 	void resizeEvent(QResizeEvent *e) override;
@@ -93,6 +95,8 @@ private:
 	}
 
 	bool _hiding = false;
+	bool _autoHiding = true;
+	QSize _availableSize;
 
 	QPixmap _cache;
 	Ui::Animations::Simple _a_appearance;
