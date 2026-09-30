@@ -213,6 +213,9 @@ private:
 	object_ptr<Ui::FadeWrap<Ui::FlatLabel>> _terms = { nullptr };
 
 	object_ptr<Ui::FlatLabel> _footer;
+#ifdef _DEBUG
+	object_ptr<Ui::LinkButton> _testSession = { nullptr };
+#endif
 
 	std::unique_ptr<Window::ConnectionState> _connecting;
 

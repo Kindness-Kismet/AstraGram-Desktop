@@ -1,6 +1,6 @@
 {
   "Preferences": "AstraGram Preferences",
-  "DebugEnterFakeSession": "Enter test session",
+  "DebugTestMode": "Mock Mode",
   "DebugFakeSessionFailed": "Could not enter the test session. Check the application log.",
   "DocsText": "Documentation",
   "CategoryGeneral": "General",

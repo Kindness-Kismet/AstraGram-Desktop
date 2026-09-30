@@ -49,6 +49,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "boxes/about_box.h"
+#ifdef _DEBUG
+#include "extras/debug/debug_login.h"
+#endif
 
 
 namespace Intro {
@@ -180,6 +183,22 @@ Widget::Widget(
 	}
 
 	_footer->setText(QString("AstraGram v%1").arg(currentVersionText()));
+
+#ifdef _DEBUG
+	_testSession = object_ptr<Ui::LinkButton>(
+		this,
+		tr::extras_DebugTestMode(tr::now),
+		st::introTestMode);
+	_testSession->setObjectName(u"debugFakeSession"_q);
+	_testSession->show();
+	_testSession->setClickedCallback([=] {
+		const auto error = ExtrasDebug::CreateFakeSession();
+		if (!error.isEmpty()) {
+			LOG(("Debug: Could not create fake session: %1").arg(error));
+			getStep()->showError(tr::extras_DebugFakeSessionFailed());
+		}
+	});
+#endif
 }
 
 rpl::producer<> Widget::showSettingsRequested() const {
@@ -849,6 +868,18 @@ void Widget::updateControlsGeometry() {
 			skip + _settings->width() + skip,
 			_settings->y());
 	}
+	// 版本号与调试入口在左上角，与右上角的设置按钮同一行；返回键占着左上角时让开。
+	const auto footerLeft = (_back->isHidden() ? 0 : _back->width()) + skip;
+	_footer->moveToLeft(
+		footerLeft,
+		controlsTop + skip + (_settings->height() - _footer->height()) / 2);
+#ifdef _DEBUG
+	if (_testSession) {
+		_testSession->moveToLeft(
+			_footer->x() + _footer->width() + skip,
+			_footer->y() + (_footer->height() - _testSession->height()) / 2);
+	}
+#endif
 	_back->moveToLeft(0, controlsTop);
 
 	auto nextTopTo = getStep()->contentTop() + st::introNextTop;
@@ -877,11 +908,6 @@ void Widget::updateControlsGeometry() {
 			(width() - _terms->width()) / 2,
 			height() - st::introTermsBottom - _terms->height());
 	}
-
-	// 底部中间留给各步骤自己的链接，版本号放左下角。
-	_footer->moveToLeft(
-		st::lineWidth * 6,
-		height() - _footer->height() - st::lineWidth * 6);
 }
 
 void Widget::keyPressEvent(QKeyEvent *e) {

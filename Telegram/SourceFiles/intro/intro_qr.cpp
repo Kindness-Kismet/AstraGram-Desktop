@@ -35,9 +35,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "main/main_domain.h"
-#ifdef _DEBUG
-#include "extras/debug/debug_login.h"
-#endif
 
 
 namespace Intro {
@@ -380,34 +377,6 @@ void QrWidget::setupControls() {
 	}, _skip->lifetime());
 
 	_skip->setClickedCallback([=] { submit(); });
-
-#ifdef _DEBUG
-	// 扫码页是启动首见页，调试入口挂在这里而不是手机号页。
-	// 底部是登录链接与版本号，调试入口放在它们上方。
-	const auto offline = Ui::CreateChild<Ui::LinkButton>(
-		this,
-		tr::extras_DebugEnterFakeSession(tr::now));
-	offline->setObjectName(u"debugFakeSession"_q);
-	offline->show();
-	rpl::combine(
-		sizeValue(),
-		offline->widthValue()
-	) | rpl::on_next([=](QSize size, int offlineWidth) {
-		offline->moveToLeft(
-			(size.width() - offlineWidth) / 2,
-			(contentTop()
-				+ st::introQrSkipTop
-				- 1.5 * st::normalFont->height));
-	}, offline->lifetime());
-
-	offline->setClickedCallback([=] {
-		const auto error = ExtrasDebug::CreateFakeSession();
-		if (!error.isEmpty()) {
-			LOG(("Debug: Could not create fake session: %1").arg(error));
-			showError(tr::extras_DebugFakeSessionFailed());
-		}
-	});
-#endif
 }
 
 void QrWidget::setupPasskeyLink() {

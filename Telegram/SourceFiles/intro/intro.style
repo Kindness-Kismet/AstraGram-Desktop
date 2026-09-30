@@ -60,12 +60,18 @@ introDescription: FlatLabel(defaultFlatLabel) {
 	}
 }
 introFooter: FlatLabel(defaultFlatLabel) {
-    align: align(center);
+	align: align(left);
 	textFg: introDescriptionFg;
 	style: TextStyle(defaultTextStyle) {
 		font: font(11px);
 		lineHeight: 24px;
 	}
+}
+introTestMode: LinkButton(defaultLinkButton) {
+	color: introDescriptionFg;
+	overColor: windowActiveTextFg;
+	font: font(11px);
+	overFont: font(11px);
 }
 introDescriptionTop: 34px;
 

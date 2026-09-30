@@ -9211,7 +9211,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SettingsDescription" = "Telegram Desktop fork focused on customization.";
 "extras_ArchiveChatsInMenu" = "Archived Chats";
 "extras_DebugEnvironment" = "Environment";
-"extras_DebugEnterFakeSession" = "Enter test session";
+"extras_DebugTestMode" = "Mock Mode";
 "extras_DebugFakeSessionFailed" = "Could not enter the test session. Check the application log.";
 "extras_DebugCopied" = "Copied";
 "extras_DebugVersion" = "Version";
