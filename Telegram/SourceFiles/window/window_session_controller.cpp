@@ -2096,51 +2096,24 @@ bool SessionController::openFolderInDifferentWindow(
 void SessionController::openFolder(not_null<Data::Folder*> folder) {
 	if (openFolderInDifferentWindow(folder)) {
 		return;
-	}
-	const auto enteringFolder = !_openedFolder.current();
-	const auto returnFilterId = activeChatsFilterCurrent();
-	if (_openedFolder.current() != folder) {
+	} else if (_openedFolder.current() != folder) {
 		resetFakeUnreadWhileOpened();
 	}
-	if (activeChatsFilterCurrent() != 0) {
-		setActiveChatsFilter(0);
-	} else if (adaptive().isOneColumn()) {
+	// 进入归档保留当前分组，标签不切换，退出后仍停在原分组。
+	if (adaptive().isOneColumn()) {
 		clearSectionStack(SectionShow::Way::ClearStack);
 	}
 	closeForum();
 	_openedFolder = folder.get();
-	if (enteringFolder) {
-		_folderReturnFilterId = returnFilterId;
-	}
 }
 
 void SessionController::closeFolder() {
-	const auto wasOpened = (_openedFolder.current() != nullptr);
-	if (wasOpened
+	if (_openedFolder.current()
 		&& windowId().type == SeparateType::Archive) {
 		Core::App().closeWindow(_window);
 		return;
 	}
-	const auto returnFilterId = base::take(_folderReturnFilterId);
 	_openedFolder = nullptr;
-	if (!wasOpened || activeChatsFilterCurrent() != 0) {
-		return;
-	}
-	const auto filters = &session().data().chatsFilters();
-	const auto returnExists = returnFilterId
-		&& ranges::contains(
-			filters->list(),
-			returnFilterId,
-			&Data::ChatFilter::id);
-	// 隐藏全部对话时编号 0 没有入口，原分组不在就退回第一个分组。
-	const auto targetId = returnExists
-		? returnFilterId
-		: ExtrasSettings::getInstance().hideAllChatsFolder()
-		? filters->defaultId()
-		: FilterId();
-	if (targetId) {
-		setActiveChatsFilter(targetId);
-	}
 }
 
 bool SessionController::openCommunityInDifferentWindow(
@@ -2168,9 +2141,7 @@ void SessionController::openCommunity(not_null<Data::CommunityInfo*> info) {
 	}
 	const auto returnState = enteringCommunity
 		? CommunityReturnState{
-			.filterId = _openedFolder.current()
-				? _folderReturnFilterId
-				: activeChatsFilterCurrent(),
+			.filterId = activeChatsFilterCurrent(),
 			.folderId = _openedFolder.current()
 				? _openedFolder.current()->id()
 				: 0,
@@ -2182,7 +2153,6 @@ void SessionController::openCommunity(not_null<Data::CommunityInfo*> info) {
 		clearSectionStack(SectionShow::Way::ClearStack);
 	}
 	closeForum();
-	_folderReturnFilterId = 0;
 	closeFolder();
 	_openedCommunity = info.get();
 	if (enteringCommunity) {
@@ -2232,18 +2202,20 @@ void SessionController::closeCommunity() {
 		|| _openedFolder.current()) {
 		return;
 	}
-	if (returnState->folderId) {
-		if (const auto folder = session().data().folderLoaded(
+	const auto &filters = session().data().chatsFilters().list();
+	if (returnState->filterId
+		&& ranges::contains(
+			filters,
+			returnState->filterId,
+			&Data::ChatFilter::id)) {
+		setActiveChatsFilter(returnState->filterId);
+	}
+	if (!returnState->folderId) {
+		return;
+	}
+	if (const auto folder = session().data().folderLoaded(
 			returnState->folderId)) {
-			openFolder(folder);
-			_folderReturnFilterId = returnState->filterId;
-		}
-	} else if (returnState->filterId) {
-		const auto &filters = session().data().chatsFilters().list();
-		if (ranges::find(filters, returnState->filterId, &Data::ChatFilter::id)
-			!= end(filters)) {
-			setActiveChatsFilter(returnState->filterId);
-		}
+		openFolder(folder);
 	}
 }
 
@@ -3383,8 +3355,10 @@ void SessionController::setActiveChatsFilter(
 		return;
 	}
 	const auto changed = (activeChatsFilterCurrent() != id);
-	// 主动选择标签时，以新选择为准，不再恢复归档前的标签。
-	_folderReturnFilterId = 0;
+	// 归档内分组不变，选择任意分组（含全部对话）都退出归档。
+	const auto closeOpened = id
+		|| !changed
+		|| _openedFolder.current();
 	if (changed) {
 		resetFakeUnreadWhileOpened();
 		if (_openedCommunity.current()) {
@@ -3392,7 +3366,7 @@ void SessionController::setActiveChatsFilter(
 		}
 	}
 	_activeChatsFilter.force_assign(id);
-	if (id || !changed) {
+	if (closeOpened) {
 		closeForum();
 		closeFolder();
 		closeCommunity();

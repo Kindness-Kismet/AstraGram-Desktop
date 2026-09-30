@@ -888,11 +888,19 @@ void InnerWidget::changeOpenedFolder(Data::Folder *folder) {
 	}
 	stopReorderPinned();
 	clearSelection();
+	if (folder) {
+		saveChatsFilterScrollState(_filterId);
+	}
+	// 归档内按全部对话处理置顶与菜单，当前分组退出归档后再应用。
 	_openedFolder = folder;
+	_filterId = folder ? 0 : _controller->activeChatsFilterCurrent();
 	refreshShownList();
 	refreshWithCollapsedRows(true);
 	if (_loadMoreCallback) {
 		_loadMoreCallback();
+	}
+	if (!folder) {
+		restoreChatsFilterScrollState(_filterId);
 	}
 }
 
@@ -908,7 +916,7 @@ void InnerWidget::changeOpenedForum(Data::Forum *forum) {
 	if (forum) {
 		saveChatsFilterScrollState(_filterId);
 	}
-	_filterId = forum
+	_filterId = (forum || _openedFolder)
 		? 0
 		: _controller->activeChatsFilterCurrent();
 	if (_openedForum) {
@@ -5818,7 +5826,8 @@ bool InnerWidget::chooseCollapsedRow(Qt::KeyboardModifiers modifiers) {
 }
 
 void InnerWidget::switchToFilter(FilterId filterId) {
-	if (_controller->windowId().type != Window::SeparateType::Primary) {
+	if (_controller->windowId().type != Window::SeparateType::Primary
+		|| _openedFolder) {
 		return;
 	}
 	const auto &list = session().data().chatsFilters().list();
@@ -5834,16 +5843,11 @@ void InnerWidget::switchToFilter(FilterId filterId) {
 		return;
 	}
 	saveChatsFilterScrollState(_filterId);
-	if (_openedFolder) {
-		_filterId = filterId;
-		refreshShownList();
-	} else {
-		clearSelection();
-		stopReorderPinned();
-		_filterId = filterId;
-		refreshShownList();
-		refreshWithCollapsedRows(true);
-	}
+	clearSelection();
+	stopReorderPinned();
+	_filterId = filterId;
+	refreshShownList();
+	refreshWithCollapsedRows(true);
 	refreshEmpty();
 	{
 		const auto skip = found

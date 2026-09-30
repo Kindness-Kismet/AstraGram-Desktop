@@ -2210,7 +2210,9 @@ void Widget::toggleFiltersMenu(bool enabled) {
 			_chatFilters.get(),
 			&session(),
 			[this](FilterId id) {
-				if (controller()->activeChatsFilterCurrent() != id) {
+				// 归档内点当前分组也要退出归档。
+				if (controller()->activeChatsFilterCurrent() != id
+					|| _openedFolder) {
 					controller()->setActiveChatsFilter(id);
 				} else {
 					_scroll->scrollToY(0);
@@ -2855,9 +2857,9 @@ void Widget::jumpToTop(bool belowPinned) {
 		if (belowPinned) {
 			const auto list = _openedForum
 				? _openedForum->topicsList()
-				: controller()->activeChatsFilterCurrent()
+				: _inner->filterId()
 				? session().data().chatsFilters().chatsList(
-					controller()->activeChatsFilterCurrent())
+					_inner->filterId())
 				: session().data().chatsList(_openedFolder);
 			const auto count = int(list->pinned()->order().size());
 			const auto row = _inner->st()->height;
