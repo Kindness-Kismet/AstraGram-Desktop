@@ -190,8 +190,8 @@ ivEditorBottomSend: SendButton(historySend) {
 	inner: IconButton(historyAttach) {
 		width: ivEditorBottomCircleSize;
 		height: ivEditorBottomCircleSize;
-		icon: icon {{ "menu/rich/send-24x24", windowFgActive }};
-		iconOver: icon {{ "menu/rich/send-24x24", windowFgActive }};
+		icon: icon {{ "chat/input_send", windowFgActive }};
+		iconOver: icon {{ "chat/input_send", windowFgActive }};
 		rippleAreaSize: ivEditorBottomCircleSize;
 		rippleAreaPosition: point(0px, 0px);
 	}
