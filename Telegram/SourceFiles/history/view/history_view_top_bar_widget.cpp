@@ -867,14 +867,7 @@ void TopBarWidget::infoClicked() {
 
 void TopBarWidget::backClicked() {
 	if (_activeChat.key.folder()) {
-		const auto &settings = ExtrasSettings::getInstance();
-		if (settings.hideAllChatsFolder()) {
-			const auto filters = &_controller->session().data().chatsFilters();
-			const auto lookupId = filters->lookupId(_controller->session().premium() ? 0 : 1);
-			_controller->setActiveChatsFilter(lookupId);
-		} else {
-			_controller->closeFolder();
-		}
+		_controller->closeFolder();
 	} else if (_activeChat.section == Section::ChatsList
 		&& _activeChat.key.history()
 		&& _activeChat.key.history()->isForum()) {

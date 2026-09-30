@@ -2123,13 +2123,23 @@ void SessionController::closeFolder() {
 	}
 	const auto returnFilterId = base::take(_folderReturnFilterId);
 	_openedFolder = nullptr;
-	if (!wasOpened || !returnFilterId || activeChatsFilterCurrent() != 0) {
+	if (!wasOpened || activeChatsFilterCurrent() != 0) {
 		return;
 	}
-	const auto &filters = session().data().chatsFilters().list();
-	if (ranges::find(filters, returnFilterId, &Data::ChatFilter::id)
-		!= end(filters)) {
-		setActiveChatsFilter(returnFilterId);
+	const auto filters = &session().data().chatsFilters();
+	const auto returnExists = returnFilterId
+		&& ranges::contains(
+			filters->list(),
+			returnFilterId,
+			&Data::ChatFilter::id);
+	// 隐藏全部对话时编号 0 没有入口，原分组不在就退回第一个分组。
+	const auto targetId = returnExists
+		? returnFilterId
+		: ExtrasSettings::getInstance().hideAllChatsFolder()
+		? filters->defaultId()
+		: FilterId();
+	if (targetId) {
+		setActiveChatsFilter(targetId);
 	}
 }
 
