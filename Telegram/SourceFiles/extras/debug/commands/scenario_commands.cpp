@@ -2,6 +2,7 @@
 #include "extras/debug/commands/commands_internal.h"
 
 #include "extras/debug/debug_login.h"
+#include "extras/extras_settings.h"
 #include "base/unixtime.h"
 #include "data/data_channel.h"
 #include "data/data_chat_filters.h"
@@ -517,6 +518,10 @@ void seedFakeScenarios(not_null<Main::Session*> session) {
 	filters.set(Data::ChatFilter(3,
 		{ .text = { u"工作"_q } }, {}, {},
 		Flag::Groups | Flag::Channels | Flag::NoArchived, {}, {}, {}));
+	// 与服务端下发一致：隐藏全部对话时分组列表不含默认分组。
+	if (ExtrasSettings::getInstance().hideAllChatsFolder()) {
+		filters.remove(FilterId());
+	}
 	session->data().folder(Data::Folder::kId)->chatsList()->setLoaded();
 	SeededSession = base::make_weak(session);
 }
