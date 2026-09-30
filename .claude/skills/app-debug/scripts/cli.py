@@ -296,6 +296,9 @@ def register_commands(sub) -> None:
     command.add_argument("target", help="输入框的 objectName，如 messageInput")
     command.add_argument("text", nargs="?", help="待输入文字，空字符串用于清空")
     command.add_argument("--file", dest="text_file", help="按 UTF-8 读取文字，保留换行和引号")
+    command = sub.add_parser("control.drop-files", help="仅在假会话向控件拖入本地文件，不点击发送")
+    command.add_argument("target", help="目标控件名称，如 messageInput")
+    command.add_argument("paths", nargs="+", help="本地文件路径")
 
 
 def main() -> int:
@@ -409,6 +412,9 @@ def build_server_command(args: argparse.Namespace) -> str:
         value = Path(args.text_file).read_text(encoding="utf-8") if args.text_file is not None else args.text
         encoded = base64.b64encode(value.encode("utf-8")).decode("ascii")
         return f"control.input {quote_arg(args.target)} b64:{encoded}"
+    if command == "control.drop-files":
+        paths = [quote_arg(str(Path(path).resolve())) for path in args.paths]
+        return " ".join([command, quote_arg(args.target), *paths])
     if command == "settings.get":
         return f"settings.get {quote_arg(args.key)}"
     if command == "settings.set":

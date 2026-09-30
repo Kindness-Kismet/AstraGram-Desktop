@@ -1,5 +1,6 @@
 #ifdef _DEBUG
 #include "extras/debug/commands/commands_internal.h"
+#include "extras/debug/debug_login.h"
 
 #include "core/application.h"
 #include "ui/abstract_button.h"
@@ -16,6 +17,11 @@
 #include <QKeyEvent>
 #include <QMap>
 #include <QMouseEvent>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
+#include <QFileInfo>
+#include <QUrl>
 #include <QPointer>
 #include <QWidget>
 #include <QAccessible>
@@ -597,6 +603,47 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	return Result::Ok();
 }
 
+[[nodiscard]] Result controlDropFiles(const QStringList &args) {
+	if (args.size() < 2) {
+		return Result::Err(u"usage: control.drop-files <target> <path>..."_q);
+	}
+	const auto session = ActiveSession();
+	if (!session || !isFakeSession(session)) {
+		return Result::Err(u"an in-process fake session is required"_q);
+	}
+	const auto target = findControl(args[0]);
+	if (!target || !target->isVisible() || !target->isEnabled()) {
+		return Result::Err(u"visible enabled control not found"_q);
+	}
+	auto urls = QList<QUrl>();
+	for (const auto &path : args.mid(1)) {
+		const auto file = QFileInfo(path);
+		if (!file.isFile() || !file.isReadable()) {
+			return Result::Err(u"expected readable local files"_q);
+		}
+		urls.push_back(QUrl::fromLocalFile(file.absoluteFilePath()));
+	}
+	auto mime = QMimeData();
+	mime.setUrls(urls);
+	const auto center = target->rect().center();
+	const auto child = target->childAt(center);
+	const auto receiver = QPointer<QWidget>(child ? child : target);
+	const auto point = receiver->mapFromGlobal(target->mapToGlobal(center));
+	auto enter = QDragEnterEvent(point, Qt::CopyAction, &mime,
+		Qt::LeftButton, Qt::NoModifier);
+	sendIfAlive(receiver, std::move(enter));
+	if (!enter.isAccepted()) {
+		return Result::Err(u"control does not accept local file drops"_q);
+	}
+	auto drop = QDropEvent(point, Qt::CopyAction, &mime,
+		Qt::LeftButton, Qt::NoModifier);
+	sendIfAlive(receiver, std::move(drop));
+	if (!drop.isAccepted()) {
+		return Result::Err(u"local file drop was not accepted"_q);
+	}
+	return Result::Ok(Compact(json{ { "files", urls.size() } }));
+}
+
 } // namespace
 
 const HandlerMap &ControlHandlers() {
@@ -612,6 +659,7 @@ const HandlerMap &ControlHandlers() {
 		{ u"control.set"_q, &controlSet },
 		{ u"control.action"_q, &controlAction },
 		{ u"control.mouse"_q, &controlMouse },
+		{ u"control.drop-files"_q, &controlDropFiles },
 	};
 	return result;
 }

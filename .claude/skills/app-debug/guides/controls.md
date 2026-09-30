@@ -42,6 +42,8 @@ python .codex/skills/app-debug/scripts/cli.py control.pointer historyScroll
 
 ## 点击命中检查
 
+control.drop-files <目标> <本地文件路径>... 仅限本进程假会话，向控件投递本地文件拖放事件，沿正常输入区流程打开附件预览；不会点击发送，也不使用系统剪贴板。
+
 `control.click <目标> --mouse` 从窗口开始命中测试，再发送鼠标事件。目标中心被遮挡时返回错误，
 用于检查遮罩、层级与点击回调；不等同于人工鼠标验收，依赖真实光标的行为仍需人工确认。
 
