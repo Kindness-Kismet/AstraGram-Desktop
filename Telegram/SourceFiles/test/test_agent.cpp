@@ -32,24 +32,21 @@ void ApplyStartupOverrides() {
 		return;
 	}
 	const auto value = qEnvironmentVariable("TDESKTOP_TEST_SCALE");
-	auto selectedScale = style::kScaleDefault;
-	auto source = u"default"_q;
-	if (!value.isEmpty()) {
-		auto ok = false;
-		const auto scale = value.toInt(&ok);
-		if (ok && scale >= style::kScaleMin && scale <= style::kScaleMax) {
-			selectedScale = style::CheckScale(scale);
-			source = u"environment"_q;
-		} else {
-			Note(u"TDESKTOP_TEST_SCALE rejected: %1"_q.arg(value));
-		}
+	if (value.isEmpty()) {
+		return;
 	}
+	auto ok = false;
+	const auto scale = value.toInt(&ok);
+	if (!ok || scale < style::kScaleMin || scale > style::kScaleMax) {
+		Note(u"TDESKTOP_TEST_SCALE rejected: %1"_q.arg(value));
+		return;
+	}
+	const auto selectedScale = style::CheckScale(scale);
 	cSetConfigScale(selectedScale);
-	const auto report = u"TDESKTOP_TEST_SCALE=[%1] applied: %2 source=%3"_q
+	const auto report = u"TDESKTOP_TEST_SCALE=[%1] applied: %2 source=environment"_q
 		.arg(
 			value,
-			QString::number(selectedScale),
-			source);
+			QString::number(selectedScale));
 	Note(report);
 }
 
