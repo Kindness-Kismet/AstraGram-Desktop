@@ -192,6 +192,8 @@ set(extras_files
         extras/ui/message_history/history_section.h
         extras/ui/boxes/edit_mark_box.cpp
         extras/ui/boxes/edit_mark_box.h
+        extras/ui/boxes/donation_box.cpp
+        extras/ui/boxes/donation_box.h
         extras/ui/boxes/emoji_packs_box.cpp
         extras/ui/boxes/emoji_packs_box.h
         extras/ui/boxes/font_selector.cpp

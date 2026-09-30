@@ -88,6 +88,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_extras_icons.h"
 #include "lang_auto.h"
 #include "extras/ui/settings/settings_main.h"
+#include "extras/ui/boxes/donation_box.h"
 #include "styles/style_info.h"
 
 
@@ -938,6 +939,13 @@ void MainMenu::setupMenu() {
 		u"settings"_q
 	)->setClickedCallback([=] {
 		controller->showSettings();
+	});
+	addAction(
+		tr::extras_DonationDetails(),
+		{ &st::menuIconGiftPremium },
+		u"donation"_q
+	)->setClickedCallback([=] {
+		ExtrasUi::showDonationBox(controller);
 	});
 
 	if (settings.showNightModeToggleInDrawer()) {

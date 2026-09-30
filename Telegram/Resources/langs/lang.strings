@@ -9263,3 +9263,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_MusicPlay" = "Play";
 "extras_MusicPause" = "Pause";
 "extras_MusicOrderDefault" = "Forward order";
+"extras_DonationDetails" = "Donation details";
+"extras_DonationMessage" = "If you like my work, please consider supporting me. Your donation will help with everyday software development and new features.";
+"extras_DonationOpenAfdian" = "Open Afdian";

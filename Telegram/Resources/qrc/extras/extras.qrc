@@ -24,6 +24,7 @@
         <file alias="art/extras/win95/app_icon.ico">../../art/extras/win95/app_icon.ico</file>
         <file alias="art/extras/yaplus/app.svg">../../art/extras/yaplus/app.svg</file>
         <file alias="art/extras/yaplus/app_icon.ico">../../art/extras/yaplus/app_icon.ico</file>
+        <file alias="art/extras/donation/kiritoxdone.png">../../art/extras/donation/kiritoxdone.png</file>
         <file alias="icons/extras/nocover.svg">../../icons/extras/nocover.svg</file>
         <file alias="icons/extras/sticker_preview.svg">../../icons/extras/sticker_preview.svg</file>
         <file alias="emoji/emoji_presets.json">../../emoji/emoji_presets.json</file>

@@ -529,5 +529,8 @@
   "MusicNext": "下一首",
   "MusicPlay": "播放",
   "MusicPause": "暂停",
-  "MusicOrderDefault": "正序播放"
+  "MusicOrderDefault": "正序播放",
+  "DonationDetails": "捐赠详情",
+  "DonationMessage": "如果你喜欢我的工作，可以考虑捐赠我。这将用于日常软件开发和功能增添。",
+  "DonationOpenAfdian": "前往爱发电"
 }
