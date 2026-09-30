@@ -871,6 +871,7 @@ private:
 
 	PeerData *_showEditPeer = nullptr;
 	rpl::variable<Data::Folder*> _openedFolder;
+	FilterId _folderReturnFilterId = 0;
 	rpl::variable<Data::Forum*> _shownForum;
 	rpl::lifetime _shownForumLifetime;
 	rpl::variable<Data::CommunityInfo*> _openedCommunity;

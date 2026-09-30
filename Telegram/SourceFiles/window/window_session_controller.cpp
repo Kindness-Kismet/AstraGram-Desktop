@@ -2096,7 +2096,10 @@ bool SessionController::openFolderInDifferentWindow(
 void SessionController::openFolder(not_null<Data::Folder*> folder) {
 	if (openFolderInDifferentWindow(folder)) {
 		return;
-	} else if (_openedFolder.current() != folder) {
+	}
+	const auto enteringFolder = !_openedFolder.current();
+	const auto returnFilterId = activeChatsFilterCurrent();
+	if (_openedFolder.current() != folder) {
 		resetFakeUnreadWhileOpened();
 	}
 	if (activeChatsFilterCurrent() != 0) {
@@ -2106,15 +2109,28 @@ void SessionController::openFolder(not_null<Data::Folder*> folder) {
 	}
 	closeForum();
 	_openedFolder = folder.get();
+	if (enteringFolder) {
+		_folderReturnFilterId = returnFilterId;
+	}
 }
 
 void SessionController::closeFolder() {
-	if (_openedFolder.current()
+	const auto wasOpened = (_openedFolder.current() != nullptr);
+	if (wasOpened
 		&& windowId().type == SeparateType::Archive) {
 		Core::App().closeWindow(_window);
 		return;
 	}
+	const auto returnFilterId = base::take(_folderReturnFilterId);
 	_openedFolder = nullptr;
+	if (!wasOpened || !returnFilterId || activeChatsFilterCurrent() != 0) {
+		return;
+	}
+	const auto &filters = session().data().chatsFilters().list();
+	if (ranges::find(filters, returnFilterId, &Data::ChatFilter::id)
+		!= end(filters)) {
+		setActiveChatsFilter(returnFilterId);
+	}
 }
 
 bool SessionController::openCommunityInDifferentWindow(
@@ -2142,7 +2158,9 @@ void SessionController::openCommunity(not_null<Data::CommunityInfo*> info) {
 	}
 	const auto returnState = enteringCommunity
 		? CommunityReturnState{
-			.filterId = activeChatsFilterCurrent(),
+			.filterId = _openedFolder.current()
+				? _folderReturnFilterId
+				: activeChatsFilterCurrent(),
 			.folderId = _openedFolder.current()
 				? _openedFolder.current()->id()
 				: 0,
@@ -2154,6 +2172,7 @@ void SessionController::openCommunity(not_null<Data::CommunityInfo*> info) {
 		clearSectionStack(SectionShow::Way::ClearStack);
 	}
 	closeForum();
+	_folderReturnFilterId = 0;
 	closeFolder();
 	_openedCommunity = info.get();
 	if (enteringCommunity) {
@@ -2207,6 +2226,7 @@ void SessionController::closeCommunity() {
 		if (const auto folder = session().data().folderLoaded(
 			returnState->folderId)) {
 			openFolder(folder);
+			_folderReturnFilterId = returnState->filterId;
 		}
 	} else if (returnState->filterId) {
 		const auto &filters = session().data().chatsFilters().list();
@@ -3353,6 +3373,8 @@ void SessionController::setActiveChatsFilter(
 		return;
 	}
 	const auto changed = (activeChatsFilterCurrent() != id);
+	// 主动选择标签时，以新选择为准，不再恢复归档前的标签。
+	_folderReturnFilterId = 0;
 	if (changed) {
 		resetFakeUnreadWhileOpened();
 		if (_openedCommunity.current()) {
