@@ -540,5 +540,8 @@
   "MusicVideo": "视频消息",
   "MediaPrevious": "上一条",
   "MediaNext": "下一条",
-  "MediaSpeed": "播放速度"
+  "MediaSpeed": "播放速度",
+  "DonationDetails": "捐赠详情",
+  "DonationMessage": "如果你喜欢我的工作，可以考虑捐赠我。这将用于日常软件开发和功能增添。",
+  "DonationOpenAfdian": "前往爱发电"
 }

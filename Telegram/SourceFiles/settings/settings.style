@@ -105,8 +105,6 @@ settingsPremiumIconTags: icon {{ "settings/premium/tags", settingsIconFg }};
 settingsIconChatAutomation: icon {
 	{ size(24px, 24px), transparent },
 	{ "chat/ai_letters-20x20", menuIconColor, point(2px, 2px) },
-	{ "chat/ai_star1-20x20", menuIconColor, point(2px, 2px) },
-	{ "chat/ai_star2-20x20", menuIconColor, point(2px, 2px) },
 };
 
 settingsStoriesIconOrder: icon {{ "settings/premium/stories_order", premiumButtonBg1 }};

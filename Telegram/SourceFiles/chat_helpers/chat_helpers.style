@@ -1130,6 +1130,7 @@ historyReplySkip: 53px;
 historyReplyNameFg: windowActiveTextFg;
 historyReplyHeight: 49px;
 historyReplyIconPosition: point(7px, 7px);
+historyLinkIconPosition: point(13px, 13px);
 historyReplyIcon: icon {{ "chat/input_reply_settings", historyReplyIconFg }};
 historyLinkIcon: icon {{ "chat/input_link_settings", historyReplyIconFg }};
 historyQuoteIcon: icon {{ "chat/input_reply_quote", historyReplyIconFg }};
@@ -1523,16 +1524,14 @@ historyAiComposeButton: IconButton(historyAttach) {
 	rippleAreaPosition: point(0px, 0px);
 }
 historyAiComposeButtonLetters: icon{{ "chat/ai_letters-20x20", historyComposeIconFg }};
-historyAiComposeButtonStar1: icon{{ "chat/ai_star1-20x20", historyComposeIconFg }};
-historyAiComposeButtonStar2: icon{{ "chat/ai_star2-20x20", historyComposeIconFg }};
 historyAiComposeButtonPosition: point(-8px, -4px);
 historySendAsFileButton: IconButton(historyAiComposeButton) {
 	icon: icon {{ "chat/text_to_file-18x18", historyComposeIconFg }};
 	iconOver: icon {{ "chat/text_to_file-18x18", historyComposeIconFgOver }};
 }
-historyExpandComposeButton: IconButton(historyAiComposeButton) {
-	icon: icon {{ "menu/rich/expand-20x20", historyComposeIconFg }};
-	iconOver: icon {{ "menu/rich/expand-20x20", historyComposeIconFgOver }};
+historyExpandComposeButton: IconButton(historyAttach) {
+	icon: icon {{ "menu/rich/expand-24x24", historyComposeIconFg }};
+	iconOver: icon {{ "menu/rich/expand-24x24", historyComposeIconFgOver }};
 }
 historyDiscardRichDraftButton: IconButton(historyAiComposeButton) {
 	width: 34px;

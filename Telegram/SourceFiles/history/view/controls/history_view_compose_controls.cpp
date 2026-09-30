@@ -431,7 +431,10 @@ void FieldHeader::init() {
 		if (_suggestOptions) {
 			_suggestOptions->paintIcon(p, 0, 0, width());
 		} else if (_preview.parsed) {
-			st::historyLinkIcon.paint(p, position, width());
+			st::historyLinkIcon.paint(
+				p,
+				st::historyLinkIconPosition,
+				width());
 		} else if (isEditingMessage()) {
 			st::historyEditIcon.paint(p, position, width());
 		} else if (const auto reply = displayedReplyingToMessage(); reply.replying()) {
@@ -4987,6 +4990,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		- (_tabbedSelectorToggle->isHidden()
 			? 0
 			: _tabbedSelectorToggle->width())
+		- (_expand->isHidden() ? 0 : _expand->width())
 		- (_likeShown ? _like->width() : 0)
 		- ((_silent && !_silent->isHidden()) ? _silent->width() : 0)
 		- ((_toggleSuggestPost && !_toggleSuggestPost->isHidden())
@@ -5082,6 +5086,10 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 	if (!_tabbedSelectorToggle->isHidden()) {
 		right += _tabbedSelectorToggle->width();
 	}
+	_expand->moveToRight(right, buttonsTop);
+	if (!_expand->isHidden()) {
+		right += _expand->width();
+	}
 	if (_like) {
 		using Type = Controls::WriteRestrictionType;
 		if (_writeRestriction.current().type == Type::PremiumRequired) {
@@ -5128,7 +5136,6 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 	}
 	updateAiButtonGeometry();
 	updateSendAsFileGeometry();
-	updateExpandButtonGeometry();
 	updateDiscardRichDraftGeometry();
 
 	_voiceRecordBar->resizeToWidth(size.width());
@@ -5239,16 +5246,8 @@ void ComposeControls::updateExpandButtonVisibility() {
 	const auto hidden = !canShowRichEditor() || !hasEnoughLinesForExpand();
 	if (_expand->isHidden() != hidden) {
 		_expand->setVisible(!hidden);
+		updateControlsGeometry(_wrap->size());
 	}
-	updateExpandButtonGeometry();
-}
-
-void ComposeControls::updateExpandButtonGeometry() {
-	if (_expand->isHidden()) {
-		return;
-	}
-	const auto x = _send->x() + _send->width() - _expand->width();
-	_expand->move(QPoint(x, _field->y()) + st::historyAiComposeButtonPosition);
 }
 
 void ComposeControls::updateDiscardRichDraftVisibility() {

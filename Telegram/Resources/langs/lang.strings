@@ -9274,3 +9274,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_MediaPrevious" = "Previous message";
 "extras_MediaNext" = "Next message";
 "extras_MediaSpeed" = "Playback speed";
+"extras_DonationDetails" = "Donation details";
+"extras_DonationMessage" = "If you like my work, please consider supporting me. Your donation will help with everyday software development and new features.";
+"extras_DonationOpenAfdian" = "Open Afdian";

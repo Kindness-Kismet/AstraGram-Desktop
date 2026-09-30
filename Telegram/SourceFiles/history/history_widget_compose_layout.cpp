@@ -706,16 +706,8 @@ void HistoryWidget::updateExpandButtonVisibility() {
 	const auto hidden = !canShowRichEditor() || !hasEnoughLinesForExpand();
 	if (_expand->isHidden() != hidden) {
 		_expand->setVisible(!hidden);
+		updateFieldSize();
 	}
-	updateExpandButtonGeometry();
-}
-
-void HistoryWidget::updateExpandButtonGeometry() {
-	if (_expand->isHidden()) {
-		return;
-	}
-	const auto x = _send->x() + _send->width() - _expand->width();
-	_expand->move(QPoint(x, _field->y()) + st::historyAiComposeButtonPosition);
 }
 
 void HistoryWidget::initDiscardRichDraftButton() {
@@ -868,6 +860,10 @@ void HistoryWidget::moveFieldControls() {
 	_tabbedSelectorToggle->moveToRight(right, buttonsBottom);
 	_botKeyboardHide->moveToRight(right, buttonsBottom);
 	right += settings.showEmojiButtonInMessageField() || !_botKeyboardHide->isHidden() ? _botKeyboardHide->width() : 0;
+	_expand->moveToRight(right, buttonsBottom);
+	if (!_expand->isHidden()) {
+		right += _expand->width();
+	}
 	_botKeyboardShow->moveToRight(right, buttonsBottom);
 	if (_silent) {
 		_silent->moveToRight(right, buttonsBottom);
@@ -893,7 +889,6 @@ void HistoryWidget::moveFieldControls() {
 	}
 	updateAiButtonGeometry();
 	updateSendAsFileGeometry();
-	updateExpandButtonGeometry();
 	updateDiscardRichDraftGeometry();
 
 	_fieldBarCancel->moveToRight(
@@ -935,7 +930,11 @@ void HistoryWidget::updateFieldSize() {
 		- (settings.showAttachButtonInMessageField() ? _attachToggle->width() : 0)
 		- 2 * (st::historyComposeCapsuleMargin + st::historyComposeCapsulePadding)
 		- _send->width()
-		- (settings.showEmojiButtonInMessageField() ? _tabbedSelectorToggle->width() : 0);
+		- ((settings.showEmojiButtonInMessageField()
+			|| !_botKeyboardHide->isHidden())
+			? _botKeyboardHide->width()
+			: 0)
+		- (_expand->isHidden() ? 0 : _expand->width());
 	if (_botMenu.button) {
 		fieldWidth -= st::historyBotMenuSkip + _botMenu.button->width();
 	}
