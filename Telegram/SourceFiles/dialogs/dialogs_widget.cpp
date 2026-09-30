@@ -4849,7 +4849,7 @@ void Widget::updateControlsGeometry() {
 				- st::dialogsStories.photoLeft)
 			: (filterLeft + filterWidth);
 		_stories->setLayoutConstraints(
-			{ storiesLeft, filterTop + added },
+			{ storiesLeft, filterAreaTop + filterTop + added },
 			inFolderTitle ? style::al_left : style::al_right,
 			{ 0, expandedStoriesTop, barw, st::dialogsStoriesFull.height });
 	}
