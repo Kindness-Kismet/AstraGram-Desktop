@@ -4,10 +4,12 @@
 #include "extras/debug/debug_login.h"
 #include "base/unixtime.h"
 #include "data/data_channel.h"
+#include "data/data_chat_filters.h"
 #include "data/business/data_shortcut_messages.h"
 #include "data/components/sponsored_messages.h"
 #include "data/data_drafts.h"
 #include "data/data_forum.h"
+#include "data/data_folder.h"
 #include "data/data_forum_topic.h"
 #include "data/data_peer_bot_command.h"
 #include "data/data_replies_list.h"
@@ -48,6 +50,8 @@ enum class Kind {
 	Keyboard,
 	Sponsored,
 	Pinned,
+	ArchivedPrivate,
+	ArchivedGroup,
 };
 
 struct Scenario {
@@ -74,6 +78,8 @@ constexpr auto kScenarios = std::array{
 	Scenario{ "keyboard", u"15 机器人键盘", Kind::Keyboard },
 	Scenario{ "sponsored", u"16 顶部广告样本", Kind::Sponsored },
 	Scenario{ "pinned", u"17 多条置顶消息", Kind::Pinned },
+	Scenario{ "archived-private", u"18 归档私聊", Kind::ArchivedPrivate },
+	Scenario{ "archived-group", u"19 归档群聊", Kind::ArchivedGroup },
 };
 
 constexpr auto kFirstPeerId = uint64(810000001);
@@ -89,7 +95,8 @@ base::weak_ptr<Main::Session> SeededSession;
 		|| kind == Kind::Business
 		|| kind == Kind::Paid
 		|| kind == Kind::Keyboard
-		|| kind == Kind::Sponsored;
+		|| kind == Kind::Sponsored
+		|| kind == Kind::ArchivedPrivate;
 }
 
 [[nodiscard]] PeerId scenarioPeerId(int index) {
@@ -181,7 +188,12 @@ void fillHistory(
 		int index,
 		bool pinned) {
 	const auto history = session->data().history(peer);
-	history->clearFolder();
+	const auto kind = kScenarios[index].kind;
+	if (kind == Kind::ArchivedPrivate || kind == Kind::ArchivedGroup) {
+		history->setFolder(session->data().folder(Data::Folder::kId));
+	} else {
+		history->clearFolder();
+	}
 	history->addOlderSlice({});
 	const auto topic = kScenarios[index].kind == Kind::Topic;
 	const auto translating = kScenarios[index].kind == Kind::Translate;
@@ -497,6 +509,15 @@ void seedFakeScenarios(not_null<Main::Session*> session) {
 	for (auto i = 0; i != kScenarios.size(); ++i) {
 		seedScenario(session, i);
 	}
+	using Flag = Data::ChatFilter::Flag;
+	auto &filters = session->data().chatsFilters();
+	filters.set(Data::ChatFilter(2,
+		{ .text = { u"朋友"_q } }, {}, {},
+		Flag::Contacts | Flag::NonContacts | Flag::NoArchived, {}, {}, {}));
+	filters.set(Data::ChatFilter(3,
+		{ .text = { u"工作"_q } }, {}, {},
+		Flag::Groups | Flag::Channels | Flag::NoArchived, {}, {}, {}));
+	session->data().folder(Data::Folder::kId)->chatsList()->setLoaded();
 	SeededSession = base::make_weak(session);
 }
 

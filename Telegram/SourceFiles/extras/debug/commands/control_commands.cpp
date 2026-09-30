@@ -483,6 +483,9 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	}
 	if (const auto interface = QAccessible::queryAccessibleInterface(target)) {
 		data["accessibleValue"] = interface->text(QAccessible::Value).toStdString();
+		if (interface->state().selectable) {
+			data["selected"] = bool(interface->state().selected);
+		}
 		auto actions = json::array();
 		if (const auto action = interface->actionInterface()) {
 			for (const auto &name : action->actionNames()) actions.push_back(name.toStdString());

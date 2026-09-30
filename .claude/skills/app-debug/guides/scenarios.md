@@ -30,6 +30,11 @@ python .codex/skills/app-debug/scripts/cli.py scenario.open discussion + screens
 | keyboard | 机器人键盘、命令补全与输入区 |
 | sponsored | 本地广告样本与顶部条 |
 | pinned | 多条置顶消息，可取消全部置顶的群组 |
+| archived-private | 归档中的普通私聊 |
+| archived-group | 归档中的群聊 |
+
+假会话还会创建“朋友”和“工作”两个分组，分别展示未归档的私聊、群聊和频道。
+可切换分组后从侧边菜单进入归档，点击返回，检查是否保留原分组；两个归档场景仅存在内存中。
 
 这些场景使用正式界面的数据与控件路径，数据存在内存中；按钮仍保留原有业务行为。
 布局检查使用截图、控件树和内部悬停，涉及发送、加入、通话等业务操作时单独安排测试。
