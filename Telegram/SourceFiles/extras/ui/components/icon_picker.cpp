@@ -15,23 +15,11 @@
 
 namespace {
 
-const QVector<QString> icons{
-	ExtrasAssets::DEFAULT_ICON,
-	ExtrasAssets::ALT_ICON,
-	ExtrasAssets::DISCORD_ICON,
-	ExtrasAssets::SPOTIFY_ICON,
-	ExtrasAssets::EXTERA_ICON,
-	ExtrasAssets::NOTHING_ICON,
-	ExtrasAssets::BARD_ICON,
-	ExtrasAssets::YAPLUS_ICON,
-	ExtrasAssets::WIN95_ICON,
-	ExtrasAssets::CHIBI_ICON,
-	ExtrasAssets::CHIBI2_ICON,
-	ExtrasAssets::EXTERA2_ICON,
-};
-
-const auto rows = static_cast<int>(icons.size()) / IconPicker::kColumns
-	+ std::min(1, static_cast<int>(icons.size()) % IconPicker::kColumns);
+// 预设常量定义在其他编译单元，不能在静态初始化阶段读取列表。
+[[nodiscard]] int rowsCount() {
+	const auto count = int(ExtrasAssets::appIcons().size());
+	return (count + IconPicker::kColumns - 1) / IconPicker::kColumns;
+}
 
 void applyIcon() {
 #ifdef Q_OS_WIN
@@ -53,7 +41,7 @@ IconPicker::IconPicker(QWidget *parent)
 		const auto cell = w / kColumns;
 		const auto iconSize = st::iconPickerIconSize;
 		const auto contentSize = iconSize + st::iconPickerImagePadding * 2;
-		const auto h = rows * cell - (cell - contentSize);
+		const auto h = rowsCount() * cell - (cell - contentSize);
 		resize(w, h);
 	}, lifetime());
 }
@@ -94,6 +82,8 @@ void IconPicker::paintEvent(QPaintEvent *e) {
 
 	const auto cell = cellWidth();
 	const auto iconSize = st::iconPickerIconSize;
+	const auto &icons = ExtrasAssets::appIcons();
+	const auto rows = rowsCount();
 
 	for (int row = 0; row < rows; row++) {
 		const auto columns = std::min(kColumns, static_cast<int>(icons.size()) - row * kColumns);
@@ -129,6 +119,8 @@ void IconPicker::mousePressEvent(QMouseEvent *e) {
 	const auto cell = cellWidth();
 	const auto iconSize = st::iconPickerIconSize;
 	const auto pos = e->pos();
+	const auto &icons = ExtrasAssets::appIcons();
+	const auto rows = rowsCount();
 	const auto iconName = [&] {
 		for (int row = 0; row < rows; row++) {
 			const auto columns = std::min(kColumns, static_cast<int>(icons.size()) - row * kColumns);

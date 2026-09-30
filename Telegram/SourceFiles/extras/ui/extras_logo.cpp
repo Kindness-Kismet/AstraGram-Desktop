@@ -12,6 +12,20 @@ static QImage LAST_LOADED_PAD;
 
 namespace ExtrasAssets {
 
+const QVector<QString> &appIcons() {
+	static const auto result = QVector<QString>{
+		DEFAULT_ICON,
+		ALT_ICON,
+		DISCORD_ICON,
+		SPOTIFY_ICON,
+		EXTERA_ICON,
+		NOTHING_ICON,
+		BARD_ICON,
+		YAPLUS_ICON,
+	};
+	return result;
+}
+
 QString appIcoPath() {
 	const auto &settings = ExtrasSettings::getInstance();
 	return cWorkingDir()

@@ -86,42 +86,6 @@
                 <key>CFBundleIconName</key>
                 <string>AppIcon-Yaplus</string>
             </dict>
-            <key>AppIcon-Win95</key>
-            <dict>
-                <key>CFBundleIconFiles</key>
-                <array>
-                    <string>AppIcon-Win95</string>
-                </array>
-                <key>CFBundleIconName</key>
-                <string>AppIcon-Win95</string>
-            </dict>
-            <key>AppIcon-Chibi</key>
-            <dict>
-                <key>CFBundleIconFiles</key>
-                <array>
-                    <string>AppIcon-Chibi</string>
-                </array>
-                <key>CFBundleIconName</key>
-                <string>AppIcon-Chibi</string>
-            </dict>
-            <key>AppIcon-Chibi2</key>
-            <dict>
-                <key>CFBundleIconFiles</key>
-                <array>
-                    <string>AppIcon-Chibi2</string>
-                </array>
-                <key>CFBundleIconName</key>
-                <string>AppIcon-Chibi2</string>
-            </dict>
-            <key>AppIcon-Extera2</key>
-            <dict>
-                <key>CFBundleIconFiles</key>
-                <array>
-                    <string>AppIcon-Extera2</string>
-                </array>
-                <key>CFBundleIconName</key>
-                <string>AppIcon-Extera2</string>
-            </dict>
         </dict>
     </dict>
 	<key>CFBundleIdentifier</key>

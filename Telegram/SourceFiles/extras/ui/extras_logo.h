@@ -12,10 +12,9 @@ ICON(EXTERA, "extera");
 ICON(NOTHING, "nothing");
 ICON(BARD, "bard");
 ICON(YAPLUS, "yaplus");
-ICON(WIN95, "win95");
-ICON(CHIBI, "chibi");
-ICON(CHIBI2, "chibi2");
-ICON(EXTERA2, "extera2");
+
+// 图标选择器提供的全部预设，顺序即界面顺序。
+[[nodiscard]] const QVector<QString> &appIcons();
 
 void loadAppIco();
 QString appIcoPath();
