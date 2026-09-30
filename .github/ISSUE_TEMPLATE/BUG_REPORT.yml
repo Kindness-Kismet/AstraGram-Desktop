@@ -49,7 +49,7 @@ body:
       label: Installation source
       multiple: false
       options:
-        - Binary from GitHub / @AyuGramReleases channel
+        - Binary from AstraGram GitHub Releases
         - flatpak by 0FL01
         - Other (unofficial) source
     validations:
