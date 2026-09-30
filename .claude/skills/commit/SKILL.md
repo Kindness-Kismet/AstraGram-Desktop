@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Use this skill when the user asks to commit changes, write a commit message, amend a commit, or prepare changes for commit, or says phrases like "提交", "commit", "写提交信息", "提交代码" in this AyuGram Desktop project. Do not use for push operations unless the user explicitly mentions pushing.
+description: 为 AstraGram 主仓库及配套构建仓库准备、复核和创建 Git 提交。用户要求提交、编写提交信息或修改提交时使用；助手自行准备执行 git commit（含 --amend）时也必须使用，不依赖用户是否说出“提交”。推送仍需单独遵守已有授权。
 ---
 
 # 本地提交
@@ -10,14 +10,21 @@ description: Use this skill when the user asks to commit changes, write a commit
 1. 用 `git status --short --branch` 和 `git diff` 核对改动与任务范围。
 2. 按功能分组，逐个 `git add <具体路径>`。构建产物、账号数据和本地过程文档保留在工作区。
 3. 新源码先用 `git check-ignore -v <路径>` 确认可被追踪；调试目录有大小写规则。
-4. 用 `git diff --cached` 复核内容与验证结果，再提交。
-5. 记录提交号和完成内容，继续下一步。
+4. 用 `git diff --cached` 复核内容与验证结果。
+5. 提交前逐项复核下方消息规范，全部符合后再执行 `git commit`；`--amend` 同样适用，不能用“已读取技能”代替复核。
+6. 用 `git log -1 --format=%B` 核对实际保存的信息，记录提交号和完成内容。
+
+## 提交信息
+
+**Git 提交标题和正文必须使用英文。** 对用户的回复使用简体中文；回复或注释的语言要求不适用于提交信息，不能据此写中文提交。
 
 标题使用英文 `type: 简短祈使句`，最多 70 字符。类型可用
 `feat`、`fix`、`build`、`docs`、`refactor`、`chore`、`test`。
 正文使用英文，说明改动原因、最终行为、验证结果及相关限制。
 
+## 推送与修正
+
 默认创建本地提交。推送前说明待推送内容、远端与分支，收到明确确认后执行。
-公开分支保留已有历史。
+未推送的提交信息可以修正；已经推送的提交保留公开历史，不为改写消息擅自强推。
 
 遇到归属不明的改动或命令失败，保留现场并说明具体原因；先完成可确认范围内的工作。
