@@ -33,7 +33,7 @@ void AttachControls::paint(QPainter &p, int x, int y) {
 				side);
 			p.drawEllipse(circleRect);
 		} else {
-			const auto radius = std::min(groupWidth, groupHeight) / 2.;
+			const auto radius = st::sendBoxPreviewControlsRadius;
 			p.drawRoundedRect(groupRect, radius, radius);
 		}
 	}
@@ -105,6 +105,11 @@ AttachControlsWidget::AttachControlsWidget(
 , _edit(base::make_unique_q<AbstractButton>(this))
 , _delete(base::make_unique_q<AbstractButton>(this)) {
 	_controls.setType(type);
+	setObjectName(u"attach.preview.actions"_q);
+	_edit->setObjectName(u"attach.preview.more"_q);
+	_delete->setObjectName(u"attach.preview.remove"_q);
+	_edit->setVisible(type != AttachControls::Type::None);
+	_delete->setVisible(type == AttachControls::Type::Full);
 
 	const auto w = _controls.width();
 	const auto h = _controls.height();
@@ -123,7 +128,22 @@ AttachControlsWidget::AttachControlsWidget(
 	) | rpl::on_next([=] {
 		auto p = QPainter(this);
 		_controls.paint(p, 0, 0);
+		const auto over = _edit->isOver() ? _edit->geometry()
+			: _delete->isOver() ? _delete->geometry() : QRect();
+		if (!over.isEmpty()) {
+			auto hq = PainterHighQualityEnabler(p);
+			auto color = st::roundedFg->c;
+			color.setAlpha(24);
+			p.setPen(Qt::NoPen);
+			p.setBrush(color);
+			p.drawRoundedRect(over, st::sendBoxPreviewControlsRadius,
+				st::sendBoxPreviewControlsRadius);
+		}
 	}, lifetime());
+	rpl::merge(_edit->events(), _delete->events()
+	) | rpl::filter([](not_null<QEvent*> event) {
+		return event->type() == QEvent::Enter || event->type() == QEvent::Leave;
+	}) | rpl::on_next([=] { update(); }, lifetime());
 }
 
 rpl::producer<> AttachControlsWidget::editRequests() const {

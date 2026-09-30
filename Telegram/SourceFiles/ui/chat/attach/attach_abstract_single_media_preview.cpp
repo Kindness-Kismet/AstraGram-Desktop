@@ -153,9 +153,8 @@ void AbstractSingleMediaPreview::preparePreview(QImage preview) {
 		_previewHeight = maxthumbh;
 	}
 	_previewLeft = (st::boxWideWidth - _previewWidth) / 2;
-	if (_previewHeight < _minThumbH) {
-		_previewTop = (_minThumbH - _previewHeight) / 2;
-	}
+	_previewAreaHeight = std::max(_previewHeight, _minThumbH);
+	_previewTop = (_previewAreaHeight - _previewHeight) / 2;
 
 	preview = std::move(preview).scaled(
 		_previewWidth * style::DevicePixelRatio(),
@@ -167,7 +166,10 @@ void AbstractSingleMediaPreview::preparePreview(QImage preview) {
 	_preview.setDevicePixelRatio(style::DevicePixelRatio());
 	_previewBlurred = QPixmap();
 
-	resize(width(), std::max(_previewHeight, _minThumbH));
+	const auto controlsHeight = _controls->height()
+		? st::sendBoxPreviewControlsSkip + _controls->height()
+		: 0;
+	resize(width(), _previewAreaHeight + controlsHeight);
 }
 
 bool AbstractSingleMediaPreview::isOverPreview(QPoint position) const {
@@ -180,8 +182,8 @@ bool AbstractSingleMediaPreview::isOverPreview(QPoint position) const {
 
 void AbstractSingleMediaPreview::resizeEvent(QResizeEvent *e) {
 	_controls->moveToRight(
-		st::boxPhotoPadding.right() + st::sendBoxAlbumGroupSkipRight,
-		st::sendBoxAlbumGroupSkipTop,
+		st::boxPhotoPadding.right(),
+		height() - _controls->height(),
 		width());
 }
 
@@ -204,7 +206,7 @@ void AbstractSingleMediaPreview::paintEvent(QPaintEvent *e) {
 			padding.left(),
 			0,
 			width() - padding.left() - padding.right(),
-			height());
+			_previewAreaHeight);
 		const auto radius = st::bubbleRadiusSmall;
 		auto clipPath = QPainterPath();
 		clipPath.addRoundedRect(bgRect, radius, radius);
@@ -231,7 +233,7 @@ void AbstractSingleMediaPreview::paintEvent(QPaintEvent *e) {
 				padding.left(),
 				0,
 				width() - padding.right() - padding.left(),
-				height(),
+				_previewAreaHeight,
 				_st.files.confirmBg);
 		}
 	}

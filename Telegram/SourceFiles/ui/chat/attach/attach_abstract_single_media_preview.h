@@ -82,6 +82,7 @@ private:
 	int _previewTop = 0;
 	int _previewWidth = 0;
 	int _previewHeight = 0;
+	int _previewAreaHeight = 0;
 
 	std::unique_ptr<SpoilerAnimation> _spoiler;
 	bool _modifyAllowed = false;

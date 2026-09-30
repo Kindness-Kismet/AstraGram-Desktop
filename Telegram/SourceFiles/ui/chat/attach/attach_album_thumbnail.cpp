@@ -720,9 +720,11 @@ QRect AlbumThumbnail::paintButtons(
 	const auto &skipTop = st::sendBoxAlbumGroupSkipTop;
 	const auto outerWidth = geometry.width();
 	const auto outerHeight = geometry.height();
-	if (st::sendBoxAlbumGroupSize.width() <= outerWidth) {
+	if (st::sendBoxAlbumGroupSize.width() <= outerWidth
+		&& st::sendBoxAlbumGroupSize.height() <= outerHeight) {
 		_buttons.setVertical(false);
-	} else if (st::sendBoxAlbumGroupSize.height() <= outerHeight) {
+	} else if (st::sendBoxAlbumGroupSizeVertical.width() <= outerWidth
+		&& st::sendBoxAlbumGroupSizeVertical.height() <= outerHeight) {
 		_buttons.setVertical(true);
 	} else {
 		// If the size is tiny, skip the buttons.
