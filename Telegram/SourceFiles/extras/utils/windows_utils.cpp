@@ -161,4 +161,26 @@ void reloadAppIconFromTaskBar() {
 	SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, NULL, NULL);
 }
 
+bool isCapabilityDenied(const QString &capability) {
+	const auto base = u"Software\\Microsoft\\Windows\\CurrentVersion"
+		"\\CapabilityAccessManager\\ConsentStore\\"_q + capability;
+	const auto denied = [](HKEY root, const QString &path) {
+		const auto key = path.toStdWString();
+		wchar_t value[16] = { 0 };
+		auto size = DWORD(sizeof(value));
+		return (RegGetValueW(
+			root,
+			key.c_str(),
+			L"Value",
+			RRF_RT_REG_SZ,
+			nullptr,
+			value,
+			&size) == ERROR_SUCCESS) && !wcscmp(value, L"Deny");
+	};
+	// 依次为设备总开关、当前用户开关、桌面应用开关。
+	return denied(HKEY_LOCAL_MACHINE, base)
+		|| denied(HKEY_CURRENT_USER, base)
+		|| denied(HKEY_CURRENT_USER, base + u"\\NonPackaged"_q);
+}
+
 #endif

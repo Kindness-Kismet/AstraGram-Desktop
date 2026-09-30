@@ -221,6 +221,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/ui/controls/attach_menu.h"
 #include "extras/features/filters/filters_cache_controller.h"
 #include "extras/utils/telegram_helpers.h"
 #include "extras/features/message_shot/message_shot.h"
@@ -696,19 +697,19 @@ void HistoryWidget::setupShortcuts() {
 				}
 				return true;
 			});
-		if (showRecordButton()
+		const auto record = recordMenuOptions();
+		if (_voiceRecordBar->isHidden()
 			&& _canSendMessages
 			&& _joinChannel->isHidden()
 			&& !_composeSearch) {
-			const auto isVoice = request->check(Command::RecordVoice, 1);
+			const auto isVoice = record.voice
+				&& request->check(Command::RecordVoice, 1);
 			const auto isRound = !isVoice
+				&& record.round
 				&& request->check(Command::RecordRound, 1);
 			(isVoice || isRound) && request->handle([=] {
-				if (_voiceRecordBar) {
-					_voiceRecordBar->startRecordingAndLock(isRound);
-					return true;
-				}
-				return false;
+				startRecordFromMenu(isRound);
+				return true;
 			});
 		}
 		const auto channel = _peer ? _peer->asChannel() : nullptr;

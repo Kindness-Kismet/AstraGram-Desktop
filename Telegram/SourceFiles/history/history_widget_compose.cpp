@@ -346,6 +346,7 @@ void HistoryWidget::initVoiceRecordBar() {
 	_voiceRecordBar->recordingStateChanges(
 	) | rpl::on_next([=](bool active) {
 		_field->setDisabled(active);
+		updateSendButtonType();
 		controller()->widget()->setInnerFocus();
 		updateAiButtonVisibility();
 		updateSendAsFileVisibility();

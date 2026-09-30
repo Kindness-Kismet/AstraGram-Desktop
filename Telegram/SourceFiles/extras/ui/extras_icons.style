@@ -18,6 +18,8 @@ extrasWalletBotIcon: icon {{ "extras/wallet_bot", menuIconColor }};
 messageFieldAttachIcon: icon {{ "extras/message_field/attach", menuIconColor }};
 messageFieldEmojiIcon: icon {{ "extras/message_field/emoji", menuIconColor }};
 messageFieldVoiceIcon: icon {{ "extras/message_field/voice", menuIconColor }};
+extrasRecordMessageIcon: icon {{ "extras/record_message", menuIconColor }};
+extrasRecordRoundIcon: icon {{ "extras/record_round", menuIconColor }};
 messageFieldTTLIcon: icon {{ "extras/message_field/ttl", menuIconColor }};
 messageFieldCocoonAiIcon: icon{
 	{ size(24px, 24px), transparent },

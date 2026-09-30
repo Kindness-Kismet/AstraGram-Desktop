@@ -27,6 +27,7 @@ struct InlineBotQuery;
 
 namespace ExtrasUi {
 class FloatingSurfaceHost;
+struct RecordMenuOptions;
 } // namespace ExtrasUi
 
 namespace MTP {
@@ -800,6 +801,8 @@ private:
 	void setupSendAsToggle();
 	void refreshSendAsToggle();
 	void refreshAttachBotsMenu();
+	[[nodiscard]] ExtrasUi::RecordMenuOptions recordMenuOptions() const;
+	void startRecordFromMenu(bool round);
 
 	void injectSponsoredMessages() const;
 

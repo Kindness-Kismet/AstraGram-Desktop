@@ -224,6 +224,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "extras/extras_settings.h"
 #include "extras/ui/components/floating_surface_host.h"
+#include "extras/ui/controls/attach_menu.h"
 #include "extras/features/filters/filters_cache_controller.h"
 #include "extras/utils/telegram_helpers.h"
 #include "extras/features/message_shot/message_shot.h"
@@ -670,7 +671,8 @@ HistoryWidget::HistoryWidget(
 			| Data::PeerUpdate::Flag::StarsPerMessage
 		) | rpl::filter([=](const Data::PeerUpdate &update) {
 			return update.peer == _peer;
-		}) | rpl::to_empty
+		}) | rpl::to_empty,
+		ExtrasUi::recordPermissionChanges()
 	) | rpl::on_next([=] {
 		refreshAttachBotsMenu();
 	}, lifetime());
@@ -720,6 +722,8 @@ HistoryWidget::HistoryWidget(
 		if (_list) {
 			updateSendButtonType();
 		}
+		// 设备检测是异步的，结果到达后按新状态重建录制项。
+		refreshAttachBotsMenu();
 	}, lifetime());
 
 	session().data().newItemAdded(

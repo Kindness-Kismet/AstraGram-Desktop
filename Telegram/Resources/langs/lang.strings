@@ -8926,7 +8926,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_MessageFieldElementAttach" = "Attach";
 "extras_MessageFieldElementTTL" = "TTL";
 "extras_MessageFieldElementEmoji" = "Emoji";
-"extras_MessageFieldElementVoice" = "Voice";
+"extras_RecordMessage" = "Record Message";
+"extras_RecordVoiceMessage" = "Voice Message";
+"extras_RecordVideoMessage" = "Video Message";
 "extras_DrawerElementsHeader" = "Drawer Elements";
 "extras_TrayElementsHeader" = "Tray Elements";
 "extras_MessageBubbleRadius" = "Message Bubble Radius";

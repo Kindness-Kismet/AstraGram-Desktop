@@ -29,6 +29,10 @@ namespace style {
 struct ComposeControls;
 } // namespace style
 
+namespace ExtrasUi {
+struct RecordMenuOptions;
+} // namespace ExtrasUi
+
 namespace SendMenu {
 struct Details;
 } // namespace SendMenu
@@ -373,6 +377,8 @@ private:
 	void updateMessagesTTLShown();
 	bool updateSendAsButton(std::shared_ptr<Data::GroupCall> videoStream);
 	void updateAttachBotsMenu();
+	[[nodiscard]] ExtrasUi::RecordMenuOptions recordMenuOptions() const;
+	void startRecordFromMenu(bool round);
 	void updateHeight();
 	void updateWrappingVisibility();
 	void refreshSendGiftToggle();

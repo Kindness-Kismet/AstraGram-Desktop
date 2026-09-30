@@ -774,18 +774,9 @@ SendMenu::Details HistoryWidget::sendButtonMenuDetails() const {
 }
 
 bool HistoryWidget::showRecordButton() const {
-	const auto &settings = ExtrasSettings::getInstance();
-	if (!settings.showMicrophoneButtonInMessageField()) {
-		return false;
-	}
-
-	return (_recordAvailability != Webrtc::RecordAvailability::None)
-		&& !_voiceRecordBar->isListenState()
-		&& !_voiceRecordBar->isRecordingByAnotherBar()
-		&& !hasSendableContent()
-		&& !_previewDrawPreview
-		&& (_replyTo || !readyToForward())
-		&& !_editMsgId;
+	// 录制从加号菜单发起，发送键只在录制条出现期间显示录制状态。
+	return !_voiceRecordBar->isHidden()
+		&& !_voiceRecordBar->isListenState();
 }
 
 bool HistoryWidget::showInlineBotCancel() const {

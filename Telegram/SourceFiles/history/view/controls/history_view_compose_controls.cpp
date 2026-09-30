@@ -2929,7 +2929,10 @@ void ComposeControls::init() {
 
 	rpl::merge(
 		session().attachWebView().attachBotsUpdates(),
-		ExtrasSettings::getInstance().showAttachPopupChanges() | rpl::to_empty
+		ExtrasSettings::getInstance().showAttachPopupChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showMicrophoneButtonInMessageFieldChanges(
+		) | rpl::to_empty,
+		ExtrasUi::recordPermissionChanges()
 	) | rpl::on_next([=] {
 		updateAttachBotsMenu();
 	}, _wrap->lifetime());
@@ -2978,18 +2981,9 @@ void ComposeControls::orderControls() {
 }
 
 bool ComposeControls::showRecordButton() const {
-	const auto &settings = ExtrasSettings::getInstance();
-	if (!settings.showMicrophoneButtonInMessageField()) {
-		return false;
-	}
-
-	return _features.recordMediaMessage
-		&& (_recordAvailability != Webrtc::RecordAvailability::None)
-		&& !_voiceRecordBar->isListenState()
-		&& !_voiceRecordBar->isRecordingByAnotherBar()
-		&& !hasSendableContent()
-		&& (replyingToMessage().replying() || !readyToForward())
-		&& !isEditingMessage();
+	// 录制从加号菜单发起，发送键只在录制条出现期间显示录制状态。
+	return !_voiceRecordBar->isHidden()
+		&& !_voiceRecordBar->isListenState();
 }
 
 bool ComposeControls::showEditStarsButton() const {
@@ -4023,6 +4017,10 @@ void ComposeControls::initSendButton() {
 	) | rpl::on_next([=](Webrtc::RecordAvailability value) {
 		_recordAvailability = value;
 		updateSendButtonType();
+		// 设备检测是异步的，结果到达后按新状态重建录制项。
+		if (_history) {
+			updateAttachBotsMenu();
+		}
 	}, _send->lifetime());
 
 	session().changes().historyUpdates(
@@ -4379,6 +4377,7 @@ void ComposeControls::initVoiceRecordBar() {
 			changeFocusedControl();
 		}
 		_field->setDisabled(active);
+		updateSendButtonType();
 		updateFieldVisibility();
 		if (!active) {
 			changeFocusedControl();
@@ -4475,16 +4474,17 @@ void ComposeControls::initVoiceRecordBar() {
 		return Ui::AppInFocus();
 	}) | rpl::on_next([=](not_null<Shortcuts::Request*> request) {
 		using Command = Shortcuts::Command;
-		if (Data::CanSendAnything(_history->peer, !_topicRootId)) {
-			const auto isVoice = request->check(Command::RecordVoice, 1);
+		const auto record = recordMenuOptions();
+		if (_voiceRecordBar->isHidden()
+			&& Data::CanSendAnything(_history->peer, !_topicRootId)) {
+			const auto isVoice = record.voice
+				&& request->check(Command::RecordVoice, 1);
 			const auto isRound = !isVoice
+				&& record.round
 				&& request->check(Command::RecordRound, 1);
 			(isVoice || isRound) && request->handle([=] {
-				if (_voiceRecordBar) {
-					_voiceRecordBar->startRecordingAndLock(isRound);
-					return true;
-				}
-				return false;
+				startRecordFromMenu(isRound);
+				return true;
 			});
 		}
 		_field
@@ -5642,14 +5642,36 @@ void ComposeControls::updateAttachBotsMenu() {
 			_attachRequests.fire_copy(false);
 		}, &st::menuIconFile);
 	}
+	const auto record = recordMenuOptions();
+	if (!_attachBotsMenu && (record.voice || record.round)) {
+		_attachBotsMenu = std::make_unique<Ui::DropdownMenu>(
+			_panelsParent,
+			st::dropdownMenuWithIcons);
+	}
 	if (!_attachBotsMenu) {
 		return;
 	}
+	ExtrasUi::addRecordMenu(_attachBotsMenu.get(), record, [=](bool round) {
+		startRecordFromMenu(round);
+	});
 	ExtrasUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get());
 	_attachBotsMenu->heightValue(
 	) | rpl::on_next([=] {
 		updateOuterGeometry(_wrap->geometry());
 	}, _attachBotsMenu->lifetime());
+}
+
+ExtrasUi::RecordMenuOptions ComposeControls::recordMenuOptions() const {
+	return (_history && _features.recordMediaMessage)
+		? ExtrasUi::recordMenuOptions(_history->peer, _recordAvailability)
+		: ExtrasUi::RecordMenuOptions();
+}
+
+void ComposeControls::startRecordFromMenu(bool round) {
+	// 发送键在录制期间按所选类型显示。
+	Core::App().settings().setRecordVideoMessages(round);
+	_voiceRecordBar->startRecordingAndLock(round);
+	updateSendButtonType();
 }
 
 void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {

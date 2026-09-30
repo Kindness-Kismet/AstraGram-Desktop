@@ -461,10 +461,10 @@ void BuildMessageFieldElements(SectionBuilder &builder, ExtrasSectionBuilder &ex
 	});
 	extras.addSettingToggle({
 		.id = u"extras/showMicrophoneButtonInMessageField"_q,
-		.title = tr::extras_MessageFieldElementVoice(),
+		.title = tr::extras_RecordMessage(),
 		.getter = &ExtrasSettings::showMicrophoneButtonInMessageField,
 		.setter = &ExtrasSettings::setShowMicrophoneButtonInMessageField,
-		.icon = { &st::messageFieldVoiceIcon },
+		.icon = { &st::extrasRecordMessageIcon },
 	});
 	extras.addSettingToggle({
 		.id = u"extras/showGiftButtonInMessageField"_q,

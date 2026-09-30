@@ -800,14 +800,36 @@ void HistoryWidget::refreshAttachBotsMenu() {
 		crl::guard(this, [=] {
 			migrateFieldToRichEditor();
 		}));
+	const auto record = recordMenuOptions();
+	if (!_attachBotsMenu && (record.voice || record.round)) {
+		_attachBotsMenu = std::make_unique<Ui::DropdownMenu>(
+			this,
+			st::dropdownMenuWithIcons);
+	}
 	if (!_attachBotsMenu) {
 		return;
 	}
+	ExtrasUi::addRecordMenu(_attachBotsMenu.get(), record, [=](bool round) {
+		startRecordFromMenu(round);
+	});
 	ExtrasUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get());
 	_attachBotsMenu->heightValue(
 	) | rpl::on_next([=] {
 		moveFieldControls();
 	}, _attachBotsMenu->lifetime());
+}
+
+ExtrasUi::RecordMenuOptions HistoryWidget::recordMenuOptions() const {
+	return _peer
+		? ExtrasUi::recordMenuOptions(_peer, _recordAvailability)
+		: ExtrasUi::RecordMenuOptions();
+}
+
+void HistoryWidget::startRecordFromMenu(bool round) {
+	// 发送键在录制期间按所选类型显示。
+	Core::App().settings().setRecordVideoMessages(round);
+	_voiceRecordBar->startRecordingAndLock(round);
+	updateSendButtonType();
 }
 
 void HistoryWidget::unregisterDraftSources() {
