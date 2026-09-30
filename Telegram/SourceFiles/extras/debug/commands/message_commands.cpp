@@ -8,6 +8,8 @@
 #include "api/api_common.h"
 #include "core/application.h"
 #include "core/core_settings.h"
+#include "data/data_document.h"
+#include "data/data_document_media.h"
 #include "data/data_folder.h"
 #include "data/data_msg_id.h"
 #include "data/data_peer.h"
@@ -18,6 +20,8 @@
 #include "data/notify/data_notify_settings.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "history/view/history_view_element.h"
+#include "history/view/media/history_view_media.h"
 #include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
@@ -27,7 +31,9 @@
 
 #include "base/unixtime.h"
 
+#include <QBuffer>
 #include <QFile>
+#include <QImage>
 #include <QtGui/QEnterEvent>
 #include <QtGui/QMouseEvent>
 #include <QtWidgets/QWidget>
@@ -74,18 +80,65 @@ using json = nlohmann::json;
 		MTPlong())); // linked_community_id
 }
 
-// 往假会话的 Saved Messages 塞本地构造的消息，走 addNewMessage 官方路径，
-// DocumentData 与缩略图由官方代码解包，渲染行为与真实消息一致。
-// 消息只存在内存，重启即消失，不触发任何网络请求。
+// 本地图片只放入假会话的内存媒体，不上传文件。
+[[nodiscard]] std::optional<MTPMessageMedia> fakeStickerMedia(
+		not_null<Main::Session*> session,
+		const QString &path,
+		int32 messageId) {
+	const auto image = QImage(path);
+	if (image.isNull() || image.width() > 512 || image.height() > 512) {
+		return std::nullopt;
+	}
+	auto bytes = QByteArray();
+	auto buffer = QBuffer(&bytes);
+	if (!image.save(&buffer, "PNG")) {
+		return std::nullopt;
+	}
+	const auto document = MTP_document(
+		MTP_flags(0),
+		MTP_long(8000000000LL + messageId),
+		MTP_long(0),
+		MTP_bytes(),
+		MTP_int(base::unixtime::now()),
+		MTP_string("image/png"),
+		MTP_long(bytes.size()),
+		MTP_vector<MTPPhotoSize>(),
+		MTPVector<MTPVideoSize>(),
+		MTP_int(0),
+		MTP_vector<MTPDocumentAttribute>({
+			MTP_documentAttributeImageSize(
+				MTP_int(image.width()), MTP_int(image.height())),
+			MTP_documentAttributeSticker(
+				MTP_flags(0), MTP_string(""),
+				MTP_inputStickerSetEmpty(), MTPMaskCoords()),
+		}));
+	const auto data = session->data().processDocument(document);
+	if (!data->sticker()) {
+		return std::nullopt;
+	}
+	auto media = data->createMediaView();
+	media->setBytes(bytes);
+	media->setThumbnail(image);
+	session->data().keepAlive(std::move(media));
+	return MTP_messageMediaDocument(
+		MTP_flags(MTPDmessageMediaDocument::Flag::f_document),
+		document, MTPVector<MTPDocument>(), MTPPhoto(), MTPint(), MTPint());
+}
+
+// 走正式消息渲染路径，假消息仅存在内存，重启后消失。
 [[nodiscard]] Result FakeMessage(const QStringList &args) {
 	auto text = QString();
 	auto fromUserId = int64(0); // 0 = self
 	auto blocked = false;
 	auto shadowBan = false;
 	auto targetPeer = QString();
+	auto stickerPath = QString();
 	for (auto i = 0; i < args.size(); ++i) {
 		const auto &arg = args.at(i);
-		if (arg == u"--peer"_q) {
+		if (arg == u"--sticker"_q) {
+			if (++i >= args.size()) return Result::Err(u"usage: --sticker <imagePath>"_q);
+			stickerPath = args.at(i);
+		} else if (arg == u"--peer"_q) {
 			if (++i >= args.size()) return Result::Err(u"usage: --peer <peerId>"_q);
 			targetPeer = args.at(i);
 		} else if (arg == u"--from"_q) {
@@ -107,13 +160,13 @@ using json = nlohmann::json;
 		} else {
 			return Result::Err(
 				u"usage: message.fake <text> "
-				u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban]"_q);
+				u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] [--sticker <imagePath>]"_q);
 		}
 	}
 	if (text.isEmpty()) {
 		return Result::Err(
 			u"usage: message.fake <text> "
-			u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban]"_q);
+			u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] [--sticker <imagePath>]"_q);
 	}
 
 	const auto session = ActiveSession();
@@ -144,12 +197,21 @@ using json = nlohmann::json;
 	}
 	const auto fromPeer = fromUser->id;
 
-	const auto media = MTPMessageMedia();
+	const auto messageId = NextFakeMsgId();
+	auto media = MTPMessageMedia();
+	if (!stickerPath.isEmpty()) {
+		const auto sticker = fakeStickerMedia(session, stickerPath, messageId);
+		if (!sticker) {
+			return Result::Err(u"expected a valid sticker image up to 512 pixels per side"_q);
+		}
+		media = *sticker;
+	}
 	const auto flags = MTPDmessage::Flag::f_from_id
+		| (stickerPath.isEmpty() ? MTPDmessage::Flag() : MTPDmessage::Flag::f_media)
 		| (fromPeer == selfPeer ? MTPDmessage::Flag::f_out : MTPDmessage::Flag());
 	const auto message = MTP_message(
 		MTP_flags(flags),
-		MTP_int(NextFakeMsgId()),
+		MTP_int(messageId),
 		peerToMTP(fromPeer), // from_id
 		MTPint(), // from_boosts_applied
 		MTPstring(), // from_rank
@@ -472,6 +534,8 @@ using json = nlohmann::json;
 			items.push_back({ { "msgId", id }, { "exists", false } });
 			continue;
 		}
+		const auto view = item->mainView();
+		const auto media = view ? view->media() : nullptr;
 		items.push_back({
 			{ "msgId", id },
 			{ "exists", true },
@@ -480,6 +544,10 @@ using json = nlohmann::json;
 			{ "fromId", item->from()->id.value },
 			{ "hidden", isMessageHidden(item) },
 			{ "hasMainView", item->mainView() != nullptr },
+			{ "mediaSize", media ? json{
+				{ "width", media->width() },
+				{ "height", media->height() },
+			} : json(nullptr) },
 		});
 	}
 	return Result::Ok(Compact(std::move(items)));

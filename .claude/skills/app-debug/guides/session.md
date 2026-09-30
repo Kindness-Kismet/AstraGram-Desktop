@@ -23,7 +23,7 @@
 前置条件：`domain` 已启动、无会话、且恰好只有一个账号。`addActivated` 会新建账号，多账号时
 切换会留下多余的空账号，官方 `testmode` 也是这个前提。
 
-## `message.fake <text> [--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban]`
+## `message.fake <text> [--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] [--sticker <imagePath>]`
 
 往假会话插入一条本地构造的文本消息，走 `addNewMessage` 官方路径，
 渲染行为与真实消息一致。只存在内存，重启即消失，不触发任何网络请求。
@@ -33,6 +33,7 @@
 - `--from` 缺省时发送者是 self（表现为 out 消息，不会被隐藏链过滤）。
 - `--blocked` 走 `hideFromBlocked` 真拉黑路线：需同时开 `filtersEnabled` + `hideFromBlocked`。
 - `--shadow-ban` 走影子拉黑路线：只需 `filtersEnabled`，名单可用 `settings.set` 独立维护。
+- `--sticker` 使用本地图片构造静态贴纸，各边不超过 512 像素；图片保存在内存中，不上传文件。
 
 ## `notification.test [text] [--peer <userId>]`
 
@@ -85,7 +86,7 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 ## `chat.history-stats <msgId>... [--peer <peerId>]`
 
 查询指定消息是否存在、是否为自己发送、是否隐藏及是否有主视图，默认查询收藏夹。
-`--peer` 使用 `chat.list` 或 `scenario.list` 返回的对话编号。
+`--peer` 使用 `chat.list` 或 `scenario.list` 返回的对话编号；`mediaSize` 返回主视图媒体的实际布局宽高，无媒体时为空。
 
 假会话中的群菜单“删除自己所有消息”会显示 5 秒撤销倒计时，到期只删除本地自己的消息。
 可在倒计时前后用本指令核对，其他成员消息保留，不会发送删除请求。
