@@ -7,8 +7,7 @@ body:
       value: |
         Use this template when you are not sure whether the behaviour is a bug.
 
-        For a quick chat, the [AyuGram group](https://t.me/ayugramchat) is
-        usually faster than an issue.
+        Include the details below so we can help with AstraGram here.
   - type: textarea
     attributes:
       label: What are you trying to do?
@@ -40,7 +39,7 @@ body:
       label: Installation source
       multiple: false
       options:
-        - Binary from GitHub / @AyuGramReleases channel
+        - Binary from AstraGram GitHub Releases
         - flatpak by 0FL01
         - Built from source
         - Other (unofficial) source
