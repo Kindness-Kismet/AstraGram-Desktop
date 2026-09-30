@@ -97,7 +97,7 @@ jobs:
           set -euo pipefail
           exec python3 scripts/remote_build.py \
             --label "Windows x64" \
-            --repository Kindness-Net/AyuGramDesktop-Plus-Windows-Build \
+            --repository Kindness-Net/AstraGram-Desktop-Windows-Build \
             --workflow build.yml \
             --ref main \
             --source-sha "$GITHUB_SHA" \
@@ -122,7 +122,7 @@ jobs:
 
           cancel_remote_run(
               GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
-              "Kindness-Net/AyuGramDesktop-Plus-Windows-Build",
+              "Kindness-Net/AstraGram-Desktop-Windows-Build",
               int(os.environ["REMOTE_RUN_ID"]),
           )
           PY
@@ -154,7 +154,7 @@ jobs:
           set -euo pipefail
           exec python3 scripts/remote_build.py \
             --label "Windows ARM64" \
-            --repository Kindness-Net/AyuGramDesktop-Plus-Windows-ARM64-Build \
+            --repository Kindness-Net/AstraGram-Desktop-Windows-ARM64-Build \
             --workflow build.yml \
             --ref main \
             --source-sha "$GITHUB_SHA" \
@@ -184,7 +184,7 @@ jobs:
 
           cancel_remote_run(
               GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
-              "Kindness-Net/AyuGramDesktop-Plus-Windows-ARM64-Build",
+              "Kindness-Net/AstraGram-Desktop-Windows-ARM64-Build",
               int(os.environ["REMOTE_RUN_ID"]),
           )
           PY
@@ -213,7 +213,7 @@ jobs:
           set -euo pipefail
           exec python3 scripts/remote_build.py \
             --label Linux \
-            --repository Kindness-Net/AyuGramDesktop-Plus-Linux-Build \
+            --repository Kindness-Net/AstraGram-Desktop-Linux-Build \
             --workflow build.yml \
             --ref main \
             --source-sha "$GITHUB_SHA" \
@@ -238,7 +238,7 @@ jobs:
 
           cancel_remote_run(
               GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
-              "Kindness-Net/AyuGramDesktop-Plus-Linux-Build",
+              "Kindness-Net/AstraGram-Desktop-Linux-Build",
               int(os.environ["REMOTE_RUN_ID"]),
           )
           PY
@@ -267,7 +267,7 @@ jobs:
           set -euo pipefail
           exec python3 scripts/remote_build.py \
             --label macOS \
-            --repository Kindness-Net/AyuGramDesktop-Plus-macOS-Build \
+            --repository Kindness-Net/AstraGram-Desktop-macOS-Build \
             --workflow build.yml \
             --ref main \
             --source-sha "$GITHUB_SHA" \
@@ -292,7 +292,7 @@ jobs:
 
           cancel_remote_run(
               GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
-              "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
+              "Kindness-Net/AstraGram-Desktop-macOS-Build",
               int(os.environ["REMOTE_RUN_ID"]),
           )
           PY
@@ -314,7 +314,7 @@ jobs:
       - name: Download Windows x64 artifacts.
         uses: actions/download-artifact@v8
         with:
-          repository: Kindness-Net/AyuGramDesktop-Plus-Windows-Build
+          repository: Kindness-Net/AstraGram-Desktop-Windows-Build
           run-id: ${{ needs.windows-x64.outputs.run_id }}
           github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
           pattern: AstraGram-*
@@ -327,7 +327,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
-          repository: Kindness-Net/AyuGramDesktop-Plus-Windows-ARM64-Build
+          repository: Kindness-Net/AstraGram-Desktop-Windows-ARM64-Build
           run-id: ${{ needs.windows-arm64.outputs.run_id }}
           github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
           pattern: AstraGram-*
@@ -337,7 +337,7 @@ jobs:
       - name: Download Linux artifacts.
         uses: actions/download-artifact@v8
         with:
-          repository: Kindness-Net/AyuGramDesktop-Plus-Linux-Build
+          repository: Kindness-Net/AstraGram-Desktop-Linux-Build
           run-id: ${{ needs.linux.outputs.run_id }}
           github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
           pattern: AstraGram-*
@@ -347,7 +347,7 @@ jobs:
       - name: Download macOS artifacts.
         uses: actions/download-artifact@v8
         with:
-          repository: Kindness-Net/AyuGramDesktop-Plus-macOS-Build
+          repository: Kindness-Net/AstraGram-Desktop-macOS-Build
           run-id: ${{ needs.macos.outputs.run_id }}
           github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
           pattern: AstraGram-*
@@ -378,22 +378,22 @@ jobs:
             --argjson macos_attempt "$MACOS_RUN_ATTEMPT" \
             '{
               "windows-x64": {
-                repository: "Kindness-Net/AyuGramDesktop-Plus-Windows-Build",
+                repository: "Kindness-Net/AstraGram-Desktop-Windows-Build",
                 run_id: $windows_run,
                 run_attempt: $windows_attempt
               },
               "linux-x64": {
-                repository: "Kindness-Net/AyuGramDesktop-Plus-Linux-Build",
+                repository: "Kindness-Net/AstraGram-Desktop-Linux-Build",
                 run_id: $linux_run,
                 run_attempt: $linux_attempt
               },
               "macos-x64": {
-                repository: "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
+                repository: "Kindness-Net/AstraGram-Desktop-macOS-Build",
                 run_id: $macos_run,
                 run_attempt: $macos_attempt
               },
               "macos-arm64": {
-                repository: "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
+                repository: "Kindness-Net/AstraGram-Desktop-macOS-Build",
                 run_id: $macos_run,
                 run_attempt: $macos_attempt
               }
@@ -408,7 +408,7 @@ jobs:
               --argjson attempt "$WINDOWS_ARM64_RUN_ATTEMPT" \
               '$current + {
                 "windows-arm64": {
-                  repository: "Kindness-Net/AyuGramDesktop-Plus-Windows-ARM64-Build",
+                  repository: "Kindness-Net/AstraGram-Desktop-Windows-ARM64-Build",
                   run_id: $run,
                   run_attempt: $attempt
                 }
@@ -423,7 +423,7 @@ jobs:
               --argjson attempt "$LINUX_RUN_ATTEMPT" \
               '$current + {
                 "linux-arm64": {
-                  repository: "Kindness-Net/AyuGramDesktop-Plus-Linux-Build",
+                  repository: "Kindness-Net/AstraGram-Desktop-Linux-Build",
                   run_id: $run,
                   run_attempt: $attempt
                 }

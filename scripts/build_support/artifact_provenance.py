@@ -8,48 +8,48 @@ import re
 from pathlib import Path
 
 
-SOURCE_REPOSITORY = "Kindness-Kismet/AyuGramDesktop-Plus"
+SOURCE_REPOSITORY = "Kindness-Kismet/AstraGram-Desktop"
 SCHEMA_VERSION = 1
 TARGETS = {
     "windows-x64": {
-        "repository": "Kindness-Net/AyuGramDesktop-Plus-Windows-Build",
+        "repository": "Kindness-Net/AstraGram-Desktop-Windows-Build",
         "archive_platform": "win",
         "updater_prefixes": ("tx64upd",),
         "required": True,
     },
     "windows-arm64": {
-        "repository": "Kindness-Net/AyuGramDesktop-Plus-Windows-ARM64-Build",
+        "repository": "Kindness-Net/AstraGram-Desktop-Windows-ARM64-Build",
         "archive_platform": "win",
         "updater_prefixes": ("tarm64upd",),
         "required": False,
     },
     "linux-x64": {
-        "repository": "Kindness-Net/AyuGramDesktop-Plus-Linux-Build",
+        "repository": "Kindness-Net/AstraGram-Desktop-Linux-Build",
         "archive_platform": "linux",
         "updater_prefixes": ("tlinuxupd",),
         "required": True,
     },
     "linux-arm64": {
-        "repository": "Kindness-Net/AyuGramDesktop-Plus-Linux-Build",
+        "repository": "Kindness-Net/AstraGram-Desktop-Linux-Build",
         "archive_platform": "linux",
         "updater_prefixes": ("tlinuxarmupd",),
         "required": False,
     },
     "macos-x64": {
-        "repository": "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
+        "repository": "Kindness-Net/AstraGram-Desktop-macOS-Build",
         "archive_platform": "macos",
         "updater_prefixes": ("tmacupd",),
         "required": True,
     },
     "macos-arm64": {
-        "repository": "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
+        "repository": "Kindness-Net/AstraGram-Desktop-macOS-Build",
         "archive_platform": "macos",
         "updater_prefixes": ("tarmacupd",),
         "required": True,
     },
     # 兼容旧版 Universal builder 的来源清单；新 Release 不再声明这个目标。
     "macos-universal": {
-        "repository": "Kindness-Net/AyuGramDesktop-Plus-macOS-Build",
+        "repository": "Kindness-Net/AstraGram-Desktop-macOS-Build",
         "archive_platform": "macos",
         "updater_prefixes": ("tmacupd", "tarmacupd"),
         "required": False,

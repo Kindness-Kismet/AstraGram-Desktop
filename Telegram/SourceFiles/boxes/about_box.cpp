@@ -45,11 +45,11 @@ rpl::producer<TextWithEntities> Text() {
 		lt_gpl_link,
 		rpl::single(Ui::Text::Link(
 			"GNU GPL",
-			"https://github.com/Kindness-Kismet/AyuGramDesktop-Plus/blob/main/LICENSE")),
+			"https://github.com/Kindness-Kismet/AstraGram-Desktop/blob/main/LICENSE")),
 		lt_github_link,
 		rpl::single(Ui::Text::Link(
 			"GitHub",
-			"https://github.com/Kindness-Kismet/AyuGramDesktop-Plus")),
+			"https://github.com/Kindness-Kismet/AstraGram-Desktop")),
 		tr::marked);
 }
 
@@ -95,7 +95,7 @@ void AboutBox(not_null<Ui::GenericBox*> box, Window::SessionController* controll
 		[box]
 		{
 			box->closeBox();
-			File::OpenUrl(u"https://github.com/Kindness-Kismet/AyuGramDesktop-Plus"_q);
+			File::OpenUrl(u"https://github.com/Kindness-Kismet/AstraGram-Desktop"_q);
 		});
 
 	box->setWidth(st::aboutWidth);

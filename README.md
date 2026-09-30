@@ -136,7 +136,7 @@ Desktop's cloud language packs keep working as usual.
 <sub>[↑ Back to Navigation](#navigation)</sub>
 
 Grab the archive for your platform from the
-**[Releases page](https://github.com/Kindness-Kismet/AyuGramDesktop-Plus/releases/latest)**:
+**[Releases page](https://github.com/Kindness-Kismet/AstraGram-Desktop/releases/latest)**:
 
 | Platform | File |
 |---|---|
@@ -176,8 +176,8 @@ stack once, `build.py` configures and builds the app every time after that.
   build intermediates and output.
 
 ```bash
-git clone --recursive https://github.com/Kindness-Kismet/AyuGramDesktop-Plus
-cd AyuGramDesktop-Plus
+git clone --recursive https://github.com/Kindness-Kismet/AstraGram-Desktop
+cd AstraGram-Desktop
 
 # One-time: build the third-party stack (~30 stages, cached under build/tmp)
 python scripts/prebuild.py
@@ -217,8 +217,8 @@ your host distribution does not matter.
 60 GB of free space (the dependency image alone is roughly 20 GB).
 
 ```bash
-git clone --recursive https://github.com/Kindness-Kismet/AyuGramDesktop-Plus
-cd AyuGramDesktop-Plus/Telegram/build/docker/centos_env
+git clone --recursive https://github.com/Kindness-Kismet/AstraGram-Desktop
+cd AstraGram-Desktop/Telegram/build/docker/centos_env
 
 # Generate a Release Dockerfile (empty DEBUG= and LTO= disable those flags)
 poetry install
@@ -255,8 +255,8 @@ the checkout.
 brew install automake libtool meson nasm ninja pkg-config
 sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
-git clone --recursive https://github.com/Kindness-Kismet/AyuGramDesktop-Plus
-cd AyuGramDesktop-Plus
+git clone --recursive https://github.com/Kindness-Kismet/AstraGram-Desktop
+cd AstraGram-Desktop
 
 # One-time: build dependencies (drop 'silent' to see all output)
 ./Telegram/build/prepare/mac.sh silent

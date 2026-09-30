@@ -35,7 +35,7 @@ Telegram Desktop directly.
 Before opening a pull request, bring your branch up to date with this repository's
 `main` branch:
 
-    git remote add plus https://github.com/Kindness-Kismet/AyuGramDesktop-Plus.git
+    git remote add plus https://github.com/Kindness-Kismet/AstraGram-Desktop.git
     git fetch plus main
 
 Check the log to be sure that you actually want the changes, before rebasing:
@@ -103,7 +103,7 @@ Before you submit a pull request, please test your changes. Verify that AstraGra
 [//]: # (LINKS)
 [tdesktop]: https://github.com/telegramdesktop/tdesktop
 [commit_message]: http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
-[pr]: https://github.com/Kindness-Kismet/AyuGramDesktop-Plus/compare
+[pr]: https://github.com/Kindness-Kismet/AstraGram-Desktop/compare
 [build_instructions]: ../README.md#-building-from-source
 [closing-issues-via-commit-messages]: https://help.github.com/articles/closing-issues-via-commit-messages/
 [android_repo]: https://github.com/AyuGram/AyuGram4A

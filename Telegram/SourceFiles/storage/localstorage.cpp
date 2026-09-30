@@ -561,7 +561,7 @@ const QString &readAutoupdatePrefixRaw() {
 			return AutoupdatePrefix(value);
 		}
 	}
-	return AutoupdatePrefix("https://github.com/Kindness-Kismet/AyuGramDesktop-Plus/releases/latest/download");
+	return AutoupdatePrefix("https://github.com/Kindness-Kismet/AstraGram-Desktop/releases/latest/download");
 }
 
 void writeAutoupdatePrefix(const QString &prefix) {
@@ -570,7 +570,7 @@ void writeAutoupdatePrefix(const QString &prefix) {
 	}
 
 	const auto current = readAutoupdatePrefixRaw();
-    const auto fixedPrefix = QString::fromStdString("https://github.com/Kindness-Kismet/AyuGramDesktop-Plus/releases/latest/download");
+    const auto fixedPrefix = QString::fromStdString("https://github.com/Kindness-Kismet/AstraGram-Desktop/releases/latest/download");
 	if (current != fixedPrefix) {
 		AutoupdatePrefix(fixedPrefix);
 		QFile f(autoupdatePrefixFile());
