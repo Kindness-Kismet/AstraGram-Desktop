@@ -31,8 +31,6 @@ settingsPremiumIconNoForwards: icon {{ "menu/share_off-24x24", settingsIconFg }}
 settingsPremiumIconAiCompose: icon{
 	{ size(24px, 24px), transparent },
 	{ "chat/ai_letters-20x20", settingsIconFg, point(2px, 2px) },
-	{ "chat/ai_star1-20x20", settingsIconFg, point(2px, 2px) },
-	{ "chat/ai_star2-20x20", settingsIconFg, point(2px, 2px) },
 };
 settingsPremiumIconRich: icon {{ "settings/premium/rich", settingsIconFg }};
 settingsPremiumUserHeight: 205px;

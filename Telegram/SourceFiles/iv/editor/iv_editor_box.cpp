@@ -1814,9 +1814,7 @@ void WindowHost::Impl::setupWindow(ShowWindowDescriptor &&descriptor) {
 		auto owned = object_ptr<HistoryView::Controls::ComposeAiButton>(
 			_aiPill.data(),
 			st::ivEditorToolbarButton,
-			st::ivEditorBottomAiIcon,
-			st::ivEditorBottomAiStar1,
-			st::ivEditorBottomAiStar2);
+			st::ivEditorBottomAiIcon);
 		const auto button = owned.data();
 		_aiPill->addButton(std::move(owned), st::ivEditorToolbarButton);
 		button->setAccessibleName(tr::lng_ai_compose_title(tr::now));

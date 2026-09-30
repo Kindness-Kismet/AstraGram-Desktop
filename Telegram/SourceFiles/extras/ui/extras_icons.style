@@ -22,8 +22,6 @@ messageFieldTTLIcon: icon {{ "extras/message_field/ttl", menuIconColor }};
 messageFieldCocoonAiIcon: icon{
 	{ size(24px, 24px), transparent },
 	{ "chat/ai_letters-20x20", menuIconColor, point(2px, 2px) },
-	{ "chat/ai_star1-20x20", menuIconColor, point(2px, 2px) },
-	{ "chat/ai_star2-20x20", menuIconColor, point(2px, 2px) },
 };
 
 inChannelBadgeIcon: icon {{ "extras/channel", msgInDateFg }};
