@@ -638,6 +638,12 @@ void ExtrasSettings::setHidePremiumStatuses(bool val) {
 	save();
 }
 
+void ExtrasSettings::setHideProxySettingsIcon(bool val) {
+	if (_hideProxySettingsIcon.current() == val) return;
+	_hideProxySettingsIcon = val;
+	save();
+}
+
 void ExtrasSettings::setShowOnlyAddedEmojisAndStickers(bool val) {
 	if (_showOnlyAddedEmojisAndStickers.current() == val) return;
 	_showOnlyAddedEmojisAndStickers = val;
@@ -1186,6 +1192,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"disableChatBackground", s._disableChatBackground.current()},
 		{"showBubbleOutline", s._showBubbleOutline.current()},
 		{"hidePremiumStatuses", s._hidePremiumStatuses.current()},
+		{"hideProxySettingsIcon", s._hideProxySettingsIcon.current()},
 		{"showOnlyAddedEmojisAndStickers", s._showOnlyAddedEmojisAndStickers.current()},
 		{"collapseSimilarChannels", s._collapseSimilarChannels.current()},
 		{"hideSimilarChannels", s._hideSimilarChannels.current()},
@@ -1300,6 +1307,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._disableChatBackground = j.value("disableChatBackground", defaults._disableChatBackground.current());
 	s._showBubbleOutline = j.value("showBubbleOutline", defaults._showBubbleOutline.current());
 	s._hidePremiumStatuses = j.value("hidePremiumStatuses", defaults._hidePremiumStatuses.current());
+	s._hideProxySettingsIcon = j.value("hideProxySettingsIcon", defaults._hideProxySettingsIcon.current());
 	s._showOnlyAddedEmojisAndStickers = j.value("showOnlyAddedEmojisAndStickers", defaults._showOnlyAddedEmojisAndStickers.current());
 	s._collapseSimilarChannels = j.value("collapseSimilarChannels", defaults._collapseSimilarChannels.current());
 	s._hideSimilarChannels = j.value("hideSimilarChannels", defaults._hideSimilarChannels.current());

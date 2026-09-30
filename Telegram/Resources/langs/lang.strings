@@ -8847,6 +8847,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DisableChatBackground" = "Disable Chat Background";
 "extras_ShowBubbleOutline" = "Show Bubble Outline";
 "extras_HidePremiumStatuses" = "Hide Premium Statuses";
+"extras_HideProxySettingsIcon" = "Hide Proxy Settings Icon";
 "extras_SmoothScroll" = "Smooth Scroll";
 "extras_DisableNotificationsDelay" = "Disable Notify Delay";
 "extras_LocalPremium" = "Local Telegram Premium";

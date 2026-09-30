@@ -205,6 +205,12 @@ void BuildAppearance(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 		.getter = &ExtrasSettings::hidePremiumStatuses,
 		.setter = &ExtrasSettings::setHidePremiumStatuses,
 	});
+	extras.addSettingToggle({
+		.id = u"extras/hideProxySettingsIcon"_q,
+		.title = tr::extras_HideProxySettingsIcon(),
+		.getter = &ExtrasSettings::hideProxySettingsIcon,
+		.setter = &ExtrasSettings::setHideProxySettingsIcon,
+	});
 
 	const auto controller = builder.controller();
 	builder.addButton({

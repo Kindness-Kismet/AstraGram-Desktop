@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_connecting_widget.h"
 
+#include "extras/extras_settings.h"
 #include "ui/widgets/buttons.h"
 #include "ui/effects/radial_animation.h"
 #include "ui/painter.h"
@@ -226,9 +227,10 @@ ConnectionState::ConnectionState(
 , _currentLayout(computeLayout(_state)) {
 	rpl::combine(
 		std::move(shown),
-		visibility()
-	) | rpl::on_next([=](bool shown, float64 visible) {
-		if (!shown || visible == 0.) {
+		visibility(),
+		ExtrasSettings::getInstance().hideProxySettingsIconValue()
+	) | rpl::on_next([=](bool shown, float64 visible, bool hidden) {
+		if (!shown || visible == 0. || hidden) {
 			_widget = nullptr;
 		} else if (!_widget) {
 			createWidget();
@@ -255,6 +257,7 @@ ConnectionState::ConnectionState(
 
 void ConnectionState::createWidget() {
 	_widget = base::make_unique_q<Widget>(_parent, _account, _currentLayout);
+	_widget->setLayout(_currentLayout);
 	_widget->setVisible(!_forceHidden);
 
 	updateWidth();
