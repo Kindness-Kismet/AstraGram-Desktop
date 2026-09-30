@@ -13,11 +13,6 @@
         <category>InstantMessaging</category>
     </categories>
     <developer_name>企业级空气炸锅</developer_name>
-    <screenshots>
-      <screenshot type="default">
-        <image>https://raw.githubusercontent.com/telegramdesktop/tdesktop/dev/docs/assets/preview.png</image>
-      </screenshot>
-    </screenshots>
     <keywords>
         <keyword>tg</keyword>
         <keyword>telegram</keyword>
@@ -27,7 +22,7 @@
         <keyword>chat</keyword>
         <keyword>sms</keyword>
         <keyword>im</keyword>
-        <keyword>ayugram</keyword>
+        <keyword>astragam</keyword>
     </keywords>
     <requires>
         <display_length compare="ge">medium</display_length>
@@ -70,6 +65,6 @@
     </content_rating>
     <launchable type="desktop-id">com.ayugram.desktop.desktop</launchable>
     <provides>
-        <binary>AyuGram</binary>
+        <binary>AstraGram</binary>
     </provides>
 </component>
