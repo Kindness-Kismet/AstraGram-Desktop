@@ -14,7 +14,7 @@ description: Use this skill when the user asks to debug, test, or verify AstraGr
 在项目根目录运行：
 
 ```bash
-python .codex/skills/app-debug/scripts/cli.py app.ensure
+python .codex/skills/app-debug/scripts/cli.py app.start
 python .codex/skills/app-debug/scripts/cli.py settings.get streamerMode + screenshot.take
 ```
 
@@ -63,14 +63,14 @@ OpenGL 区域可能缺失。消息气泡等自绘内容主要通过图片观察�
 登录页点击“进入假会话”或执行 `session.fake`，会自动创建固定会话与消息，并显示开发者功能。
 每次新建假会话都会初始化，无需额外导入场景或环境变量。
 
-自动测试使用独立配置：先 `app.stop`，再 `app.ensure --profile scenarios + session.fake`。
+自动测试使用独立配置：先 `app.stop`，再 `app.start --profile scenarios + session.fake`。
 数据保存在 `build/debug-profiles/scenarios/`，CLI 会记住配置，后续调用无需重复指定。
 独立配置自动使用应用的测试标记，跳过链接协议注册、固定快捷方式迁移和原生通知快捷方式初始化。
 不要在独立配置中放置官方测试运行器的 `testing` 标记，避免额外场景自动运行。
 配置名限 1 至 48 个小写字母、数字、下划线或连字符，首位为字母或数字；`default` 表示原默认目录。
 
 CLI 会核对已有进程的可执行文件路径和工作目录。恢复原调试配置时先退出应用，
-再 `app.ensure --profile default`。验证其它工作树时用 `AYUGRAM_DEBUG_ROOT` 指定根目录。
+再 `app.start --profile default`。验证其它工作树时用 `AYUGRAM_DEBUG_ROOT` 指定根目录。
 
 停止应用统一使用 `app.stop`：先请求正常退出，必要时仅结束经路径校验的本仓库调试进程。
 端口被其它应用占用时保留现场并报告路径、进程编号和错误。正式安装版有独立数据与进程。
@@ -79,7 +79,7 @@ CLI 会核对已有进程的可执行文件路径和工作目录。恢复原调�
 
 C++ 修改后先 `app.stop`，再运行 `python scripts/build.py --dev --jobs 16`。
 产物位于 `build/AstraGram-v<版本>-win-x64-dev/`，包括程序和符号文件。
-构建成功后 `app.ensure` 启动已有产物，最多等待 60 秒；单条服务端指令超时为 180 秒。
+构建成功后 `app.start` 启动已有产物，最多等待 60 秒；单条服务端指令超时为 180 秒。
 
 假会话身份与场景消息在重启后消失，重新进入假会话即恢复场景；设置、草稿与留档仍写入调试配置。
 崩溃时先查看当前工作目录的 `crash.log`，结合调用栈定位文件与行号。

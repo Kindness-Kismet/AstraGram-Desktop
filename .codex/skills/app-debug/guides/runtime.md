@@ -40,12 +40,12 @@ python .claude/skills/app-debug/scripts/cli.py window.maximize true + screenshot
 
 | 指令 | 参数 | 作用 |
 |---|---|---|
-| `app.ensure` | 空 | 检查 Debug 应用是否运行，未运行时启动并等待端口就绪（最多 60 秒）。 |
-| `app.restart` | 空 | 先停止再启动，等到端口就绪。改完 C++ 重新编译后用它启动新构建。 |
+| `app.start` | 空 | 检查 Debug 应用是否运行，未运行时启动并等待端口就绪（最多 60 秒）；已在运行则保持不动。 |
+| `app.restart` | 空 | 无论是否在运行都先停止再启动，等到端口就绪；改完 C++ 重新编译后用它启动新构建。 |
 | `app.stop` | 空 | 校验端口 PID 的可执行文件路径必须匹配本仓库 `build/AstraGram-v*-win-x64-dev/AstraGram.exe`，再让应用自行退出；失败才回落到强制结束。端口未建立时只枚举路径匹配同一形态的进程。 |
 
 ```bash
-python .claude/skills/app-debug/scripts/cli.py app.ensure
+python .claude/skills/app-debug/scripts/cli.py app.start
 # 应用已就绪。
 ```
 
@@ -70,10 +70,10 @@ cat build/AstraGram-v*-win-x64-dev/crash.log                   # 读调用栈定
 
 ```bash
 python .codex/skills/app-debug/scripts/cli.py app.stop
-python .codex/skills/app-debug/scripts/cli.py app.ensure --profile scenarios
+python .codex/skills/app-debug/scripts/cli.py app.start --profile scenarios
 python .codex/skills/app-debug/scripts/cli.py session.fake
 ```
 
 配置名允许 1 至 48 个小写字母、数字、下划线或连字符，首位为字母或数字。
 端口已有进程时，CLI 核对可执行路径和工作目录；目录不符会报告并停止执行。
-恢复原配置：先 `app.stop`，再 `app.ensure --profile default`。
+恢复原配置：先 `app.stop`，再 `app.start --profile default`。

@@ -293,7 +293,7 @@ Debug 构建会在 `ExtrasInfra::init()` 里启动 `QTcpServer`，监听 `127.0.
 | `control.click <objectName \| #序号>` | 进程内合成点击，按真实事件路径投递 |
 | `filter.*` / `storage.*` / `text.process` / `action.*` / `control.get\|set` 等 | 过滤、留档、文本处理、官方快捷动作与控件值，完整清单见技能指南 |
 
-命令行工具封装（另含本地实现的 `app.ensure` / `app.restart` / `app.stop`）：
+命令行工具封装（另含本地实现的 `app.start` / `app.restart` / `app.stop`）：
 
 ```bash
 python .claude/skills/app-debug/scripts/cli.py app.info
@@ -301,7 +301,7 @@ python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true
 ```
 
 - 绕过登录：登录页的“进入假会话”按钮（仅 `_DEBUG` 构建可见），每次进入自动生成固定场景
-- 自动测试用独立配置：`app.ensure --profile <名称>`，数据在 `build/debug-profiles/`，跳过链接协议注册等系统集成
+- 自动测试用独立配置：`app.start --profile <名称>`，数据在 `build/debug-profiles/`，跳过链接协议注册等系统集成
 - 服务端代码全部在 `#ifdef _DEBUG` 内，Release 二进制里不存在
 - 指令在主线程同步执行，耗时指令会导致界面暂时无响应
 - `app.stop` 按可执行文件绝对路径校验进程，不按进程名结束进程，避免误杀正式安装版

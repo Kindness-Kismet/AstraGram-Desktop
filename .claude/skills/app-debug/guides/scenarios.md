@@ -3,7 +3,7 @@
 进入假会话时自动生成固定列表。自动测试可先选择一次独立配置：
 
 ```bash
-python .codex/skills/app-debug/scripts/cli.py app.ensure --profile scenarios + session.fake
+python .codex/skills/app-debug/scripts/cli.py app.start --profile scenarios + session.fake
 python .codex/skills/app-debug/scripts/cli.py scenario.open discussion + screenshot.take
 ```
 
