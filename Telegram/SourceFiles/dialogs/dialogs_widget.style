@@ -17,6 +17,11 @@ dialogsLock: IconButton {
 
 	ripple: emptyRippleAnimation;
 }
+dialogsDownloadsButton: IconButton(dialogsCalendar) {
+	icon: icon {{ "menu/download", dialogsMenuIconFg }};
+	iconOver: icon {{ "menu/download", dialogsMenuIconFgOver }};
+	iconPosition: point(-1px, -1px);
+}
 dialogsUnlockIcon: icon {{ "dialogs/dialogs_lock_on", dialogsMenuIconFg }};
 dialogsUnlockIconOver: icon {{ "dialogs/dialogs_lock_on", dialogsMenuIconFgOver }};
 dialogsSearchForNarrowFilters: IconButton(dialogsMenuToggle) {
