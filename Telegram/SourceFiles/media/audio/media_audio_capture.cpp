@@ -480,6 +480,10 @@ void Instance::Inner::pause(bool value, Fn<void(Result&&)> callback) {
 
 void Instance::Inner::stop(Fn<void(Result&&)> callback) {
 	if (!_timer.isActive()) {
+		// 启动失败或已停止时也要回调，调用方靠它复位录音状态。
+		if (callback) {
+			callback({});
+		}
 		return; // in stop() already
 	}
 	_paused = false;
