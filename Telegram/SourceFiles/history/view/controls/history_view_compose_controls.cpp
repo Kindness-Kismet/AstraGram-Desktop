@@ -431,7 +431,10 @@ void FieldHeader::init() {
 		if (_suggestOptions) {
 			_suggestOptions->paintIcon(p, 0, 0, width());
 		} else if (_preview.parsed) {
-			st::historyLinkIcon.paint(p, position, width());
+			st::historyLinkIcon.paint(
+				p,
+				st::historyLinkIconPosition,
+				width());
 		} else if (isEditingMessage()) {
 			st::historyEditIcon.paint(p, position, width());
 		} else if (const auto reply = displayedReplyingToMessage(); reply.replying()) {

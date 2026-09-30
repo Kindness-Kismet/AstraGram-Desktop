@@ -290,7 +290,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 	if (_previewDrawPreview) {
 		st::historyLinkIcon.paint(
 			p,
-			st::historyReplyIconPosition + QPoint(0, backy),
+			st::historyLinkIconPosition + QPoint(0, backy),
 			fullWidth);
 		const auto textTop = backy + st::msgReplyPadding.top();
 		auto previewLeft = st::historyReplySkip;

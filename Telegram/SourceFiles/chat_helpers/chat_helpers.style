@@ -1128,6 +1128,7 @@ historyReplySkip: 53px;
 historyReplyNameFg: windowActiveTextFg;
 historyReplyHeight: 49px;
 historyReplyIconPosition: point(7px, 7px);
+historyLinkIconPosition: point(13px, 13px);
 historyReplyIcon: icon {{ "chat/input_reply_settings", historyReplyIconFg }};
 historyLinkIcon: icon {{ "chat/input_link_settings", historyReplyIconFg }};
 historyQuoteIcon: icon {{ "chat/input_reply_quote", historyReplyIconFg }};
