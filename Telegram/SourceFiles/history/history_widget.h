@@ -724,6 +724,7 @@ private:
 	[[nodiscard]] int visibleScrollBottom() const;
 	[[nodiscard]] int physicalScrollTop(int visibleTop) const;
 	[[nodiscard]] QRect visibleScrollGeometry() const;
+	[[nodiscard]] QRect autocompleteBoundingRect() const;
 	void setupFrostedBackground();
 	void updateComposeSurface();
 	void updateComposeSurfaceVisibility();

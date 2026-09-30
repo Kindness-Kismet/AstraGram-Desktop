@@ -1738,9 +1738,14 @@ void ComposeControls::resizeToWidth(int width) {
 }
 
 void ComposeControls::setAutocompleteBoundingRect(QRect rect) {
-	if (_autocomplete) {
-		_autocomplete->setBoundings(rect);
+	if (!_autocomplete) {
+		return;
 	}
+	if (ComposeOuterMargin(_st)) {
+		rect.setX(_wrap->x());
+		rect.setWidth(_wrap->width());
+	}
+	_autocomplete->setBoundings(rect);
 }
 
 rpl::producer<int> ComposeControls::height() const {

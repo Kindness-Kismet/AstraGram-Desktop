@@ -803,6 +803,12 @@ QRect HistoryWidget::visibleScrollGeometry() const {
 		0, std::min(topBarsOverlap(), available), 0, _composeOverlap });
 }
 
+QRect HistoryWidget::autocompleteBoundingRect() const {
+	const auto visible = visibleScrollGeometry();
+	const auto margin = st::historyComposeCapsuleMargin;
+	return { margin, visible.y(), width() - 2 * margin, visible.height() };
+}
+
 void HistoryWidget::visibleAreaUpdated() {
 	if (_list && !_firstLoadRequest && !_scroll->isHidden()) {
 		_list->visibleAreaUpdated(
@@ -1093,7 +1099,7 @@ void HistoryWidget::updateControlsGeometry() {
 	if (_scroll->y() != scrollAreaTop || _scroll->x() != tabsLeftSkip) {
 		_scroll->moveToLeft(tabsLeftSkip, scrollAreaTop);
 		if (_autocomplete) {
-			_autocomplete->setBoundings(visibleScrollGeometry());
+			_autocomplete->setBoundings(autocompleteBoundingRect());
 		}
 		if (_supportAutocomplete) {
 			_supportAutocomplete->setBoundings(visibleScrollGeometry());
@@ -1442,7 +1448,7 @@ void HistoryWidget::updateHistoryGeometry(
 	}
 	if (needResize || overlapChanged || topOverlapChanged || initial) {
 		if (_autocomplete) {
-			_autocomplete->setBoundings(visibleScrollGeometry());
+			_autocomplete->setBoundings(autocompleteBoundingRect());
 		}
 		if (_supportAutocomplete) {
 			_supportAutocomplete->setBoundings(visibleScrollGeometry());
