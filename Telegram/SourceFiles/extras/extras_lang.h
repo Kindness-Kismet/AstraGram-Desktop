@@ -2,7 +2,7 @@
 
 #include <QJsonDocument>
 
-// AyuGram 自有文案的语言覆盖，全部从 qrc 内置资源加载，不走网络。
+// AstraGram 自有文案的语言覆盖，全部从 qrc 内置资源加载，不走网络。
 class ExtrasLanguage {
 public:
 	static void init();

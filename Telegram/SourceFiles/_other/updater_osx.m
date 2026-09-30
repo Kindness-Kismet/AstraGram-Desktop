@@ -163,9 +163,9 @@ int main(int argc, const char * argv[]) {
 
 		writeLog([@"Starting update files iteration, path: " stringByAppendingString: srcEnum]);
 
-		// Take the Updater (this currently running binary) from the place where it was placed by AyuGram
+		// Take the Updater (this currently running binary) from the place where it was placed by AstraGram
 		// and copy it to the folder with the new version of the app (ready),
-		// so it won't be deleted when we will clear the "AyuGram.app/Contents" folder.
+		// so it won't be deleted when we will clear the "AstraGram.app/Contents" folder.
 		NSString *oldVersionUpdaterPath = [appDirFull stringByAppendingString: @"/Contents/Frameworks/Updater" ];
 		NSString *newVersionUpdaterPath = [srcEnum stringByAppendingString:[[NSArray arrayWithObjects:@"/", appName, @"/Contents/Frameworks/Updater", nil] componentsJoinedByString:@""]];
 		writeLog([[NSArray arrayWithObjects: @"Copying Updater from old path ", oldVersionUpdaterPath, @" to new path ", newVersionUpdaterPath, nil] componentsJoinedByString:@""]);

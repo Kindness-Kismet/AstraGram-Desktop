@@ -79,7 +79,7 @@ class GitHubApi:
                 "Accept": "application/vnd.github+json",
                 "Authorization": f"Bearer {self._token}",
                 "Content-Type": "application/json",
-                "User-Agent": "AyuGram-remote-build",
+                "User-Agent": "AstraGram-remote-build",
                 "X-GitHub-Api-Version": _API_VERSION,
             },
         )

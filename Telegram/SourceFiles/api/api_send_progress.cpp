@@ -121,7 +121,7 @@ void SendProgressManager::send(const Key &key, int progress) {
 	const auto &ghost = ExtrasSettings::ghost(_session);
 	if (!ghost.sendUploadProgress())
 	{
-		DEBUG_LOG(("[AyuGram] Don't send upload progress"));
+		DEBUG_LOG(("[AstraGram] Don't send upload progress"));
 		return;
 	}
 

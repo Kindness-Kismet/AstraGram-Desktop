@@ -137,7 +137,7 @@ def fetch_workflow_run(
     )
     headers = {
         "Accept": "application/vnd.github+json",
-        "User-Agent": "AyuGram-build-provenance",
+        "User-Agent": "AstraGram-build-provenance",
         "X-GitHub-Api-Version": "2022-11-28",
     }
     token = os.environ.get("GH_TOKEN")

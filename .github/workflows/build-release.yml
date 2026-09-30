@@ -499,7 +499,7 @@ jobs:
         with:
           tag_name: ${{ needs.validate.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: AyuGram Desktop Plus ${{ needs.validate.outputs.version }}
+          name: AstraGram ${{ needs.validate.outputs.version }}
           body_path: ${{ runner.temp }}/release-notes.md
           files: release-artifacts/*
           draft: false

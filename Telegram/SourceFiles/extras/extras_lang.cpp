@@ -57,7 +57,7 @@ bool ExtrasLanguage::loadBundledLanguage() {
 			LOG(("Incorrect bundled language JSON: %1").arg(mapped));
 			continue;
 		}
-		LOG(("Loading bundled AyuGram language: %1").arg(mapped));
+		LOG(("Loading bundled AstraGram language: %1").arg(mapped));
 		applyLanguageJson(doc);
 		return true;
 	}
