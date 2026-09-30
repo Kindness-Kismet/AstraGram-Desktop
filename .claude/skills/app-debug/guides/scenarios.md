@@ -34,8 +34,9 @@ python .codex/skills/app-debug/scripts/cli.py scenario.open discussion + screens
 | archived-group | 归档中的群聊 |
 
 假会话还会创建“朋友”和“工作”两个分组，分别展示未归档的私聊、群聊和频道。
-可切换分组后从侧边菜单进入归档，点击返回，检查是否保留原分组；两个归档场景仅存在内存中。
-先开启 `hideAllChatsFolder` 再进入假会话，分组列表与真实账号一样不含全部对话；此时归档入口需开启 `showArchiveInDrawer`。
+切换分组后用 `chat.open-archive` 进入归档，它与菜单入口同样调用 `openFolder()`；两个归档场景仅存在内存中。
+返回必须点击界面上可见的“Go back”，不同布局由不同按钮关闭归档，直接调用 `closeFolder()` 会绕过这些点击处理。
+先开启 `hideAllChatsFolder` 再进入假会话，分组列表与真实账号一样不含全部对话。
 
 这些场景使用正式界面的数据与控件路径，数据存在内存中；按钮仍保留原有业务行为。
 布局检查使用截图、控件树和内部悬停，涉及发送、加入、通话等业务操作时单独安排测试。
