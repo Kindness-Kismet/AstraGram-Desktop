@@ -545,8 +545,6 @@ void ExtrasSettings::validate() {
 		defaults._messageBubbleRadius);
 	validateRange(_wideMultiplier, 0.5, 4.0, defaults._wideMultiplier);
 	validateRange(_messageStickerScale, 0.5, 1.6, defaults._messageStickerScale);
-	validateRange(_stickerPanelScale, 1.0, 4.0, defaults._stickerPanelScale);
-	validateRange(_recentStickersCount, 1, 200, defaults._recentStickersCount);
 	validateRange(_avatarCorners, 0, ExtrasUiSettings::kMaxAvatarCorners, defaults._avatarCorners);
 
 	const auto embeddedType = _messageShotSettings._embeddedThemeType.current();
@@ -679,12 +677,6 @@ void ExtrasSettings::setMessageStickerScale(double val) {
 	save();
 }
 
-void ExtrasSettings::setStickerPanelScale(double val) {
-	if (_stickerPanelScale.current() == val) return;
-	_stickerPanelScale = val;
-	save();
-}
-
 void ExtrasSettings::setSpoofWebviewAsAndroid(bool val) {
 	if (_spoofWebviewAsAndroid.current() == val) return;
 	_spoofWebviewAsAndroid = val;
@@ -809,12 +801,6 @@ void ExtrasSettings::setEditedMark(const QString &val) {
 void ExtrasSettings::setUnlimitedRecentStickers(bool val) {
 	if (_unlimitedRecentStickers.current() == val) return;
 	_unlimitedRecentStickers = val;
-	save();
-}
-
-void ExtrasSettings::setRecentStickersCount(int val) {
-	if (_recentStickersCount.current() == val) return;
-	_recentStickersCount = val;
 	save();
 }
 
@@ -1207,7 +1193,6 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"disableOpenLinkWarning", s._disableOpenLinkWarning.current()},
 		{"wideMultiplier", s._wideMultiplier.current()},
 		{"messageStickerScale", s._messageStickerScale.current()},
-		{"stickerPanelScale", s._stickerPanelScale.current()},
 		{"spoofWebviewAsAndroid", s._spoofWebviewAsAndroid.current()},
 		{"increaseWebviewHeight", s._increaseWebviewHeight.current()},
 		{"increaseWebviewWidth", s._increaseWebviewWidth.current()},
@@ -1227,7 +1212,6 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"deletedMark", s._deletedMark.current()},
 		{"editedMark", s._editedMark.current()},
 		{"unlimitedRecentStickers", s._unlimitedRecentStickers.current()},
-		{"recentStickersCount", s._recentStickersCount.current()},
 		{"showReactionsPanelInContextMenu", s._showReactionsPanelInContextMenu.current()},
 		{"showViewsPanelInContextMenu", s._showViewsPanelInContextMenu.current()},
 		{"showHideMessageInContextMenu", s._showHideMessageInContextMenu.current()},
@@ -1323,7 +1307,6 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._disableOpenLinkWarning = j.value("disableOpenLinkWarning", defaults._disableOpenLinkWarning.current());
 	s._wideMultiplier = j.value("wideMultiplier", defaults._wideMultiplier.current());
 	s._messageStickerScale = j.value("messageStickerScale", defaults._messageStickerScale.current());
-	s._stickerPanelScale = j.value("stickerPanelScale", defaults._stickerPanelScale.current());
 	s._spoofWebviewAsAndroid = j.value("spoofWebviewAsAndroid", defaults._spoofWebviewAsAndroid.current());
 	s._increaseWebviewHeight = j.value("increaseWebviewHeight", defaults._increaseWebviewHeight.current());
 	s._increaseWebviewWidth = j.value("increaseWebviewWidth", defaults._increaseWebviewWidth.current());
@@ -1349,7 +1332,6 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._deletedMark = j.value("deletedMark", defaults._deletedMark.current());
 	s._editedMark = j.value("editedMark", defaults._editedMark.current());
 	s._unlimitedRecentStickers = j.value("unlimitedRecentStickers", defaults._unlimitedRecentStickers.current());
-	s._recentStickersCount = j.value("recentStickersCount", defaults._recentStickersCount.current());
 	s._showReactionsPanelInContextMenu = j.value("showReactionsPanelInContextMenu", defaults._showReactionsPanelInContextMenu.current());
 	s._showViewsPanelInContextMenu = j.value("showViewsPanelInContextMenu", defaults._showViewsPanelInContextMenu.current());
 	s._showHideMessageInContextMenu = j.value("showHideMessageInContextMenu", defaults._showHideMessageInContextMenu.current());

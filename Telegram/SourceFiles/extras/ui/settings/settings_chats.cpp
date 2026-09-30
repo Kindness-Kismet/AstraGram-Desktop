@@ -89,25 +89,10 @@ void BuildRecentStickersLimit(SectionBuilder &builder, ExtrasSectionBuilder &ext
 
 	constexpr auto kMessageStickerMinScale = 0.5;
 	constexpr auto kMessageStickerScaleStep = 0.1;
-	constexpr auto kPanelMinScale = 1.0;
-	constexpr auto kPanelScaleStep = 0.1;
 
 	const auto scaleToIndex = [](double value, double min, double step) {
 		return static_cast<int>(std::round((value - min) / step));
 	};
-
-	extras.addSlider({
-		.id = u"extras/recentStickersCount"_q,
-		.title = tr::extras_SettingsRecentStickersCount(),
-		.steps = 200 + 1,
-		.current = settings->recentStickersCount(),
-		.indexToValue = [](int index) { return index; },
-		.onChanged = nullptr,
-		.onFinalChanged = [](int amount) {
-			ExtrasSettings::getInstance().setRecentStickersCount(amount);
-		},
-		.formatLabel = [](int amount) { return QString::number(amount); },
-	});
 
 	extras.addSlider({
 		.id = u"extras/messageStickerScale"_q,
@@ -131,32 +116,6 @@ void BuildRecentStickersLimit(SectionBuilder &builder, ExtrasSectionBuilder &ext
 				kMessageStickerMinScale + index * kMessageStickerScaleStep,
 				'f',
 				1) + 'x';
-		},
-	});
-
-	extras.addSlider({
-		.id = u"extras/stickerPanelScale"_q,
-		.title = tr::extras_StickerPanelScale(),
-		.steps = 31,
-		.current = scaleToIndex(
-			settings->stickerPanelScale(),
-			kPanelMinScale,
-			kPanelScaleStep),
-		.indexToValue = [](int index) { return index; },
-		.onChanged = [=](int index) {
-			ExtrasSettings::getInstance().setStickerPanelScale(
-				kPanelMinScale + index * kPanelScaleStep);
-		},
-		.onFinalChanged = [=](int index) {
-			ExtrasSettings::getInstance().setStickerPanelScale(
-				kPanelMinScale + index * kPanelScaleStep);
-		},
-		.formatLabel = [=](int index) {
-			return QString::number(
-				kPanelMinScale + index * kPanelScaleStep,
-				'f',
-				1)
-				+ 'x';
 		},
 	});
 

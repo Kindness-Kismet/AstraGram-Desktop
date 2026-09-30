@@ -114,7 +114,7 @@ def verify(profile):
 
         for key, value in [
             ("saveDeletedMessages", "1"), ("core.notifyView", "4294967296"),
-            ("recentStickersCount", "2147483648"),
+            ("avatarCorners", "2147483648"),
             ("shadowBanIds", "[9223372036854775808]"),
             ("messageShotSettings.embeddedThemeAccentColor", "4294967296"),
             ("windowMaterial", "4294967296"), ("core.songVolume", "-1"),

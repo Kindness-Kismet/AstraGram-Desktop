@@ -8901,7 +8901,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SettingsShowMessageShot" = "Show Message Shot";
 "extras_SettingsShowMessageShotDescription" = "Allows taking a screenshot of the selected messages.";
 "extras_SettingsUnlimitedRecentStickers" = "Unlimited Recent Stickers";
-"extras_SettingsRecentStickersCount" = "Recent Stickers Count";
 "extras_SettingsCustomizationHint" = "You must restart the application after making changes in the \"Customization\" section.";
 "extras_WindowMaterial" = "Window Background";
 "extras_AutoCheckUpdates" = "Check for updates automatically";
@@ -8934,7 +8933,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SettingsWideMultiplier" = "Wide Messages Multiplier";
 "extras_SettingsWideMultiplierDescription" = "You can change message width for better display on wide monitors.";
 "extras_StickerSizeScale" = "Sticker size scale";
-"extras_StickerPanelScale" = "Sticker panel scale";
 "extras_PinnedBarHidden" = "Pinned messages hidden. Click to re-show.";
 "extras_ShowPinnedMessages" = "Show pinned messages";
 "extras_SettingsSpoofWebviewAsAndroid" = "Spoof Client as Android";

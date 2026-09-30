@@ -326,16 +326,6 @@ StickersListWidget::StickersListWidget(
 			refreshStickers();
 		}, lifetime());
 	}
-
-	if (_mode == Mode::Full) {
-		ExtrasSettings::getInstance().stickerPanelScaleChanges(
-		) | rpl::on_next([=] {
-			clearSavedStickerFrames();
-			resizeToWidth(width());
-			updateItems();
-			update();
-		}, lifetime());
-	}
 }
 
 rpl::producer<FileChosen> StickersListWidget::chosen() const {
@@ -600,13 +590,7 @@ int StickersListWidget::countDesiredHeight(int newWidth) {
 	}
 	auto availableWidth = newWidth
 		- (st::stickerPanPadding - st().margin.left());
-	auto targetSize = minSize;
-	if (_mode == Mode::Full) {
-		targetSize = qMax(
-			minSize,
-			qRound(minSize * ExtrasSettings::getInstance().stickerPanelScale()));
-	}
-	auto columnCount = qMax(1, availableWidth / targetSize);
+	auto columnCount = availableWidth / minSize;
 	auto singleWidth = availableWidth / columnCount;
 	auto fullWidth = (st().margin.left() + newWidth + st::emojiScroll.width);
 	auto rowsRight = (fullWidth - columnCount * singleWidth) / 2;
@@ -1979,20 +1963,6 @@ void StickersListWidget::clearHeavyIn(Set &set, bool clearSavedFrames) {
 		sticker.lottie = nullptr;
 		sticker.documentMedia = nullptr;
 	}
-}
-
-void StickersListWidget::clearSavedStickerFrames() {
-	const auto clear = [](std::vector<Set> &sets) {
-		for (auto &set : sets) {
-			for (auto &sticker : set.stickers) {
-				sticker.savedFrame = QImage();
-				sticker.savedFrameFor = QSize();
-			}
-		}
-	};
-	clear(_mySets);
-	clear(_officialSets);
-	clear(_searchSets);
 }
 
 void StickersListWidget::pauseInvisibleLottieIn(const SectionInfo &info) {

@@ -99,7 +99,6 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"disableOpenLinkWarning"_q, [&] { return settings.disableOpenLinkWarning(); }, settings, &ExtrasSettings::setDisableOpenLinkWarning);
 	addSetting(entries, u"wideMultiplier"_q, [&] { return settings.wideMultiplier(); }, settings, &ExtrasSettings::setWideMultiplier);
 	addSetting(entries, u"messageStickerScale"_q, [&] { return settings.messageStickerScale(); }, settings, &ExtrasSettings::setMessageStickerScale);
-	addSetting(entries, u"stickerPanelScale"_q, [&] { return settings.stickerPanelScale(); }, settings, &ExtrasSettings::setStickerPanelScale);
 	addSetting(entries, u"spoofWebviewAsAndroid"_q, [&] { return settings.spoofWebviewAsAndroid(); }, settings, &ExtrasSettings::setSpoofWebviewAsAndroid);
 	addSetting(entries, u"increaseWebviewHeight"_q, [&] { return settings.increaseWebviewHeight(); }, settings, &ExtrasSettings::setIncreaseWebviewHeight);
 	addSetting(entries, u"increaseWebviewWidth"_q, [&] { return settings.increaseWebviewWidth(); }, settings, &ExtrasSettings::setIncreaseWebviewWidth);
@@ -119,7 +118,6 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"deletedMark"_q, [&] { return settings.deletedMark(); }, settings, &ExtrasSettings::setDeletedMark);
 	addSetting(entries, u"editedMark"_q, [&] { return settings.editedMark(); }, settings, &ExtrasSettings::setEditedMark);
 	addSetting(entries, u"unlimitedRecentStickers"_q, [&] { return settings.unlimitedRecentStickers(); }, settings, &ExtrasSettings::setUnlimitedRecentStickers);
-	addSetting(entries, u"recentStickersCount"_q, [&] { return settings.recentStickersCount(); }, settings, &ExtrasSettings::setRecentStickersCount);
 	addSetting(entries, u"showReactionsPanelInContextMenu"_q, [&] { return settings.showReactionsPanelInContextMenu(); }, settings, &ExtrasSettings::setShowReactionsPanelInContextMenu);
 	addSetting(entries, u"showViewsPanelInContextMenu"_q, [&] { return settings.showViewsPanelInContextMenu(); }, settings, &ExtrasSettings::setShowViewsPanelInContextMenu);
 	addSetting(entries, u"showHideMessageInContextMenu"_q, [&] { return settings.showHideMessageInContextMenu(); }, settings, &ExtrasSettings::setShowHideMessageInContextMenu);
