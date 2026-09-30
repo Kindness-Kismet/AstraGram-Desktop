@@ -64,9 +64,6 @@ private:
 	void performSwitchAndAddToRecent(const Language &data);
 	void performSwitchAndRestart(const Language &data);
 	void restartAfterSwitch();
-	void offerSwitchLangPack();
-	bool showOfferSwitchBox();
-	Language findOfferedLanguage() const;
 
 	void requestLanguageAndSwitch(const QString &id, bool warning);
 	void applyLangPackData(Pack pack, const MTPDlangPackDifference &data);
@@ -84,7 +81,6 @@ private:
 	mtpRequestId _langPackBaseRequestId = 0;
 	mtpRequestId _languagesRequestId = 0;
 
-	QString _offerSwitchToId;
 	bool _restartAfterSwitch = false;
 
 	QString _suggestedLanguage;

@@ -21,7 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "core/file_utilities.h"
 #include "core/click_handler_types.h"
-#include "boxes/abstract_box.h" // Ui::hideLayer().
+#include "boxes/abstract_box.h"
 #include "styles/style_layers.h"
 
 namespace Lang {
@@ -260,13 +260,6 @@ void CloudManager::setSuggestedLanguage(const QString &langCode) {
 	if (!_languageWasSuggested) {
 		_languageWasSuggested = true;
 		_firstLanguageSuggestion.fire({});
-
-		if (Core::App().offerLegacyLangPackSwitch()
-			&& _langpack.id().isEmpty()
-			&& !_suggestedLanguage.isEmpty()) {
-			_offerSwitchToId = _suggestedLanguage;
-			offerSwitchLangPack();
-		}
 	}
 }
 
@@ -325,59 +318,6 @@ void CloudManager::requestLanguageList() {
 	}).fail([=] {
 		_languagesRequestId = 0;
 	}).send();
-}
-
-void CloudManager::offerSwitchLangPack() {
-	Expects(!_offerSwitchToId.isEmpty());
-	Expects(_offerSwitchToId != DefaultLanguageId());
-
-	if (!showOfferSwitchBox()) {
-		languageListChanged(
-		) | rpl::on_next([=] {
-			showOfferSwitchBox();
-		}, _lifetime);
-		requestLanguageList();
-	}
-}
-
-Language CloudManager::findOfferedLanguage() const {
-	for (const auto &language : _languages) {
-		if (language.id == _offerSwitchToId) {
-			return language;
-		}
-	}
-	return {};
-}
-
-bool CloudManager::showOfferSwitchBox() {
-	const auto language = findOfferedLanguage();
-	if (language.id.isEmpty()) {
-		return false;
-	}
-
-	const auto confirm = [=] {
-		Ui::hideLayer();
-		if (_offerSwitchToId.isEmpty()) {
-			return;
-		}
-		performSwitchAndRestart(language);
-	};
-	const auto cancel = [=] {
-		Ui::hideLayer();
-		changeIdAndReInitConnection(DefaultLanguage());
-		Local::writeLangPack();
-	};
-	Ui::show(
-		Ui::MakeConfirmBox({
-			.text = QString("Do you want to switch your language to ")
-			+ language.nativeName
-			+ QString("? You can always change your language in Settings."),
-			.confirmed = confirm,
-			.cancelled = cancel,
-			.confirmText = QString("Change"),
-		}),
-		Ui::LayerOption::KeepOther);
-	return true;
 }
 
 void CloudManager::applyLangPackData(

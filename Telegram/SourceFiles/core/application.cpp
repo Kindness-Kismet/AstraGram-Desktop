@@ -1201,11 +1201,6 @@ rpl::producer<> Application::unreadBadgeChanges() const {
 	return _domain->unreadBadgeChanges();
 }
 
-bool Application::offerLegacyLangPackSwitch() const {
-	return (_domain->accounts().size() == 1)
-		&& activeAccount().sessionExists();
-}
-
 bool Application::canApplyLangPackWithoutRestart() const {
 	for (const auto &[index, account] : _domain->accounts()) {
 		if (account->sessionExists()) {
