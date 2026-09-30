@@ -294,14 +294,6 @@ windowFiltersMainMenu: SideBarButton(windowFiltersButton) {
 	iconPosition: point(-1px, -1px);
 	minHeight: 54px;
 }
-windowFiltersMainMenuUnread: icon {
-	{ "folders/sidebar/telegram_plane", windowBgActive },
-	{ "dialogs/dialogs_menu_unread_dot", sideBarBadgeBg },
-};
-windowFiltersMainMenuUnreadMuted: icon {
-	{ "folders/sidebar/telegram_plane", windowBgActive },
-	{ "dialogs/dialogs_menu_unread_dot", sideBarBadgeBgMuted },
-};
 windowFilterSmallItem: PeerListItem(defaultPeerListItem) {
 	height: 44px;
 	photoPosition: point(13px, 5px);

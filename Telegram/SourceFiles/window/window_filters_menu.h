@@ -60,7 +60,6 @@ private:
 		Data::ChatFilterTitle title,
 		Ui::FilterIcon icon,
 		bool locked = false);
-	void setupMainMenuIcon();
 	void showMenu(QPoint position, FilterId id);
 	void scrollToButton(not_null<Ui::RpWidget*> widget);
 	void applyFilterAt(int start, int delta);

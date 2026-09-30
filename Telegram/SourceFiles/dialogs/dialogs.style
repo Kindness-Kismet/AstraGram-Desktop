@@ -987,14 +987,6 @@ dialogsHeadingMenu: IconButton(dialogsMenuToggle) {
 	icon: icon {{ "intro_qr_plane", windowBgActive }};
 	iconOver: icon {{ "intro_qr_plane", windowBgActive }};
 }
-dialogsHeadingMenuUnread: icon {
-	{ "intro_qr_plane", windowBgActive },
-	{ "dialogs/dialogs_menu_unread_dot", sideBarBadgeBg },
-};
-dialogsHeadingMenuUnreadMuted: icon {
-	{ "intro_qr_plane", windowBgActive },
-	{ "dialogs/dialogs_menu_unread_dot", sideBarBadgeBgMuted },
-};
 dialogsFoldersSettings: IconButton(defaultIconButton) {
 	width: 36px;
 	height: 36px;

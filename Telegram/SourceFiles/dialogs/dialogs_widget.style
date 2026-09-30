@@ -7,14 +7,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 using "dialogs/dialogs.style";
 
-dialogsMenuToggleUnread: icon {
-	{ "dialogs/dialogs_menu_unread", dialogsMenuIconFg },
-	{ "dialogs/dialogs_menu_unread_dot", dialogsUnreadBg },
-};
-dialogsMenuToggleUnreadMuted: icon {
-	{ "dialogs/dialogs_menu_unread", dialogsMenuIconFg },
-	{ "dialogs/dialogs_menu_unread_dot", dialogsMenuIconFg },
-};
 dialogsLock: IconButton {
 	width: 36px;
 	height: 38px;
