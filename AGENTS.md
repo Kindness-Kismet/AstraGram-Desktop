@@ -1,6 +1,6 @@
-# AyuGram Desktop — 项目规范与架构
+# AstraGram — 项目规范与架构
 
-AyuGram Desktop 是 Telegram Desktop 的 fork。本文档面向协作者和 AI 助手，说明项目结构、编码规范和构建流程。内容以本代码库的实际状态为准。
+AstraGram 是 Telegram Desktop 的 fork，前身是 AyuGram Desktop。本文档面向协作者和 AI 助手，说明项目结构、编码规范和构建流程。内容以本代码库的实际状态为准。
 
 ---
 
@@ -33,7 +33,7 @@ AyuGramDesktop/
 │   ├── codegen/             # 样式、emoji、TL scheme 的代码生成器
 │   ├── Resources/           # 图标、音频、翻译等资源
 │   ├── ThirdParty/          # 外部工具（msys2、gyp 等，由 prebuild 安装）
-│   ├── lib_ui/              # 界面基础库（fork 的子模块，AyuGram 有改动）
+│   ├── lib_ui/              # 界面基础库（fork 的子模块，本仓库有改动）
 │   ├── lib_tl/              # TL scheme 解析（fork 的子模块，改过 codegen）
 │   ├── lib_base / lib_crl / lib_rpl / lib_storage / ...  # 其余 desktop-app 子模块，一般不改
 │   └── 其余文件             # 均为上游原样
@@ -96,7 +96,7 @@ AyuGramDesktop/
 
 ### extras/ 定制层
 
-AyuGram 新增的代码集中在 `Telegram/SourceFiles/extras/`：
+定制代码集中在 `Telegram/SourceFiles/extras/`：
 
 ```
 extras/

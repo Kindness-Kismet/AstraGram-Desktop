@@ -58,7 +58,7 @@ minutes.
 
 <sub>[↑ Back to Navigation](#navigation)</sub>
 
-Everything below lives under **Settings → AyuGram Preferences**. Most options
+Everything below lives under **Settings → AstraGram Preferences**. Most options
 apply the moment you flip them; the few that cannot (avatar corners, bubble
 radius, wide-message multiplier, stories, the Zalgo filter and spacing on
 receive) offer to restart for you. No config file editing either way.
@@ -225,21 +225,21 @@ poetry install
 DEBUG= LTO= poetry run gen_dockerfile > Dockerfile
 
 # Build the dependency image (first run takes 1-2 hours)
-docker build -t ayugram:centos_env .
+docker build -t astragam:centos_env .
 
 cd ../../../..   # back to the repository root
 
 docker run --rm \
   -v "$PWD":/usr/src/tdesktop \
   -e CONFIG=Release \
-  ayugram:centos_env \
+  astragam:centos_env \
   /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
   -D CMAKE_CONFIGURATION_TYPES=Release \
   -D TDESKTOP_API_ID=2040 \
   -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627
 ```
 
-The binary lands in `out/Release/AyuGram` inside the mounted volume. Rerun the
+The binary lands in `out/Release/AstraGram` inside the mounted volume. Rerun the
 same `docker run` for incremental builds — objects live in the mounted `out/`
 directory, so only what changed is recompiled.
 
@@ -270,7 +270,7 @@ cd Telegram
 cmake --build ../out --config Release --parallel
 ```
 
-The bundle lands in `out/Release/AyuGram.app`. As on Windows, dependencies only
+The bundle lands in `out/Release/AstraGram.app`. As on Windows, dependencies only
 need rebuilding when submodule pointers or `Telegram/build/version` change.
 
 <br>

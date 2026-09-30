@@ -31,8 +31,8 @@ body:
       required: true
   - type: input
     attributes:
-      label: Version of AyuGram Desktop
-      description: See Settings > AyuGram > About.
+      label: Version of AstraGram
+      description: See Settings > AstraGram Preferences > About.
     validations:
       required: true
   - type: dropdown

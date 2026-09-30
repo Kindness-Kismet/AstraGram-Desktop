@@ -1,6 +1,6 @@
 # Contributing
 
-This document describes how you can contribute to AyuGram Desktop Plus.
+This document describes how you can contribute to AstraGram.
 
 **Table of Contents**
 
@@ -17,7 +17,7 @@ This document describes how you can contribute to AyuGram Desktop Plus.
 
 ## What contributions are accepted
 
-We highly appreciate your contributions in the matter of fixing bugs and optimizing the AyuGram Desktop Plus source code and its documentation. In case of fixing the existing user experience please push to your fork and [submit a pull request][pr].
+We highly appreciate your contributions in the matter of fixing bugs and optimizing the AstraGram source code and its documentation. In case of fixing the existing user experience please push to your fork and [submit a pull request][pr].
 
 Highly appreciated feature implementations from [Android app][android_repo].
 
@@ -51,7 +51,7 @@ this on your own pull request branch.
 
 ## How to get your pull request accepted
 
-We want to improve AyuGram Desktop Plus with your contributions. But we also want to provide a stable experience for our users and the community. Follow these rules and you should succeed without a problem!
+We want to improve AstraGram with your contributions. But we also want to provide a stable experience for our users and the community. Follow these rules and you should succeed without a problem!
 
 ### Keep your pull requests limited to a single issue
 
@@ -90,7 +90,7 @@ Furthermore, the pixel shortage is over. We want to see:
 
 ### Test your changes!
 
-Before you submit a pull request, please test your changes. Verify that AyuGram Desktop Plus still works and your changes don't cause other issue or crashes.
+Before you submit a pull request, please test your changes. Verify that AstraGram still works and your changes don't cause other issue or crashes.
 
 ### Write a good commit message
 
