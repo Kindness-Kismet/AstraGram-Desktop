@@ -317,7 +317,7 @@ jobs:
           repository: Kindness-Net/AyuGramDesktop-Plus-Windows-Build
           run-id: ${{ needs.windows-x64.outputs.run_id }}
           github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
-          pattern: AyuGram-*
+          pattern: AstraGram-*
           merge-multiple: true
           path: artifacts/windows
 
@@ -330,7 +330,7 @@ jobs:
           repository: Kindness-Net/AyuGramDesktop-Plus-Windows-ARM64-Build
           run-id: ${{ needs.windows-arm64.outputs.run_id }}
           github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
-          pattern: AyuGram-*
+          pattern: AstraGram-*
           merge-multiple: true
           path: artifacts/windows-arm64
 
@@ -340,7 +340,7 @@ jobs:
           repository: Kindness-Net/AyuGramDesktop-Plus-Linux-Build
           run-id: ${{ needs.linux.outputs.run_id }}
           github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
-          pattern: AyuGram-*
+          pattern: AstraGram-*
           merge-multiple: true
           path: artifacts/linux
 
@@ -350,7 +350,7 @@ jobs:
           repository: Kindness-Net/AyuGramDesktop-Plus-macOS-Build
           run-id: ${{ needs.macos.outputs.run_id }}
           github-token: ${{ secrets.REMOTE_BUILD_TOKEN }}
-          pattern: AyuGram-*
+          pattern: AstraGram-*
           merge-multiple: true
           path: artifacts/macos
 
