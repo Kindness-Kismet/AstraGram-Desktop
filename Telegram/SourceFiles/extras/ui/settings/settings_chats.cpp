@@ -4,6 +4,7 @@
 #include "extras/extras_settings.h"
 #include "extras/ui/boxes/edit_mark_box.h"
 #include "extras/ui/components/message_preview.h"
+#include "extras/ui/components/sticker_preview.h"
 #include "extras/ui/settings/extras_builder.h"
 #include "extras/ui/settings/settings_extras_utils.h"
 #include "extras/ui/settings/settings_main.h"
@@ -84,7 +85,7 @@ void BuildStickersAndEmoji(SectionBuilder &builder, ExtrasSectionBuilder &extras
 	extras.addSectionDivider();
 }
 
-void BuildRecentStickersLimit(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
+void buildMessageStickerScale(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	auto *settings = &ExtrasSettings::getInstance();
 
 	constexpr auto kMessageStickerMinScale = 0.5;
@@ -117,6 +118,14 @@ void BuildRecentStickersLimit(SectionBuilder &builder, ExtrasSectionBuilder &ext
 				'f',
 				1) + 'x';
 		},
+	});
+
+	builder.add([](const WidgetContext &ctx) -> SectionBuilder::WidgetToAdd {
+		return {
+			.widget = object_ptr<StickerPreview>(ctx.container),
+			.margin = style::margins(
+				0, st::defaultVerticalListSkip, 0, st::settingsPrivacySkipTop),
+		};
 	});
 
 	extras.addSectionDivider();
@@ -505,6 +514,7 @@ const auto kMeta = BuildHelper({
 
 	builder.addSkip();
 	BuildStickersAndEmoji(builder, extras);
+	buildMessageStickerScale(builder, extras);
 	BuildGroupsAndChannels(builder, extras);
 	BuildMarks(builder, extras, previewState);
 	BuildWideMessagesMultiplier(builder, extras, previewState);

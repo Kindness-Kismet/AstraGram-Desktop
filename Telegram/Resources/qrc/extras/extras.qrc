@@ -25,6 +25,7 @@
         <file alias="art/extras/yaplus/app.svg">../../art/extras/yaplus/app.svg</file>
         <file alias="art/extras/yaplus/app_icon.ico">../../art/extras/yaplus/app_icon.ico</file>
         <file alias="icons/extras/nocover.svg">../../icons/extras/nocover.svg</file>
+        <file alias="icons/extras/sticker_preview.svg">../../icons/extras/sticker_preview.svg</file>
         <file alias="emoji/emoji_presets.json">../../emoji/emoji_presets.json</file>
         <file alias="langs/extras/en.json">../../langs/extras/en.json</file>
         <file alias="langs/extras/zh-hans.json">../../langs/extras/zh-hans.json</file>
