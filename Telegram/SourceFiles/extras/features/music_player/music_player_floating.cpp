@@ -19,6 +19,7 @@
 #include "ui/widgets/tooltip.h"
 
 #include <QtGui/QKeyEvent>
+#include <QtGui/QMouseEvent>
 #include <QtWidgets/QApplication>
 #include <cmath>
 
@@ -396,8 +397,13 @@ bool FloatingPlayer::eventFilter(QObject *object, QEvent *event) {
 		return false;
 	}
 	const auto widget = qobject_cast<QWidget*>(object);
-	if (event->type() == QEvent::MouseButtonPress && !contains(widget)) {
-		collapse();
+	if (event->type() == QEvent::MouseButtonPress && widget && !contains(widget)) {
+		// 原生窗口事件交给控件分发；向父控件传播的点击按实际命中位置判断。
+		const auto global = static_cast<QMouseEvent*>(event)->globalPos();
+		const auto window = widget->window();
+		if (!contains(window->childAt(window->mapFromGlobal(global)))) {
+			collapse();
+		}
 	} else if (event->type() == QEvent::KeyPress
 		&& static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape
 		&& (!_panel || !_panel->ownsMenu(widget))) {
