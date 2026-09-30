@@ -8,8 +8,9 @@
 滑块值为 0 至 1；输入字符串保留原文。单选项通过选择另一个选项切换，不直接取消选中。
 
 `control.action <target> <action>` 执行 `control.get` 返回的辅助功能动作。
-`control.mouse <target> <x> <y> [left|right|double]` 在控件内部指定位置投递点击、右键或双击，
+`control.mouse <target> <x> <y> [left|right|double|press|release]` 在控件内部指定位置投递点击、右键或双击，
 适用于消息气泡等自绘区域。所有事件都在本应用内，不移动系统光标。
+`press` 只按下、`release` 只松开，用于长按录音等需要保持按下的操作；松开直接投递给目标控件。
 
 目标可使用控件标识、可见文字或 `control.list` 的全树序号。文字重复时使用标识或序号。
 

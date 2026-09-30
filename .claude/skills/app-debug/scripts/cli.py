@@ -41,7 +41,7 @@ PROFILE_OVERRIDE = None
 
 GENERIC_COMMANDS = {
     "session.thread-settings": "查询或修改话题与子会话配置：<会话编号> <话题编号> <子会话编号> [键 值]",
-    "control.mouse": "在应用控件内部点击或打开菜单：<目标> <横坐标> <纵坐标> [left|right|double]",
+    "control.mouse": "在应用控件内部点击、打开菜单或分开按下松开：<目标> <横坐标> <纵坐标> [left|right|double|press|release]",
     "crash.log": "读取当前调试配置的崩溃日志",
     "session.list": "列出本地账号与当前激活账号",
     "session.activate": "切换本地账号：<索引>",
