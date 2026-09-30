@@ -1,46 +1,39 @@
 {
-  "fill-specializations" : [
+  "fill": {
+    "automatic-gradient": "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+  },
+  "groups": [
     {
-      "value" : "system-light"
-    },
-    {
-      "appearance" : "dark",
-      "value" : {
-        "solid" : "extended-gray:0.75000,1.00000"
-      }
-    }
-  ],
-  "groups" : [
-    {
-      "layers" : [
+      "layers": [
         {
-          "blend-mode" : "normal",
-          "fill" : "automatic",
-          "glass" : false,
-          "image-name" : "app.svg",
-          "name" : "app",
-          "opacity" : 1,
-          "position" : {
-            "scale" : 0.75,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
+          "glass": false,
+          "image-name": "app_icon_foreground.svg",
+          "name": "app_icon_foreground"
+        },
+        {
+          "glass": false,
+          "image-name": "app_icon_background.svg",
+          "name": "app_icon_background",
+          "opacity-specializations": [
+            {
+              "appearance": "dark",
+              "value": 0
+            }
+          ]
         }
       ],
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.5
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
       },
-      "translucency" : {
-        "enabled" : true,
-        "value" : 0.5
+      "translucency": {
+        "enabled": true,
+        "value": 0.5
       }
     }
   ],
-  "supported-platforms" : {
-    "squares" : [
+  "supported-platforms": {
+    "squares": [
       "macOS"
     ]
   }
