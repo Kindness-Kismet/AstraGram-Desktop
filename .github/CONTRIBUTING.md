@@ -104,6 +104,6 @@ Before you submit a pull request, please test your changes. Verify that AstraGra
 [tdesktop]: https://github.com/telegramdesktop/tdesktop
 [commit_message]: http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
 [pr]: https://github.com/Kindness-Kismet/AstraGram-Desktop/compare
-[build_instructions]: ../README.md#-building-from-source
+[build_instructions]: ../README.en.md#-building-from-source
 [closing-issues-via-commit-messages]: https://help.github.com/articles/closing-issues-via-commit-messages/
 [android_repo]: https://github.com/AyuGram/AyuGram4A
