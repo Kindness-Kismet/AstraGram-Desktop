@@ -8864,8 +8864,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SendForwardFirst" = "Send comment after forwarding";
 "extras_TranslationProvider" = "Translation Provider";
 "extras_CategoriesHeader" = "Categories";
-"extras_CrashReporting" = "Crash Reporting";
-"extras_CrashReportingDescription" = "When this option is enabled, you'll be prompted to send a report after the app crashes. You can decide whether to send it or not.";
 "extras_RestoreHiddenFeatures" = "Restore Hidden Features";
 "extras_DevFeaturesUnlocked" = "Developer features enabled. Reopen AstraGram preferences.";
 "extras_DevFeaturesRestored" = "Developer features hidden. Reopen AstraGram preferences.";
@@ -9223,11 +9221,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DebugEnableLogsConfirm" = "Enable DEBUG logs?\n\nAll network events will be written to log.txt.";
 "extras_DebugShowLogFile" = "Show log.txt";
 "extras_DebugVerboseLogsNote" = "Verbose logs record every network event and grow log.txt quickly. Disabling them restarts the app.";
-"extras_DebugCrashReporting" = "Crash reporting";
-"extras_DebugTriggerTestCrash" = "Trigger a test crash";
-"extras_DebugCrashConfirmText" = "Crash the app on purpose?\n\nUnsaved state is lost. Use this only to verify that crash reporting works.";
-"extras_DebugCrashConfirmButton" = "Crash";
-"extras_DebugCrashReportingNote" = "The crash id shown on the next launch is what a bug report needs.";
 "extras_ConfirmationSticker" = "Do you want to send this sticker?";
 "extras_ConfirmationGIF" = "Do you want to send this GIF?";
 "extras_ConfirmationVoice" = "Do you want to send this voice message?";

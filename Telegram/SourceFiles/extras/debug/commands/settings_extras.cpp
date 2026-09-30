@@ -174,7 +174,6 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"translationProvider"_q, [&] { return settings.translationProvider(); }, settings, &ExtrasSettings::setTranslationProvider);
 	addSetting(entries, u"adaptiveCoverColor"_q, [&] { return settings.adaptiveCoverColor(); }, settings, &ExtrasSettings::setAdaptiveCoverColor);
 	addSetting(entries, u"improveLinkPreviews"_q, [&] { return settings.improveLinkPreviews(); }, settings, &ExtrasSettings::setImproveLinkPreviews);
-	addSetting(entries, u"crashReporting"_q, [&] { return settings.crashReporting(); }, settings, &ExtrasSettings::setCrashReporting);
 	addSetting(entries, u"avatarCorners"_q, [&] { return settings.avatarCorners(); }, settings, &ExtrasSettings::setAvatarCorners);
 	addSetting(entries, u"singleCornerRadius"_q, [&] { return settings.singleCornerRadius(); }, settings, &ExtrasSettings::setSingleCornerRadius);
 	addSetting(entries, u"streamerMode"_q, [&] { return settings.streamerMode(); }, settings, &ExtrasSettings::setStreamerMode);

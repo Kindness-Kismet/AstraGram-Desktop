@@ -124,34 +124,6 @@ void BuildDiagnostics(SectionBuilder &builder) {
 	builder.addDividerText(tr::extras_DebugVerboseLogsNote());
 }
 
-void BuildDangerZone(SectionBuilder &builder) {
-	const auto controller = builder.controller();
-
-	builder.addSkip();
-	builder.addSubsectionTitle(tr::extras_DebugCrashReporting());
-
-	// 故意崩溃用于验证崩溃上报链路，双重确认避免误触。
-	builder.addButton({
-		.id = u"extras/debug/crash"_q,
-		.title = tr::extras_DebugTriggerTestCrash(),
-		.icon = { &st::menuIconReport },
-		.onClick = [=] {
-			controller->show(Ui::MakeConfirmBox({
-				.text = tr::extras_DebugCrashConfirmText(tr::now),
-				.confirmed = [=](Fn<void()> &&close) {
-					close();
-					Unexpected("Crashed from the debug section.");
-				},
-				.confirmText = tr::extras_DebugCrashConfirmButton(tr::now),
-			}));
-		},
-	});
-
-	builder.addSkip();
-	builder.addDividerText(tr::extras_DebugCrashReportingNote());
-	builder.addSkip();
-}
-
 const auto kMeta = BuildHelper({
 	.id = ExtrasDebug::Id(),
 	.parentId = ExtrasMain::Id(),
@@ -160,7 +132,6 @@ const auto kMeta = BuildHelper({
 }, [](SectionBuilder &builder) {
 	BuildEnvironment(builder);
 	BuildDiagnostics(builder);
-	BuildDangerZone(builder);
 });
 
 } // namespace

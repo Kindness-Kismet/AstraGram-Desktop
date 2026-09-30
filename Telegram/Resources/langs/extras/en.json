@@ -90,8 +90,6 @@
   "LinksTranslate": "Translate",
   "LinksDocumentation": "Documentation",
   "CategoriesHeader": "Categories",
-  "CrashReporting": "Crash Reporting",
-  "CrashReportingDescription": "When this option is enabled, you'll be prompted to send a report after the app crashes. You can decide whether to send it or not.",
   "ResetSettings_PC": "Reset Settings",
   "ResetSettingsConfirmation_PC": "Are you sure you want to reset **all** AstraGram preferences to their defaults?",
   "DisableColorfulCover": "Disable adaptive color",

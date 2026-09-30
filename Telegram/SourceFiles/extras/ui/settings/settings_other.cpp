@@ -25,23 +25,6 @@ using namespace ExtrasBuilder;
 
 namespace {
 
-void BuildCrashReporting(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
-#ifndef TDESKTOP_DISABLE_AUTOUPDATE
-	builder.addSkip();
-	builder.addSubsectionTitle(tr::extras_CategoryOther());
-
-	extras.addSettingToggle({
-		.id = u"extras/crashReporting"_q,
-		.altIds = { u"extras/crashlytics"_q },
-		.title = tr::extras_CrashReporting(),
-		.getter = &ExtrasSettings::crashReporting,
-		.setter = &ExtrasSettings::setCrashReporting,
-		.icon = { &st::menuIconReport },
-	});
-	builder.addSkip();
-	builder.addDividerText(tr::extras_CrashReportingDescription());
-#endif
-}
 
 void BuildOtherThings(SectionBuilder &builder) {
 	const auto controller = builder.controller();
@@ -96,7 +79,6 @@ const auto kMeta = BuildHelper({
 	auto extras = ExtrasSectionBuilder(builder);
 
 	builder.addSkip();
-	BuildCrashReporting(builder, extras);
 	BuildOtherThings(builder);
 });
 
