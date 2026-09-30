@@ -1527,9 +1527,9 @@ historySendAsFileButton: IconButton(historyAiComposeButton) {
 	icon: icon {{ "chat/text_to_file-18x18", historyComposeIconFg }};
 	iconOver: icon {{ "chat/text_to_file-18x18", historyComposeIconFgOver }};
 }
-historyExpandComposeButton: IconButton(historyAiComposeButton) {
-	icon: icon {{ "menu/rich/expand-20x20", historyComposeIconFg }};
-	iconOver: icon {{ "menu/rich/expand-20x20", historyComposeIconFgOver }};
+historyExpandComposeButton: IconButton(historyAttach) {
+	icon: icon {{ "menu/rich/expand-24x24", historyComposeIconFg }};
+	iconOver: icon {{ "menu/rich/expand-24x24", historyComposeIconFgOver }};
 }
 historyDiscardRichDraftButton: IconButton(historyAiComposeButton) {
 	width: 34px;

@@ -589,7 +589,6 @@ private:
 	void updateSendAsFileGeometry();
 	void initExpandButton();
 	void updateExpandButtonVisibility();
-	void updateExpandButtonGeometry();
 	[[nodiscard]] bool canShowRichEditor() const;
 	void showRichEditor();
 	void initDiscardRichDraftButton();
