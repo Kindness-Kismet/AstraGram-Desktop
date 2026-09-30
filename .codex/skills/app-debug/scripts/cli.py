@@ -186,9 +186,11 @@ def register_commands(sub) -> None:
     for name, description in GENERIC_COMMANDS.items():
         command = sub.add_parser(name, help=description, description=description)
         command.add_argument("params", nargs=argparse.REMAINDER)
-    command = sub.add_parser("app.ensure", help="确保 Debug 应用在运行，未运行则拉起并等到端口就绪")
+    command = sub.add_parser("app.start", help="启动 Debug 应用：未运行时拉起并等到端口就绪，已在运行则保持不变")
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
-    command = sub.add_parser("app.restart", help="重启 Debug 应用")
+    command = sub.add_parser("app.ensure", help="app.start 的等价写法")
+    command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
+    command = sub.add_parser("app.restart", help="先停止再启动 Debug 应用，重新编译后用它启动新产物")
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
     sub.add_parser("app.stop", help="停止 Debug 应用，只认端口 PID 或本仓库 dev 产物路径")
     sub.add_parser("app.ping", help="探活，返回 pong")
@@ -337,7 +339,7 @@ def execute_command(args: argparse.Namespace) -> None:
         working_dir()
 
     # 生命周期指令由 CLI 自己完成，不进服务端。
-    if command == "app.ensure":
+    if command in ("app.start", "app.ensure"):
         ensure_debug_app()
         if profile is not None:
             PROFILE_FILE.write_text(json.dumps({"profile": PROFILE_OVERRIDE}), encoding="utf-8")

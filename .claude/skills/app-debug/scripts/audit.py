@@ -30,7 +30,7 @@ def audit():
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command")
     cli.register_commands(sub)
-    client = set(sub.choices) - {"app.ensure", "app.restart", "app.stop"}
+    client = set(sub.choices) - {"app.start", "app.ensure", "app.restart", "app.stop"}
     server = set(re.findall(r'\{\s*u"([a-z][a-z.-]+)"_q,\s*&', handlers))
     missing.extend(f"命令注册不一致：{name}" for name in sorted(client ^ server))
     cmake = (cli.ROOT / "Telegram" / "CMakeLists.txt").read_text(encoding="utf-8")
