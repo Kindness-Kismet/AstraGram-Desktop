@@ -724,7 +724,7 @@ private:
 	rpl::variable<bool> _showContactsInDrawer = true;
 	rpl::variable<bool> _showCallsInDrawer = true;
 	rpl::variable<bool> _showSavedMessagesInDrawer = true;
-	rpl::variable<bool> _showArchiveInDrawer = false;
+	rpl::variable<bool> _showArchiveInDrawer = true;
 	rpl::variable<bool> _showLReadToggleInDrawer = false;
 	rpl::variable<bool> _showSReadToggleInDrawer = true;
 	rpl::variable<bool> _showNightModeToggleInDrawer = true;
