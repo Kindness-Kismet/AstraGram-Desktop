@@ -1,6 +1,6 @@
 #define MyAppShortName "AstraGram"
 #define MyAppName "AstraGram"
-#define MyAppPublisher "Radolyn Labs"
+#define MyAppPublisher "企业级空气炸锅"
 #define MyAppURL "https://github.com/AyuGram"
 #define MyAppExeName "AstraGram.exe"
 #define MyAppId "53F49750-6209-4FBF-9CA8-7A333C87D666"
