@@ -278,6 +278,8 @@ FieldAutocomplete::FieldAutocomplete(
 		.opacity = [=] { return _opacityAnimation.value(_hiding ? 0. : 1.); },
 	});
 	_scroll->setAutoFillBackground(false);
+	_scroll->setVerticalBarTopSkip(st::windowCardRadius);
+	_scroll->setVerticalBarBottomSkip(st::windowCardRadius);
 	_scroll->setGeometry(rect());
 
 	_inner = _scroll->setOwnedWidget(
