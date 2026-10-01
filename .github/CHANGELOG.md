@@ -1,4 +1,3 @@
-- Donations are optional and never affect feature access; you can support AstraGram through Afdian at https://afdian.com/a/KiritoXD under the account KiritoXDone, which helps cover daily token maintenance costs and keeps the project moving
 - Added voice and video recording actions to the attachment menu, so you can choose recording tools alongside other attachments
 - Added a floating media player to the chat list, which now stays open while you use its internal controls
 - Added donation details to the side menu, so you can view project support information from the app
@@ -12,7 +11,6 @@
 
 ---
 
-- 捐赠完全自愿，不会影响任何功能使用；如果愿意支持 AstraGram，可以通过爱发电向账户 KiritoXDone 捐赠，资金主要用于日常令牌维护开销，也会让我们更有动力继续维护项目：https://afdian.com/a/KiritoXD
 - 新增了附件菜单中的语音和视频录制入口，现在可以和其他附件一起选择录制功能
 - 新增了聊天列表中的浮动媒体播放器，现在操作播放器内部按钮时不会意外关闭
 - 新增了侧边菜单中的捐赠详情入口，现在可以在应用内查看项目支持信息

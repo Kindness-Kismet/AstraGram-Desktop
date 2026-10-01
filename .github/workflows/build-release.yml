@@ -11,6 +11,12 @@ on:
 permissions:
   contents: read
 
+env:
+  RELEASE_DONATION_NOTICE: |-
+    Donations are optional and never affect feature access. If AstraGram is useful to you, you can consider supporting the project through Afdian at https://afdian.com/a/KiritoXD under the account KiritoXDone. Contributions help cover daily token maintenance costs and encourage us to keep maintaining the project
+
+    捐赠完全自愿，不会影响任何功能使用。如果 AstraGram 对你有帮助，欢迎量力通过爱发电支持项目，账户为 KiritoXDone：https://afdian.com/a/KiritoXD。捐赠主要用于日常 token 维护开销，也会让我们更有动力继续维护项目
+
 # 发版排队执行，不中断已在构建的版本。
 concurrency:
   group: build-release
@@ -69,7 +75,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/release_notes.py \
-            .github/CHANGELOG.md "$RUNNER_TEMP/release-notes.md"
+            .github/CHANGELOG.md "$RUNNER_TEMP/changelog.md"
+          {
+            printf '%s\n\n' "$RELEASE_DONATION_NOTICE"
+            printf '%s\n\n' '---'
+            cat "$RUNNER_TEMP/changelog.md"
+          } > "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md"
 
   windows-x64:
@@ -471,7 +482,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/release_notes.py \
-            .github/CHANGELOG.md "$RUNNER_TEMP/release-notes.md"
+            .github/CHANGELOG.md "$RUNNER_TEMP/changelog.md"
+          {
+            printf '%s\n\n' "$RELEASE_DONATION_NOTICE"
+            printf '%s\n\n' '---'
+            cat "$RUNNER_TEMP/changelog.md"
+          } > "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md"
 
       # 一个版本号只对应一个提交；重跑时标签已指向本提交则直接沿用。
