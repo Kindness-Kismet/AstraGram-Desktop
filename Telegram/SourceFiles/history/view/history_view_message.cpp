@@ -6065,6 +6065,7 @@ bool Message::displayFastReply() const {
 
 	return hasFastReply()
 		&& data()->isRegular()
+		&& !data()->isDeleted()
 		&& canSendAnything()
 		&& !delegate()->elementInSelectionMode(this).inSelectionMode;
 }

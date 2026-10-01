@@ -3226,18 +3226,31 @@ void AddSelectRestrictionAction(
 	if (addIcon && !menu->empty()) {
 		menu->addSeparator();
 	}
-	const auto user = peer->asUser();
+	const auto &menuStyle = menu->st().menu;
+	const auto icon = (addIcon && !peer->isUser())
+		? &st::menuIconCopyright
+		: nullptr;
+	const auto labelStyle = menu->lifetime().make_state<style::FlatLabel>(
+		st::historyHasCustomEmoji);
+	labelStyle->style = menuStyle.itemStyle;
+	labelStyle->textFg = menuStyle.itemFg;
+	if (icon) {
+		labelStyle->style.lineHeight = icon->height();
+	}
+	const auto labelTop = icon
+		? menuStyle.itemIconPosition.y()
+		: menuStyle.itemPadding.top();
 	auto button = base::make_unique_q<Ui::Menu::MultilineAction>(
 		menu->menu(),
-		menu->st().menu,
-		st::historyHasCustomEmoji,
-		((addIcon && !user)
-			? st::historySponsoredAboutMenuLabelPosition
-			: st::historyHasCustomEmojiPosition),
+		menuStyle,
+		*labelStyle,
+		QPoint(icon
+			? menuStyle.itemPadding.left()
+			: st::historyHasCustomEmojiPosition.x(), labelTop),
 		tr::extras_UnforwardableContextMenuText(
 			tr::now,
 			tr::rich),
-		(addIcon && !user) ? &st::menuIconCopyright : nullptr);
+		icon);
 	button->setAttribute(Qt::WA_TransparentForMouseEvents);
 	menu->addAction(std::move(button));
 }

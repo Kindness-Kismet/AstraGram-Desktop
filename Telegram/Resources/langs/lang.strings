@@ -9163,7 +9163,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DeleteDateMenuText" = "Delete Date";
 "extras_ReadDateMenuText" = "Read Date";
 "extras_ContentsReadDateMenuText" = "Contents Read Date";
-"extras_UnforwardableContextMenuText" = "Plain forwarding is not allowed.";
+"extras_UnforwardableContextMenuText" = "Plain forwarding is not allowed";
 "extras_LastSeenPillAutoRefresh" = "Auto-Refresh";
 "extras_LikelyOfflineStatus" = "offline ?";
 "extras_GhostModeShortcut" = "Enter with Ghost";

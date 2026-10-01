@@ -419,7 +419,7 @@
   "DeleteDateMenuText": "Delete Date",
   "ReadDateMenuText": "Read Date",
   "ContentsReadDateMenuText": "Contents Read Date",
-  "UnforwardableContextMenuText": "Plain forwarding is not allowed.",
+  "UnforwardableContextMenuText": "Plain forwarding is not allowed",
   "LastSeenPillAutoRefresh": "Auto-Refresh",
   "LikelyOfflineStatus": "offline ?",
   "GhostModeShortcut": "Enter with Ghost",
