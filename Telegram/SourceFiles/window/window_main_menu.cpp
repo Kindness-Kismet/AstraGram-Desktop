@@ -140,15 +140,13 @@ public:
 	ToggleAccountsButton(QWidget *parent);
 
 	[[nodiscard]] int rightSkip() const {
-		return _rightSkip.current();
-	}
-	[[nodiscard]] rpl::producer<int> rightSkipValue() const {
-		return _rightSkip.value();
+		return st::mainMenuTogglePosition.x()
+			+ st::mainMenuCoverMargin
+			+ 2 * st::mainMenuToggleSize;
 	}
 
 private:
 	void paintEvent(QPaintEvent *e) override;
-	rpl::variable<int> _rightSkip = 0;
 	Ui::Animations::Simple _toggledAnimation;
 	bool _toggled = false;
 
@@ -166,7 +164,7 @@ protected:
 };
 
 MainMenu::ToggleAccountsButton::ToggleAccountsButton(
-QWidget *parent)
+	QWidget *parent)
 : AbstractButton(parent) {
 	auto &settings = Core::App().settings();
 	if (Core::App().domain().accounts().size() < 2
@@ -399,7 +397,6 @@ MainMenu::MainMenu(
 		std::make_shared<UrlClickHandler>(Core::App().changelogLink()));
 
 	rpl::combine(
-		_toggleAccounts->rightSkipValue(),
 		rpl::single(rpl::empty) | rpl::then(_badge->updated()),
 		rpl::single(rpl::empty) | rpl::then(_exteraBadge->updated())
 	) | rpl::on_next([=] {
