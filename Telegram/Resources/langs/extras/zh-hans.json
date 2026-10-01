@@ -124,7 +124,6 @@
   "WindowMaterialAcrylic": "亚克力",
   "WindowMaterialBlur": "磨砂玻璃",
   "WindowMaterialDescription": "为整个窗口使用系统背景。效果生效时会暂时替代聊天壁纸，关闭后恢复已保存的壁纸。实际效果取决于系统及透明度设置。",
-  "MaterialSwitches": "MD3 开关样式",
   "RemoveMessageTail_PC": "移除消息气泡尾巴",
   "HideShareButton_PC": "隐藏消息右侧的“分享”按钮",
   "ChatFoldersHeader": "聊天文件夹",

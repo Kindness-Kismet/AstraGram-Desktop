@@ -8908,7 +8908,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_WindowMaterialAcrylic" = "Acrylic";
 "extras_WindowMaterialBlur" = "Blur";
 "extras_WindowMaterialDescription" = "Use a system background throughout the window. While active, it temporarily replaces your chat wallpaper. Turning it off restores your saved wallpaper. Effects depend on your system and transparency settings.";
-"extras_MaterialSwitches" = "MD3 Switch Style";
 "extras_RemoveMessageTail" = "Remove Message Tail";
 "extras_HideShareButton" = "Hide Side \"Share\" Button";
 "extras_ChatFoldersHeader" = "Chat Folders";
