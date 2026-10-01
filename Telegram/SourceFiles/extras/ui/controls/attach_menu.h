@@ -27,8 +27,8 @@ struct RecordMenuOptions {
 	not_null<PeerData*> peer,
 	Webrtc::RecordAvailability availability);
 
-// 切回应用时重新检查系统授权，有变化才触发，供输入区重建加号菜单。
-[[nodiscard]] rpl::producer<> recordPermissionChanges();
+// 系统授权、采集占用或通话状态变化时重建录音菜单。
+[[nodiscard]] rpl::producer<> recordMenuChanges();
 
 // 在菜单末尾追加可展开的“录制消息”分组；展开项插在分组之后，须最后添加。
 void addRecordMenu(

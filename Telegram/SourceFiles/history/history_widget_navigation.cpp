@@ -820,12 +820,17 @@ void HistoryWidget::refreshAttachBotsMenu() {
 }
 
 ExtrasUi::RecordMenuOptions HistoryWidget::recordMenuOptions() const {
-	return _peer
-		? ExtrasUi::recordMenuOptions(_peer, _recordAvailability)
-		: ExtrasUi::RecordMenuOptions();
+	if (!_peer || _editMsgId || !_voiceRecordBar->isHidden()) {
+		return {};
+	}
+	return ExtrasUi::recordMenuOptions(_peer, _recordAvailability);
 }
 
 void HistoryWidget::startRecordFromMenu(bool round) {
+	const auto options = recordMenuOptions();
+	if (round ? !options.round : !options.voice) {
+		return;
+	}
 	// 发送键在录制期间按所选类型显示。
 	Core::App().settings().setRecordVideoMessages(round);
 	_voiceRecordBar->startRecordingAndLock(round);
@@ -909,6 +914,7 @@ void HistoryWidget::trackThreadFieldVisibility() {
 void HistoryWidget::setEditMsgId(MsgId msgId) {
 	unregisterDraftSources();
 	_editMsgId = msgId;
+	refreshAttachBotsMenu();
 	if (!msgId) {
 		_mediaEditManager.cancel();
 		_canReplaceMedia = _canAddMedia = false;

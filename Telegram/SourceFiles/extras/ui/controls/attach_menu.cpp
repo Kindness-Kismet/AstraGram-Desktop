@@ -2,9 +2,11 @@
 
 #include "extras/extras_settings.h"
 #include "base/event_filter.h"
+#include "calls/calls_instance.h"
 #include "core/application.h"
 #include "data/data_chat_participant_status.h"
 #include "lang/lang_keys.h"
+#include "media/audio/media_audio_capture.h"
 #include "platform/platform_specific.h"
 #include "ui/widgets/dropdown_menu.h"
 #include "ui/widgets/menu/menu_action.h"
@@ -89,7 +91,10 @@ RecordMenuOptions recordMenuOptions(
 		Webrtc::RecordAvailability availability) {
 	using Availability = Webrtc::RecordAvailability;
 	if (!ExtrasSettings::getInstance().showMicrophoneButtonInMessageField()
-		|| availability == Availability::None) {
+		|| availability == Availability::None
+		|| Media::Capture::instance()->started()
+		|| Core::App().calls().currentCall()
+		|| Core::App().calls().currentGroupCall()) {
 		return {};
 	}
 	const auto permissions = readRecordPermissions();
@@ -107,8 +112,8 @@ RecordMenuOptions recordMenuOptions(
 	};
 }
 
-rpl::producer<> recordPermissionChanges() {
-	return [](auto consumer) {
+rpl::producer<> recordMenuChanges() {
+	auto permissions = rpl::producer<>([](auto consumer) {
 		auto result = rpl::lifetime();
 		const auto last = result.make_state<RecordPermissions>(
 			readRecordPermissions());
@@ -124,7 +129,12 @@ rpl::producer<> recordPermissionChanges() {
 			consumer.put_next({});
 		}, result);
 		return result;
-	};
+	});
+	return rpl::merge(
+		std::move(permissions),
+		Media::Capture::instance()->startedChanges() | rpl::to_empty,
+		Core::App().calls().currentCallValue() | rpl::to_empty,
+		Core::App().calls().currentGroupCallValue() | rpl::to_empty);
 }
 
 void setupAttachMenu(

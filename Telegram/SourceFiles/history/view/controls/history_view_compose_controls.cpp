@@ -2937,10 +2937,13 @@ void ComposeControls::init() {
 
 	rpl::merge(
 		session().attachWebView().attachBotsUpdates(),
+		_voiceRecordBar->shownValue()
+			| rpl::filter(!rpl::mappers::_1) | rpl::to_empty,
+		_header->editMsgIdValue() | rpl::to_empty,
 		ExtrasSettings::getInstance().showAttachPopupChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showMicrophoneButtonInMessageFieldChanges(
 		) | rpl::to_empty,
-		ExtrasUi::recordPermissionChanges()
+		ExtrasUi::recordMenuChanges()
 	) | rpl::on_next([=] {
 		updateAttachBotsMenu();
 	}, _wrap->lifetime());
@@ -5665,12 +5668,20 @@ void ComposeControls::updateAttachBotsMenu() {
 }
 
 ExtrasUi::RecordMenuOptions ComposeControls::recordMenuOptions() const {
-	return (_history && _features.recordMediaMessage)
-		? ExtrasUi::recordMenuOptions(_history->peer, _recordAvailability)
-		: ExtrasUi::RecordMenuOptions();
+	if (!_history
+		|| !_features.recordMediaMessage
+		|| isEditingMessage()
+		|| !_voiceRecordBar->isHidden()) {
+		return {};
+	}
+	return ExtrasUi::recordMenuOptions(_history->peer, _recordAvailability);
 }
 
 void ComposeControls::startRecordFromMenu(bool round) {
+	const auto options = recordMenuOptions();
+	if (round ? !options.round : !options.voice) {
+		return;
+	}
 	// 发送键在录制期间按所选类型显示。
 	Core::App().settings().setRecordVideoMessages(round);
 	_voiceRecordBar->startRecordingAndLock(round);

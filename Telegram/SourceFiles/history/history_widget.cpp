@@ -666,13 +666,15 @@ HistoryWidget::HistoryWidget(
 	session().attachWebView().requestBots();
 	rpl::merge(
 		session().attachWebView().attachBotsUpdates(),
+		_voiceRecordBar->shownValue()
+			| rpl::filter(!rpl::mappers::_1) | rpl::to_empty,
 		session().changes().peerUpdates(
 			Data::PeerUpdate::Flag::Rights
 			| Data::PeerUpdate::Flag::StarsPerMessage
 		) | rpl::filter([=](const Data::PeerUpdate &update) {
 			return update.peer == _peer;
 		}) | rpl::to_empty,
-		ExtrasUi::recordPermissionChanges()
+		ExtrasUi::recordMenuChanges()
 	) | rpl::on_next([=] {
 		refreshAttachBotsMenu();
 	}, lifetime());
