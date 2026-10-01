@@ -401,6 +401,9 @@ bool FloatingPlayer::eventFilter(QObject *object, QEvent *event) {
 			collapse();
 		}
 	} else if (event->type() == QEvent::KeyPress
+		&& widget
+		&& widget->window() == _panelParent->window()
+		&& !_controller->window().isLayerShown()
 		&& static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape
 		&& (!_panel || !_panel->ownsMenu(widget))) {
 		if (_playlistOnly) {
