@@ -1,23 +1,27 @@
-- Added voice and video recording actions to the attachment menu, so you can choose recording tools alongside other attachments
-- Added a floating media player to the chat list, which now stays open while you use its internal controls
+- Changed how voice and video recording starts; recording types are now selected from the attachment menu, with recording unavailable while editing, already recording or in a call
+- Changed how music and voice playback controls are shown; the top playback bar and music dialog are replaced by a shared floating panel opened from the chat list, with fully visible controls, no scrollbars and a size independent of the list
+- Changed how music and voice playback interact; starting one pauses the other, and playback cannot be resumed during calls
 - Added donation details to the side menu, so you can view project support information from the app
-- Changed the app icon set; it now uses blue paper plane branding and no longer offers the legacy alternate icons
+- Changed the default app icon to a blue paper plane; four legacy icon presets were removed while other choices remain available
 - Improved autocomplete panels, which now align with the compose field and keep their scrollbars inside rounded corners
-- Improved media attachment previews, which now place single-media actions below the image
-- Improved compose and profile icons, which now use more consistent sizes and lighter stroke weights
-- Removed unsolicited language switch prompts, so language changes only follow the normal settings flow
-- Changed appearance settings; boolean options now use a consistent switch and the duplicate custom background option is removed
-- Improved notification previews and cards, which now share a rounded layout with lighter shadows and no monitor icon
+- Improved media attachment previews, which now place single-attachment action buttons below the preview instead of over the image
+- Improved compose, editor and profile controls, which now use more consistent icon sizes and strokes, with the editor entry placed beside the emoji button
+- Removed automatic language-switch pop-ups; manual language selection remains available
+- Changed appearance settings; switches now use a single style, and the switch-style selector and the option to disable custom chat backgrounds are removed
+- Improved notification settings previews, which now match the rounded notification cards, with lighter card shadows and no monitor graphic around the preview
+- Changed the account switcher in the main menu; it no longer shows the combined unread badge for other accounts and retains space for the expand arrow
 
 ---
 
-- 新增了附件菜单中的语音和视频录制入口，现在可以和其他附件一起选择录制功能
-- 新增了聊天列表中的浮动媒体播放器，现在操作播放器内部按钮时不会意外关闭
+- 调整了语音和视频消息的录制入口，现在从附件菜单选择录制类型，编辑消息、已有录制或通话期间不能开始新录制
+- 调整了音乐和语音的播放界面，现在由聊天列表按钮打开的共用浮动面板替代旧顶部播放条和音乐弹窗，控制项完整显示、没有滚动条，面板大小也不受列表限制
+- 调整了音乐和语音的播放行为，现在播放其中一种会暂停另一种，通话期间不能重新开启播放
 - 新增了侧边菜单中的捐赠详情入口，现在可以在应用内查看项目支持信息
-- 调整了应用图标，现在使用蓝色纸飞机品牌图标，并移除了旧版备用图标
+- 调整了应用图标，现在默认使用蓝色纸飞机，并移除了四种旧版预设，其余图标仍可选择
 - 改进了自动补全面板，现在会与输入框对齐，滚动条也会保持在圆角区域内
-- 改进了媒体附件预览，现在会把单张媒体的操作按钮放到图片下方
-- 改进了输入区和个人资料图标，现在尺寸更统一，线条也更轻
-- 移除了未经请求的语言切换提示，语言变化现在只遵循正常设置流程
-- 调整了外观设置，真假状态统一使用开关样式，并移除了重复的自定义背景选项
-- 改进了通知预览和通知卡片，现在使用统一的圆角布局和更轻的阴影，并移除了电脑图标
+- 改进了媒体附件预览，现在把单个附件的操作按钮放在预览下方，不再遮挡图片
+- 改进了输入区、编辑器和个人资料的控件，现在图标尺寸和线条更统一，编辑器入口也会排列在表情按钮旁
+- 移除了自动弹出的语言切换提示框，仍可手动选择界面语言
+- 调整了外观设置，现在统一使用一种开关样式，不再提供切换开关样式和禁用自定义聊天背景的选项
+- 改进了通知设置中的预览，现在与通知卡片的圆角样式一致，同时减轻了卡片阴影，并移除了预览外的显示器图案
+- 调整了主菜单账号切换区，现在不再显示其他账号的未读总数角标，并保留展开箭头的空间
