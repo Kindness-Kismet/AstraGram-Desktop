@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/event_filter.h"
 #include "base/qt_signal_producer.h"
 #include "boxes/about_box.h" // currentVersionShortText
+#include "boxes/connection_box.h"
 #include "core/update_channel.h"
 #include "boxes/peer_list_controllers.h"
 #include "boxes/premium_preview_box.h"
@@ -806,6 +807,13 @@ void MainMenu::setupMenu() {
 		});
 	}
 	nextSection();
+	addAction(
+		tr::lng_proxy_settings(),
+		{ &st::menuIconNetwork },
+		u"proxy"_q
+	)->setClickedCallback([=] {
+		ProxiesBoxController::Show(controller);
+	});
 	addAction(
 		tr::lng_menu_settings(),
 		{ &st::menuIconSettings },
