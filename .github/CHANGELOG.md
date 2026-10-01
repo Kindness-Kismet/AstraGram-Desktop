@@ -1,11 +1,25 @@
-- Added a sticker size setting with a live preview in Chats settings, so you can now resize stickers in messages from 0.5x to 1.6x
-- Fixed an issue with archived chats that previously caused the folder tabs to jump to All chats when opening them and to lose your folder when leaving
-- Fixed an issue with collapsed stories that previously caused them to sit out of line with the search bar and the App Lock button
-- Changed how the main menu shows Archived Chats; it now appears by default for new settings
+- Donations are optional and never affect feature access; you can support AstraGram through Afdian at https://afdian.com/a/KiritoXD under the account KiritoXDone, which helps cover daily token maintenance costs and keeps the project moving
+- Added voice and video recording actions to the attachment menu, so you can choose recording tools alongside other attachments
+- Added a floating media player to the chat list, which now stays open while you use its internal controls
+- Added donation details to the side menu, so you can view project support information from the app
+- Changed the app icon set; it now uses blue paper plane branding and no longer offers the legacy alternate icons
+- Improved autocomplete panels, which now align with the compose field and keep their scrollbars inside rounded corners
+- Improved media attachment previews, which now place single-media actions below the image
+- Improved compose and profile icons, which now use more consistent sizes and lighter stroke weights
+- Removed unsolicited language switch prompts, so language changes only follow the normal settings flow
+- Changed appearance settings; boolean options now use a consistent switch and the duplicate custom background option is removed
+- Improved notification previews and cards, which now share a rounded layout with lighter shadows and no monitor icon
 
 ---
 
-- 新增了聊天设置中的贴纸尺寸选项与实时预览，现在可以把消息中的贴纸在 0.5 至 1.6 倍之间缩放
-- 修复了关于归档会话的错误，该问题曾导致进入时分组标签跳到全部对话，退出后也回不到原来的分组
-- 修复了关于折叠故事的错误，该问题曾导致故事缩略图与搜索栏和应用锁按钮不在同一行
-- 调整了主菜单中归档会话入口的行为，现在新设置默认显示该入口
+- 捐赠完全自愿，不会影响任何功能使用；如果愿意支持 AstraGram，可以通过爱发电向账户 KiritoXDone 捐赠，资金主要用于日常令牌维护开销，也会让我们更有动力继续维护项目：https://afdian.com/a/KiritoXD
+- 新增了附件菜单中的语音和视频录制入口，现在可以和其他附件一起选择录制功能
+- 新增了聊天列表中的浮动媒体播放器，现在操作播放器内部按钮时不会意外关闭
+- 新增了侧边菜单中的捐赠详情入口，现在可以在应用内查看项目支持信息
+- 调整了应用图标，现在使用蓝色纸飞机品牌图标，并移除了旧版备用图标
+- 改进了自动补全面板，现在会与输入框对齐，滚动条也会保持在圆角区域内
+- 改进了媒体附件预览，现在会把单张媒体的操作按钮放到图片下方
+- 改进了输入区和个人资料图标，现在尺寸更统一，线条也更轻
+- 移除了未经请求的语言切换提示，语言变化现在只遵循正常设置流程
+- 调整了外观设置，真假状态统一使用开关样式，并移除了重复的自定义背景选项
+- 改进了通知预览和通知卡片，现在使用统一的圆角布局和更轻的阴影，并移除了电脑图标
