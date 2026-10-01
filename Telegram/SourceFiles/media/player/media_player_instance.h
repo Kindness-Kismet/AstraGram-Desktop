@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "data/data_audio_msg_id.h"
 #include "data/data_shared_media.h"
+#include "rpl/variable.h"
 
 class AudioMsgId;
 class DocumentData;
@@ -87,6 +88,12 @@ public:
 	bool previous(AudioMsgId::Type type);
 
 	AudioMsgId::Type getActiveType() const;
+	[[nodiscard]] bool playbackAllowed() const {
+		return _playbackAllowed.current();
+	}
+	[[nodiscard]] rpl::producer<bool> playbackAllowedValue() const {
+		return _playbackAllowed.value();
+	}
 
 	void play() {
 		play(getActiveType());
@@ -239,6 +246,8 @@ private:
 	friend void finish(not_null<Audio::Instance*> instance);
 
 	void setupShortcuts();
+	// 切换活动媒体时暂停另一类媒体，并取消其通话后恢复标记。
+	void activatePlayback(AudioMsgId::Type type);
 	void playStreamed(
 		const AudioMsgId &audioId,
 		std::shared_ptr<Streaming::Document> shared);
@@ -336,6 +345,8 @@ private:
 
 	Data _songData;
 	Data _voiceData;
+	AudioMsgId::Type _activeType = AudioMsgId::Type::Song;
+	rpl::variable<bool> _playbackAllowed = true;
 	std::unique_ptr<MusicListenTracker> _listenTracker;
 	bool _roundPlaying = false;
 

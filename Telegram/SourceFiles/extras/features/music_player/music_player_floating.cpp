@@ -160,33 +160,12 @@ FloatingPlayer::FloatingPlayer(
 	_playlist->sizeValue(
 	) | rpl::on_next([=] { updatePosition(); }, _lifetime);
 	using namespace Media::Player;
-	_type = instance()->getActiveType();
-	_songPlaying = ShowPauseIcon(instance()->getState(kSong).state);
-	_voicePlaying = ShowPauseIcon(instance()->getState(AudioMsgId::Type::Voice).state);
-	for (const auto type : { kSong, AudioMsgId::Type::Voice }) {
-		instance()->startsPlay(type) | rpl::on_next([=] {
-			_type = type;
-			refresh();
-		}, _lifetime);
-	}
-	instance()->updatedNotifier(
-	) | rpl::on_next([=](const TrackState &state) {
-		auto &wasPlaying = state.id.type() == kSong ? _songPlaying : _voicePlaying;
-		const auto playing = ShowPauseIcon(state.state);
-		if (playing && !wasPlaying) {
-			_type = state.id.type();
-		}
-		wasPlaying = playing;
-		refresh();
-	}, _lifetime);
-	instance()->trackChanged(
+	rpl::merge(
+		instance()->updatedNotifier() | rpl::to_empty,
+		instance()->trackChanged() | rpl::to_empty,
+		instance()->stops(kSong),
+		instance()->stops(AudioMsgId::Type::Voice)
 	) | rpl::on_next([=] { refresh(); }, _lifetime);
-	for (const auto type : { kSong, AudioMsgId::Type::Voice }) {
-		instance()->stops(type) | rpl::on_next([=] {
-			(type == kSong ? _songPlaying : _voicePlaying) = false;
-			refresh();
-		}, _lifetime);
-	}
 	instance()->closePlayerRequests(
 	) | rpl::on_next([=] { collapse(); }, _lifetime);
 	qApp->installEventFilter(this);
@@ -223,10 +202,7 @@ void FloatingPlayer::setAvailableRect(QRect rect) {
 
 void FloatingPlayer::refresh() {
 	using namespace Media::Player;
-	const auto selected = instance()->getState(_type);
-	if (!selected.id || IsStoppedOrStopping(selected.state)) {
-		_type = instance()->getActiveType();
-	}
+	_type = instance()->getActiveType();
 	const auto type = _type;
 	const auto current = instance()->current(type);
 	const auto document = current.audio();

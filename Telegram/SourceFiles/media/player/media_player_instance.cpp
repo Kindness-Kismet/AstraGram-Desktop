@@ -197,6 +197,7 @@ Instance::Instance()
 		Core::App().calls().currentGroupCallValue(),
 		_1 || _2
 	) | rpl::on_next([=](bool call) {
+		_playbackAllowed = !call;
 		if (call) {
 			pauseOnCall(AudioMsgId::Type::Voice);
 			pauseOnCall(AudioMsgId::Type::Song);
@@ -216,15 +217,16 @@ Instance::~Instance() {
 }
 
 AudioMsgId::Type Instance::getActiveType() const {
-	if (const auto data = getData(AudioMsgId::Type::Voice)) {
-		if (data->current) {
-			const auto state = getState(data->type);
-			if (!IsStoppedOrStopping(state.state)) {
-				return data->type;
-			}
+	const auto other = (_activeType == AudioMsgId::Type::Song)
+		? AudioMsgId::Type::Voice
+		: AudioMsgId::Type::Song;
+	for (const auto type : { _activeType, other }) {
+		const auto state = getState(type);
+		if (state.id && !IsStoppedOrStopping(state.state)) {
+			return type;
 		}
 	}
-	return AudioMsgId::Type::Song;
+	return _activeType;
 }
 
 void Instance::handleSongUpdate(const AudioMsgId &audioId) {
@@ -831,12 +833,25 @@ not_null<Instance*> instance() {
 	return SingleInstance;
 }
 
+void Instance::activatePlayback(AudioMsgId::Type type) {
+	_activeType = type;
+	const auto other = (type == AudioMsgId::Type::Song)
+		? AudioMsgId::Type::Voice
+		: AudioMsgId::Type::Song;
+	getData(other)->resumeOnCallEnd = false;
+	pause(other);
+}
+
 void Instance::play(AudioMsgId::Type type) {
+	if (!playbackAllowed()) {
+		return;
+	}
 	if (const auto data = getData(type)) {
 		if (!data->streamed || IsStopped(getState(type).state)) {
 			play(data->current);
 		} else {
 			if (data->streamed->instance.active()) {
+				activatePlayback(type);
 				data->streamed->instance.resume();
 			}
 			emitUpdate(type);
@@ -849,7 +864,7 @@ void Instance::play(
 		const AudioMsgId &audioId,
 		std::optional<PlaylistContext> context) {
 	const auto document = audioId.audio();
-	if (!document) {
+	if (!document || !playbackAllowed()) {
 		return;
 	}
 	_pendingContext = context;
@@ -890,6 +905,7 @@ void Instance::playStreamed(
 
 	const auto data = getData(audioId.type());
 	Assert(data != nullptr);
+	activatePlayback(audioId.type());
 
 	clearStreamed(data, data->current.audio() != audioId.audio());
 	data->streamed = std::make_unique<Streamed>(
@@ -1111,22 +1127,30 @@ void Instance::setupShuffleData(not_null<Data*> data) {
 }
 
 void Instance::playPause(AudioMsgId::Type type) {
-	if (const auto data = getData(type)) {
-		if (!data->streamed) {
-			play(data->current);
-		} else {
-			auto &streamed = data->streamed->instance;
-			if (!streamed.active()) {
-				streamed.play(streamingOptions(data->streamed->id));
-			} else if (streamed.paused()) {
-				streamed.resume();
-			} else {
-				streamed.pause();
-			}
-			emitUpdate(type);
-		}
-		data->resumeOnCallEnd = false;
+	if (!playbackAllowed()) {
+		return;
 	}
+	const auto data = getData(type);
+	if (!data) {
+		return;
+	}
+	if (!data->streamed) {
+		play(data->current);
+		return;
+	}
+	data->resumeOnCallEnd = false;
+	auto &streamed = data->streamed->instance;
+	if (streamed.active() && !streamed.paused()) {
+		pause(type);
+		return;
+	}
+	activatePlayback(type);
+	if (streamed.active()) {
+		streamed.resume();
+	} else {
+		streamed.play(streamingOptions(data->streamed->id));
+	}
+	emitUpdate(type);
 }
 
 void Instance::pauseOnCall(AudioMsgId::Type type) {
@@ -1153,6 +1177,9 @@ void Instance::resumeOnCall(AudioMsgId::Type type) {
 }
 
 bool Instance::next(AudioMsgId::Type type) {
+	if (!playbackAllowed()) {
+		return false;
+	}
 	if (const auto data = getData(type)) {
 		return moveInPlaylist(data, 1, false);
 	}
@@ -1160,6 +1187,9 @@ bool Instance::next(AudioMsgId::Type type) {
 }
 
 bool Instance::previous(AudioMsgId::Type type) {
+	if (!playbackAllowed()) {
+		return false;
+	}
 	if (const auto data = getData(type)) {
 		return moveInPlaylist(data, -1, false);
 	}
@@ -1219,12 +1249,15 @@ void Instance::seekStreamed(
 		float64 progress,
 		bool keepPaused) {
 	const auto streamed = data->streamed.get();
-	if (!streamed) {
+	if (!streamed || !playbackAllowed()) {
 		return;
 	}
 	const auto duration = streamedDuration(streamed);
 	if (duration <= 0) {
 		return;
+	}
+	if (!keepPaused) {
+		activatePlayback(data->type);
 	}
 	const auto position = crl::time(base::SafeRound(
 		std::clamp(progress, 0., 1.) * duration));

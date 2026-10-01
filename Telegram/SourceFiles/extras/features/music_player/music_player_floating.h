@@ -62,8 +62,6 @@ private:
 	QRect _available;
 	AudioMsgId::Type _type = AudioMsgId::Type::Song;
 	bool _active = false;
-	bool _songPlaying = false;
-	bool _voicePlaying = false;
 	bool _shown = false;
 	bool _playlistShown = false;
 	bool _playlistOnly = false;

@@ -212,8 +212,13 @@ CompactPanel::CompactPanel(
 	) | rpl::on_next([=] { refreshTrack(); }, lifetime());
 	instance()->updatedNotifier(
 	) | rpl::on_next([=] { refreshTrack(); }, lifetime());
+	instance()->playbackAllowedValue(
+	) | rpl::on_next([=] { refreshTrack(); }, lifetime());
 	rpl::merge(instance()->stops(kSong), instance()->stops(AudioMsgId::Type::Voice)
-	) | rpl::on_next([=] { cancelSeek(false); refreshTrack(); }, lifetime());
+	) | rpl::on_next([=] {
+		cancelSeek(false);
+		refreshTrack();
+	}, lifetime());
 	resize(st::extrasMusicCompactWidth, st::extrasMusicCompactHeight);
 	refreshTrack();
 }
@@ -279,7 +284,7 @@ void CompactPanel::refreshPlayback(const TrackState &state) {
 		? tr::extras_MusicPause(tr::now) : tr::extras_MusicPlay(tr::now));
 	_durationMs = (state.frequency > 0 && state.length > 0)
 		? state.length * 1000 / state.frequency : 0;
-	_progress->setDisabled(_durationMs <= 0);
+	_progress->setDisabled(_durationMs <= 0 || !instance()->playbackAllowed());
 	_playback->updateState(state);
 	_duration = Ui::FormatDurationText(_durationMs / 1000);
 	if (!_seeking) {
@@ -313,8 +318,10 @@ void CompactPanel::refreshPlaylist() {
 		? tr::extras_MusicPrevious(tr::now) : tr::extras_MediaPrevious(tr::now));
 	_next->setAccessibleName(music
 		? tr::extras_MusicNext(tr::now) : tr::extras_MediaNext(tr::now));
-	const auto previous = instance()->previousAvailable(type);
-	const auto next = instance()->nextAvailable(type);
+	const auto allowed = instance()->playbackAllowed();
+	_play->setDisabled(!allowed);
+	const auto previous = allowed && instance()->previousAvailable(type);
+	const auto next = allowed && instance()->nextAvailable(type);
 	_previous->setDisabled(!previous);
 	_next->setDisabled(!next);
 	_previous->setIconOverride(previous ? nullptr : &st::mediaPlayerPreviousDisabledIcon);
