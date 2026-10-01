@@ -513,7 +513,7 @@ Widget::Widget(
 , _lockUnlock(
 	_searchControls,
 	object_ptr<Ui::IconButton>(this, st::dialogsLock))
-, _downloadsButton(_searchControls, st::dialogsDownloadsButton)
+, _downloadsButton(this, st::dialogsDownloadsButton)
 , _scroll(this)
 , _scrollToTop(_scroll, st::dialogsToUp)
 , _stories((_layout != Layout::Child)
@@ -826,7 +826,7 @@ Widget::Widget(
 		Core::App().maybeLockByPasscode();
 		lockUnlock->setIconOverride(nullptr);
 	});
-	_downloadsButton->setObjectName(u"downloadsButtonInSearch"_q);
+	_downloadsButton->setObjectName(u"downloadsButtonInHeader"_q);
 	_downloadsButton->setAccessibleName(tr::lng_downloads_section(tr::now));
 	_downloadsButton->setClickedCallback([=] {
 		controller->showSection(
@@ -840,9 +840,9 @@ Widget::Widget(
 	) | rpl::on_next([=] {
 		updateLockUnlockPosition();
 	}, lifetime());
-	ExtrasSettings::getInstance().showDownloadsButtonInSearchValue(
+	ExtrasSettings::getInstance().showDownloadsButtonInHeaderValue(
 	) | rpl::on_next([=] {
-		updateLockUnlockPosition();
+		updateDownloadsButton();
 	}, lifetime());
 
 	setupMainMenuToggle();
@@ -2153,57 +2153,46 @@ void Widget::updateLockUnlockPosition() {
 			right - _lockUnlock->width(),
 			st::dialogsFilterPadding.y());
 	}
-	updateDownloadsButton(right);
+	const auto margin = int(_chooseFromUser->width()
+		* _chooseFromUser->shownProgress())
+		+ int(_chooseSearchType->width()
+			* _chooseSearchType->shownProgress());
+	if (_searchAdditionalRightMargin != margin) {
+		_searchAdditionalRightMargin = margin;
+		_search->setAdditionalMargins(QMargins(0, 0, margin, 0));
+	}
+	updateDownloadsButton();
 }
 
-void Widget::updateDownloadsButton(int right) {
-	const auto simple = _search->x() + _search->width();
-	const auto buttonRight = right - (_lockUnlock->isHidden()
-		? 0
-		: _lockUnlock->width());
+void Widget::updateDownloadsButton() {
+	const auto header = listHeaderHeight();
+	const auto buttonRight = width() - st::dialogsFilterPadding.x();
 	const auto buttonLeft = buttonRight - _downloadsButton->width();
-	const auto show = ExtrasSettings::getInstance().showDownloadsButtonInSearch()
+	const auto titleLeft = st::dialogsHeadingLeft
+		+ (_headingMenu->isHidden()
+			? 0
+			: _headingMenu->width() + st::dialogsFilterSkip);
+	const auto titleRight = titleLeft
+		+ st::dialogsHeadingFont->width(u"AstraGram"_q);
+	const auto show = ExtrasSettings::getInstance().showDownloadsButtonInHeader()
 		&& (_layout == Layout::Main)
-		&& width() >= _narrowWidth
-		&& !_searchControls->isHidden()
+		&& header > 0
 		&& !_showAnimation
 		&& _widthAnimationCache.isNull()
 		&& !_childList
 		&& !_openedFolder
 		&& !_openedForum
 		&& !_openedCommunity
-		&& !_suggestions
-		&& _hidingSuggestions.empty()
-		&& !searchActive()
-		&& !_searchHasFocus
-		&& !_searchSuggestionsLocked
-		&& _cancelSearch->isHidden()
-		&& _searchState.query.isEmpty()
-		&& !_searchState.inChat
-		&& !_searchState.fromPeer
-		&& _searchState.tags.empty()
-		&& _searchState.typeFilter == Api::SearchFilter::NoFilter
-		&& _searchState.filter == ChatTypeFilter::All
-		&& buttonRight <= _searchControls->width()
-		&& (buttonLeft >= _search->x()
-			+ st::dialogsFilter.textMargins.left()
-			+ style::ConvertScale(40));
+		&& buttonLeft >= titleRight + st::dialogsFilterSkip;
+	const auto changed = (_downloadsButton->isHidden() == show);
 	_downloadsButton->setVisible(show);
 	if (show) {
-		_downloadsButton->move(buttonLeft, _search->y());
+		_downloadsButton->moveToRight(
+			st::dialogsFilterPadding.x(),
+			(header - _downloadsButton->height()) / 2);
 	}
-	const auto searchButtonMargins = int(_chooseFromUser->width()
-		* _chooseFromUser->shownProgress())
-		+ int(_chooseSearchType->width()
-			* _chooseSearchType->shownProgress());
-	const auto downloadMargin = show
-		? std::max(0, simple - buttonLeft
-			- st::dialogsFilter.textMargins.right())
-		: 0;
-	const auto margin = searchButtonMargins + downloadMargin;
-	if (_searchAdditionalRightMargin != margin) {
-		_searchAdditionalRightMargin = margin;
-		_search->setAdditionalMargins(QMargins(0, 0, margin, 0));
+	if (changed) {
+		update(0, 0, width(), header);
 	}
 }
 
@@ -3168,6 +3157,7 @@ void Widget::startSlideAnimation(
 		_stories->setToggledHidden(true, false);
 	}
 	_searchControls->hide();
+	_downloadsButton->hide();
 	if (_subsectionTopBar) {
 		_subsectionTopBar->hide();
 	}

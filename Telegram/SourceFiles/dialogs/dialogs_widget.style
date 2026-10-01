@@ -18,8 +18,8 @@ dialogsLock: IconButton {
 	ripple: emptyRippleAnimation;
 }
 dialogsDownloadsButton: IconButton(dialogsCalendar) {
-	icon: icon {{ "menu/download", dialogsMenuIconFg }};
-	iconOver: icon {{ "menu/download", dialogsMenuIconFgOver }};
+	icon: icon {{ "dialogs/download_2_line", dialogsMenuIconFg }};
+	iconOver: icon {{ "dialogs/download_2_line", dialogsMenuIconFgOver }};
 	iconPosition: point(-1px, -1px);
 }
 dialogsUnlockIcon: icon {{ "dialogs/dialogs_lock_on", dialogsMenuIconFg }};

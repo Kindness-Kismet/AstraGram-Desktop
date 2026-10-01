@@ -43,3 +43,5 @@ python .codex/skills/app-debug/scripts/cli.py settings.keys session.autoDownload
 语言、主题文件、密码、账号安全及服务器动态选项经 `page.list/open` 与控件命令操作，保留原生确认流程。
 已跳转到定制设置的实验选项使用对应定制键，不保留重复入口。
 `theme.set <dark|light>` 切换主题并解除跟随系统；`theme.reset-background` 恢复默认壁纸。
+
+下载入口设置键为 `showDownloadsButtonInHeader`，默认显示；旧配置文件中的 `showDownloadsButtonInSearch` 自动迁移。

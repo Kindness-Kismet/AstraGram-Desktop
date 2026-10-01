@@ -198,10 +198,10 @@ void BuildAppearance(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 		.setter = &ExtrasSettings::setHideProxySettingsIcon,
 	});
 	extras.addSettingToggle({
-		.id = u"extras/showDownloadsButtonInSearch"_q,
-		.title = tr::extras_ShowDownloadsButtonInSearch(),
-		.getter = &ExtrasSettings::showDownloadsButtonInSearch,
-		.setter = &ExtrasSettings::setShowDownloadsButtonInSearch,
+		.id = u"extras/showDownloadsButtonInHeader"_q,
+		.title = tr::extras_ShowDownloadsButtonInHeader(),
+		.getter = &ExtrasSettings::showDownloadsButtonInHeader,
+		.setter = &ExtrasSettings::setShowDownloadsButtonInHeader,
 	});
 
 	const auto controller = builder.controller();

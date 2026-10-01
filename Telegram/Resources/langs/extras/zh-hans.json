@@ -70,7 +70,7 @@
   "DisableOpenLinkWarning": "关闭链接跳转确认",
   "HidePremiumStatuses": "隐藏 Premium 状态",
   "HideProxySettingsIcon": "隐藏代理设置图标",
-  "ShowDownloadsButtonInSearch": "在搜索框中显示下载按钮",
+  "ShowDownloadsButtonInHeader": "在对话列表顶栏显示下载入口",
   "SmoothScroll": "平滑滚动",
   "DisableNotificationsDelay": "禁用通知延迟",
   "LocalPremium": "本地 Telegram 高级版",
