@@ -363,6 +363,39 @@ void markReadAfterAction(not_null<History*> history) {
 	}
 }
 
+void readThreadOnServer(not_null<Data::Thread*> thread) {
+	const auto session = &thread->session();
+	if (ExtrasSettings::ghost(session).sendReadMessages()) {
+		return;
+	}
+	if (const auto history = thread->asHistory()) {
+		const auto send = [=] {
+			if (const auto last = history->lastServerMessage()) {
+				readHistory(last);
+			}
+		};
+		if (history->lastServerMessageKnown()) {
+			send();
+		} else {
+			// 末条消息未知时与官方 readInbox 一样，先拉取会话信息再发
+			history->owner().histories().requestDialogEntry(history, send);
+		}
+		return;
+	}
+	// 私信频道子列表的已读不受幽灵模式拦截，无需补发
+	const auto topic = thread->asTopic();
+	if (!topic) {
+		return;
+	}
+	session->api().request(MTPmessages_ReadDiscussion(
+		topic->peer()->input(),
+		MTP_int(topic->rootId()),
+		MTP_int(topic->lastKnownServerMessageId())
+	)).done([=] {
+		ExtrasWorker::markAsOnline(session);
+	}).send();
+}
+
 QString formatTTL(int time, bool isDoc) {
 	if (time == 0x7FFFFFFF) {
 		return isDoc ? tr::extras_OnePlayTTL(tr::now) : tr::extras_OneViewTTL(tr::now);

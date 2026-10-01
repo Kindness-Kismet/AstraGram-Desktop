@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_session.h"
 #include "data/data_unread_value.h"
 #include "data/data_user.h"
+#include "extras/utils/telegram_helpers.h"
 #include "history/history.h"
 #include "info/profile/info_profile_values.h"
 #include "lang/lang_keys.h"
@@ -91,8 +92,10 @@ bool IsUnreadThread(not_null<Data::Thread*> thread) {
 void MarkAsReadThread(
 		not_null<Data::Thread*> thread,
 		MarkAsReadMuted muted) {
+	// 幽灵模式下主动标为已读也发给服务器
 	const auto readHistory = [&](not_null<History*> history) {
 		history->owner().histories().readInbox(history);
+		readThreadOnServer(history);
 	};
 	if (!IsUnreadThread(thread)
 		|| ((muted == MarkAsReadMuted::Skip) && SkipMutedThread(thread))) {
@@ -108,6 +111,7 @@ void MarkAsReadThread(
 		}
 	} else if (const auto topic = thread->asTopic()) {
 		topic->readTillEnd();
+		readThreadOnServer(topic);
 	} else if (const auto sublist = thread->asSublist()) {
 		sublist->readTillEnd();
 	}

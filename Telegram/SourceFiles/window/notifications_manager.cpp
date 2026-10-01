@@ -1467,6 +1467,13 @@ void Manager::notificationReplied(
 	message.action.clearDraft = false;
 	history->session().api().sendMessage(std::move(message));
 
+	// 空回复即“标为已读”，幽灵模式下同菜单一样发给服务器
+	if (reply.text.isEmpty() && !monoforumPeerId) {
+		readThreadOnServer(topic
+			? not_null<Data::Thread*>(topic)
+			: not_null<Data::Thread*>(history));
+	}
+
 	if (item && item->isUnreadMention() && !item->isIncomingUnreadMedia()) {
 		history->session().api().markContentsRead(item);
 	}
