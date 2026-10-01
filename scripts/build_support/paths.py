@@ -47,5 +47,5 @@ DEFAULT_API_HASH = "b18441a1ff607e10a989891a5462e627"
 # 构建产物，Updater 缺失不视为失败
 PRODUCT_BINARIES = ("AstraGram.exe", "Updater.exe")
 
-# 仅 Debug 收集，符号文件缺失不视为失败
+# 仅带 --pdb 构建 Debug 时生成与收集
 DEBUG_SYMBOLS = ("AstraGram.pdb",)

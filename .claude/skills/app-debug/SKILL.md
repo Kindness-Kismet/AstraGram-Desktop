@@ -78,11 +78,11 @@ CLI 会核对已有进程的可执行文件路径和工作目录。恢复原调�
 ## 构建与验证
 
 C++ 修改后先 `app.stop`，再运行 `python scripts/build.py --dev --jobs 16`。
-产物位于 `build/AstraGram-v<版本>-win-x64-dev/`，包括程序和符号文件。
+产物位于 `build/AstraGram-v<版本>-win-x64-dev/`，默认不含 pdb；需要符号时加 `--pdb`，切换会全量重编。
 构建成功后 `app.start` 启动已有产物，最多等待 60 秒；单条服务端指令超时为 180 秒。
 
 假会话身份与场景消息在重启后消失，重新进入假会话即恢复场景；设置、草稿与留档仍写入调试配置。
-崩溃时先查看当前工作目录的 `crash.log`，结合调用栈定位文件与行号。
+崩溃时先查看当前工作目录的 `crash.log`；默认只有模块内偏移，`--pdb` 构建才能定位文件与行号。
 
 命令覆盖检查运行 `python .codex/skills/app-debug/scripts/audit.py`。
 独立配置已进入假会话后，运行 `python .codex/skills/app-debug/scripts/verify.py --profile scenarios`。

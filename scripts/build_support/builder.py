@@ -81,7 +81,7 @@ def zip_output(profile: str) -> Path:
     return archive
 
 
-def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bool, jobs: int, pack: bool = False, clean_pack: bool = False) -> None:
+def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bool, jobs: int, pack: bool = False, clean_pack: bool = False, pdb: bool = False) -> None:
     environment = msvc_environment()
     # cmake/external/qt 靠 %QT% 定位 Qt-<版本> 目录，缺失会直接 FATAL_ERROR
     environment["QT"] = qt_version(TARGET)
@@ -99,7 +99,7 @@ def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bo
             print(f"  removed {CMAKE_OUT_DIR}", flush=True)
 
     with timed_step("Configure CMake"):
-        configure(environment, api_id, api_hash)
+        configure(environment, api_id, api_hash, pdb)
 
     # 运行中的实例会占住产物，编译完再停就白等一轮链接，开工前先腾出来
     with timed_step("Release running instances"):
@@ -114,7 +114,7 @@ def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bo
         with timed_step(f"Build {cmake_config}"):
             compile_target(environment, cmake_config, jobs)
         with timed_step(f"Collect {cmake_config}"):
-            produced.extend(collect(cmake_config, profile))
+            produced.extend(collect(cmake_config, profile, pdb))
         if pack:
             if clean_pack:
                 with timed_step(f"Clean {cmake_config} output"):
@@ -140,7 +140,7 @@ def cmake_executable(environment: dict[str, str]) -> str:
     return found
 
 
-def configure(environment: dict[str, str], api_id: str, api_hash: str) -> None:
+def configure(environment: dict[str, str], api_id: str, api_hash: str, pdb: bool) -> None:
     CMAKE_OUT_DIR.mkdir(parents=True, exist_ok=True)
     command = [
         cmake_executable(environment),
@@ -169,8 +169,10 @@ def configure(environment: dict[str, str], api_id: str, api_hash: str) -> None:
     # 不会被 option() 覆盖，故显式传 OFF，让 Updater 参与构建。
     command.append("-DDESKTOP_APP_DISABLE_AUTOUPDATE=OFF")
 
-    # 只有 Debug 生成调试信息；Release 编译不带符号，链接走 /DEBUG:NONE，不产出 pdb。
-    command.append("-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=$<$<CONFIG:Debug>:ProgramDatabase>")
+    # 默认不生成调试信息；--pdb 时 Debug 把调试信息嵌进 obj，链接据此完整生成 pdb。
+    # 切换会改变全部编译参数，触发全量重编。
+    debug_format = "$<$<CONFIG:Debug>:Embedded>" if pdb else ""
+    command.append(f"-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT={debug_format}")
 
     # Qt5 的官方配置文件含有未初始化变量，开启该诊断会把外部包告警当成配置失败
     command += ["-Werror=dev", "-Werror=deprecated"]
@@ -270,7 +272,7 @@ def release_target(path: Path) -> None:
     time.sleep(0.5)
 
 
-def collect(cmake_config: str, profile: str) -> list[tuple[str, object]]:
+def collect(cmake_config: str, profile: str, pdb: bool) -> list[tuple[str, object]]:
     source_dir = CMAKE_OUT_DIR / cmake_config
     destination = output_dir(profile)
     destination.mkdir(parents=True, exist_ok=True)
@@ -279,8 +281,11 @@ def collect(cmake_config: str, profile: str) -> list[tuple[str, object]]:
     for name in PRODUCT_BINARIES:
         release_target(destination / name)
 
-    # Debug 还要带 .pdb，否则调试器只能看到地址而没有符号；Release 不生成调试信息。
-    wanted = PRODUCT_BINARIES + (DEBUG_SYMBOLS if profile == "dev" else ())
+    wanted = PRODUCT_BINARIES + (DEBUG_SYMBOLS if pdb and profile == "dev" else ())
+    # 不带 --pdb 时清掉上次留下的 pdb，免得与新 exe 对不上
+    for name in set(DEBUG_SYMBOLS) - set(wanted):
+        (source_dir / name).unlink(missing_ok=True)
+        (destination / name).unlink(missing_ok=True)
 
     collected: list[tuple[str, object]] = []
     for name in wanted:

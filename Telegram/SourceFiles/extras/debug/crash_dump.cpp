@@ -30,7 +30,7 @@ void DumpException(EXCEPTION_POINTERS *info) {
 	const auto process = GetCurrentProcess();
 	SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
 
-	// PDB 与 exe 同目录
+	// PDB 与 exe 同目录，只有带 --pdb 构建时存在
 	char exePath[MAX_PATH] = {};
 	GetModuleFileNameA(nullptr, exePath, MAX_PATH);
 	if (auto slash = strrchr(exePath, '\\')) {
@@ -85,11 +85,21 @@ void DumpException(EXCEPTION_POINTERS *info) {
 		symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
 		symbol->MaxNameLen = 255;
 		auto displacement = DWORD64{};
+		if (!SymFromAddr(process, pc, &displacement, symbol)) {
+			// 没有符号时输出模块内偏移，对照反汇编定位
+			snprintf(
+				line, sizeof(line),
+				"#%02d %s+0x%llx",
+				i,
+				moduleName,
+				static_cast<unsigned long long>(pc - moduleBase));
+			WriteLine(line);
+			continue;
+		}
+
 		auto lineInfo = IMAGEHLP_LINE64{};
 		lineInfo.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
 		auto lineDisplacement = DWORD{};
-
-		const auto hasSymbol = SymFromAddr(process, pc, &displacement, symbol);
 		const auto hasLine = SymGetLineFromAddr64(
 			process,
 			pc,
@@ -101,10 +111,10 @@ void DumpException(EXCEPTION_POINTERS *info) {
 
 		snprintf(
 			line, sizeof(line),
-			"#%02d %s!%s+0x%llu [%s:%lu]",
+			"#%02d %s!%s+0x%llx [%s:%lu]",
 			i,
 			moduleName,
-			hasSymbol ? symbol->Name : "??",
+			symbol->Name,
 			static_cast<unsigned long long>(displacement),
 			filePart ? filePart + 1 : (hasLine ? lineInfo.FileName : "?"),
 			lineInfo.LineNumber);

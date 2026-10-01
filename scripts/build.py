@@ -47,6 +47,7 @@ def main() -> None:
             jobs=args.jobs,
             pack=args.pack,
             clean_pack=args.clean_pack,
+            pdb=args.pdb,
         )
 
 
@@ -58,6 +59,7 @@ def print_environment(args: argparse.Namespace, environment: dict[str, str]) -> 
     print(f"  Platform       Windows {TARGET_SUFFIX}")
     print(f"  Toolset        {describe_toolset(environment)}")
     print(f"  Configuration  {configurations}")
+    print(f"  Debug PDB      {'yes' if args.pdb else 'no'}")
     print(f"  Compile jobs   {args.jobs} (maximum: {MAX_BUILD_JOBS})")
     print(f"  CMake          {get_tool_version([cmake_executable(environment), '--version'])}")
     print(f"  Dependencies   {describe_dependencies()}")
@@ -82,7 +84,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Build AstraGram into versioned directories under build/.\n"
-            "Builds Release by default; Debug also collects AstraGram.pdb."
+            "Builds Release by default; no PDB unless --pdb is given."
         ),
         formatter_class=MultilineHelpFormatter,
     )
@@ -96,6 +98,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--api-id", metavar="ID", default=DEFAULT_API_ID, help="Telegram API id")
     parser.add_argument("--api-hash", metavar="HASH", default=DEFAULT_API_HASH, help="Telegram API hash")
     parser.add_argument("--reconfigure", action="store_true", help="Discard the CMake cache before configuring")
+    parser.add_argument(
+        "--pdb",
+        action="store_true",
+        help="Debug only: link without incremental mode and write a fresh AstraGram.pdb;\n"
+        "toggling this option recompiles everything",
+    )
     parser.add_argument(
         "--jobs",
         metavar="N",
@@ -117,6 +125,8 @@ def parse_args() -> argparse.Namespace:
     if not 1 <= args.jobs <= MAX_BUILD_JOBS:
         parser.error(f"--jobs must be between 1 and {MAX_BUILD_JOBS}")
     args.configurations = resolve_configurations(args)
+    if args.pdb and "dev" not in args.configurations:
+        parser.error("--pdb requires --dev or --all")
     return args
 
 

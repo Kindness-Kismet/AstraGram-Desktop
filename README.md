@@ -186,7 +186,8 @@ python scripts/prebuild.py --list    # see the stage list first
 
 # Build the app
 python scripts/build.py              # Release
-python scripts/build.py --dev        # Debug, also collects the PDB
+python scripts/build.py --dev        # Debug
+python scripts/build.py --dev --pdb  # Debug with a freshly linked PDB (toggling recompiles everything)
 python scripts/build.py --jobs 8     # fewer parallel jobs, see the memory note
 ```
 

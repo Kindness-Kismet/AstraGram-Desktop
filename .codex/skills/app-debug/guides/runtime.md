@@ -53,7 +53,7 @@ python .claude/skills/app-debug/scripts/cli.py app.start
 
 ## 崩溃排查
 
-Debug 构建装了未处理异常过滤器：进程崩溃时把异常码与符号化调用栈写进
+Debug 构建装了未处理异常过滤器：进程崩溃时把异常码与调用栈写进
 工作目录 `crash.log`（工作目录见 `app.info` 的 workingDir）。
 
 ```bash
@@ -61,7 +61,7 @@ python .claude/skills/app-debug/scripts/cli.py page.open extras   # 复现操作
 cat build/AstraGram-v*-win-x64-dev/crash.log                   # 读调用栈定位
 ```
 
-复现崩溃后先查看 crash.log 的调用栈，定位文件与行号。
+默认构建没有 pdb，本程序的帧只有模块内偏移；需要函数名与行号时用 `--pdb` 构建后复现。
 
 ## 独立数据目录
 
