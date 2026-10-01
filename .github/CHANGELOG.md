@@ -9,7 +9,9 @@
 - Removed automatic language-switch pop-ups; manual language selection remains available
 - Changed appearance settings; switches now use a single style, and the switch-style selector and the option to disable custom chat backgrounds are removed
 - Improved notification settings previews, which now match the rounded notification cards, with lighter card shadows and no monitor graphic around the preview
-- Changed the account switcher in the main menu; it no longer shows the combined unread badge for other accounts and retains space for the expand arrow
+- Changed the account switcher and main menu icons; combined unread badges and dots for other accounts are removed, while the account switcher retains space for the expand arrow
+- Added an appearance option to hide the proxy settings icon, so you can control whether it appears
+- Added an appearance option to show a downloads button in the search bar, so you can open downloads when the search bar is idle and has enough space
 
 ---
 
@@ -24,4 +26,6 @@
 - 移除了自动弹出的语言切换提示框，仍可手动选择界面语言
 - 调整了外观设置，现在统一使用一种开关样式，不再提供切换开关样式和禁用自定义聊天背景的选项
 - 改进了通知设置中的预览，现在与通知卡片的圆角样式一致，同时减轻了卡片阴影，并移除了预览外的显示器图案
-- 调整了主菜单账号切换区，现在不再显示其他账号的未读总数角标，并保留展开箭头的空间
+- 调整了账号切换区和主菜单图标，现在不再显示其他账号的未读总数角标与圆点，账号切换区仍保留展开箭头的空间
+- 新增了隐藏代理设置图标的外观选项，现在可以控制该图标是否显示
+- 新增了在搜索框中显示下载按钮的外观选项，现在可以在搜索框空闲且空间充足时直接打开下载列表
