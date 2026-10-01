@@ -65,11 +65,11 @@ def verify(profile):
     passed(f"客户端与服务端指令一致，共 {len(server)} 条")
 
     scenarios = command("scenario.list")
-    require(len(scenarios) == 17, "场景数量不符")
+    require(any(s["key"] == "message-menu" for s in scenarios), "缺少消息菜单对照场景")
     require(command("settings.get", "devFeaturesEnabled"), "假会话未自动开启开发者功能")
     for scenario in scenarios:
         command("scenario.open", scenario["key"])
-    passed("进入假会话后 17 种场景均可直接打开")
+    passed(f"进入假会话后 {len(scenarios)} 种场景均可直接打开")
 
     schema = command("settings.schema")
     keys = command("settings.keys")

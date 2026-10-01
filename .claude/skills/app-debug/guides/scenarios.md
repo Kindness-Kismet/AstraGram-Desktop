@@ -32,6 +32,10 @@ python .codex/skills/app-debug/scripts/cli.py scenario.open discussion + screens
 | pinned | 多条置顶消息，可取消全部置顶的群组 |
 | archived-private | 归档中的普通私聊 |
 | archived-group | 归档中的群聊 |
+| message-menu | 普通消息、禁止转发消息和已删除消息，检查菜单提示与悬停回复 |
+
+`message-menu` 自动包含三条对照消息：普通消息和禁止转发消息可悬停回复，已删除消息不显示回复按钮。
+右键禁止转发消息可检查提示文字与菜单项的字号、对齐；已删除样本只设置内存状态，不修改留档开关或写入数据库。
 
 假会话还会创建“朋友”和“工作”两个分组，分别展示未归档的私聊、群聊和频道。
 切换分组后用 `chat.open-archive` 进入归档，它与菜单入口同样调用 `openFolder()`；两个归档场景仅存在内存中。

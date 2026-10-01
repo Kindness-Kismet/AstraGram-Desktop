@@ -53,6 +53,7 @@ enum class Kind {
 	Pinned,
 	ArchivedPrivate,
 	ArchivedGroup,
+	MessageMenu,
 };
 
 struct Scenario {
@@ -81,6 +82,7 @@ constexpr auto kScenarios = std::array{
 	Scenario{ "pinned", u"17 多条置顶消息", Kind::Pinned },
 	Scenario{ "archived-private", u"18 归档私聊", Kind::ArchivedPrivate },
 	Scenario{ "archived-group", u"19 归档群聊", Kind::ArchivedGroup },
+	Scenario{ "message-menu", u"20 转发限制与已删除消息", Kind::MessageMenu },
 };
 
 constexpr auto kFirstPeerId = uint64(810000001);
@@ -138,7 +140,8 @@ void initialiseUser(
 		bool topic,
 		int shortcutId = 0,
 		bool keyboard = false,
-		bool edited = false) {
+		bool edited = false,
+		bool noForwards = false) {
 	using Flag = MTPDmessage::Flag;
 	using ReplyFlag = MTPDmessageReplyHeader::Flag;
 	const auto reply = topic ? MTP_messageReplyHeader(
@@ -169,6 +172,7 @@ void initialiseUser(
 			| (shortcutId ? Flag::f_quick_reply_shortcut_id : Flag())
 			| (keyboard ? Flag::f_reply_markup : Flag())
 			| (edited ? Flag::f_edit_date : Flag())
+			| (noForwards ? Flag::f_noforwards : Flag())
 			| (peer->isBroadcast() ? Flag::f_post : Flag())),
 		MTP_int(id), peerToMTP(sender), MTPint(), MTPstring(),
 		peerToMTP(peer->id), MTPPeer(), MTPMessageFwdHeader(),
@@ -199,6 +203,12 @@ void fillHistory(
 	const auto topic = kScenarios[index].kind == Kind::Topic;
 	const auto translating = kScenarios[index].kind == Kind::Translate;
 	const auto pinAll = kScenarios[index].kind == Kind::Pinned;
+	const auto messageMenu = kind == Kind::MessageMenu;
+	constexpr auto kMessageMenuTexts = std::array{
+		u"普通消息：悬停时应显示回复按钮。",
+		u"禁止转发消息：右键检查底部提示的字号与对齐。",
+		u"已删除消息：悬停时不应显示回复按钮。",
+	};
 	const auto sender = peer->isBroadcast() ? peer->id
 		: peer->isUser() ? peer->id
 		: peerFromUser(UserId(kFirstPeerId));
@@ -208,10 +218,13 @@ void fillHistory(
 		messages.push_back(makeMessage(peer, session->userPeerId(),
 			kTopicRootId, u"话题开始：检查独立输入区。"_q, false, false));
 	}
-	const auto messageCount = translating ? 5
+	const auto messageCount = messageMenu ? int(kMessageMenuTexts.size())
+		: translating ? 5
 		: kScenarios[index].kind == Kind::Sponsored ? 24 : 6;
 	for (auto i = 0; i != messageCount; ++i) {
-		const auto text = translating
+		const auto text = messageMenu
+			? QString::fromUtf16(kMessageMenuTexts[i])
+			: translating
 			? u"Bonjour, voici un exemple de conversation pour vérifier la traduction et la disposition des messages. %1"_q.arg(i + 1)
 			: (i == 0 && pinned)
 			? u"置顶说明：检查顶部条、正文留白与窄窗换行。"_q
@@ -222,11 +235,16 @@ void fillHistory(
 		messages.prepend(makeMessage(peer,
 			outgoing ? session->userPeerId() : sender, id,
 			text, pinned && (i == 0 || pinAll), topic, 0,
-			kScenarios[index].kind == Kind::Keyboard && i == messageCount - 1));
+			kScenarios[index].kind == Kind::Keyboard && i == messageCount - 1,
+			false, messageMenu && i == 1));
 		replyIds.push_back(id);
 	}
 	history->addNewerSlice(messages);
 	history->addNewerSlice({});
+	if (messageMenu) {
+		// 仅构造已删除消息的显示状态，不写入留档库或修改留档开关。
+		session->data().message(peer->id, replyIds.back())->setDeleted();
+	}
 	if (kScenarios[index].kind == Kind::Keyboard) {
 		history->setLastKeyboard(kFirstMessageId + 100 * index + messageCount - 1,
 			peer->id);
