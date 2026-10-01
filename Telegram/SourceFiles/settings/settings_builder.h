@@ -21,7 +21,7 @@ namespace Ui {
 class RpWidget;
 class VerticalLayout;
 class SettingsButton;
-class Checkbox;
+class SettingsToggle;
 } // namespace Ui
 
 namespace Main {
@@ -237,7 +237,7 @@ public:
 	};
 	Ui::SettingsButton *addPrivacyButton(PrivacyButtonArgs &&args);
 
-	struct CheckboxArgs {
+	struct ToggleArgs {
 		QString id;
 		QStringList altIds;
 		rpl::producer<QString> title;
@@ -246,7 +246,7 @@ public:
 		HighlightArgs highlight = { .radius = st::boxRadius };
 		rpl::producer<bool> shown;
 	};
-	Ui::Checkbox *addCheckbox(CheckboxArgs &&args);
+	Ui::SettingsToggle *addToggle(ToggleArgs &&args);
 
 	struct SubsectionTitleArgs {
 		QString id;

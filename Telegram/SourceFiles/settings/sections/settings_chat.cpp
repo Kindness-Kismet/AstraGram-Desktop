@@ -36,6 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
+#include "ui/widgets/settings_toggle.h"
 #include "ui/widgets/color_editor.h"
 #include "ui/widgets/labels.h"
 #include "ui/chat/attach/attach_extensions.h"
@@ -1238,7 +1239,7 @@ void BuildSupportSection(SectionBuilder &builder) {
 
 	builder.addSkip(st::settingsCheckboxesSkip);
 
-	const auto templatesAutocomplete = builder.addCheckbox({
+	const auto templatesAutocomplete = builder.addToggle({
 		.id = u"chat/support/templates"_q,
 		.title = rpl::single(u"Enable templates autocomplete"_q),
 		.checked = session->settings().supportTemplatesAutocomplete(),
@@ -1253,7 +1254,7 @@ void BuildSupportSection(SectionBuilder &builder) {
 		}, templatesAutocomplete->lifetime());
 	}
 
-	const auto allSilent = builder.addCheckbox({
+	const auto allSilent = builder.addToggle({
 		.id = u"chat/support/silent"_q,
 		.title = rpl::single(u"Send all messages without sound"_q),
 		.checked = session->settings().supportAllSilent(),
@@ -1446,19 +1447,18 @@ void SetupStickersEmoji(
 		QMargins(0, 0, 0, st::settingsCheckbox.margin.bottom())));
 
 	const auto checkbox = [&](const QString &label, bool checked) {
-		return object_ptr<Ui::Checkbox>(
+		return object_ptr<Ui::SettingsToggle>(
 			container,
 			label,
 			checked,
-			st::settingsCheckbox);
+			st::settingsButtonNoIcon);
 	};
 	const auto addWithReturn = [&](
 			const QString &label,
 			bool checked,
 			auto &&handle) {
 		const auto result = inner->add(
-			checkbox(label, checked),
-			st::settingsCheckboxPadding);
+			checkbox(label, checked));
 		result->checkedChanges(
 		) | rpl::on_next(
 			std::move(handle),
@@ -1471,10 +1471,9 @@ void SetupStickersEmoji(
 			auto &&handle,
 			rpl::producer<bool> shown) {
 		const auto wrap = inner->add(
-			object_ptr<Ui::SlideWrap<Ui::Checkbox>>(
+			object_ptr<Ui::SlideWrap<Ui::SettingsToggle>>(
 				inner,
-				checkbox(label, checked),
-				st::settingsCheckboxPadding));
+				checkbox(label, checked)));
 		wrap->setDuration(0)->toggleOn(std::move(shown))->entity()->checkedChanges(
 		) | rpl::on_next(
 			std::move(handle),
@@ -1799,12 +1798,11 @@ void SetupMessages(
 	Ui::AddSkip(inner, st::settingsSendTypeSkip);
 
 	const auto cornerReply = inner->add(
-		object_ptr<Ui::Checkbox>(
+		object_ptr<Ui::SettingsToggle>(
 			inner,
 			tr::lng_settings_chat_corner_reply(tr::now),
 			Core::App().settings().cornerReply(),
-			st::settingsCheckbox),
-		st::settingsCheckboxPadding);
+			st::settingsButtonNoIcon));
 	cornerReply->checkedChanges(
 	) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setCornerReply(checked);
@@ -1818,12 +1816,11 @@ void SetupMessages(
 	}
 
 	const auto cornerReaction = inner->add(
-		object_ptr<Ui::Checkbox>(
+		object_ptr<Ui::SettingsToggle>(
 			inner,
 			tr::lng_settings_chat_corner_reaction(tr::now),
 			Core::App().settings().cornerReaction(),
-			st::settingsCheckbox),
-		st::settingsCheckboxPadding);
+			st::settingsButtonNoIcon));
 	cornerReaction->checkedChanges(
 	) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setCornerReaction(checked);
@@ -1837,12 +1834,11 @@ void SetupMessages(
 	}
 
 	const auto pullToNext = inner->add(
-		object_ptr<Ui::Checkbox>(
+		object_ptr<Ui::SettingsToggle>(
 			inner,
 			tr::lng_settings_pull_to_next_channel(tr::now),
 			Core::App().settings().pullToNextChannel(),
-			st::settingsCheckbox),
-		st::settingsCheckboxPadding);
+			st::settingsButtonNoIcon));
 	pullToNext->checkedChanges(
 	) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setPullToNextChannel(checked);
@@ -2087,24 +2083,22 @@ void SetupChatBackground(
 
 	const auto background = Window::Theme::Background();
 	const auto tile = inner->add(
-		object_ptr<Ui::SlideWrap<Ui::Checkbox>>(
+		object_ptr<Ui::SlideWrap<Ui::SettingsToggle>>(
 			inner,
-			object_ptr<Ui::Checkbox>(
+			object_ptr<Ui::SettingsToggle>(
 				inner,
 				tr::lng_settings_bg_tile(tr::now),
 				background->tile(),
-				st::settingsCheckbox),
-			st::settingsSendTypePadding));
+				st::settingsButtonNoIcon)));
 	// 常驻显示：上游只在宽屏布局已生效时才显示这个开关，找不到入口会让人困惑。
 	const auto adaptive = inner->add(
-		object_ptr<Ui::SlideWrap<Ui::Checkbox>>(
+		object_ptr<Ui::SlideWrap<Ui::SettingsToggle>>(
 			inner,
-			object_ptr<Ui::Checkbox>(
+			object_ptr<Ui::SettingsToggle>(
 				inner,
 				tr::lng_settings_adaptive_wide(tr::now),
 				Core::App().settings().adaptiveForWide(),
-				st::settingsCheckbox),
-			st::settingsSendTypePadding));
+				st::settingsButtonNoIcon)));
 
 	tile->entity()->checkedChanges(
 	) | rpl::on_next([=](bool checked) {
@@ -2392,14 +2386,13 @@ void SetupDefaultThemes(
 		container.get(),
 		container.get());
 	const auto systemAccentWrap = container->add(
-		object_ptr<Ui::SlideWrap<Ui::Checkbox>>(
+		object_ptr<Ui::SlideWrap<Ui::SettingsToggle>>(
 			container,
-			object_ptr<Ui::Checkbox>(
+			object_ptr<Ui::SettingsToggle>(
 				container,
 				tr::lng_settings_theme_system_accent_color(tr::now),
 				Core::App().settings().systemAccentColorEnabled(),
-				st::settingsCheckbox)),
-		st::settingsCheckboxPadding);
+				st::settingsButtonNoIcon)));
 	systemAccentWrap->setDuration(0);
 
 	const auto updateMessageShotPalette = [=](const QString &path)
@@ -2974,12 +2967,11 @@ void SetupSupport(
 	Ui::AddSkip(inner, st::settingsCheckboxesSkip);
 
 	inner->add(
-		object_ptr<Ui::Checkbox>(
+		object_ptr<Ui::SettingsToggle>(
 			inner,
 			"Enable templates autocomplete",
 			controller->session().settings().supportTemplatesAutocomplete(),
-			st::settingsCheckbox),
-		st::settingsSendTypePadding
+			st::settingsButtonNoIcon)
 	)->checkedChanges(
 	) | rpl::on_next([=](bool checked) {
 		controller->session().settings().setSupportTemplatesAutocomplete(
@@ -2988,12 +2980,11 @@ void SetupSupport(
 	}, inner->lifetime());
 
 	inner->add(
-		object_ptr<Ui::Checkbox>(
+		object_ptr<Ui::SettingsToggle>(
 			inner,
 			"Send all messages without sound",
 			controller->session().settings().supportAllSilent(),
-			st::settingsCheckbox),
-		st::settingsSendTypePadding
+			st::settingsButtonNoIcon)
 	)->checkedChanges(
 	) | rpl::on_next([=](bool checked) {
 		controller->session().settings().setSupportAllSilent(

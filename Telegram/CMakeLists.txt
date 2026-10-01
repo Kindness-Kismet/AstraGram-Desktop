@@ -2321,6 +2321,8 @@ PRIVATE
     ui/widgets/chat_filters_tabs_strip.h
     ui/widgets/peer_bubble.cpp
     ui/widgets/peer_bubble.h
+    ui/widgets/settings_toggle.cpp
+    ui/widgets/settings_toggle.h
     ui/countryinput.cpp
     ui/countryinput.h
     ui/dynamic_thumbnails.cpp

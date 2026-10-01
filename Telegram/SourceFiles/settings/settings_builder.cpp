@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
+#include "ui/widgets/settings_toggle.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_session_controller.h"
@@ -409,20 +410,22 @@ Ui::SettingsButton *SectionBuilder::addPrivacyButton(PrivacyButtonArgs &&args) {
 	return button;
 }
 
-Ui::Checkbox *SectionBuilder::addCheckbox(CheckboxArgs &&args) {
+Ui::SettingsToggle *SectionBuilder::addToggle(ToggleArgs &&args) {
+	const auto id = args.id;
 	const auto factory = [&](not_null<Ui::VerticalLayout*> container) {
-		return object_ptr<Ui::Checkbox>(
+		auto result = object_ptr<Ui::SettingsToggle>(
 			container,
 			ResolveTitle(rpl::duplicate(args.title)),
 			args.checked,
-			st::settingsCheckbox);
+			st::settingsButtonNoIcon);
+		result->setObjectName(id);
+		return result;
 	};
-	return static_cast<Ui::Checkbox*>(addControl({
+	return static_cast<Ui::SettingsToggle*>(addControl({
 		.factory = factory,
 		.id = std::move(args.id),
 		.altIds = std::move(args.altIds),
 		.title = rpl::duplicate(args.title),
-		.margin = st::settingsCheckboxPadding,
 		.highlight = std::move(args.highlight),
 		.shown = std::move(args.shown),
 		.keywords = std::move(args.keywords),

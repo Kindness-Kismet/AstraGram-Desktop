@@ -57,6 +57,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
+#include "ui/widgets/settings_toggle.h"
 #include "ui/widgets/labels.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
@@ -313,7 +314,7 @@ void BuildWindowTitleSection(SectionBuilder &builder) {
 		return settings->windowTitleContent();
 	};
 
-	const auto showChatName = builder.addCheckbox({
+	const auto showChatName = builder.addToggle({
 		.id = u"advanced/title_chat_name"_q,
 		.title = tr::lng_settings_title_chat_name(),
 		.checked = !content().hideChatName,
@@ -332,7 +333,7 @@ void BuildWindowTitleSection(SectionBuilder &builder) {
 	}
 
 	const auto showAccountName = (Core::App().domain().accountsAuthedCount() > 1)
-		? builder.addCheckbox({
+		? builder.addToggle({
 			.id = u"advanced/title_account_name"_q,
 			.title = tr::lng_settings_title_account_name(),
 			.checked = !content().hideAccountName,
@@ -351,7 +352,7 @@ void BuildWindowTitleSection(SectionBuilder &builder) {
 		}, showAccountName->lifetime());
 	}
 
-	const auto showTotalUnread = builder.addCheckbox({
+	const auto showTotalUnread = builder.addToggle({
 		.id = u"advanced/title_total_unread"_q,
 		.title = tr::lng_settings_title_total_count(),
 		.checked = !content().hideTotalUnread,
@@ -370,7 +371,7 @@ void BuildWindowTitleSection(SectionBuilder &builder) {
 	}
 
 	if (Ui::Platform::NativeWindowFrameSupported()) {
-		const auto nativeFrame = builder.addCheckbox({
+		const auto nativeFrame = builder.addToggle({
 			.id = u"advanced/native_frame"_q,
 			.title = Platform::IsWayland()
 				? tr::lng_settings_qt_frame()
@@ -476,7 +477,7 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 			return (workMode == WorkMode::TrayOnly)
 				|| (workMode == WorkMode::WindowAndTray);
 		};
-		const auto tray = builder.addCheckbox({
+		const auto tray = builder.addToggle({
 			.id = u"advanced/tray"_q,
 			.title = tr::lng_settings_workmode_tray(),
 			.checked = trayEnabled(),
@@ -489,7 +490,7 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 				|| (workMode == WorkMode::WindowAndTray);
 		};
 		const auto taskbar = Platform::SkipTaskbarSupported()
-			? builder.addCheckbox({
+			? builder.addToggle({
 				.id = u"advanced/taskbar"_q,
 				.title = tr::lng_settings_workmode_window(),
 				.checked = taskbarEnabled(),
@@ -498,7 +499,7 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 			: nullptr;
 
 		const auto monochrome = Platform::HasMonochromeSetting()
-			? builder.addCheckbox({
+			? builder.addToggle({
 				.id = u"advanced/monochrome_icon"_q,
 				.title = tr::lng_settings_monochrome_icon(),
 				.checked = settings->trayIconMonochrome(),
@@ -562,7 +563,7 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 	}
 
 #ifdef Q_OS_MAC
-	const auto warnBeforeQuit = builder.addCheckbox({
+	const auto warnBeforeQuit = builder.addToggle({
 		.id = u"advanced/warn_before_quit"_q,
 		.title = tr::lng_settings_mac_warn_before_quit(
 			lt_text,
@@ -580,7 +581,7 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 		}, warnBeforeQuit->lifetime());
 	}
 
-	const auto systemReplace = builder.addCheckbox({
+	const auto systemReplace = builder.addToggle({
 		.id = u"advanced/system_text_replace"_q,
 		.title = tr::lng_settings_system_text_replace(),
 		.checked = settings->systemTextReplace(),
@@ -601,7 +602,7 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 		const auto digest = base::Platform::CurrentCustomAppIconDigest();
 		return digest && (settings->macRoundIconDigest() == digest);
 	};
-	const auto roundIcon = builder.addCheckbox({
+	const auto roundIcon = builder.addToggle({
 		.id = u"advanced/round_icon"_q,
 		.title = tr::lng_settings_mac_round_icon(),
 		.checked = roundIconEnabled(),
@@ -641,7 +642,7 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 		}, container->lifetime());
 	}
 
-	const auto closeToTaskbar = builder.addCheckbox({
+	const auto closeToTaskbar = builder.addToggle({
 		.id = u"advanced/close_to_taskbar"_q,
 		.title = tr::lng_settings_close_to_taskbar(),
 		.checked = settings->closeBehavior() == Behavior::CloseToTaskbar,
@@ -670,14 +671,14 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 				&& !controller->session().domain().local().hasLocalPasscode();
 		};
 
-		const auto autostart = builder.addCheckbox({
+		const auto autostart = builder.addToggle({
 			.id = u"advanced/autostart"_q,
 			.title = tr::lng_settings_auto_start(),
 			.checked = cAutoStart(),
 			.keywords = { u"autostart"_q, u"startup"_q, u"boot"_q },
 		});
 
-		const auto minimized = builder.addCheckbox({
+		const auto minimized = builder.addToggle({
 			.id = u"advanced/start_minimized"_q,
 			.title = tr::lng_settings_start_min(),
 			.checked = minimizedToggled(),
@@ -740,7 +741,7 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 		}
 	}
 
-	const auto restoreWindows = builder.addCheckbox({
+	const auto restoreWindows = builder.addToggle({
 		.id = u"advanced/restore_windows"_q,
 		.title = tr::lng_settings_restore_windows(),
 		.checked = Core::App().savedWindows()->restoreOnLaunch(),
@@ -763,7 +764,7 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 	}
 
 	if (Platform::IsWindows() && !Platform::IsWindowsStoreBuild()) {
-		const auto sendto = builder.addCheckbox({
+		const auto sendto = builder.addToggle({
 			.id = u"advanced/sendto"_q,
 			.title = tr::lng_settings_add_sendto(),
 			.checked = cSendToMenu(),
@@ -1170,18 +1171,17 @@ void SetupWindowTitleContent(
 		Window::SessionController *controller,
 		not_null<Ui::VerticalLayout*> container) {
 	const auto checkbox = [&](rpl::producer<QString> &&label, bool checked) {
-		return object_ptr<Ui::Checkbox>(
+		return object_ptr<Ui::SettingsToggle>(
 			container,
 			std::move(label),
 			checked,
-			st::settingsCheckbox);
+			st::settingsButtonNoIcon);
 	};
 	const auto addCheckbox = [&](
 			rpl::producer<QString> &&label,
 			bool checked) {
 		return container->add(
-			checkbox(std::move(label), checked),
-			st::settingsCheckboxPadding);
+			checkbox(std::move(label), checked));
 	};
 	const auto settings = &Core::App().settings();
 	if (controller) {
@@ -1253,27 +1253,25 @@ void SetupSystemIntegrationContent(
 	using WorkMode = Core::Settings::WorkMode;
 
 	const auto checkbox = [&](rpl::producer<QString> &&label, bool checked) {
-		return object_ptr<Ui::Checkbox>(
+		return object_ptr<Ui::SettingsToggle>(
 			container,
 			std::move(label),
 			checked,
-			st::settingsCheckbox);
+			st::settingsButtonNoIcon);
 	};
 	const auto addCheckbox = [&](
 			rpl::producer<QString> &&label,
 			bool checked) {
 		return container->add(
-			checkbox(std::move(label), checked),
-			st::settingsCheckboxPadding);
+			checkbox(std::move(label), checked));
 	};
 	const auto addSlidingCheckbox = [&](
 			rpl::producer<QString> &&label,
 			bool checked) {
 		return container->add(
-			object_ptr<Ui::SlideWrap<Ui::Checkbox>>(
+			object_ptr<Ui::SlideWrap<Ui::SettingsToggle>>(
 				container,
-				checkbox(std::move(label), checked),
-				st::settingsCheckboxPadding));
+				checkbox(std::move(label), checked)));
 	};
 
 	const auto settings = &Core::App().settings();

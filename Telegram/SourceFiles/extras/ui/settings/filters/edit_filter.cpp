@@ -21,6 +21,7 @@
 #include "ui/text/text.h"
 #include "ui/toast/toast.h"
 #include "ui/widgets/checkbox.h"
+#include "ui/widgets/settings_toggle.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/wrap/slide_wrap.h"
@@ -146,26 +147,23 @@ void RegexEditBuilder(
 		st::markdownLinkFieldPadding);
 	const auto errorText = AddError(box->verticalLayout(), regexValue);
 	const auto enabled = box->addRow(
-		object_ptr<Ui::Checkbox>(
+		object_ptr<Ui::SettingsToggle>(
 			box,
 			tr::extras_EnableExpression(tr::now),
 			data.enabled,
-			st::defaultBoxCheckbox),
-		st::settingsCheckboxPadding);
+			st::settingsButtonNoIcon), style::margins());
 	const auto caseInsensitive = box->addRow(
-		object_ptr<Ui::Checkbox>(
+		object_ptr<Ui::SettingsToggle>(
 			box,
 			tr::extras_CaseInsensitiveExpression(tr::now),
 			data.caseInsensitive,
-			st::defaultBoxCheckbox),
-		st::settingsCheckboxPadding);
+			st::settingsButtonNoIcon), style::margins());
 	const auto reversed = box->addRow(
-		object_ptr<Ui::Checkbox>(
+		object_ptr<Ui::SettingsToggle>(
 			box,
 			tr::extras_ReversedExpression(tr::now),
 			data.reversed,
-			st::defaultBoxCheckbox),
-		st::settingsCheckboxPadding);
+			st::settingsButtonNoIcon), style::margins());
 
 	regexValue->setText(QString::fromStdString(data.text));
 
