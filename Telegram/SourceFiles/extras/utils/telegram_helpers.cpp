@@ -318,30 +318,31 @@ void MarkAsReadThread(not_null<Data::Thread*> thread) {
 void readHistory(not_null<HistoryItem*> message) {
 	const auto history = message->history();
 	const auto tillId = message->id;
+	const auto session = &history->session();
 
-	history->session().data().histories()
-		.sendRequest(history,
-					 Data::Histories::RequestType::ReadInbox,
-					 [=](Fn<void()> finish)
-					 {
-						 if (const auto channel = history->peer->asChannel()) {
-							 return history->session().api().request(MTPchannels_ReadHistory(
-								 channel->inputChannel(),
-								 MTP_int(tillId)
-							 )).done([=] { ExtrasWorker::markAsOnline(&history->session()); }).send();
-						 }
-
-						 return history->session().api().request(MTPmessages_ReadHistory(
-							 history->peer->input(),
-							 MTP_int(tillId)
-						 )).done([=](const MTPmessages_AffectedMessages &result)
-						 {
-							 history->session().api().applyAffectedMessages(history->peer, result);
-							 ExtrasWorker::markAsOnline(&history->session());
-						 }).fail([=]
-						 {
-						 }).send();
-					 });
+	// 必须调用 finish，否则请求记录残留，会挡住该会话后续的条目刷新
+	session->data().histories().sendRequest(
+		history,
+		Data::Histories::RequestType::ReadInbox,
+		[=](Fn<void()> finish) {
+			const auto done = [=] {
+				ExtrasWorker::markAsOnline(session);
+				finish();
+			};
+			if (const auto channel = history->peer->asChannel()) {
+				return session->api().request(MTPchannels_ReadHistory(
+					channel->inputChannel(),
+					MTP_int(tillId)
+				)).done(done).fail(finish).send();
+			}
+			return session->api().request(MTPmessages_ReadHistory(
+				history->peer->input(),
+				MTP_int(tillId)
+			)).done([=](const MTPmessages_AffectedMessages &result) {
+				session->api().applyAffectedMessages(history->peer, result);
+				done();
+			}).fail(finish).send();
+		});
 
 	if (history->unreadMentions().has()) {
 		readMentions(history->asThread());
