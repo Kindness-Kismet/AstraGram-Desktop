@@ -344,7 +344,6 @@ private:
 
 	object_ptr<Ui::RpWidget> _searchControls;
 	object_ptr<Ui::IconButton> _headingMenu;
-	object_ptr<Ui::IconButton> _foldersSettings;
 	object_ptr<HistoryView::TopBarWidget> _subsectionTopBar = { nullptr };
 	struct {
 		object_ptr<Ui::IconButton> toggle;

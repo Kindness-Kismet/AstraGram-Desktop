@@ -36,7 +36,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/chat_filters_tabs_strip.h"
-#include "settings/sections/settings_folders.h"
 #include "ui/widgets/elastic_scroll.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/popup_menu.h"
@@ -493,7 +492,6 @@ Widget::Widget(
 	+ st::defaultDialogRow.padding.left())
 , _searchControls(this)
 , _headingMenu(this, st::dialogsHeadingMenu)
-, _foldersSettings(_searchControls, st::dialogsFoldersSettings)
 , _mainMenu({
 	.toggle = object_ptr<Ui::IconButton>(
 		_searchControls,
@@ -1846,11 +1844,6 @@ void Widget::setupMainMenuToggle() {
 	_headingMenu->setAccessibleName(tr::lng_main_menu(tr::now));
 	_headingMenu->setIsMenuButton(true);
 	_headingMenu->setClickedCallback([=] { showMainMenu(); });
-	_foldersSettings->setObjectName(u"chatFolders.settings"_q);
-	_foldersSettings->setAccessibleName(tr::lng_filters_setup(tr::now));
-	_foldersSettings->setClickedCallback([=] {
-		controller()->showSettings(Settings::FoldersId());
-	});
 	_mainMenu.under->setClickedCallback([=] {
 		_mainMenu.toggle->clicked({}, Qt::LeftButton);
 	});
@@ -4813,16 +4806,12 @@ void Widget::updateControlsGeometry() {
 		: (st::dialogsFilterPadding.x() + _mainMenu.toggle->width()))
 		+ st::dialogsFilterPadding.x();
 	const auto filterRight = st::dialogsFilterSkip
-		+ st::dialogsFilterPadding.x()
-		+ (filterAreaTop ? _foldersSettings->width() : 0);
+		+ st::dialogsFilterPadding.x();
 	const auto filterWidth = std::max(ratiow, smallw)
 		- filterLeft
 		- filterRight;
 	const auto filterAreaHeight = st::topBarHeight;
 	_searchControls->setGeometry(0, filterAreaTop, ratiow, filterAreaHeight);
-	_foldersSettings->setVisible(filterAreaTop > 0);
-	_foldersSettings->moveToRight(st::dialogsFilterPadding.x(),
-		(filterAreaHeight - _foldersSettings->height()) / 2);
 	if (_subsectionTopBar) {
 		_subsectionTopBar->setGeometryWithNarrowRatio(
 			_searchControls->geometry(),

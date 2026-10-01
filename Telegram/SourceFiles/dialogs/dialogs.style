@@ -987,13 +987,3 @@ dialogsHeadingMenu: IconButton(dialogsMenuToggle) {
 	icon: icon {{ "intro_qr_plane", windowBgActive }};
 	iconOver: icon {{ "intro_qr_plane", windowBgActive }};
 }
-dialogsFoldersSettings: IconButton(defaultIconButton) {
-	width: 36px;
-	height: 36px;
-	icon: icon {{ "dialogs/folders_settings", menuIconFg }};
-	iconOver: icon {{ "dialogs/folders_settings", menuIconFgOver }};
-	iconPosition: point(-1px, -1px);
-	rippleAreaPosition: point(0px, 0px);
-	rippleAreaSize: 36px;
-	ripple: defaultRippleAnimationBgOver;
-}
