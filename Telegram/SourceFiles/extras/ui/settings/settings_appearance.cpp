@@ -186,20 +186,6 @@ void BuildAppearance(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	builder.addSubsectionTitle(tr::extras_CategoryAppearance());
 
 	extras.addSettingToggle({
-		.id = u"extras/materialSwitches"_q,
-		.altIds = { u"extras/newSwitchStyle"_q },
-		.title = tr::extras_MaterialSwitches(),
-		.getter = &ExtrasSettings::materialSwitches,
-		.setter = &ExtrasSettings::setMaterialSwitches,
-	});
-	extras.addSettingToggle({
-		.id = u"extras/disableCustomBackgrounds"_q,
-		.altIds = { u"extras/customThemes"_q },
-		.title = tr::extras_DisableCustomBackgrounds(),
-		.getter = &ExtrasSettings::disableCustomBackgrounds,
-		.setter = &ExtrasSettings::setDisableCustomBackgrounds,
-	});
-	extras.addSettingToggle({
 		.id = u"extras/hidePremiumStatuses"_q,
 		.title = tr::extras_HidePremiumStatuses(),
 		.getter = &ExtrasSettings::hidePremiumStatuses,

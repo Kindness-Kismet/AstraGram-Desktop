@@ -67,7 +67,6 @@ private:
 
 	QRect getScreenRect() const;
 	QRect getScreenRect(int width) const;
-	int getContentLeft() const;
 	void prepareNotificationSampleSmall();
 	void prepareNotificationSampleLarge();
 	void prepareNotificationSampleUserpic();

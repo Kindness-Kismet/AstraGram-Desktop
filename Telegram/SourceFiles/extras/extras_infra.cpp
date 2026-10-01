@@ -34,7 +34,7 @@ void initUiSettings() {
 
 	ExtrasUiSettings::setMonoFont(settings.monoFont());
 	ExtrasUiSettings::setWideMultiplier(settings.wideMultiplier());
-	ExtrasUiSettings::setMaterialSwitches(settings.materialSwitches());
+	ExtrasUiSettings::setMaterialSwitches(true);
 	ExtrasUiSettings::setAvatarCorners(settings.avatarCorners());
 	Ui::SetAppliedBubbleRadius(settings.messageBubbleRadius());
 }

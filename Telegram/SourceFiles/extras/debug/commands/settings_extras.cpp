@@ -88,7 +88,6 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"semiTransparentDeletedMessages"_q, [&] { return settings.semiTransparentDeletedMessages(); }, settings, &ExtrasSettings::setSemiTransparentDeletedMessages);
 	addSetting(entries, u"disableAds"_q, [&] { return settings.disableAds(); }, settings, &ExtrasSettings::setDisableAds);
 	addSetting(entries, u"disableStories"_q, [&] { return settings.disableStories(); }, settings, &ExtrasSettings::setDisableStories);
-	addSetting(entries, u"disableCustomBackgrounds"_q, [&] { return settings.disableCustomBackgrounds(); }, settings, &ExtrasSettings::setDisableCustomBackgrounds);
 	addSetting(entries, u"disableChatBackground"_q, [&] { return settings.disableChatBackground(); }, settings, &ExtrasSettings::setDisableChatBackground);
 	addSetting(entries, u"showBubbleOutline"_q, [&] { return settings.showBubbleOutline(); }, settings, &ExtrasSettings::setShowBubbleOutline);
 	addSetting(entries, u"hidePremiumStatuses"_q, [&] { return settings.hidePremiumStatuses(); }, settings, &ExtrasSettings::setHidePremiumStatuses);
@@ -103,7 +102,6 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"increaseWebviewHeight"_q, [&] { return settings.increaseWebviewHeight(); }, settings, &ExtrasSettings::setIncreaseWebviewHeight);
 	addSetting(entries, u"increaseWebviewWidth"_q, [&] { return settings.increaseWebviewWidth(); }, settings, &ExtrasSettings::setIncreaseWebviewWidth);
 	addSetting(entries, u"windowMaterial"_q, [&] { return settings.windowMaterial(); }, settings, &ExtrasSettings::setWindowMaterial);
-	addSetting(entries, u"materialSwitches"_q, [&] { return settings.materialSwitches(); }, settings, &ExtrasSettings::setMaterialSwitches);
 	addSetting(entries, u"removeMessageTail"_q, [&] { return settings.removeMessageTail(); }, settings, &ExtrasSettings::setRemoveMessageTail);
 	addSetting(entries, u"disableNotificationsDelay"_q, [&] { return settings.disableNotificationsDelay(); }, settings, &ExtrasSettings::setDisableNotificationsDelay);
 	addSetting(entries, u"localPremium"_q, [&] { return settings.localPremium(); }, settings, &ExtrasSettings::setLocalPremium);

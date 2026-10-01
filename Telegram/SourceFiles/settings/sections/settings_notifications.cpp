@@ -344,8 +344,6 @@ NotificationsCount::NotificationsCount(
 void NotificationsCount::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
-	auto contentLeft = getContentLeft();
-
 	auto screenRect = getScreenRect();
 	p.fillRect(
 		screenRect.x(),
@@ -353,9 +351,6 @@ void NotificationsCount::paintEvent(QPaintEvent *e) {
 		st::notificationsBoxScreenSize.width(),
 		st::notificationsBoxScreenSize.height(),
 		st::notificationsBoxScreenBg);
-
-	auto monitorTop = 0;
-	st::notificationsBoxMonitor.paint(p, contentLeft, monitorTop, width());
 
 	for (int corner = 0; corner != 4; ++corner) {
 		auto screenCorner = static_cast<ScreenCorner>(corner);
@@ -416,10 +411,6 @@ void NotificationsCount::setCount(int count) {
 	}
 }
 
-int NotificationsCount::getContentLeft() const {
-	return (width() - st::notificationsBoxMonitor.width()) / 2;
-}
-
 QRect NotificationsCount::getScreenRect() const {
 	return getScreenRect(width());
 }
@@ -432,7 +423,9 @@ QRect NotificationsCount::getScreenRect(int width) const {
 
 int NotificationsCount::resizeGetHeight(int newWidth) {
 	update();
-	return st::notificationsBoxMonitor.height();
+	return st::notificationsBoxScreenTop
+		+ st::notificationsBoxScreenSize.height()
+		+ st::notificationsSampleBottomSkip;
 }
 
 void NotificationsCount::prepareNotificationSampleSmall() {
@@ -442,34 +435,34 @@ void NotificationsCount::prepareNotificationSampleSmall() {
 		QSize(width, height) * style::DevicePixelRatio(),
 		QImage::Format_ARGB32_Premultiplied);
 	sampleImage.setDevicePixelRatio(style::DevicePixelRatio());
-	sampleImage.fill(st::notificationBg->c);
+	sampleImage.fill(Qt::transparent);
 	{
 		Painter p(&sampleImage);
 		PainterHighQualityEnabler hq(p);
 
 		p.setPen(Qt::NoPen);
+		const auto shadow = Window::Notifications::Default::ShadowSkip();
+		const auto card = QRect(shadow, shadow, width - 2 * shadow, height - 2 * shadow);
+		Window::Notifications::Default::PaintCard(p, card);
 
-		auto padding = height / 8;
-		auto userpicSize = height - 2 * padding;
+		const auto padding = 5;
+		const auto userpicSize = card.height() - 2 * padding;
 		p.setBrush(st::notificationSampleUserpicFg);
-		ExtrasUserpic::PaintShape(p, QRectF(style::rtlrect(padding, padding, userpicSize, userpicSize, width)));
+		ExtrasUserpic::PaintShape(
+			p,
+			QRectF(padding + shadow, padding + shadow, userpicSize, userpicSize));
 
-		auto rowLeft = height;
-		auto rowHeight = padding;
-		auto nameTop = (height - 5 * padding) / 2;
-		auto nameWidth = height;
+		const auto rowLeft = shadow + userpicSize + padding * 2;
+		const auto rowHeight = 3;
+		const auto nameTop = shadow + 8;
 		p.setBrush(st::notificationSampleNameFg);
-		p.drawRoundedRect(style::rtlrect(rowLeft, nameTop, nameWidth, rowHeight, width), rowHeight / 2, rowHeight / 2);
+		p.drawRoundedRect(rowLeft, nameTop, 42, rowHeight, rowHeight / 2., rowHeight / 2.);
 
-		auto rowWidth = (width - rowLeft - 3 * padding);
-		auto rowTop = nameTop + rowHeight + padding;
+		const auto rowWidth = width - rowLeft - shadow - 10;
+		const auto rowTop = nameTop + 8;
 		p.setBrush(st::notificationSampleTextFg);
-		p.drawRoundedRect(style::rtlrect(rowLeft, rowTop, rowWidth, rowHeight, width), rowHeight / 2, rowHeight / 2);
-		rowTop += rowHeight + padding;
-		p.drawRoundedRect(style::rtlrect(rowLeft, rowTop, rowWidth, rowHeight, width), rowHeight / 2, rowHeight / 2);
-
-		auto closeLeft = width - 2 * padding;
-		p.fillRect(style::rtlrect(closeLeft, padding, padding, padding, width), st::notificationSampleCloseFg);
+		p.drawRoundedRect(rowLeft, rowTop, rowWidth, rowHeight, rowHeight / 2., rowHeight / 2.);
+		p.drawRoundedRect(rowLeft, rowTop + 7, rowWidth - 14, rowHeight, rowHeight / 2., rowHeight / 2.);
 	}
 	_notificationSampleSmall = Ui::PixmapFromImage(std::move(sampleImage));
 	_notificationSampleSmall.setDevicePixelRatio(style::DevicePixelRatio());

@@ -8843,7 +8843,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DisableAds" = "Disable Ads";
 "extras_DisableStories" = "Disable Stories";
 "extras_DisableOpenLinkWarning" = "Disable Open Link Warning";
-"extras_DisableCustomBackgrounds" = "Disable Custom Backgrounds";
 "extras_DisableChatBackground" = "Disable Chat Background";
 "extras_ShowBubbleOutline" = "Show Bubble Outline";
 "extras_HidePremiumStatuses" = "Hide Premium Statuses";

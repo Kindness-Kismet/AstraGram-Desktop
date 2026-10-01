@@ -280,7 +280,6 @@ public:
 	[[nodiscard]] bool semiTransparentDeletedMessages() const { return _semiTransparentDeletedMessages.current(); }
 	[[nodiscard]] bool disableAds() const { return _disableAds.current(); }
 	[[nodiscard]] bool disableStories() const { return _disableStories.current(); }
-	[[nodiscard]] bool disableCustomBackgrounds() const { return _disableCustomBackgrounds.current(); }
 	[[nodiscard]] bool disableChatBackground() const { return _disableChatBackground.current(); }
 	[[nodiscard]] bool showBubbleOutline() const { return _showBubbleOutline.current(); }
 	[[nodiscard]] bool hidePremiumStatuses() const { return _hidePremiumStatuses.current(); }
@@ -295,7 +294,6 @@ public:
 	[[nodiscard]] bool increaseWebviewHeight() const { return _increaseWebviewHeight.current(); }
 	[[nodiscard]] bool increaseWebviewWidth() const { return _increaseWebviewWidth.current(); }
 	[[nodiscard]] WindowMaterial windowMaterial() const { return _windowMaterial.current(); }
-	[[nodiscard]] bool materialSwitches() const { return _materialSwitches.current(); }
 	[[nodiscard]] bool removeMessageTail() const { return _removeMessageTail.current(); }
 	[[nodiscard]] bool disableNotificationsDelay() const { return _disableNotificationsDelay.current(); }
 	[[nodiscard]] bool localPremium() const { return _localPremium.current(); }
@@ -377,7 +375,6 @@ public:
 	void setSemiTransparentDeletedMessages(bool val);
 	void setDisableAds(bool val);
 	void setDisableStories(bool val);
-	void setDisableCustomBackgrounds(bool val);
 	void setDisableChatBackground(bool val);
 	void setShowBubbleOutline(bool val);
 	void setHidePremiumStatuses(bool val);
@@ -392,7 +389,6 @@ public:
 	void setIncreaseWebviewHeight(bool val);
 	void setIncreaseWebviewWidth(bool val);
 	void setWindowMaterial(WindowMaterial val);
-	void setMaterialSwitches(bool val);
 	void setRemoveMessageTail(bool val);
 	void setDisableNotificationsDelay(bool val);
 	void setLocalPremium(bool val);
@@ -485,10 +481,8 @@ public:
 	[[nodiscard]] rpl::producer<bool> disableAdsChanges() const { return _disableAds.changes(); }
 	[[nodiscard]] rpl::producer<bool> disableStoriesValue() const { return _disableStories.value(); }
 	[[nodiscard]] rpl::producer<bool> disableStoriesChanges() const { return _disableStories.changes(); }
-	[[nodiscard]] rpl::producer<bool> disableCustomBackgroundsValue() const { return _disableCustomBackgrounds.value(); }
 	[[nodiscard]] rpl::producer<bool> disableChatBackgroundValue() const { return _disableChatBackground.value(); }
 	[[nodiscard]] rpl::producer<bool> showBubbleOutlineValue() const { return _showBubbleOutline.value(); }
-	[[nodiscard]] rpl::producer<bool> disableCustomBackgroundsChanges() const { return _disableCustomBackgrounds.changes(); }
 	[[nodiscard]] rpl::producer<bool> hidePremiumStatusesValue() const { return _hidePremiumStatuses.value(); }
 	[[nodiscard]] rpl::producer<bool> hidePremiumStatusesChanges() const { return _hidePremiumStatuses.changes(); }
 	[[nodiscard]] rpl::producer<bool> showOnlyAddedEmojisAndStickersValue() const { return _showOnlyAddedEmojisAndStickers.value(); }
@@ -513,8 +507,6 @@ public:
 	[[nodiscard]] rpl::producer<bool> increaseWebviewWidthChanges() const { return _increaseWebviewWidth.changes(); }
 	[[nodiscard]] rpl::producer<WindowMaterial> windowMaterialValue() const { return _windowMaterial.value(); }
 	[[nodiscard]] rpl::producer<WindowMaterial> windowMaterialChanges() const { return _windowMaterial.changes(); }
-	[[nodiscard]] rpl::producer<bool> materialSwitchesValue() const { return _materialSwitches.value(); }
-	[[nodiscard]] rpl::producer<bool> materialSwitchesChanges() const { return _materialSwitches.changes(); }
 	[[nodiscard]] rpl::producer<bool> removeMessageTailValue() const { return _removeMessageTail.value(); }
 	[[nodiscard]] rpl::producer<bool> removeMessageTailChanges() const { return _removeMessageTail.changes(); }
 	[[nodiscard]] rpl::producer<bool> disableNotificationsDelayValue() const { return _disableNotificationsDelay.value(); }
@@ -673,7 +665,6 @@ private:
 	rpl::variable<bool> _semiTransparentDeletedMessages = false;
 	rpl::variable<bool> _disableAds = true;
 	rpl::variable<bool> _disableStories = false;
-	rpl::variable<bool> _disableCustomBackgrounds = false;
 	rpl::variable<bool> _disableChatBackground = false;
 	rpl::variable<bool> _showBubbleOutline = false;
 	rpl::variable<bool> _showOnlyAddedEmojisAndStickers = false;
@@ -687,7 +678,6 @@ private:
 	rpl::variable<bool> _increaseWebviewHeight = false;
 	rpl::variable<bool> _increaseWebviewWidth = false;
 	rpl::variable<WindowMaterial> _windowMaterial = WindowMaterial::Off;
-	rpl::variable<bool> _materialSwitches = true;
 	rpl::variable<bool> _removeMessageTail = false;
 	rpl::variable<bool> _disableNotificationsDelay = false;
 	rpl::variable<bool> _devFeaturesEnabled = false;

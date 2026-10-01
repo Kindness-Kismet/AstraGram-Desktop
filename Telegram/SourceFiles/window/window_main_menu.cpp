@@ -137,7 +137,7 @@ void FillBackground(QPainter &p, QSize size) {
 
 class MainMenu::ToggleAccountsButton final : public Ui::AbstractButton {
 public:
-	ToggleAccountsButton(QWidget *parent, not_null<Main::Account*> current);
+	ToggleAccountsButton(QWidget *parent);
 
 	[[nodiscard]] int rightSkip() const {
 		return _rightSkip.current();
@@ -148,18 +148,9 @@ public:
 
 private:
 	void paintEvent(QPaintEvent *e) override;
-	void paintUnreadBadge(Painter &p);
-
-	void validateUnreadBadge();
-	[[nodiscard]] QString computeUnreadBadge() const;
-
-	const not_null<Main::Account*> _current;
 	rpl::variable<int> _rightSkip = 0;
 	Ui::Animations::Simple _toggledAnimation;
 	bool _toggled = false;
-
-	QString _unreadBadge;
-	bool _unreadBadgeStale = false;
 
 };
 
@@ -175,20 +166,8 @@ protected:
 };
 
 MainMenu::ToggleAccountsButton::ToggleAccountsButton(
-	QWidget *parent,
-	not_null<Main::Account*> current)
-: AbstractButton(parent)
-, _current(current) {
-	rpl::single(rpl::empty) | rpl::then(
-		Core::App().unreadBadgeChanges()
-	) | rpl::on_next([=] {
-		_unreadBadgeStale = true;
-		if (!_toggled) {
-			validateUnreadBadge();
-			update();
-		}
-	}, lifetime());
-
+QWidget *parent)
+: AbstractButton(parent) {
 	auto &settings = Core::App().settings();
 	if (Core::App().domain().accounts().size() < 2
 		&& settings.mainMenuAccountsShown()) {
@@ -204,7 +183,6 @@ MainMenu::ToggleAccountsButton::ToggleAccountsButton(
 			_toggled ? 0. : 1.,
 			_toggled ? 1. : 0.,
 			st::slideWrapDuration);
-		validateUnreadBadge();
 	}, lifetime());
 	_toggledAnimation.stop();
 }
@@ -230,58 +208,6 @@ void MainMenu::ToggleAccountsButton::paintEvent(QPaintEvent *e) {
 
 	p.fillPath(path, st::windowSubTextFg);
 
-	paintUnreadBadge(p);
-}
-
-void MainMenu::ToggleAccountsButton::paintUnreadBadge(Painter &p) {
-	const auto progress = 1. - _toggledAnimation.value(_toggled ? 1. : 0.);
-	if (!progress) {
-		return;
-	}
-	validateUnreadBadge();
-	if (_unreadBadge.isEmpty()) {
-		return;
-	}
-
-	auto st = Settings::Badge::Style();
-	const auto right = width()
-		- st::mainMenuTogglePosition.x()
-		- st::mainMenuToggleSize * 3;
-	const auto top = height()
-		- st::mainMenuTogglePosition.y()
-		- st::mainMenuBadgeSize / 2;
-	p.setOpacity(progress);
-	Ui::PaintUnreadBadge(p, _unreadBadge, right, top, st);
-}
-
-void MainMenu::ToggleAccountsButton::validateUnreadBadge() {
-	const auto base = st::mainMenuTogglePosition.x()
-		+ st::mainMenuCoverMargin
-		+ 2 * st::mainMenuToggleSize;
-	if (_toggled) {
-		_rightSkip = base;
-		return;
-	} else if (!_unreadBadgeStale) {
-		return;
-	}
-	_unreadBadge = computeUnreadBadge();
-
-	auto skip = base;
-	if (!_unreadBadge.isEmpty()) {
-		const auto st = Settings::Badge::Style();
-		skip += 2 * st::mainMenuToggleSize
-			+ Ui::CountUnreadBadgeSize(_unreadBadge, st).width();
-	}
-	_rightSkip = skip;
-}
-
-QString MainMenu::ToggleAccountsButton::computeUnreadBadge() const {
-	const auto state = OtherAccountsUnreadStateCurrent(_current);
-	return state.allMuted
-		? QString()
-		: (state.count > 0)
-		? Lang::FormatCountToShort(state.count).string
-		: QString();
 }
 
 MainMenu::ResetScaleButton::ResetScaleButton(QWidget *parent)
@@ -337,7 +263,7 @@ MainMenu::MainMenu(
 	this,
 	_controller->session().user(),
 	st::mainMenuUserpic)
-, _toggleAccounts(this, &controller->session().account())
+, _toggleAccounts(this)
 , _setEmojiStatus(this, PreferencesLabel(), st::mainMenuStatusLabel)
 , _emojiStatusPanel(std::make_unique<Info::Profile::EmojiStatusPanel>())
 , _badge(std::make_unique<Info::Profile::Badge>(

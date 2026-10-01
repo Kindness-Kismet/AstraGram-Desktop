@@ -614,12 +614,6 @@ void ExtrasSettings::setDisableStories(bool val) {
 	save();
 }
 
-void ExtrasSettings::setDisableCustomBackgrounds(bool val) {
-	if (_disableCustomBackgrounds.current() == val) return;
-	_disableCustomBackgrounds = val;
-	save();
-}
-
 void ExtrasSettings::setDisableChatBackground(bool val) {
 	if (_disableChatBackground.current() == val) return;
 	_disableChatBackground = val;
@@ -709,14 +703,6 @@ void ExtrasSettings::setWindowMaterial(WindowMaterial val) {
 		return;
 	}
 	_windowMaterial = val;
-	save();
-}
-
-void ExtrasSettings::setMaterialSwitches(bool val) {
-	if (_materialSwitches.current() == val) return;
-	_materialSwitches = val;
-	ExtrasUiSettings::setMaterialSwitches(val);
-	repaintApp();
 	save();
 }
 
@@ -1182,7 +1168,6 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"semiTransparentDeletedMessages", s._semiTransparentDeletedMessages.current()},
 		{"disableAds", s._disableAds.current()},
 		{"disableStories", s._disableStories.current()},
-		{"disableCustomBackgrounds", s._disableCustomBackgrounds.current()},
 		{"disableChatBackground", s._disableChatBackground.current()},
 		{"showBubbleOutline", s._showBubbleOutline.current()},
 		{"hidePremiumStatuses", s._hidePremiumStatuses.current()},
@@ -1197,7 +1182,6 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"increaseWebviewHeight", s._increaseWebviewHeight.current()},
 		{"increaseWebviewWidth", s._increaseWebviewWidth.current()},
 		{"windowMaterial", static_cast<int>(s._windowMaterial.current())},
-		{"materialSwitches", s._materialSwitches.current()},
 		{"removeMessageTail", s._removeMessageTail.current()},
 		{"disableNotificationsDelay", s._disableNotificationsDelay.current()},
 		{"localPremium", s._localPremium.current()},
@@ -1296,7 +1280,6 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._semiTransparentDeletedMessages = j.value("semiTransparentDeletedMessages", defaults._semiTransparentDeletedMessages.current());
 	s._disableAds = j.value("disableAds", defaults._disableAds.current());
 	s._disableStories = j.value("disableStories", defaults._disableStories.current());
-	s._disableCustomBackgrounds = j.value("disableCustomBackgrounds", defaults._disableCustomBackgrounds.current());
 	s._disableChatBackground = j.value("disableChatBackground", defaults._disableChatBackground.current());
 	s._showBubbleOutline = j.value("showBubbleOutline", defaults._showBubbleOutline.current());
 	s._hidePremiumStatuses = j.value("hidePremiumStatuses", defaults._hidePremiumStatuses.current());
@@ -1317,7 +1300,6 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 		&& *material <= static_cast<int>(WindowMaterial::Blur))
 		? static_cast<WindowMaterial>(material->get<int>())
 		: WindowMaterial::Off;
-	s._materialSwitches = j.value("materialSwitches", defaults._materialSwitches.current());
 	s._removeMessageTail = j.value("removeMessageTail", defaults._removeMessageTail.current());
 	s._disableNotificationsDelay = j.value("disableNotificationsDelay", defaults._disableNotificationsDelay.current());
 	s._localPremium = j.value("localPremium", defaults._localPremium.current());
