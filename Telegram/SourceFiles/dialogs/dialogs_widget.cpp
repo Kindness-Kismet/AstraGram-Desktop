@@ -803,8 +803,12 @@ Widget::Widget(
 	}
 
 	_cancelSearch->setClickedCallback([=] {
-		cancelSearch({ .jumpBackToSearchedChat = true });
+		cancelSearch({
+			.forceFullCancel = _archiveSearchShown,
+			.jumpBackToSearchedChat = true,
+		});
 	});
+	_cancelSearch->setObjectName(u"search.cancel"_q);
 	_cancelSearch->setAccessibleName(tr::lng_sr_cancel_search(tr::now));
 	_jumpToDate->entity()->setClickedCallback([=] { showCalendar(); });
 	_jumpToDate->entity()->setAccessibleName(
@@ -2599,6 +2603,10 @@ void Widget::refreshTopBars() {
 		if (!_subsectionTopBar) {
 			_subsectionTopBar.create(this, controller());
 			_subsectionTopBar->searchRequest() | rpl::on_next([=] {
+				if (_openedFolder && _archiveSearchShown) {
+					cancelSearch({ .forceFullCancel = true });
+					return;
+				}
 				if (_openedFolder) {
 					controller()->searchInChat(_openedFolder);
 				} else if (_openedForum) {
