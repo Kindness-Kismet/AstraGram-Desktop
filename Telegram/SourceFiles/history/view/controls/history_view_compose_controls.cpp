@@ -6345,6 +6345,10 @@ int ComposeControls::fieldCharacterCount() const {
 	return Ui::ComputeFieldCharacterCount(_field);
 }
 
+bool ComposeControls::hasPausedVoiceRecording() const {
+	return _voiceRecordBar->hasPausedVoiceRecording();
+}
+
 bool ComposeControls::preventsClose(Fn<void()> &&continueCallback) const {
 	if (_voiceRecordBar->isActive()) {
 		_voiceRecordBar->showDiscardBox(std::move(continueCallback));

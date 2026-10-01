@@ -591,6 +591,10 @@ void HistoryWidget::setTabbedPanel(std::unique_ptr<TabbedPanel> panel) {
 	}
 }
 
+bool HistoryWidget::hasPausedVoiceRecording() const {
+	return _voiceRecordBar->hasPausedVoiceRecording();
+}
+
 bool HistoryWidget::preventsClose(Fn<void()> &&continueCallback) const {
 	if (_voiceRecordBar->isActive()) {
 		_voiceRecordBar->showDiscardBox(std::move(continueCallback));

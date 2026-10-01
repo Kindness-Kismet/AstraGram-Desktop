@@ -746,6 +746,10 @@ Dialogs::RowDescriptor WelcomeMessagesWidget::activeChat() const {
 	};
 }
 
+bool WelcomeMessagesWidget::hasPausedVoiceRecording() const {
+	return _composeControls->hasPausedVoiceRecording();
+}
+
 bool WelcomeMessagesWidget::preventsClose(
 		Fn<void()> &&continueCallback) const {
 	return _composeControls->preventsClose(std::move(continueCallback));

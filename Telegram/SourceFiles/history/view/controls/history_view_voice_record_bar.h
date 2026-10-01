@@ -107,6 +107,7 @@ public:
 	[[nodiscard]] bool isRecordingLocked() const;
 	[[nodiscard]] bool isLockPresent() const;
 	[[nodiscard]] bool isListenState() const;
+	[[nodiscard]] bool hasPausedVoiceRecording() const;
 	[[nodiscard]] bool isActive() const;
 	[[nodiscard]] bool isRecordingByAnotherBar() const;
 	[[nodiscard]] bool isTTLButtonShown() const;

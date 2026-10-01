@@ -1077,6 +1077,10 @@ Dialogs::RowDescriptor ScheduledWidget::activeChat() const {
 	};
 }
 
+bool ScheduledWidget::hasPausedVoiceRecording() const {
+	return _composeControls->hasPausedVoiceRecording();
+}
+
 bool ScheduledWidget::preventsClose(Fn<void()> &&continueCallback) const {
 	return _composeControls->preventsClose(std::move(continueCallback));
 }

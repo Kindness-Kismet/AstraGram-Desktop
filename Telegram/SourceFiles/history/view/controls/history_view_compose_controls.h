@@ -274,6 +274,7 @@ public:
 	[[nodiscard]] rpl::producer<FullReplyTo> replyingToMessageExternalValue() const;
 
 	[[nodiscard]] bool preventsClose(Fn<void()> &&continueCallback) const;
+	[[nodiscard]] bool hasPausedVoiceRecording() const;
 
 	void showForGrab();
 	void showStarted();

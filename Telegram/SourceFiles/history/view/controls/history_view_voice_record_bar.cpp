@@ -2758,6 +2758,9 @@ void VoiceRecordBar::startRecording() {
 	}) | rpl::on_next([=] {
 		auto keyFilterCallback = [=](not_null<QEvent*> e) {
 			using Result = base::EventFilterResult;
+			if (!isVisible() || Core::App().passcodeLocked()) {
+				return Result::Continue;
+			}
 			if (_send->type() != Ui::SendButton::Type::Record
 				&& _send->type() != Ui::SendButton::Type::Round) {
 				return Result::Continue;
@@ -3268,6 +3271,10 @@ bool VoiceRecordBar::isListenState() const {
 	return _listen != nullptr;
 }
 
+bool VoiceRecordBar::hasPausedVoiceRecording() const {
+	return _paused.current() && !_recordingVideo;
+}
+
 bool VoiceRecordBar::isTypeRecord() const {
 	return (_send->type() == Ui::SendButton::Type::Record)
 		|| (_send->type() == Ui::SendButton::Type::Round);
@@ -3346,6 +3353,10 @@ void VoiceRecordBar::installListenStateFilter() {
 	_keyFilterInRecordingState = nullptr;
 	auto keyFilterCallback = [=](not_null<QEvent*> e) {
 		using Result = base::EventFilterResult;
+		// 密码输入和隐藏页面的按键不能触发录音播放或发送。
+		if (!isVisible() || Core::App().passcodeLocked()) {
+			return Result::Continue;
+		}
 		if (!(_send->type() == Ui::SendButton::Type::Send
 			|| _send->type() == Ui::SendButton::Type::Schedule)) {
 			return Result::Continue;

@@ -163,6 +163,7 @@ public:
 	void historyLoaded();
 
 	[[nodiscard]] bool preventsClose(Fn<void()> &&continueCallback) const;
+	[[nodiscard]] bool hasPausedVoiceRecording() const;
 
 	// When resizing the widget with top edge moved up or down and we
 	// want to add this top movement to the scroll position, so inner

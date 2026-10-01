@@ -192,6 +192,9 @@ public:
 			Fn<void()> &&continueCallback) const {
 		return false;
 	}
+	[[nodiscard]] virtual bool hasPausedVoiceRecording() const {
+		return false;
+	}
 
 	// Send bot command from peer info or media viewer.
 	virtual SectionActionResult sendBotCommand(

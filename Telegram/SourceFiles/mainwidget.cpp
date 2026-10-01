@@ -2187,7 +2187,9 @@ std::vector<Window::SavedChat> MainWidget::chatStackForSave() const {
 
 bool MainWidget::preventsCloseSection(Fn<void()> callback) const {
 	if (Core::App().passcodeLocked()) {
-		return false;
+		// 自动锁定保留暂停语音所在页面，解锁后沿用录音数据和续录状态。
+		return (_mainSection && _mainSection->hasPausedVoiceRecording())
+			|| (_history && _history->hasPausedVoiceRecording());
 	}
 	auto copy = callback;
 	return (_mainSection && _mainSection->preventsClose(std::move(copy)))

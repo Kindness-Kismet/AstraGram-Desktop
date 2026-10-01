@@ -3839,6 +3839,10 @@ Dialogs::RowDescriptor ChatWidget::activeChat() const {
 	return { _history, messageId };
 }
 
+bool ChatWidget::hasPausedVoiceRecording() const {
+	return _composeControls->hasPausedVoiceRecording();
+}
+
 bool ChatWidget::preventsClose(Fn<void()> &&continueCallback) const {
 	if (_composeControls->preventsClose(base::duplicate(continueCallback))) {
 		return true;

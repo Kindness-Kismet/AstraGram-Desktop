@@ -63,6 +63,7 @@ public:
 	not_null<History*> history() const;
 	Dialogs::RowDescriptor activeChat() const override;
 	bool preventsClose(Fn<void()> &&continueCallback) const override;
+	bool hasPausedVoiceRecording() const override;
 
 	bool hasTopBarShadow() const override {
 		return true;
