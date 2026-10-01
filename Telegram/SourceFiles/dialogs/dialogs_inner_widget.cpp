@@ -924,6 +924,10 @@ void InnerWidget::changeOpenedForum(Data::Forum *forum) {
 		session().data().forumIcons().scheduleUserpicsReset(_openedForum);
 	}
 	_openedForum = forum;
+	if (!forum) {
+		updateSearchIn();
+		moveSearchIn();
+	}
 	_st = forum ? &st::forumTopicRow : &st::defaultDialogRow;
 	refreshShownList();
 	if (!forum && _openedCommunity) {
@@ -5324,6 +5328,7 @@ void InnerWidget::updateSearchIn() {
 		return;
 	} else if (!_searchIn) {
 		_searchIn = std::make_unique<ChatSearchIn>(this);
+		_searchIn->setObjectName(u"search.scope"_q);
 		_searchIn->show();
 		_searchIn->changeFromRequests() | rpl::start_to_stream(
 			_changeSearchFromRequests,

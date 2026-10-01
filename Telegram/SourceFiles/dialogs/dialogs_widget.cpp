@@ -2760,6 +2760,13 @@ bool Widget::toggleArchiveSearch(bool shown) {
 }
 
 void Widget::switchToChatsFilter(FilterId id) {
+	if (_searchState || _archiveSearchShown || _searchHasFocus || _searchSuggestionsLocked) {
+		const auto weak = base::make_weak(this);
+		cancelSearch({ .forceFullCancel = true });
+		if (!weak) {
+			return;
+		}
+	}
 	const auto was = _inner->filterId();
 	const auto animated = (was != id)
 		&& !isHidden()
