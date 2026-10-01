@@ -315,6 +315,7 @@ private:
 	void startScrollUpButtonAnimation(bool shown);
 	void updateScrollUpPosition();
 	void updateLockUnlockPosition();
+	void updateDownloadsButton(int right);
 	void updateSuggestions(anim::type animated);
 	void processSearchFocusChange();
 	void closeSuggestions();
@@ -357,6 +358,8 @@ private:
 	object_ptr<Ui::CrossButton> _cancelSearch;
 	base::unique_qptr<Ui::PopupMenu> _searchTypeMenu;
 	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _lockUnlock;
+	object_ptr<Ui::IconButton> _downloadsButton;
+	int _searchAdditionalRightMargin = -1;
 
 	std::unique_ptr<Ui::MoreChatsBar> _moreChatsBar;
 

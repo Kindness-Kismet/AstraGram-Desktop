@@ -74,7 +74,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 #include "window/window_slide_animation.h"
 #include "window/window_connecting_widget.h"
-#include "window/window_main_menu.h"
 #include "storage/storage_media_prepare.h"
 #include "storage/storage_account.h"
 #include "storage/storage_domain.h"
@@ -516,6 +515,7 @@ Widget::Widget(
 , _lockUnlock(
 	_searchControls,
 	object_ptr<Ui::IconButton>(this, st::dialogsLock))
+, _downloadsButton(_searchControls, st::dialogsDownloadsButton)
 , _scroll(this)
 , _scrollToTop(_scroll, st::dialogsToUp)
 , _stories((_layout != Layout::Child)
@@ -577,6 +577,7 @@ Widget::Widget(
 	}, _innerList->lifetime());
 	_scrollToTop->raise();
 	_lockUnlock->toggle(false, anim::type::instant);
+	_downloadsButton->hide();
 
 	_inner->updated(
 	) | rpl::on_next([=] {
@@ -827,6 +828,24 @@ Widget::Widget(
 		Core::App().maybeLockByPasscode();
 		lockUnlock->setIconOverride(nullptr);
 	});
+	_downloadsButton->setObjectName(u"downloadsButtonInSearch"_q);
+	_downloadsButton->setAccessibleName(tr::lng_downloads_section(tr::now));
+	_downloadsButton->setClickedCallback([=] {
+		controller->showSection(
+			Info::Downloads::Make(controller->session().user()));
+	});
+	_cancelSearch->shownValue(
+	) | rpl::on_next([=] {
+		updateLockUnlockPosition();
+	}, lifetime());
+	_lockUnlock->shownValue(
+	) | rpl::on_next([=] {
+		updateLockUnlockPosition();
+	}, lifetime());
+	ExtrasSettings::getInstance().showDownloadsButtonInSearchValue(
+	) | rpl::on_next([=] {
+		updateLockUnlockPosition();
+	}, lifetime());
 
 	setupMainMenuToggle();
 	setupShortcuts();
@@ -1846,29 +1865,6 @@ void Widget::setupMainMenuToggle() {
 	) | rpl::on_next([=] {
 		updateControlsGeometry();
 	}, lifetime());
-
-	Window::OtherAccountsUnreadState(
-		&controller()->session().account()
-	) | rpl::on_next([=](const Window::OthersUnreadState &state) {
-		auto icon = !state.count
-			? nullptr
-			: !state.allMuted
-			? &st::dialogsMenuToggleUnread
-			: &st::dialogsMenuToggleUnreadMuted;
-
-		const auto &settings = ExtrasSettings::getInstance();
-		if (settings.hideNotificationCounters()) {
-			icon = nullptr;
-		}
-
-		_mainMenu.toggle->setIconOverride(icon, icon);
-		const auto headingIcon = !state.count || settings.hideNotificationCounters()
-			? nullptr
-			: !state.allMuted
-			? &st::dialogsHeadingMenuUnread
-			: &st::dialogsHeadingMenuUnreadMuted;
-		_headingMenu->setIconOverride(headingIcon, headingIcon);
-	}, _mainMenu.toggle->lifetime());
 }
 
 void Widget::setupStories() {
@@ -2152,9 +2148,6 @@ void Widget::updateControlsVisibility(bool fast) {
 }
 
 void Widget::updateLockUnlockPosition() {
-	if (_lockUnlock->isHidden()) {
-		return;
-	}
 	const auto stories = (_stories && !_stories->isHidden())
 		? _stories->collapsedGeometryCurrent()
 		: Stories::List::CollapsedGeometry();
@@ -2162,9 +2155,63 @@ void Widget::updateLockUnlockPosition() {
 	const auto right = stories.geometry.isEmpty()
 		? simple
 		: anim::interpolate(stories.geometry.x(), simple, stories.expanded);
-	_lockUnlock->move(
-		right - _lockUnlock->width(),
-		st::dialogsFilterPadding.y());
+	if (!_lockUnlock->isHidden()) {
+		_lockUnlock->move(
+			right - _lockUnlock->width(),
+			st::dialogsFilterPadding.y());
+	}
+	updateDownloadsButton(right);
+}
+
+void Widget::updateDownloadsButton(int right) {
+	const auto simple = _search->x() + _search->width();
+	const auto buttonRight = right - (_lockUnlock->isHidden()
+		? 0
+		: _lockUnlock->width());
+	const auto buttonLeft = buttonRight - _downloadsButton->width();
+	const auto show = ExtrasSettings::getInstance().showDownloadsButtonInSearch()
+		&& (_layout == Layout::Main)
+		&& width() >= _narrowWidth
+		&& !_searchControls->isHidden()
+		&& !_showAnimation
+		&& _widthAnimationCache.isNull()
+		&& !_childList
+		&& !_openedFolder
+		&& !_openedForum
+		&& !_openedCommunity
+		&& !_suggestions
+		&& _hidingSuggestions.empty()
+		&& !searchActive()
+		&& !_searchHasFocus
+		&& !_searchSuggestionsLocked
+		&& _cancelSearch->isHidden()
+		&& _searchState.query.isEmpty()
+		&& !_searchState.inChat
+		&& !_searchState.fromPeer
+		&& _searchState.tags.empty()
+		&& _searchState.typeFilter == Api::SearchFilter::NoFilter
+		&& _searchState.filter == ChatTypeFilter::All
+		&& buttonRight <= _searchControls->width()
+		&& (buttonLeft >= _search->x()
+			+ st::dialogsFilter.textMargins.left()
+			+ style::ConvertScale(40));
+	_downloadsButton->setVisible(show);
+	if (show) {
+		_downloadsButton->move(buttonLeft, _search->y());
+	}
+	const auto searchButtonMargins = int(_chooseFromUser->width()
+		* _chooseFromUser->shownProgress())
+		+ int(_chooseSearchType->width()
+			* _chooseSearchType->shownProgress());
+	const auto downloadMargin = show
+		? std::max(0, simple - buttonLeft
+			- st::dialogsFilter.textMargins.right())
+		: 0;
+	const auto margin = searchButtonMargins + downloadMargin;
+	if (_searchAdditionalRightMargin != margin) {
+		_searchAdditionalRightMargin = margin;
+		_search->setAdditionalMargins(QMargins(0, 0, margin, 0));
+	}
 }
 
 void Widget::updateHasFocus(not_null<QWidget*> focused) {
@@ -4677,6 +4724,9 @@ void Widget::updateLockUnlockVisibility(anim::type animated) {
 		}
 		updateControlsGeometry();
 	}
+	if (!changed) {
+		updateLockUnlockPosition();
+	}
 }
 
 void Widget::updateLoadMoreChatsVisibility() {
@@ -4714,8 +4764,6 @@ void Widget::updateSearchFromVisibility(bool fast) {
 	}();
 	const auto typeVisible = searchInPeer()
 		&& (_searchState.typeFilter == Api::SearchFilter::NoFilter);
-	const auto changed = (fromVisible == !_chooseFromUser->toggled())
-		|| (typeVisible == !_chooseSearchType->toggled());
 	_chooseFromUser->toggle(
 		fromVisible,
 		fast ? anim::type::instant : anim::type::normal);
@@ -4725,14 +4773,6 @@ void Widget::updateSearchFromVisibility(bool fast) {
 	if (_subsectionTopBar) {
 		_subsectionTopBar->searchEnableChooseFromUser(true, fromVisible);
 		_subsectionTopBar->searchEnableChooseType(true, typeVisible);
-	} else if (changed) {
-		auto additional = QMargins();
-		additional.setRight(
-			int(_chooseFromUser->width()
-				* _chooseFromUser->shownProgress())
-			+ int(_chooseSearchType->width()
-				* _chooseSearchType->shownProgress()));
-		_search->setAdditionalMargins(additional);
 	}
 	updateControlsGeometry();
 }
@@ -4797,14 +4837,6 @@ void Widget::updateControlsGeometry() {
 		filterTop,
 		filterWidth,
 		_search->height());
-	_search->setAdditionalMargins(QMargins(
-		0,
-		0,
-		int(_chooseFromUser->width() * _chooseFromUser->shownProgress())
-			+ int(_chooseSearchType->width()
-				* _chooseSearchType->shownProgress()),
-		0));
-
 	auto mainMenuLeft = anim::interpolate(
 		st::dialogsFilterPadding.x(),
 		(_narrowWidth - _mainMenu.toggle->width()) / 2,

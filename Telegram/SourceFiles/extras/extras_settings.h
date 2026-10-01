@@ -283,6 +283,8 @@ public:
 	[[nodiscard]] bool disableChatBackground() const { return _disableChatBackground.current(); }
 	[[nodiscard]] bool showBubbleOutline() const { return _showBubbleOutline.current(); }
 	[[nodiscard]] bool hidePremiumStatuses() const { return _hidePremiumStatuses.current(); }
+	[[nodiscard]] bool hideProxySettingsIcon() const { return _hideProxySettingsIcon.current(); }
+	[[nodiscard]] bool showDownloadsButtonInSearch() const { return _showDownloadsButtonInSearch.current(); }
 	[[nodiscard]] bool showOnlyAddedEmojisAndStickers() const { return _showOnlyAddedEmojisAndStickers.current(); }
 	[[nodiscard]] bool collapseSimilarChannels() const { return _collapseSimilarChannels.current(); }
 	[[nodiscard]] bool hideSimilarChannels() const { return _hideSimilarChannels.current(); }
@@ -378,6 +380,8 @@ public:
 	void setDisableChatBackground(bool val);
 	void setShowBubbleOutline(bool val);
 	void setHidePremiumStatuses(bool val);
+	void setHideProxySettingsIcon(bool val);
+	void setShowDownloadsButtonInSearch(bool val);
 	void setShowOnlyAddedEmojisAndStickers(bool val);
 	void setCollapseSimilarChannels(bool val);
 	void setHideSimilarChannels(bool val);
@@ -485,6 +489,9 @@ public:
 	[[nodiscard]] rpl::producer<bool> showBubbleOutlineValue() const { return _showBubbleOutline.value(); }
 	[[nodiscard]] rpl::producer<bool> hidePremiumStatusesValue() const { return _hidePremiumStatuses.value(); }
 	[[nodiscard]] rpl::producer<bool> hidePremiumStatusesChanges() const { return _hidePremiumStatuses.changes(); }
+	[[nodiscard]] rpl::producer<bool> hideProxySettingsIconValue() const { return _hideProxySettingsIcon.value(); }
+	[[nodiscard]] rpl::producer<bool> hideProxySettingsIconChanges() const { return _hideProxySettingsIcon.changes(); }
+	[[nodiscard]] rpl::producer<bool> showDownloadsButtonInSearchValue() const { return _showDownloadsButtonInSearch.value(); }
 	[[nodiscard]] rpl::producer<bool> showOnlyAddedEmojisAndStickersValue() const { return _showOnlyAddedEmojisAndStickers.value(); }
 	[[nodiscard]] rpl::producer<bool> showOnlyAddedEmojisAndStickersChanges() const { return _showOnlyAddedEmojisAndStickers.changes(); }
 	[[nodiscard]] rpl::producer<bool> collapseSimilarChannelsValue() const { return _collapseSimilarChannels.value(); }
@@ -723,6 +730,8 @@ private:
 	rpl::variable<bool> _showGhostToggleInTray = false;
 	rpl::variable<bool> _showStreamerToggleInTray = false;
 	rpl::variable<bool> _hidePremiumStatuses = false;
+	rpl::variable<bool> _hideProxySettingsIcon = false;
+	rpl::variable<bool> _showDownloadsButtonInSearch = false;
 	rpl::variable<QString> _monoFont;
 	rpl::variable<bool> _hideNotificationCounters = false;
 	rpl::variable<bool> _hideNotificationBadge = false;

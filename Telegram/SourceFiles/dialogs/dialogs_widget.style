@@ -7,14 +7,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 using "dialogs/dialogs.style";
 
-dialogsMenuToggleUnread: icon {
-	{ "dialogs/dialogs_menu_unread", dialogsMenuIconFg },
-	{ "dialogs/dialogs_menu_unread_dot", dialogsUnreadBg },
-};
-dialogsMenuToggleUnreadMuted: icon {
-	{ "dialogs/dialogs_menu_unread", dialogsMenuIconFg },
-	{ "dialogs/dialogs_menu_unread_dot", dialogsMenuIconFg },
-};
 dialogsLock: IconButton {
 	width: 36px;
 	height: 38px;
@@ -24,6 +16,11 @@ dialogsLock: IconButton {
 	iconPosition: point(-1px, -1px);
 
 	ripple: emptyRippleAnimation;
+}
+dialogsDownloadsButton: IconButton(dialogsCalendar) {
+	icon: icon {{ "menu/download", dialogsMenuIconFg }};
+	iconOver: icon {{ "menu/download", dialogsMenuIconFgOver }};
+	iconPosition: point(-1px, -1px);
 }
 dialogsUnlockIcon: icon {{ "dialogs/dialogs_lock_on", dialogsMenuIconFg }};
 dialogsUnlockIconOver: icon {{ "dialogs/dialogs_lock_on", dialogsMenuIconFgOver }};
