@@ -347,6 +347,13 @@ void BuildDrawerElements(SectionBuilder &builder, ExtrasSectionBuilder &extras) 
 		.icon = { &st::extrasSReadMenuIcon },
 	});
 	extras.addSettingToggle({
+		.id = u"extras/showDonationDetailsInDrawer"_q,
+		.title = tr::extras_DonationDetails(),
+		.getter = &ExtrasSettings::showDonationDetailsInDrawer,
+		.setter = &ExtrasSettings::setShowDonationDetailsInDrawer,
+		.icon = { &st::menuIconGiftPremium },
+	});
+	extras.addSettingToggle({
 		.id = u"extras/showNightModeToggleInDrawer"_q,
 		.title = tr::lng_menu_night_mode(),
 		.getter = &ExtrasSettings::showNightModeToggleInDrawer,

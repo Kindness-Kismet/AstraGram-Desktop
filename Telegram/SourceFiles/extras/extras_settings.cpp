@@ -952,6 +952,14 @@ void ExtrasSettings::setShowSReadToggleInDrawer(bool val) {
 	save();
 }
 
+void ExtrasSettings::setShowDonationDetailsInDrawer(bool val) {
+	if (_showDonationDetailsInDrawer.current() == val) {
+		return;
+	}
+	_showDonationDetailsInDrawer = val;
+	save();
+}
+
 void ExtrasSettings::setShowNightModeToggleInDrawer(bool val) {
 	if (_showNightModeToggleInDrawer.current() == val) return;
 	_showNightModeToggleInDrawer = val;
@@ -1235,6 +1243,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"showArchiveInDrawer", s._showArchiveInDrawer.current()},
 		{"showLReadToggleInDrawer", s._showLReadToggleInDrawer.current()},
 		{"showSReadToggleInDrawer", s._showSReadToggleInDrawer.current()},
+		{"showDonationDetailsInDrawer", s._showDonationDetailsInDrawer.current()},
 		{"showNightModeToggleInDrawer", s._showNightModeToggleInDrawer.current()},
 		{"showGhostToggleInDrawer", s._showGhostToggleInDrawer.current()},
 		{"showStreamerToggleInDrawer", s._showStreamerToggleInDrawer.current()},
@@ -1359,6 +1368,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._showArchiveInDrawer = j.value("showArchiveInDrawer", defaults._showArchiveInDrawer.current());
 	s._showLReadToggleInDrawer = j.value("showLReadToggleInDrawer", defaults._showLReadToggleInDrawer.current());
 	s._showSReadToggleInDrawer = j.value("showSReadToggleInDrawer", defaults._showSReadToggleInDrawer.current());
+	s._showDonationDetailsInDrawer = j.value("showDonationDetailsInDrawer", defaults._showDonationDetailsInDrawer.current());
 	s._showNightModeToggleInDrawer = j.value("showNightModeToggleInDrawer", defaults._showNightModeToggleInDrawer.current());
 	s._showGhostToggleInDrawer = j.value("showGhostToggleInDrawer", defaults._showGhostToggleInDrawer.current());
 	s._showStreamerToggleInDrawer = j.value("showStreamerToggleInDrawer", defaults._showStreamerToggleInDrawer.current());

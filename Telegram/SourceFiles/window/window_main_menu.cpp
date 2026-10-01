@@ -863,13 +863,15 @@ void MainMenu::setupMenu() {
 	)->setClickedCallback([=] {
 		controller->showSettings();
 	});
-	addAction(
-		tr::extras_DonationDetails(),
-		{ &st::menuIconGiftPremium },
-		u"donation"_q
-	)->setClickedCallback([=] {
-		ExtrasUi::showDonationBox(controller);
-	});
+	if (settings.showDonationDetailsInDrawer()) {
+		addAction(
+			tr::extras_DonationDetails(),
+			{ &st::menuIconGiftPremium },
+			u"donation"_q
+		)->setClickedCallback([=] {
+			ExtrasUi::showDonationBox(controller);
+		});
+	}
 
 	if (settings.showNightModeToggleInDrawer()) {
 

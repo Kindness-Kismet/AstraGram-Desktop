@@ -335,6 +335,7 @@ public:
 	[[nodiscard]] bool showArchiveInDrawer() const { return _showArchiveInDrawer.current(); }
 	[[nodiscard]] bool showLReadToggleInDrawer() const { return _showLReadToggleInDrawer.current(); }
 	[[nodiscard]] bool showSReadToggleInDrawer() const { return _showSReadToggleInDrawer.current(); }
+	[[nodiscard]] bool showDonationDetailsInDrawer() const { return _showDonationDetailsInDrawer.current(); }
 	[[nodiscard]] bool showNightModeToggleInDrawer() const { return _showNightModeToggleInDrawer.current(); }
 	[[nodiscard]] bool showGhostToggleInDrawer() const { return _showGhostToggleInDrawer.current(); }
 	[[nodiscard]] bool showStreamerToggleInDrawer() const { return _showStreamerToggleInDrawer.current(); }
@@ -432,6 +433,7 @@ public:
 	void setShowArchiveInDrawer(bool val);
 	void setShowLReadToggleInDrawer(bool val);
 	void setShowSReadToggleInDrawer(bool val);
+	void setShowDonationDetailsInDrawer(bool val);
 	void setShowNightModeToggleInDrawer(bool val);
 	void setShowGhostToggleInDrawer(bool val);
 	void setShowStreamerToggleInDrawer(bool val);
@@ -724,6 +726,7 @@ private:
 	rpl::variable<bool> _showArchiveInDrawer = true;
 	rpl::variable<bool> _showLReadToggleInDrawer = false;
 	rpl::variable<bool> _showSReadToggleInDrawer = true;
+	rpl::variable<bool> _showDonationDetailsInDrawer = true;
 	rpl::variable<bool> _showNightModeToggleInDrawer = true;
 	rpl::variable<bool> _showGhostToggleInDrawer = false;
 	rpl::variable<bool> _showStreamerToggleInDrawer = false;
