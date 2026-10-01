@@ -2024,7 +2024,9 @@ void Widget::setupShortcuts() {
 					controller()->searchInChat(history);
 					return true;
 				} else if (_openedFolder) {
-					if (!_subsectionTopBar->searchSetFocus()) {
+					if (_archiveSearchShown) {
+						_search->setFocusFast();
+					} else {
 						controller()->searchInChat(_openedFolder);
 					}
 					return true;
@@ -2084,7 +2086,9 @@ void Widget::updateControlsVisibility(bool fast) {
 	updateLoadMoreChatsVisibility();
 	_scroll->setVisible(!_suggestions && _hidingSuggestions.empty());
 	updateStoriesVisibility();
-	if ((_openedFolder || _openedForum || _openedCommunity)
+	if (((_openedFolder && !_archiveSearchShown)
+		|| _openedForum
+		|| _openedCommunity)
 		&& _searchHasFocus) {
 		setInnerFocus();
 	}
@@ -2092,7 +2096,9 @@ void Widget::updateControlsVisibility(bool fast) {
 		_updateTelegram->show();
 	}
 	_searchControls->setVisible(
-		!_openedFolder && !_openedForum && !_openedCommunity);
+		(!_openedFolder || _archiveSearchShown)
+		&& !_openedForum
+		&& !_openedCommunity);
 	if (_moreChatsBar) {
 		_moreChatsBar->show();
 	}
@@ -2301,6 +2307,7 @@ bool Widget::searchActive() const {
 
 void Widget::updateSuggestions(anim::type animated) {
 	const auto suggest = (searchActive() || _searchSuggestionsLocked)
+		&& !_openedFolder
 		&& !_searchState.inChat
 		&& (_inner->state() == WidgetState::Default);
 	if (anim::Disabled() || !session().data().chatsListLoaded()) {
@@ -2492,6 +2499,7 @@ void Widget::changeOpenedFolder(Data::Folder *folder, anim::type animated) {
 		cancelSearch({ .forceFullCancel = true });
 		closeChildList(anim::type::instant);
 		controller()->closeForum();
+		_archiveSearchShown = false;
 		_openedFolder = folder;
 		_inner->changeOpenedFolder(folder);
 		if (_stories) {
@@ -2590,6 +2598,16 @@ void Widget::refreshTopBars() {
 	if (_openedFolder || _openedForum || _openedCommunity) {
 		if (!_subsectionTopBar) {
 			_subsectionTopBar.create(this, controller());
+			_subsectionTopBar->searchRequest() | rpl::on_next([=] {
+				if (_openedFolder) {
+					controller()->searchInChat(_openedFolder);
+				} else if (_openedForum) {
+					controller()->searchInChat(_openedForum->history());
+				} else if (_openedCommunity) {
+					controller()->searchInChat(
+						session().data().history(_openedCommunity->channel()));
+				}
+			}, _subsectionTopBar->lifetime());
 			if (_stories) {
 				_stories->raise();
 			}
@@ -2603,7 +2621,9 @@ void Widget::refreshTopBars() {
 			}, _subsectionTopBar->lifetime());
 			_subsectionTopBar->searchQuery(
 			) | rpl::on_next([=](QString query) {
-				applySearchUpdate();
+				if (!_openedFolder) {
+					applySearchUpdate();
+				}
 			}, _subsectionTopBar->lifetime());
 			_subsectionTopBar->searchModeChanges(
 			) | rpl::on_next([=](bool) {
@@ -2718,8 +2738,25 @@ void Widget::refreshTopBars() {
 void Widget::showSearchInTopBar(anim::type animated) {
 	Expects(_subsectionTopBar != nullptr);
 
+	if (_openedFolder) {
+		toggleArchiveSearch(true);
+		_search->setFocusFast();
+		return;
+	}
 	_subsectionTopBar->toggleSearch(true, animated);
 	updateForceDisplayWide();
+}
+
+bool Widget::toggleArchiveSearch(bool shown) {
+	if (_archiveSearchShown == shown) {
+		return false;
+	}
+	_archiveSearchShown = shown;
+	updateControlsVisibility();
+	updateControlsGeometry();
+	updateCancelSearch();
+	updateForceDisplayWide();
+	return true;
 }
 
 void Widget::switchToChatsFilter(FilterId id) {
@@ -3057,9 +3094,7 @@ void Widget::updateStoriesVisibility() {
 		|| !_searchState.query.isEmpty()
 		|| _searchState.inChat
 		|| suggestionsAnimation
-		|| (_openedFolder
-			&& _subsectionTopBar
-			&& _subsectionTopBar->searchMode());
+		|| _archiveSearchShown;
 	const auto pulledDown = _scroll->position().overscroll
 		< -st::dialogsFilterSkip;
 	const auto hiddenInstant = _showAnimation
@@ -3585,6 +3620,8 @@ void Widget::searchMessages(SearchState state) {
 
 	if (_childList) {
 		_childList->setInnerFocus();
+	} else if (_openedFolder) {
+		showSearchInTopBar(anim::type::normal);
 	} else if (_subsectionTopBar) {
 		if (!_subsectionTopBar->searchSetFocus()
 			&& !_subsectionTopBar->searchHasFocus()) {
@@ -4014,7 +4051,7 @@ void Widget::listScrollUpdated() {
 }
 
 void Widget::updateCancelSearch() {
-	const auto shown = !_searchState.query.isEmpty()
+	const auto shown = _archiveSearchShown || !_searchState.query.isEmpty()
 		|| (!_searchState.inChat
 			&& (searchActive() || _searchSuggestionsLocked));
 	_cancelSearch->toggle(shown, anim::type::normal);
@@ -4454,7 +4491,7 @@ bool Widget::applySearchState(SearchState state) {
 			stopWidthAnimation();
 		}
 		setInnerFocus();
-	} else if (!_subsectionTopBar) {
+	} else if (!_subsectionTopBar || _archiveSearchShown) {
 		_search->setFocus();
 	} else if (_openedForum && !_subsectionTopBar->searchSetFocus()) {
 		_subsectionTopBar->toggleSearch(true, anim::type::normal);
@@ -4773,14 +4810,16 @@ void Widget::updateControlsGeometry() {
 	if (width() < _narrowWidth) {
 		return;
 	}
-	const auto filterAreaTop = listHeaderHeight();
+	const auto header = listHeaderHeight();
+	const auto filterAreaTop = header
+		+ (_archiveSearchShown ? st::topBarHeight : 0);
 	const auto filtersHidden = !controller()->filtersWidth();
-	_headingMenu->setVisible(filtersHidden && filterAreaTop > 0);
+	_headingMenu->setVisible(filtersHidden && header > 0);
 	_headingMenu->moveToLeft(st::dialogsHeadingLeft,
 		(filterAreaTop - _headingMenu->height()) / 2);
-	_mainMenu.toggle->setVisible(filtersHidden && !filterAreaTop);
-	_mainMenu.under->setVisible(filtersHidden && !filterAreaTop);
-	_searchForNarrowLayout->setVisible(!filtersHidden);
+	_mainMenu.toggle->setVisible(filtersHidden && !header && !_openedFolder);
+	_mainMenu.under->setVisible(filtersHidden && !header && !_openedFolder);
+	_searchForNarrowLayout->setVisible(!filtersHidden && !_openedFolder);
 
 	const auto ratiow = anim::interpolate(
 		width(),
@@ -4791,7 +4830,7 @@ void Widget::updateControlsGeometry() {
 		? ((smallw - ratiow) / float64(smallw - _narrowWidth))
 		: 0.;
 
-	auto filterLeft = (controller()->filtersWidth() || filterAreaTop
+	auto filterLeft = (controller()->filtersWidth() || header || _openedFolder
 		? st::dialogsFilterSkip
 		: (st::dialogsFilterPadding.x() + _mainMenu.toggle->width()))
 		+ st::dialogsFilterPadding.x();
@@ -4804,7 +4843,7 @@ void Widget::updateControlsGeometry() {
 	_searchControls->setGeometry(0, filterAreaTop, ratiow, filterAreaHeight);
 	if (_subsectionTopBar) {
 		_subsectionTopBar->setGeometryWithNarrowRatio(
-			_searchControls->geometry(),
+			QRect(0, 0, ratiow, st::topBarHeight),
 			_narrowWidth,
 			narrowRatio);
 	}
@@ -5250,19 +5289,19 @@ const std::vector<Data::ReactionId> &Widget::searchInTags() const {
 }
 
 QString Widget::currentSearchQuery() const {
-	return _subsectionTopBar
+	return (_subsectionTopBar && !_openedFolder)
 		? _subsectionTopBar->searchQueryCurrent()
 		: _search->getLastText();
 }
 
 int Widget::currentSearchQueryCursorPosition() const {
-	return _subsectionTopBar
+	return (_subsectionTopBar && !_openedFolder)
 		? _subsectionTopBar->searchQueryCursorPosition()
 		: _search->textCursor().position();
 }
 
 void Widget::clearSearchField() {
-	if (_subsectionTopBar) {
+	if (_subsectionTopBar && !_openedFolder) {
 		_subsectionTopBar->searchClear();
 	} else {
 		_search->clear();
@@ -5277,7 +5316,7 @@ void Widget::setSearchQuery(const QString &query, int cursorPosition) {
 	if (cursorPosition < 0) {
 		cursorPosition = query.size();
 	}
-	if (_subsectionTopBar) {
+	if (_subsectionTopBar && !_openedFolder) {
 		_subsectionTopBar->searchSetText(query, cursorPosition);
 	} else {
 		_search->setText(query);
@@ -5325,6 +5364,12 @@ bool Widget::cancelSearch(CancelSearchOptions options) {
 		updatedState.inChat = {};
 		updatedState.fromPeer = nullptr;
 		updatedState.tags = {};
+	}
+	if ((forceFullCancel || !clearingQuery)
+		&& _archiveSearchShown
+		&& toggleArchiveSearch(false)) {
+		setInnerFocus(true);
+		clearingInChat = true;
 	}
 	if (!clearingQuery
 		&& _subsectionTopBar

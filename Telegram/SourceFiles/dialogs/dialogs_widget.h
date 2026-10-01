@@ -268,6 +268,7 @@ private:
 	void updateControlsGeometry();
 	void refreshTopBars();
 	void showSearchInTopBar(anim::type animated);
+	bool toggleArchiveSearch(bool shown);
 	void checkUpdateStatus();
 	void openBotMainApp(not_null<UserData*> bot);
 	void changeOpenedSubsection(
@@ -406,6 +407,7 @@ private:
 	object_ptr<Ui::JumpDownButton> _scrollToTop;
 	bool _scrollToTopIsShown = false;
 	bool _forumSearchRequested = false;
+	bool _archiveSearchShown = false;
 	HashOrCashtag _searchHashOrCashtag = {};
 	bool _searchWithPostsPreview = false;
 

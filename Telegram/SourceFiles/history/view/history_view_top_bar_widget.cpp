@@ -1102,6 +1102,7 @@ void TopBarWidget::updateSearchVisibility() {
 		&& _activeChat.key.peer()
 		&& _activeChat.key.peer()->isSelf();
 	const auto searchAllowedMode = (_activeChat.section == Section::History)
+		|| (_activeChat.section == Section::ChatsList && _activeChat.key.folder())
 		|| (_activeChat.section == Section::Replies)
 		|| (_activeChat.section == Section::Pinned
 			&& !pinnedInSavedMessages)
