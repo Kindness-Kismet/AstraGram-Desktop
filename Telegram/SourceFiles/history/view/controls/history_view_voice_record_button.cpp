@@ -265,6 +265,9 @@ bool VoiceRecordButton::inCircle(const QPoint &localPos) const {
 }
 
 void VoiceRecordButton::requestPaintProgress(float64 progress) {
+	if (_suppressed) {
+		return;
+	}
 	_showProgress = progress;
 	update();
 }
@@ -292,6 +295,14 @@ void VoiceRecordButton::setType(Type state) {
 		Unexpected("Voice record button type.");
 	}());
 
+}
+
+void VoiceRecordButton::setSuppressed(bool suppressed) {
+	_suppressed = suppressed;
+	if (suppressed) {
+		_showProgress = 0.;
+		hide();
+	}
 }
 
 } // namespace HistoryView::Controls

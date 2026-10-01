@@ -135,6 +135,8 @@ set(extras_files
         extras/utils/rc_manager.cpp
         extras/utils/rc_manager.h
         extras/ui/extras_logo.cpp
+        extras/ui/voice_record_capsule.h
+        extras/ui/voice_record_capsule.cpp
         extras/ui/extras_logo.h
         extras/ui/toasts.cpp
         extras/ui/toasts.h

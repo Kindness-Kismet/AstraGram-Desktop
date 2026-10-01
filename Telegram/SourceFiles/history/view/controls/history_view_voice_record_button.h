@@ -39,6 +39,7 @@ public:
 	};
 
 	void setType(Type state);
+	void setSuppressed(bool suppressed);
 
 	void requestPaintColor(float64 progress);
 	void requestPaintProgress(float64 progress);
@@ -59,6 +60,7 @@ private:
 	crl::time _lastUpdateTime = 0;
 	crl::time _blobsHideLastTime = 0;
 	const int _center;
+	bool _suppressed = false;
 
 	rpl::variable<float64> _showProgress = 0.;
 	float64 _colorProgress = 0.;

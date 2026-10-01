@@ -56,6 +56,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/ui/voice_record_capsule.h"
 #include "boxes/abstract_box.h"
 
 
@@ -676,7 +677,8 @@ public:
 		not_null<Main::Session*> session,
 		not_null<Ui::RoundVideoResult*> data,
 		bool allowTrim,
-		const style::font &font);
+		const style::font &font,
+		bool compact = false);
 
 	void requestPaintProgress(float64 progress);
 	void prepareForSendAnimation();
@@ -684,6 +686,11 @@ public:
 	void applyTrimBeforeSend();
 
 	void playPause();
+	void stopPlayback();
+	void beginSeek();
+	[[nodiscard]] ExtrasUi::VoiceRecordPreview preview() const;
+	void setTrim(float64 left, float64 right);
+	void seek(float64 progress);
 	[[nodiscard]] std::shared_ptr<Ui::DynamicImage> videoPreview();
 
 	[[nodiscard]] rpl::lifetime &lifetime();
@@ -708,6 +715,7 @@ private:
 	void init();
 	void initPlayButton();
 	void initPlayProgress();
+	bool applyPendingSeek();
 	void applyTrimSelection(bool resetSelection);
 	void updateControlGeometry();
 	void updateTrimGeometry();
@@ -739,6 +747,8 @@ private:
 	const std::shared_ptr<Data::DocumentMedia> _mediaView;
 	const not_null<Ui::RoundVideoResult*> _data;
 	const bool _allowTrim = false;
+	const bool _compact;
+	std::optional<float64> _pendingSeek;
 	const base::unique_qptr<Ui::IconButton> _delete;
 	const style::font &_durationFont;
 	QString _duration;
@@ -782,7 +792,8 @@ ListenWrap::ListenWrap(
 	not_null<Main::Session*> session,
 	not_null<Ui::RoundVideoResult*> data,
 	bool allowTrim,
-	const style::font &font)
+	const style::font &font,
+	bool compact)
 : _parent(parent)
 , _st(st)
 , _send(send)
@@ -792,6 +803,7 @@ ListenWrap::ListenWrap(
 , _mediaView(_document->createMediaView())
 , _data(data)
 , _allowTrim(allowTrim)
+, _compact(compact)
 , _delete(base::make_unique_q<Ui::IconButton>(parent, _st.remove))
 , _durationFont(font)
 , _duration(FormatTrimDuration(_data->duration))
@@ -810,8 +822,8 @@ ListenWrap::ListenWrap(
 
 void ListenWrap::init() {
 	auto deleteShow = _showProgress.value(
-	) | rpl::map([](auto value) {
-		return value == 1.;
+	) | rpl::map([=](auto value) {
+		return !_compact && value == 1.;
 	}) | rpl::distinct_until_changed();
 	_delete->showOn(std::move(deleteShow));
 
@@ -834,6 +846,9 @@ void ListenWrap::init() {
 
 	_parent->paintRequest(
 	) | rpl::on_next([=](const QRect &clip) {
+		if (_compact) {
+			return;
+		}
 		auto p = QPainter(_parent);
 		auto hq = PainterHighQualityEnabler(p);
 		const auto progress = _showProgress.current();
@@ -1086,7 +1101,7 @@ void ListenWrap::initPlayButton() {
 
 	const auto &play = _playPauseSt.playOuter;
 	updateControlGeometry();
-	_playPauseButton->show();
+	_playPauseButton->setVisible(!_compact);
 	_playPauseButton->setAccessibleName(tr::lng_record_lock_play(tr::now));
 
 	_playPauseButton->paintRequest(
@@ -1200,6 +1215,9 @@ void ListenWrap::initPlayProgress() {
 		} else if (!_isShowAnimation && (_showProgress.current() < 1.)) {
 			return;
 		}
+		if (applyPendingSeek()) {
+			return;
+		}
 		const auto [leftBoundary, rightBoundary] = selectedTrimBoundaries();
 		const auto playbackTrimmed = canTrim()
 			&& ((leftBoundary > kTrimPlaybackEpsilon)
@@ -1257,7 +1275,7 @@ void ListenWrap::initPlayProgress() {
 
 	_parent->events(
 	) | rpl::filter([=](not_null<QEvent*> e) {
-		return (e->type() == QEvent::MouseMove
+		return !_compact && (e->type() == QEvent::MouseMove
 			|| e->type() == QEvent::MouseButtonPress
 			|| e->type() == QEvent::MouseButtonRelease);
 	}) | rpl::on_next([=](not_null<QEvent*> e) {
@@ -1508,6 +1526,11 @@ ListenWrap::TrimGeometry ListenWrap::computeTrimGeometry(
 }
 
 void ListenWrap::updateControlGeometry() {
+	if (_compact) {
+		_controlRect = {};
+		_playPauseButton->hide();
+		return;
+	}
 	const auto availableRect = (canTrim() && !_trimFrameRect.isEmpty())
 		? _trimFrameRect
 		: _waveformBgFinalCenterRect;
@@ -1666,6 +1689,63 @@ void ListenWrap::prepareForSendAnimation() {
 	}
 }
 
+ExtrasUi::VoiceRecordPreview ListenWrap::preview() const {
+	const auto state = ::Media::Player::instance()->getState(AudioMsgId::Type::Voice);
+	return {
+		.waveform = _data->waveform,
+		.duration = selectedDuration(),
+		.progress = _playProgress.current(),
+		.trimLeft = _trimLeftProgress,
+		.trimRight = _trimRightProgress,
+		.playing = isInPlayer(state) && ::Media::Player::ShowPauseIcon(state.state),
+	};
+}
+
+void ListenWrap::setTrim(float64 left, float64 right) {
+	stopPlayback();
+	_trimLeftProgress = left;
+	_trimRightProgress = right;
+	updateDurationText();
+	updateTrimGeometry();
+}
+
+void ListenWrap::beginSeek() {
+	_pendingSeek.reset();
+	const auto player = ::Media::Player::instance();
+	if (!isInPlayer()) {
+		player->play({ _document, FullMsgId() });
+	}
+	if (isInPlayer()) {
+		player->startSeeking(AudioMsgId::Type::Voice);
+	}
+}
+
+void ListenWrap::seek(float64 progress) {
+	_pendingSeek = std::clamp(progress, _trimLeftProgress, _trimRightProgress);
+	applyPendingSeek();
+}
+
+bool ListenWrap::applyPendingSeek() {
+	const auto player = ::Media::Player::instance();
+	const auto state = player->getState(AudioMsgId::Type::Voice);
+	if (!_pendingSeek || !isInPlayer(state) || state.length <= 0) {
+		return false;
+	}
+	// 首次加载完成后才能按比例定位；先清请求，避免播放器通知重入。
+	const auto progress = *base::take(_pendingSeek);
+	player->finishSeeking(AudioMsgId::Type::Voice, progress);
+	return true;
+}
+
+void ListenWrap::stopPlayback() {
+	_pendingSeek.reset();
+	if (isInPlayer()) {
+		const auto player = ::Media::Player::instance();
+		player->cancelSeeking(AudioMsgId::Type::Voice);
+		player->stop(AudioMsgId::Type::Voice, true);
+	}
+}
+
 void ListenWrap::playPause() {
 	::Media::Player::instance()->playPause({ _document, FullMsgId() });
 }
@@ -1722,6 +1802,10 @@ public:
 	void requestPaintPauseToInputProgress(float64 progress);
 	void setVisibleTopPart(int part);
 	void setRecordingVideo(bool value);
+	void setSuppressed(bool suppressed) {
+		_suppressed = suppressed;
+		if (suppressed) hide();
+	}
 
 	[[nodiscard]] rpl::producer<> locks() const;
 	[[nodiscard]] bool isLocked() const;
@@ -1730,6 +1814,9 @@ public:
 	[[nodiscard]] float64 lockToStopProgress() const;
 
 protected:
+	void setVisibleHook(bool visible) override {
+		Ui::RippleButton::setVisibleHook(visible && !_suppressed);
+	}
 	QImage prepareRippleMask() const override;
 	QPoint prepareRippleStartPosition() const override;
 
@@ -1751,6 +1838,7 @@ private:
 	rpl::variable<float64> _progress = 0.;
 	int _visibleTopPart = -1;
 	bool _recordingVideo = false;
+	bool _suppressed = false;
 
 };
 
@@ -2167,6 +2255,9 @@ void VoiceRecordBar::updateMessageGeometry() {
 }
 
 void VoiceRecordBar::updateLockGeometry() {
+	if (_capsule) {
+		return;
+	}
 	const auto parent = parentWidget();
 	const auto me = Ui::MapFrom(_outerContainer, parent, geometry());
 	const auto finalTop = me.y()
@@ -2272,6 +2363,9 @@ void VoiceRecordBar::init() {
 
 	paintRequest(
 	) | rpl::on_next([=](const QRect &clip) {
+		if (_capsule) {
+			return;
+		}
 		auto p = QPainter(this);
 		if (_showAnimation.animating()) {
 			p.setOpacity(showAnimationRatio());
@@ -2371,7 +2465,7 @@ void VoiceRecordBar::init() {
 
 			return;
 		}
-		if (!_lock->isStopState()) {
+		if (!_capsule && !_lock->isStopState()) {
 			return;
 		}
 
@@ -2404,7 +2498,7 @@ void VoiceRecordBar::init() {
 
 	_lock->locks(
 	) | rpl::on_next([=] {
-		if (_hasTTLFilter && _hasTTLFilter()) {
+		if (!_capsule && _hasTTLFilter && _hasTTLFilter()) {
 			if (!_ttlButton) {
 				_ttlButton = std::make_unique<TTLButton>(
 					_outerContainer,
@@ -2463,6 +2557,7 @@ void VoiceRecordBar::init() {
 		_listen->lifetime().add([=] { _listenChanges.fire({}); });
 
 		installListenStateFilter();
+		syncCapsule();
 	}, lifetime());
 
 	_cancel->setClickedCallback([=] {
@@ -2473,6 +2568,56 @@ void VoiceRecordBar::init() {
 	initLevelGeometry();
 }
 
+void VoiceRecordBar::initCapsule() {
+	_capsule = std::make_unique<ExtrasUi::VoiceRecordCapsule>(this, _send.get(),
+		ExtrasUi::VoiceRecordActions{
+			.cancel = [=] { hideAnimated(); },
+			.pause = [=] {
+				if (_showAnimation.animating() || _showListenAnimation.animating()) return;
+				_capsuleConfirmed = false;
+				_lock->clicked(Qt::NoModifier, Qt::LeftButton);
+			},
+			.confirm = [=] { confirmCapsule(); },
+			.play = [=] { if (_listen) _listen->playPause(); },
+			.beginSeek = [=] { if (_listen) _listen->beginSeek(); },
+			.seek = [=](float64 progress) { if (_listen) _listen->seek(progress); },
+			.trim = [=](float64 left, float64 right) { if (_listen) _listen->setTrim(left, right); },
+			.preview = [=] {
+				return _listen ? _listen->preview() : ExtrasUi::VoiceRecordPreview();
+			},
+		});
+	_capsule->setOnceAllowed(_hasTTLFilter && _hasTTLFilter());
+	const auto capsule = _capsule.get();
+	sizeValue() | rpl::on_next([=](QSize size) {
+		const auto margin = _st.radius ? 0 : st::historyComposeCapsuleMargin;
+		capsule->setGeometry(QRect(QPoint(), size).adjusted(margin, 0, -margin, 0));
+	}, capsule->lifetime());
+	orderControls();
+}
+
+void VoiceRecordBar::syncCapsule() {
+	if (!_capsule) return;
+	using State = ExtrasUi::VoiceRecordCapsule::State;
+	_capsule->setState(_capsuleConfirmed ? State::Ready
+		: _listen ? State::Paused : State::Recording);
+	_cancel->hide();
+	orderControls();
+}
+
+void VoiceRecordBar::confirmCapsule() {
+	if (!_capsule || _showAnimation.animating() || _showListenAnimation.animating()) return;
+	if (_capsuleConfirmed && _listen) {
+		requestToSendWithOptions({});
+		return;
+	}
+	_capsuleConfirmed = true;
+	if (_listen) {
+		syncCapsule();
+		return;
+	}
+	stopRecording(StopType::Listen);
+}
+
 void VoiceRecordBar::prepareOnSendPress() {
 	_recordingTipRequire = crl::now();
 	_recordingVideo = (_send->type() == Ui::SendButton::Type::Round);
@@ -2480,9 +2625,16 @@ void VoiceRecordBar::prepareOnSendPress() {
 	_ttlButton = nullptr;
 	clearResumeState();
 	_lock->setRecordingVideo(_recordingVideo);
+	_lock->setSuppressed(!_recordingVideo);
+	_level->setSuppressed(!_recordingVideo);
+	_capsuleConfirmed = false;
+	if (!_recordingVideo) {
+		initCapsule();
+	}
 }
 
 void VoiceRecordBar::applyListenTrimForResume() {
+	_listen->stopPlayback();
 	const auto beforeDuration = _data.duration;
 	const auto beforeSize = _data.content.size();
 	_listen->applyTrimBeforeSend();
@@ -2621,6 +2773,9 @@ void VoiceRecordBar::startRecording() {
 		startRedCircleAnimation();
 
 		_recording = true;
+		if (_capsule) {
+			_capsule->setState(ExtrasUi::VoiceRecordCapsule::State::Recording);
+		}
 		if (_paused.current()) {
 			_paused = false;
 			if (_videoRecorder) {
@@ -2772,7 +2927,8 @@ void VoiceRecordBar::startRecording() {
 					&& Ui::ShouldSubmit(
 						static_cast<QKeyEvent*>(e.get()),
 						Core::App().settings().sendSubmitWay())) {
-					stop(true);
+					if (_capsule) confirmCapsule();
+					else stop(true);
 					return Result::Cancel;
 				}
 				return Result::Continue;
@@ -2804,6 +2960,10 @@ void VoiceRecordBar::recordUpdated(quint16 level, int samples) {
 	const auto resumedSamples = std::max(0, samples - _resumeRawSamples);
 	const auto totalSamples = _resumePrefixSamples + resumedSamples;
 	_recordingSamples = totalSamples;
+	if (_capsule) {
+		_capsule->updateLevel(level,
+			(totalSamples * crl::time(1000)) / ::Media::Player::kDefaultFrequency);
+	}
 	if (totalSamples < 0 || totalSamples >= kMaxSamples) {
 		stop(totalSamples > 0 && _inField.current());
 	}
@@ -2835,6 +2995,8 @@ void VoiceRecordBar::stop(bool send) {
 }
 
 void VoiceRecordBar::finish() {
+	_capsule = nullptr;
+	_capsuleConfirmed = false;
 	_recordingLifetime.destroy();
 	_lockShowing = false;
 	_inField = false;
@@ -2961,7 +3123,7 @@ void VoiceRecordBar::stopRecording(StopType type, bool ttlBeforeHide) {
 						&_show->session(),
 						&_data,
 						false,
-						_cancelFont);
+						_cancelFont, bool(_capsule));
 					_listenChanges.fire({});
 
 					using SilentPreview = ::Media::Streaming::RoundPreview;
@@ -2997,7 +3159,7 @@ void VoiceRecordBar::stopRecording(StopType type, bool ttlBeforeHide) {
 					&_show->session(),
 					&_data,
 					true,
-					_cancelFont);
+					_cancelFont, bool(_capsule));
 				_listenChanges.fire({});
 			}));
 		}
@@ -3331,10 +3493,12 @@ float64 VoiceRecordBar::calcLockProgress(QPoint globalPos) {
 }
 
 bool VoiceRecordBar::peekTTLState() const {
+	if (_capsule) return _capsule->once();
 	return _ttlButton && !_ttlButton->isDisabled();
 }
 
 bool VoiceRecordBar::takeTTLState() const {
+	if (_capsule) return _capsule->takeOnce();
 	if (!_ttlButton) {
 		return false;
 	}
@@ -3344,6 +3508,11 @@ bool VoiceRecordBar::takeTTLState() const {
 }
 
 void VoiceRecordBar::orderControls() {
+	if (_capsule) {
+		raise();
+		_capsule->raise();
+		return;
+	}
 	stackUnder(_send.get());
 	_lock->raise();
 	_level->raise();
@@ -3373,7 +3542,8 @@ void VoiceRecordBar::installListenStateFilter() {
 				return Result::Cancel;
 			}
 			if (isEnter && !_warningShown) {
-				requestToSendWithOptions({});
+				if (_capsule) confirmCapsule();
+				else requestToSendWithOptions({});
 				return Result::Cancel;
 			}
 			return Result::Continue;

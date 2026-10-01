@@ -18,6 +18,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 struct VoiceData;
 
+namespace ExtrasUi {
+class VoiceRecordCapsule;
+}
+
 namespace style {
 struct RecordBar;
 } // namespace style
@@ -126,6 +130,9 @@ private:
 	};
 
 	void init();
+	void initCapsule();
+	void syncCapsule();
+	void confirmCapsule();
 	void initLockGeometry();
 	void initLevelGeometry();
 
@@ -184,6 +191,8 @@ private:
 	const std::unique_ptr<CancelButton> _cancel;
 	std::unique_ptr<Ui::AbstractButton> _ttlButton;
 	std::unique_ptr<ListenWrap> _listen;
+	std::unique_ptr<ExtrasUi::VoiceRecordCapsule> _capsule;
+	bool _capsuleConfirmed = false;
 
 	Ui::RoundVideoResult _data;
 	Ui::RoundVideoResult _resumePrefixData;
