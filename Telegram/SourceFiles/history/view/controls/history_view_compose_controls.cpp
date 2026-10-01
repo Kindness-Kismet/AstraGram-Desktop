@@ -2950,7 +2950,6 @@ void ComposeControls::init() {
 		ExtrasSettings::getInstance().showEmojiButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showMicrophoneButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showAutoDeleteButtonInMessageFieldChanges() | rpl::to_empty,
-		session().data().aiComposeTones().updated() | rpl::to_empty,
 		ExtrasSettings::getInstance().showAiEditorButtonInMessageFieldChanges() | rpl::to_empty,
 		base::options::lookup<bool>(Ui::kOptionHideAiButton).changes(),
 		session().data().aiComposeTones().updated(),
