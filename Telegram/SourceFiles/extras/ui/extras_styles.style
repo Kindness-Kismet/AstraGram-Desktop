@@ -41,8 +41,8 @@ extrasMusicFloatingSize: 44px;
 extrasMusicFloatingShadow: 4px;
 extrasMusicFloatingMargin: 16px;
 extrasMusicFloatingGap: 12px;
-extrasMusicCompactWidth: 320px;
-extrasMusicCompactHeight: 274px;
+extrasMusicCompactWidth: 340px;
+extrasMusicCompactHeight: 286px;
 extrasMusicCompactPadding: 18px;
 extrasMusicCompactCover: 62px;
 extrasMusicCompactTitle: font(15px semibold);
@@ -55,6 +55,9 @@ extrasMusicCompactSource: LinkButton(defaultLinkButton) {
 }
 extrasMusicCompactDropdown: InnerDropdown(defaultInnerDropdown) {
 	showDuration: 160;
+	scroll: ScrollArea(defaultSolidScroll) {
+		barHidden: true;
+	}
 	scrollPadding: margins(0px, 0px, 0px, 0px);
 }
 extrasMusicCompactButton: IconButton(mediaPlayerRepeatButton) {

@@ -956,8 +956,6 @@ Widget::Widget(
 	if (_layout == Layout::Main) {
 		_musicPlayer = std::make_unique<Extras::MusicPlayer::FloatingPlayer>(
 			this, controller);
-		_musicPlayer->expandedChanges(
-		) | rpl::on_next([=] { updateForceDisplayWide(); }, lifetime());
 		updateControlsGeometry();
 	}
 #ifdef _DEBUG
@@ -4044,10 +4042,6 @@ void Widget::applySearchUpdate() {
 }
 
 void Widget::updateForceDisplayWide() {
-	if (_musicPlayer && _musicPlayer->expanded()) {
-		controller()->setChatsForceDisplayWide(true);
-		return;
-	}
 	if (_childList) {
 		_childList->updateForceDisplayWide();
 		return;

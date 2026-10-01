@@ -477,10 +477,15 @@ void CompactPanel::resizeEvent(QResizeEvent *event) {
 	_next->moveToLeft(_play->x() + _play->width() + style::ConvertScale(8), style::ConvertScale(167));
 	_order->moveToLeft(style::ConvertScale(10), style::ConvertScale(174));
 	_repeat->moveToRight(style::ConvertScale(10), style::ConvertScale(167));
-	_volume->moveToLeft(style::ConvertScale(8), style::ConvertScale(238));
-	_volumeSlider->setGeometry(style::ConvertScale(45), style::ConvertScale(245), std::max(style::ConvertScale(32), width() - style::ConvertScale(175)), style::ConvertScale(16));
-	_playlist->moveToRight(style::ConvertScale(47), style::ConvertScale(238));
-	_speed->moveToRight(style::ConvertScale(10), style::ConvertScale(238));
+	const auto footerTop = height() - style::ConvertScale(42);
+	_volume->moveToLeft(style::ConvertScale(8), footerTop);
+	_volumeSlider->setGeometry(
+		style::ConvertScale(45),
+		footerTop + style::ConvertScale(7),
+		std::max(style::ConvertScale(32), width() - style::ConvertScale(175)),
+		style::ConvertScale(16));
+	_playlist->moveToRight(style::ConvertScale(47), footerTop);
+	_speed->moveToRight(style::ConvertScale(10), footerTop);
 	updateMenuGeometry();
 }
 
@@ -525,9 +530,10 @@ void CompactPanel::paintEvent(QPaintEvent *event) {
 	p.drawTextLeft(textLeft, style::ConvertScale(73), width(), st::extrasMusicCompactSmall->elided(_performer, textWidth));
 	p.drawTextLeft(padding, style::ConvertScale(140), width(), _elapsed);
 	p.drawTextRight(padding, style::ConvertScale(140), width(), _duration);
-	p.fillRect(0, style::ConvertScale(231), width(), st::lineWidth, st::menuSeparatorFg);
+	p.fillRect(0, height() - style::ConvertScale(49), width(),
+		st::lineWidth, st::menuSeparatorFg);
 	if (playbackType() != kSong) {
-		p.drawTextLeft(padding, style::ConvertScale(247), width(),
+		p.drawTextLeft(padding, height() - style::ConvertScale(33), width(),
 			tr::extras_MediaSpeed(tr::now));
 	}
 }

@@ -4,7 +4,6 @@
 #include "base/object_ptr.h"
 #include "data/data_audio_msg_id.h"
 #include "rpl/lifetime.h"
-#include "rpl/event_stream.h"
 
 #include <QtCore/QObject>
 #include <QtCore/QRect>
@@ -37,10 +36,6 @@ public:
 	void setAvailableRect(QRect rect);
 	void raise();
 	void collapse();
-	[[nodiscard]] bool expanded() const { return _shown; }
-	[[nodiscard]] rpl::producer<> expandedChanges() const {
-		return _expandedChanges.events();
-	}
 
 protected:
 	bool eventFilter(QObject *object, QEvent *event) override;
@@ -51,9 +46,12 @@ private:
 	void ensurePanel();
 	void togglePlaylist();
 	void updatePosition();
+	void updatePanelPosition();
+	void updatePlaylistPosition(int contentWidth, int bottom, const QRect &bounds);
 	[[nodiscard]] bool contains(QWidget *widget) const;
 
 	const not_null<Ui::RpWidget*> _parent;
+	const not_null<Ui::RpWidget*> _panelParent;
 	const not_null<Window::SessionController*> _controller;
 	object_ptr<FloatingButton> _button;
 	object_ptr<Ui::InnerDropdown> _dropdown;
@@ -66,7 +64,6 @@ private:
 	bool _playlistShown = false;
 	bool _playlistOnly = false;
 	bool _positioning = false;
-	rpl::event_stream<> _expandedChanges;
 	rpl::lifetime _lifetime;
 };
 

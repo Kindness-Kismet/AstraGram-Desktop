@@ -17,6 +17,8 @@
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/inner_dropdown.h"
 #include "ui/widgets/tooltip.h"
+#include "window/window_controller.h"
+#include "window/window_session_controller.h"
 
 #include <QtGui/QKeyEvent>
 #include <QtGui/QMouseEvent>
@@ -147,10 +149,11 @@ FloatingPlayer::FloatingPlayer(
 	not_null<Window::SessionController*> controller)
 : QObject(parent.get())
 , _parent(parent)
+, _panelParent(controller->widget()->bodyWidget())
 , _controller(controller)
 , _button(parent)
-, _dropdown(parent, st::extrasMusicCompactDropdown)
-, _playlist(parent, controller) {
+, _dropdown(_panelParent, st::extrasMusicCompactDropdown)
+, _playlist(_panelParent, controller) {
 	_dropdown->setObjectName(u"music.popup"_q);
 	_dropdown->setAutoHiding(false);
 	_dropdown->hide();
@@ -159,6 +162,13 @@ FloatingPlayer::FloatingPlayer(
 	_button->setClickedCallback([=] { toggle(); });
 	_playlist->sizeValue(
 	) | rpl::on_next([=] { updatePosition(); }, _lifetime);
+	rpl::merge(
+		_parent->positionValue() | rpl::to_empty,
+		_panelParent->sizeValue() | rpl::to_empty
+	) | rpl::on_next([=] { updatePosition(); }, _lifetime);
+	_controller->window().boxShownValue(
+	) | rpl::filter([](bool shown) { return shown; }
+	) | rpl::on_next([=] { collapse(); }, _lifetime);
 	using namespace Media::Player;
 	rpl::merge(
 		instance()->updatedNotifier() | rpl::to_empty,
@@ -238,7 +248,7 @@ void FloatingPlayer::ensurePanel() {
 		return;
 	}
 	_panel = _dropdown->setOwnedWidget(object_ptr<CompactPanel>(
-		_dropdown, _parent, _controller, _type));
+		_dropdown, _panelParent, _controller, _type));
 	_panel->collapseRequests(
 	) | rpl::on_next([=] { collapse(); }, _panel->lifetime());
 	_panel->playlistRequests(
@@ -262,22 +272,17 @@ void FloatingPlayer::toggle() {
 	ensurePanel();
 	_shown = true;
 	_button->setExpanded(true);
-	_expandedChanges.fire({});
 	updatePosition();
 	raise();
 }
 
 void FloatingPlayer::collapse() {
-	const auto wasShown = _shown;
 	_shown = _playlistShown = _playlistOnly = false;
 	_button->setExpanded(false);
 	_playlist->hideIgnoringEnterEvents();
 	_dropdown->hideAnimated();
 	if (_panel) {
 		_panel->dismiss();
-	}
-	if (wasShown) {
-		_expandedChanges.fire({});
 	}
 }
 
@@ -302,47 +307,61 @@ void FloatingPlayer::updatePosition() {
 		return;
 	}
 	_positioning = true;
+	const auto guard = gsl::finally([&] { _positioning = false; });
 	const auto margin = st::extrasMusicFloatingMargin;
-	const auto gap = st::extrasMusicFloatingGap;
-	const auto shadow = st::extrasMusicFloatingShadow;
 	const auto buttonLeft = std::max(_available.x() + (_available.width() - _button->width()) / 2,
 		_available.right() + 1 - margin - _button->width());
 	_button->move(buttonLeft, _available.bottom() + 1 - margin - _button->height());
 	if (_panel) {
-		const auto &padding = _dropdown->st().padding;
-		const auto contentWidth = std::min(st::extrasMusicCompactWidth,
-			_available.width() - 2 * margin);
-		if (contentWidth < style::ConvertScale(228)) {
-			_dropdown->hideFast();
-			_playlist->hideIgnoringEnterEvents();
-			_positioning = false;
-			return;
-		}
-		_panel->resizeToWidth(contentWidth);
-		_panel->setMenuBounds(_available.marginsRemoved(
-			QMargins(margin, 0, margin, margin + _button->height())));
-		const auto bottom = _button->y() + shadow - gap + padding.bottom();
-		_dropdown->setMaxHeight(std::max(1, bottom - _available.y()));
-		_dropdown->resizeToContent();
-		_dropdown->move(_available.right() + 1 - margin + padding.right() - _dropdown->width(),
-			bottom - _dropdown->height());
-		if (_playlistShown) {
-			const auto above = _dropdown->y() - _available.y();
-			_playlistOnly = (above < style::ConvertScale(96));
-			const auto queueBottom = _playlistOnly ? bottom : _dropdown->y() + padding.top();
-			_playlist->setAvailableSize(QSize(
-				contentWidth + padding.left() + padding.right(),
-				std::max(1, queueBottom - _available.y())));
-			_playlist->move(_dropdown->x(), queueBottom - _playlist->height());
-			if (_playlistOnly) {
-				_dropdown->hideFast();
-			}
-		}
-		if (_shown && !_playlistOnly && _dropdown->isHidden()) {
-			_dropdown->showAnimated(Ui::PanelAnimation::Origin::BottomRight);
-		}
+		updatePanelPosition();
 	}
-	_positioning = false;
+}
+
+void FloatingPlayer::updatePanelPosition() {
+	const auto margin = st::extrasMusicFloatingMargin;
+	const auto &padding = _dropdown->st().padding;
+	const auto bounds = _panelParent->rect().marginsRemoved(
+		QMargins(margin, margin, margin, margin));
+	const auto contentWidth = std::min(st::extrasMusicCompactWidth,
+		bounds.width() - padding.left() - padding.right());
+	_panel->resizeToWidth(contentWidth);
+	const auto anchor = _button->mapTo(_panelParent, QPoint(
+		_button->width(),
+		st::extrasMusicFloatingShadow - st::extrasMusicFloatingGap));
+	// 面板只受主窗口边界限制，聊天列表仅提供入口位置。
+	_dropdown->resizeToContent();
+	_dropdown->move(
+		std::clamp(anchor.x() + padding.right() - _dropdown->width(),
+			bounds.left(), bounds.right() + 1 - _dropdown->width()),
+		std::clamp(anchor.y() + padding.bottom() - _dropdown->height(),
+			bounds.top(), bounds.bottom() + 1 - _dropdown->height()));
+	_panel->setMenuBounds(bounds);
+	if (_playlistShown) {
+		updatePlaylistPosition(contentWidth,
+			_dropdown->y() + _dropdown->height(), bounds);
+	}
+	if (_shown && !_playlistOnly && _dropdown->isHidden()) {
+		_dropdown->showAnimated(Ui::PanelAnimation::Origin::BottomRight);
+	}
+}
+
+void FloatingPlayer::updatePlaylistPosition(
+		int contentWidth,
+		int bottom,
+		const QRect &bounds) {
+	const auto &padding = _dropdown->st().padding;
+	const auto above = _dropdown->y() - bounds.top();
+	_playlistOnly = (above < style::ConvertScale(96));
+	const auto queueBottom = _playlistOnly
+		? bottom
+		: _dropdown->y() + padding.top();
+	_playlist->setAvailableSize(QSize(
+		contentWidth + padding.left() + padding.right(),
+		std::max(1, queueBottom - bounds.top())));
+	_playlist->move(_dropdown->x(), queueBottom - _playlist->height());
+	if (_playlistOnly) {
+		_dropdown->hideFast();
+	}
 }
 
 void FloatingPlayer::raise() {
@@ -366,7 +385,8 @@ bool FloatingPlayer::contains(QWidget *widget) const {
 }
 
 bool FloatingPlayer::eventFilter(QObject *object, QEvent *event) {
-	if (object == _parent.get() && event->type() == QEvent::Hide) {
+	if ((object == _parent.get() || object == _panelParent.get())
+		&& event->type() == QEvent::Hide) {
 		collapse();
 	}
 	if (!_shown) {
