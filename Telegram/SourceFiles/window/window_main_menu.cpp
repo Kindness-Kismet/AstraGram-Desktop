@@ -781,56 +781,6 @@ void MainMenu::setupMenu() {
 			controller->window().hideSettingsAndLayer();
 		});
 		}
-
-		if (settings.showLReadToggleInDrawer()) {
-			addAction(
-				tr::extras_LReadMessages(),
-				{&st::extrasLReadMenuIcon},
-				u"lRead"_q
-			)->setClickedCallback([=]() mutable
-			{
-				auto &ghost = ExtrasSettings::ghost(&controller->session());
-				const auto prev = ghost.sendReadMessages();
-				ghost.setSendReadMessages(false);
-
-				const auto chats = controller->session().data().chatsList();
-				MarkAsReadChatList(chats);
-
-				ghost.setSendReadMessages(prev);
-			});
-		}
-
-		if (settings.showSReadToggleInDrawer()) {
-			auto callback = [=](Fn<void()> &&close) mutable {
-				auto &ghost = ExtrasSettings::ghost(&controller->session());
-				const auto prev = ghost.sendReadMessages();
-				ghost.setSendReadMessages(true);
-
-				auto chats = controller->session().data().chatsList();
-				MarkAsReadChatList(chats);
-
-				// slight delay for forums to send packets
-				dispatchToMainThread(crl::guard(controller, [=] {
-					auto &ghost = ExtrasSettings::ghost(&controller->session());
-					ghost.setSendReadMessages(prev);
-				}), 200);
-				close();
-			};
-
-			addAction(
-				tr::extras_SReadMessages(),
-				{&st::extrasSReadMenuIcon},
-				u"sRead"_q
-			)->setClickedCallback([=]
-			{
-				auto box = Ui::MakeConfirmBox({
-					.text = tr::extras_ReadConfirmationBoxQuestion(),
-					.confirmed = callback,
-					.confirmText = tr::extras_ReadConfirmationBoxActionText()
-				});
-				Ui::show(std::move(box));
-			});
-		}
 	} else {
 		addAction(
 			tr::lng_profile_add_contact(),

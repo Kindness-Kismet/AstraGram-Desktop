@@ -141,8 +141,6 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"showCallsInDrawer"_q, [&] { return settings.showCallsInDrawer(); }, settings, &ExtrasSettings::setShowCallsInDrawer);
 	addSetting(entries, u"showSavedMessagesInDrawer"_q, [&] { return settings.showSavedMessagesInDrawer(); }, settings, &ExtrasSettings::setShowSavedMessagesInDrawer);
 	addSetting(entries, u"showArchiveInDrawer"_q, [&] { return settings.showArchiveInDrawer(); }, settings, &ExtrasSettings::setShowArchiveInDrawer);
-	addSetting(entries, u"showLReadToggleInDrawer"_q, [&] { return settings.showLReadToggleInDrawer(); }, settings, &ExtrasSettings::setShowLReadToggleInDrawer);
-	addSetting(entries, u"showSReadToggleInDrawer"_q, [&] { return settings.showSReadToggleInDrawer(); }, settings, &ExtrasSettings::setShowSReadToggleInDrawer);
 	addSetting(entries, u"showDonationDetailsInDrawer"_q, [&] { return settings.showDonationDetailsInDrawer(); }, settings, &ExtrasSettings::setShowDonationDetailsInDrawer);
 	addSetting(entries, u"showNightModeToggleInDrawer"_q, [&] { return settings.showNightModeToggleInDrawer(); }, settings, &ExtrasSettings::setShowNightModeToggleInDrawer);
 	addSetting(entries, u"showGhostToggleInDrawer"_q, [&] { return settings.showGhostToggleInDrawer(); }, settings, &ExtrasSettings::setShowGhostToggleInDrawer);

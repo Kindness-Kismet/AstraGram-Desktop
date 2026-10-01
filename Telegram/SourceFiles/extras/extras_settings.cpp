@@ -940,18 +940,6 @@ void ExtrasSettings::setShowArchiveInDrawer(bool val) {
 	save();
 }
 
-void ExtrasSettings::setShowLReadToggleInDrawer(bool val) {
-	if (_showLReadToggleInDrawer.current() == val) return;
-	_showLReadToggleInDrawer = val;
-	save();
-}
-
-void ExtrasSettings::setShowSReadToggleInDrawer(bool val) {
-	if (_showSReadToggleInDrawer.current() == val) return;
-	_showSReadToggleInDrawer = val;
-	save();
-}
-
 void ExtrasSettings::setShowDonationDetailsInDrawer(bool val) {
 	if (_showDonationDetailsInDrawer.current() == val) {
 		return;
@@ -1241,8 +1229,6 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"showCallsInDrawer", s._showCallsInDrawer.current()},
 		{"showSavedMessagesInDrawer", s._showSavedMessagesInDrawer.current()},
 		{"showArchiveInDrawer", s._showArchiveInDrawer.current()},
-		{"showLReadToggleInDrawer", s._showLReadToggleInDrawer.current()},
-		{"showSReadToggleInDrawer", s._showSReadToggleInDrawer.current()},
 		{"showDonationDetailsInDrawer", s._showDonationDetailsInDrawer.current()},
 		{"showNightModeToggleInDrawer", s._showNightModeToggleInDrawer.current()},
 		{"showGhostToggleInDrawer", s._showGhostToggleInDrawer.current()},
@@ -1366,8 +1352,6 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._showCallsInDrawer = j.value("showCallsInDrawer", defaults._showCallsInDrawer.current());
 	s._showSavedMessagesInDrawer = j.value("showSavedMessagesInDrawer", defaults._showSavedMessagesInDrawer.current());
 	s._showArchiveInDrawer = j.value("showArchiveInDrawer", defaults._showArchiveInDrawer.current());
-	s._showLReadToggleInDrawer = j.value("showLReadToggleInDrawer", defaults._showLReadToggleInDrawer.current());
-	s._showSReadToggleInDrawer = j.value("showSReadToggleInDrawer", defaults._showSReadToggleInDrawer.current());
 	s._showDonationDetailsInDrawer = j.value("showDonationDetailsInDrawer", defaults._showDonationDetailsInDrawer.current());
 	s._showNightModeToggleInDrawer = j.value("showNightModeToggleInDrawer", defaults._showNightModeToggleInDrawer.current());
 	s._showGhostToggleInDrawer = j.value("showGhostToggleInDrawer", defaults._showGhostToggleInDrawer.current());

@@ -333,8 +333,6 @@ public:
 	[[nodiscard]] bool showCallsInDrawer() const { return _showCallsInDrawer.current(); }
 	[[nodiscard]] bool showSavedMessagesInDrawer() const { return _showSavedMessagesInDrawer.current(); }
 	[[nodiscard]] bool showArchiveInDrawer() const { return _showArchiveInDrawer.current(); }
-	[[nodiscard]] bool showLReadToggleInDrawer() const { return _showLReadToggleInDrawer.current(); }
-	[[nodiscard]] bool showSReadToggleInDrawer() const { return _showSReadToggleInDrawer.current(); }
 	[[nodiscard]] bool showDonationDetailsInDrawer() const { return _showDonationDetailsInDrawer.current(); }
 	[[nodiscard]] bool showNightModeToggleInDrawer() const { return _showNightModeToggleInDrawer.current(); }
 	[[nodiscard]] bool showGhostToggleInDrawer() const { return _showGhostToggleInDrawer.current(); }
@@ -431,8 +429,6 @@ public:
 	void setShowCallsInDrawer(bool val);
 	void setShowSavedMessagesInDrawer(bool val);
 	void setShowArchiveInDrawer(bool val);
-	void setShowLReadToggleInDrawer(bool val);
-	void setShowSReadToggleInDrawer(bool val);
 	void setShowDonationDetailsInDrawer(bool val);
 	void setShowNightModeToggleInDrawer(bool val);
 	void setShowGhostToggleInDrawer(bool val);
@@ -587,10 +583,6 @@ public:
 	[[nodiscard]] rpl::producer<bool> showSavedMessagesInDrawerValue() const { return _showSavedMessagesInDrawer.value(); }
 	[[nodiscard]] rpl::producer<bool> showArchiveInDrawerValue() const { return _showArchiveInDrawer.value(); }
 	[[nodiscard]] rpl::producer<bool> showSavedMessagesInDrawerChanges() const { return _showSavedMessagesInDrawer.changes(); }
-	[[nodiscard]] rpl::producer<bool> showLReadToggleInDrawerValue() const { return _showLReadToggleInDrawer.value(); }
-	[[nodiscard]] rpl::producer<bool> showLReadToggleInDrawerChanges() const { return _showLReadToggleInDrawer.changes(); }
-	[[nodiscard]] rpl::producer<bool> showSReadToggleInDrawerValue() const { return _showSReadToggleInDrawer.value(); }
-	[[nodiscard]] rpl::producer<bool> showSReadToggleInDrawerChanges() const { return _showSReadToggleInDrawer.changes(); }
 	[[nodiscard]] rpl::producer<bool> showNightModeToggleInDrawerValue() const { return _showNightModeToggleInDrawer.value(); }
 	[[nodiscard]] rpl::producer<bool> showNightModeToggleInDrawerChanges() const { return _showNightModeToggleInDrawer.changes(); }
 	[[nodiscard]] rpl::producer<bool> showGhostToggleInDrawerValue() const { return _showGhostToggleInDrawer.value(); }
@@ -724,8 +716,6 @@ private:
 	rpl::variable<bool> _showCallsInDrawer = true;
 	rpl::variable<bool> _showSavedMessagesInDrawer = true;
 	rpl::variable<bool> _showArchiveInDrawer = true;
-	rpl::variable<bool> _showLReadToggleInDrawer = false;
-	rpl::variable<bool> _showSReadToggleInDrawer = true;
 	rpl::variable<bool> _showDonationDetailsInDrawer = true;
 	rpl::variable<bool> _showNightModeToggleInDrawer = true;
 	rpl::variable<bool> _showGhostToggleInDrawer = false;

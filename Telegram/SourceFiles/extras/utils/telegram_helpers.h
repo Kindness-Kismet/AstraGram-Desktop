@@ -4,7 +4,6 @@
 #include "extras/data/entities.h"
 #include "core/application.h"
 #include "data/data_media_types.h"
-#include "dialogs/dialogs_main_list.h"
 #include "info/profile/info_profile_badge.h"
 
 namespace Api {
@@ -59,9 +58,6 @@ rpl::producer<Info::Profile::Badge::Content> ExteraBadgeTypeFromPeer(not_null<Pe
 Fn<void()> badgeClickHandler(not_null<PeerData *> peer);
 
 bool isMessageHidden(not_null<HistoryItem*> item);
-
-void MarkAsReadChatList(not_null<Dialogs::MainList*> list);
-void MarkAsReadThread(not_null<Data::Thread*> thread);
 
 void markReadAfterAction(not_null<History*> history);
 void readHistory(not_null<HistoryItem*> message);

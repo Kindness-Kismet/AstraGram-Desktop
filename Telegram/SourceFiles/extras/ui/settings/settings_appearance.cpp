@@ -333,20 +333,6 @@ void BuildDrawerElements(SectionBuilder &builder, ExtrasSectionBuilder &extras) 
 		.icon = { &st::menuIconArchive },
 	});
 	extras.addSettingToggle({
-		.id = u"extras/showLReadToggleInDrawer"_q,
-		.title = tr::extras_LReadMessages(),
-		.getter = &ExtrasSettings::showLReadToggleInDrawer,
-		.setter = &ExtrasSettings::setShowLReadToggleInDrawer,
-		.icon = { &st::extrasLReadMenuIcon },
-	});
-	extras.addSettingToggle({
-		.id = u"extras/showSReadToggleInDrawer"_q,
-		.title = tr::extras_SReadMessages(),
-		.getter = &ExtrasSettings::showSReadToggleInDrawer,
-		.setter = &ExtrasSettings::setShowSReadToggleInDrawer,
-		.icon = { &st::extrasSReadMenuIcon },
-	});
-	extras.addSettingToggle({
 		.id = u"extras/showDonationDetailsInDrawer"_q,
 		.title = tr::extras_DonationDetails(),
 		.getter = &ExtrasSettings::showDonationDetailsInDrawer,

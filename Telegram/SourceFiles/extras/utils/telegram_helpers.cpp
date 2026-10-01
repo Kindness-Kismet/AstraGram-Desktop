@@ -207,16 +207,6 @@ bool isMessageHidden(const not_null<HistoryItem*> item) {
 	return FiltersController::filtered(item);
 }
 
-void MarkAsReadChatList(not_null<Dialogs::MainList*> list) {
-	auto mark = std::vector<not_null<History*>>();
-	for (const auto &row : list->indexed()->all()) {
-		if (const auto history = row->history()) {
-			mark.push_back(history);
-		}
-	}
-	ranges::for_each(mark, MarkAsReadThread);
-}
-
 void readMentions(base::weak_ptr<Data::Thread> weakThread) {
 	const auto thread = weakThread.get();
 	if (!thread) {
@@ -269,50 +259,6 @@ void readReactions(base::weak_ptr<Data::Thread> weakThread) {
 			peer->owner().history(peer)->clearUnreadReactionsFor(rootId, sublist);
 		}
 	}).send();
-}
-
-void MarkAsReadThread(not_null<Data::Thread*> thread) {
-	const auto readHistoryNative = [&](const not_null<History*> history)
-	{
-		history->owner().histories().readInbox(history);
-	};
-	const auto sendReadMentions = [=](
-		const not_null<Data::Thread*> threadInner)
-	{
-		readMentions(base::make_weak(threadInner));
-	};
-	const auto sendReadReactions = [=](
-		const not_null<Data::Thread*> threadInner)
-	{
-		readReactions(base::make_weak(threadInner));
-	};
-
-	if (thread->chatListBadgesState().unread) {
-		if (const auto forum = thread->asForum()) {
-			forum->enumerateTopics([](
-				not_null<Data::ForumTopic*> topic)
-				{
-					MarkAsReadThread(topic);
-				});
-		} else if (const auto topic = thread->asTopic()) {
-			topic->readTillEnd();
-		} else if (const auto history = thread->asHistory()) {
-			readHistoryNative(history);
-			if (const auto migrated = history->migrateSibling()) {
-				readHistoryNative(migrated);
-			}
-		}
-	}
-
-	if (thread->unreadMentions().has()) {
-		sendReadMentions(thread);
-	}
-
-	if (thread->unreadReactions().has()) {
-		sendReadReactions(thread);
-	}
-
-	ExtrasWorker::markAsOnline(&thread->session());
 }
 
 void readHistory(not_null<HistoryItem*> message) {

@@ -9050,8 +9050,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_MessageDetailsPackOwnerFetchingPC" = "fetching...";
 "extras_MessageDetailsPackOwnerNotFoundPC" = "not found";
 "extras_KillApp" = "Kill App";
-"extras_LReadMessages" = "Read on Local";
-"extras_SReadMessages" = "Read on Server";
 "extras_GhostModeToggle" = "Ghost Mode";
 "extras_EnableGhostMode" = "Enable Ghost";
 "extras_DisableGhostMode" = "Disable Ghost";
@@ -9090,8 +9088,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_ReadUntilMenuText" = "Read Message";
 "extras_DeleteKeepLocally" = "Keep locally";
 "extras_BoxActionReset" = "Reset";
-"extras_ReadConfirmationBoxQuestion" = "Do you want to read all messages?";
-"extras_ReadConfirmationBoxActionText" = "Read";
 "extras_ClearDeletedMessagesTitle" = "Clear deleted messages";
 "extras_ClearDeletedMessagesText" = "Are you sure you want to clear all deleted messages in this chat?";
 "extras_ClearDeletedMessagesActionText" = "Clear";
