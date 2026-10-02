@@ -3,6 +3,12 @@ using "ui/chat/chat.style";
 using "ui/widgets/widgets.style";
 using "dialogs/dialogs.style";
 
+extrasEmptyStateSearch: icon {{ "extras/empty_state/search", windowSubTextFg }};
+extrasEmptyStateNoResults: icon {{ "extras/empty_state/no_results", windowSubTextFg }};
+extrasEmptyStateChats: icon {{ "extras/empty_state/chats", windowSubTextFg }};
+extrasEmptyStateBlocked: icon {{ "extras/empty_state/blocked", windowSubTextFg }};
+extrasEmptyStateGifts: icon {{ "extras/empty_state/gifts", windowSubTextFg }};
+
 extrasGhostIcon: icon {{ "extras/ghost", menuIconColor }};
 extrasGhostModeGlobalIcon: icon {{ "extras/ghost_mode_global", historyPeerUserpicFg }};
 extrasEditsHistoryIcon: icon {{ "extras/edits_history", menuIconColor }};
