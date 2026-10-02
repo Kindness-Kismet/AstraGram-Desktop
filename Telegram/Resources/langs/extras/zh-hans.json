@@ -540,5 +540,7 @@
   "MediaSpeed": "播放速度",
   "DonationDetails": "捐赠详情",
   "DonationMessage": "如果你喜欢我的工作，可以考虑捐赠我。这将用于日常软件开发和功能增添。",
-  "DonationOpenAfdian": "前往爱发电"
+  "DonationOpenAfdian": "前往爱发电",
+  "MessageArchiveReadError": "无法打开消息留档，已保留原有数据。",
+  "MessageArchivePasscodeReset": "未解锁就退出登录会重置本地密码。重新登录也无法解开原来保存的已删除消息和编辑历史。确定继续吗？"
 }

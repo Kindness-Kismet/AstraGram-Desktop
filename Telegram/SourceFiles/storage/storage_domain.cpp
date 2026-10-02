@@ -8,12 +8,21 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/storage_domain.h"
 
 #include "core/version.h"
+#include "extras/data/extras_database.h"
 #include "storage/details/storage_file_utilities.h"
 #include "storage/serialize_common.h"
 #include "mtproto/mtproto_config.h"
 #include "main/main_domain.h"
 #include "main/main_account.h"
 #include "base/random.h"
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#include <io.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
 namespace Storage {
 namespace {
@@ -28,6 +37,27 @@ using namespace details;
 	// We dropped old test authorizations when migrated to multi auth.
 	//return "key_" + dataName + (cTestMode() ? "[test]" : "");
 	return "key_" + dataName;
+}
+
+[[nodiscard]] bool FlushKeyFile(const QString &name) {
+	QFile file(BaseGlobalPath() + name + 's');
+	if (!file.open(QIODevice::ReadWrite) || !file.flush()) {
+		return false;
+	}
+#ifdef Q_OS_WIN
+	return FlushFileBuffers(reinterpret_cast<HANDLE>(
+		_get_osfhandle(file.handle()))) != 0;
+#else
+	if (fsync(file.handle()) != 0) {
+		return false;
+	}
+	const auto directory = open(QFile::encodeName(BaseGlobalPath()).constData(), O_RDONLY);
+	if (directory < 0) {
+		return false;
+	}
+	const auto done = gsl::finally([&] { close(directory); });
+	return fsync(directory) == 0;
+#endif
 }
 
 } // namespace
@@ -86,7 +116,19 @@ void Domain::startWithSingleAccount(
 	_owner->accountAddedInStorage(Main::Domain::AccountWithIndex{
 		.account = std::move(account)
 	});
-	writeAccounts();
+	// 旧留档转成密文前，必须确认新主密钥已保存且能够恢复。
+	writeAccounts(true);
+	FileReadDescriptor saved;
+	QByteArray salt, encrypted;
+	if (ReadFile(saved, ComputeKeyName(_dataName), BaseGlobalPath())) {
+		saved.stream >> salt >> encrypted;
+	}
+	if (salt != _passcodeKeySalt || encrypted != _passcodeKeyEncrypted
+		|| !FlushKeyFile(ComputeKeyName(_dataName))) {
+		LOG(("Message archive: local key was not saved; migration was skipped."));
+		return;
+	}
+	Database::unlockMessages(_localKey->data());
 }
 
 void Domain::generateLocalKey() {
@@ -166,6 +208,7 @@ Domain::StartModernResult Domain::startModern(
 		return StartModernResult::Failed;
 	}
 
+	Database::unlockMessages(_localKey->data());
 	_oldVersion = keyData.version;
 
 	auto tried = base::flat_set<int>();
@@ -213,6 +256,10 @@ Domain::StartModernResult Domain::startModern(
 }
 
 void Domain::writeAccounts() {
+	writeAccounts(false);
+}
+
+void Domain::writeAccounts(bool sync) {
 	Expects(!_owner->accounts().empty());
 
 	const auto path = BaseGlobalPath();
@@ -220,7 +267,7 @@ void Domain::writeAccounts() {
 		QDir().mkpath(path);
 	}
 
-	FileWriteDescriptor key(ComputeKeyName(_dataName), path);
+	FileWriteDescriptor key(ComputeKeyName(_dataName), path, sync);
 	key.writeData(_passcodeKeySalt);
 	key.writeData(_passcodeKeyEncrypted);
 

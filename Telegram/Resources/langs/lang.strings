@@ -9178,6 +9178,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_EmojiPackImporting" = "Importing…";
 "extras_EmojiPackFileFilter" = "Color emoji fonts (*.ttf *.otf)";
 "extras_EmojiPackReadError" = "Could not read the font. Imported font files must be no larger than 64 MB.";
+"extras_MessageArchiveReadError" = "Message history could not be opened. The stored data has been kept.";
+"extras_MessageArchivePasscodeReset" = "Logging out without unlocking resets the local passcode. Logging in again will not unlock your saved deleted messages and edit history. Continue?";
 "extras_EmojiPackFontError" = "This font contains no supported color emoji. Please choose another color emoji font.";
 "extras_EmojiPackFull" = "The custom emoji pack limit has been reached.";
 "extras_EmojiPackDownloadError" = "Could not download the emoji font. Please check your connection and try again.";

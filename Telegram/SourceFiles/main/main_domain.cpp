@@ -11,6 +11,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/core_settings.h"
 #include "core/shortcuts.h"
 #include "core/crash_reports.h"
+#include "extras/data/extras_database.h"
+#include "boxes/abstract_box.h"
+#include "lang/lang_keys.h"
+#include "ui/boxes/confirm_box.h"
 #include "main/main_account.h"
 #include "main/main_session.h"
 #include "data/data_session.h"
@@ -70,6 +74,11 @@ Storage::StartResult Domain::start(const QByteArray &passcode) {
 	if (result == Storage::StartResult::Success) {
 		activateAfterStarting();
 		crl::on_main(&Core::App(), [=] { suggestExportIfNeeded(); });
+		if (!Database::messageArchiveReady()) {
+			crl::on_main(&Core::App(), [] {
+				Ui::show(Ui::MakeInformBox(tr::extras_MessageArchiveReadError()));
+			});
+		}
 	} else {
 		Assert(!started());
 	}
@@ -401,7 +410,8 @@ bool Domain::removePasscodeIfEmpty() {
 	if (Core::App().passcodeLocked()) {
 		Core::App().unlockPasscode();
 	}
-	if (!_local->hasLocalPasscode()) {
+	// 留档仍使用当前主密钥，退出账号不能自动解除它的口令保护。
+	if (!_local->hasLocalPasscode() || Database::hasProtectedMessages()) {
 		return false;
 	}
 	_local->setPasscode(QByteArray());

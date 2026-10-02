@@ -6,9 +6,11 @@
 #include "extras/data/extras_database.h"
 #include "extras/data/messages_storage.h"
 #include "extras/debug/debug_login.h"
+#include "extras/debug/commands/message_archive_tests.h"
 #include "extras/features/filters/filters_controller.h"
 #include "extras/ui/context_menu/context_menu.h"
 #include "extras/utils/telegram_helpers.h"
+#include "core/application.h"
 #include "data/data_session.h"
 #include "history/history.h"
 #include "history/history_item.h"
@@ -42,11 +44,14 @@ Result storageStats(const QStringList &args) {
 		{"databaseExists", info.exists()},
 		{"databaseBytes", info.exists() ? info.size() : 0},
 		{"filters", Database::getCount()},
+		{"archiveReady", Database::messageArchiveReady()},
+		{"archiveError", Database::messageArchiveError().toStdString()},
 	}));
 }
 
 Result deletedMessages(const QStringList &args) {
 	if (args.empty() || args.size() > 3) return Result::Err(u"usage: storage.deleted <peerId> [limit] [search]"_q);
+	if (Core::App().passcodeLocked()) return Result::Err(u"local passcode is locked"_q);
 	const auto peer = findPeer(args[0]);
 	if (!peer) return Result::Err(u"peer not found"_q);
 	auto ok = true;
@@ -55,11 +60,15 @@ Result deletedMessages(const QStringList &args) {
 	auto result = Json::array();
 	for (const auto &message : ExtrasMessages::getDeletedMessages(peer, 0, 0, 0, limit,
 		args.size() == 3 ? args[2] : QString())) result.push_back(describeStored(message));
+	if (!Database::messageArchiveError().isEmpty()) {
+		return Result::Err(u"message archive is unavailable; stored data was preserved"_q);
+	}
 	return Result::Ok(Compact(result));
 }
 
 Result editedMessages(const QStringList &args) {
 	if (args.size() < 2 || args.size() > 3) return Result::Err(u"usage: storage.edits <peerId> <messageId> [limit]"_q);
+	if (Core::App().passcodeLocked()) return Result::Err(u"local passcode is locked"_q);
 	const auto peer = findPeer(args[0]);
 	auto idOk = false;
 	const auto id = args[1].toInt(&idOk);
@@ -71,6 +80,9 @@ Result editedMessages(const QStringList &args) {
 	for (const auto &message : Database::getEditedMessages(
 		ActiveSession()->userId().bare & PeerId::kChatTypeMask,
 		getDialogIdFromPeer(peer), id, 0, 0, limit)) result.push_back(describeStored(message));
+	if (!Database::messageArchiveError().isEmpty()) {
+		return Result::Err(u"message archive is unavailable; stored data was preserved"_q);
+	}
 	return Result::Ok(Compact(result));
 }
 
@@ -123,6 +135,7 @@ Result hideMessage(const QStringList &args) {
 const HandlerMap &StorageHandlers() {
 	static const auto result = HandlerMap{
 		{u"storage.stats"_q, &storageStats},
+		{u"storage.verify-archive"_q, &verifyMessageArchive},
 		{u"storage.deleted"_q, &deletedMessages},
 		{u"storage.edits"_q, &editedMessages},
 		{u"message.inspect"_q, &inspectMessage},

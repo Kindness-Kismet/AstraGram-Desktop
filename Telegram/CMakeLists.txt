@@ -301,6 +301,10 @@ set(extras_files
         extras/data/entities.h
         extras/data/extras_database.cpp
         extras/data/extras_database.h
+        extras/data/message_archive_crypto.cpp
+        extras/data/message_archive_crypto.h
+        extras/data/message_archive_store.cpp
+        extras/data/message_archive_store.h
         extras/debug/debug_commands.cpp
         extras/debug/debug_commands.h
         extras/debug/crash_dump.cpp
@@ -325,6 +329,8 @@ set(extras_files
         extras/debug/commands/player_commands.cpp
         extras/debug/commands/ghost_commands.cpp
         extras/debug/commands/storage_commands.cpp
+        extras/debug/commands/message_archive_tests.cpp
+        extras/debug/commands/message_archive_tests.h
         extras/debug/commands/screenshot_commands.cpp
         extras/debug/commands/control_commands.cpp
         extras/debug/commands/message_commands.cpp

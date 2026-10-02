@@ -1,6 +1,7 @@
 #pragma once
 
 #include "extras/data/entities.h"
+#include "base/bytes.h"
 
 #include <functional>
 
@@ -14,6 +15,14 @@ public:
 namespace Database {
 
 void initialize();
+void unlockMessages(bytes::const_span localKey);
+[[nodiscard]] bool hasProtectedMessages();
+[[nodiscard]] bool messageArchiveReady();
+[[nodiscard]] QString messageArchiveError();
+[[nodiscard]] std::vector<ExtrasMessageBase> getArchivedMessages(
+	bool edited, ID userId, ID dialogId, ID topicId, ID messageId,
+	ID minId, ID maxId, int totalLimit, const std::string &searchQuery = {},
+	QString *error = nullptr);
 
 void addEditedMessage(const EditedMessage &message);
 std::vector<EditedMessage> getEditedMessages(ID userId, ID dialogId, ID messageId, ID minId, ID maxId, int totalLimit);
@@ -50,7 +59,5 @@ void deleteAllExclusions();
 
 bool hasFilters();
 bool hasPerDialogFilters();
-
-void moveCurrentDatabase();
 
 }

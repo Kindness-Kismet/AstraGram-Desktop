@@ -1,6 +1,10 @@
 # 消息留档与本地事件
 
 `storage.stats` 查询留档开关、数据库路径、大小与过滤规则数量。
+返回的 `archiveReady` 表示留档已解锁，`archiveError` 表示最近的存储错误。
+
+`storage.verify-archive` 仅在独立假会话中运行，用临时数据库验证加密、篡改拒绝、检索和旧库迁移。
+它不操作当前留档；本地密码的创建、修改、关闭和冷启动解锁仍需通过真实界面另行验证。
 
 `storage.deleted <peerId> [limit] [search]` 查询已删除消息；
 `storage.edits <peerId> <messageId> [limit]` 查询编辑历史。

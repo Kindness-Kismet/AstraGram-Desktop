@@ -5,6 +5,8 @@
 #include "mainwindow.h"
 #include "api/api_attached_stickers.h"
 #include "extras/data/messages_storage.h"
+#include "extras/data/extras_database.h"
+#include "extras/utils/telegram_helpers.h"
 #include "extras/ui/message_history/history_section.h"
 #include "base/call_delayed.h"
 #include "base/unixtime.h"
@@ -457,10 +459,10 @@ void InnerWidget::checkPreloadMore() {
 }
 
 void InnerWidget::updateEmptyText() {
-	// auto text = !_searchQuery.isEmpty()
-	// 	? tr::lng_admin_log_no_results_title(tr::now)
-	// 	: tr::lng_search_messages_none(tr::now);
-	_emptyText.setMarkedText(st::defaultTextStyle, Ui::Text::Semibold(tr::lng_search_messages_none(tr::now)));
+	const auto text = Database::messageArchiveError().isEmpty()
+		? tr::lng_search_messages_none(tr::now)
+		: tr::extras_MessageArchiveReadError(tr::now);
+	_emptyText.setMarkedText(st::defaultTextStyle, Ui::Text::Semibold(text));
 }
 
 QString InnerWidget::tooltipText() const {
@@ -739,20 +741,20 @@ void InnerWidget::preloadMore(Direction direction) {
 
 	const auto reqNum = ++_loadRequestNum;
 
-	const auto item = _item;
-	const auto peer = _peer;
+	const auto edited = (_item != nullptr);
+	const auto userId = ID(_peer->session().userId().bare & PeerId::kChatTypeMask);
+	const auto dialogId = getDialogIdFromPeer(_peer);
+	const auto messageId = _item ? _item->id.bare : 0;
 	const auto topicId = _topicId;
-	const auto searchQuery = _searchQuery;
+	const auto searchQuery = _searchQuery.toStdString();
 
 	const auto weak = base::make_weak(this);
 
 	crl::async([=] {
-		std::vector<ExtrasMessageBase> messages;
-		if (item) { // viewing edited history
-			messages = ExtrasMessages::getEditedMessages(item, minId, maxId, perPage);
-		} else { // viewing deleted messages
-			messages = ExtrasMessages::getDeletedMessages(peer, topicId, minId, maxId, perPage, searchQuery);
-		}
+		auto error = QString();
+		auto messages = Database::getArchivedMessages(
+			edited, userId, dialogId, topicId, messageId,
+			minId, maxId, perPage, searchQuery, &error);
 
 		crl::on_main([=, messages = std::move(messages)]() mutable
 		{
@@ -766,6 +768,13 @@ void InnerWidget::preloadMore(Direction direction) {
 
 			auto &loadingFlagRef = (direction == Direction::Up) ? _loadingUp : _loadingDown;
 			loadingFlagRef = false;
+			if (!error.isEmpty()) {
+				(direction == Direction::Up ? _upLoaded : _downLoaded) = true;
+				updateEmptyText();
+				update();
+				_controller->showToast(tr::extras_MessageArchiveReadError(tr::now));
+				return;
+			}
 
 			addMessages(direction, messages);
 		});

@@ -48,6 +48,8 @@ public:
 	[[nodiscard]] bool hasLocalPasscode() const;
 
 private:
+	void writeAccounts(bool sync);
+
 	enum class StartModernResult {
 		Success,
 		IncorrectPasscode,

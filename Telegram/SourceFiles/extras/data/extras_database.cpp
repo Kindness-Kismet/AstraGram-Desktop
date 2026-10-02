@@ -1,8 +1,27 @@
 #include "extras/data/extras_database.h"
 
 #include "extras/data/entities.h"
+#include "extras/data/message_archive_store.h"
 #include "extras/libs/sqlite/sqlite_orm.h"
-#include "base/unixtime.h"
+
+namespace {
+
+Database::Archive::Store archiveStore;
+
+template <typename Message>
+[[nodiscard]] std::vector<Message> typedMessages(
+		std::vector<ExtrasMessageBase> messages) {
+	auto result = std::vector<Message>();
+	result.reserve(messages.size());
+	for (auto &message : messages) {
+		auto typed = Message();
+		static_cast<ExtrasMessageBase&>(typed) = std::move(message);
+		result.push_back(std::move(typed));
+	}
+	return result;
+}
+
+} // namespace
 
 using namespace sqlite_orm;
 auto storage = make_storage(
@@ -11,87 +30,6 @@ auto storage = make_storage(
 		"SchemaVersion",
 		make_column("id", &SchemaVersion::id, primary_key()),
 		make_column("version", &SchemaVersion::version)
-	),
-	make_index("idx_deleted_message_userId_dialogId_topicId_messageId",
-			   column<DeletedMessage>(&DeletedMessage::userId),
-			   column<DeletedMessage>(&DeletedMessage::dialogId),
-			   column<DeletedMessage>(&DeletedMessage::topicId),
-			   column<DeletedMessage>(&DeletedMessage::messageId)),
-	make_index("idx_edited_message_userId_dialogId_messageId",
-			   column<EditedMessage>(&EditedMessage::userId),
-			   column<EditedMessage>(&EditedMessage::dialogId),
-			   column<EditedMessage>(&EditedMessage::messageId)),
-	make_table<DeletedMessage>(
-		"DeletedMessage",
-		make_column("fakeId", &DeletedMessage::fakeId, primary_key().autoincrement()),
-		make_column("userId", &DeletedMessage::userId),
-		make_column("dialogId", &DeletedMessage::dialogId),
-		make_column("groupedId", &DeletedMessage::groupedId),
-		make_column("peerId", &DeletedMessage::peerId),
-		make_column("fromId", &DeletedMessage::fromId),
-		make_column("topicId", &DeletedMessage::topicId),
-		make_column("messageId", &DeletedMessage::messageId),
-		make_column("date", &DeletedMessage::date),
-		make_column("flags", &DeletedMessage::flags),
-		make_column("editDate", &DeletedMessage::editDate),
-		make_column("views", &DeletedMessage::views),
-		make_column("fwdFlags", &DeletedMessage::fwdFlags),
-		make_column("fwdFromId", &DeletedMessage::fwdFromId),
-		make_column("fwdName", &DeletedMessage::fwdName),
-		make_column("fwdDate", &DeletedMessage::fwdDate),
-		make_column("fwdPostAuthor", &DeletedMessage::fwdPostAuthor),
-		make_column("replyFlags", &DeletedMessage::replyFlags),
-		make_column("replyMessageId", &DeletedMessage::replyMessageId),
-		make_column("replyPeerId", &DeletedMessage::replyPeerId),
-		make_column("replyTopId", &DeletedMessage::replyTopId),
-		make_column("replyForumTopic", &DeletedMessage::replyForumTopic),
-		make_column("replySerialized", &DeletedMessage::replySerialized),
-		make_column("entityCreateDate", &DeletedMessage::entityCreateDate),
-		make_column("text", &DeletedMessage::text),
-		make_column("textEntities", &DeletedMessage::textEntities),
-		make_column("mediaPath", &DeletedMessage::mediaPath),
-		make_column("hqThumbPath", &DeletedMessage::hqThumbPath),
-		make_column("documentType", &DeletedMessage::documentType),
-		make_column("documentSerialized", &DeletedMessage::documentSerialized),
-		make_column("thumbsSerialized", &DeletedMessage::thumbsSerialized),
-		make_column("documentAttributesSerialized", &DeletedMessage::documentAttributesSerialized),
-		make_column("mimeType", &DeletedMessage::mimeType)
-	),
-	make_table<EditedMessage>(
-		"EditedMessage",
-		make_column("fakeId", &EditedMessage::fakeId, primary_key().autoincrement()),
-		make_column("userId", &EditedMessage::userId),
-		make_column("dialogId", &EditedMessage::dialogId),
-		make_column("groupedId", &EditedMessage::groupedId),
-		make_column("peerId", &EditedMessage::peerId),
-		make_column("fromId", &EditedMessage::fromId),
-		make_column("topicId", &EditedMessage::topicId),
-		make_column("messageId", &EditedMessage::messageId),
-		make_column("date", &EditedMessage::date),
-		make_column("flags", &EditedMessage::flags),
-		make_column("editDate", &EditedMessage::editDate),
-		make_column("views", &EditedMessage::views),
-		make_column("fwdFlags", &EditedMessage::fwdFlags),
-		make_column("fwdFromId", &EditedMessage::fwdFromId),
-		make_column("fwdName", &EditedMessage::fwdName),
-		make_column("fwdDate", &EditedMessage::fwdDate),
-		make_column("fwdPostAuthor", &EditedMessage::fwdPostAuthor),
-		make_column("replyFlags", &EditedMessage::replyFlags),
-		make_column("replyMessageId", &EditedMessage::replyMessageId),
-		make_column("replyPeerId", &EditedMessage::replyPeerId),
-		make_column("replyTopId", &EditedMessage::replyTopId),
-		make_column("replyForumTopic", &EditedMessage::replyForumTopic),
-		make_column("replySerialized", &EditedMessage::replySerialized),
-		make_column("entityCreateDate", &EditedMessage::entityCreateDate),
-		make_column("text", &EditedMessage::text),
-		make_column("textEntities", &EditedMessage::textEntities),
-		make_column("mediaPath", &EditedMessage::mediaPath),
-		make_column("hqThumbPath", &EditedMessage::hqThumbPath),
-		make_column("documentType", &EditedMessage::documentType),
-		make_column("documentSerialized", &EditedMessage::documentSerialized),
-		make_column("thumbsSerialized", &EditedMessage::thumbsSerialized),
-		make_column("documentAttributesSerialized", &EditedMessage::documentAttributesSerialized),
-		make_column("mimeType", &EditedMessage::mimeType)
 	),
 	make_table<DeletedDialog>(
 		"DeletedDialog",
@@ -194,7 +132,6 @@ void runMigrations(decltype(storage) &storage) {
 		} catch (...) {
 			storage.rollback();
 			LOG(("Failed to apply migration for version: %1.").arg(v));
-			Database::moveCurrentDatabase();
 
 			return;
 		}
@@ -203,199 +140,85 @@ void runMigrations(decltype(storage) &storage) {
 
 namespace Database {
 
-void moveCurrentDatabase() {
-	const auto time = base::unixtime::now();
-
-	if (QFile::exists("./tdata/extrasdata.db")) {
-		QFile::rename("./tdata/extrasdata.db", QString("./tdata/extrasdata_%1.db").arg(time));
-	}
-
-	if (QFile::exists("./tdata/extrasdata.db-shm")) {
-		QFile::rename("./tdata/extrasdata.db-shm", QString("./tdata/extrasdata_%1.db-shm").arg(time));
-	}
-
-	if (QFile::exists("./tdata/extrasdata.db-wal")) {
-		QFile::rename("./tdata/extrasdata.db-wal", QString("./tdata/extrasdata_%1.db-wal").arg(time));
-	}
-}
-
 void initialize() {
 	try {
 		storage.sync_schema(true);
-
 		runMigrations(storage);
-
 		storage.sync_schema(true);
 	} catch (const std::exception &ex) {
 		LOG(("Database initialization failed: %1").arg(ex.what()));
-		moveCurrentDatabase();
-
-		storage.sync_schema(true);
-		if (!storage.get_pointer<SchemaVersion>(1)) {
-			storage.insert(SchemaVersion{1, 0});
-		}
 	}
 }
 
+void unlockMessages(bytes::const_span localKey) {
+	if (!archiveStore.unlock(cWorkingDir() + u"tdata/extrasdata.db"_q, localKey)) {
+		LOG(("Message archive: %1").arg(archiveStore.error()));
+	}
+}
+
+bool hasProtectedMessages() {
+	return archiveStore.hasMessages();
+}
+
+bool messageArchiveReady() {
+	return archiveStore.available();
+}
+
+QString messageArchiveError() {
+	return archiveStore.error();
+}
+
+std::vector<ExtrasMessageBase> getArchivedMessages(
+		bool edited, ID userId, ID dialogId, ID topicId, ID messageId,
+		ID minId, ID maxId, int totalLimit, const std::string &searchQuery,
+		QString *error) {
+	return archiveStore.get(edited, userId, dialogId, topicId, messageId,
+		minId, maxId, totalLimit, searchQuery, error);
+}
+
 void addEditedMessage(const EditedMessage &message) {
-	try {
-		storage.begin_transaction();
-		storage.insert(message);
-		storage.commit();
-	} catch (std::exception &ex) {
-		try {
-			storage.rollback();
-		} catch (...) {
-		}
-		LOG(("Failed to save edited message for some reason: %1").arg(ex.what()));
+	if (!archiveStore.add(message, true)) {
+		LOG(("Message archive: %1").arg(archiveStore.error()));
 	}
 }
 
 std::vector<EditedMessage> getEditedMessages(ID userId, ID dialogId, ID messageId, ID minId, ID maxId, int totalLimit) {
-	return storage.get_all<EditedMessage>(
-		where(
-			column<EditedMessage>(&EditedMessage::userId) == userId and
-			column<EditedMessage>(&EditedMessage::dialogId) == dialogId and
-			column<EditedMessage>(&EditedMessage::messageId) == messageId and
-			(column<EditedMessage>(&EditedMessage::fakeId) > minId or minId == 0) and
-			(column<EditedMessage>(&EditedMessage::fakeId) < maxId or maxId == 0)
-		),
-		order_by(column<EditedMessage>(&EditedMessage::fakeId)).desc(),
-		limit(totalLimit)
-	);
+	return typedMessages<EditedMessage>(getArchivedMessages(
+		true, userId, dialogId, 0, messageId, minId, maxId, totalLimit));
 }
 
 bool hasRevisions(ID userId, ID dialogId, ID messageId) {
-	try {
-		return !storage.select(
-			columns(column<EditedMessage>(&EditedMessage::messageId)),
-			where(
-				column<EditedMessage>(&EditedMessage::userId) == userId and
-				column<EditedMessage>(&EditedMessage::dialogId) == dialogId and
-				column<EditedMessage>(&EditedMessage::messageId) == messageId
-			),
-			limit(1)
-		).empty();
-	} catch (std::exception &ex) {
-		LOG(("Failed to check if message has revisions: %1").arg(ex.what()));
-		return false;
-	}
+	return archiveStore.contains(true, userId, dialogId, 0, messageId);
 }
 
 void addDeletedMessage(const DeletedMessage &message) {
-	try {
-		storage.begin_transaction();
-		storage.insert(message);
-		storage.commit();
-	} catch (std::exception &ex) {
-		try {
-			storage.rollback();
-		} catch (...) {
-		}
-		LOG(("Failed to save edited message for some reason: %1").arg(ex.what()));
+	if (!archiveStore.add(message, false)) {
+		LOG(("Message archive: %1").arg(archiveStore.error()));
 	}
 }
 
 std::vector<ID> getDeletedMessageIds(ID userId, ID dialogId, ID topicId) {
-	try {
-		const auto ids = storage.select(
-			column<DeletedMessage>(&DeletedMessage::messageId),
-			where(
-				column<DeletedMessage>(&DeletedMessage::userId) == userId and
-				column<DeletedMessage>(&DeletedMessage::dialogId) == dialogId and
-				(column<DeletedMessage>(&DeletedMessage::topicId) == topicId or topicId == 0)
-			)
-		);
-		auto result = std::vector<ID>();
-		result.reserve(ids.size());
-		for (const auto id : ids) {
-			result.push_back(id);
-		}
-		return result;
-	} catch (const std::exception &) {
-		return {};
-	}
+	return archiveStore.deletedIds(userId, dialogId, topicId);
 }
 
 std::vector<DeletedMessage> getDeletedMessages(ID userId, ID dialogId, ID topicId, ID minId, ID maxId, int totalLimit, const std::string &searchQuery) {
-	if (searchQuery.empty()) {
-		return storage.get_all<DeletedMessage>(
-			where(
-				column<DeletedMessage>(&DeletedMessage::userId) == userId and
-				column<DeletedMessage>(&DeletedMessage::dialogId) == dialogId and
-				(column<DeletedMessage>(&DeletedMessage::topicId) == topicId or topicId == 0) and
-				(column<DeletedMessage>(&DeletedMessage::messageId) > minId or minId == 0) and
-				(column<DeletedMessage>(&DeletedMessage::messageId) < maxId or maxId == 0)
-			),
-			order_by(column<DeletedMessage>(&DeletedMessage::messageId)).desc(),
-			limit(totalLimit)
-		);
-	}
-
-	std::string escaped;
-	escaped.reserve(searchQuery.size());
-	for (const auto c : searchQuery) {
-		if (c == '%' || c == '_' || c == '\\') {
-			escaped += '\\';
-		}
-		escaped += c;
-	}
-	const auto pattern = "%" + escaped + "%";
-	return storage.get_all<DeletedMessage>(
-		where(
-			column<DeletedMessage>(&DeletedMessage::userId) == userId and
-			column<DeletedMessage>(&DeletedMessage::dialogId) == dialogId and
-			(column<DeletedMessage>(&DeletedMessage::topicId) == topicId or topicId == 0) and
-			(column<DeletedMessage>(&DeletedMessage::messageId) > minId or minId == 0) and
-			(column<DeletedMessage>(&DeletedMessage::messageId) < maxId or maxId == 0) and
-			like(column<DeletedMessage>(&DeletedMessage::text), pattern, "\\")
-		),
-		order_by(column<DeletedMessage>(&DeletedMessage::messageId)).desc(),
-		limit(totalLimit)
-	);
+	return typedMessages<DeletedMessage>(getArchivedMessages(
+		false, userId, dialogId, topicId, 0, minId, maxId, totalLimit, searchQuery));
 }
 
 bool hasDeletedMessages(ID userId, ID dialogId, ID topicId) {
-	try {
-		return !storage.select(
-			columns(column<DeletedMessage>(&DeletedMessage::dialogId)),
-			where(
-				column<DeletedMessage>(&DeletedMessage::userId) == userId and
-				column<DeletedMessage>(&DeletedMessage::dialogId) == dialogId and
-				(column<DeletedMessage>(&DeletedMessage::topicId) == topicId or topicId == 0)
-			),
-			limit(1)
-		).empty();
-	} catch (std::exception &ex) {
-		LOG(("Failed to check if dialog has deleted message: %1").arg(ex.what()));
-		return false;
-	}
+	return archiveStore.contains(false, userId, dialogId, topicId);
 }
 
 void removeDeletedMessage(ID userId, ID dialogId, ID messageId) {
-	try {
-		storage.remove_all<DeletedMessage>(
-			where(
-				column<DeletedMessage>(&DeletedMessage::userId) == userId and
-				column<DeletedMessage>(&DeletedMessage::dialogId) == dialogId and
-				column<DeletedMessage>(&DeletedMessage::messageId) == messageId
-			)
-		);
-	} catch (std::exception &ex) {
-		LOG(("Failed to remove deleted message: %1").arg(ex.what()));
+	if (!archiveStore.remove(userId, dialogId, messageId)) {
+		LOG(("Message archive: %1").arg(archiveStore.error()));
 	}
 }
 
 void clearDeletedMessages(ID userId, ID dialogId, ID topicId) {
-	try {
-		storage.remove_all<DeletedMessage>(
-			where(
-				column<DeletedMessage>(&DeletedMessage::userId) == userId and
-				column<DeletedMessage>(&DeletedMessage::dialogId) == dialogId and
-				(column<DeletedMessage>(&DeletedMessage::topicId) == topicId or topicId == 0)
-			)
-		);
-	} catch (std::exception &) {
+	if (!archiveStore.clear(userId, dialogId, topicId)) {
+		LOG(("Message archive: %1").arg(archiveStore.error()));
 	}
 }
 

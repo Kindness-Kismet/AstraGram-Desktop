@@ -573,6 +573,8 @@ QPoint Controller::getPointForCallPanelCenter() const {
 }
 
 void Controller::showLogoutConfirmation() {
+	const auto resettingPasscode = Core::App().passcodeLocked()
+		&& !Core::App().domain().started();
 	const auto account = Core::App().passcodeLocked()
 		? nullptr
 		: sessionController()
@@ -588,7 +590,9 @@ void Controller::showLogoutConfirmation() {
 		}
 	};
 	show(Ui::MakeConfirmBox({
-		.text = tr::lng_sure_logout(),
+		.text = resettingPasscode
+			? tr::extras_MessageArchivePasscodeReset()
+			: tr::lng_sure_logout(),
 		.confirmed = callback,
 		.confirmText = tr::lng_settings_logout(),
 		.confirmStyle = &st::attentionBoxButton,

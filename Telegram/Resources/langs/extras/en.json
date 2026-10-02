@@ -494,5 +494,7 @@
   "MusicVideo": "Video message",
   "MediaPrevious": "Previous message",
   "MediaNext": "Next message",
-  "MediaSpeed": "Playback speed"
+  "MediaSpeed": "Playback speed",
+  "MessageArchiveReadError": "Message history could not be opened. The stored data has been kept.",
+  "MessageArchivePasscodeReset": "Logging out without unlocking resets the local passcode. Logging in again will not unlock your saved deleted messages and edit history. Continue?"
 }
