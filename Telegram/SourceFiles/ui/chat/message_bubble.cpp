@@ -18,6 +18,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/extras_settings.h"
 
 #include <QtGui/QPainterPath>
+#include <cmath>
+#include <map>
+#include <tuple>
 
 namespace Ui {
 namespace {
@@ -100,6 +103,187 @@ using Corner = BubbleCornerRounding;
 	return path;
 }
 
+// 半径按 Skia 的规则换算成高斯标准差，核截断在三个标准差处。
+[[nodiscard]] QImage BlurBubbleShadow(const QImage &mask) {
+	constexpr auto kRadius = 5;
+	constexpr auto kSigma = 2. * 0.57735 + 0.5;
+	auto kernel = std::array<double, 2 * kRadius + 1>();
+	auto sum = 0.;
+	for (auto i = -kRadius; i <= kRadius; ++i) {
+		sum += (kernel[i + kRadius] = std::exp(-i * i / (2. * kSigma * kSigma)));
+	}
+	for (auto &weight : kernel) {
+		weight /= sum;
+	}
+	const auto width = mask.width();
+	const auto height = mask.height();
+	auto horizontal = std::vector<double>(width * height);
+	for (auto y = 0; y != height; ++y) {
+		const auto row = reinterpret_cast<const QRgb*>(mask.constScanLine(y));
+		for (auto x = 0; x != width; ++x) {
+			for (auto i = -kRadius; i <= kRadius; ++i) {
+				horizontal[y * width + x] += kernel[i + kRadius]
+					* qRed(row[std::clamp(x + i, 0, width - 1)]);
+			}
+		}
+	}
+	auto result = QImage(mask.size(), QImage::Format_RGB32);
+	result.setDevicePixelRatio(mask.devicePixelRatio());
+	for (auto y = 0; y != height; ++y) {
+		const auto row = reinterpret_cast<QRgb*>(result.scanLine(y));
+		for (auto x = 0; x != width; ++x) {
+			auto value = 0.;
+			for (auto i = -kRadius; i <= kRadius; ++i) {
+				value += kernel[i + kRadius]
+					* horizontal[std::clamp(y + i, 0, height - 1) * width + x];
+			}
+			const auto intensity = int(std::round(value));
+			row[x] = qRgb(intensity, intensity, intensity);
+		}
+	}
+	return result;
+}
+
+// 阴影参数参考 Nagram 的 MessageDrawable：纵向透明度 21→41，模糊半径 2，下移 1 像素。
+[[nodiscard]] QImage PrepareBubbleShadow(
+		QSize size,
+		const BubbleRounding &rounding,
+		QSize tailSize,
+		QColor color,
+		QMargins margins) {
+	const auto ratio = style::DevicePixelRatio();
+	const auto outer = QRect(QPoint(), size).marginsAdded(margins).size();
+	const auto body = QRectF(QPointF(margins.left(), margins.top()), size);
+	auto mask = QImage(outer * ratio, QImage::Format_RGB32);
+	mask.setDevicePixelRatio(ratio);
+	mask.fill(Qt::black);
+	const auto expand = (ratio > 1 || style::ConvertScale(100) > 100)
+		? 1. / ratio
+		: 0.;
+	{
+		auto painter = QPainter(&mask);
+		painter.setRenderHint(QPainter::Antialiasing);
+		auto gradient = QLinearGradient(body.topLeft(), body.bottomLeft());
+		gradient.setColorAt(0., QColor(21, 21, 21));
+		gradient.setColorAt(1., QColor(41, 41, 41));
+		painter.setPen(Qt::NoPen);
+		painter.setBrush(gradient);
+		painter.drawPath(BubbleOutlinePath(
+			body.adjusted(-expand, -expand, expand, expand),
+			rounding,
+			tailSize));
+	}
+	auto shifted = QImage(mask.size(), QImage::Format_RGB32);
+	shifted.fill(Qt::black);
+	{
+		auto painter = QPainter(&shifted);
+		painter.drawImage(QRect(0, 1, mask.width(), mask.height()), mask);
+	}
+	const auto blurred = BlurBubbleShadow(shifted);
+	auto result = QImage(mask.size(), QImage::Format_ARGB32_Premultiplied);
+	result.setDevicePixelRatio(ratio);
+	const auto red = color.red() * 95 / 255;
+	const auto green = color.green() * 101 / 255;
+	const auto blue = color.blue() * 105 / 255;
+	for (auto y = 0; y != result.height(); ++y) {
+		const auto source = reinterpret_cast<const QRgb*>(mask.constScanLine(y));
+		const auto shadow = reinterpret_cast<const QRgb*>(blurred.constScanLine(y));
+		const auto target = reinterpret_cast<QRgb*>(result.scanLine(y));
+		for (auto x = 0; x != result.width(); ++x) {
+			const auto intensity = qRed(source[x])
+				+ qRed(shadow[x]) * (255 - qRed(source[x])) / 255;
+			const auto alpha = std::min(255, intensity * color.alpha() / 41);
+			target[x] = qPremultiply(qRgba(red, green, blue, alpha));
+		}
+	}
+	{
+		auto painter = QPainter(&result);
+		painter.setRenderHint(QPainter::Antialiasing);
+		painter.setCompositionMode(QPainter::CompositionMode_DestinationOut);
+		painter.setPen(Qt::NoPen);
+		painter.setBrush(Qt::white);
+		painter.drawPath(BubbleOutlinePath(body, rounding, tailSize));
+	}
+	return result;
+}
+
+void PaintBubbleShadow(QPainter &p, const SimpleBubble &args) {
+	if (!args.shadowed || args.geometry.isEmpty()) {
+		return;
+	}
+	const auto &message = args.st->messageStyle(args.outbg, args.selected);
+	const auto color = message.msgShadow->c;
+	if (!color.alpha()) {
+		return;
+	}
+	const auto tail = message.tailLeft.size();
+	const auto small = BubbleRadiusSmall();
+	const auto large = BubbleRadiusLarge();
+	const auto size = QSize(
+		std::min(args.geometry.width(), std::max(
+			style::ConvertScale(50), 2 * (large + tail.width()) + 2)),
+		std::min(args.geometry.height(), std::max(
+			style::ConvertScale(40), 2 * large + 2)));
+	const auto padding = 6;
+	const auto margins = QMargins(
+		padding + tail.width(), padding, padding + tail.width(), padding);
+	const auto removeTail = ExtrasSettings::getInstance().removeMessageTail();
+	const auto ratio = style::DevicePixelRatio();
+	const auto key = std::make_tuple(
+		size.width(), size.height(), small, large, tail.width(), tail.height(),
+		args.rounding.key(), color.rgba(), removeTail, ratio);
+	// 主题预览也会在工作线程绘制，缓存不能跨线程共享。
+	static thread_local auto cache = std::map<std::decay_t<decltype(key)>, QImage>();
+	auto i = cache.find(key);
+	if (i == cache.end()) {
+		if (cache.size() >= 64) {
+			cache.clear();
+		}
+		i = cache.emplace(key, PrepareBubbleShadow(
+			size, args.rounding, tail, color, margins)).first;
+	}
+	const auto &image = i->second;
+	const auto sourceSize = image.size() / ratio;
+	const auto outer = args.geometry.marginsAdded(margins);
+	const auto x = std::array{
+		0, sourceSize.width() / 2, sourceSize.width() / 2 + 1, sourceSize.width() };
+	const auto y = std::array{
+		0, sourceSize.height() / 2, sourceSize.height() / 2 + 1, sourceSize.height() };
+	const auto targetX = std::array{
+		outer.x(), outer.x() + x[1],
+		outer.x() + outer.width() - (x[3] - x[2]), outer.x() + outer.width() };
+	const auto targetY = std::array{
+		outer.y(), outer.y() + y[1],
+		outer.y() + outer.height() - (y[3] - y[2]), outer.y() + outer.height() };
+
+	p.save();
+	auto clip = outer;
+	if (args.rounding.topLeft == Corner::None && args.rounding.topRight == Corner::None) {
+		clip.setTop(args.geometry.top());
+	}
+	if (args.rounding.bottomLeft == Corner::None && args.rounding.bottomRight == Corner::None) {
+		clip.setBottom(args.geometry.bottom());
+	}
+	p.setClipRect(clip, Qt::IntersectClip);
+	p.setOpacity(p.opacity() * message.msgBg->c.alphaF());
+	for (auto row = 0; row != 3; ++row) {
+		for (auto column = 0; column != 3; ++column) {
+			if (row == 1 && column == 1) {
+				continue;
+			}
+			p.drawImage(
+				QRect(targetX[column], targetY[row],
+					targetX[column + 1] - targetX[column],
+					targetY[row + 1] - targetY[row]),
+				image,
+				QRect(x[column] * ratio, y[row] * ratio,
+					(x[column + 1] - x[column]) * ratio,
+					(y[row + 1] - y[row]) * ratio));
+		}
+	}
+	p.restore();
+}
+
 [[nodiscard]] bool UsePatternBubble(const SimpleBubble &args) {
 	return !args.selected
 		&& args.outbg
@@ -131,7 +315,6 @@ void PaintBubblePiece(
 		simple.rounding.bottomLeft
 			= simple.rounding.bottomRight
 			= Corner::None;
-		simple.shadowed = false;
 	}
 	PaintBubble(p, simple);
 }
@@ -150,13 +333,11 @@ void PaintBubblePiece(
 
 template <
 	typename FillBg, // fillBg(QRect rect)
-	typename FillSh, // fillSh(QRect rect)
 	typename FillCorner, // fillCorner(int x, int y, int index, Corner size)
-	typename PaintTail> // paintTail(QPoint bottomPosition) -> tailWidth
+	typename PaintTail> // paintTail(QPoint bottomPosition)
 void PaintBubbleGeneric(
 		const SimpleBubble &args,
 		FillBg &&fillBg,
-		FillSh &&fillSh,
 		FillCorner &&fillCorner,
 		PaintTail &&paintTail) {
 	using namespace Images;
@@ -277,30 +458,17 @@ void PaintBubbleGeneric(
 			}
 		}
 	}
-	const auto leftTail = (bottomWithTailLeft == Corner::Tail)
-		? paintTail({ rect.x(), rect.y() + rect.height() })
-		: 0;
-	const auto rightTail = (bottomWithTailRight == Corner::Tail)
-		? paintTail({ rect.x() + rect.width(), rect.y() + rect.height() })
-		: 0;
-	if (!args.shadowed) {
-		return;
+	if (bottomWithTailLeft == Corner::Tail) {
+		paintTail({ rect.x(), rect.y() + rect.height() });
 	}
-	const auto shLeft = rect.x() + cornerSize(bottomLeft) - leftTail;
-	const auto shWidth = rect.x()
-		+ rect.width()
-		- cornerSize(bottomRight)
-		+ rightTail
-		- shLeft;
-	if (shWidth > 0) {
-		fillSh({ shLeft, rect.y() + rect.height(), shWidth, st::msgShadow });
+	if (bottomWithTailRight == Corner::Tail) {
+		paintTail({ rect.x() + rect.width(), rect.y() + rect.height() });
 	}
 }
 
 void PaintPatternBubble(QPainter &p, const SimpleBubble &args) {
 	const auto wasOpacity = p.opacity();
 	const auto opacity = PatternBubbleOpacity(args, wasOpacity);
-	const auto shadowOpacity = opacity * args.st->msgOutShadow()->c.alphaF();
 	const auto pattern = args.pattern;
 	const auto &tail = (args.rounding.bottomRight == Corner::Tail)
 		? pattern->tailRight
@@ -317,11 +485,6 @@ void PaintPatternBubble(QPainter &p, const SimpleBubble &args) {
 				pattern->pixmap,
 				fill);
 		}
-	};
-	const auto fillSh = [&](const QRect &rect) {
-		p.setOpacity(shadowOpacity);
-		fillBg(rect);
-		p.setOpacity(opacity);
 	};
 	const auto fillPattern = [&](
 			int x,
@@ -352,20 +515,16 @@ void PaintPatternBubble(QPainter &p, const SimpleBubble &args) {
 	const auto paintTail = [&](QPoint bottomPosition) {
 		const auto position = bottomPosition - tailShift;
 		fillPattern(position.x(), position.y(), tail, pattern->tailCache);
-		return tail.width() / int(tail.devicePixelRatio());
 	};
 
 	p.setOpacity(opacity);
-	PaintBubbleGeneric(args, fillBg, fillSh, fillCorner, paintTail);
+	PaintBubbleGeneric(args, fillBg, fillCorner, paintTail);
 	p.setOpacity(wasOpacity);
 }
 
 void PaintSolidBubble(QPainter &p, const SimpleBubble &args) {
 	const auto &st = args.st->messageStyle(args.outbg, args.selected);
 	const auto &bg = st.msgBg;
-	const auto sh = (args.rounding.bottomRight == Corner::None)
-		? nullptr
-		: &st.msgShadow;
 	const auto &tail = (args.rounding.bottomRight == Corner::Tail)
 		? st.tailRight
 		: st.tailLeft;
@@ -375,8 +534,6 @@ void PaintSolidBubble(QPainter &p, const SimpleBubble &args) {
 
 	PaintBubbleGeneric(args, [&](const QRect &rect) {
 		p.fillRect(rect, bg);
-	}, [&](const QRect &rect) {
-		p.fillRect(rect, *sh);
 	}, [&](int x, int y, int index, Corner size) {
 		auto &corners = (size == Corner::Large)
 			? st.msgBgCornersLarge
@@ -384,7 +541,6 @@ void PaintSolidBubble(QPainter &p, const SimpleBubble &args) {
 		p.drawPixmap(x, y, corners.p[index]);
 	}, [&](const QPoint &bottomPosition) {
 		tail.paint(p, bottomPosition - tailShift, args.outerWidth);
-		return tail.width();
 	});
 
 	if (ExtrasSettings::getInstance().showBubbleOutline()) {
@@ -406,29 +562,10 @@ void PaintSolidBubble(QPainter &p, const SimpleBubble &args) {
 } // namespace
 
 std::unique_ptr<BubblePattern> PrepareBubblePattern(
-		not_null<const style::palette*> st) {
+		not_null<const style::palette*>) {
 	auto result = std::make_unique<Ui::BubblePattern>();
 	result->cornersSmall = Images::CornersMask(BubbleRadiusSmall());
 	result->cornersLarge = Images::CornersMask(BubbleRadiusLarge());
-	const auto addShadow = [&](QImage &bottomCorner) {
-		auto result = QImage(
-			bottomCorner.width(),
-			(bottomCorner.height()
-				+ st::msgShadow * int(bottomCorner.devicePixelRatio())),
-			QImage::Format_ARGB32_Premultiplied);
-		result.fill(Qt::transparent);
-		result.setDevicePixelRatio(bottomCorner.devicePixelRatio());
-		auto p = QPainter(&result);
-		p.setOpacity(st->msgInShadow()->c.alphaF());
-		p.drawImage(0, st::msgShadow, bottomCorner);
-		p.setOpacity(1.);
-		p.drawImage(0, 0, bottomCorner);
-		p.end();
-
-		bottomCorner = std::move(result);
-	};
-	addShadow(result->cornersSmall[2]);
-	addShadow(result->cornersSmall[3]);
 	result->cornerTopSmallCache = QImage(
 		result->cornersSmall[0].size(),
 		QImage::Format_ARGB32_Premultiplied);
@@ -453,6 +590,7 @@ void FinishBubblePatternOnMain(not_null<BubblePattern*> pattern) {
 }
 
 void PaintBubble(QPainter &p, const SimpleBubble &args) {
+	PaintBubbleShadow(p, args);
 	if (UsePatternBubble(args)) {
 		PaintPatternBubble(p, args);
 	} else {
@@ -465,6 +603,9 @@ void PaintBubble(QPainter &p, const ComplexBubble &args) {
 		PaintBubble(p, args.simple);
 		return;
 	}
+	PaintBubbleShadow(p, args.simple);
+	auto simple = args.simple;
+	simple.shadowed = false;
 	const auto rect = args.simple.geometry;
 	const auto left = rect.x();
 	const auto width = rect.width();
@@ -475,7 +616,7 @@ void PaintBubble(QPainter &p, const ComplexBubble &args) {
 		if (selected.top > from) {
 			PaintBubblePiece(
 				p,
-				args.simple,
+				simple,
 				QRect(left, from, width, selected.top - from),
 				false,
 				(from <= top),
@@ -483,7 +624,7 @@ void PaintBubble(QPainter &p, const ComplexBubble &args) {
 		}
 		PaintBubblePiece(
 			p,
-			args.simple,
+			simple,
 			QRect(left, selected.top, width, selected.height),
 			true,
 			(selected.top <= top),
@@ -493,7 +634,7 @@ void PaintBubble(QPainter &p, const ComplexBubble &args) {
 	if (from < bottom) {
 		PaintBubblePiece(
 			p,
-			args.simple,
+			simple,
 			QRect(left, from, width, bottom - from),
 			false,
 			false,

@@ -30,10 +30,9 @@ namespace {
 void EnsureCorners(
 		CornersPixmaps &corners,
 		int radius,
-		const style::color &color,
-		const style::color *shadow = nullptr) {
+		const style::color &color) {
 	if (corners.radius != radius) {
-		corners = PrepareCornerPixmaps(radius, color, shadow);
+		corners = PrepareCornerPixmaps(radius, color);
 	}
 }
 
@@ -786,13 +785,11 @@ const MessageStyle &ChatStyle::messageStyle(bool outbg, bool selected) const {
 	EnsureCorners(
 		result.msgBgCornersSmall,
 		BubbleRadiusSmall(),
-		result.msgBg,
-		&result.msgShadow);
+		result.msgBg);
 	EnsureCorners(
 		result.msgBgCornersLarge,
 		BubbleRadiusLarge(),
-		result.msgBg,
-		&result.msgShadow);
+		result.msgBg);
 	const auto &replyBar = result.msgReplyBarColor->c;
 	for (auto i = 0; i != kColorPatternsCount; ++i) {
 		EnsureBlockquoteCache(
