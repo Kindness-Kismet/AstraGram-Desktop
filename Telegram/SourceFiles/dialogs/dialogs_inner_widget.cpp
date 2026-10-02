@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/features/window_material/window_material.h"
 #include "dialogs/dialogs_three_state_icon.h"
 #include "dialogs/ui/chat_search_empty.h"
+#include "extras/ui/components/empty_state_icon.h"
 #include "dialogs/ui/chat_search_in.h"
 #include "dialogs/ui/dialogs_layout.h"
 #include "dialogs/ui/dialogs_message_view.h"
@@ -5070,9 +5071,6 @@ void InnerWidget::refreshEmpty() {
 			_searchEmpty = MakeSearchEmpty(this, _searchState, [=] {
 				_resetSearchRestrictionsRequests.fire({});
 			});
-			if (_controller->session().data().chatsListLoaded()) {
-				_searchEmpty->animate();
-			}
 		} else if (_searchEmpty) {
 			_searchEmpty->show();
 		}
@@ -5186,13 +5184,10 @@ void InnerWidget::refreshEmpty() {
 		_emptyList.create(this);
 		_emptyList->setVisible(isListVisible);
 
-		auto icon = ::Settings::CreateLottieIcon(
+		_emptyList->add(ExtrasUi::createEmptyStateIcon(
 			_emptyList,
-			{
-				.name = u"no_chats"_q,
-				.sizeOverride = st::normalBoxLottieSize,
-			});
-		_emptyList->add(std::move(icon.widget), style::al_top);
+			ExtrasUi::EmptyStateIcon::Chats,
+			st::normalBoxLottieSize), style::al_top);
 		Ui::AddSkip(_emptyList);
 		_emptyList->add(
 			object_ptr<Ui::FlatLabel>(
@@ -5200,9 +5195,6 @@ void InnerWidget::refreshEmpty() {
 				tr::lng_no_conversations(),
 				st::dialogEmptyButtonLabel),
 			style::al_top);
-		if (_state == WidgetState::Default) {
-			icon.animate(anim::repeat::once);
-		}
 		_emptyButton.create(
 			this,
 			tr::lng_no_conversations_button(),

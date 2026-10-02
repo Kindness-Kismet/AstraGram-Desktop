@@ -27,8 +27,6 @@ public:
 
 	void setMinimalHeight(int minimalHeight);
 
-	void animate();
-
 	[[nodiscard]] rpl::producer<ClickHandlerPtr> handlerActivated() const {
 		return _handlerActivated.events();
 	}
@@ -36,7 +34,6 @@ public:
 private:
 	void setup(Icon icon, rpl::producer<TextWithEntities> text);
 
-	Fn<void()> _animate;
 	rpl::event_stream<ClickHandlerPtr> _handlerActivated;
 
 };

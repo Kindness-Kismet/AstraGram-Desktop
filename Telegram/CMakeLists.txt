@@ -134,6 +134,8 @@ set(extras_files
         extras/utils/windows_utils.h
         extras/utils/rc_manager.cpp
         extras/utils/rc_manager.h
+        extras/ui/components/empty_state_icon.h
+        extras/ui/components/empty_state_icon.cpp
         extras/ui/extras_logo.cpp
         extras/ui/voice_record_capsule.h
         extras/ui/voice_record_capsule.cpp

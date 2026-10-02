@@ -548,8 +548,6 @@ void SetupEmptyView(
 	view->show();
 
 	ResizeFitChild(container, view);
-
-	InvokeQueued(view, [=] { view->animate(); });
 }
 
 void SetupVenues(

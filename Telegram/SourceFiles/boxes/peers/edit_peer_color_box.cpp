@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/peers/edit_peer_color_box.h"
+#include "extras/ui/components/empty_state_icon.h"
 
 #include "apiwrap.h"
 #include "api/api_peer_colors.h"
@@ -44,8 +45,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/info_memento.h"
 #include "iv/iv_data.h"
 #include "lang/lang_keys.h"
-#include "lottie/lottie_icon.h"
-#include "lottie/lottie_single_player.h"
 #include "main/main_session.h"
 #include "settings/settings_common.h"
 #include "settings/sections/settings_premium.h"
@@ -93,14 +92,12 @@ base::unique_qptr<Ui::RpWidget> CreateEmptyPlaceholder(
 	const auto container = Ui::CreateChild<Ui::RpWidget>(parent);
 	auto result = base::unique_qptr<Ui::RpWidget>{ container };
 
-	auto icon = Settings::CreateLottieIcon(
+	auto icon = ExtrasUi::createEmptyStateIcon(
 		container,
-		{
-			.name = u"my_gifts_empty"_q,
-			.sizeOverride = st::normalBoxLottieSize,
-		},
+		ExtrasUi::EmptyStateIcon::Gifts,
+		st::normalBoxLottieSize,
 		st::settingsBlockedListIconPadding);
-	const auto iconWidget = icon.widget.data();
+	const auto iconWidget = icon.data();
 	iconWidget->show();
 
 	const auto emptyLabel = Ui::CreateChild<Ui::FlatLabel>(
@@ -129,8 +126,6 @@ base::unique_qptr<Ui::RpWidget> CreateEmptyPlaceholder(
 			return false;
 		});
 	}
-
-	icon.animate(anim::repeat::loop);
 
 	const auto labelHeight = emptyLabel->height();
 	const auto nextLabelHeight = emptyNextLabel

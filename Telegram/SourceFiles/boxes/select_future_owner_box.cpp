@@ -460,9 +460,6 @@ void SelectFutureOwnerbox(
 						(s.width() - state->noLists->width()) / 2,
 						(s.height() - state->noLists->height()) / 2);
 				}, state->noLists->lifetime());
-				crl::on_main(state->noLists.get(), [=] {
-					state->noLists->animate();
-				});
 			}, selectBox->lifetime());
 			{
 				const auto &st = st::futureOwnerBoxSelect;

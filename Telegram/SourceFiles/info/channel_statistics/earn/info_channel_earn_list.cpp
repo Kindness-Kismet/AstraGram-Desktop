@@ -368,7 +368,6 @@ void InnerWidget::fill() {
 			Dialogs::SearchEmptyIcon::NoResults,
 			tr::lng_search_tab_no_results(tr::bold)));
 		empty->setMinimalHeight(st::normalBoxLottieSize.height());
-		empty->animate();
 		return;
 	}
 	const auto bot = (peerIsUser(_peer->id) && _peer->asUser()->botInfo)

@@ -22,7 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_element.h"
 #include "history/view/history_view_service_message.h"
 #include "history/view/reactions/history_view_reactions_button.h"
-#include "lottie/lottie_icon.h"
+#include "extras/ui/components/empty_state_icon.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
 #include "info/info_controller.h"
@@ -224,9 +224,7 @@ private:
 	Ui::Animations::Simple _newPollButtonAnimation;
 	bool _newPollButtonShown = true;
 
-	std::unique_ptr<Lottie::Icon> _emptyIcon;
 	Ui::Text::String _emptyText = { 1 };
-	bool _emptyAnimated = false;
 
 	QImage _bg;
 
@@ -420,10 +418,6 @@ void ListWidget::Inner::setScrollTop(int top) {
 void ListWidget::Inner::setSearchQuery(const QString &query) {
 	if (_searchQuery == query) {
 		return;
-	}
-	_emptyAnimated = false;
-	if (_emptyIcon) {
-		_emptyIcon->jumpTo(0, nullptr);
 	}
 	_searchQuery = query;
 	if (_viewerRefreshed) {
@@ -688,24 +682,12 @@ void ListWidget::Inner::listOpenDocument(
 void ListWidget::Inner::listPaintEmpty(
 		Painter &p,
 		const Ui::ChatPaintContext &context) {
-	if (!_emptyIcon) {
-		const auto size = st::recentPeersEmptySize;
-		_emptyIcon = Lottie::MakeIcon({
-			.name = u"noresults"_q,
-			.sizeOverride = { size, size },
-		});
+	if (_emptyText.isEmpty()) {
 		_emptyText.setText(
 			st::serviceTextStyle,
 			tr::lng_polls_search_none(tr::now));
 	}
-	if (!_emptyAnimated) {
-		_emptyAnimated = true;
-		_emptyIcon->animate(
-			[=] { _scroll ? _scroll->update() : _list->update(); },
-			0,
-			_emptyIcon->framesCount() - 1);
-	}
-	const auto iconSize = _emptyIcon->size();
+	const auto iconSize = QSize(st::recentPeersEmptySize, st::recentPeersEmptySize);
 	const auto width = st::repliesEmptyWidth;
 	const auto padding = st::repliesEmptyPadding;
 	const auto textWidth = width - padding.left() - padding.right();
@@ -730,9 +712,10 @@ void ListWidget::Inner::listPaintEmpty(
 		context.st,
 		r);
 
-	_emptyIcon->paintInCenter(
+	ExtrasUi::paintEmptyStateIcon(
 		p,
 		QRect(r.x(), r.y() + padding.top(), r.width(), iconSize.height()),
+		ExtrasUi::EmptyStateIcon::NoResults,
 		st::msgServiceFg->c);
 	p.setPen(st::msgServiceFg);
 	_emptyText.draw(

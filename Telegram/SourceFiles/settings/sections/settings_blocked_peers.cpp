@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/sections/settings_blocked_peers.h"
+#include "extras/ui/components/empty_state_icon.h"
 
 #include "settings/settings_common_session.h"
 
@@ -14,7 +15,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_changes.h"
 #include "data/data_peer.h"
 #include "lang/lang_keys.h"
-#include "lottie/lottie_icon.h"
 #include "main/main_session.h"
 #include "settings/sections/settings_privacy_security.h"
 #include "settings/settings_builder.h"
@@ -71,7 +71,6 @@ private:
 
 	rpl::variable<int> _countBlocked;
 
-	rpl::event_stream<> _showFinished;
 	rpl::event_stream<bool> _emptinessChanges;
 
 	QPointer<Ui::RpWidget> _blockUserButton;
@@ -211,19 +210,11 @@ void Blocked::setupContent() {
 
 	{
 		const auto content = emptyWrap->entity();
-		auto icon = CreateLottieIcon(
+		content->add(ExtrasUi::createEmptyStateIcon(
 			content,
-			{
-				.name = u"blocked_peers_empty"_q,
-				.sizeOverride = st::normalBoxLottieSize,
-			},
-			st::settingsBlockedListIconPadding);
-		content->add(std::move(icon.widget));
-
-		_showFinished.events(
-		) | rpl::on_next([animate = std::move(icon.animate)] {
-			animate(anim::repeat::once);
-		}, content->lifetime());
+			ExtrasUi::EmptyStateIcon::Blocked,
+			st::normalBoxLottieSize,
+			st::settingsBlockedListIconPadding));
 
 		content->add(
 			object_ptr<Ui::FlatLabel>(
@@ -311,7 +302,6 @@ void Blocked::visibleTopBottomUpdated(int visibleTop, int visibleBottom) {
 
 void Blocked::showFinished() {
 	Section::showFinished();
-	_showFinished.fire({});
 	controller()->checkHighlightControl(
 		u"blocked/block-user"_q,
 		_blockUserButton);

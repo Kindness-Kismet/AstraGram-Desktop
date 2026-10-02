@@ -2789,12 +2789,6 @@ object_ptr<Ui::SlideWrap<>> Suggestions::setupEmpty(
 		std::move(content));
 	result->toggle(false, anim::type::instant);
 
-	result->toggledValue() | rpl::filter([=](bool shown) {
-		return shown && _controller->session().data().chatsListLoaded();
-	}) | rpl::on_next([=] {
-		raw->animate();
-	}, raw->lifetime());
-
 	return result;
 }
 

@@ -6,10 +6,10 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/boxes/report_box_graphics.h"
+#include "extras/ui/components/empty_state_icon.h"
 
 #include "info/profile/info_profile_icon.h"
 #include "lang/lang_keys.h"
-#include "lottie/lottie_icon.h"
 #include "settings/settings_common.h"
 #include "ui/layers/generic_box.h"
 #include "ui/painter.h"
@@ -208,17 +208,10 @@ not_null<Ui::AbstractButton*> AddReportOptionButton(
 }
 
 void AddReportDetailsIconButton(not_null<GenericBox*> box) {
-	auto icon = Settings::CreateLottieIcon(
+	box->addRow(ExtrasUi::createEmptyStateIcon(
 		box->verticalLayout(),
-		{
-			.name = u"blocked_peers_empty"_q,
-			.sizeOverride = st::normalBoxLottieSize,
-		},
-		{});
-	box->setShowFinishedCallback([animate = std::move(icon.animate)] {
-		animate(anim::repeat::once);
-	});
-	box->addRow(std::move(icon.widget));
+		ExtrasUi::EmptyStateIcon::Blocked,
+		st::normalBoxLottieSize));
 }
 
 } // namespace Ui
