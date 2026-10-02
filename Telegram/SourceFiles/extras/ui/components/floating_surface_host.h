@@ -24,7 +24,7 @@ private:
 	void scheduleAreas();
 	void refreshAreas();
 	void repaintSurfaces();
-	void paint(QPainter &p, FloatingSurface *surface, QColor tint) const;
+	void paint(QPainter &p, FloatingSurface *surface, QColor tint);
 
 	QWidget *const _root;
 	ChatFrostedBackground _background;

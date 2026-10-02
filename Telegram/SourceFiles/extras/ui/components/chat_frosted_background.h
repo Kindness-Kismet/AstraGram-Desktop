@@ -23,7 +23,8 @@ public:
 	void setAreas(std::vector<QRect> areas);
 	void invalidate(QRect area = {});
 	void clear();
-	void paint(QPainter &p, QRect area, QColor tint) const;
+	// 绘制前同步刷新对应区域，模糊层与本帧内容一致。
+	void paint(QPainter &p, QRect area, QColor tint);
 
 private:
 	struct Tile {
@@ -34,6 +35,7 @@ private:
 	};
 
 	void refresh();
+	[[nodiscard]] bool refreshTile(Tile &tile);
 
 	QWidget *const _root;
 	Capture _capture;

@@ -217,6 +217,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_layers.h"
 
 #include <QtGui/QWindow>
+#include <QtGui/QKeyEvent>
+#include <QtGui/QMouseEvent>
+#include <QtGui/QWheelEvent>
 #include <QtCore/QMimeData>
 
 // AyuGram includes
@@ -230,6 +233,35 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_widget_internal.h"
 
 using namespace HistoryWidgetDetails;
+
+namespace {
+
+[[nodiscard]] bool isScrollAnimationInput(not_null<QEvent*> event, bool isBar) {
+	switch (event->type()) {
+	case QEvent::TouchBegin:
+		return true;
+	case QEvent::Wheel: {
+		const auto wheel = static_cast<QWheelEvent*>(event.get());
+		const auto delta = wheel->pixelDelta().isNull()
+			? wheel->angleDelta()
+			: wheel->pixelDelta();
+		return delta.y() && std::abs(delta.y()) >= std::abs(delta.x());
+	}
+	case QEvent::MouseButtonPress:
+		return isBar && static_cast<QMouseEvent*>(event.get())->button()
+			== Qt::LeftButton;
+	case QEvent::KeyPress: {
+		const auto key = static_cast<QKeyEvent*>(event.get())->key();
+		return key == Qt::Key_Up || key == Qt::Key_Down
+			|| key == Qt::Key_PageUp || key == Qt::Key_PageDown
+			|| key == Qt::Key_Home || key == Qt::Key_End;
+	}
+	default:
+		return false;
+	}
+}
+
+} // namespace
 
 void HistoryWidget::scrollToCurrentVoiceMessage(
 		FullMsgId fromId,
@@ -284,12 +316,17 @@ void HistoryWidget::animatedScrollToItem(MsgId msgId) {
 	animatedScrollToY(scrollTo, to);
 }
 
-void HistoryWidget::animatedScrollToY(int scrollTo, HistoryItem *attachTo) {
+void HistoryWidget::animatedScrollToY(
+		int scrollTo,
+		HistoryItem *attachTo,
+		anim::transition transition) {
 	Expects(_history != nullptr);
 
 	if (hasPendingResizedItems()) {
 		updateListSize();
 	}
+	stopScrollAnimation();
+	scrollTo = std::clamp(scrollTo, 0, _scroll->scrollTopMax());
 
 	// Attach our scroll animation to some item.
 	auto itemTop = _list->itemTop(attachTo);
@@ -303,9 +340,11 @@ void HistoryWidget::animatedScrollToY(int scrollTo, HistoryItem *attachTo) {
 		return;
 	}
 
-	_scrollToAnimation.stop();
-	auto maxAnimatedDelta = _scroll->height();
-	auto transition = anim::sineInOut;
+	const auto maxAnimatedDelta = visibleScrollHeight();
+	if (!maxAnimatedDelta) {
+		synteticScrollToY(scrollTo);
+		return;
+	}
 	if (scrollTo > scrollTop + maxAnimatedDelta) {
 		scrollTop = scrollTo - maxAnimatedDelta;
 		synteticScrollToY(scrollTop);
@@ -323,12 +362,42 @@ void HistoryWidget::animatedScrollToY(int scrollTo, HistoryItem *attachTo) {
 	const auto itemId = attachTo->fullId();
 	const auto relativeFrom = scrollTop - itemTop;
 	const auto relativeTo = scrollTo - itemTop;
+	watchScrollAnimationInput();
 	_scrollToAnimation.start(
 		[=] { scrollToAnimationCallback(itemId, relativeTo); },
 		relativeFrom,
 		relativeTo,
 		st::slideDuration,
-		anim::sineInOut);
+		std::move(transition));
+}
+
+void HistoryWidget::watchScrollAnimationInput() {
+	auto widgets = _scroll->findChildren<QWidget*>();
+	widgets.push_front(_scroll.data());
+	for (const auto widget : widgets) {
+		const auto isBar = (dynamic_cast<Ui::ElasticScrollBar*>(widget) != nullptr);
+		base::install_event_filter(widget, [=](not_null<QEvent*> event) {
+			if (!_scrollToAnimation.animating()
+				|| !isScrollAnimationInput(event, isBar)) {
+				return base::EventFilterResult::Continue;
+			}
+			// 只响应滚动输入，布局引起的位置变化不打断动画。
+			stopScrollAnimation();
+			crl::on_main(this, [=] { preloadHistoryIfNeeded(); });
+			return base::EventFilterResult::Continue;
+		}, _scrollToInputLifetime);
+	}
+}
+
+void HistoryWidget::stopScrollAnimation() {
+	_scrollToAnimation.stop();
+	if (!_scrollToInputLifetime) {
+		return;
+	}
+	// 延迟销毁旧过滤器，避免在自身回调内释放，也不影响新动画。
+	const auto cleanup = std::make_shared<rpl::lifetime>(
+		std::move(_scrollToInputLifetime));
+	crl::on_main(this, [cleanup] { cleanup->destroy(); });
 }
 
 void HistoryWidget::scrollToAnimationCallback(
@@ -336,12 +405,13 @@ void HistoryWidget::scrollToAnimationCallback(
 		int relativeTo) {
 	auto itemTop = _list->itemTop(session().data().message(attachToId));
 	if (itemTop < 0) {
-		_scrollToAnimation.stop();
+		stopScrollAnimation();
 	} else {
 		const auto value = _scrollToAnimation.value(relativeTo);
 		synteticScrollToY(int(base::SafeRound(value)) + itemTop);
 	}
 	if (!_scrollToAnimation.animating()) {
+		stopScrollAnimation();
 		preloadHistoryByScroll();
 		checkReplyReturns();
 	}
@@ -1489,7 +1559,7 @@ void HistoryWidget::updateHistoryGeometry(
 	if (initial) {
 		newScrollTop = countInitialScrollTop();
 		_historyInited = true;
-		_scrollToAnimation.stop();
+		stopScrollAnimation();
 	} else if (wasAtBottom && !loadedDown && !_history->unreadBar()) {
 		newScrollTop = countAutomaticScrollTop();
 	} else {

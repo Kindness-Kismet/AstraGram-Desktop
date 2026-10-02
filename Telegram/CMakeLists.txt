@@ -284,6 +284,8 @@ set(extras_files
         extras/features/translator/extras_translate_provider.h
         extras/features/translator/html_parser.cpp
         extras/features/translator/html_parser.h
+        extras/features/translator/language_recognition.cpp
+        extras/features/translator/language_recognition.h
         extras/features/translator/implementations/google.cpp
         extras/features/translator/implementations/google.h
         extras/features/translator/implementations/yandex.cpp

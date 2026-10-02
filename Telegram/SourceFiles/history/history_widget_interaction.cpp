@@ -1054,6 +1054,10 @@ void HistoryWidget::jumpToReply(FullReplyTo to) {
 void HistoryWidget::keyPressEvent(QKeyEvent *e) {
 	if (!_history) return;
 
+	const auto scroll = [&] {
+		stopScrollAnimation();
+		_scroll->keyPressEvent(e);
+	};
 	const auto commonModifiers = e->modifiers() & kCommonModifiers;
 	if (e->key() == Qt::Key_Escape) {
 		if (hasFocus()) {
@@ -1064,17 +1068,17 @@ void HistoryWidget::keyPressEvent(QKeyEvent *e) {
 	} else if (e->key() == Qt::Key_Back) {
 		_cancelRequests.fire({});
 	} else if (e->key() == Qt::Key_PageDown) {
-		_scroll->keyPressEvent(e);
+		scroll();
 	} else if (e->key() == Qt::Key_PageUp) {
-		_scroll->keyPressEvent(e);
+		scroll();
 	} else if (e->key() == Qt::Key_Down && !commonModifiers) {
-		_scroll->keyPressEvent(e);
+		scroll();
 	} else if (e->key() == Qt::Key_Up && !commonModifiers) {
 		if (!_field->empty()
 			|| !canWriteMessage()
 			|| _editMsgId
 			|| _replyTo) {
-			_scroll->keyPressEvent(e);
+			scroll();
 		} else {
 			const auto last = _history->lastMessage();
 			if (last && last->isLocal()) {
@@ -1083,7 +1087,7 @@ void HistoryWidget::keyPressEvent(QKeyEvent *e) {
 						controller()->show(Box(Ui::EditCaptionBox, view));
 					}
 				} else {
-					_scroll->keyPressEvent(e);
+					scroll();
 				}
 				return;
 			}
@@ -1093,7 +1097,7 @@ void HistoryWidget::keyPressEvent(QKeyEvent *e) {
 			if (item) {
 				editMessage(item, {});
 			} else {
-				_scroll->keyPressEvent(e);
+				scroll();
 			}
 		}
 	} else if (e->key() == Qt::Key_Up

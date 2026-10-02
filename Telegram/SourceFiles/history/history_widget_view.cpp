@@ -945,6 +945,14 @@ void HistoryWidget::messagesReceived(
 		historyLoaded();
 		injectSponsoredMessages();
 	} else if (_delayedShowAtRequest == requestId) {
+		const auto targetIsEnd = (_delayedShowAtMsgId == ShowAtTheEndMsgId)
+			|| (_delayedShowAtMsgId == ShowAtUnreadMsgId
+				&& !_history->loadAroundId()
+				&& (!_migrated || !_migrated->loadAroundId()));
+		const auto animateToEnd = targetIsEnd && _historyInited
+			&& !toMigrated && !_scroll->isHidden()
+			&& _delayedShowAtMsgParams.animated == anim::type::normal
+			&& !_showAnimation && !anim::Disabled();
 		if (toMigrated) {
 			_history->clear(History::ClearType::Unload);
 		} else if (_migrated) {
@@ -980,6 +988,16 @@ void HistoryWidget::messagesReceived(
 		_delayedShowAtRequest = 0;
 		setMsgId(_delayedShowAtMsgId, _delayedShowAtMsgParams);
 		historyLoaded();
+		if (animateToEnd && _historyInited
+			&& _scroll->scrollTop() == _scroll->scrollTopMax()) {
+			// 补载跳转只展示末尾一屏，首次进入和未读定位不加过渡。
+			const auto target = _scroll->scrollTopMax();
+			const auto from = std::max(0, target - visibleScrollHeight());
+			if (from < target) {
+				synteticScrollToY(from);
+				animatedScrollToY(target, nullptr, anim::easeOutCubic);
+			}
+		}
 	}
 	if (session().supportMode()) {
 		crl::on_main(this, [=] { checkSupportPreload(); });

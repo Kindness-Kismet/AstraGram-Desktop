@@ -28,6 +28,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/features/translator/language_recognition.h"
 
 
 namespace HistoryView {
@@ -155,7 +156,7 @@ bool TranslateTracker::add(
 	_itemsForRecognize.emplace(id, ItemForRecognize{
 		.generation = _generation,
 		.id = (_trackingLanguage.current()
-			? Platform::Language::Recognize(text)
+			? Extras::Language::Recognize(text)
 			: MaybeLanguageId{ text }),
 	});
 	++_addedInBunch;
@@ -490,7 +491,7 @@ void TranslateTracker::applyLimit() {
 void TranslateTracker::recognizeCollected() {
 	for (auto &[id, entry] : _itemsForRecognize) {
 		if (const auto text = std::get_if<QString>(&entry.id)) {
-			entry.id = Platform::Language::Recognize(*text);
+			entry.id = Extras::Language::Recognize(*text);
 		}
 	}
 }

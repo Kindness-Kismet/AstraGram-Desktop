@@ -756,7 +756,12 @@ private:
 	friend class HistoryInner;
 	HistoryItem *getItemFromHistoryOrMigrated(MsgId genericMsgId) const;
 	void animatedScrollToItem(MsgId msgId);
-	void animatedScrollToY(int scrollTo, HistoryItem *attachTo = nullptr);
+	void animatedScrollToY(
+		int scrollTo,
+		HistoryItem *attachTo = nullptr,
+		anim::transition transition = anim::sineInOut);
+	void watchScrollAnimationInput();
+	void stopScrollAnimation();
 
 	// when scroll position or scroll area size changed this method
 	// updates the boundings of the visible area in HistoryInner
@@ -918,6 +923,7 @@ private:
 	crl::time _lastUserScrolled = 0;
 	bool _synteticScrollEvent = false;
 	Ui::Animations::Simple _scrollToAnimation;
+	rpl::lifetime _scrollToInputLifetime;
 
 	HistoryView::CornerButtons _cornerButtons;
 	std::unique_ptr<HistoryView::PullToNextChannel> _pullToNext;

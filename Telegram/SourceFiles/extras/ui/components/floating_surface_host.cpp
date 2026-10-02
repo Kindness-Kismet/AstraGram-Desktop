@@ -110,7 +110,7 @@ void FloatingSurfaceHost::clear() {
 void FloatingSurfaceHost::paint(
 		QPainter &p,
 		FloatingSurface *surface,
-		QColor tint) const {
+		QColor tint) {
 	const auto area = surface->visibleArea(_root);
 	if (area.isEmpty()) {
 		return;

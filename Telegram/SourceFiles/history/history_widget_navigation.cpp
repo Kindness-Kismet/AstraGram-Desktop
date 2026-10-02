@@ -388,7 +388,7 @@ void HistoryWidget::showHistory(
 		_requestsBar = nullptr;
 		_chooseTheme = nullptr;
 		_membersDropdown.destroy();
-		_scrollToAnimation.stop();
+		stopScrollAnimation();
 
 		setHistory(nullptr);
 		_list = nullptr;
