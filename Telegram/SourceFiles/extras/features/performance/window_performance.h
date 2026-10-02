@@ -23,7 +23,7 @@ public:
 	void refreshTitleLabel();
 
 #ifdef _DEBUG
-	void startCapture();
+	[[nodiscard]] bool startCapture();
 	void stopCapture();
 	[[nodiscard]] nlohmann::json snapshot() const;
 #endif
@@ -59,6 +59,8 @@ private:
 };
 
 #ifdef _DEBUG
+[[nodiscard]] Monitor *capturingMonitor();
+
 class TaskSample final {
 public:
 	TaskSample(QWidget *window, QString name);

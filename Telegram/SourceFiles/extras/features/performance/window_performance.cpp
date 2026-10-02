@@ -66,14 +66,6 @@ struct Monitor::State {
 	, refreshTimer([=] { refreshFps(); }) {
 	}
 
-	bool enabled() const {
-		return fpsEnabled
-#ifdef _DEBUG
-			|| capture
-#endif
-			;
-	}
-
 	void refreshFps() {
 		const auto active = !timestamps.empty()
 			&& ((nowNs() - timestamps.back()) / kNanosecondsPerMs < 500.);
@@ -172,6 +164,11 @@ Monitor::Monitor(not_null<Window::MainWindow*> window)
 	ExtrasSettings::getInstance().showFpsValue(
 	) | rpl::on_next([=](bool enabled) {
 		_state->fpsEnabled = enabled;
+#ifdef _DEBUG
+		if (!enabled) {
+			stopCapture();
+		}
+#endif
 		_state->refreshTimer.cancel();
 		_state->timestamps.clear();
 		_state->fps = 0;
@@ -260,7 +257,7 @@ EventSample::EventSample(QObject *receiver, QEvent *event) {
 	if (type == QEvent::UpdateRequest || type == QEvent::Paint) {
 		const auto widget = qobject_cast<QWidget*>(receiver);
 		const auto monitor = widget ? findMonitor(widget->window()) : nullptr;
-		if (monitor && monitor->_state->enabled()) {
+		if (monitor && monitor->_state->fpsEnabled) {
 			_monitor = monitor;
 			auto &state = *monitor->_state;
 			if (type == QEvent::UpdateRequest
@@ -306,7 +303,7 @@ EventSample::~EventSample() {
 	const auto duration = _started ? (nowNs() - _started) / kNanosecondsPerMs : 0.;
 	if (_frame) {
 		state.inFrame = false;
-		if (state.painted) {
+		if (state.painted && state.fpsEnabled) {
 			state.recordFrame(_started, duration);
 		}
 	}
@@ -318,7 +315,14 @@ EventSample::~EventSample() {
 }
 
 #ifdef _DEBUG
-void Monitor::startCapture() {
+Monitor *capturingMonitor() {
+	return Capturing.data();
+}
+
+bool Monitor::startCapture() {
+	if (!_state->fpsEnabled) {
+		return false;
+	}
 	if (Capturing && Capturing != this) {
 		Capturing->stopCapture();
 	}
@@ -329,6 +333,7 @@ void Monitor::startCapture() {
 	_state->lastFrame = 0;
 	_state->frames.clear();
 	_state->timings.clear();
+	return true;
 }
 
 void Monitor::stopCapture() {

@@ -22,7 +22,9 @@ Result startCapture(const QStringList &args) {
 	if (!monitor) {
 		return Result::Err(u"no window performance monitor"_q);
 	}
-	monitor->startCapture();
+	if (!monitor->startCapture()) {
+		return Result::Err(u"frame rate display is disabled"_q);
+	}
 	return Result::Ok();
 }
 
@@ -30,9 +32,9 @@ Result stopCapture(const QStringList &args) {
 	if (!args.empty()) {
 		return Result::Err(u"usage: perf.stop"_q);
 	}
-	const auto monitor = activeMonitor();
+	const auto monitor = ExtrasPerformance::capturingMonitor();
 	if (!monitor) {
-		return Result::Err(u"no window performance monitor"_q);
+		return Result::Err(u"no active performance capture"_q);
 	}
 	monitor->stopCapture();
 	return Result::Ok(Compact(monitor->snapshot()));
