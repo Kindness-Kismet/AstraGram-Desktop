@@ -458,21 +458,11 @@ void ChatSearchIn::showMenu() {
 
 void ChatSearchIn::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
-	const auto top = QRect(0, 0, width(), st::searchedBarHeight);
-	p.fillRect(top, st::searchedBarBg);
-	p.fillRect(rect().translated(0, st::searchedBarHeight), st::dialogsBg);
-
-	p.setFont(st::searchedBarFont);
-	p.setPen(st::searchedBarFg);
-	p.drawTextLeft(
-		st::searchedBarPosition.x(),
-		st::searchedBarPosition.y(),
-		width(),
-		tr::lng_dlg_search_in(tr::now));
+	p.fillRect(rect(), st::dialogsBg);
 }
 
 int ChatSearchIn::resizeGetHeight(int newWidth) {
-	auto result = st::searchedBarHeight;
+	auto result = 0;
 	if (const auto raw = _in.outer.get()) {
 		raw->resizeToWidth(newWidth);
 		raw->move(0, result);
