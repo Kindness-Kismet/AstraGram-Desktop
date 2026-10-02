@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "mainwindow.h"
+#include "extras/features/performance/window_performance.h"
 #include "extras/features/window_material/window_material.h"
 
 #include "data/data_document.h"
@@ -405,10 +406,20 @@ void MainWindow::showMainMenu() {
 
 	if (isHidden()) showFromTray();
 
+#ifdef _DEBUG
+	const auto timing = ExtrasPerformance::TaskSample(this, u"main-menu.open"_q);
+#endif
 	ensureLayerCreated();
-	_layer->showMainMenu(
-		object_ptr<Window::MainMenu>(body(), sessionController()),
-		anim::type::normal);
+	auto menu = [&] {
+#ifdef _DEBUG
+		const auto timing = ExtrasPerformance::TaskSample(this, u"main-menu.create"_q);
+#endif
+		return object_ptr<Window::MainMenu>(body(), sessionController());
+	}();
+#ifdef _DEBUG
+	const auto showTiming = ExtrasPerformance::TaskSample(this, u"main-menu.prepare-animation"_q);
+#endif
+	_layer->showMainMenu(std::move(menu), anim::type::normal);
 }
 
 void MainWindow::ensureLayerCreated() {
@@ -418,6 +429,7 @@ void MainWindow::ensureLayerCreated() {
 	_layer = base::make_unique_q<Ui::LayerStackWidget>(
 		bodyWidget(),
 		crl::guard(this, [=] { return controller().uiShow(); }));
+	_layer->setObjectName(u"window.layers"_q);
 
 	_layer->hideFinishEvents(
 	) | rpl::filter([=] {

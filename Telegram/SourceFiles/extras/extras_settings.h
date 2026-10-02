@@ -285,6 +285,7 @@ public:
 	[[nodiscard]] bool hidePremiumStatuses() const { return _hidePremiumStatuses.current(); }
 	[[nodiscard]] bool hideProxySettingsIcon() const { return _hideProxySettingsIcon.current(); }
 	[[nodiscard]] bool showDownloadsButtonInHeader() const { return _showDownloadsButtonInHeader.current(); }
+	[[nodiscard]] bool showFps() const { return _showFps.current(); }
 	[[nodiscard]] bool showOnlyAddedEmojisAndStickers() const { return _showOnlyAddedEmojisAndStickers.current(); }
 	[[nodiscard]] bool collapseSimilarChannels() const { return _collapseSimilarChannels.current(); }
 	[[nodiscard]] bool hideSimilarChannels() const { return _hideSimilarChannels.current(); }
@@ -381,6 +382,7 @@ public:
 	void setHidePremiumStatuses(bool val);
 	void setHideProxySettingsIcon(bool val);
 	void setShowDownloadsButtonInHeader(bool val);
+	void setShowFps(bool val);
 	void setShowOnlyAddedEmojisAndStickers(bool val);
 	void setCollapseSimilarChannels(bool val);
 	void setHideSimilarChannels(bool val);
@@ -490,6 +492,7 @@ public:
 	[[nodiscard]] rpl::producer<bool> hideProxySettingsIconValue() const { return _hideProxySettingsIcon.value(); }
 	[[nodiscard]] rpl::producer<bool> hideProxySettingsIconChanges() const { return _hideProxySettingsIcon.changes(); }
 	[[nodiscard]] rpl::producer<bool> showDownloadsButtonInHeaderValue() const { return _showDownloadsButtonInHeader.value(); }
+	[[nodiscard]] rpl::producer<bool> showFpsValue() const { return _showFps.value(); }
 	[[nodiscard]] rpl::producer<bool> showOnlyAddedEmojisAndStickersValue() const { return _showOnlyAddedEmojisAndStickers.value(); }
 	[[nodiscard]] rpl::producer<bool> showOnlyAddedEmojisAndStickersChanges() const { return _showOnlyAddedEmojisAndStickers.changes(); }
 	[[nodiscard]] rpl::producer<bool> collapseSimilarChannelsValue() const { return _collapseSimilarChannels.value(); }
@@ -725,6 +728,7 @@ private:
 	rpl::variable<bool> _hidePremiumStatuses = false;
 	rpl::variable<bool> _hideProxySettingsIcon = false;
 	rpl::variable<bool> _showDownloadsButtonInHeader = true;
+	rpl::variable<bool> _showFps = true;
 	rpl::variable<QString> _monoFont;
 	rpl::variable<bool> _hideNotificationCounters = false;
 	rpl::variable<bool> _hideNotificationBadge = false;

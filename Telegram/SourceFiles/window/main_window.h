@@ -12,6 +12,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/object_ptr.h"
 #include "core/core_settings.h"
 
+namespace ExtrasPerformance {
+class Monitor;
+} // namespace ExtrasPerformance
+
 namespace Main {
 class Session;
 class Account;
@@ -209,6 +213,7 @@ private:
 	bool computeIsActive() const;
 
 	not_null<Window::Controller*> _controller;
+	std::unique_ptr<ExtrasPerformance::Monitor> _performance;
 
 	base::Timer _positionUpdatedTimer;
 	bool _positionInited = false;

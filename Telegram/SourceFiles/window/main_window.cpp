@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/main_window.h"
+#include "extras/features/performance/window_performance.h"
 #include "extras/features/window_material/window_material.h"
 
 #include "api/api_updates.h"
@@ -433,6 +434,15 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 	}));
 }))
 , _body(body()) {
+	// 实色背景必须完整覆盖，让侧栏动画的截图缓存保持不透明。
+	_body->setObjectName(u"window.body"_q);
+	_body->setAttribute(Qt::WA_OpaquePaintEvent);
+	_body->paintRequest() | rpl::on_next([=](QRect clip) {
+		if (ExtrasFeatures::WindowMaterial::isActive(_body)) {
+			return;
+		}
+		QPainter(_body).fillRect(clip, palette().color(QPalette::Window));
+	}, _body->lifetime());
 	ExtrasFeatures::WindowMaterial::initialize(this);
 	style::PaletteChanged(
 	) | rpl::on_next([=] {
@@ -581,6 +591,7 @@ QRect MainWindow::desktopRect() const {
 
 void MainWindow::init() {
 	initHook();
+	_performance = std::make_unique<ExtrasPerformance::Monitor>(this);
 
 	updatePalette();
 
@@ -714,6 +725,7 @@ void MainWindow::refreshTitleWidget() {
 		setNativeFrame(false);
 		_titleShadow.destroy();
 	}
+	_performance->refreshTitleLabel();
 }
 
 void MainWindow::setupCanaryTitleLabel() {

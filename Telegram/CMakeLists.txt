@@ -259,6 +259,8 @@ set(extras_files
         extras/features/message_shot/message_shot.cpp
         extras/features/message_shot/message_shot.h
         extras/features/auto_space/auto_space.cpp
+        extras/features/performance/window_performance.h
+        extras/features/performance/window_performance.cpp
         extras/features/auto_space/auto_space.h
         extras/features/emoji_packs/emoji_font.cpp
         extras/features/emoji_packs/emoji_font.h
@@ -309,6 +311,7 @@ set(extras_files
         extras/debug/debug_server.h
         extras/debug/commands/commands_internal.h
         extras/debug/commands/app_commands.cpp
+        extras/debug/commands/performance_commands.cpp
         extras/debug/commands/session_commands.cpp
         extras/debug/commands/scenario_commands.cpp
         extras/debug/commands/settings_commands.cpp

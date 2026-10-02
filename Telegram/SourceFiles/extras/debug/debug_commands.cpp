@@ -40,6 +40,7 @@ namespace {
 		auto all = Commands::HandlerMap{};
 		for (const auto *part : {
 			&Commands::AppHandlers(),
+			&Commands::performanceHandlers(),
 			&Commands::SessionHandlers(),
 			&Commands::ScenarioHandlers(),
 			&Commands::SettingsHandlers(),
