@@ -304,15 +304,13 @@ dialogsCalendar: IconButton {
 
 	icon: icon {{ "dialogs/dialogs_calendar", dialogsMenuIconFg }};
 	iconOver: icon {{ "dialogs/dialogs_calendar", dialogsMenuIconFgOver }};
-	iconPosition: point(1px, 8px);
+	iconPosition: point(-1px, -1px);
 }
 dialogsSearchFrom: IconButton(dialogsCalendar) {
-	width: 29px;
 	icon: icon {{ "dialogs/dialogs_search_from", dialogsMenuIconFg }};
 	iconOver: icon {{ "dialogs/dialogs_search_from", dialogsMenuIconFgOver }};
 }
 dialogsSearchType: IconButton(dialogsCalendar) {
-	width: 29px;
 	icon: icon {{ "menu/tag_filter", dialogsMenuIconFg }};
 	iconOver: icon {{ "menu/tag_filter", dialogsMenuIconFgOver }};
 }

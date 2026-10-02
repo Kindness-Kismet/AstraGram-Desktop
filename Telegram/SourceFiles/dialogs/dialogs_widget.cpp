@@ -811,9 +811,11 @@ Widget::Widget(
 	_cancelSearch->setObjectName(u"search.cancel"_q);
 	_cancelSearch->setAccessibleName(tr::lng_sr_cancel_search(tr::now));
 	_jumpToDate->entity()->setClickedCallback([=] { showCalendar(); });
+	_jumpToDate->entity()->setObjectName(u"search.date"_q);
 	_jumpToDate->entity()->setAccessibleName(
 		tr::lng_sr_search_date(tr::now));
 	_chooseFromUser->entity()->setClickedCallback([=] { showSearchFrom(); });
+	_chooseFromUser->entity()->setObjectName(u"search.from"_q);
 	_chooseFromUser->entity()->setAccessibleName(
 		tr::lng_search_messages_from(tr::now));
 	rpl::single(rpl::empty) | rpl::then(
@@ -858,6 +860,7 @@ Widget::Widget(
 	_searchForNarrowLayout->setAccessibleName(tr::lng_dlg_filter(tr::now));
 	_chooseSearchType->entity()->setClickedCallback(
 		[=] { showSearchType(); });
+	_chooseSearchType->entity()->setObjectName(u"search.type"_q);
 	_chooseSearchType->entity()->setAccessibleName(
 		tr::extras_SearchFilterType(tr::now));
 	_searchForNarrowLayout->setClickedCallback([=] {
