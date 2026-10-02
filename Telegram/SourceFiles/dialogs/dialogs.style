@@ -488,13 +488,6 @@ dialogsSearchInNameTop: 9px;
 dialogsSearchInDownTop: 15px;
 dialogsSearchInDown: icon {{ "intro_country_dropdown", windowBoldFg }};
 dialogsSearchInDownSkip: 4px;
-dialogsSearchInMenu: PopupMenu(defaultPopupMenu) {
-	scrollPadding: margins(0px, 0px, 0px, 0px);
-	radius: 8px;
-	menu: menuWithIcons;
-}
-dialogsSearchInCheck: icon {{ "player/player_check", mediaPlayerActiveFg }};
-dialogsSearchInCheckSkip: 8px;
 dialogsSearchFromStyle: defaultTextStyle;
 
 dialogsScamPadding: margins(2px, 0px, 2px, 0px);

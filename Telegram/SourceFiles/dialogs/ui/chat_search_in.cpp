@@ -8,15 +8,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "dialogs/ui/chat_search_in.h"
 
 #include "lang/lang_keys.h"
-#include "ui/effects/ripple_animation.h"
+#include "menu/menu_checked_action.h"
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/shadow.h"
-#include "ui/widgets/menu/menu_item_base.h"
-struct FullMsgId;
 #include "ui/dynamic_image.h"
-#include "ui/dynamic_thumbnails.h"
 #include "ui/painter.h"
 #include "styles/style_dialogs.h"
 #include "styles/style_menu_icons.h"
@@ -24,43 +21,6 @@ struct FullMsgId;
 
 namespace Dialogs {
 namespace {
-
-class Action final : public Ui::Menu::ItemBase {
-public:
-	Action(
-		not_null<Ui::PopupMenu*> parentMenu,
-		std::shared_ptr<Ui::DynamicImage> icon,
-		const QString &label,
-		bool chosen);
-	~Action();
-
-	bool isEnabled() const override;
-	not_null<QAction*> action() const override;
-
-	void handleKeyPress(not_null<QKeyEvent*> e) override;
-
-protected:
-	QPoint prepareRippleStartPosition() const override;
-	QImage prepareRippleMask() const override;
-
-	int contentHeight() const override;
-
-private:
-	void paint(Painter &p);
-
-	void resolveMinWidth();
-	void refreshDimensions();
-
-	const not_null<Ui::PopupMenu*> _parentMenu;
-	const not_null<QAction*> _dummyAction;
-	const style::Menu &_st;
-	const int _height = 0;
-
-	std::shared_ptr<Ui::DynamicImage> _icon;
-	Ui::Text::String _text;
-	bool _checked = false;
-
-};
 
 [[nodiscard]] QString TabLabel(
 		ChatSearchTab tab,
@@ -88,121 +48,6 @@ private:
 		return tr::lng_search_tab_this_community(tr::now);
 	}
 	Unexpected("Tab in Dialogs::TabLabel.");
-}
-
-Action::Action(
-	not_null<Ui::PopupMenu*> parentMenu,
-	std::shared_ptr<Ui::DynamicImage> icon,
-	const QString &label,
-	bool chosen)
-: ItemBase(parentMenu->menu(), parentMenu->menu()->st())
-, _parentMenu(parentMenu)
-, _dummyAction(CreateChild<QAction>(parentMenu->menu().get()))
-, _st(parentMenu->menu()->st())
-, _height(st::dialogsSearchInHeight)
-, _icon(std::move(icon))
-, _checked(chosen) {
-	_text.setText(st::semiboldTextStyle, label);
-	_icon->subscribeToUpdates([=] { update(); });
-
-	fitToMenuWidth();
-	resolveMinWidth();
-
-	paintRequest(
-	) | rpl::on_next([=] {
-		Painter p(this);
-		paint(p);
-	}, lifetime());
-
-	enableMouseSelecting();
-}
-
-Action::~Action() {
-	_icon->subscribeToUpdates(nullptr);
-}
-
-void Action::resolveMinWidth() {
-	const auto maxWidth = st::dialogsSearchInPhotoPadding
-		+ st::dialogsSearchInPhotoSize
-		+ st::dialogsSearchInSkip
-		+ _text.maxWidth()
-		+ st::dialogsSearchInCheckSkip
-		+ st::dialogsSearchInCheck.width()
-		+ st::dialogsSearchInCheckSkip;
-	setMinWidth(maxWidth);
-}
-
-void Action::paint(Painter &p) {
-	const auto enabled = isEnabled();
-	const auto selected = isSelected();
-	Ui::Menu::PaintItemBackground(
-		p,
-		_st,
-		QRect(0, 0, width(), _height),
-		selected);
-	if (enabled) {
-		paintRipple(p, 0, 0);
-	}
-
-	auto x = st::dialogsSearchInPhotoPadding;
-	const auto photos = st::dialogsSearchInPhotoSize;
-	const auto photoy = (height() - photos) / 2;
-	p.drawImage(QRect{ x, photoy, photos, photos }, _icon->image(photos));
-	x += photos + st::dialogsSearchInSkip;
-	const auto available = width()
-		- x
-		- st::dialogsSearchInCheckSkip
-		- st::dialogsSearchInCheck.width()
-		- st::dialogsSearchInCheckSkip;
-
-	p.setPen(!enabled
-		? _st.itemFgDisabled
-		: selected
-		? _st.itemFgOver
-		: _st.itemFg);
-	_text.drawLeftElided(
-		p,
-		x,
-		st::dialogsSearchInNameTop,
-		available,
-		width());
-	x += available;
-	if (_checked) {
-		x += st::dialogsSearchInCheckSkip;
-		const auto &icon = st::dialogsSearchInCheck;
-		const auto icony = (height() - icon.height()) / 2;
-		icon.paint(p, x, icony, width());
-	}
-}
-
-bool Action::isEnabled() const {
-	return true;
-}
-
-not_null<QAction*> Action::action() const {
-	return _dummyAction;
-}
-
-QPoint Action::prepareRippleStartPosition() const {
-	return mapFromGlobal(QCursor::pos());
-}
-
-QImage Action::prepareRippleMask() const {
-	return Ui::Menu::ItemRippleMask(_st, size());
-}
-
-int Action::contentHeight() const {
-	return _height;
-}
-
-void Action::handleKeyPress(not_null<QKeyEvent*> e) {
-	if (!isSelected()) {
-		return;
-	}
-	const auto key = e->key();
-	if (key == Qt::Key_Enter || key == Qt::Key_Return) {
-		setClicked(Ui::Menu::TriggeredSource::Keyboard);
-	}
 }
 
 } // namespace
@@ -283,15 +128,12 @@ void FillSearchTypeMenu(
 	const auto addAction = [&](Api::SearchFilter filter,
 			const style::icon &icon,
 			const QString &text) {
-		auto action = base::make_unique_q<Action>(
+		Menu::AddCheckedAction(
 			menu,
-			Ui::MakeIconThumbnail(icon),
 			text,
+			[=] { callback(filter); },
+			&icon,
 			(current == filter));
-		action->setActionTriggered([=] {
-			callback(filter);
-		});
-		menu->addAction(std::move(action));
 	};
 	addAction(
 		Api::SearchFilter::NoFilter,
@@ -405,7 +247,7 @@ void ChatSearchIn::updateType(
 void ChatSearchIn::showTypeMenu() {
 	_menu = base::make_unique_q<Ui::PopupMenu>(
 		this,
-		st::dialogsSearchInMenu);
+		st::popupMenuWithIcons);
 	FillSearchTypeMenu(
 		_menu.get(),
 		_typeFilter,
@@ -421,39 +263,22 @@ void ChatSearchIn::showTypeMenu() {
 void ChatSearchIn::showMenu() {
 	_menu = base::make_unique_q<Ui::PopupMenu>(
 		this,
-		st::dialogsSearchInMenu);
+		st::popupMenuWithIcons);
 	const auto active = _active.current();
-	auto activeIndex = 0;
 	for (const auto &tab : _tabs) {
 		if (!tab.icon) {
 			continue;
 		}
 		const auto value = tab.tab;
-		if (value == active) {
-			activeIndex = _menu->actions().size();
-		}
-		auto action = base::make_unique_q<Action>(
+		Menu::AddCheckedAction(
 			_menu.get(),
-			tab.icon,
 			TabLabel(value, _peerTabType),
+			[=] { _active = value; },
+			tab.icon,
+			st::menuIconChats.width(),
 			(value == active));
-		action->setActionTriggered([=] {
-			_active = value;
-		});
-		_menu->addAction(std::move(action));
 	}
-	const auto count = int(_menu->actions().size());
-	const auto bottomLeft = (activeIndex * 2 >= count);
-	const auto single = st::dialogsSearchInHeight;
-	const auto in = mapToGlobal(_in.outer->pos()
-		+ QPoint(0, bottomLeft ? count * single : 0));
-	_menu->setForcedOrigin(bottomLeft
-		? Ui::PanelAnimation::Origin::BottomLeft
-		: Ui::PanelAnimation::Origin::TopLeft);
-	if (_menu->prepareGeometryFor(in)) {
-		_menu->move(_menu->pos() - QPoint(_menu->inner().x(), activeIndex * single));
-		_menu->popupPrepared();
-	}
+	_menu->popup(_in.outer->mapToGlobal(QPoint(0, _in.outer->height())));
 }
 
 void ChatSearchIn::paintEvent(QPaintEvent *e) {

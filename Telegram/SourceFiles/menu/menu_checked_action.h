@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 class QAction;
 
 namespace Ui {
+class DynamicImage;
 class PopupMenu;
 } // namespace Ui
 
@@ -23,6 +24,14 @@ not_null<QAction*> AddCheckedAction(
 	const QString &text,
 	Fn<void()> callback,
 	const style::icon *icon,
+	bool checked);
+
+not_null<QAction*> AddCheckedAction(
+	not_null<Ui::PopupMenu*> menu,
+	const QString &text,
+	Fn<void()> callback,
+	std::shared_ptr<Ui::DynamicImage> thumbnail,
+	int thumbnailSize,
 	bool checked);
 
 // Like a usual menu action, but when `active` the whole item (icon, text and

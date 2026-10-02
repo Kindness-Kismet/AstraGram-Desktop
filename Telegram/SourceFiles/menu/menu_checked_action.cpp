@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "menu/menu_checked_action.h"
 
 #include "base/unique_qptr.h"
+#include "menu/menu_action_with_thumbnail.h"
 #include "ui/effects/premium_graphics.h"
 #include "ui/widgets/menu/menu_action.h"
 #include "ui/widgets/menu/menu_common.h"
@@ -144,13 +145,14 @@ void ActiveColorAction::paintEvent(QPaintEvent *e) {
 	}
 }
 
-class CheckedAction final : public Ui::Menu::Action {
+class CheckedAction final : public Menu::ActionWithThumbnail {
 public:
 	CheckedAction(
 		not_null<Ui::Menu::Menu*> parent,
 		const style::Menu &st,
 		not_null<QAction*> action,
-		const style::icon *icon,
+		std::shared_ptr<Ui::DynamicImage> thumbnail,
+		int thumbnailSize,
 		bool checked);
 
 private:
@@ -164,15 +166,16 @@ CheckedAction::CheckedAction(
 	not_null<Ui::Menu::Menu*> parent,
 	const style::Menu &st,
 	not_null<QAction*> action,
-	const style::icon *icon,
+	std::shared_ptr<Ui::DynamicImage> thumbnail,
+	int thumbnailSize,
 	bool checked)
-: Ui::Menu::Action(parent, st, action, icon, icon)
+: ActionWithThumbnail(parent, st, action, std::move(thumbnail), thumbnailSize)
 , _checked(checked) {
 	setMinWidth(minWidth() + st.itemRightSkip + st::mediaPlayerMenuCheck.width());
 }
 
 void CheckedAction::paintEvent(QPaintEvent *e) {
-	Ui::Menu::Action::paintEvent(e);
+	ActionWithThumbnail::paintEvent(e);
 
 	if (!_checked) {
 		return;
@@ -202,7 +205,29 @@ not_null<QAction*> AddCheckedAction(
 			menu->menu().get(),
 			text,
 			std::move(callback)),
-		icon,
+		nullptr,
+		0,
+		checked);
+	item->setIcon(icon);
+	return menu->addAction(std::move(item));
+}
+
+not_null<QAction*> AddCheckedAction(
+		not_null<Ui::PopupMenu*> menu,
+		const QString &text,
+		Fn<void()> callback,
+		std::shared_ptr<Ui::DynamicImage> thumbnail,
+		int thumbnailSize,
+		bool checked) {
+	auto item = base::make_unique_q<CheckedAction>(
+		menu->menu(),
+		menu->st().menu,
+		Ui::Menu::CreateAction(
+			menu->menu().get(),
+			text,
+			std::move(callback)),
+		std::move(thumbnail),
+		thumbnailSize,
 		checked);
 	return menu->addAction(std::move(item));
 }

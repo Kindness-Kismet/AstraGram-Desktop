@@ -15,7 +15,7 @@ class DynamicImage;
 
 namespace Menu {
 
-class ActionWithThumbnail final : public Ui::Menu::Action {
+class ActionWithThumbnail : public Ui::Menu::Action {
 public:
 	ActionWithThumbnail(
 		not_null<Ui::Menu::Menu*> parent,
