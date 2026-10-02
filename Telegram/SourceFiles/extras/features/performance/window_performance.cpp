@@ -224,7 +224,9 @@ void Monitor::refreshTitleLabel() {
 		auto p = QPainter(label);
 		p.setFont(st::normalFont->f);
 		p.setPen(st::windowSubTextFg->c);
-		p.drawText(label->rect(), Qt::AlignCenter, u"%1 FPS"_q.arg(_state->fps));
+		p.drawText(label->rect(), Qt::AlignCenter, _state->fps
+			? u"%1 FPS"_q.arg(_state->fps)
+			: u"— FPS"_q);
 	}, label->lifetime());
 
 	const auto position = [=] {
