@@ -1,31 +1,41 @@
-- Changed how voice and video recording starts; recording types are now selected from the attachment menu, with recording unavailable while editing, already recording or in a call
-- Changed how music and voice playback controls are shown; the top playback bar and music dialog are replaced by a shared floating panel opened from the chat list, with fully visible controls, no scrollbars and a size independent of the list
-- Changed how music and voice playback interact; starting one pauses the other, and playback cannot be resumed during calls
-- Added donation details to the side menu, so you can view project support information from the app
-- Changed the default app icon to a blue paper plane; four legacy icon presets were removed while other choices remain available
-- Improved autocomplete panels, which now align with the compose field and keep their scrollbars inside rounded corners
-- Improved media attachment previews, which now place single-attachment action buttons below the preview instead of over the image
-- Improved compose, editor and profile controls, which now use more consistent icon sizes and strokes, with the editor entry placed beside the emoji button
-- Removed automatic language-switch pop-ups; manual language selection remains available
-- Changed appearance settings; switches now use a single style, and the switch-style selector and the option to disable custom chat backgrounds are removed
-- Improved notification settings previews, which now match the rounded notification cards, with lighter card shadows and no monitor graphic around the preview
-- Changed the account switcher and main menu icons; combined unread badges and dots for other accounts are removed, while the account switcher retains space for the expand arrow
-- Added an appearance option to hide the proxy settings icon, so you can control whether it appears
-- Added an appearance option to show a downloads button in the search bar, so you can open downloads when the search bar is idle and has enough space
+- Improved voice recording controls, which now share the rounded compose area for recording, pausing, previewing, trimming, continuing and confirming a recording
+- Fixed an issue with paused voice recordings that previously caused recorded audio to be lost when the app automatically locked with a passcode
+- Changed how explicit mark-as-read actions work in ghost mode; they now sync read status to the server, making it visible to other clients and the chat partner, while simply opening a chat still respects ghost settings
+- Fixed an issue with manual read requests that previously caused subsequent chat list updates for the same conversation to remain blocked
+- Removed the side menu's local and server mark-all-as-read entries and their visibility settings; marking all chats as read from those entries is no longer available
+- Changed how the downloads button is shown; it now appears in the chat list header, remains available during search and with no downloads, and defaults to visible while preserving saved preferences
+- Improved archive search, which now opens in a separate row below the navigation bar and closes with one click on the search or cancel button
+- Fixed an issue with switching or reselecting chat folders that previously caused the search scope from a chat or topic to remain visible
+- Changed the search layout; it now uses more consistent filter icons and removes the redundant search scope heading and adjacent chat folder settings shortcut
+- Added a proxy settings entry to the main menu, so you can now open connection settings directly
+- Added a visibility option for donation details, so you can now hide that side menu entry from appearance settings
+- Improved standalone on/off settings, which now use consistent right-aligned switches in advanced settings, chat settings and the regex filter editor
+- Fixed an issue with locally retained deleted messages that previously caused an unusable quick reply button to appear on hover
+- Improved the forwarding restriction hint, which now matches the font and alignment of other message menu items
+- Added a title bar frame rate display, so you can now see the window's rendering activity, with a dash when idle and an appearance setting to turn off the display, which is enabled by default
+- Improved side menu animations, which now open and close more smoothly when using a solid window background
+- Changed empty-state illustrations; search, empty results, chats, blocked users and gifts now use static icons that follow the current theme
+- Improved the taskbar alert setting icon, which now uses a notification symbol sized consistently with neighboring controls
+- Improved message bubble shadows, which now follow the theme colors and form a softer outline around the bubble
 
 ---
 
-- 调整了语音和视频消息的录制入口，现在从附件菜单选择录制类型，编辑消息、已有录制或通话期间不能开始新录制
-- 调整了音乐和语音的播放界面，现在由聊天列表按钮打开的共用浮动面板替代旧顶部播放条和音乐弹窗，控制项完整显示、没有滚动条，面板大小也不受列表限制
-- 调整了音乐和语音的播放行为，现在播放其中一种会暂停另一种，通话期间不能重新开启播放
-- 新增了侧边菜单中的捐赠详情入口，现在可以在应用内查看项目支持信息
-- 调整了应用图标，现在默认使用蓝色纸飞机，并移除了四种旧版预设，其余图标仍可选择
-- 改进了自动补全面板，现在会与输入框对齐，滚动条也会保持在圆角区域内
-- 改进了媒体附件预览，现在把单个附件的操作按钮放在预览下方，不再遮挡图片
-- 改进了输入区、编辑器和个人资料的控件，现在图标尺寸和线条更统一，编辑器入口也会排列在表情按钮旁
-- 移除了自动弹出的语言切换提示框，仍可手动选择界面语言
-- 调整了外观设置，现在统一使用一种开关样式，不再提供切换开关样式和禁用自定义聊天背景的选项
-- 改进了通知设置中的预览，现在与通知卡片的圆角样式一致，同时减轻了卡片阴影，并移除了预览外的显示器图案
-- 调整了账号切换区和主菜单图标，现在不再显示其他账号的未读总数角标与圆点，账号切换区仍保留展开箭头的空间
-- 新增了隐藏代理设置图标的外观选项，现在可以控制该图标是否显示
-- 新增了在搜索框中显示下载按钮的外观选项，现在可以在搜索框空闲且空间充足时直接打开下载列表
+- 对语音录制控件进行了改善，这使得录制、暂停、试听、裁剪、续录和确认操作都能在输入框的圆角区域内完成
+- 修复了关于暂停中的语音录制的错误，该问题曾导致应用自动密码锁定后丢失已录制的内容
+- 调整了幽灵模式下主动标为已读的行为，现在会将已读状态同步到服务器，其他客户端和聊天对方也能看到，单纯打开聊天仍遵循幽灵模式设置
+- 修复了关于手动已读请求的错误，该问题曾导致同一会话后续的聊天列表更新一直被阻塞
+- 移除了侧边菜单中的本地全部已读、服务器全部已读入口及其显示设置，通过这些入口将所有聊天标为已读不再可用
+- 调整了下载按钮的显示方式，现在位于聊天列表顶部，搜索期间或没有下载记录时也能使用，默认显示并保留已保存的显示偏好
+- 对归档搜索进行了改善，这使得搜索框能在导航栏下方独立显示，点击搜索按钮或取消按钮即可关闭
+- 修复了关于切换或重新选择聊天文件夹的错误，该问题曾导致之前聊天或话题的搜索范围残留
+- 调整了搜索区域的布局，现在筛选图标的尺寸和线条更统一，并移除了多余的搜索范围标题和旁边的聊天文件夹设置快捷入口
+- 新增了主菜单中的代理设置入口，现在可以直接打开连接设置
+- 新增了捐赠详情的显示选项，现在可以在外观设置中隐藏侧边菜单里的这一入口
+- 对独立开关设置进行了改善，这使得高级设置、聊天设置和正则过滤编辑器中的相关选项统一使用右侧开关
+- 修复了关于本地保留的已删除消息的错误，该问题曾导致鼠标悬停时仍显示无法使用的快捷回复按钮
+- 对禁止转发提示进行了改善，这使得它的字体和对齐方式与消息菜单中的其他条目保持一致
+- 新增了标题栏帧率显示，现在可以查看窗口的绘制活动，空闲时显示横线，默认开启并可在外观设置中关闭
+- 对侧边菜单动画进行了改善，这使得使用实色窗口背景时打开和关闭菜单更流畅
+- 调整了空白页面插图，现在搜索、无搜索结果、空聊天列表、空黑名单和空礼物列表使用跟随当前主题的静态图标
+- 对任务栏提醒设置的图标进行了改善，这使得它使用通知图案并与相邻控件的尺寸保持一致
+- 对消息气泡阴影进行了改善，这使得阴影能跟随主题颜色，并在气泡周围呈现更柔和的轮廓
