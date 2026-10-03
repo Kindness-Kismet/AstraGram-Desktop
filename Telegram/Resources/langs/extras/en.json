@@ -5,6 +5,8 @@
   "DocsText": "Documentation",
   "CategoryGeneral": "General",
   "CategoryAppearance": "Appearance",
+  "ThemeSimpleWhite": "Simple White",
+  "ThemeSimpleBlack": "Simple Black",
   "LocalThemeSaveError": "Could not save the theme. Check that the data folder is writable and has enough free space.",
   "LocalThemeRemoveError": "Could not remove the saved theme. Please try again.",
   "LocalThemeLoadError": "Could not open the saved theme. Please import it again.",

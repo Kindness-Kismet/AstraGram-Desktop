@@ -1078,6 +1078,16 @@ Window::Theme::Saved readThemeUsingKey(FileKey key) {
 
 std::optional<QString> InitialLoadThemeUsingKey(FileKey key) {
 	auto read = readThemeUsingKey(key);
+	if (!read.object.cloud.id
+		&& read.object.pathAbsolute == u":/gui/day-blue.tdesktop-theme"_q) {
+		Core::App().settings().themesAccentColors().migrateLegacyDayTheme();
+		if (_themeKeyLegacy) {
+			Window::Theme::SetNightModeValue(false);
+			_themeKeyDay = base::take(_themeKeyLegacy);
+		}
+		clearTheme();
+		return QString();
+	}
 	const auto result = read.object.pathAbsolute;
 	if (read.object.content.isEmpty()) {
 		DEBUG_LOG(("Theme: Could not read content for key: %1").arg(key));
@@ -1293,7 +1303,13 @@ Window::Theme::Saved readThemeAfterSwitch() {
 	const auto key = Window::Theme::IsNightMode()
 		? _themeKeyNight
 		: _themeKeyDay;
-	return readThemeUsingKey(key);
+	auto read = readThemeUsingKey(key);
+	if (!read.object.cloud.id
+		&& read.object.pathAbsolute == u":/gui/day-blue.tdesktop-theme"_q) {
+		Core::App().settings().themesAccentColors().migrateLegacyDayTheme();
+		return {};
+	}
+	return read;
 }
 
 void readLangPack() {

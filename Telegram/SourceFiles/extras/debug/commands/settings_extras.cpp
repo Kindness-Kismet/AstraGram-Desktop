@@ -58,7 +58,7 @@ void addShot(SettingsMap &entries, MessageShotSettings &settings) {
 				if (key.starts_with("embedded")) {
 					int type = 0;
 					if (const auto error = readSetting(updated.at("embeddedThemeType"), type); !error.isEmpty()) return Result::Err(error);
-					if (type < -1 || type > 3) return Result::Err(u"invalid embedded theme index"_q);
+					if (type != -1 && type != 1 && type != 2) return Result::Err(u"invalid embedded theme index"_q);
 					settings.setEmbeddedTheme(type, updated.at("embeddedThemeAccentColor").get<uint32>());
 				} else {
 					settings.setCloudTheme(

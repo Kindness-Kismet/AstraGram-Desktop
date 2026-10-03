@@ -133,9 +133,6 @@ style::colorizer ColorizerFrom(
 	case EmbeddedType::Default:
 		result.lightnessMax = 160;
 		break;
-	case EmbeddedType::DayBlue:
-		result.lightnessMax = 160;
-		break;
 	case EmbeddedType::Night:
 		result.keepContrast = base::flat_map<QLatin1String, Pair>{ {
 			//{ qstr("windowFgActive"), Pair{ cColor("5288c1"), cColor("17212b") } }, // windowBgActive
@@ -231,25 +228,14 @@ std::vector<EmbeddedScheme> EmbeddedThemes() {
 	return {
 		EmbeddedScheme{
 			EmbeddedType::Default,
-			qColor("9bd494"),
-			qColor("eaffdc"),
 			qColor("ffffff"),
-			qColor("eaffdc"),
+			qColor("d4edff"),
 			qColor("ffffff"),
-			name(tr::lng_settings_theme_classic),
+			qColor("d4edff"),
+			qColor("ffffff"),
+			name(tr::extras_ThemeSimpleWhite),
 			QString(),
-			qColor("40a7e3")
-		},
-		EmbeddedScheme{
-			EmbeddedType::DayBlue,
-			qColor("7ec4ea"),
-			qColor("d7f0ff"),
-			qColor("ffffff"),
-			qColor("d7f0ff"),
-			qColor("ffffff"),
-			name(tr::lng_settings_theme_day),
-			":/gui/day-blue.tdesktop-theme",
-			qColor("40a7e3")
+			qColor("238fe8")
 		},
 		EmbeddedScheme{
 			EmbeddedType::Night,
@@ -258,7 +244,7 @@ std::vector<EmbeddedScheme> EmbeddedThemes() {
 			qColor("6b808d"),
 			qColor("6b808d"),
 			qColor("5ca7d4"),
-			name(tr::lng_settings_theme_tinted),
+			name(tr::extras_ThemeSimpleBlack),
 			":/gui/night.tdesktop-theme",
 			qColor("5288c1")
 		},
@@ -270,17 +256,6 @@ std::vector<QColor> DefaultAccentColors(EmbeddedType type) {
 		return style::ColorFromHex(hex);
 	};
 	switch (type) {
-	case EmbeddedType::DayBlue:
-		return {
-			qColor("45bce7"),
-			qColor("52b440"),
-			qColor("d46c99"),
-			qColor("df8a49"),
-			qColor("9978c8"),
-			qColor("c55245"),
-			qColor("687b98"),
-			qColor("dea922"),
-		};
 	case EmbeddedType::Default:
 		return {
 			qColor("45bce7"),
@@ -343,18 +318,22 @@ Fn<void(style::palette&)> PrepareCurrentPaletteCallback() {
 
 QByteArray AccentColors::serialize() const {
 	auto result = QByteArray();
-	if (_data.empty()) {
+	if (_data.empty() && !_legacyDayColor) {
 		return result;
 	}
 
-	const auto count = _data.size();
+	const auto count = _data.size() + (_legacyDayColor ? 1 : 0);
 	auto size = sizeof(qint32) * (count + 1)
 		+ Serialize::colorSize() * count;
 	result.reserve(size);
 
 	auto stream = QDataStream(&result, QIODevice::WriteOnly);
 	stream.setVersion(QDataStream::Qt_5_1);
-	stream << qint32(_data.size());
+	stream << qint32(count);
+	if (_legacyDayColor) {
+		stream << qint32(0);
+		Serialize::writeColor(stream, *_legacyDayColor);
+	}
 	for (const auto &[type, color] : _data) {
 		stream << static_cast<qint32>(type);
 		Serialize::writeColor(stream, color);
@@ -367,6 +346,7 @@ QByteArray AccentColors::serialize() const {
 bool AccentColors::setFromSerialized(const QByteArray &serialized) {
 	if (serialized.isEmpty()) {
 		_data.clear();
+		_legacyDayColor = std::nullopt;
 		return true;
 	}
 	auto copy = QByteArray(serialized);
@@ -377,18 +357,23 @@ bool AccentColors::setFromSerialized(const QByteArray &serialized) {
 	stream >> count;
 	if (stream.status() != QDataStream::Ok) {
 		return false;
-	} else if (count <= 0 || count > kMaxAccentColors) {
+	}
+	if (count <= 0 || count > kMaxAccentColors) {
 		return false;
 	}
 	auto data = base::flat_map<EmbeddedType, QColor>();
+	auto legacyDayColor = std::optional<QColor>();
 	for (auto i = 0; i != count; ++i) {
 		auto type = qint32();
 		stream >> type;
 		const auto color = Serialize::readColor(stream);
+		if (type == 0) {
+			legacyDayColor = color;
+			continue;
+		}
 		const auto uncheckedType = static_cast<EmbeddedType>(type);
 		switch (uncheckedType) {
 		case EmbeddedType::Default:
-		case EmbeddedType::DayBlue:
 		case EmbeddedType::Night:
 			data.emplace(uncheckedType, color);
 			break;
@@ -400,7 +385,17 @@ bool AccentColors::setFromSerialized(const QByteArray &serialized) {
 		return false;
 	}
 	_data = std::move(data);
+	_legacyDayColor = legacyDayColor;
 	return true;
+}
+
+void AccentColors::migrateLegacyDayTheme() {
+	if (!_legacyDayColor) {
+		clear(EmbeddedType::Default);
+		return;
+	}
+	// 旧主题路径可能在取消预览后再次读取，保留旧色以便重复迁移。
+	set(EmbeddedType::Default, *_legacyDayColor);
 }
 
 void AccentColors::set(EmbeddedType type, const QColor &value) {

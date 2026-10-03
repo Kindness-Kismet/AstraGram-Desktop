@@ -15,13 +15,12 @@ namespace Window {
 namespace Theme {
 
 enum class EmbeddedType {
-	DayBlue,
-	Default,
-	Night,
+	Default = 1,
+	Night = 2,
 };
 
 struct EmbeddedScheme {
-	EmbeddedType type = EmbeddedType();
+	EmbeddedType type = EmbeddedType::Default;
 	QColor background;
 	QColor sent;
 	QColor received;
@@ -36,6 +35,7 @@ class AccentColors final {
 public:
 	[[nodiscard]] QByteArray serialize() const;
 	bool setFromSerialized(const QByteArray &serialized);
+	void migrateLegacyDayTheme();
 
 	void set(EmbeddedType type, const QColor &value);
 	void clear(EmbeddedType type);
@@ -43,6 +43,7 @@ public:
 
 private:
 	base::flat_map<EmbeddedType, QColor> _data;
+	std::optional<QColor> _legacyDayColor;
 
 };
 

@@ -275,15 +275,12 @@ void ensureChatThemesRefreshed() {
 	session->data().cloudThemes().refresh();
 }
 
-// from `std::vector<EmbeddedScheme> EmbeddedThemes()`
 QString embeddedThemeDisplayName(Window::Theme::EmbeddedType type) {
 	switch (type) {
 	case Window::Theme::EmbeddedType::Default:
-		return tr::lng_settings_theme_classic(tr::now);
-	case Window::Theme::EmbeddedType::DayBlue:
-		return tr::lng_settings_theme_day(tr::now);
+		return tr::extras_ThemeSimpleWhite(tr::now);
 	case Window::Theme::EmbeddedType::Night:
-		return tr::lng_settings_theme_tinted(tr::now);
+		return tr::extras_ThemeSimpleBlack(tr::now);
 	}
 	return tr::extras_MessageShotThemeDefault(tr::now);
 }

@@ -427,6 +427,11 @@ bool InitializeFromSaved(Saved &&saved) {
 	}
 
 	const auto editing = ReadEditingPalette();
+	if (!editing
+		&& saved.object.pathAbsolute.startsWith(u":/gui/"_q)) {
+		// 内置主题随应用更新，旧缓存不能保留已替换的配色资源。
+		saved.object.content = readThemeContent(saved.object.pathAbsolute);
+	}
 	GlobalBackground.createIfNull();
 	if (!editing && InitializeFromCache(saved.object.content, saved.cache)) {
 		return true;

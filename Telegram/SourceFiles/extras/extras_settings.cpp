@@ -548,8 +548,12 @@ void ExtrasSettings::validate() {
 	validateRange(_avatarCorners, 0, ExtrasUiSettings::kMaxAvatarCorners, defaults._avatarCorners);
 
 	const auto embeddedType = _messageShotSettings._embeddedThemeType.current();
-	auto embeddedTypeValid = (embeddedType == -1) || (embeddedType >= 0 && embeddedType <= 2); // 内嵌主题枚举范围:DayBlue 到 Night
-	if (!embeddedTypeValid) {
+	if (embeddedType == 0) {
+		// 旧白天主题改用简约白，截图已保存的强调色继续保留。
+		_messageShotSettings._embeddedThemeType = 1;
+		modified = true;
+	}
+	if (embeddedType < -1 || embeddedType > 2) {
 		_messageShotSettings._embeddedThemeType = defaults._messageShotSettings._embeddedThemeType.current();
 		_messageShotSettings._embeddedThemeAccentColor = defaults._messageShotSettings._embeddedThemeAccentColor.current();
 		modified = true;
