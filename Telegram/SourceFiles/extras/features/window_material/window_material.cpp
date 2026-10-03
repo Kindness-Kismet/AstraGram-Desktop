@@ -228,16 +228,10 @@ rpl::producer<bool> changes(not_null<QWidget*> widget) {
 }
 
 QColor rootTintColor(const QWidget *widget) {
-	if (!isActive(widget)) {
-		return widget->palette().color(QPalette::Window);
-	}
-	const auto mode = ::WindowMaterial(widget->window()->property(kModeProperty).toInt());
-	if (mode == ::WindowMaterial::Mica) {
-		return QColor(Qt::transparent);
-	}
-	return Window::Theme::IsNightMode()
-		? QColor(0x21, 0x21, 0x21, 0xB3)
-		: QColor(0xFF, 0xFF, 0xFF, 0xB3);
+	// 原生材质负责着色与失焦效果，透明标题栏不再叠加实色。
+	return isActive(widget)
+		? QColor(Qt::transparent)
+		: widget->palette().color(QPalette::Window);
 }
 
 QColor cardColor(const QWidget *widget, QColor opaque) {
