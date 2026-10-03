@@ -327,9 +327,7 @@ void HistoryWidget::showHistory(
 					const auto to = countInitialScrollTop();
 					const auto item = getItemFromHistoryOrMigrated(
 						_showAtMsgId);
-					animatedScrollToY(
-						std::clamp(to, 0, _scroll->scrollTopMax()),
-						item);
+					animatedScrollToY(to, item);
 				} else {
 					historyLoaded();
 				}

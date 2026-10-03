@@ -322,14 +322,17 @@ void HistoryWidget::animatedScrollToY(
 		anim::transition transition) {
 	Expects(_history != nullptr);
 
-	if (hasPendingResizedItems()) {
+	const auto toEnd = (scrollTo == ScrollMax);
+	stopScrollAnimation();
+	if (toEnd) {
+		handlePendingHistoryUpdate();
+	} else if (hasPendingResizedItems()) {
 		updateListSize();
 	}
-	stopScrollAnimation();
 	scrollTo = std::clamp(scrollTo, 0, _scroll->scrollTopMax());
 
-	// Attach our scroll animation to some item.
-	auto itemTop = _list->itemTop(attachTo);
+	// 置底跟随列表末尾，定位消息仍跟随对应消息的顶部。
+	auto itemTop = toEnd ? scrollTo : _list->itemTop(attachTo);
 	auto scrollTop = _scroll->scrollTop();
 	if (itemTop < 0 && !_history->isEmpty()) {
 		attachTo = _history->blocks.back()->messages.back()->data();
@@ -359,12 +362,12 @@ void HistoryWidget::animatedScrollToY(
 		// jump to the bottom of history in some updateHistoryGeometry() call.
 		synteticScrollToY(scrollTop);
 	}
-	const auto itemId = attachTo->fullId();
+	const auto itemId = toEnd ? FullMsgId() : attachTo->fullId();
 	const auto relativeFrom = scrollTop - itemTop;
 	const auto relativeTo = scrollTo - itemTop;
 	watchScrollAnimationInput();
 	_scrollToAnimation.start(
-		[=] { scrollToAnimationCallback(itemId, relativeTo); },
+		[=] { scrollToAnimationCallback(itemId, relativeTo, toEnd); },
 		relativeFrom,
 		relativeTo,
 		st::slideDuration,
@@ -402,8 +405,14 @@ void HistoryWidget::stopScrollAnimation() {
 
 void HistoryWidget::scrollToAnimationCallback(
 		FullMsgId attachToId,
-		int relativeTo) {
-	auto itemTop = _list->itemTop(session().data().message(attachToId));
+		int relativeTo,
+		bool toEnd) {
+	if (toEnd) {
+		handlePendingHistoryUpdate();
+	}
+	const auto itemTop = toEnd
+		? _scroll->scrollTopMax()
+		: _list->itemTop(session().data().message(attachToId));
 	if (itemTop < 0) {
 		stopScrollAnimation();
 	} else {

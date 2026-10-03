@@ -995,7 +995,7 @@ void HistoryWidget::messagesReceived(
 			const auto from = std::max(0, target - visibleScrollHeight());
 			if (from < target) {
 				synteticScrollToY(from);
-				animatedScrollToY(target, nullptr, anim::easeOutCubic);
+				animatedScrollToY(ScrollMax, nullptr, anim::easeOutCubic);
 			}
 		}
 	}

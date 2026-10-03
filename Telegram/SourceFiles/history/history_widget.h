@@ -771,7 +771,10 @@ private:
 	int countAutomaticScrollTop();
 	void preloadHistoryByScroll();
 	void checkReplyReturns();
-	void scrollToAnimationCallback(FullMsgId attachToId, int relativeTo);
+	void scrollToAnimationCallback(
+		FullMsgId attachToId,
+		int relativeTo,
+		bool toEnd);
 
 	[[nodiscard]] bool readyToForward() const;
 	[[nodiscard]] bool hasSilentToggle() const;
