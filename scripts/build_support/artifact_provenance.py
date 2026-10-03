@@ -396,13 +396,18 @@ def verify_artifacts(
             "ref": source_ref,
             "sha": source_sha,
             "run_id": source_run_id,
-            "run_attempt": source_run_attempt,
         }
         source = manifest["source"]
         for field, expected in expected_source.items():
             actual = str(source.get(field, "")).lower() if field == "sha" else source.get(field)
             if actual != expected:
                 raise ProvenanceError(f"{path.name} 的 source {field} 不匹配")
+        # 重跑失败任务时，已成功平台沿用旧 attempt 的产物；同一 run 的各 attempt 共用同一提交。
+        attempt = source.get("run_attempt")
+        if not is_positive_integer(attempt) or attempt > source_run_attempt:
+            raise ProvenanceError(
+                f"{path.name} 的 source run_attempt 必须在 1 到 {source_run_attempt} 之间，实际 {attempt!r}"
+            )
         if manifest["builder"] != build_runs[key]:
             raise ProvenanceError(f"{path.name} 的 builder run 不匹配")
         expected_names = _expected_filenames(platform, arch, version, appupdateversion)

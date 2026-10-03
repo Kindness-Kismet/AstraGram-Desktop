@@ -301,7 +301,7 @@ jobs:
           )
           PY
 
-  # 单个平台失败不阻塞其余平台发布；补发缺失平台需 Re-run all jobs，来源校验要求产物来自同一 attempt。
+  # 单个平台失败不阻塞其余平台发布；补发缺失平台用 Re-run failed jobs，已成功平台沿用原 attempt 的产物。
   publish:
     name: Verify and publish release
     needs: [validate, windows-x64, windows-arm64, linux, macos]
