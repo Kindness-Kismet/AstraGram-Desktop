@@ -61,7 +61,7 @@ bool isMessageHidden(not_null<HistoryItem*> item);
 
 void markReadAfterAction(not_null<History*> history);
 void readHistory(not_null<HistoryItem*> message);
-// 幽灵模式只拦截被动已读；用户主动标为已读时由此发给服务器，重启后不会回到未读。
+// 隐身模式只拦截被动已读；用户主动标为已读时由此发给服务器，重启后不会回到未读。
 void readThreadOnServer(not_null<Data::Thread*> thread);
 
 QString formatTTL(int time, bool isDoc);

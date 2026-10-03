@@ -137,11 +137,11 @@ def verify(profile):
             if key.endswith("Locked"):
                 change("ghost." + key, False)
         command("settings.set", "ghost.enabled", "true")
-        require(command("ghost.status")["enabled"], "幽灵模式未启用")
+        require(command("ghost.status")["enabled"], "隐身模式未启用")
         change("deletedMark", "验证")
         command("settings.set", "ghost.enabled", "false")
-        require(not command("ghost.status")["enabled"], "修改其他设置后幽灵模式订阅失效")
-        passed("幽灵模式切换和设置订阅保持有效")
+        require(not command("ghost.status")["enabled"], "修改其他设置后隐身模式订阅失效")
+        passed("隐身模式切换和设置订阅保持有效")
 
         change("autoSpaceSending", True)
         spaced = command("text.process", "send", "中文Test")

@@ -8,7 +8,7 @@ AstraGram 是 Telegram Desktop 的 fork，前身是 AyuGram Desktop。本文档�
 
 在 Telegram Desktop 之上叠加五类定制能力：
 
-- **幽灵模式**：控制已读回执、在线状态、输入状态的发送时机
+- **隐身模式**：控制已读回执、在线状态、输入状态的发送时机
 - **消息留档**：把已删除消息与编辑历史保存在本地
 - **正则过滤**：按正则表达式隐藏消息（含隐藏已拉黑用户的消息）
 - **文本处理**：中英文之间自动加空格、过滤异常组合字符
@@ -288,7 +288,7 @@ Debug 构建会在 `ExtrasInfra::init()` 里启动 `QTcpServer`，监听 `127.0.
 | `settings.keys` / `settings.dump` | 设置键名清单、全量 JSON 导出 |
 | `settings.get <key>` / `settings.set <key> <value>` | 读写单个设置 |
 | `page.list [filter]` / `page.open <id>` | 查询官方与定制设置索引，按编号打开设置页 |
-| `ghost.status` | 幽灵模式状态（需要已登录） |
+| `ghost.status` | 隐身模式状态（需要已登录） |
 | `storage.stats` | 留档数据库的路径与大小 |
 | `screenshot.take` | 截取活动窗口，保存到 `build/screenshots/` |
 | `control.list [filter] [--all]` | 列出控件树（objectName、类名、几何、可见性） |

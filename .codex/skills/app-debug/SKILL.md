@@ -1,6 +1,6 @@
 ---
 name: app-debug
-description: Use this skill when the user asks to debug, test, or verify AstraGram functionality, take a screenshot, read or change settings, inspect ghost mode, check deleted-message storage, control the running Debug app, restart or stop the app, or says phrases like "调试", "测试", "验证", "截图", "看一下设置", "改个设置", "幽灵模式", "已删除消息", "重启应用", "停掉应用", "观察界面" in this AstraGram project.
+description: Use this skill when the user asks to debug, test, or verify AstraGram functionality, take a screenshot, read or change settings, inspect ghost mode, check deleted-message storage, control the running Debug app, restart or stop the app, or says phrases like "调试", "测试", "验证", "截图", "看一下设置", "改个设置", "隐身模式", "已删除消息", "重启应用", "停掉应用", "观察界面" in this AstraGram project.
 ---
 
 # 应用调试
@@ -51,7 +51,7 @@ OpenGL 区域可能缺失。消息气泡等自绘内容主要通过图片观察�
 | 设置值、主题、设置页面 | [设置](guides/settings.md) |
 | 官方业务、账号、隐私、设置索引、快捷动作 | [官方业务](guides/official.md) |
 | 过滤规则、文本、翻译、表情包、转发、消息截图 | [定制业务](guides/features.md) |
-| 幽灵模式 | [幽灵模式](guides/ghost.md) |
+| 隐身模式 | [隐身模式](guides/ghost.md) |
 | 消息留档 | [存储](guides/storage.md) |
 | 控件树、点击、输入、按键、悬停、滚动 | [控件](guides/controls.md) |
 | 主窗口、菜单与通知截图 | [截图](guides/screenshot.md) |

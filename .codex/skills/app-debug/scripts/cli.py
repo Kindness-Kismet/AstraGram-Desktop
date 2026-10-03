@@ -160,7 +160,7 @@ COMMAND_CATEGORY_LABELS = {
     "theme": "主题与聊天背景",
     "page": "页面导航",
     "settings": "设置读写",
-    "ghost": "幽灵模式",
+    "ghost": "隐身模式",
     "storage": "已删除消息与编辑历史",
     "screenshot": "截图",
     "control": "控件树与合成交互",
@@ -267,7 +267,7 @@ def register_commands(sub) -> None:
     command = sub.add_parser("window.maximize", help="最大化或还原窗口")
     command.add_argument("maximized", choices=["true", "false"], help="true 最大化，false 还原")
 
-    sub.add_parser("ghost.status", help="读全局与当前账号的幽灵模式状态")
+    sub.add_parser("ghost.status", help="读全局与当前账号的隐身模式状态")
 
     sub.add_parser("storage.stats", help="读保存开关与数据库文件大小")
 

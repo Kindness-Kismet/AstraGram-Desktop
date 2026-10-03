@@ -92,7 +92,7 @@ bool IsUnreadThread(not_null<Data::Thread*> thread) {
 void MarkAsReadThread(
 		not_null<Data::Thread*> thread,
 		MarkAsReadMuted muted) {
-	// 幽灵模式下主动标为已读也发给服务器
+	// 隐身模式下主动标为已读也发给服务器
 	const auto readHistory = [&](not_null<History*> history) {
 		history->owner().histories().readInbox(history);
 		readThreadOnServer(history);

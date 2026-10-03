@@ -328,7 +328,7 @@ void readThreadOnServer(not_null<Data::Thread*> thread) {
 		}
 		return;
 	}
-	// 私信频道子列表的已读不受幽灵模式拦截，无需补发
+	// 私信频道子列表的已读不受隐身模式拦截，无需补发
 	const auto topic = thread->asTopic();
 	if (!topic) {
 		return;
