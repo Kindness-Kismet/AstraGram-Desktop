@@ -9,9 +9,10 @@
 - Added a local theme list, so you can now keep imported themes as previews after the built-in themes and delete them when they are no longer needed
 - Changed the built-in themes; only Simple White and Simple Black remain, and a previously selected Day theme switches to Simple White
 - Changed how the Acrylic and Blur window backgrounds look; they now show the system effect directly without an extra color layer over the title bar
-- Improved accent colors, which now apply consistently to scrollbars, the selected chat, service messages and the window frame, while the system accent color option uses the Windows accent color and follows its changes without resetting the chat wallpaper
+- Improved accent colors, which now apply consistently to scrollbars, the selected chat, service messages and the window frame, while the system accent color option turns the Windows accent color into a softer shade that stays readable in both themes and follows its changes without resetting the chat wallpaper
 - Removed the window title bar settings for showing the chat name, active account and total unread count and for using the system window frame; customizing the window title or frame is no longer available
 - Changed how automatic media download works; it is now off by default in private chats, groups and channels, GIFs follow the GIF autoplay setting, and manually changed size limits are kept
+- Changed how accent colors apply to Simple Black; its background now stays a neutral #212121, and the title bar and input fields no longer turn darker with darker accents
 
 ---
 
@@ -26,6 +27,7 @@
 - 新增了本地主题列表，现在可以把导入的主题保存为预览，排在内置主题之后，不再需要时也能删除
 - 调整了内置主题，现在只保留简约白和简约黑，之前选择的日间主题会自动改为简约白
 - 调整了亚克力和磨砂玻璃窗口背景的显示效果，现在直接呈现系统效果，标题栏不再额外叠加一层底色
-- 对强调色进行了改善，这使得滚动条、选中的聊天、服务消息和窗口边框的配色保持一致，系统强调色选项也会使用 Windows 强调色，并在其变化时同步更新，不会重置聊天壁纸
+- 对强调色进行了改善，这使得滚动条、选中的聊天、服务消息和窗口边框的配色保持一致，系统强调色选项会把 Windows 强调色调整为更柔和、在深浅主题下都清晰易读的颜色，并在其变化时同步更新，不会重置聊天壁纸
 - 移除了窗口标题栏中显示聊天名称、当前账号、未读总数以及使用系统窗口边框的设置，自定义窗口标题或边框不再可用
 - 调整了媒体自动下载的行为，现在私聊、群组和频道默认关闭，动图遵循自动播放动图的设置，手动修改过的大小限制保持不变
+- 调整了强调色在简约黑主题下的效果，现在背景固定为中性的 #212121，选择较深的强调色时标题栏和输入框也不会随之变暗
