@@ -713,6 +713,7 @@ public:
 		Custom,
 	};
 	void setMode(Mode mode);
+	void setRowBackgroundRounding(QMargins margins, int radius);
 
 	[[nodiscard]] rpl::producer<int> selectedIndexValue() const;
 	[[nodiscard]] int selectedIndex() const;
@@ -945,6 +946,8 @@ private:
 
 	Mode _mode = Mode::Default;
 	int _rowHeight = 0;
+	QMargins _rowBackgroundMargins;
+	int _rowBackgroundRadius = 0;
 	int _visibleTop = 0;
 	int _visibleBottom = 0;
 

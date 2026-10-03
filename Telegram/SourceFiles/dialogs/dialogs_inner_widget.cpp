@@ -1951,16 +1951,23 @@ void InnerWidget::paintPeerSearchResult(
 		Painter &p,
 		not_null<const PeerSearchResult*> result,
 		const Ui::PaintContext &context) {
-	QRect fullRect(0, 0, context.width, st::dialogsRowHeight);
-	p.fillRect(
-		fullRect,
-		(context.active
-			? st::dialogsBgActive
-			: context.selected
-			? st::dialogsBgOver
-			: currentBg()));
+	const auto fullRect = QRect(0, 0, context.width, st::dialogsRowHeight);
+	const auto highlight = fullRect.marginsRemoved(context.st->activeMargin);
+	const auto radius = context.st->activeRadius;
+	p.fillRect(fullRect, currentBg());
+	if (context.active || context.selected) {
+		auto hq = PainterHighQualityEnabler(p);
+		p.setPen(Qt::NoPen);
+		p.setBrush(context.active ? st::dialogsBgActive : st::dialogsBgOver);
+		p.drawRoundedRect(highlight, radius, radius);
+	}
 	if (!context.active) {
+		p.save();
+		auto path = QPainterPath();
+		path.addRoundedRect(highlight, radius, radius);
+		p.setClipPath(path, Qt::IntersectClip);
 		result->row.paintRipple(p, 0, 0, context.width);
+		p.restore();
 	}
 
 	auto peer = result->peer;

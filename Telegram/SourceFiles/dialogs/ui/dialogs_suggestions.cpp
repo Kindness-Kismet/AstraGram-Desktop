@@ -87,6 +87,19 @@ constexpr auto kCollapsedAppsCount = 5;
 constexpr auto kProbablyMaxApps = 100;
 constexpr auto kSearchQueryDelay = crl::time(900);
 
+void PaintSuggestionDivider(not_null<QWidget*> widget) {
+	auto p = Painter(widget.get());
+	auto hq = PainterHighQualityEnabler(p);
+	p.setPen(Qt::NoPen);
+	p.setBrush(ExtrasFeatures::WindowMaterial::surfaceColor(
+		widget.get(), st::searchedBarBg->c));
+	const auto &st = st::defaultDialogRow;
+	p.drawRoundedRect(
+		widget->rect().marginsRemoved(st.activeMargin),
+		st.activeRadius,
+		st.activeRadius);
+}
+
 class RecentRow final : public PeerListRow {
 public:
 	explicit RecentRow(not_null<PeerData*> peer);
@@ -748,9 +761,8 @@ void Suggestions::ObjectListController::setupPlainDivider(
 		label->resizeToWidth(size.width() - x * 2);
 		label->moveToLeft(x, y, size.width());
 	}, raw->lifetime());
-	raw->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(raw).fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(
-			raw, st::searchedBarBg->c));
+	raw->paintRequest() | rpl::on_next([=] {
+		PaintSuggestionDivider(raw);
 	}, raw->lifetime());
 
 	delegate()->peerListSetAboveWidget(std::move(result));
@@ -816,9 +828,8 @@ void Suggestions::ObjectListController::setupExpandDivider(
 		label->moveToLeft(x, y, size.width());
 	}, raw->lifetime());
 
-	raw->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(raw).fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(
-			raw, st::searchedBarBg->c));
+	raw->paintRequest() | rpl::on_next([=] {
+		PaintSuggestionDivider(raw);
 	}, raw->lifetime());
 
 	delegate()->peerListSetAboveWidget(std::move(result));
@@ -938,9 +949,8 @@ void RecentsController::setupDivider() {
 		label->resizeToWidth(size.width() - x - width);
 		label->moveToLeft(x, y, size.width());
 	}, raw->lifetime());
-	raw->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(raw).fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(
-			raw, st::searchedBarBg->c));
+	raw->paintRequest() | rpl::on_next([=] {
+		PaintSuggestionDivider(raw);
 	}, raw->lifetime());
 
 	delegate()->peerListSetAboveWidget(std::move(result));
@@ -2721,6 +2731,9 @@ auto Suggestions::setupObjectList(
 
 	auto content = object_ptr<PeerListContent>(parent, controller);
 	const auto list = content.data();
+	list->setRowBackgroundRounding(
+		st::defaultDialogRow.activeMargin,
+		st::defaultDialogRow.activeRadius);
 
 	auto result = std::make_unique<ObjectList>(ObjectList{
 		.wrap = parent->add(object_ptr<Ui::SlideWrap<PeerListContent>>(

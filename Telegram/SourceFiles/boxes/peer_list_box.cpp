@@ -43,6 +43,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_widgets.h"
 
 #include <xxhash.h> // XXH64.
+#include <QtGui/QPainterPath>
 #include <QtWidgets/QApplication>
 
 // AyuGram includes
@@ -1233,6 +1234,13 @@ PeerListContent::PeerListContent(
 	_repaintByStatus.setCallback([this] { update(); });
 }
 
+void PeerListContent::setRowBackgroundRounding(QMargins margins, int radius) {
+	_rowBackgroundMargins = margins;
+	_rowBackgroundRadius = radius;
+	_rowsScrollCache.clear();
+	update();
+}
+
 void PeerListContent::setMode(Mode mode) {
 	if (mode == Mode::Default && _mode == Mode::Default) {
 		return;
@@ -1341,6 +1349,7 @@ void PeerListContent::addRowEntry(not_null<PeerListRow*> row) {
 }
 
 void PeerListContent::invalidatePixmapsCache() {
+	_rowsScrollCache.clear();
 	auto invalidate = [](auto &&row) { row->invalidatePixmapsCache(); };
 	ranges::for_each(_rows, invalidate);
 	ranges::for_each(_searchRows, invalidate);
@@ -2134,10 +2143,32 @@ void PeerListContent::paintRowContent(
 		}
 	});
 
-	p.fillRect(0, 0, outerWidth, _rowHeight, selected
+	const auto background = selected
 		? bg->c
-		: ExtrasFeatures::WindowMaterial::surfaceColor(this, bg->c));
-	row->paintRipple(p, st, 0, 0, outerWidth);
+		: ExtrasFeatures::WindowMaterial::surfaceColor(this, bg->c);
+	const auto rowRect = QRect(0, 0, outerWidth, _rowHeight);
+	if (_rowBackgroundRadius > 0) {
+		const auto base = _st.item.button.textBg->c;
+		p.fillRect(rowRect, ExtrasFeatures::WindowMaterial::surfaceColor(
+			this, base));
+		const auto highlight = rowRect.marginsRemoved(_rowBackgroundMargins);
+		const auto radius = _rowBackgroundRadius;
+		auto hq = PainterHighQualityEnabler(p);
+		p.save();
+		if (selected || bg->c != base) {
+			p.setPen(Qt::NoPen);
+			p.setBrush(background);
+			p.drawRoundedRect(highlight, radius, radius);
+		}
+		auto path = QPainterPath();
+		path.addRoundedRect(highlight, radius, radius);
+		p.setClipPath(path, Qt::IntersectClip);
+		row->paintRipple(p, st, 0, 0, outerWidth);
+		p.restore();
+	} else {
+		p.fillRect(rowRect, background);
+		row->paintRipple(p, st, 0, 0, outerWidth);
+	}
 	row->paintUserpic(
 		p,
 		st,
@@ -2794,6 +2825,7 @@ base::flat_set<QString> PeerListContent::visibleSectionLetters() const {
 }
 
 void PeerListContent::updateRow(not_null<PeerListRow*> row, RowIndex hint) {
+	_rowsScrollCache.invalidate(row->id());
 	updateRow(findRowIndex(row, hint));
 }
 
