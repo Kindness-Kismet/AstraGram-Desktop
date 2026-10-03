@@ -55,6 +55,7 @@ constexpr auto kShowPerRow = 4;
 	auto result = Data::CloudTheme();
 	result.id = result.documentId = kFakeCloudThemeId;
 	result.slug = object.pathAbsolute;
+	result.title = QFileInfo(object.pathAbsolute).completeBaseName();
 	return result;
 }
 
@@ -225,6 +226,14 @@ constexpr auto kShowPerRow = 4;
 
 } // namespace
 
+std::optional<CloudListColors> ColorsFromThemeFile(const QString &path) {
+	auto result = ColorsFromTheme(path, QByteArray());
+	if (result && result->background.isNull()) {
+		result->background = ColorsFromCurrentTheme().background;
+	}
+	return result;
+}
+
 CloudListColors ColorsFromScheme(const EmbeddedScheme &scheme) {
 	auto result = CloudListColors();
 	result.sent = scheme.sent;
@@ -393,9 +402,9 @@ void CloudListCheck::paintWithColors(
 	p.setBrush(_colors->sent);
 	p.drawRoundedRect(style::rtlrect(sent, outerWidth), radius, radius);
 
+	paintOutline(p, outerWidth);
 	if (_emoji) {
 		paintEmoji(p, outerWidth);
-		paintOutline(p, outerWidth);
 		return;
 	}
 	const auto radio = _radio.getSize();
@@ -421,18 +430,18 @@ void CloudListCheck::paintEmoji(QPainter &p, int outerWidth) {
 }
 
 void CloudListCheck::paintOutline(QPainter &p, int outerWidth) {
-	const auto toggled = currentAnimationValue();
-	if (toggled <= 0.) {
-		return;
-	}
-	const auto width = float64(st::settingsThemeOutlineWidth);
+	const auto toggled = _emoji ? currentAnimationValue() : 0.;
+	const auto width = st::lineWidth
+		+ (st::settingsThemeOutlineWidth - st::lineWidth) * toggled;
 	const auto inset = width / 2.;
 	const auto radius = st::roundRadiusLarge - inset;
-	auto pen = QPen(_colors->radiobuttonActive);
+	// 预览背景与设置页同色时，仍保留清晰的边界。
+	auto border = st::windowSubTextFg->c;
+	border.setAlphaF(0.5);
+	auto pen = QPen(anim::color(border, _colors->radiobuttonActive, toggled));
 	pen.setWidthF(width);
 	p.setPen(pen);
 	p.setBrush(Qt::NoBrush);
-	p.setOpacity(toggled);
 	p.drawRoundedRect(
 		QRectF(0, 0, outerWidth, getSize().height()).adjusted(
 			inset,
@@ -441,7 +450,6 @@ void CloudListCheck::paintOutline(QPainter &p, int outerWidth) {
 			-inset),
 		radius,
 		radius);
-	p.setOpacity(1.);
 }
 
 QImage CloudListCheck::prepareRippleMask() const {
@@ -541,7 +549,8 @@ std::vector<Data::CloudTheme> CloudList::collectAll() const {
 	const auto &object = Background()->themeObject();
 	const auto isDefault = IsEmbeddedTheme(object.pathAbsolute);
 	auto result = _window->session().data().cloudThemes().list();
-	if (!isDefault) {
+	if (!isDefault && (object.cloud.id
+		|| ExtrasFeatures::MessageShot::isChoosingTheme())) {
 		const auto i = ranges::find(
 			result,
 			object.cloud.id,
@@ -672,23 +681,26 @@ void CloudList::insert(int index, const Data::CloudTheme &theme) {
 	button->setAcceptBoth(true);
 	button->addClickHandler([=](Qt::MouseButton button) {
 		const auto i = ranges::find(_elements, id, &Element::id);
-		if (i == end(_elements)
-			|| id == kFakeCloudThemeId
-			|| i->waiting) {
+		if (i == end(_elements) || i->waiting) {
 			return;
 		}
-		const auto &cloud = i->theme;
-
+		const auto cloud = i->theme;
 		if (ExtrasFeatures::MessageShot::isChoosingTheme()) {
-			ExtrasFeatures::MessageShot::setTheme(cloud);
-			ExtrasFeatures::MessageShot::setCustomSelected(cloud);
-			_group->setValue(groupValueForId(cloud.id));
+			if (id != kFakeCloudThemeId) {
+				ExtrasFeatures::MessageShot::setTheme(cloud);
+				ExtrasFeatures::MessageShot::setCustomSelected(cloud);
+				_group->setValue(groupValueForId(cloud.id));
+			}
 			return;
 		}
-
 		if (button == Qt::RightButton) {
 			showMenu(*i);
-		} else if (cloud.documentId) {
+			return;
+		}
+		if (id == kFakeCloudThemeId) {
+			return;
+		}
+		if (cloud.documentId) {
 			++*_applyGeneration;
 			_window->session().data().cloudThemes().applyFromDocument(cloud);
 		} else if (!cloud.emoticon.isEmpty() && !cloud.settings.empty()) {
@@ -825,7 +837,8 @@ void CloudList::showMenu(Element &element) {
 		element.button.get(),
 		st::popupMenuWithIcons);
 	const auto cloud = element.theme;
-	if (const auto slug = element.theme.slug; !slug.isEmpty()) {
+	const auto local = cloud.id == kFakeCloudThemeId;
+	if (const auto slug = cloud.slug; !slug.isEmpty() && !local) {
 		_contextMenu->addAction(tr::lng_theme_share(tr::now), [=] {
 			QGuiApplication::clipboard()->setText(
 				_window->session().createInternalLinkFull("addtheme/" + slug));
@@ -858,7 +871,7 @@ void CloudList::showMenu(Element &element) {
 					ResetToSomeDefault();
 					KeepApplied();
 				}
-				if (id != kFakeCloudThemeId) {
+				if (!local) {
 					_window->session().data().cloudThemes().remove(id);
 				}
 			};
@@ -977,10 +990,7 @@ int CloudList::resizeGetHeight(int newWidth) {
 	const auto single = std::min(
 		st::settingsThemePreviewSize.width(),
 		(newWidth - minSkip * (kShowPerRow - 1)) / kShowPerRow);
-	const auto skip = (newWidth - kShowPerRow * single)
-		/ float64(kShowPerRow - 1);
-
-	auto x = 0.;
+	auto x = 0;
 	auto y = 0;
 
 	auto index = 0;
@@ -988,11 +998,11 @@ int CloudList::resizeGetHeight(int newWidth) {
 	for (const auto &element : _elements) {
 		const auto button = element.button.get();
 		button->resizeToWidth(single);
-		button->moveToLeft(int(base::SafeRound(x)), y);
+		button->moveToLeft(x, y);
 		accumulate_max(rowHeight, button->height());
-		x += single + skip;
+		x += single + minSkip;
 		if (++index == kShowPerRow) {
-			x = 0.;
+			x = 0;
 			index = 0;
 			y += rowHeight + st::themesSmallSkip;
 			rowHeight = 0;

@@ -42,6 +42,8 @@ struct CloudListColors {
 [[nodiscard]] CloudListColors ColorsFromScheme(
 	const EmbeddedScheme &scheme,
 	const style::colorizer &colorizer);
+[[nodiscard]] std::optional<CloudListColors> ColorsFromThemeFile(
+	const QString &path);
 
 class CloudListCheck final : public Ui::AbstractCheckView {
 public:

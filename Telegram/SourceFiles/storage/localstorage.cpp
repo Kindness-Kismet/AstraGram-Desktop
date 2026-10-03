@@ -40,6 +40,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/data/local_themes.h"
 
 
 //extern "C" {
@@ -1086,10 +1087,18 @@ std::optional<QString> InitialLoadThemeUsingKey(FileKey key) {
 		DEBUG_LOG(("Theme: Could not initialized for key: %1").arg(key));
 		return std::nullopt;
 	}
+	if (_themeKeyLegacy) {
+		Window::Theme::SetNightModeValue(result == Window::Theme::NightThemePath());
+		(Window::Theme::IsNightMode()
+			? _themeKeyNight
+			: _themeKeyDay) = base::take(_themeKeyLegacy);
+	}
 	return result;
 }
 
-void writeTheme(const Window::Theme::Saved &saved) {
+namespace {
+
+void writeThemeForMode(const Window::Theme::Saved &saved, bool nightMode) {
 	using namespace Window::Theme;
 
 	if (_themeKeyLegacy) {
@@ -1097,16 +1106,16 @@ void writeTheme(const Window::Theme::Saved &saved) {
 			).arg(_themeKeyLegacy));
 		return;
 	}
-	auto &themeKey = IsNightMode()
+	auto &themeKey = nightMode
 		? _themeKeyNight
 		: _themeKeyDay;
 	DEBUG_LOG(("Theme: writing (night: %1), key_day: %2, key_night: %3"
-		).arg(Logs::b(IsNightMode())
+		).arg(Logs::b(nightMode)
 		).arg(_themeKeyDay
 		).arg(_themeKeyNight));
 	if (saved.object.content.isEmpty()) {
 		if (themeKey) {
-			if (IsNightMode()) {
+			if (nightMode && IsNightMode()) {
 				DEBUG_LOG(("Theme: cleared for night mode."));
 				SetNightModeValue(false);
 			}
@@ -1189,8 +1198,54 @@ void writeTheme(const Window::Theme::Saved &saved) {
 	file.writeEncrypted(data, SettingsKey);
 }
 
+void migrateLocalThemes() {
+	using namespace Window::Theme;
+
+	// 同时迁移深浅模式的旧引用，避免删掉副本后从另一模式恢复它。
+	for (const auto nightMode : { false, true }) {
+		const auto key = nightMode ? _themeKeyNight : _themeKeyDay;
+		if (!key) {
+			continue;
+		}
+		auto saved = readThemeUsingKey(key);
+		const auto path = saved.object.pathAbsolute;
+		if (!Extras::LocalThemes::save(saved.object)) {
+			LOG(("LocalThemes: could not migrate saved theme: %1").arg(path));
+			continue;
+		}
+		if (saved.object.pathAbsolute == path) {
+			continue;
+		}
+		writeThemeForMode(saved, nightMode);
+		if (nightMode == IsNightMode()) {
+			Background()->setThemeObject(saved.object);
+		}
+	}
+}
+
+} // namespace
+
+void writeTheme(const Window::Theme::Saved &saved) {
+	writeThemeForMode(saved, Window::Theme::IsNightMode());
+}
+
 void clearTheme() {
 	writeTheme(Window::Theme::Saved());
+}
+
+void clearThemeByPath(const QString &path) {
+	auto changed = false;
+	for (const auto key : { &_themeKeyDay, &_themeKeyNight, &_themeKeyLegacy }) {
+		if (!*key || readThemeUsingKey(*key).object.pathAbsolute != path) {
+			continue;
+		}
+		ClearKey(*key, _basePath);
+		*key = 0;
+		changed = true;
+	}
+	if (changed) {
+		writeSettings();
+	}
 }
 
 void InitialLoadTheme() {
@@ -1210,27 +1265,13 @@ void InitialLoadTheme() {
 			DEBUG_LOG(("Theme: zero key for night mode."));
 			Window::Theme::SetNightModeValue(false);
 		}
-		return;
 	} else if (const auto path = InitialLoadThemeUsingKey(key)) {
 		DEBUG_LOG(("Theme: loaded with result: %1").arg(*path));
-		if (_themeKeyLegacy) {
-			Window::Theme::SetNightModeValue(*path
-				== Window::Theme::NightThemePath());
-			(Window::Theme::IsNightMode()
-				? _themeKeyNight
-				: _themeKeyDay) = base::take(_themeKeyLegacy);
-			DEBUG_LOG(("Theme: now (night: %1), "
-				"key_legacy: %2, key_day: %3, key_night: %4 (path: %5)"
-				).arg(Logs::b(Window::Theme::IsNightMode())
-				).arg(_themeKeyLegacy
-				).arg(_themeKeyDay
-				).arg(_themeKeyNight
-				).arg(*path));
-		}
 	} else {
 		DEBUG_LOG(("Theme: could not load, clearing.."));
 		clearTheme();
 	}
+	migrateLocalThemes();
 }
 
 bool ApplyDefaultNightMode() {

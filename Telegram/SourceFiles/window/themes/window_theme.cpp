@@ -40,6 +40,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/application.h"
 #include "webview/webview_common.h"
 #include "extras/extras_settings.h"
+#include "extras/data/local_themes.h"
 
 #include <QtCore/QBuffer>
 #include <QtCore/QJsonDocument>
@@ -456,6 +457,17 @@ bool InitializeFromSaved(Saved &&saved) {
 		Local::writeTheme(saved);
 	}
 	return true;
+}
+
+[[nodiscard]] bool SaveAppliedLocalTheme(Object &object) {
+	if (Extras::LocalThemes::save(object)) {
+		return true;
+	}
+	Revert();
+	if (const auto window = Core::App().activePrimaryWindow()) {
+		window->show(Ui::MakeInformBox(tr::extras_LocalThemeSaveError()));
+	}
+	return false;
 }
 
 [[nodiscard]] QImage PostprocessBackgroundImage(
@@ -1267,6 +1279,11 @@ void ChatBackground::reapplyWithNightMode(
 	// Theme editor could have already reverted the testing of this toggle.
 	if (AreTestingTheme()) {
 		GlobalApplying.overrideKeep = [=] {
+			auto saved = GlobalApplying.data;
+			const auto originalPath = saved.object.pathAbsolute;
+			if (!SaveAppliedLocalTheme(saved.object)) {
+				return;
+			}
 			if (nightModeChanged) {
 				_nightMode = newNightMode;
 
@@ -1274,9 +1291,7 @@ void ChatBackground::reapplyWithNightMode(
 				(oldNightMode ? _tileNightValue : _tileDayValue) = oldTileValue;
 			}
 
-			const auto saved = std::move(GlobalApplying.data);
-			if (!alreadyOnDisk) {
-				// First-time switch to default night mode should write it.
+			if (!alreadyOnDisk || saved.object.pathAbsolute != originalPath) {
 				Local::writeTheme(saved);
 			}
 			ClearApplying();
@@ -1380,7 +1395,10 @@ void KeepApplied() {
 		onstack();
 		return;
 	}
-	const auto saved = std::move(GlobalApplying.data);
+	auto saved = GlobalApplying.data;
+	if (!SaveAppliedLocalTheme(saved.object)) {
+		return;
+	}
 	Local::writeTheme(saved);
 	ClearApplying();
 	Background()->keepApplied(saved.object, true);

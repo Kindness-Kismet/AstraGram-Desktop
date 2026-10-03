@@ -113,6 +113,8 @@ PRIVATE
 )
 
 set(extras_files
+        extras/data/local_themes.cpp
+        extras/data/local_themes.h
         extras/extras_worker.cpp
         extras/extras_worker.h
         extras/extras_url_handlers.cpp
@@ -158,6 +160,8 @@ set(extras_files
         extras/ui/settings/extras_builder.h
         extras/ui/settings/settings_appearance.cpp
         extras/ui/settings/settings_appearance.h
+        extras/ui/settings/settings_theme_grid.cpp
+        extras/ui/settings/settings_theme_grid.h
         extras/ui/settings/settings_extras_utils.cpp
         extras/ui/settings/settings_extras_utils.h
         extras/ui/settings/settings_chats.cpp

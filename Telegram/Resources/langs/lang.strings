@@ -8783,6 +8783,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DocsText" = "Documentation";
 "extras_CategoryGeneral" = "General";
 "extras_CategoryAppearance" = "Appearance";
+"extras_LocalThemeSaveError" = "Could not save the theme. Check that the data folder is writable and has enough free space.";
+"extras_LocalThemeRemoveError" = "Could not remove the saved theme. Please try again.";
+"extras_LocalThemeLoadError" = "Could not open the saved theme. Please import it again.";
 "extras_CategoryChats" = "Chats";
 "extras_CategoryOther" = "Other";
 "extras_CategoryGhostMode" = "Ghost Mode";

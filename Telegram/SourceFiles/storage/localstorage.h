@@ -83,6 +83,7 @@ void cancelTask(TaskId id);
 
 void writeTheme(const Window::Theme::Saved &saved);
 void clearTheme();
+void clearThemeByPath(const QString &path);
 [[nodiscard]] Window::Theme::Saved readThemeAfterSwitch();
 
 [[nodiscard]] Window::Theme::Object ReadThemeContent();

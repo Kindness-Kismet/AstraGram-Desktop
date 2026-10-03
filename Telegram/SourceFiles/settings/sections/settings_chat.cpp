@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "settings/settings_common_session.h"
 #include "extras/ui/settings/settings_window_material.h"
+#include "extras/ui/settings/settings_theme_grid.h"
 
 #include "base/timer_rpl.h"
 #include "settings/settings_builder.h"
@@ -2613,39 +2614,16 @@ void SetupDefaultThemes(
 		group->setValue(type);
 	}, container->lifetime());
 
+
 	for (const auto button : buttons) {
 		button->setCheckAlignment(style::al_top);
 		button->resizeToWidth(button->width());
 	}
-	block->resize(block->width(), buttons[0]->height());
-	block->widthValue(
-	) | rpl::on_next([buttons = std::move(buttons)](int width) {
-		Expects(!buttons.empty());
-
-		const auto padding = st::settingsButtonNoIcon.padding;
-		width -= padding.left() + padding.right();
-		const auto desired = st::settingsThemePreviewSize.width();
-		const auto count = int(buttons.size());
-		const auto skips = count - 1;
-		const auto minSkip = st::settingsThemeMinSkip;
-		const auto single = [&] {
-			if (width >= skips * minSkip + count * desired) {
-				return desired;
-			}
-			return (width - skips * minSkip) / count;
-		}();
-		if (single <= 0) {
-			return;
-		}
-		const auto fullSkips = width - count * single;
-		const auto skip = fullSkips / float64(skips);
-		auto left = padding.left() + 0.;
-		for (const auto button : buttons) {
-			button->resizeToWidth(single);
-			button->moveToLeft(int(base::SafeRound(left)), 0);
-			left += button->width() + skip;
-		}
-	}, block->lifetime());
+	Extras::ThemeGrid::setupThemeGrid(
+		window,
+		block,
+		{ begin(buttons), end(buttons) },
+		!ExtrasFeatures::MessageShot::isChoosingTheme());
 
 	if (ExtrasFeatures::MessageShot::isChoosingTheme()) {
 		palette->selected() | rpl::on_next(
