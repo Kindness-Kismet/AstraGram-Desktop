@@ -6,7 +6,6 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/main_window.h"
-#include "extras/features/performance/window_performance.h"
 #include "extras/features/window_material/window_material.h"
 
 #include "api/api_updates.h"
@@ -591,7 +590,6 @@ QRect MainWindow::desktopRect() const {
 
 void MainWindow::init() {
 	initHook();
-	_performance = std::make_unique<ExtrasPerformance::Monitor>(this);
 
 	updatePalette();
 
@@ -725,7 +723,6 @@ void MainWindow::refreshTitleWidget() {
 		setNativeFrame(false);
 		_titleShadow.destroy();
 	}
-	_performance->refreshTitleLabel();
 }
 
 void MainWindow::setupCanaryTitleLabel() {

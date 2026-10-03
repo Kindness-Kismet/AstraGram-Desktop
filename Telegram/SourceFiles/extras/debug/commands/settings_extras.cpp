@@ -93,7 +93,6 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"hidePremiumStatuses"_q, [&] { return settings.hidePremiumStatuses(); }, settings, &ExtrasSettings::setHidePremiumStatuses);
 	addSetting(entries, u"hideProxySettingsIcon"_q, [&] { return settings.hideProxySettingsIcon(); }, settings, &ExtrasSettings::setHideProxySettingsIcon);
 	addSetting(entries, u"showDownloadsButtonInHeader"_q, [&] { return settings.showDownloadsButtonInHeader(); }, settings, &ExtrasSettings::setShowDownloadsButtonInHeader);
-	addSetting(entries, u"showFps"_q, [&] { return settings.showFps(); }, settings, &ExtrasSettings::setShowFps);
 	addSetting(entries, u"showOnlyAddedEmojisAndStickers"_q, [&] { return settings.showOnlyAddedEmojisAndStickers(); }, settings, &ExtrasSettings::setShowOnlyAddedEmojisAndStickers);
 	addSetting(entries, u"collapseSimilarChannels"_q, [&] { return settings.collapseSimilarChannels(); }, settings, &ExtrasSettings::setCollapseSimilarChannels);
 	addSetting(entries, u"hideSimilarChannels"_q, [&] { return settings.hideSimilarChannels(); }, settings, &ExtrasSettings::setHideSimilarChannels);

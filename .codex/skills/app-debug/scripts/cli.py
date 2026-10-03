@@ -40,9 +40,6 @@ PROFILE_FILE = ROOT / "build" / "app-debug-profile.json"
 PROFILE_OVERRIDE = None
 
 GENERIC_COMMANDS = {
-    "perf.start": "开始采集当前窗口的绘制、长帧和事件耗时，清空上次记录",
-    "perf.status": "查询最近的帧间隔、绘制耗时、侧栏展开耗时和显示器刷新率",
-    "perf.stop": "停止性能采集并返回结果",
     "session.thread-settings": "查询或修改话题与子会话配置：<会话编号> <话题编号> <子会话编号> [键 值]",
     "control.mouse": "在应用控件内部点击、打开菜单或分开按下松开：<目标> <横坐标> <纵坐标> [left|right|double|press|release]",
     "crash.log": "读取当前调试配置的崩溃日志",

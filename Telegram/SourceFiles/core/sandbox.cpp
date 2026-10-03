@@ -6,7 +6,6 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "core/sandbox.h"
-#include "extras/features/performance/window_performance.h"
 
 #include "base/platform/base_platform_info.h"
 #include "platform/platform_specific.h"
@@ -749,7 +748,6 @@ bool Sandbox::notify(QObject *receiver, QEvent *e) {
 	}
 
 	const auto wrap = createEventNestingLevel();
-	const auto performance = ExtrasPerformance::EventSample(receiver, e);
 	if (e->type() == QEvent::UpdateRequest) {
 		const auto weak = QPointer<QObject>(receiver);
 		_widgetUpdateRequests.fire({});

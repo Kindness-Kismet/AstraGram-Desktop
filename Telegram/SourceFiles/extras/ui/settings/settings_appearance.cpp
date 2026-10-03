@@ -203,12 +203,6 @@ void BuildAppearance(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 		.getter = &ExtrasSettings::showDownloadsButtonInHeader,
 		.setter = &ExtrasSettings::setShowDownloadsButtonInHeader,
 	});
-	extras.addSettingToggle({
-		.id = u"extras/showFps"_q,
-		.title = tr::extras_ShowFps(),
-		.getter = &ExtrasSettings::showFps,
-		.setter = &ExtrasSettings::setShowFps,
-	});
 
 	const auto controller = builder.controller();
 	builder.addButton({
