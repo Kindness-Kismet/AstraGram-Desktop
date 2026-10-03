@@ -37,14 +37,19 @@ auto enums_view(int till) {
 }
 
 const Full &Defaults() {
-	static auto Result = [] {
+	static const auto result = Full::FullDisabled();
+	return result;
+}
+
+const Full &EnabledDefaults() {
+	static const auto result = [] {
 		auto result = Full::FullDisabled();
 		for (const auto source : enums_view<Source>(kSourcesCount)) {
-			SetDefaultsForSource(result, source);
+			SetEnabledForSource(result, source);
 		}
 		return result;
 	}();
-	return Result;
+	return result;
 }
 
 Source SourceFromPeer(not_null<PeerData*> peer) {
@@ -70,7 +75,8 @@ Type AutoPlayTypeFromDocument(not_null<DocumentData*> document) {
 		Source source,
 		Type type) {
 	const auto user = data.bytesLimit(source, type);
-	return (user > 0) ? user : Defaults().bytesLimit(source, type);
+	// 显式允许的会话仍采用启用时的大小限制。
+	return (user > 0) ? user : EnabledDefaults().bytesLimit(source, type);
 }
 
 [[nodiscard]] bool ForceAllowed(
@@ -87,7 +93,7 @@ Type AutoPlayTypeFromDocument(not_null<DocumentData*> document) {
 
 } // namespace
 
-void SetDefaultsForSource(Full &data, Source source) {
+void SetEnabledForSource(Full &data, Source source) {
 	data.setBytesLimit(source, Type::Photo, kDefaultMaxSize);
 	data.setBytesLimit(source, Type::VoiceMessage, kDefaultMaxSize);
 	data.setBytesLimit(
@@ -353,9 +359,13 @@ bool Should(
 		const Full &data,
 		Source source,
 		not_null<DocumentData*> document) {
-	if (document->sticker() || document->isGifv()) {
+	if (document->sticker()) {
 		return true;
-	} else if (document->isVoiceMessage()
+	}
+	if (document->isGifv()) {
+		return data.shouldDownload(source, Type::AutoPlayGIF, document->size);
+	}
+	if (document->isVoiceMessage()
 		|| document->isVideoMessage()
 		|| document->isSong()
 		|| document->isVideoFile()) {
@@ -374,9 +384,11 @@ bool Should(
 	const auto override = data.peerOverride(peer->id);
 	if (override == Override::ForceDeny) {
 		return false;
-	} else if (document->isGifv()) {
-		return true;
-	} else if (override == Override::ForceAllow) {
+	}
+	if (document->isGifv()) {
+		return ShouldAutoPlay(data, peer, document);
+	}
+	if (override == Override::ForceAllow) {
 		if (document->isVoiceMessage()
 			|| document->isVideoMessage()
 			|| document->isSong()

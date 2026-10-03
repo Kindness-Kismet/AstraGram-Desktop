@@ -118,7 +118,7 @@ private:
 
 };
 
-void SetDefaultsForSource(Full &data, Source source);
+void SetEnabledForSource(Full &data, Source source);
 void SetDisabledForSource(Full &data, Source source);
 [[nodiscard]] bool HasEnabledTypes(const Full &data, Source source);
 

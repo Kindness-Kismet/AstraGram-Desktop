@@ -264,7 +264,7 @@ void BuildAutoDownloadSection(SectionBuilder &builder) {
 			auto &data = session->settings().autoDownload();
 			const auto enable = !checkView->checked();
 			if (enable) {
-				SetDefaultsForSource(data, source);
+				SetEnabledForSource(data, source);
 				session->data().photoLoadSettingsChanged();
 				session->data().documentLoadSettingsChanged();
 			} else {
