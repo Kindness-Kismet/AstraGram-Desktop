@@ -2537,7 +2537,9 @@ void SetupDefaultThemes(
 	};
 	const auto refreshSystemAccentVisibility = [=](Type type) {
 		systemAccentWrap->toggle(
-			IsSystemAccentColorSupported() && (type != Type(-1)),
+			!ExtrasFeatures::MessageShot::isChoosingTheme()
+				&& IsSystemAccentColorSupported()
+				&& (type != Type(-1)),
 			anim::type::instant);
 	};
 	group->setChangedCallback([=, raw = group.get()](Type type) {
@@ -2614,6 +2616,15 @@ void SetupDefaultThemes(
 		group->setValue(type);
 	}, container->lifetime());
 
+	Background()->updates(
+	) | rpl::filter([](const BackgroundUpdate &update) {
+		return update.type == BackgroundUpdate::Type::New
+			&& Core::App().settings().systemAccentColorEnabled();
+	}) | rpl::on_next([=] {
+		for (const auto &scheme : kSchemesList) {
+			refreshColorizer(scheme.type);
+		}
+	}, container->lifetime());
 
 	for (const auto button : buttons) {
 		button->setCheckAlignment(style::al_top);

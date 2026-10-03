@@ -304,11 +304,7 @@ void ImportFromFile(
 
 	const auto adjustables = base::flat_map<QByteArray, style::color>{
 		{ qba(qstr("msgServiceBg")), st::msgServiceBg },
-		{ qba(qstr("msgServiceBgSelected")), st::msgServiceBgSelected },
-		{ qba(qstr("historyScrollBg")), st::historyScrollBg },
-		{ qba(qstr("historyScrollBgOver")), st::historyScrollBgOver },
-		{ qba(qstr("historyScrollBarBg")), st::historyScrollBarBg },
-		{ qba(qstr("historyScrollBarBgOver")), st::historyScrollBarBgOver }
+		{ qba(qstr("msgServiceBgSelected")), st::msgServiceBgSelected }
 	};
 	for (const auto &[name, color] : adjustables) {
 		data = ReplaceValueInPaletteContent(

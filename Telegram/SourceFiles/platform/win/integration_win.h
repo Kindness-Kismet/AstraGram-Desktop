@@ -10,8 +10,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/win/base_windows_shlobj_h.h"
 #include "base/platform/win/base_windows_winrt.h"
 #include "platform/platform_integration.h"
+#include "base/timer.h"
 
 #include <QAbstractNativeEventFilter>
+#include <QtGui/QColor>
+#include <rpl/variable.h>
 
 namespace Platform {
 
@@ -26,6 +29,9 @@ public:
 	void init() override;
 
 	[[nodiscard]] ITaskbarList3 *taskbarList() const;
+	[[nodiscard]] std::optional<QColor> systemAccentColor() const;
+	[[nodiscard]] rpl::producer<std::optional<QColor>>
+	systemAccentColorValue() const;
 
 	[[nodiscard]] static WindowsIntegration &Instance();
 
@@ -44,11 +50,15 @@ private:
 	void createCustomJumpList();
 	void refreshCustomJumpList();
 	void setupTaskbarButtons(HWND window);
+	void refreshSystemAccentColor();
+	void scheduleSystemAccentColorRefresh();
 
 	uint32 _taskbarCreatedMsgId = 0;
 	winrt::com_ptr<ITaskbarList3> _taskbarList;
 	winrt::com_ptr<ICustomDestinationList> _jumpList;
 	std::unique_ptr<TaskbarButtons> _taskbarButtons;
+	rpl::variable<std::optional<QColor>> _systemAccentColor;
+	base::Timer _systemAccentColorRefresh;
 
 };
 

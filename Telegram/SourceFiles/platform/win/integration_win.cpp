@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/integration_win.h"
 
 #include "base/platform/win/base_windows_winrt.h"
+#include "base/platform/win/base_windows_wrl.h"
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "core/sandbox.h"
@@ -27,8 +28,44 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <propvarutil.h>
 #include <propkey.h>
+#include <windows.ui.viewmanagement.h>
 
 namespace Platform {
+namespace {
+
+[[nodiscard]] std::optional<QColor> ReadSystemAccentColor() {
+	if (!base::Platform::SupportsWRL()) {
+		return std::nullopt;
+	}
+	const auto &className = RuntimeClass_Windows_UI_ViewManagement_UISettings;
+	auto header = HSTRING_HEADER();
+	auto name = HSTRING();
+	if (FAILED(WindowsCreateStringReference(
+			className,
+			UINT32(std::size(className) - 1),
+			&header,
+			&name))) {
+		return std::nullopt;
+	}
+	auto instance = winrt::com_ptr<IInspectable>();
+	if (FAILED(RoActivateInstance(name, instance.put()))) {
+		return std::nullopt;
+	}
+	using namespace ABI::Windows::UI::ViewManagement;
+	auto settings = winrt::com_ptr<IUISettings3>();
+	if (FAILED(instance->QueryInterface(
+			__uuidof(IUISettings3),
+			settings.put_void()))) {
+		return std::nullopt;
+	}
+	auto color = ABI::Windows::UI::Color();
+	if (FAILED(settings->GetColorValue(UIColorType_Accent, &color))) {
+		return std::nullopt;
+	}
+	return QColor(color.R, color.G, color.B, color.A);
+}
+
+} // namespace
 
 void WindowsIntegration::init() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
@@ -40,12 +77,36 @@ void WindowsIntegration::init() {
 #endif // Qt >= 6.5.0
 	QCoreApplication::instance()->installNativeEventFilter(this);
 	_taskbarCreatedMsgId = RegisterWindowMessage(L"TaskbarButtonCreated");
+	_systemAccentColorRefresh.setCallback([=] { refreshSystemAccentColor(); });
+	refreshSystemAccentColor();
 }
 
 WindowsIntegration::~WindowsIntegration() = default;
 
 ITaskbarList3 *WindowsIntegration::taskbarList() const {
 	return _taskbarList.get();
+}
+
+std::optional<QColor> WindowsIntegration::systemAccentColor() const {
+	return _systemAccentColor.current();
+}
+
+rpl::producer<std::optional<QColor>>
+WindowsIntegration::systemAccentColorValue() const {
+	return _systemAccentColor.value();
+}
+
+void WindowsIntegration::refreshSystemAccentColor() {
+	// 系统广播会发给多个窗口，只发布真正变化的颜色。
+	_systemAccentColor = ReadSystemAccentColor();
+}
+
+void WindowsIntegration::scheduleSystemAccentColorRefresh() {
+	if (_systemAccentColorRefresh.isActive()) {
+		return;
+	}
+	// 广播返回后再应用主题，避免在原生窗口回调中重建界面。
+	_systemAccentColorRefresh.callOnce(0);
 }
 
 WindowsIntegration &WindowsIntegration::Instance() {
@@ -200,6 +261,7 @@ bool WindowsIntegration::processEvent(
 		break;
 
 	case WM_SETTINGCHANGE:
+		scheduleSystemAccentColorRefresh();
 		RefreshTaskbarThemeValue();
 #if QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
 		Core::App().settings().setSystemDarkMode(Platform::IsDarkMode());
@@ -211,6 +273,10 @@ bool WindowsIntegration::processEvent(
 		if (_jumpList) {
 			refreshCustomJumpList();
 		}
+		break;
+
+	case WM_DWMCOLORIZATIONCOLORCHANGED:
+		scheduleSystemAccentColorRefresh();
 		break;
 	}
 	return false;

@@ -26,6 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/crc32hash.h"
 #include "base/never_freed_pointer.h"
 #include "base/qt_signal_producer.h"
+#include "base/timer.h"
 #include "data/data_session.h"
 #include "data/data_document_resolver.h"
 #include "main/main_account.h" // Account::local.
@@ -48,6 +49,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QFileSystemWatcher>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QStyleHints>
+
+#ifdef Q_OS_WIN
+#include "platform/win/integration_win.h"
+#endif
 
 namespace Window {
 namespace Theme {
@@ -367,6 +372,12 @@ bool LoadTheme(
 	}
 	if (out) {
 		out->palette.finalize(paletteColorizer);
+		ApplyAccentPalette(out->palette);
+	} else {
+		auto palette = style::palette();
+		palette = *style::main_palette::get();
+		ApplyAccentPalette(palette);
+		style::main_palette::apply(palette);
 	}
 	if (cache) {
 		if (out) {
@@ -507,11 +518,7 @@ ChatBackground::AdjustableColor::AdjustableColor(style::color data)
 // They're duplicated in window_theme_editor_box.cpp:ReplaceAdjustableColors.
 ChatBackground::ChatBackground() : _adjustableColors({
 		st::msgServiceBg,
-		st::msgServiceBgSelected,
-		st::historyScrollBg,
-		st::historyScrollBgOver,
-		st::historyScrollBarBg,
-		st::historyScrollBarBgOver }) {
+		st::msgServiceBgSelected }) {
 }
 
 ChatBackground::~ChatBackground() = default;
@@ -542,6 +549,11 @@ void ChatBackground::initialRead() {
 }
 
 void ChatBackground::start() {
+	struct AccentRefresh {
+		base::Timer timer;
+		bool pending = false;
+	};
+	const auto accentRefresh = _lifetime.make_state<AccentRefresh>();
 	saveAdjustableColors();
 
 	_updates.events(
@@ -549,6 +561,9 @@ void ChatBackground::start() {
 		refreshThemeWatcher();
 		if (update.paletteChanged()) {
 			style::NotifyPaletteChanged();
+		}
+		if (accentRefresh->pending && !AreTestingTheme()) {
+			accentRefresh->timer.callOnce(0);
 		}
 	}, _lifetime);
 
@@ -606,6 +621,41 @@ void ChatBackground::start() {
 		Core::App().settings().setSystemDarkMode(dark);
 	}, _lifetime);
 
+	accentRefresh->timer.setCallback([=] {
+		// 预览结束后再应用系统色，不覆盖确认与取消所需的状态。
+		if (AreTestingTheme() || editingTheme()) {
+			return;
+		}
+		accentRefresh->pending = false;
+		const auto &settings = Core::App().settings();
+		if (!settings.systemAccentColorEnabled()
+			|| _themeObject.cloud.id) {
+			return;
+		}
+		const auto path = _themeObject.pathAbsolute;
+		if (!IsEmbeddedTheme(path)) {
+			return;
+		}
+		auto palette = style::palette();
+		if (path.isEmpty()) {
+			palette.reset(ColorizerForTheme(path));
+			ApplyAccentPalette(palette);
+		} else {
+			auto instance = Instance();
+			if (!LoadFromFile(path, &instance, nullptr, nullptr)) {
+				return;
+			}
+			palette = std::move(instance.palette);
+		}
+		// 只替换配色，保留当前壁纸与平铺方式。
+		style::main_palette::apply(palette);
+		saveAdjustableColors();
+		adjustPaletteUsingPaper(_prepared);
+		_updates.fire({ BackgroundUpdate::Type::New, tile() });
+	});
+#ifdef Q_OS_WIN
+	Platform::WindowsIntegration::Instance().systemAccentColorValue()
+#else
 	rpl::single(
 		QGuiApplication::palette()
 	) | rpl::then(
@@ -613,19 +663,11 @@ void ChatBackground::start() {
 			qApp,
 			&QGuiApplication::paletteChanged
 		)
-	) | rpl::on_next([=] {
-		const auto &settings = Core::App().settings();
-		if (!settings.systemAccentColorEnabled()
-			|| _themeObject.cloud.id
-			|| editingTheme()) {
-			return;
-		}
-		const auto path = _themeObject.pathAbsolute;
-		if (!IsEmbeddedTheme(path)) {
-			return;
-		}
-		ApplyDefaultWithPath(path);
-		KeepApplied();
+	) | rpl::map([] { return SystemAccentColor(); })
+#endif
+	| rpl::distinct_until_changed() | rpl::on_next([=] {
+		accentRefresh->pending = true;
+		accentRefresh->timer.callOnce(0);
 	}, _lifetime);
 }
 
@@ -855,9 +897,17 @@ bool ChatBackground::adjustPaletteRequired() {
 	if (ExtrasSettings::getInstance().disableChatBackground()) {
 		return false;
 	}
+	const auto &object = AreTestingTheme()
+		? GlobalApplying.data.object
+		: _themeObject;
+	// 内置主题的日期和服务提示跟随强调色，壁纸不能再次覆盖配色。
+	if (!object.cloud.id && IsEmbeddedTheme(object.pathAbsolute)) {
+		return false;
+	}
 	if (_editingTheme.has_value()) {
 		return false;
-	} else if (isNonDefaultThemeOrBackground() || nightMode()) {
+	}
+	if (isNonDefaultThemeOrBackground() || nightMode()) {
 		return !usingThemeBackground();
 	}
 	return !usingDefaultBackground();
@@ -1147,7 +1197,10 @@ void ChatBackground::setTestingDefaultTheme() {
 }
 
 void ChatBackground::applyDefaultThemeAccentColorizer() {
-	style::main_palette::reset(ColorizerForTheme(QString()));
+	auto palette = style::palette();
+	palette.reset(ColorizerForTheme(QString()));
+	ApplyAccentPalette(palette);
+	style::main_palette::apply(palette);
 	saveAdjustableColors();
 }
 

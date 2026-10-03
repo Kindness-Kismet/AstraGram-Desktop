@@ -7,16 +7,20 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/themes/window_themes_embedded.h"
 
-#include "base/platform/base_platform_info.h"
 #include "lang/lang_keys.h"
 #include "storage/serialize_common.h"
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "ui/style/style_palette_colorizer.h"
+#include "ui/effects/animations.h"
 #include "window/themes/window_theme.h"
 
 #include <QtGui/QGuiApplication>
 #include <QtGui/QPalette>
+
+#ifdef Q_OS_WIN
+#include "platform/win/integration_win.h"
+#endif
 
 // AyuGram includes
 #include "extras/features/message_shot/message_shot.h"
@@ -169,13 +173,12 @@ style::colorizer ColorizerFrom(
 }
 
 std::optional<QColor> SystemAccentColor() {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-	if (Platform::IsWindows() && Platform::IsWindows8OrGreater()) {
-		return std::nullopt;
-	}
-#endif // Qt < 6.0.0
+#ifdef Q_OS_WIN
+	return Platform::WindowsIntegration::Instance().systemAccentColor();
+#else
 	const auto accent = QPalette().color(QPalette::Highlight);
 	return accent.isValid() ? std::make_optional(accent) : std::nullopt;
+#endif
 }
 
 style::colorizer ColorizerForTheme(const QString &absolutePath) {
@@ -216,6 +219,14 @@ void Colorize(EmbeddedScheme &scheme, const style::colorizer &colorizer) {
 			scheme.*color = changed->toRgb();
 		}
 	}
+}
+
+void ApplyAccentPalette(style::palette &palette) {
+	// 所有选中行与头像角标共用同一份实时混色。
+	palette.setColor(qstr("dialogsBgActive"), anim::color(
+		palette.dialogsBg()->c,
+		palette.windowBgActive()->c,
+		0.5));
 }
 
 std::vector<EmbeddedScheme> EmbeddedThemes() {

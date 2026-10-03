@@ -52,6 +52,7 @@ private:
 	const QColor &color);
 [[nodiscard]] std::optional<QColor> SystemAccentColor();
 [[nodiscard]] style::colorizer ColorizerForTheme(const QString &absolutePath);
+void ApplyAccentPalette(style::palette &palette);
 
 void Colorize(
 	EmbeddedScheme &scheme,
