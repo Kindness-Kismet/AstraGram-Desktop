@@ -105,6 +105,8 @@ const auto kColorizeIgnoredKeys = base::flat_set<QLatin1String>{ {
 	qstr("premiumIconBg2"),
 } };
 
+constexpr auto kNightAccentColor = std::string_view("5288c1");
+
 style::colorizer::Color cColor(std::string_view hex) {
 	const auto q = style::ColorFromHex(hex);
 	auto hue = int();
@@ -112,6 +114,31 @@ style::colorizer::Color cColor(std::string_view hex) {
 	auto value = int();
 	q.getHsv(&hue, &saturation, &value);
 	return style::colorizer::Color{ hue, saturation, value };
+}
+
+// 调色器只记录原强调色，以夜间主题的原强调色识别夜间调色器。
+[[nodiscard]] bool IsNightColorizer(const style::colorizer &colorizer) {
+	static const auto night = cColor(kNightAccentColor);
+	return (colorizer.was.hue == night.hue)
+		&& (colorizer.was.saturation == night.saturation)
+		&& (colorizer.was.value == night.value);
+}
+
+// 夜间背景固定为中性灰：比强调色更灰的颜色只换色相，亮度保持原值，避免暗强调色压低层次。
+[[nodiscard]] QColor KeepNeutralValue(
+		const QColor &original,
+		const QColor &colorized,
+		const style::colorizer &colorizer) {
+	if (colorized.rgba() == original.rgba()
+		|| !IsNightColorizer(colorizer)
+		|| original.hsvSaturation() >= colorizer.was.saturation) {
+		return colorized;
+	}
+	auto hue = 0;
+	auto saturation = 0;
+	auto value = 0;
+	colorized.getHsv(&hue, &saturation, &value);
+	return QColor::fromHsv(hue, saturation, original.value(), colorized.alpha());
 }
 
 } // namespace
@@ -206,6 +233,27 @@ style::colorizer ColorizerForTheme(const QString &absolutePath) {
 	return {};
 }
 
+void ColorizeSchemeValue(
+		QLatin1String name,
+		uchar &r,
+		uchar &g,
+		uchar &b,
+		const style::colorizer &colorizer) {
+	const auto original = QColor(int(r), int(g), int(b));
+	style::colorize(name, r, g, b, colorizer);
+	// 对比度配对的键已由调色器选定前景，不再调整亮度。
+	if (colorizer.keepContrast.contains(name)) {
+		return;
+	}
+	const auto result = KeepNeutralValue(
+		original,
+		QColor(int(r), int(g), int(b)),
+		colorizer).toRgb();
+	r = uchar(result.red());
+	g = uchar(result.green());
+	b = uchar(result.blue());
+}
+
 void Colorize(EmbeddedScheme &scheme, const style::colorizer &colorizer) {
 	const auto colors = {
 		&EmbeddedScheme::background,
@@ -216,7 +264,10 @@ void Colorize(EmbeddedScheme &scheme, const style::colorizer &colorizer) {
 	};
 	for (const auto color : colors) {
 		if (const auto changed = style::colorize(scheme.*color, colorizer)) {
-			scheme.*color = changed->toRgb();
+			scheme.*color = KeepNeutralValue(
+				scheme.*color,
+				*changed,
+				colorizer).toRgb();
 		}
 	}
 }
@@ -250,14 +301,14 @@ std::vector<EmbeddedScheme> EmbeddedThemes() {
 		},
 		EmbeddedScheme{
 			EmbeddedType::Night,
-			qColor("485761"),
+			qColor("212121"),
 			qColor("5ca7d4"),
 			qColor("6b808d"),
 			qColor("6b808d"),
 			qColor("5ca7d4"),
 			name(tr::extras_ThemeSimpleBlack),
 			":/gui/night.tdesktop-theme",
-			qColor("5288c1")
+			qColor(kNightAccentColor)
 		},
 	};
 }

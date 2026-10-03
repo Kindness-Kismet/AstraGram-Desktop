@@ -54,6 +54,14 @@ private:
 [[nodiscard]] style::colorizer ColorizerForTheme(const QString &absolutePath);
 void ApplyAccentPalette(style::palette &palette);
 
+// 主题文件逐项调色；夜间主题背景固定，比强调色更灰的颜色只换色相、保留原亮度。
+void ColorizeSchemeValue(
+	QLatin1String name,
+	uchar &r,
+	uchar &g,
+	uchar &b,
+	const style::colorizer &colorizer);
+
 void Colorize(
 	EmbeddedScheme &scheme,
 	const style::colorizer &colorizer);

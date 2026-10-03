@@ -188,7 +188,7 @@ SetResult setColorSchemeValue(
 		auto b = readHexUchar(data[5], data[6], error);
 		auto a = (size == 9) ? readHexUchar(data[7], data[8], error) : uchar(255);
 		if (colorizer) {
-			style::colorize(name, r, g, b, colorizer);
+			ColorizeSchemeValue(name, r, g, b, colorizer);
 		}
 		if (error) {
 			LOG(("Theme Warning: Skipping value '%1: %2' (expected a color value in #rrggbb or #rrggbbaa or a previously defined key in the color scheme)").arg(name).arg(value));
