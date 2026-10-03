@@ -1,41 +1,31 @@
-- Improved voice recording controls, which now share the rounded compose area for recording, pausing, previewing, trimming, continuing and confirming a recording
-- Fixed an issue with paused voice recordings that previously caused recorded audio to be lost when the app automatically locked with a passcode
-- Changed how explicit mark-as-read actions work in ghost mode; they now sync read status to the server, making it visible to other clients and the chat partner, while simply opening a chat still respects ghost settings
-- Fixed an issue with manual read requests that previously caused subsequent chat list updates for the same conversation to remain blocked
-- Removed the side menu's local and server mark-all-as-read entries and their visibility settings; marking all chats as read from those entries is no longer available
-- Changed how the downloads button is shown; it now appears in the chat list header, remains available during search and with no downloads, and defaults to visible while preserving saved preferences
-- Improved archive search, which now opens in a separate row below the navigation bar and closes with one click on the search or cancel button
-- Fixed an issue with switching or reselecting chat folders that previously caused the search scope from a chat or topic to remain visible
-- Changed the search layout; it now uses more consistent filter icons and removes the redundant search scope heading and adjacent chat folder settings shortcut
-- Added a proxy settings entry to the main menu, so you can now open connection settings directly
-- Added a visibility option for donation details, so you can now hide that side menu entry from appearance settings
-- Improved standalone on/off settings, which now use consistent right-aligned switches in advanced settings, chat settings and the regex filter editor
-- Fixed an issue with locally retained deleted messages that previously caused an unusable quick reply button to appear on hover
-- Improved the forwarding restriction hint, which now matches the font and alignment of other message menu items
-- Added a title bar frame rate display, so you can now see the window's rendering activity, with a dash when idle and an appearance setting to turn off the display, which is enabled by default
-- Improved side menu animations, which now open and close more smoothly when using a solid window background
-- Changed empty-state illustrations; search, empty results, chats, blocked users and gifts now use static icons that follow the current theme
-- Improved the taskbar alert setting icon, which now uses a notification symbol sized consistently with neighboring controls
-- Improved message bubble shadows, which now follow the theme colors and form a softer outline around the bubble
+- Improved the search scope menu, the message read and reaction lists and the story viewer list, which now match the font, spacing and position of other menus
+- Improved the local archive of deleted messages and edit history, which is now encrypted on disk, requires unlocking when a local passcode is set and warns you before a logout without unlocking makes it unreadable
+- Improved scrolling in large chats, which now spends less time drawing the blurred bars and detecting message languages, and jumping to the latest message now ends with a smooth animation that keeps the last message above the input field
+- Removed the title bar frame rate display and its appearance setting; viewing the window's frame rate is no longer available
+- Improved search results and suggestions, whose highlights and dividers now use the same rounded insets as the chat list
+- Fixed an issue with the login and passcode lock screens that previously caused the window's rounded corners to appear square
+- Improved spoiler animations, which now redraw only when the particles move and use less CPU while idle
+- Fixed an issue with popup menus that previously caused the shadow around their rounded corners to be cut off
+- Added a local theme list, so you can now keep imported themes as previews after the built-in themes and delete them when they are no longer needed
+- Changed the built-in themes; only Simple White and Simple Black remain, and a previously selected Day theme switches to Simple White
+- Changed how the Acrylic and Blur window backgrounds look; they now show the system effect directly without an extra color layer over the title bar
+- Improved accent colors, which now apply consistently to scrollbars, the selected chat, service messages and the window frame, while the system accent color option uses the Windows accent color and follows its changes without resetting the chat wallpaper
+- Removed the window title bar settings for showing the chat name, active account and total unread count and for using the system window frame; customizing the window title or frame is no longer available
+- Changed how automatic media download works; it is now off by default in private chats, groups and channels, GIFs follow the GIF autoplay setting, and manually changed size limits are kept
 
 ---
 
-- 对语音录制控件进行了改善，这使得录制、暂停、试听、裁剪、续录和确认操作都能在输入框的圆角区域内完成
-- 修复了关于暂停中的语音录制的错误，该问题曾导致应用自动密码锁定后丢失已录制的内容
-- 调整了隐身模式下主动标为已读的行为，现在会将已读状态同步到服务器，其他客户端和聊天对方也能看到，单纯打开聊天仍遵循隐身模式设置
-- 修复了关于手动已读请求的错误，该问题曾导致同一会话后续的聊天列表更新一直被阻塞
-- 移除了侧边菜单中的本地全部已读、服务器全部已读入口及其显示设置，通过这些入口将所有聊天标为已读不再可用
-- 调整了下载按钮的显示方式，现在位于聊天列表顶部，搜索期间或没有下载记录时也能使用，默认显示并保留已保存的显示偏好
-- 对归档搜索进行了改善，这使得搜索框能在导航栏下方独立显示，点击搜索按钮或取消按钮即可关闭
-- 修复了关于切换或重新选择聊天文件夹的错误，该问题曾导致之前聊天或话题的搜索范围残留
-- 调整了搜索区域的布局，现在筛选图标的尺寸和线条更统一，并移除了多余的搜索范围标题和旁边的聊天文件夹设置快捷入口
-- 新增了主菜单中的代理设置入口，现在可以直接打开连接设置
-- 新增了捐赠详情的显示选项，现在可以在外观设置中隐藏侧边菜单里的这一入口
-- 对独立开关设置进行了改善，这使得高级设置、聊天设置和正则过滤编辑器中的相关选项统一使用右侧开关
-- 修复了关于本地保留的已删除消息的错误，该问题曾导致鼠标悬停时仍显示无法使用的快捷回复按钮
-- 对禁止转发提示进行了改善，这使得它的字体和对齐方式与消息菜单中的其他条目保持一致
-- 新增了标题栏帧率显示，现在可以查看窗口的绘制活动，空闲时显示横线，默认开启并可在外观设置中关闭
-- 对侧边菜单动画进行了改善，这使得使用实色窗口背景时打开和关闭菜单更流畅
-- 调整了空白页面插图，现在搜索、无搜索结果、空聊天列表、空黑名单和空礼物列表使用跟随当前主题的静态图标
-- 对任务栏提醒设置的图标进行了改善，这使得它使用通知图案并与相邻控件的尺寸保持一致
-- 对消息气泡阴影进行了改善，这使得阴影能跟随主题颜色，并在气泡周围呈现更柔和的轮廓
+- 对搜索范围菜单、消息已读与回应列表以及动态观看列表进行了改善，这使得它们的字体、间距和弹出位置与其他菜单保持一致
+- 对已删除消息和编辑历史的本地留档进行了改善，这使得留档在磁盘上加密保存，设置本地密码后需要解锁才能查看，未解锁就退出登录前也会提示留档将无法再打开
+- 对大型聊天的滚动进行了改善，这使得绘制模糊栏和识别消息语言占用的时间更少，跳到最新消息时会平滑滚动到底，并让最后一条消息保持在输入框上方
+- 移除了标题栏帧率显示及其外观设置，查看窗口帧率不再可用
+- 对搜索结果和搜索建议进行了改善，这使得高亮和分隔线与聊天列表使用相同的圆角边距
+- 修复了关于登录页和密码锁定页的错误，该问题曾导致窗口圆角显示为直角
+- 对剧透遮罩动画进行了改善，这使得它只在粒子变化时重绘，空闲时占用的 CPU 更少
+- 修复了关于弹出菜单的错误，该问题曾导致圆角处的阴影被截断
+- 新增了本地主题列表，现在可以把导入的主题保存为预览，排在内置主题之后，不再需要时也能删除
+- 调整了内置主题，现在只保留简约白和简约黑，之前选择的日间主题会自动改为简约白
+- 调整了亚克力和磨砂玻璃窗口背景的显示效果，现在直接呈现系统效果，标题栏不再额外叠加一层底色
+- 对强调色进行了改善，这使得滚动条、选中的聊天、服务消息和窗口边框的配色保持一致，系统强调色选项也会使用 Windows 强调色，并在其变化时同步更新，不会重置聊天壁纸
+- 移除了窗口标题栏中显示聊天名称、当前账号、未读总数以及使用系统窗口边框的设置，自定义窗口标题或边框不再可用
+- 调整了媒体自动下载的行为，现在私聊、群组和频道默认关闭，动图遵循自动播放动图的设置，手动修改过的大小限制保持不变
