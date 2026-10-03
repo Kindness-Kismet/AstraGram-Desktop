@@ -47,8 +47,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 #include "window/window_setup_email.h"
 #include "window/window_media_preview.h"
+#include "window/window_shell_color.h"
 #include "styles/style_window.h"
 
+#include <QtGui/QPainterPath>
 #include <QtGui/QWindow>
 
 namespace {
@@ -85,6 +87,36 @@ const char kOptionAutoScrollInactiveChat[]
 MainWindow::MainWindow(not_null<Window::Controller*> controller)
 : Platform::MainWindow(controller) {
 	resize(st::windowDefaultWidth, st::windowDefaultHeight);
+
+	_pageCorners.create(bodyWidget());
+	_pageCorners->setObjectName(u"window.pageCorners"_q);
+	_pageCorners->setAttribute(Qt::WA_TransparentForMouseEvents);
+	_pageCorners->paintRequest() | rpl::on_next([=] {
+		const auto fullPage = (_intro && !_intro->isHidden())
+			|| (_passcodeLock && !_passcodeLock->isHidden())
+			|| (_setupEmailLock && !_setupEmailLock->isHidden());
+		if (!fullPage) {
+			return;
+		}
+		// 登录与锁屏共用内容区圆角，覆盖子页面切换动画的直角背景。
+		const auto radius = st::windowCardRadius;
+		auto square = QPainterPath();
+		square.addRect(QRect(0, 0, radius, radius));
+		auto rounded = QPainterPath();
+		rounded.addEllipse(QRect(0, 0, 2 * radius, 2 * radius));
+		const auto corner = square.subtracted(rounded);
+		const auto fill = Window::ShellBackgroundColor(this)->c;
+		auto p = QPainter(_pageCorners.data());
+		p.setRenderHint(QPainter::Antialiasing);
+		p.fillPath(corner, fill);
+		p.translate(_pageCorners->width(), 0);
+		p.scale(-1., 1.);
+		p.fillPath(corner, fill);
+	}, _pageCorners->lifetime());
+	style::PaletteChanged() | rpl::on_next([=] {
+		_pageCorners->update();
+	}, _pageCorners->lifetime());
+	_pageCorners->show();
 
 	setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
 
@@ -712,6 +744,10 @@ bool MainWindow::takeThirdSectionFromLayer() {
 void MainWindow::fixOrder() {
 	if (_setupEmailLock) _setupEmailLock->raise();
 	if (_passcodeLock) _passcodeLock->raise();
+	if (_pageCorners) {
+		_pageCorners->raise();
+		_pageCorners->update();
+	}
 	if (_layer) _layer->raise();
 	if (_mediaPreview) _mediaPreview->raise();
 	if (_testingThemeWarning) _testingThemeWarning->raise();
@@ -768,8 +804,12 @@ void MainWindow::updateControlsGeometry() {
 	if (_layer) _layer->setGeometry(body);
 	if (_mediaPreview) _mediaPreview->setGeometry(body);
 	if (_testingThemeWarning) _testingThemeWarning->setGeometry(body);
+	if (_pageCorners) {
+		_pageCorners->setGeometry(0, 0, body.width(), st::windowCardRadius);
+	}
 
 	if (_main) _main->checkMainSectionToLayer();
+	fixOrder();
 }
 
 void MainWindow::handleStartFiles(QStringList paths) {
