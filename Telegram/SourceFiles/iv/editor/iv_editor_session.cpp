@@ -1802,44 +1802,10 @@ private:
 		});
 	}
 
-	[[nodiscard]] ::Data::Thread *titleThread() const {
-		if (_composeAction) {
-			return _composeAction->history->threadFor(
-				_composeAction->replyTo.topicRootId,
-				_composeAction->replyTo.monoforumPeerId);
-		} else if (_edited) {
-			const auto item = _edited->item;
-			if (const auto topic = item->topic()) {
-				return topic;
-			} else if (const auto sublist = item->savedSublist()) {
-				return sublist;
-			}
-			return item->history();
-		}
-		return nullptr;
-	}
-
 	[[nodiscard]] QString windowTitle() const {
-		const auto word = (_mode == Mode::Compose)
+		return (_mode == Mode::Compose)
 			? tr::lng_article_editor_title(tr::now)
 			: tr::lng_article_editor_title_editing(tr::now);
-		const auto settings = Core::App().settings().windowTitleContent();
-		const auto thread = settings.hideChatName ? nullptr : titleThread();
-		const auto topic = thread ? thread->asTopic() : nullptr;
-		const auto name = !thread
-			? QString()
-			: topic
-			? topic->title()
-			: thread->owningHistory()->peer->isSelf()
-			? tr::lng_saved_messages(tr::now)
-			: thread->owningHistory()->peer->name();
-		const auto user = (!settings.hideAccountName
-			&& Core::App().domain().accountsAuthedCount() > 1)
-			? st::wrap_rtl(_session->user()->name())
-			: QString();
-		return word
-			+ (name.isEmpty() ? QString() : u" · "_q + st::wrap_rtl(name))
-			+ (user.isEmpty() ? QString() : u" @ "_q + user);
 	}
 
 	void showWindow() {

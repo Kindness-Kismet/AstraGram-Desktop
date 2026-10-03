@@ -12,7 +12,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/click_handler_types.h"
 #include "export/export_manager.h"
 #include "ui/platform/ui_platform_window.h"
-#include "platform/platform_window_title.h"
 #include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
@@ -26,6 +25,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/emoji_config.h"
 #include "chat_helpers/emoji_sets_manager.h"
 #include "window/window_session_controller.h"
+#include "window/themes/window_theme.h"
 #include "window/themes/window_theme_editor.h"
 #include "ui/boxes/confirm_box.h"
 #include "data/components/promo_suggestions.h"
@@ -202,12 +202,6 @@ void Controller::showAccount(
 			}, _sessionController->lifetime());
 
 			widget()->setInnerFocus();
-
-			_sessionController->activeChatChanges(
-			) | rpl::on_next([=] {
-				_widget.updateTitle();
-			}, _sessionController->lifetime());
-			_widget.updateTitle();
 
 			if (session->promoSuggestions().setupEmailState()
 				!= Data::SetupEmailState::None) {
@@ -431,14 +425,6 @@ void Controller::setupMain(
 
 void Controller::showSettings() {
 	_widget.showSettings();
-}
-
-int Controller::verticalShadowTop() const {
-	return (Platform::NativeTitleRequiresShadow()
-		&& Ui::Platform::NativeWindowFrameSupported()
-		&& Core::App().settings().nativeWindowFrame())
-		? st::lineWidth
-		: 0;
 }
 
 void Controller::showToast(Ui::Toast::Config &&config) {

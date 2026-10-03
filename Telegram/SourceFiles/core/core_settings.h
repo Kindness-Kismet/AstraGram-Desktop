@@ -62,16 +62,6 @@ struct WindowPosition {
 	WindowPosition position,
 	const QString &name);
 
-struct WindowTitleContent {
-	bool hideChatName : 1 = false;
-	bool hideAccountName : 1 = false;
-	bool hideTotalUnread : 1 = false;
-
-	friend inline constexpr auto operator<=>(
-		WindowTitleContent,
-		WindowTitleContent) = default;
-};
-
 constexpr auto kRecentEmojiLimit = 54;
 
 struct RecentEmojiDocument {
@@ -720,15 +710,6 @@ public:
 	[[nodiscard]] bool notifyFromAll() const {
 		return _notifyFromAll;
 	}
-	void setNativeWindowFrame(bool value) {
-		_nativeWindowFrame = value;
-	}
-	[[nodiscard]] bool nativeWindowFrame() const {
-		return _nativeWindowFrame.current();
-	}
-	[[nodiscard]] rpl::producer<bool> nativeWindowFrameChanges() const {
-		return _nativeWindowFrame.changes();
-	}
 	void setSystemDarkMode(std::optional<bool> value) {
 		_systemDarkMode = value;
 	}
@@ -758,15 +739,6 @@ public:
 	}
 	[[nodiscard]] bool systemAccentColorEnabled() const {
 		return _systemAccentColorEnabled;
-	}
-	[[nodiscard]] WindowTitleContent windowTitleContent() const {
-		return _windowTitleContent.current();
-	}
-	[[nodiscard]] rpl::producer<WindowTitleContent> windowTitleContentChanges() const {
-		return _windowTitleContent.changes();
-	}
-	void setWindowTitleContent(WindowTitleContent content) {
-		_windowTitleContent = content;
 	}
 	[[nodiscard]] const WindowPosition &windowPosition() const {
 		return _windowPosition;
@@ -1167,11 +1139,9 @@ private:
 	rpl::variable<float64> _dialogsNoChatWidthRatio; // per-window
 	rpl::variable<int> _thirdColumnWidth = kDefaultThirdColumnWidth; // p-w
 	bool _notifyFromAll = true;
-	rpl::variable<bool> _nativeWindowFrame = false;
 	rpl::variable<std::optional<bool>> _systemDarkMode = std::nullopt;
 	rpl::variable<bool> _systemDarkModeEnabled = true;
 	bool _systemAccentColorEnabled = false;
-	rpl::variable<WindowTitleContent> _windowTitleContent;
 	WindowPosition _windowPosition; // per-window
 	bool _disableOpenGL = false;
 	rpl::variable<WorkMode> _workMode = WorkMode::WindowAndTray;

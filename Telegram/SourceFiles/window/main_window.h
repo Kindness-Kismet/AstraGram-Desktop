@@ -195,7 +195,6 @@ protected:
 	virtual QRect computeDesktopRect() const;
 
 private:
-	void refreshTitleWidget();
 	void setupCanaryTitleLabel();
 	[[nodiscard]] QString nativeTitleSuffix() const;
 	void updateMinimumSize();
@@ -213,7 +212,6 @@ private:
 	base::Timer _positionUpdatedTimer;
 	bool _positionInited = false;
 
-	object_ptr<Ui::PlainShadow> _titleShadow = { nullptr };
 	object_ptr<Ui::RpWidget> _outdated;
 	object_ptr<Ui::RpWidget> _screenReaderBar;
 	object_ptr<Ui::RpWidget> _body;

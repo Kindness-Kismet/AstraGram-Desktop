@@ -13,9 +13,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/platform_specific.h"
 #include "ui/platform/ui_platform_window.h"
 #include "ui/platform/ui_platform_window_title.h"
-#include "platform/platform_window_title.h"
+#include "base/platform/base_platform_info.h"
 #include "history/history.h"
-#include "info/media/info_media_widget.h" // SharedMediaTitle.
 #include "window/window_saved_windows.h"
 #include "window/window_separate_id.h"
 #include "window/window_session_controller.h"
@@ -114,28 +113,6 @@ base::options::toggle OptionDisableTouchbar({
 	},
 	.restartRequired = true,
 });
-
-[[nodiscard]] QString TitleFromSeparateSharedMedia(
-		const Core::WindowTitleContent &settings,
-		const SeparateId &id) {
-	if (id.type != SeparateType::SharedMedia) {
-		return QString();
-	}
-	const auto type = id.sharedMediaType;
-	const auto result = Info::Media::SharedMediaTitle(type)(tr::now);
-	if (settings.hideChatName) {
-		return result;
-	}
-	const auto thread = id.thread;
-	const auto topic = thread->asTopic();
-	const auto name = topic
-		? topic->title()
-		: thread->peer()->isSelf()
-		? tr::lng_saved_messages(tr::now)
-		: thread->peer()->name();
-	const auto wrapped = st::wrap_rtl(name);
-	return name + u" @ "_q + result;
-}
 
 } // namespace
 
@@ -450,7 +427,6 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 
 	Core::App().unreadBadgeChanges(
 	) | rpl::on_next([=] {
-		updateTitle();
 		unreadCounterChangedHook();
 		Core::App().tray().updateIconCounters();
 	}, lifetime());
@@ -593,14 +569,7 @@ void MainWindow::init() {
 
 	updatePalette();
 
-	if (Ui::Platform::NativeWindowFrameSupported()) {
-		Core::App().settings().nativeWindowFrameChanges(
-		) | rpl::on_next([=](bool native) {
-			refreshTitleWidget();
-			recountGeometryConstraints();
-		}, lifetime());
-	}
-	refreshTitleWidget();
+	setNativeFrame(false);
 	if constexpr (Core::BuildIsCanary) {
 		setupCanaryTitleLabel();
 	}
@@ -709,20 +678,6 @@ int MainWindow::computeMinHeight() const {
 		return _screenReaderBar->height();
 	}();
 	return outdated + screenReader + st::windowMinHeight;
-}
-
-void MainWindow::refreshTitleWidget() {
-	if (Ui::Platform::NativeWindowFrameSupported()
-		&& Core::App().settings().nativeWindowFrame()) {
-		setNativeFrame(true);
-		if (Platform::NativeTitleRequiresShadow()) {
-			_titleShadow.create(this);
-			_titleShadow->show();
-		}
-	} else {
-		setNativeFrame(false);
-		_titleShadow.destroy();
-	}
 }
 
 void MainWindow::setupCanaryTitleLabel() {
@@ -893,9 +848,6 @@ void MainWindow::updateControlsGeometry() {
 	auto bodyLeft = inner.x();
 	auto bodyTop = inner.y();
 	auto bodyWidth = inner.width();
-	if (_titleShadow) {
-		_titleShadow->setGeometry(inner.x(), bodyTop, inner.width(), st::lineWidth);
-	}
 	if (_outdated) {
 		Ui::SendPendingMoveResizeEvents(_outdated.data());
 		_outdated->resizeToWidth(inner.width());
@@ -920,52 +872,7 @@ void MainWindow::updateTitle() {
 		return;
 	}
 
-	const auto suffix = nativeTitleSuffix();
-	const auto settings = Core::App().settings().windowTitleContent();
-	const auto locked = Core::App().passcodeLocked();
-	const auto counter = settings.hideTotalUnread
-		? 0
-		: Core::App().unreadBadge();
-	const auto added = (counter > 0) ? u" (%1)"_q.arg(counter) : QString();
-	const auto session = locked ? nullptr : _controller->sessionController();
-	const auto user = (session
-		&& !settings.hideAccountName
-		&& Core::App().domain().accountsAuthedCount() > 1)
-		? st::wrap_rtl(session->authedName())
-		: QString();
-	const auto separateSharedMediaTitle = session
-		? TitleFromSeparateSharedMedia(settings, session->windowId())
-		: QString();
-	if (!separateSharedMediaTitle.isEmpty()) {
-		setTitle(separateSharedMediaTitle + suffix);
-		return;
-	}
-	const auto key = (session && !settings.hideChatName)
-		? session->activeChatCurrent()
-		: Dialogs::Key();
-	const auto thread = key ? key.thread() : nullptr;
-	if (!thread) {
-		setTitle((user.isEmpty() ? u"AstraGram"_q : user) + added + suffix);
-		return;
-	}
-	const auto history = thread->owningHistory();
-	const auto topic = thread->asTopic();
-	const auto name = topic
-		? topic->title()
-		: history->peer->isSelf()
-		? tr::lng_saved_messages(tr::now)
-		: history->peer->name();
-	const auto wrapped = st::wrap_rtl(name);
-	const auto threadCounter = thread->chatListBadgesState().unreadCounter;
-	const auto primary = (threadCounter > 0)
-		? u"(%1) %2"_q.arg(threadCounter).arg(wrapped)
-		: wrapped;
-	const auto middle = !user.isEmpty()
-		? (u" @ "_q + user)
-		: !added.isEmpty()
-		? u" \u2013"_q
-		: QString();
-	setTitle(primary + middle + added + suffix);
+	setTitle(u"AstraGram"_q + nativeTitleSuffix());
 }
 
 QRect MainWindow::computeDesktopRect() const {

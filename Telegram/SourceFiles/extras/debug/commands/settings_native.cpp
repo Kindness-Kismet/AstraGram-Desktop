@@ -23,15 +23,6 @@ void from_json(const nlohmann::json &j, WindowPosition &v) {
 	j.at("scale").get_to(v.scale); j.at("x").get_to(v.x); j.at("y").get_to(v.y);
 	j.at("w").get_to(v.w); j.at("h").get_to(v.h);
 }
-void to_json(nlohmann::json &j, const WindowTitleContent &v) {
-	j = {{"hideChatName", bool(v.hideChatName)}, {"hideAccountName", bool(v.hideAccountName)},
-		{"hideTotalUnread", bool(v.hideTotalUnread)}};
-}
-void from_json(const nlohmann::json &j, WindowTitleContent &v) {
-	v.hideChatName = j.at("hideChatName").get<bool>();
-	v.hideAccountName = j.at("hideAccountName").get<bool>();
-	v.hideTotalUnread = j.at("hideTotalUnread").get<bool>();
-}
 }
 namespace Media {
 void to_json(nlohmann::json &j, const VideoQuality &v) {
@@ -237,11 +228,9 @@ void addCoreSettings(SettingsMap &entries) {
 	addSetting(entries, u"core.recordVideoMessages"_q, [&] { return settings.recordVideoMessages(); }, settings, &Core::Settings::setRecordVideoMessages);
 	addSetting(entries, u"core.thirdColumnWidth"_q, [&] { return settings.thirdColumnWidth(); }, settings, &Core::Settings::setThirdColumnWidth);
 	addSetting(entries, u"core.notifyFromAll"_q, [&] { return settings.notifyFromAll(); }, settings, &Core::Settings::setNotifyFromAll);
-	addSetting(entries, u"core.nativeWindowFrame"_q, [&] { return settings.nativeWindowFrame(); }, settings, &Core::Settings::setNativeWindowFrame);
 	addSetting(entries, u"core.systemDarkMode"_q, [&] { return settings.systemDarkMode(); }, settings, &Core::Settings::setSystemDarkMode);
 	addSetting(entries, u"core.systemDarkModeEnabled"_q, [&] { return settings.systemDarkModeEnabled(); }, settings, &Core::Settings::setSystemDarkModeEnabled);
 	addSetting(entries, u"core.systemAccentColorEnabled"_q, [&] { return settings.systemAccentColorEnabled(); }, settings, &Core::Settings::setSystemAccentColorEnabled);
-	addSetting(entries, u"core.windowTitleContent"_q, [&] { return settings.windowTitleContent(); }, settings, &Core::Settings::setWindowTitleContent);
 	addSetting(entries, u"core.windowPosition"_q, [&] { return settings.windowPosition(); }, settings, &Core::Settings::setWindowPosition);
 	addSetting(entries, u"core.workMode"_q, [&] { return settings.workMode(); }, settings, &Core::Settings::setWorkMode);
 	addSetting(entries, u"core.disableOpenGL"_q, [&] { return settings.disableOpenGL(); }, settings, &Core::Settings::setDisableOpenGL);

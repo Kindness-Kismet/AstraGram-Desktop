@@ -1624,29 +1624,14 @@ SessionController::SessionController(
 		}, _lifetime);
 	}
 
-	_authedName = session->user()->name();
 	session->changes().peerUpdates(
 		Data::PeerUpdate::Flag::FullInfo
-		| Data::PeerUpdate::Flag::Name
 	) | rpl::filter([=](const Data::PeerUpdate &update) {
-		if (update.flags & Data::PeerUpdate::Flag::Name) {
-			const auto user = session->user();
-			if (update.peer == user) {
-				_authedName = user->name();
-				const auto &settings = Core::App().settings();
-				if (!settings.windowTitleContent().hideAccountName) {
-					widget()->updateTitle();
-				}
-			}
+		if (update.peer->isSelf()) {
+			Support::Helper::CheckIfLost(this);
 		}
-		if (update.flags & Data::PeerUpdate::Flag::FullInfo) {
-			if (update.peer->isSelf()) {
-				Support::Helper::CheckIfLost(this);
-			}
-			fullInfoLoadedHook(update.peer);
-		}
-		return (update.flags & Data::PeerUpdate::Flag::FullInfo)
-			&& (update.peer == _showEditPeer);
+		fullInfoLoadedHook(update.peer);
+		return (update.peer == _showEditPeer);
 	}) | rpl::on_next([=] {
 		show(Box<EditPeerInfoBox>(this, base::take(_showEditPeer)));
 	}, lifetime());

@@ -112,8 +112,7 @@ private:
 	void startStep(SavedWindow &&data);
 	[[nodiscard]] Step *stepById(int stepId) const;
 	[[nodiscard]] QString shellTitle(
-		const SavedWindow &data,
-		not_null<Main::Session*> session) const;
+		const SavedWindow &data) const;
 	void createShell(not_null<Step*> step);
 	void queueFinishStep(int stepId);
 	void finishStep(not_null<Step*> step);

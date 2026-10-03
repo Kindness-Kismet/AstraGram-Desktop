@@ -49,7 +49,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/gl/gl_detection.h"
 #include "ui/layers/generic_box.h"
 #include "ui/painter.h"
-#include "ui/platform/ui_platform_window.h"
 #include "ui/power_saving.h"
 #include "ui/rp_widget.h"
 #include "ui/screen_reader_mode.h"
@@ -297,100 +296,6 @@ void BuildAutoDownloadSection(SectionBuilder &builder) {
 		{ u"auto"_q, u"download"_q, u"channels"_q, u"media"_q });
 
 	builder.addSkip(st::settingsCheckboxesSkip);
-}
-
-void BuildWindowTitleSection(SectionBuilder &builder) {
-	const auto settings = &Core::App().settings();
-
-	builder.addDivider();
-	builder.addSkip();
-	builder.addSubsectionTitle({
-		.id = u"advanced/window_title"_q,
-		.title = tr::lng_settings_window_system(),
-		.keywords = { u"window"_q, u"title"_q, u"frame"_q },
-	});
-
-	const auto content = [=] {
-		return settings->windowTitleContent();
-	};
-
-	const auto showChatName = builder.addToggle({
-		.id = u"advanced/title_chat_name"_q,
-		.title = tr::lng_settings_title_chat_name(),
-		.checked = !content().hideChatName,
-		.keywords = { u"title"_q, u"chat"_q, u"name"_q },
-	});
-	if (showChatName) {
-		showChatName->checkedChanges(
-		) | rpl::filter([=](bool checked) {
-			return (checked == content().hideChatName);
-		}) | rpl::on_next([=](bool checked) {
-			auto updated = content();
-			updated.hideChatName = !checked;
-			settings->setWindowTitleContent(updated);
-			Core::App().saveSettingsDelayed();
-		}, showChatName->lifetime());
-	}
-
-	const auto showAccountName = (Core::App().domain().accountsAuthedCount() > 1)
-		? builder.addToggle({
-			.id = u"advanced/title_account_name"_q,
-			.title = tr::lng_settings_title_account_name(),
-			.checked = !content().hideAccountName,
-			.keywords = { u"title"_q, u"account"_q, u"name"_q },
-		})
-		: nullptr;
-	if (showAccountName) {
-		showAccountName->checkedChanges(
-		) | rpl::filter([=](bool checked) {
-			return (checked == content().hideAccountName);
-		}) | rpl::on_next([=](bool checked) {
-			auto updated = content();
-			updated.hideAccountName = !checked;
-			settings->setWindowTitleContent(updated);
-			Core::App().saveSettingsDelayed();
-		}, showAccountName->lifetime());
-	}
-
-	const auto showTotalUnread = builder.addToggle({
-		.id = u"advanced/title_total_unread"_q,
-		.title = tr::lng_settings_title_total_count(),
-		.checked = !content().hideTotalUnread,
-		.keywords = { u"title"_q, u"unread"_q, u"count"_q, u"badge"_q },
-	});
-	if (showTotalUnread) {
-		showTotalUnread->checkedChanges(
-		) | rpl::filter([=](bool checked) {
-			return (checked == content().hideTotalUnread);
-		}) | rpl::on_next([=](bool checked) {
-			auto updated = content();
-			updated.hideTotalUnread = !checked;
-			settings->setWindowTitleContent(updated);
-			Core::App().saveSettingsDelayed();
-		}, showTotalUnread->lifetime());
-	}
-
-	if (Ui::Platform::NativeWindowFrameSupported()) {
-		const auto nativeFrame = builder.addToggle({
-			.id = u"advanced/native_frame"_q,
-			.title = Platform::IsWayland()
-				? tr::lng_settings_qt_frame()
-				: tr::lng_settings_native_frame(),
-			.checked = settings->nativeWindowFrame(),
-			.keywords = { u"frame"_q, u"native"_q, u"window"_q, u"border"_q },
-		});
-		if (nativeFrame) {
-			nativeFrame->checkedChanges(
-			) | rpl::filter([](bool checked) {
-				return (checked != Core::App().settings().nativeWindowFrame());
-			}) | rpl::on_next([=](bool checked) {
-				Core::App().settings().setNativeWindowFrame(checked);
-				Core::App().saveSettingsDelayed();
-			}, nativeFrame->lifetime());
-		}
-	}
-
-	builder.addSkip();
 }
 
 #if !defined Q_OS_WIN && !defined Q_OS_MAC
@@ -1103,7 +1008,6 @@ const auto kMeta = BuildHelper({
 }, [](SectionBuilder &builder) {
 	BuildDataStorageSection(builder);
 	BuildAutoDownloadSection(builder);
-	BuildWindowTitleSection(builder);
 #if !defined Q_OS_WIN && !defined Q_OS_MAC
 	BuildWindowCloseBehaviorSection(builder);
 #endif
@@ -1165,86 +1069,6 @@ void SetupConnectionType(
 	button->addClickHandler([=] {
 		controller->show(ProxiesBoxController::CreateOwningBox(account));
 	});
-}
-
-void SetupWindowTitleContent(
-		Window::SessionController *controller,
-		not_null<Ui::VerticalLayout*> container) {
-	const auto checkbox = [&](rpl::producer<QString> &&label, bool checked) {
-		return object_ptr<Ui::SettingsToggle>(
-			container,
-			std::move(label),
-			checked,
-			st::settingsButtonNoIcon);
-	};
-	const auto addCheckbox = [&](
-			rpl::producer<QString> &&label,
-			bool checked) {
-		return container->add(
-			checkbox(std::move(label), checked));
-	};
-	const auto settings = &Core::App().settings();
-	if (controller) {
-		const auto content = [=] {
-			return settings->windowTitleContent();
-		};
-		const auto showChatName = addCheckbox(
-			tr::lng_settings_title_chat_name(),
-			!content().hideChatName);
-		showChatName->checkedChanges(
-		) | rpl::filter([=](bool checked) {
-			return (checked == content().hideChatName);
-		}) | rpl::on_next([=](bool checked) {
-			auto updated = content();
-			updated.hideChatName = !checked;
-			settings->setWindowTitleContent(updated);
-			Core::App().saveSettingsDelayed();
-		}, showChatName->lifetime());
-
-		if (Core::App().domain().accountsAuthedCount() > 1) {
-			const auto showAccountName = addCheckbox(
-				tr::lng_settings_title_account_name(),
-				!content().hideAccountName);
-			showAccountName->checkedChanges(
-			) | rpl::filter([=](bool checked) {
-				return (checked == content().hideAccountName);
-			}) | rpl::on_next([=](bool checked) {
-				auto updated = content();
-				updated.hideAccountName = !checked;
-				settings->setWindowTitleContent(updated);
-				Core::App().saveSettingsDelayed();
-			}, showAccountName->lifetime());
-		}
-
-		const auto showTotalUnread = addCheckbox(
-			tr::lng_settings_title_total_count(),
-			!content().hideTotalUnread);
-		showTotalUnread->checkedChanges(
-		) | rpl::filter([=](bool checked) {
-			return (checked == content().hideTotalUnread);
-		}) | rpl::on_next([=](bool checked) {
-			auto updated = content();
-			updated.hideTotalUnread = !checked;
-			settings->setWindowTitleContent(updated);
-			Core::App().saveSettingsDelayed();
-		}, showTotalUnread->lifetime());
-	}
-
-	if (Ui::Platform::NativeWindowFrameSupported()) {
-		const auto nativeFrame = addCheckbox(
-			Platform::IsWayland()
-				? tr::lng_settings_qt_frame()
-				: tr::lng_settings_native_frame(),
-			Core::App().settings().nativeWindowFrame());
-
-		nativeFrame->checkedChanges(
-		) | rpl::filter([](bool checked) {
-			return (checked != Core::App().settings().nativeWindowFrame());
-		}) | rpl::on_next([=](bool checked) {
-			Core::App().settings().setNativeWindowFrame(checked);
-			Core::App().saveSettingsDelayed();
-		}, nativeFrame->lifetime());
-	}
 }
 
 void SetupSystemIntegrationContent(

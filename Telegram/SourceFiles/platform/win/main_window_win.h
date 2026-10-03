@@ -27,10 +27,6 @@ public:
 	void updateWindowIcon() override;
 	bool isActiveForTrayMenu() override;
 
-	// Custom shadows.
-	void shadowsActivate();
-	void shadowsDeactivate();
-
 	[[nodiscard]] bool hasTabletView() const;
 
 	void destroyedFromSystem();
@@ -74,10 +70,9 @@ private:
 
 	};
 
-	void setupNativeWindowFrame();
 	void setupPreviewPasscodeLock();
 	void updateTaskbarAndIconCounters();
-	void validateWindowTheme(bool native, bool night);
+	void setupCustomWindowTheme();
 
 	void forceIconRefresh();
 	void destroyCachedIcons();
@@ -100,8 +95,6 @@ private:
 
 	// Workarounds for activation from tray icon.
 	crl::time _lastDeactivateTime = 0;
-
-	bool _hasActiveFrame = false;
 
 };
 

@@ -702,10 +702,6 @@ public:
 		return _chatStyle.get();
 	}
 
-	[[nodiscard]] QString authedName() const {
-		return _authedName;
-	}
-
 	void setPremiumRef(const QString &ref);
 	[[nodiscard]] QString premiumRef() const;
 
@@ -834,8 +830,6 @@ private:
 	const bool _hasDialogs = false;
 
 	mutable std::shared_ptr<ChatHelpers::Show> _cachedShow;
-
-	QString _authedName;
 
 	using SendingAnimation = Ui::MessageSendingAnimationController;
 	const std::unique_ptr<SendingAnimation> _sendingAnimation;

@@ -383,7 +383,6 @@ private:
 	void startTray();
 
 	void createTray();
-	void updateWindowTitles();
 	void setLastActiveWindow(Window::Controller *window);
 	void showAccount(not_null<Main::Account*> account);
 	void processCreatedWindow(not_null<Window::Controller*> window);

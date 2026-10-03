@@ -79,8 +79,6 @@ public:
 
 	void showSettings();
 
-	[[nodiscard]] int verticalShadowTop() const;
-
 	void showToast(Ui::Toast::Config &&config);
 	void showToast(TextWithEntities &&text, crl::time duration = 0);
 	void showToast(const QString &text, crl::time duration = 0);

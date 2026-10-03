@@ -937,36 +937,21 @@ SavedWindows::Step *SavedWindows::stepById(int stepId) const {
 	return nullptr;
 }
 
-QString SavedWindows::shellTitle(
-		const SavedWindow &data,
-		not_null<Main::Session*> session) const {
-	const auto settings = _app->settings().windowTitleContent();
-	const auto name = settings.hideChatName
-		? QString()
-		: st::wrap_rtl(data.title);
+QString SavedWindows::shellTitle(const SavedWindow &data) const {
 	if (data.type == SeparateType::SharedMedia
 		&& data.sharedMediaType >= 0
 		&& data.sharedMediaType < Storage::kSharedMediaTypeCount) {
-		const auto media = Info::Media::SharedMediaTitle(
+		return Info::Media::SharedMediaTitle(
 			Storage::SharedMediaType(data.sharedMediaType))(tr::now);
-		return name.isEmpty() ? media : (name + u" @ "_q + media);
 	}
-	const auto user = (!settings.hideAccountName
-		&& _app->domain().accountsAuthedCount() > 1)
-		? st::wrap_rtl(session->user()->name())
-		: QString();
-	return name.isEmpty()
-		? (user.isEmpty() ? u"Telegram"_q : user)
-		: user.isEmpty()
-		? name
-		: (name + u" @ "_q + user);
+	return u"AstraGram"_q;
 }
 
 void SavedWindows::createShell(not_null<Step*> step) {
 	Expects(step->shell == nullptr);
 
 	step->shell = std::make_unique<RestoreShell>(
-		shellTitle(step->data, step->session),
+		shellTitle(step->data),
 		step->data.position);
 	const auto stepId = step->id;
 	step->shell->closeRequests(
@@ -1078,7 +1063,7 @@ void SavedWindows::markUnavailable(std::unique_ptr<Step> step) {
 	auto shell = step->shell
 		? std::move(step->shell)
 		: std::make_unique<RestoreShell>(
-			shellTitle(step->data, step->session),
+			shellTitle(step->data),
 			step->data.position);
 	pushClosed(std::move(step->data), shell.get());
 	const auto raw = shell.get();

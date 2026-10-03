@@ -30,6 +30,8 @@ namespace {
 constexpr auto kInitialVideoQuality = 480; // Start with SD.
 constexpr auto kMinIvZoom = 25;
 constexpr auto kMaxIvZoom = 400;
+// 新格式配置的开头标记；缺少时按旧版字段顺序读取。
+constexpr auto kSettingsFormat = quint32(0x41534731);
 
 [[nodiscard]] int DefaultIvZoom() {
 	const auto exact = cScale() * 100 / cScreenScale();
@@ -204,7 +206,8 @@ QByteArray Settings::serialize() const {
 		end(_noWarningExtensions)
 	).join(' ');
 
-	auto size = Serialize::bytearraySize(themesAccentColors)
+	auto size = sizeof(quint32) // 配置格式标记
+		+ Serialize::bytearraySize(themesAccentColors)
 		+ sizeof(qint32) // _adaptiveForWide
 		+ sizeof(qint32) // _moderateModeEnabled
 		+ sizeof(qint32) // _songVolume
@@ -257,7 +260,6 @@ QByteArray Settings::serialize() const {
 		+ sizeof(qint32) // _thirdColumnWidth
 		+ sizeof(qint32) // _thirdSectionExtendedBy
 		+ sizeof(qint32) // _notifyFromAll
-		+ sizeof(qint32) // _nativeWindowFrame
 		+ sizeof(qint32) // legacy system dark mode
 		+ Serialize::stringSize(_cameraDeviceId.current())
 		+ sizeof(qint32) // _ipRevealWarning
@@ -302,9 +304,6 @@ QByteArray Settings::serialize() const {
 		+ sizeof(qint32) // _rememberedDeleteMessageOnlyForYou
 		+ sizeof(qint32) // _translateChatEnabled
 		+ sizeof(quint64) // _translateToRaw
-		+ sizeof(qint32) // hideChatName
-		+ sizeof(qint32) // hideAccountName
-		+ sizeof(qint32) // hideTotalUnread
 		+ Serialize::bytearraySize(mediaViewPosition)
 		+ sizeof(qint32) // _ignoreBatterySaving
 		+ sizeof(quint64) // _macRoundIconDigest
@@ -357,6 +356,7 @@ QByteArray Settings::serialize() const {
 		QDataStream stream(&result, QIODevice::WriteOnly);
 		stream.setVersion(QDataStream::Qt_5_1);
 		stream
+			<< kSettingsFormat
 			<< themesAccentColors
 			<< qint32(_adaptiveForWide.current() ? 1 : 0)
 			<< qint32(_moderateModeEnabled ? 1 : 0)
@@ -418,7 +418,6 @@ QByteArray Settings::serialize() const {
 			<< qint32(_thirdColumnWidth.current())
 			<< qint32(_thirdSectionExtendedBy)
 			<< qint32(_notifyFromAll ? 1 : 0)
-			<< qint32(_nativeWindowFrame.current() ? 1 : 0)
 			<< qint32(0) // Legacy system dark mode
 			<< _cameraDeviceId.current()
 			<< qint32(_ipRevealWarning ? 1 : 0)
@@ -477,9 +476,6 @@ QByteArray Settings::serialize() const {
 			<< qint32(_rememberedDeleteMessageOnlyForYou ? 1 : 0)
 			<< qint32(_translateChatEnabled.current() ? 1 : 0)
 			<< quint64(QLocale::Language(_translateToRaw.current()))
-			<< qint32(_windowTitleContent.current().hideChatName ? 1 : 0)
-			<< qint32(_windowTitleContent.current().hideAccountName ? 1 : 0)
-			<< qint32(_windowTitleContent.current().hideTotalUnread ? 1 : 0)
 			<< mediaViewPosition
 			<< qint32(_ignoreBatterySaving.current() ? 1 : 0)
 			<< quint64(_macRoundIconDigest.value_or(0))
@@ -544,6 +540,12 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 
 	QDataStream stream(serialized);
 	stream.setVersion(QDataStream::Qt_5_1);
+	auto format = quint32();
+	stream >> format;
+	const auto legacyFormat = (format != kSettingsFormat);
+	if (legacyFormat) {
+		stream.device()->seek(0);
+	}
 
 	QByteArray themesAccentColors;
 	qint32 adaptiveForWide = _adaptiveForWide.current() ? 1 : 0;
@@ -608,7 +610,6 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	qint32 thirdColumnWidth = _thirdColumnWidth.current();
 	qint32 thirdSectionExtendedBy = _thirdSectionExtendedBy;
 	qint32 notifyFromAll = _notifyFromAll ? 1 : 0;
-	qint32 nativeWindowFrame = _nativeWindowFrame.current() ? 1 : 0;
 	qint32 systemDarkModeEnabled = _systemDarkModeEnabled.current() ? 1 : 0;
 	qint32 ipRevealWarning = _ipRevealWarning ? 1 : 0;
 	qint32 groupCallPushToTalk = _groupCallPushToTalk ? 1 : 0;
@@ -645,9 +646,6 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	qint32 rememberedDeleteMessageOnlyForYou = _rememberedDeleteMessageOnlyForYou ? 1 : 0;
 	qint32 translateChatEnabled = _translateChatEnabled.current() ? 1 : 0;
 	quint64 translateToRaw = _translateToRaw.current();
-	qint32 hideChatName = _windowTitleContent.current().hideChatName ? 1 : 0;
-	qint32 hideAccountName = _windowTitleContent.current().hideAccountName ? 1 : 0;
-	qint32 hideTotalUnread = _windowTitleContent.current().hideTotalUnread ? 1 : 0;
 	QByteArray mediaViewPosition;
 	qint32 ignoreBatterySaving = _ignoreBatterySaving.current() ? 1 : 0;
 	quint64 macRoundIconDigest = _macRoundIconDigest.value_or(0);
@@ -750,8 +748,9 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 			0.,
 			1.);
 	}
-	if (!stream.atEnd()) {
-		stream >> nativeWindowFrame;
+	if (legacyFormat && !stream.atEnd()) {
+		// 迁移时跳过已移除的边框设置，新配置不再保存。
+		stream.skipRawData(sizeof(qint32));
 	}
 	if (!stream.atEnd()) {
 		// Read over this one below, if was in the file.
@@ -894,11 +893,9 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 			>> translateChatEnabled
 			>> translateToRaw;
 	}
-	if (!stream.atEnd()) {
-		stream
-			>> hideChatName
-			>> hideAccountName
-			>> hideTotalUnread;
+	if (legacyFormat && !stream.atEnd()) {
+		// 迁移时跳过已移除的标题设置，新配置不再保存。
+		stream.skipRawData(3 * sizeof(qint32));
 	}
 	if (!stream.atEnd()) {
 		stream >> mediaViewPosition;
@@ -1180,7 +1177,6 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 		_tabbedSelectorSectionEnabled = false;
 	}
 	_notifyFromAll = (notifyFromAll == 1);
-	_nativeWindowFrame = (nativeWindowFrame == 1);
 	_systemDarkModeEnabled = (systemDarkModeEnabled == 1);
 	_groupCallPushToTalk = (groupCallPushToTalk == 1);
 	_groupCallPushToTalkShortcut = groupCallPushToTalkShortcut;
@@ -1276,11 +1272,6 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	_rememberedDeleteMessageOnlyForYou = (rememberedDeleteMessageOnlyForYou == 1);
 	_translateChatEnabled = (translateChatEnabled == 1);
 	_translateToRaw = int(QLocale::Language(translateToRaw));
-	_windowTitleContent = WindowTitleContent{
-		.hideChatName = (hideChatName == 1),
-		.hideAccountName = (hideAccountName == 1),
-		.hideTotalUnread = (hideTotalUnread == 1),
-	};
 	if (!mediaViewPosition.isEmpty()) {
 		_mediaViewPosition = Deserialize(mediaViewPosition);
 		if (!_mediaViewPosition.w && !_mediaViewPosition.maximized) {

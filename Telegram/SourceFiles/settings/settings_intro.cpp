@@ -134,9 +134,6 @@ object_ptr<Ui::RpWidget> CreateIntroSettings(
 		SetupSystemIntegrationContent(
 			window->sessionController(),
 			wrap.data());
-		SetupWindowTitleContent(
-			window->sessionController(),
-			wrap.data());
 		if (wrap->count() > 0) {
 			Ui::AddDivider(result);
 			Ui::AddSkip(result);

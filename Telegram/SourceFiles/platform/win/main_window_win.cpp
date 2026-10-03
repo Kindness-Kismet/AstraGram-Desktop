@@ -33,7 +33,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtWidgets/QApplication>
 #include <QtGui/QWindow>
 #include <QtGui/QScreen>
-#include <QtCore/QOperatingSystemVersion>
 
 #include <Shobjidl.h>
 #include <shellapi.h>
@@ -236,14 +235,6 @@ bool EventFilter::mainWindowEvent(
 		_window->destroyedFromSystem();
 	} return false;
 
-	case WM_ACTIVATE: {
-		if (LOWORD(wParam) != WA_INACTIVE) {
-			_window->shadowsActivate();
-		} else {
-			_window->shadowsDeactivate();
-		}
-	} return false;
-
 	case WM_SIZE: {
 		if (wParam == SIZE_MAXIMIZED || wParam == SIZE_RESTORED || wParam == SIZE_MINIMIZED) {
 			if (wParam == SIZE_RESTORED && _window->windowState() == Qt::WindowNoState) {
@@ -423,8 +414,6 @@ MainWindow::MainWindow(not_null<Window::Controller*> controller)
 , _taskbarHiderWindow(std::make_unique<QWindow>()) {
 	qApp->installNativeEventFilter(&_private->filter);
 
-	setupNativeWindowFrame();
-
 	SetWindowPriority(this, controller->isPrimary() ? 2 : 1);
 
 	using namespace rpl::mappers;
@@ -454,29 +443,6 @@ void MainWindow::setupPreviewPasscodeLock() {
 			&fHasIconicBitmap,
 			sizeof(fHasIconicBitmap));
 	}, lifetime());
-}
-
-void MainWindow::setupNativeWindowFrame() {
-	auto nativeFrame = rpl::single(
-		Core::App().settings().nativeWindowFrame()
-	) | rpl::then(
-		Core::App().settings().nativeWindowFrameChanges()
-	);
-
-	rpl::combine(
-		std::move(nativeFrame),
-		Window::Theme::IsNightModeValue()
-	) | rpl::skip(1) | rpl::on_next([=](bool native, bool night) {
-		validateWindowTheme(native, night);
-	}, lifetime());
-}
-
-void MainWindow::shadowsActivate() {
-	_hasActiveFrame = true;
-}
-
-void MainWindow::shadowsDeactivate() {
-	_hasActiveFrame = false;
 }
 
 void MainWindow::destroyedFromSystem() {
@@ -725,100 +691,16 @@ void MainWindow::initHook() {
 		}
 	}
 
-	validateWindowTheme(
-		Core::App().settings().nativeWindowFrame(),
-		Window::Theme::IsNightMode());
+	setupCustomWindowTheme();
 }
 
-void MainWindow::validateWindowTheme(bool native, bool night) {
+void MainWindow::setupCustomWindowTheme() {
 	if (!IsWindows8OrGreater()) {
-		const auto empty = native ? nullptr : L" ";
-		SetWindowTheme(_hWnd, empty, empty);
+		SetWindowTheme(_hWnd, L" ", L" ");
 		QApplication::setStyle(QStyleFactory::create(u"Windows"_q));
-#if 0
-	} else if (!Core::App().settings().systemDarkMode().has_value()/*
-		|| (!Dlls::AllowDarkModeForApp && !Dlls::SetPreferredAppMode)
-		|| !Dlls::AllowDarkModeForWindow
-		|| !Dlls::RefreshImmersiveColorPolicyState
-		|| !Dlls::FlushMenuThemes*/) {
-		return;
-#endif
-	} else if (!native) {
-		SetWindowTheme(_hWnd, nullptr, nullptr);
 		return;
 	}
-
-	// See "https://github.com/microsoft/terminal/blob/"
-	// "eb480b6bbbd83a2aafbe62992d360838e0ab9da5/"
-	// "src/interactivity/win32/windowtheme.cpp#L43-L63"
-
-	auto darkValue = BOOL(night ? TRUE : FALSE);
-
-	const auto updateStyle = [&] {
-		static const auto kSystemVersion = QOperatingSystemVersion::current();
-		if (kSystemVersion.microVersion() >= 18875 && Dlls::SetWindowCompositionAttribute) {
-			Dlls::WINDOWCOMPOSITIONATTRIBDATA data = {
-				Dlls::WINDOWCOMPOSITIONATTRIB::WCA_USEDARKMODECOLORS,
-				&darkValue,
-				sizeof(darkValue)
-			};
-			Dlls::SetWindowCompositionAttribute(_hWnd, &data);
-		} else if (kSystemVersion.microVersion() >= 17763) {
-			static const auto kDWMWA_USE_IMMERSIVE_DARK_MODE = (kSystemVersion.microVersion() >= 18985)
-				? DWORD(20)
-				: DWORD(19);
-			DwmSetWindowAttribute(
-				_hWnd,
-				kDWMWA_USE_IMMERSIVE_DARK_MODE,
-				&darkValue,
-				sizeof(darkValue));
-		}
-	};
-
-	updateStyle();
-
-	// See "https://osdn.net/projects/tortoisesvn/scm/svn/blobs/28812/"
-	// "trunk/src/TortoiseIDiff/MainWindow.cpp"
-	//
-	// But for now it works event with a small part of that.
-	//
-
-	//const auto updateWindowTheme = [&] {
-	//	const auto set = [&](LPCWSTR name) {
-	//		return SetWindowTheme(_hWnd, name, nullptr);
-	//	};
-	//	if (!night || FAILED(set(L"DarkMode_Explorer"))) {
-	//		set(L"Explorer");
-	//	}
-	//};
-	//
-	//if (night) {
-	//	if (Dlls::SetPreferredAppMode) {
-	//		Dlls::SetPreferredAppMode(Dlls::PreferredAppMode::AllowDark);
-	//	} else {
-	//		Dlls::AllowDarkModeForApp(TRUE);
-	//	}
-	//	Dlls::AllowDarkModeForWindow(_hWnd, TRUE);
-	//	updateWindowTheme();
-	//	updateStyle();
-	//	Dlls::FlushMenuThemes();
-	//	Dlls::RefreshImmersiveColorPolicyState();
-	//} else {
-	//	updateWindowTheme();
-	//	Dlls::AllowDarkModeForWindow(_hWnd, FALSE);
-	//	updateStyle();
-	//	Dlls::FlushMenuThemes();
-	//	Dlls::RefreshImmersiveColorPolicyState();
-	//	if (Dlls::SetPreferredAppMode) {
-	//		Dlls::SetPreferredAppMode(Dlls::PreferredAppMode::Default);
-	//	} else {
-	//		Dlls::AllowDarkModeForApp(FALSE);
-	//	}
-	//}
-
-	// Didn't find any other way to definitely repaint with the new style.
-	SendMessage(_hWnd, WM_NCACTIVATE, _hasActiveFrame ? 0 : 1, 0);
-	SendMessage(_hWnd, WM_NCACTIVATE, _hasActiveFrame ? 1 : 0, 0);
+	SetWindowTheme(_hWnd, nullptr, nullptr);
 }
 
 HWND MainWindow::psHwnd() const {
