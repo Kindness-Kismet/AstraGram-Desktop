@@ -32,10 +32,9 @@ def generate_update_map(artifacts: Path, version: int) -> dict:
             },
         }
 
-    # 两个苹果架构必须各有更新包，不能把单架构包同时登记到两个键。
-    missing = {"win64", "linux", "mac", "armac"} - result.keys()
-    if missing:
-        raise ValueError("缺少必需的更新包：" + ", ".join(sorted(missing)))
+    # 每个键只登记本架构的更新包；缺席平台的客户端本次不提示更新。
+    if not result:
+        raise ValueError("没有任何更新包")
     return result
 
 

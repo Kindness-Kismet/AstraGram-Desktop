@@ -15,44 +15,37 @@ TARGETS = {
         "repository": "Kindness-Net/AstraGram-Desktop-Windows-Build",
         "archive_platform": "win",
         "updater_prefixes": ("tx64upd",),
-        "required": True,
     },
     "windows-arm64": {
         "repository": "Kindness-Net/AstraGram-Desktop-Windows-ARM64-Build",
         "archive_platform": "win",
         "updater_prefixes": ("tarm64upd",),
-        "required": False,
     },
     "linux-x64": {
         "repository": "Kindness-Net/AstraGram-Desktop-Linux-Build",
         "archive_platform": "linux",
         "updater_prefixes": ("tlinuxupd",),
-        "required": True,
     },
     "linux-arm64": {
         "repository": "Kindness-Net/AstraGram-Desktop-Linux-Build",
         "archive_platform": "linux",
         "updater_prefixes": ("tlinuxarmupd",),
-        "required": False,
     },
     "macos-x64": {
         "repository": "Kindness-Net/AstraGram-Desktop-macOS-Build",
         "archive_platform": "macos",
         "updater_prefixes": ("tmacupd",),
-        "required": True,
     },
     "macos-arm64": {
         "repository": "Kindness-Net/AstraGram-Desktop-macOS-Build",
         "archive_platform": "macos",
         "updater_prefixes": ("tarmacupd",),
-        "required": True,
     },
     # 兼容旧版 Universal builder 的来源清单；新 Release 不再声明这个目标。
     "macos-universal": {
         "repository": "Kindness-Net/AstraGram-Desktop-macOS-Build",
         "archive_platform": "macos",
         "updater_prefixes": ("tmacupd", "tarmacupd"),
-        "required": False,
     },
 }
 
@@ -234,9 +227,9 @@ def _parse_build_runs(raw: str) -> dict[str, dict]:
     unknown = set(build_runs) - set(TARGETS)
     if unknown:
         raise ProvenanceError("--build-runs 包含未知目标：" + ", ".join(sorted(unknown)))
-    missing = {key for key, target in TARGETS.items() if target["required"]} - set(build_runs)
-    if missing:
-        raise ProvenanceError("--build-runs 缺少必需目标：" + ", ".join(sorted(missing)))
+    # 单个平台失败不阻塞其余平台发布，至少要有一个目标。
+    if not build_runs:
+        raise ProvenanceError("--build-runs 至少需要一个目标")
     for key, build in build_runs.items():
         if not isinstance(build, dict) or set(build) != {"repository", "run_id", "run_attempt"}:
             raise ProvenanceError(f"{key} build run 必须只包含 repository、run_id、run_attempt")

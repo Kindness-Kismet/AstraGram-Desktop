@@ -138,7 +138,6 @@ jobs:
           )
           PY
 
-  # arm64 配方已就位但未在 CI 跑通，通过前不阻塞发布
   windows-arm64:
     name: Windows ARM64 remote build
     needs: validate
@@ -158,7 +157,6 @@ jobs:
 
       - name: Dispatch and wait for Windows ARM64.
         id: remote
-        continue-on-error: true
         env:
           REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
         run: |
@@ -175,11 +173,6 @@ jobs:
             --version "${{ needs.validate.outputs.version }}" \
             --appupdateversion "${{ needs.validate.outputs.appversion }}" \
             --timeout-seconds 21300
-
-      - name: Report Windows ARM64 outcome.
-        if: steps.remote.outcome == 'failure'
-        run: |
-          echo "::warning::Windows ARM64 build failed; the release continues without it. ${GITHUB_SERVER_URL}/${{ github.repository }}/actions"
 
       - name: Cancel Windows ARM64 remote build.
         if: ${{ cancelled() && steps.remote.outputs.run_id != '' }}
@@ -308,9 +301,11 @@ jobs:
           )
           PY
 
+  # 单个平台失败不阻塞其余平台发布；补发缺失平台需 Re-run all jobs，来源校验要求产物来自同一 attempt。
   publish:
     name: Verify and publish release
     needs: [validate, windows-x64, windows-arm64, linux, macos]
+    if: ${{ !cancelled() && needs.validate.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -322,7 +317,10 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
+      # 远程运行结束才有 attempt；失败的运行可能只上传了部分架构，下载失败不中断发布。
       - name: Download Windows x64 artifacts.
+        if: needs.windows-x64.outputs.run_attempt != ''
+        continue-on-error: ${{ needs.windows-x64.result != 'success' }}
         uses: actions/download-artifact@v8
         with:
           repository: Kindness-Net/AstraGram-Desktop-Windows-Build
@@ -332,10 +330,9 @@ jobs:
           merge-multiple: true
           path: artifacts/windows
 
-      # arm64 构建失败时整个下载步骤缺失产物，容忍并交给来源校验跳过
       - name: Download Windows ARM64 artifacts.
-        if: needs.windows-arm64.outputs.run_id != ''
-        continue-on-error: true
+        if: needs.windows-arm64.outputs.run_attempt != ''
+        continue-on-error: ${{ needs.windows-arm64.result != 'success' }}
         uses: actions/download-artifact@v8
         with:
           repository: Kindness-Net/AstraGram-Desktop-Windows-ARM64-Build
@@ -346,6 +343,8 @@ jobs:
           path: artifacts/windows-arm64
 
       - name: Download Linux artifacts.
+        if: needs.linux.outputs.run_attempt != ''
+        continue-on-error: ${{ needs.linux.result != 'success' }}
         uses: actions/download-artifact@v8
         with:
           repository: Kindness-Net/AstraGram-Desktop-Linux-Build
@@ -356,6 +355,8 @@ jobs:
           path: artifacts/linux
 
       - name: Download macOS artifacts.
+        if: needs.macos.outputs.run_attempt != ''
+        continue-on-error: ${{ needs.macos.result != 'success' }}
         uses: actions/download-artifact@v8
         with:
           repository: Kindness-Net/AstraGram-Desktop-macOS-Build
@@ -370,76 +371,54 @@ jobs:
           SOURCE_REF: refs/tags/${{ needs.validate.outputs.tag }}
           VERSION: ${{ needs.validate.outputs.version }}
           APPVERSION: ${{ needs.validate.outputs.appversion }}
+          WINDOWS_RESULT: ${{ needs.windows-x64.result }}
           WINDOWS_RUN_ID: ${{ needs.windows-x64.outputs.run_id }}
           WINDOWS_RUN_ATTEMPT: ${{ needs.windows-x64.outputs.run_attempt }}
+          WINDOWS_ARM64_RESULT: ${{ needs.windows-arm64.result }}
           WINDOWS_ARM64_RUN_ID: ${{ needs.windows-arm64.outputs.run_id }}
           WINDOWS_ARM64_RUN_ATTEMPT: ${{ needs.windows-arm64.outputs.run_attempt }}
+          LINUX_RESULT: ${{ needs.linux.result }}
           LINUX_RUN_ID: ${{ needs.linux.outputs.run_id }}
           LINUX_RUN_ATTEMPT: ${{ needs.linux.outputs.run_attempt }}
+          MACOS_RESULT: ${{ needs.macos.result }}
           MACOS_RUN_ID: ${{ needs.macos.outputs.run_id }}
           MACOS_RUN_ATTEMPT: ${{ needs.macos.outputs.run_attempt }}
         run: |
           set -euo pipefail
-          build_runs=$(jq -cn \
-            --argjson windows_run "$WINDOWS_RUN_ID" \
-            --argjson windows_attempt "$WINDOWS_RUN_ATTEMPT" \
-            --argjson linux_run "$LINUX_RUN_ID" \
-            --argjson linux_attempt "$LINUX_RUN_ATTEMPT" \
-            --argjson macos_run "$MACOS_RUN_ID" \
-            --argjson macos_attempt "$MACOS_RUN_ATTEMPT" \
-            '{
-              "windows-x64": {
-                repository: "Kindness-Net/AstraGram-Desktop-Windows-Build",
-                run_id: $windows_run,
-                run_attempt: $windows_attempt
-              },
-              "linux-x64": {
-                repository: "Kindness-Net/AstraGram-Desktop-Linux-Build",
-                run_id: $linux_run,
-                run_attempt: $linux_attempt
-              },
-              "macos-x64": {
-                repository: "Kindness-Net/AstraGram-Desktop-macOS-Build",
-                run_id: $macos_run,
-                run_attempt: $macos_attempt
-              },
-              "macos-arm64": {
-                repository: "Kindness-Net/AstraGram-Desktop-macOS-Build",
-                run_id: $macos_run,
-                run_attempt: $macos_attempt
-              }
-            }')
-
-          if test -d artifacts/windows-arm64 \
-            && find artifacts/windows-arm64 -type f -name 'provenance-windows-arm64.json' \
-            -print -quit | grep -q .; then
+          build_runs='{}'
+          # 按实际下载到的来源清单登记目标；平台构建成功却缺少必有目标时停止发布。
+          add_target() {
+            local key=$1 repository=$2 run_id=$3 attempt=$4 result=$5 expected=$6
+            if ! find artifacts -type f -name "provenance-${key}.json" \
+              -print -quit 2>/dev/null | grep -q .; then
+              if test "$result" = success && test "$expected" = true; then
+                echo "::error::${key} build succeeded but its provenance is missing."
+                exit 1
+              fi
+              echo "::warning::${key} is not included in this release."
+              return 0
+            fi
             build_runs=$(jq -cn \
               --argjson current "$build_runs" \
-              --argjson run "$WINDOWS_ARM64_RUN_ID" \
-              --argjson attempt "$WINDOWS_ARM64_RUN_ATTEMPT" \
-              '$current + {
-                "windows-arm64": {
-                  repository: "Kindness-Net/AstraGram-Desktop-Windows-ARM64-Build",
-                  run_id: $run,
-                  run_attempt: $attempt
-                }
-              }')
-          fi
+              --arg key "$key" \
+              --arg repository "$repository" \
+              --argjson run "$run_id" \
+              --argjson attempt "$attempt" \
+              '$current + {($key): {repository: $repository, run_id: $run, run_attempt: $attempt}}')
+          }
 
-          if find artifacts/linux -type f -name 'provenance-linux-arm64.json' \
-            -print -quit | grep -q .; then
-            build_runs=$(jq -cn \
-              --argjson current "$build_runs" \
-              --argjson run "$LINUX_RUN_ID" \
-              --argjson attempt "$LINUX_RUN_ATTEMPT" \
-              '$current + {
-                "linux-arm64": {
-                  repository: "Kindness-Net/AstraGram-Desktop-Linux-Build",
-                  run_id: $run,
-                  run_attempt: $attempt
-                }
-              }')
-          fi
+          add_target windows-x64 Kindness-Net/AstraGram-Desktop-Windows-Build \
+            "$WINDOWS_RUN_ID" "$WINDOWS_RUN_ATTEMPT" "$WINDOWS_RESULT" true
+          add_target windows-arm64 Kindness-Net/AstraGram-Desktop-Windows-ARM64-Build \
+            "$WINDOWS_ARM64_RUN_ID" "$WINDOWS_ARM64_RUN_ATTEMPT" "$WINDOWS_ARM64_RESULT" true
+          add_target linux-x64 Kindness-Net/AstraGram-Desktop-Linux-Build \
+            "$LINUX_RUN_ID" "$LINUX_RUN_ATTEMPT" "$LINUX_RESULT" true
+          add_target linux-arm64 Kindness-Net/AstraGram-Desktop-Linux-Build \
+            "$LINUX_RUN_ID" "$LINUX_RUN_ATTEMPT" "$LINUX_RESULT" false
+          add_target macos-x64 Kindness-Net/AstraGram-Desktop-macOS-Build \
+            "$MACOS_RUN_ID" "$MACOS_RUN_ATTEMPT" "$MACOS_RESULT" true
+          add_target macos-arm64 Kindness-Net/AstraGram-Desktop-macOS-Build \
+            "$MACOS_RUN_ID" "$MACOS_RUN_ATTEMPT" "$MACOS_RESULT" true
 
           python3 scripts/build_provenance.py verify-artifacts \
             --root artifacts \
@@ -464,7 +443,6 @@ jobs:
             test ! -e "release-artifacts/$name"
             cp -- "$file" "release-artifacts/$name"
           done < <(find artifacts -type f -print0)
-          test "$(find release-artifacts -maxdepth 1 -type f -name '*.zip' | wc -l)" -ge 4
 
       - name: Generate update map.
         env:

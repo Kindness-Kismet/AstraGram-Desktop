@@ -46,6 +46,14 @@ class RunDetails:
     url: str
 
 
+class RemoteBuildFailed(RemoteBuildError):
+    """表示远程运行已结束但未成功；其中已成功的架构产物仍可按该 attempt 校验。"""
+
+    def __init__(self, message: str, details: RunDetails) -> None:
+        super().__init__(message)
+        self.details = details
+
+
 class GitHubApi:
     """通过固定超时的 GitHub REST 请求调度、查询和取消工作流。"""
 
@@ -311,8 +319,9 @@ def run_remote_build(
             if details.status == "completed":
                 terminal = True
                 if details.conclusion != "success":
-                    raise RemoteBuildError(
-                        f"远程构建失败: {details.conclusion}; {details.url}"
+                    raise RemoteBuildFailed(
+                        f"远程构建失败: {details.conclusion}; {details.url}",
+                        details,
                     )
                 return details
 
@@ -358,7 +367,7 @@ def _append_dispatched_outputs(
         output.write(f"run_url={url}\n")
 
 
-def _append_success_outputs(path: Path | None, details: RunDetails) -> None:
+def _append_attempt_output(path: Path | None, details: RunDetails) -> None:
     if path is None:
         return
     with path.open("a", encoding="utf-8") as output:
@@ -478,11 +487,16 @@ def main() -> int:
             )
         finally:
             _restore_signal_handlers(previous_handlers)
+    except RemoteBuildFailed as error:
+        # 运行已结束，记录 attempt 供发布阶段收集其中已成功的架构。
+        _append_attempt_output(output_path, error.details)
+        print(f"error: {error}", file=sys.stderr)
+        return 1
     except (RemoteBuildError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
 
-    _append_success_outputs(output_path, details)
+    _append_attempt_output(output_path, details)
     _append_success_summary(summary_path, details)
     return 0
 
