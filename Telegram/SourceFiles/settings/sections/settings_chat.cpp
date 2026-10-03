@@ -299,7 +299,7 @@ void ColorsPalette::show(Type type) {
 	const auto color = messageShotSelected.has_value()
 		? messageShotSelected
 		: (settings.systemAccentColorEnabled()
-			? Window::Theme::SystemAccentColor()
+			? Window::Theme::SystemAccentColor(*scheme)
 			: settings.themesAccentColors().get(type));
 	const auto current = color.value_or(scheme->accentColor);
 	const auto i = ranges::find(list, current);
@@ -2514,7 +2514,7 @@ void SetupDefaultThemes(
 			return;
 		}
 		const auto color = settings.systemAccentColorEnabled()
-			? Window::Theme::SystemAccentColor()
+			? Window::Theme::SystemAccentColor(*scheme)
 			: settings.themesAccentColors().get(type);
 		if (i != end(checks)) {
 			if (ExtrasFeatures::MessageShot::isChoosingTheme()) {

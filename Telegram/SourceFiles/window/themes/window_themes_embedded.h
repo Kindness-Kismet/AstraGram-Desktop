@@ -51,6 +51,9 @@ private:
 	const EmbeddedScheme &scheme,
 	const QColor &color);
 [[nodiscard]] std::optional<QColor> SystemAccentColor();
+// 按主题明暗把系统强调色归一化为界面实际使用的强调色。
+[[nodiscard]] std::optional<QColor> SystemAccentColor(
+	const EmbeddedScheme &scheme);
 [[nodiscard]] style::colorizer ColorizerForTheme(const QString &absolutePath);
 void ApplyAccentPalette(style::palette &palette);
 

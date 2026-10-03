@@ -18,6 +18,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QGuiApplication>
 #include <QtGui/QPalette>
 
+#include <cmath>
+#include <numbers>
+
 #ifdef Q_OS_WIN
 #include "platform/win/integration_win.h"
 #endif
@@ -141,6 +144,122 @@ style::colorizer::Color cColor(std::string_view hex) {
 	return QColor::fromHsv(hue, saturation, original.value(), colorized.alpha());
 }
 
+struct Oklch {
+	double lightness = 0.;
+	double chroma = 0.;
+	double hue = 0.;
+};
+
+using LinearRgb = std::array<double, 3>;
+
+[[nodiscard]] double ToLinear(double value) {
+	return (value <= 0.04045)
+		? (value / 12.92)
+		: std::pow((value + 0.055) / 1.055, 2.4);
+}
+
+[[nodiscard]] double FromLinear(double value) {
+	value = std::clamp(value, 0., 1.);
+	return (value <= 0.0031308)
+		? (12.92 * value)
+		: (1.055 * std::pow(value, 1. / 2.4) - 0.055);
+}
+
+[[nodiscard]] Oklch ToOklch(const QColor &color) {
+	const auto r = ToLinear(color.redF());
+	const auto g = ToLinear(color.greenF());
+	const auto b = ToLinear(color.blueF());
+	const auto l = std::cbrt(
+		0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+	const auto m = std::cbrt(
+		0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+	const auto s = std::cbrt(
+		0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+	const auto x = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s;
+	const auto y = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
+	const auto chroma = std::sqrt(x * x + y * y);
+	const auto hue = (chroma < 0.000001)
+		? 0.
+		: (std::atan2(y, x) * 180. / std::numbers::pi);
+	return {
+		.lightness = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+		.chroma = chroma,
+		.hue = (hue < 0.) ? (hue + 360.) : hue,
+	};
+}
+
+[[nodiscard]] LinearRgb ToLinearRgb(double lightness, double x, double y) {
+	auto l = lightness + 0.3963377774 * x + 0.2158037573 * y;
+	auto m = lightness - 0.1055613458 * x - 0.0638541728 * y;
+	auto s = lightness - 0.0894841775 * x - 1.2914855480 * y;
+	l *= l * l;
+	m *= m * m;
+	s *= s * s;
+	return {
+		4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+		-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+		-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+	};
+}
+
+[[nodiscard]] QColor ToColor(const LinearRgb &rgb) {
+	const auto channel = [](double value) {
+		return int(std::lround(FromLinear(value) * 255.));
+	};
+	return QColor(channel(rgb[0]), channel(rgb[1]), channel(rgb[2]));
+}
+
+// 超出 sRGB 色域时逐步降低彩度，最终退化为同明度的灰色。
+[[nodiscard]] QColor FromOklch(double lightness, double chroma, double hue) {
+	const auto radians = hue * std::numbers::pi / 180.;
+	for (auto i = 0; i != 32; ++i) {
+		const auto rgb = ToLinearRgb(
+			lightness,
+			chroma * std::cos(radians),
+			chroma * std::sin(radians));
+		if (ranges::all_of(rgb, [](double v) { return v >= 0. && v <= 1.; })) {
+			return ToColor(rgb);
+		}
+		chroma *= 0.9;
+	}
+	return ToColor(ToLinearRgb(lightness, 0., 0.));
+}
+
+[[nodiscard]] double ContrastRatio(const QColor &a, const QColor &b) {
+	const auto luminance = [](const QColor &color) {
+		return 0.2126 * ToLinear(color.redF())
+			+ 0.7152 * ToLinear(color.greenF())
+			+ 0.0722 * ToLinear(color.blueF());
+	};
+	const auto first = luminance(a);
+	const auto second = luminance(b);
+	return (std::max(first, second) + 0.05) / (std::min(first, second) + 0.05);
+}
+
+// 与 stelliberty 一致：只取系统色相，彩度限制在 0.025..0.18，明度按主题固定，与背景对比度至少 3:1。
+[[nodiscard]] QColor NormalizeSystemAccent(
+		const QColor &source,
+		const QColor &surface,
+		bool dark) {
+	const auto oklch = ToOklch(source);
+	const auto chroma = (oklch.chroma < 0.015)
+		? 0.
+		: std::clamp(oklch.chroma, 0.025, 0.18);
+	auto result = FromOklch(dark ? 0.78 : 0.54, chroma, oklch.hue);
+	if (ContrastRatio(result, surface) >= 3.) {
+		return result;
+	}
+	auto tone = ToOklch(result).lightness;
+	for (auto i = 0; i != 24; ++i) {
+		tone = std::clamp(tone + (dark ? 0.02 : -0.02), 0.30, 0.88);
+		result = FromOklch(tone, chroma, oklch.hue);
+		if (ContrastRatio(result, surface) >= 3.) {
+			return result;
+		}
+	}
+	return result;
+}
+
 } // namespace
 
 style::colorizer ColorizerFrom(
@@ -208,6 +327,17 @@ std::optional<QColor> SystemAccentColor() {
 #endif
 }
 
+std::optional<QColor> SystemAccentColor(const EmbeddedScheme &scheme) {
+	const auto accent = SystemAccentColor();
+	if (!accent) {
+		return std::nullopt;
+	}
+	return NormalizeSystemAccent(
+		*accent,
+		scheme.background,
+		scheme.type == EmbeddedType::Night);
+}
+
 style::colorizer ColorizerForTheme(const QString &absolutePath) {
 	if (!IsEmbeddedTheme(absolutePath)) {
 		return {};
@@ -222,7 +352,7 @@ style::colorizer ColorizerForTheme(const QString &absolutePath) {
 	}
 	const auto &settings = Core::App().settings();
 	if (settings.systemAccentColorEnabled()) {
-		if (const auto accent = SystemAccentColor()) {
+		if (const auto accent = SystemAccentColor(*i)) {
 			return ColorizerFrom(*i, *accent);
 		}
 	}
