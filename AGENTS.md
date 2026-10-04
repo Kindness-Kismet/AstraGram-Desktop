@@ -248,7 +248,7 @@ python scripts/build.py               # Release，默认
 python scripts/build.py --dev         # Debug
 python scripts/build.py --dev --pdb   # Debug，并重新生成完整的 AstraGram.pdb
 python scripts/build.py --all         # 两个配置都构建
-python scripts/build.py --jobs 32     # 协作使用 32；默认 32，上限 128
+python scripts/build.py --jobs 20     # 协作统一使用 20；脚本默认 32，上限 128
 python scripts/build.py --reconfigure # 丢弃 CMake 缓存重新配置
 python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 ```
@@ -263,7 +263,7 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 ### 编译并发
 
 - 构建脚本默认 32 并发，`--jobs` 接受 1 至 128，超过上限或非正数直接报错。
-- 协作时使用 `python scripts/build.py --dev --jobs 32`，避免影响同时运行的其他任务；未指定参数时同样使用默认值 32。
+- 助手编译统一显式传入 `--jobs 20`，例如 `python scripts/build.py --dev --jobs 20`；后续任务同样遵守，不使用脚本默认并发。
 
 ---
 
