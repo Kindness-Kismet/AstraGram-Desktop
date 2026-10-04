@@ -396,6 +396,7 @@ public:
 	void setDisableNotificationsDelay(bool val);
 	void setLocalPremium(bool val);
 	void setDevFeaturesEnabled(bool val);
+	void enableBadgeDevFeatures();
 	void setShowChannelReactions(bool val);
 	void setShowGroupReactions(bool val);
 	void setShowPrivateChatReactions(bool val);
@@ -682,6 +683,7 @@ private:
 	rpl::variable<bool> _removeMessageTail = false;
 	rpl::variable<bool> _disableNotificationsDelay = false;
 	rpl::variable<bool> _devFeaturesEnabled = false;
+	bool _devFeaturesExplicit = false;
 	rpl::variable<bool> _localPremium = false;
 	rpl::variable<bool> _showChannelReactions = true;
 	rpl::variable<bool> _showGroupReactions = true;

@@ -1,6 +1,7 @@
 #include "extras/utils/badge_helpers.h"
 
 #include "extras/utils/rc_manager.h"
+#include "extras/extras_settings.h"
 #include "extras/ui/boxes/donation_box.h"
 #include "extras/ui/toasts.h"
 #include "core/application.h"
@@ -88,6 +89,16 @@ void BadgeToastIcon::updateInnerGeometry() {
 	return {};
 }
 
+void applyBadgeDefaults(not_null<Main::Session*> session) {
+	const auto &roster = RCManager::getInstance().roster();
+	const auto id = ID(session->userId().bare);
+	if (roster.developers.contains(id)
+		|| roster.supporters.contains(id)
+		|| roster.customBadges.contains(id)) {
+		ExtrasSettings::getInstance().enableBadgeDevFeatures();
+	}
+}
+
 } // namespace
 
 bool isExteraPeer(not_null<PeerData*> peer) {
@@ -120,7 +131,9 @@ rpl::producer<Info::Profile::Badge::Content> ExteraBadgeTypeFromPeer(
 }
 
 void watchBadgeChanges(not_null<Main::Session*> session) {
+	applyBadgeDefaults(session);
 	RCManager::getInstance().changes() | rpl::on_next([=](const std::vector<PeerId> &ids) {
+		applyBadgeDefaults(session);
 		for (const auto id : ids) {
 			if (const auto peer = session->data().peerLoaded(id)) {
 				session->changes().peerUpdated(peer, Data::PeerUpdate::Flag::EmojiStatus);
