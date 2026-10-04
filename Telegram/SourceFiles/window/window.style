@@ -279,6 +279,11 @@ windowFiltersButton: SideBarButton(defaultSideBarButton) {
 	badgeStroke: 2px;
 	badgePosition: point(3px, 7px);
 	iconPosition: point(-1px, 6px);
+	// showDuration 为 0 时按下不起水波纹;拖拽高亮走 setForceRippled,只用 hideDuration,不受影响。
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: sideBarBgRipple;
+		showDuration: 0;
+	}
 }
 windowFiltersButtonTextOnly: SideBarButton(windowFiltersButton) {
 	textTop: 15px;
@@ -292,6 +297,9 @@ windowFiltersButtonIconsOnly: SideBarButton(windowFiltersButton) {
 windowFiltersMainMenu: SideBarButton(windowFiltersButton) {
 	icon: icon {{ "folders/sidebar/telegram_plane", windowBgActive }};
 	iconPosition: point(-1px, -1px);
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: sideBarBgRipple;
+	}
 	minHeight: 54px;
 }
 windowFilterSmallItem: PeerListItem(defaultPeerListItem) {

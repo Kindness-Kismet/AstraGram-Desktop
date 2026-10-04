@@ -58,10 +58,6 @@ public:
 	void addRipple(QPoint origin, QSize size, Fn<void()> updateCallback);
 	virtual void stopLastRipple();
 	virtual void clearRipple();
-	void addRippleWithMask(
-		QPoint origin,
-		QImage mask,
-		Fn<void()> updateCallback);
 
 	void paintRipple(
 		QPainter &p,

@@ -348,29 +348,8 @@ bool Row::CornerLayersManager::isDisplayedNone() const {
 BasicRow::BasicRow() = default;
 BasicRow::~BasicRow() = default;
 
-void BasicRow::addRipple(
-		QPoint origin,
-		QSize size,
-		Fn<void()> updateCallback) {
-	if (!_ripple) {
-		addRippleWithMask(
-			origin,
-			Ui::RippleAnimation::RectMask(size),
-			std::move(updateCallback));
-	} else {
-		_ripple->add(origin);
-	}
-}
-
-void BasicRow::addRippleWithMask(
-		QPoint origin,
-		QImage mask,
-		Fn<void()> updateCallback) {
-	_ripple = std::make_unique<Ui::RippleAnimation>(
-		st::dialogsRipple,
-		std::move(mask),
-		std::move(updateCallback));
-	_ripple->add(origin);
+// 会话列表行不画点击水波纹,选中态只靠背景色区分。
+void BasicRow::addRipple(QPoint, QSize, Fn<void()>) {
 }
 
 void BasicRow::clearRipple() {
@@ -924,19 +903,11 @@ void Row::clearRipple() {
 	clearTopicJumpRipple();
 }
 
+// 话题跳转块同样不画水波纹,保持行内点击反馈一致。
 void Row::addTopicJumpRipple(
-		QPoint origin,
-		not_null<Ui::TopicJumpCache*> topicJumpCache,
-		Fn<void()> updateCallback) {
-	const auto history = this->history();
-	const auto view = history ? &history->lastItemDialogsView() : nullptr;
-	if (view) {
-		view->addTopicJumpRipple(
-			origin,
-			topicJumpCache,
-			std::move(updateCallback));
-		_topicJumpRipple = 1;
-	}
+		QPoint,
+		not_null<Ui::TopicJumpCache*>,
+		Fn<void()>) {
 }
 
 void Row::clearTopicJumpRipple() {
