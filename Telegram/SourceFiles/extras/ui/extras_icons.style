@@ -36,6 +36,7 @@ outChannelBadgeIcon: icon {{ "extras/channel", msgOutDateFg }};
 outChannelBadgeSelectedIcon: icon {{ "extras/channel", msgOutDateFgSelected }};
 
 infoExteraOfficialBadge: icon {{ "extras/extera_official", profileVerifiedCheckBg }};
+infoExteraSupporterBadge: icon {{ "extras/extera_badge", profileVerifiedCheckBg }};
 
 winEnterWithGuestIcon: icon {{ "extras/ghost_tray", windowFg }};
 
@@ -69,3 +70,9 @@ extrasHistoryFileOutPlugin: icon {{ "extras/history_file_plugin", historyFileOut
 extrasHistoryFileOutPluginSelected: icon {{ "extras/history_file_plugin", historyFileOutIconFgSelected }};
 
 menuIconClearAttention: icon {{ "menu/clear", menuIconAttentionColor }};
+
+dialogsExteraSupporterIcon: ThreeStateIcon {
+	icon: icon {{ "extras/dialogs_extera_supporter", dialogsVerifiedIconBg }};
+	over: icon {{ "extras/dialogs_extera_supporter", dialogsVerifiedIconBgOver }};
+	active: icon {{ "extras/dialogs_extera_supporter", dialogsVerifiedIconBgActive }};
+}

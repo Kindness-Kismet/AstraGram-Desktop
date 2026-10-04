@@ -153,7 +153,9 @@ ComposedBadge::ComposedBadge(
 		nullptr,
 		std::move(animationPaused),
 		0,
-		Info::Profile::BadgeType::Extera) {
+		Info::Profile::BadgeType::Extera
+			| Info::Profile::BadgeType::ExteraSupporter
+			| Info::Profile::BadgeType::ExteraCustom) {
 	if (hasUnread) {
 		_unread = Badge::CreateUnread(this, rpl::single(
 			rpl::empty
@@ -184,6 +186,7 @@ ComposedBadge::ComposedBadge(
 		}
 	}, lifetime());
 
+	_exteraBadge.setPremiumClickCallback(badgeClickHandler(session->user()));
 	_exteraBadge.updated(
 	) | rpl::on_next([=] {
 		if (const auto widget = _exteraBadge.widget()) {

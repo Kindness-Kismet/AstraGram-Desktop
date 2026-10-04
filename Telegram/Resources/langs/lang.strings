@@ -9197,8 +9197,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SessionTerminated" = "Session **{item}** was terminated. You may still browse cached messages.";
 "extras_InvalidConnectionLayerNote" = "You should re-login due to an error during the update.";
 "extras_LocalPremiumNotice" = "You're using **local** Telegram Premium.\nIt **won't** give you any benefits.\n**Enjoy the star near your nickname!**";
-"extras_DeveloperPopup" = "**{item}** is a member of the **exteraGram** development team.";
-"extras_OfficialResourcePopup" = "**{item}** is the official resource of **exteraGram** or **AyuGram**.";
+"extras_DeveloperPopup" = "**{item}** is a member of the **AstraGram** development team.";
+"extras_OfficialResourcePopup" = "**{item}** is an official **AstraGram** channel.";
 "extras_MutualContactInfo" = "This contact is mutual.";
 "extras_SessionInfoOfficialApp" = "Official app";
 "extras_SettingsWatermark" = "AstraGram is based on AyuGram, developed and maintained by Radolyn Labs.";
@@ -9273,3 +9273,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DonationDetails" = "Donation details";
 "extras_DonationMessage" = "If you like my work, please consider supporting me. Your donation will help with everyday software development and new features.";
 "extras_DonationOpenAfdian" = "Open Afdian";
+
+"extras_SupporterPopup" = "**{item}** supports **AstraGram** development.";
+
+"extras_CustomBadgePopup" = "**{item}** has a custom **AstraGram** badge.";
+
+"extras_BadgeAccessibleName" = "AstraGram badge";
+
+"extras_DonationBadgeInstructions" = "1. Donate through the Afdian link below.\n\n2. Send your payment confirmation and Telegram user ID through Afdian messages. For a channel badge, also include its channel ID.\n\n3. After verification, your badge will appear in AstraGram. Custom badges use Telegram custom emoji.";

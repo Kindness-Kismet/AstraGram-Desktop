@@ -4,7 +4,7 @@
 #include "extras/data/entities.h"
 #include "core/application.h"
 #include "data/data_media_types.h"
-#include "info/profile/info_profile_badge.h"
+#include "extras/utils/badge_helpers.h"
 
 namespace Api {
 struct SendOptions;
@@ -51,11 +51,6 @@ void dispatchToMainThread(const std::function<void()> &callback, int delay = 0);
 ID getDialogIdFromPeer(not_null<PeerData*> peer);
 
 ID getBareID(not_null<PeerData*> peer);
-
-bool isExteraPeer(ID peerId);
-
-rpl::producer<Info::Profile::Badge::Content> ExteraBadgeTypeFromPeer(not_null<PeerData*> peer);
-Fn<void()> badgeClickHandler(not_null<PeerData *> peer);
 
 bool isMessageHidden(not_null<HistoryItem*> item);
 

@@ -2027,6 +2027,10 @@ void InnerWidget::paintPeerSearchResult(
 			st::dialogsExteraOfficialIcon,
 			context.active,
 			context.selected),
+		.exteraSupporter = &ThreeStateIcon(
+			st::dialogsExteraSupporterIcon,
+			context.active,
+			context.selected),
 		.premium = &ThreeStateIcon(
 			st::dialogsPremiumIcon,
 			context.active,

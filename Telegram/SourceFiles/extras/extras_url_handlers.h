@@ -27,6 +27,11 @@ bool HandleExtrasSettings(
 	const Match &match,
 	const QVariant &context);
 
+bool handleSupport(
+	Window::SessionController *controller,
+	const Match &match,
+	const QVariant &context);
+
 bool TryHandleSpotify(const QString &url);
 
 }

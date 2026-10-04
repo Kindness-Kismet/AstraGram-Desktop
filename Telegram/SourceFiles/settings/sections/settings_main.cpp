@@ -175,7 +175,9 @@ Cover::Cover(
 			Window::GifPauseReason::Layer);
 	},
 	0, // customStatusLoopsLimit
-	Info::Profile::BadgeType::Extera)
+	Info::Profile::BadgeType::Extera
+		| Info::Profile::BadgeType::ExteraSupporter
+		| Info::Profile::BadgeType::ExteraCustom)
 , _userpic(
 	this,
 	controller,
@@ -237,10 +239,7 @@ Cover::Cover(
 			_badge.widget(),
 			_badge.sizeTag());
 	});
-	const auto isExtera = isExteraPeer(getBareID(_user));
-	if (isExtera) {
-		_exteraBadge.setPremiumClickCallback(badgeClickHandler(_user));
-	}
+	_exteraBadge.setPremiumClickCallback(badgeClickHandler(_user));
 	rpl::merge(
 		_badge.updated(),
 		_exteraBadge.updated()
