@@ -7,21 +7,78 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 using "boxes/boxes.style";
 
-connectionHostInputField: InputField(defaultInputField) {
+proxyFormInput: InputField(defaultInputField) {
+	textMargins: margins(12px, 11px, 12px, 10px);
+	placeholderFont: font(14px);
+	placeholderScale: 0.;
+	placeholderShift: 0px;
+	borderRadius: 10px;
+	borderFg: strokeFgStrong;
+	borderActive: 1px;
+	heightMin: 42px;
+	heightMax: 42px;
+}
+connectionHostInputField: InputField(proxyFormInput) {
 	width: 160px;
 }
-connectionPortInputField: InputField(defaultInputField) {
-	width: 55px;
+connectionPortInputField: InputField(proxyFormInput) {
+	width: 84px;
 }
-connectionUserInputField: InputField(defaultInputField) {
+connectionUserInputField: InputField(proxyFormInput) {
 }
-connectionPasswordInputField: InputField(defaultInputField) {
+connectionPasswordInputField: InputField(proxyFormInput) {
 }
 proxyUsePadding: margins(22px, 6px, 22px, 5px);
 proxyTryIPv6Padding: margins(22px, 8px, 22px, 5px);
-proxyRowPadding: margins(22px, 8px, 8px, 8px);
-proxyRowIconSkip: 32px;
+
+// 顶部药丸形分段控件：整高填充的激活块代替细条，圆角取 barStroke 的一半。
+proxyModeSlider: SettingsSlider(defaultSettingsSlider) {
+	height: 32px;
+	barTop: 0px;
+	barSkip: 0px;
+	barStroke: 32px;
+	barRadius: 16px;
+	barFg: transparent;
+	barFgActive: windowBgActive;
+	barSnapToLabel: false;
+	labelTop: 7px;
+	labelStyle: semiboldTextStyle;
+	labelFg: windowSubTextFg;
+	labelFgActive: windowFgActive;
+	rippleBg: windowBgOver;
+	rippleBgActive: activeButtonBgRipple;
+	ripple: defaultRippleAnimation;
+	duration: 150;
+}
+// 分段控件所在的容器：底色衬出未选中段，内边距留出药丸与边缘的间隙。
+proxyFormSlider: SettingsSlider(proxyModeSlider) {
+	height: 32px;
+	barStroke: 32px;
+	barRadius: 8px;
+	barFgActive: cardBg;
+	labelStyle: defaultTextStyle;
+	labelFgActive: windowActiveTextFg;
+	rippleBgActive: windowBgOver;
+}
+proxyModeSliderBg: windowBgOver;
+proxyModeSliderRadius: 18px;
+proxyModeSliderInnerPadding: margins(2px, 2px, 2px, 2px);
+proxyModeSliderPadding: margins(22px, 4px, 22px, 10px);
+proxyModeAboutPadding: margins(22px, 0px, 22px, 10px);
+proxyRowPadding: margins(22px, 10px, 8px, 10px);
+// 图标方块占位：方块宽度加与文字的间距。
+proxyRowIconSkip: 46px;
 proxyRowSkip: 2px;
+// 代理行左侧的图标方块，选中时换成强调色底与白色图标。
+proxyRowIconTileSize: 34px;
+proxyRowIconTileRadius: 10px;
+proxyRowIconTileBg: windowBgOver;
+proxyRowIcon: icon {{ "menu/network", menuIconFg }};
+proxyRowIconActive: icon {{ "menu/network", windowFgActive }};
+// 状态行前的圆点，颜色随状态取 proxyRowStatusFg* 系列。
+proxyRowStatusDotSize: 6px;
+proxyRowStatusDotSkip: 7px;
+proxyRowStatusDotTop: 4px;
 proxyRowRipple: defaultRippleAnimationBgOver;
 proxyRowTitleFg: windowFg;
 proxyRowTitlePalette: TextPalette(defaultTextPalette) {
@@ -34,16 +91,30 @@ proxyRowStatusFg: windowSubTextFg;
 proxyRowStatusFgOnline: windowActiveTextFg;
 proxyRowStatusFgOffline: boxTextFgError;
 proxyRowStatusFgAvailable: boxTextFgGood;
+// 模式说明块：强调色图标方块 + 标题 + 说明文字。
+proxyHeroPadding: margins(22px, 6px, 22px, 10px);
+proxyHeroIconSize: 40px;
+proxyHeroIconRadius: 12px;
+proxyHeroIconBg: windowBgActive;
+proxyHeroIcon: icon {{ "menu/network", windowFgActive }};
+proxyHeroSkip: 14px;
+proxyHeroTextSkip: 3px;
+proxyHeroTitleFg: windowBoldFg;
+proxyHeroTitleStyle: TextStyle(defaultTextStyle) {
+	font: semiboldFont;
+}
+proxyHeroAboutFg: windowSubTextFg;
 proxyEditTitle: FlatLabel(defaultFlatLabel) {
 	style: TextStyle(defaultTextStyle) {
-		font: autoDownloadTitleFont;
+		font: font(12px semibold);
 	}
-	textFg: boxTitleFg;
+	textFg: windowSubTextFg;
 }
-proxyEditTitlePadding: margins(22px, 16px, 22px, 0px);
+proxyEditTitlePadding: margins(20px, 12px, 20px, 6px);
+proxyEditWidth: 480px;
 proxyEditTypePadding: margins(22px, 4px, 22px, 8px);
-proxyEditInputPadding: margins(22px, 0px, 22px, 0px);
-proxyEditSkip: 16px;
+proxyEditInputPadding: margins(20px, 0px, 20px, 0px);
+proxyEditSkip: 12px;
 proxyEmptyListLabel: FlatLabel(defaultFlatLabel) {
 	align: align(top);
 	textFg: windowSubTextFg;

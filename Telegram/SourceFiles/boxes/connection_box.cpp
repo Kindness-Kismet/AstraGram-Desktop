@@ -85,6 +85,35 @@ using ProxyData = MTP::ProxyData;
 	return result;
 }
 
+// 顶部分段控件的段序：停用、系统代理、自定义。
+constexpr auto kProxyModeSections = std::array{
+	ProxyData::Settings::Disabled,
+	ProxyData::Settings::System,
+	ProxyData::Settings::Enabled,
+};
+
+[[nodiscard]] int ProxyModeSection(ProxyData::Settings value) {
+	for (auto i = 0; i != int(kProxyModeSections.size()); ++i) {
+		if (kProxyModeSections[i] == value) {
+			return i;
+		}
+	}
+	Unexpected("Proxy settings value in ProxyModeSection.");
+}
+
+[[nodiscard]] rpl::producer<QString> ProxyModeAbout(
+		ProxyData::Settings value) {
+	switch (value) {
+	case ProxyData::Settings::Disabled:
+		return tr::extras_ProxyModeOffAbout();
+	case ProxyData::Settings::System:
+		return tr::extras_ProxyModeSystemAbout();
+	case ProxyData::Settings::Enabled:
+		return tr::extras_ProxyModeCustomAbout();
+	}
+	Unexpected("Proxy settings value in ProxyModeAbout.");
+}
+
 [[nodiscard]] std::vector<QString> ExtractLinkCandidates(const QString &input) {
 	auto urls = std::vector<QString>();
 	static const auto urlRegex = QRegularExpression(
@@ -654,10 +683,13 @@ protected:
 	void prepare() override;
 	void showFinished() override;
 	void keyPressEvent(QKeyEvent *e) override;
+	void resizeEvent(QResizeEvent *e) override;
 
 private:
 	void setupContent();
 	void setupTopButton();
+	void setupModeBar();
+	void syncModeSlider();
 	void createNoRowsLabel();
 	void addNewProxy();
 	void applyView(View &&view);
@@ -665,20 +697,25 @@ private:
 	int rowHeight() const;
 	void refreshProxyForCalls();
 	void refreshProxyRotation();
+	void refreshProxyList();
 
 	not_null<ProxiesBoxController*> _controller;
 	Core::SettingsProxy &_settings;
-	QPointer<Ui::Checkbox> _tryIPv6;
+	QPointer<Ui::RpWidget> _modeBar;
+	QPointer<Ui::SettingsSlider> _modeSlider;
+	QPointer<Settings::Button> _tryIPv6;
 	std::shared_ptr<Ui::RadioenumGroup<ProxyData::Settings>> _proxySettings;
-	QPointer<Ui::SlideWrap<Ui::Checkbox>> _proxyForCalls;
-	QPointer<Ui::SlideWrap<Ui::Checkbox>> _proxyRotation;
+	QPointer<Ui::SlideWrap<Settings::Button>> _proxyForCalls;
+	QPointer<Ui::SlideWrap<Settings::Button>> _proxyRotation;
 	QPointer<Ui::SlideWrap<Ui::VerticalLayout>> _proxyRotationOptions;
 	QPointer<Ui::SettingsSlider> _proxyRotationTimeout;
-	QPointer<Ui::DividerLabel> _about;
+	QPointer<Ui::FlatLabel> _about;
+	QPointer<Ui::SlideWrap<Ui::VerticalLayout>> _listWrap;
 	base::unique_qptr<Ui::RpWidget> _noRows;
 	object_ptr<Ui::VerticalLayout> _initialWrap;
 	QPointer<Ui::VerticalLayout> _wrap;
 	int _currentProxySupportsCallsId = 0;
+	bool _modeSliderSyncing = false;
 
 	base::flat_map<int, base::unique_qptr<ProxyRow>> _rows;
 
@@ -700,6 +737,10 @@ private:
 	using Type = ProxyData::Type;
 
 	void prepare() override;
+	void resizeEvent(QResizeEvent *e) override {
+		Ui::BoxContent::resizeEvent(e);
+		_content->resizeToWidth(width());
+	}
 	void setInnerFocus() override {
 		if (_type->current() == Type::Web) {
 			_webHost->setFocusFast();
@@ -724,6 +765,8 @@ private:
 		const QString &text) const;
 
 	const bool _allowShare = false;
+	int _formHeight = 0;
+	bool _changingType = false;
 	Fn<void(ProxyData)> _callback;
 	Fn<void(ProxyData)> _shareCallback;
 
@@ -1104,6 +1147,15 @@ void ProxiesBox::keyPressEvent(QKeyEvent *e) {
 	}
 }
 
+void ProxiesBox::resizeEvent(QResizeEvent *e) {
+	BoxContent::resizeEvent(e);
+
+	if (_modeBar) {
+		_modeBar->resizeToWidth(width());
+		_modeBar->moveToLeft(0, 0);
+	}
+}
+
 void ProxiesBox::prepare() {
 	setTitle(tr::lng_proxy_settings());
 
@@ -1168,77 +1220,118 @@ void ProxiesBox::setupTopButton() {
 	});
 }
 
-void ProxiesBox::setupContent() {
-	const auto inner = setInnerWidget(object_ptr<Ui::VerticalLayout>(this));
-
-	_tryIPv6 = inner->add(
-		object_ptr<Ui::Checkbox>(
-			inner,
-			tr::lng_connection_try_ipv6(tr::now),
-			_settings.tryIPv6()),
-		st::proxyTryIPv6Padding);
+void ProxiesBox::setupModeBar() {
 	_proxySettings
 		= std::make_shared<Ui::RadioenumGroup<ProxyData::Settings>>(
 			_settings.settings());
-	inner->add(
-		object_ptr<Ui::Radioenum<ProxyData::Settings>>(
+
+	const auto bar = Ui::CreateChild<Ui::RpWidget>(this);
+	_modeBar = bar;
+
+	const auto slider = Ui::CreateChild<Ui::SettingsSlider>(
+		bar,
+		st::proxyModeSlider);
+	_modeSlider = slider;
+	slider->setSections({
+		tr::extras_ProxyModeOff(tr::now),
+		tr::extras_ProxyModeSystem(tr::now),
+		tr::extras_ProxyModeCustom(tr::now),
+	});
+	slider->setActiveSectionFast(ProxyModeSection(_settings.settings()));
+
+	// 分段控件的衬底：未选中段落在这层底色上，激活段由控件自己绘制。
+	const auto radius = st::proxyModeSliderRadius;
+	bar->paintRequest() | rpl::on_next([=] {
+		auto p = QPainter(bar);
+		auto hq = PainterHighQualityEnabler(p);
+		p.setPen(Qt::NoPen);
+		p.setBrush(st::proxyModeSliderBg);
+		const auto &padding = st::proxyModeSliderPadding;
+		p.drawRoundedRect(
+			QRect(
+				padding.left(),
+				padding.top(),
+				bar->width() - padding.left() - padding.right(),
+				bar->height() - padding.top() - padding.bottom()),
+			radius,
+			radius);
+	}, bar->lifetime());
+
+	bar->widthValue() | rpl::on_next([=](int width) {
+		const auto &padding = st::proxyModeSliderPadding;
+		const auto &inner = st::proxyModeSliderInnerPadding;
+		const auto left = padding.left() + inner.left();
+		const auto top = padding.top() + inner.top();
+		slider->resizeToWidth(width
+			- left
+			- padding.right()
+			- inner.right());
+		slider->moveToLeft(left, top);
+		bar->resize(width, top + slider->height()
+			+ inner.bottom()
+			+ padding.bottom());
+	}, bar->lifetime());
+	bar->resizeToWidth(st::boxWideWidth);
+
+	slider->sectionActivated() | rpl::on_next([=](int section) {
+		if (_modeSliderSyncing) {
+			return;
+		}
+		_proxySettings->setValue(kProxyModeSections[section]);
+	}, slider->lifetime());
+}
+
+void ProxiesBox::setupContent() {
+	setupModeBar();
+
+	const auto inner = setInnerWidget(
+		object_ptr<Ui::VerticalLayout>(this),
+		st::boxScroll,
+		_modeBar->height());
+
+	// 模式说明：跟随分段切换，替代原先三个单选项各自的标题。
+	_about = inner->add(
+		object_ptr<Ui::FlatLabel>(
 			inner,
-			_proxySettings,
-			ProxyData::Settings::Disabled,
-			tr::lng_proxy_disable(tr::now)),
-		st::proxyUsePadding);
-	inner->add(
-		object_ptr<Ui::Radioenum<ProxyData::Settings>>(
-			inner,
-			_proxySettings,
-			ProxyData::Settings::System,
-			tr::lng_proxy_use_system_settings(tr::now)),
-		st::proxyUsePadding);
-	inner->add(
-		object_ptr<Ui::Radioenum<ProxyData::Settings>>(
-			inner,
-			_proxySettings,
-			ProxyData::Settings::Enabled,
-			tr::lng_proxy_use_custom(tr::now)),
-		st::proxyUsePadding);
-	_proxyForCalls = inner->add(
-		object_ptr<Ui::SlideWrap<Ui::Checkbox>>(
-			inner,
-			object_ptr<Ui::Checkbox>(
-				inner,
-				tr::lng_proxy_use_for_calls(tr::now),
-				_settings.useProxyForCalls()),
-			style::margins(
-				0,
-				st::proxyUsePadding.top(),
-				0,
-				st::proxyUsePadding.bottom())),
-		style::margins(
-			st::proxyTryIPv6Padding.left(),
-			0,
-			st::proxyTryIPv6Padding.right(),
-			st::proxyTryIPv6Padding.top()));
-	_proxyRotation = inner->add(
-		object_ptr<Ui::SlideWrap<Ui::Checkbox>>(
-			inner,
-			object_ptr<Ui::Checkbox>(
-				inner,
-				tr::lng_proxy_auto_switch(tr::now),
-				_settings.proxyRotationEnabled()),
-			style::margins(
-				0,
-				st::proxyUsePadding.top(),
-				0,
-				st::proxyUsePadding.bottom())),
-		style::margins(
-			st::proxyTryIPv6Padding.left(),
-			0,
-			st::proxyTryIPv6Padding.right(),
-			st::proxyTryIPv6Padding.top()));
-	_proxyRotationOptions = inner->add(
+			_proxySettings->value() | rpl::map(ProxyModeAbout) | rpl::flatten_latest(),
+			st::boxDividerLabel),
+		st::proxyModeAboutPadding);
+
+	// 自定义模式的内容：代理列表、通话代理、轮换设置。
+	_listWrap = inner->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			inner,
 			object_ptr<Ui::VerticalLayout>(inner)));
+	const auto list = _listWrap->entity();
+
+	_wrap = list->add(std::move(_initialWrap));
+
+	_proxyForCalls = list->add(
+		object_ptr<Ui::SlideWrap<Settings::Button>>(
+			list,
+			Settings::CreateButtonWithIcon(
+				list,
+				tr::lng_proxy_use_for_calls(),
+				st::settingsButton,
+				{ &st::menuIconCallsReceive })));
+	_proxyForCalls->entity()->toggleOn(
+		rpl::single(_settings.useProxyForCalls()));
+
+	_proxyRotation = list->add(
+		object_ptr<Ui::SlideWrap<Settings::Button>>(
+			list,
+			Settings::CreateButtonWithIcon(
+				list,
+				tr::lng_proxy_auto_switch(),
+				st::settingsButton,
+				{ &st::menuIconRestore })));
+	_proxyRotation->entity()->toggleOn(
+		rpl::single(_settings.proxyRotationEnabled()));
+
+	_proxyRotationOptions = list->add(
+		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+			list,
+			object_ptr<Ui::VerticalLayout>(list)));
 	_proxyRotationTimeout = _proxyRotationOptions->entity()->add(
 		object_ptr<Ui::SettingsSlider>(
 			_proxyRotationOptions->entity(),
@@ -1260,70 +1353,11 @@ void ProxiesBox::setupContent() {
 			st::boxDividerLabel),
 		st::proxyAboutPadding);
 
-	_about = inner->add(
-		object_ptr<Ui::DividerLabel>(
-			inner,
-			object_ptr<Ui::FlatLabel>(
-				inner,
-				tr::lng_proxy_about(tr::now),
-				st::boxDividerLabel),
-			st::proxyAboutPadding),
-		style::margins(0, 0, 0, st::proxyRowPadding.top()));
-
-	_wrap = inner->add(std::move(_initialWrap));
-	inner->add(object_ptr<Ui::FixedHeightWidget>(
-		inner,
-		st::proxyRowPadding.bottom()));
-
-	_proxySettings->setChangedCallback([=](ProxyData::Settings value) {
-		if (!_controller->setProxySettings(value)) {
-			_proxySettings->setValue(_settings.settings());
-			addNewProxy();
-		}
-		refreshProxyForCalls();
-		refreshProxyRotation();
-	});
-	_tryIPv6->checkedChanges(
-	) | rpl::on_next([=](bool checked) {
-		_controller->setTryIPv6(checked);
-	}, _tryIPv6->lifetime());
-
-	_controller->proxySettingsValue(
-	) | rpl::on_next([=](ProxyData::Settings value) {
-		_proxySettings->setValue(value);
-		refreshProxyForCalls();
-		refreshProxyRotation();
-	}, inner->lifetime());
-
-	_proxyForCalls->entity()->checkedChanges(
-	) | rpl::on_next([=](bool checked) {
-		_controller->setProxyForCalls(checked);
-	}, _proxyForCalls->lifetime());
-	_proxyRotation->entity()->checkedChanges(
-	) | rpl::on_next([=](bool checked) {
-		_controller->setProxyRotationEnabled(checked);
-		refreshProxyRotation();
-	}, _proxyRotation->lifetime());
-	_proxyRotationTimeout->sectionActivated(
-	) | rpl::on_next([=](int section) {
-		_controller->setProxyRotationTimeout(
-			Core::SettingsProxy::kProxyRotationTimeouts[section]);
-	}, _proxyRotationTimeout->lifetime());
-
-	if (_rows.empty()) {
-		createNoRowsLabel();
-	}
-	refreshProxyForCalls();
-	refreshProxyRotation();
-	_proxyForCalls->finishAnimating();
-	_proxyRotation->finishAnimating();
-	_proxyRotationOptions->finishAnimating();
-
 	{
-		const auto wrap = inner->add(
+		const auto wrap = list->add(
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-				inner,
-				object_ptr<Ui::VerticalLayout>(inner)));
+				list,
+				object_ptr<Ui::VerticalLayout>(list)));
 		const auto shareList = Settings::AddButtonWithIcon(
 			wrap->entity(),
 			tr::lng_proxy_edit_share_list_button(),
@@ -1337,19 +1371,107 @@ void ProxiesBox::setupContent() {
 		wrap->finishAnimating();
 	}
 
+	// IPv6 对直连同样有效，所以不随模式隐藏。
+	Ui::AddSkip(inner);
+	Ui::AddDivider(inner);
+	Ui::AddSkip(inner);
+	_tryIPv6 = Settings::AddButtonWithIcon(
+		inner,
+		tr::lng_connection_try_ipv6(),
+		st::settingsButton,
+		{ &st::menuIconNetwork });
+	_tryIPv6->toggleOn(rpl::single(_settings.tryIPv6()));
+	Ui::AddDividerText(inner, tr::lng_proxy_about());
+
+	_proxySettings->setChangedCallback([=](ProxyData::Settings value) {
+		if (!_controller->setProxySettings(value)) {
+			_proxySettings->setValue(_settings.settings());
+			addNewProxy();
+		}
+		syncModeSlider();
+		refreshProxyList();
+		refreshProxyForCalls();
+		refreshProxyRotation();
+	});
+	_tryIPv6->toggledChanges(
+	) | rpl::on_next([=](bool checked) {
+		_controller->setTryIPv6(checked);
+	}, _tryIPv6->lifetime());
+
+	_controller->proxySettingsValue(
+	) | rpl::on_next([=](ProxyData::Settings value) {
+		_proxySettings->setValue(value);
+		syncModeSlider();
+		refreshProxyList();
+		refreshProxyForCalls();
+		refreshProxyRotation();
+	}, inner->lifetime());
+
+	_proxyForCalls->entity()->toggledChanges(
+	) | rpl::on_next([=](bool checked) {
+		_controller->setProxyForCalls(checked);
+	}, _proxyForCalls->lifetime());
+	_proxyRotation->entity()->toggledChanges(
+	) | rpl::on_next([=](bool checked) {
+		_controller->setProxyRotationEnabled(checked);
+		refreshProxyRotation();
+	}, _proxyRotation->lifetime());
+	_proxyRotationTimeout->sectionActivated(
+	) | rpl::on_next([=](int section) {
+		_controller->setProxyRotationTimeout(
+			Core::SettingsProxy::kProxyRotationTimeouts[section]);
+	}, _proxyRotationTimeout->lifetime());
+
+	if (_rows.empty()) {
+		createNoRowsLabel();
+	}
+	refreshProxyList();
+	refreshProxyForCalls();
+	refreshProxyRotation();
+	_listWrap->finishAnimating();
+	_proxyForCalls->finishAnimating();
+	_proxyRotation->finishAnimating();
+	_proxyRotationOptions->finishAnimating();
+
 	inner->resizeToWidth(st::boxWideWidth);
 
+	// 高度下限取「说明 + 三行列表」，避免切换模式时弹窗高度大幅跳动。
 	inner->heightValue(
 	) | rpl::map([=](int height) {
+		const auto minimal = _modeBar->height()
+			+ _about->height()
+			+ st::proxyModeAboutPadding.top()
+			+ st::proxyModeAboutPadding.bottom()
+			+ 3 * rowHeight();
 		return std::min(
-			std::max(height, _about->y()
-				+ _about->height()
-				+ 3 * rowHeight()),
+			std::max(height + _modeBar->height(), minimal),
 			st::boxMaxListHeight);
 	}) | rpl::distinct_until_changed(
 	) | rpl::on_next([=](int height) {
 		setDimensions(st::boxWideWidth, height);
 	}, inner->lifetime());
+}
+
+void ProxiesBox::syncModeSlider() {
+	if (!_modeSlider) {
+		return;
+	}
+	const auto section = ProxyModeSection(_proxySettings->current());
+	if (_modeSlider->activeSection() == section) {
+		return;
+	}
+	_modeSliderSyncing = true;
+	_modeSlider->setActiveSection(section);
+	_modeSliderSyncing = false;
+}
+
+void ProxiesBox::refreshProxyList() {
+	if (!_listWrap) {
+		return;
+	}
+	_listWrap->toggle(
+		_proxySettings->current() == ProxyData::Settings::Enabled,
+		anim::type::normal);
 }
 
 void ProxiesBox::refreshProxyForCalls() {
@@ -1372,7 +1494,7 @@ void ProxiesBox::refreshProxyRotation() {
 		&& (_settings.list().size() > 1);
 	_proxyRotation->toggle(visible, anim::type::normal);
 	_proxyRotationOptions->toggle(
-		visible && _proxyRotation->entity()->checked(),
+		visible && _proxyRotation->entity()->toggled(),
 		anim::type::normal);
 }
 
@@ -1490,7 +1612,8 @@ ProxyBox::ProxyBox(
 }
 
 void ProxyBox::prepare() {
-	setTitle(tr::lng_proxy_edit());
+	setTitle(_allowShare ? tr::lng_proxy_edit() : tr::lng_proxy_add());
+	setProperty("responsiveBoxWidth", true);
 
 	connect(_host.data(), &HostInput::changed, [=] {
 		Ui::PostponeCall(_host, [=] {
@@ -1548,11 +1671,18 @@ void ProxyBox::prepare() {
 	connect(_secret.data(), &Ui::MaskedInputField::submitted, submit);
 
 	refreshButtons();
-	setDimensionsToContent(st::boxWideWidth, _content);
+	_content->heightValue() | rpl::on_next([=](int height) {
+		if (!_changingType) {
+			setDimensions(st::proxyEditWidth, std::max(height, _formHeight));
+		}
+	}, lifetime());
 }
 
 void ProxyBox::refreshButtons() {
 	clearButtons();
+	const auto close = addTopButton(st::boxTitleClose);
+	close->setAccessibleName(tr::lng_close(tr::now));
+	close->setClickedCallback([=] { closeBox(); });
 	addButton(tr::lng_settings_save(), [=] { save(); });
 	addButton(tr::lng_cancel(), [=] { closeBox(); });
 
@@ -1623,21 +1753,33 @@ ProxyData ProxyBox::collectData() {
 }
 
 void ProxyBox::setupTypes() {
-	const auto types = std::vector<std::pair<Type, QString>>{
-		{ Type::Mtproto, u"MTPROTO"_q },
-		{ Type::Socks5, u"SOCKS5"_q },
-		{ Type::Http, u"HTTP"_q },
-		{ Type::Web, u"WEB"_q },
+	const auto types = std::vector<Type>{
+		Type::Socks5, Type::Http, Type::Mtproto, Type::Web,
 	};
-	for (const auto &[type, label] : types) {
-		_content->add(
-			object_ptr<Ui::Radioenum<Type>>(
-				_content,
-				_type,
-				type,
-				label),
-			st::proxyEditTypePadding);
-	}
+	const auto bar = _content->add(object_ptr<Ui::FixedHeightWidget>(
+		_content, style::ConvertScale(38)),
+		QMargins(style::ConvertScale(20), style::ConvertScale(8),
+			style::ConvertScale(20), style::ConvertScale(6)));
+	bar->paintRequest() | rpl::on_next([=] {
+		auto p = QPainter(bar);
+		auto hq = PainterHighQualityEnabler(p);
+		p.setPen(st::strokeFg);
+		p.setBrush(st::cardBgSunken);
+		const auto radius = style::ConvertScale(10);
+		p.drawRoundedRect(QRectF(bar->rect()).adjusted(.5, .5, -.5, -.5), radius, radius);
+	}, bar->lifetime());
+	const auto slider = Ui::CreateChild<Ui::SettingsSlider>(bar, st::proxyFormSlider);
+	slider->setObjectName(u"proxy-type"_q);
+	slider->setSections({ u"SOCKS5"_q, u"HTTP"_q, u"MTProto"_q, u"Web"_q });
+	slider->setActiveSectionFast(int(ranges::find(types, _type->current()) - types.begin()));
+	bar->widthValue() | rpl::on_next([=](int width) {
+		const auto inset = style::ConvertScale(3);
+		slider->resizeToWidth(width - 2 * inset);
+		slider->moveToLeft(inset, inset);
+	}, slider->lifetime());
+	slider->sectionActivated() | rpl::on_next([=](int index) {
+		_type->setValue(types[index]);
+	}, slider->lifetime());
 	auto warning = _type->value(
 	) | rpl::map([](Type type) {
 		return (type == Type::Web)
@@ -1661,7 +1803,17 @@ void ProxyBox::setupSocketAddress(const ProxyData &data) {
 			_content,
 			object_ptr<Ui::VerticalLayout>(_content)));
 	const auto content = _socketAddress->entity();
-	addLabel(content, tr::lng_proxy_address_label(tr::now));
+	const auto labels = content->add(object_ptr<Ui::FixedHeightWidget>(
+		content, st::proxyEditTitle.style.font->height), st::proxyEditTitlePadding);
+	const auto hostLabel = Ui::CreateChild<Ui::FlatLabel>(
+		labels, tr::lng_connection_host_ph(), st::proxyEditTitle);
+	const auto portLabel = Ui::CreateChild<Ui::FlatLabel>(
+		labels, tr::lng_connection_port_ph(), st::proxyEditTitle);
+	labels->widthValue() | rpl::on_next([=](int width) {
+		hostLabel->moveToLeft(0, 0);
+		const auto portWidth = style::ConvertScale(width < style::ConvertScale(400) ? 84 : 96);
+		portLabel->moveToLeft(width - portWidth, 0);
+	}, labels->lifetime());
 	const auto address = content->add(
 		object_ptr<Ui::FixedHeightWidget>(
 			content,
@@ -1670,16 +1822,17 @@ void ProxyBox::setupSocketAddress(const ProxyData &data) {
 	_host = Ui::CreateChild<HostInput>(
 		address,
 		st::connectionHostInputField,
-		tr::lng_connection_host_ph(),
+		rpl::single(u"proxy.example.com"_q),
 		data.host);
 	_port = Ui::CreateChild<Ui::NumberInput>(
 		address,
 		st::connectionPortInputField,
-		tr::lng_connection_port_ph(),
+		rpl::single(u"443"_q),
 		data.port ? QString::number(data.port) : QString(),
 		65535);
 	address->widthValue(
 	) | rpl::on_next([=](int width) {
+		_port->resize(style::ConvertScale(width < style::ConvertScale(400) ? 84 : 96), _port->height());
 		_port->moveToRight(0, 0);
 		_host->resize(
 			width - _port->width() - st::proxyEditSkip,
@@ -1713,22 +1866,23 @@ void ProxyBox::setupCredentials(const ProxyData &data) {
 			_content,
 			object_ptr<Ui::VerticalLayout>(_content)));
 	const auto credentials = _credentials->entity();
-	addLabel(credentials, tr::lng_proxy_credentials_optional(tr::now));
+	addLabel(credentials, tr::extras_ProxyUsernameOptional(tr::now));
 	_user = credentials->add(
 		object_ptr<Ui::InputField>(
 			credentials,
 			st::connectionUserInputField,
-			tr::lng_connection_user_ph(),
+			tr::extras_ProxyNoAuthentication(),
 			data.user),
 		st::proxyEditInputPadding);
 	_user->setInputMethodHints(Qt::ImhNoAutoUppercase
 		| Qt::ImhNoPredictiveText);
 
+	addLabel(credentials, tr::extras_ProxyPasswordOptional(tr::now));
 	auto passwordWrap = object_ptr<Ui::RpWidget>(credentials);
 	_password = Ui::CreateChild<Ui::PasswordInput>(
 		passwordWrap.data(),
 		st::connectionPasswordInputField,
-		tr::lng_connection_password_ph(),
+		rpl::single(QString(8, QChar(0x2022))),
 		(data.type == Type::Mtproto || data.type == Type::Web)
 			? QString()
 			: data.password);
@@ -1775,10 +1929,10 @@ void ProxyBox::setupMtprotoCredentials(const ProxyData &data) {
 void ProxyBox::setupControls(const ProxyData &data) {
 	_type = std::make_shared<Ui::RadioenumGroup<Type>>(
 		(data.type == Type::None
-			? Type::Mtproto
+			? Type::Socks5
 			: data.type));
 	_content.create(this);
-	_content->resizeToWidth(st::boxWideWidth);
+	_content->resizeToWidth(st::proxyEditWidth);
 	_content->moveToLeft(0, 0);
 
 	setupTypes();
@@ -1786,8 +1940,16 @@ void ProxyBox::setupControls(const ProxyData &data) {
 	setupWebAddress(data);
 	setupCredentials(data);
 	setupMtprotoCredentials(data);
+	_host->setObjectName(u"proxy-host"_q);
+	_port->setObjectName(u"proxy-port"_q);
+	_user->setObjectName(u"proxy-username"_q);
+	_password->setObjectName(u"proxy-password"_q);
+	_secret->setObjectName(u"proxy-secret"_q);
+	_webHost->setObjectName(u"proxy-web-host"_q);
+	Ui::AddSkip(_content, style::ConvertScale(12));
 
 	const auto handleType = [=](Type type) {
+		_changingType = true;
 		const auto web = (type == Type::Web);
 		const auto credentialsShown
 			= (type == Type::Http || type == Type::Socks5);
@@ -1805,11 +1967,19 @@ void ProxyBox::setupControls(const ProxyData &data) {
 		_secret->setFocusPolicy(
 			mtprotoShown ? Qt::StrongFocus : Qt::NoFocus);
 		_webHost->setFocusPolicy(web ? Qt::StrongFocus : Qt::NoFocus);
+		_changingType = false;
 	};
 	_type->setChangedCallback([=](Type type) {
 		handleType(type);
+		setDimensions(st::proxyEditWidth, std::max(_formHeight, _content->height()));
 		refreshButtons();
 	});
+	// 各协议共用最大表单高度，切换时保留弹窗位置。
+	for (const auto type : { Type::Socks5, Type::Http, Type::Mtproto, Type::Web }) {
+		handleType(type);
+		_content->resizeToWidth(st::proxyEditWidth);
+		accumulate_max(_formHeight, _content->height());
+	}
 	handleType(_type->current());
 }
 

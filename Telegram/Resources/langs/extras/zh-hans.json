@@ -546,5 +546,14 @@
   "DonationMessage": "如果你喜欢我的工作，可以考虑捐赠我。这将用于日常软件开发和功能增添。",
   "DonationOpenAfdian": "前往爱发电",
   "MessageArchiveReadError": "无法打开消息留档，已保留原有数据。",
-  "MessageArchivePasscodeReset": "未解锁就退出登录会重置本地密码。重新登录也无法解开原来保存的已删除消息和编辑历史。确定继续吗？"
+  "MessageArchivePasscodeReset": "未解锁就退出登录会重置本地密码。重新登录也无法解开原来保存的已删除消息和编辑历史。确定继续吗？",
+  "ProxyModeOff": "停用",
+  "ProxyModeSystem": "系统代理",
+  "ProxyModeCustom": "自定义",
+  "ProxyModeOffAbout": "直接连接 Telegram 服务器，不经过代理。",
+  "ProxyModeSystemAbout": "使用操作系统的网络配置，更改系统设置后立刻生效。",
+  "ProxyModeCustomAbout": "在下面的列表里选择服务器，点击即可切换连接。",
+  "ProxyUsernameOptional": "用户名（可选）",
+  "ProxyPasswordOptional": "密码（可选）",
+  "ProxyNoAuthentication": "留空表示不需要认证"
 }

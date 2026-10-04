@@ -500,5 +500,14 @@
   "MediaNext": "Next message",
   "MediaSpeed": "Playback speed",
   "MessageArchiveReadError": "Message history could not be opened. The stored data has been kept.",
-  "MessageArchivePasscodeReset": "Logging out without unlocking resets the local passcode. Logging in again will not unlock your saved deleted messages and edit history. Continue?"
+  "MessageArchivePasscodeReset": "Logging out without unlocking resets the local passcode. Logging in again will not unlock your saved deleted messages and edit history. Continue?",
+  "ProxyModeOff": "Off",
+  "ProxyModeSystem": "System",
+  "ProxyModeCustom": "Custom",
+  "ProxyModeOffAbout": "Connecting to Telegram servers directly, without a proxy.",
+  "ProxyModeSystemAbout": "Using the network configuration of your operating system. Changes there take effect immediately.",
+  "ProxyModeCustomAbout": "Pick a server from the list below. Click a server to connect through it.",
+  "ProxyUsernameOptional": "Username (optional)",
+  "ProxyPasswordOptional": "Password (optional)",
+  "ProxyNoAuthentication": "Leave empty if authentication is not required"
 }

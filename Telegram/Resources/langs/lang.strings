@@ -9273,3 +9273,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DonationDetails" = "Donation details";
 "extras_DonationMessage" = "If you like my work, please consider supporting me. Your donation will help with everyday software development and new features.";
 "extras_DonationOpenAfdian" = "Open Afdian";
+
+"extras_ProxyModeOff" = "Off";
+"extras_ProxyModeSystem" = "System";
+"extras_ProxyModeCustom" = "Custom";
+"extras_ProxyModeOffAbout" = "Connecting to Telegram servers directly, without a proxy.";
+"extras_ProxyModeSystemAbout" = "Using the network configuration of your operating system. Changes there take effect immediately.";
+"extras_ProxyModeCustomAbout" = "Pick a server from the list below. Click a server to connect through it.";
+"extras_ProxyUsernameOptional" = "Username (optional)";
+"extras_ProxyPasswordOptional" = "Password (optional)";
+"extras_ProxyNoAuthentication" = "Leave empty if authentication is not required";
