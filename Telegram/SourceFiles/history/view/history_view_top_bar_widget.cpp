@@ -530,8 +530,10 @@ void TopBarWidget::paintEvent(QPaintEvent *e) {
 	const auto slidingTop = std::max(selectedButtonsTop, searchFieldTop);
 
 	p.fillRect(rect(), ExtrasFeatures::WindowMaterial::surfaceColor(this, st::topBarBg->c));
-	p.fillRect(0, height() - st::lineWidth, width(), st::lineWidth,
-		st::windowDividerFg);
+	if (!ExtrasFeatures::WindowMaterial::isActive(this)) {
+		p.fillRect(0, height() - st::lineWidth, width(), st::lineWidth,
+			st::windowDividerFg);
+	}
 	if (slidingTop < 0) {
 		p.translate(0, slidingTop + st::topBarHeight);
 		paintTopBar(p);

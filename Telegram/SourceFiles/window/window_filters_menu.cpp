@@ -174,8 +174,11 @@ void FiltersMenu::setup() {
 		overlay->raise();
 	}, overlay->lifetime());
 	overlay->paintRequest() | rpl::on_next([=] {
+		if (ExtrasFeatures::WindowMaterial::isActive(&_outer)) {
+			return;
+		}
 		auto p = QPainter(overlay);
-		const auto top = ExtrasFeatures::WindowMaterial::isActive(&_outer) ? 0 : gap;
+		const auto top = gap;
 		p.fillRect(_outer.width() - st::lineWidth, top, st::lineWidth,
 			_outer.height() - top, st::windowDividerFg);
 	}, overlay->lifetime());
