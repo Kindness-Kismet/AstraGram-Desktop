@@ -404,7 +404,7 @@ void Colorize(EmbeddedScheme &scheme, const style::colorizer &colorizer) {
 
 void ApplyAccentPalette(style::palette &palette) {
 	// 选中行用强调色实底配白字，强调色偏浅时压暗到白字对比度至少 4.5:1。
-	// 所有主题统一覆盖，导入主题自带的选中配色不生效。
+	// 所有主题统一覆盖，导入主题自带的这些配色不生效。
 	const auto white = QColor(255, 255, 255);
 	const auto accent = palette.windowBgActive()->c;
 	auto bg = accent;
@@ -414,7 +414,11 @@ void ApplyAccentPalette(style::palette &palette) {
 	const auto tint = [&](float64 ratio) {
 		return anim::color(bg, white, ratio);
 	};
+	const auto tick = palette.windowActiveTextFg()->c;
 	const std::pair<const char*, QColor> colors[] = {
+		// 已读勾号跟随强调色，不用固定绿色。
+		{ "dialogsSentIconFg", tick },
+		{ "dialogsSentIconFgOver", tick },
 		{ "dialogsBgActive", bg },
 		{ "dialogsNameFgActive", white },
 		{ "dialogsChatIconFgActive", white },
