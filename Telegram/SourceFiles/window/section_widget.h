@@ -119,9 +119,6 @@ public:
 	virtual Dialogs::RowDescriptor activeChat() const {
 		return {};
 	}
-	[[nodiscard]] virtual bool usesFullWidth() const {
-		return false;
-	}
 
 	// When resizing the widget with top edge moved up or down and we
 	// want to add this top movement to the scroll position, so inner

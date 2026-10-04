@@ -176,10 +176,6 @@ set(extras_files
         extras/ui/settings/settings_filters.h
         extras/ui/settings/settings_main.cpp
         extras/ui/settings/settings_main.h
-        extras/ui/settings/settings_page.cpp
-        extras/ui/settings/settings_page.h
-        extras/ui/settings/settings_page_widgets.cpp
-        extras/ui/settings/settings_page_widgets.h
         extras/ui/settings/settings_other.cpp
         extras/ui/settings/settings_other.h
         extras/ui/settings/settings_window_material.cpp

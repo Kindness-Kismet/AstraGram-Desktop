@@ -193,7 +193,7 @@ void WrapWidget::setupShortcuts() {
 
 	Shortcuts::Requests(
 	) | rpl::filter([=] {
-		return isVisible() && (Core::App().activeWindow()
+		return (Core::App().activeWindow()
 				== &_controller->parentController()->window())
 			&& (requireTopBarSearch() || isSettings() || isContentSearch());
 	}) | rpl::on_next([=](not_null<Shortcuts::Request*> request) {
@@ -376,9 +376,6 @@ void WrapWidget::createTopBar() {
 		_controller.get(),
 		TopBarStyle(wrapValue),
 		std::move(selectedItems));
-	if (_controller->section().type() == Section::Type::Settings) {
-		_topBar->setObjectName(u"settings.page.header"_q);
-	}
 	_topBar->selectionActionRequests(
 	) | rpl::on_next([=](SelectionAction action) {
 		_content->selectionAction(action);
@@ -452,7 +449,6 @@ void WrapWidget::setupTopBarMenuToggle() {
 			const auto button = _topBar->addButton(
 				base::make_unique_q<Ui::IconButton>(_topBar, st));
 			button->setAccessibleName(tr::lng_dlg_filter(tr::now));
-			button->setObjectName(u"settings.page.header.search"_q);
 			button->addClickHandler([=] {
 				_controller->showSettings(::Settings::Search::Id());
 			});
@@ -575,35 +571,6 @@ void WrapWidget::checkBeforeClose(Fn<void()> close) {
 	}));
 }
 
-bool WrapWidget::preventsClose(Fn<void()> &&continueCallback) const {
-	if (base::take(_closeConfirmed)) {
-		return false;
-	}
-	struct State {
-		bool checking = true;
-		bool allowed = false;
-	};
-	const auto state = std::make_shared<State>();
-	_content->checkBeforeClose(crl::guard(this,
-		[state, weak = base::make_weak(this), callback = std::move(continueCallback)] {
-			if (state->checking) {
-				state->allowed = true;
-				return;
-			}
-			weak->_closeConfirmed = true;
-			callback();
-			if (weak) {
-				weak->_closeConfirmed = false;
-			}
-		}));
-	state->checking = false;
-	return !state->allowed;
-}
-
-void WrapWidget::setRootBackHandler(Fn<void()> handler) {
-	_rootBackHandler = std::move(handler);
-}
-
 void WrapWidget::checkBeforeCloseByEscape(Fn<void()> close) {
 	if (_topBar) {
 		_topBar->checkBeforeCloseByEscape([&] {
@@ -636,9 +603,6 @@ void WrapWidget::addTopBarMenuButton() {
 			(wrap() == Wrap::Layer
 				? st::infoLayerTopBarMenu
 				: st::infoTopBarMenu))));
-	if (_controller->section().type() == Section::Type::Settings) {
-		_topBarMenuToggle->setObjectName(u"settings.page.header.menu"_q);
-	}
 	_topBarMenuToggle->setAccessibleName(tr::lng_sr_profile_menu(tr::now));
 	_topBarMenuToggle->addClickHandler([this] {
 		showTopBarMenu(false);
@@ -747,10 +711,6 @@ bool WrapWidget::showBackFromStackInternal(
 		showNewContent(
 			last.section.get(),
 			params.withWay(Window::SectionShow::Way::Backward));
-		return true;
-	}
-	if (_rootBackHandler) {
-		_rootBackHandler();
 		return true;
 	}
 	return (wrap() == Wrap::Layer);
@@ -983,11 +943,6 @@ bool WrapWidget::showInternal(
 		not_null<Window::SectionMemento*> memento,
 		const Window::SectionShow &params) {
 	if (auto infoMemento = dynamic_cast<Memento*>(memento.get())) {
-		const auto settings = infoMemento->content()->section().type()
-			== Section::Type::Settings;
-		if (settings != bool(_rootBackHandler)) {
-			return false;
-		}
 		if (_mementoTaken || infoMemento->stackSize() > 1) {
 			return false;
 		}

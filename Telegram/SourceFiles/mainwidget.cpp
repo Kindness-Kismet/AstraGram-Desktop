@@ -517,9 +517,6 @@ void MainWidget::floatPlayerToggleGifsPaused(bool paused) {
 
 auto MainWidget::floatPlayerGetSection(Window::Column column)
 -> not_null<Media::Player::FloatSectionDelegate*> {
-	if (isMainSectionFullWidth()) {
-		return _mainSection;
-	}
 	if (isThreeColumn()) {
 		if (_dialogs && column == Window::Column::First) {
 			return _dialogs;
@@ -551,10 +548,6 @@ auto MainWidget::floatPlayerGetSection(Window::Column column)
 void MainWidget::floatPlayerEnumerateSections(Fn<void(
 		not_null<Media::Player::FloatSectionDelegate*> widget,
 		Window::Column widgetColumn)> callback) {
-	if (isMainSectionFullWidth()) {
-		callback(_mainSection, Window::Column::Second);
-		return;
-	}
 	if (isThreeColumn()) {
 		if (_dialogs) {
 			callback(_dialogs, Window::Column::First);
@@ -872,7 +865,7 @@ void MainWidget::searchMessages(
 		};
 		state.tab = state.defaultTabForMe();
 		_dialogs->searchMessages(std::move(state));
-		if (isOneColumn() || isMainSectionFullWidth()) {
+		if (isOneColumn()) {
 			_controller->clearSectionStack();
 		} else {
 			_dialogs->setInnerFocus();
@@ -1250,9 +1243,7 @@ void MainWidget::setInnerFocus() {
 			widget->setInnerFocus();
 		}
 	};
-	if (isMainSectionFullWidth()) {
-		setTo(_mainSection);
-	} else if (_dialogs && _dialogs->searchHasFocus()) {
+	if (_dialogs && _dialogs->searchHasFocus()) {
 		setTo(_dialogs);
 	} else if (_hider || !_history->peer()) {
 		if (!_hider && _mainSection) {
@@ -1562,7 +1553,6 @@ void MainWidget::showHistory(
 
 	auto animatedShow = [&] {
 		if (_showAnimation
-			|| isMainSectionFullWidth()
 			|| Core::App().passcodeLocked()
 			|| (params.animated == anim::type::instant)) {
 			return false;
@@ -1797,11 +1787,6 @@ bool MainWidget::saveSectionInStack(
 void MainWidget::showSection(
 		std::shared_ptr<Window::SectionMemento> memento,
 		const SectionShow &params) {
-	const auto closeChecked = isMainSectionFullWidth();
-	if (closeChecked && preventsCloseSection(
-		[=] { showSection(memento, params); }, params)) {
-		return;
-	}
 	if (_mainSection && _mainSection->showInternal(
 			memento.get(),
 			params)) {
@@ -1822,7 +1807,7 @@ void MainWidget::showSection(
 	//	return;
 	}
 
-	if (!closeChecked && preventsCloseSection(
+	if (preventsCloseSection(
 		[=] { showSection(memento, params); },
 		params)) {
 		return;
@@ -1966,12 +1951,9 @@ void MainWidget::showNewSection(
 	const auto fromBottom = params.slideFromBottom
 		&& !newThirdSection
 		&& (_mainSection != nullptr);
-	const auto changingFullWidth = newMainSection
-		&& (newMainSection->usesFullWidth() != isMainSectionFullWidth());
 
 	auto animatedShow = [&] {
 		if (_showAnimation
-			|| changingFullWidth
 			|| Core::App().passcodeLocked()
 			|| (params.animated == anim::type::instant)
 			|| memento->instant()) {
@@ -2057,7 +2039,6 @@ void MainWidget::showNewSection(
 		settingSection->showFast();
 	}
 
-	updateSideSectionsVisibility();
 	floatPlayerCheckVisibility();
 	orderWidgets();
 }
@@ -2093,7 +2074,7 @@ bool MainWidget::isMainSectionShown() const {
 }
 
 bool MainWidget::isThirdSectionShown() const {
-	return _thirdSection != nullptr && !isMainSectionFullWidth();
+	return _thirdSection != nullptr;
 }
 
 Dialogs::RowDescriptor MainWidget::resolveChatNext(
@@ -2375,7 +2356,7 @@ QPixmap MainWidget::grabForShowAnimation(const Window::SectionSlideParams &param
 	}
 
 	auto sectionTop = getMainSectionTop();
-	if (isOneColumn() || isMainSectionFullWidth()) {
+	if (isOneColumn()) {
 		result = Ui::GrabWidget(this, QRect(
 			0,
 			sectionTop,
@@ -2552,7 +2533,7 @@ void MainWidget::showAll() {
 		_controller->show(Ui::MakeInformBox(
 			tr::lng_cloud_password_updated()));
 	}
-	if (isOneColumn() || isMainSectionFullWidth()) {
+	if (isOneColumn()) {
 		if (_sideShadow) {
 			_sideShadow->hide();
 		}
@@ -2616,37 +2597,6 @@ void MainWidget::resizeEvent(QResizeEvent *e) {
 
 void MainWidget::updateMainSectionShown() {
 	_controller->setMainSectionShown(_mainSection || _history->peer());
-	_controller->setFiltersMenuVisible(!isMainSectionFullWidth());
-}
-
-bool MainWidget::isMainSectionFullWidth() const {
-	return _mainSection && _mainSection->usesFullWidth();
-}
-
-void MainWidget::updateSideSectionsVisibility() {
-	if (_showAnimation) {
-		return;
-	}
-	const auto fullWidth = isMainSectionFullWidth();
-	if (_dialogs && (fullWidth || !isOneColumn())) {
-		if (fullWidth) {
-			_dialogs->hide();
-		} else if (_dialogs->isHidden()) {
-			_dialogs->showFast();
-		}
-	}
-	if (_thirdSection) {
-		_thirdSection->setVisible(!fullWidth && isThreeColumn());
-	}
-	if (_sideShadow) {
-		_sideShadow->setVisible(!fullWidth && !isOneColumn());
-	}
-	if (_thirdShadow) {
-		_thirdShadow->setVisible(!fullWidth && isThreeColumn());
-	}
-	if (_hider) {
-		_hider->setVisible(!fullWidth && !isOneColumn());
-	}
 }
 
 void MainWidget::updateControlsGeometry() {
@@ -2654,7 +2604,6 @@ void MainWidget::updateControlsGeometry() {
 		return;
 	}
 	updateWindowAdaptiveLayout();
-	const auto fullWidth = isMainSectionFullWidth();
 	if (_dialogs) {
 		const auto nochat = !_controller->mainSectionShown();
 		if (Core::App().settings().dialogsWidthRatio(nochat) > 0) {
@@ -2664,7 +2613,7 @@ void MainWidget::updateControlsGeometry() {
 			_dialogs->stopWidthAnimation();
 		}
 	}
-	if (isThreeColumn() && !fullWidth) {
+	if (isThreeColumn()) {
 		if (!_thirdSection
 			&& !_controller->takeThirdSectionFromLayer()) {
 			auto params = Window::SectionShow(
@@ -2697,7 +2646,7 @@ void MainWidget::updateControlsGeometry() {
 				}
 			}
 		}
-	} else if (!fullWidth) {
+	} else {
 		destroyThirdSection();
 		_thirdShadow.destroy();
 	}
@@ -2707,7 +2656,7 @@ void MainWidget::updateControlsGeometry() {
 		: isOneColumn()
 		? width()
 		: 0;
-	if (isOneColumn() || fullWidth) {
+	if (isOneColumn()) {
 		const auto gap = st::windowCardGap;
 		const auto contentWidth = width();
 		if (_callTopBar) {
@@ -2799,12 +2748,12 @@ void MainWidget::updateControlsGeometry() {
 		}
 	}
 	if (_mainSection) {
+		// 内容区与聊天面板使用相同的边界。
 		_mainSection->setGeometryWithTopMoved(
 			_history->geometry(),
 			_contentScrollAddToY);
 	}
 	refreshResizeAreas();
-	updateSideSectionsVisibility();
 	_contentScrollAddToY = 0;
 
 	if (_cardOverlay) {
@@ -2826,7 +2775,7 @@ void MainWidget::destroyThirdSection() {
 }
 
 void MainWidget::refreshResizeAreas() {
-	if (!isMainSectionFullWidth() && !isOneColumn() && _dialogs) {
+	if (!isOneColumn() && _dialogs) {
 		ensureFirstColumnResizeAreaCreated();
 		_firstColumnResizeArea->setGeometryToLeft(
 			_history->x(),
@@ -2837,7 +2786,7 @@ void MainWidget::refreshResizeAreas() {
 		_firstColumnResizeArea.destroy();
 	}
 
-	if (!isMainSectionFullWidth() && isThreeColumn() && _thirdSection) {
+	if (isThreeColumn() && _thirdSection) {
 		ensureThirdColumnResizeAreaCreated();
 		_thirdColumnResizeArea->setGeometryToLeft(
 			_thirdSection->x(),
@@ -3076,9 +3025,7 @@ bool MainWidget::eventFilter(QObject *o, QEvent *e) {
 			if (event->button() == Qt::BackButton) {
 				if (!Core::App().hideMediaView()
 					&& !_controller->window().closeLayerByBackButton()
-					&& (!_dialogs
-						|| isMainSectionFullWidth()
-						|| !_dialogs->cancelSearchByMouseBack())) {
+					&& (!_dialogs || !_dialogs->cancelSearchByMouseBack())) {
 					handleHistoryBack();
 				}
 				return true;
@@ -3097,7 +3044,7 @@ bool MainWidget::eventFilter(QObject *o, QEvent *e) {
 void MainWidget::handleAdaptiveLayoutUpdate() {
 	showAll();
 	if (_sideShadow) {
-		_sideShadow->setVisible(!isOneColumn() && !isMainSectionFullWidth());
+		_sideShadow->setVisible(!isOneColumn());
 	}
 }
 

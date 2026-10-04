@@ -119,9 +119,6 @@ public:
 		const Window::SectionShow &params) override;
 	bool showBackFromStackInternal(const Window::SectionShow &params);
 	bool closeByBackButton();
-	void checkBeforeClose(Fn<void()> close);
-	void setRootBackHandler(Fn<void()> handler);
-	bool preventsClose(Fn<void()> &&continueCallback) const override;
 	void removeFromStack(const std::vector<Section> &sections);
 	std::shared_ptr<Window::SectionMemento> createMemento() override;
 	[[nodiscard]] SendMenu::Details sendMenuDetails() const override;
@@ -180,6 +177,7 @@ private:
 	void injectActivePeerProfile(not_null<PeerData*> peer);
 	void injectActiveProfileMemento(
 		std::shared_ptr<ContentMemento> memento);
+	void checkBeforeClose(Fn<void()> close);
 	void checkBeforeCloseByEscape(Fn<void()> close);
 	void restoreHistoryStack(
 		std::vector<std::shared_ptr<ContentMemento>> stack);
@@ -249,8 +247,6 @@ private:
 	std::vector<StackItem> _historyStack;
 	rpl::event_stream<> _removeRequests;
 	bool _shortcutsSetup = false;
-	Fn<void()> _rootBackHandler;
-	mutable bool _closeConfirmed = false;
 
 	rpl::event_stream<rpl::producer<int>> _desiredHeights;
 	rpl::event_stream<rpl::producer<bool>> _desiredShadowVisibilities;

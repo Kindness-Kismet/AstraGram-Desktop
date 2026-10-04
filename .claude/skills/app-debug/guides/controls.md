@@ -84,11 +84,6 @@ python .claude/skills/app-debug/scripts/cli.py control.list --all
 id 即 objectName，如 `extras/search`、`extras/cat/ghost`）。没有 objectName 的控件用 `control.list`
 查类名/accessibleName 定位，或用 `#序号` 寻址。
 
-设置主页面使用 `settings.page`，分类栏为 `settings.page.navigation`，详情为 `settings.page.content`。
-设置期间全局会话分组栏 `chatFolders.sidebar` 隐藏且不占宽度，返回聊天后恢复。
-分类按钮使用 `settings.page.navigation.<名称>`；详情返回、搜索、菜单分别为 `settings.page.header.back`、
-`settings.page.header.search`、`settings.page.header.menu`。`settings.page.back` 返回聊天，窄窗口先从分类进入详情。
-
 ## `control.click <objectName | #序号> [--all]`
 
 点击控件。按钮直接执行控件动作，不经过系统输入和命中测试；其余控件在中心做命中测试，

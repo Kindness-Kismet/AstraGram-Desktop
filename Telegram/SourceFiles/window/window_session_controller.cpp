@@ -2016,22 +2016,10 @@ void SessionController::toggleFiltersMenu(bool enabled) {
 		_filters = std::make_unique<FiltersMenu>(
 			widget()->bodyWidget(),
 			this);
-		_filters->setVisible(_filtersMenuVisible);
 	} else {
 		_filters = nullptr;
 	}
 	_filtersMenuChanged.fire({});
-}
-
-void SessionController::setFiltersMenuVisible(bool visible) {
-	if (_filtersMenuVisible == visible) {
-		return;
-	}
-	_filtersMenuVisible = visible;
-	if (_filters) {
-		_filters->setVisible(visible);
-		_filtersMenuChanged.fire({});
-	}
 }
 
 rpl::producer<> SessionController::filtersMenuChanged() const {
@@ -2097,7 +2085,7 @@ void SessionController::openFolder(not_null<Data::Folder*> folder) {
 		resetFakeUnreadWhileOpened();
 	}
 	// 进入归档保留当前分组，标签不切换，退出后仍停在原分组。
-	if (adaptive().isOneColumn() || content()->isMainSectionFullWidth()) {
+	if (adaptive().isOneColumn()) {
 		clearSectionStack(SectionShow::Way::ClearStack);
 	}
 	closeForum();
@@ -2146,8 +2134,7 @@ void SessionController::openCommunity(not_null<Data::CommunityInfo*> info) {
 		: CommunityReturnState{};
 	if (activeChatsFilterCurrent() != 0) {
 		setActiveChatsFilter(0);
-	} else if (adaptive().isOneColumn()
-		|| content()->isMainSectionFullWidth()) {
+	} else if (adaptive().isOneColumn()) {
 		clearSectionStack(SectionShow::Way::ClearStack);
 	}
 	closeForum();
@@ -2271,10 +2258,9 @@ void SessionController::showForum(
 	if (_shownForum.current() != forum) {
 		resetFakeUnreadWhileOpened();
 	}
-	if (content()->isMainSectionFullWidth()
-		|| (forum
-			&& _activeChatEntry.current().key.peer()
-			&& adaptive().isOneColumn())) {
+	if (forum
+		&& _activeChatEntry.current().key.peer()
+		&& adaptive().isOneColumn()) {
 		clearSectionStack(params);
 	}
 	_shownForum = forum.get();
@@ -3326,7 +3312,7 @@ not_null<MainWidget*> SessionController::content() const {
 }
 
 int SessionController::filtersWidth() const {
-	return (_filters && _filtersMenuVisible) ? st::windowFiltersWidth : 0;
+	return _filters ? st::windowFiltersWidth : 0;
 }
 
 bool SessionController::enoughSpaceForFilters() const {
@@ -3370,7 +3356,7 @@ void SessionController::setActiveChatsFilter(
 		closeFolder();
 		closeCommunity();
 	}
-	if (adaptive().isOneColumn() || content()->isMainSectionFullWidth()) {
+	if (adaptive().isOneColumn()) {
 		clearSectionStack(params);
 	}
 }

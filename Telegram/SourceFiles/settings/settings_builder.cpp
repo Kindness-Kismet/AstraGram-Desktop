@@ -136,17 +136,6 @@ QString SearchRegistry::sectionTitle(Type sectionId) const {
 	return (it != _sections.end()) ? ResolveSectionTitle(*it->second) : QString();
 }
 
-bool SearchRegistry::isSectionWithin(Type sectionId, Type ancestor) const {
-	while (sectionId) {
-		if (sectionId == ancestor) {
-			return true;
-		}
-		const auto i = _sections.find(sectionId);
-		sectionId = (i != _sections.end()) ? i->second->parentId : nullptr;
-	}
-	return false;
-}
-
 QString SearchRegistry::sectionPath(Type sectionId, bool parentsOnly) const {
 	auto parts = QStringList();
 	auto current = sectionId;

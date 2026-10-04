@@ -2,46 +2,6 @@ using "ui/basic.style";
 using "ui/layers/layers.style";
 using "ui/widgets/widgets.style";
 using "info/info.style";
-using "settings/settings.style";
-
-settingsPageSidebarWidth: 224px;
-settingsPageTwoColumnWidth: 680px;
-settingsPageGridTwoColumnWidth: 420px;
-settingsPageHeaderHeight: infoTopBarHeight;
-settingsPageProfileHeight: 76px;
-settingsPageRowHeight: 42px;
-settingsPageTileHeight: 100px;
-settingsPageInset: 20px;
-settingsPageSmallSkip: 10px;
-settingsPageRadius: 8px;
-
-settingsPageTitle: FlatLabel(defaultFlatLabel) {
-	style: TextStyle(defaultTextStyle) {
-		font: font(16px semibold);
-	}
-}
-settingsPageProfileName: FlatLabel(defaultFlatLabel) {
-	maxHeight: 20px;
-	style: TextStyle(defaultTextStyle) {
-		font: font(13px semibold);
-	}
-}
-settingsPageCaption: FlatLabel(defaultFlatLabel) {
-	maxHeight: 18px;
-	textFg: windowSubTextFg;
-	style: TextStyle(defaultTextStyle) {
-		font: font(12px);
-	}
-}
-settingsPageSidebarPhoto: UserpicButton(defaultUserpicButton) {
-	size: size(40px, 40px);
-	photoSize: 40px;
-}
-settingsPageOverviewPhoto: UserpicButton(defaultUserpicButton) {
-	size: size(52px, 52px);
-	photoSize: 52px;
-	uploadHeight: 18px;
-}
 
 centeredBoxLabelStyle: TextStyle(boxLabelStyle) {
     font: font(13px);

@@ -105,7 +105,6 @@ public:
 		not_null<::Main::Session*> session) const;
 
 	[[nodiscard]] QString sectionTitle(Type sectionId) const;
-	[[nodiscard]] bool isSectionWithin(Type sectionId, Type ancestor) const;
 	[[nodiscard]] QString sectionPath(
 		Type sectionId,
 		bool parentsOnly = false) const;

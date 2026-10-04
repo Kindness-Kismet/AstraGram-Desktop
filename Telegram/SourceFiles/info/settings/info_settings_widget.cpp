@@ -67,8 +67,6 @@ Widget::Widget(
 		}))
 , _pinnedToTop(_inner->createPinnedToTop(this))
 , _pinnedToBottom(_inner->createPinnedToBottom(this)) {
-	setObjectName(u"settings.page.section"_q);
-	_inner->setObjectName(u"settings.page.section.inner"_q);
 	_inner->sectionShowOther(
 	) | rpl::on_next([=](Type type) {
 		controller->showSettings(type);
@@ -226,11 +224,17 @@ rpl::producer<bool> Widget::desiredShadowVisibility() const {
 }
 
 bool Widget::closeByOutsideClick() const {
-	return _inner->closeByOutsideClick();
+	return _inner->closeByOutsideClick();;
 }
 
 void Widget::checkBeforeClose(Fn<void()> close) {
 	_inner->checkBeforeClose(std::move(close));
+}
+
+void Widget::checkBeforeCloseByEscape(Fn<void()> close) {
+	ContentWidget::checkBeforeCloseByEscape([&] {
+		_inner->checkBeforeClose(std::move(close));
+	});
 }
 
 rpl::producer<QString> Widget::title() {

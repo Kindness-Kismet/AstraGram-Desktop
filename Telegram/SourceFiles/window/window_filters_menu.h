@@ -39,7 +39,6 @@ public:
 		not_null<Ui::RpWidget*> parent,
 		not_null<SessionController*> session);
 	~FiltersMenu();
-	void setVisible(bool visible);
 
 private:
 	void setup();

@@ -6,7 +6,6 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/info_memento.h"
-#include "extras/ui/settings/settings_page.h"
 
 #include "info/global_media/info_global_media_widget.h"
 #include "info/profile/info_profile_widget.h"
@@ -297,11 +296,6 @@ object_ptr<Window::SectionWidget> Memento::createWidget(
 		not_null<Window::SessionController*> controller,
 		Window::Column column,
 		const QRect &geometry) {
-	if (content()->section().type() == Section::Type::Settings) {
-		auto result = object_ptr<::Settings::Page>(parent, controller, this);
-		result->setGeometry(geometry);
-		return result;
-	}
 	auto wrap = (column == Window::Column::Third)
 		? Wrap::Side
 		: Wrap::Narrow;
@@ -317,9 +311,6 @@ object_ptr<Window::SectionWidget> Memento::createWidget(
 object_ptr<Ui::LayerWidget> Memento::createLayer(
 		not_null<Window::SessionController*> controller,
 		const QRect &geometry) {
-	if (content()->section().type() == Section::Type::Settings) {
-		return nullptr;
-	}
 	if (geometry.width() >= LayerWidget::MinimalSupportedWidth()) {
 		return object_ptr<LayerWidget>(controller, this);
 	}
