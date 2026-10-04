@@ -1,4 +1,5 @@
 #include "settings/settings_card_layout.h"
+#include "extras/features/window_material/window_material.h"
 #include "settings/settings_common.h"
 
 #include "ui/painter.h"
@@ -19,13 +20,17 @@ public:
 	, _content(Ui::CreateChild<Ui::VerticalLayout>(this))
 	, _frame(Ui::CreateChild<Ui::RpWidget>(this)) {
 		_content->setProperty("settingsCardGroup", true);
+		ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+			updateMaterialClip();
+			_frame->update();
+		}, lifetime());
 		_frame->setAttribute(Qt::WA_TransparentForMouseEvents);
 		_frame->paintRequest() | rpl::on_next([=] {
 			paintFrame();
 		}, _frame->lifetime());
 		paintRequest() | rpl::on_next([=] {
 			auto p = QPainter(this);
-			p.fillRect(rect(), st::cardBg);
+			p.fillRect(rect(), ExtrasFeatures::WindowMaterial::cardColor(this, st::cardBg->c));
 		}, lifetime());
 		_content->heightValue() | rpl::on_next([=] {
 			if (!_resizing) {
@@ -33,6 +38,7 @@ public:
 			}
 		}, lifetime());
 		sizeValue() | rpl::on_next([=](QSize size) {
+			updateMaterialClip();
 			_frame->resize(size);
 			_frame->raise();
 		}, lifetime());
@@ -55,6 +61,17 @@ protected:
 	}
 
 private:
+	void updateMaterialClip() {
+		if (!ExtrasFeatures::WindowMaterial::isActive(this)) {
+			clearMask();
+			return;
+		}
+		// 透明底层无法覆盖子控件的方角，直接裁切整张卡片。
+		auto shape = QPainterPath();
+		shape.addRoundedRect(QRectF(rect()), st::settingsCardRadius, st::settingsCardRadius);
+		setMask(QRegion(shape.toFillPolygon().toPolygon()));
+	}
+
 	void paintFrame() {
 		auto p = QPainter(_frame);
 		auto hq = PainterHighQualityEnabler(p);
@@ -65,7 +82,9 @@ private:
 		auto corners = QPainterPath();
 		corners.addRect(rect());
 		corners.addPath(shape);
-		p.fillPath(corners, st::windowBg);
+		if (!ExtrasFeatures::WindowMaterial::isActive(this)) {
+			p.fillPath(corners, st::windowBg);
+		}
 		p.setPen(st::strokeFg);
 		p.setBrush(Qt::NoBrush);
 		p.drawPath(shape);
@@ -96,6 +115,7 @@ private:
 CardPage::CardPage(QWidget *parent)
 : RpWidget(parent)
 , _content(Ui::CreateChild<Ui::VerticalLayout>(this)) {
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	for (auto ancestor = parent; ancestor; ancestor = ancestor->parentWidget()) {
 		const auto section = dynamic_cast<AbstractSection*>(ancestor);
 		if (!section) {
@@ -106,7 +126,7 @@ CardPage::CardPage(QWidget *parent)
 	}
 	paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(this);
-		p.fillRect(rect(), st::windowBg);
+		p.fillRect(rect(), ExtrasFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c));
 	}, lifetime());
 	_content->heightValue() | rpl::on_next([=] {
 		if (!_resizing) {

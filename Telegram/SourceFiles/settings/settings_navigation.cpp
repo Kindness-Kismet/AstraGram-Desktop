@@ -1,4 +1,5 @@
 #include "settings/settings_navigation.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "boxes/about_box.h"
 #include "boxes/star_gift_box.h"
@@ -56,6 +57,7 @@ public:
 	: AbstractButton(parent)
 	, _user(user)
 	, _userpic(user->createUserpicView()) {
+		ExtrasFeatures::WindowMaterial::watchSurface(this);
 		_user->loadUserpic();
 		setAccessibleName(user->name());
 		_user->session().changes().peerUpdates(_user,
@@ -79,7 +81,8 @@ protected:
 		auto p = Painter(this);
 		p.setRenderHint(QPainter::Antialiasing);
 		p.setPen(st::strokeFg);
-		p.setBrush(isOver() ? st::windowBgOver : st::cardBg);
+		p.setBrush(ExtrasFeatures::WindowMaterial::cardColor(
+			this, (isOver() ? st::windowBgOver : st::cardBg)->c));
 		p.drawRoundedRect(rect().adjusted(1, 1, -1, -1), scaled(14), scaled(14));
 		_user->paintUserpicLeft(p, _userpic, scaled(10), scaled(11), width(), scaled(42), true);
 		const auto left = scaled(64);
@@ -166,6 +169,7 @@ Navigation::Navigation(
 , _header(this)
 , _scroll(this, st::boxScroll) {
 	setObjectName(u"settings-navigation"_q);
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	const auto home = Ui::CreateChild<Ui::AbstractButton>(_header.data());
 	home->setObjectName(u"settings-overview"_q);
 	home->setAccessibleName(tr::lng_menu_settings(tr::now));
@@ -335,8 +339,10 @@ void Navigation::resizeEvent(QResizeEvent *e) {
 
 void Navigation::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
-	p.fillRect(e->rect(), st::cardBgSunken);
-	if (!property("narrow").toBool()) {
+	p.fillRect(e->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(
+		this, st::cardBgSunken->c));
+	if (!property("narrow").toBool()
+		&& !ExtrasFeatures::WindowMaterial::isActive(this)) {
 		p.fillRect(width() - st::lineWidth, 0, st::lineWidth, height(), st::strokeFg);
 	}
 }

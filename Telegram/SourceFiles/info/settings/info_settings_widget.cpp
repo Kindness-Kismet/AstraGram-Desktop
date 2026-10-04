@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/settings/info_settings_widget.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "info/info_memento.h"
 #include "settings/sections/settings_main.h"
@@ -246,7 +247,8 @@ rpl::producer<QString> Widget::title() {
 void Widget::paintEvent(QPaintEvent *e) {
 	if (!_inner->paintOuter(this, maxVisibleHeight(), e->rect())) {
 		if (_inner->property("settingsCardBackground").toBool()) {
-			QPainter(this).fillRect(e->rect(), st::windowBg);
+			QPainter(this).fillRect(e->rect(),
+				ExtrasFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c));
 		} else {
 			ContentWidget::paintEvent(e);
 		}

@@ -1,4 +1,5 @@
 #include "settings/settings_workspace.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "extras/ui/settings/settings_main.h"
 #include "info/info_content_widget.h"
@@ -182,7 +183,8 @@ void Workspace::resizeEvent(QResizeEvent *e) {
 void Workspace::paintEvent(QPaintEvent *e) {
 	Window::SectionWidget::paintEvent(e);
 	if (!animatingShow()) {
-		QPainter(this).fillRect(e->rect(), st::windowBg);
+		QPainter(this).fillRect(e->rect(),
+			ExtrasFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c));
 	}
 }
 
