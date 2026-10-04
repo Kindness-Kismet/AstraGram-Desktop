@@ -403,11 +403,38 @@ void Colorize(EmbeddedScheme &scheme, const style::colorizer &colorizer) {
 }
 
 void ApplyAccentPalette(style::palette &palette) {
-	// 所有选中行与头像角标共用同一份实时混色。
-	palette.setColor(qstr("dialogsBgActive"), anim::color(
-		palette.dialogsBg()->c,
-		palette.windowBgActive()->c,
-		0.5));
+	// 选中行用强调色实底配白字，强调色偏浅时压暗到白字对比度至少 4.5:1。
+	// 所有主题统一覆盖，导入主题自带的选中配色不生效。
+	const auto white = QColor(255, 255, 255);
+	const auto accent = palette.windowBgActive()->c;
+	auto bg = accent;
+	for (auto i = 1; i <= 100 && ContrastRatio(bg, white) < 4.5; ++i) {
+		bg = anim::color(accent, QColor(0, 0, 0), i / 100.);
+	}
+	const auto tint = [&](float64 ratio) {
+		return anim::color(bg, white, ratio);
+	};
+	const std::pair<const char*, QColor> colors[] = {
+		{ "dialogsBgActive", bg },
+		{ "dialogsNameFgActive", white },
+		{ "dialogsChatIconFgActive", white },
+		{ "dialogsDateFgActive", tint(0.82) },
+		{ "dialogsTextFgActive", tint(0.9) },
+		{ "dialogsTextFgServiceActive", white },
+		{ "dialogsDraftFgActive", white },
+		{ "dialogsScamFgActive", white },
+		{ "dialogsVerifiedIconBgActive", white },
+		{ "dialogsVerifiedIconFgActive", bg },
+		{ "dialogsSentIconFgActive", white },
+		{ "dialogsUnreadBgActive", white },
+		{ "dialogsUnreadFgActive", bg },
+		{ "dialogsUnreadBgMutedActive", tint(0.7) },
+		{ "dialogsOnlineBadgeFgActive", white },
+		{ "dialogsRippleBgActive", tint(0.12) },
+	};
+	for (const auto &[name, color] : colors) {
+		palette.setColor(QLatin1String(name), color);
+	}
 }
 
 std::vector<EmbeddedScheme> EmbeddedThemes() {
