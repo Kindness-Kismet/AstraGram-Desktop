@@ -491,7 +491,7 @@ void BuildSectionButtons(SectionBuilder &builder) {
 	builder.addButton({
 		.id = u"main/language"_q,
 		.title = tr::lng_settings_language(),
-		.icon = { &st::menuIconTranslate },
+		.icon = { &st::menuIconLanguage },
 		.label = rpl::single(
 			Lang::GetInstance().id()
 		) | rpl::then(
@@ -860,7 +860,7 @@ void SetupLanguageButton(
 			Lang::GetInstance().idChanges()
 		) | rpl::map([] { return Lang::GetInstance().nativeName(); }),
 		st::settingsButton,
-		{ &st::menuIconTranslate });
+		{ &st::menuIconLanguage });
 	const auto guard = Ui::CreateChild<base::binary_guard>(button.get());
 	button->addClickHandler([=] {
 		const auto m = button->clickModifiers();
