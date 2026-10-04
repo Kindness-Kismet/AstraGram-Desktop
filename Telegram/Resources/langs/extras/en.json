@@ -1,5 +1,9 @@
 {
   "Preferences": "AstraGram Preferences",
+  "SettingsPageOverview": "Settings overview",
+  "SettingsPagePersonal": "Account and messages",
+  "SettingsPagePreferences": "Preferences",
+  "SettingsPageQuick": "Quick settings",
   "DebugTestMode": "Mock Mode",
   "DebugFakeSessionFailed": "Could not enter the test session. Check the application log.",
   "DocsText": "Documentation",

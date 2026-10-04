@@ -115,6 +115,7 @@ public:
 	[[nodiscard]] Window::SeparateId windowId() const;
 	[[nodiscard]] bool isPrimary() const;
 	[[nodiscard]] bool isMainSectionShown() const;
+	[[nodiscard]] bool isMainSectionFullWidth() const;
 	[[nodiscard]] bool isThirdSectionShown() const;
 
 	[[nodiscard]] Dialogs::RowDescriptor resolveChatNext(
@@ -241,6 +242,7 @@ private:
 	void updateWindowAdaptiveLayout();
 	void handleAudioUpdate(const Media::Player::TrackState &state);
 	void updateControlsGeometry();
+	void updateSideSectionsVisibility();
 	// 按各栏当前位置与可见性收集卡片矩形，隐藏的栏不参与。
 	[[nodiscard]] std::vector<QRect> cardRects() const;
 	// 只裁剪面板外侧的顶部圆角。

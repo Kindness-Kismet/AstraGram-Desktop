@@ -1,5 +1,9 @@
 {
   "Preferences": "AstraGram 设置",
+  "SettingsPageOverview": "设置概览",
+  "SettingsPagePersonal": "账号与消息",
+  "SettingsPagePreferences": "使用偏好",
+  "SettingsPageQuick": "常用设置",
   "DocsText": "文档",
   "CategoryGeneral": "通用",
   "CategoryAppearance": "外观",

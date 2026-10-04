@@ -114,6 +114,13 @@ FiltersMenu::FiltersMenu(
 
 FiltersMenu::~FiltersMenu() = default;
 
+void FiltersMenu::setVisible(bool visible) {
+	_outer.setVisible(visible);
+	if (!visible) {
+		_drag.timer.cancel();
+	}
+}
+
 void FiltersMenu::setup() {
 	_outer.setObjectName(u"chatFolders.sidebar"_q);
 	_menu.setObjectName(u"chatFolders.menu"_q);

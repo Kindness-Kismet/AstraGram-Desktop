@@ -8776,6 +8776,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_Preferences" = "AstraGram Preferences";
 "extras_DocsText" = "Documentation";
 "extras_CategoryGeneral" = "General";
+"extras_SettingsPageOverview" = "Settings overview";
+"extras_SettingsPagePersonal" = "Account and messages";
+"extras_SettingsPagePreferences" = "Preferences";
+"extras_SettingsPageQuick" = "Quick settings";
 "extras_CategoryAppearance" = "Appearance";
 "extras_ThemeSimpleWhite" = "Simple White";
 "extras_ThemeSimpleBlack" = "Simple Black";

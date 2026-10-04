@@ -94,6 +94,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/ui/settings/settings_main.h"
+#include "extras/ui/settings/settings_page_widgets.h"
+#include "styles/style_extras_settings.h"
 #include "extras/ui/utils/extras_profile_values.h"
 #include "extras/utils/telegram_helpers.h"
 
@@ -147,9 +149,7 @@ Cover::Cover(
 	not_null<UserData*> user)
 : FixedHeightWidget(
 	parent,
-	st::settingsPhotoTop
-		+ st::infoProfileCover.photo.size.height()
-		+ st::settingsPhotoBottom)
+	st::settingsPageProfileHeight + st::settingsPageInset)
 , _controller(controller)
 , _user(user)
 , _badge(
@@ -182,10 +182,12 @@ Cover::Cover(
 	_user,
 	Ui::UserpicButton::Role::OpenPhoto,
 	Ui::UserpicButton::Source::PeerPhoto,
-	st::infoProfileCover.photo)
-, _name(this, st::infoProfileCover.name)
-, _id(this, st::defaultFlatLabel, st::popupMenuWithIcons)
-, _username(this, st::infoProfileMegagroupCover.status) {
+	st::settingsPageOverviewPhoto)
+, _name(this, st::settingsPageProfileName)
+, _id(this, st::settingsPageCaption, st::popupMenuWithIcons)
+, _username(this, st::settingsPageCaption) {
+	setObjectName(u"settings.page.overview.profile"_q);
+	_userpic->setObjectName(u"settings.page.overview.profile.photo"_q);
 	_user->updateFull();
 
 	_name->setSelectable(true);
@@ -269,8 +271,8 @@ void Cover::setupChildGeometry() {
 	widthValue(
 	) | rpl::on_next([=](int newWidth) {
 		_userpic->moveToLeft(
-			st::settingsPhotoLeft,
-			st::settingsPhotoTop,
+			st::settingsPageInset,
+			st::settingsPageInset,
 			newWidth);
 		refreshNameGeometry(newWidth);
 		refreshIdGeometry(newWidth);
@@ -323,8 +325,8 @@ void Cover::initViewers() {
 }
 
 void Cover::refreshNameGeometry(int newWidth) {
-	const auto nameLeft = st::settingsNameLeft;
-	const auto nameTop = st::settingsNameTop;
+	const auto nameLeft = st::settingsPageInset * 2 + _userpic->width();
+	const auto nameTop = st::settingsPageInset;
 	const auto qrButtonWidth = (_qrButton && !_qrButton->isHidden())
 		? (_qrButton->width() + st::infoProfileCover.rightSkip)
 		: 0;
@@ -357,8 +359,8 @@ void Cover::updateIdText() {
 }
 
 void Cover::refreshIdGeometry(int newWidth) {
-	const auto idLeft = st::settingsPhoneLeft;
-	const auto idTop = st::settingsPhoneTop;
+	const auto idLeft = st::settingsPageInset * 2 + _userpic->width();
+	const auto idTop = st::settingsPageInset + _name->height() + st::lineWidth * 2;
 	const auto idWidth = newWidth
 		- idLeft
 		- st::infoProfileCover.rightSkip;
@@ -367,8 +369,9 @@ void Cover::refreshIdGeometry(int newWidth) {
 }
 
 void Cover::refreshUsernameGeometry(int newWidth) {
-	const auto usernameLeft = st::settingsUsernameLeft;
-	const auto usernameTop = st::settingsUsernameTop;
+	const auto usernameLeft = st::settingsPageInset * 2 + _userpic->width();
+	const auto usernameTop = st::settingsPageInset + _name->height()
+		+ _id->height() + st::lineWidth * 4;
 	const auto usernameRight = st::infoProfileCover.rightSkip;
 	const auto usernameWidth = newWidth - usernameLeft - usernameRight;
 	_username->resizeToWidth(usernameWidth);
@@ -697,7 +700,7 @@ Main::Main(
 }
 
 rpl::producer<QString> Main::title() {
-	return tr::lng_menu_settings();
+	return tr::extras_SettingsPageOverview();
 }
 
 void Main::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
@@ -759,10 +762,8 @@ void Main::setupContent() {
 			.isPaused = isPaused,
 			.highlights = highlights,
 		});
-		builder.addDivider();
-		builder.addSkip();
 		BuildValidationSuggestions(builder);
-		BuildSectionButtons(builder);
+		buildPageOverview(builder);
 		builder.addSkip();
 		BuildInterfaceScale(builder);
 		BuildPremiumSection(builder);

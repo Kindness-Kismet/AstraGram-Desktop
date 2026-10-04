@@ -91,7 +91,6 @@ public:
 
 	bool closeByOutsideClick() const override;
 	void checkBeforeClose(Fn<void()> close) override;
-	void checkBeforeCloseByEscape(Fn<void()> close) override;
 	rpl::producer<QString> title() override;
 
 	void enableBackButton() override;

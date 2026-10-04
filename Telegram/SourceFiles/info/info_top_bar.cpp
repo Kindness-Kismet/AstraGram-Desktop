@@ -141,6 +141,9 @@ void TopBar::enableBackButton() {
 	_back->setDuration(st::infoTopBarDuration);
 	_back->toggle(!selectionMode(), anim::type::instant);
 	_back->entity()->setAccessibleName(tr::lng_go_back(tr::now));
+	if (objectName() == u"settings.page.header"_q) {
+		_back->entity()->setObjectName(u"settings.page.header.back"_q);
+	}
 	_back->entity()->clicks(
 	) | rpl::to_empty
 	| rpl::start_to_stream(_backClicks, _back->lifetime());

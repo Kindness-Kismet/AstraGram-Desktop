@@ -80,6 +80,12 @@ public:
 		return int(_stack.size());
 	}
 	std::vector<std::shared_ptr<ContentMemento>> takeStack();
+	[[nodiscard]] std::optional<bool> settingsNavigationVisible() const {
+		return _settingsNavigationVisible;
+	}
+	void setSettingsNavigationVisible(bool visible) {
+		_settingsNavigationVisible = visible;
+	}
 
 	not_null<ContentMemento*> content() {
 		Expects(!_stack.empty());
@@ -127,6 +133,7 @@ private:
 		Section section);
 
 	std::vector<std::shared_ptr<ContentMemento>> _stack;
+	std::optional<bool> _settingsNavigationVisible;
 	rpl::event_stream<> _removeRequests;
 	rpl::lifetime _lifetime;
 
