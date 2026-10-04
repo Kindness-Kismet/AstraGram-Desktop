@@ -115,8 +115,11 @@ void AddTerms(
 	const auto &buttonPadding = stBox.buttonPadding;
 	const auto style = box->lifetime().make_state<style::Box>(style::Box{
 		.buttonPadding = buttonPadding + QMargins(0, 0, 0, terms->height()),
+		.buttonSkip = stBox.buttonSkip,
 		.buttonHeight = stBox.buttonHeight,
 		.button = stBox.button,
+		.buttonSecondary = stBox.buttonSecondary,
+		.buttonLeft = stBox.buttonLeft,
 		.margin = stBox.margin,
 		.title = stBox.title,
 		.bg = stBox.bg,

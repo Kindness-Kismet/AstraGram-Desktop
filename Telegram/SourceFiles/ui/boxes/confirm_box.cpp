@@ -27,8 +27,6 @@ void ConfirmBox(not_null<Ui::GenericBox*> box, ConfirmBoxArgs &&args) {
 		const auto padding = st::boxPadding;
 		const auto use = args.labelPadding
 			? *args.labelPadding
-			: withTitle
-			? QMargins(padding.left(), 0, padding.right(), padding.bottom())
 			: padding;
 		const auto label = box->addRow(
 			object_ptr<Ui::FlatLabel>(
@@ -97,7 +95,9 @@ void ConfirmBox(not_null<Ui::GenericBox*> box, ConfirmBoxArgs &&args) {
 				lifetime->destroy();
 				c();
 			}),
-			args.cancelStyle ? *args.cancelStyle : defaultButtonStyle);
+			args.cancelStyle
+				? *args.cancelStyle
+				: box->getDelegate()->style().buttonSecondary);
 
 		box->boxClosing(
 		) | rpl::on_next(crl::guard(cancelButton, [=] {
