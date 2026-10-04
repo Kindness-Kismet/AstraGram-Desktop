@@ -1455,6 +1455,38 @@ rpl::producer<Ui::ScrollToRequest> Content::mustScrollTo() const {
 
 } // namespace
 
+LanguageListContent CreateLanguageList(QWidget *parent) {
+	const auto &[recent, official] = PrepareLists();
+	auto widget = object_ptr<Content>(parent, recent, official);
+	const auto inner = QPointer<Content>(widget.data());
+	const auto currentId = [] {
+		return Lang::LanguageIdOrDefault(Lang::Id());
+	};
+	inner->activations(
+	) | rpl::on_next([=](const Language &language) {
+		// 自定义语言包每次切换都会重新应用，只处理实际变化。
+		if (language.id == currentId()) {
+			return;
+		}
+		Lang::CurrentCloudManager().switchToLanguage(language);
+		if (inner) {
+			inner->changeChosen(currentId());
+		}
+	}, inner->lifetime());
+	Lang::GetInstance().idChanges(
+	) | rpl::on_next([=] {
+		inner->changeChosen(currentId());
+	}, inner->lifetime());
+	return {
+		.widget = std::move(widget),
+		.filter = [=](const QString &query) { inner->filter(query); },
+		.submit = [=] { inner->activateBySubmit(); },
+		.jump = [=](int rows) { return inner->jump(rows); },
+		.scrollRequests = inner->mustScrollTo(),
+		.rowHeight = Rows::DefaultRowHeight(),
+	};
+}
+
 LanguageBox::LanguageBox(
 	QWidget*,
 	Window::SessionController *controller,
@@ -1479,9 +1511,9 @@ void LanguageBox::prepare() {
 
 	using namespace rpl::mappers;
 
-	const auto &[recent, official] = PrepareLists();
+	auto list = CreateLanguageList(this);
 	const auto inner = setInnerWidget(
-		object_ptr<Content>(this, recent, official),
+		std::move(list.widget),
 		st::boxScroll,
 		topContainer->height());
 	inner->resizeToWidth(st::boxWidth);
@@ -1500,32 +1532,17 @@ void LanguageBox::prepare() {
 		setInnerTopSkip(height);
 	}, inner->lifetime());
 
-	select->setSubmittedCallback([=](Qt::KeyboardModifiers) {
-		inner->activateBySubmit();
+	select->setSubmittedCallback([
+		submit = std::move(list.submit)
+	](Qt::KeyboardModifiers) {
+		submit();
 	});
-	select->setQueryChangedCallback([=](const QString &query) {
-		inner->filter(query);
-	});
+	select->setQueryChangedCallback(std::move(list.filter));
 	select->setCancelledCallback([=] {
 		select->clearQuery();
 	});
 
-	inner->activations(
-	) | rpl::on_next([=](const Language &language) {
-		// "#custom" is applied each time it's passed to switchToLanguage().
-		// So we check that the language really has changed.
-		const auto currentId = [] {
-			return Lang::LanguageIdOrDefault(Lang::Id());
-		};
-		if (language.id != currentId()) {
-			Lang::CurrentCloudManager().switchToLanguage(language);
-			if (inner) {
-				inner->changeChosen(currentId());
-			}
-		}
-	}, inner->lifetime());
-
-	inner->mustScrollTo(
+	std::move(list.scrollRequests
 	) | rpl::on_next([=](Ui::ScrollToRequest request) {
 		scrollToY(request.ymin, request.ymax);
 	}, inner->lifetime());
@@ -1533,24 +1550,12 @@ void LanguageBox::prepare() {
 	_setInnerFocus = [=] {
 		select->setInnerFocus();
 	};
-	_jump = [=](int rows) {
-		return inner->jump(rows);
-	};
+	_jump = std::move(list.jump);
 }
 
 void LanguageBox::showFinished() {
 	if (_controller && !_highlightId.isEmpty()) {
-		if (const auto window = Core::App().findWindow(this)) {
-			window->checkHighlightControl(
-				u"language/show-button"_q,
-				_showButtonToggle.data());
-			window->checkHighlightControl(
-				u"language/translate-chats"_q,
-				_translateChatsToggle.data());
-			window->checkHighlightControl(
-				u"language/do-not-translate"_q,
-				_doNotTranslateButton.data());
-		}
+		_showFinished.fire({});
 	}
 }
 
@@ -1558,76 +1563,10 @@ void LanguageBox::setupTop(not_null<Ui::VerticalLayout*> container) {
 	if (!_controller) {
 		return;
 	}
-	const auto translateEnabled = container->add(
-		object_ptr<Ui::SettingsButton>(
-			container,
-			tr::lng_translate_settings_show(),
-			st::settingsButtonNoIcon))->toggleOn(
-				rpl::single(Core::App().settings().translateButtonEnabled()));
-	_showButtonToggle = translateEnabled;
-
-	translateEnabled->toggledValue(
-	) | rpl::filter([](bool checked) {
-		return (checked != Core::App().settings().translateButtonEnabled());
-	}) | rpl::on_next([=](bool checked) {
-		Core::App().settings().setTranslateButtonEnabled(checked);
-		Core::App().saveSettingsDelayed();
-	}, translateEnabled->lifetime());
-
-	using namespace rpl::mappers;
-	auto premium = rpl::single(true);
-	const auto translateChat = container->add(object_ptr<Ui::SettingsButton>(
+	Settings::SetupLanguageTranslationControls(
 		container,
-		tr::lng_translate_settings_chat(),
-		st::settingsButtonNoIconLocked
-	))->toggleOn(rpl::merge(
-		rpl::combine(
-			Core::App().settings().translateChatEnabledValue(),
-			rpl::duplicate(premium),
-			_1 && _2),
-		_translateChatTurnOff.events()));
-	_translateChatsToggle = translateChat;
-	std::move(premium) | rpl::on_next([=](bool value) {
-		translateChat->setToggleLocked(!value);
-	}, translateChat->lifetime());
-
-	translateChat->toggledValue(
-	) | rpl::filter([](bool checked) {
-		return checked != Core::App().settings().translateChatEnabled();
-	}) | rpl::on_next([=](bool checked) {
-		Core::App().settings().setTranslateChatEnabled(checked);
-		Core::App().saveSettingsDelayed();
-	}, translateChat->lifetime());
-
-	using Languages = std::vector<LanguageId>;
-	const auto translateSkipWrap = container->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			container,
-			object_ptr<Ui::VerticalLayout>(container)));
-	translateSkipWrap->toggle(
-		translateEnabled->toggled(),
-		anim::type::normal);
-	translateSkipWrap->toggleOn(rpl::combine(
-		translateEnabled->toggledValue(),
-		translateChat->toggledValue(),
-		rpl::mappers::_1 || rpl::mappers::_2));
-	const auto translateSkip = Settings::AddButtonWithLabel(
-		translateSkipWrap->entity(),
-		tr::lng_translate_settings_choose(),
-		Core::App().settings().skipTranslationLanguagesValue(
-		) | rpl::map([](const Languages &list) {
-			return (list.size() > 1)
-				? tr::lng_languages_count(tr::now, lt_count, list.size())
-				: Ui::LanguageName(list.front());
-		}),
-		st::settingsButtonNoIcon);
-	_doNotTranslateButton = translateSkip;
-
-	translateSkip->setClickedCallback([=] {
-		uiShow()->showBox(Ui::EditSkipTranslationLanguages());
-	});
-	Ui::AddSkip(container);
-	Ui::AddDividerText(container, tr::lng_translate_settings_about());
+		_controller,
+		_showFinished.events());
 }
 
 void LanguageBox::keyPressEvent(QKeyEvent *e) {
@@ -1664,6 +1603,10 @@ void LanguageBox::setInnerFocus() {
 base::binary_guard LanguageBox::Show(
 		Window::SessionController *controller,
 		const QString &highlightId) {
+	if (controller) {
+		Settings::ShowLanguageSettings(controller, highlightId);
+		return {};
+	}
 	auto result = base::binary_guard();
 
 	auto &manager = Lang::CurrentCloudManager();

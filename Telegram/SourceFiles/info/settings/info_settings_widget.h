@@ -27,6 +27,7 @@ struct Tag;
 struct SectionCustomTopBarData {
 	rpl::producer<> backButtonEnables;
 	rpl::producer<Info::Wrap> wrapValue;
+	rpl::producer<bool> navigationVisible;
 };
 
 class Memento final : public ContentMemento {
@@ -56,10 +57,17 @@ public:
 	[[nodiscard]] const std::any &sectionState() const {
 		return _sectionState;
 	}
+	void setPageTitle(QString title) {
+		_pageTitle = std::move(title);
+	}
+	[[nodiscard]] const QString &pageTitle() const {
+		return _pageTitle;
+	}
 
 private:
 	Type _type = Type();
 	std::any _sectionState;
+	QString _pageTitle;
 
 };
 
@@ -95,6 +103,7 @@ public:
 	rpl::producer<QString> title() override;
 
 	void enableBackButton() override;
+	void setNavigationVisible(bool visible);
 
 	rpl::producer<SelectedItems> selectedListValue() const override;
 	void selectionAction(SelectionAction action) override;
@@ -112,6 +121,7 @@ private:
 	Type _type = Type();
 
 	FlexibleScrollData _flexibleScroll;
+	rpl::variable<bool> _navigationVisible = false;
 	not_null<::Settings::AbstractSection*> _inner;
 	base::weak_qptr<Ui::RpWidget> _pinnedToTop;
 	base::weak_qptr<Ui::RpWidget> _pinnedToBottom;

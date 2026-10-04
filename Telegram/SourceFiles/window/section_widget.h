@@ -128,6 +128,9 @@ public:
 	virtual bool hasTopBarShadow() const {
 		return false;
 	}
+	[[nodiscard]] virtual bool useFullWidth() const {
+		return false;
+	}
 	virtual bool forceAnimateBack() const {
 		return false;
 	}

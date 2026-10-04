@@ -656,6 +656,7 @@ public:
 		const SectionShow &params = SectionShow::Way::ClearStack);
 
 	void toggleFiltersMenu(bool enabled);
+	void setFiltersMenuSuppressed(bool suppressed);
 	[[nodiscard]] rpl::producer<> filtersMenuChanged() const;
 
 	[[nodiscard]] auto defaultChatTheme() const
@@ -836,6 +837,7 @@ private:
 
 	std::unique_ptr<Passport::FormController> _passportForm;
 	std::unique_ptr<FiltersMenu> _filters;
+	bool _filtersMenuSuppressed = false;
 
 	GifPauseReasons _gifPauseReasons = 0;
 	rpl::event_stream<> _gifPauseLevelChanged;

@@ -387,7 +387,6 @@ void Cover::refreshQrButtonGeometry(int newWidth) {
 
 void BuildSectionButtons(SectionBuilder &builder) {
 	const auto session = builder.session();
-	const auto controller = builder.controller();
 	const auto showOther = builder.showOther();
 
 	builder.addSectionButton({
@@ -483,7 +482,7 @@ void BuildSectionButtons(SectionBuilder &builder) {
 		.title = tr::lng_settings_power_menu(),
 		.icon = { &st::menuIconPowerUsage },
 		.onClick = [=] {
-			controller->show(Box(PowerSavingBox, PowerSaving::Flags()));
+			showOther(PowerSavingId());
 		},
 		.keywords = { u"battery"_q, u"animations"_q, u"power"_q, u"saving"_q },
 	});
@@ -498,8 +497,7 @@ void BuildSectionButtons(SectionBuilder &builder) {
 			Lang::GetInstance().idChanges()
 		) | rpl::map([] { return Lang::GetInstance().nativeName(); }),
 		.onClick = [=] {
-			static auto Guard = base::binary_guard();
-			Guard = LanguageBox::Show(controller);
+			showOther(LanguageId());
 		},
 		.keywords = { u"translate"_q, u"localization"_q, u"language"_q },
 	});

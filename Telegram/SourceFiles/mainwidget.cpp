@@ -1553,6 +1553,7 @@ void MainWidget::showHistory(
 
 	auto animatedShow = [&] {
 		if (_showAnimation
+			|| (_mainSection && _mainSection->useFullWidth())
 			|| Core::App().passcodeLocked()
 			|| (params.animated == anim::type::instant)) {
 			return false;
@@ -1903,13 +1904,14 @@ void MainWidget::showNewSection(
 		return;
 	}
 	auto saveInStack = (params.way == SectionShow::Way::Forward);
+	const auto useFullWidth = memento->useFullWidth();
 	const auto thirdSectionTop = getThirdSectionTop();
 	const auto newThirdGeometry = QRect(
 		width() - _thirdColumnWidth,
 		thirdSectionTop,
 		_thirdColumnWidth,
 		height() - thirdSectionTop);
-	auto newThirdSection = (isThreeColumn() && params.thirdColumn)
+	auto newThirdSection = (!useFullWidth && isThreeColumn() && params.thirdColumn)
 		? memento->createWidget(
 			this,
 			_controller,
@@ -1935,9 +1937,9 @@ void MainWidget::showNewSection(
 
 	auto mainSectionTop = getMainSectionTop();
 	auto newMainGeometry = QRect(
-		_history->x(),
+		useFullWidth ? 0 : _history->x(),
 		mainSectionTop,
-		_history->width(),
+		useFullWidth ? width() : _history->width(),
 		height() - mainSectionTop);
 	auto newMainSection = newThirdSection
 		? nullptr
@@ -1953,6 +1955,10 @@ void MainWidget::showNewSection(
 		&& (_mainSection != nullptr);
 
 	auto animatedShow = [&] {
+		if (useFullWidth
+			|| (_mainSection && _mainSection->useFullWidth())) {
+			return false;
+		}
 		if (_showAnimation
 			|| Core::App().passcodeLocked()
 			|| (params.animated == anim::type::instant)
@@ -2748,10 +2754,29 @@ void MainWidget::updateControlsGeometry() {
 		}
 	}
 	if (_mainSection) {
-		// 内容区与聊天面板使用相同的边界。
+		const auto geometry = _mainSection->useFullWidth()
+			? QRect(0, mainSectionTop + st::windowCardGap, width(),
+				height() - mainSectionTop - st::windowCardGap)
+			: _history->geometry();
 		_mainSection->setGeometryWithTopMoved(
-			_history->geometry(),
+			geometry,
 			_contentScrollAddToY);
+	}
+	const auto fullWidth = _mainSection && _mainSection->useFullWidth();
+	_controller->setFiltersMenuSuppressed(fullWidth);
+	if (_dialogs && !_showAnimation) {
+		_dialogs->setVisible(!fullWidth && (!isOneColumn() || !isMainSectionShown()));
+	}
+	if (_thirdSection && !_showAnimation) {
+		_thirdSection->setVisible(!fullWidth);
+	}
+	if (fullWidth) {
+		if (_sideShadow) {
+			_sideShadow->hide();
+		}
+		if (_thirdShadow) {
+			_thirdShadow->hide();
+		}
 	}
 	refreshResizeAreas();
 	_contentScrollAddToY = 0;
@@ -2775,7 +2800,8 @@ void MainWidget::destroyThirdSection() {
 }
 
 void MainWidget::refreshResizeAreas() {
-	if (!isOneColumn() && _dialogs) {
+	const auto fullWidth = _mainSection && _mainSection->useFullWidth();
+	if (!fullWidth && !isOneColumn() && _dialogs) {
 		ensureFirstColumnResizeAreaCreated();
 		_firstColumnResizeArea->setGeometryToLeft(
 			_history->x(),
@@ -2786,7 +2812,7 @@ void MainWidget::refreshResizeAreas() {
 		_firstColumnResizeArea.destroy();
 	}
 
-	if (isThreeColumn() && _thirdSection) {
+	if (!fullWidth && isThreeColumn() && _thirdSection) {
 		ensureThirdColumnResizeAreaCreated();
 		_thirdColumnResizeArea->setGeometryToLeft(
 			_thirdSection->x(),

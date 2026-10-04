@@ -28,7 +28,6 @@ object_ptr<Ui::BoxContent> EditCloudPasswordBox(
 	not_null<::Main::Session*> session);
 object_ptr<Ui::BoxContent> ClearPaymentInfoBox(
 	not_null<::Main::Session*> session);
-void OpenFileConfirmationsBox(not_null<Ui::GenericBox*> box);
 void RemoveCloudPassword(not_null<Window::SessionController*> session);
 object_ptr<Ui::BoxContent> CloudPasswordAppOutdatedBox();
 
@@ -50,10 +49,5 @@ void AddPrivacyPremiumStar(
 	not_null<::Main::Session*> session,
 	rpl::producer<QString> label,
 	const QMargins &padding);
-
-void SetupArchiveAndMute(
-	not_null<Window::SessionController*> controller,
-	not_null<Ui::VerticalLayout*> container,
-	HighlightRegistry *highlights = nullptr);
 
 } // namespace Settings

@@ -8789,6 +8789,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_CategoryFilters" = "Filters";
 "extras_CategoryCustomization" = "Customization";
 "extras_GhostEssentialsHeader" = "Ghost essentials";
+"extras_SettingsQuickToggles" = "Quick Toggles";
+"extras_SettingsGhostDescription" = "Read receipts, online status and typing status";
+"extras_SettingsFiltersDescription" = "Hide messages using regular expressions";
+"extras_SettingsGeneralDescription" = "Translation, link previews and everyday options";
+"extras_SettingsAppearanceDescription" = "Themes, avatars, switches and window appearance";
+"extras_SettingsChatsDescription" = "Message display, editing and chat interactions";
+"extras_SettingsOtherDescription" = "Link registration, reset and developer options";
+"extras_SettingsDebugTitle" = "Debug";
 "extras_DontReadMessages" = "Don't Read Messages";
 "extras_DontReadStories" = "Don't Read Stories";
 "extras_DontSendOnlinePackets" = "Don't Send Online";
@@ -9280,6 +9288,29 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_ProxyModeOffAbout" = "Connecting to Telegram servers directly, without a proxy.";
 "extras_ProxyModeSystemAbout" = "Using the network configuration of your operating system. Changes there take effect immediately.";
 "extras_ProxyModeCustomAbout" = "Pick a server from the list below. Click a server to connect through it.";
+
+"extras_SettingsGroupAccount" = "Account";
+"extras_SettingsGroupApplication" = "Application";
+"extras_SettingsGroupHelp" = "Help";
+"extras_SettingsSearch" = "Search settings";
+
 "extras_ProxyUsernameOptional" = "Username (optional)";
+
 "extras_ProxyPasswordOptional" = "Password (optional)";
+
 "extras_ProxyNoAuthentication" = "Leave empty if authentication is not required";
+
+"extras_SettingsArchiveTitle" = "Message Archive";
+
+"extras_SettingsArchiveDescription" = "Save deleted messages and edit history";
+
+"extras_SettingsTextTitle" = "Text Processing";
+
+"extras_SettingsTextDescription" = "Automatic spacing and unusual character filtering";
+
+"extras_SettingsAppearanceTitle" = "Appearance";
+
+"extras_SettingsMoreTitle" = "More Settings";
+
+"extras_SettingsStateOn" = "On";
+"extras_SettingsStateOff" = "Off";

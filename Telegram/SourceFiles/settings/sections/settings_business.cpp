@@ -664,6 +664,7 @@ private:
 	base::unique_qptr<Ui::FadeWrap<Ui::IconButton>> _back;
 	base::unique_qptr<Ui::IconButton> _close;
 	rpl::variable<bool> _backToggles;
+	rpl::variable<bool> _navigationVisible = false;
 	rpl::variable<Info::Wrap> _wrap;
 	std::shared_ptr<Ui::RadiobuttonGroup> _radioGroup;
 
@@ -704,6 +705,7 @@ void Business::setStepDataReference(std::any &data) {
 			my->backButtonEnables
 		) | rpl::map_to(true);
 		_wrap = std::move(my->wrapValue);
+		_navigationVisible = std::move(my->navigationVisible);
 	}
 }
 
@@ -836,9 +838,12 @@ base::weak_qptr<Ui::RpWidget> Business::createPinnedToTop(
 					: st::settingsPremiumTopBarBack)),
 			st::infoTopBarScale);
 		_back->setDuration(0);
-		_back->toggleOn(isLayer
-			? _backToggles.value() | rpl::type_erased
-			: rpl::single(true));
+		_back->toggleOn(rpl::combine(
+			_backToggles.value(),
+			_navigationVisible.value()
+		) | rpl::map([=](bool enabled, bool navigation) {
+			return !navigation && (!isLayer || enabled);
+		}));
 		_back->entity()->addClickHandler([=] {
 			_showBack.fire({});
 		});

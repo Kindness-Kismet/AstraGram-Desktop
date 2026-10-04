@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "ui/layers/box_content.h"
 #include "base/binary_guard.h"
+#include "settings/sections/settings_language.h"
 
 struct LanguageId;
 
@@ -21,6 +22,17 @@ class VerticalLayout;
 namespace Window {
 class SessionController;
 } // namespace Window
+
+struct LanguageListContent {
+	object_ptr<Ui::RpWidget> widget = { nullptr };
+	Fn<void(const QString&)> filter;
+	Fn<void()> submit;
+	Fn<Ui::ScrollToRequest(int)> jump;
+	rpl::producer<Ui::ScrollToRequest> scrollRequests;
+	int rowHeight = 0;
+};
+
+[[nodiscard]] LanguageListContent CreateLanguageList(QWidget *parent);
 
 class LanguageBox : public Ui::BoxContent {
 public:
@@ -47,10 +59,7 @@ private:
 
 	Window::SessionController *_controller = nullptr;
 	QString _highlightId;
-	QPointer<Ui::RpWidget> _showButtonToggle;
-	QPointer<Ui::RpWidget> _translateChatsToggle;
-	QPointer<Ui::RpWidget> _doNotTranslateButton;
-	rpl::event_stream<bool> _translateChatTurnOff;
+	rpl::event_stream<> _showFinished;
 	Fn<void()> _setInnerFocus;
 	Fn<Ui::ScrollToRequest(int rows)> _jump;
 

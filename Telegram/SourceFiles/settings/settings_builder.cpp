@@ -13,6 +13,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/edit_privacy_box.h"
 #include "main/main_session.h"
 #include "settings/settings_common.h"
+#include "settings/settings_card_layout.h"
+#include "settings/sections/settings_credits.h"
+#include "settings/sections/settings_main.h"
+#include "settings/sections/settings_premium.h"
 #include "settings/sections/settings_privacy_security.h"
 #include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
@@ -67,15 +71,23 @@ BuildHelper::BuildHelper(
 	const auto isPaused = Window::PausedIn(
 		controller,
 		Window::GifPauseReason::Layer);
-	auto builder = SectionBuilder(WidgetContext{
-		.container = static_cast<Ui::VerticalLayout*>(
+	// 推广页与旧设置概览有独立封面和自绘布局，不套用普通设置卡片。
+	const auto cards = (_meta.id != MainId())
+		&& (_meta.id != PremiumId())
+		&& (_meta.id != CreditsId());
+	const auto content = cards
+		? container.get()
+		: static_cast<Ui::VerticalLayout*>(
 			container->add(object_ptr<Ui::OverrideMargins>(
 				container,
-				object_ptr<Ui::VerticalLayout>(container)))->entity()),
+				object_ptr<Ui::VerticalLayout>(container)))->entity());
+	auto builder = SectionBuilder(WidgetContext{
+		.container = content,
 		.controller = controller,
 		.showOther = std::move(showOther),
 		.isPaused = isPaused,
 		.highlights = highlights,
+		.cardLayout = cards,
 	});
 	_method(builder);
 	SetupCopyLinkMenus(controller, *highlights, lifetime);
@@ -171,11 +183,49 @@ std::vector<SearchEntry> BuildHelper::index(
 
 SectionBuilder::SectionBuilder(BuildContext context)
 : _context(std::move(context)) {
+	if (const auto ctx = std::get_if<WidgetContext>(&_context)) {
+		_cardRoot = ctx->cardLayout ? ctx->container.get() : nullptr;
+		for (auto parent = ctx->container->parentWidget(); parent; parent = parent->parentWidget()) {
+			const auto section = dynamic_cast<AbstractSection*>(parent);
+			if (!section) {
+				continue;
+			}
+			const auto id = section->id();
+			if (id == MainId() || id == PremiumId() || id == CreditsId()) {
+				_cardRoot = nullptr;
+			}
+			break;
+		}
+	}
+}
+
+void SectionBuilder::ensureCard() {
+	if (!_cardRoot || _scopeDepth) {
+		return;
+	}
+	if (!_cardPage) {
+		closeCard();
+	}
+	auto &ctx = std::get<WidgetContext>(_context);
+	if (ctx.container == _cardPage) {
+		ctx.container = AddCardGroup(_cardPage);
+	}
+}
+
+void SectionBuilder::closeCard() {
+	if (!_cardRoot || _scopeDepth) {
+		return;
+	}
+	if (!_cardPage) {
+		_cardPage = _cardRoot->add(object_ptr<CardPage>(_cardRoot))->content().get();
+	}
+	std::get<WidgetContext>(_context).container = _cardPage;
 }
 
 void SectionBuilder::add(FnMut<void(const BuildContext &ctx)> method) {
 	Expects(method != nullptr);
 
+	ensureCard();
 	method(_context);
 }
 
@@ -183,6 +233,7 @@ Ui::VerticalLayout *SectionBuilder::scope(
 		FnMut<void()> method,
 		rpl::producer<bool> shown,
 		FnMut<void(ToggledScopePtr)> hook) {
+	ensureCard();
 	auto result = (Ui::VerticalLayout*)nullptr;
 	v::match(_context, [&](WidgetContext &wctx) {
 		const auto outer = wctx.container;
@@ -197,7 +248,9 @@ Ui::VerticalLayout *SectionBuilder::scope(
 			? wrap->entity()
 			: outer->add(object_ptr<Ui::VerticalLayout>(outer));
 		wctx.container = inner;
+		++_scopeDepth;
 		method();
+		--_scopeDepth;
 		if (shown) {
 			wrap->toggleOn(std::move(shown));
 			wrap->finishAnimating();
@@ -272,6 +325,10 @@ Ui::RpWidget *SectionBuilder::addControl(ControlArgs &&args) {
 Ui::SettingsButton *SectionBuilder::addButton(ButtonArgs &&args) {
 	const auto &st = args.st ? *args.st : st::settingsButton;
 	auto iconForSearch = IconDescriptor{ args.icon.icon };
+	const auto hasIcon = bool(args.icon);
+	if (_cardRoot && hasIcon && !args.icon.color) {
+		args.icon.color = &st::menuIconFg;
+	}
 	// id 先拷贝：ControlArgs 构造时会 move 走 args.id，而 factory 引用捕获 args
 	const auto id = args.id;
 	const auto factory = [&](not_null<Ui::VerticalLayout*> container) {
@@ -280,6 +337,8 @@ Ui::SettingsButton *SectionBuilder::addButton(ButtonArgs &&args) {
 			rpl::duplicate(args.title),
 			st,
 			std::move(args.icon));
+		button->setProperty("settingsSeparatorInset", hasIcon
+			? button->st().padding.left() : st::settingsCardRowInset);
 		// id 挂到 objectName，调试指令可用 control.click <id> 寻址
 		if (button && !id.isEmpty()) {
 			button->setObjectName(id);
@@ -316,17 +375,31 @@ Ui::SettingsButton *SectionBuilder::addSectionButton(SectionArgs &&args) {
 	const auto wctx = std::get_if<WidgetContext>(&_context);
 	const auto showOther = wctx ? wctx->showOther : nullptr;
 	const auto target = args.targetSection;
-	return addButton({
+	const auto result = addButton({
 		.id = std::move(args.id),
 		.altIds = std::move(args.altIds),
 		.title = std::move(args.title),
+		.st = !_cardRoot
+			? nullptr
+			: args.description
+			? &st::settingsCardDetailedButton
+			: &st::settingsCardSectionButton,
 		.icon = std::move(args.icon),
+		.label = std::move(args.label),
 		.onClick = [=] { showOther(target); },
 		.keywords = std::move(args.keywords),
 	});
+	if (result && _cardRoot) {
+		AddSectionRowDetails(result, std::move(args.description));
+	}
+	return result;
 }
 
 void SectionBuilder::addDivider() {
+	if (_cardRoot && !_scopeDepth) {
+		closeCard();
+		return;
+	}
 	v::match(_context, [&](const WidgetContext &ctx) {
 		Ui::AddDivider(ctx.container);
 	}, [](const SearchContext &) {
@@ -334,6 +407,9 @@ void SectionBuilder::addDivider() {
 }
 
 void SectionBuilder::addSkip() {
+	if (_cardRoot && !_scopeDepth) {
+		return;
+	}
 	v::match(_context, [&](const WidgetContext &ctx) {
 		Ui::AddSkip(ctx.container);
 	}, [](const SearchContext &) {
@@ -348,6 +424,11 @@ void SectionBuilder::addSkip(int height) {
 }
 
 void SectionBuilder::addDividerText(rpl::producer<QString> text) {
+	if (_cardRoot && !_scopeDepth) {
+		closeCard();
+		AddCardDescription(_cardPage, std::move(text));
+		return;
+	}
 	v::match(_context, [&](const WidgetContext &ctx) {
 		Ui::AddDividerText(ctx.container, std::move(text));
 	}, [](const SearchContext &) {
@@ -436,10 +517,11 @@ Ui::SettingsToggle *SectionBuilder::addToggle(ToggleArgs &&args) {
 }
 
 void SectionBuilder::addSubsectionTitle(SubsectionTitleArgs &&args) {
+	closeCard();
 	v::match(_context, [&](const WidgetContext &ctx) {
-		const auto title = AddSubsectionTitle(
-			ctx.container,
-			rpl::duplicate(args.title));
+		const auto title = (_cardPage && !_scopeDepth)
+			? AddCardTitle(ctx.container, rpl::duplicate(args.title))
+			: AddSubsectionTitle(ctx.container, rpl::duplicate(args.title));
 		if (!args.id.isEmpty() && ctx.highlights) {
 			ctx.highlights->push_back({
 				args.id,
@@ -460,15 +542,20 @@ void SectionBuilder::addSubsectionTitle(SubsectionTitleArgs &&args) {
 }
 
 void SectionBuilder::addSubsectionTitle(rpl::producer<QString> text) {
+	closeCard();
 	v::match(_context, [&](const WidgetContext &ctx) {
-		AddSubsectionTitle(ctx.container, std::move(text));
+		if (_cardPage && !_scopeDepth) {
+			AddCardTitle(ctx.container, std::move(text));
+		} else {
+			AddSubsectionTitle(ctx.container, std::move(text));
+		}
 	}, [](const SearchContext &) {
 	});
 }
 
 Ui::VerticalLayout *SectionBuilder::container() const {
-	return v::match(_context, [](const WidgetContext &ctx) {
-		return ctx.container.get();
+	return v::match(_context, [&](const WidgetContext &ctx) {
+		return (_cardRoot && !_scopeDepth) ? _cardRoot : ctx.container.get();
 	}, [](const SearchContext &) -> Ui::VerticalLayout* {
 		return nullptr;
 	});

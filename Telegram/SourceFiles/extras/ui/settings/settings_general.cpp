@@ -204,59 +204,6 @@ void BuildQoLToggles(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 
 	extras.addSectionDivider();
 
-	const auto zalgoButton = builder.addButton({
-		.id = u"extras/filterZalgo"_q,
-		.title = tr::extras_FilterZalgo(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(settings->filterZalgo()),
-	});
-	if (zalgoButton) {
-		zalgoButton->toggledValue(
-		) | rpl::filter(
-			[=](bool enabled) {
-				return (enabled != settings->filterZalgo());
-			}
-		) | on_next(
-			[=](bool enabled) {
-				ExtrasSettings::getInstance().setFilterZalgo(enabled);
-				ShowRestartPrompt(controller);
-			},
-			zalgoButton->lifetime());
-		extras.addBetaBadge(zalgoButton);
-	}
-
-	extras.addSettingToggle({
-		.id = u"extras/autoSpaceSending"_q,
-		.title = tr::extras_AutoSpaceSending(),
-		.getter = &ExtrasSettings::autoSpaceSending,
-		.setter = &ExtrasSettings::setAutoSpaceSending,
-	});
-	extras.addSettingToggle({
-		.id = u"extras/autoSpaceEditing"_q,
-		.title = tr::extras_AutoSpaceEditing(),
-		.getter = &ExtrasSettings::autoSpaceEditing,
-		.setter = &ExtrasSettings::setAutoSpaceEditing,
-	});
-	const auto autoSpaceReceivingButton = builder.addButton({
-		.id = u"extras/autoSpaceReceiving"_q,
-		.title = tr::extras_AutoSpaceReceiving(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(settings->autoSpaceReceiving()),
-	});
-	if (autoSpaceReceivingButton) {
-		autoSpaceReceivingButton->toggledValue(
-		) | rpl::filter(
-			[=](bool enabled) {
-				return (enabled != settings->autoSpaceReceiving());
-			}
-		) | on_next(
-			[=](bool enabled) {
-				ExtrasSettings::getInstance().setAutoSpaceReceiving(enabled);
-				ShowRestartPrompt(controller);
-			},
-			autoSpaceReceivingButton->lifetime());
-	}
-
 	extras.addSettingToggle({
 		.id = u"extras/improveLinkPreviews"_q,
 		.title = tr::extras_ImproveLinkPreviews(),

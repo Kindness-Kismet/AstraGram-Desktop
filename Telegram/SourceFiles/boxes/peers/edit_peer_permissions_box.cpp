@@ -403,24 +403,24 @@ ChatRestrictions DisabledByAdminRights(not_null<PeerData*> peer) {
 
 not_null<Ui::RpWidget*> AddInnerToggle(
 		not_null<Ui::VerticalLayout*> container,
-		const style::SettingsButton &st,
+		const style::SettingsButton &requestedStyle,
 		std::vector<not_null<Ui::AbstractCheckView*>> innerCheckViews,
 		not_null<Ui::SlideWrap<>*> wrap,
 		rpl::producer<QString> buttonLabel,
 		std::optional<QString> locked,
 		Settings::IconDescriptor &&icon) {
-	const auto button = container->add(object_ptr<Ui::SettingsButton>(
+	const auto button = container->add(Settings::CreateButtonWithIcon(
 		container,
 		nullptr,
-		st));
-	if (icon) {
-		Settings::AddButtonIcon(button, st, std::move(icon));
-	}
+		requestedStyle,
+		std::move(icon)));
+	const auto &st = button->st();
 
 	const auto toggleButton = Ui::CreateChild<Ui::SettingsButton>(
 		container.get(),
 		nullptr,
 		st);
+	toggleButton->setProperty("settingsCardRow", button->property("settingsCardRow"));
 
 	struct State final {
 		State(const style::Toggle &st, Fn<void()> c)

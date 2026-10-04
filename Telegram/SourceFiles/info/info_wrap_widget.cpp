@@ -15,6 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/info_controller.h"
 #include "info/info_memento.h"
 #include "info/info_top_bar.h"
+#include "info/settings/info_settings_widget.h"
 #include "settings/cloud_password/settings_cloud_password_email_confirm.h"
 #include "settings/sections/settings_chat.h"
 #include "settings/sections/settings_information.h"
@@ -124,12 +125,14 @@ WrapWidget::WrapWidget(
 	QWidget *parent,
 	not_null<Window::SessionController*> window,
 	Wrap wrap,
-	not_null<Memento*> memento)
+	not_null<Memento*> memento,
+	bool settingsNavigation)
 : SectionWidget(parent, window, rpl::producer<PeerData*>())
 , _isSeparatedWindow(
 	window->windowId().type == Window::SeparateType::SharedMedia)
 , _wrap(wrap)
 , _controller(createController(window, memento->content()))
+, _settingsNavigation(settingsNavigation)
 , _topShadow(this)
 , _bottomShadow(this) {
 	_topShadow->toggleOn(
@@ -385,7 +388,13 @@ void WrapWidget::createTopBar() {
 		_topBar->enableBackButton();
 		_topBar->backRequest(
 		) | rpl::on_next([=] {
-			checkBeforeClose([=] { _controller->showBackFromStack(); });
+			checkBeforeClose([=] {
+				if (!hasStackHistory() && _settingsRootBack) {
+					_settingsRootBack();
+				} else {
+					_controller->showBackFromStack();
+				}
+			});
 		}, _topBar->lifetime());
 	} else if (wrapValue == Wrap::Side) {
 		auto close = _topBar->addButton(
@@ -442,7 +451,10 @@ void WrapWidget::setupTopBarMenuToggle() {
 		addProfileCallsButton();
 	} else if (section.type() == Section::Type::Settings) {
 		addTopBarMenuButton();
-		if (section.settingsType() == ::Settings::MainId()) {
+		if (section.settingsType() == ::Settings::MainId()
+			|| ((_settingsNavigation || _settingsRootBack)
+				&& section.settingsType() != ::Settings::Search::Id()
+				&& section.settingsType() != ::Settings::InformationId())) {
 			const auto &st = (wrap() == Wrap::Layer)
 				? st::infoLayerTopBarSearch
 				: st::infoTopBarSearch;
@@ -567,7 +579,11 @@ void WrapWidget::setupTopBarMenuToggle() {
 void WrapWidget::checkBeforeClose(Fn<void()> close) {
 	_content->checkBeforeClose(crl::guard(this, [=] {
 		_controller->parentController()->hideLayer();
-		close();
+		if (_controller->section().type() == Section::Type::Settings) {
+			_content->saveChanges(crl::guard(this, [=] { close(); }));
+		} else {
+			close();
+		}
 	}));
 }
 
@@ -705,6 +721,10 @@ bool WrapWidget::requireTopBarSearch() const {
 
 bool WrapWidget::showBackFromStackInternal(
 		const Window::SectionShow &params) {
+	if (!hasStackHistory() && _settingsRootBack) {
+		checkBeforeClose(_settingsRootBack);
+		return true;
+	}
 	if (hasStackHistory()) {
 		auto last = std::move(_historyStack.back());
 		_historyStack.pop_back();
@@ -764,6 +784,7 @@ void WrapWidget::showContent(object_ptr<ContentWidget> content) {
 
 void WrapWidget::finishShowContent() {
 	setupTopBarMenuToggle();
+	setupSettingsBreadcrumb();
 	updateContentGeometry();
 	_content->setIsStackBottom(!hasStackHistory());
 	if (_topBar) {
@@ -840,10 +861,14 @@ rpl::producer<SelectedItems> WrapWidget::selectedListValue() const {
 object_ptr<ContentWidget> WrapWidget::createContent(
 		not_null<ContentMemento*> memento,
 		not_null<Controller*> controller) {
-	return memento->createWidget(
+	auto result = memento->createWidget(
 		this,
 		controller,
 		contentGeometry());
+	if (const auto settings = dynamic_cast<Settings::Widget*>(result.data())) {
+		settings->setNavigationVisible(_settingsNavigation);
+	}
+	return result;
 }
 
 rpl::producer<Wrap> WrapWidget::wrapValue() const {
@@ -852,6 +877,56 @@ rpl::producer<Wrap> WrapWidget::wrapValue() const {
 
 void WrapWidget::setWrap(Wrap wrap) {
 	_wrap = wrap;
+}
+
+void WrapWidget::setSettingsNavigation(bool visible) {
+	if (_settingsNavigation == visible) {
+		return;
+	}
+	_settingsNavigation = visible;
+	setupTop();
+	setupTopBarMenuToggle();
+	setupSettingsBreadcrumb();
+	if (_topBar) {
+		_topBar->setTitle({
+			.title = _content->title(),
+			.subtitle = _content->subtitle(),
+		});
+		_topBar->setStories(_content->titleStories());
+	}
+	if (const auto settings = dynamic_cast<Settings::Widget*>(_content.data())) {
+		settings->setNavigationVisible(visible);
+	}
+	updateContentGeometry();
+}
+
+bool WrapWidget::hasSettingsHistory() const {
+	return hasStackHistory();
+}
+
+void WrapWidget::setSettingsRootBack(Fn<void()> callback) {
+	_settingsRootBack = std::move(callback);
+}
+
+void WrapWidget::setupSettingsBreadcrumb() {
+	_settingsBreadcrumb.destroy();
+	if (!_settingsNavigation || !hasStackHistory()) {
+		return;
+	}
+	_settingsBreadcrumb.create(this);
+	_settingsBreadcrumb->setObjectName(u"settings-breadcrumb"_q);
+	const auto memento = dynamic_cast<Settings::Memento*>(_historyStack.back().section.get());
+	Expects(memento != nullptr);
+	const auto text = memento->pageTitle().isEmpty()
+		? tr::lng_menu_settings(tr::now)
+		: memento->pageTitle();
+	const auto parent = Ui::CreateChild<Ui::LinkButton>(_settingsBreadcrumb.data(), text);
+	parent->setObjectName(u"settings-breadcrumb-parent"_q);
+	parent->setClickedCallback([=] {
+		checkBeforeClose([=] { _controller->showBackFromStack(); });
+	});
+	parent->moveToLeft(style::ConvertScale(20), style::ConvertScale(4));
+	_settingsBreadcrumb->show();
 }
 
 rpl::producer<bool> WrapWidget::contentTillBottomValue() const {
@@ -947,6 +1022,11 @@ bool WrapWidget::showInternal(
 			return false;
 		}
 		auto content = infoMemento->content();
+		// 设置始终由页面容器接管，不能混入资料弹层的导航栈。
+		if ((_controller->section().type() == Section::Type::Settings)
+			!= (content->section().type() == Section::Type::Settings)) {
+			return false;
+		}
 		auto skipInternal = hasStackHistory()
 			&& (params.way == Window::SectionShow::Way::ClearStack);
 		if (_controller->validateMementoPeer(content)) {
@@ -1009,7 +1089,8 @@ rpl::producer<int> WrapWidget::desiredHeightValue() const {
 }
 
 QRect WrapWidget::contentGeometry() const {
-	const auto top = _topBar ? _topBar->height() : 0;
+	const auto top = (_topBar ? _topBar->height() : 0)
+		+ (_settingsBreadcrumb ? style::ConvertScale(28) : 0);
 	return rect().marginsRemoved({ 0, std::min(top, height()), 0, 0});
 }
 
@@ -1143,6 +1224,10 @@ void WrapWidget::keyPressEvent(QKeyEvent *e) {
 }
 
 bool WrapWidget::closeByBackButton() {
+	if (!hasStackHistory() && _settingsRootBack) {
+		checkBeforeCloseByEscape(_settingsRootBack);
+		return true;
+	}
 	if (!hasStackHistory() && wrap() != Wrap::Layer) {
 		return false;
 	}
@@ -1156,6 +1241,10 @@ bool WrapWidget::closeByBackButton() {
 
 void WrapWidget::updateContentGeometry() {
 	if (_content) {
+		if (_settingsBreadcrumb) {
+			_settingsBreadcrumb->setGeometry(0, _topBar ? _topBar->height() : 0,
+				width(), style::ConvertScale(28));
+		}
 		if (_topBar) {
 			_topShadow->resizeToWidth(width());
 			_topShadow->moveToLeft(0, _topBar->height());
@@ -1251,12 +1340,15 @@ const Ui::RoundRect *WrapWidget::bottomSkipRounding() const {
 }
 
 bool WrapWidget::hasBackButton() const {
-	return !_isSeparatedWindow
+	return !_settingsNavigation && !_isSeparatedWindow
 		&& (wrap() == Wrap::Narrow || hasStackHistory());
 }
 
 bool WrapWidget::willHaveBackButton(
 		const Window::SectionShow &params) const {
+	if (_settingsNavigation) {
+		return false;
+	}
 	using Way = Window::SectionShow::Way;
 	const auto willSaveToStack = (_content != nullptr)
 		&& (params.way == Way::Forward);

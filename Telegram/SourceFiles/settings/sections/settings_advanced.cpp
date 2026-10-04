@@ -15,7 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/base_platform_custom_app_icon.h"
 #include "base/platform/base_platform_info.h"
 #include "base/screen_reader_state.h"
-#include "boxes/auto_download_box.h"
+#include "settings/sections/settings_auto_download.h"
 #include "boxes/connection_box.h"
 #include "boxes/download_path_box.h"
 #include "core/application.h"
@@ -242,11 +242,7 @@ void BuildAutoDownloadSection(SectionBuilder &builder) {
 			.title = std::move(title),
 			.icon = { icon },
 			.onClick = [=] {
-				auto box = Box<AutoDownloadBox>(session, source);
-				box->boxClosing() | rpl::on_next(crl::guard(container, [=] {
-					state->changes.fire({});
-				}), box->lifetime());
-				controller->show(std::move(box));
+				ShowAutoDownload(controller, source);
 			},
 			.keywords = std::move(keywords),
 		});
@@ -809,7 +805,7 @@ void BuildPerformanceSection(SectionBuilder &builder) {
 		.title = tr::lng_settings_power_menu(),
 		.st = &st::settingsButtonNoIcon,
 		.onClick = [=] {
-			controller->window().show(Box(PowerSavingBox, PowerSaving::Flags()));
+			ShowPowerSaving(controller);
 		},
 		.keywords = { u"power"_q, u"saving"_q, u"battery"_q, u"animation"_q },
 	});
@@ -1330,94 +1326,6 @@ void SetupAnimations(
 	))->setClickedCallback([=] {
 		window->show(Box(PowerSavingBox, PowerSaving::Flags()));
 	});
-}
-
-void ArchiveSettingsBox(
-		not_null<Ui::GenericBox*> box,
-		not_null<Window::SessionController*> controller) {
-	box->setTitle(tr::lng_settings_archive_title());
-	box->setWidth(st::boxWideWidth);
-
-	box->addButton(tr::lng_about_done(), [=] { box->closeBox(); });
-
-	PreloadArchiveSettings(&controller->session());
-
-	struct State {
-		Ui::SlideWrap<Ui::VerticalLayout> *foldersWrap = nullptr;
-		Ui::SettingsButton *folders = nullptr;
-	};
-	const auto state = box->lifetime().make_state<State>();
-	const auto privacy = &controller->session().api().globalPrivacy();
-
-	const auto container = box->verticalLayout();
-	AddSkip(container);
-	AddSubsectionTitle(container, tr::lng_settings_unmuted_chats());
-
-	using Unarchive = Api::UnarchiveOnNewMessage;
-	container->add(object_ptr<Button>(
-		container,
-		tr::lng_settings_always_in_archive(),
-		st::settingsButtonNoIcon
-	))->toggleOn(privacy->unarchiveOnNewMessage(
-	) | rpl::map(
-		rpl::mappers::_1 == Unarchive::None
-	))->toggledChanges(
-	) | rpl::filter([=](bool toggled) {
-		const auto current = privacy->unarchiveOnNewMessageCurrent();
-		state->foldersWrap->toggle(!toggled, anim::type::normal);
-		return toggled != (current == Unarchive::None);
-	}) | rpl::on_next([=](bool toggled) {
-		privacy->updateUnarchiveOnNewMessage(toggled
-			? Unarchive::None
-			: state->folders->toggled()
-			? Unarchive::NotInFoldersUnmuted
-			: Unarchive::AnyUnmuted);
-	}, container->lifetime());
-
-	AddSkip(container);
-	AddDividerText(container, tr::lng_settings_unmuted_chats_about());
-
-	state->foldersWrap = container->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			container,
-			object_ptr<Ui::VerticalLayout>(container)));
-	const auto inner = state->foldersWrap->entity();
-	AddSkip(inner);
-	AddSubsectionTitle(inner, tr::lng_settings_chats_from_folders());
-
-	state->folders = inner->add(object_ptr<Button>(
-		inner,
-		tr::lng_settings_always_in_archive(),
-		st::settingsButtonNoIcon
-	))->toggleOn(privacy->unarchiveOnNewMessage(
-	) | rpl::map(
-		rpl::mappers::_1 != Unarchive::AnyUnmuted
-	));
-	state->folders->toggledChanges(
-	) | rpl::filter([=](bool toggled) {
-		const auto current = privacy->unarchiveOnNewMessageCurrent();
-		return toggled != (current != Unarchive::AnyUnmuted);
-	}) | rpl::on_next([=](bool toggled) {
-		const auto current = privacy->unarchiveOnNewMessageCurrent();
-		privacy->updateUnarchiveOnNewMessage(!toggled
-			? Unarchive::AnyUnmuted
-			: (current == Unarchive::AnyUnmuted)
-			? Unarchive::NotInFoldersUnmuted
-			: current);
-	}, inner->lifetime());
-
-	AddSkip(inner);
-	AddDividerText(inner, tr::lng_settings_chats_from_folders_about());
-
-	state->foldersWrap->toggle(
-		privacy->unarchiveOnNewMessageCurrent() != Unarchive::None,
-		anim::type::instant);
-
-	SetupArchiveAndMute(controller, box->verticalLayout());
-}
-
-void PreloadArchiveSettings(not_null<::Main::Session*> session) {
-	session->api().globalPrivacy().reload();
 }
 
 Type AdvancedId() {

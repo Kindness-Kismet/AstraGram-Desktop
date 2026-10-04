@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "settings/sections/settings_main.h"
 #include "settings/settings_builder.h"
+#include "settings/settings_card_layout.h"
 #include "settings/settings_common_session.h"
 #include "settings/business/settings_chatbots.h"
 #include "ui/wrap/vertical_layout.h"
@@ -470,7 +471,6 @@ void SetupBirthday(
 		InformationHighlightTargets *targets) {
 	const auto session = &self->session();
 
-	Ui::AddSkip(container);
 
 	auto value = rpl::combine(
 		Info::Profile::BirthdayValue(self),
@@ -508,7 +508,6 @@ void SetupBirthday(
 			&& value.never.peers.empty();
 	}) | rpl::distinct_until_changed();
 
-	Ui::AddSkip(container);
 	Ui::AddDividerText(container, rpl::conditional(
 		std::move(isExactlyContacts),
 		tr::lng_settings_birthday_contacts(
@@ -566,16 +565,13 @@ void SetupChatAutomation(
 				const QString &text,
 				int width) {
 			const auto space = st.style.font->spacew;
-			const auto left = st.padding.left()
+			const auto left = button->st().padding.left()
 				+ st.style.font->width(text)
 				+ space;
 			const auto available = width - left - st.padding.right();
 			badge->setVisible(available >= badge->width());
 			if (!badge->isHidden()) {
-				const auto top = st.padding.top()
-					+ st.style.font->ascent
-					- st::settingsPremiumNewBadge.style.font->ascent
-					- st::settingsPremiumNewBadgePadding.top();
+				const auto top = (button->height() - badge->height()) / 2;
 				badge->moveToLeft(left, top, width);
 			}
 		}, badge->lifetime());
@@ -591,7 +587,6 @@ void SetupPersonalChannel(
 		not_null<Window::SessionController*> controller,
 		not_null<UserData*> self,
 		InformationHighlightTargets *targets) {
-	Ui::AddSkip(container);
 
 	auto value = rpl::combine(
 		Info::Profile::PersonalChannelValue(self),
@@ -626,8 +621,6 @@ void SetupPersonalChannel(
 		targets->colorButton = colorButton;
 	}
 
-	Ui::AddSkip(container);
-	Ui::AddDivider(container);
 }
 
 void SetupRows(
@@ -1387,27 +1380,19 @@ void Information::setupContent() {
 			rpl::producer<> showFinished) {
 		auto &lifetime = container->lifetime();
 		const auto highlights = lifetime.make_state<HighlightRegistry>();
-		const auto isPaused = Window::PausedIn(
-			controller,
-			Window::GifPauseReason::Layer);
-
-		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
-			.highlights = highlights,
-		});
 
 		const auto self = controller->session().user();
 		auto targets = InformationHighlightTargets();
-
-		SetupPhoto(container, controller, self, &targets);
-		SetupBio(container, self, &targets);
-		SetupRows(container, controller, self, &targets);
-		SetupPersonalChannel(container, controller, self, &targets);
-		SetupBirthday(container, controller, self, &targets);
-		SetupAccountsWrap(container, controller, &targets);
+		const auto page = container->add(object_ptr<CardPage>(container));
+		const auto root = page->content();
+		SetupPhoto(AddCardGroup(root), controller, self, &targets);
+		const auto information = AddCardGroup(root);
+		SetupBio(information, self, &targets);
+		SetupRows(information, controller, self, &targets);
+		const auto profile = AddCardGroup(root);
+		SetupPersonalChannel(profile, controller, self, &targets);
+		SetupBirthday(profile, controller, self, &targets);
+		SetupAccountsWrap(AddCardGroup(root), controller, &targets);
 
 		*photo = targets.photo;
 		*uploadPhoto = targets.uploadPhoto;

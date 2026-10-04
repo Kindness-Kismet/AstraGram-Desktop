@@ -35,6 +35,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_saved_sublist.h"
 #include "data/data_session.h"
 #include "main/main_session.h"
+#include "settings/settings_workspace.h"
 
 namespace Info {
 
@@ -296,6 +297,9 @@ object_ptr<Window::SectionWidget> Memento::createWidget(
 		not_null<Window::SessionController*> controller,
 		Window::Column column,
 		const QRect &geometry) {
+	if (content()->section().type() == Section::Type::Settings) {
+		return object_ptr<::Settings::Workspace>(parent, controller, this, geometry);
+	}
 	auto wrap = (column == Window::Column::Third)
 		? Wrap::Side
 		: Wrap::Narrow;
@@ -311,6 +315,9 @@ object_ptr<Window::SectionWidget> Memento::createWidget(
 object_ptr<Ui::LayerWidget> Memento::createLayer(
 		not_null<Window::SessionController*> controller,
 		const QRect &geometry) {
+	if (content()->section().type() == Section::Type::Settings) {
+		return nullptr;
+	}
 	if (geometry.width() >= LayerWidget::MinimalSupportedWidth()) {
 		return object_ptr<LayerWidget>(controller, this);
 	}
@@ -319,6 +326,11 @@ object_ptr<Ui::LayerWidget> Memento::createLayer(
 
 std::vector<std::shared_ptr<ContentMemento>> Memento::takeStack() {
 	return std::move(_stack);
+}
+
+bool Memento::useFullWidth() const {
+	return !_stack.empty()
+		&& _stack.back()->section().type() == Section::Type::Settings;
 }
 
 Memento::~Memento() = default;

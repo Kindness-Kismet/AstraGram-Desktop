@@ -38,6 +38,9 @@ public:
 	[[nodiscard]] virtual bool instant() const {
 		return false;
 	}
+	[[nodiscard]] virtual bool useFullWidth() const {
+		return false;
+	}
 
 	[[nodiscard]] virtual Data::ForumTopic *topicForRemoveRequests() const {
 		return nullptr;

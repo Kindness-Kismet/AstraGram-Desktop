@@ -39,9 +39,4 @@ void SetupAnimations(
 	not_null<Window::Controller*> window,
 	not_null<Ui::VerticalLayout*> container);
 
-void ArchiveSettingsBox(
-	not_null<Ui::GenericBox*> box,
-	not_null<Window::SessionController*> controller);
-void PreloadArchiveSettings(not_null<::Main::Session*> session);
-
 } // namespace Settings

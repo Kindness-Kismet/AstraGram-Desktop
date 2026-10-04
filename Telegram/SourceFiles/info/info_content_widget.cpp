@@ -84,7 +84,7 @@ ContentWidget::ContentWidget(
 		: st::defaultScrollArea)) {
 	using namespace rpl::mappers;
 
-	setAttribute(Qt::WA_OpaquePaintEvent);
+	setAttribute(Qt::WA_OpaquePaintEvent, _controller->wrap() != Wrap::Layer);
 	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	_controller->wrapValue(
 	) | rpl::on_next([this](Wrap value) {

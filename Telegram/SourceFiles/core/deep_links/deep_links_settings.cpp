@@ -95,10 +95,7 @@ Result ShowPowerSavingBox(
 	if (!ctx.controller) {
 		return Result::NeedsAuth;
 	}
-	ctx.controller->show(
-		Box(::Settings::PowerSavingBox, highlightFlags),
-		Ui::LayerOption::KeepOther,
-		anim::type::normal);
+	::Settings::ShowPowerSaving(ctx.controller, highlightFlags);
 	return Result::Handled;
 }
 

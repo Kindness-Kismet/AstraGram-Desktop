@@ -22,7 +22,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/abstract_box.h"
 #include "boxes/peers/edit_peer_color_box.h"
 #include "boxes/connection_box.h"
-#include "boxes/auto_download_box.h"
+#include "settings/sections/settings_auto_download.h"
+#include "settings/sections/settings_archive.h"
 #include "boxes/reactions_settings_box.h"
 #include "boxes/stickers_box.h"
 #include "ui/boxes/confirm_box.h"
@@ -1177,8 +1178,7 @@ void BuildArchiveSection(SectionBuilder &builder) {
 		.icon = { &st::menuIconArchive },
 		.onClick = [=] {
 			if (controller) {
-				controller->show(
-					Box<Ui::GenericBox>(ArchiveSettingsBox, controller));
+				controller->showSettings(ArchiveId());
 			}
 		},
 		.keywords = { u"archive"_q, u"settings"_q, u"folder"_q },
@@ -1871,7 +1871,7 @@ void SetupArchive(
 		st::settingsButton,
 		{ &st::menuIconArchive }
 	)->addClickHandler([=] {
-		controller->show(Box(Settings::ArchiveSettingsBox, controller));
+		controller->showSettings(ArchiveId());
 	});
 }
 
@@ -2020,8 +2020,7 @@ void SetupAutoDownload(
 			st::settingsButton,
 			std::move(descriptor)
 		)->addClickHandler([=] {
-			controller->show(
-				Box<AutoDownloadBox>(&controller->session(), source));
+			ShowAutoDownload(controller, source);
 		});
 	};
 	add(

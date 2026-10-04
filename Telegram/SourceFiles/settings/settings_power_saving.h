@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "base/flags.h"
+#include "settings/settings_type.h"
 
 template <typename Flags>
 struct EditFlagsDescriptor;
@@ -22,8 +23,18 @@ class GenericBox;
 class RpWidget;
 } // namespace Ui
 
+namespace Window {
+class SessionController;
+} // namespace Window
+
 namespace Settings {
 
+[[nodiscard]] Type PowerSavingId();
+void ShowPowerSaving(
+	not_null<Window::SessionController*> controller,
+	PowerSaving::Flags highlightFlags = PowerSaving::Flags());
+
+// 登录页尚无会话，继续使用可独立打开的设置窗口。
 void PowerSavingBox(
 	not_null<Ui::GenericBox*> box,
 	PowerSaving::Flags highlightFlags = PowerSaving::Flags());

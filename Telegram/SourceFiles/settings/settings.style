@@ -12,9 +12,51 @@ using "boxes/boxes.style";
 
 settingsButton: SettingsButton(infoProfileButton) {
 	style: boxTextStyle;
-	padding: margins(60px, 10px, 22px, 10px);
+	padding: margins(60px, 16px, 22px, 16px);
 	iconLeft: 20px;
+	textBg: transparent;
 }
+
+settingsCardRadius: 14px;
+settingsCardPageWidth: 560px;
+settingsCardPagePadding: 20px;
+settingsCardNarrowPadding: 12px;
+settingsCardNarrowWidth: 420px;
+settingsCardPageTop: 8px;
+settingsCardPageBottom: 24px;
+settingsCardGroupSkip: 14px;
+settingsCardRowInset: 14px;
+settingsCardTitle: FlatLabel(defaultFlatLabel) {
+	textFg: windowSubTextFg;
+	style: TextStyle(defaultTextStyle) {
+		font: font(12px semibold);
+	}
+}
+settingsCardTitlePadding: margins(14px, 4px, 14px, 8px);
+settingsCardHint: FlatLabel(defaultFlatLabel) {
+	textFg: windowSubTextFg;
+	style: TextStyle(defaultTextStyle) {
+		font: font(12px);
+		lineHeight: 18px;
+	}
+}
+settingsCardHintPadding: margins(14px, 0px, 14px, 14px);
+settingsCardSectionButton: SettingsButton(settingsButton) {
+	height: 20px;
+	padding: margins(54px, 16px, 38px, 16px);
+	iconLeft: 14px;
+}
+settingsCardDetailedButton: SettingsButton(settingsCardSectionButton) {
+	height: 36px;
+	padding: margins(54px, 10px, 38px, 12px);
+}
+settingsCardToggleButton: SettingsButton(settingsCardSectionButton) {
+	padding: margins(54px, 16px, 18px, 16px);
+}
+settingsCardRowDescription: FlatLabel(settingsCardHint) {
+	maxHeight: 18px;
+}
+settingsCardDescriptionTop: 32px;
 settingsButtonRightLabelSpoiler: SettingsButton(settingsButton) {
 	rightLabel: FlatLabel(defaultSettingsRightLabel) {
 		palette: TextPalette(defaultTextPalette) {
@@ -23,7 +65,7 @@ settingsButtonRightLabelSpoiler: SettingsButton(settingsButton) {
 	}
 }
 settingsButtonNoIcon: SettingsButton(settingsButton) {
-	padding: margins(22px, 10px, 22px, 8px);
+	padding: margins(22px, 16px, 22px, 16px);
 }
 settingsButtonLight: SettingsButton(settingsButton) {
 	textFg: lightButtonFg;

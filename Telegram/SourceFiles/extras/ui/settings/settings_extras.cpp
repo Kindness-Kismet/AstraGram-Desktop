@@ -624,32 +624,6 @@ void BuildGhostEssentials(SectionBuilder &builder) {
 	});
 }
 
-void BuildSpyEssentials(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
-	builder.addSubsectionTitle(tr::extras_SpyEssentialsHeader());
-
-	extras.addSettingToggle({
-		.id = u"extras/saveDeletedMessages"_q,
-		.title = tr::extras_SaveDeletedMessages(),
-		.getter = &ExtrasSettings::saveDeletedMessages,
-		.setter = &ExtrasSettings::setSaveDeletedMessages,
-	});
-	extras.addSettingToggle({
-		.id = u"extras/saveMessagesHistory"_q,
-		.title = tr::extras_SaveMessagesHistory(),
-		.getter = &ExtrasSettings::saveMessagesHistory,
-		.setter = &ExtrasSettings::setSaveMessagesHistory,
-	});
-
-	extras.addSectionDivider();
-
-	extras.addSettingToggle({
-		.id = u"extras/saveForBots"_q,
-		.title = tr::extras_MessageSavingSaveForBots(),
-		.getter = &ExtrasSettings::saveForBots,
-		.setter = &ExtrasSettings::setSaveForBots,
-	});
-}
-
 void BuildOther(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	builder.addSubsectionTitle(tr::extras_MessageSavingOtherHeader());
 
@@ -670,7 +644,7 @@ void BuildOther(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 const auto kMeta = BuildHelper({
 	.id = ExtrasGhost::Id(),
 	.parentId = ExtrasMain::Id(),
-	.title = u"AstraGram"_q,
+	.title = &tr::extras_GhostModeToggle,
 	.icon = &st::menuIconGroupReactions,
 }, [](SectionBuilder &builder) {
 	auto extras = ExtrasSectionBuilder(builder);
@@ -682,8 +656,6 @@ const auto kMeta = BuildHelper({
 	builder.addSkip();
 	BuildGhostEssentials(builder);
 
-	builder.addSkip();
-	BuildSpyEssentials(builder, extras);
 
 	extras.addSectionDivider();
 	BuildOther(builder, extras);
@@ -693,7 +665,7 @@ const auto kMeta = BuildHelper({
 } // namespace
 
 rpl::producer<QString> ExtrasGhost::title() {
-	return rpl::single(QString("AstraGram"));
+	return tr::extras_GhostModeToggle();
 }
 
 ExtrasGhost::ExtrasGhost(

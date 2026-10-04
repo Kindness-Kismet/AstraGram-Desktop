@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/settings_common_session.h"
 #include "menu/menu_send.h"
 #include "ui/ui_utility.h"
+#include "styles/style_layers.h"
 
 // AyuGram includes
 #include "extras/ui/settings/settings_main.h"
@@ -63,6 +64,7 @@ Widget::Widget(
 			controller->stepDataReference() = SectionCustomTopBarData{
 				.backButtonEnables = _flexibleScroll.backButtonEnables.events(),
 				.wrapValue = controller->wrapValue(),
+				.navigationVisible = _navigationVisible.value(),
 			};
 		}))
 , _pinnedToTop(_inner->createPinnedToTop(this))
@@ -243,7 +245,11 @@ rpl::producer<QString> Widget::title() {
 
 void Widget::paintEvent(QPaintEvent *e) {
 	if (!_inner->paintOuter(this, maxVisibleHeight(), e->rect())) {
-		ContentWidget::paintEvent(e);
+		if (_inner->property("settingsCardBackground").toBool()) {
+			QPainter(this).fillRect(e->rect(), st::windowBg);
+		} else {
+			ContentWidget::paintEvent(e);
+		}
 	}
 }
 
@@ -255,6 +261,10 @@ std::shared_ptr<ContentMemento> Widget::doCreateMemento() {
 
 void Widget::enableBackButton() {
 	_flexibleScroll.backButtonEnables.fire({});
+}
+
+void Widget::setNavigationVisible(bool visible) {
+	_navigationVisible = visible;
 }
 
 rpl::producer<SelectedItems> Widget::selectedListValue() const {
@@ -270,6 +280,9 @@ void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 }
 
 void Widget::saveState(not_null<Memento*> memento) {
+	_inner->title() | rpl::take(1) | rpl::on_next([=](QString title) {
+		memento->setPageTitle(std::move(title));
+	}, lifetime());
 	memento->setScrollTop(scrollTopSave());
 	auto sectionState = std::any();
 	_inner->sectionSaveState(sectionState);

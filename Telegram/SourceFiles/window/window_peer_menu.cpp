@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_peer_menu.h"
+#include "settings/sections/settings_archive.h"
 
 #include "base/call_delayed.h"
 #include "menu/menu_check_item.h"
@@ -2130,7 +2131,7 @@ void Filler::fillArchiveActions() {
 
 	Settings::PreloadArchiveSettings(&controller->session());
 	const auto openSettings = [=] {
-		controller->show(Box(Settings::ArchiveSettingsBox, controller));
+		controller->showSettings(Settings::ArchiveId());
 	};
 	_addAction(
 		tr::lng_context_archive_settings(tr::now),

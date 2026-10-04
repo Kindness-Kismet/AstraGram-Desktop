@@ -1485,11 +1485,14 @@ void SessionNavigation::showByInitialId(
 void SessionNavigation::showSettings(
 		Settings::Type type,
 		const SectionShow &params) {
+	auto pageParams = params;
+	pageParams.forbidLayer = true;
+	pageParams.thirdColumn = false;
 	showSection(
 		std::make_shared<Info::Memento>(
 			Info::Settings::Tag{ _session->user() },
 			Info::Section(type)),
-		params);
+		pageParams);
 }
 
 void SessionNavigation::showSettings(const SectionShow &params) {
@@ -2016,6 +2019,7 @@ void SessionController::toggleFiltersMenu(bool enabled) {
 		_filters = std::make_unique<FiltersMenu>(
 			widget()->bodyWidget(),
 			this);
+		_filters->setVisible(!_filtersMenuSuppressed);
 	} else {
 		_filters = nullptr;
 	}
@@ -2024,6 +2028,17 @@ void SessionController::toggleFiltersMenu(bool enabled) {
 
 rpl::producer<> SessionController::filtersMenuChanged() const {
 	return _filtersMenuChanged.events();
+}
+
+void SessionController::setFiltersMenuSuppressed(bool suppressed) {
+	if (_filtersMenuSuppressed == suppressed) {
+		return;
+	}
+	_filtersMenuSuppressed = suppressed;
+	if (_filters) {
+		_filters->setVisible(!suppressed);
+		_filtersMenuChanged.fire({});
+	}
 }
 
 void SessionController::checkOpenedFilter() {
@@ -3312,7 +3327,7 @@ not_null<MainWidget*> SessionController::content() const {
 }
 
 int SessionController::filtersWidth() const {
-	return _filters ? st::windowFiltersWidth : 0;
+	return (_filters && !_filtersMenuSuppressed) ? st::windowFiltersWidth : 0;
 }
 
 bool SessionController::enoughSpaceForFilters() const {

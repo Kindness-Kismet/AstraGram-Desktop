@@ -137,6 +137,7 @@ struct WidgetContext {
 	Fn<void(Type)> showOther;
 	Fn<bool()> isPaused;
 	HighlightRegistry *highlights = nullptr;
+	bool cardLayout = true;
 };
 
 struct SearchContext {
@@ -212,6 +213,8 @@ public:
 		Type targetSection;
 		IconDescriptor icon;
 		QStringList keywords;
+		rpl::producer<QString> description;
+		rpl::producer<QString> label;
 	};
 	Ui::SettingsButton *addSectionButton(SectionArgs &&args);
 
@@ -268,12 +271,18 @@ public:
 	[[nodiscard]] HighlightRegistry *highlights() const;
 
 private:
+	void ensureCard();
+	void closeCard();
+
 	void registerHighlight(
 		QString id,
 		QWidget *widget,
 		HighlightArgs &&args);
 
 	BuildContext _context;
+	Ui::VerticalLayout *_cardRoot = nullptr;
+	Ui::VerticalLayout *_cardPage = nullptr;
+	int _scopeDepth = 0;
 
 };
 

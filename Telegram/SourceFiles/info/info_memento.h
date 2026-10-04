@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/info_wrap_widget.h"
 #include "dialogs/dialogs_key.h"
 #include "window/section_memento.h"
+#include "settings/settings_type.h"
 #include "base/object_ptr.h"
 
 namespace Api {
@@ -47,6 +48,17 @@ class WrapWidget;
 
 class Memento final : public Window::SectionMemento {
 public:
+	struct SettingsNavigationState {
+		bool listShown = true;
+		::Settings::Type category;
+	};
+	void setSettingsNavigationState(SettingsNavigationState state) {
+		_settingsNavigationState = std::move(state);
+	}
+	[[nodiscard]] const auto &settingsNavigationState() const {
+		return _settingsNavigationState;
+	}
+
 	explicit Memento(not_null<PeerData*> peer);
 	Memento(not_null<PeerData*> peer, Section section);
 	explicit Memento(not_null<Data::ForumTopic*> topic);
@@ -71,6 +83,7 @@ public:
 	object_ptr<Ui::LayerWidget> createLayer(
 		not_null<Window::SessionController*> controller,
 		const QRect &geometry) override;
+	[[nodiscard]] bool useFullWidth() const override;
 
 	rpl::producer<> removeRequests() const override {
 		return _removeRequests.events();
@@ -127,6 +140,7 @@ private:
 		Section section);
 
 	std::vector<std::shared_ptr<ContentMemento>> _stack;
+	std::optional<SettingsNavigationState> _settingsNavigationState;
 	rpl::event_stream<> _removeRequests;
 	rpl::lifetime _lifetime;
 

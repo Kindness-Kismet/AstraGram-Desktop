@@ -174,6 +174,8 @@ set(extras_files
         extras/ui/settings/settings_extras.h
         extras/ui/settings/settings_filters.cpp
         extras/ui/settings/settings_filters.h
+        extras/ui/settings/settings_content.cpp
+        extras/ui/settings/settings_content.h
         extras/ui/settings/settings_main.cpp
         extras/ui/settings/settings_main.h
         extras/ui/settings/settings_other.cpp
@@ -548,8 +550,6 @@ PRIVATE
     boxes/add_contact_box.h
     boxes/auto_lock_box.cpp
     boxes/auto_lock_box.h
-    boxes/auto_download_box.cpp
-    boxes/auto_download_box.h
     boxes/background_box.cpp
     boxes/background_box.h
     boxes/background_preview_box.cpp
@@ -2120,6 +2120,8 @@ PRIVATE
     settings/sections/settings_global_ttl.h
     settings/sections/settings_information.cpp
     settings/sections/settings_information.h
+    settings/sections/settings_language.cpp
+    settings/sections/settings_language.h
     settings/settings_intro.cpp
     settings/settings_intro.h
     settings/sections/settings_local_passcode.cpp
@@ -2136,6 +2138,14 @@ PRIVATE
     settings/settings_faq_suggestions.h
     settings/settings_builder.cpp
     settings/settings_builder.h
+    settings/settings_card_layout.cpp
+    settings/settings_card_layout.h
+    settings/sections/settings_auto_download.cpp
+    settings/sections/settings_auto_download.h
+    settings/sections/settings_archive.cpp
+    settings/sections/settings_archive.h
+    settings/sections/settings_file_confirmations.cpp
+    settings/sections/settings_file_confirmations.h
     settings/sections/settings_notifications.cpp
     settings/sections/settings_notifications.h
     settings/sections/settings_privacy_security.cpp
@@ -2155,6 +2165,10 @@ PRIVATE
     settings/settings_scale_preview.cpp
     settings/settings_scale_preview.h
     settings/settings_type.h
+    settings/settings_workspace.cpp
+    settings/settings_workspace.h
+    settings/settings_navigation.cpp
+    settings/settings_navigation.h
     settings/sections/settings_shortcuts.cpp
     settings/sections/settings_shortcuts.h
     settings/sections/settings_websites.cpp

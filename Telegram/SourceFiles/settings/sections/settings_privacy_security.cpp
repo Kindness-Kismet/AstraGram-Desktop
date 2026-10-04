@@ -45,6 +45,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/cloud_password/settings_cloud_password_input.h"
 #include "settings/cloud_password/settings_cloud_password_start.h"
 #include "settings/sections/settings_main.h"
+#include "settings/sections/settings_file_confirmations.h"
 #include "settings/sections/settings_active_sessions.h"
 #include "settings/sections/settings_blocked_peers.h"
 #include "settings/sections/settings_global_ttl.h"
@@ -356,59 +357,6 @@ object_ptr<Ui::BoxContent> EditCloudPasswordBox(not_null<::Main::Session*> sessi
 	return result;
 }
 
-void OpenFileConfirmationsBox(not_null<Ui::GenericBox*> box) {
-	box->setTitle(tr::lng_settings_file_confirmations());
-
-	const auto settings = &Core::App().settings();
-	const auto &list = settings->noWarningExtensions();
-	const auto text = QStringList(begin(list), end(list)).join(' ');
-	const auto layout = box->verticalLayout();
-	const auto extensions = box->addRow(
-		object_ptr<Ui::InputField>(
-			box,
-			st::defaultInputField,
-			Ui::InputField::Mode::MultiLine,
-			tr::lng_settings_edit_extensions(),
-			TextWithTags{ text }),
-		st::boxRowPadding + QMargins(0, 0, 0, st::settingsPrivacySkip));
-	extensions->setInputMethodHints(Qt::ImhLatinOnly
-		| Qt::ImhNoAutoUppercase
-		| Qt::ImhNoPredictiveText);
-	Ui::AddDividerText(layout, tr::lng_settings_edit_extensions_about());
-	Ui::AddSkip(layout);
-	const auto ip = layout->add(object_ptr<Ui::SettingsButton>(
-		box,
-		tr::lng_settings_edit_ip_confirm(),
-		st::settingsButtonNoIcon
-	))->toggleOn(rpl::single(settings->ipRevealWarning()));
-	Ui::AddSkip(layout);
-	Ui::AddDividerText(layout, tr::lng_settings_edit_ip_confirm_about());
-
-	box->setFocusCallback([=] {
-		extensions->setFocusFast();
-	});
-
-	box->addButton(tr::lng_settings_save(), [=] {
-		const auto extensionsList = extensions->getLastText()
-			.mid(0, 10240)
-			.split(' ', Qt::SkipEmptyParts)
-			.mid(0, 1024);
-		auto extensionsSet = base::flat_set<QString>(
-			extensionsList.begin(),
-			extensionsList.end());
-		const auto ipRevealWarning = ip->toggled();
-		if (extensionsSet != settings->noWarningExtensions()
-			|| ipRevealWarning != settings->ipRevealWarning()) {
-			settings->setNoWarningExtensions(std::move(extensionsSet));
-			settings->setIpRevealWarning(ipRevealWarning);
-			Core::App().saveSettingsDelayed();
-		}
-		box->closeBox();
-
-	});
-	box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
-}
-
 void RemoveCloudPassword(not_null<Window::SessionController*> controller) {
 	const auto session = &controller->session();
 	const auto current = session->api().cloudPassword().stateCurrent();
@@ -479,59 +427,6 @@ not_null<Ui::SettingsButton*> AddPrivacyButton(
 		}));
 	});
 	return button;
-}
-
-void SetupArchiveAndMute(
-		not_null<Window::SessionController*> controller,
-		not_null<Ui::VerticalLayout*> container,
-		HighlightRegistry *highlights) {
-	using namespace rpl::mappers;
-
-	const auto wrap = container->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			container,
-			object_ptr<Ui::VerticalLayout>(container)));
-	const auto inner = wrap->entity();
-
-	Ui::AddSkip(inner);
-	Ui::AddSubsectionTitle(inner, tr::lng_settings_new_unknown());
-
-	const auto session = &controller->session();
-
-	const auto privacy = &session->api().globalPrivacy();
-	privacy->reload();
-	const auto button = inner->add(object_ptr<Button>(
-		inner,
-		tr::lng_settings_auto_archive(),
-		st::settingsButtonNoIcon
-	));
-	button->toggleOn(
-		privacy->archiveAndMute()
-	)->toggledChanges(
-	) | rpl::filter([=](bool toggled) {
-		return toggled != privacy->archiveAndMuteCurrent();
-	}) | rpl::on_next([=](bool toggled) {
-		privacy->updateArchiveAndMute(toggled);
-	}, container->lifetime());
-
-	if (highlights) {
-		highlights->push_back({ u"privacy/archive_and_mute"_q, { button } });
-	}
-
-	Ui::AddSkip(inner);
-	Ui::AddDividerText(inner, tr::lng_settings_auto_archive_about());
-
-	auto shown = rpl::single(
-		false
-	) | rpl::then(session->api().globalPrivacy().showArchiveAndMute(
-	) | rpl::filter(_1) | rpl::take(1));
-	auto premium = Data::AmPremiumValue(&controller->session());
-
-	using namespace rpl::mappers;
-	wrap->toggleOn(rpl::combine(
-		std::move(shown),
-		std::move(premium),
-		_1 || _2));
 }
 
 namespace {
@@ -1149,7 +1044,7 @@ void BuildConfirmationExtensions(SectionBuilder &builder) {
 		.title = tr::lng_settings_edit_extensions(),
 		.st = &st::settingsButtonNoIcon,
 		.onClick = [=] {
-			controller->show(Box(OpenFileConfirmationsBox));
+			controller->showSettings(FileConfirmationsId());
 		},
 		.keywords = { u"extensions"_q, u"files"_q, u"confirmations"_q },
 	});

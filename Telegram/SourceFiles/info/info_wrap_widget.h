@@ -91,7 +91,8 @@ public:
 		QWidget *parent,
 		not_null<Window::SessionController*> window,
 		Wrap wrap,
-		not_null<Memento*> memento);
+		not_null<Memento*> memento,
+		bool settingsNavigation = false);
 
 	[[nodiscard]] Key key() const;
 	Dialogs::RowDescriptor activeChat() const override;
@@ -100,6 +101,10 @@ public:
 	}
 	[[nodiscard]] rpl::producer<Wrap> wrapValue() const;
 	void setWrap(Wrap wrap);
+	void setSettingsNavigation(bool visible);
+	void setSettingsRootBack(Fn<void()> callback);
+	[[nodiscard]] bool hasSettingsHistory() const;
+	void checkBeforeClose(Fn<void()> close);
 
 	[[nodiscard]] rpl::producer<bool> contentTillBottomValue() const;
 	[[nodiscard]] rpl::producer<> contentChanged() const;
@@ -177,7 +182,6 @@ private:
 	void injectActivePeerProfile(not_null<PeerData*> peer);
 	void injectActiveProfileMemento(
 		std::shared_ptr<ContentMemento> memento);
-	void checkBeforeClose(Fn<void()> close);
 	void checkBeforeCloseByEscape(Fn<void()> close);
 	void restoreHistoryStack(
 		std::vector<std::shared_ptr<ContentMemento>> stack);
@@ -192,6 +196,7 @@ private:
 		not_null<ContentMemento*> memento,
 		const Window::SectionShow &params);
 	void setupTop();
+	void setupSettingsBreadcrumb();
 	void setupTopBarMenuToggle();
 	void createTopBar();
 	void highlightTopBar();
@@ -237,6 +242,9 @@ private:
 	rpl::variable<bool> _contentTillBottom = false;
 	object_ptr<TopBar> _topBar = { nullptr };
 	object_ptr<Ui::RpWidget> _topBarSurrogate = { nullptr };
+	object_ptr<Ui::RpWidget> _settingsBreadcrumb = { nullptr };
+	bool _settingsNavigation = false;
+	Fn<void()> _settingsRootBack;
 	Ui::Animations::Simple _topBarOverrideAnimation;
 
 	object_ptr<Ui::FadeShadow> _topShadow;

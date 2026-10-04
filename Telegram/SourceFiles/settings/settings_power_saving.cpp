@@ -17,6 +17,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/power_saving.h"
 #include "ui/vertical_list.h"
 #include "settings/settings_common.h"
+#include "settings/settings_common_session.h"
+#include "settings/settings_builder.h"
+#include "settings/sections/settings_main.h"
+#include "ui/wrap/vertical_layout.h"
+#include "window/window_session_controller.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_layers.h"
 #include "styles/style_settings.h"
@@ -26,7 +31,102 @@ namespace {
 
 constexpr auto kForceDisableTooltipDuration = 3 * crl::time(1000);
 
+class PowerSavingSection final : public Section<PowerSavingSection> {
+public:
+	PowerSavingSection(
+		QWidget *parent,
+		not_null<Window::SessionController*> controller);
+
+	rpl::producer<QString> title() override {
+		return tr::lng_settings_power_title();
+	}
+};
+
+const auto kPowerSavingPage = Builder::BuildHelper({
+	.id = PowerSavingSection::Id(),
+	.parentId = MainId(),
+	.title = &tr::lng_settings_power_title,
+	.icon = &st::menuIconPowerUsage,
+}, [](Builder::SectionBuilder &builder) {
+	builder.addDividerText(tr::lng_settings_power_subtitle());
+	builder.add([](const Builder::WidgetContext &ctx) {
+		const auto id = ctx.controller->highlightControlId();
+		const auto prefix = u"power/flags/"_q;
+		const auto flags = id.startsWith(prefix)
+			? PowerSaving::Flags::from_raw(id.mid(prefix.size()).toUInt())
+			: PowerSaving::Flags();
+		auto disabled = rpl::combine(
+			Core::App().batterySaving().value(),
+			Core::App().settings().ignoreBatterySavingValue()
+		) | rpl::map([](bool saving, bool ignore) {
+			return (saving && !ignore)
+				? tr::lng_settings_power_turn_off()
+				: rpl::single(QString());
+		}) | rpl::flatten_latest();
+		auto controls = CreateEditPowerSaving(
+			ctx.container,
+			PowerSaving::kAll & ~PowerSaving::Current(),
+			std::move(disabled),
+			flags);
+		std::move(controls.changes) | rpl::on_next([](PowerSaving::Flags enabled) {
+			if (PowerSaving::ForceAll()) {
+				return;
+			}
+			PowerSaving::Set(PowerSaving::kAll & ~enabled);
+			Core::App().saveSettingsDelayed();
+		}, controls.widget->lifetime());
+		if (flags && controls.highlightWidget && ctx.highlights) {
+			ctx.highlights->push_back({ id, { controls.highlightWidget.data(), {} } });
+		}
+		return Builder::SectionBuilder::WidgetToAdd{
+			.widget = std::move(controls.widget),
+		};
+	});
+	if (!Core::App().batterySaving().enabled().has_value()) {
+		return;
+	}
+	builder.addDivider();
+	const auto automatic = builder.addButton({
+		.id = u"power/automatic"_q,
+		.title = tr::lng_settings_power_auto(),
+		.st = &st::settingsCardToggleButton,
+		.icon = { &st::menuIconPowerUsage },
+		.toggled = Core::App().settings().ignoreBatterySavingValue(
+			) | rpl::map(rpl::mappers::_1 == false),
+	});
+	if (automatic) {
+		automatic->toggledChanges() | rpl::on_next([](bool enabled) {
+			Core::App().settings().setIgnoreBatterySavingValue(!enabled);
+			Core::App().saveSettingsDelayed();
+		}, automatic->lifetime());
+	}
+	builder.addDividerText(tr::lng_settings_power_auto_about());
+});
+
+PowerSavingSection::PowerSavingSection(
+	QWidget *parent,
+	not_null<Window::SessionController*> controller)
+: Section(parent, controller) {
+	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	build(content, kPowerSavingPage.build);
+	Ui::ResizeFitChild(this, content);
+}
+
 } // namespace
+
+Type PowerSavingId() {
+	return PowerSavingSection::Id();
+}
+
+void ShowPowerSaving(
+		not_null<Window::SessionController*> controller,
+		PowerSaving::Flags highlightFlags) {
+	if (highlightFlags) {
+		controller->setHighlightControlId(
+			u"power/flags/"_q + QString::number(highlightFlags.value()));
+	}
+	controller->showSettings(PowerSavingId());
+}
 
 void PowerSavingBox(
 		not_null<Ui::GenericBox*> box,

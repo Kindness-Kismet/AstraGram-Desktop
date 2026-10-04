@@ -465,10 +465,36 @@ object_ptr<Button> CreateButtonWithIcon(
 		rpl::producer<QString> text,
 		const style::SettingsButton &st,
 		IconDescriptor &&descriptor) {
-	auto result = object_ptr<Button>(parent, std::move(text), st);
+	auto card = false;
+	for (auto widget = parent.get(); widget; widget = widget->parentWidget()) {
+		if (widget->property("settingsCardGroup").toBool()) {
+			card = true;
+			break;
+		}
+	}
+	const auto rowStyle = card
+		? std::make_shared<style::SettingsButton>(st)
+		: std::shared_ptr<style::SettingsButton>();
+	if (card) {
+		rowStyle->padding.setLeft(descriptor ? st::settingsCardSectionButton.padding.left()
+			: st::settingsCardRowInset);
+		rowStyle->iconLeft = st::settingsCardRowInset;
+		if (st.height <= st::settingsButton.height) {
+			rowStyle->height = st.style.font->height;
+			const auto padding = style::ConvertScale(52) - rowStyle->height;
+			rowStyle->padding.setTop(padding / 2);
+			rowStyle->padding.setBottom(padding - padding / 2);
+		}
+	}
+	auto result = object_ptr<Button>(parent, std::move(text), rowStyle ? *rowStyle : st);
 	const auto button = result.data();
+	if (rowStyle) {
+		button->lifetime().add([rowStyle] {});
+	}
+	button->setProperty("settingsCardRow", card);
+	button->setProperty("settingsSeparatorInset", button->st().padding.left());
 	if (descriptor) {
-		AddButtonIcon(button, st, std::move(descriptor));
+		AddButtonIcon(button, button->st(), std::move(descriptor));
 	}
 	return result;
 }
@@ -489,48 +515,75 @@ not_null<Button*> AddButtonWithIcon(
 void CreateRightLabel(
 		not_null<Button*> button,
 		v::text::data &&label,
-		const style::SettingsButton &st,
+		const style::SettingsButton &requestedStyle,
 		rpl::producer<QString> buttonText,
 		Ui::Text::MarkedContext context) {
+	const auto &st = button->st();
+	const auto centered = button->property("settingsCardRow").toBool();
+	const auto labelStyle = button->lifetime().make_state<style::FlatLabel>(st.rightLabel);
+	if (centered) {
+		labelStyle->textFg = st::windowSubTextFg;
+	}
 	const auto name = Ui::CreateChild<Ui::FlatLabel>(
 		button.get(),
-		st.rightLabel);
+		*labelStyle);
 	name->show();
+	const auto computeRightSkip = [=] {
+		return std::max(
+			st::settingsButtonRightSkip,
+			button->property("settingsRightLabelSkip").toInt());
+	};
+	// 箭头可能在右值之后添加，属性变化时同步重排，普通设置行保持原间距。
+	auto rightSkip = rpl::single(computeRightSkip()) | rpl::then(
+		button->events()
+		| rpl::filter([](not_null<QEvent*> event) {
+			return event->type() == QEvent::DynamicPropertyChange;
+		})
+		| rpl::map(computeRightSkip)
+	) | rpl::distinct_until_changed();
 	if (v::text::is_plain(label)) {
 		rpl::combine(
 			button->widthValue(),
 			std::move(buttonText),
-			v::text::take_plain(std::move(label))
+			v::text::take_plain(std::move(label)),
+			std::move(rightSkip)
 		) | rpl::on_next([=, &st](
 				int width,
 				const QString &button,
-				const QString &text) {
+				const QString &text,
+				int rightSkip) {
 			const auto available = width
 				- st.padding.left()
 				- st.padding.right()
 				- st.style.font->width(button)
-				- st::settingsButtonRightSkip;
+				- rightSkip;
 			name->setText(text);
 			name->resizeToNaturalWidth(available);
-			name->moveToRight(st::settingsButtonRightSkip, st.padding.top());
+			name->moveToRight(rightSkip, centered
+				? (name->parentWidget()->height() - name->height()) / 2
+				: st.padding.top());
 		}, name->lifetime());
 	} else if (v::text::is_marked(label)) {
 		rpl::combine(
 			button->widthValue(),
 			std::move(buttonText),
-			v::text::take_marked(std::move(label))
+			v::text::take_marked(std::move(label)),
+			std::move(rightSkip)
 		) | rpl::on_next([=, &st](
 				int width,
 				const QString &button,
-				const TextWithEntities &text) {
+				const TextWithEntities &text,
+				int rightSkip) {
 			const auto available = width
 				- st.padding.left()
 				- st.padding.right()
 				- st.style.font->width(button)
-				- st::settingsButtonRightSkip;
+				- rightSkip;
 			name->setMarkedText(text, context);
 			name->resizeToNaturalWidth(available);
-			name->moveToRight(st::settingsButtonRightSkip, st.padding.top());
+			name->moveToRight(rightSkip, centered
+				? (name->parentWidget()->height() - name->height()) / 2
+				: st.padding.top());
 		}, name->lifetime());
 	}
 	name->setAttribute(Qt::WA_TransparentForMouseEvents);
