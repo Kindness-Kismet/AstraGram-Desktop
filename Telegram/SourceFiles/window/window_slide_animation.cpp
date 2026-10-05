@@ -6,10 +6,38 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_slide_animation.h"
+#include "ui/rp_widget.h"
+#include "ui/ui_utility.h"
 #include "styles/style_basic.h"
 
 
 namespace Window {
+
+void ShowSlideAnimation(
+		not_null<QWidget*> parent,
+		const QRect &geometry,
+		const QPixmap &oldContentCache,
+		SlideDirection direction) {
+	const auto newContentCache = Ui::GrabWidget(parent, geometry);
+	const auto overlay = Ui::CreateChild<Ui::RpWidget>(parent);
+	overlay->setObjectName(u"section-slide-overlay"_q);
+	overlay->setGeometry(geometry);
+	const auto animation = overlay->lifetime().make_state<SlideAnimation>();
+	animation->setDirection(direction);
+	animation->setPixmaps(oldContentCache, newContentCache);
+	animation->setRepaintCallback([=] { overlay->update(); });
+	animation->setFinishedCallback([=] {
+		overlay->hide();
+		overlay->deleteLater();
+	});
+	overlay->paintRequest() | rpl::on_next([=] {
+		auto p = QPainter(overlay);
+		animation->paintContents(p);
+	}, overlay->lifetime());
+	overlay->show();
+	overlay->raise();
+	animation->start();
+}
 
 void SlideAnimation::paintContents(QPainter &p) const {
 	const auto retina = style::DevicePixelRatio();

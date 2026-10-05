@@ -237,6 +237,8 @@ private:
 		not_null<QWidget*> widget) const;
 
 	void showFinished();
+	[[nodiscard]] Fn<void()> prepareFullWidthHideAnimation(
+		const Window::SectionShow &params);
 	void handleAdaptiveLayoutUpdate();
 	void updateWindowAdaptiveLayout();
 	void handleAudioUpdate(const Media::Player::TrackState &state);

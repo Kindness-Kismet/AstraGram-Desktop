@@ -17,6 +17,12 @@ enum class SlideDirection {
 	FromBottom,
 };
 
+void ShowSlideAnimation(
+	not_null<QWidget*> parent,
+	const QRect &geometry,
+	const QPixmap &oldContentCache,
+	SlideDirection direction);
+
 class SlideAnimation {
 public:
 	void paintContents(QPainter &p) const;

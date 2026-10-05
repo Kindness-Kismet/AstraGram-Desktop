@@ -1551,6 +1551,12 @@ void MainWidget::showHistory(
 		_controller->window().hideSettingsAndLayer();
 	}
 
+	const auto finishFullWidthAnimation = prepareFullWidthHideAnimation(params);
+	const auto fullWidthAnimationGuard = gsl::finally([&] {
+		if (finishFullWidthAnimation) {
+			finishFullWidthAnimation();
+		}
+	});
 	auto animatedShow = [&] {
 		if (_showAnimation
 			|| (_mainSection && _mainSection->useFullWidth())
@@ -1900,6 +1906,31 @@ Window::SectionSlideParams MainWidget::prepareMainSectionAnimation(
 	return prepareShowAnimation(section->hasTopBarShadow(), fromBottom);
 }
 
+Fn<void()> MainWidget::prepareFullWidthHideAnimation(const SectionShow &params) {
+	if (!_mainSection
+		|| !_mainSection->useFullWidth()
+		|| _showAnimation
+		|| Core::App().passcodeLocked()
+		|| params.animated == anim::type::instant) {
+		return nullptr;
+	}
+	// 全宽页面退出时，分类栏和对话区需要放在同一张画面里过渡。
+	const auto parent = parentWidget();
+	const auto geometry = QRect(
+		mapToParent(_mainSection->pos()), _mainSection->size());
+	floatPlayerHideAll();
+	const auto oldContentCache = Ui::GrabWidget(parent, geometry);
+	floatPlayerShowVisible();
+	const auto direction = params.way == SectionShow::Way::Backward
+		? Window::SlideDirection::FromLeft
+		: Window::SlideDirection::FromRight;
+	return [=] {
+		floatPlayerHideAll();
+		Window::ShowSlideAnimation(parent, geometry, oldContentCache, direction);
+		floatPlayerShowVisible();
+	};
+}
+
 Window::SectionSlideParams MainWidget::prepareHistoryAnimation(PeerId historyPeerId) {
 	return prepareShowAnimation(historyPeerId != 0, false);
 }
@@ -1966,6 +1997,14 @@ void MainWidget::showNewSection(
 	const auto fromBottom = params.slideFromBottom
 		&& !newThirdSection
 		&& (_mainSection != nullptr);
+	const auto finishFullWidthAnimation = (!newThirdSection && !memento->instant())
+		? prepareFullWidthHideAnimation(params)
+		: nullptr;
+	const auto fullWidthAnimationGuard = gsl::finally([&] {
+		if (finishFullWidthAnimation) {
+			finishFullWidthAnimation();
+		}
+	});
 
 	auto animatedShow = [&] {
 		if (_mainSection && _mainSection->useFullWidth()) {
