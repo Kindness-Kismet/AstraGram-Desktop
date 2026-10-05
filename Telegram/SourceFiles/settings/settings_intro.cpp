@@ -64,33 +64,10 @@ private:
 };
 
 #ifdef _DEBUG
-// 登录页的调试入口。任务 4 的 AyuGram 设置里那个 Debug 页需要会话才能打开，
-// 全新构建停在登录界面时走不到，所以离线入口必须放在这里。
-void SetupDebugLogin(
+// 登录前提供测试数据中心切换入口。
+void SetupTestEnvironment(
 		not_null<Window::Controller*> window,
 		not_null<Ui::VerticalLayout*> container) {
-	AddButtonWithIcon(
-		container,
-		rpl::single(u"Enter without logging in"_q),
-		st::settingsButton,
-		{ &st::menuIconStats }
-	)->addClickHandler([=] {
-		window->show(Ui::MakeConfirmBox({
-			.text = u"Create an offline fake session?\n\n"
-				"The chat list stays empty and every network request fails. "
-				"Use it to check the interface and settings only.\n\n"
-				"Nothing is written to tdata, so a restart clears it."_q,
-			.confirmed = [=](Fn<void()> &&close) {
-				close();
-				const auto error = ExtrasDebug::CreateFakeSession();
-				if (!error.isEmpty()) {
-					window->show(Ui::MakeInformBox(error));
-				}
-			},
-			.confirmText = rpl::single(u"Enter"_q),
-		}));
-	});
-
 	AddButtonWithIcon(
 		container,
 		rpl::single(u"Switch to the test environment"_q),
@@ -150,7 +127,7 @@ object_ptr<Ui::RpWidget> CreateIntroSettings(
 	});
 
 #ifdef _DEBUG
-	SetupDebugLogin(window, AddCardGroup(content));
+	SetupTestEnvironment(window, AddCardGroup(content));
 #endif
 
 	return result;
