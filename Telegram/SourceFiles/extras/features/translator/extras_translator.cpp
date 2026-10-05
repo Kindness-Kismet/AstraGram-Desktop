@@ -1,6 +1,7 @@
 #include "extras/features/translator/extras_translator.h"
 
 #include "api/api_text_entities.h"
+#include "base/weak_ptr.h"
 #include "extras/features/translator/implementations/google.h"
 #include "extras/features/translator/implementations/yandex.h"
 #include "data/data_peer.h"
@@ -9,6 +10,7 @@
 #include "main/main_session.h"
 
 #include <QtCore/QCryptographicHash>
+#include <QtCore/QDataStream>
 #include <QtCore/QString>
 #include <QtNetwork/QNetworkReply>
 
@@ -129,8 +131,8 @@ mtpRequestId TranslateManager::performTranslation(Builder &req) {
 				.text = qs(data.vtext()),
 				.entities = Api::EntitiesFromMTP(req.session(), data.ventities().v),
 			};
-			// 缓存键暂不包含实体。
-			addText(i, text, generateCacheKey(text.text, fromLang, toLang));
+			addText(i, text, generateCacheKey(
+				text, req.session()->uniqueId(), req._provider, fromLang, toLang));
 		}
 	} else if (peerData) {
 		for (int i = 0; i < req.ids().v.size(); ++i) {
@@ -146,7 +148,8 @@ mtpRequestId TranslateManager::performTranslation(Builder &req) {
 			addText(
 				i,
 				message->originalText(),
-				generateMessageCacheKey(peerData->id, msgId, fromLang, toLang));
+				generateCacheKey(message->originalText(), req.session()->uniqueId(),
+					req._provider, fromLang, toLang));
 		}
 	}
 
@@ -169,8 +172,13 @@ mtpRequestId TranslateManager::performTranslation(Builder &req) {
 
 	CallbackSuccess onSuccess = [this, id, resultTexts = std::move(resultTexts), cacheKeys = std::move(cacheKeys),
 			uncachedIndices = std::move(uncachedIndices), texts = std::move(texts),
-			fromLang, toLang, session = req.session()](const std::vector<TextWithEntities> &translated) mutable
+			fromLang, toLang, weakSession = base::make_weak(req.session())](const std::vector<TextWithEntities> &translated) mutable
 	{
+		const auto session = weakSession.get();
+		if (!session) {
+			_pending.erase(id);
+			return;
+		}
 		for (size_t i = 0; i < translated.size() && i < uncachedIndices.size(); ++i) {
 			const auto index = uncachedIndices[i];
 			resultTexts[index] = translated[i];
@@ -270,16 +278,21 @@ void TranslateManager::init() {
 	if (!instance) instance = new TranslateManager;
 }
 
-QString TranslateManager::generateCacheKey(const QString &text, const QString &fromLang, const QString &toLang) const {
-	const auto textHash = QCryptographicHash::hash(text.toUtf8(), QCryptographicHash::Sha1).toHex();
-	return QStringLiteral("%1_%2_%3").arg(QString::fromLatin1(textHash), fromLang, toLang);
-}
-
-QString TranslateManager::generateMessageCacheKey(PeerId peerId,
-												  MsgId msgId,
-												  const QString &fromLang,
-												  const QString &toLang) const {
-	return QStringLiteral("%1_%2_%3_%4").arg(peerId.value).arg(msgId.bare).arg(fromLang, toLang);
+QString TranslateManager::generateCacheKey(
+		const TextWithEntities &text,
+		uint64 accountId,
+		TranslationProvider provider,
+		const QString &fromLang,
+		const QString &toLang) const {
+	auto data = QByteArray();
+	auto stream = QDataStream(&data, QIODevice::WriteOnly);
+	stream << quint64(accountId) << qint32(provider) << text.text << fromLang << toLang;
+	for (const auto &entity : text.entities) {
+		stream << qint32(entity.type()) << qint32(entity.offset())
+			<< qint32(entity.length()) << entity.data();
+	}
+	return QString::fromLatin1(
+		QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex());
 }
 
 void TranslateManager::insertToCache(const QString &key, const CacheEntry &entry) {
