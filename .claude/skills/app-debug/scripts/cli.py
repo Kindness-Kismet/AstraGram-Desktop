@@ -532,7 +532,7 @@ def launch_app() -> None:
     directory.mkdir(parents=True, exist_ok=True)
     command = [str(app_exe()), "-workdir", str(directory)]
     if directory.resolve() != debug_dir().resolve():
-        command.append("-testagent")
+        command.append("-debugprofile")
     if sys.platform == "win32":
         subprocess.Popen(command, cwd=directory, creationflags=subprocess.DETACHED_PROCESS)
     else:

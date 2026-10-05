@@ -26,7 +26,8 @@ using json = nlohmann::json;
 		{ "debugLogs", Logs::DebugEnabled() },
 		{ "hasSession", session != nullptr },
 		{ "fakeSession", session && isFakeSession(session) },
-		{ "isolatedDebug", cTestAgent() },
+		{ "isolatedDebug", cDebugProfile() || cTestAgent() },
+		{ "testAgent", cTestAgent() },
 		{ "hasWindow", window != nullptr },
 	};
 	if (session) {

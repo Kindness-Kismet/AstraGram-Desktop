@@ -2029,7 +2029,7 @@ void Application::startShortcuts() {
 
 void Application::RegisterUrlScheme() {
 #ifdef _DEBUG
-	if (cTestAgent()) return;
+	if (cTestAgent() || cDebugProfile()) return;
 #endif
 	const auto arguments = Launcher::Instance().customWorkingDir()
 		? u"-workdir \"%1\""_q.arg(cWorkingDir())

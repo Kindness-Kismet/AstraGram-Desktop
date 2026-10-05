@@ -74,6 +74,9 @@ python .codex/skills/app-debug/scripts/cli.py app.start --profile scenarios
 python .codex/skills/app-debug/scripts/cli.py session.fake
 ```
 
+独立配置使用 `-debugprofile`，`app.info` 应显示 `isolatedDebug: true`、`testAgent: false`。
+外部链接正常打开；`-testagent` 保留给会拦截系统启动操作的自动测试。
+
 配置名允许 1 至 48 个小写字母、数字、下划线或连字符，首位为字母或数字。
 端口已有进程时，CLI 核对可执行路径和工作目录；目录不符会报告并停止执行。
 恢复原配置：先 `app.stop`，再 `app.start --profile default`。

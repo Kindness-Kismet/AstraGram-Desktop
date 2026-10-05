@@ -404,7 +404,7 @@ bool WaitForInputForCustom() {
 
 bool Supported() {
 #ifdef _DEBUG
-	if (cTestAgent()) return false;
+	if (cTestAgent() || cDebugProfile()) return false;
 #endif
 	if (!Checked) {
 		Checked = true;

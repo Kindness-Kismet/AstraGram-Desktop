@@ -599,7 +599,9 @@ Result verifyMessageArchive(const QStringList &args) {
 		return Result::Err(u"usage: storage.verify-archive"_q);
 	}
 	const auto session = ActiveSession();
-	if (!cTestAgent() || !session || !isFakeSession(session)) {
+	if ((!cDebugProfile() && !cTestAgent())
+		|| !session
+		|| !isFakeSession(session)) {
 		return Result::Err(u"an isolated debug profile and fake session are required"_q);
 	}
 	QTemporaryDir directory(QDir::tempPath() + u"/astragram-archive-tests-XXXXXX"_q);

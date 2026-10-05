@@ -694,7 +694,7 @@ bool OpenSystemSettings(SystemSettingsType type) {
 
 void NewVersionLaunched(int oldVersion) {
 #ifdef _DEBUG
-	if (cTestAgent()) return;
+	if (cTestAgent() || cDebugProfile()) return;
 #endif
 	if (oldVersion <= 4009009) {
 		AppUserModelId::CheckPinned();

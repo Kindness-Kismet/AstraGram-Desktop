@@ -40,6 +40,9 @@ bool gNoStartUpdate = false;
 bool gStartToSettings = false;
 bool gDebugMode = false;
 bool gTestAgent = false;
+#ifdef _DEBUG
+bool gDebugProfile = false;
+#endif
 
 uint32 gConnectionsInSession = 1;
 

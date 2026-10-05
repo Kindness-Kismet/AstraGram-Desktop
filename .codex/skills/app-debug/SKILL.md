@@ -65,7 +65,8 @@ OpenGL 区域可能缺失。消息气泡等自绘内容主要通过图片观察�
 
 自动测试使用独立配置：先 `app.stop`，再 `app.start --profile scenarios + session.fake`。
 数据保存在 `build/debug-profiles/scenarios/`，CLI 会记住配置，后续调用无需重复指定。
-独立配置自动使用应用的测试标记，跳过链接协议注册、固定快捷方式迁移和原生通知快捷方式初始化。
+独立配置使用 `-debugprofile`，跳过链接协议注册、固定快捷方式迁移和原生通知快捷方式初始化。
+`-testagent` 专供自动测试，会拦截外部链接；日常调试不使用这个标记。
 不要在独立配置中放置官方测试运行器的 `testing` 标记，避免额外场景自动运行。
 配置名限 1 至 48 个小写字母、数字、下划线或连字符，首位为字母或数字；`default` 表示原默认目录。
 
@@ -77,7 +78,7 @@ CLI 会核对已有进程的可执行文件路径和工作目录。恢复原调�
 
 ## 构建与验证
 
-C++ 修改后先 `app.stop`，再运行 `python scripts/build.py --dev --jobs 16`。
+C++ 修改后先 `app.stop`，再运行 `python scripts/build.py --dev --jobs 20`。
 产物位于 `build/AstraGram-v<版本>-win-x64-dev/`，默认不含 pdb；需要符号时加 `--pdb`，切换会全量重编。
 构建成功后 `app.start` 启动已有产物，最多等待 60 秒；单条服务端指令超时为 180 秒。
 
