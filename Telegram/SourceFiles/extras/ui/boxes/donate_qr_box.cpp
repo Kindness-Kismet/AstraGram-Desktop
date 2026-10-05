@@ -79,40 +79,26 @@ void fillDonateQrBox(
 	const auto qrWidget = box->verticalLayout()->add(
 		object_ptr<Ui::RpWidget>(box->verticalLayout()));
 
-	struct State {
-		QImage qrImage;
-		int qrMaxSize = 0;
-	};
-	const auto state = qrWidget->lifetime().make_state<State>();
-
-	const auto recompute = [=] {
-		const auto qrMaxSize = int(st::aboutWidth * 1.25) - st::boxRowPadding.left() - st::boxRowPadding.right();
-		state->qrMaxSize = qrMaxSize;
-
-		const auto remainder = qrMaxSize % st::introQrPixel;
-		const auto downTo = remainder ? (qrMaxSize - remainder) : qrMaxSize;
-		state->qrImage = makeQrWithIcon(
-			address.toUtf8(),
-			iconResourcePath,
-			st::introQrPixel,
-			downTo).scaled(
-			Size(qrMaxSize * style::DevicePixelRatio()),
-			Qt::IgnoreAspectRatio,
-			Qt::SmoothTransformation);
-
-		qrWidget->resize(
-			state->qrMaxSize,
-			state->qrMaxSize);
-	};
-
-	recompute();
+	const auto qrMaxSize = box->width()
+		- st::boxRowPadding.left()
+		- st::boxRowPadding.right();
+	const auto downTo = qrMaxSize - qrMaxSize % st::introQrPixel;
+	const auto qrImage = makeQrWithIcon(
+		address.toUtf8(),
+		iconResourcePath,
+		st::introQrPixel,
+		downTo).scaled(
+		Size(qrMaxSize * style::DevicePixelRatio()),
+		Qt::IgnoreAspectRatio,
+		Qt::SmoothTransformation);
+	qrWidget->resize(qrMaxSize, qrMaxSize);
 
 	qrWidget->paintRequest(
 	) | rpl::on_next([=](QRect) {
 		QPainter p(qrWidget);
 		PainterHighQualityEnabler hq(p);
 
-		const auto size = state->qrImage.size() / style::DevicePixelRatio();
+		const auto size = qrImage.size() / style::DevicePixelRatio();
 		const auto rect = Rect(
 			(qrWidget->width() - size.width()) / 2,
 			(qrWidget->height() - size.height()) / 2,
@@ -128,7 +114,7 @@ void fillDonateQrBox(
 		const auto padding = st::boxRowPadding.left();
 		const auto innerRect = rect - Margins(padding);
 
-		p.drawImage(innerRect, state->qrImage);
+		p.drawImage(innerRect, qrImage);
 	}, qrWidget->lifetime());
 
 	Ui::AddSkip(box->verticalLayout());
