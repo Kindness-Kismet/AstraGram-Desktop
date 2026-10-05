@@ -54,13 +54,12 @@ int scaled(int value) {
 	return style::ConvertScale(value);
 }
 
-class AccountCard final : public Ui::AbstractButton {
+class AccountHeader final : public Ui::AbstractButton {
 public:
-	AccountCard(QWidget *parent, not_null<UserData*> user)
+	AccountHeader(QWidget *parent, not_null<UserData*> user)
 	: AbstractButton(parent)
 	, _user(user)
 	, _userpic(user->createUserpicView()) {
-		ExtrasFeatures::WindowMaterial::watchSurface(this);
 		_user->loadUserpic();
 		setAccessibleName(user->name());
 		_user->session().changes().peerUpdates(_user,
@@ -78,32 +77,24 @@ public:
 
 protected:
 	int resizeGetHeight(int width) override {
-		return scaled(64);
+		return scaled(88);
 	}
 	void paintEvent(QPaintEvent *e) override {
 		auto p = Painter(this);
-		p.setRenderHint(QPainter::Antialiasing);
-		p.setPen(st::strokeFg);
-		p.setBrush(ExtrasFeatures::WindowMaterial::cardColor(
-			this, (isOver() ? st::windowBgOver : st::cardBg)->c));
-		p.drawRoundedRect(rect().adjusted(1, 1, -1, -1), scaled(14), scaled(14));
-		_user->paintUserpicLeft(p, _userpic, scaled(10), scaled(11), width(), scaled(42), true);
-		const auto left = scaled(64);
+		_user->paintUserpicLeft(p, _userpic, scaled(10), scaled(16), width(), scaled(56), true);
+		const auto left = scaled(78);
 		const auto textWidth = width() - left - scaled(12);
 		p.setPen(st::windowBoldFg);
 		p.setFont(st::semiboldFont);
-		p.drawText(QRect(left, scaled(10), textWidth, scaled(23)),
+		p.drawText(QRect(left, scaled(21), textWidth, scaled(23)),
 			Qt::AlignVCenter, st::semiboldFont->elided(_user->name(), textWidth));
 		p.setPen(st::windowSubTextFg);
 		p.setFont(st::settingsExperimentalAbout.style.font);
 		const auto subtitle = _user->username().isEmpty()
 			? QString::number(peerToUser(_user->id).bare)
 			: '@' + _user->username();
-		p.drawText(QRect(left, scaled(34), textWidth, scaled(19)),
+		p.drawText(QRect(left, scaled(47), textWidth, scaled(19)),
 			Qt::AlignVCenter, st::settingsExperimentalAbout.style.font->elided(subtitle, textWidth));
-	}
-	void onStateChanged(State was, StateChangeSource source) override {
-		update();
 	}
 
 private:
@@ -202,9 +193,9 @@ Navigation::Navigation(
 	}, lifetime());
 
 	_list = _scroll->setOwnedWidget(object_ptr<Ui::VerticalLayout>(this));
-	const auto account = _list->add(object_ptr<AccountCard>(
+	const auto account = _list->add(object_ptr<AccountHeader>(
 		_list, controller->session().user()), { scaled(8), scaled(8), scaled(8), scaled(8) });
-	account->setObjectName(u"settings-account-card"_q);
+	account->setObjectName(u"settings-account-header"_q);
 	account->setClickedCallback([=] { _navigate(InformationId()); });
 	const auto fieldStyle = lifetime().make_state<style::InputField>(st::defaultMultiSelectSearchField);
 	fieldStyle->textBg = fieldStyle->textBgActive = st::cardBg;
