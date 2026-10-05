@@ -1,33 +1,21 @@
-- Improved the search scope menu, the message read and reaction lists and the story viewer list, which now match the font, spacing and position of other menus
-- Improved the local archive of deleted messages and edit history, which is now encrypted on disk, requires unlocking when a local passcode is set and warns you before a logout without unlocking makes it unreadable
-- Improved scrolling in large chats, which now spends less time drawing the blurred bars and detecting message languages, and jumping to the latest message now ends with a smooth animation that keeps the last message above the input field
-- Removed the title bar frame rate display and its appearance setting; viewing the window's frame rate is no longer available
-- Improved search results and suggestions, whose highlights and dividers now use the same rounded insets as the chat list
-- Fixed an issue with the login and passcode lock screens that previously caused the window's rounded corners to appear square
-- Improved spoiler animations, which now redraw only when the particles move and use less CPU while idle
-- Fixed an issue with popup menus that previously caused the shadow around their rounded corners to be cut off
-- Added a local theme list, so you can now keep imported themes as previews after the built-in themes and delete them when they are no longer needed
-- Changed the built-in themes; only Simple White and Simple Black remain, and a previously selected Day theme switches to Simple White
-- Changed how the Acrylic and Blur window backgrounds look; they now show the system effect directly without an extra color layer over the title bar
-- Improved accent colors, which now apply consistently to scrollbars, the selected chat, service messages and the window frame, while the system accent color option turns the Windows accent color into a softer shade that stays readable in both themes and follows its changes without resetting the chat wallpaper
-- Removed the window title bar settings for showing the chat name, active account and total unread count and for using the system window frame; customizing the window title or frame is no longer available
-- Changed how automatic media download works; it is now off by default in private chats, groups and channels, GIFs follow the GIF autoplay setting, and manually changed size limits are kept
-- Changed how accent colors apply to Simple Black; its background now stays a neutral #212121, and the title bar and input fields no longer turn darker with darker accents
+- Improved settings, which now use a full-window layout with grouped cards, a sidebar on wide windows and a single-page layout on narrow windows, with consistent theme previews and text alignment
+- Added a dedicated About page, so you can now find the app version, release notes, project link, update settings, Telegram services and help in one place
+- Removed settings search; searching settings and filtering settings lists are no longer available
+- Changed how settings switches work; they now toggle only when you click the switch itself, reducing accidental changes when clicking a row
+- Improved message translation, which now shows translations inside the original message bubbles and lets you change the target language or return to the original text from the message menu
+- Improved proxy settings, which now separate direct, system and custom proxy modes and show authentication fields only when needed, while allowing you to browse custom mode before adding a proxy
+- Improved chat list styling, which now uses solid accent backgrounds for selected chats and accent-colored sent checkmarks, with updated folder icons and no click ripple animations on rows or folder tabs
+- Improved dialog appearance, which now uses consistent theme colors, spacing and distinct styles for primary and secondary actions
+- Added project and supporter badges and a donation QR code, so you can now view badges in chats and profiles and open the donation page by scanning its code
 
 ---
 
-- 对搜索范围菜单、消息已读与回应列表以及动态观看列表进行了改善，这使得它们的字体、间距和弹出位置与其他菜单保持一致
-- 对已删除消息和编辑历史的本地留档进行了改善，这使得留档在磁盘上加密保存，设置本地密码后需要解锁才能查看，未解锁就退出登录前也会提示留档将无法再打开
-- 对大型聊天的滚动进行了改善，这使得绘制模糊栏和识别消息语言占用的时间更少，跳到最新消息时会平滑滚动到底，并让最后一条消息保持在输入框上方
-- 移除了标题栏帧率显示及其外观设置，查看窗口帧率不再可用
-- 对搜索结果和搜索建议进行了改善，这使得高亮和分隔线与聊天列表使用相同的圆角边距
-- 修复了关于登录页和密码锁定页的错误，该问题曾导致窗口圆角显示为直角
-- 对剧透遮罩动画进行了改善，这使得它只在粒子变化时重绘，空闲时占用的 CPU 更少
-- 修复了关于弹出菜单的错误，该问题曾导致圆角处的阴影被截断
-- 新增了本地主题列表，现在可以把导入的主题保存为预览，排在内置主题之后，不再需要时也能删除
-- 调整了内置主题，现在只保留简约白和简约黑，之前选择的日间主题会自动改为简约白
-- 调整了亚克力和磨砂玻璃窗口背景的显示效果，现在直接呈现系统效果，标题栏不再额外叠加一层底色
-- 对强调色进行了改善，这使得滚动条、选中的聊天、服务消息和窗口边框的配色保持一致，系统强调色选项会把 Windows 强调色调整为更柔和、在深浅主题下都清晰易读的颜色，并在其变化时同步更新，不会重置聊天壁纸
-- 移除了窗口标题栏中显示聊天名称、当前账号、未读总数以及使用系统窗口边框的设置，自定义窗口标题或边框不再可用
-- 调整了媒体自动下载的行为，现在私聊、群组和频道默认关闭，动图遵循自动播放动图的设置，手动修改过的大小限制保持不变
-- 调整了强调色在简约黑主题下的效果，现在背景固定为中性的 #212121，选择较深的强调色时标题栏和输入框也不会随之变暗
+- 对设置界面进行了改善，这使得设置以全窗口卡片布局呈现，宽窗口显示侧边栏，窄窗口采用单页布局，主题预览和文字对齐也保持一致
+- 新增了独立的关于页面，现在可以集中查看应用版本、更新说明、项目链接、更新设置、Telegram 服务和帮助
+- 移除了设置搜索，搜索设置及筛选设置列表不再可用
+- 调整了设置开关的行为，现在只有点击开关本身才会切换状态，减少点击整行时的误操作
+- 对消息翻译进行了改善，这使得译文直接显示在原消息气泡内，并可通过消息菜单切换目标语言或查看原文
+- 对代理设置进行了改善，这使得直连、系统代理和自定义代理分别展示，认证字段按需显示，尚未添加代理时也能浏览自定义模式
+- 对聊天列表样式进行了改善，这使得选中的聊天使用纯强调色背景，已发送标记跟随强调色，文件夹图标更统一，聊天行和文件夹标签不再显示点击水波纹
+- 对弹窗外观进行了改善，这使得主题配色和间距保持一致，主要操作与次要操作也有更明确的样式区分
+- 新增了项目与支持者徽章及捐赠二维码，现在可以在聊天和个人资料中查看徽章，并扫码打开捐赠页面
