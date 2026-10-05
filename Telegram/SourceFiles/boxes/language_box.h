@@ -32,7 +32,9 @@ struct LanguageListContent {
 	int rowHeight = 0;
 };
 
-[[nodiscard]] LanguageListContent CreateLanguageList(QWidget *parent);
+[[nodiscard]] LanguageListContent CreateLanguageList(
+	QWidget *parent,
+	bool boxPadding = true);
 
 class LanguageBox : public Ui::BoxContent {
 public:

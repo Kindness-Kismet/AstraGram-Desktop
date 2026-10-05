@@ -104,7 +104,7 @@ rpl::producer<QString> Language::title() {
 
 void Language::rebuildLanguages() {
 	_languages->clear();
-	_listContent = CreateLanguageList(_languages);
+	_listContent = CreateLanguageList(_languages, false);
 	_list = _languages->add(std::move(_listContent.widget));
 	_list->setObjectName(u"settings-language-list"_q);
 	_listContent.filter(_query);
@@ -250,11 +250,10 @@ void SetupLanguageTranslationControls(
 		not_null<Window::SessionController*> controller,
 		rpl::producer<> showFinished) {
 	const auto group = AddCardGroup(container);
-	const auto translateEnabled = group->add(
-		object_ptr<Ui::SettingsButton>(
-			group,
-			tr::lng_translate_settings_show(),
-			st::settingsButtonNoIcon))->toggleOn(
+	const auto translateEnabled = AddButtonWithIcon(
+		group,
+		tr::lng_translate_settings_show(),
+		st::settingsButtonNoIcon)->toggleOn(
 				rpl::single(Core::App().settings().translateButtonEnabled()));
 	translateEnabled->setObjectName(u"settings-language-show-button"_q);
 	translateEnabled->toggledValue(
@@ -265,11 +264,10 @@ void SetupLanguageTranslationControls(
 		Core::App().saveSettingsDelayed();
 	}, translateEnabled->lifetime());
 
-	const auto translateChat = group->add(
-		object_ptr<Ui::SettingsButton>(
-			group,
-			tr::lng_translate_settings_chat(),
-			st::settingsButtonNoIcon))->toggleOn(
+	const auto translateChat = AddButtonWithIcon(
+		group,
+		tr::lng_translate_settings_chat(),
+		st::settingsButtonNoIcon)->toggleOn(
 				Core::App().settings().translateChatEnabledValue());
 	translateChat->setObjectName(u"settings-language-translate-chats"_q);
 	translateChat->toggledValue(

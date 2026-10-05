@@ -241,7 +241,8 @@ public:
 	Content(
 		QWidget *parent,
 		const Languages &recent,
-		const Languages &official);
+		const Languages &official,
+		bool boxPadding);
 
 	Ui::ScrollToRequest jump(int rows);
 	void filter(const QString &query);
@@ -253,7 +254,8 @@ public:
 private:
 	void setupContent(
 		const Languages &recent,
-		const Languages &official);
+		const Languages &official,
+		bool boxPadding);
 
 	Fn<Ui::ScrollToRequest(int rows)> _jump;
 	Fn<void(const QString &query)> _filter;
@@ -1209,14 +1211,16 @@ void Rows::accessibilityChildActivate(quintptr identity) {
 Content::Content(
 	QWidget *parent,
 	const Languages &recent,
-	const Languages &official)
+	const Languages &official,
+	bool boxPadding)
 : RpWidget(parent) {
-	setupContent(recent, official);
+	setupContent(recent, official, boxPadding);
 }
 
 void Content::setupContent(
 		const Languages &recent,
-		const Languages &official) {
+		const Languages &official,
+		bool boxPadding) {
 	using namespace rpl::mappers;
 
 	const auto current = Lang::LanguageIdOrDefault(Lang::Id());
@@ -1230,17 +1234,21 @@ void Content::setupContent(
 				content,
 				object_ptr<Ui::VerticalLayout>(content)));
 		const auto inner = wrap->entity();
-		inner->add(object_ptr<Ui::FixedHeightWidget>(
-			inner,
-			st::defaultBox.margin.top()));
+		if (boxPadding) {
+			inner->add(object_ptr<Ui::FixedHeightWidget>(
+				inner,
+				st::defaultBox.margin.top()));
+		}
 		const auto rows = inner->add(object_ptr<Rows>(
 			inner,
 			list,
 			current,
 			areOfficial));
-		inner->add(object_ptr<Ui::FixedHeightWidget>(
-			inner,
-			st::defaultBox.margin.top()));
+		if (boxPadding) {
+			inner->add(object_ptr<Ui::FixedHeightWidget>(
+				inner,
+				st::defaultBox.margin.top()));
+		}
 
 		rows->isEmpty() | rpl::on_next([=](bool empty) {
 			wrap->toggle(!empty, anim::type::instant);
@@ -1455,9 +1463,9 @@ rpl::producer<Ui::ScrollToRequest> Content::mustScrollTo() const {
 
 } // namespace
 
-LanguageListContent CreateLanguageList(QWidget *parent) {
+LanguageListContent CreateLanguageList(QWidget *parent, bool boxPadding) {
 	const auto &[recent, official] = PrepareLists();
-	auto widget = object_ptr<Content>(parent, recent, official);
+	auto widget = object_ptr<Content>(parent, recent, official, boxPadding);
 	const auto inner = QPointer<Content>(widget.data());
 	const auto currentId = [] {
 		return Lang::LanguageIdOrDefault(Lang::Id());
