@@ -27,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_main.h"
 #include "settings/sections/settings_premium.h"
 #include "settings/settings_builder.h"
+#include "settings/settings_card_layout.h"
 #include "settings/settings_common_session.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/empty_userpic.h"
@@ -922,18 +923,15 @@ void SetupRecommendedSection(
 		return button;
 	};
 
-	Ui::AddSkip(container);
 	const auto nonEmptyAbout = container->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			container,
 			object_ptr<Ui::VerticalLayout>(container))
 	)->setDuration(0);
-	const auto aboutRows = nonEmptyAbout->entity();
-	Ui::AddDivider(aboutRows);
-	Ui::AddSkip(aboutRows);
-	const auto recommendedTitle = Ui::AddSubsectionTitle(
-		aboutRows,
+	const auto recommendedTitle = AddCardTitle(
+		nonEmptyAbout->entity(),
 		tr::lng_filters_recommended());
+	const auto aboutRows = AddCardGroup(nonEmptyAbout->entity());
 	if (highlights) {
 		highlights->push_back({
 			u"folders/add-recommended"_q,
@@ -989,7 +987,6 @@ void SetupRecommendedSection(
 			}, button->lifetime());
 		}
 		aboutRows->resizeToWidth(container->width());
-		Ui::AddSkip(aboutRows, st::defaultVerticalListSkip);
 	}, aboutRows->lifetime());
 
 	auto showSuggestions = rpl::combine(
@@ -1003,11 +1000,9 @@ void SetupRecommendedSection(
 }
 
 void BuildTopContent(SectionBuilder &builder, rpl::producer<> showFinished) {
-	builder.add([showFinished = std::move(showFinished)](
+	builder.addPageContent([showFinished = std::move(showFinished)](
 			const WidgetContext &ctx) mutable {
 		const auto parent = ctx.container;
-		const auto divider = Ui::CreateChild<Ui::BoxContentDivider>(
-			parent.get());
 		const auto verticalLayout = parent->add(
 			object_ptr<Ui::VerticalLayout>(parent.get()));
 
@@ -1036,12 +1031,6 @@ void BuildTopContent(SectionBuilder &builder, rpl::producer<> showFinished) {
 			st::settingsFilterDividerLabelPadding,
 			style::al_top)->setTryMakeSimilarLines(true);
 
-		verticalLayout->geometryValue(
-		) | rpl::on_next([=](const QRect &r) {
-			divider->setGeometry(r);
-		}, divider->lifetime());
-
-		return SectionBuilder::WidgetToAdd{};
 	});
 }
 
@@ -1051,10 +1040,10 @@ void BuildFoldersListSection(
 	builder.addSkip();
 	builder.addSubsectionTitle(tr::lng_filters_subtitle());
 
-	builder.add([=](const WidgetContext &ctx) {
+	builder.addPageContent([=](const WidgetContext &ctx) {
 		const auto wrap = SetupFoldersList(
 			ctx.controller,
-			ctx.container,
+			AddCardGroup(ctx.container),
 			state,
 			ctx.highlights);
 		SetupRecommendedSection(
@@ -1063,7 +1052,6 @@ void BuildFoldersListSection(
 			state,
 			ctx.highlights,
 			wrap);
-		return SectionBuilder::WidgetToAdd{};
 	});
 }
 
@@ -1160,9 +1148,9 @@ void BuildTagsSection(SectionBuilder &builder, not_null<FoldersState*> state) {
 
 	builder.addSkip();
 
-	builder.add([=](const WidgetContext &ctx) {
+	builder.addPageContent([=](const WidgetContext &ctx) {
 		auto premium = Data::AmPremiumValue(session);
-		const auto about = Ui::AddDividerText(
+		const auto about = ctx.container->add(object_ptr<Ui::FlatLabel>(
 			ctx.container,
 			rpl::conditional(
 				rpl::duplicate(premium),
@@ -1172,12 +1160,11 @@ void BuildTagsSection(SectionBuilder &builder, not_null<FoldersState*> state) {
 					tr::lng_effect_premium_link() | rpl::map([](QString t) {
 						return tr::link(std::move(t), u"internal:"_q);
 					}),
-					tr::rich)));
+					tr::rich)), st::settingsCardHint), st::settingsCardHintPadding);
 		about->setClickHandlerFilter([=](const auto &...) {
 			Settings::ShowPremium(ctx.controller, u"folder_tags"_q);
 			return true;
 		});
-		return SectionBuilder::WidgetToAdd{};
 	});
 }
 
