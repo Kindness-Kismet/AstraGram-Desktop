@@ -8,6 +8,10 @@ class Memento;
 class WrapWidget;
 } // namespace Info
 
+namespace style {
+struct WindowTitle;
+} // namespace style
+
 namespace Settings {
 
 namespace Builder {
@@ -40,6 +44,7 @@ public:
 
 protected:
 	void resizeEvent(QResizeEvent *e) override;
+	void hideEvent(QHideEvent *e) override;
 	void paintEvent(QPaintEvent *e) override;
 	void doSetInnerFocus() override;
 	void showFinishedHook() override;
@@ -55,8 +60,10 @@ private:
 	object_ptr<Navigation> _navigation;
 	object_ptr<Info::WrapWidget> _content;
 	object_ptr<WorkspaceSearch> _search;
+	std::unique_ptr<style::WindowTitle> _titleStyle;
 	bool _listShown = true;
 	bool _updatingLayout = false;
+	bool _searchInTitle = false;
 	Type _category;
 };
 

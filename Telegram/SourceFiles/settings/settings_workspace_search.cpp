@@ -7,6 +7,7 @@
 #include "main/main_session.h"
 #include "settings/settings_common.h"
 #include "ui/painter.h"
+#include "ui/chat/floating_bar.h"
 #include "ui/search_field_controller.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/fields/input_field.h"
@@ -14,6 +15,7 @@
 #include "ui/widgets/scroll_area.h"
 #include "ui/wrap/vertical_layout.h"
 #include "styles/style_dialogs.h"
+#include "styles/style_chat_helpers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 #include "styles/style_widgets.h"
@@ -32,19 +34,65 @@ QString entryKey(const Builder::SearchEntry &entry, const QString &path) {
 	return entry.id.isEmpty() ? path + '/' + entry.title : entry.id;
 }
 
+int resultRowHeight() {
+	return st::mentionPadding.top() + st::mentionFont->height
+		+ style::ConvertScale(4) + st::normalFont->height
+		+ st::mentionPadding.bottom();
+}
+
+class SearchResultButton final : public Ui::AbstractButton {
+public:
+	SearchResultButton(QWidget *parent, QString title, QString path,
+			const style::icon *icon)
+	: AbstractButton(parent)
+	, _title(std::move(title))
+	, _path(std::move(path))
+	, _icon(icon ? icon : &st::menuIconSettings) {
+	}
+
+protected:
+	int resizeGetHeight(int width) override {
+		return resultRowHeight();
+	}
+	void paintEvent(QPaintEvent *e) override {
+		auto p = Painter(this);
+		Ui::PaintChatBar(p, this, rect(), st::defaultEmojiPan.bg->c,
+			isOver() ? st::mentionBgOver->c : QColor());
+		const auto left = 2 * st::mentionPadding.left() + st::mentionPhotoSize;
+		const auto available = width() - left - st::mentionPadding.right();
+		_icon->paint(p, st::mentionPadding.left()
+			+ (st::mentionPhotoSize - _icon->width()) / 2,
+			(height() - _icon->height()) / 2, width());
+		p.setFont(st::mentionFont);
+		p.setPen(isOver() ? st::mentionNameFgOver : st::mentionNameFg);
+		p.drawTextLeft(left, st::mentionPadding.top(), width(),
+			st::mentionFont->elided(_title, available));
+		p.setFont(st::normalFont);
+		p.setPen(isOver() ? st::mentionFgOver : st::mentionFg);
+		p.drawTextLeft(left, st::mentionPadding.top() + st::mentionFont->height
+			+ style::ConvertScale(4), width(), st::normalFont->elided(_path, available));
+	}
+
+private:
+	const QString _title;
+	const QString _path;
+	const style::icon *_icon;
+};
+
 } // namespace
 
 WorkspaceSearch::WorkspaceSearch(
 	QWidget *parent,
+	QWidget *popupParent,
 	not_null<Main::Session*> session,
 	Fn<void(Builder::SearchEntry)> activate)
 : RpWidget(parent)
 , _session(session)
 , _activate(std::move(activate))
 , _search(std::make_unique<Ui::SearchFieldController>(QString()))
-, _popup(parent) {
+, _popup(popupParent) {
 	setObjectName(u"settings-search"_q);
-	_field = _search->createField(this, st::dialogsFilter).release();
+	_field = _search->createField(this, st::settingsSearchField).release();
 	_field->setObjectName(u"settings-search-input"_q);
 	_field->rawTextEdit()->setObjectName(u"settings-search-editor"_q);
 	_field->setPlaceholder(tr::extras_SettingsSearchPlaceholder());
@@ -71,15 +119,11 @@ WorkspaceSearch::WorkspaceSearch(
 		_clear->moveToRight(0, (size.height() - _clear->height()) / 2);
 	}, lifetime());
 	_popup->setObjectName(u"settings-search-results"_q);
-	_popup->paintRequest() | rpl::on_next([=] {
-		auto p = Painter(_popup);
-		auto hq = PainterHighQualityEnabler(p);
-		p.setBrush(st::boxBg);
-		p.setPen(st::strokeFg);
-		p.drawRoundedRect(QRectF(_popup->rect()).adjusted(.5, .5, -.5, -.5),
-			st::settingsCardRadius, st::settingsCardRadius);
-	}, lifetime());
+	Ui::ApplyAutocompleteSurface(_popup.data(), st::defaultEmojiPan.bg);
 	_scroll = Ui::CreateChild<Ui::ScrollArea>(_popup.data());
+	_scroll->setAutoFillBackground(false);
+	_scroll->setVerticalBarTopSkip(st::windowCardRadius);
+	_scroll->setVerticalBarBottomSkip(st::windowCardRadius);
 	_scroll->setObjectName(u"settings-search-scroll"_q);
 	_list = _scroll->setOwnedWidget(object_ptr<Ui::VerticalLayout>(_scroll));
 	_scroll->show();
@@ -140,6 +184,7 @@ WorkspaceSearch::WorkspaceSearch(
 
 WorkspaceSearch::~WorkspaceSearch() {
 	lifetime().destroy();
+	_popup.destroy();
 }
 
 void WorkspaceSearch::rebuildIndex() {
@@ -233,27 +278,12 @@ void WorkspaceSearch::refreshResults() {
 	}
 	for (auto i = 0; i != int(_results.size()); ++i) {
 		const auto &indexed = _entries[_results[i]];
-		auto icon = indexed.entry.icon;
-		if (!icon) {
-			icon = { &st::menuIconSettings };
-		}
-		const auto button = _list->add(CreateButtonWithIcon(_list,
-			rpl::single(indexed.entry.title), st::settingsSearchResult, std::move(icon)),
+		const auto button = _list->add(object_ptr<SearchResultButton>(_list,
+			indexed.entry.title, indexed.path, indexed.entry.icon.icon),
 			style::al_justify);
 		button->setObjectName(u"settings-search-result-%1"_q.arg(i));
 		button->setProperty("settingsSearchControlId", indexed.entry.id);
 		button->setAccessibleName(indexed.entry.title + u", "_q + indexed.path);
-		const auto label = Ui::CreateChild<Ui::FlatLabel>(
-			button, indexed.path, st::settingsCardRowDescription);
-		label->setAttribute(Qt::WA_TransparentForMouseEvents);
-		label->show();
-		button->widthValue() | rpl::on_next([=](int width) {
-			label->resizeToWidth(std::max(1, width
-				- st::settingsSearchResult.padding.left()
-				- st::settingsSearchResult.padding.right()));
-			label->moveToLeft(st::settingsSearchResult.padding.left(),
-				st::settingsSearchDescriptionTop);
-		}, label->lifetime());
 		button->setClickedCallback([=] { activateResult(i); });
 		button->events() | rpl::on_next([=](not_null<QEvent*> e) {
 			if (e->type() == QEvent::Enter) {
@@ -340,23 +370,27 @@ void WorkspaceSearch::hideResults() {
 	_selected = -1;
 }
 
+bool WorkspaceSearch::containsGlobalPoint(QPoint point) const {
+	return isVisible() && _field->rect().contains(_field->mapFromGlobal(point));
+}
+
 void WorkspaceSearch::updateLayout() {
 	const auto padding = st::settingsCardPagePadding;
 	const auto fieldWidth = std::max(1, std::min(width() - 2 * padding,
 		style::ConvertScale(560)));
 	_field->resizeToWidth(fieldWidth);
 	_field->moveToLeft((width() - fieldWidth) / 2,
-		(height() - _field->height()) / 2);
-	const auto inset = style::ConvertScale(5);
-	_list->resizeToWidth(std::max(1, fieldWidth - 2 * inset));
-	const auto position = _field->mapTo(parentWidget(), QPoint(0,
-		_field->height() + style::ConvertScale(4)));
-	const auto available = std::max(1, parentWidget()->height() - position.y() - padding);
-	const auto popupHeight = std::min({ _list->height() + 2 * inset,
-		style::ConvertScale(420), available });
-	_popup->setGeometry(position.x(), position.y(), fieldWidth, popupHeight);
-	_scroll->setGeometry(inset, inset, std::max(1, fieldWidth - 2 * inset),
-		std::max(1, popupHeight - 2 * inset));
+		(height() - _field->height() + 1) / 2);
+	_list->resizeToWidth(fieldWidth);
+	const auto popupParent = _popup->parentWidget();
+	const auto position = popupParent->mapFromGlobal(_field->mapToGlobal(QPoint(0,
+		_field->height() + style::ConvertScale(4))));
+	const auto top = std::max(0, position.y());
+	const auto available = std::max(1, popupParent->height() - top - padding);
+	const auto popupHeight = std::min({ _list->height(),
+		int(4.5 * resultRowHeight()), available });
+	_popup->setGeometry(position.x(), top, fieldWidth, popupHeight);
+	_scroll->setGeometry(0, 0, fieldWidth, popupHeight);
 	// 页面动画会显示所有直接子控件，这里恢复结果面板自身的显示状态。
 	_popup->setVisible(_resultsShown);
 	if (_resultsShown) {

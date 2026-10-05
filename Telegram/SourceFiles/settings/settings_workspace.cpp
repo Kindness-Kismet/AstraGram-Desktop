@@ -9,12 +9,17 @@
 #include "info/info_memento.h"
 #include "info/info_wrap_widget.h"
 #include "main/main_session.h"
+#include "mainwindow.h"
 #include "settings/sections/settings_main.h"
 #include "settings/settings_navigation.h"
 #include "settings/settings_workspace_search.h"
 #include "ui/widgets/buttons.h"
+#include "ui/platform/ui_platform_window_title.h"
 #include "window/window_session_controller.h"
 #include "styles/style_layers.h"
+#include "styles/style_settings.h"
+#include "styles/style_widgets.h"
+#include "styles/style_window.h"
 
 namespace Settings {
 namespace {
@@ -40,6 +45,7 @@ Workspace::Workspace(
 	[=] { closeWorkspace(); })
 , _content(nullptr)
 , _search(nullptr)
+, _titleStyle(std::make_unique<style::WindowTitle>(st::defaultWindowTitle))
 , _listShown(memento->settingsNavigationState()
 	? memento->settingsNavigationState()->listShown
 	: memento->content()->section().settingsType() == MainId())
@@ -47,6 +53,7 @@ Workspace::Workspace(
 	? memento->settingsNavigationState()->category
 	: Type()) {
 	setObjectName(u"settings-workspace"_q);
+	_titleStyle->height = style::ConvertScale(52);
 	setGeometry(geometry);
 	// 宽屏首页直接展示定制设置，完整概览仍可从分类进入。
 	if (_listShown && !memento->settingsNavigationState()
@@ -59,9 +66,16 @@ Workspace::Workspace(
 		_content.create(this, controller, Info::Wrap::Narrow, memento,
 			geometry.width() >= wideThreshold());
 	}
-	_search.create(this, &controller->session(), [=](Builder::SearchEntry entry) {
+	_search.create(this, this, &controller->session(), [=](Builder::SearchEntry entry) {
 		showSearchResult(std::move(entry));
 	});
+	controller->widget()->hitTestRequests() | rpl::on_next([=](
+			not_null<Ui::Platform::HitTestRequest*> request) {
+		if (_searchInTitle && _search->containsGlobalPoint(
+				controller->widget()->mapToGlobal(request->point))) {
+			request->result = Ui::Platform::HitTestResult::Client;
+		}
+	}, lifetime());
 	_content->contentChanged() | rpl::on_next([=] {
 		_search->dismiss();
 		_listShown = false;
@@ -73,7 +87,14 @@ Workspace::Workspace(
 	updateLayout();
 }
 
-Workspace::~Workspace() = default;
+Workspace::~Workspace() {
+	_updatingLayout = true;
+	lifetime().destroy();
+	_search.destroy();
+	if (_searchInTitle) {
+		controller()->widget()->setTitleStyle(st::defaultWindowTitle);
+	}
+}
 
 void Workspace::showSearchResult(Builder::SearchEntry entry) {
 	_content->checkBeforeClose([=] {
@@ -139,10 +160,19 @@ void Workspace::updateLayout() {
 		return;
 	}
 	_updatingLayout = true;
+	const auto window = controller()->widget();
+	const auto title = window->titleWidget();
+	const auto inTitle = title && !title->isHidden() && isVisible();
+	if (_searchInTitle != inTitle) {
+		_searchInTitle = inTitle;
+		window->setTitleStyle(inTitle
+			? *_titleStyle
+			: st::defaultWindowTitle);
+	}
 	const auto wide = width() >= wideThreshold();
 	const auto navigationShown = wide || _listShown;
 	const auto contentShown = wide || !_listShown;
-	const auto searchHeight = style::ConvertScale(60);
+	const auto searchHeight = inTitle ? 0 : style::ConvertScale(60);
 	const auto navigationTop = wide ? 0 : searchHeight;
 	_navigation->setVisible(navigationShown);
 	_navigation->setNarrow(!wide);
@@ -155,8 +185,23 @@ void Workspace::updateLayout() {
 		width() - left, height() - searchHeight),
 		false, true, 0, height() - searchHeight);
 	if (_search) {
-		_search->setGeometry(left, 0, width() - left, searchHeight);
-		_search->show();
+		const auto searchParent = inTitle ? title : this;
+		if (_search->parentWidget() != searchParent) {
+			_search->setParent(searchParent);
+		}
+		if (inTitle) {
+			const auto controls = st::defaultWindowTitle.minimize.width
+				+ st::defaultWindowTitle.maximize.width
+				+ st::defaultWindowTitle.close.width;
+			const auto inset = wide ? controls : 0;
+			// 正文卡片与标题栏之间的间隙也计入可见的上下留白。
+			_search->setGeometry(inset, 0,
+				std::max(1, title->width() - inset - controls),
+				title->height() + st::windowCardGap);
+		} else {
+			_search->setGeometry(left, 0, width() - left, searchHeight);
+		}
+		_search->setVisible(isVisible());
 		_search->raise();
 		_search->updateLayout();
 	}
@@ -213,6 +258,17 @@ QPixmap Workspace::grabForShowAnimation(const Window::SectionSlideParams &params
 
 void Workspace::resizeEvent(QResizeEvent *e) {
 	updateLayout();
+}
+
+void Workspace::hideEvent(QHideEvent *e) {
+	if (_search) {
+		_search->hide();
+	}
+	if (_searchInTitle) {
+		_searchInTitle = false;
+		controller()->widget()->setTitleStyle(st::defaultWindowTitle);
+	}
+	Window::SectionWidget::hideEvent(e);
 }
 
 void Workspace::paintEvent(QPaintEvent *e) {

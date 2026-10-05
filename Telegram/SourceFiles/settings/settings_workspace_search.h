@@ -6,7 +6,7 @@
 
 namespace Ui {
 class CrossButton;
-class FlatLabel;
+class AbstractButton;
 class InputField;
 class ScrollArea;
 class SearchFieldController;
@@ -19,11 +19,13 @@ class WorkspaceSearch final : public Ui::RpWidget {
 public:
 	WorkspaceSearch(
 		QWidget *parent,
+		QWidget *popupParent,
 		not_null<Main::Session*> session,
 		Fn<void(Builder::SearchEntry)> activate);
 	~WorkspaceSearch();
 	void updateLayout();
 	bool dismiss();
+	bool containsGlobalPoint(QPoint point) const;
 
 protected:
 	void resizeEvent(QResizeEvent *e) override;
@@ -54,7 +56,7 @@ private:
 	Ui::VerticalLayout *_list = nullptr;
 	std::vector<IndexedEntry> _entries;
 	std::vector<int> _results;
-	std::vector<Ui::SettingsButton*> _buttons;
+	std::vector<Ui::AbstractButton*> _buttons;
 	std::vector<QString> _recent;
 	int _selected = -1;
 	bool _focused = false;

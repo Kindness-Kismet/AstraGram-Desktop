@@ -85,4 +85,27 @@ inline void PaintChatBar(
 	}
 }
 
+// 输入候选面板共用底色、边框与圆角裁剪，聊天磨砂背景仍沿用输入框配色。
+inline void ApplyAutocompleteSurface(
+		not_null<QWidget*> widget,
+		style::color background,
+		Fn<qreal()> opacity = nullptr) {
+	const auto frosted = [=] {
+		const auto surface = ExtrasUi::FloatingSurface::find(widget.get());
+		return surface && surface->hasBackdrop();
+	};
+	ExtrasUi::FloatingSurface::attach(widget.get(), {
+		.radius = st::windowCardRadius,
+		.background = [=] {
+			return frosted() ? ExtrasUi::ChatSurfaceBackground() : background->c;
+		},
+		.border = [=] {
+			return frosted() ? ExtrasUi::ChatSurfaceBorder() : st::windowDividerFg->c;
+		},
+		.borderWidth = st::lineWidth,
+		.maskInput = true,
+		.opacity = std::move(opacity),
+	});
+}
+
 } // namespace Ui
