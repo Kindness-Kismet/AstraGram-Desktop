@@ -476,6 +476,12 @@ object_ptr<Button> CreateButtonWithIcon(
 		? std::make_shared<style::SettingsButton>(st)
 		: std::shared_ptr<style::SettingsButton>();
 	if (card) {
+		if (descriptor && !descriptor.color
+			&& !descriptor.background && !descriptor.backgroundBrush) {
+			descriptor.color = (&st == &st::settingsAttentionButtonWithIcon)
+				? &st::attentionButtonFg
+				: &st::windowFg;
+		}
 		rowStyle->padding.setLeft(descriptor ? st::settingsCardSectionButton.padding.left()
 			: st::settingsCardRowInset);
 		rowStyle->iconLeft = st::settingsCardRowInset;

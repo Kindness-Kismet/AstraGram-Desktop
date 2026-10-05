@@ -301,7 +301,7 @@ void Passkeys::setupContent() {
 						});
 					} else {
 						const auto w = button->width();
-						st::settingsIconPasskeys.paint(p, iconLeft, iconTop, w);
+						st::settingsIconPasskeys.paint(p, iconLeft, iconTop, w, st::windowFg->c);
 					}
 					const auto textLeft = st::settingsCardSectionButton.padding.left();
 					const auto textWidth = button->width() - textLeft

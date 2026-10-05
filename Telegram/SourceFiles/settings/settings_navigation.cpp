@@ -143,7 +143,7 @@ protected:
 			p.drawRoundedRect(rect(), scaled(10), scaled(10));
 		}
 		_icon.paint(p, scaled(10), (height() - _icon.height()) / 2,
-			width(), (_active ? st::windowFgActive : st::menuIconFg)->c);
+			width(), (_active ? st::windowFgActive : st::windowFg)->c);
 		p.setFont(st::normalFont);
 		p.setPen(_active ? st::windowFgActive : st::windowFg);
 		const auto left = scaled(44);

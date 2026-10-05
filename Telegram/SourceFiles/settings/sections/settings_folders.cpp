@@ -350,9 +350,7 @@ void FilterRowButton::paintEvent(QPaintEvent *e) {
 			0,
 			0,
 			width(),
-			(over
-				? st::activeButtonBgOver
-				: st::activeButtonBg)->c);
+			st::windowFg->c);
 	}
 }
 

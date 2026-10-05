@@ -337,9 +337,6 @@ Ui::SettingsButton *SectionBuilder::addButton(ButtonArgs &&args) {
 	const auto &st = args.st ? *args.st : st::settingsButton;
 	auto iconForSearch = IconDescriptor{ args.icon.icon };
 	const auto hasIcon = bool(args.icon);
-	if (_cardRoot && hasIcon && !args.icon.color) {
-		args.icon.color = &st::menuIconFg;
-	}
 	// id 先拷贝：ControlArgs 构造时会 move 走 args.id，而 factory 引用捕获 args
 	const auto id = args.id;
 	const auto factory = [&](not_null<Ui::VerticalLayout*> container) {

@@ -2074,7 +2074,7 @@ void SetupChatListQuickAction(
 				? st::menuIconDelete
 				: (value == Dialogs::Ui::QuickDialogAction::Archive)
 				? st::menuIconArchive
-				: st::menuIconShowInFolder).paintInCenter(p, icon->rect());
+				: st::menuIconShowInFolder).paintInCenter(p, icon->rect(), st::windowFg->c);
 		}, icon->lifetime());
 	}
 
