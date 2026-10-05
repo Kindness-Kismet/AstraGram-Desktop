@@ -86,6 +86,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "iv/editor/iv_editor_session.h"
 #include "window/window_separate_id.h"
 #include "window/window_session_controller.h"
+#include "settings/settings_common_session.h"
 #include "window/window_controller.h"
 #include "settings/sections/settings_advanced.h"
 #include "settings/sections/settings_premium.h"
@@ -2131,7 +2132,7 @@ void Filler::fillArchiveActions() {
 
 	Settings::PreloadArchiveSettings(&controller->session());
 	const auto openSettings = [=] {
-		controller->showSettings(Settings::ArchiveId());
+		Settings::ShowSettingsLayer(controller, Settings::ArchiveId());
 	};
 	_addAction(
 		tr::lng_context_archive_settings(tr::now),

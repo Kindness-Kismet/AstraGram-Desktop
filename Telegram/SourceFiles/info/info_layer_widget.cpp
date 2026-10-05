@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/info_layer_widget.h"
 
 #include "info/info_content_widget.h"
+#include "info/info_controller.h"
 #include "info/info_top_bar.h"
 #include "info/info_memento.h"
 #include "ui/rp_widget.h"
@@ -170,7 +171,9 @@ void LayerWidget::parentResized() {
 
 	auto parentSize = parentWidget()->size();
 	auto parentWidth = parentSize.width();
-	if (parentWidth < MinimalSupportedWidth()) {
+	const auto settings = _contentWrap->controller()->section().type()
+		== Section::Type::Settings;
+	if (parentWidth < MinimalSupportedWidth() && !settings) {
 		Ui::FocusPersister persister(this);
 		restoreFloatPlayerDelegate();
 		unregisterActiveLayerSection();

@@ -1044,7 +1044,7 @@ void BuildConfirmationExtensions(SectionBuilder &builder) {
 		.title = tr::lng_settings_edit_extensions(),
 		.st = &st::settingsButtonNoIcon,
 		.onClick = [=] {
-			controller->showSettings(FileConfirmationsId());
+			ShowSettingsLayer(controller, FileConfirmationsId());
 		},
 		.keywords = { u"extensions"_q, u"files"_q, u"confirmations"_q },
 	});

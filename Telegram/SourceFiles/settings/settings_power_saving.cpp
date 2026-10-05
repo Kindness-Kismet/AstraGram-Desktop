@@ -125,7 +125,7 @@ void ShowPowerSaving(
 		controller->setHighlightControlId(
 			u"power/flags/"_q + QString::number(highlightFlags.value()));
 	}
-	controller->showSettings(PowerSavingId());
+	ShowSettingsLayer(controller, PowerSavingId());
 }
 
 void PowerSavingBox(

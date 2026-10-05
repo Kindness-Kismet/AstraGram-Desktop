@@ -532,7 +532,7 @@ Type AutoDownloadId(Source source) {
 void ShowAutoDownload(
 		not_null<Window::SessionController*> controller,
 		Source source) {
-	controller->showSettings(AutoDownloadId(source));
+	ShowSettingsLayer(controller, AutoDownloadId(source));
 }
 
 namespace {

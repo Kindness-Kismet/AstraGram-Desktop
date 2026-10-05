@@ -7,6 +7,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/settings_common_session.h"
 
+#include "info/info_controller.h"
+#include "info/info_layer_widget.h"
+#include "info/info_memento.h"
+#include "main/main_session.h"
+#include "window/window_session_controller.h"
+
 #include "settings/cloud_password/settings_cloud_password_email_confirm.h"
 #include "settings/settings_experimental.h"
 #include "settings/sections/settings_chat.h"
@@ -17,6 +23,17 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 
 namespace Settings {
+
+void ShowSettingsLayer(
+		not_null<Window::SessionController*> controller,
+		Type type) {
+	auto memento = Info::Memento(
+		Info::Settings::Tag{ controller->session().user() },
+		Info::Section(type));
+	controller->showSpecialLayer(object_ptr<Info::LayerWidget>(
+		controller,
+		&memento));
+}
 
 bool HasMenu(Type type) {
 	return (type == ::Settings::CloudPasswordEmailConfirmId())

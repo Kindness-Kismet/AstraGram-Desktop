@@ -1178,7 +1178,7 @@ void BuildArchiveSection(SectionBuilder &builder) {
 		.icon = { &st::menuIconArchive },
 		.onClick = [=] {
 			if (controller) {
-				controller->showSettings(ArchiveId());
+				ShowSettingsLayer(controller, ArchiveId());
 			}
 		},
 		.keywords = { u"archive"_q, u"settings"_q, u"folder"_q },
@@ -1871,7 +1871,7 @@ void SetupArchive(
 		st::settingsButton,
 		{ &st::menuIconArchive }
 	)->addClickHandler([=] {
-		controller->showSettings(ArchiveId());
+		ShowSettingsLayer(controller, ArchiveId());
 	});
 }
 

@@ -242,7 +242,7 @@ void ShowLanguageSettings(
 	if (!highlightId.isEmpty()) {
 		controller->setHighlightControlId(highlightId);
 	}
-	controller->showSettings(LanguageId());
+	ShowSettingsLayer(controller, LanguageId());
 }
 
 void SetupLanguageTranslationControls(

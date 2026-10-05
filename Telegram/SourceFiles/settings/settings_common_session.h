@@ -81,4 +81,8 @@ public:
 
 bool HasMenu(Type type);
 
+void ShowSettingsLayer(
+	not_null<Window::SessionController*> controller,
+	Type type);
+
 } // namespace Settings
