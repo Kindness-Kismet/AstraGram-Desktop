@@ -41,7 +41,6 @@ protected:
 
 private:
 	void showCategory(Type type);
-	void showSearch(const QString &query);
 	void backFromCategory();
 	void closeWorkspace();
 	void updateLayout();

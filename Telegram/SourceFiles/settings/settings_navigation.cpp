@@ -36,7 +36,6 @@
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/menu/menu_add_action_callback.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
-#include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/wrap/vertical_layout.h"
@@ -156,7 +155,6 @@ Navigation::Navigation(
 	QWidget *parent,
 	not_null<Window::SessionController*> controller,
 	Fn<void(Type)> navigate,
-	Fn<void(QString)> search,
 	Fn<void()> close)
 : RpWidget(parent)
 , _navigate(std::move(navigate))
@@ -197,32 +195,6 @@ Navigation::Navigation(
 		_list, controller->session().user()), { scaled(8), scaled(8), scaled(8), scaled(8) });
 	account->setObjectName(u"settings-account-header"_q);
 	account->setClickedCallback([=] { _navigate(InformationId()); });
-	const auto fieldStyle = lifetime().make_state<style::InputField>(st::defaultMultiSelectSearchField);
-	fieldStyle->textBg = fieldStyle->textBgActive = st::cardBg;
-	fieldStyle->textMargins = { scaled(12), scaled(9), scaled(12), scaled(7) };
-	fieldStyle->placeholderMargins = {};
-	fieldStyle->border = fieldStyle->borderActive = st::lineWidth;
-	fieldStyle->borderRadius = scaled(10);
-	fieldStyle->borderFg = st::strokeFg;
-	fieldStyle->borderFgActive = st::windowBgActive;
-	fieldStyle->heightMin = fieldStyle->heightMax = scaled(40);
-	const auto field = _list->add(object_ptr<Ui::InputField>(
-		_list, *fieldStyle, tr::extras_SettingsSearch()),
-		{ scaled(12), scaled(4), scaled(12), scaled(8) });
-	field->setObjectName(u"settings-navigation-search"_q);
-	field->submits() | rpl::on_next([=] { search(field->getLastText()); }, field->lifetime());
-	// 保留完整搜索索引，点击搜索按钮或回车进入结果页。
-	const auto searchStyle = lifetime().make_state<style::IconButton>(st::infoTopBarSearch);
-	searchStyle->width = searchStyle->height = scaled(38);
-	searchStyle->rippleAreaSize = scaled(32);
-	searchStyle->rippleAreaPosition = { scaled(3), scaled(3) };
-	const auto searchButton = Ui::CreateChild<Ui::IconButton>(field, *searchStyle);
-	field->setAdditionalMargins({ 0, 0, searchButton->width(), 0 });
-	searchButton->setObjectName(u"settings-navigation-search-submit"_q);
-	searchButton->setClickedCallback([=] { search(field->getLastText()); });
-	field->sizeValue() | rpl::on_next([=](QSize size) {
-		searchButton->moveToRight(0, (size.height() - searchButton->height()) / 2);
-	}, field->lifetime());
 
 	addSeparator();
 	addItem(tr::extras_Preferences(), st::menuIconPremium, u"extras"_q, ExtrasMain::Id());

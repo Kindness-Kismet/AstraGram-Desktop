@@ -6,11 +6,9 @@
 #include "info/info_controller.h"
 #include "info/info_memento.h"
 #include "info/info_wrap_widget.h"
-#include "info/settings/info_settings_widget.h"
 #include "main/main_session.h"
 #include "settings/sections/settings_main.h"
 #include "settings/settings_navigation.h"
-#include "settings/settings_search.h"
 #include "ui/widgets/buttons.h"
 #include "window/window_session_controller.h"
 #include "styles/style_layers.h"
@@ -36,7 +34,6 @@ Workspace::Workspace(
 : Window::SectionWidget(parent, controller)
 , _navigation(this, controller,
 	[=](Type type) { showCategory(type); },
-	[=](QString query) { showSearch(query); },
 	[=] { closeWorkspace(); })
 , _content(nullptr)
 , _listShown(memento->settingsNavigationState()
@@ -75,20 +72,6 @@ void Workspace::showCategory(Type type) {
 		_listShown = false;
 		_category = type;
 		_content->controller()->showSettings(type,
-			Window::SectionShow(Window::SectionShow::Way::ClearStack));
-		updateLayout();
-		_content->setInnerFocus();
-	});
-}
-
-void Workspace::showSearch(const QString &query) {
-	_content->checkBeforeClose([=] {
-		_listShown = false;
-		auto state = std::make_shared<Info::Settings::Memento>(
-			controller()->session().user(), Search::Id());
-		state->setSectionState(SearchSectionState{ .query = query });
-		auto memento = Info::Memento({ state });
-		_content->showInternal(&memento,
 			Window::SectionShow(Window::SectionShow::Way::ClearStack));
 		updateLayout();
 		_content->setInnerFocus();

@@ -11,7 +11,6 @@ class SessionController;
 namespace Ui {
 class ScrollArea;
 class VerticalLayout;
-class InputField;
 } // namespace Ui
 
 namespace Settings {
@@ -22,7 +21,6 @@ public:
 		QWidget *parent,
 		not_null<Window::SessionController*> controller,
 		Fn<void(Type)> navigate,
-		Fn<void(QString)> search,
 		Fn<void()> close);
 	~Navigation();
 
