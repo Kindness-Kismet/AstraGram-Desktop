@@ -22,16 +22,11 @@ namespace style {
 struct DialogRow;
 } // namespace style
 
-namespace Ui {
-class RippleAnimation;
-} // namespace Ui
-
 namespace Dialogs::Ui {
 using namespace ::Ui;
 class RowPainter;
 class VideoUserpic;
 struct PaintContext;
-struct TopicJumpCache;
 } // namespace Dialogs::Ui
 
 namespace Dialogs {
@@ -55,24 +50,12 @@ public:
 		const Ui::PaintContext &context,
 		bool hasUnreadBadgesAbove) const;
 
-	void addRipple(QPoint origin, QSize size, Fn<void()> updateCallback);
-	virtual void stopLastRipple();
-	virtual void clearRipple();
-
-	void paintRipple(
-		QPainter &p,
-		int x,
-		int y,
-		int outerWidth,
-		const QColor *colorOverride = nullptr) const;
-
 	[[nodiscard]] Ui::PeerUserpicView &userpicView() const {
 		return _userpic;
 	}
 
 private:
 	mutable Ui::PeerUserpicView _userpic;
-	mutable std::unique_ptr<Ui::RippleAnimation> _ripple;
 
 };
 
@@ -113,14 +96,6 @@ public:
 		bool hasUnreadBadgesAbove) const final override;
 
 	[[nodiscard]] bool lookupIsInTopicJump(int x, int y) const;
-	void stopLastRipple() override;
-	void clearRipple() override;
-	void addTopicJumpRipple(
-		QPoint origin,
-		not_null<Ui::TopicJumpCache*> topicJumpCache,
-		Fn<void()> updateCallback);
-	void clearTopicJumpRipple();
-	[[nodiscard]] bool topicJumpRipple() const;
 
 	[[nodiscard]] Key key() const {
 		return _id;
@@ -213,7 +188,6 @@ private:
 	int _height = 0;
 	uint32 _index : 30 = 0;
 	uint32 _cornerBadgeShown : 1 = 0;
-	uint32 _topicJumpRipple : 1 = 0;
 
 };
 

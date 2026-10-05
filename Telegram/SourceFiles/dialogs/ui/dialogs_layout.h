@@ -51,7 +51,6 @@ struct TopicJumpCache {
 	TopicJumpCorners corners;
 	TopicJumpCorners over;
 	TopicJumpCorners selected;
-	TopicJumpCorners rippleMask;
 };
 
 struct PaintContext {

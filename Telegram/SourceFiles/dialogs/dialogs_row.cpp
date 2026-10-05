@@ -11,7 +11,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/color_contrast.h"
 #include "ui/effects/credits_graphics.h"
 #include "ui/effects/outline_segments.h"
-#include "ui/effects/ripple_animation.h"
 #include "ui/effects/ttl_icon.h"
 #include "ui/effects/round_checkbox.h"
 #include "ui/image/image_prepare.h"
@@ -348,34 +347,6 @@ bool Row::CornerLayersManager::isDisplayedNone() const {
 BasicRow::BasicRow() = default;
 BasicRow::~BasicRow() = default;
 
-// 会话列表行不画点击水波纹,选中态只靠背景色区分。
-void BasicRow::addRipple(QPoint, QSize, Fn<void()>) {
-}
-
-void BasicRow::clearRipple() {
-	_ripple = nullptr;
-}
-
-void BasicRow::stopLastRipple() {
-	if (_ripple) {
-		_ripple->lastStop();
-	}
-}
-
-void BasicRow::paintRipple(
-		QPainter &p,
-		int x,
-		int y,
-		int outerWidth,
-		const QColor *colorOverride) const {
-	if (_ripple) {
-		_ripple->paint(p, x, y, outerWidth, colorOverride);
-		if (_ripple->empty()) {
-			_ripple.reset();
-		}
-	}
-}
-
 void BasicRow::paintUserpic(
 		Painter &p,
 		not_null<Entry*> entry,
@@ -392,9 +363,7 @@ Row::Row(Key key, int index, int top) : _id(key), _top(top), _index(index) {
 	}
 }
 
-Row::~Row() {
-	clearTopicJumpRipple();
-}
+Row::~Row() = default;
 
 const style::DialogRow &Row::ComputeSt(
 		not_null<const Entry*> entry,
@@ -887,43 +856,6 @@ void Row::paintUserpic(
 bool Row::lookupIsInTopicJump(int x, int y) const {
 	const auto history = this->history();
 	return history && history->lastItemDialogsView().isInTopicJump(x, y);
-}
-
-void Row::stopLastRipple() {
-	BasicRow::stopLastRipple();
-	const auto history = this->history();
-	const auto view = history ? &history->lastItemDialogsView() : nullptr;
-	if (view) {
-		view->stopLastRipple();
-	}
-}
-
-void Row::clearRipple() {
-	BasicRow::clearRipple();
-	clearTopicJumpRipple();
-}
-
-// 话题跳转块同样不画水波纹,保持行内点击反馈一致。
-void Row::addTopicJumpRipple(
-		QPoint,
-		not_null<Ui::TopicJumpCache*>,
-		Fn<void()>) {
-}
-
-void Row::clearTopicJumpRipple() {
-	if (!_topicJumpRipple) {
-		return;
-	}
-	const auto history = this->history();
-	const auto view = history ? &history->lastItemDialogsView() : nullptr;
-	if (view) {
-		view->clearRipple();
-	}
-	_topicJumpRipple = 0;
-}
-
-bool Row::topicJumpRipple() const {
-	return _topicJumpRipple != 0;
 }
 
 FakeRow::FakeRow(

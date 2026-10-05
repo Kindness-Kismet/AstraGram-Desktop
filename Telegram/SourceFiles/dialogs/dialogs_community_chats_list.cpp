@@ -205,9 +205,6 @@ void CommunityChatsList::setPressed(int pressed) {
 	if (_pressed == pressed) {
 		return;
 	}
-	if (const auto row = _view.rowAt(_pressed)) {
-		row->stopLastRipple();
-	}
 	_pressed = pressed;
 }
 
@@ -221,14 +218,6 @@ void CommunityChatsList::mousePressEvent(QMouseEvent *e) {
 	}
 	updateSelected(e->pos());
 	setPressed(_selected);
-	if (const auto row = _view.rowAt(_pressed)) {
-		const auto top = _view.rowTop(_pressed);
-		const auto height = row->height();
-		row->addRipple(
-			e->pos() - QPoint(0, top),
-			QSize(width(), height),
-			[=] { update(0, top, width(), height); });
-	}
 }
 
 void CommunityChatsList::mouseReleaseEvent(QMouseEvent *e) {

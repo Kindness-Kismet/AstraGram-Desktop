@@ -22,7 +22,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/power_saving.h"
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
-#include "ui/effects/ripple_animation.h"
 #include "styles/style_dialogs.h"
 
 namespace Dialogs::Ui {
@@ -240,12 +239,8 @@ void TopicsView::paint(
 	}
 }
 
-bool TopicsView::changeTopicJumpGeometry(JumpToLastGeometry geometry) {
-	if (_lastTopicJumpGeometry != geometry) {
-		_lastTopicJumpGeometry = geometry;
-		return true;
-	}
-	return false;
+void TopicsView::changeTopicJumpGeometry(JumpToLastGeometry geometry) {
+	_lastTopicJumpGeometry = geometry;
 }
 
 void TopicsView::clearTopicJumpGeometry() {
@@ -255,69 +250,6 @@ void TopicsView::clearTopicJumpGeometry() {
 bool TopicsView::isInTopicJumpArea(int x, int y) const {
 	return _lastTopicJumpGeometry.area1.contains(x, y)
 		|| _lastTopicJumpGeometry.area2.contains(x, y);
-}
-
-void TopicsView::addTopicJumpRipple(
-		QPoint origin,
-		not_null<TopicJumpCache*> topicJumpCache,
-		Fn<void()> updateCallback) {
-	auto mask = topicJumpRippleMask(topicJumpCache);
-	if (mask.isNull()) {
-		return;
-	}
-	_ripple = std::make_unique<Ui::RippleAnimation>(
-		st::dialogsRipple,
-		std::move(mask),
-		std::move(updateCallback));
-	_ripple->add(origin);
-}
-
-void TopicsView::stopLastRipple() {
-	if (_ripple) {
-		_ripple->lastStop();
-	}
-}
-
-void TopicsView::clearRipple() {
-	_ripple = nullptr;
-}
-
-void TopicsView::paintRipple(
-		QPainter &p,
-		int x,
-		int y,
-		int outerWidth,
-		const QColor *colorOverride) const {
-	if (_ripple) {
-		_ripple->paint(p, x, y, outerWidth, colorOverride);
-		if (_ripple->empty()) {
-			_ripple.reset();
-		}
-	}
-}
-
-QImage TopicsView::topicJumpRippleMask(
-		not_null<TopicJumpCache*> topicJumpCache) const {
-	const auto &st = st::forumDialogRow;
-	const auto area1 = _lastTopicJumpGeometry.area1;
-	if (area1.isEmpty()) {
-		return QImage();
-	}
-	const auto area2 = _lastTopicJumpGeometry.area2;
-	const auto drawer = [&](QPainter &p) {
-		const auto white = style::complex_color([] { return Qt::white; });
-		// p.setOpacity(.1);
-		FillJumpToLastPrepared(p, {
-			.st = &st,
-			.corners = &topicJumpCache->rippleMask,
-			.bg = white.color(),
-			.prepared = _lastTopicJumpGeometry,
-		});
-	};
-	return Ui::RippleAnimation::MaskByDrawer(
-		QRect(0, 0, 1, 1).united(area1).united(area2).size(),
-		false,
-		drawer);
 }
 
 JumpToLastGeometry FillJumpToLastBg(QPainter &p, JumpToLastBg context) {

@@ -337,30 +337,6 @@ bool MessageView::isInTopicJump(int x, int y) const {
 	return _topics && _topics->isInTopicJumpArea(x, y);
 }
 
-void MessageView::addTopicJumpRipple(
-		QPoint origin,
-		not_null<TopicJumpCache*> topicJumpCache,
-		Fn<void()> updateCallback) {
-	if (_topics) {
-		_topics->addTopicJumpRipple(
-			origin,
-			topicJumpCache,
-			std::move(updateCallback));
-	}
-}
-
-void MessageView::stopLastRipple() {
-	if (_topics) {
-		_topics->stopLastRipple();
-	}
-}
-
-void MessageView::clearRipple() {
-	if (_topics) {
-		_topics->clearRipple();
-	}
-}
-
 int MessageView::countWidth() const {
 	auto result = 0;
 	if (!_senderCache.isEmpty()) {
@@ -580,13 +556,7 @@ void MessageView::paintJumpToLast(
 		});
 		p.setOpacity(1.);
 	}
-	if (!_topics->changeTopicJumpGeometry(geometry)) {
-		auto color = st::dialogsTextFg->c;
-		color.setAlpha(color.alpha() / 10);
-		if (color.alpha() > 0) {
-			_topics->paintRipple(p, 0, 0, context.width, &color);
-		}
-	}
+	_topics->changeTopicJumpGeometry(geometry);
 }
 
 HistoryView::ItemPreview PreviewWithSender(

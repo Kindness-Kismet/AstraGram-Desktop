@@ -421,7 +421,6 @@ enum class Flag {
 	RepliesMessages  = 0x010,
 	VerifyCodes      = 0x020,
 	AllowUserOnline  = 0x040,
-	TopicJumpRipple  = 0x080,
 	HiddenAuthor     = 0x100,
 	MyNotes          = 0x200,
 };
@@ -509,17 +508,6 @@ void PaintRow(
 			st::lineWidth,
 			st::windowDividerFg);
 	}
-	if (!(flags & Flag::TopicJumpRipple)) {
-		auto ripple = context.active
-			? st::dialogsRippleBgActive
-			: st::dialogsRippleBg;
-		auto path = QPainterPath();
-		path.addRoundedRect(highlight, radius, radius);
-		p.setClipPath(path);
-		row->paintRipple(p, 0, 0, context.width, &ripple->c);
-		p.setClipping(false);
-	}
-
 	if (flags & Flag::SavedMessages) {
 		EmptyUserpic::PaintSavedMessages(
 			p,
@@ -1227,8 +1215,7 @@ void RowPainter::Paint(
 			: Flag(0))
 		| ((sublist && from->isSavedHiddenAuthor())
 			? Flag::HiddenAuthor
-			: Flag(0))
-		| (row->topicJumpRipple() ? Flag::TopicJumpRipple : Flag(0));
+			: Flag(0));
 	const auto paintItemCallback = [&](int nameleft, int namewidth) {
 		const auto texttop = context.st->textTop;
 		const auto availableWidth = PaintWideCounter(
@@ -1460,8 +1447,6 @@ void PaintCollapsedRow(
 	p.fillRect(
 		QRect{ 0, 0, context.width, st::dialogsImportantBarHeight },
 		context.selected ? st::dialogsBgOver : context.currentBg);
-
-	row.paintRipple(p, 0, 0, context.width);
 
 	const auto unreadTop = (st::dialogsImportantBarHeight - st::dialogsUnreadHeight) / 2;
 	if (!context.narrow || !folder) {

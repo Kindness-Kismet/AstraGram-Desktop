@@ -38,7 +38,6 @@ namespace Dialogs::Ui {
 using namespace ::Ui;
 
 struct PaintContext;
-struct TopicJumpCache;
 class TopicsView;
 
 [[nodiscard]] TextWithEntities DialogsPreviewText(TextWithEntities text);
@@ -78,12 +77,6 @@ public:
 	void resetLastPaintGeometry();
 
 	[[nodiscard]] bool isInTopicJump(int x, int y) const;
-	void addTopicJumpRipple(
-		QPoint origin,
-		not_null<TopicJumpCache*> topicJumpCache,
-		Fn<void()> updateCallback);
-	void stopLastRipple();
-	void clearRipple();
 
 private:
 	struct LoadingContext;

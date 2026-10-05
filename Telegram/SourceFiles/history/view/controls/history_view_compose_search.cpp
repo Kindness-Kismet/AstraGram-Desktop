@@ -60,8 +60,6 @@ public:
 	[[nodiscard]] FullMsgId fullId() const;
 	[[nodiscard]] not_null<Dialogs::FakeRow*> fakeRow() const;
 
-	void elementsStopLastRipple() override;
-
 private:
 	const std::unique_ptr<Dialogs::FakeRow> _fakeRow;
 
@@ -80,10 +78,6 @@ FullMsgId Row::fullId() const {
 
 not_null<Dialogs::FakeRow*> Row::fakeRow() const {
 	return _fakeRow.get();
-}
-
-void Row::elementsStopLastRipple() {
-	_fakeRow->stopLastRipple();
 }
 
 class ListController final : public PeerListController {
@@ -175,14 +169,11 @@ bool ListController::customRowSelectionPoint(
 	return true;
 }
 
+// 搜索结果沿用会话行的无水波纹样式。
 void ListController::customRowAddRipple(
-		not_null<PeerListRow*> row,
-		QPoint point,
-		Fn<void()> updateCallback) {
-	static_cast<Row*>(row.get())->fakeRow()->addRipple(
-		point,
-		QSize(_content->width(), st::dialogsRowHeight),
-		std::move(updateCallback));
+		not_null<PeerListRow*>,
+		QPoint,
+		Fn<void()>) {
 }
 
 void ListController::loadMoreRows() {

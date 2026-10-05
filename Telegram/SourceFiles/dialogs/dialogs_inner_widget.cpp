@@ -1476,7 +1476,6 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 					const auto &result = _hashtagResults[from];
 					bool selected = (from == (isPressed() ? _hashtagPressed : _hashtagSelected));
 					p.fillRect(0, 0, fullWidth, st::mentionHeight, selected ? st::mentionBgOver : currentBg());
-					result->row.paintRipple(p, 0, 0, fullWidth);
 					const auto &tag = result->tag;
 					if (selected) {
 						int skip = (st::mentionHeight - st::smallCloseIconOver.height()) / 2;
@@ -1960,14 +1959,6 @@ void InnerWidget::paintPeerSearchResult(
 		p.setPen(Qt::NoPen);
 		p.setBrush(context.active ? st::dialogsBgActive : st::dialogsBgOver);
 		p.drawRoundedRect(highlight, radius, radius);
-	}
-	if (!context.active) {
-		p.save();
-		auto path = QPainterPath();
-		path.addRoundedRect(highlight, radius, radius);
-		p.setClipPath(path, Qt::IntersectClip);
-		result->row.paintRipple(p, 0, 0, context.width);
-		p.restore();
 	}
 
 	auto peer = result->peer;
@@ -2590,12 +2581,7 @@ void InnerWidget::mousePressEvent(QMouseEvent *e) {
 		scheduleChatPreview(e->globalPos());
 	}
 
-	if (base::in_range(_collapsedSelected, 0, _collapsedRows.size())) {
-		auto row = &_collapsedRows[_collapsedSelected]->row;
-		row->addRipple(e->pos(), QSize(width(), st::dialogsImportantBarHeight), [this, index = _collapsedSelected] {
-			update(0, (index * st::dialogsImportantBarHeight), width(), st::dialogsImportantBarHeight);
-		});
-	} else if (_pressed) {
+	if (_pressed) {
 		auto row = _pressed;
 		const auto weakThis = base::make_weak(this);
 		const auto weakEntry = base::make_weak(row->entry());
@@ -2609,36 +2595,18 @@ void InnerWidget::mousePressEvent(QMouseEvent *e) {
 		};
 		const auto origin = e->pos()
 			- QPoint(0, dialogsOffset() + _pressed->top());
-		if ((_pressButton == Qt::MiddleButton)
-			&& addQuickActionRipple(row, updateCallback)) {
-		} else if (addRightButtonRipple(origin, updateCallback)) {
-		} else if (_pressedTopicJump) {
-			row->addTopicJumpRipple(
-				origin,
-				_topicJumpCache.get(),
-				updateCallback);
-		} else {
-			row->clearTopicJumpRipple();
-			row->addRipple(
-				origin,
-				QSize(width(), _pressed->height()),
-				updateCallback);
+		if (_pressButton != Qt::MiddleButton
+			|| !addQuickActionRipple(row, updateCallback)) {
+			addRightButtonRipple(origin, updateCallback);
 		}
 		_dragStart = e->pos();
-	} else if (base::in_range(_hashtagPressed, 0, _hashtagResults.size()) && !_hashtagDeletePressed) {
-		auto row = &_hashtagResults[_hashtagPressed]->row;
-		const auto origin = e->pos() - QPoint(0, hashtagsOffset() + _hashtagPressed * st::mentionHeight);
-		row->addRipple(origin, QSize(width(), st::mentionHeight), [this, index = _hashtagPressed] {
-			update(0, hashtagsOffset() + index * st::mentionHeight, width(), st::mentionHeight);
-		});
 	} else if (base::in_range(_filteredPressed, 0, _filterResults.size())) {
 		const auto &result = _filterResults[_filteredPressed];
 		const auto row = result.row;
 		const auto filterId = _filterId;
 		const auto origin = e->pos()
 			- QPoint(0, filteredOffset() + result.top);
-		// The ripple can be parked in _rightButtons, which is owned by us and
-		// outlives the Row, so hold the row weakly rather than raw.
+		// 右侧按钮可能比会话行存活更久，回调只持有弱引用。
 		const auto weakThis = base::make_weak(this);
 		const auto weakRow = base::make_weak(row);
 		const auto updateCallback = [weakThis, weakRow, filterId] {
@@ -2648,63 +2616,15 @@ void InnerWidget::mousePressEvent(QMouseEvent *e) {
 				that->repaintDialogRow(filterId, strong);
 			}
 		};
-		if (addRightButtonRipple(origin, updateCallback)) {
-		} else if (_pressedTopicJump) {
-			row->addTopicJumpRipple(
-				origin,
-				_topicJumpCache.get(),
-				updateCallback);
-		} else {
-			row->clearTopicJumpRipple();
-			row->addRipple(
-				origin,
-				QSize(width(), row->height()),
-				updateCallback);
-		}
-	} else if (base::in_range(_idSearchPressed, 0, _idSearchResults.size())) {
-		auto &result = _idSearchResults[_idSearchPressed];
-		const auto row = &result->row;
-		const auto origin = e->pos()
-			- QPoint(0, idSearchOffset() + _idSearchPressed * st::dialogsRowHeight);
-		const auto updateCallback = [this, peer = result->peer] {
-			updateSearchResult(peer);
-		};
-		row->addRipple(
-			origin,
-			QSize(width(), st::dialogsRowHeight),
-			updateCallback);
+		addRightButtonRipple(origin, updateCallback);
 	} else if (base::in_range(_peerSearchPressed, 0, _peerSearchResults.size())) {
 		auto &result = _peerSearchResults[_peerSearchPressed];
-		const auto row = &result->row;
 		const auto origin = e->pos()
 			- QPoint(0, peerSearchOffset() + _peerSearchPressed * st::dialogsRowHeight);
 		const auto updateCallback = [this, peer = result->peer] {
 			updateSearchResult(peer);
 		};
-		if (addRightButtonRipple(origin, updateCallback)) {
-		} else {
-			row->addRipple(
-				origin,
-				QSize(width(), st::dialogsRowHeight),
-				updateCallback);
-		}
-	} else if (base::in_range(_searchedPressed, 0, _searchResults.size())) {
-		const auto &row = _searchResults[_searchedPressed];
-		row->addRipple(
-			e->pos() - QPoint(0, searchedOffset() + _searchedPressed * _st->height),
-			QSize(width(), _st->height),
-			row->repaint());
-	} else if (_communityPressed >= 0) {
-		if (const auto row = communityRowAt(_communityPressed)) {
-			const auto top = communityRowAbsoluteTop(_communityPressed);
-			const auto height = row->height();
-			row->addRipple(
-				e->pos() - QPoint(0, top),
-				QSize(width(), height),
-				[=] {
-					update(0, top, width(), height);
-				});
-		}
+		addRightButtonRipple(origin, updateCallback);
 	}
 	ClickHandler::pressed();
 	if (anim::Disabled()
@@ -3240,12 +3160,7 @@ void InnerWidget::mousePressReleased(
 }
 
 void InnerWidget::setCollapsedPressed(int pressed) {
-	if (_collapsedPressed != pressed) {
-		if (_collapsedPressed >= 0) {
-			_collapsedRows[_collapsedPressed]->row.stopLastRipple();
-		}
-		_collapsedPressed = pressed;
-	}
+	_collapsedPressed = pressed;
 }
 
 void InnerWidget::setPressed(
@@ -3255,9 +3170,6 @@ void InnerWidget::setPressed(
 	if ((_pressed != pressed)
 		|| (pressed && _pressedTopicJump != pressedTopicJump)
 		|| (pressed && _pressedRightButton != pressedRightButton)) {
-		if (_pressed) {
-			_pressed->stopLastRipple();
-		}
 		if (_pressedRightButtonData && _pressedRightButtonData->ripple) {
 			_pressedRightButtonData->ripple->lastStop();
 		}
@@ -3290,9 +3202,6 @@ void InnerWidget::clearPressed() {
 }
 
 void InnerWidget::setHashtagPressed(int pressed) {
-	if (base::in_range(_hashtagPressed, 0, _hashtagResults.size())) {
-		_hashtagResults[_hashtagPressed]->row.stopLastRipple();
-	}
 	_hashtagPressed = pressed;
 }
 
@@ -3303,9 +3212,6 @@ void InnerWidget::setFilteredPressed(
 	if (_filteredPressed != pressed
 		|| (pressed >= 0 && _pressedTopicJump != pressedTopicJump)
 		|| (pressed >= 0 && _pressedRightButton != pressedRightButton)) {
-		if (base::in_range(_filteredPressed, 0, _filterResults.size())) {
-			_filterResults[_filteredPressed].row->stopLastRipple();
-		}
 		if (_pressedRightButtonData && _pressedRightButtonData->ripple) {
 			_pressedRightButtonData->ripple->lastStop();
 		}
@@ -3337,9 +3243,6 @@ void InnerWidget::setFilteredPressed(
 void InnerWidget::setPeerSearchPressed(int pressed, bool pressedRightButton) {
 	if (_peerSearchPressed != pressed
 		|| (pressed >= 0 && _pressedRightButton != pressedRightButton)) {
-		if (base::in_range(_peerSearchPressed, 0, _peerSearchResults.size())) {
-			_peerSearchResults[_peerSearchPressed]->row.stopLastRipple();
-		}
 		if (_pressedRightButtonData && _pressedRightButtonData->ripple) {
 			_pressedRightButtonData->ripple->lastStop();
 		}
@@ -3357,32 +3260,18 @@ void InnerWidget::setPeerSearchPressed(int pressed, bool pressedRightButton) {
 }
 
 void InnerWidget::setIdSearchPressed(int pressed) {
-	if (_idSearchPressed != pressed) {
-		if (base::in_range(_idSearchPressed, 0, _idSearchResults.size())) {
-			_idSearchResults[_idSearchPressed]->row.stopLastRipple();
-		}
-		_idSearchPressed = pressed;
-	}
+	_idSearchPressed = pressed;
 }
 
 void InnerWidget::setPreviewPressed(int pressed) {
-	if (base::in_range(_previewPressed, 0, _previewResults.size())) {
-		_previewResults[_previewPressed]->stopLastRipple();
-	}
 	_previewPressed = pressed;
 }
 
 void InnerWidget::setSearchedPressed(int pressed) {
-	if (base::in_range(_searchedPressed, 0, _searchResults.size())) {
-		_searchResults[_searchedPressed]->stopLastRipple();
-	}
 	_searchedPressed = pressed;
 }
 
 void InnerWidget::setCommunityPressed(int pressed) {
-	if (const auto row = communityRowAt(_communityPressed)) {
-		row->stopLastRipple();
-	}
 	_communityPressed = pressed;
 }
 
