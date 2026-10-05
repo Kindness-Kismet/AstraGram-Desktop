@@ -25,6 +25,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_session_controller.h"
+#include "styles/style_basic.h"
 #include "styles/style_settings.h"
 
 // AyuGram includes
@@ -407,16 +408,14 @@ void SectionBuilder::addDivider() {
 }
 
 void SectionBuilder::addSkip() {
-	if (_cardRoot && !_scopeDepth) {
-		return;
-	}
-	v::match(_context, [&](const WidgetContext &ctx) {
-		Ui::AddSkip(ctx.container);
-	}, [](const SearchContext &) {
-	});
+	addSkip(st::defaultVerticalListSkip);
 }
 
 void SectionBuilder::addSkip(int height) {
+	// 卡片间距由卡片布局负责，不再叠加旧列表的段落留白。
+	if (_cardRoot && !_scopeDepth) {
+		return;
+	}
 	v::match(_context, [&](const WidgetContext &ctx) {
 		Ui::AddSkip(ctx.container, height);
 	}, [](const SearchContext &) {
