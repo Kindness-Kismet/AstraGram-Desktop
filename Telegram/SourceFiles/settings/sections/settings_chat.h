@@ -74,7 +74,6 @@ void SetupMessages(
 	not_null<Ui::VerticalLayout*> container,
 	HighlightRegistry *highlights = nullptr);
 
-
 void SetupSensitiveContent(
 	not_null<Window::SessionController*> controller,
 	not_null<Ui::VerticalLayout*> container,

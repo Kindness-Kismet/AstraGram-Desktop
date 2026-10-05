@@ -15,23 +15,17 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/timer_rpl.h"
 #include "settings/settings_builder.h"
 #include "settings/settings_card_layout.h"
-#include "settings/sections/settings_advanced.h"
-#include "settings/sections/settings_local_storage.h"
 #include "settings/sections/settings_main.h"
 #include "settings/sections/settings_privacy_security.h"
-#include "settings/settings_experimental.h"
 #include "settings/sections/settings_shortcuts.h"
 #include "boxes/abstract_box.h"
 #include "boxes/peers/edit_peer_color_box.h"
-#include "boxes/connection_box.h"
-#include "settings/sections/settings_auto_download.h"
 #include "settings/sections/settings_archive.h"
 #include "boxes/reactions_settings_box.h"
 #include "boxes/stickers_box.h"
 #include "ui/boxes/confirm_box.h"
 #include "boxes/background_box.h"
 #include "boxes/background_preview_box.h"
-#include "boxes/download_path_box.h"
 #include "dialogs/ui/dialogs_quick_action_context.h"
 #include "dialogs/dialogs_quick_action.h"
 #include "ui/boxes/choose_font_box.h"
@@ -59,16 +53,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_quick_action.h"
 #include "lang/lang_keys.h"
 #include "lottie/lottie_icon.h"
-#include "export/export_manager.h"
 #include "window/themes/window_theme.h"
 #include "window/themes/window_themes_embedded.h"
 #include "window/themes/window_theme_editor_box.h"
 #include "window/themes/window_themes_cloud_list.h"
 #include "window/window_adaptive.h"
 #include "window/window_session_controller.h"
+#include "window/section_widget.h"
 #include "window/window_controller.h"
-#include "info/downloads/info_downloads_widget.h"
-#include "info/info_memento.h"
 #include "storage/localstorage.h"
 #include "core/file_utilities.h"
 #include "core/application.h"
@@ -81,7 +73,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_user.h"
 #include "chat_helpers/emoji_sets_manager.h"
 #include "base/platform/base_platform_info.h"
-#include "base/call_delayed.h"
 #include "support/support_common.h"
 #include "support/support_templates.h"
 #include "main/main_session.h"
@@ -2127,8 +2118,9 @@ void SetupDefaultThemes(
 	using Check = Window::Theme::CloudListCheck;
 	using namespace Window::Theme;
 
-	const auto block = container->add(object_ptr<Ui::FixedHeightWidget>(
-		container));
+	const auto block = container->add(
+		object_ptr<Ui::FixedHeightWidget>(container),
+		QMargins(0, st::settingsThemesTopSkip, 0, 0));
 	const auto palette = Ui::CreateChild<ColorsPalette>(
 		container.get(),
 		container.get());
@@ -2449,7 +2441,6 @@ void SetupThemeOptions(
 		HighlightRegistry *highlights) {
 	using namespace Window::Theme;
 
-	Ui::AddSkip(container, st::settingsThemesTopSkip);
 	SetupDefaultThemes(&controller->window(), container, highlights);
 }
 
@@ -2500,7 +2491,7 @@ void SetupCloudThemes(
 		list->takeWidget(),
 		style::margins(
 			st::settingsButtonNoIcon.padding.left(),
-			0,
+			st::settingsThemesTopSkip,
 			st::settingsButtonNoIcon.padding.right(),
 			0));
 

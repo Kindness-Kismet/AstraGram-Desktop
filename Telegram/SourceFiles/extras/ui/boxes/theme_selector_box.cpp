@@ -49,7 +49,6 @@ void ThemeSelectorBox::setupContent() {
 		std::move(wrap2)));
 
 	AddSubsectionTitle(container, tr::lng_settings_themes());
-	AddSkip(container, st::settingsThemesTopSkip);
 
 	Settings::SetupDefaultThemes(&_controller->window(), container);
 
