@@ -699,27 +699,7 @@ rpl::producer<QString> Main::title() {
 }
 
 void Main::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
-	const auto &list = Core::App().domain().accounts();
-	if (list.size() < Core::App().domain().maxAccounts()) {
-		addAction(tr::lng_menu_add_account(tr::now), [=] {
-			Core::App().setActivePrimaryWindow(&controller()->window());
-			Core::App().domain().addActivated(MTP::Environment{});
-		}, &st::menuIconAddAccount);
-	}
-	if (!controller()->session().supportMode()) {
-		addAction(
-			tr::lng_settings_information(tr::now),
-			[=] { showOther(InformationId()); },
-			&st::menuIconEdit);
-	}
-	const auto window = &controller()->window();
-	const auto logout = addAction({
-		.text = tr::lng_settings_logout(tr::now),
-		.handler = [=] { window->showLogoutConfirmation(); },
-		.icon = &st::menuIconLeaveAttention,
-		.isAttention = true,
-	});
-	logout->setProperty("highlight-control-id", u"settings/log-out"_q);
+	FillAccountMenu(controller(), addAction, [=](Type type) { showOther(type); });
 }
 
 void Main::keyPressEvent(QKeyEvent *e) {
@@ -1260,6 +1240,33 @@ void OpenAskQuestionConfirm(not_null<Window::SessionController*> window) {
 		.cancelText = tr::lng_settings_faq_button(),
 		.strictCancel = true,
 	}));
+}
+
+void FillAccountMenu(
+		not_null<Window::SessionController*> controller,
+		const Ui::Menu::MenuCallback &addAction,
+		Fn<void(Type)> showOther) {
+	const auto &list = Core::App().domain().accounts();
+	if (list.size() < Core::App().domain().maxAccounts()) {
+		addAction(tr::lng_menu_add_account(tr::now), [=] {
+			Core::App().setActivePrimaryWindow(&controller->window());
+			Core::App().domain().addActivated(MTP::Environment{});
+		}, &st::menuIconAddAccount);
+	}
+	if (!controller->session().supportMode()) {
+		addAction(
+			tr::lng_settings_information(tr::now),
+			[=] { showOther(InformationId()); },
+			&st::menuIconEdit);
+	}
+	const auto window = &controller->window();
+	const auto logout = addAction({
+		.text = tr::lng_settings_logout(tr::now),
+		.handler = [=] { window->showLogoutConfirmation(); },
+		.icon = &st::menuIconLeaveAttention,
+		.isAttention = true,
+	});
+	logout->setProperty("highlight-control-id", u"settings/log-out"_q);
 }
 
 } // namespace Settings

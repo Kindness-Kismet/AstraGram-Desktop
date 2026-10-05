@@ -18,9 +18,18 @@ namespace Ui {
 class VerticalLayout;
 } // namespace Ui
 
+namespace Ui::Menu {
+struct MenuCallback;
+} // namespace Ui::Menu
+
 namespace Settings {
 
 [[nodiscard]] Type MainId();
+
+void FillAccountMenu(
+	not_null<Window::SessionController*> controller,
+	const Ui::Menu::MenuCallback &addAction,
+	Fn<void(Type)> showOther);
 
 void SetupLanguageButton(
 	not_null<Window::Controller*> window,

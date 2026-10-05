@@ -33,6 +33,9 @@
 #include "ui/userpic_view.h"
 #include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
+#include "ui/widgets/popup_menu.h"
+#include "ui/widgets/menu/menu_add_action_callback.h"
+#include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/scroll_area.h"
@@ -180,10 +183,22 @@ Navigation::Navigation(
 	exit->setObjectName(u"settings-close"_q);
 	exit->setAccessibleName(tr::lng_close(tr::now));
 	exit->setClickedCallback(std::move(close));
+	const auto accountMenu = Ui::CreateChild<Ui::IconButton>(
+		_header.data(), st::infoTopBarMenu);
+	accountMenu->setObjectName(u"settings-account-menu"_q);
+	accountMenu->setAccessibleName(tr::lng_sr_profile_menu(tr::now));
+	accountMenu->setClickedCallback([=] {
+		const auto menu = Ui::CreateChild<Ui::PopupMenu>(accountMenu, st::popupMenuWithIcons);
+		FillAccountMenu(controller, Ui::Menu::CreateAddActionCallback(menu), [=](Type type) {
+			_navigate(type);
+		});
+		menu->popup(accountMenu->mapToGlobal(QPoint(0, accountMenu->height())));
+	});
 	_header->sizeValue() | rpl::on_next([=](QSize size) {
 		home->setGeometry(scaled(20), 0, title->width(), size.height());
 		title->moveToLeft(0, (size.height() - title->height()) / 2);
 		exit->moveToRight(0, (size.height() - exit->height()) / 2);
+		accountMenu->moveToRight(exit->width(), (size.height() - accountMenu->height()) / 2);
 	}, lifetime());
 
 	_list = _scroll->setOwnedWidget(object_ptr<Ui::VerticalLayout>(this));
