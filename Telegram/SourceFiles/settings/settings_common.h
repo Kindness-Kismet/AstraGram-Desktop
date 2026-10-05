@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "ui/text/text_variant.h"
 #include "ui/rp_widget.h"
+#include "ui/widgets/buttons.h"
 #include "ui/round_rect.h"
 #include "base/object_ptr.h"
 #include "base/weak_qptr.h"
@@ -71,6 +72,15 @@ namespace Settings {
 class KeyNavigation;
 
 using Button = Ui::SettingsButton;
+
+class RowButton : public Ui::SettingsButton {
+public:
+	using Ui::SettingsButton::SettingsButton;
+
+protected:
+	void mousePressEvent(QMouseEvent *e) override;
+	void mouseReleaseEvent(QMouseEvent *e) override;
+};
 
 enum class HighlightShape {
 	Rect,

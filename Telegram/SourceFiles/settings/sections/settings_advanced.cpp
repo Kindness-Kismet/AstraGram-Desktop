@@ -5,6 +5,7 @@ the official desktop application for the Telegram messaging service.
 For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
+#include "settings/settings_common.h"
 #include "settings/sections/settings_advanced.h"
 
 #include "settings/settings_common_session.h"
@@ -1319,7 +1320,7 @@ void SetupSystemIntegrationContent(
 void SetupAnimations(
 		not_null<Window::Controller*> window,
 		not_null<Ui::VerticalLayout*> container) {
-	container->add(object_ptr<Button>(
+	container->add(object_ptr<Settings::RowButton>(
 		container,
 		tr::lng_settings_power_menu(),
 		st::settingsButtonNoIcon

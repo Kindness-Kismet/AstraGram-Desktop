@@ -5,6 +5,7 @@ the official desktop application for the Telegram messaging service.
 For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
+#include "settings/settings_common.h"
 #include "settings/business/settings_working_hours.h"
 #include "settings/settings_card_layout.h"
 
@@ -311,7 +312,7 @@ void EditDayBox(
 			});
 			box->getDelegate()->show(Box(EditTimeBox, min, max, now, save));
 		});
-		raw->add(object_ptr<Ui::SettingsButton>(
+		raw->add(object_ptr<Settings::RowButton>(
 			raw,
 			tr::lng_hours_remove(),
 			st::settingsAttentionButton
@@ -335,7 +336,7 @@ void EditDayBox(
 	AddDivider(addWrap->entity());
 	AddSkip(addWrap->entity());
 	const auto add = addWrap->entity()->add(
-		object_ptr<Ui::SettingsButton>(
+		object_ptr<Settings::RowButton>(
 			container,
 			tr::lng_hours_add_button(),
 			st::settingsButtonLightNoIcon));
@@ -487,14 +488,9 @@ void AddWeekButton(
 			crl::guard(button, done)));
 	});
 
-	const auto toggleButton = Ui::CreateChild<Ui::SettingsButton>(
-		container.get(),
-		nullptr,
-		st);
-	const auto checkView = button->lifetime().make_state<Ui::ToggleView>(
-		st.toggle,
-		false,
-		[=] { toggleButton->update(); });
+	const auto separated = AddSeparatedToggle(button, st, false);
+	const auto toggleButton = separated.button;
+	const auto checkView = separated.checkView;
 
 	auto status = data->value(
 	) | rpl::map([=](const Data::WorkingHours &data) -> rpl::producer<QString> {
@@ -522,41 +518,6 @@ void AddWeekButton(
 		st.padding.top() + st.height - details->height());
 	details->setAttribute(Qt::WA_TransparentForMouseEvents);
 
-	const auto separator = Ui::CreateChild<Ui::RpWidget>(container.get());
-	separator->paintRequest(
-	) | rpl::on_next([=, bg = st.textBgOver] {
-		auto p = QPainter(separator);
-		p.fillRect(separator->rect(), bg);
-	}, separator->lifetime());
-	const auto separatorHeight = st.height - 2 * st.toggle.border;
-	button->geometryValue(
-	) | rpl::on_next([=](const QRect &r) {
-		const auto w = st::rightsButtonToggleWidth;
-		toggleButton->setGeometry(
-			r.x() + r.width() - w,
-			r.y(),
-			w,
-			r.height());
-		separator->setGeometry(
-			toggleButton->x() - st::lineWidth,
-			r.y() + (r.height() - separatorHeight) / 2,
-			st::lineWidth,
-			separatorHeight);
-	}, toggleButton->lifetime());
-
-	const auto checkWidget = Ui::CreateChild<Ui::RpWidget>(toggleButton);
-	checkWidget->resize(checkView->getSize());
-	checkWidget->paintRequest(
-	) | rpl::on_next([=] {
-		auto p = QPainter(checkWidget);
-		checkView->paint(p, 0, 0, checkWidget->width());
-	}, checkWidget->lifetime());
-	toggleButton->sizeValue(
-	) | rpl::on_next([=](const QSize &s) {
-		checkWidget->moveToRight(
-			st.toggleSkip,
-			(s.height() - checkWidget->height()) / 2);
-	}, toggleButton->lifetime());
 
 	toggleButton->setClickedCallback([=] {
 		const auto enabled = !checkView->checked();

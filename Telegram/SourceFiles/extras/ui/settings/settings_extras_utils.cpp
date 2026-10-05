@@ -136,34 +136,21 @@ not_null<Ui::RpWidget*> AddInnerToggle(not_null<Ui::VerticalLayout*> container,
 									   bool toggledWhenAll,
 									   std::vector<Fn<bool()>> lockChecks,
 									   rpl::event_stream<> *lockChanges) {
-	const auto button = container->add(object_ptr<Ui::SettingsButton>(
+	const auto button = container->add(object_ptr<Settings::RowButton>(
 		container,
 		nullptr,
 		st::settingsButtonNoIcon));
 
-	const auto toggleButton = Ui::CreateChild<Ui::SettingsButton>(
-		container.get(),
-		nullptr,
-		st);
-
-	struct State final
-	{
-		State(const style::Toggle &st, Fn<void()> c)
-			: checkView(st, false, c) {
-		}
-
-		Ui::ToggleView checkView;
+	const auto separated = AddSeparatedToggle(button, st, false);
+	const auto toggleButton = separated.button;
+	const auto checkView = separated.checkView;
+	struct State final {
 		Ui::Animations::Simple animation;
 		rpl::event_stream<> anyChanges;
 		std::vector<not_null<Ui::AbstractCheckView*>> innerChecks;
 		std::vector<Fn<bool()>> lockChecks;
 	};
-	const auto state = button->lifetime().make_state<State>(
-		st.toggle,
-		[=]
-		{
-			toggleButton->update();
-		});
+	const auto state = button->lifetime().make_state<State>();
 	state->innerChecks = std::move(innerCheckViews);
 	state->lockChecks = std::move(lockChecks);
 	const auto countChecked = [=]
@@ -210,55 +197,6 @@ not_null<Ui::RpWidget*> AddInnerToggle(not_null<Ui::VerticalLayout*> container,
 			state->anyChanges,
 			button->lifetime());
 	}
-	const auto checkView = &state->checkView;
-	{
-		const auto separator = Ui::CreateChild<Ui::RpWidget>(container.get());
-		separator->paintRequest(
-		) | on_next([=, bg = st.textBgOver]
-							{
-								auto p = QPainter(separator);
-								p.fillRect(separator->rect(), bg);
-							},
-							separator->lifetime());
-		const auto separatorHeight = 2 * st.toggle.border
-			+ st.toggle.diameter;
-		button->geometryValue(
-		) | on_next([=](const QRect &r)
-							{
-								const auto w = st::rightsButtonToggleWidth;
-								constexpr auto kLineWidth = 1;
-								toggleButton->setGeometry(
-									r.x() + r.width() - w,
-									r.y(),
-									w,
-									r.height());
-								separator->setGeometry(
-									toggleButton->x() - kLineWidth,
-									r.y() + (r.height() - separatorHeight) / 2,
-									kLineWidth,
-									separatorHeight);
-							},
-							toggleButton->lifetime());
-
-		const auto checkWidget = Ui::CreateChild<Ui::RpWidget>(toggleButton);
-		checkWidget->resize(checkView->getSize());
-		checkWidget->paintRequest(
-		) | on_next([=]
-							{
-								auto p = QPainter(checkWidget);
-								checkView->paint(p, 0, 0, checkWidget->width());
-							},
-							checkWidget->lifetime());
-		toggleButton->sizeValue(
-		) | on_next([=](const QSize &s)
-							{
-								checkWidget->moveToRight(
-									st.toggleSkip,
-									(s.height() - checkWidget->height()) / 2);
-							},
-							toggleButton->lifetime());
-	}
-
 	const auto totalInnerChecks = state->innerChecks.size();
 
 	state->anyChanges.events_starting_with(
@@ -323,7 +261,7 @@ not_null<Ui::RpWidget*> AddInnerToggle(not_null<Ui::VerticalLayout*> container,
 	) | on_next([=, &st](const QSize &s)
 						{
 							const auto labelLeft = st.padding.left();
-							const auto labelRight = s.width() - toggleButton->width();
+							const auto labelRight = toggleButton->x();
 
 							label->resizeToWidth(labelRight - labelLeft - arrow->width());
 							label->moveToLeft(

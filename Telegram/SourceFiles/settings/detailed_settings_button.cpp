@@ -98,6 +98,24 @@ void DetailedSettingsButton::finishAnimating() {
 	_toggle->finishAnimating();
 }
 
+void DetailedSettingsButton::mousePressEvent(QMouseEvent *e) {
+	if (!myrtlrect(toggleRect()).contains(e->pos())) {
+		e->accept();
+		return;
+	}
+	Ui::RippleButton::mousePressEvent(e);
+}
+
+void DetailedSettingsButton::mouseReleaseEvent(QMouseEvent *e) {
+	if (!myrtlrect(toggleRect()).contains(e->pos())) {
+		setOver(false);
+		Ui::RippleButton::mouseReleaseEvent(e);
+		setOver(rect().contains(e->pos()));
+		return;
+	}
+	Ui::RippleButton::mouseReleaseEvent(e);
+}
+
 void DetailedSettingsButton::onStateChanged(
 		State was,
 		StateChangeSource source) {

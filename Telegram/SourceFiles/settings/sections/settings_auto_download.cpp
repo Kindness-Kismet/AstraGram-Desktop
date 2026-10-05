@@ -243,7 +243,7 @@ void AutoDownloadSection::setupContent() {
 			Type type,
 			rpl::producer<QString> label) {
 		const auto value = settings->bytesLimit(_source, type);
-		content->add(object_ptr<Ui::SettingsButton>(
+		content->add(object_ptr<Settings::RowButton>(
 			content,
 			std::move(label),
 			st::settingsButtonNoIcon

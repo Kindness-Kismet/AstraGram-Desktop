@@ -5,6 +5,7 @@ the official desktop application for the Telegram messaging service.
 For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
+#include "settings/settings_common.h"
 #include "settings/settings_privacy_controllers.h"
 
 #include "api/api_global_privacy.h"
@@ -697,7 +698,7 @@ object_ptr<Ui::RpWidget> LastSeenPrivacyController::setupBelowWidget(
 	Ui::AddSkip(content);
 
 	const auto privacy = &controller->session().api().globalPrivacy();
-	const auto hideReadTimeButton = content->add(object_ptr<Ui::SettingsButton>(
+	const auto hideReadTimeButton = content->add(object_ptr<Settings::RowButton>(
 		content,
 		tr::lng_edit_lastseen_hide_read_time(),
 		st::settingsButtonNoIcon
@@ -714,7 +715,7 @@ object_ptr<Ui::RpWidget> LastSeenPrivacyController::setupBelowWidget(
 		tr::lng_edit_lastseen_hide_read_time_about());
 	if (!controller->session().premium()) {
 		Ui::AddSkip(content);
-		content->add(object_ptr<Ui::SettingsButton>(
+		content->add(object_ptr<Settings::RowButton>(
 			content,
 			tr::lng_edit_lastseen_subscribe(),
 			st::settingsButtonLightNoIcon
@@ -1221,7 +1222,7 @@ object_ptr<Ui::RpWidget> ProfilePhotoPrivacyController::setupMiddleWidget(
 	const auto removeButton = container->add(
 		object_ptr<Ui::SlideWrap<Ui::SettingsButton>>(
 			container,
-			object_ptr<Ui::SettingsButton>(
+			object_ptr<Settings::RowButton>(
 				parent,
 				tr::lng_edit_privacy_profile_photo_public_remove(),
 				stRemoveButton)));
@@ -1715,7 +1716,7 @@ object_ptr<Ui::RpWidget> GiftsAutoSavePrivacyController::setupAboveWidget(
 	using Type = Api::DisallowedGiftType;
 
 	const auto session = &controller->session();
-	const auto icon = content->add(object_ptr<Ui::SettingsButton>(
+	const auto icon = content->add(object_ptr<Settings::RowButton>(
 		content,
 		tr::lng_edit_privacy_gifts_show_icon(),
 		st::settingsButtonNoIconLocked));
@@ -1777,7 +1778,7 @@ object_ptr<Ui::RpWidget> GiftsAutoSavePrivacyController::setupBelowWidget(
 		{ Type::Premium, tr::lng_edit_privacy_gifts_premium() },
 	};
 	for (const auto &[type, title] : types) {
-		const auto button = content->add(object_ptr<Ui::SettingsButton>(
+		const auto button = content->add(object_ptr<Settings::RowButton>(
 			content,
 			rpl::duplicate(title),
 			st::settingsButtonNoIconLocked));

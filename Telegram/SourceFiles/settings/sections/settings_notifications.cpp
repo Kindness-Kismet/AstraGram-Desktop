@@ -5,6 +5,7 @@ the official desktop application for the Telegram messaging service.
 For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
+#include "settings/settings_common.h"
 #include "settings/sections/settings_notifications.h"
 
 #include "settings/settings_common_session.h"
@@ -127,50 +128,9 @@ SplitToggle SetupSplitToggle(
 		st.padding.top() + st.height - label->height());
 	label->setAttribute(Qt::WA_TransparentForMouseEvents);
 
-	const auto toggle = Ui::CreateChild<Ui::SettingsButton>(
-		container.get(),
-		nullptr,
-		st);
-	const auto checkView = button->lifetime().make_state<Ui::ToggleView>(
-		st.toggle,
-		checked,
-		[=] { toggle->update(); });
-
-	const auto separator = Ui::CreateChild<Ui::RpWidget>(container.get());
-	separator->paintRequest(
-	) | rpl::on_next([=, bg = st.textBgOver] {
-		auto p = QPainter(separator);
-		p.fillRect(separator->rect(), bg);
-	}, separator->lifetime());
-	const auto separatorHeight = st.height - 2 * st.toggle.border;
-	button->geometryValue(
-	) | rpl::on_next([=](const QRect &r) {
-		const auto w = st::rightsButtonToggleWidth;
-		toggle->setGeometry(
-			r.x() + r.width() - w,
-			r.y(),
-			w,
-			r.height());
-		separator->setGeometry(
-			toggle->x() - st::lineWidth,
-			r.y() + (r.height() - separatorHeight) / 2,
-			st::lineWidth,
-			separatorHeight);
-	}, toggle->lifetime());
-
-	const auto checkWidget = Ui::CreateChild<Ui::RpWidget>(toggle);
-	checkWidget->resize(checkView->getSize());
-	checkWidget->paintRequest(
-	) | rpl::on_next([=] {
-		auto p = QPainter(checkWidget);
-		checkView->paint(p, 0, 0, checkWidget->width());
-	}, checkWidget->lifetime());
-	toggle->sizeValue(
-	) | rpl::on_next([=](const QSize &s) {
-		checkWidget->moveToRight(
-			st.toggleSkip,
-			(s.height() - checkWidget->height()) / 2);
-	}, toggle->lifetime());
+	const auto separated = AddSeparatedToggle(button, st, checked);
+	const auto toggle = separated.button;
+	const auto checkView = separated.checkView;
 
 	return { button, toggle, checkView };
 }

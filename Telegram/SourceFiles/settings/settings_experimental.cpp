@@ -199,14 +199,14 @@ void SetupCopyDeepLink(
 		const QString &description,
 		const style::SettingsButton &st) {
 	if (description.isEmpty()) {
-		return container->add(object_ptr<Button>(
+		return container->add(object_ptr<Settings::RowButton>(
 			container,
 			rpl::single(name),
 			st));
 	}
 	const auto &titlePadding = st::settingsExperimentalTitlePadding;
 	const auto &aboutPadding = st::settingsExperimentalAboutPadding;
-	const auto button = Ui::CreateChild<Button>(
+	const auto button = Ui::CreateChild<Settings::RowButton>(
 		container.get(),
 		rpl::single(QString()),
 		st);

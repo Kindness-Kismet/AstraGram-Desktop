@@ -1,5 +1,6 @@
 #include "settings/sections/settings_file_confirmations.h"
 
+#include "settings/settings_common.h"
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "lang/lang_keys.h"
@@ -69,7 +70,7 @@ FileConfirmations::FileConfirmations(
 	AddCardDescription(root, tr::lng_settings_edit_extensions_about());
 
 	const auto ipCard = AddCardGroup(root);
-	const auto ip = ipCard->add(object_ptr<Ui::SettingsButton>(
+	const auto ip = ipCard->add(object_ptr<Settings::RowButton>(
 		ipCard,
 		tr::lng_settings_edit_ip_confirm(),
 		st::settingsButtonNoIcon

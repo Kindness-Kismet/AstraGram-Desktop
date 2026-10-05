@@ -1,5 +1,6 @@
 #include "settings/sections/settings_update.h"
 
+#include "settings/settings_common.h"
 #include "boxes/about_box.h"
 #include "core/application.h"
 #include "core/launcher.h"
@@ -107,7 +108,7 @@ void BuildUpdateSection(SectionBuilder &builder) {
 	});
 
 	if (check && container) {
-		const auto update = Ui::CreateChild<Ui::SettingsButton>(
+		const auto update = Ui::CreateChild<Settings::RowButton>(
 			check,
 			tr::lng_update_telegram(),
 			st::settingsUpdate);
@@ -260,7 +261,7 @@ void SetupUpdate(not_null<Ui::VerticalLayout*> container) {
 		tr::now,
 		lt_version,
 		currentVersionText());
-	const auto toggle = container->add(object_ptr<Button>(
+	const auto toggle = container->add(object_ptr<Settings::RowButton>(
 		container,
 		tr::extras_AutoCheckUpdates(),
 		st::settingsUpdateToggle));
@@ -276,16 +277,16 @@ void SetupUpdate(not_null<Ui::VerticalLayout*> container) {
 	const auto inner = options->entity();
 	const auto install = (cAlphaVersion() || KSandbox::isInside())
 		? nullptr
-		: inner->add(object_ptr<Button>(
+		: inner->add(object_ptr<Settings::RowButton>(
 			inner,
 			tr::lng_settings_install_beta(),
 			st::settingsButtonNoIcon));
 
-	const auto check = inner->add(object_ptr<Button>(
+	const auto check = inner->add(object_ptr<Settings::RowButton>(
 		inner,
 		tr::lng_settings_check_now(),
 		st::settingsButtonNoIcon));
-	const auto update = Ui::CreateChild<Button>(
+	const auto update = Ui::CreateChild<Settings::RowButton>(
 		check,
 		tr::lng_update_telegram(),
 		st::settingsUpdate);

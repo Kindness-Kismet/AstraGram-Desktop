@@ -5,6 +5,7 @@ the official desktop application for the Telegram messaging service.
 For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
+#include "settings/settings_common.h"
 #include "settings/sections/settings_chat.h"
 
 #include "settings/settings_common_session.h"
@@ -2031,7 +2032,7 @@ void SetupChatListQuickAction(
 
 	const auto &st = st::settingsCardSectionButton;
 	const auto button = container->add(
-		object_ptr<Ui::SettingsButton>(
+		object_ptr<Settings::RowButton>(
 			container,
 			group->value() | rpl::map([](Type value) {
 				return ((value == Dialogs::Ui::QuickDialogAction::Mute)

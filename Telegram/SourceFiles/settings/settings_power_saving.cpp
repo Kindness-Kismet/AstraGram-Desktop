@@ -171,7 +171,7 @@ void PowerSavingBox(
 		Ui::AddSkip(container);
 		Ui::AddDivider(container);
 		Ui::AddSkip(container);
-		automatic = container->add(object_ptr<Ui::SettingsButton>(
+		automatic = container->add(object_ptr<Settings::RowButton>(
 			container,
 			tr::lng_settings_power_auto(),
 			st::powerSavingButtonNoIcon

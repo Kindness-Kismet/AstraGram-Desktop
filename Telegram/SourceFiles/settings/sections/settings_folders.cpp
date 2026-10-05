@@ -5,6 +5,7 @@ the official desktop application for the Telegram messaging service.
 For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
+#include "settings/settings_common.h"
 #include "settings/sections/settings_folders.h"
 
 #include "api/api_chat_filters.h"
@@ -1077,7 +1078,7 @@ void BuildTagsSection(SectionBuilder &builder, not_null<FoldersState*> state) {
 
 		auto premium = Data::AmPremiumValue(session);
 		const auto tagsButton = content->add(
-			object_ptr<Ui::SettingsButton>(
+			object_ptr<Settings::RowButton>(
 				content,
 				tr::lng_filters_enable_tags(),
 				st::settingsButtonNoIconLocked));

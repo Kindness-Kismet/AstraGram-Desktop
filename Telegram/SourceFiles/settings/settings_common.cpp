@@ -32,6 +32,26 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QAction>
 
 namespace Settings {
+void RowButton::mousePressEvent(QMouseEvent *e) {
+	const auto toggle = maybeToggleRect();
+	if (!toggle.isEmpty() && !myrtlrect(toggle).contains(e->pos())) {
+		e->accept();
+		return;
+	}
+	Ui::SettingsButton::mousePressEvent(e);
+}
+
+void RowButton::mouseReleaseEvent(QMouseEvent *e) {
+	const auto toggle = maybeToggleRect();
+	if (!toggle.isEmpty() && !myrtlrect(toggle).contains(e->pos())) {
+		setOver(false);
+		Ui::SettingsButton::mouseReleaseEvent(e);
+		setOver(rect().contains(e->pos()));
+		return;
+	}
+	Ui::SettingsButton::mouseReleaseEvent(e);
+}
+
 namespace {
 
 [[nodiscard]] HighlightArgs MaybeFillFromRipple(
@@ -492,7 +512,7 @@ object_ptr<Button> CreateButtonWithIcon(
 			rowStyle->padding.setBottom(padding - padding / 2);
 		}
 	}
-	auto result = object_ptr<Button>(parent, std::move(text), rowStyle ? *rowStyle : st);
+	auto result = object_ptr<RowButton>(parent, std::move(text), rowStyle ? *rowStyle : st);
 	const auto button = result.data();
 	if (rowStyle) {
 		button->lifetime().add([rowStyle] {});
@@ -599,50 +619,27 @@ SeparatedToggle AddSeparatedToggle(
 		not_null<Button*> button,
 		const style::SettingsButton &st,
 		bool checked) {
-	const auto container = button->parentWidget();
-	const auto toggle = Ui::CreateChild<Button>(container, nullptr, st);
+	const auto toggleStyle = button->lifetime().make_state<style::SettingsButton>(st);
+	toggleStyle->textBg = toggleStyle->textBgOver = st::transparent;
+	const auto toggle = Ui::CreateChild<RowButton>(button.get(), nullptr, *toggleStyle);
 	const auto checkView = button->lifetime().make_state<Ui::ToggleView>(
 		st.toggle,
 		checked,
 		[=] { toggle->update(); });
-
-	const auto separator = Ui::CreateChild<Ui::RpWidget>(container);
-	separator->paintRequest(
-	) | rpl::on_next([=, bg = st.textBgOver] {
-		auto p = QPainter(separator);
-		p.fillRect(separator->rect(), bg);
-	}, separator->lifetime());
-	const auto separatorHeight = 2 * st.toggle.border + st.toggle.diameter;
-	button->geometryValue(
-	) | rpl::on_next([=](const QRect &r) {
-		const auto width = st::rightsButtonToggleWidth;
-		toggle->setGeometry(
-			r.x() + r.width() - width,
-			r.y(),
-			width,
-			r.height());
-		separator->setGeometry(
-			toggle->x() - st::lineWidth,
-			r.y() + (r.height() - separatorHeight) / 2,
-			st::lineWidth,
-			separatorHeight);
-	}, toggle->lifetime());
-
 	const auto checkWidget = Ui::CreateChild<Ui::RpWidget>(toggle);
+	checkWidget->setAttribute(Qt::WA_TransparentForMouseEvents);
 	checkWidget->resize(checkView->getSize());
-	checkWidget->paintRequest(
-	) | rpl::on_next([=] {
+	checkWidget->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(checkWidget);
+		checkView->setStyle(toggle->isOver()
+			? toggleStyle->toggleOver
+			: toggleStyle->toggle);
 		checkView->paint(p, 0, 0, checkWidget->width());
 	}, checkWidget->lifetime());
-	toggle->sizeValue(
-	) | rpl::on_next([=, &st](const QSize &s) {
-		checkWidget->moveToRight(
-			st.toggleSkip,
-			(s.height() - checkWidget->height()) / 2);
+	button->sizeValue() | rpl::on_next([=, &st](QSize size) {
+		toggle->resize(checkView->getSize());
+		toggle->moveToRight(st.toggleSkip, (size.height() - toggle->height()) / 2);
 	}, toggle->lifetime());
-
-	separator->show();
 	checkWidget->show();
 	toggle->show();
 

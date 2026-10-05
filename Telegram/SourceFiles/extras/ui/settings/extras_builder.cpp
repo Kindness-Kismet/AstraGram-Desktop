@@ -192,7 +192,7 @@ void ExtrasSectionBuilder::addSlider(SliderArgs &&args) {
 			const auto container = wctx.container;
 			const auto titleButton = args.showTitle
 				? container->add(
-					object_ptr<Button>(container,
+					object_ptr<Settings::RowButton>(container,
 						std::move(args.title),
 						st::settingsButtonNoIcon))
 				: nullptr;
