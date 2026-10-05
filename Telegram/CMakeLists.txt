@@ -2172,6 +2172,8 @@ PRIVATE
     settings/settings_type.h
     settings/settings_workspace.cpp
     settings/settings_workspace.h
+    settings/settings_workspace_search.cpp
+    settings/settings_workspace_search.h
     settings/settings_navigation.cpp
     settings/settings_navigation.h
     settings/sections/settings_shortcuts.cpp

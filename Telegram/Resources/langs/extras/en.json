@@ -1,4 +1,7 @@
 {
+  "SettingsSearchPlaceholder": "Find a setting",
+  "SettingsSearchRecent": "Recently opened settings",
+  "SettingsSearchEmpty": "No matching settings. Try another keyword.",
   "ExperimentalForumHideChatsList": "Hide chat list in forums",
   "ExperimentalForumHideChatsListDescription": "Don't keep a narrow column of chat list.",
   "ExperimentalDialogsUnreadOnTop": "Keep unmuted unread chats on top",

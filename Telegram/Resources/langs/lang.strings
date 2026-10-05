@@ -9418,3 +9418,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_ExperimentalInvalidCode" = "Clipboard does not contain a valid experimental settings code.";
 "extras_ExperimentalUnsupportedCode" = "Experimental settings code is valid, but data format is not supported.";
 "extras_ExperimentalImported" = "Experimental settings imported from code in clipboard.";
+
+"extras_SettingsSearchPlaceholder" = "Find a setting";
+"extras_SettingsSearchRecent" = "Recently opened settings";
+"extras_SettingsSearchEmpty" = "No matching settings. Try another keyword.";

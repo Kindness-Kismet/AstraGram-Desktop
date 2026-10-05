@@ -105,6 +105,7 @@ public:
 		not_null<::Main::Session*> session) const;
 
 	[[nodiscard]] QString sectionTitle(Type sectionId) const;
+	[[nodiscard]] Type sectionCategory(Type sectionId) const;
 	[[nodiscard]] QString sectionPath(
 		Type sectionId,
 		bool parentsOnly = false) const;

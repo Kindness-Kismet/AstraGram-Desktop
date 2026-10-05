@@ -1,21 +1,23 @@
 - Improved settings, which now use a full-window layout with grouped cards, a sidebar on wide windows and a single-page layout on narrow windows, with consistent theme previews and text alignment
 - Added a dedicated About page, so you can now find the app version, release notes, project link, update settings, Telegram services and help in one place
-- Removed the settings search entry and the search fields on the language and keyboard shortcut pages
+- Removed the search fields on the language and keyboard shortcut pages
 - Changed how switches in settings rows respond to mouse clicks; they now toggle only when you click the switch itself, reducing accidental changes when clicking a row
 - Improved message translation, which now shows translations inside the original message bubbles and lets you translate or return to the original text from the message menu
 - Improved proxy settings, which now separate direct, system and custom proxy modes and show the authentication fields for the selected proxy type, while allowing you to browse custom mode before adding a proxy
 - Improved chat list styling, which now uses solid accent backgrounds for selected chats and accent-colored sent checkmarks, with updated folder icons and no click ripple animations on rows or folder tabs
 - Improved dialog appearance, which now uses consistent theme colors, spacing and distinct styles for primary and secondary actions
 - Added project and supporter badges and a donation QR code, so you can now view badges in chats and profiles and open the donation page by scanning its code
+- Improved settings search, which now stays at the top of settings, shows matching options with their page paths as you type, and supports keyboard navigation and recently opened settings
 
 ---
 
 - 对设置界面进行了改善，这使得设置以全窗口卡片布局呈现，宽窗口显示侧边栏，窄窗口采用单页布局，主题预览和文字对齐也保持一致
 - 新增了独立的关于页面，现在可以集中查看应用版本、更新说明、项目链接、更新设置、Telegram 服务和帮助
-- 移除了设置搜索入口，以及语言和快捷键页面中的搜索框
+- 移除了语言和快捷键页面中的搜索框
 - 调整了设置列表中开关的鼠标点击行为，现在只有点击开关本身才会切换状态，减少点击整行时的误操作
 - 对消息翻译进行了改善，这使得译文直接显示在原消息气泡内，并可通过消息菜单翻译或查看原文
 - 对代理设置进行了改善，这使得直连、系统代理和自定义代理分别展示，按代理类型显示对应的认证字段，尚未添加代理时也能浏览自定义模式
 - 对聊天列表样式进行了改善，这使得选中的聊天使用纯强调色背景，已发送标记跟随强调色，文件夹图标更统一，聊天行和文件夹标签不再显示点击水波纹
 - 对弹窗外观进行了改善，这使得主题配色和间距保持一致，主要操作与次要操作也有更明确的样式区分
 - 新增了项目与支持者徽章及捐赠二维码，现在可以在聊天和个人资料中查看徽章，并扫码打开捐赠页面
+- 对设置搜索进行了改善，这使得搜索框常驻设置顶部，输入时显示匹配选项及所在页面，并支持键盘选择和最近打开的设置

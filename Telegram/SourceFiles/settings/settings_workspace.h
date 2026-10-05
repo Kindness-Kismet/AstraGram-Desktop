@@ -10,7 +10,12 @@ class WrapWidget;
 
 namespace Settings {
 
+namespace Builder {
+struct SearchEntry;
+} // namespace Builder
+
 class Navigation;
+class WorkspaceSearch;
 
 class Workspace final : public Window::SectionWidget {
 public:
@@ -41,6 +46,7 @@ protected:
 
 private:
 	void showCategory(Type type);
+	void showSearchResult(Builder::SearchEntry entry);
 	void backFromCategory();
 	void closeWorkspace();
 	void updateLayout();
@@ -48,6 +54,7 @@ private:
 
 	object_ptr<Navigation> _navigation;
 	object_ptr<Info::WrapWidget> _content;
+	object_ptr<WorkspaceSearch> _search;
 	bool _listShown = true;
 	bool _updatingLayout = false;
 	Type _category;

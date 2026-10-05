@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/settings_card_layout.h"
 
 #include "settings/settings_common.h"
+#include "settings/sections/settings_advanced.h"
 #include "data/components/passkeys.h"
 #include "ui/layers/generic_box.h"
 #include "main/main_session.h"
@@ -501,6 +502,44 @@ std::vector<Category> experimentalCategories() {
 		},
 	};
 }
+
+const auto kSearchMeta = Builder::BuildHelper({
+	.id = Experimental::Id(),
+	.parentId = AdvancedId(),
+	.title = &tr::lng_settings_experimental,
+	.icon = &st::menuIconExperimental,
+}, [](Builder::SectionBuilder &builder) {
+	const auto add = [&](const ExperimentalOption &entry, const QString &category) {
+		const auto &option = base::options::lookup<bool>(entry.id);
+		builder.add(nullptr, [&] {
+			return Builder::SearchEntry{
+				.id = u"experimental/"_q + option.id(),
+				.title = entry.title(tr::now),
+				.keywords = { category, option.name(), option.description(),
+					entry.description ? (*entry.description)(tr::now) : QString() },
+				.icon = { &st::menuIconExperimental },
+			};
+		});
+	};
+	for (const auto &category : experimentalCategories()) {
+		for (const auto &entry : category.options) {
+			add(entry, category.title);
+		}
+	}
+	if (base::options::lookup<bool>(kOptionFastButtonsMode).value()) {
+		add({ kOptionFastButtonsMode, tr::extras_ExperimentalFastButtonsMode,
+			&tr::extras_ExperimentalFastButtonsModeDescription }, QString());
+	}
+	builder.add(nullptr, [] {
+		return Builder::SearchEntry{
+			.id = u"experimental/"_q
+				+ QString::fromLatin1(Window::kOptionFolderFavoriteLink),
+			.title = tr::extras_ExperimentalFolderFavoriteLink(tr::now),
+			.keywords = { tr::extras_ExperimentalFolderFavoriteLinkDescription(tr::now) },
+			.icon = { &st::menuIconExperimental },
+		};
+	});
+});
 
 void SetupExperimental(
 		not_null<Window::Controller*> window,

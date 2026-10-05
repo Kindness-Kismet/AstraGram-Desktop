@@ -153,6 +153,17 @@ QString SearchRegistry::sectionTitle(Type sectionId) const {
 	return (it != _sections.end()) ? ResolveSectionTitle(*it->second) : QString();
 }
 
+Type SearchRegistry::sectionCategory(Type sectionId) const {
+	for (;;) {
+		const auto i = _sections.find(sectionId);
+		if (i == _sections.end() || !i->second->parentId
+			|| i->second->parentId == MainId()) {
+			return sectionId;
+		}
+		sectionId = i->second->parentId;
+	}
+}
+
 QString SearchRegistry::sectionPath(Type sectionId, bool parentsOnly) const {
 	auto parts = QStringList();
 	auto current = sectionId;
@@ -273,6 +284,16 @@ Ui::VerticalLayout *SectionBuilder::scope(
 		wctx.container = outer;
 		result = inner;
 	}, [&](const SearchContext &sctx) {
+		if (shown) {
+			auto visible = false;
+			auto lifetime = rpl::lifetime();
+			std::move(shown) | rpl::on_next([&](bool value) {
+				visible = value;
+			}, lifetime);
+			if (!visible) {
+				return;
+			}
+		}
 		method();
 	});
 	return result;

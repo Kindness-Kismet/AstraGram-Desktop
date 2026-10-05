@@ -92,6 +92,13 @@ settingsCardRowDescription: FlatLabel(settingsCardHint) {
 	maxHeight: 18px;
 }
 settingsCardDescriptionTop: 32px;
+settingsSearchResult: SettingsButton(settingsButton) {
+	height: 38px;
+	padding: margins(54px, 8px, 14px, 8px);
+	iconLeft: 14px;
+}
+settingsSearchDescriptionTop: 29px;
+settingsSearchHintPadding: margins(14px, 12px, 14px, 12px);
 settingsButtonRightLabelSpoiler: SettingsButton(settingsButton) {
 	rightLabel: FlatLabel(defaultSettingsRightLabel) {
 		palette: TextPalette(defaultTextPalette) {

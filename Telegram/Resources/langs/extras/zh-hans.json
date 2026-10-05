@@ -1,4 +1,7 @@
 {
+  "SettingsSearchPlaceholder": "查找设置",
+  "SettingsSearchRecent": "最近打开的设置",
+  "SettingsSearchEmpty": "没有找到相关设置，试试其他关键词",
   "ExperimentalForumHideChatsList": "在话题群中隐藏聊天列表",
   "ExperimentalForumHideChatsListDescription": "打开话题群时，不再保留左侧的窄聊天列表",
   "ExperimentalDialogsUnreadOnTop": "将未静音的未读聊天排在前面",

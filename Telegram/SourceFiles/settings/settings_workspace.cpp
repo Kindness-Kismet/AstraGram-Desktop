@@ -1,5 +1,7 @@
 #include "settings/settings_workspace.h"
 #include "extras/features/window_material/window_material.h"
+#include "core/application.h"
+#include "core/click_handler_types.h"
 
 #include "extras/ui/settings/settings_main.h"
 #include "info/info_content_widget.h"
@@ -9,6 +11,7 @@
 #include "main/main_session.h"
 #include "settings/sections/settings_main.h"
 #include "settings/settings_navigation.h"
+#include "settings/settings_workspace_search.h"
 #include "ui/widgets/buttons.h"
 #include "window/window_session_controller.h"
 #include "styles/style_layers.h"
@@ -36,6 +39,7 @@ Workspace::Workspace(
 	[=](Type type) { showCategory(type); },
 	[=] { closeWorkspace(); })
 , _content(nullptr)
+, _search(nullptr)
 , _listShown(memento->settingsNavigationState()
 	? memento->settingsNavigationState()->listShown
 	: memento->content()->section().settingsType() == MainId())
@@ -55,7 +59,11 @@ Workspace::Workspace(
 		_content.create(this, controller, Info::Wrap::Narrow, memento,
 			geometry.width() >= wideThreshold());
 	}
+	_search.create(this, &controller->session(), [=](Builder::SearchEntry entry) {
+		showSearchResult(std::move(entry));
+	});
 	_content->contentChanged() | rpl::on_next([=] {
+		_search->dismiss();
 		_listShown = false;
 		updateNavigation();
 		updateLayout();
@@ -66,6 +74,24 @@ Workspace::Workspace(
 }
 
 Workspace::~Workspace() = default;
+
+void Workspace::showSearchResult(Builder::SearchEntry entry) {
+	_content->checkBeforeClose([=] {
+		controller()->setHighlightControlId(entry.id);
+		if (!entry.deeplink.isEmpty()) {
+			Core::App().openLocalUrl(entry.deeplink,
+				QVariant::fromValue(ClickHandlerContext{
+					.sessionWindow = base::make_weak(controller()),
+				}));
+			return;
+		}
+		_listShown = false;
+		_category = Builder::SearchRegistry::Instance().sectionCategory(entry.section);
+		_content->controller()->showSettings(entry.section);
+		updateLayout();
+		_content->setInnerFocus();
+	});
+}
 
 void Workspace::showCategory(Type type) {
 	if (type == _category) {
@@ -116,14 +142,24 @@ void Workspace::updateLayout() {
 	const auto wide = width() >= wideThreshold();
 	const auto navigationShown = wide || _listShown;
 	const auto contentShown = wide || !_listShown;
+	const auto searchHeight = style::ConvertScale(60);
+	const auto navigationTop = wide ? 0 : searchHeight;
 	_navigation->setVisible(navigationShown);
 	_navigation->setNarrow(!wide);
-	_navigation->setGeometry(0, 0, wide ? navigationWidth() : width(), height());
+	_navigation->setGeometry(0, navigationTop, wide ? navigationWidth() : width(),
+		height() - navigationTop);
 	_content->setVisible(contentShown);
 	_content->setSettingsNavigation(wide);
 	const auto left = wide ? navigationWidth() : 0;
-	_content->updateGeometry(QRect(left, 0, width() - left, height()),
-		false, true, 0, height());
+	_content->updateGeometry(QRect(left, searchHeight,
+		width() - left, height() - searchHeight),
+		false, true, 0, height() - searchHeight);
+	if (_search) {
+		_search->setGeometry(left, 0, width() - left, searchHeight);
+		_search->show();
+		_search->raise();
+		_search->updateLayout();
+	}
 	_updatingLayout = false;
 }
 
@@ -146,6 +182,9 @@ bool Workspace::showInternal(
 }
 
 bool Workspace::showBackInternal() {
+	if (_search->dismiss()) {
+		return true;
+	}
 	return _content->closeByBackButton();
 }
 
