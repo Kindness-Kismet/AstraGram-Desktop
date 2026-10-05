@@ -29,16 +29,16 @@ private:
 	void initializeSharedFilters(not_null<Ui::VerticalLayout*> container);
 	void initializeShadowBan(not_null<Ui::VerticalLayout*> container);
 
-	void addNewFilter(const RegexFilter &filter, bool exclusion = false);
+	void addNewFilter(
+		not_null<Ui::VerticalLayout*> container,
+		const RegexFilter &filter,
+		bool exclusion = false);
 
 	not_null<Window::SessionController*> _controller;
 	not_null<Ui::VerticalLayout*> _content;
 
 	std::vector<RegexFilter> filters;
 	std::vector<RegexFilter> exclusions;
-
-	Ui::FlatLabel *filtersTitle = nullptr;
-	Ui::FlatLabel *excludedTitle = nullptr;
 
 	std::optional<long long> dialogId;
 	bool shadowBan;

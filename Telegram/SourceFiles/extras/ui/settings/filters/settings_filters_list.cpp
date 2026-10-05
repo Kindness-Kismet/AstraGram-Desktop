@@ -14,6 +14,7 @@
 #include "data/data_channel.h"
 #include "info/info_wrap_widget.h"
 #include "settings/settings_common.h"
+#include "settings/settings_card_layout.h"
 #include "storage/localstorage.h"
 #include "styles/style_boxes.h"
 #include "styles/style_media_view.h"
@@ -74,14 +75,17 @@ void ExtrasFiltersList::checkBeforeClose(Fn<void()> close) {
 	close();
 }
 
-void ExtrasFiltersList::addNewFilter(const RegexFilter &filter, bool exclusion) {
+void ExtrasFiltersList::addNewFilter(
+		not_null<Ui::VerticalLayout*> container,
+		const RegexFilter &filter,
+		bool exclusion) {
 	const auto state = lifetime().make_state<RegexFilter>(filter);
-	const auto button = _content->add(
-	object_ptr<Button>(
-			_content,
+	const auto button = container->add(
+		CreateButtonWithIcon(
+			container,
 			rpl::single(QString::fromStdString(state->text).replace("\n", " ")),
-			st::settingsButtonNoIcon
-		)
+			st::settingsButtonNoIcon,
+			{})
 	);
 
 	if (!state->enabled) {
@@ -227,28 +231,25 @@ void ExtrasFiltersList::initializeSharedFilters(
 	}
 
 	if (!filters.empty()) {
-		AddSkip(container);
-		filtersTitle = AddSubsectionTitle(container, tr::extras_RegexFiltersHeader());
+		AddCardTitle(container, tr::extras_RegexFiltersHeader());
+		const auto card = AddCardGroup(container);
 
 		for (const auto &filter : filters) {
-			addNewFilter(filter);
+			addNewFilter(card, filter);
 		}
 	}
 
 	if (!exclusions.empty()) {
-		if (!filters.empty()) {
-			AddSectionDivider(container);
-		}
-
-		excludedTitle = AddSubsectionTitle(container, tr::extras_RegexFiltersExcluded());
+		AddCardTitle(container, tr::extras_RegexFiltersExcluded());
+		const auto card = AddCardGroup(container);
 
 		for (const auto &exclusion : exclusions) {
-			addNewFilter(exclusion, true);
+			addNewFilter(card, exclusion, true);
 		}
 	}
 
 	if (filters.empty() && exclusions.empty()) {
-		Ui::AddDividerText(container, tr::extras_RegexFiltersListEmpty());
+		AddCardDescription(container, tr::extras_RegexFiltersListEmpty());
 	}
 }
 
@@ -268,26 +269,23 @@ void ExtrasFiltersList::initializeShadowBan(not_null<Ui::VerticalLayout*> contai
 
 	// delegate is not initialized at this moment
 	if (ExtrasSettings::getInstance().shadowBanIds().size() > 0) {
-		AddSkip(container);
-
-		filtersTitle = AddSubsectionTitle(container, tr::extras_RegexFiltersHeader());
-		const auto content = container->add(std::move(list));
-
-		AddSkip(container);
+		AddCardTitle(container, tr::extras_RegexFiltersHeader());
+		const auto content = AddCardGroup(container)->add(std::move(list));
 
 		auto delegate = container->lifetime().make_state<PeerListContentDelegateSimple>();
 		delegate->setContent(content->entity());
 		ctrl->setDelegate(delegate);
 	} else {
-		Ui::AddDividerText(container, tr::extras_RegexFiltersListEmpty());
+		AddCardDescription(container, tr::extras_RegexFiltersListEmpty());
 	}
 }
 
 void ExtrasFiltersList::setupContent(not_null<Window::SessionController*> controller) {
+	const auto page = _content->add(object_ptr<CardPage>(_content));
 	if (shadowBan) {
-		initializeShadowBan(_content);
+		initializeShadowBan(page->content());
 	} else {
-		initializeSharedFilters(_content);
+		initializeSharedFilters(page->content());
 	}
 
 	ResizeFitChild(this, _content);

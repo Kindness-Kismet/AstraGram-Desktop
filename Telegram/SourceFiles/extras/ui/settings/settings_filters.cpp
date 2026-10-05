@@ -16,6 +16,7 @@
 #include "inline_bots/bot_attach_web_view.h"
 #include "settings/settings_builder.h"
 #include "settings/settings_common.h"
+#include "settings/settings_card_layout.h"
 #include "styles/style_extras_icons.h"
 #include "styles/style_boxes.h"
 #include "styles/style_layers.h"
@@ -133,36 +134,29 @@ void BuildShadowBan(SectionBuilder &builder) {
 }
 
 void BuildPerDialog(SectionBuilder &builder) {
-	builder.add([](const BuildContext &ctx) {
-		v::match(ctx, [&](const WidgetContext &wctx) {
-			if (!Database::hasPerDialogFilters()) {
-				return;
-			}
+	builder.addPageContent([](const WidgetContext &wctx) {
+		if (!Database::hasPerDialogFilters()) {
+			return;
+		}
 
-			const auto container = wctx.container;
-			const auto controller = wctx.controller;
+		const auto container = AddCardGroup(wctx.container);
+		const auto controller = wctx.controller;
 
-			AddSkip(container);
-			AddDivider(container);
 
-			auto ctrl = container->lifetime().make_state<PerDialogFiltersListController>(
-				&controller->session(),
-				controller);
+		auto ctrl = container->lifetime().make_state<PerDialogFiltersListController>(
+			&controller->session(),
+			controller);
 
-			auto list = object_ptr<Ui::PaddingWrap<PeerListContent>>(
+		auto list = object_ptr<Ui::PaddingWrap<PeerListContent>>(
+			container,
+			object_ptr<PeerListContent>(
 				container,
-				object_ptr<PeerListContent>(
-					container,
-					ctrl),
-				QMargins(0, -st::peerListBox.padding.top(), 0, -st::peerListBox.padding.bottom()));
-			AddSkip(container);
-			const auto content = container->add(std::move(list));
-			AddSkip(container);
-			auto delegate = container->lifetime().make_state<PeerListContentDelegateSimple>();
-			delegate->setContent(content->entity());
-			ctrl->setDelegate(delegate);
-		}, [&](const SearchContext &) {
-		});
+				ctrl),
+			QMargins(0, -st::peerListBox.padding.top(), 0, -st::peerListBox.padding.bottom()));
+		const auto content = container->add(std::move(list));
+		auto delegate = container->lifetime().make_state<PeerListContentDelegateSimple>();
+		delegate->setContent(content->entity());
+		ctrl->setDelegate(delegate);
 	});
 }
 

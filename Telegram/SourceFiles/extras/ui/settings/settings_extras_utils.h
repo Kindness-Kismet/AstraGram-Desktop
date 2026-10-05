@@ -93,7 +93,6 @@ not_null<Button*> AddToggle(
 	Fn<void(bool)> setter,
 	const style::icon &icon);
 
-void AddSectionDivider(not_null<Ui::VerticalLayout*> container);
 
 not_null<Button*> AddSettingToggle(
 	not_null<Ui::VerticalLayout*> container,

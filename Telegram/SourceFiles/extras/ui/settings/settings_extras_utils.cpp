@@ -5,6 +5,7 @@
 #include "core/application.h"
 #include "lang/lang_text_entity.h"
 #include "settings/settings_common.h"
+#include "settings/settings_card_layout.h"
 #include "styles/style_extras_styles.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_edit_peer_members.h"
@@ -487,8 +488,7 @@ CollapsibleToggleResult AddCollapsibleToggle(not_null<Ui::VerticalLayout*> conta
 	}
 
 	if (!description.isEmpty()) {
-		Ui::AddDividerText(verticalLayout, rpl::single(std::move(description)));
-		Ui::AddSkip(verticalLayout);
+		AddCardDescription(verticalLayout, rpl::single(std::move(description)));
 	}
 
 	refreshLockLooks();
@@ -665,12 +665,6 @@ not_null<Button*> AddToggle(
 		std::move(setter),
 		st::settingsButton,
 		{&icon});
-}
-
-void AddSectionDivider(not_null<Ui::VerticalLayout*> container) {
-	AddSkip(container);
-	AddDivider(container);
-	AddSkip(container);
 }
 
 not_null<Button*> AddSettingToggle(
