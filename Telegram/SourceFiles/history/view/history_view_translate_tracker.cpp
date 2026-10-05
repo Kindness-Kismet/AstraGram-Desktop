@@ -341,10 +341,12 @@ void TranslateTracker::requestSome() {
 	const auto owner = &session->data();
 	auto requests = std::vector<Ui::TranslateProviderRequest>();
 	requests.reserve(_requested.size());
+	auto originals = base::flat_map<FullMsgId, TextWithEntities>();
 	auto ids = std::vector<FullMsgId>();
 	ids.reserve(_requested.size());
 	for (const auto &id : _requested) {
 		if (const auto item = owner->message(id)) {
+			originals.emplace(id, item->originalText());
 			requests.push_back(Ui::PrepareTranslateProviderRequest(
 				_provider.get(),
 				session->data().peer(id.peer),
@@ -372,6 +374,9 @@ void TranslateTracker::requestSome() {
 			}
 			const auto &id = _requested[index];
 			if (const auto item = owner->message(id)) {
+				if (item->originalText() != originals.find(id)->second) {
+					return;
+				}
 				item->translationDone(
 					to,
 					result.text.value_or(TextWithEntities()));
@@ -402,11 +407,13 @@ void TranslateTracker::requestSomeRich(LanguageId to, PeerId peerId) {
 	}
 	auto mtpIds = QVector<MTPint>();
 	mtpIds.reserve(_requested.size());
+	auto originals = base::flat_map<FullMsgId, std::shared_ptr<const Iv::RichPage>>();
 	auto ids = std::vector<FullMsgId>();
 	ids.reserve(_requested.size());
 	for (const auto &id : _requested) {
 		const auto item = owner->message(id);
 		if (item && item->richPage()) {
+			originals.emplace(id, item->richPage());
 			mtpIds.push_back(MTP_int(id.msg));
 			ids.push_back(id);
 		}
@@ -438,6 +445,9 @@ void TranslateTracker::requestSomeRich(LanguageId to, PeerId peerId) {
 		const auto &list = result.data().vresult().v;
 		for (auto i = 0, count = int(_requested.size()); i != count; ++i) {
 			if (const auto item = owner->message(_requested[i])) {
+				if (item->richPage() != originals.find(_requested[i])->second) {
+					continue;
+				}
 				item->translationDone(to, (i < list.size())
 					? Iv::ParseRichPage(session, list[i])
 					: nullptr);
@@ -450,6 +460,9 @@ void TranslateTracker::requestSomeRich(LanguageId to, PeerId peerId) {
 		}
 		for (const auto &id : _requested) {
 			if (const auto item = owner->message(id)) {
+				if (item->richPage() != originals.find(id)->second) {
+					continue;
+				}
 				item->translationDone(to, TextWithEntities());
 			}
 		}
