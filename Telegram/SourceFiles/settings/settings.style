@@ -18,7 +18,6 @@ settingsButton: SettingsButton(infoProfileButton) {
 }
 
 settingsCardRadius: 14px;
-settingsCardPageWidth: 560px;
 settingsCardPagePadding: 20px;
 settingsCardNarrowPadding: 12px;
 settingsCardNarrowWidth: 420px;

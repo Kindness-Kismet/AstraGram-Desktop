@@ -143,9 +143,7 @@ int CardPage::resizeGetHeight(int newWidth) {
 	const auto padding = (newWidth < st::settingsCardNarrowWidth)
 		? st::settingsCardNarrowPadding
 		: st::settingsCardPagePadding;
-	const auto available = std::min(
-		st::settingsCardPageWidth,
-		std::max(newWidth - 2 * padding, 1));
+	const auto available = std::max(newWidth - 2 * padding, 1);
 	_resizing = true;
 	_content->resizeToWidth(available);
 	_content->moveToLeft((newWidth - available) / 2, st::settingsCardPageTop);
