@@ -740,11 +740,8 @@ void Main::setupContent() {
 		builder.addDivider();
 		builder.addSkip();
 		BuildValidationSuggestions(builder);
-		BuildSectionButtons(builder);
 		builder.addSkip();
 		BuildInterfaceScale(builder);
-		BuildPremiumSection(builder);
-		BuildHelpSection(builder);
 		BuildAppSection(builder);
 
 		std::move(showFinished) | rpl::on_next([=] {
