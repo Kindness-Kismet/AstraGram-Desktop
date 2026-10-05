@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "settings/sections/settings_chat.h"
 #include "settings/settings_builder.h"
+#include "settings/settings_card_layout.h"
 #include "settings/settings_common_session.h"
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/buttons.h"
@@ -184,11 +185,12 @@ struct SetupShortcutsResult {
 		std::vector<QKeySequence> now;
 		Ui::SlideWrap<Ui::VerticalLayout> *wrap = nullptr;
 		Ui::VerticalLayout *inner = nullptr;
+		int group = 0;
 		std::vector<std::unique_ptr<Button>> buttons;
 	};
 	struct State {
 		std::vector<Entry> entries;
-		std::vector<Ui::SlideWrap<Ui::VerticalLayout>*> separators;
+		std::vector<Ui::SlideWrap<Ui::VerticalLayout>*> groups;
 		QString query;
 		QStringList resetTerms;
 		rpl::variable<bool> modified;
@@ -258,10 +260,11 @@ struct SetupShortcutsResult {
 				});
 				const auto raw = button.get();
 				const auto widget = entry.inner->add(
-					object_ptr<Ui::SettingsButton>(
+					CreateButtonWithIcon(
 						entry.inner,
 						rpl::duplicate(entry.label),
-						st::settingsButtonNoIcon));
+						st::settingsButtonNoIcon,
+						{}));
 				if (highlights && index == 0) {
 					const auto id = ShortcutsHighlightId(entry.command);
 					if (!id.isEmpty()) {
@@ -287,7 +290,7 @@ struct SetupShortcutsResult {
 						const QKeySequence &key,
 						Button *recording,
 						bool removed) {
-					const auto &st = st::settingsButtonNoIcon;
+					const auto &st = widget->st();
 					const auto available = width
 						- st.padding.left()
 						- st.padding.right()
@@ -310,8 +313,8 @@ struct SetupShortcutsResult {
 						: std::optional<QColor>());
 					keys->resizeToNaturalWidth(available);
 					keys->moveToRight(
-						st::settingsButtonRightSkip,
-						st.padding.top());
+						st.padding.right(),
+						(widget->height() - keys->height()) / 2);
 				}, keys->lifetime());
 				keys->setAttribute(Qt::WA_TransparentForMouseEvents);
 
@@ -486,13 +489,12 @@ struct SetupShortcutsResult {
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			content,
 			object_ptr<Ui::VerticalLayout>(content)));
-	const auto modifiedInner = modifiedWrap->entity();
-	AddDivider(modifiedInner);
-	AddSkip(modifiedInner);
-	const auto reset = modifiedInner->add(object_ptr<Ui::SettingsButton>(
+	const auto modifiedInner = AddCardGroup(modifiedWrap->entity());
+	const auto reset = modifiedInner->add(CreateButtonWithIcon(
 		modifiedInner,
 		tr::lng_shortcuts_reset(),
-		st::settingsButtonNoIcon));
+		st::settingsButtonNoIcon,
+		{}));
 	reset->setClickedCallback([=] {
 		stopRecording();
 		for (auto &entry : state->entries) {
@@ -504,8 +506,6 @@ struct SetupShortcutsResult {
 		checkModified();
 		S::ResetToDefaults();
 	});
-	AddSkip(modifiedInner);
-	AddDivider(modifiedInner);
 	modifiedWrap->toggleOn(rpl::combine(
 		state->modified.value(),
 		state->resetShown.value()
@@ -513,7 +513,6 @@ struct SetupShortcutsResult {
 		return modified && shown;
 	}));
 
-	AddSkip(content);
 	const auto nothingFound = content->add(
 		object_ptr<Ui::SlideWrap<Ui::FlatLabel>>(
 			content,
@@ -532,6 +531,7 @@ struct SetupShortcutsResult {
 		const auto reset = MatchesWords(state->resetTerms, words);
 		state->resetShown = reset;
 		auto found = reset && state->modified.current();
+		auto shownGroups = std::vector<bool>(state->groups.size(), false);
 		for (auto &entry : state->entries) {
 			if (!entry.wrap) {
 				continue;
@@ -542,10 +542,11 @@ struct SetupShortcutsResult {
 			}
 			const auto shown = MatchesWords(terms, words);
 			entry.wrap->toggle(shown, anim::type::instant);
+			shownGroups[entry.group] = shownGroups[entry.group] || shown;
 			found = found || shown;
 		}
-		for (const auto separator : state->separators) {
-			separator->toggle(words.isEmpty(), anim::type::instant);
+		for (auto i = 0; i != state->groups.size(); ++i) {
+			state->groups[i]->toggle(shownGroups[i], anim::type::instant);
 		}
 		nothingFound->toggle(!found, anim::type::instant);
 	};
@@ -558,25 +559,28 @@ struct SetupShortcutsResult {
 		}
 	}, content->lifetime());
 
+	Ui::VerticalLayout *group = nullptr;
 	for (auto &entry : entries) {
 		if (!entry.label) {
-			const auto separator = content->add(
+			group = nullptr;
+			continue;
+		}
+		if (!group) {
+			const auto wrap = content->add(
 				object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 					content,
 					object_ptr<Ui::VerticalLayout>(content)),
 				style::margins(),
 				style::al_justify);
-			separator->setDuration(0);
-			AddSkip(separator->entity());
-			AddDivider(separator->entity());
-			AddSkip(separator->entity());
-			state->separators.push_back(separator);
-			continue;
+			wrap->setDuration(0);
+			group = AddCardGroup(wrap->entity());
+			state->groups.push_back(wrap);
 		}
-		entry.wrap = content->add(
+		entry.group = int(state->groups.size()) - 1;
+		entry.wrap = group->add(
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-				content,
-				object_ptr<Ui::VerticalLayout>(content)),
+				group,
+				object_ptr<Ui::VerticalLayout>(group)),
 			style::margins(),
 			style::al_justify);
 		entry.wrap->setDuration(0);
@@ -690,21 +694,10 @@ void Shortcuts::setupContent() {
 			rpl::producer<> showFinished) {
 		auto &lifetime = container->lifetime();
 		const auto highlights = lifetime.make_state<HighlightRegistry>();
-		const auto isPaused = Window::PausedIn(
-			controller,
-			Window::GifPauseReason::Layer);
-
-		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
-			.highlights = highlights,
-		});
-
+		const auto page = container->add(object_ptr<CardPage>(container));
 		auto result = SetupShortcutsContent(
 			controller,
-			container,
+			page->content(),
 			highlights);
 		*save = std::move(result.save);
 		*resetButton = result.resetButton;
