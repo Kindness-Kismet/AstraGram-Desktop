@@ -8,12 +8,14 @@
 #include "extras/debug/debug_login.h"
 #include "extras/debug/commands/message_archive_tests.h"
 #include "extras/features/filters/filters_controller.h"
+#include "extras/features/translator/message_translation.h"
 #include "extras/ui/context_menu/context_menu.h"
 #include "extras/utils/telegram_helpers.h"
 #include "core/application.h"
 #include "data/data_session.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "history/history_item_components.h"
 #include "main/main_session.h"
 #include "settings.h"
 #include <QFileInfo>
@@ -90,13 +92,38 @@ Result inspectMessage(const QStringList &args) {
 	if (args.size() != 2) return Result::Err(u"usage: message.inspect <peerId> <messageId>"_q);
 	const auto item = findMessage(args[0], args[1]);
 	if (!item) return Result::Err(u"message not found"_q);
+	const auto translation = item->translation();
 	return Result::Ok(Compact(Json{
 		{"peerId", item->history()->peer->id.value}, {"messageId", item->id.bare},
 		{"text", item->originalText().text.toStdString()}, {"outgoing", item->out()},
 		{"deleted", item->isDeleted()}, {"hidden", ExtrasState::isHidden(item)},
 		{"filtered", FiltersController::filtered(item)}, {"hasRevisions", ExtrasMessages::hasRevisions(item)},
 		{"hasView", item->mainView() != nullptr},
+		{"translatedText", item->translatedText().text.toStdString()},
+		{"translationShown", item->translationDisplayed()},
+		{"translationManual", translation && translation->manualTo.has_value()},
+		{"translationRequested", translation && translation->requested},
+		{"translationFailed", translation && translation->failed},
+		{"chatTranslationActive", bool(item->history()->translatedTo())},
 	}));
+}
+
+Result translateMessage(const QStringList &args) {
+	if (args.size() != 2) return Result::Err(u"usage: message.translate <peerId> <messageId>"_q);
+	const auto item = findMessage(args[0], args[1]);
+	if (!item) return Result::Err(u"message not found"_q);
+	item->history()->session().messageTranslations().translate(item, [](QString error) {
+		LOG(("Translation: %1").arg(error));
+	});
+	return inspectMessage(args);
+}
+
+Result showOriginalMessage(const QStringList &args) {
+	if (args.size() != 2) return Result::Err(u"usage: message.show-original <peerId> <messageId>"_q);
+	const auto item = findMessage(args[0], args[1]);
+	if (!item) return Result::Err(u"message not found"_q);
+	item->history()->session().messageTranslations().showOriginal(item);
+	return inspectMessage(args);
 }
 
 Result editLocalMessage(const QStringList &args) {
@@ -139,6 +166,8 @@ const HandlerMap &StorageHandlers() {
 		{u"storage.deleted"_q, &deletedMessages},
 		{u"storage.edits"_q, &editedMessages},
 		{u"message.inspect"_q, &inspectMessage},
+		{u"message.translate"_q, &translateMessage},
+		{u"message.show-original"_q, &showOriginalMessage},
 		{u"message.edit-local"_q, &editLocalMessage},
 		{u"message.delete-local"_q, &deleteLocalMessage},
 		{u"message.hide"_q, &hideMessage},

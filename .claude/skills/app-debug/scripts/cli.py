@@ -67,6 +67,8 @@ GENERIC_COMMANDS = {
     "storage.edits": "查询本地编辑历史：<会话编号> <消息编号> [条数]",
     "storage.verify-archive": "在临时数据库验证留档加密、篡改拒绝和旧库迁移，仅限独立假会话",
     "message.inspect": "查询消息正文与删除、过滤、视图状态：<会话编号> <消息编号>",
+    "message.translate": "调用消息业务逻辑在原气泡翻译：<会话编号> <消息编号>",
+    "message.show-original": "恢复消息原文并取消待处理翻译：<会话编号> <消息编号>",
     "message.edit-local": "在假会话触发原生编辑流程：<会话编号> <消息编号> <文字>",
     "message.delete-local": "在假会话触发原生删除流程：<会话编号> <消息编号>",
     "message.hide": "按右键菜单流程隐藏消息及所在相册：<会话编号> <消息编号>",

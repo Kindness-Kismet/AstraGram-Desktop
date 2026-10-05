@@ -45,3 +45,11 @@
 发起转发、重复发送和更多消息动作可通过消息右键菜单操作，保留原有选项与目标确认流程。
 
 `feature.status` 返回隐私遮挡开关、窗口材质实际生效状态、支持的材质、翻译服务和当前表情包。
+
+消息气泡翻译可直接调用业务入口，不需要模拟右键点击：
+
+- `message.translate <peerId> <messageId>`：按当前服务和目标语言翻译消息。
+- `message.show-original <peerId> <messageId>`：恢复原文，同时取消当前消息待处理的翻译结果。
+- `message.inspect <peerId> <messageId>`：查询结果；`translationRequested` 表示请求中，`translationFailed` 表示失败，`translationShown` 表示显示译文。
+
+命令返回当前状态，不代表异步翻译已完成；失败详情写入应用日志。菜单和命令共用消息翻译管理器，界面命中、菜单布局仍需单独验证。真实账号的消息可能被发送给所选翻译服务，测试优先使用假会话。

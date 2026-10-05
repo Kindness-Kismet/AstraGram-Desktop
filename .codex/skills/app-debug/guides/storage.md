@@ -23,6 +23,6 @@ python .codex/skills/app-debug/scripts/cli.py storage.edits self '<上一步消�
 `message.edit-local` 走编辑事件处理，`message.delete-local` 走原有删除逻辑；
 保存开关、发送者身份等条件仍按应用规则决定是否留档。两条命令只允许本进程创建的假会话。
 
-`message.inspect <peerId> <messageId>` 查看正文与已删除、隐藏、过滤、历史和视图状态。
+`message.inspect <peerId> <messageId>` 查看正文与已删除、隐藏、过滤、历史和视图状态；同时返回当前显示文字、译文是否显示、是否手动翻译、请求状态和聊天翻译状态。
 `message.hide <peerId> <messageId>` 与右键菜单相同：隐藏消息及所在相册并移出列表，收藏夹不支持。
 真实编辑／删除和远端同步效果需要另行授权的测试账号，本轮不执行。
