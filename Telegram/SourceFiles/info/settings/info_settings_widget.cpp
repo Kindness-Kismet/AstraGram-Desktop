@@ -248,7 +248,7 @@ void Widget::paintEvent(QPaintEvent *e) {
 	if (!_inner->paintOuter(this, maxVisibleHeight(), e->rect())) {
 		if (_inner->property("settingsCardBackground").toBool()) {
 			QPainter(this).fillRect(e->rect(),
-				ExtrasFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c));
+				ExtrasFeatures::WindowMaterial::surfaceColor(this, st::dialogsBg->c));
 		} else {
 			ContentWidget::paintEvent(e);
 		}

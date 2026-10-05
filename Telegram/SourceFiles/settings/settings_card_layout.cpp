@@ -83,7 +83,7 @@ private:
 		corners.addRect(rect());
 		corners.addPath(shape);
 		if (!ExtrasFeatures::WindowMaterial::isActive(this)) {
-			p.fillPath(corners, st::windowBg);
+			p.fillPath(corners, st::dialogsBg);
 		}
 		p.setPen(st::strokeFg);
 		p.setBrush(Qt::NoBrush);
@@ -126,7 +126,7 @@ CardPage::CardPage(QWidget *parent)
 	}
 	paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(this);
-		p.fillRect(rect(), ExtrasFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c));
+		p.fillRect(rect(), ExtrasFeatures::WindowMaterial::surfaceColor(this, st::dialogsBg->c));
 	}, lifetime());
 	_content->heightValue() | rpl::on_next([=] {
 		if (!_resizing) {

@@ -184,7 +184,7 @@ void Workspace::paintEvent(QPaintEvent *e) {
 	Window::SectionWidget::paintEvent(e);
 	if (!animatingShow()) {
 		QPainter(this).fillRect(e->rect(),
-			ExtrasFeatures::WindowMaterial::surfaceColor(this, st::windowBg->c));
+			ExtrasFeatures::WindowMaterial::surfaceColor(this, st::dialogsBg->c));
 	}
 }
 

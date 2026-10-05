@@ -355,10 +355,10 @@ void Navigation::resizeEvent(QResizeEvent *e) {
 void Navigation::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 	p.fillRect(e->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(
-		this, st::cardBgSunken->c));
+		this, st::dialogsBg->c));
 	if (!property("narrow").toBool()
 		&& !ExtrasFeatures::WindowMaterial::isActive(this)) {
-		p.fillRect(width() - st::lineWidth, 0, st::lineWidth, height(), st::strokeFg);
+		p.fillRect(width() - st::lineWidth, 0, st::lineWidth, height(), st::windowDividerFg);
 	}
 }
 
