@@ -177,7 +177,8 @@ Navigation::Navigation(
 	accountMenu->setObjectName(u"settings-account-menu"_q);
 	accountMenu->setAccessibleName(tr::lng_sr_profile_menu(tr::now));
 	accountMenu->setClickedCallback([=] {
-		const auto menu = Ui::CreateChild<Ui::PopupMenu>(accountMenu, st::popupMenuWithIcons);
+		_accountMenu = base::make_unique_q<Ui::PopupMenu>(accountMenu, st::popupMenuWithIcons);
+		const auto menu = _accountMenu.get();
 		FillAccountMenu(controller, Ui::Menu::CreateAddActionCallback(menu), [=](Type type) {
 			_navigate(type);
 		});
@@ -271,7 +272,12 @@ Navigation::Navigation(
 	}, lifetime());
 }
 
-Navigation::~Navigation() = default;
+Navigation::~Navigation() {
+	// 菜单恢复焦点时，导航控件必须尚未进入 QWidget 析构。
+	if (_accountMenu) {
+		_accountMenu->hideMenu(true);
+	}
+}
 
 void Navigation::addSeparator() {
 	Ui::AddSkip(_list, scaled(12));

@@ -3,12 +3,14 @@
 #include "settings/settings_type.h"
 #include "ui/rp_widget.h"
 #include "base/object_ptr.h"
+#include "base/unique_qptr.h"
 
 namespace Window {
 class SessionController;
 } // namespace Window
 
 namespace Ui {
+class PopupMenu;
 class ScrollArea;
 class VerticalLayout;
 } // namespace Ui
@@ -47,6 +49,7 @@ private:
 	object_ptr<Ui::ScrollArea> _scroll;
 	Ui::VerticalLayout *_list = nullptr;
 	std::vector<std::pair<Type, Item*>> _items;
+	base::unique_qptr<Ui::PopupMenu> _accountMenu;
 };
 
 } // namespace Settings
