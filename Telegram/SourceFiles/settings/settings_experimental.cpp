@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/settings_experimental.h"
+#include "settings/settings_card_layout.h"
 
 #include "settings/settings_common.h"
 #include "data/components/passkeys.h"
@@ -503,14 +504,13 @@ void SetupExperimental(
 			object_ptr<Ui::VerticalLayout>(container)));
 	const auto header = headerWrap->entity();
 
-	Ui::AddSkip(header, st::settingsCheckboxesSkip);
 
 	header->add(
 		object_ptr<Ui::FlatLabel>(
 			header,
 			tr::lng_settings_experimental_about(),
 			st::boxLabel),
-		st::defaultBoxDividerLabelPadding);
+		st::settingsCardHintPadding);
 
 	auto reset = (Button*)nullptr;
 	if (base::options::changed()) {
@@ -518,21 +518,18 @@ void SetupExperimental(
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 				header,
 				object_ptr<Ui::VerticalLayout>(header)));
-		const auto inner = wrap->entity();
-		Ui::AddDivider(inner);
-		Ui::AddSkip(inner, st::settingsCheckboxesSkip);
-		reset = inner->add(object_ptr<Button>(
+		const auto inner = AddCardGroup(wrap->entity());
+		reset = inner->add(CreateButtonWithIcon(
 			inner,
 			tr::lng_settings_experimental_restore(),
-			st::settingsButtonNoIcon));
+			st::settingsButtonNoIcon,
+			{}));
 		reset->addClickHandler([=] {
 			base::options::reset();
 			wrap->hide(anim::type::normal);
 		});
-		Ui::AddSkip(inner, st::settingsCheckboxesSkip);
 	}
 
-	Ui::AddDivider(header);
 
 	rpl::duplicate(
 		query
@@ -564,13 +561,10 @@ void SetupExperimental(
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 				container,
 				object_ptr<Ui::VerticalLayout>(container)));
-		const auto inner = wrap->entity();
-		Ui::AddSkip(inner);
-		Ui::AddSubsectionTitle(inner, rpl::single(title));
+		AddCardTitle(wrap->entity(), rpl::single(title));
+		const auto inner = AddCardGroup(wrap->entity());
 		auto searchable = std::vector<QString>();
 		fill(inner, searchable);
-		Ui::AddSkip(inner);
-		Ui::AddDivider(inner);
 
 		auto terms = std::vector<QStringList>();
 		for (const auto &entry : searchable) {
@@ -714,7 +708,8 @@ base::weak_qptr<Ui::RpWidget> Experimental::createPinnedToTop(
 }
 
 void Experimental::setupContent() {
-	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	const auto page = Ui::CreateChild<CardPage>(this);
+	const auto content = page->content();
 
 	SetupExperimental(
 		&controller()->window(),
@@ -726,7 +721,7 @@ void Experimental::setupContent() {
 			_highlights.push_back({ id, widget.get() });
 		});
 
-	Ui::ResizeFitChild(this, content);
+	Ui::ResizeFitChild(this, page);
 }
 
 } // namespace Settings
