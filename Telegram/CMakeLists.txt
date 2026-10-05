@@ -2139,12 +2139,6 @@ PRIVATE
     settings/sections/settings_local_storage.h
     settings/sections/settings_main.cpp
     settings/sections/settings_main.h
-    settings/settings_recent_searches.cpp
-    settings/settings_recent_searches.h
-    settings/settings_search.cpp
-    settings/settings_search.h
-    settings/settings_faq_suggestions.cpp
-    settings/settings_faq_suggestions.h
     settings/settings_builder.cpp
     settings/settings_builder.h
     settings/settings_card_layout.cpp
@@ -2184,6 +2178,8 @@ PRIVATE
     settings/sections/settings_websites.h
     storage/details/storage_file_utilities.cpp
     storage/details/storage_file_utilities.h
+    storage/details/storage_search_suggestions.cpp
+    storage/details/storage_search_suggestions.h
     storage/details/storage_settings_scheme.cpp
     storage/details/storage_settings_scheme.h
     storage/download_manager_mtproto.cpp

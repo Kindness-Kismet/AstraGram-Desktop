@@ -52,7 +52,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_calls.h"
 #include "settings/sections/settings_chat.h"
 #include "settings/settings_codes.h"
-#include "settings/settings_faq_suggestions.h"
 #include "settings/sections/settings_credits.h"
 #include "settings/sections/settings_folders.h"
 #include "settings/sections/settings_information.h"
@@ -761,7 +760,6 @@ void Main::setupContent() {
 	session->api().globalPrivacy().reload();
 	session->api().premium().reload();
 	session->data().cloudThemes().refresh();
-	session->faqSuggestions().request();
 }
 
 void Main::showFinished() {

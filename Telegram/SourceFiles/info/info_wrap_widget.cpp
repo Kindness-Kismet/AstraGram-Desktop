@@ -21,7 +21,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_information.h"
 #include "settings/sections/settings_main.h"
 #include "settings/sections/settings_premium.h"
-#include "settings/settings_search.h"
 #include "ui/effects/ripple_animation.h" // MaskByDrawer.
 #include "ui/widgets/menu/menu_add_action_callback.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
@@ -31,7 +30,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/shadow.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/wrap/fade_wrap.h"
-#include "ui/search_field_controller.h"
 #include "ui/ui_utility.h"
 #include "core/application.h"
 #include "calls/calls_instance.h"
@@ -189,11 +187,6 @@ void WrapWidget::setupShortcuts() {
 	const auto isContentSearch = [=] {
 		return _content && _content->searchAvailable();
 	};
-	const auto isSearchSettings = [=] {
-		return isSettings()
-			&& (_controller->section().settingsType()
-				== ::Settings::Search::Id());
-	};
 
 	Shortcuts::Requests(
 	) | rpl::filter([=] {
@@ -205,11 +198,7 @@ void WrapWidget::setupShortcuts() {
 		request->check(Command::Search) && request->handle([=] {
 			if (requireTopBarSearch()) {
 				_topBar->showSearch();
-			} else if (isSearchSettings()) {
-				_content->setInnerFocus();
-			} else if (isSettings()) {
-				_controller->showSettings(::Settings::Search::Id());
-			} else if (isContentSearch()) {
+			} else if (!isSettings() && isContentSearch()) {
 				_content->showSearch();
 			}
 			return true;
@@ -455,20 +444,7 @@ void WrapWidget::setupTopBarMenuToggle() {
 		addProfileCallsButton();
 	} else if (section.type() == Section::Type::Settings) {
 		addTopBarMenuButton();
-		if (section.settingsType() == ::Settings::MainId()
-			|| ((_settingsNavigation || _settingsRootBack)
-				&& section.settingsType() != ::Settings::Search::Id()
-				&& section.settingsType() != ::Settings::InformationId())) {
-			const auto &st = (wrap() == Wrap::Layer)
-				? st::infoLayerTopBarSearch
-				: st::infoTopBarSearch;
-			const auto button = _topBar->addButton(
-				base::make_unique_q<Ui::IconButton>(_topBar, st));
-			button->setAccessibleName(tr::lng_dlg_filter(tr::now));
-			button->addClickHandler([=] {
-				_controller->showSettings(::Settings::Search::Id());
-			});
-		} else if (section.settingsType() == ::Settings::InformationId()) {
+		if (section.settingsType() == ::Settings::InformationId()) {
 			const auto controller = _controller->parentController();
 			const auto self = controller->session().user();
 			if (!self->username().isEmpty()) {

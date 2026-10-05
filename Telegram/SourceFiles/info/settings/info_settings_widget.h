@@ -57,17 +57,10 @@ public:
 	[[nodiscard]] const std::any &sectionState() const {
 		return _sectionState;
 	}
-	void setPageTitle(QString title) {
-		_pageTitle = std::move(title);
-	}
-	[[nodiscard]] const QString &pageTitle() const {
-		return _pageTitle;
-	}
 
 private:
 	Type _type = Type();
 	std::any _sectionState;
-	QString _pageTitle;
 
 };
 

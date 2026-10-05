@@ -65,7 +65,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_notifications.h"
 #include "settings/sections/settings_notifications_type.h"
 #include "settings/settings_power_saving.h"
-#include "settings/settings_search.h"
 #include "settings/settings_experimental.h"
 #include "settings/sections/settings_premium.h"
 #include "ui/power_saving.h"
@@ -1738,25 +1737,7 @@ void RegisterSettingsHandlers(Router &router) {
 		.requiresAuth = false,
 	});
 
-	router.add(u"settings"_q, {
-		.path = u"search"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
-			if (!ctx.controller) {
-				return Result::NeedsAuth;
-			}
-			const auto self = ctx.controller->session().user();
-			auto stack = std::vector<std::shared_ptr<Info::ContentMemento>>();
-			stack.push_back(std::make_shared<Info::Settings::Memento>(
-				self,
-				::Settings::MainId()));
-			stack.push_back(std::make_shared<Info::Settings::Memento>(
-				self,
-				::Settings::Search::Id()));
-			ctx.controller->showSection(
-				std::make_shared<Info::Memento>(std::move(stack)));
-			return Result::Handled;
-		}},
-	});
+
 
 	router.add(u"settings"_q, {
 		.path = u"qr-code"_q,

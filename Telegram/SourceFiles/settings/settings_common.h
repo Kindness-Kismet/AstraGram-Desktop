@@ -42,7 +42,6 @@ namespace Ui {
 class VerticalLayout;
 class FlatLabel;
 class InputField;
-class SearchFieldController;
 class SettingsButton;
 class AbstractButton;
 class MediaSlider;
@@ -349,21 +348,5 @@ void AddLottieIconWithCircle(
 void AddPremiumStar(
 	not_null<Button*> button,
 	bool credits);
-
-struct SectionSearchRow {
-	std::unique_ptr<Ui::SearchFieldController> controller;
-	not_null<Ui::RpWidget*> row;
-	not_null<Ui::InputField*> field;
-};
-
-[[nodiscard]] SectionSearchRow CreateSectionSearchRow(
-	not_null<QWidget*> parent,
-	const QString &query = QString());
-
-[[nodiscard]] QStringList SearchWords(const QString &text);
-
-[[nodiscard]] bool MatchesWords(
-	const QStringList &terms,
-	const QStringList &words);
 
 } // namespace Settings

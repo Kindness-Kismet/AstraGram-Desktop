@@ -282,9 +282,6 @@ void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 }
 
 void Widget::saveState(not_null<Memento*> memento) {
-	_inner->title() | rpl::take(1) | rpl::on_next([=](QString title) {
-		memento->setPageTitle(std::move(title));
-	}, lifetime());
 	memento->setScrollTop(scrollTopSave());
 	auto sectionState = std::any();
 	_inner->sectionSaveState(sectionState);

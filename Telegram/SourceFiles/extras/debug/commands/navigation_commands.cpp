@@ -5,7 +5,6 @@
 #include "core/click_handler_types.h"
 #include "core/shortcuts.h"
 #include "settings/settings_builder.h"
-#include "settings/settings_search.h"
 #include "settings/sections/settings_main.h"
 #include "extras/ui/settings/settings_main.h"
 #include "window/window_session_controller.h"
@@ -45,9 +44,9 @@ Result openPage(const QStringList &args) {
 	const auto controller = session ? session->tryResolveWindow() : nullptr;
 	if (!controller) return Result::Err(u"an active session is required"_q);
 	const auto &key = args.front();
-	if (key == u"settings"_q || key == u"extras"_q || key == u"search"_q) {
+	if (key == u"settings"_q || key == u"extras"_q) {
 		controller->showSettings(key == u"settings"_q ? Settings::MainId()
-			: key == u"extras"_q ? Settings::ExtrasMainId() : Settings::Search::Id());
+			: Settings::ExtrasMainId());
 		return Result::Ok();
 	}
 	for (const auto &entry : Settings::Builder::SearchRegistry::Instance().collectAll(session)) {

@@ -1,6 +1,5 @@
 #include "settings/sections/settings_language.h"
 
-#include "base/event_filter.h"
 #include "boxes/language_box.h"
 #include "boxes/translate_box.h"
 #include "core/application.h"
@@ -13,9 +12,7 @@
 #include "settings/settings_common_session.h"
 #include "spellcheck/spellcheck_types.h"
 #include "ui/boxes/choose_language_box.h"
-#include "ui/search_field_controller.h"
 #include "ui/widgets/buttons.h"
-#include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
@@ -36,11 +33,6 @@ public:
 
 	[[nodiscard]] Type id() const override;
 	[[nodiscard]] rpl::producer<QString> title() override;
-	[[nodiscard]] base::weak_qptr<Ui::RpWidget> createPinnedToTop(
-		not_null<QWidget*> parent) override;
-	void setInnerFocus() override;
-	void sectionSaveState(std::any &state) override;
-	void sectionRestoreState(const std::any &state) override;
 
 protected:
 	void keyPressEvent(QKeyEvent *e) override;
@@ -55,9 +47,7 @@ private:
 	Ui::VerticalLayout *_languages = nullptr;
 	QPointer<Ui::RpWidget> _list;
 	LanguageListContent _listContent;
-	std::unique_ptr<Ui::SearchFieldController> _searchController;
-	QPointer<Ui::InputField> _searchField;
-	QString _query;
+
 };
 
 class LanguageFactory final : public AbstractSectionFactory {
@@ -107,51 +97,18 @@ void Language::rebuildLanguages() {
 	_listContent = CreateLanguageList(_languages, false);
 	_list = _languages->add(std::move(_listContent.widget));
 	_list->setObjectName(u"settings-language-list"_q);
-	_listContent.filter(_query);
 	std::move(_listContent.scrollRequests
 	) | rpl::on_next([=](Ui::ScrollToRequest request) {
 		scrollToRequest(request);
 	}, _list->lifetime());
 }
 
-base::weak_qptr<Ui::RpWidget> Language::createPinnedToTop(
-		not_null<QWidget*> parent) {
-	auto search = CreateSectionSearchRow(parent, _query);
-	_searchController = std::move(search.controller);
-	_searchField = search.field;
-	_searchField->setObjectName(u"settings-language-search"_q);
-	_searchField->setPlaceholder(tr::lng_participant_filter());
-	_searchField->customUpDown(true);
-
-	_searchController->queryChanges(
-	) | rpl::on_next([=](const QString &query) {
-		_query = query;
-		_listContent.filter(query);
-	}, search.row->lifetime());
-	_searchField->submits(
-	) | rpl::on_next([=] {
-		_listContent.submit();
-	}, search.row->lifetime());
-	base::install_event_filter(_searchField, [=](not_null<QEvent*> e) {
-		if (e->type() != QEvent::KeyPress) {
-			return base::EventFilterResult::Continue;
-		}
-		const auto key = static_cast<QKeyEvent*>(e.get())->key();
-		if (key == Qt::Key_Escape && !_query.isEmpty()) {
-			_searchField->setText(QString());
-			return base::EventFilterResult::Cancel;
-		}
-		return handleNavigation(key)
-			? base::EventFilterResult::Cancel
-			: base::EventFilterResult::Continue;
-	}, search.row->lifetime());
-	return base::make_weak(search.row);
-}
-
 bool Language::handleNavigation(int key) {
 	const auto rows = std::max(_scroll->height() / _listContent.rowHeight, 1);
 	auto skip = 0;
 	switch (key) {
+	case Qt::Key_Return:
+	case Qt::Key_Enter: _listContent.submit(); return true;
 	case Qt::Key_Up: skip = -1; break;
 	case Qt::Key_Down: skip = 1; break;
 	case Qt::Key_PageUp: skip = -rows; break;
@@ -176,28 +133,6 @@ void Language::keyPressEvent(QKeyEvent *e) {
 		return;
 	}
 	AbstractSection::keyPressEvent(e);
-}
-
-void Language::setInnerFocus() {
-	if (_searchField) {
-		_searchField->setFocus();
-	}
-}
-
-void Language::sectionSaveState(std::any &state) {
-	state = _query;
-}
-
-void Language::sectionRestoreState(const std::any &state) {
-	const auto saved = std::any_cast<QString>(&state);
-	if (!saved) {
-		return;
-	}
-	_query = *saved;
-	_listContent.filter(_query);
-	if (_searchField) {
-		_searchField->setText(_query);
-	}
 }
 
 const auto kMeta = Builder::BuildHelper({

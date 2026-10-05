@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/storage_clear_legacy.h"
 #include "storage/cache/storage_cache_types.h"
 #include "storage/details/storage_file_utilities.h"
+#include "storage/details/storage_search_suggestions.h"
 #include "storage/details/storage_settings_scheme.h"
 #include "storage/serialize_common.h"
 #include "storage/serialize_peer.h"
@@ -31,7 +32,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/version.h"
 #include "data/components/recent_inline_bots.h"
 #include "data/components/recent_peers.h"
-#include "settings/settings_recent_searches.h"
 #include "data/components/top_peers.h"
 #include "data/stickers/data_stickers.h"
 #include "data/data_session.h"
@@ -3208,13 +3208,10 @@ void Account::writeSearchSuggestions() {
 
 	const auto top = _owner->session().topPeers().serialize();
 	const auto recent = _owner->session().recentPeers().serialize();
-	const auto settingsSearches
-		= _owner->session().recentSettingsSearches().serialize();
 	const auto guestChatBots
 		= _owner->session().topGuestChatBots().serialize();
 	if (top.isEmpty()
 		&& recent.isEmpty()
-		&& settingsSearches.isEmpty()
 		&& guestChatBots.isEmpty()) {
 		if (_searchSuggestionsKey) {
 			ClearKey(_searchSuggestionsKey, _basePath);
@@ -3227,12 +3224,12 @@ void Account::writeSearchSuggestions() {
 		_searchSuggestionsKey = GenerateKey(_basePath);
 		writeMapQueued();
 	}
-	quint32 size = Serialize::bytearraySize(top)
-		+ Serialize::bytearraySize(recent)
-		+ Serialize::bytearraySize(settingsSearches)
-		+ Serialize::bytearraySize(guestChatBots);
-	EncryptedDescriptor data(size);
-	data.stream << top << recent << settingsSearches << guestChatBots;
+	EncryptedDescriptor data(0);
+	WriteSearchSuggestions(data.stream, {
+		.topPeers = top,
+		.recentPeers = recent,
+		.topGuestChatBots = guestChatBots,
+	});
 
 	FileWriteDescriptor file(_searchSuggestionsKey, _basePath);
 	file.writeEncrypted(data, _localKey);
@@ -3257,25 +3254,22 @@ void Account::readSearchSuggestions() {
 		return;
 	}
 
-	auto top = QByteArray();
-	auto recent = QByteArray();
-	auto settingsSearches = QByteArray();
-	auto guestChatBots = QByteArray();
-	suggestions.stream >> top >> recent;
-	if (!suggestions.stream.atEnd()) {
-		suggestions.stream >> settingsSearches;
-	}
-	if (!suggestions.stream.atEnd()) {
-		suggestions.stream >> guestChatBots;
-	}
-	if (CheckStreamStatus(suggestions.stream)) {
-		_owner->session().topPeers().applyLocal(top);
-		_owner->session().recentPeers().applyLocal(recent);
-		_owner->session().recentSettingsSearches().applyLocal(
-			settingsSearches);
-		_owner->session().topGuestChatBots().applyLocal(guestChatBots);
-	} else {
+	const auto result = ReadSearchSuggestions(suggestions.stream);
+	if (!result) {
 		DEBUG_LOG(("Suggestions: Could not read content."));
+		return;
+	}
+	const auto &data = result->data;
+	DEBUG_LOG(("Suggestions: Loaded %1 format (%2/%3/%4 bytes)."
+		).arg(result->legacy ? "legacy" : "named"
+		).arg(data.topPeers.size()
+		).arg(data.recentPeers.size()
+		).arg(data.topGuestChatBots.size()));
+	_owner->session().topPeers().applyLocal(data.topPeers);
+	_owner->session().recentPeers().applyLocal(data.recentPeers);
+	_owner->session().topGuestChatBots().applyLocal(data.topGuestChatBots);
+	if (result->legacy) {
+		writeSearchSuggestionsDelayed();
 	}
 }
 

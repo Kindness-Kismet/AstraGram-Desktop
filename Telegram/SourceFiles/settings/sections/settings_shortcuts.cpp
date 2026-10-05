@@ -8,7 +8,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_shortcuts.h"
 
 #include "base/event_filter.h"
-#include "core/application.h"
 #include "core/shortcuts.h"
 #include "lang/lang_keys.h"
 #include "settings/sections/settings_chat.h"
@@ -21,7 +20,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/popup_menu.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
-#include "ui/search_field_controller.h"
 #include "ui/vertical_list.h"
 #include "window/window_session_controller.h"
 #include "styles/style_menu_icons.h"
@@ -144,23 +142,8 @@ struct Labeled {
 	return result;
 }
 
-[[nodiscard]] QStringList KeyWords(const QKeySequence &key) {
-	if (key.isEmpty()) {
-		return {};
-	}
-	auto text = key.toString();
-#ifdef Q_OS_MAC
-	text.replace(u"Ctrl+"_q, u"Ctrl Cmd Command "_q);
-	text.replace(u"Meta+"_q, u"Meta Control "_q);
-	text.replace(u"Alt+"_q, u"Alt Opt Option "_q);
-#endif // Q_OS_MAC
-	return SearchWords(text);
-}
-
 struct SetupShortcutsResult {
-	Fn<void()> save;
-	QPointer<Ui::RpWidget> resetButton;
-	Fn<void(const QString &query)> applyFilter;
+	not_null<Ui::RpWidget*> resetButton;
 	rpl::producer<> recordingStarts;
 };
 
@@ -180,21 +163,14 @@ struct SetupShortcutsResult {
 	struct Entry {
 		S::Command command;
 		rpl::producer<QString> label;
-		QStringList terms;
 		std::vector<QKeySequence> original;
 		std::vector<QKeySequence> now;
-		Ui::SlideWrap<Ui::VerticalLayout> *wrap = nullptr;
 		Ui::VerticalLayout *inner = nullptr;
-		int group = 0;
 		std::vector<std::unique_ptr<Button>> buttons;
 	};
 	struct State {
 		std::vector<Entry> entries;
-		std::vector<Ui::SlideWrap<Ui::VerticalLayout>*> groups;
-		QString query;
-		QStringList resetTerms;
 		rpl::variable<bool> modified;
-		rpl::variable<bool> resetShown = true;
 		rpl::variable<Button*> recording;
 		rpl::variable<QKeySequence> lastKey;
 		Fn<void(S::Command command)> showMenuFor;
@@ -506,58 +482,7 @@ struct SetupShortcutsResult {
 		checkModified();
 		S::ResetToDefaults();
 	});
-	modifiedWrap->toggleOn(rpl::combine(
-		state->modified.value(),
-		state->resetShown.value()
-	) | rpl::map([](bool modified, bool shown) {
-		return modified && shown;
-	}));
-
-	const auto nothingFound = content->add(
-		object_ptr<Ui::SlideWrap<Ui::FlatLabel>>(
-			content,
-			object_ptr<Ui::FlatLabel>(
-				content,
-				tr::lng_search_tab_no_results(),
-				st::settingsSearchNoResults),
-			st::settingsSearchNoResultsPadding),
-		style::margins(),
-		style::al_justify);
-	nothingFound->setDuration(0);
-	nothingFound->hide(anim::type::instant);
-
-	const auto refreshFilter = [=] {
-		const auto words = SearchWords(state->query);
-		const auto reset = MatchesWords(state->resetTerms, words);
-		state->resetShown = reset;
-		auto found = reset && state->modified.current();
-		auto shownGroups = std::vector<bool>(state->groups.size(), false);
-		for (auto &entry : state->entries) {
-			if (!entry.wrap) {
-				continue;
-			}
-			auto terms = entry.terms;
-			for (const auto &key : entry.now) {
-				terms += KeyWords(key);
-			}
-			const auto shown = MatchesWords(terms, words);
-			entry.wrap->toggle(shown, anim::type::instant);
-			shownGroups[entry.group] = shownGroups[entry.group] || shown;
-			found = found || shown;
-		}
-		for (auto i = 0; i != state->groups.size(); ++i) {
-			state->groups[i]->toggle(shownGroups[i], anim::type::instant);
-		}
-		nothingFound->toggle(!found, anim::type::instant);
-	};
-
-	tr::lng_shortcuts_reset(
-	) | rpl::on_next([=](const QString &text) {
-		state->resetTerms = SearchWords(text);
-		if (!state->query.isEmpty()) {
-			refreshFilter();
-		}
-	}, content->lifetime());
+	modifiedWrap->toggleOn(state->modified.value());
 
 	Ui::VerticalLayout *group = nullptr;
 	for (auto &entry : entries) {
@@ -566,45 +491,14 @@ struct SetupShortcutsResult {
 			continue;
 		}
 		if (!group) {
-			const auto wrap = content->add(
-				object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-					content,
-					object_ptr<Ui::VerticalLayout>(content)),
-				style::margins(),
-				style::al_justify);
-			wrap->setDuration(0);
-			group = AddCardGroup(wrap->entity());
-			state->groups.push_back(wrap);
+			group = AddCardGroup(content);
 		}
-		entry.group = int(state->groups.size()) - 1;
-		entry.wrap = group->add(
-			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-				group,
-				object_ptr<Ui::VerticalLayout>(group)),
-			style::margins(),
-			style::al_justify);
-		entry.wrap->setDuration(0);
-		entry.inner = entry.wrap->entity();
+		entry.inner = group->add(object_ptr<Ui::VerticalLayout>(group));
 		fill(entry);
-
-		const auto raw = &entry;
-		rpl::duplicate(
-			entry.label
-		) | rpl::on_next([=](const QString &text) {
-			raw->terms = SearchWords(text);
-			if (!state->query.isEmpty()) {
-				refreshFilter();
-			}
-		}, content->lifetime());
 	}
 
 	return {
-		.save = [=] {},
 		.resetButton = reset,
-		.applyFilter = [=](const QString &query) {
-			state->query = query;
-			refreshFilter();
-		},
 		.recordingStarts = state->recording.changes(
 		) | rpl::filter([](Button *button) {
 			return button != nullptr;
@@ -627,23 +521,9 @@ public:
 	Shortcuts(
 		QWidget *parent,
 		not_null<Window::SessionController*> controller);
-	~Shortcuts();
-
-	void showFinished() override;
-
 	[[nodiscard]] rpl::producer<QString> title() override;
-
-	[[nodiscard]] base::weak_qptr<Ui::RpWidget> createPinnedToTop(
-		not_null<QWidget*> parent) override;
-
 private:
 	void setupContent();
-
-	std::unique_ptr<Ui::SearchFieldController> _searchController;
-	Fn<void(const QString &query)> _applyFilter;
-	Fn<void()> _save;
-	QPointer<Ui::RpWidget> _resetButton;
-
 };
 
 Shortcuts::Shortcuts(
@@ -653,41 +533,14 @@ Shortcuts::Shortcuts(
 	setupContent();
 }
 
-Shortcuts::~Shortcuts() {
-	if (!Core::Quitting()) {
-		_save();
-	}
-}
-
 rpl::producer<QString> Shortcuts::title() {
 	return tr::lng_settings_shortcuts();
-}
-
-base::weak_qptr<Ui::RpWidget> Shortcuts::createPinnedToTop(
-		not_null<QWidget*> parent) {
-	auto search = CreateSectionSearchRow(parent);
-	_searchController = std::move(search.controller);
-	const auto row = search.row;
-
-	_searchController->queryChanges(
-	) | rpl::on_next([=](const QString &query) {
-		if (_applyFilter) {
-			_applyFilter(query);
-		}
-	}, row->lifetime());
-
-	return base::make_weak(row);
 }
 
 void Shortcuts::setupContent() {
 	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
 
-	const SectionBuildMethod buildMethod = [
-		section = this,
-		applyFilter = &_applyFilter,
-		resetButton = &_resetButton,
-		save = &_save
-	](
+	const SectionBuildMethod buildMethod = [section = this](
 			not_null<Ui::VerticalLayout*> container,
 			not_null<Window::SessionController*> controller,
 			Fn<void(Type)> showOther,
@@ -699,9 +552,6 @@ void Shortcuts::setupContent() {
 			controller,
 			page->content(),
 			highlights);
-		*save = std::move(result.save);
-		*resetButton = result.resetButton;
-		*applyFilter = std::move(result.applyFilter);
 
 		std::move(
 			result.recordingStarts
@@ -709,12 +559,10 @@ void Shortcuts::setupContent() {
 			section->setFocus();
 		}, lifetime);
 
-		if (highlights && *resetButton) {
-			highlights->push_back({
-				u"shortcuts/reset"_q,
-				{ resetButton->data(), { .rippleShape = true } },
-			});
-		}
+		highlights->push_back({
+			u"shortcuts/reset"_q,
+			{ result.resetButton.get(), { .rippleShape = true } },
+		});
 
 		std::move(showFinished) | rpl::on_next([=] {
 			for (const auto &[id, entry] : *highlights) {
@@ -731,10 +579,6 @@ void Shortcuts::setupContent() {
 	build(content, buildMethod);
 
 	Ui::ResizeFitChild(this, content);
-}
-
-void Shortcuts::showFinished() {
-	Section<Shortcuts>::showFinished();
 }
 
 const auto kMeta = BuildHelper({

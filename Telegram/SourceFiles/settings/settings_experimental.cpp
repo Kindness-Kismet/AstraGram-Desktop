@@ -13,7 +13,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/layers/generic_box.h"
 #include "main/main_session.h"
 #include "ui/boxes/confirm_box.h"
-#include "ui/search_field_controller.h"
 #include "ui/text/text_entity.h"
 #include "ui/toast/toast.h"
 #include "ui/widgets/menu/menu_add_action_callback.h"
@@ -244,25 +243,19 @@ void SetupCopyDeepLink(
 	return button;
 }
 
-QString AddOption(
+void AddOption(
 		not_null<Window::Controller*> window,
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::VerticalLayout*> container,
 		base::options::option<bool> &option,
 		rpl::producer<> resetClicks,
 		rpl::producer<> reloadOptionsRequests,
-		rpl::producer<QString> query,
 		Fn<void(const QString&, not_null<QWidget*>)> registerHighlight) {
 	const auto name = option.name().isEmpty() ? option.id() : option.name();
 	const auto &description = option.description();
 
-	const auto wrap = container->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			container,
-			object_ptr<Ui::VerticalLayout>(container)),
-		style::margins(),
-		style::al_justify);
-	const auto inner = wrap->entity();
+	const auto inner = container->add(
+		object_ptr<Ui::VerticalLayout>(container));
 
 	auto &lifetime = inner->lifetime();
 	const auto toggles = lifetime.make_state<rpl::event_stream<bool>>();
@@ -332,39 +325,20 @@ QString AddOption(
 			}
 		}, inner->lifetime());
 	}
-
-	const auto searchable = name + ' ' + description;
-	const auto terms = SearchWords(searchable);
-	std::move(
-		query
-	) | rpl::on_next([=](const QString &text) {
-		wrap->toggle(
-			MatchesWords(terms, SearchWords(text)),
-			anim::type::instant);
-	}, wrap->lifetime());
-
-	return searchable;
 }
 
-QString AddFavoriteLinkButton(
+void AddFavoriteLinkButton(
 		not_null<Window::Controller*> window,
 		not_null<Ui::VerticalLayout*> container,
-		rpl::producer<QString> query,
 		Fn<void(const QString&, not_null<QWidget*>)> registerHighlight) {
 	const auto option = &base::options::lookup<QString>(
 		Window::kOptionFolderFavoriteLink);
 	const auto name = option->name().isEmpty()
 		? option->id()
 		: option->name();
-	const auto &description = option->description();
 
-	const auto wrap = container->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			container,
-			object_ptr<Ui::VerticalLayout>(container)),
-		style::margins(),
-		style::al_justify);
-	const auto inner = wrap->entity();
+	const auto inner = container->add(
+		object_ptr<Ui::VerticalLayout>(container));
 
 	auto label = rpl::single(
 		rpl::empty
@@ -387,18 +361,6 @@ QString AddFavoriteLinkButton(
 	}
 
 	SetupCopyDeepLink(window, button, option->id());
-
-	const auto searchable = name + ' ' + description;
-	const auto terms = SearchWords(searchable);
-	std::move(
-		query
-	) | rpl::on_next([=](const QString &text) {
-		wrap->toggle(
-			MatchesWords(terms, SearchWords(text)),
-			anim::type::instant);
-	}, wrap->lifetime());
-
-	return searchable;
 }
 
 struct Category {
@@ -496,14 +458,9 @@ void SetupExperimental(
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::VerticalLayout*> container,
 		rpl::producer<> reloadOptionsRequests,
-		rpl::producer<QString> query,
 		Fn<void(const QString&, not_null<QWidget*>)> registerHighlight) {
-	const auto headerWrap = container->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			container,
-			object_ptr<Ui::VerticalLayout>(container)));
-	const auto header = headerWrap->entity();
-
+	const auto header = container->add(
+		object_ptr<Ui::VerticalLayout>(container));
 
 	header->add(
 		object_ptr<Ui::FlatLabel>(
@@ -529,14 +486,6 @@ void SetupExperimental(
 			wrap->hide(anim::type::normal);
 		});
 	}
-
-
-	rpl::duplicate(
-		query
-	) | rpl::on_next([=](const QString &text) {
-		headerWrap->toggle(text.trimmed().isEmpty(), anim::type::instant);
-	}, headerWrap->lifetime());
-
 	const auto categories = experimentalCategories();
 
 	const auto addOption = [&](
@@ -551,58 +500,34 @@ void SetupExperimental(
 				? (reset->clicks() | rpl::to_empty)
 				: rpl::producer<>()),
 			rpl::duplicate(reloadOptionsRequests),
-			rpl::duplicate(query),
 			registerHighlight);
 	};
 	const auto addCategory = [&](
 			const QString &title,
 			auto &&fill) {
-		const auto wrap = container->add(
-			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-				container,
-				object_ptr<Ui::VerticalLayout>(container)));
-		AddCardTitle(wrap->entity(), rpl::single(title));
-		const auto inner = AddCardGroup(wrap->entity());
-		auto searchable = std::vector<QString>();
-		fill(inner, searchable);
-
-		auto terms = std::vector<QStringList>();
-		for (const auto &entry : searchable) {
-			terms.push_back(SearchWords(entry));
-		}
-		rpl::duplicate(
-			query
-		) | rpl::on_next([=](const QString &text) {
-			const auto words = SearchWords(text);
-			const auto matches = words.isEmpty()
-				|| ranges::any_of(terms, [&](const QStringList &entry) {
-					return MatchesWords(entry, words);
-				});
-			wrap->toggle(matches, anim::type::instant);
-		}, wrap->lifetime());
+		AddCardTitle(container, rpl::single(title));
+		const auto inner = AddCardGroup(container);
+		fill(inner);
 	};
 
 	for (const auto &category : categories) {
 		addCategory(category.title, [&](
-				not_null<Ui::VerticalLayout*> inner,
-				std::vector<QString> &searchable) {
+				not_null<Ui::VerticalLayout*> inner) {
 			for (const auto name : category.options) {
-				searchable.push_back(addOption(inner, name));
+				addOption(inner, name);
 			}
 		});
 	}
 
 	addCategory(u"Other"_q, [&](
-			not_null<Ui::VerticalLayout*> inner,
-			std::vector<QString> &searchable) {
+			not_null<Ui::VerticalLayout*> inner) {
 		if (base::options::lookup<bool>(kOptionFastButtonsMode).value()) {
-			searchable.push_back(addOption(inner, kOptionFastButtonsMode));
+			addOption(inner, kOptionFastButtonsMode);
 		}
-		searchable.push_back(AddFavoriteLinkButton(
+		AddFavoriteLinkButton(
 			window,
 			inner,
-			rpl::duplicate(query),
-			registerHighlight));
+			registerHighlight);
 	});
 }
 
@@ -675,14 +600,6 @@ void Experimental::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 		&st::menuIconImportTheme);
 }
 
-void Experimental::setInnerFocus() {
-	if (_searchField) {
-		_searchField->setFocus();
-	} else {
-		setFocus();
-	}
-}
-
 void Experimental::showFinished() {
 	AbstractSection::showFinished();
 	for (const auto &[id, widget] : _highlights) {
@@ -690,21 +607,6 @@ void Experimental::showFinished() {
 			controller()->checkHighlightControl(id, widget);
 		}
 	}
-}
-
-base::weak_qptr<Ui::RpWidget> Experimental::createPinnedToTop(
-		not_null<QWidget*> parent) {
-	auto search = CreateSectionSearchRow(parent, _query.current());
-	_searchController = std::move(search.controller);
-	const auto row = search.row;
-	_searchField = search.field;
-
-	_searchController->queryValue(
-	) | rpl::on_next([=](QString text) {
-		_query = std::move(text);
-	}, row->lifetime());
-
-	return base::make_weak(row);
 }
 
 void Experimental::setupContent() {
@@ -716,7 +618,6 @@ void Experimental::setupContent() {
 		controller(),
 		content,
 		_reloadOptionsRequests.events(),
-		_query.value(),
 		[this](const QString &id, not_null<QWidget*> widget) {
 			_highlights.push_back({ id, widget.get() });
 		});

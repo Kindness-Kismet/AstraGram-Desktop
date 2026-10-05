@@ -13,7 +13,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/settings_key_navigation.h"
 #include "ui/effects/animations.h"
 #include "ui/painter.h"
-#include "ui/search_field_controller.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/continuous_sliders.h"
@@ -829,44 +828,6 @@ void AddPremiumStar(
 	AddButtonIcon(button, button->st(), {
 		credits ? &st::menuIconStar : &st::menuIconPremium,
 	});
-}
-
-SectionSearchRow CreateSectionSearchRow(
-		not_null<QWidget*> parent,
-		const QString &query) {
-	auto controller = std::make_unique<Ui::SearchFieldController>(query);
-	auto rowView = controller->createRowView(
-		parent,
-		st::infoLayerMediaSearch);
-	const auto row = rowView.wrap.release();
-	const auto field = rowView.field.data();
-	row->show();
-	return {
-		.controller = std::move(controller),
-		.row = row,
-		.field = field,
-	};
-}
-
-QStringList SearchWords(const QString &text) {
-	auto simple = text;
-	return TextUtilities::PrepareSearchWords(simple.replace('#', ' '));
-}
-
-bool MatchesWords(const QStringList &terms, const QStringList &words) {
-	for (const auto &word : words) {
-		auto found = false;
-		for (const auto &term : terms) {
-			if (term.startsWith(word)) {
-				found = true;
-				break;
-			}
-		}
-		if (!found) {
-			return false;
-		}
-	}
-	return true;
 }
 
 } // namespace Settings

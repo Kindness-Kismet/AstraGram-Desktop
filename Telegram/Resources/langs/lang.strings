@@ -9291,10 +9291,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_ProxyModeSystemAbout" = "Using the network configuration of your operating system. Changes there take effect immediately.";
 "extras_ProxyModeCustomAbout" = "Pick a server from the list below. Click a server to connect through it.";
 
-"extras_SettingsGroupAccount" = "Account";
-"extras_SettingsGroupApplication" = "Application";
-"extras_SettingsGroupHelp" = "Help";
-"extras_SettingsSearch" = "Search settings";
 
 "extras_ProxyUsernameOptional" = "Username (optional)";
 
