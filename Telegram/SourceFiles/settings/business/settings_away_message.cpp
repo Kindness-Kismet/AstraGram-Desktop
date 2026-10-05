@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/business/settings_away_message.h"
+#include "settings/settings_card_layout.h"
 
 #include "base/unixtime.h"
 #include "core/application.h"
@@ -82,14 +83,15 @@ void AddAwayScheduleSelector(
 	const auto controller = descriptor.controller;
 	const auto data = descriptor.data;
 
-	Ui::AddSubsectionTitle(container, tr::lng_away_schedule());
+	AddCardTitle(container, tr::lng_away_schedule());
+	const auto choices = AddCardGroup(container);
 	const auto group = std::make_shared<Ui::RadioenumGroup<Type>>(
 		data->current().type);
 
 	const auto add = [&](Type type, const QString &label) {
-		container->add(
+		choices->add(
 			object_ptr<Ui::Radioenum<Type>>(
-				container,
+				choices,
 				group,
 				type,
 				label),
@@ -103,7 +105,7 @@ void AddAwayScheduleSelector(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			container,
 			object_ptr<Ui::VerticalLayout>(container)));
-	const auto customInner = customWrap->entity();
+	const auto customInner = AddCardGroup(customWrap->entity());
 	customWrap->toggleOn(group->value() | rpl::map(_1 == Type::Custom));
 
 	group->changes() | rpl::on_next([=](Type value) {
@@ -136,9 +138,6 @@ void AddAwayScheduleSelector(
 		}));
 	};
 
-	Ui::AddSkip(customInner);
-	Ui::AddDivider(customInner);
-	Ui::AddSkip(customInner);
 
 	auto startLabel = data->value(
 	) | rpl::map([=](const Data::AwaySchedule &value) {
@@ -213,7 +212,8 @@ void AwayMessage::setupContent(
 	using namespace Data;
 	using namespace rpl::mappers;
 
-	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	const auto page = Ui::CreateChild<CardPage>(this);
+	const auto content = page->content();
 	const auto info = &controller->session().data().businessInfo();
 	const auto current = info->awaySettings();
 	const auto disabled = (current.schedule.type == AwayScheduleType::Never);
@@ -240,6 +240,7 @@ void AwayMessage::setupContent(
 		.showFinished = showFinishes(),
 		.about = tr::lng_away_about(tr::marked),
 		.aboutMargins = st::peerAppearanceCoverLabelMargin,
+		.showDivider = false,
 	});
 
 	const auto session = &controller->session();
@@ -249,12 +250,11 @@ void AwayMessage::setupContent(
 		ShortcutExistsValue(session, u"away"_q),
 		(_1 < _2) || _3);
 
-	Ui::AddSkip(content);
-	const auto enabled = content->add(object_ptr<Ui::SettingsButton>(
-		content,
+	const auto enabled = AddButtonWithIcon(
+		AddCardGroup(content),
 		tr::lng_away_enable(),
-		st::settingsButtonNoIcon
-	))->toggleOn(rpl::single(
+		st::settingsButtonNoIcon,
+		{})->toggleOn(rpl::single(
 		!disabled
 	) | rpl::then(rpl::merge(
 		_canHave.value() | rpl::filter(!_1),
@@ -278,15 +278,12 @@ void AwayMessage::setupContent(
 			object_ptr<Ui::VerticalLayout>(content)));
 	const auto inner = wrap->entity();
 
-	Ui::AddSkip(inner);
-	Ui::AddDivider(inner);
 
 	const auto createWrap = inner->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			inner,
 			object_ptr<Ui::VerticalLayout>(inner)));
-	const auto createInner = createWrap->entity();
-	Ui::AddSkip(createInner);
+	const auto createInner = AddCardGroup(createWrap->entity());
 	const auto create = AddButtonWithLabel(
 		createInner,
 		rpl::conditional(
@@ -307,30 +304,22 @@ void AwayMessage::setupContent(
 		const auto id = owner->shortcutMessages().emplaceShortcut("away");
 		showOther(ShortcutMessagesId(id));
 	});
-	Ui::AddSkip(createInner);
-	Ui::AddDivider(createInner);
 
 	createWrap->toggleOn(rpl::single(true));
 
-	Ui::AddSkip(inner);
 	AddAwayScheduleSelector(inner, {
 		.controller = controller,
 		.data = &_schedule,
 	});
-	Ui::AddSkip(inner);
-	Ui::AddDivider(inner);
-	Ui::AddSkip(inner);
 
-	const auto offlineOnly = inner->add(
-		object_ptr<Ui::SettingsButton>(
-			inner,
-			tr::lng_away_offline_only(),
-			st::settingsButtonNoIcon)
-	)->toggleOn(rpl::single(current.offlineOnly));
+	const auto offlineOnly = AddButtonWithIcon(
+		AddCardGroup(inner),
+		tr::lng_away_offline_only(),
+		st::settingsButtonNoIcon,
+		{})->toggleOn(rpl::single(current.offlineOnly));
 	_offlineOnly = offlineOnly->toggledValue();
 
-	Ui::AddSkip(inner);
-	Ui::AddDividerText(inner, tr::lng_away_offline_only_about());
+	AddCardDescription(inner, tr::lng_away_offline_only_about());
 
 	AddBusinessRecipientsSelector(inner, {
 		.controller = controller,
@@ -339,12 +328,11 @@ void AwayMessage::setupContent(
 		.type = Data::BusinessRecipientsType::Messages,
 	});
 
-	Ui::AddSkip(inner, st::settingsChatbotsAccessSkip);
 
 	wrap->toggleOn(enabled->toggledValue());
 	wrap->finishAnimating();
 
-	Ui::ResizeFitChild(this, content);
+	Ui::ResizeFitChild(this, page);
 }
 
 void AwayMessage::save() {

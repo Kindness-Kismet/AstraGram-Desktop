@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/business/settings_working_hours.h"
+#include "settings/settings_card_layout.h"
 
 #include "base/event_filter.h"
 #include "base/unixtime.h"
@@ -596,7 +597,8 @@ void WorkingHours::setupContent(
 		not_null<Window::SessionController*> controller) {
 	using namespace rpl::mappers;
 
-	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	const auto page = Ui::CreateChild<CardPage>(this);
+	const auto content = page->content();
 
 	struct State {
 		rpl::variable<Data::Timezones> timezones;
@@ -615,14 +617,14 @@ void WorkingHours::setupContent(
 		.showFinished = showFinishes(),
 		.about = tr::lng_hours_about(tr::marked),
 		.aboutMargins = st::peerAppearanceCoverLabelMargin,
+		.showDivider = false,
 	});
 
-	Ui::AddSkip(content);
-	const auto enabled = content->add(object_ptr<Ui::SettingsButton>(
-		content,
+	const auto enabled = AddButtonWithIcon(
+		AddCardGroup(content),
 		tr::lng_hours_show(),
-		st::settingsButtonNoIcon
-	))->toggleOn(rpl::single(bool(_hours.current())));
+		st::settingsButtonNoIcon,
+		{})->toggleOn(rpl::single(bool(_hours.current())));
 
 	_enabled = enabled->toggledValue();
 
@@ -632,17 +634,12 @@ void WorkingHours::setupContent(
 			object_ptr<Ui::VerticalLayout>(content)));
 	const auto inner = wrap->entity();
 
-	Ui::AddSkip(inner);
-	Ui::AddDivider(inner);
-	Ui::AddSkip(inner);
 
+	const auto week = AddCardGroup(inner);
 	for (auto i = 0; i != 7; ++i) {
-		AddWeekButton(inner, controller, i, &_hours);
+		AddWeekButton(week, controller, i, &_hours);
 	}
 
-	Ui::AddSkip(inner);
-	Ui::AddDivider(inner);
-	Ui::AddSkip(inner);
 
 	state->timezones.value(
 	) | rpl::filter([=](const Data::Timezones &value) {
@@ -679,7 +676,7 @@ void WorkingHours::setupContent(
 		}));
 	};
 	AddButtonWithLabel(
-		inner,
+		AddCardGroup(inner),
 		tr::lng_hours_time_zone(),
 		std::move(timezoneLabel),
 		st::settingsButtonNoIcon
@@ -707,7 +704,7 @@ void WorkingHours::setupContent(
 	wrap->toggleOn(enabled->toggledValue());
 	wrap->finishAnimating();
 
-	Ui::ResizeFitChild(this, content);
+	Ui::ResizeFitChild(this, page);
 }
 
 void WorkingHours::save() {

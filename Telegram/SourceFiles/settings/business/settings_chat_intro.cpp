@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/business/settings_chat_intro.h"
+#include "settings/settings_card_layout.h"
 
 #include "api/api_premium.h"
 #include "boxes/peers/edit_peer_color_box.h" // ButtonStyleWithRightEmoji
@@ -545,7 +546,8 @@ void ChatIntro::setupContent(
 		not_null<Window::SessionController*> controller) {
 	using namespace rpl::mappers;
 
-	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	const auto page = Ui::CreateChild<CardPage>(this);
+	const auto content = page->content();
 	const auto session = &controller->session();
 	_intro = controller->session().user()->businessDetails().intro;
 
@@ -562,18 +564,19 @@ void ChatIntro::setupContent(
 			IntroWithRandomSticker(session, _intro.value())),
 		style::margins());
 
+	const auto fields = AddCardGroup(content);
 	const auto title = AddPartInput(
-		content,
+		fields,
 		tr::lng_chat_intro_enter_title(),
 		_intro.current().title,
 		PartLimit(session, u"intro_title_length_limit"_q, 32));
 	const auto description = AddPartInput(
-		content,
+		fields,
 		tr::lng_chat_intro_enter_message(),
 		_intro.current().description,
 		PartLimit(session, u"intro_description_length_limit"_q, 70));
-	content->add(CreateIntroStickerButton(
-		content,
+	fields->add(CreateIntroStickerButton(
+		fields,
 		controller->uiShow(),
 		_intro.value() | rpl::map([](const Data::ChatIntro &intro) {
 			return intro.sticker;
@@ -583,7 +586,6 @@ void ChatIntro::setupContent(
 				intro.sticker = sticker;
 			});
 		}));
-	Ui::AddSkip(content);
 
 	title->changes() | rpl::on_next([=] {
 		change([&](Data::ChatIntro &intro) {
@@ -601,32 +603,27 @@ void ChatIntro::setupContent(
 		title->setFocusFast();
 	};
 
-	Ui::AddDividerText(
-		content,
-		tr::lng_chat_intro_about(),
-		st::peerAppearanceDividerTextMargin);
-	Ui::AddSkip(content);
+	AddCardDescription(content, tr::lng_chat_intro_about());
 
-	const auto resetWrap = content->add(
-		object_ptr<Ui::SlideWrap<Ui::SettingsButton>>(
-			content,
-			object_ptr<Ui::SettingsButton>(
-				content,
-				tr::lng_chat_intro_reset(),
-				st::settingsAttentionButton
-			)));
+	const auto resetWrap = content->add(object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+		content, object_ptr<Ui::VerticalLayout>(content)));
+	const auto reset = AddButtonWithIcon(
+		AddCardGroup(resetWrap->entity()),
+		tr::lng_chat_intro_reset(),
+		st::settingsAttentionButton,
+		{});
 	resetWrap->toggleOn(
 		_intro.value() | rpl::map([](const Data::ChatIntro &intro) {
 			return !!intro;
 		}));
-	resetWrap->entity()->setClickedCallback([=] {
+	reset->setClickedCallback([=] {
 		_intro = Data::ChatIntro();
 		title->clear();
 		description->clear();
 		title->setFocus();
 	});
 
-	Ui::ResizeFitChild(this, content);
+	Ui::ResizeFitChild(this, page);
 }
 
 void ChatIntro::save() {

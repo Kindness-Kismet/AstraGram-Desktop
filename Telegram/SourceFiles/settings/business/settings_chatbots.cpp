@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/business/settings_chatbots.h"
+#include "settings/settings_card_layout.h"
 
 #include "apiwrap.h"
 #include "boxes/peers/edit_peer_permissions_box.h"
@@ -76,7 +77,6 @@ public:
 	[[nodiscard]] rpl::producer<QString> title() override;
 	void setInnerFocus() override;
 
-	const Ui::RoundRect *bottomSkipRounding() const override;
 
 private:
 	[[nodiscard]] bool shouldConfirmLeaveWithoutAddedBot() const;
@@ -84,7 +84,6 @@ private:
 	void refreshDetails();
 	void save();
 
-	Ui::RoundRect _bottomSkipRounding;
 
 	Ui::VerticalLayout *_detailsWrap = nullptr;
 	Ui::VerticalLayout *_permissionsWrap = nullptr;
@@ -583,8 +582,7 @@ void AppendUsersFromPeerList(
 Chatbots::Chatbots(
 	QWidget *parent,
 	not_null<Window::SessionController*> controller)
-: Section(parent, controller)
-, _bottomSkipRounding(st::boxRadius, st::windowBg) {
+: Section(parent, controller) {
 	setupContent();
 }
 
@@ -637,14 +635,11 @@ void Chatbots::setInnerFocus() {
 	}
 }
 
-const Ui::RoundRect *Chatbots::bottomSkipRounding() const {
-	return _permissionsWrap->count() ? nullptr : &_bottomSkipRounding;
-}
-
 void Chatbots::setupContent() {
 	using namespace rpl::mappers;
 
-	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	const auto page = Ui::CreateChild<CardPage>(this);
+	const auto content = page->content();
 	const auto current = controller()->session().data().chatbots().current();
 
 	_recipients = Data::BusinessRecipients::MakeValid(current.recipients);
@@ -660,6 +655,7 @@ void Chatbots::setupContent() {
 		.showFinished = showFinishes(),
 		.about = tr::lng_chat_automation_about(tr::marked),
 		.aboutMargins = st::peerAppearanceCoverLabelMargin,
+		.showDivider = false,
 	});
 
 	const auto usernameWrap = content->add(
@@ -743,10 +739,7 @@ void Chatbots::setupContent() {
 			std::move(stateAndBot),
 			addBot)));
 
-	Ui::AddDividerText(
-		content,
-		tr::lng_chat_automation_add_about(),
-		st::peerAppearanceDividerTextMargin);
+	AddCardDescription(content, tr::lng_chat_automation_add_about());
 
 	_detailsWrap = content->add(object_ptr<Ui::VerticalLayout>(content));
 
@@ -757,13 +750,7 @@ void Chatbots::setupContent() {
 		.type = Data::BusinessRecipientsType::Bots,
 	});
 
-	Ui::AddSkip(_detailsWrap, st::settingsChatbotsAccessSkip);
-	Ui::AddDividerText(
-		_detailsWrap,
-		tr::lng_chatbots_exclude_about(),
-		st::peerAppearanceDividerTextMargin,
-		st::defaultDividerLabel,
-		RectPart::Top);
+	AddCardDescription(_detailsWrap, tr::lng_chatbots_exclude_about());
 
 	_permissionsWrap = _detailsWrap->add(
 		object_ptr<Ui::VerticalLayout>(_detailsWrap));
@@ -772,9 +759,7 @@ void Chatbots::setupContent() {
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			_detailsWrap,
 			object_ptr<Ui::VerticalLayout>(_detailsWrap)));
-	const auto removeInner = removeWrap->entity();
-	Ui::AddDivider(removeInner);
-	Ui::AddSkip(removeInner);
+	const auto removeInner = AddCardGroup(removeWrap->entity());
 	const auto remove = removeInner->add(
 		CreateButtonWithIcon(
 			removeInner,
@@ -797,7 +782,7 @@ void Chatbots::setupContent() {
 		refreshDetails();
 	}, lifetime());
 
-	Ui::ResizeFitChild(this, content);
+	Ui::ResizeFitChild(this, page);
 }
 
 void Chatbots::refreshDetails() {
@@ -816,13 +801,12 @@ void Chatbots::refreshDetails() {
 		}
 	}
 	if (!bot) {
-		_permissionsWrap->resizeToWidth(width());
+		_permissionsWrap->resizeToWidth(_detailsWrap->width());
 		return;
 	}
 
-	const auto content = _permissionsWrap;
-	Ui::AddSkip(content);
-	Ui::AddSubsectionTitle(content, tr::lng_chatbots_permissions_title());
+	AddCardTitle(_permissionsWrap, tr::lng_chatbots_permissions_title());
+	const auto content = AddCardGroup(_permissionsWrap);
 
 	auto permissions = CreateEditChatbotPermissions(
 		content,
@@ -862,9 +846,8 @@ void Chatbots::refreshDetails() {
 		_permissions = now;
 	}, lifetime());
 
-	Ui::AddSkip(content);
 
-	_permissionsWrap->resizeToWidth(width());
+	_permissionsWrap->resizeToWidth(_detailsWrap->width());
 }
 
 void Chatbots::save() {

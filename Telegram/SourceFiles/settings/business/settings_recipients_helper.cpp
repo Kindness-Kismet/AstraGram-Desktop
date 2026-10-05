@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/business/settings_recipients_helper.h"
+#include "settings/settings_card_layout.h"
 
 #include "boxes/filters/edit_filter_chats_list.h"
 #include "boxes/filters/edit_filter_chats_preview.h"
@@ -155,8 +156,8 @@ not_null<FilterChatsPreview*> SetupBusinessChatsPreview(
 void AddBusinessRecipientsSelector(
 		not_null<Ui::VerticalLayout*> container,
 		BusinessRecipientsSelectorDescriptor &&descriptor) {
-	Ui::AddSkip(container);
-	Ui::AddSubsectionTitle(container, std::move(descriptor.title));
+	AddCardTitle(container, std::move(descriptor.title));
+	const auto choices = AddCardGroup(container);
 
 	auto &lifetime = container->lifetime();
 	const auto controller = descriptor.controller;
@@ -172,25 +173,23 @@ void AddBusinessRecipientsSelector(
 	const auto all = current.allButExcluded || current.included.empty();
 	const auto group = std::make_shared<Ui::RadiobuttonGroup>(
 		all ? kAllExcept : kSelectedOnly);
-	container->add(
+	choices->add(
 		object_ptr<Ui::Radiobutton>(
-			container,
+			choices,
 			group,
 			kAllExcept,
 			tr::lng_chatbots_all_except(tr::now),
 			st::settingsChatbotsAccess),
 		st::settingsChatbotsAccessMargins);
-	container->add(
+	choices->add(
 		object_ptr<Ui::Radiobutton>(
-			container,
+			choices,
 			group,
 			kSelectedOnly,
 			tr::lng_chatbots_selected(tr::now),
 			st::settingsChatbotsAccess),
 		st::settingsChatbotsAccessMargins);
 
-	Ui::AddSkip(container, st::settingsChatbotsAccessSkip);
-	Ui::AddDivider(container);
 
 	const auto includeWrap = container->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
@@ -203,10 +202,8 @@ void AddBusinessRecipientsSelector(
 			object_ptr<Ui::VerticalLayout>(container))
 	)->setDuration(0);
 
-	const auto excludeInner = excludeWrap->entity();
-
-	Ui::AddSkip(excludeInner);
-	Ui::AddSubsectionTitle(excludeInner, tr::lng_chatbots_excluded_title());
+	AddCardTitle(excludeWrap->entity(), tr::lng_chatbots_excluded_title());
+	const auto excludeInner = AddCardGroup(excludeWrap->entity());
 	const auto excludeAdd = AddButtonWithIcon(
 		excludeInner,
 		tr::lng_chatbots_exclude_button(),
@@ -263,10 +260,8 @@ void AddBusinessRecipientsSelector(
 	}));
 	excludeWrap->finishAnimating();
 
-	const auto includeInner = includeWrap->entity();
-
-	Ui::AddSkip(includeInner);
-	Ui::AddSubsectionTitle(includeInner, tr::lng_chatbots_included_title());
+	AddCardTitle(includeWrap->entity(), tr::lng_chatbots_included_title());
+	const auto includeInner = AddCardGroup(includeWrap->entity());
 	const auto includeAdd = AddButtonWithIcon(
 		includeInner,
 		tr::lng_chatbots_include_button(),

@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/business/settings_chat_links.h"
+#include "settings/settings_card_layout.h"
 
 #include "api/api_chat_links.h"
 #include "apiwrap.h"
@@ -717,7 +718,8 @@ void ChatLinks::setupContent(
 		not_null<Window::SessionController*> controller) {
 	using namespace rpl::mappers;
 
-	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	const auto page = Ui::CreateChild<CardPage>(this);
+	const auto content = page->content();
 
 	AddDividerTextWithLottie(content, {
 		.lottie = u"chat_link"_q,
@@ -726,26 +728,26 @@ void ChatLinks::setupContent(
 		.showFinished = showFinishes() | rpl::take(1),
 		.about = tr::lng_chat_links_about(tr::marked),
 		.aboutMargins = st::peerAppearanceCoverLabelMargin,
+		.showDivider = false,
 	});
 
-	Ui::AddSkip(content);
 
 	const auto limit = controller->session().appConfig().get<int>(
 		u"business_chat_links_limit"_q,
 		100);
-	const auto add = content->add(
-		object_ptr<Ui::SlideWrap<Ui::SettingsButton>>(
-			content,
-			MakeCreateLinkButton(
-				content,
-				tr::lng_chat_links_create_link()))
-	)->setDuration(0);
-
-	const auto list = AddLinksList(controller, content);
+	const auto add = content->add(object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+		content, object_ptr<Ui::VerticalLayout>(content)))->setDuration(0);
+	const auto createCard = AddCardGroup(add->entity());
+	const auto create = createCard->add(MakeCreateLinkButton(
+		createCard, tr::lng_chat_links_create_link()));
+	const auto listWrap = content->add(object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+		content, object_ptr<Ui::VerticalLayout>(content)))->setDuration(0);
+	const auto list = AddLinksList(controller, AddCardGroup(listWrap->entity()));
+	listWrap->toggleOn(list.controller->fullCountValue() | rpl::map(_1 > 0));
 	add->toggleOn(list.controller->fullCountValue() | rpl::map(_1 < limit));
 	add->finishAnimating();
 
-	add->entity()->setClickedCallback([=] {
+	create->setClickedCallback([=] {
 		if (!controller->session().premium()) {
 			ShowPremiumPreviewToBuy(
 				controller,
@@ -773,7 +775,6 @@ void ChatLinks::setupContent(
 			crl::guard(this, submit)));
 	});
 
-	Ui::AddSkip(content);
 
 	const auto self = controller->session().user();
 	const auto username = self->username();
@@ -802,7 +803,7 @@ void ChatLinks::setupContent(
 			lt_links,
 			rpl::single(std::move(links)),
 			tr::marked),
-		st::boxDividerLabel);
+		st::settingsCardHint);
 	label->setClickHandlerFilter([=](ClickHandlerPtr handler, auto) {
 		QGuiApplication::clipboard()->setText(handler->url());
 		controller->showToast({
@@ -812,14 +813,9 @@ void ChatLinks::setupContent(
 		});
 		return false;
 	});
-	content->add(object_ptr<Ui::DividerLabel>(
-		content,
-		std::move(label),
-		st::settingsChatbotsBottomTextMargin,
-		st::defaultDividerBar,
-		RectPart::Top));
+	content->add(std::move(label), st::settingsCardHintPadding);
 
-	Ui::ResizeFitChild(this, content);
+	Ui::ResizeFitChild(this, page);
 }
 
 } // namespace

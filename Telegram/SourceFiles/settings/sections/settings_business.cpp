@@ -39,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/settings_builder.h"
 #include "settings/settings_common.h"
 #include "settings/settings_common_session.h"
+#include "settings/settings_card_layout.h"
 #include "settings/sections/settings_premium.h"
 #include "ui/controls/swipe_handler.h"
 #include "ui/controls/swipe_handler_data.h"
@@ -424,7 +425,7 @@ void BuildSponsoredSection(
 		return;
 	}
 
-	builder.add([controller, session, state](const WidgetContext &ctx) {
+	builder.addPageContent([controller, session, state](const WidgetContext &ctx) {
 		const auto content = ctx.container;
 		const auto sponsoredWrap = content->add(
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
@@ -435,7 +436,6 @@ void BuildSponsoredSection(
 			while (sponsoredWrap->entity()->count()) {
 				delete sponsoredWrap->entity()->widgetAt(0);
 			}
-			Ui::AddDivider(sponsoredWrap->entity());
 			const auto loading = sponsoredWrap->entity()->add(
 				object_ptr<Ui::SlideWrap<Ui::FlatLabel>>(
 					sponsoredWrap->entity(),
@@ -451,22 +451,20 @@ void BuildSponsoredSection(
 					object_ptr<Ui::VerticalLayout>(sponsoredWrap->entity())));
 			wrap->toggle(false, anim::type::instant);
 			const auto inner = wrap->entity();
-			Ui::AddSkip(inner);
-			Ui::AddSubsectionTitle(
+			AddCardTitle(
 				inner,
 				tr::lng_business_subtitle_sponsored());
-			const auto button = inner->add(object_ptr<Ui::SettingsButton>(
-				inner,
-				tr::lng_business_button_sponsored()));
+			const auto button = AddButtonWithIcon(
+				AddCardGroup(inner),
+				tr::lng_business_button_sponsored(),
+				st::settingsButtonNoIcon,
+				{});
 			if (state) {
 				state->sponsoredButton = button;
 			}
-			Ui::AddSkip(inner);
 
 			{
-				inner->add(object_ptr<Ui::DividerLabel>(
-					inner,
-					object_ptr<Ui::FlatLabel>(
+				inner->add(object_ptr<Ui::FlatLabel>(
 						inner,
 						tr::lng_business_about_sponsored(
 							lt_link,
@@ -481,8 +479,8 @@ void BuildSponsoredSection(
 								return tr::link(text, url);
 							}),
 							tr::rich),
-						st::boxDividerLabel),
-					st::defaultBoxDividerLabelPadding));
+						st::settingsCardHint),
+					st::settingsCardHintPadding);
 			}
 
 			const auto api = inner->lifetime().make_state<Api::SponsoredToggle>(
@@ -516,7 +514,6 @@ void BuildSponsoredSection(
 			}
 		}, content->lifetime());
 
-		return SectionBuilder::WidgetToAdd{};
 	});
 }
 

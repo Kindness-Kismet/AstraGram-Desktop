@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/business/settings_quick_replies.h"
+#include "settings/settings_card_layout.h"
 
 #include "boxes/premium_preview_box.h"
 #include "core/application.h"
@@ -64,7 +65,8 @@ void QuickReplies::setupContent(
 		not_null<Window::SessionController*> controller) {
 	using namespace rpl::mappers;
 
-	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	const auto page = Ui::CreateChild<CardPage>(this);
+	const auto content = page->content();
 
 	AddDividerTextWithLottie(content, {
 		.lottie = u"writing"_q,
@@ -73,8 +75,8 @@ void QuickReplies::setupContent(
 		.showFinished = showFinishes(),
 		.about = tr::lng_replies_about(tr::marked),
 		.aboutMargins = st::peerAppearanceCoverLabelMargin,
+		.showDivider = false,
 	});
-	Ui::AddSkip(content);
 
 	const auto addWrap = content->add(
 		object_ptr<Ui::VerticalLayout>(content));
@@ -90,11 +92,11 @@ void QuickReplies::setupContent(
 			delete addWrap->widgetAt(0);
 		}
 		if (count < limit) {
-			const auto add = addWrap->add(object_ptr<Ui::SettingsButton>(
-				addWrap,
+			const auto add = AddButtonWithIcon(
+				AddCardGroup(addWrap),
 				tr::lng_replies_add(),
-				st::settingsButtonNoIcon
-			));
+				st::settingsButtonNoIcon,
+				{});
 
 			add->setClickedCallback([=] {
 				if (!controller->session().premium()) {
@@ -113,19 +115,16 @@ void QuickReplies::setupContent(
 					QString(),
 					crl::guard(this, submit)));
 			});
-			if (count > 0) {
-				AddSkip(addWrap);
-				AddDivider(addWrap);
-				AddSkip(addWrap);
-			}
 		}
 		if (const auto width = content->width()) {
 			content->resizeToWidth(width);
 		}
 	}, lifetime());
 
-	const auto inner = content->add(
-		object_ptr<Ui::VerticalLayout>(content));
+	const auto listWrap = content->add(object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+		content, object_ptr<Ui::VerticalLayout>(content)));
+	const auto inner = AddCardGroup(listWrap->entity());
+	listWrap->toggleOn(_count.value() | rpl::map(_1 > 0), anim::type::instant);
 	rpl::single(rpl::empty) | rpl::then(
 		messages->shortcutsChanged()
 	) | rpl::on_next([=] {
@@ -160,7 +159,7 @@ void QuickReplies::setupContent(
 		_count = inner->count();
 	}, content->lifetime());
 
-	Ui::ResizeFitChild(this, content);
+	Ui::ResizeFitChild(this, page);
 }
 
 [[nodiscard]] bool ValidShortcutName(const QString &name) {

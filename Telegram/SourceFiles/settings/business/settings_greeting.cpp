@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/business/settings_greeting.h"
+#include "settings/settings_card_layout.h"
 
 #include "base/event_filter.h"
 #include "core/application.h"
@@ -118,7 +119,8 @@ void Greeting::setupContent(
 		not_null<Window::SessionController*> controller) {
 	using namespace rpl::mappers;
 
-	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	const auto page = Ui::CreateChild<CardPage>(this);
+	const auto content = page->content();
 	const auto info = &controller->session().data().businessInfo();
 	const auto current = info->greetingSettings();
 	const auto disabled = !current.noActivityDays;
@@ -137,6 +139,7 @@ void Greeting::setupContent(
 		.showFinished = showFinishes(),
 		.about = tr::lng_greeting_about(tr::marked),
 		.aboutMargins = st::peerAppearanceCoverLabelMargin,
+		.showDivider = false,
 	});
 
 	const auto session = &controller->session();
@@ -146,12 +149,11 @@ void Greeting::setupContent(
 		ShortcutExistsValue(session, u"hello"_q),
 		(_1 < _2) || _3);
 
-	Ui::AddSkip(content);
-	const auto enabled = content->add(object_ptr<Ui::SettingsButton>(
-		content,
+	const auto enabled = AddButtonWithIcon(
+		AddCardGroup(content),
 		tr::lng_greeting_enable(),
-		st::settingsButtonNoIcon
-	))->toggleOn(rpl::single(
+		st::settingsButtonNoIcon,
+		{})->toggleOn(rpl::single(
 		!disabled
 	) | rpl::then(rpl::merge(
 		_canHave.value() | rpl::filter(!_1),
@@ -169,23 +171,6 @@ void Greeting::setupContent(
 		}
 	}, lifetime());
 
-	Ui::AddSkip(content);
-
-	content->add(
-		object_ptr<Ui::SlideWrap<Ui::BoxContentDivider>>(
-			content,
-			object_ptr<Ui::BoxContentDivider>(
-				content,
-				st::boxDividerHeight,
-				st::defaultDividerBar,
-				RectPart::Top))
-	)->setDuration(0)->toggleOn(enabled->toggledValue() | rpl::map(!_1));
-	content->add(
-		object_ptr<Ui::SlideWrap<Ui::BoxContentDivider>>(
-			content,
-			object_ptr<Ui::BoxContentDivider>(
-				content))
-	)->setDuration(0)->toggleOn(enabled->toggledValue());
 
 	const auto wrap = content->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
@@ -197,8 +182,7 @@ void Greeting::setupContent(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			inner,
 			object_ptr<Ui::VerticalLayout>(inner)));
-	const auto createInner = createWrap->entity();
-	Ui::AddSkip(createInner);
+	const auto createInner = AddCardGroup(createWrap->entity());
 	const auto create = AddButtonWithLabel(
 		createInner,
 		rpl::conditional(
@@ -219,12 +203,9 @@ void Greeting::setupContent(
 		const auto id = owner->shortcutMessages().emplaceShortcut("hello");
 		showOther(ShortcutMessagesId(id));
 	});
-	Ui::AddSkip(createInner);
-	Ui::AddDivider(createInner);
 
 	createWrap->toggleOn(rpl::single(true));
 
-	Ui::AddSkip(inner);
 	AddBusinessRecipientsSelector(inner, {
 		.controller = controller,
 		.title = tr::lng_greeting_recipients(),
@@ -232,12 +213,9 @@ void Greeting::setupContent(
 		.type = Data::BusinessRecipientsType::Messages,
 	});
 
-	Ui::AddSkip(inner);
-	Ui::AddDivider(inner);
-	Ui::AddSkip(inner);
 
 	AddButtonWithLabel(
-		inner,
+		AddCardGroup(inner),
 		tr::lng_greeting_period_title(),
 		_noActivityDays.value(
 		) | rpl::map(
@@ -251,18 +229,12 @@ void Greeting::setupContent(
 			[=](int days) { _noActivityDays = days; }));
 	});
 
-	Ui::AddSkip(inner);
-	Ui::AddDividerText(
-		inner,
-		tr::lng_greeting_period_about(),
-		st::settingsChatbotsBottomTextMargin,
-		st::defaultDividerLabel,
-		RectPart::Top);
+	AddCardDescription(inner, tr::lng_greeting_period_about());
 
 	wrap->toggleOn(enabled->toggledValue());
 	wrap->finishAnimating();
 
-	Ui::ResizeFitChild(this, content);
+	Ui::ResizeFitChild(this, page);
 }
 
 void Greeting::save() {

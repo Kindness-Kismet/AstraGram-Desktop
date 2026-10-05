@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/business/settings_location.h"
+#include "settings/settings_card_layout.h"
 
 #include "core/application.h"
 #include "core/shortcuts.h"
@@ -104,7 +105,8 @@ void Location::setupContent(
 		not_null<Window::SessionController*> controller) {
 	using namespace rpl::mappers;
 
-	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	const auto page = Ui::CreateChild<CardPage>(this);
+	const auto content = page->content();
 
 	if (mapSupported()) {
 		setupPicker(content);
@@ -112,7 +114,7 @@ void Location::setupContent(
 		setupUnsupported(content);
 	}
 
-	Ui::ResizeFitChild(this, content);
+	Ui::ResizeFitChild(this, page);
 }
 
 void Location::setupPicker(not_null<Ui::VerticalLayout*> content) {
@@ -125,9 +127,11 @@ void Location::setupPicker(not_null<Ui::VerticalLayout*> content) {
 		.showFinished = showFinishes(),
 		.about = tr::lng_location_about(tr::marked),
 		.aboutMargins = st::peerAppearanceCoverLabelMargin,
+		.showDivider = false,
 	});
 
-	const auto address = content->add(
+	const auto addressCard = AddCardGroup(content);
+	const auto address = addressCard->add(
 		object_ptr<Ui::InputField>(
 			content,
 			st::settingsLocationAddress,
@@ -147,11 +151,10 @@ void Location::setupPicker(not_null<Ui::VerticalLayout*> content) {
 		_data = std::move(copy);
 		}, address->lifetime());
 
-	AddDivider(content);
-	AddSkip(content);
+
 
 	const auto maptoggle = AddButtonWithIcon(
-		content,
+		AddCardGroup(content),
 		tr::lng_location_set_map(),
 		st::settingsButton,
 		{ &st::menuIconAddress }
@@ -276,6 +279,7 @@ void Location::setupUnsupported(not_null<Ui::VerticalLayout*> content) {
 		.about = tr::lng_location_fallback(tr::marked),
 		.aboutMargins = st::peerAppearanceCoverLabelMargin,
 		.parts = RectPart::Top,
+		.showDivider = false,
 	});
 }
 
