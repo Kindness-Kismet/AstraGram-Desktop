@@ -67,6 +67,7 @@ void MessageTranslationManager::translate(
 		if (i->second.requestId) {
 			_api.request(i->second.requestId).cancel();
 		}
+		item->translationFinishManual(i->second.token, {}, nullptr);
 		_pending.erase(i);
 	}
 	if (original.empty() && !page) {
@@ -82,7 +83,7 @@ void MessageTranslationManager::translate(
 		: Ui::ChooseTranslateTo(history);
 	const auto token = ++_nextToken;
 	_manual.emplace(id);
-	if (!item->translationStartManual(to, token)) {
+	if (!item->translationStartManual(to, token, original)) {
 		return;
 	}
 	_pending.emplace(id, Pending{
@@ -159,6 +160,7 @@ void MessageTranslationManager::finish(
 		return;
 	}
 	if (sourceText(item) != pending.original || item->richPage() != pending.page) {
+		item->translationFinishManual(token, {}, nullptr);
 		return;
 	}
 	if (!item->translationFinishManual(token, std::move(text), std::move(page))) {

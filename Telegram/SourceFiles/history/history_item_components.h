@@ -441,6 +441,8 @@ struct HistoryMessageTranslation
 : RuntimeComponent<HistoryMessageTranslation, HistoryItem> {
 	TextWithEntities text;
 	std::shared_ptr<const Iv::RichPage> richPage;
+	TextWithEntities source;
+	std::shared_ptr<const Iv::RichPage> sourcePage;
 	LanguageId to;
 	std::optional<LanguageId> manualTo;
 	uint64 manualRequestToken = 0;

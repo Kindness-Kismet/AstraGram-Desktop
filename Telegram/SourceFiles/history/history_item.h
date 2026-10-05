@@ -512,7 +512,10 @@ public:
 		not_null<Data::Thread*> to) const;
 	[[nodiscard]] const HistoryMessageTranslation *translation() const;
 	[[nodiscard]] bool translationDisplayed() const;
-	bool translationStartManual(LanguageId to, uint64 token);
+	bool translationStartManual(
+		LanguageId to,
+		uint64 token,
+		const TextWithEntities &source);
 	bool translationFinishManual(
 		uint64 token,
 		TextWithEntities text,

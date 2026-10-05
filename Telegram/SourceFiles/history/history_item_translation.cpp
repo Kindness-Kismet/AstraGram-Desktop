@@ -4,7 +4,6 @@
 #include "history/history.h"
 #include "history/history_item_components.h"
 #include "iv/iv_rich_page.h"
-#include "main/main_session.h"
 
 const HistoryMessageTranslation *HistoryItem::translation() const {
 	return Get<HistoryMessageTranslation>();
@@ -16,13 +15,17 @@ bool HistoryItem::translationDisplayed() const {
 		&& state->to == state->manualTo.value_or(history()->translatedTo());
 }
 
-bool HistoryItem::translationStartManual(LanguageId to, uint64 token) {
+bool HistoryItem::translationStartManual(
+		LanguageId to,
+		uint64 token,
+		const TextWithEntities &source) {
 	Expects(to && token);
 
 	AddComponents(HistoryMessageTranslation::Bit());
 	const auto state = Get<HistoryMessageTranslation>();
 	state->manualTo = to;
-	if (state->to == to && !state->text.empty()) {
+	if (state->to == to && !state->text.empty()
+		&& state->source == source && state->sourcePage == richPage()) {
 		state->manualRequestToken = 0;
 		translationToggle(state, true);
 		return false;
@@ -31,6 +34,8 @@ bool HistoryItem::translationStartManual(LanguageId to, uint64 token) {
 	state->to = to;
 	state->text = {};
 	state->richPage = nullptr;
+	state->source = source;
+	state->sourcePage = richPage();
 	state->requested = true;
 	state->failed = false;
 	state->manualRequestToken = token;
@@ -68,60 +73,52 @@ void HistoryItem::translationShowOriginal() {
 }
 
 bool HistoryItem::translationShowRequiresCheck(LanguageId to) const {
-	if (const auto state = translation(); state && state->manualTo.has_value()) {
+	const auto state = translation();
+	if (state && state->manualTo.has_value()) {
 		return false;
 	}
 	// 与实际切换方法保持一致，避免重复刷新。
 	if (!to) {
-		if (const auto translation = Get<HistoryMessageTranslation>()) {
-			return (!translation->failed && translation->text.empty())
-				|| translation->used;
-		}
-		return false;
-	} else if (const auto translation = Get<HistoryMessageTranslation>()) {
-		if (translation->to == to) {
-			return !translation->used && !translation->text.empty();
-		}
-		return true;
-	} else {
-		return true;
+		return state && ((!state->failed && state->text.empty()) || state->used);
 	}
+	return !state || state->to != to || (!state->used && !state->text.empty());
 }
 
 bool HistoryItem::translationShowRequiresRequest(LanguageId to) {
-	if (const auto state = translation(); state && state->manualTo.has_value()) {
+	auto state = Get<HistoryMessageTranslation>();
+	if (state && state->manualTo.has_value()) {
 		return false;
 	}
 	// 手动选择由单条请求管理，聊天批次只修改跟随聊天的消息。
 	if (!to) {
-		if (const auto translation = Get<HistoryMessageTranslation>()) {
-			if (!translation->failed && translation->text.empty()) {
-				Assert(!translation->used);
-				RemoveComponents(HistoryMessageTranslation::Bit());
-			} else {
-				translationToggle(translation, false);
-			}
-		}
-		return false;
-	} else if (const auto translation = Get<HistoryMessageTranslation>()) {
-		if (translation->to == to) {
-			translationToggle(translation, true);
+		if (!state) {
 			return false;
 		}
-		translationToggle(translation, false);
-		translation->to = to;
-		translation->requested = true;
-		translation->failed = false;
-		translation->text = {};
-		translation->richPage = nullptr;
-		return true;
-	} else {
-		AddComponents(HistoryMessageTranslation::Bit());
-		const auto added = Get<HistoryMessageTranslation>();
-		added->to = to;
-		added->requested = true;
-		return true;
+		if (!state->failed && state->text.empty()) {
+			Assert(!state->used);
+			RemoveComponents(HistoryMessageTranslation::Bit());
+		} else {
+			translationToggle(state, false);
+		}
+		return false;
 	}
+	if (state && state->to == to) {
+		translationToggle(state, true);
+		return false;
+	}
+	if (!state) {
+		AddComponents(HistoryMessageTranslation::Bit());
+		state = Get<HistoryMessageTranslation>();
+	}
+	translationToggle(state, false);
+	state->to = to;
+	state->requested = true;
+	state->failed = false;
+	state->text = {};
+	state->richPage = nullptr;
+	state->source = originalText();
+	state->sourcePage = richPage();
+	return true;
 }
 
 void HistoryItem::translationToggle(
@@ -176,6 +173,8 @@ void HistoryItem::translationDone(
 		AddComponents(HistoryMessageTranslation::Bit());
 		const auto added = Get<HistoryMessageTranslation>();
 		added->to = to;
+		added->source = originalText();
+		added->sourcePage = richPage();
 		set(added);
 	}
 }
@@ -184,14 +183,8 @@ const TextWithEntities &HistoryItem::translatedText() const {
 	if (isService()) {
 		static const auto kEmpty = TextWithEntities();
 		return kEmpty;
-	} else if (const auto translation = this->translation()
-		; translation
-		&& translation->used
-		&& (translation->to == translation->manualTo.value_or(history()->translatedTo()))) {
-		return translation->text;
-	} else {
-		return originalText();
 	}
+	return translationDisplayed() ? translation()->text : originalText();
 }
 
 TextWithEntities HistoryItem::translatedTextWithLocalEntities() const {
@@ -224,12 +217,10 @@ auto HistoryItem::translatedRichPage() const
 	const auto original = richPage();
 	if (!original) {
 		return nullptr;
-	} else if (const auto translation = this->translation()
-		; translation
-		&& translation->used
-		&& translation->richPage
-		&& (translation->to == translation->manualTo.value_or(history()->translatedTo()))) {
-		return translation->richPage;
+	}
+	const auto state = translation();
+	if (translationDisplayed() && state->richPage) {
+		return state->richPage;
 	}
 	return original;
 }
