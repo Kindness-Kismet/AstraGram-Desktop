@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/settings_intro.h"
+#include "settings/settings_card_layout.h"
 
 #include "settings/sections/settings_advanced.h"
 #include "settings/sections/settings_main.h"
@@ -116,51 +117,32 @@ void SetupDebugLogin(
 object_ptr<Ui::RpWidget> CreateIntroSettings(
 		QWidget *parent,
 		not_null<Window::Controller*> window) {
-	auto result = object_ptr<Ui::VerticalLayout>(parent);
-
-	Ui::AddDivider(result);
-	Ui::AddSkip(result);
-	SetupLanguageButton(window, result);
-	SetupConnectionType(window, &window->account(), result);
-	Ui::AddSkip(result);
+	auto result = object_ptr<CardPage>(parent);
+	const auto content = result->content();
+	const auto connection = AddCardGroup(content);
+	SetupLanguageButton(window, connection);
+	SetupConnectionType(window, &window->account(), connection);
 	if (HasUpdate()) {
-		Ui::AddDivider(result);
-		Ui::AddSkip(result);
-		SetupUpdate(result);
-		Ui::AddSkip(result);
+		SetupUpdate(AddCardGroup(content));
 	}
 	{
-		auto wrap = object_ptr<Ui::VerticalLayout>(result);
+		auto wrap = object_ptr<Ui::VerticalLayout>(content);
 		SetupSystemIntegrationContent(
 			window->sessionController(),
 			wrap.data());
 		if (wrap->count() > 0) {
-			Ui::AddDivider(result);
-			Ui::AddSkip(result);
-			result->add(object_ptr<Ui::OverrideMargins>(
-				result,
-				std::move(wrap)));
-			Ui::AddSkip(result);
+			AddCardGroup(content)->add(std::move(wrap));
 		}
 	}
-	Ui::AddDivider(result);
-	Ui::AddSkip(result);
-	SetupInterfaceScale(window, result, false);
-	SetupDefaultThemes(window, result);
-	Ui::AddSkip(result);
+	SetupInterfaceScale(window, AddCardGroup(content), false);
+	SetupDefaultThemes(window, AddCardGroup(content));
 
 	if (anim::Disabled()) {
-		Ui::AddDivider(result);
-		Ui::AddSkip(result);
-		SetupAnimations(window, result);
-		Ui::AddSkip(result);
+		SetupAnimations(window, AddCardGroup(content));
 	}
 
-	Ui::AddDivider(result);
-	Ui::AddSkip(result);
-
 	AddButtonWithIcon(
-		result,
+		AddCardGroup(content),
 		tr::lng_settings_faq(),
 		st::settingsButtonNoIcon
 	)->addClickHandler([] {
@@ -168,10 +150,7 @@ object_ptr<Ui::RpWidget> CreateIntroSettings(
 	});
 
 #ifdef _DEBUG
-	Ui::AddDivider(result);
-	Ui::AddSkip(result);
-	SetupDebugLogin(window, result);
-	Ui::AddSkip(result);
+	SetupDebugLogin(window, AddCardGroup(content));
 #endif
 
 	return result;
