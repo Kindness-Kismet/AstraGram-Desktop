@@ -667,11 +667,6 @@ not_null<Button*> AddButtonWithLabel(
 void AddDividerTextWithLottie(
 		not_null<Ui::VerticalLayout*> container,
 		DividerWithLottieDescriptor &&descriptor) {
-	const auto divider = Ui::CreateChild<Ui::BoxContentDivider>(
-		container.get(),
-		0,
-		st::defaultDividerBar,
-		descriptor.parts);
 	const auto verticalLayout = container->add(
 		object_ptr<Ui::VerticalLayout>(container.get()));
 	const auto size = descriptor.lottieSize.value_or(
@@ -705,10 +700,18 @@ void AddDividerTextWithLottie(
 			style::al_top)->setTryMakeSimilarLines(true);
 	}
 
-	verticalLayout->geometryValue(
-	) | rpl::on_next([=](const QRect &r) {
-		divider->setGeometry(r);
-	}, divider->lifetime());
+	if (descriptor.showDivider) {
+		const auto divider = Ui::CreateChild<Ui::BoxContentDivider>(
+			container.get(),
+			0,
+			st::defaultDividerBar,
+			descriptor.parts);
+		divider->lower();
+		verticalLayout->geometryValue(
+		) | rpl::on_next([=](const QRect &r) {
+			divider->setGeometry(r);
+		}, divider->lifetime());
+	}
 }
 
 LottieIcon CreateLottieIcon(
