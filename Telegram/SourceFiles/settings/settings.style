@@ -31,6 +31,26 @@ settingsButton: SettingsButton(infoProfileButton) {
 	textBg: transparent;
 }
 
+settingsAboutLogoSize: 48px;
+settingsAboutHeaderPadding: margins(14px, 16px, 14px, 20px);
+settingsAboutNamePadding: margins(0px, 10px, 0px, 4px);
+settingsAboutName: FlatLabel(defaultFlatLabel) {
+	minWidth: 1px;
+	align: align(top);
+	style: TextStyle(defaultTextStyle) {
+		font: font(22px semibold);
+	}
+}
+settingsAboutVersion: FlatLabel(defaultFlatLabel) {
+	minWidth: 1px;
+	align: align(top);
+	textFg: windowSubTextFg;
+	style: TextStyle(defaultTextStyle) {
+		font: font(12px);
+		lineHeight: 18px;
+	}
+}
+
 settingsCardRadius: 14px;
 settingsCardPagePadding: 20px;
 settingsCardNarrowPadding: 12px;

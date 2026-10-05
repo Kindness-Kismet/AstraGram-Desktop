@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/sections/settings_premium.h"
+#include "settings/sections/settings_about.h"
 
 #include "boxes/premium_preview_box.h"
 #include "boxes/sticker_set_box.h"
@@ -1787,7 +1788,7 @@ base::weak_qptr<Ui::RpWidget> Premium::createPinnedToBottom(
 
 const auto kMeta = BuildHelper({
 	.id = Premium::Id(),
-	.parentId = MainId(),
+	.parentId = AboutId(),
 	.title = &tr::lng_premium_summary_title,
 	.icon = &st::menuIconPremium,
 }, [](SectionBuilder &builder) {

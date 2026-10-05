@@ -1,13 +1,6 @@
 #include "settings/settings_navigation.h"
 #include "extras/features/window_material/window_material.h"
 
-#include "boxes/about_box.h"
-#include "boxes/star_gift_box.h"
-#include "api/api_credits.h"
-#include "data/components/credits.h"
-#include "settings/sections/settings_business.h"
-#include "settings/sections/settings_credits.h"
-#include "settings/sections/settings_premium.h"
 #include "core/application.h"
 #include "data/data_user.h"
 #include "data/data_changes.h"
@@ -18,6 +11,7 @@
 #include "extras/ui/settings/settings_main.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
+#include "settings/sections/settings_about.h"
 #include "settings/sections/settings_advanced.h"
 #include "settings/sections/settings_calls.h"
 #include "settings/sections/settings_chat.h"
@@ -41,6 +35,7 @@
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/slide_wrap.h"
 #include "window/window_session_controller.h"
+#include "styles/style_dialogs.h"
 #include "styles/style_info.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
@@ -160,7 +155,7 @@ Navigation::Navigation(
 : RpWidget(parent)
 , _navigate(std::move(navigate))
 , _header(this)
-, _scroll(this, st::defaultScrollArea) {
+, _scroll(this, st::dialogsTabsScroll) {
 	setObjectName(u"settings-navigation"_q);
 	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	const auto home = Ui::CreateChild<Ui::AbstractButton>(_header.data());
@@ -198,9 +193,7 @@ Navigation::Navigation(
 	account->setObjectName(u"settings-account-header"_q);
 	account->setClickedCallback([=] { _navigate(InformationId()); });
 
-	addSeparator();
 	addItem(tr::extras_Preferences(), st::menuIconAstraGram, u"extras"_q, ExtrasMain::Id());
-	addSeparator();
 	if (!controller->session().supportMode()) {
 		addItem(tr::lng_settings_my_account(), st::menuIconProfile, u"account"_q, InformationId());
 	}
@@ -231,42 +224,7 @@ Navigation::Navigation(
 	addItem(tr::lng_settings_section_devices(), st::menuIconUnmute, u"calls"_q, CallsId());
 	addItem(tr::lng_settings_power_menu(), st::menuIconPowerUsage, u"power"_q, PowerSavingId());
 	addItem(tr::lng_settings_language(), st::menuIconLanguage, u"language"_q, LanguageId());
-	if (session->premiumPossible()) {
-		addSeparator();
-		addItem(tr::lng_premium_summary_title(), st::menuIconPremium, u"premium"_q, PremiumId(), [=] {
-			controller->setPremiumRef("settings");
-			_navigate(PremiumId());
-		});
-		addItem(tr::lng_settings_credits(), st::menuIconStar, u"credits"_q, CreditsId(), [=] {
-			controller->setPremiumRef("settings");
-			_navigate(CreditsId());
-		});
-		session->credits().load();
-		session->credits().tonLoad();
-		addItem(tr::lng_settings_currency(), st::menuIconTon, u"currency"_q, CurrencyId(), [=] {
-			controller->setPremiumRef("settings");
-			_navigate(CurrencyId());
-		}, session->credits().tonBalanceValue() | rpl::map([](CreditsAmount amount) {
-			return !amount.empty();
-		}));
-		addItem(tr::lng_business_title(), st::menuIconShop, u"business"_q, BusinessId());
-		if (session->premiumCanBuy()) {
-			addItem(tr::lng_settings_gift_premium(), st::menuIconGiftPremium, u"gift"_q, nullptr, [=] {
-				Ui::ChooseStarGiftRecipient(controller);
-			});
-		}
-	}
-	addSeparator();
-	addItem(tr::lng_settings_faq(), st::menuIconFaq, u"faq"_q, nullptr, [=] {
-		OpenFaq(base::make_weak(controller));
-	});
-	addItem(tr::lng_settings_ask_question(), st::menuIconDiscussion, u"ask-question"_q, nullptr, [=] {
-		OpenAskQuestionConfirm(controller);
-	});
-	addSeparator();
-	addItem(tr::lng_menu_about(), st::menuIconInfo, u"about"_q, nullptr, [=] {
-		controller->show(Box(AboutBox, controller.get()));
-	});
+	addItem(tr::lng_menu_about(), st::menuIconInfo, u"about"_q, AboutId());
 	Ui::AddSkip(_list, scaled(12));
 	_scroll->widthValue() | rpl::on_next([=](int width) {
 		_list->resizeToWidth(width);
@@ -278,10 +236,6 @@ Navigation::~Navigation() {
 	if (_accountMenu) {
 		_accountMenu->hideMenu(true);
 	}
-}
-
-void Navigation::addSeparator() {
-	Ui::AddSkip(_list, scaled(12));
 }
 
 void Navigation::addItem(

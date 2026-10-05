@@ -1,4 +1,7 @@
 {
+  "AboutChangelog": "Release notes",
+  "AboutServices": "Telegram services",
+  "AboutHelp": "Help and support",
   "Preferences": "AstraGram Preferences",
   "SettingsQuickToggles": "Quick Toggles",
   "SettingsGhostDescription": "Read receipts, online status and typing status",

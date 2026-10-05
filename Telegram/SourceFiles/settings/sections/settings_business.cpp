@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/sections/settings_business.h"
+#include "settings/sections/settings_about.h"
 
 #include "api/api_chat_links.h"
 #include "api/api_premium.h"
@@ -961,7 +962,7 @@ base::weak_qptr<Ui::RpWidget> Business::createPinnedToBottom(
 
 const auto kMeta = BuildHelper({
 	.id = Business::Id(),
-	.parentId = MainId(),
+	.parentId = AboutId(),
 	.title = &tr::lng_business_title,
 	.icon = &st::menuIconShop,
 }, [](SectionBuilder &builder) {

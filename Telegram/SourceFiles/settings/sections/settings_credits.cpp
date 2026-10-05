@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/sections/settings_credits.h"
+#include "settings/sections/settings_about.h"
 
 #include "api/api_credits.h"
 #include "api/api_earn.h"
@@ -1052,7 +1053,7 @@ void BuildCreditsSectionContent(
 
 const auto kCreditsBuilderMeta = BuildHelper({
 	.id = Credits::Id(),
-	.parentId = MainId(),
+	.parentId = AboutId(),
 	.title = &tr::lng_credits_summary_title,
 	.icon = &st::menuIconPremium,
 }, [](SectionBuilder &builder) {

@@ -35,7 +35,6 @@ protected:
 
 private:
 	class Item;
-	void addSeparator();
 	void addItem(
 		rpl::producer<QString> title,
 		const style::icon &icon,

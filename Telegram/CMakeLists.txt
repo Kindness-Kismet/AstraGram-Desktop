@@ -2097,6 +2097,8 @@ PRIVATE
     settings/cloud_password/settings_cloud_password_step.h
     settings/cloud_password/settings_cloud_password_validate_icon.cpp
     settings/cloud_password/settings_cloud_password_validate_icon.h
+    settings/sections/settings_about.cpp
+    settings/sections/settings_about.h
     settings/sections/settings_active_sessions.cpp
     settings/sections/settings_active_sessions.h
     settings/sections/settings_advanced.cpp

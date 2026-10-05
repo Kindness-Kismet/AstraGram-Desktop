@@ -11,7 +11,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/settings_card_layout.h"
 
 #include "api/api_cloud_password.h"
-#include "api/api_credits.h"
 #include "api/api_global_privacy.h"
 #include "api/api_peer_photo.h"
 #include "api/api_premium.h"
@@ -19,13 +18,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "base/call_delayed.h"
 #include "base/platform/base_platform_info.h"
-#include "boxes/about_box.h"
 #include "boxes/language_box.h"
-#include "boxes/star_gift_box.h"
 #include "boxes/username_box.h"
 #include "core/application.h"
 #include "core/click_handler_types.h"
-#include "data/components/credits.h"
 #include "data/components/promo_suggestions.h"
 #include "data/data_chat_filters.h"
 #include "data/data_cloud_themes.h"
@@ -47,19 +43,16 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session_settings.h"
 #include "settings/settings_builder.h"
 #include "settings/cloud_password/settings_cloud_password_input.h"
+#include "settings/sections/settings_about.h"
 #include "settings/sections/settings_advanced.h"
-#include "settings/sections/settings_business.h"
 #include "settings/sections/settings_calls.h"
 #include "settings/sections/settings_chat.h"
 #include "settings/settings_codes.h"
-#include "settings/sections/settings_credits.h"
 #include "settings/sections/settings_folders.h"
 #include "settings/sections/settings_information.h"
 #include "settings/sections/settings_notifications.h"
 #include "settings/settings_power_saving.h"
-#include "settings/sections/settings_premium.h"
 #include "settings/sections/settings_privacy_security.h"
-#include "settings/sections/settings_update.h"
 #include "settings/settings_scale_preview.h"
 #include "storage/localstorage.h"
 #include "ui/basic_click_handlers.h"
@@ -527,123 +520,13 @@ void BuildInterfaceScale(SectionBuilder &builder) {
 	builder.addSkip();
 }
 
-void BuildPremiumSection(SectionBuilder &builder) {
-	const auto session = builder.session();
-	const auto controller = builder.controller();
-	const auto showOther = builder.showOther();
-
-	if (!session->premiumPossible()) {
-		return;
-	}
-
-	builder.addDivider();
-	builder.addSkip();
-
-	builder.addPremiumButton({
-		.id = u"main/premium"_q,
-		.title = tr::lng_premium_summary_title(),
-		.onClick = [=] {
-			controller->setPremiumRef("settings");
-			showOther(PremiumId());
-		},
-		.keywords = { u"subscription"_q },
-	});
-
-	session->credits().load();
-	builder.addPremiumButton({
-		.id = u"main/credits"_q,
-		.title = tr::lng_settings_credits(),
-		.label = session->credits().balanceValue(
-		) | rpl::map([](CreditsAmount c) {
-			return c
-				? Lang::FormatCreditsAmountToShort(c).string
-				: QString();
-		}),
-		.credits = true,
-		.onClick = [=] {
-			controller->setPremiumRef("settings");
-			showOther(CreditsId());
-		},
-		.keywords = { u"stars"_q, u"balance"_q },
-	});
-
-	session->credits().tonLoad();
-	builder.addButton({
-		.id = u"main/currency"_q,
-		.title = tr::lng_settings_currency(),
-		.icon = { &st::menuIconTon },
-		.label = session->credits().tonBalanceValue(
-		) | rpl::map([](CreditsAmount c) {
-			return c ? Lang::FormatCreditsAmountToShort(c).string : u""_q;
-		}),
-		.onClick = [=] {
-			controller->setPremiumRef("settings");
-			showOther(CurrencyId());
-		},
-		.keywords = { u"ton"_q, u"crypto"_q, u"wallet"_q },
-		.shown = session->credits().tonBalanceValue(
-		) | rpl::map([](CreditsAmount c) { return !c.empty(); }),
-	});
-
-	builder.addButton({
-		.id = u"main/business"_q,
-		.title = tr::lng_business_title(),
-		.icon = { .icon = &st::menuIconShop },
-		.onClick = [=] { showOther(BusinessId()); },
-		.keywords = { u"work"_q, u"company"_q },
-	});
-
-	if (session->premiumCanBuy()) {
-		builder.addButton({
-			.id = u"main/send-gift"_q,
-			.title = tr::lng_settings_gift_premium(),
-			.icon = { .icon = &st::menuIconGiftPremium, .newBadge = true },
-			.onClick = [=] { Ui::ChooseStarGiftRecipient(controller); },
-			.keywords = { u"present"_q, u"send"_q },
-		});
-	}
-
-	builder.addSkip();
-}
-
-void BuildHelpSection(SectionBuilder &builder) {
-	builder.addDivider();
-	builder.addSkip();
-
-	const auto controller = builder.controller();
-	builder.addButton({
-		.id = u"main/faq"_q,
-		.title = tr::lng_settings_faq(),
-		.icon = { &st::menuIconFaq },
-		.onClick = [=] { OpenFaq(controller); },
-		.keywords = { u"help"_q, u"support"_q, u"questions"_q },
-	});
-
-	builder.addButton({
-		.id = u"main/ask-question"_q,
-		.title = tr::lng_settings_ask_question(),
-		.icon = { &st::menuIconDiscussion },
-		.onClick = [=] { OpenAskQuestionConfirm(controller); },
-		.keywords = { u"contact"_q, u"feedback"_q },
-	});
-
-	builder.addSkip();
-}
-
 void BuildAppSection(SectionBuilder &builder) {
 	builder.addDivider();
-
-	BuildUpdateSection(builder);
-	if (!HasUpdate()) {
-		builder.addSkip();
-	}
-
-	const auto controller = builder.controller();
-	builder.addButton({
+	builder.addSectionButton({
 		.id = u"main/about"_q,
 		.title = tr::lng_menu_about(),
+		.targetSection = AboutId(),
 		.icon = { &st::menuIconInfo },
-		.onClick = [=] { controller->show(Box(AboutBox, controller)); },
 		.keywords = { u"about"_q, u"version"_q },
 	});
 
@@ -811,8 +694,6 @@ const auto kMeta = BuildHelper({
 	builder.addSkip();
 
 	BuildInterfaceScale(builder);
-	BuildPremiumSection(builder);
-	BuildHelpSection(builder);
 	BuildAppSection(builder);
 });
 
@@ -1190,6 +1071,7 @@ void OpenFaq(base::weak_ptr<Window::SessionController> weak) {
 		tr::lng_settings_faq_link(tr::now),
 		QVariant::fromValue(ClickHandlerContext{
 			.sessionWindow = weak,
+			.ignoreIv = true,
 		}));
 }
 

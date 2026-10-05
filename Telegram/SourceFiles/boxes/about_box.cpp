@@ -38,22 +38,22 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller_link_info.h"
 
 
-namespace {
-
-rpl::producer<TextWithEntities> Text() {
+rpl::producer<TextWithEntities> aboutText() {
 	return tr::lng_about_text2(
 		lt_gpl_link,
 		rpl::single(Ui::Text::Link(
 			"GNU GPL",
-			"https://github.com/Kindness-Kismet/AstraGram-Desktop/blob/main/LICENSE")),
+			projectGithubLink() + u"/blob/main/LICENSE"_q)),
 		lt_github_link,
 		rpl::single(Ui::Text::Link(
 			"GitHub",
-			"https://github.com/Kindness-Kismet/AstraGram-Desktop")),
+			projectGithubLink())),
 		tr::marked);
 }
 
-} // namespace
+QString projectGithubLink() {
+	return u"https://github.com/Kindness-Kismet/AstraGram-Desktop"_q;
+}
 
 void AboutBox(not_null<Ui::GenericBox*> box, Window::SessionController* controller) {
 	box->setTitle(rpl::single(u"AstraGram"_q));
@@ -87,7 +87,7 @@ void AboutBox(not_null<Ui::GenericBox*> box, Window::SessionController* controll
 		Ui::AddSkip(layout, st::aboutSkip);
 	};
 
-	addText(Text());
+	addText(aboutText());
 
 	box->addButton(tr::lng_close(), [=] { box->closeBox(); });
 	box->addLeftButton(
@@ -95,7 +95,7 @@ void AboutBox(not_null<Ui::GenericBox*> box, Window::SessionController* controll
 		[box]
 		{
 			box->closeBox();
-			File::OpenUrl(u"https://github.com/Kindness-Kismet/AstraGram-Desktop"_q);
+			File::OpenUrl(projectGithubLink());
 		});
 
 	box->setWidth(st::aboutWidth);

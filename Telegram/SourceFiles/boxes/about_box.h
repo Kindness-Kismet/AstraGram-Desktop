@@ -20,6 +20,8 @@ void ArchiveHintBox(
 	Fn<void()> onUnarchive);
 
 QString telegramFaqLink();
+rpl::producer<TextWithEntities> aboutText();
+QString projectGithubLink();
 // The full form ends with the canary commit hash, the short one is for
 // the main menu where the line has to stay narrow.
 QString currentVersionText();

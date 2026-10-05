@@ -47,26 +47,21 @@ void BuildUpdateSection(SectionBuilder &builder) {
 		.id = u"main/updates/auto_update"_q,
 		.altIds = { u"advanced/auto_update"_q },
 		.title = tr::extras_AutoCheckUpdates(),
-		.st = &st::settingsUpdateToggle,
+		.st = &st::settingsButtonNoIcon,
 		.toggled = rpl::single(cAutoUpdate()),
 		.keywords = { u"update"_q, u"automatic"_q, u"version"_q },
 	});
 
 	if (toggle) {
-		const auto label = Ui::CreateChild<Ui::FlatLabel>(
-			toggle,
-			texts->events(),
-			st::settingsUpdateState);
-
-		rpl::combine(
-			toggle->widthValue(),
-			label->widthValue()
-		) | rpl::on_next([=] {
-			label->moveToLeft(
-				st::settingsUpdateStatePosition.x(),
-				st::settingsUpdateStatePosition.y());
-		}, label->lifetime());
-		label->setAttribute(Qt::WA_TransparentForMouseEvents);
+		builder.add([=](const WidgetContext &ctx) {
+			auto label = object_ptr<Ui::FlatLabel>(
+				ctx.container, texts->events(), st::settingsCardHint);
+			label->setObjectName(u"about-update-status"_q);
+			return SectionBuilder::WidgetToAdd{
+				.widget = std::move(label),
+				.margin = st::settingsCardHintPadding,
+			};
+		});
 	}
 
 	auto optionsShown = rpl::producer<bool>(nullptr);
