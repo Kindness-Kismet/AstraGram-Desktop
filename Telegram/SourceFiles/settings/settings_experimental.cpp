@@ -21,7 +21,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/widgets/buttons.h"
-#include "ui/widgets/kinetic_scroller.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/vertical_list.h"
@@ -198,17 +197,22 @@ void SetupCopyDeepLink(
 		const QString &description,
 		const style::SettingsButton &st) {
 	if (description.isEmpty()) {
-		return container->add(object_ptr<Settings::RowButton>(
+		return container->add(CreateButtonWithIcon(
 			container,
 			rpl::single(name),
-			st));
+			st,
+			{}), style::al_justify);
 	}
-	const auto &titlePadding = st::settingsExperimentalTitlePadding;
-	const auto &aboutPadding = st::settingsExperimentalAboutPadding;
-	const auto button = Ui::CreateChild<Settings::RowButton>(
-		container.get(),
+	const auto button = CreateButtonWithIcon(
+		container,
 		rpl::single(QString()),
-		st);
+		st,
+		{}).release();
+	button->setAccessibleName(name);
+	auto titlePadding = st::settingsExperimentalTitlePadding;
+	auto aboutPadding = st::settingsExperimentalAboutPadding;
+	titlePadding.setLeft(button->st().padding.left());
+	aboutPadding.setLeft(button->st().padding.left());
 	const auto title = container->add(
 		object_ptr<Ui::FlatLabel>(
 			container,
@@ -255,7 +259,7 @@ void AddOption(
 	const auto &description = option.description();
 
 	const auto inner = container->add(
-		object_ptr<Ui::VerticalLayout>(container));
+		object_ptr<Ui::VerticalLayout>(container), style::al_justify);
 
 	auto &lifetime = inner->lifetime();
 	const auto toggles = lifetime.make_state<rpl::event_stream<bool>>();
@@ -276,6 +280,7 @@ void AddOption(
 		(!referrer.isEmpty() || option.relevant())
 			? st::settingsButtonNoIcon
 			: st::settingsOptionDisabled);
+	button->setObjectName(u"experimental/"_q + option.id());
 	if (!referrer.isEmpty()) {
 		button->addClickHandler([=] {
 			const auto resolved = ResolveReferrer(
@@ -338,7 +343,7 @@ void AddFavoriteLinkButton(
 		: option->name();
 
 	const auto inner = container->add(
-		object_ptr<Ui::VerticalLayout>(container));
+		object_ptr<Ui::VerticalLayout>(container), style::al_justify);
 
 	auto label = rpl::single(
 		rpl::empty
