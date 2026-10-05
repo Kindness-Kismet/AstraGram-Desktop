@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/ui/components/empty_state_icon.h"
 
 #include "settings/settings_common_session.h"
+#include "settings/settings_card_layout.h"
 
 #include "api/api_blocked_peers.h"
 #include "apiwrap.h"
@@ -122,12 +123,11 @@ rpl::producer<QString> Blocked::title() {
 
 base::weak_qptr<Ui::RpWidget> Blocked::createPinnedToTop(
 		not_null<QWidget*> parent) {
-	const auto content = Ui::CreateChild<Ui::VerticalLayout>(parent.get());
-
-	Ui::AddSkip(content);
+	const auto page = Ui::CreateChild<CardPage>(parent.get());
+	const auto content = page->content();
 
 	const auto blockButton = AddButtonWithIcon(
-		content,
+		AddCardGroup(content),
 		tr::lng_blocked_list_add(),
 		st::settingsButtonActive,
 		{ &st::menuIconBlockSettings });
@@ -136,23 +136,18 @@ base::weak_qptr<Ui::RpWidget> Blocked::createPinnedToTop(
 		BlockedBoxController::BlockNewPeer(controller());
 	});
 
-	Ui::AddSkip(content);
-	Ui::AddDividerText(content, tr::lng_blocked_list_about());
+	AddCardDescription(content, tr::lng_blocked_list_about());
 
 	{
 		const auto subtitle = content->add(
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 				content,
 				object_ptr<Ui::VerticalLayout>(content)))->setDuration(0);
-		Ui::AddSkip(subtitle->entity());
 		auto subtitleText = _countBlocked.value(
 		) | rpl::map([=](int count) {
 			return tr::lng_blocked_list_subtitle(tr::now, lt_count, count);
 		});
-		Ui::AddSubsectionTitle(
-			subtitle->entity(),
-			rpl::duplicate(subtitleText),
-			st::settingsBlockedListSubtitleAddPadding);
+		AddCardTitle(subtitle->entity(), rpl::duplicate(subtitleText));
 		subtitle->toggleOn(
 			rpl::merge(
 				_emptinessChanges.events() | rpl::map(!rpl::mappers::_1),
@@ -166,16 +161,18 @@ base::weak_qptr<Ui::RpWidget> Blocked::createPinnedToTop(
 		}, subtitle->lifetime());
 	}
 
-	return base::make_weak(not_null<Ui::RpWidget*>{ content });
+	return base::make_weak(not_null<Ui::RpWidget*>{ page });
 }
 
 void Blocked::setupContent() {
 	using namespace rpl::mappers;
 
-	const auto listWrap = _container->add(
+	const auto page = _container->add(object_ptr<CardPage>(_container));
+	const auto pageContent = page->content();
+	const auto listWrap = pageContent->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			_container,
-			object_ptr<Ui::VerticalLayout>(_container)));
+			pageContent,
+			object_ptr<Ui::VerticalLayout>(pageContent)));
 	listWrap->toggleOn(
 		_emptinessChanges.events_starting_with(true) | rpl::map(!_1),
 		anim::type::instant);
@@ -189,7 +186,7 @@ void Blocked::setupContent() {
 		auto controller = std::make_unique<BlockedBoxController>(
 			this->controller());
 		controller->setStyleOverrides(&st::settingsBlockedList);
-		const auto content = listWrap->entity()->add(
+		const auto content = AddCardGroup(listWrap->entity())->add(
 			object_ptr<PeerListContent>(this, controller.get()));
 
 		const auto state = content->lifetime().make_state<State>();
@@ -200,10 +197,10 @@ void Blocked::setupContent() {
 		state->controller->setDelegate(state->delegate.get());
 	}
 
-	const auto emptyWrap = _container->add(
+	const auto emptyWrap = pageContent->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			_container,
-			object_ptr<Ui::VerticalLayout>(_container)));
+			pageContent,
+			object_ptr<Ui::VerticalLayout>(pageContent)));
 	emptyWrap->toggleOn(
 		_emptinessChanges.events_starting_with(false),
 		anim::type::instant);

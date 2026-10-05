@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/cloud_password/settings_cloud_password_manage.h"
+#include "settings/settings_card_layout.h"
 
 #include "api/api_cloud_password.h"
 #include "core/application.h"
@@ -61,7 +62,6 @@ protected:
 	[[nodiscard]] rpl::producer<std::vector<Type>> removeTypes() override;
 
 private:
-	rpl::variable<bool> _isBottomFillerShown;
 
 	QString _currentPassword;
 
@@ -92,7 +92,8 @@ void Manage::setupContent() {
 	setFocusPolicy(Qt::StrongFocus);
 	setFocus();
 
-	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	const auto page = Ui::CreateChild<CardPage>(this);
+	const auto content = page->content();
 	auto currentStepData = stepData();
 	_currentPassword = base::take(currentStepData.currentPassword);
 	// If we go back from Password Manage to Privacy Settings
@@ -136,11 +137,12 @@ void Manage::setupContent() {
 		.showFinished = showFinishes(),
 		.about = tr::lng_settings_cloud_password_manage_about1(
 			TextWithEntities::Simple),
+		.showDivider = false,
 	});
 
-	Ui::AddSkip(content);
+	const auto actions = AddCardGroup(content);
 	const auto changePasswordButton = AddButtonWithIcon(
-		content,
+		actions,
 		tr::lng_settings_cloud_password_manage_password_change(),
 		st::settingsButton,
 		{ &st::menuIconPermissions });
@@ -149,7 +151,7 @@ void Manage::setupContent() {
 		showOtherAndRememberPassword(CloudPasswordInputId());
 	});
 	const auto changeEmailButton = AddButtonWithIcon(
-		content,
+		actions,
 		state->hasRecovery
 			? tr::lng_settings_cloud_password_manage_email_change()
 			: tr::lng_settings_cloud_password_manage_email_new(),
@@ -163,7 +165,6 @@ void Manage::setupContent() {
 
 		showOtherAndRememberPassword(CloudPasswordEmailId());
 	});
-	Ui::AddSkip(content);
 
 	showFinishes() | rpl::take(1) | rpl::on_next([=] {
 		controller()->checkHighlightControl(
@@ -175,30 +176,9 @@ void Manage::setupContent() {
 		controller()->checkHighlightControl("2sv/disable"_q, _disableButton);
 	}, lifetime());
 
-	using Divider = CloudPassword::OneEdgeBoxContentDivider;
-	const auto divider = Ui::CreateChild<Divider>(this);
-	divider->lower();
-	const auto about = content->add(
-		object_ptr<Ui::PaddingWrap<>>(
-			content,
-			object_ptr<Ui::FlatLabel>(
-				content,
-				tr::lng_settings_cloud_password_manage_about2(),
-				st::boxDividerLabel),
-		st::defaultBoxDividerLabelPadding));
-	rpl::combine(
-		about->geometryValue(),
-		content->widthValue()
-	) | rpl::on_next([=](QRect r, int w) {
-		r.setWidth(w);
-		divider->setGeometry(r);
-	}, divider->lifetime());
-	_isBottomFillerShown.value(
-	) | rpl::on_next([=](bool shown) {
-		divider->skipEdge(Qt::BottomEdge, shown);
-	}, divider->lifetime());
+	AddCardDescription(content, tr::lng_settings_cloud_password_manage_about2());
 
-	Ui::ResizeFitChild(this, content);
+	Ui::ResizeFitChild(this, page);
 }
 
 base::weak_qptr<Ui::RpWidget> Manage::createPinnedToBottom(
@@ -238,7 +218,6 @@ base::weak_qptr<Ui::RpWidget> Manage::createPinnedToBottom(
 		tr::lng_settings_password_disable(),
 		std::move(callback));
 
-	_isBottomFillerShown = base::take(bottomButton.isBottomFillerShown);
 	_disableButton = bottomButton.button.get();
 
 	return bottomButton.content;

@@ -22,6 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_privacy_security.h"
 #include "settings/settings_builder.h"
 #include "settings/settings_common.h"
+#include "settings/settings_card_layout.h"
 #include "settings/settings_common_session.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/layers/generic_box.h"
@@ -109,8 +110,8 @@ void BuildPasskeysSection(
 	}
 
 	builder.addSkip();
-	builder.add([=](const WidgetContext &ctx) {
-		const auto label = Ui::AddDividerText(
+	builder.addPageContent([=](const WidgetContext &ctx) {
+		const auto label = ctx.container->add(object_ptr<Ui::FlatLabel>(
 			ctx.container,
 			tr::lng_settings_passkeys_button_about(
 				lt_link,
@@ -122,12 +123,11 @@ void BuildPasskeysSection(
 					return tr::link(std::move(text), u"internal"_q);
 				}),
 				tr::rich
-			));
+			), st::settingsCardHint), st::settingsCardHintPadding);
 		label->setClickHandlerFilter([controller, session](const auto &...) {
 			controller->show(Box(PasskeysNoneBox, session));
 			return false;
 		});
-		return SectionBuilder::WidgetToAdd{};
 	});
 }
 

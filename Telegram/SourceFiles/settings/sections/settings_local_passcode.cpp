@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/cloud_password/settings_cloud_password_step.h"
 #include "settings/settings_builder.h"
 #include "settings/settings_common.h"
+#include "settings/settings_card_layout.h"
 #include "storage/storage_domain.h"
 #include "ui/vertical_list.h"
 #include "ui/boxes/confirm_box.h"
@@ -430,31 +431,14 @@ void BuildManageContent(SectionBuilder &builder) {
 
 	builder.addSkip();
 
-	using Divider = CloudPassword::OneEdgeBoxContentDivider;
-	builder.add([](const WidgetContext &ctx) {
-		const auto divider = Ui::CreateChild<Divider>(ctx.container.get());
-		divider->lower();
-		const auto about = ctx.container->add(
-			object_ptr<Ui::PaddingWrap<>>(
-				ctx.container,
-				object_ptr<Ui::FlatLabel>(
-					ctx.container,
-					rpl::combine(
-						tr::lng_passcode_about1(),
-						tr::lng_passcode_about3()
-					) | rpl::map([](const QString &s1, const QString &s2) {
-						return s1 + "\n\n" + s2;
-					}),
-					st::boxDividerLabel),
-			st::defaultBoxDividerLabelPadding));
-		about->geometryValue(
-		) | rpl::on_next([=](const QRect &r) {
-			divider->setGeometry(r);
-		}, divider->lifetime());
-		return SectionBuilder::WidgetToAdd{};
-	});
+	builder.addDividerText(rpl::combine(
+		tr::lng_passcode_about1(),
+		tr::lng_passcode_about3()
+	) | rpl::map([](const QString &s1, const QString &s2) {
+		return s1 + "\n\n" + s2;
+	}));
 
-	builder.add([](const WidgetContext &ctx) {
+	builder.addPageContent([](const WidgetContext &ctx) {
 		const auto systemUnlockWrap = ctx.container->add(
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 				ctx.container,
@@ -484,10 +468,10 @@ void BuildManageContent(SectionBuilder &builder) {
 				delete systemUnlockContent->widgetAt(0);
 			}
 
-			Ui::AddSkip(systemUnlockContent);
+			const auto card = AddCardGroup(systemUnlockContent);
 
 			const auto biometricsButton = AddButtonWithIcon(
-				systemUnlockContent,
+				card,
 				(Platform::IsWindows()
 					? tr::lng_settings_use_winhello()
 					: (type == UnlockType::Biometrics)
@@ -520,9 +504,8 @@ void BuildManageContent(SectionBuilder &builder) {
 				});
 			}
 
-			Ui::AddSkip(systemUnlockContent);
 
-			Ui::AddDividerText(
+			AddCardDescription(
 				systemUnlockContent,
 				(Platform::IsWindows()
 					? tr::lng_settings_use_winhello_about()
@@ -537,8 +520,8 @@ void BuildManageContent(SectionBuilder &builder) {
 		systemUnlockWrap->toggleOn(unlockType->value(
 		) | rpl::map(rpl::mappers::_1 != UnlockType::None));
 
-		return SectionBuilder::WidgetToAdd{};
-	}, [] {
+	});
+	builder.add(nullptr, [] {
 		return SearchEntry{
 			.id = u"passcode/biometrics"_q,
 			.title = Platform::IsWindows()

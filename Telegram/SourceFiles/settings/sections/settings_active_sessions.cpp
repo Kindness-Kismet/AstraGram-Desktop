@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_active_sessions.h"
 
 #include "settings/settings_common_session.h"
+#include "settings/settings_card_layout.h"
 
 #include "api/api_authorizations.h"
 #include "apiwrap.h"
@@ -918,7 +919,7 @@ void SessionsContent::Inner::setupContent() {
 
 	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
 
-	_currentHeader = AddSubsectionTitle(
+	_currentHeader = AddCardTitle(
 		content,
 		tr::lng_sessions_header());
 	const auto rename = Ui::CreateChild<Ui::LinkButton>(
@@ -931,8 +932,8 @@ void SessionsContent::Inner::setupContent() {
 	) | rpl::on_next([=](QSize outer, QPoint position) {
 		const auto x = st::sessionTerminateSkip
 			+ st::sessionTerminate.iconPosition.x();
-		const auto y = st::defaultSubsectionTitlePadding.top()
-			+ st::defaultSubsectionTitle.style.font->ascent
+		const auto y = position.y()
+			+ st::settingsCardTitle.style.font->ascent
 			- st::defaultLinkButton.font->ascent;
 		rename->moveToRight(x, y, outer.width());
 	}, rename->lifetime());
@@ -942,55 +943,48 @@ void SessionsContent::Inner::setupContent() {
 
 	const auto session = &_controller->session();
 	_current = ListController::Add(
-		content,
-		session,
-		style::margins{ 0, 0, 0, st::sessionCurrentSkip });
+		AddCardGroup(content),
+		session);
 	const auto terminateWrap = content->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			content,
 			object_ptr<Ui::VerticalLayout>(content)))->setDuration(0);
-	const auto terminateInner = terminateWrap->entity();
+	const auto terminateInner = AddCardGroup(terminateWrap->entity());
 	_terminateAll = terminateInner->add(
 		CreateButtonWithIcon(
 			terminateInner,
 			tr::lng_sessions_terminate_all(),
-			st::infoBlockButton,
+			st::settingsAttentionButtonWithIcon,
 			{ .icon = &st::infoIconBlock }));
-	AddSkip(terminateInner);
-	AddDividerText(terminateInner, tr::lng_sessions_terminate_all_about());
+	AddCardDescription(terminateWrap->entity(), tr::lng_sessions_terminate_all_about());
 
 	const auto incompleteWrap = content->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			content,
 			object_ptr<Ui::VerticalLayout>(content)))->setDuration(0);
 	const auto incompleteInner = incompleteWrap->entity();
-	AddSkip(incompleteInner, st::sessionSubtitleSkip);
-	_incompleteHeader = AddSubsectionTitle(incompleteInner, tr::lng_sessions_incomplete());
-	_incomplete = ListController::Add(incompleteInner, session);
-	AddSkip(incompleteInner);
-	AddDividerText(incompleteInner, tr::lng_sessions_incomplete_about());
+	_incompleteHeader = AddCardTitle(incompleteInner, tr::lng_sessions_incomplete());
+	_incomplete = ListController::Add(AddCardGroup(incompleteInner), session);
+	AddCardDescription(incompleteInner, tr::lng_sessions_incomplete_about());
 
 	const auto listWrap = content->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			content,
 			object_ptr<Ui::VerticalLayout>(content)))->setDuration(0);
 	const auto listInner = listWrap->entity();
-	AddSkip(listInner, st::sessionSubtitleSkip);
-	_otherHeader = AddSubsectionTitle(listInner, tr::lng_sessions_other_header());
-	_list = ListController::Add(listInner, session);
-	AddSkip(listInner);
-	AddDividerText(listInner, tr::lng_sessions_about_apps());
+	_otherHeader = AddCardTitle(listInner, tr::lng_sessions_other_header());
+	_list = ListController::Add(AddCardGroup(listInner), session);
+	AddCardDescription(listInner, tr::lng_sessions_about_apps());
 
 	const auto ttlWrap = content->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			content,
 			object_ptr<Ui::VerticalLayout>(content)))->setDuration(0);
 	const auto ttlInner = ttlWrap->entity();
-	AddSkip(ttlInner, st::sessionSubtitleSkip);
-	AddSubsectionTitle(ttlInner, tr::lng_settings_terminate_title());
+	AddCardTitle(ttlInner, tr::lng_settings_terminate_title());
 
 	_autoTerminate = AddButtonWithLabel(
-		ttlInner,
+		AddCardGroup(ttlInner),
 		tr::lng_settings_terminate_if(),
 		_ttlDays.value() | rpl::map(SelfDestructionBox::DaysLabel),
 		st::settingsButtonNoIcon);
@@ -1001,7 +995,6 @@ void SessionsContent::Inner::setupContent() {
 			_ttlDays.value()));
 	});
 
-	AddSkip(ttlInner);
 
 	const auto placeholder = content->add(
 		object_ptr<Ui::SlideWrap<Ui::FlatLabel>>(
@@ -1009,8 +1002,8 @@ void SessionsContent::Inner::setupContent() {
 			object_ptr<Ui::FlatLabel>(
 				content,
 				tr::lng_sessions_other_desc(),
-				st::boxDividerLabel),
-			st::defaultBoxDividerLabelPadding))->setDuration(0);
+				st::settingsCardHint),
+			st::settingsCardHintPadding))->setDuration(0);
 
 	terminateWrap->toggleOn(
 		rpl::combine(
@@ -1258,7 +1251,7 @@ void Sessions::setupContent() {
 
 		builder.addSkip(st::settingsPrivacySkip);
 
-		builder.add([=](const WidgetContext &ctx) {
+		builder.addPageContent([=](const WidgetContext &ctx) {
 			const auto content = ctx.container->add(
 				object_ptr<SessionsContent>(ctx.container, ctx.controller));
 			content->setupContent();
@@ -1286,7 +1279,6 @@ void Sessions::setupContent() {
 				});
 			}
 
-			return SectionBuilder::WidgetToAdd{};
 		});
 
 		std::move(showFinished) | rpl::on_next([=] {

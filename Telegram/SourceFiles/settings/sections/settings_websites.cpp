@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_websites.h"
 #include "settings/settings_common_session.h"
+#include "settings/settings_card_layout.h"
 #include "apiwrap.h"
 #include "boxes/peer_list_box.h"
 #include "data/data_user.h"
@@ -583,16 +584,15 @@ void Content::Inner::setupContent() {
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			content,
 			object_ptr<Ui::VerticalLayout>(content)))->setDuration(0);
-	const auto terminateInner = terminateWrap->entity();
+	const auto terminateInner = AddCardGroup(terminateWrap->entity());
 	_terminateAll = terminateInner->add(
 		CreateButtonWithIcon(
 			terminateInner,
 			tr::lng_settings_disconnect_all(),
-			st::infoBlockButton,
+			st::settingsAttentionButtonWithIcon,
 			{ .icon = &st::infoIconBlock }));
-	Ui::AddSkip(terminateInner);
-	Ui::AddDividerText(
-		terminateInner,
+	AddCardDescription(
+		terminateWrap->entity(),
 		tr::lng_settings_logged_in_description());
 
 	const auto listWrap = content->add(
@@ -600,20 +600,17 @@ void Content::Inner::setupContent() {
 			content,
 			object_ptr<Ui::VerticalLayout>(content)))->setDuration(0);
 	const auto listInner = listWrap->entity();
-	Ui::AddSkip(listInner, st::sessionSubtitleSkip);
-	Ui::AddSubsectionTitle(listInner, tr::lng_settings_logged_in_title());
-	_list = ListController::Add(listInner, session);
-	Ui::AddSkip(listInner);
+	AddCardTitle(listInner, tr::lng_settings_logged_in_title());
+	_list = ListController::Add(AddCardGroup(listInner), session);
 
-	const auto skip = st::noContactsHeight / 2;
 	const auto placeholder = content->add(
 		object_ptr<Ui::SlideWrap<Ui::FlatLabel>>(
 			content,
 			object_ptr<Ui::FlatLabel>(
 				content,
 				tr::lng_settings_logged_in_description(),
-				st::boxDividerLabel),
-			st::defaultBoxDividerLabelPadding + QMargins(0, skip, 0, skip))
+				st::settingsCardHint),
+			st::settingsCardHintPadding)
 	)->setDuration(0);
 
 	terminateWrap->toggleOn(_list->itemsCount() | rpl::map(_1 > 0));
@@ -812,7 +809,7 @@ void Websites::setupContent() {
 
 		builder.addSkip();
 
-		builder.add([=](const WidgetContext &ctx) {
+		builder.addPageContent([=](const WidgetContext &ctx) {
 			const auto content = ctx.container->add(
 				object_ptr<Content>(ctx.container, ctx.controller));
 			content->setupContent();
@@ -824,7 +821,6 @@ void Websites::setupContent() {
 				});
 			}
 
-			return SectionBuilder::WidgetToAdd{};
 		});
 
 		std::move(showFinished) | rpl::on_next([=] {

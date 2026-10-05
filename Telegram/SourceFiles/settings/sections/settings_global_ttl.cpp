@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/settings_builder.h"
 #include "settings/settings_common.h"
 #include "settings/settings_common_session.h"
+#include "settings/settings_card_layout.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/painter.h"
 #include "ui/vertical_list.h"
@@ -168,11 +169,9 @@ struct GlobalTTLState {
 };
 
 void BuildTopContent(SectionBuilder &builder, rpl::producer<> showFinished) {
-	builder.add([showFinished = std::move(showFinished)](
+	builder.addPageContent([showFinished = std::move(showFinished)](
 			const WidgetContext &ctx) mutable {
 		const auto parent = ctx.container;
-		const auto divider = Ui::CreateChild<Ui::BoxContentDivider>(
-			parent.get());
 		const auto verticalLayout = parent->add(
 			object_ptr<Ui::VerticalLayout>(parent.get()));
 
@@ -193,12 +192,6 @@ void BuildTopContent(SectionBuilder &builder, rpl::producer<> showFinished) {
 		}, verticalLayout->lifetime());
 		verticalLayout->add(std::move(icon.widget));
 
-		verticalLayout->geometryValue(
-		) | rpl::on_next([=](const QRect &r) {
-			divider->setGeometry(r);
-		}, divider->lifetime());
-
-		return SectionBuilder::WidgetToAdd{};
 	});
 }
 
@@ -401,7 +394,7 @@ void BuildApplyToExisting(
 		not_null<GlobalTTLState*> state) {
 	builder.addSkip();
 
-	builder.add([=](const WidgetContext &ctx) {
+	builder.addPageContent([=](const WidgetContext &ctx) {
 		const auto controller = ctx.controller;
 		const auto session = &controller->session();
 
@@ -412,7 +405,7 @@ void BuildApplyToExisting(
 				tr::lng_settings_ttl_after_about_link(
 				) | rpl::map([](QString s) { return tr::link(s, 1); }),
 				tr::marked),
-			st::boxDividerLabel);
+			st::settingsCardHint);
 		footer->setLink(1, std::make_shared<LambdaClickHandler>([=] {
 			auto boxController = std::make_unique<TTLChatsBoxController>(session);
 			auto initBox = [=, ctrl = boxController.get()](
@@ -452,12 +445,8 @@ void BuildApplyToExisting(
 			controller->show(
 				Box<PeerListBox>(std::move(boxController), std::move(initBox)));
 		}));
-		ctx.container->add(object_ptr<Ui::DividerLabel>(
-			ctx.container,
-			std::move(footer),
-			st::defaultBoxDividerLabelPadding));
+		ctx.container->add(std::move(footer), st::settingsCardHintPadding);
 
-		return SectionBuilder::WidgetToAdd{};
 	});
 }
 
