@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_main.h"
 
 #include "settings/settings_common_session.h"
+#include "settings/settings_card_layout.h"
 
 #include "api/api_cloud_password.h"
 #include "api/api_credits.h"
@@ -651,20 +652,16 @@ void BuildAppSection(SectionBuilder &builder) {
 }
 
 void BuildValidationSuggestions(SectionBuilder &builder) {
-	builder.add([](const WidgetContext &ctx) {
+	builder.addPageContent([](const WidgetContext &ctx) {
 		const auto controller = ctx.controller.get();
 		const auto showOther = ctx.showOther;
-		auto wrap = object_ptr<Ui::VerticalLayout>(ctx.container);
-		SetupValidatePhoneNumberSuggestion(controller, wrap.data(), showOther);
-		return SectionBuilder::WidgetToAdd{ .widget = std::move(wrap) };
+		SetupValidatePhoneNumberSuggestion(controller, ctx.container, showOther);
 	});
 
-	builder.add([](const WidgetContext &ctx) {
+	builder.addPageContent([](const WidgetContext &ctx) {
 		const auto controller = ctx.controller.get();
 		const auto showOther = ctx.showOther;
-		auto wrap = object_ptr<Ui::VerticalLayout>(ctx.container);
-		SetupValidatePasswordSuggestion(controller, wrap.data(), showOther);
-		return SectionBuilder::WidgetToAdd{ .widget = std::move(wrap) };
+		SetupValidatePasswordSuggestion(controller, ctx.container, showOther);
 	});
 }
 
@@ -859,7 +856,7 @@ void SetupValidatePhoneNumberSuggestion(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			container,
 			object_ptr<Ui::VerticalLayout>(container)));
-	const auto content = mainWrap->entity();
+	const auto content = AddCardGroup(mainWrap->entity());
 	Ui::AddSubsectionTitle(
 		content,
 		tr::lng_settings_suggestion_phone_number_title(
@@ -958,10 +955,7 @@ void SetupValidatePhoneNumberSuggestion(
 		yes->moveToLeft(0, 0, width);
 		no->moveToRight(0, 0, width);
 	}, wrap->lifetime());
-	Ui::AddSkip(content);
-	Ui::AddSkip(content);
-	Ui::AddDivider(content);
-	Ui::AddSkip(content);
+	Ui::AddSkip(content, st::settingsCardRowInset);
 }
 
 void SetupValidatePasswordSuggestion(
@@ -978,7 +972,7 @@ void SetupValidatePasswordSuggestion(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			container,
 			object_ptr<Ui::VerticalLayout>(container)));
-	const auto content = mainWrap->entity();
+	const auto content = AddCardGroup(mainWrap->entity());
 	Ui::AddSubsectionTitle(
 		content,
 		tr::lng_settings_suggestion_password_title(),
@@ -1029,10 +1023,7 @@ void SetupValidatePasswordSuggestion(
 		yes->moveToLeft(0, 0, width);
 		no->moveToRight(0, 0, width);
 	}, wrap->lifetime());
-	Ui::AddSkip(content);
-	Ui::AddSkip(content);
-	Ui::AddDivider(content);
-	Ui::AddSkip(content);
+	Ui::AddSkip(content, st::settingsCardRowInset);
 }
 
 bool HasInterfaceScale() {
