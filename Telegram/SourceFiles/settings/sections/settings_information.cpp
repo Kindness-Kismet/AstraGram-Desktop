@@ -508,7 +508,12 @@ void SetupBirthday(
 			&& value.never.peers.empty();
 	}) | rpl::distinct_until_changed();
 
-	Ui::AddDividerText(container, rpl::conditional(
+	const auto description = container->add(
+		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+			container,
+			object_ptr<Ui::VerticalLayout>(container)));
+	description->toggle(false, anim::type::instant);
+	auto text = rpl::conditional(
 		std::move(isExactlyContacts),
 		tr::lng_settings_birthday_contacts(
 			lt_link,
@@ -519,7 +524,16 @@ void SetupBirthday(
 			lt_link,
 			tr::lng_settings_birthday_about_link(
 				tr::url(u"internal:edit_privacy_birthday"_q)),
-			tr::marked)));
+			tr::marked));
+	const auto labelStyle = container->lifetime().make_state<style::FlatLabel>(
+		st::settingsCardHint);
+	labelStyle->minWidth = 1;
+	description->entity()->add(
+		object_ptr<Ui::FlatLabel>(description->entity(), rpl::duplicate(text), *labelStyle),
+		st::settingsCardHintPadding);
+	std::move(text) | rpl::on_next([=](const TextWithEntities &value) {
+		description->toggle(!value.text.isEmpty(), anim::type::instant);
+	}, description->lifetime());
 }
 
 void SetupChatAutomation(
@@ -720,8 +734,6 @@ void SetupRows(
 		targets->username = usernameButton;
 	}
 
-	Ui::AddSkip(container);
-	Ui::AddDividerText(container, tr::lng_settings_username_about());
 }
 
 void SetupBio(
@@ -851,8 +863,6 @@ void SetupAccountsWrap(
 		not_null<Ui::VerticalLayout*> container,
 		not_null<Window::SessionController*> controller,
 		InformationHighlightTargets *targets) {
-	Ui::AddSkip(container);
-
 	auto events = SetupAccounts(container, controller);
 	if (targets) {
 		targets->addAccount = events.addAccountButton;
