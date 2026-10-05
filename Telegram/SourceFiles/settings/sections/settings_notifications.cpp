@@ -116,7 +116,7 @@ SplitToggle SetupSplitToggle(
 		st::settingsNotificationType,
 		{ icon });
 
-	const auto &st = st::settingsNotificationType;
+	const auto &st = button->st();
 
 	const auto label = Ui::CreateChild<Ui::FlatLabel>(
 		button.get(),

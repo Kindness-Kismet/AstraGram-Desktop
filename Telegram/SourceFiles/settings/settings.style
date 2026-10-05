@@ -47,6 +47,8 @@ settingsCardTitle: FlatLabel(defaultFlatLabel) {
 }
 settingsCardTitlePadding: margins(14px, 4px, 14px, 8px);
 settingsCardHint: FlatLabel(defaultFlatLabel) {
+	// 非零下限启用换行，实际宽度由页面布局决定。
+	minWidth: 1px;
 	textFg: windowSubTextFg;
 	style: TextStyle(defaultTextStyle) {
 		font: font(12px);

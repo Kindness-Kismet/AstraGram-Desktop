@@ -528,11 +528,8 @@ void SetupBirthday(
 			tr::lng_settings_birthday_about_link(
 				tr::url(u"internal:edit_privacy_birthday"_q)),
 			tr::marked));
-	const auto labelStyle = container->lifetime().make_state<style::FlatLabel>(
-		st::settingsCardHint);
-	labelStyle->minWidth = 1;
 	description->entity()->add(
-		object_ptr<Ui::FlatLabel>(description->entity(), rpl::duplicate(text), *labelStyle),
+		object_ptr<Ui::FlatLabel>(description->entity(), rpl::duplicate(text), st::settingsCardHint),
 		st::settingsCardHintPadding);
 	std::move(text) | rpl::on_next([=](const TextWithEntities &value) {
 		description->toggle(!value.text.isEmpty(), anim::type::instant);

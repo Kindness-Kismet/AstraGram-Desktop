@@ -7,7 +7,6 @@
 #include "lang_auto.h"
 #include "settings/settings_builder.h"
 #include "styles/style_menu_icons.h"
-#include "styles/style_settings.h"
 #include "ui/widgets/buttons.h"
 #include "ui/wrap/vertical_layout.h"
 
@@ -45,24 +44,16 @@ void buildArchive(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 void buildText(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	const auto settings = &ExtrasSettings::getInstance();
 	const auto controller = builder.controller();
-	const auto zalgoButton = builder.addButton({
+	const auto zalgoButton = extras.addToggle({
 		.id = u"extras/filterZalgo"_q,
 		.title = tr::extras_FilterZalgo(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(settings->filterZalgo()),
+		.getter = [=] { return settings->filterZalgo(); },
+		.setter = [=](bool enabled) {
+			settings->setFilterZalgo(enabled);
+			ShowRestartPrompt(controller);
+		},
 	});
 	if (zalgoButton) {
-		zalgoButton->toggledValue(
-		) | rpl::filter(
-			[=](bool enabled) {
-				return (enabled != settings->filterZalgo());
-			}
-		) | on_next(
-			[=](bool enabled) {
-				ExtrasSettings::getInstance().setFilterZalgo(enabled);
-				ShowRestartPrompt(controller);
-			},
-			zalgoButton->lifetime());
 		extras.addBetaBadge(zalgoButton);
 	}
 
@@ -78,26 +69,15 @@ void buildText(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 		.getter = &ExtrasSettings::autoSpaceEditing,
 		.setter = &ExtrasSettings::setAutoSpaceEditing,
 	});
-	const auto autoSpaceReceivingButton = builder.addButton({
+	extras.addToggle({
 		.id = u"extras/autoSpaceReceiving"_q,
 		.title = tr::extras_AutoSpaceReceiving(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(settings->autoSpaceReceiving()),
+		.getter = [=] { return settings->autoSpaceReceiving(); },
+		.setter = [=](bool enabled) {
+			settings->setAutoSpaceReceiving(enabled);
+			ShowRestartPrompt(controller);
+		},
 	});
-	if (autoSpaceReceivingButton) {
-		autoSpaceReceivingButton->toggledValue(
-		) | rpl::filter(
-			[=](bool enabled) {
-				return (enabled != settings->autoSpaceReceiving());
-			}
-		) | on_next(
-			[=](bool enabled) {
-				ExtrasSettings::getInstance().setAutoSpaceReceiving(enabled);
-				ShowRestartPrompt(controller);
-			},
-			autoSpaceReceivingButton->lifetime());
-	}
-
 }
 
 const auto kExtrasArchiveMeta = BuildHelper({

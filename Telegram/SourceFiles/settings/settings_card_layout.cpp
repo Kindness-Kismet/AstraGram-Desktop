@@ -175,12 +175,8 @@ not_null<Ui::FlatLabel*> AddCardTitle(
 void AddCardDescription(
 	not_null<Ui::VerticalLayout*> container,
 	rpl::producer<QString> text) {
-	const auto labelStyle = container->lifetime().make_state<style::FlatLabel>(
-		st::settingsCardHint);
-	// 非零下限启用换行，取 1 让排版始终服从布局给出的实际宽度。
-	labelStyle->minWidth = 1;
 	container->add(
-		object_ptr<Ui::FlatLabel>(container, std::move(text), *labelStyle),
+		object_ptr<Ui::FlatLabel>(container, std::move(text), st::settingsCardHint),
 		st::settingsCardHintPadding);
 }
 

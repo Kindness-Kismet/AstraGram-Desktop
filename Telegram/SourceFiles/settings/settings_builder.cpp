@@ -35,6 +35,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Settings::Builder {
 namespace {
 
+[[nodiscard]] bool UseCardLayout(Type type) {
+	return (type != MainId())
+		&& (type != PremiumId())
+		&& (type != CreditsId());
+}
+
 [[nodiscard]] QString ResolveTitle(rpl::producer<QString> title) {
 	auto result = QString();
 	auto lifetime = rpl::lifetime();
@@ -73,9 +79,7 @@ BuildHelper::BuildHelper(
 		controller,
 		Window::GifPauseReason::Layer);
 	// 推广页与旧设置概览有独立封面和自绘布局，不套用普通设置卡片。
-	const auto cards = (_meta.id != MainId())
-		&& (_meta.id != PremiumId())
-		&& (_meta.id != CreditsId());
+	const auto cards = UseCardLayout(_meta.id);
 	const auto content = cards
 		? container.get()
 		: static_cast<Ui::VerticalLayout*>(
@@ -191,8 +195,7 @@ SectionBuilder::SectionBuilder(BuildContext context)
 			if (!section) {
 				continue;
 			}
-			const auto id = section->id();
-			if (id == MainId() || id == PremiumId() || id == CreditsId()) {
+			if (!UseCardLayout(section->id())) {
 				_cardRoot = nullptr;
 			}
 			break;

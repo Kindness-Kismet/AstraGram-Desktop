@@ -467,11 +467,11 @@ void AddWeekButton(
 		}
 		Unexpected("Index in AddWeekButton.");
 	}();
-	const auto &st = st::settingsWorkingHoursWeek;
 	const auto button = AddButtonWithIcon(
 		container,
 		rpl::duplicate(label),
-		st);
+		st::settingsWorkingHoursWeek);
+	const auto &st = button->st();
 	button->setClickedCallback([=] {
 		const auto done = [=](Data::WorkingIntervals intervals) {
 			auto now = data->current();
