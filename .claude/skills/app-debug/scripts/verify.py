@@ -60,7 +60,7 @@ def verify(profile):
     sub = parser.add_subparsers(dest="command")
     cli.register_commands(sub)
     server = set(command("app.help"))
-    client = set(sub.choices) - {"app.ensure", "app.restart", "app.stop"}
+    client = set(sub.choices) - {"app.start", "app.ensure", "app.restart", "app.stop"}
     require(server == client, f"客户端与服务端指令不一致：{sorted(server ^ client)}")
     passed(f"客户端与服务端指令一致，共 {len(server)} 条")
 

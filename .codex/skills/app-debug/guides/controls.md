@@ -81,7 +81,7 @@ python .claude/skills/app-debug/scripts/cli.py control.list --all
 自带 objectName 的常用控件：`brandMenuButton`（顶部布局主菜单）、`chatFolders.menu`（左侧标签主菜单）、
 `mainMenuButton`（窄列表主菜单）、`sendButton`（发送）、
 `messageInput`（消息输入框）、`menu.*`（主菜单项）、`extras/*`（AstraGram 设置按钮，
-id 即 objectName，如 `extras/search`、`extras/cat/ghost`）。没有 objectName 的控件用 `control.list`
+id 即 objectName，如 `extras/quick/autoSpaceSending`、`extras/cat/ghost`）。没有 objectName 的控件用 `control.list`
 查类名/accessibleName 定位，或用 `#序号` 寻址。
 
 ## `control.click <objectName | #序号> [--all]`
