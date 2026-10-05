@@ -28,7 +28,7 @@ menuIconStealth: icon {{ "menu/stealth", menuIconColor }};
 menuIconStealthLocked: icon {{ "menu/stealth_locked", menuIconColor }};
 menuIconGif: icon {{ "menu/gif", menuIconColor }};
 menuIconShowInFolder: icon {{ "menu/show_in_folder", menuIconColor }};
-menuIconDownload: icon {{ "menu/download", menuIconColor }};
+menuIconDownload: icon {{ "menu/download-24x24", menuIconColor }};
 menuIconLink: icon {{ "menu/link", menuIconColor }};
 menuIconBlock: icon {{ "menu/block", menuIconColor }};
 menuIconUnblock: icon {{ "menu/unblock", menuIconColor }};

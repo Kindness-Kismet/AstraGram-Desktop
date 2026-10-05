@@ -14,6 +14,7 @@
 #include "settings/sections/settings_main.h"
 #include "settings/settings_builder.h"
 #include "styles/style_menu_icons.h"
+#include "styles/style_extras_icons.h"
 #include "styles/style_settings.h"
 #include "ui/widgets/buttons.h"
 #include "ui/text/format_values.h"
@@ -28,7 +29,7 @@ using namespace Builder;
 
 namespace {
 
-void BuildCategories(SectionBuilder &builder) {
+void buildCategories(SectionBuilder &builder) {
 	const auto dev = ExtrasSettings::getInstance().devFeaturesEnabled();
 	if (dev) {
 		builder.addSectionButton({
@@ -154,9 +155,9 @@ const auto kMeta = BuildHelper({
 	.id = ExtrasMain::Id(),
 	.parentId = MainId(),
 	.title = &tr::extras_Preferences,
-	.icon = &st::menuIconPremium,
+	.icon = &st::menuIconAstraGram,
 }, [](SectionBuilder &builder) {
-	BuildCategories(builder);
+	buildCategories(builder);
 	buildQuickToggles(builder);
 	builder.addSubsectionTitle(tr::extras_SettingsMoreTitle());
 	builder.addSectionButton({

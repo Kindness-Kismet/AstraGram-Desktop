@@ -44,6 +44,7 @@
 #include "styles/style_info.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
+#include "styles/style_extras_icons.h"
 #include "styles/style_settings.h"
 
 namespace Settings {
@@ -198,7 +199,7 @@ Navigation::Navigation(
 	account->setClickedCallback([=] { _navigate(InformationId()); });
 
 	addSeparator();
-	addItem(tr::extras_Preferences(), st::menuIconPremium, u"extras"_q, ExtrasMain::Id());
+	addItem(tr::extras_Preferences(), st::menuIconAstraGram, u"extras"_q, ExtrasMain::Id());
 	addSeparator();
 	if (!controller->session().supportMode()) {
 		addItem(tr::lng_settings_my_account(), st::menuIconProfile, u"account"_q, InformationId());

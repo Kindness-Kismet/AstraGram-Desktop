@@ -86,6 +86,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_info.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
+#include "styles/style_extras_icons.h"
 #include "styles/style_settings.h"
 
 #include <QtGui/QClipboard>
@@ -391,7 +392,7 @@ void BuildSectionButtons(SectionBuilder &builder) {
 	builder.addSectionButton({
 		.title = tr::extras_Preferences(),
 		.targetSection = ExtrasMain::Id(),
-		.icon = { &st::menuIconPremium },
+		.icon = { &st::menuIconAstraGram },
 		.keywords = { u"extras"_q },
 	});
 	builder.addSkip();

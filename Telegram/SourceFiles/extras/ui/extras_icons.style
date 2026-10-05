@@ -67,6 +67,7 @@ extrasHistoryFileOutPlugin: icon {{ "extras/history_file_plugin", historyFileOut
 extrasHistoryFileOutPluginSelected: icon {{ "extras/history_file_plugin", historyFileOutIconFgSelected }};
 
 menuIconClearAttention: icon {{ "menu/clear", menuIconAttentionColor }};
+menuIconAstraGram: icon {{ "menu/target_line-24x24", menuIconColor }};
 
 dialogsExteraSupporterIcon: ThreeStateIcon {
 	icon: icon {{ "extras/dialogs_extera_supporter", dialogsVerifiedIconBg }};
