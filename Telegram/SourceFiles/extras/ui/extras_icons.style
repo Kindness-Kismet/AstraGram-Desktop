@@ -25,10 +25,7 @@ messageFieldVoiceIcon: icon {{ "extras/message_field/voice", menuIconColor }};
 extrasRecordMessageIcon: icon {{ "extras/record_message", menuIconColor }};
 extrasRecordRoundIcon: icon {{ "extras/record_round", menuIconColor }};
 messageFieldTTLIcon: icon {{ "extras/message_field/ttl", menuIconColor }};
-messageFieldCocoonAiIcon: icon{
-	{ size(24px, 24px), transparent },
-	{ "chat/ai_letters-20x20", menuIconColor, point(2px, 2px) },
-};
+messageFieldCocoonAiIcon: icon {{ "chat/ai_letters-24x24", menuIconColor }};
 
 inChannelBadgeIcon: icon {{ "extras/channel", msgInDateFg }};
 inChannelBadgeSelectedIcon: icon {{ "extras/channel", msgInDateFgSelected }};
