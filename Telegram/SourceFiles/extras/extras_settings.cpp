@@ -630,6 +630,15 @@ void ExtrasSettings::setShowBubbleOutline(bool val) {
 	save();
 }
 
+void ExtrasSettings::setDisableBubbleShadow(bool val) {
+	if (_disableBubbleShadow.current() == val) {
+		return;
+	}
+	_disableBubbleShadow = val;
+	repaintApp();
+	save();
+}
+
 void ExtrasSettings::setHidePremiumStatuses(bool val) {
 	if (_hidePremiumStatuses.current() == val) return;
 	_hidePremiumStatuses = val;
@@ -1192,6 +1201,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"disableStories", s._disableStories.current()},
 		{"disableChatBackground", s._disableChatBackground.current()},
 		{"showBubbleOutline", s._showBubbleOutline.current()},
+		{"disableBubbleShadow", s._disableBubbleShadow.current()},
 		{"hidePremiumStatuses", s._hidePremiumStatuses.current()},
 		{"hideProxySettingsIcon", s._hideProxySettingsIcon.current()},
 		{"showDownloadsButtonInHeader", s._showDownloadsButtonInHeader.current()},
@@ -1306,6 +1316,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._disableStories = j.value("disableStories", defaults._disableStories.current());
 	s._disableChatBackground = j.value("disableChatBackground", defaults._disableChatBackground.current());
 	s._showBubbleOutline = j.value("showBubbleOutline", defaults._showBubbleOutline.current());
+	s._disableBubbleShadow = j.value("disableBubbleShadow", defaults._disableBubbleShadow.current());
 	s._hidePremiumStatuses = j.value("hidePremiumStatuses", defaults._hidePremiumStatuses.current());
 	s._hideProxySettingsIcon = j.value("hideProxySettingsIcon", defaults._hideProxySettingsIcon.current());
 	s._showDownloadsButtonInHeader = j.contains("showDownloadsButtonInHeader")

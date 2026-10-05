@@ -208,7 +208,8 @@ using Corner = BubbleCornerRounding;
 }
 
 void PaintBubbleShadow(QPainter &p, const SimpleBubble &args) {
-	if (!args.shadowed || args.geometry.isEmpty()) {
+	if (!args.shadowed || args.geometry.isEmpty()
+		|| ExtrasSettings::getInstance().disableBubbleShadow()) {
 		return;
 	}
 	const auto &message = args.st->messageStyle(args.outbg, args.selected);

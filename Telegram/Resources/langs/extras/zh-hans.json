@@ -1,4 +1,6 @@
 {
+  "DisableBubbleShadow": "禁用气泡阴影",
+  "DisableBubbleShadowDescription": "移除收发消息气泡周围的阴影，立即生效",
   "SettingsSearchPlaceholder": "查找设置",
   "SettingsSearchRecent": "最近打开的设置",
   "SettingsSearchEmpty": "没有找到相关设置，试试其他关键词",

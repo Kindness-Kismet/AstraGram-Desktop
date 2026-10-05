@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/basic_click_handlers.h"
 
 #include "boxes/send_credits_box.h" // CreditsEmoji.
+#include "extras/extras_settings.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/view/history_view_element.h"
@@ -294,6 +295,9 @@ void Media::fillImageShadow(
 		QRect rect,
 		Ui::BubbleRounding rounding,
 		const PaintContext &context) const {
+	if (ExtrasSettings::getInstance().disableBubbleShadow()) {
+		return;
+	}
 	const auto sti = context.imageStyle();
 	auto corners = Ui::CornersPixmaps();
 	const auto choose = [&](int index) -> QPixmap {

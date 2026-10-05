@@ -909,7 +909,6 @@ void BuildChatBackgroundSection(SectionBuilder &builder) {
 		.title = tr::extras_DisableChatBackground(),
 		.getter = &ExtrasSettings::disableChatBackground,
 		.setter = &ExtrasSettings::setDisableChatBackground,
-		.icon = { &st::menuIconBlock },
 		.keywords = { u"background"_q, u"wallpaper"_q, u"solid"_q, u"color"_q },
 	});
 	// 纯色背景下白气泡边界发虚，描边一圈阴影色补足
@@ -918,9 +917,16 @@ void BuildChatBackgroundSection(SectionBuilder &builder) {
 		.title = tr::extras_ShowBubbleOutline(),
 		.getter = &ExtrasSettings::showBubbleOutline,
 		.setter = &ExtrasSettings::setShowBubbleOutline,
-		.icon = { &st::menuIconSelect },
 		.keywords = { u"bubble"_q, u"outline"_q, u"border"_q, u"edge"_q },
 	});
+	ExtrasBuilder::ExtrasSectionBuilder(builder).addSettingToggle({
+		.id = u"chat/disable-bubble-shadow"_q,
+		.title = tr::extras_DisableBubbleShadow(),
+		.getter = &ExtrasSettings::disableBubbleShadow,
+		.setter = &ExtrasSettings::setDisableBubbleShadow,
+		.keywords = { u"bubble"_q, u"shadow"_q },
+	});
+	builder.addDividerText(tr::extras_DisableBubbleShadowDescription());
 
 	builder.add(nullptr, [] {
 		return SearchEntry{

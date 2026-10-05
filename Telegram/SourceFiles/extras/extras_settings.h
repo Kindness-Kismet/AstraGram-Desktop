@@ -282,6 +282,7 @@ public:
 	[[nodiscard]] bool disableStories() const { return _disableStories.current(); }
 	[[nodiscard]] bool disableChatBackground() const { return _disableChatBackground.current(); }
 	[[nodiscard]] bool showBubbleOutline() const { return _showBubbleOutline.current(); }
+	[[nodiscard]] bool disableBubbleShadow() const { return _disableBubbleShadow.current(); }
 	[[nodiscard]] bool hidePremiumStatuses() const { return _hidePremiumStatuses.current(); }
 	[[nodiscard]] bool hideProxySettingsIcon() const { return _hideProxySettingsIcon.current(); }
 	[[nodiscard]] bool showDownloadsButtonInHeader() const { return _showDownloadsButtonInHeader.current(); }
@@ -378,6 +379,7 @@ public:
 	void setDisableStories(bool val);
 	void setDisableChatBackground(bool val);
 	void setShowBubbleOutline(bool val);
+	void setDisableBubbleShadow(bool val);
 	void setHidePremiumStatuses(bool val);
 	void setHideProxySettingsIcon(bool val);
 	void setShowDownloadsButtonInHeader(bool val);
@@ -486,6 +488,7 @@ public:
 	[[nodiscard]] rpl::producer<bool> disableStoriesChanges() const { return _disableStories.changes(); }
 	[[nodiscard]] rpl::producer<bool> disableChatBackgroundValue() const { return _disableChatBackground.value(); }
 	[[nodiscard]] rpl::producer<bool> showBubbleOutlineValue() const { return _showBubbleOutline.value(); }
+	[[nodiscard]] rpl::producer<bool> disableBubbleShadowValue() const { return _disableBubbleShadow.value(); }
 	[[nodiscard]] rpl::producer<bool> hidePremiumStatusesValue() const { return _hidePremiumStatuses.value(); }
 	[[nodiscard]] rpl::producer<bool> hidePremiumStatusesChanges() const { return _hidePremiumStatuses.changes(); }
 	[[nodiscard]] rpl::producer<bool> hideProxySettingsIconValue() const { return _hideProxySettingsIcon.value(); }
@@ -669,6 +672,7 @@ private:
 	rpl::variable<bool> _disableStories = false;
 	rpl::variable<bool> _disableChatBackground = false;
 	rpl::variable<bool> _showBubbleOutline = false;
+	rpl::variable<bool> _disableBubbleShadow = false;
 	rpl::variable<bool> _showOnlyAddedEmojisAndStickers = false;
 	rpl::variable<bool> _collapseSimilarChannels = true;
 	rpl::variable<bool> _hideSimilarChannels = false;

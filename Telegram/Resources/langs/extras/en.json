@@ -1,4 +1,6 @@
 {
+  "DisableBubbleShadow": "Disable bubble shadows",
+  "DisableBubbleShadowDescription": "Remove shadows around incoming and outgoing message bubbles. Takes effect immediately.",
   "SettingsSearchPlaceholder": "Find a setting",
   "SettingsSearchRecent": "Recently opened settings",
   "SettingsSearchEmpty": "No matching settings. Try another keyword.",

@@ -90,6 +90,7 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"disableStories"_q, [&] { return settings.disableStories(); }, settings, &ExtrasSettings::setDisableStories);
 	addSetting(entries, u"disableChatBackground"_q, [&] { return settings.disableChatBackground(); }, settings, &ExtrasSettings::setDisableChatBackground);
 	addSetting(entries, u"showBubbleOutline"_q, [&] { return settings.showBubbleOutline(); }, settings, &ExtrasSettings::setShowBubbleOutline);
+	addSetting(entries, u"disableBubbleShadow"_q, [&] { return settings.disableBubbleShadow(); }, settings, &ExtrasSettings::setDisableBubbleShadow);
 	addSetting(entries, u"hidePremiumStatuses"_q, [&] { return settings.hidePremiumStatuses(); }, settings, &ExtrasSettings::setHidePremiumStatuses);
 	addSetting(entries, u"hideProxySettingsIcon"_q, [&] { return settings.hideProxySettingsIcon(); }, settings, &ExtrasSettings::setHideProxySettingsIcon);
 	addSetting(entries, u"showDownloadsButtonInHeader"_q, [&] { return settings.showDownloadsButtonInHeader(); }, settings, &ExtrasSettings::setShowDownloadsButtonInHeader);
