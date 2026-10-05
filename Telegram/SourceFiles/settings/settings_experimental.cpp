@@ -80,6 +80,12 @@ struct DecodeOptionsResult {
 	QString json;
 };
 
+struct ExperimentalOption {
+	const char *id;
+	tr::phrase<> title;
+	const tr::phrase<> *description = nullptr;
+};
+
 struct ResolvedReferrer {
 	QString controlId;
 	Type section = ExtrasMain::Id();
@@ -178,10 +184,10 @@ void SetupCopyDeepLink(
 		*menu = base::make_unique_q<Ui::PopupMenu>(
 			button,
 			st::popupMenuWithIcons);
-		(*menu)->addAction(u"Copy deep link"_q, [=] {
+		(*menu)->addAction(tr::extras_ExperimentalCopyDeepLink(tr::now), [=] {
 			TextUtilities::SetClipboardText({ link });
 			window->showToast({
-				.text = { u"Deep link copied to clipboard."_q },
+				.text = { tr::extras_ExperimentalDeepLinkCopied(tr::now) },
 				.iconLottie = u"toast/voip_invite"_q,
 				.iconLottieSize = st::toastLottieIconSize,
 			});
@@ -251,12 +257,15 @@ void AddOption(
 		not_null<Window::Controller*> window,
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::VerticalLayout*> container,
-		base::options::option<bool> &option,
+		const ExperimentalOption &entry,
 		rpl::producer<> resetClicks,
 		rpl::producer<> reloadOptionsRequests,
 		Fn<void(const QString&, not_null<QWidget*>)> registerHighlight) {
-	const auto name = option.name().isEmpty() ? option.id() : option.name();
-	const auto &description = option.description();
+	auto &option = base::options::lookup<bool>(entry.id);
+	const auto name = entry.title(tr::now);
+	const auto description = entry.description
+		? (*entry.description)(tr::now)
+		: QString();
 
 	const auto inner = container->add(
 		object_ptr<Ui::VerticalLayout>(container), style::al_justify);
@@ -338,9 +347,7 @@ void AddFavoriteLinkButton(
 		Fn<void(const QString&, not_null<QWidget*>)> registerHighlight) {
 	const auto option = &base::options::lookup<QString>(
 		Window::kOptionFolderFavoriteLink);
-	const auto name = option->name().isEmpty()
-		? option->id()
-		: option->name();
+	const auto name = tr::extras_ExperimentalFolderFavoriteLink(tr::now);
 
 	const auto inner = container->add(
 		object_ptr<Ui::VerticalLayout>(container), style::al_justify);
@@ -357,6 +364,7 @@ void AddFavoriteLinkButton(
 		rpl::single(name),
 		std::move(label),
 		st::settingsButtonNoIcon);
+	AddCardDescription(inner, tr::extras_ExperimentalFolderFavoriteLinkDescription());
 	button->setClickedCallback([=] {
 		window->show(Box(Window::EditFolderFavoriteLinkBox));
 	});
@@ -370,89 +378,125 @@ void AddFavoriteLinkButton(
 
 struct Category {
 	QString title;
-	std::vector<const char*> options;
+	std::vector<ExperimentalOption> options;
 };
 std::vector<Category> experimentalCategories() {
 	return {
 		{
-			u"Chats"_q,
+			tr::extras_ExperimentalCategoryChats(tr::now),
 			{
-				Dialogs::kOptionForumHideChatsList,
-				Dialogs::kOptionDialogsUnreadOnTop,
-				Dialogs::Ui::kOptionDialogsMuteIcon,
-				kOptionUseNewChatView,
-				kOptionAutoScrollInactiveChat,
-				kModerateCommonGroups,
-				Info::kClassicProfileScroll,
+				{ Dialogs::kOptionForumHideChatsList, tr::extras_ExperimentalForumHideChatsList,
+					&tr::extras_ExperimentalForumHideChatsListDescription },
+				{ Dialogs::kOptionDialogsUnreadOnTop, tr::extras_ExperimentalDialogsUnreadOnTop,
+					&tr::extras_ExperimentalDialogsUnreadOnTopDescription },
+				{ Dialogs::Ui::kOptionDialogsMuteIcon, tr::extras_ExperimentalDialogsMuteIcon,
+					&tr::extras_ExperimentalDialogsMuteIconDescription },
+				{ kOptionUseNewChatView, tr::extras_ExperimentalUseNewChatView,
+					&tr::extras_ExperimentalUseNewChatViewDescription },
+				{ kOptionAutoScrollInactiveChat, tr::extras_ExperimentalAutoScrollInactiveChat,
+					&tr::extras_ExperimentalAutoScrollInactiveChatDescription },
+				{ kModerateCommonGroups, tr::extras_ExperimentalModerateCommonGroups },
+				{ Info::kClassicProfileScroll, tr::extras_ExperimentalClassicProfileScroll,
+					&tr::extras_ExperimentalClassicProfileScrollDescription },
 			}
 		},
 		{
-			u"Messages"_q,
+			tr::extras_ExperimentalCategoryMessages(tr::now),
 			{
-				Ui::kOptionUseSmallMsgBubbleRadius,
-				HistoryView::kOptionUnlimitedMessageWidth,
-				HistoryView::Controls::kOptionMacCmdReplyImmediately,
-				Ui::kOptionHideAiButton,
-				kForceComposeSearchOneColumn,
+				{ Ui::kOptionUseSmallMsgBubbleRadius, tr::extras_ExperimentalUseSmallMsgBubbleRadius,
+					&tr::extras_ExperimentalUseSmallMsgBubbleRadiusDescription },
+				{ HistoryView::kOptionUnlimitedMessageWidth, tr::extras_ExperimentalUnlimitedMessageWidth,
+					&tr::extras_ExperimentalUnlimitedMessageWidthDescription },
+				{ HistoryView::Controls::kOptionMacCmdReplyImmediately, tr::extras_ExperimentalMacCmdReplyImmediately,
+					&tr::extras_ExperimentalMacCmdReplyImmediatelyDescription },
+				{ Ui::kOptionHideAiButton, tr::extras_ExperimentalHideAiButton,
+					&tr::extras_ExperimentalHideAiButtonDescription },
+				{ kForceComposeSearchOneColumn, tr::extras_ExperimentalForceComposeSearchOneColumn,
+					&tr::extras_ExperimentalForceComposeSearchOneColumnDescription },
 			}
 		},
 		{
-			u"Profile"_q,
+			tr::extras_ExperimentalCategoryProfile(tr::now),
 			{
-				Window::kOptionViewProfileInChatsListContextMenu,
-				Info::Profile::kOptionShowPeerIdBelowAbout,
-				Info::Profile::kOptionShowChannelJoinedBelowAbout,
-				Info::Profile::kOptionProfileMediaTabs,
-				Info::Profile::kOptionProfileMediaTabsExpanded,
+				{ Window::kOptionViewProfileInChatsListContextMenu, tr::extras_ExperimentalViewProfileInChatsListContextMenu,
+					&tr::extras_ExperimentalViewProfileInChatsListContextMenuDescription },
+				{ Info::Profile::kOptionShowPeerIdBelowAbout, tr::extras_ExperimentalShowPeerIdBelowAbout,
+					&tr::extras_ExperimentalShowPeerIdBelowAboutDescription },
+				{ Info::Profile::kOptionShowChannelJoinedBelowAbout, tr::extras_ExperimentalShowChannelJoinedBelowAbout,
+					&tr::extras_ExperimentalShowChannelJoinedBelowAboutDescription },
+				{ Info::Profile::kOptionProfileMediaTabs, tr::extras_ExperimentalProfileMediaTabs,
+					&tr::extras_ExperimentalProfileMediaTabsDescription },
+				{ Info::Profile::kOptionProfileMediaTabsExpanded, tr::extras_ExperimentalProfileMediaTabsExpanded,
+					&tr::extras_ExperimentalProfileMediaTabsExpandedDescription },
 			}
 		},
 		{
-			u"Stickers and emoji"_q,
+			tr::extras_ExperimentalCategoryStickersAndEmoji(tr::now),
 			{
-				ChatHelpers::kOptionTabbedPanelShowOnClick,
-				ChatHelpers::kOptionUnlimitedRecentStickers,
+				{ ChatHelpers::kOptionTabbedPanelShowOnClick, tr::extras_ExperimentalTabbedPanelShowOnClick,
+					&tr::extras_ExperimentalTabbedPanelShowOnClickDescription },
+				{ ChatHelpers::kOptionUnlimitedRecentStickers, tr::extras_ExperimentalUnlimitedRecentStickers,
+					&tr::extras_ExperimentalUnlimitedRecentStickersDescription },
 			}
 		},
 		{
-			u"Media"_q,
+			tr::extras_ExperimentalCategoryMedia(tr::now),
 			{
-				Media::Player::kOptionDisableAutoplayNext,
-				Window::kOptionExternalMediaViewer,
-				FFmpeg::kOptionFFmpegMultiThread,
+				{ Media::Player::kOptionDisableAutoplayNext, tr::extras_ExperimentalDisableAutoplayNext,
+					&tr::extras_ExperimentalDisableAutoplayNextDescription },
+				{ Window::kOptionExternalMediaViewer, tr::extras_ExperimentalExternalMediaViewer,
+					&tr::extras_ExperimentalExternalMediaViewerDescription },
+				{ FFmpeg::kOptionFFmpegMultiThread, tr::extras_ExperimentalFFmpegMultiThread,
+					&tr::extras_ExperimentalFFmpegMultiThreadDescription },
 			}
 		},
 		{
-			u"Notifications"_q,
+			tr::extras_ExperimentalCategoryNotifications(tr::now),
 			{
-				Window::Notifications::kOptionHideReplyButton,
-				Window::Notifications::kOptionCustomNotification,
-				Window::Notifications::kOptionGNotification,
-				Window::Notifications::kOptionMacModernNotifications,
+				{ Window::Notifications::kOptionHideReplyButton, tr::extras_ExperimentalHideReplyButton,
+					&tr::extras_ExperimentalHideReplyButtonDescription },
+				{ Window::Notifications::kOptionCustomNotification, tr::extras_ExperimentalCustomNotification,
+					&tr::extras_ExperimentalCustomNotificationDescription },
+				{ Window::Notifications::kOptionGNotification, tr::extras_ExperimentalGNotification,
+					&tr::extras_ExperimentalGNotificationDescription },
+				{ Window::Notifications::kOptionMacModernNotifications, tr::extras_ExperimentalMacModernNotifications,
+					&tr::extras_ExperimentalMacModernNotificationsDescription },
 			}
 		},
 		{
-			u"Interface"_q,
+			tr::extras_ExperimentalCategoryInterface(tr::now),
 			{
-				Core::kOptionFractionalScalingEnabled,
-				Core::kOptionHighDpiDownscale,
-				Ui::GL::kOptionUseQtRhi,
-				Ui::GL::kOptionEnableVulkanRhi,
-				Core::kOptionFreeType,
+				{ Core::kOptionFractionalScalingEnabled, tr::extras_ExperimentalFractionalScalingEnabled,
+					&tr::extras_ExperimentalFractionalScalingEnabledDescription },
+				{ Core::kOptionHighDpiDownscale, tr::extras_ExperimentalHighDpiDownscale,
+					&tr::extras_ExperimentalHighDpiDownscaleDescription },
+				{ Ui::GL::kOptionUseQtRhi, tr::extras_ExperimentalUseQtRhi,
+					&tr::extras_ExperimentalUseQtRhiDescription },
+				{ Ui::GL::kOptionEnableVulkanRhi, tr::extras_ExperimentalEnableVulkanRhi,
+					&tr::extras_ExperimentalEnableVulkanRhiDescription },
+				{ Core::kOptionFreeType, tr::extras_ExperimentalFreeType,
+					&tr::extras_ExperimentalFreeTypeDescription },
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-				Ui::kOptionKineticScroller,
+				{ Ui::kOptionKineticScroller, tr::extras_ExperimentalKineticScroller },
 #endif
-				Window::kOptionDisableTouchbar,
-				Window::kOptionNewWindowsSizeAsFirst,
+				{ Window::kOptionDisableTouchbar, tr::extras_ExperimentalDisableTouchbar },
+				{ Window::kOptionNewWindowsSizeAsFirst, tr::extras_ExperimentalNewWindowsSizeAsFirst,
+					&tr::extras_ExperimentalNewWindowsSizeAsFirstDescription },
 			}
 		},
 		{
-			u"System"_q,
+			tr::extras_ExperimentalCategorySystem(tr::now),
 			{
-				MTP::details::kOptionPreferIPv6,
-				Core::kOptionSkipUrlSchemeRegister,
-				Core::kOptionDeadlockDetector,
-				Webview::kOptionWebviewDebugEnabled,
-				Webview::kOptionWebviewLegacyEdge,
+				{ MTP::details::kOptionPreferIPv6, tr::extras_ExperimentalPreferIPv6,
+					&tr::extras_ExperimentalPreferIPv6Description },
+				{ Core::kOptionSkipUrlSchemeRegister, tr::extras_ExperimentalSkipUrlSchemeRegister,
+					&tr::extras_ExperimentalSkipUrlSchemeRegisterDescription },
+				{ Core::kOptionDeadlockDetector, tr::extras_ExperimentalDeadlockDetector,
+					&tr::extras_ExperimentalDeadlockDetectorDescription },
+				{ Webview::kOptionWebviewDebugEnabled, tr::extras_ExperimentalWebviewDebugEnabled,
+					&tr::extras_ExperimentalWebviewDebugEnabledDescription },
+				{ Webview::kOptionWebviewLegacyEdge, tr::extras_ExperimentalWebviewLegacyEdge,
+					&tr::extras_ExperimentalWebviewLegacyEdgeDescription },
 			}
 		},
 	};
@@ -495,12 +539,12 @@ void SetupExperimental(
 
 	const auto addOption = [&](
 			not_null<Ui::VerticalLayout*> inner,
-			const char name[]) {
+			const ExperimentalOption &entry) {
 		return AddOption(
 			window,
 			controller,
 			inner,
-			base::options::lookup<bool>(name),
+			entry,
 			(reset
 				? (reset->clicks() | rpl::to_empty)
 				: rpl::producer<>()),
@@ -518,16 +562,20 @@ void SetupExperimental(
 	for (const auto &category : categories) {
 		addCategory(category.title, [&](
 				not_null<Ui::VerticalLayout*> inner) {
-			for (const auto name : category.options) {
-				addOption(inner, name);
+			for (const auto &entry : category.options) {
+				addOption(inner, entry);
 			}
 		});
 	}
 
-	addCategory(u"Other"_q, [&](
+	addCategory(tr::extras_ExperimentalCategoryOther(tr::now), [&](
 			not_null<Ui::VerticalLayout*> inner) {
 		if (base::options::lookup<bool>(kOptionFastButtonsMode).value()) {
-			addOption(inner, kOptionFastButtonsMode);
+			addOption(inner, {
+				kOptionFastButtonsMode,
+				tr::extras_ExperimentalFastButtonsMode,
+				&tr::extras_ExperimentalFastButtonsModeDescription,
+			});
 		}
 		AddFavoriteLinkButton(
 			window,
@@ -542,9 +590,11 @@ void SetupExperimental(
 std::vector<not_null<base::options::details::BasicOption*>> experimentalOptionsForDebug() {
 	auto result = std::vector<not_null<base::options::details::BasicOption*>>();
 	for (const auto &category : experimentalCategories()) {
-		for (const auto name : category.options) {
-			if (!OptionReferrer(base::options::lookup<bool>(name)).isEmpty()) continue;
-			result.push_back(&base::options::details::Lookup(name));
+		for (const auto &entry : category.options) {
+			if (!OptionReferrer(base::options::lookup<bool>(entry.id)).isEmpty()) {
+				continue;
+			}
+			result.push_back(&base::options::details::Lookup(entry.id));
 		}
 	}
 	result.push_back(&base::options::details::Lookup(kOptionFastButtonsMode));
@@ -569,12 +619,12 @@ rpl::producer<QString> Experimental::title() {
 void Experimental::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 	const auto window = &controller()->window();
 	addAction(
-		u"Export"_q,
+		tr::extras_ExperimentalExport(tr::now),
 		[=] {
 			TextUtilities::SetClipboardText(
 				{ EncodeOptionsToText(base::options::serialize()) });
 			window->showToast({
-				.text = { u"Experimental settings code copied to clipboard."_q },
+				.text = { tr::extras_ExperimentalExported(tr::now) },
 				.iconLottie = u"toast/copy"_q,
 				.iconLottieSize = st::toastLottieIconSize,
 			});
@@ -584,23 +634,20 @@ void Experimental::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 		return;
 	}
 	addAction(
-		u"Import"_q,
+		tr::extras_ExperimentalImport(tr::now),
 		[=] {
 			const auto decoded = DecodeOptionsFromText(
 				QGuiApplication::clipboard()->text());
 			if (!decoded.ok) {
-				window->showToast(u"Clipboard does not contain "
-					"a valid experimental settings code."_q);
+				window->showToast(tr::extras_ExperimentalInvalidCode(tr::now));
 				return;
 			}
 			if (!base::options::deserialize(decoded.json)) {
-				window->showToast(u"Experimental settings code is valid"
-					", but data format is not supported."_q);
+				window->showToast(tr::extras_ExperimentalUnsupportedCode(tr::now));
 				return;
 			}
 			_reloadOptionsRequests.fire({});
-			window->showToast(u"Experimental settings imported "
-				"from code in clipboard."_q);
+			window->showToast(tr::extras_ExperimentalImported(tr::now));
 		},
 		&st::menuIconImportTheme);
 }
