@@ -150,7 +150,7 @@ ComposedBadge::ComposedBadge(
 		this,
 		st::infoPeerBadge,
 		session,
-		ExteraBadgeTypeFromPeer(session->user()),
+		exteraBadgeTypeFromPeer(session->user()),
 		nullptr,
 		std::move(animationPaused),
 		0,

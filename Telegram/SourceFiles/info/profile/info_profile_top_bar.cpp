@@ -386,7 +386,7 @@ TopBar::TopBar(
 	this,
 	st::infoPeerBadge,
 	&_peer->session(),
-	ExteraBadgeTypeFromPeer(_peer),
+	exteraBadgeTypeFromPeer(_peer),
 	nullptr,
 	_gifPausedChecker))
 , _hasActions(!_savedMessages

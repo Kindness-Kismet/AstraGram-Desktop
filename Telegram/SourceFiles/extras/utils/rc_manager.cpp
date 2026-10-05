@@ -1,7 +1,7 @@
 #include "extras/utils/rc_manager.h"
 
 #include <QCoreApplication>
-#include <QNetworkAccessManager>
+#include <QtNetwork/QNetworkAccessManager>
 #include <QTimer>
 #include <algorithm>
 
@@ -13,9 +13,6 @@ constexpr auto kFetchTimeout = 15 * 1000;
 void appendAffectedPeers(std::vector<PeerId> &result, const BadgeRoster &roster) {
 	const auto append = [&](const auto &ids, bool channel) {
 		for (const auto id : ids) {
-			if (uint64(id) > PeerId::kChatTypeMask) {
-				continue;
-			}
 			result.push_back(channel ? peerFromChannel(ChannelId(id)) : peerFromUser(UserId(id)));
 		}
 	};
@@ -24,9 +21,6 @@ void appendAffectedPeers(std::vector<PeerId> &result, const BadgeRoster &roster)
 	append(roster.officialChannels, true);
 	append(roster.supporterChannels, true);
 	for (const auto &[id, badge] : roster.customBadges) {
-		if (uint64(id) > PeerId::kChatTypeMask) {
-			continue;
-		}
 		result.push_back(peerFromUser(UserId(id)));
 		result.push_back(peerFromChannel(ChannelId(id)));
 		result.push_back(peerFromChat(ChatId(id)));

@@ -278,7 +278,7 @@ MainMenu::MainMenu(
 	this,
 	st::infoPeerBadge,
 	&controller->session(),
-	ExteraBadgeTypeFromPeer(controller->session().user()),
+	exteraBadgeTypeFromPeer(controller->session().user()),
 	nullptr,
 	[=] { return controller->isGifPausedAtLeastFor(GifPauseReason::Layer); },
 	0,

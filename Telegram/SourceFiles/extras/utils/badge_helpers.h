@@ -6,7 +6,7 @@
 [[nodiscard]] bool isExteraPeer(not_null<PeerData*> peer);
 [[nodiscard]] bool isSupporterPeer(not_null<PeerData*> peer);
 [[nodiscard]] CustomBadge getCustomBadge(ID peerId);
-[[nodiscard]] rpl::producer<Info::Profile::Badge::Content> ExteraBadgeTypeFromPeer(
+[[nodiscard]] rpl::producer<Info::Profile::Badge::Content> exteraBadgeTypeFromPeer(
 	not_null<PeerData*> peer);
 [[nodiscard]] Fn<void()> badgeClickHandler(not_null<PeerData*> peer);
 void watchBadgeChanges(not_null<Main::Session*> session);

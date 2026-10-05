@@ -75,9 +75,6 @@ void Badge::setContent(Content content) {
 			&& content.badge == BadgeType::Premium)) {
 		content.badge = BadgeType::None;
 	}
-	if (!(_allowed & content.badge)) {
-		content.badge = BadgeType::None;
-	}
 	if (_content == content) {
 		return;
 	}

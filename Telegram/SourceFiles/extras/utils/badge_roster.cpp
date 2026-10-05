@@ -1,4 +1,5 @@
 #include "extras/utils/badge_roster.h"
+#include "data/data_peer_id.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -33,7 +34,7 @@ constexpr auto kMaxTextLength = 256;
 		return false;
 	}
 	for (const auto &entry : array) {
-		const auto id = parseDecimal(entry, std::numeric_limits<ID>::max());
+		const auto id = parseDecimal(entry, PeerId::kChatTypeMask);
 		if (!id || !result.insert(ID(id)).second) {
 			return false;
 		}
@@ -56,7 +57,7 @@ constexpr auto kMaxTextLength = 256;
 			return false;
 		}
 		const auto object = entry.toObject();
-		const auto id = parseDecimal(object.value("id"), std::numeric_limits<ID>::max());
+		const auto id = parseDecimal(object.value("id"), PeerId::kChatTypeMask);
 		if (!id || object.size() != 2 || !object.value("badge").isObject()) {
 			return false;
 		}

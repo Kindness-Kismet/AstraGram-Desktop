@@ -121,7 +121,7 @@ CustomBadge getCustomBadge(ID peerId) {
 	return found != badges.end() ? found->second : CustomBadge();
 }
 
-rpl::producer<Info::Profile::Badge::Content> ExteraBadgeTypeFromPeer(
+rpl::producer<Info::Profile::Badge::Content> exteraBadgeTypeFromPeer(
 		not_null<PeerData*> peer) {
 	return rpl::single(rpl::empty) | rpl::then(
 		RCManager::getInstance().changes() | rpl::to_empty

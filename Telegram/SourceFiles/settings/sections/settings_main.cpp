@@ -168,7 +168,7 @@ Cover::Cover(
 	this,
 	st::infoPeerBadge,
 	&user->session(),
-	ExteraBadgeTypeFromPeer(user),
+	exteraBadgeTypeFromPeer(user),
 	&_emojiStatusPanel,
 	[=] {
 		return controller->isGifPausedAtLeastFor(
