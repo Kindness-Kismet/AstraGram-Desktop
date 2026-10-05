@@ -161,7 +161,7 @@ Navigation::Navigation(
 : RpWidget(parent)
 , _navigate(std::move(navigate))
 , _header(this)
-, _scroll(this, st::boxScroll) {
+, _scroll(this, st::defaultScrollArea) {
 	setObjectName(u"settings-navigation"_q);
 	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	const auto home = Ui::CreateChild<Ui::AbstractButton>(_header.data());
