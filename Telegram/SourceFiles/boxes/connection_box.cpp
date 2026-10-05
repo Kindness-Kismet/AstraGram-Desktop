@@ -1384,10 +1384,8 @@ void ProxiesBox::setupContent() {
 	Ui::AddDividerText(inner, tr::lng_proxy_about());
 
 	_proxySettings->setChangedCallback([=](ProxyData::Settings value) {
-		if (!_controller->setProxySettings(value)) {
-			_proxySettings->setValue(_settings.settings());
-			addNewProxy();
-		}
+		// 空代理列表仍可浏览自定义模式，添加代理由用户主动触发。
+		_controller->setProxySettings(value);
 		syncModeSlider();
 		refreshProxyList();
 		refreshProxyForCalls();
@@ -1453,9 +1451,6 @@ void ProxiesBox::setupContent() {
 }
 
 void ProxiesBox::syncModeSlider() {
-	if (!_modeSlider) {
-		return;
-	}
 	const auto section = ProxyModeSection(_proxySettings->current());
 	if (_modeSlider->activeSection() == section) {
 		return;
@@ -1466,9 +1461,6 @@ void ProxiesBox::syncModeSlider() {
 }
 
 void ProxiesBox::refreshProxyList() {
-	if (!_listWrap) {
-		return;
-	}
 	_listWrap->toggle(
 		_proxySettings->current() == ProxyData::Settings::Enabled,
 		anim::type::normal);
