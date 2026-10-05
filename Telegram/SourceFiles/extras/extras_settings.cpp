@@ -1332,7 +1332,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._disableNotificationsDelay = j.value("disableNotificationsDelay", defaults._disableNotificationsDelay.current());
 	s._localPremium = j.value("localPremium", defaults._localPremium.current());
 	s._devFeaturesEnabled = j.value("devFeaturesEnabled", defaults._devFeaturesEnabled.current());
-	s._devFeaturesExplicit = j.value("devFeaturesExplicit", defaults._devFeaturesExplicit);
+	s._devFeaturesExplicit = j.value("devFeaturesExplicit", j.contains("devFeaturesEnabled"));
 	s._showChannelReactions = j.value("showChannelReactions", defaults._showChannelReactions.current());
 	s._showGroupReactions = j.value("showGroupReactions", defaults._showGroupReactions.current());
 	s._showPrivateChatReactions = j.value("showPrivateChatReactions", defaults._showPrivateChatReactions.current());
