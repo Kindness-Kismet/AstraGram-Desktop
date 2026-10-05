@@ -31,13 +31,13 @@ connectionPasswordInputField: InputField(proxyFormInput) {
 proxyUsePadding: margins(22px, 6px, 22px, 5px);
 proxyTryIPv6Padding: margins(22px, 8px, 22px, 5px);
 
-// 顶部药丸形分段控件：整高填充的激活块代替细条，圆角取 barStroke 的一半。
+// 代理模式与代理类型使用相同的圆角矩形分段形状。
 proxyModeSlider: SettingsSlider(defaultSettingsSlider) {
 	height: 32px;
 	barTop: 0px;
 	barSkip: 0px;
 	barStroke: 32px;
-	barRadius: 16px;
+	barRadius: 8px;
 	barFg: transparent;
 	barFgActive: windowBgActive;
 	barSnapToLabel: false;
@@ -50,7 +50,7 @@ proxyModeSlider: SettingsSlider(defaultSettingsSlider) {
 	ripple: defaultRippleAnimation;
 	duration: 150;
 }
-// 分段控件所在的容器：底色衬出未选中段，内边距留出药丸与边缘的间隙。
+// 表单分段保留独立配色。
 proxyFormSlider: SettingsSlider(proxyModeSlider) {
 	height: 32px;
 	barStroke: 32px;
@@ -61,7 +61,7 @@ proxyFormSlider: SettingsSlider(proxyModeSlider) {
 	rippleBgActive: windowBgOver;
 }
 proxyModeSliderBg: windowBgOver;
-proxyModeSliderRadius: 18px;
+proxyModeSliderRadius: 10px;
 proxyModeSliderInnerPadding: margins(2px, 2px, 2px, 2px);
 proxyModeSliderPadding: margins(22px, 4px, 22px, 10px);
 proxyModeAboutPadding: margins(22px, 0px, 22px, 10px);
