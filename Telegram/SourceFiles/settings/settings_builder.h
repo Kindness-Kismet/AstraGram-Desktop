@@ -153,6 +153,8 @@ public:
 	explicit SectionBuilder(BuildContext context);
 
 	void add(FnMut<void(const BuildContext &ctx)> method);
+	// 动态分组自行创建标题和卡片，挂在页面层而不是已有卡片内部。
+	void addPageContent(FnMut<void(const WidgetContext &ctx)> method);
 
 	using ToggledScopePtr = not_null<Ui::SlideWrap<Ui::VerticalLayout>*>;
 	Ui::VerticalLayout *scope(

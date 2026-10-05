@@ -644,7 +644,6 @@ void SetupRows(
 		InformationHighlightTargets *targets) {
 	const auto session = &self->session();
 
-	Ui::AddSkip(container);
 
 	const auto showEditName = [=] {
 		if (controller->showFrozenError()) {
@@ -856,7 +855,6 @@ void SetupBio(
 		&self->session());
 	updated();
 
-	Ui::AddDividerText(container, tr::lng_settings_about_bio());
 }
 
 void SetupAccountsWrap(
@@ -1396,8 +1394,9 @@ void Information::setupContent() {
 		const auto page = container->add(object_ptr<CardPage>(container));
 		const auto root = page->content();
 		SetupPhoto(AddCardGroup(root), controller, self, &targets);
+		SetupBio(AddCardGroup(root), self, &targets);
+		AddCardDescription(root, tr::lng_settings_about_bio());
 		const auto information = AddCardGroup(root);
-		SetupBio(information, self, &targets);
 		SetupRows(information, controller, self, &targets);
 		const auto profile = AddCardGroup(root);
 		SetupPersonalChannel(profile, controller, self, &targets);

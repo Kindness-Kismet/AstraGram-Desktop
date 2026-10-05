@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_privacy_security.h"
 
 #include "settings/settings_common_session.h"
+#include "settings/settings_card_layout.h"
 
 #include "api/api_authorizations.h"
 #include "api/api_blocked_peers.h"
@@ -269,8 +270,8 @@ void SetupSensitiveContent(
 			object_ptr<Ui::VerticalLayout>(container)));
 	const auto inner = wrap->entity();
 
-	Ui::AddSkip(inner);
-	Ui::AddSubsectionTitle(inner, tr::lng_settings_sensitive_title());
+	AddCardTitle(inner, tr::lng_settings_sensitive_title());
+	const auto card = AddCardGroup(inner);
 
 	const auto show = controller->uiShow();
 	const auto session = &controller->session();
@@ -281,10 +282,10 @@ void SetupSensitiveContent(
 	) | rpl::on_next([=] {
 		session->api().sensitiveContent().reload();
 	}, container->lifetime());
-	const auto button = inner->add(object_ptr<Button>(
-		inner,
+	const auto button = AddButtonWithIcon(
+		card,
 		tr::lng_settings_sensitive_disable_filtering(),
-		st::settingsButtonNoIcon));
+		st::settingsButtonNoIcon);
 	button->toggleOn(rpl::merge(
 		session->api().sensitiveContent().enabled(),
 		disable->events() | rpl::map_to(false)
@@ -305,11 +306,10 @@ void SetupSensitiveContent(
 	}, container->lifetime());
 
 	if (highlights) {
-		highlights->push_back({ u"chat/show-18-content"_q, { button } });
+		highlights->push_back({ u"chat/show-18-content"_q, { button.get() } });
 	}
 
-	Ui::AddSkip(inner);
-	Ui::AddDividerText(inner, tr::lng_settings_sensitive_about());
+	AddCardDescription(inner, tr::lng_settings_sensitive_about());
 
 	wrap->toggleOn(session->api().sensitiveContent().canChange());
 }

@@ -29,6 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/platform_notifications_manager.h"
 #include "platform/platform_specific.h"
 #include "settings/settings_builder.h"
+#include "settings/settings_card_layout.h"
 #include "settings/sections/settings_main.h"
 #include "settings/settings_notifications_common.h"
 #include "settings/sections/settings_notifications_reactions.h"
@@ -1118,12 +1119,7 @@ void BuildNotifyViewSection(SectionBuilder &builder) {
 		const auto preview = checkboxes.preview;
 		const auto previewWrap = checkboxes.wrap;
 
-		const auto previewDivider = container->add(
-			object_ptr<Ui::SlideWrap<Ui::BoxContentDivider>>(
-				container,
-				object_ptr<Ui::BoxContentDivider>(container)));
 		previewWrap->toggle(settings.desktopNotify(), anim::type::instant);
-		previewDivider->toggle(!settings.desktopNotify(), anim::type::instant);
 
 		const auto changed = [=](ChangeType change) {
 			Core::App().saveSettingsDelayed();
@@ -1167,9 +1163,6 @@ void BuildNotifyViewSection(SectionBuilder &builder) {
 			if (change == ChangeType::DesktopEnabled) {
 				previewWrap->toggle(
 					Core::App().settings().desktopNotify(),
-					anim::type::normal);
-				previewDivider->toggle(
-					!Core::App().settings().desktopNotify(),
 					anim::type::normal);
 			}
 		}, container->lifetime());
@@ -1467,7 +1460,7 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 		return;
 	}
 
-	builder.add([native, controller](const WidgetContext &ctx) {
+	builder.addPageContent([native, controller](const WidgetContext &ctx) {
 		const auto container = ctx.container.get();
 		const auto advancedSlide = container->add(
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
@@ -1488,11 +1481,12 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 		}
 
 		if (Platform::IsWindows()) {
-			const auto skipInFocus = advancedWrap->add(object_ptr<Ui::SettingsButton>(
-				advancedWrap,
+			const auto card = AddCardGroup(advancedWrap);
+			const auto skipInFocus = AddButtonWithIcon(
+				card,
 				tr::lng_settings_skip_in_focus(),
 				st::settingsButtonNoIcon
-			))->toggleOn(rpl::single(Core::App().settings().skipToastsInFocus()));
+			)->toggleOn(rpl::single(Core::App().settings().skipToastsInFocus()));
 
 			skipInFocus->toggledChanges(
 			) | rpl::filter([](bool checked) {
@@ -1509,12 +1503,10 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 
 		const auto screens = QGuiApplication::screens();
 		if (screens.size() > 1) {
-			Ui::AddSkip(advancedWrap, st::settingsCheckboxesSkip);
-			Ui::AddDivider(advancedWrap);
-			Ui::AddSkip(advancedWrap, st::settingsCheckboxesSkip);
-			Ui::AddSubsectionTitle(
+			AddCardTitle(
 				advancedWrap,
 				tr::lng_settings_notifications_display());
+			const auto displayCard = AddCardGroup(advancedWrap);
 
 			const auto currentChecksum
 				= Core::App().settings().notificationsDisplayChecksum();
@@ -1531,9 +1523,9 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 			const auto group = std::make_shared<Ui::RadiobuttonGroup>(
 				currentIndex);
 
-			advancedWrap->add(
+			displayCard->add(
 				object_ptr<Ui::Radiobutton>(
-					advancedWrap,
+					displayCard,
 					group,
 					kDefaultDisplayIndex,
 					tr::lng_settings_notifications_display_default(tr::now),
@@ -1550,7 +1542,7 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 				const auto label = name.isEmpty()
 					? QString("Display (%1)").arg(resolution)
 					: QString("%1 (%2)").arg(name).arg(resolution);
-				advancedWrap->add(
+				displayCard->add(
 					object_ptr<Ui::Radiobutton>(
 						advancedWrap,
 						group,
@@ -1580,22 +1572,19 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 			});
 		}
 
-		Ui::AddSkip(advancedWrap, st::settingsCheckboxesSkip);
-		Ui::AddDivider(advancedWrap);
-		Ui::AddSkip(advancedWrap, st::settingsCheckboxesSkip);
-		Ui::AddSubsectionTitle(
+		AddCardTitle(
 			advancedWrap,
 			tr::lng_settings_notifications_position());
-		Ui::AddSkip(advancedWrap, st::settingsCheckboxesSkip);
 
-		const auto position = advancedWrap->add(
-			object_ptr<NotificationsCount>(advancedWrap, controller));
+		const auto positionCard = AddCardGroup(advancedWrap);
+		const auto position = positionCard->add(
+			object_ptr<NotificationsCount>(positionCard, controller));
 
-		Ui::AddSkip(advancedWrap, st::settingsCheckboxesSkip);
-		Ui::AddSubsectionTitle(advancedWrap, tr::lng_settings_notifications_count());
+		AddCardTitle(advancedWrap, tr::lng_settings_notifications_count());
+		const auto countCard = AddCardGroup(advancedWrap);
 
-		const auto countSlider = advancedWrap->add(
-			object_ptr<Ui::SettingsSlider>(advancedWrap, st::settingsSlider),
+		const auto countSlider = countCard->add(
+			object_ptr<Ui::SettingsSlider>(countCard, st::settingsSlider),
 			st::settingsBigScalePadding);
 		for (int i = 0; i != kMaxNotificationsCount; ++i) {
 			countSlider->addSection(QString::number(i + 1));
@@ -1605,7 +1594,6 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 		) | rpl::on_next([=](int section) {
 			position->setCount(section + 1);
 		}, countSlider->lifetime());
-		Ui::AddSkip(advancedWrap, st::settingsCheckboxesSkip);
 
 		if (Core::App().settings().nativeNotifications()) {
 			advancedSlide->hide(anim::type::instant);
@@ -1619,7 +1607,6 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 			}
 		}, advancedSlide->lifetime());
 
-		return SectionBuilder::WidgetToAdd{};
 	});
 }
 

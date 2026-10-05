@@ -230,6 +230,14 @@ void SectionBuilder::add(FnMut<void(const BuildContext &ctx)> method) {
 	method(_context);
 }
 
+void SectionBuilder::addPageContent(FnMut<void(const WidgetContext &ctx)> method) {
+	Expects(!_scopeDepth);
+	closeCard();
+	if (const auto context = std::get_if<WidgetContext>(&_context)) {
+		method(*context);
+	}
+}
+
 Ui::VerticalLayout *SectionBuilder::scope(
 		FnMut<void()> method,
 		rpl::producer<bool> shown,
@@ -271,27 +279,29 @@ Ui::RpWidget *SectionBuilder::add(
 		FnMut<WidgetToAdd(const WidgetContext &ctx)> widget,
 		FnMut<SearchEntry()> search) {
 	auto result = (Ui::RpWidget*)nullptr;
-	add([&](const BuildContext &ctx) {
-		v::match(ctx, [&](const WidgetContext &wctx) {
-			if (auto w = widget ? widget(wctx) : WidgetToAdd()) {
-				result = w.widget.data();
-				wctx.container->add(std::move(w.widget), w.margin, w.align);
+	if (widget) {
+		ensureCard();
+	}
+	const auto &ctx = _context;
+	v::match(ctx, [&](const WidgetContext &wctx) {
+		if (auto w = widget ? widget(wctx) : WidgetToAdd()) {
+			result = w.widget.data();
+			wctx.container->add(std::move(w.widget), w.margin, w.align);
 
-				if (auto entry = search ? search() : SearchEntry()) {
-					if (wctx.highlights) {
-						wctx.highlights->push_back({
-							std::move(entry.id),
-							{ result, std::move(w.highlight) },
-						});
-					}
+			if (auto entry = search ? search() : SearchEntry()) {
+				if (wctx.highlights) {
+					wctx.highlights->push_back({
+						std::move(entry.id),
+						{ result, std::move(w.highlight) },
+					});
 				}
 			}
-		}, [&](const SearchContext &sctx) {
-			if (auto entry = search ? search() : SearchEntry()) {
-				entry.section = sctx.sectionId;
-				sctx.entries->push_back(std::move(entry));
-			}
-		});
+		}
+	}, [&](const SearchContext &sctx) {
+		if (auto entry = search ? search() : SearchEntry()) {
+			entry.section = sctx.sectionId;
+			sctx.entries->push_back(std::move(entry));
+		}
 	});
 	return result;
 }

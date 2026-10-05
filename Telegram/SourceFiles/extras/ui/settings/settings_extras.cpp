@@ -13,6 +13,7 @@
 #include "main/main_domain.h"
 #include "main/main_session.h"
 #include "settings/settings_builder.h"
+#include "settings/settings_card_layout.h"
 #include "settings/settings_common.h"
 #include "styles/style_extras_icons.h"
 #include "styles/style_extras_styles.h"
@@ -293,334 +294,334 @@ void selectGhostProfile(GhostPickerState *state, uint64 userId) {
 }
 
 void BuildGhostEssentials(SectionBuilder &builder) {
-	builder.add([](const BuildContext &ctx) {
-		v::match(ctx, [&](const WidgetContext &wctx) {
-			const auto container = wctx.container;
-			const auto controller = wctx.controller;
+	builder.addPageContent([](const WidgetContext &wctx) {
+		const auto root = wctx.container;
+		auto container = AddCardGroup(root);
+		const auto controller = wctx.controller;
 
-			auto activeCount = 0;
-			for (const auto &account : Core::App().domain().orderedAccounts()) {
-				if (account->sessionExists()) {
-					++activeCount;
+		auto activeCount = 0;
+		for (const auto &account : Core::App().domain().orderedAccounts()) {
+			if (account->sessionExists()) {
+				++activeCount;
+			}
+		}
+
+		if (activeCount <= 1 && !ExtrasSettings::getInstance().useGlobalGhostMode()) {
+			auto userId = controller->session().userId().bare;
+			auto &src = ExtrasSettings::ghost(userId);
+			auto &dst = ExtrasSettings::ghost(0);
+			dst.setSendReadMessages(src.sendReadMessages());
+			dst.setSendReadStories(src.sendReadStories());
+			dst.setSendOnlinePackets(src.sendOnlinePackets());
+			dst.setSendUploadProgress(src.sendUploadProgress());
+			dst.setSendOfflinePacketAfterOnline(src.sendOfflinePacketAfterOnline());
+			dst.setMarkReadAfterAction(src.markReadAfterAction());
+			dst.setUseScheduledMessages(src.useScheduledMessages());
+			dst.setSendWithoutSound(src.sendWithoutSound());
+			dst.setSuggestGhostModeBeforeViewingStory(src.suggestGhostModeBeforeViewingStory());
+			dst.setSendReadMessagesLocked(src.sendReadMessagesLocked());
+			dst.setSendReadStoriesLocked(src.sendReadStoriesLocked());
+			dst.setSendOnlinePacketsLocked(src.sendOnlinePacketsLocked());
+			dst.setSendUploadProgressLocked(src.sendUploadProgressLocked());
+			dst.setSendOfflinePacketAfterOnlineLocked(src.sendOfflinePacketAfterOnlineLocked());
+			ExtrasSettings::getInstance().setUseGlobalGhostMode(true);
+		}
+
+		const auto isGlobal = ExtrasSettings::getInstance().useGlobalGhostMode();
+		auto initialUserId = isGlobal
+			? uint64(0)
+			: controller->session().userId().bare;
+
+		const auto state = container->lifetime().make_state<GhostPickerState>();
+		state->selectedUserId = initialUserId;
+
+		const auto title = AddSubsectionTitle(container, tr::extras_GhostEssentialsHeader());
+
+		const auto pickerButton = Ui::CreateChild<Ui::LinkButton>(
+			container.get(),
+			PickerLabel(initialUserId),
+			st::ghostPickerButton);
+		state->pickerButton = pickerButton;
+
+		const auto arrow = Ui::CreateChild<Ui::AbstractButton>(container.get());
+		{
+			const auto &icon = st::ghostPickerArrow;
+			arrow->resize(icon.size());
+			arrow->paintRequest(
+			) | rpl::on_next([=, &icon] {
+				auto p = QPainter(arrow);
+				icon.paint(p, 0, 0, arrow->width());
+			}, arrow->lifetime());
+		}
+		arrow->setCursor(style::cur_pointer);
+
+		const auto showPicker = activeCount > 1;
+		pickerButton->setVisible(showPicker);
+		arrow->setVisible(showPicker);
+
+		rpl::combine(
+			title->geometryValue(),
+			container->widthValue(),
+			pickerButton->naturalWidthValue()
+		) | rpl::on_next([=](QRect r, int width, int natural) {
+			pickerButton->resizeToNaturalWidth(width / 2);
+			pickerButton->moveToRight(
+				st::defaultSubsectionTitlePadding.right() + arrow->width() + st::normalFont->spacew / 2,
+				r.y() + (r.height() - pickerButton->height()) / 2,
+				width);
+			arrow->moveToLeft(
+				pickerButton->x() + pickerButton->width() + st::normalFont->spacew / 2,
+				r.y() + (r.height() - arrow->height()) / 2);
+		}, pickerButton->lifetime());
+
+		std::vector checkboxes{
+			NestedEntry{
+				tr::extras_DontReadMessages(tr::now),
+				[state] { return !ExtrasSettings::ghost(state->selectedUserId.current()).sendReadMessages(); },
+				[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendReadMessages(!v); },
+				[state] { return ExtrasSettings::ghost(state->selectedUserId.current()).sendReadMessagesLocked(); },
+				[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendReadMessagesLocked(v); }
+			},
+			NestedEntry{
+				tr::extras_DontReadStories(tr::now),
+				[state] { return !ExtrasSettings::ghost(state->selectedUserId.current()).sendReadStories(); },
+				[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendReadStories(!v); },
+				[state] { return ExtrasSettings::ghost(state->selectedUserId.current()).sendReadStoriesLocked(); },
+				[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendReadStoriesLocked(v); }
+			},
+			NestedEntry{
+				tr::extras_DontSendOnlinePackets(tr::now),
+				[state] { return !ExtrasSettings::ghost(state->selectedUserId.current()).sendOnlinePackets(); },
+				[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendOnlinePackets(!v); },
+				[state] { return ExtrasSettings::ghost(state->selectedUserId.current()).sendOnlinePacketsLocked(); },
+				[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendOnlinePacketsLocked(v); }
+			},
+			NestedEntry{
+				tr::extras_DontSendUploadProgress(tr::now),
+				[state] { return !ExtrasSettings::ghost(state->selectedUserId.current()).sendUploadProgress(); },
+				[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendUploadProgress(!v); },
+				[state] { return ExtrasSettings::ghost(state->selectedUserId.current()).sendUploadProgressLocked(); },
+				[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendUploadProgressLocked(v); }
+			},
+			NestedEntry{
+				tr::extras_SendOfflinePacketAfterOnline(tr::now),
+				[state] { return ExtrasSettings::ghost(state->selectedUserId.current()).sendOfflinePacketAfterOnline(); },
+				[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendOfflinePacketAfterOnline(v); },
+				[state] { return ExtrasSettings::ghost(state->selectedUserId.current()).sendOfflinePacketAfterOnlineLocked(); },
+				[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendOfflinePacketAfterOnlineLocked(v); }
+			},
+		};
+
+		auto collapsible = AddCollapsibleToggle(
+			container,
+			tr::extras_GhostModeToggle(),
+			std::move(checkboxes),
+			true,
+			tr::extras_GhostModeOptionShiftDescription(tr::now));
+		state->refreshCheckboxes = std::move(collapsible.refresh);
+		if (wctx.highlights && collapsible.widget) {
+			wctx.highlights->push_back(std::make_pair(
+				u"extras/ghostModeToggle"_q,
+				HighlightEntry{ collapsible.widget, {} }));
+		}
+
+		container = AddCardGroup(root);
+		const auto markReadButton = AddButtonWithIcon(
+			container,
+			tr::extras_MarkReadAfterAction(),
+			st::settingsButtonNoIcon
+		);
+		if (wctx.highlights) {
+			wctx.highlights->push_back(std::make_pair(
+				u"extras/markReadAfterAction"_q,
+				HighlightEntry{ markReadButton.get(), {} }));
+		}
+		markReadButton->toggleOn(
+			state->selectedUserId.value()
+			| rpl::map([](uint64 id) {
+				return ExtrasSettings::ghost(id).markReadAfterActionValue();
+			}) | rpl::flatten_latest()
+		)->toggledValue(
+		) | rpl::filter(
+			[=](bool enabled) {
+				return enabled != ExtrasSettings::ghost(state->selectedUserId.current()).markReadAfterAction();
+			}
+		) | on_next(
+			[=](bool enabled) {
+				auto &ghost = ExtrasSettings::ghost(state->selectedUserId.current());
+				ghost.setMarkReadAfterAction(enabled);
+				if (enabled) {
+					ghost.setUseScheduledMessages(false);
 				}
+			},
+			container->lifetime());
+		AddCardDescription(root, tr::extras_MarkReadAfterActionDescription());
+
+		container = AddCardGroup(root);
+		const auto scheduleButton = AddButtonWithIcon(
+			container,
+			tr::extras_UseScheduledMessages(),
+			st::settingsButtonNoIcon
+		);
+		if (wctx.highlights) {
+			wctx.highlights->push_back(std::make_pair(
+				u"extras/useScheduledMessages"_q,
+				HighlightEntry{ scheduleButton.get(), {} }));
+		}
+		scheduleButton->toggleOn(
+			state->selectedUserId.value()
+			| rpl::map([](uint64 id) {
+				return ExtrasSettings::ghost(id).useScheduledMessagesValue();
+			}) | rpl::flatten_latest()
+		)->toggledValue(
+		) | rpl::filter(
+			[=](bool enabled) {
+				return enabled != ExtrasSettings::ghost(state->selectedUserId.current()).useScheduledMessages();
 			}
-
-			if (activeCount <= 1 && !ExtrasSettings::getInstance().useGlobalGhostMode()) {
-				auto userId = controller->session().userId().bare;
-				auto &src = ExtrasSettings::ghost(userId);
-				auto &dst = ExtrasSettings::ghost(0);
-				dst.setSendReadMessages(src.sendReadMessages());
-				dst.setSendReadStories(src.sendReadStories());
-				dst.setSendOnlinePackets(src.sendOnlinePackets());
-				dst.setSendUploadProgress(src.sendUploadProgress());
-				dst.setSendOfflinePacketAfterOnline(src.sendOfflinePacketAfterOnline());
-				dst.setMarkReadAfterAction(src.markReadAfterAction());
-				dst.setUseScheduledMessages(src.useScheduledMessages());
-				dst.setSendWithoutSound(src.sendWithoutSound());
-				dst.setSuggestGhostModeBeforeViewingStory(src.suggestGhostModeBeforeViewingStory());
-				dst.setSendReadMessagesLocked(src.sendReadMessagesLocked());
-				dst.setSendReadStoriesLocked(src.sendReadStoriesLocked());
-				dst.setSendOnlinePacketsLocked(src.sendOnlinePacketsLocked());
-				dst.setSendUploadProgressLocked(src.sendUploadProgressLocked());
-				dst.setSendOfflinePacketAfterOnlineLocked(src.sendOfflinePacketAfterOnlineLocked());
-				ExtrasSettings::getInstance().setUseGlobalGhostMode(true);
-			}
-
-			const auto isGlobal = ExtrasSettings::getInstance().useGlobalGhostMode();
-			auto initialUserId = isGlobal
-				? uint64(0)
-				: controller->session().userId().bare;
-
-			const auto state = container->lifetime().make_state<GhostPickerState>();
-			state->selectedUserId = initialUserId;
-
-			const auto title = AddSubsectionTitle(container, tr::extras_GhostEssentialsHeader());
-
-			const auto pickerButton = Ui::CreateChild<Ui::LinkButton>(
-				container.get(),
-				PickerLabel(initialUserId),
-				st::ghostPickerButton);
-			state->pickerButton = pickerButton;
-
-			const auto arrow = Ui::CreateChild<Ui::AbstractButton>(container.get());
-			{
-				const auto &icon = st::ghostPickerArrow;
-				arrow->resize(icon.size());
-				arrow->paintRequest(
-				) | rpl::on_next([=, &icon] {
-					auto p = QPainter(arrow);
-					icon.paint(p, 0, 0, arrow->width());
-				}, arrow->lifetime());
-			}
-			arrow->setCursor(style::cur_pointer);
-
-			const auto showPicker = activeCount > 1;
-			pickerButton->setVisible(showPicker);
-			arrow->setVisible(showPicker);
-
-			rpl::combine(
-				title->geometryValue(),
-				container->widthValue(),
-				pickerButton->naturalWidthValue()
-			) | rpl::on_next([=](QRect r, int width, int natural) {
-				pickerButton->resizeToNaturalWidth(width / 2);
-				pickerButton->moveToRight(
-					st::defaultSubsectionTitlePadding.right() + arrow->width() + st::normalFont->spacew / 2,
-					r.y() + (r.height() - pickerButton->height()) / 2,
-					width);
-				arrow->moveToLeft(
-					pickerButton->x() + pickerButton->width() + st::normalFont->spacew / 2,
-					r.y() + (r.height() - arrow->height()) / 2);
-			}, pickerButton->lifetime());
-
-			std::vector checkboxes{
-				NestedEntry{
-					tr::extras_DontReadMessages(tr::now),
-					[state] { return !ExtrasSettings::ghost(state->selectedUserId.current()).sendReadMessages(); },
-					[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendReadMessages(!v); },
-					[state] { return ExtrasSettings::ghost(state->selectedUserId.current()).sendReadMessagesLocked(); },
-					[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendReadMessagesLocked(v); }
-				},
-				NestedEntry{
-					tr::extras_DontReadStories(tr::now),
-					[state] { return !ExtrasSettings::ghost(state->selectedUserId.current()).sendReadStories(); },
-					[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendReadStories(!v); },
-					[state] { return ExtrasSettings::ghost(state->selectedUserId.current()).sendReadStoriesLocked(); },
-					[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendReadStoriesLocked(v); }
-				},
-				NestedEntry{
-					tr::extras_DontSendOnlinePackets(tr::now),
-					[state] { return !ExtrasSettings::ghost(state->selectedUserId.current()).sendOnlinePackets(); },
-					[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendOnlinePackets(!v); },
-					[state] { return ExtrasSettings::ghost(state->selectedUserId.current()).sendOnlinePacketsLocked(); },
-					[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendOnlinePacketsLocked(v); }
-				},
-				NestedEntry{
-					tr::extras_DontSendUploadProgress(tr::now),
-					[state] { return !ExtrasSettings::ghost(state->selectedUserId.current()).sendUploadProgress(); },
-					[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendUploadProgress(!v); },
-					[state] { return ExtrasSettings::ghost(state->selectedUserId.current()).sendUploadProgressLocked(); },
-					[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendUploadProgressLocked(v); }
-				},
-				NestedEntry{
-					tr::extras_SendOfflinePacketAfterOnline(tr::now),
-					[state] { return ExtrasSettings::ghost(state->selectedUserId.current()).sendOfflinePacketAfterOnline(); },
-					[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendOfflinePacketAfterOnline(v); },
-					[state] { return ExtrasSettings::ghost(state->selectedUserId.current()).sendOfflinePacketAfterOnlineLocked(); },
-					[state](bool v) { ExtrasSettings::ghost(state->selectedUserId.current()).setSendOfflinePacketAfterOnlineLocked(v); }
-				},
-			};
-
-			auto collapsible = AddCollapsibleToggle(
-				container,
-				tr::extras_GhostModeToggle(),
-				std::move(checkboxes),
-				true,
-				tr::extras_GhostModeOptionShiftDescription(tr::now));
-			state->refreshCheckboxes = std::move(collapsible.refresh);
-			if (wctx.highlights && collapsible.widget) {
-				wctx.highlights->push_back(std::make_pair(
-					u"extras/ghostModeToggle"_q,
-					HighlightEntry{ collapsible.widget, {} }));
-			}
-
-			const auto markReadButton = AddButtonWithIcon(
-				container,
-				tr::extras_MarkReadAfterAction(),
-				st::settingsButtonNoIcon
-			);
-			if (wctx.highlights) {
-				wctx.highlights->push_back(std::make_pair(
-					u"extras/markReadAfterAction"_q,
-					HighlightEntry{ markReadButton.get(), {} }));
-			}
-			markReadButton->toggleOn(
-				state->selectedUserId.value()
-				| rpl::map([](uint64 id) {
-					return ExtrasSettings::ghost(id).markReadAfterActionValue();
-				}) | rpl::flatten_latest()
-			)->toggledValue(
-			) | rpl::filter(
-				[=](bool enabled) {
-					return enabled != ExtrasSettings::ghost(state->selectedUserId.current()).markReadAfterAction();
+		) | on_next(
+			[=](bool enabled) {
+				auto &ghost = ExtrasSettings::ghost(state->selectedUserId.current());
+				ghost.setUseScheduledMessages(enabled);
+				if (enabled) {
+					ghost.setMarkReadAfterAction(false);
 				}
-			) | on_next(
-				[=](bool enabled) {
-					auto &ghost = ExtrasSettings::ghost(state->selectedUserId.current());
-					ghost.setMarkReadAfterAction(enabled);
-					if (enabled) {
-						ghost.setUseScheduledMessages(false);
-					}
-				},
-				container->lifetime());
-			AddSkip(container);
-			AddDividerText(container, tr::extras_MarkReadAfterActionDescription());
+			},
+			container->lifetime());
+		AddCardDescription(root, tr::extras_UseScheduledMessagesDescription());
 
-			AddSkip(container);
-			const auto scheduleButton = AddButtonWithIcon(
-				container,
-				tr::extras_UseScheduledMessages(),
-				st::settingsButtonNoIcon
-			);
-			if (wctx.highlights) {
-				wctx.highlights->push_back(std::make_pair(
-					u"extras/useScheduledMessages"_q,
-					HighlightEntry{ scheduleButton.get(), {} }));
-			}
-			scheduleButton->toggleOn(
-				state->selectedUserId.value()
-				| rpl::map([](uint64 id) {
-					return ExtrasSettings::ghost(id).useScheduledMessagesValue();
-				}) | rpl::flatten_latest()
-			)->toggledValue(
-			) | rpl::filter(
-				[=](bool enabled) {
-					return enabled != ExtrasSettings::ghost(state->selectedUserId.current()).useScheduledMessages();
-				}
-			) | on_next(
-				[=](bool enabled) {
-					auto &ghost = ExtrasSettings::ghost(state->selectedUserId.current());
-					ghost.setUseScheduledMessages(enabled);
-					if (enabled) {
-						ghost.setMarkReadAfterAction(false);
-					}
-				},
-				container->lifetime());
-			AddSkip(container);
-			AddDividerText(container, tr::extras_UseScheduledMessagesDescription());
-
-			AddSkip(container);
-			const auto silentOptions = std::vector<QString>{
-				tr::extras_SendWithoutSoundByDefaultNever(tr::now),
-				tr::extras_SendWithoutSoundByDefaultInGhostMode(tr::now),
-				tr::extras_SendWithoutSoundByDefaultAlways(tr::now),
-			};
-			const auto silentOptionText = state->selectedUserId.value(
-			) | rpl::map([=](uint64 id) {
-				return ExtrasSettings::ghost(id).sendWithoutSoundValue(
-				) | rpl::map([=](SendWithoutSoundOption value) {
-					return silentOptions[static_cast<int>(value)];
-				});
-			}) | rpl::flatten_latest();
-			const auto silentButton = AddButtonWithLabel(
-				container,
-				tr::extras_SendWithoutSoundByDefault(),
-				std::move(silentOptionText),
-				st::settingsButtonNoIcon);
-			if (wctx.highlights) {
-				wctx.highlights->push_back(std::make_pair(
-					u"extras/sendWithoutSound"_q,
-					HighlightEntry{ silentButton.get(), {} }));
-			}
-			silentButton->addClickHandler([=] {
-				controller->show(Box([=](not_null<Ui::GenericBox*> box) {
-					const auto save = [=](int index) {
-						ExtrasSettings::ghost(state->selectedUserId.current()
-						).setSendWithoutSound(
-							static_cast<SendWithoutSoundOption>(index));
-					};
-					SingleChoiceBox(box, {
-						.title = tr::extras_SendWithoutSoundByDefault(),
-						.options = silentOptions,
-						.initialSelection = static_cast<int>(
-							ExtrasSettings::ghost(state->selectedUserId.current()
-							).sendWithoutSound()),
-						.callback = save,
-					});
-				}));
+		container = AddCardGroup(root);
+		const auto silentOptions = std::vector<QString>{
+			tr::extras_SendWithoutSoundByDefaultNever(tr::now),
+			tr::extras_SendWithoutSoundByDefaultInGhostMode(tr::now),
+			tr::extras_SendWithoutSoundByDefaultAlways(tr::now),
+		};
+		const auto silentOptionText = state->selectedUserId.value(
+		) | rpl::map([=](uint64 id) {
+			return ExtrasSettings::ghost(id).sendWithoutSoundValue(
+			) | rpl::map([=](SendWithoutSoundOption value) {
+				return silentOptions[static_cast<int>(value)];
 			});
-			AddSkip(container);
-			AddDividerText(container, tr::extras_SendWithoutSoundByDefaultDescription());
+		}) | rpl::flatten_latest();
+		const auto silentButton = AddButtonWithLabel(
+			container,
+			tr::extras_SendWithoutSoundByDefault(),
+			std::move(silentOptionText),
+			st::settingsButtonNoIcon);
+		if (wctx.highlights) {
+			wctx.highlights->push_back(std::make_pair(
+				u"extras/sendWithoutSound"_q,
+				HighlightEntry{ silentButton.get(), {} }));
+		}
+		silentButton->addClickHandler([=] {
+			controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+				const auto save = [=](int index) {
+					ExtrasSettings::ghost(state->selectedUserId.current()
+					).setSendWithoutSound(
+						static_cast<SendWithoutSoundOption>(index));
+				};
+				SingleChoiceBox(box, {
+					.title = tr::extras_SendWithoutSoundByDefault(),
+					.options = silentOptions,
+					.initialSelection = static_cast<int>(
+						ExtrasSettings::ghost(state->selectedUserId.current()
+						).sendWithoutSound()),
+					.callback = save,
+				});
+			}));
+		});
+		AddCardDescription(root, tr::extras_SendWithoutSoundByDefaultDescription());
 
-			AddSkip(container);
-			const auto suggestGhostModeButton = AddButtonWithIcon(
-				container,
-				tr::extras_SuggestGhostModeBeforeViewingStory(),
-				st::settingsButtonNoIcon);
-			if (wctx.highlights) {
-				wctx.highlights->push_back(std::make_pair(
-					u"extras/suggestGhostModeBeforeViewingStory"_q,
-					HighlightEntry{ suggestGhostModeButton.get(), {} }));
+		container = AddCardGroup(root);
+		const auto suggestGhostModeButton = AddButtonWithIcon(
+			container,
+			tr::extras_SuggestGhostModeBeforeViewingStory(),
+			st::settingsButtonNoIcon);
+		if (wctx.highlights) {
+			wctx.highlights->push_back(std::make_pair(
+				u"extras/suggestGhostModeBeforeViewingStory"_q,
+				HighlightEntry{ suggestGhostModeButton.get(), {} }));
+		}
+		suggestGhostModeButton->toggleOn(
+			state->selectedUserId.value()
+			| rpl::map([](uint64 id) {
+				return ExtrasSettings::ghost(id).suggestGhostModeBeforeViewingStoryValue();
+			}) | rpl::flatten_latest()
+		)->toggledValue(
+		) | rpl::filter(
+			[=](bool enabled) {
+				return enabled != ExtrasSettings::ghost(state->selectedUserId.current()).suggestGhostModeBeforeViewingStory();
 			}
-			suggestGhostModeButton->toggleOn(
-				state->selectedUserId.value()
-				| rpl::map([](uint64 id) {
-					return ExtrasSettings::ghost(id).suggestGhostModeBeforeViewingStoryValue();
-				}) | rpl::flatten_latest()
-			)->toggledValue(
-			) | rpl::filter(
-				[=](bool enabled) {
-					return enabled != ExtrasSettings::ghost(state->selectedUserId.current()).suggestGhostModeBeforeViewingStory();
+		) | on_next(
+			[=](bool enabled) {
+				ExtrasSettings::ghost(state->selectedUserId.current()).setSuggestGhostModeBeforeViewingStory(enabled);
+			},
+			container->lifetime());
+		AddCardDescription(root, tr::extras_SuggestGhostModeBeforeViewingStoryDescription());
+
+		auto showMenu = [=] {
+			state->menu = base::make_unique_q<Ui::PopupMenu>(
+				pickerButton,
+				st::defaultPopupMenu);
+
+			state->menu->addAction(
+				base::make_unique_q<GlobalAction>(
+					state->menu->menu(),
+					st::defaultPopupMenu.menu,
+					tr::extras_GhostModeGlobalSettings(tr::now),
+					state->selectedUserId.current() == 0,
+					[=] { selectGhostProfile(state, 0); }));
+
+			for (const auto &account : Core::App().domain().orderedAccounts()) {
+				if (!account->sessionExists()) {
+					continue;
 				}
-			) | on_next(
-				[=](bool enabled) {
-					ExtrasSettings::ghost(state->selectedUserId.current()).setSuggestGhostModeBeforeViewingStory(enabled);
-				},
-				container->lifetime());
-			AddSkip(container);
-			AddDividerText(container, tr::extras_SuggestGhostModeBeforeViewingStoryDescription());
-
-			auto showMenu = [=] {
-				state->menu = base::make_unique_q<Ui::PopupMenu>(
-					pickerButton,
-					st::defaultPopupMenu);
-
+				auto user = account->session().user();
+				auto id = account->session().userId().bare;
 				state->menu->addAction(
-					base::make_unique_q<GlobalAction>(
+					base::make_unique_q<AccountAction>(
 						state->menu->menu(),
 						st::defaultPopupMenu.menu,
-						tr::extras_GhostModeGlobalSettings(tr::now),
-						state->selectedUserId.current() == 0,
-						[=] { selectGhostProfile(state, 0); }));
+						user,
+						state->selectedUserId.current() == id,
+						[=] { selectGhostProfile(state, id); }));
+			}
 
-				for (const auto &account : Core::App().domain().orderedAccounts()) {
-					if (!account->sessionExists()) {
-						continue;
-					}
-					auto user = account->session().user();
-					auto id = account->session().userId().bare;
-					state->menu->addAction(
-						base::make_unique_q<AccountAction>(
-							state->menu->menu(),
-							st::defaultPopupMenu.menu,
-							user,
-							state->selectedUserId.current() == id,
-							[=] { selectGhostProfile(state, id); }));
-				}
-
-				state->menu->popup(
-					pickerButton->mapToGlobal(
-						QPoint(pickerButton->width(), pickerButton->height())));
-			};
-			pickerButton->setClickedCallback(showMenu);
-			arrow->setClickedCallback(showMenu);
-		}, [&](const SearchContext &sctx) {
-			sctx.entries->push_back({
-				.id = u"extras/ghostModeToggle"_q,
-				.title = tr::extras_GhostModeToggle(tr::now),
-				.section = sctx.sectionId,
-			});
-			sctx.entries->push_back({
-				.id = u"extras/markReadAfterAction"_q,
-				.title = tr::extras_MarkReadAfterAction(tr::now),
-				.section = sctx.sectionId,
-			});
-			sctx.entries->push_back({
-				.id = u"extras/useScheduledMessages"_q,
-				.title = tr::extras_UseScheduledMessages(tr::now),
-				.section = sctx.sectionId,
-			});
-			sctx.entries->push_back({
-				.id = u"extras/sendWithoutSound"_q,
-				.title = tr::extras_SendWithoutSoundByDefault(tr::now),
-				.section = sctx.sectionId,
-			});
-			sctx.entries->push_back({
-				.id = u"extras/suggestGhostModeBeforeViewingStory"_q,
-				.title = tr::extras_SuggestGhostModeBeforeViewingStory(tr::now),
-				.section = sctx.sectionId,
-			});
-		});
+			state->menu->popup(
+				pickerButton->mapToGlobal(
+					QPoint(pickerButton->width(), pickerButton->height())));
+		};
+		pickerButton->setClickedCallback(showMenu);
+		arrow->setClickedCallback(showMenu);
+	});
+	builder.add(nullptr, [] {
+		return SearchEntry{
+			.id = u"extras/ghostModeToggle"_q,
+			.title = tr::extras_GhostModeToggle(tr::now),
+		};
+	});
+	builder.add(nullptr, [] {
+		return SearchEntry{
+			.id = u"extras/markReadAfterAction"_q,
+			.title = tr::extras_MarkReadAfterAction(tr::now),
+		};
+	});
+	builder.add(nullptr, [] {
+		return SearchEntry{
+			.id = u"extras/useScheduledMessages"_q,
+			.title = tr::extras_UseScheduledMessages(tr::now),
+		};
+	});
+	builder.add(nullptr, [] {
+		return SearchEntry{
+			.id = u"extras/sendWithoutSound"_q,
+			.title = tr::extras_SendWithoutSoundByDefault(tr::now),
+		};
+	});
+	builder.add(nullptr, [] {
+		return SearchEntry{
+			.id = u"extras/suggestGhostModeBeforeViewingStory"_q,
+			.title = tr::extras_SuggestGhostModeBeforeViewingStory(tr::now),
+		};
 	});
 }
 

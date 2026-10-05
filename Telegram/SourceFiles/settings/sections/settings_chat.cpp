@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/timer_rpl.h"
 #include "settings/settings_builder.h"
+#include "settings/settings_card_layout.h"
 #include "settings/sections/settings_advanced.h"
 #include "settings/sections/settings_local_storage.h"
 #include "settings/sections/settings_main.h"
@@ -99,7 +100,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/extras_settings.h"
 #include "extras/ui/settings/extras_builder.h"
 #include "window/themes/window_theme_preview.h"
-
 
 namespace Settings {
 namespace {
@@ -809,16 +809,15 @@ void BuildThemeOptionsSection(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 	const auto highlights = builder.highlights();
 
+	builder.addSubsectionTitle({
+		.id = u"chat/themes"_q,
+		.title = tr::lng_settings_themes(),
+		.keywords = { u"themes"_q, u"appearance"_q, u"dark"_q, u"light"_q },
+	});
+
 	builder.add([controller, highlights](const WidgetContext &ctx) {
 		SetupThemeOptions(controller, ctx.container.get(), highlights);
 		return SectionBuilder::WidgetToAdd{};
-	}, [] {
-		return SearchEntry{
-			.id = u"chat/themes"_q,
-			.title = tr::lng_settings_themes(tr::now),
-			.keywords = { u"themes"_q, u"appearance"_q, u"dark"_q, u"light"_q },
-			.icon = { &st::menuIconPalette },
-		};
 	});
 
 	builder.add(nullptr, [] {
@@ -849,16 +848,15 @@ void BuildThemeOptionsSection(SectionBuilder &builder) {
 void BuildThemeSettingsSection(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 
+	builder.addSubsectionTitle({
+		.id = u"chat/peer-color"_q,
+		.title = tr::lng_settings_theme_settings(),
+		.keywords = { u"color"_q, u"profile"_q, u"name"_q },
+	});
+
 	builder.add([controller](const WidgetContext &ctx) {
 		SetupThemeSettings(controller, ctx.container.get(), ctx.highlights);
 		return SectionBuilder::WidgetToAdd{};
-	}, [] {
-		return SearchEntry{
-			.id = u"chat/peer-color"_q,
-			.title = tr::lng_settings_theme_settings(tr::now),
-			.keywords = { u"color"_q, u"profile"_q, u"name"_q },
-			.icon = { &st::menuIconChangeColors },
-		};
 	});
 
 	builder.add(nullptr, [] {
@@ -886,10 +884,10 @@ void BuildCloudThemesSection(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 	const auto highlights = builder.highlights();
 
-	builder.add([controller, highlights](const WidgetContext &ctx) {
+	builder.addPageContent([controller, highlights](const WidgetContext &ctx) {
 		SetupCloudThemes(controller, ctx.container.get(), highlights);
-		return SectionBuilder::WidgetToAdd{};
-	}, [] {
+	});
+	builder.add(nullptr, [] {
 		return SearchEntry{
 			.id = u"chat/cloud-themes"_q,
 			.title = tr::lng_settings_bg_cloud_themes(tr::now),
@@ -902,16 +900,15 @@ void BuildChatBackgroundSection(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 	const auto highlights = builder.highlights();
 
+	builder.addSubsectionTitle({
+		.id = u"chat/wallpapers"_q,
+		.title = tr::lng_settings_section_background(),
+		.keywords = { u"background"_q, u"wallpaper"_q, u"image"_q },
+	});
+
 	builder.add([controller, highlights](const WidgetContext &ctx) {
 		SetupChatBackground(controller, ctx.container.get(), highlights);
 		return SectionBuilder::WidgetToAdd{};
-	}, [] {
-		return SearchEntry{
-			.id = u"chat/wallpapers"_q,
-			.title = tr::lng_settings_section_background(tr::now),
-			.keywords = { u"background"_q, u"wallpaper"_q, u"image"_q },
-			.icon = { &st::menuIconPhoto },
-		};
 	});
 
 	// 禁用后聊天背景纯色化，跟随会话列表背景色，随主题联动
@@ -964,32 +961,32 @@ void BuildChatBackgroundSection(SectionBuilder &builder) {
 void BuildChatListQuickActionSection(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 
+	builder.addSubsectionTitle({
+		.id = u"chat/quick-dialog-action"_q,
+		.title = tr::lng_settings_quick_dialog_action_title(),
+		.keywords = { u"swipe"_q, u"quick"_q, u"action"_q, u"dialog"_q },
+	});
+
 	builder.add([controller](const WidgetContext &ctx) {
 		SetupChatListQuickAction(controller, ctx.container.get(), ctx.highlights);
 		return SectionBuilder::WidgetToAdd{};
-	}, [] {
-		return SearchEntry{
-			.id = u"chat/quick-dialog-action"_q,
-			.title = tr::lng_settings_quick_dialog_action_title(tr::now),
-			.keywords = { u"swipe"_q, u"quick"_q, u"action"_q, u"dialog"_q },
-		};
 	});
+	builder.addDividerText(tr::lng_settings_quick_dialog_action_about());
 }
 
 void BuildStickersEmojiSection(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 	const auto highlights = builder.highlights();
 
+	builder.addSubsectionTitle({
+		.id = u"chat/stickers-emoji"_q,
+		.title = tr::lng_settings_stickers_emoji(),
+		.keywords = { u"stickers"_q, u"emoji"_q },
+	});
+
 	builder.add([controller, highlights](const WidgetContext &ctx) {
 		SetupStickersEmoji(controller, ctx.container.get(), highlights);
 		return SectionBuilder::WidgetToAdd{};
-	}, [] {
-		return SearchEntry{
-			.id = u"chat/stickers-emoji"_q,
-			.title = tr::lng_settings_stickers_emoji(tr::now),
-			.keywords = { u"stickers"_q, u"emoji"_q },
-			.icon = { &st::menuIconStickers },
-		};
 	});
 
 	builder.add(nullptr, [] {
@@ -1081,15 +1078,15 @@ void BuildMessagesSection(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 	const auto highlights = builder.highlights();
 
+	builder.addSubsectionTitle({
+		.id = u"chat/messages"_q,
+		.title = tr::lng_settings_messages(),
+		.keywords = { u"messages"_q, u"send"_q, u"enter"_q },
+	});
+
 	builder.add([controller, highlights](const WidgetContext &ctx) {
 		SetupMessages(controller, ctx.container.get(), highlights);
 		return SectionBuilder::WidgetToAdd{};
-	}, [] {
-		return SearchEntry{
-			.id = u"chat/messages"_q,
-			.title = tr::lng_settings_messages(tr::now),
-			.keywords = { u"messages"_q, u"send"_q, u"enter"_q },
-		};
 	});
 
 	builder.add(nullptr, [] {
@@ -1135,17 +1132,16 @@ void BuildSensitiveContentSection(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 	const auto highlights = builder.highlights();
 
-	builder.add([controller, highlights](const WidgetContext &ctx) {
+	builder.addPageContent([controller, highlights](const WidgetContext &ctx) {
 		auto updateOnTick = rpl::single(
 		) | rpl::then(base::timer_each(60 * crl::time(1000)));
-		Ui::AddDivider(ctx.container.get());
 		SetupSensitiveContent(
 			controller,
 			ctx.container.get(),
 			std::move(updateOnTick),
 			highlights);
-		return SectionBuilder::WidgetToAdd{};
-	}, [] {
+	});
+	builder.add(nullptr, [] {
 		return SearchEntry{
 			.id = u"chat/sensitive-content"_q,
 			.title = tr::lng_settings_sensitive_title(tr::now),
@@ -1426,17 +1422,6 @@ void SetupStickersEmoji(
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::VerticalLayout*> container,
 		HighlightRegistry *highlights) {
-	Ui::AddSkip(container);
-
-	const auto title = Ui::AddSubsectionTitle(
-		container,
-		tr::lng_settings_stickers_emoji());
-	if (highlights) {
-		highlights->push_back({ u"chat/stickers-emoji"_q, {
-			title.get(),
-			SubsectionTitleHighlight(),
-		} });
-	}
 
 	const auto session = &controller->session();
 
@@ -1607,25 +1592,12 @@ void SetupStickersEmoji(
 		} });
 	}
 
-	Ui::AddSkip(container, st::settingsCheckboxesSkip);
 }
 
 void SetupMessages(
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::VerticalLayout*> container,
 		HighlightRegistry *highlights) {
-	Ui::AddDivider(container);
-	Ui::AddSkip(container);
-
-	const auto title = Ui::AddSubsectionTitle(
-		container,
-		tr::lng_settings_messages());
-	if (highlights) {
-		highlights->push_back({ u"chat/messages"_q, {
-			title.get(),
-			SubsectionTitleHighlight(),
-		} });
-	}
 
 	Ui::AddSkip(container, st::settingsSendTypeSkip);
 
@@ -1846,219 +1818,18 @@ void SetupMessages(
 		Core::App().saveSettingsDelayed();
 	}, inner->lifetime());
 
-	Ui::AddSkip(inner);
-}
-
-void SetupArchive(
-		not_null<Window::SessionController*> controller,
-		not_null<Ui::VerticalLayout*> container,
-		Fn<void(Type)> showOther) {
-	Ui::AddSkip(container);
-
-	AddButtonWithIcon(
-		container,
-		tr::lng_settings_shortcuts(),
-		st::settingsButton,
-		{ &st::menuIconShortcut }
-	)->addClickHandler([=] {
-		showOther(ShortcutsId());
-	});
-
-	PreloadArchiveSettings(&controller->session());
-	AddButtonWithIcon(
-		container,
-		tr::lng_context_archive_settings(),
-		st::settingsButton,
-		{ &st::menuIconArchive }
-	)->addClickHandler([=] {
-		ShowSettingsLayer(controller, ArchiveId());
-	});
-}
-
-void SetupExport(
-		not_null<Window::SessionController*> controller,
-		not_null<Ui::VerticalLayout*> container,
-		Fn<void(Type)> showOther) {
-	AddButtonWithIcon(
-		container,
-		tr::lng_settings_export_data(),
-		st::settingsButton,
-		{ &st::menuIconExport }
-	)->addClickHandler([=] {
-		const auto session = &controller->session();
-		controller->window().hideSettingsAndLayer();
-		base::call_delayed(
-			st::boxDuration,
-			session,
-			[=] { Core::App().exportManager().start(session); });
-	});
-
-	AddButtonWithIcon(
-		container,
-		tr::lng_settings_experimental(),
-		st::settingsButton,
-		{ &st::menuIconExperimental }
-	)->addClickHandler([=] {
-		showOther(Experimental::Id());
-	});
-}
-
-void SetupLocalStorage(
-		not_null<Window::SessionController*> controller,
-		not_null<Ui::VerticalLayout*> container) {
-	AddButtonWithIcon(
-		container,
-		tr::lng_settings_manage_local_storage(),
-		st::settingsButton,
-		{ &st::menuIconStorage }
-	)->addClickHandler([=] {
-		controller->showSettings(LocalStorageId());
-	});
-}
-
-void SetupDataStorage(
-		not_null<Window::SessionController*> controller,
-		not_null<Ui::VerticalLayout*> container) {
-	using namespace rpl::mappers;
-
-	Ui::AddSkip(container);
-
-	Ui::AddSubsectionTitle(container, tr::lng_settings_data_storage());
-
-	SetupConnectionType(
-		&controller->window(),
-		&controller->session().account(),
-		container);
-
-#ifndef OS_WIN_STORE
-	const auto showpath = container->lifetime(
-	).make_state<rpl::event_stream<bool>>();
-
-	const auto path = container->add(
-		object_ptr<Ui::SlideWrap<Button>>(
-			container,
-			CreateButtonWithIcon(
-				container,
-				tr::lng_download_path(),
-				st::settingsButton,
-				{ &st::menuIconShowInFolder })));
-	auto pathtext = Core::App().settings().downloadPathValue(
-	) | rpl::map([](const QString &text) {
-		if (text.isEmpty()) {
-			return Core::App().canReadDefaultDownloadPath()
-				? tr::lng_download_path_default(tr::now)
-				: tr::lng_download_path_temp(tr::now);
-		} else if (text == FileDialog::Tmp()) {
-			return tr::lng_download_path_temp(tr::now);
-		}
-		return QDir::toNativeSeparators(text);
-	});
-	CreateRightLabel(
-		path->entity(),
-		std::move(pathtext),
-		st::settingsButton,
-		tr::lng_download_path());
-	path->entity()->addClickHandler([=] {
-		controller->show(Box<DownloadPathBox>(controller));
-	});
-#endif // OS_WIN_STORE
-
-	SetupLocalStorage(controller, container);
-
-	AddButtonWithIcon(
-		container,
-		tr::lng_downloads_section(),
-		st::settingsButton,
-		{ &st::menuIconDownload }
-	)->setClickedCallback([=] {
-		controller->showSection(
-			Info::Downloads::Make(controller->session().user()));
-	});
-
-	const auto ask = container->add(object_ptr<Ui::SettingsButton>(
-		container,
-		tr::lng_download_path_ask(),
-		st::settingsButtonNoIcon
-	))->toggleOn(rpl::single(Core::App().settings().askDownloadPath()));
-
-	ask->toggledValue(
-	) | rpl::filter([](bool checked) {
-		return (checked != Core::App().settings().askDownloadPath());
-	}) | rpl::on_next([=](bool checked) {
-		Core::App().settings().setAskDownloadPath(checked);
-		Core::App().saveSettingsDelayed();
-
-#ifndef OS_WIN_STORE
-		showpath->fire_copy(!checked);
-#endif // OS_WIN_STORE
-
-	}, ask->lifetime());
-
-#ifndef OS_WIN_STORE
-	path->toggleOn(ask->toggledValue() | rpl::map(!_1));
-#endif // OS_WIN_STORE
-
-	Ui::AddSkip(container, st::settingsCheckboxesSkip);
-}
-
-void SetupAutoDownload(
-		not_null<Window::SessionController*> controller,
-		not_null<Ui::VerticalLayout*> container) {
-	Ui::AddDivider(container);
-	Ui::AddSkip(container);
-
-	Ui::AddSubsectionTitle(container, tr::lng_media_auto_settings());
-
-	using Source = Data::AutoDownload::Source;
-	const auto add = [&](
-		rpl::producer<QString> label,
-		Source source,
-		IconDescriptor &&descriptor) {
-		AddButtonWithIcon(
-			container,
-			std::move(label),
-			st::settingsButton,
-			std::move(descriptor)
-		)->addClickHandler([=] {
-			ShowAutoDownload(controller, source);
-		});
-	};
-	add(
-		tr::lng_media_auto_in_private(),
-		Source::User,
-		{ &st::menuIconProfile });
-	add(
-		tr::lng_media_auto_in_groups(),
-		Source::Group,
-		{ &st::menuIconGroups });
-	add(
-		tr::lng_media_auto_in_channels(),
-		Source::Channel,
-		{ &st::menuIconChannel });
-
-	Ui::AddSkip(container, st::settingsCheckboxesSkip);
 }
 
 void SetupChatBackground(
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::VerticalLayout*> container,
 		HighlightRegistry *highlights) {
-	Ui::AddDivider(container);
-	Ui::AddSkip(container);
-
-	const auto title = Ui::AddSubsectionTitle(
-		container,
-		tr::lng_settings_section_background());
 
 	const auto row = container->add(
 		object_ptr<BackgroundRow>(container, controller),
 		st::settingsBackgroundPadding);
 
 	if (highlights) {
-		highlights->push_back({ u"chat/wallpapers"_q, {
-			title.get(),
-			SubsectionTitleHighlight(),
-		} });
 		highlights->push_back({ u"chat/wallpapers-set"_q, {
 			row->chooseFromGallery(),
 			SubsectionTitleHighlight(),
@@ -2069,38 +1840,24 @@ void SetupChatBackground(
 		} });
 	}
 
-	const auto skipTop = st::settingsCheckbox.margin.top();
-	const auto skipBottom = st::settingsCheckbox.margin.bottom();
-	auto wrap = object_ptr<Ui::VerticalLayout>(container);
-	const auto inner = wrap.data();
-	container->add(
-		object_ptr<Ui::OverrideMargins>(
-			container,
-			std::move(wrap),
-			QMargins(0, skipTop, 0, skipBottom)));
-
-	Ui::AddSkip(container, st::settingsTileSkip);
-
 	const auto background = Window::Theme::Background();
-	const auto tile = inner->add(
-		object_ptr<Ui::SlideWrap<Ui::SettingsToggle>>(
-			inner,
-			object_ptr<Ui::SettingsToggle>(
-				inner,
-				tr::lng_settings_bg_tile(tr::now),
-				background->tile(),
+	const auto tile = container->add(
+		object_ptr<Ui::SlideWrap<Button>>(
+			container,
+			CreateButtonWithIcon(
+				container,
+				tr::lng_settings_bg_tile(),
 				st::settingsButtonNoIcon)));
+	tile->entity()->toggleOn(rpl::single(background->tile()) | rpl::then(
+		background->updates() | rpl::map([=] { return background->tile(); })));
 	// 常驻显示：上游只在宽屏布局已生效时才显示这个开关，找不到入口会让人困惑。
-	const auto adaptive = inner->add(
-		object_ptr<Ui::SlideWrap<Ui::SettingsToggle>>(
-			inner,
-			object_ptr<Ui::SettingsToggle>(
-				inner,
-				tr::lng_settings_adaptive_wide(tr::now),
-				Core::App().settings().adaptiveForWide(),
-				st::settingsButtonNoIcon)));
+	const auto adaptive = AddButtonWithIcon(
+		container,
+		tr::lng_settings_adaptive_wide(),
+		st::settingsButtonNoIcon)->toggleOn(
+			rpl::single(Core::App().settings().adaptiveForWide()));
 
-	tile->entity()->checkedChanges(
+	tile->entity()->toggledChanges(
 	) | rpl::on_next([=](bool checked) {
 		background->setTile(checked);
 	}, tile->lifetime());
@@ -2117,18 +1874,17 @@ void SetupChatBackground(
 		return (update.type == Update::Type::Changed)
 			|| (update.type == Update::Type::New);
 	}) | rpl::on_next([=] {
-		tile->entity()->setChecked(background->tile());
 		tile->toggle(shown(), anim::type::instant);
 	}, tile->lifetime());
 
-	adaptive->entity()->checkedChanges(
+	adaptive->toggledChanges(
 	) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setAdaptiveForWide(checked);
 		Core::App().saveSettingsDelayed();
 	}, adaptive->lifetime());
 	if (highlights) {
 		highlights->push_back({ u"chat/adaptive-layout"_q, {
-			adaptive->entity(),
+			adaptive,
 			{ .radius = st::boxRadius },
 		} });
 	}
@@ -2138,11 +1894,6 @@ void SetupChatListQuickAction(
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::VerticalLayout*> container,
 		HighlightRegistry *highlights) {
-	Ui::AddDivider(container);
-	Ui::AddSkip(container);
-	Ui::AddSubsectionTitle(
-		container,
-		tr::lng_settings_quick_dialog_action_title());
 
 	using Type = Dialogs::Ui::QuickDialogAction;
 	using LabelType = Dialogs::Ui::QuickDialogActionLabel;
@@ -2364,11 +2115,6 @@ void SetupChatListQuickAction(
 			{ button, { .rippleShape = true } },
 		});
 	}
-	Ui::AddSkip(container);
-	Ui::AddDividerText(
-		container,
-		tr::lng_settings_quick_dialog_action_about());
-	Ui::AddSkip(container);
 }
 
 void SetupDefaultThemes(
@@ -2702,21 +2448,8 @@ void SetupThemeOptions(
 		HighlightRegistry *highlights) {
 	using namespace Window::Theme;
 
-	Ui::AddSkip(container, st::settingsPrivacySkip);
-
-	const auto title = Ui::AddSubsectionTitle(
-		container,
-		tr::lng_settings_themes());
-	if (highlights) {
-		highlights->push_back({ u"chat/themes"_q, {
-			title.get(),
-			SubsectionTitleHighlight(),
-		} });
-	}
-
 	Ui::AddSkip(container, st::settingsThemesTopSkip);
 	SetupDefaultThemes(&controller->window(), container, highlights);
-	Ui::AddSkip(container);
 }
 
 void SetupCloudThemes(
@@ -2733,10 +2466,7 @@ void SetupCloudThemes(
 	)->setDuration(0);
 	const auto inner = wrap->entity();
 
-	Ui::AddDivider(inner);
-	Ui::AddSkip(inner, st::settingsPrivacySkip);
-
-	const auto title = AddSubsectionTitle(
+	const auto title = AddCardTitle(
 		inner,
 		tr::lng_settings_bg_cloud_themes());
 	if (highlights) {
@@ -2760,12 +2490,12 @@ void SetupCloudThemes(
 			outerWidth);
 	}, showAll->lifetime());
 
-	Ui::AddSkip(inner, st::settingsThemesTopSkip);
+	const auto card = AddCardGroup(inner);
 
 	const auto list = inner->lifetime().make_state<CloudList>(
-		inner,
+		card,
 		controller);
-	inner->add(
+	card->add(
 		list->takeWidget(),
 		style::margins(
 			st::settingsButtonNoIcon.padding.left(),
@@ -2782,10 +2512,10 @@ void SetupCloudThemes(
 		list->showAll();
 	});
 
-	const auto editWrap = inner->add(
+	const auto editWrap = card->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			inner,
-			object_ptr<Ui::VerticalLayout>(inner))
+			card,
+			object_ptr<Ui::VerticalLayout>(card))
 	)->setDuration(0);
 	const auto edit = editWrap->entity();
 
@@ -2813,8 +2543,6 @@ void SetupCloudThemes(
 		return (Background()->themeObject().cloud.createdBy == userId);
 	}));
 
-	Ui::AddSkip(inner, 2 * st::defaultVerticalListSkip);
-
 	wrap->setDuration(0)->toggleOn(list->empty() | rpl::map(!_1));
 }
 
@@ -2822,18 +2550,6 @@ void SetupThemeSettings(
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::VerticalLayout*> container,
 		HighlightRegistry *highlights) {
-	Ui::AddDivider(container);
-	Ui::AddSkip(container, st::settingsPrivacySkip);
-
-	const auto title = Ui::AddSubsectionTitle(
-		container,
-		tr::lng_settings_theme_settings());
-	if (highlights) {
-		highlights->push_back({ u"chat/peer-color"_q, {
-			title.get(),
-			SubsectionTitleHighlight(),
-		} });
-	}
 
 	AddPeerColorButton(
 		container,
