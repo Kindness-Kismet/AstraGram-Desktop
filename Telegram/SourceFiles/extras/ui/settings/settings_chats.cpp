@@ -123,8 +123,6 @@ void buildMessageStickerScale(SectionBuilder &builder, ExtrasSectionBuilder &ext
 	builder.add([](const WidgetContext &ctx) -> SectionBuilder::WidgetToAdd {
 		return {
 			.widget = object_ptr<StickerPreview>(ctx.container),
-			.margin = style::margins(
-				0, st::defaultVerticalListSkip, 0, st::settingsPrivacySkipTop),
 		};
 	});
 
@@ -203,11 +201,6 @@ void BuildMarks(
 		previewState->widget = preview.data();
 		return {
 			.widget = std::move(preview),
-			.margin = style::margins(
-				0,
-				st::defaultVerticalListSkip,
-				0,
-				st::settingsPrivacySkipTop),
 		};
 	});
 
