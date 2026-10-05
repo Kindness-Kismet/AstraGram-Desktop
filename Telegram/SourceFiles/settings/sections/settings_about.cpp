@@ -6,6 +6,8 @@
 #include "core/application.h"
 #include "core/file_utilities.h"
 #include "data/components/credits.h"
+#include "extras/extras_settings.h"
+#include "extras/ui/extras_logo.h"
 #include "lang/lang_keys.h"
 #include "lang/lang_tag.h"
 #include "main/main_session.h"
@@ -22,7 +24,6 @@
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_session_controller.h"
-#include "styles/style_extras_icons.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 
@@ -143,16 +144,17 @@ const auto kMeta = Builder::BuildHelper({
 			object_ptr<Ui::VerticalLayout>(ctx.container),
 			st::settingsAboutHeaderPadding);
 		const auto logo = header->add(object_ptr<Ui::RpWidget>(header));
+		logo->setObjectName(u"about-app-icon"_q);
 		logo->resize(0, st::settingsAboutLogoSize);
+		ExtrasSettings::getInstance().appIconChanges() | rpl::on_next([=] {
+			logo->update();
+		}, logo->lifetime());
 		logo->paintRequest() | rpl::on_next([=] {
 			auto p = Painter(logo);
 			auto hq = PainterHighQualityEnabler(p);
 			const auto size = st::settingsAboutLogoSize;
 			const auto rect = QRect((logo->width() - size) / 2, 0, size, size);
-			p.setPen(Qt::NoPen);
-			p.setBrush(st::activeButtonBg);
-			p.drawRoundedRect(rect, size / 3., size / 3.);
-			st::menuIconAstraGram.paintInCenter(p, rect, st::activeButtonFg->c);
+			p.drawImage(rect, ExtrasAssets::currentAppLogo());
 		}, logo->lifetime());
 		header->add(object_ptr<Ui::FlatLabel>(
 			header,
