@@ -511,6 +511,13 @@ public:
 	[[nodiscard]] Data::SendError errorTextForForwardIgnoreRights(
 		not_null<Data::Thread*> to) const;
 	[[nodiscard]] const HistoryMessageTranslation *translation() const;
+	[[nodiscard]] bool translationDisplayed() const;
+	bool translationStartManual(LanguageId to, uint64 token);
+	bool translationFinishManual(
+		uint64 token,
+		TextWithEntities text,
+		std::shared_ptr<const Iv::RichPage> page);
+	void translationShowOriginal();
 	[[nodiscard]] bool translationShowRequiresCheck(LanguageId to) const;
 	bool translationShowRequiresRequest(LanguageId to);
 	void translationDone(LanguageId to, TextWithEntities result);

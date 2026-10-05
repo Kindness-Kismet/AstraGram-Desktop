@@ -45,6 +45,12 @@ base::options::option<QString> OptionTranslateUrlTemplate({
 
 namespace Ui {
 
+bool SupportsRichMessageTranslation() {
+	const auto url = OptionTranslateUrlTemplate.value();
+	return !(url.contains(u"%q"_q))
+		&& (ResolveTranslateProvider() == TranslationProvider::Telegram);
+}
+
 std::unique_ptr<TranslateProvider> CreateTranslateProvider(
 		not_null<Main::Session*> session) {
 	const auto urlTemplate = OptionTranslateUrlTemplate.value();

@@ -13,6 +13,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 class ApiWrap;
 
+namespace Extras::Translator {
+class MessageTranslationManager;
+} // namespace Extras::Translator
+
 namespace Api {
 class Updates;
 class SendProgressManager;
@@ -117,6 +121,7 @@ public:
 	Session &operator=(const Session &other) = delete;
 
 	[[nodiscard]] Account &account() const;
+	[[nodiscard]] Extras::Translator::MessageTranslationManager &messageTranslations();
 	[[nodiscard]] Storage::Account &local() const;
 	[[nodiscard]] Domain &domain() const;
 	[[nodiscard]] Storage::Domain &domainLocal() const;
@@ -368,6 +373,7 @@ private:
 	TimeId _tmpPasswordValidUntil = 0;
 
 	rpl::lifetime _lifetime;
+	std::unique_ptr<Extras::Translator::MessageTranslationManager> _messageTranslations;
 
 };
 

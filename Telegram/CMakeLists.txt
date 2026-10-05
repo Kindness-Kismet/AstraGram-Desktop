@@ -286,6 +286,8 @@ set(extras_files
         extras/features/translator/extras_translator.h
         extras/features/translator/extras_translate_provider.cpp
         extras/features/translator/extras_translate_provider.h
+        extras/features/translator/message_translation.cpp
+        extras/features/translator/message_translation.h
         extras/features/translator/html_parser.cpp
         extras/features/translator/html_parser.h
         extras/features/translator/language_recognition.cpp
@@ -1421,6 +1423,7 @@ PRIVATE
     history/history_streamed_drafts.h
     history/history_translation.cpp
     history/history_translation.h
+    history/history_item_translation.cpp
     history/history_unread_things.cpp
     history/history_unread_things.h
     history/history_view_highlight_manager.cpp

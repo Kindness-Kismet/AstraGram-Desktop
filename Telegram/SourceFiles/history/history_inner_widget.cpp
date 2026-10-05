@@ -140,6 +140,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/features/translator/message_translation.h"
 #include "extras/features/filters/filters_cache_controller.h"
 #include "extras/features/forward/extras_forward.h"
 #include "extras/ui/context_menu/context_menu.h"
@@ -3936,26 +3937,10 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 							[=] { copyContextText(itemId); },
 							&st::menuIconCopy);
 					}
-					if ((!item->translation() || !_history->translatedTo())
-						&& (view->hasVisibleText() || mediaHasTextForCopy)) {
-						const auto peer = item->history()->peer;
-						const auto itemId = item->id;
-						const auto translate = mediaHasTextForCopy
-							? (HistoryView::TransribedText(item)
-								.append('\n')
-								.append(item->originalText()))
-							: item->originalText();
-						if (!translate.text.isEmpty()
-							&& !Ui::SkipTranslate(translate)) {
-							_menu->addAction(tr::lng_context_translate(tr::now), [=] {
-								_controller->show(Box(
-									Ui::TranslateBox,
-									peer,
-									mediaHasTextForCopy ? MsgId() : itemId,
-									translate,
-									hasRestriction));
-							}, &st::menuIconTranslate);
-						}
+					if ((view->hasVisibleText() || mediaHasTextForCopy)
+						&& !(item->media() && item->media()->poll())) {
+						Extras::Translator::addMessageTranslationActions(
+							_menu, item, _controller);
 					}
 				}
 			}

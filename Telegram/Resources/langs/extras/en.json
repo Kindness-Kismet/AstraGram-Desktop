@@ -98,6 +98,8 @@
   "QuickAdminShortcuts": "Quick Admin Shortcuts",
   "DisableGreetingSticker_PC": "Disable Greeting Sticker",
   "TranslationProvider": "Translation Provider",
+  "TranslationPending": "Translating…",
+  "TranslationUnsupported": "This translation service does not support rich messages.",
   "LinksHeader": "Links",
   "LinksChannel": "Channel",
   "LinksChats": "Chats",

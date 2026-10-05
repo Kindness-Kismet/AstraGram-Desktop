@@ -8870,6 +8870,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_UseQuickForwardMenu" = "Use quick forward menu";
 "extras_SendForwardFirst" = "Send comment after forwarding";
 "extras_TranslationProvider" = "Translation Provider";
+"extras_TranslationPending" = "Translating…";
+"extras_TranslationUnsupported" = "This translation service does not support rich messages.";
 "extras_CategoriesHeader" = "Categories";
 "extras_RestoreHiddenFeatures" = "Restore Hidden Features";
 "extras_DevFeaturesUnlocked" = "Developer features enabled. Reopen AstraGram preferences.";

@@ -442,6 +442,8 @@ struct HistoryMessageTranslation
 	TextWithEntities text;
 	std::shared_ptr<const Iv::RichPage> richPage;
 	LanguageId to;
+	std::optional<LanguageId> manualTo;
+	uint64 manualRequestToken = 0;
 	bool requested = false;
 	bool failed = false;
 	bool used = false;

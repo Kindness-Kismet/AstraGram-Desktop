@@ -68,6 +68,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/features/translator/message_translation.h"
 #include "api/api_blocked_peers.h"
 
 
@@ -361,6 +362,7 @@ void Session::finishLogout() {
 
 Session::~Session() {
 	unlockTerms();
+	_messageTranslations = nullptr;
 	data().clear();
 	ClickHandler::clearActive();
 	ClickHandler::unpressed();
@@ -368,6 +370,14 @@ Session::~Session() {
 
 Account &Session::account() const {
 	return *_account;
+}
+
+Extras::Translator::MessageTranslationManager &Session::messageTranslations() {
+	if (!_messageTranslations) {
+		_messageTranslations = std::make_unique<
+			Extras::Translator::MessageTranslationManager>(this);
+	}
+	return *_messageTranslations;
 }
 
 Storage::Account &Session::local() const {

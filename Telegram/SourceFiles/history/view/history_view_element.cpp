@@ -2249,7 +2249,9 @@ void Element::validateText() {
 		clearRichPage();
 		return;
 	}
-	const auto &text = _textItem->_text;
+	const auto &text = (_flags & Flag::ServiceMessage)
+		? _textItem->_text
+		: _textItem->translatedText();
 	auto richPage = std::shared_ptr<const Iv::RichPage>();
 	if (!summaryShownChanged && _text.isEmpty() == text.empty()) {
 	} else if (_flags & Flag::ServiceMessage) {

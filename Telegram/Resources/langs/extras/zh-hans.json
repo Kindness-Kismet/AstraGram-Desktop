@@ -99,6 +99,8 @@
   "QuickAdminShortcuts": "管理员快捷操作",
   "DisableGreetingSticker_PC": "关闭问候贴纸推荐",
   "TranslationProvider": "翻译服务",
+  "TranslationPending": "正在翻译…",
+  "TranslationUnsupported": "当前翻译服务暂不支持复杂排版消息。",
   "CategoriesHeader": "分类",
   "ResetSettings_PC": "重置设置",
   "ResetSettingsConfirmation_PC": "确定要将 AstraGram 的**所有**设置恢复为默认值吗？",

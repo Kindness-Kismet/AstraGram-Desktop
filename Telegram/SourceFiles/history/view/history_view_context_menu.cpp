@@ -124,6 +124,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "extras/extras_settings.h"
 #include "extras/features/forward/extras_forward.h"
+#include "extras/features/translator/message_translation.h"
 #include "extras/ui/context_menu/context_menu.h"
 
 
@@ -2112,27 +2113,8 @@ void FillContextMenuItems(
 				}, &st::menuIconCopy);
 			}
 
-			const auto translate = mediaHasTextForCopy
-				? (HistoryView::TransribedText(item)
-					.append('\n')
-					.append(item->originalText()))
-				: item->originalText();
-			if ((!item->translation() || !item->history()->translatedTo())
-				&& !translate.text.isEmpty()
-				&& !Ui::SkipTranslate(translate)) {
-				result->addAction(tr::lng_context_translate(tr::now), [=] {
-					if (const auto item = owner->message(itemId)) {
-						list->controller()->show(Box(
-							Ui::TranslateBox,
-							item->history()->peer,
-							mediaHasTextForCopy
-								? MsgId()
-								: item->fullId().msg,
-							translate,
-							list->hasCopyRestriction(view->data())));
-					}
-				}, &st::menuIconTranslate);
-			}
+			Extras::Translator::addMessageTranslationActions(
+				result, item, list->controller());
 		}
 	}
 
@@ -2554,24 +2536,7 @@ void AddPollActions(
 		not_null<Window::SessionController*> controller,
 		bool skipRetractVote,
 		bool skipViewStats) {
-	{
-		constexpr auto kRadio = "\xf0\x9f\x94\x98";
-		const auto radio = QString::fromUtf8(kRadio);
-		auto text = poll->question;
-		for (const auto &answer : poll->answers) {
-			text.append('\n').append(radio).append(answer.text);
-		}
-		if (!Ui::SkipTranslate(text)) {
-			menu->addAction(tr::lng_context_translate(tr::now), [=] {
-				controller->show(Box(
-					Ui::TranslateBox,
-					item->history()->peer,
-					MsgId(),
-					std::move(text),
-					item->forbidsForward()));
-			}, &st::menuIconTranslate);
-		}
-	}
+	Extras::Translator::addMessageTranslationActions(menu, item, controller);
 	if ((context != Context::History)
 		&& (context != Context::Replies)
 		&& (context != Context::Pinned)

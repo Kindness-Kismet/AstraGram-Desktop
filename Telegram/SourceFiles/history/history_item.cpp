@@ -3505,112 +3505,6 @@ Data::SendError HistoryItem::errorTextForForwardIgnoreRights(
 	return {};
 }
 
-const HistoryMessageTranslation *HistoryItem::translation() const {
-	return Get<HistoryMessageTranslation>();
-}
-
-bool HistoryItem::translationShowRequiresCheck(LanguageId to) const {
-	// Check if a call to translationShowRequiresRequest(to) is not a no-op.
-	if (!to) {
-		if (const auto translation = Get<HistoryMessageTranslation>()) {
-			return (!translation->failed && translation->text.empty())
-				|| translation->used;
-		}
-		return false;
-	} else if (const auto translation = Get<HistoryMessageTranslation>()) {
-		if (translation->to == to) {
-			return !translation->used && !translation->text.empty();
-		}
-		return true;
-	} else {
-		return true;
-	}
-}
-
-bool HistoryItem::translationShowRequiresRequest(LanguageId to) {
-	// When changing be sure to reflect in translationShowRequiresCheck(to).
-	if (!to) {
-		if (const auto translation = Get<HistoryMessageTranslation>()) {
-			if (!translation->failed && translation->text.empty()) {
-				Assert(!translation->used);
-				RemoveComponents(HistoryMessageTranslation::Bit());
-			} else {
-				translationToggle(translation, false);
-			}
-		}
-		return false;
-	} else if (const auto translation = Get<HistoryMessageTranslation>()) {
-		if (translation->to == to) {
-			translationToggle(translation, true);
-			return false;
-		}
-		translationToggle(translation, false);
-		translation->to = to;
-		translation->requested = true;
-		translation->failed = false;
-		translation->text = {};
-		translation->richPage = nullptr;
-		return true;
-	} else {
-		AddComponents(HistoryMessageTranslation::Bit());
-		const auto added = Get<HistoryMessageTranslation>();
-		added->to = to;
-		added->requested = true;
-		return true;
-	}
-}
-
-void HistoryItem::translationToggle(
-		not_null<HistoryMessageTranslation*> translation,
-		bool used) {
-	if (translation->used != used && !translation->text.empty()) {
-		translation->used = used;
-		_history->owner().requestItemTextRefresh(this);
-		_history->owner().updateDependentMessages(this);
-	}
-}
-
-void HistoryItem::translationDone(LanguageId to, TextWithEntities result) {
-	translationDone(to, std::move(result), nullptr);
-}
-
-void HistoryItem::translationDone(
-		LanguageId to,
-		std::shared_ptr<const Iv::RichPage> result) {
-	auto summary = result
-		? Iv::FlattenRichPageSummary(result)
-		: TextWithEntities();
-	translationDone(to, std::move(summary), std::move(result));
-}
-
-void HistoryItem::translationDone(
-		LanguageId to,
-		TextWithEntities result,
-		std::shared_ptr<const Iv::RichPage> page) {
-	const auto set = [&](not_null<HistoryMessageTranslation*> translation) {
-		if (result.empty()) {
-			translation->failed = true;
-		} else {
-			translation->text = std::move(result);
-			translation->richPage = std::move(page);
-			if (_history->translatedTo() == to) {
-				translationToggle(translation, true);
-			}
-		}
-	};
-	if (const auto translation = Get<HistoryMessageTranslation>()) {
-		if (translation->to == to && translation->text.empty()) {
-			translation->requested = false;
-			set(translation);
-		}
-	} else {
-		AddComponents(HistoryMessageTranslation::Bit());
-		const auto added = Get<HistoryMessageTranslation>();
-		added->to = to;
-		set(added);
-	}
-}
-
 bool HistoryItem::canReact() const {
 	if (_deleted) {
 		return false;
@@ -3987,60 +3881,6 @@ MsgId HistoryItem::originalId() const {
 const TextWithEntities &HistoryItem::originalText() const {
 	static const auto kEmpty = TextWithEntities();
 	return isService() ? kEmpty : _text;
-}
-
-const TextWithEntities &HistoryItem::translatedText() const {
-	if (isService()) {
-		static const auto kEmpty = TextWithEntities();
-		return kEmpty;
-	} else if (const auto translation = this->translation()
-		; translation
-		&& translation->used
-		&& (translation->to == history()->translatedTo())) {
-		return translation->text;
-	} else {
-		return originalText();
-	}
-}
-
-TextWithEntities HistoryItem::translatedTextWithLocalEntities() const {
-	if (isService()) {
-		return {};
-	}
-	auto result = withLocalEntities(translatedText());
-
-	if (hideLinks()) {
-		const auto isUrl = [](const EntityInText &entity) {
-			const auto type = entity.type();
-			return (type == EntityType::Mention)
-				|| (type == EntityType::Hashtag)
-				|| (type == EntityType::Cashtag)
-				|| (type == EntityType::Url)
-				|| (type == EntityType::CustomUrl);
-		};
-		const auto from = ranges::remove_if(result.entities, isUrl);
-		if (from != result.entities.end()) {
-			result.entities.erase(from, result.entities.end());
-			setHasHiddenLinks(true);
-		}
-	}
-
-	return result;
-}
-
-auto HistoryItem::translatedRichPage() const
--> std::shared_ptr<const Iv::RichPage> {
-	const auto original = richPage();
-	if (!original) {
-		return nullptr;
-	} else if (const auto translation = this->translation()
-		; translation
-		&& translation->used
-		&& translation->richPage
-		&& (translation->to == history()->translatedTo())) {
-		return translation->richPage;
-	}
-	return original;
 }
 
 void HistoryItem::setHasHiddenLinks(bool has) const {
@@ -8970,8 +8810,4 @@ void HistoryItem::overrideMedia(std::unique_ptr<Data::Media> media) {
 	Expects(!media || media->parent() == this);
 
 	_media = std::move(media);
-}
-
-void HistoryItem::removeTranslationBit() {
-	RemoveComponents(HistoryMessageTranslation::Bit());
 }
