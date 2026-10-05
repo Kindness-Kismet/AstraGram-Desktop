@@ -83,6 +83,7 @@ bool HasMenu(Type type);
 
 void ShowSettingsLayer(
 	not_null<Window::SessionController*> controller,
-	Type type);
+	Type type,
+	Fn<void()> closed = nullptr);
 
 } // namespace Settings

@@ -243,7 +243,9 @@ void BuildAutoDownloadSection(SectionBuilder &builder) {
 			.title = std::move(title),
 			.icon = { icon },
 			.onClick = [=] {
-				ShowAutoDownload(controller, source);
+				ShowAutoDownload(controller, source, crl::guard(container, [=] {
+					state->changes.fire({});
+				}));
 			},
 			.keywords = std::move(keywords),
 		});

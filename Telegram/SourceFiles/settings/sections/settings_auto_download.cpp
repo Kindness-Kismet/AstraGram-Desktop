@@ -74,7 +74,8 @@ struct PeerBuckets {
 		const auto peer = owner->peer(peerId);
 		if (!PeerMatchesSource(peer, source)) {
 			return;
-		} else if (value == Override::ForceAllow) {
+		}
+		if (value == Override::ForceAllow) {
 			result.always.emplace(peerId);
 		} else if (value == Override::ForceDeny) {
 			result.never.emplace(peerId);
@@ -531,8 +532,9 @@ Type AutoDownloadId(Source source) {
 
 void ShowAutoDownload(
 		not_null<Window::SessionController*> controller,
-		Source source) {
-	ShowSettingsLayer(controller, AutoDownloadId(source));
+		Source source,
+		Fn<void()> closed) {
+	ShowSettingsLayer(controller, AutoDownloadId(source), std::move(closed));
 }
 
 namespace {

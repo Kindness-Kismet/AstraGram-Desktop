@@ -24,6 +24,7 @@ namespace Settings {
 [[nodiscard]] Type AutoDownloadId(Data::AutoDownload::Source source);
 void ShowAutoDownload(
 	not_null<Window::SessionController*> controller,
-	Data::AutoDownload::Source source);
+	Data::AutoDownload::Source source,
+	Fn<void()> closed = nullptr);
 
 } // namespace Settings
