@@ -839,14 +839,14 @@ base::weak_qptr<Ui::RpWidget> Business::createPinnedToTop(
 			_backToggles.value(),
 			_navigationVisible.value()
 		) | rpl::map([=](bool enabled, bool navigation) {
-			return !navigation && (!isLayer || enabled);
+			return enabled || (!navigation && !isLayer);
 		}));
 		_back->entity()->addClickHandler([=] {
 			_showBack.fire({});
 		});
 		_back->toggledValue(
 		) | rpl::on_next([=](bool toggled) {
-			const auto &st = isLayer ? st::infoLayerTopBar : st::infoTopBar;
+			const auto &st = isLayer ? st::infoLayerTopBar : st::settingsPageTopBar;
 			content->setTextPosition(
 				toggled ? st.back.width : st.titlePosition.x(),
 				st.titlePosition.y());

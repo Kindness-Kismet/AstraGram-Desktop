@@ -10,6 +10,20 @@ using "ui/widgets/widgets.style";
 using "info/info.style";
 using "boxes/boxes.style";
 
+settingsPageTopBar: InfoTopBar(infoTopBar) {
+	back: historyTopBarBack;
+}
+settingsPageMenu: IconButton(topBarSearch) {
+	icon: menuToggleIcon;
+	iconOver: menuToggleIconOver;
+	iconPosition: point(-1px, -1px);
+}
+settingsPageClose: IconButton(topBarSearch) {
+	icon: icon {{ "info/info_close", menuIconFg }};
+	iconOver: icon {{ "info/info_close", menuIconFgOver }};
+	iconPosition: point(-1px, -1px);
+}
+
 settingsButton: SettingsButton(infoProfileButton) {
 	style: boxTextStyle;
 	padding: margins(60px, 16px, 22px, 16px);
@@ -492,7 +506,7 @@ notifyPreviewBottomSkip: 9px;
 settingsPremiumButtonPadding: margins(11px, 11px, 11px, 3px);
 settingsPremiumTopBarBackIcon: icon {{ "info/info_back", premiumButtonFg }};
 settingsPremiumTopBarBackIconOver: icon {{ "info/info_back", premiumButtonFg }};
-settingsPremiumTopBarBack: IconButton(infoTopBarBack) {
+settingsPremiumTopBarBack: IconButton(historyTopBarBack) {
 	icon: settingsPremiumTopBarBackIcon;
 	iconOver: settingsPremiumTopBarBackIconOver;
 	ripple: RippleAnimation(defaultRippleAnimation) {

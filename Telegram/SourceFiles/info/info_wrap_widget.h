@@ -196,7 +196,6 @@ private:
 		not_null<ContentMemento*> memento,
 		const Window::SectionShow &params);
 	void setupTop();
-	void setupSettingsBreadcrumb();
 	void setupTopBarMenuToggle();
 	void createTopBar();
 	void highlightTopBar();
@@ -242,7 +241,6 @@ private:
 	rpl::variable<bool> _contentTillBottom = false;
 	object_ptr<TopBar> _topBar = { nullptr };
 	object_ptr<Ui::RpWidget> _topBarSurrogate = { nullptr };
-	object_ptr<Ui::RpWidget> _settingsBreadcrumb = { nullptr };
 	bool _settingsNavigation = false;
 	Fn<void()> _settingsRootBack;
 	Ui::Animations::Simple _topBarOverrideAnimation;

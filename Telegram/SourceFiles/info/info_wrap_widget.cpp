@@ -64,6 +64,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/utils/telegram_helpers.h"
 #include "inline_bots/bot_attach_web_view.h"
 #include "styles/style_extras_settings.h"
+#include "styles/style_settings.h"
 #include "window/window_peer_menu.h"
 
 
@@ -377,7 +378,10 @@ void WrapWidget::createTopBar() {
 	_topBar.create(
 		this,
 		_controller.get(),
-		TopBarStyle(wrapValue),
+		(_controller->section().type() == Section::Type::Settings
+			&& wrapValue == Wrap::Narrow)
+			? st::settingsPageTopBar
+			: TopBarStyle(wrapValue),
 		std::move(selectedItems));
 	_topBar->selectionActionRequests(
 	) | rpl::on_next([=](SelectionAction action) {
@@ -784,7 +788,6 @@ void WrapWidget::showContent(object_ptr<ContentWidget> content) {
 
 void WrapWidget::finishShowContent() {
 	setupTopBarMenuToggle();
-	setupSettingsBreadcrumb();
 	updateContentGeometry();
 	_content->setIsStackBottom(!hasStackHistory());
 	if (_topBar) {
@@ -886,7 +889,6 @@ void WrapWidget::setSettingsNavigation(bool visible) {
 	_settingsNavigation = visible;
 	setupTop();
 	setupTopBarMenuToggle();
-	setupSettingsBreadcrumb();
 	if (_topBar) {
 		_topBar->setTitle({
 			.title = _content->title(),
@@ -906,27 +908,6 @@ bool WrapWidget::hasSettingsHistory() const {
 
 void WrapWidget::setSettingsRootBack(Fn<void()> callback) {
 	_settingsRootBack = std::move(callback);
-}
-
-void WrapWidget::setupSettingsBreadcrumb() {
-	_settingsBreadcrumb.destroy();
-	if (!_settingsNavigation || !hasStackHistory()) {
-		return;
-	}
-	_settingsBreadcrumb.create(this);
-	_settingsBreadcrumb->setObjectName(u"settings-breadcrumb"_q);
-	const auto memento = dynamic_cast<Settings::Memento*>(_historyStack.back().section.get());
-	Expects(memento != nullptr);
-	const auto text = memento->pageTitle().isEmpty()
-		? tr::lng_menu_settings(tr::now)
-		: memento->pageTitle();
-	const auto parent = Ui::CreateChild<Ui::LinkButton>(_settingsBreadcrumb.data(), text);
-	parent->setObjectName(u"settings-breadcrumb-parent"_q);
-	parent->setClickedCallback([=] {
-		checkBeforeClose([=] { _controller->showBackFromStack(); });
-	});
-	parent->moveToLeft(style::ConvertScale(20), style::ConvertScale(4));
-	_settingsBreadcrumb->show();
 }
 
 rpl::producer<bool> WrapWidget::contentTillBottomValue() const {
@@ -1089,8 +1070,7 @@ rpl::producer<int> WrapWidget::desiredHeightValue() const {
 }
 
 QRect WrapWidget::contentGeometry() const {
-	const auto top = (_topBar ? _topBar->height() : 0)
-		+ (_settingsBreadcrumb ? style::ConvertScale(28) : 0);
+	const auto top = _topBar ? _topBar->height() : 0;
 	return rect().marginsRemoved({ 0, std::min(top, height()), 0, 0});
 }
 
@@ -1162,7 +1142,9 @@ void WrapWidget::showNewContent(
 		_historyStack.clear();
 	}
 
-	if (withBackButton) {
+	if (withBackButton
+		&& (memento->section().type() != Section::Type::Settings
+			|| hasStackHistory())) {
 		newContent->enableBackButton();
 	}
 
@@ -1195,7 +1177,9 @@ void WrapWidget::showNewContent(not_null<ContentMemento*> memento) {
 	// Validates contentGeometry().
 	setupTop();
 	auto newContent = createContent(memento, _controller.get());
-	if (!_topBar && hasBackButton()) {
+	if (!_topBar && hasBackButton()
+		&& (_controller->section().type() != Section::Type::Settings
+			|| hasStackHistory())) {
 		newContent->enableBackButton();
 	}
 	showContent(std::move(newContent));
@@ -1241,10 +1225,6 @@ bool WrapWidget::closeByBackButton() {
 
 void WrapWidget::updateContentGeometry() {
 	if (_content) {
-		if (_settingsBreadcrumb) {
-			_settingsBreadcrumb->setGeometry(0, _topBar ? _topBar->height() : 0,
-				width(), style::ConvertScale(28));
-		}
 		if (_topBar) {
 			_topShadow->resizeToWidth(width());
 			_topShadow->moveToLeft(0, _topBar->height());
@@ -1340,22 +1320,20 @@ const Ui::RoundRect *WrapWidget::bottomSkipRounding() const {
 }
 
 bool WrapWidget::hasBackButton() const {
-	return !_settingsNavigation && !_isSeparatedWindow
-		&& (wrap() == Wrap::Narrow || hasStackHistory());
+	return !_isSeparatedWindow
+		&& (hasStackHistory()
+			|| (!_settingsNavigation && wrap() == Wrap::Narrow));
 }
 
 bool WrapWidget::willHaveBackButton(
 		const Window::SectionShow &params) const {
-	if (_settingsNavigation) {
-		return false;
-	}
 	using Way = Window::SectionShow::Way;
 	const auto willSaveToStack = (_content != nullptr)
 		&& (params.way == Way::Forward);
 	const auto willClearStack = (params.way == Way::ClearStack);
 	const auto willHaveStack = !willClearStack
 		&& (hasStackHistory() || willSaveToStack);
-	return (wrap() == Wrap::Narrow) || willHaveStack;
+	return (!_settingsNavigation && wrap() == Wrap::Narrow) || willHaveStack;
 }
 
 void WrapWidget::replaceSwipeHandler(

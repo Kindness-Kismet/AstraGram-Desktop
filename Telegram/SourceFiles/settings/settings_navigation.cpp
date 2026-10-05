@@ -168,12 +168,12 @@ Navigation::Navigation(
 	home->setClickedCallback([=] { _navigate(MainId()); });
 	const auto title = Ui::CreateChild<Ui::FlatLabel>(home, tr::lng_menu_settings(), st::boxTitle);
 	title->setAttribute(Qt::WA_TransparentForMouseEvents);
-	const auto exit = Ui::CreateChild<Ui::IconButton>(_header.data(), st::infoTopBarClose);
+	const auto exit = Ui::CreateChild<Ui::IconButton>(_header.data(), st::settingsPageClose);
 	exit->setObjectName(u"settings-close"_q);
 	exit->setAccessibleName(tr::lng_close(tr::now));
 	exit->setClickedCallback(std::move(close));
 	const auto accountMenu = Ui::CreateChild<Ui::IconButton>(
-		_header.data(), st::infoTopBarMenu);
+		_header.data(), st::settingsPageMenu);
 	accountMenu->setObjectName(u"settings-account-menu"_q);
 	accountMenu->setAccessibleName(tr::lng_sr_profile_menu(tr::now));
 	accountMenu->setClickedCallback([=] {
