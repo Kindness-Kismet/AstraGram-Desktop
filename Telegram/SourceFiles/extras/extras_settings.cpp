@@ -741,8 +741,18 @@ void ExtrasSettings::setLocalPremium(bool val) {
 }
 
 void ExtrasSettings::setDevFeaturesEnabled(bool val) {
-	if (_devFeaturesEnabled.current() == val) return;
+	if (_devFeaturesExplicit && _devFeaturesEnabled.current() == val) return;
+	_devFeaturesExplicit = true;
 	_devFeaturesEnabled = val;
+	save();
+}
+
+void ExtrasSettings::enableBadgeDevFeatures() {
+	// 身份只决定默认值，用户手动关闭后不随名单刷新重新开启。
+	if (_devFeaturesExplicit || _devFeaturesEnabled.current()) {
+		return;
+	}
+	_devFeaturesEnabled = true;
 	save();
 }
 
@@ -1200,6 +1210,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"disableNotificationsDelay", s._disableNotificationsDelay.current()},
 		{"localPremium", s._localPremium.current()},
 		{"devFeaturesEnabled", s._devFeaturesEnabled.current()},
+		{"devFeaturesExplicit", s._devFeaturesExplicit},
 		{"showChannelReactions", s._showChannelReactions.current()},
 		{"showGroupReactions", s._showGroupReactions.current()},
 		{"showPrivateChatReactions", s._showPrivateChatReactions.current()},
@@ -1321,6 +1332,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._disableNotificationsDelay = j.value("disableNotificationsDelay", defaults._disableNotificationsDelay.current());
 	s._localPremium = j.value("localPremium", defaults._localPremium.current());
 	s._devFeaturesEnabled = j.value("devFeaturesEnabled", defaults._devFeaturesEnabled.current());
+	s._devFeaturesExplicit = j.value("devFeaturesExplicit", defaults._devFeaturesExplicit);
 	s._showChannelReactions = j.value("showChannelReactions", defaults._showChannelReactions.current());
 	s._showGroupReactions = j.value("showGroupReactions", defaults._showGroupReactions.current());
 	s._showPrivateChatReactions = j.value("showPrivateChatReactions", defaults._showPrivateChatReactions.current());

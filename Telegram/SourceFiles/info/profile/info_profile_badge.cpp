@@ -33,7 +33,9 @@ namespace {
 [[nodiscard]] bool HasPremiumClick(const Badge::Content &content) {
 	return content.badge == BadgeType::Premium
 		|| (content.badge == BadgeType::Verified && content.emojiStatusId)
-		|| (content.badge == BadgeType::Extera);
+		|| (content.badge == BadgeType::Extera)
+		|| (content.badge == BadgeType::ExteraSupporter)
+		|| (content.badge == BadgeType::ExteraCustom);
 }
 
 } // namespace
@@ -89,6 +91,10 @@ void Badge::setContent(Content content) {
 	_view.create(_parent);
 	_view->setAccessibleName([&] {
 		switch (_content.badge) {
+		case BadgeType::Extera:
+		case BadgeType::ExteraSupporter:
+		case BadgeType::ExteraCustom:
+			return tr::extras_BadgeAccessibleName(tr::now);
 		case BadgeType::Verified:
 			return tr::lng_sr_verified_badge(tr::now);
 		case BadgeType::BotVerified:
@@ -110,6 +116,7 @@ void Badge::setContent(Content content) {
 	}());
 	_view->show();
 	switch (_content.badge) {
+	case BadgeType::ExteraCustom:
 	case BadgeType::Verified:
 	case BadgeType::BotVerified:
 	case BadgeType::Premium: {
@@ -214,8 +221,11 @@ void Badge::setContent(Content content) {
 						: st::attentionButtonFg));
 			}, _view->lifetime());
 	} break;
-	case BadgeType::Extera: {
-		const auto icon = &st::infoExteraOfficialBadge;
+	case BadgeType::Extera:
+	case BadgeType::ExteraSupporter: {
+		const auto icon = (_content.badge == BadgeType::Extera)
+			? &st::infoExteraOfficialBadge
+			: &st::infoExteraSupporterBadge;
 		const auto skip = st::infoVerifiedCheckPosition.x();
 		_view->resize(
 			icon->width() + skip,

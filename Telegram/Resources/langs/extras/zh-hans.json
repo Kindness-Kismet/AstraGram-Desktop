@@ -464,8 +464,8 @@
   "InvalidConnectionLayerNote": "由于更新过程中出现错误，您需要重新登录。",
   "LocalPremiumNotice_PC": "您正在使用**本地** Telegram Premium。\n它**不会**为您带来任何实际权益。\n**尽情欣赏昵称旁的星标吧！**",
   "LocalPremiumNotice_Android": "您正在使用**本地** Telegram Premium。\n您可以使用有频率限制的翻译功能，以及部分仅在**本地**生效的 Telegram Premium 功能。",
-  "DeveloperPopup": "**{item}** 是 **exteraGram** 开发团队的成员。",
-  "OfficialResourcePopup": "**{item}** 是 **exteraGram** 或 **AyuGram** 的官方渠道。",
+  "DeveloperPopup": "**{item}** 是 **AstraGram** 开发团队的成员。",
+  "OfficialResourcePopup": "**{item}** 是 **AstraGram** 的官方频道。",
   "MutualContactInfo_PC": "互为联系人。",
   "SessionInfoOfficialApp": "官方应用",
   "SettingsWatermark": "AstraGram 基于 AyuGram 开发，AyuGram 由 Radolyn Labs 开发和维护。",
@@ -577,5 +577,9 @@
   "SettingsAppearanceTitle": "界面定制",
   "SettingsMoreTitle": "更多设置",
   "SettingsStateOn": "已开启",
-  "SettingsStateOff": "未开启"
+  "SettingsStateOff": "未开启",
+  "SupporterPopup": "**{item}** 为 **AstraGram** 的开发提供了支持。",
+  "CustomBadgePopup": "**{item}** 拥有 **AstraGram** 自定义勋章。",
+  "BadgeAccessibleName": "AstraGram 勋章",
+  "DonationBadgeInstructions": "1. 通过下方爱发电链接捐赠。\n\n2. 在爱发电私信中发送付款凭证和你的 Telegram 用户 ID；申请频道徽章时，请一并提供频道 ID。\n\n3. 核实后，徽章会在 AstraGram 中显示。自定义勋章使用 Telegram 自定义表情。"
 }

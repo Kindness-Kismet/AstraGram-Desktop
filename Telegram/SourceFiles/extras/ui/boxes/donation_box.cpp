@@ -1,4 +1,5 @@
 #include "extras/ui/boxes/donation_box.h"
+#include "extras/ui/boxes/donate_qr_box.h"
 
 #include "core/file_utilities.h"
 #include "lang/lang_keys.h"
@@ -18,7 +19,9 @@ namespace {
 constexpr auto kAvatarSize = 96;
 const auto kDonationUrl = u"https://afdian.com/a/KiritoXD"_q;
 
-void fillDonationBox(not_null<Ui::GenericBox*> box) {
+void fillDonationBox(
+		not_null<Ui::GenericBox*> box,
+		not_null<Window::SessionController*> controller) {
 	box->setTitle(tr::extras_DonationDetails());
 	box->setWidth(st::boxWidth);
 	box->verticalLayout()->resizeToWidth(box->width());
@@ -64,6 +67,23 @@ void fillDonationBox(not_null<Ui::GenericBox*> box) {
 	link->setClickedCallback([] { File::OpenUrl(kDonationUrl); });
 	box->addSkip(style::ConvertScale(12));
 
+	box->addRow(object_ptr<Ui::FlatLabel>(
+		box,
+		tr::extras_DonationBadgeInstructions(),
+		st::boxLabel));
+	box->addSkip(style::ConvertScale(12));
+	const auto qr = box->addRow(
+		object_ptr<Ui::LinkButton>(box, tr::lng_group_invite_context_qr(tr::now)),
+		style::al_center);
+	qr->setObjectName(u"donation.qr"_q);
+	qr->setClickedCallback([=] {
+		controller->show(Box(
+			Ui::fillDonateQrBox,
+			kDonationUrl,
+			u":/gui/icons/extras/donates/support_logo.svg"_q));
+	});
+	box->addSkip(style::ConvertScale(12));
+
 	box->addButton(tr::extras_DonationOpenAfdian(), [] {
 		File::OpenUrl(kDonationUrl);
 	});
@@ -73,7 +93,7 @@ void fillDonationBox(not_null<Ui::GenericBox*> box) {
 } // namespace
 
 void showDonationBox(not_null<Window::SessionController*> controller) {
-	controller->show(Box(fillDonationBox));
+	controller->show(Box(fillDonationBox, controller));
 }
 
 } // namespace ExtrasUi

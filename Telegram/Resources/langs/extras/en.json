@@ -465,8 +465,8 @@
   "InvalidConnectionLayerNote": "You should re-login due to an error during the update.",
   "LocalPremiumNotice_PC": "You're using **local** Telegram Premium.\nIt **won't** give you any benefits.\n**Enjoy the star near your nickname!**",
   "LocalPremiumNotice_Android": "You're using **local** Telegram Premium.\nYou may use it for a rate-limited translator and some **local** Telegram Premium stuff.",
-  "DeveloperPopup": "**{item}** is a member of the **exteraGram** development team.",
-  "OfficialResourcePopup": "**{item}** is the official resource of **exteraGram** or **AyuGram**.",
+  "DeveloperPopup": "**{item}** is a member of the **AstraGram** development team.",
+  "OfficialResourcePopup": "**{item}** is an official **AstraGram** channel.",
   "MutualContactInfo_PC": "This contact is mutual.",
   "SessionInfoOfficialApp": "Official app",
   "SettingsWatermark": "AstraGram is based on AyuGram, developed and maintained by Radolyn Labs.",
@@ -531,5 +531,12 @@
   "SettingsAppearanceTitle": "Appearance",
   "SettingsMoreTitle": "More Settings",
   "SettingsStateOn": "On",
-  "SettingsStateOff": "Off"
+  "SettingsStateOff": "Off",
+  "SupporterPopup": "**{item}** supports **AstraGram** development.",
+  "CustomBadgePopup": "**{item}** has a custom **AstraGram** badge.",
+  "BadgeAccessibleName": "AstraGram badge",
+  "DonationDetails": "Donation details",
+  "DonationMessage": "If you like my work, please consider supporting me. Your donation will help with everyday software development and new features.",
+  "DonationOpenAfdian": "Open Afdian",
+  "DonationBadgeInstructions": "1. Donate through the Afdian link below.\n\n2. Send your payment confirmation and Telegram user ID through Afdian messages. For a channel badge, also include its channel ID.\n\n3. After verification, your badge will appear in AstraGram. Custom badges use Telegram custom emoji."
 }

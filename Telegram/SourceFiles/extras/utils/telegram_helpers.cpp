@@ -9,7 +9,6 @@
 #include "extras/data/entities.h"
 #include "extras/data/messages_storage.h"
 #include "extras/features/filters/filters_controller.h"
-#include "extras/utils/rc_manager.h"
 #include "core/core_settings.h"
 #include "core/application.h"
 #include "base/unixtime.h"
@@ -36,12 +35,9 @@
 #include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
-#include "styles/style_extras_styles.h"
-#include "styles/style_info.h"
 #include "ui/emoji_config.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_entity.h"
-#include "ui/toast/toast.h"
 
 #include <atomic>
 #include <functional>
@@ -62,58 +58,6 @@ const auto regDateBotUsername = QString("ayugrambot");
 const auto kZalgoPattern = QStringLiteral(
 	"\\p{Mn}{3,}|[\\x{202A}-\\x{202E}\\x{2066}-\\x{2069}\\x{200E}\\x{200F}\\x{061C}]");
 
-class BadgeToastIcon final : public Ui::RpWidget {
-public:
-	BadgeToastIcon(
-		QWidget *parent,
-		not_null<PeerData*> peer,
-		Info::Profile::Badge::Content content);
-
-private:
-	void updateInnerGeometry();
-
-	Info::Profile::Badge _badge;
-
-};
-
-BadgeToastIcon::BadgeToastIcon(
-	QWidget *parent,
-	not_null<PeerData*> peer,
-	Info::Profile::Badge::Content content)
-: Ui::RpWidget(parent)
-, _badge(
-	this,
-	st::infoPeerBadge,
-	&peer->session(),
-	rpl::single(content),
-	nullptr,
-	[] { return false; },
-	0,
-	Info::Profile::BadgeType::Extera) {
-	setAttribute(Qt::WA_TransparentForMouseEvents);
-	_badge.setOverrideStyle(&st::exteraBadgeToastBadge);
-	_badge.updated() | rpl::on_next([=] {
-		updateInnerGeometry();
-	}, lifetime());
-	updateInnerGeometry();
-}
-
-void BadgeToastIcon::updateInnerGeometry() {
-	const auto widget = _badge.widget();
-	const auto size = widget ? widget->size() : QSize();
-	resize(size.width(), size.height());
-	if (widget) {
-		widget->moveToLeft(0, 0);
-	}
-}
-
-[[nodiscard]] object_ptr<Ui::RpWidget> MakeBadgeToastIcon(
-		not_null<PeerData*> peer,
-		Info::Profile::Badge::Content content) {
-	return (content.badge == Info::Profile::BadgeType::None)
-		? object_ptr<Ui::RpWidget>(nullptr)
-		: object_ptr<BadgeToastIcon>(nullptr, peer, content);
-}
 
 }
 
@@ -157,46 +101,6 @@ ID getDialogIdFromPeer(not_null<PeerData*> peer) {
 
 ID getBareID(not_null<PeerData*> peer) {
 	return peer->id.value & PeerId::kChatTypeMask;
-}
-
-bool isExteraPeer(ID peerId) {
-	return RCManager::getInstance().developers().contains(peerId) || RCManager::getInstance().channels().
-		contains(peerId);
-}
-
-[[nodiscard]] Info::Profile::Badge::Content computeExteraBadgeContent(
-		not_null<PeerData*> peer) {
-	return isExteraPeer(getBareID(peer))
-		? Info::Profile::Badge::Content{
-			.badge = Info::Profile::BadgeType::Extera,
-		}
-		: Info::Profile::Badge::Content{};
-}
-
-rpl::producer<Info::Profile::Badge::Content> ExteraBadgeTypeFromPeer(not_null<PeerData*> peer) {
-	return rpl::single(computeExteraBadgeContent(peer));
-}
-
-Fn<void()> badgeClickHandler(not_null<PeerData*> peer) {
-	return [=] {
-		if (!isExteraPeer(getBareID(peer))) {
-			return;
-		}
-		const auto text = (peer->isUser()
-			? tr::extras_DeveloperPopup
-			: tr::extras_OfficialResourcePopup)(
-				tr::now,
-				lt_item,
-				TextWithEntities{peer->name()},
-				tr::rich);
-		Ui::Toast::Show(Ui::Toast::Config{
-			.text = text,
-			.iconContent = MakeBadgeToastIcon(peer, computeExteraBadgeContent(peer)),
-			.st = &st::exteraBadgeToast,
-			.adaptive = true,
-			.duration = 3 * crl::time(1000),
-		});
-	};
 }
 
 bool isMessageHidden(const not_null<HistoryItem*> item) {

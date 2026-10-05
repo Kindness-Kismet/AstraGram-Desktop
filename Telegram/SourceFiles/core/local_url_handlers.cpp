@@ -1870,6 +1870,10 @@ const std::vector<LocalUrlHandler> &LocalUrlHandlers() {
 			ExtrasUrlHandlers::HandleExtras
 		},
 		{
+			u"^(support|donate)/?(#|$)"_q,
+			ExtrasUrlHandlers::handleSupport
+		},
+		{
 			u"^([^\\?]+)(\\?|#|$)"_q,
 			HandleUnknown
 		},

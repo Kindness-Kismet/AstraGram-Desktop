@@ -3,6 +3,7 @@
 #include "lang_auto.h"
 #include "mainwindow.h"
 #include "extras/ui/settings/settings_main.h"
+#include "extras/ui/boxes/donation_box.h"
 #include "extras/utils/telegram_helpers.h"
 #include "base/qthelp_url.h"
 #include "boxes/abstract_box.h"
@@ -121,6 +122,18 @@ bool HandleExtras(
 	} catch (...) {
 	}
 
+	return true;
+}
+
+bool handleSupport(
+		Window::SessionController *controller,
+		const Match &match,
+		const QVariant &context) {
+	if (!controller) {
+		return false;
+	}
+	ExtrasUi::showDonationBox(controller);
+	controller->window().activate();
 	return true;
 }
 

@@ -521,10 +521,7 @@ TopBar::TopBar(
 			_botVerify->updated());
 	}
 	if (_exteraBadge) {
-		const auto isExtera = isExteraPeer(getBareID(_peer));
-		if (isExtera) {
-			_exteraBadge->setPremiumClickCallback(badgeClickHandler(_peer));
-		}
+		_exteraBadge->setPremiumClickCallback(badgeClickHandler(_peer));
 		badgeUpdates = rpl::merge(
 			std::move(badgeUpdates),
 			_exteraBadge->updated());

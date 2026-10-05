@@ -134,6 +134,10 @@ set(extras_files
         extras/utils/telegram_helpers.h
         extras/utils/windows_utils.cpp
         extras/utils/windows_utils.h
+        extras/utils/badge_helpers.cpp
+        extras/utils/badge_helpers.h
+        extras/utils/badge_roster.cpp
+        extras/utils/badge_roster.h
         extras/utils/rc_manager.cpp
         extras/utils/rc_manager.h
         extras/ui/components/empty_state_icon.h
@@ -202,6 +206,8 @@ set(extras_files
         extras/ui/message_history/history_section.h
         extras/ui/boxes/edit_mark_box.cpp
         extras/ui/boxes/edit_mark_box.h
+        extras/ui/boxes/donate_qr_box.cpp
+        extras/ui/boxes/donate_qr_box.h
         extras/ui/boxes/donation_box.cpp
         extras/ui/boxes/donation_box.h
         extras/ui/boxes/emoji_packs_box.cpp

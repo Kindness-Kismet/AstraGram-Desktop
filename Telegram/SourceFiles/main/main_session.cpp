@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "main/main_session.h"
 
+#include "extras/utils/badge_helpers.h"
+
 #include "apiwrap.h"
 #include "api/api_peer_colors.h"
 #include "api/api_updates.h"
@@ -224,6 +226,7 @@ Session::Session(
 , _fastButtonsBots(std::make_unique<Support::FastButtonsBots>(this))
 , _saveSettingsTimer([=] { saveSettings(); }) {
 	Expects(_settings != nullptr);
+	watchBadgeChanges(this);
 
 	_api->requestTermsUpdate();
 	_api->requestFullPeer(_user);

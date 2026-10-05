@@ -1,14 +1,15 @@
 #pragma once
 
-#include "extras/data/entities.h"
+#include "extras/utils/badge_roster.h"
+#include "data/data_peer_id.h"
 
 #include <QtNetwork/QNetworkReply>
+#include <rpl/event_stream.h>
+#include <vector>
 
-extern std::unordered_set<ID> default_developers;
-extern std::unordered_set<ID> default_channels;
+class QTimer;
 
-class RCManager final : public QObject
-{
+class RCManager final : public QObject {
 	Q_OBJECT
 public:
 	static RCManager &getInstance() {
@@ -22,19 +23,9 @@ public:
 	RCManager &operator=(RCManager &&) = delete;
 
 	void start();
-
-	[[nodiscard]] const std::unordered_set<ID> &developers() const {
-		if (!initialized) {
-			return default_developers;
-		}
-		return _developers;
-	}
-
-	[[nodiscard]] const std::unordered_set<ID> &channels() const {
-		if (!initialized) {
-			return default_channels;
-		}
-		return _officialChannels;
+	[[nodiscard]] const BadgeRoster &roster() const { return _roster; }
+	[[nodiscard]] rpl::producer<std::vector<PeerId>> changes() const {
+		return _changes.events();
 	}
 
 private:
@@ -42,24 +33,14 @@ private:
 	~RCManager();
 
 	void makeRequest();
-	void sendRequest();
-	bool tryRetryWithExteraFallback();
-
 	void gotResponse();
-	void gotFailure(QNetworkReply::NetworkError e);
 	void clearSentRequest();
-	bool handleResponse(const QByteArray &response);
-	bool applyResponse(const QByteArray &response);
+	void stop();
 
-	bool initialized = false;
-
-	std::unordered_set<ID> _developers = {};
-	std::unordered_set<ID> _officialChannels = {};
-	QTimer* _timer = nullptr;
-
-	std::unique_ptr<QNetworkAccessManager> _manager = nullptr;
+	BadgeRoster _roster;
+	QByteArray _etag;
+	QTimer *_timer = nullptr;
+	std::unique_ptr<QNetworkAccessManager> _manager;
 	QNetworkReply *_reply = nullptr;
-	bool _useExteraFallback = false;
-	bool _retryAttempted = false;
-
+	rpl::event_stream<std::vector<PeerId>> _changes;
 };
