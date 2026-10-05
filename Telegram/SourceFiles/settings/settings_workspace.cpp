@@ -68,6 +68,14 @@ Workspace::Workspace(
 Workspace::~Workspace() = default;
 
 void Workspace::showCategory(Type type) {
+	if (type == _category) {
+		if (_listShown) {
+			_listShown = false;
+			updateLayout();
+			_content->setInnerFocus();
+		}
+		return;
+	}
 	_content->checkBeforeClose([=] {
 		_listShown = false;
 		_category = type;
