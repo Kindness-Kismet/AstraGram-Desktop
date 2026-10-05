@@ -255,7 +255,7 @@ void Passkeys::setupContent() {
 				}, button->lifetime());
 				const auto iconSize = st::settingsIconPasskeys.width();
 				const auto emoji = iconSize;
-				const auto iconLeft = st::settingsButton.iconLeft;
+				const auto iconLeft = st::settingsCardSectionButton.iconLeft;
 				auto emojiInstance = passkey.softwareEmojiId
 					? session->data().customEmojiManager().create(
 						passkey.softwareEmojiId,
@@ -303,7 +303,7 @@ void Passkeys::setupContent() {
 						const auto w = button->width();
 						st::settingsIconPasskeys.paint(p, iconLeft, iconTop, w);
 					}
-					const auto textLeft = st::settingsButton.padding.left();
+					const auto textLeft = st::settingsCardSectionButton.padding.left();
 					const auto textWidth = button->width() - textLeft
 						- st::settingsButton.padding.right();
 					p.setPen(st.nameFg);

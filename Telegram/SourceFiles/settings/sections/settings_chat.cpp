@@ -2029,7 +2029,7 @@ void SetupChatListQuickAction(
 		}, widget->lifetime());
 	};
 
-	const auto &st = st::settingsButton;
+	const auto &st = st::settingsCardSectionButton;
 	const auto button = container->add(
 		object_ptr<Ui::SettingsButton>(
 			container,
