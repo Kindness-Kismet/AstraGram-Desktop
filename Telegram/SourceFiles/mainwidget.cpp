@@ -1884,6 +1884,19 @@ Window::SectionSlideParams MainWidget::prepareShowAnimation(
 Window::SectionSlideParams MainWidget::prepareMainSectionAnimation(
 		Window::SectionWidget *section,
 		bool fromBottom) {
+	if (section->useFullWidth()) {
+		auto result = Window::SectionSlideParams();
+		const auto top = getMainSectionTop() + st::windowCardGap;
+		const auto filtersWidth = _controller->filtersWidth();
+		floatPlayerHideAll();
+		result.oldContentCache = Ui::GrabWidget(parentWidget(), QRect(
+			x() - filtersWidth,
+			y() + top,
+			width() + filtersWidth,
+			height() - top));
+		floatPlayerShowVisible();
+		return result;
+	}
 	return prepareShowAnimation(section->hasTopBarShadow(), fromBottom);
 }
 
@@ -1955,8 +1968,7 @@ void MainWidget::showNewSection(
 		&& (_mainSection != nullptr);
 
 	auto animatedShow = [&] {
-		if (useFullWidth
-			|| (_mainSection && _mainSection->useFullWidth())) {
+		if (_mainSection && _mainSection->useFullWidth()) {
 			return false;
 		}
 		if (_showAnimation
@@ -1964,6 +1976,9 @@ void MainWidget::showNewSection(
 			|| (params.animated == anim::type::instant)
 			|| memento->instant()) {
 			return false;
+		}
+		if (useFullWidth) {
+			return true;
 		}
 		if (fromBottom) {
 			return true;

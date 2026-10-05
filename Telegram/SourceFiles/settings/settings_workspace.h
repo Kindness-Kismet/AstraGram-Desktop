@@ -31,6 +31,7 @@ public:
 	std::shared_ptr<Window::SectionMemento> createMemento() override;
 	bool floatPlayerHandleWheelEvent(QEvent *e) override;
 	QRect floatPlayerAvailableRect() override;
+	QPixmap grabForShowAnimation(const Window::SectionSlideParams &params) override;
 
 protected:
 	void resizeEvent(QResizeEvent *e) override;

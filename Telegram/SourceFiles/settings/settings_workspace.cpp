@@ -176,6 +176,11 @@ QRect Workspace::floatPlayerAvailableRect() {
 	return _content->floatPlayerAvailableRect();
 }
 
+QPixmap Workspace::grabForShowAnimation(const Window::SectionSlideParams &params) {
+	updateLayout();
+	return Window::SectionWidget::grabForShowAnimation(params);
+}
+
 void Workspace::resizeEvent(QResizeEvent *e) {
 	updateLayout();
 }
