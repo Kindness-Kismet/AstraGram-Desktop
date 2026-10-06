@@ -2270,6 +2270,8 @@ PRIVATE
     test/test_log_lines.h
     test/test_mapped_target.cpp
     test/test_mapped_target.h
+    test/test_marking_read.cpp
+    test/test_marking_read.h
     test/test_menu.cpp
     test/test_menu.h
     test/test_messages.cpp
