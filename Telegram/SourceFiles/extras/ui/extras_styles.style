@@ -9,7 +9,7 @@ extrasMusicPlaceholder: icon {{ "menu/rich/audio", windowSubTextFg }};
 extrasMediaVoice: icon {{ "extras/message_field/voice", windowSubTextFg }};
 extrasMediaVideo: icon {{ "chat/input_video", windowSubTextFg }};
 
-extrasMusicPlay: IconButton(mediaPlayerPlayButton) {
+extrasMusicPlay: IconButton(mediaPlayerRepeatButton) {
 	icon: icon {{ "player/player_play", mediaPlayerActiveFg }};
 	width: 48px;
 	height: 44px;

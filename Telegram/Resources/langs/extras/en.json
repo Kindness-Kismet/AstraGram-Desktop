@@ -575,7 +575,7 @@
   "LocalPremiumNotice_PC": "You're using **local** Telegram Premium.\nIt **won't** give you any benefits.\n**Enjoy the star near your nickname!**",
   "LocalPremiumNotice_Android": "You're using **local** Telegram Premium.\nYou may use it for a rate-limited translator and some **local** Telegram Premium stuff.",
   "DeveloperPopup": "**{item}** is a member of the **AstraGram** development team.",
-  "OfficialResourcePopup": "**{item}** is an official **AstraGram** channel.",
+  "OfficialResourcePopup": "**{item}** is an official **AstraGram** resource.",
   "MutualContactInfo_PC": "This contact is mutual.",
   "SessionInfoOfficialApp": "Official app",
   "SettingsWatermark": "AstraGram is based on AyuGram, developed and maintained by Radolyn Labs.",

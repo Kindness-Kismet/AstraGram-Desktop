@@ -1,27 +1,34 @@
 ---
 name: upstream-sync
-description: "同步官方 Telegram Desktop 稳定版：检查官方有没有新的稳定版，生成已适配版本到目标版本之间 tdesktop 与各子模块的改动报告，适配完成后登记新的官方版本。Use when the user asks whether Telegram Desktop has a new stable release, how far behind upstream the fork is, what changed upstream, wants to sync or adapt upstream, or asks to record a completed upstream sync, or says phrases like \"同步上游\", \"官方更新\", \"适配官方\", \"上游有什么变化\"."
+description: "同步官方 Telegram Desktop 最新 tag，包含稳定版与测试版：检查官方新版本，生成已适配版本到目标版本之间 tdesktop 与各子模块的改动报告，适配完成后登记新的官方版本。Use when the user asks whether Telegram Desktop has a new stable or beta release, how far behind upstream the fork is, what changed upstream, wants to sync or adapt upstream, or asks to record a completed upstream sync, or says phrases like \"同步上游\", \"官方更新\", \"适配官方\", \"上游有什么变化\"."
 ---
 
-# 同步官方稳定版
+# 同步官方最新 tag
 
-`.github/upstream.json` 的 `tdesktop` 字段只记录已经适配的官方稳定版号，例如 `7.2.9`。
+`.github/upstream.json` 的 `tdesktop` 只记录已适配的官方 tag 版本号。
+项目以 main 为主线；上游是否为 beta 不改变本项目的正常发版方式。
 其余基准都由它推导，不需要登记：
 
 - tdesktop 基线：官方 `v<版本>` 标签。
 - 子模块基线：官方该版本记录的子模块指针。
 - 本地定制：用 git diff 对比基线计算。
 
-只跟随官方正式版，提交标题为 `Beta version` 的测试版不参与比较。脚本按官方地址拉取标签，
+默认选取版本号最高的官方 `vX.Y.Z` tag，正式版和 pre-release 一同参与比较，
+不使用仅返回稳定版的 Latest 接口；`--to` 仍可固定目标。脚本按官方地址拉取标签，
 保存在 `refs/upstream-tags/`，不依赖远程名，也不会和本仓库同名的发布标签混在一起。
 `upstream.json` 另有三类规则：`skip` 长期不跟进，`notes` 跟进时要注意，`deferred` 暂缓、以后要补。
+
+## 同步范围
+
+只取官方 tag，不追踪 tag 之间的开发分支提交。上游正式版与测试版标签都可作为基线，
+完成适配与验证后按本项目原有 main 发版流程发布，不因上游 beta 增加版本后缀。
 
 ## 检查与报告
 
 ```bash
-python scripts/upstream.py check                          # 官方有没有更新的稳定版
-python scripts/upstream.py report                         # 从已登记版本到官方最新稳定版
-python scripts/upstream.py report --to 7.3.0              # 指定目标版本
+python scripts/upstream.py check                          # 官方有没有更新的 tag，包含测试版
+python scripts/upstream.py report                         # 从已登记版本到官方最新 tag
+python scripts/upstream.py report --to 7.2.10             # 固定目标，正式版和测试版均可
 python scripts/upstream.py report --base 7.2.7 --to 7.2.9 # 指定基线，用于演练或复查
 ```
 
@@ -45,7 +52,7 @@ python scripts/upstream.py report --base 7.2.7 --to 7.2.9 # 指定基线，用�
 ## 适配
 
 报告生成后先交给用户阅读，按用户决定的范围合并；生成报告本身不改动代码。
-建议在 `feature/upstream-<版本>` 分支上进行。
+从最新 main 创建临时 `feature/upstream-<版本>` 分支进行，PR 目标为 main。
 
 - **tdesktop**：本仓库与官方没有共同的 git 历史，不能 `git merge`，按报告开头的命令逐类处理：
   直接采用和官方新增用 `git checkout`，需要合并的用 `git diff <基线> <目标> | git apply -3`。
@@ -75,11 +82,12 @@ python scripts/upstream.py report --base 7.2.7 --to 7.2.9 # 指定基线，用�
 适配完成且编译验证通过后：
 
 ```bash
-python scripts/upstream.py done <官方版本>
+python scripts/upstream.py done <已适配的官方版本>
 ```
 
 `done` 会检查每个子模块已提交的指针等于或包含官方该版本的指针，不满足时拒绝登记；只能往更新的版本登记。
-随后用 version-bump 把本应用版本改为 `<官方版本>`，更新说明写“适配官方 Telegram Desktop x.y.z”。
+随后用 version-bump 准备 `<官方版本>[.<修订号>]`，按原有 main 发布流程处理。
+更新说明写明所适配的 Telegram Desktop 版本；不要把上游 beta 标记复制成我们的版本后缀或发布通道。
 
 ## 提交
 

@@ -414,6 +414,11 @@ void WithDropdownController::showBack() {
 	}
 }
 
+void WithDropdownController::setOtherDropdownCheck(
+		Fn<bool(QPoint globalPosition)> check) {
+	_otherDropdownCheck = std::move(check);
+}
+
 void WithDropdownController::showMenu() {
 	if (_menu) {
 		return;
@@ -427,6 +432,9 @@ void WithDropdownController::showMenu() {
 			_menuOverCallback(true);
 		} else if (type == QEvent::Leave) {
 			_menuOverCallback(false);
+		} else if (type == QEvent::MouseMove) {
+			const auto mouse = static_cast<QMouseEvent*>(e.get());
+			handleMenuMove(mouse->globalPos());
 		}
 	}, _menu->lifetime());
 	_menu->setHiddenCallback([=]{
@@ -459,6 +467,18 @@ void WithDropdownController::showMenu() {
 	}();
 	_menu->showAnimated(origin);
 	_menuToggled = true;
+}
+
+void WithDropdownController::handleMenuMove(QPoint globalPosition) {
+	if (!_menu || !_otherDropdownCheck) {
+		return;
+	}
+	const auto local = _button->mapFromGlobal(globalPosition);
+	if (_button->rect().contains(local)
+		|| !_otherDropdownCheck(globalPosition)) {
+		return;
+	}
+	_menu->hideFast();
 }
 
 OrderController::OrderController(

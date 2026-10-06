@@ -38,7 +38,7 @@ AyuGramDesktop/
 │   ├── lib_base / lib_crl / lib_rpl / lib_storage / ...  # 其余 desktop-app 子模块，一般不改
 │   └── 其余文件             # 均为上游原样
 ├── scripts/                 # prebuild.py / build.py（见构建章节）
-└── .github/upstream.json    # 已适配的官方稳定版号与同步跳过规则
+└── .github/upstream.json    # 已适配的官方 tag 版本号与同步跳过规则
 ```
 
 **子模块约定**：`lib_ui`、`lib_tl`、`codegen` 是 fork，改动先推到 fork 仓库，再更新主仓库的子模块指针；`cmake` 用官方子模块，定制由构建脚本打补丁。其余 `lib_*` 视为只读依赖。
@@ -321,15 +321,17 @@ Settings → AstraGram Preferences → Debug，可见条件是 `#ifdef _DEBUG` �
 
 ## upstream-sync skill
 
-同步官方 Telegram Desktop 稳定版。`.github/upstream.json` 只登记已适配的官方版本号，子模块基线取官方该版本记录的子模块指针，本地定制用 git diff 计算：
+同步官方 Telegram Desktop 最新 tag，包含正式版与测试版。`.github/upstream.json` 只登记已适配的官方版本号，子模块基线取官方该版本记录的子模块指针，本地定制用 git diff 计算：
 
 ```bash
-python scripts/upstream.py check              # 官方有没有更新的稳定版
+python scripts/upstream.py check              # 官方有没有更新的 tag，包含测试版
 python scripts/upstream.py report             # 生成各仓库的改动报告，保存在 build/upstream-sync/
 python scripts/upstream.py done <官方版本>     # 适配并编译通过后登记
 ```
 
-- 只跟随官方正式版，测试版不参与比较；官方标签放在 `refs/upstream-tags/`，不和本仓库同名的发布标签混在一起
+- 按版本号选取最新官方 tag，正式版与测试版一同参与比较；不跟进 tag 之间的开发分支提交
+- 保持 main 主线与现有发版方式，上游 beta 不强制本项目增加 beta 后缀；适配使用临时功能分支
+- 官方标签放在 `refs/upstream-tags/`，不和本仓库同名的发布标签混在一起
 - 报告按“需要合并 / 直接采用 / 官方新增 / 官方删除 / 已与目标一致 / 按 skip 跳过”分类，需要合并的文件已预演三方合并
 - `upstream.json` 里 `skip` 是长期不跟进的路径，`notes` 是跟进时要注意的路径，`deferred` 是暂缓、以后要补的改动
 - `lib_ui` 是 fork 的子模块：改动先推到 fork 仓库，再在主仓库更新子模块指针，两步都要做
@@ -401,4 +403,4 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 
 ## 上游与社区
 
-- 官方稳定版的检查、改动报告与登记统一走 `upstream-sync` skill
+- 官方 tag（包含测试版）的检查、改动报告与登记统一走 `upstream-sync` skill

@@ -128,6 +128,7 @@ Widget::Widget(
 , _mediaUploadState(std::move(services.mediaUploadState))
 , _cancelMediaUpload(std::move(services.cancelMediaUpload))
 , _addMediaAndGroupWithBlock(std::move(services.addMediaAndGroupWithBlock))
+, _submit(std::move(services.submit))
 , _peer(peer)
 , _state(std::move(state))
 , _showLimitToast(std::move(showLimitToast))
@@ -236,6 +237,8 @@ Widget::Widget(
 			&& !searchBlockedByLayer()) {
 			event->accept();
 			toggleSearch();
+			return base::EventFilterResult::Cancel;
+		} else if (handleSubmitShortcut(event)) {
 			return base::EventFilterResult::Cancel;
 		} else if (handleUndoRedoShortcutOverride(event)) {
 			return base::EventFilterResult::Cancel;

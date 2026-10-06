@@ -547,7 +547,12 @@ std::optional<SavedWindow> SavedWindows::serializeWindow(
 	if (id.thread) {
 		result.thread = SavedChatFromThread(id.thread);
 		const auto topic = id.thread->asTopic();
-		const auto peer = id.thread->peer();
+		const auto sublist = (id.type == SeparateType::SharedMedia)
+			? id.thread->asSublist()
+			: nullptr;
+		const auto peer = sublist
+			? sublist->sublistPeer()
+			: id.thread->peer();
 		result.title = topic
 			? topic->title()
 			: peer->isSelf()

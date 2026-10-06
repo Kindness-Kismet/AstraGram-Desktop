@@ -9208,7 +9208,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_InvalidConnectionLayerNote" = "You should re-login due to an error during the update.";
 "extras_LocalPremiumNotice" = "You're using **local** Telegram Premium.\nIt **won't** give you any benefits.\n**Enjoy the star near your nickname!**";
 "extras_DeveloperPopup" = "**{item}** is a member of the **AstraGram** development team.";
-"extras_OfficialResourcePopup" = "**{item}** is an official **AstraGram** channel.";
+"extras_OfficialResourcePopup" = "**{item}** is an official **AstraGram** resource.";
 "extras_MutualContactInfo" = "This contact is mutual.";
 "extras_SessionInfoOfficialApp" = "Official app";
 "extras_SettingsWatermark" = "AstraGram is based on AyuGram, developed and maintained by Radolyn Labs.";

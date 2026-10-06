@@ -65,5 +65,9 @@ set(desktop_app_skip_libs
     variant
 )
 
+if (LINUX)
+    include(Telegram/cmake/linux_heif_linking.cmake)
+endif()
+
 add_subdirectory(cmake)
 add_subdirectory(Telegram)

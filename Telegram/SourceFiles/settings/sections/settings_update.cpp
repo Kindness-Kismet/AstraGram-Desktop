@@ -4,6 +4,7 @@
 #include "boxes/about_box.h"
 #include "core/application.h"
 #include "core/launcher.h"
+#include "core/update_channel.h"
 #include "core/update_checker.h"
 #include "lang/lang_keys.h"
 #include "settings/settings_builder.h"
@@ -77,7 +78,7 @@ void BuildUpdateSection(SectionBuilder &builder) {
 	auto install = (Ui::SettingsButton*)nullptr;
 	auto check = (Ui::SettingsButton*)nullptr;
 	builder.scope([&] {
-		install = (cAlphaVersion() || KSandbox::isInside())
+		install = (cAlphaVersion() || Core::BuildIsCanary || KSandbox::isInside())
 			? nullptr
 			: builder.addButton({
 				.id = u"main/updates/install_beta"_q,
@@ -270,7 +271,7 @@ void SetupUpdate(not_null<Ui::VerticalLayout*> container) {
 			container,
 			object_ptr<Ui::VerticalLayout>(container)));
 	const auto inner = options->entity();
-	const auto install = (cAlphaVersion() || KSandbox::isInside())
+	const auto install = (cAlphaVersion() || Core::BuildIsCanary || KSandbox::isInside())
 		? nullptr
 		: inner->add(object_ptr<Settings::RowButton>(
 			inner,

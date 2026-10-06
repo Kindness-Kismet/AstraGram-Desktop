@@ -114,7 +114,7 @@ def read_current_version() -> str:
 
 
 def read_upstream_version() -> str:
-    """已适配的官方稳定版号，由 scripts/upstream.py done 登记。"""
+    """已适配的官方 tag 版本号，由 scripts/upstream.py done 登记。"""
     try:
         data = json.loads(_UPSTREAM_TRACKING.read_text(encoding="utf-8"))
         return str(data["tdesktop"])

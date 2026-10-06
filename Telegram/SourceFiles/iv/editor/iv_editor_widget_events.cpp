@@ -118,7 +118,8 @@ bool Widget::eventFilter(QObject *object, QEvent *event) {
 			const auto type = event->type();
 			if (type == QEvent::ShortcutOverride || type == QEvent::KeyPress) {
 				const auto keyEvent = static_cast<QKeyEvent*>(event);
-				if (handleFieldBlockInsertShortcut(keyEvent)
+				if (handleSubmitShortcut(keyEvent)
+					|| handleFieldBlockInsertShortcut(keyEvent)
 					|| handleStructuralBlockInsertShortcut(keyEvent)
 					|| handleBroaderFormatShortcut(keyEvent)) {
 					return true;
@@ -167,7 +168,8 @@ bool Widget::eventFilter(QObject *object, QEvent *event) {
 
 bool Widget::eventHook(QEvent *e) {
 	if (e->type() == QEvent::ShortcutOverride) {
-		if (handleFieldBlockInsertShortcut(
+		if (handleSubmitShortcut(static_cast<QKeyEvent*>(e))
+			|| handleFieldBlockInsertShortcut(
 				static_cast<QKeyEvent*>(e))
 			|| handleStructuralBlockInsertShortcut(
 				static_cast<QKeyEvent*>(e))
@@ -265,6 +267,8 @@ bool Widget::focusNextPrevChild(bool next) {
 void Widget::keyPressEvent(QKeyEvent *e) {
 	if (e->key() == Qt::Key_Escape && closeSearch()) {
 		e->accept();
+		return;
+	} else if (handleSubmitShortcut(e)) {
 		return;
 	} else if (handleUndoRedoShortcut(e)) {
 		return;
@@ -1313,6 +1317,11 @@ bool Widget::handleFieldMouseEvent(QEvent *event) {
 		} else {
 			_selectScroll.cancel();
 			if (bandSelectsInField) {
+				if (_fieldBandSelecting) {
+					// Nested synthetic move from the reveal scroll below.
+					mouse->accept();
+					return true;
+				}
 				const auto raw = _field->rawTextEdit();
 				const auto pointerCursor = raw->cursorForPosition(
 					raw->viewport()->mapFromGlobal(globalPoint));
@@ -1324,7 +1333,9 @@ bool Widget::handleFieldMouseEvent(QEvent *event) {
 				auto cursor = _field->textCursor();
 				if (cursor.position() != position) {
 					cursor.setPosition(position, QTextCursor::KeepAnchor);
+					_fieldBandSelecting = true;
 					_field->setTextCursor(cursor);
+					_fieldBandSelecting = false;
 				}
 				mouse->accept();
 				return true;
