@@ -9,15 +9,24 @@ description: 更新本应用的发布版本号并编写更新说明。用于升�
 在 CMake 配置阶段从它生成，不需要手动修改。
 
 版本号前三段等于 `.github/upstream.json` 登记的官方版本，第四段是本项目修订号：
-首次发布用 `x.y.z`，之后依次用 `x.y.z.1`、`x.y.z.2`。官方版本的变化走 upstream-sync。
+首次发布用 `x.y.z`，之后依次用 `x.y.z.1`、`x.y.z.2`。测试版在其后加 `.beta`，
+例如 `7.2.10.beta`、`7.2.10.1.beta`。官方版本的变化走 upstream-sync。
 
-1. 从 `origin` 确认本仓库地址，显式指定仓库查询最新稳定发布，确认当前官方版本下最大的修订号。
+`dev` 只发布测试版，GitHub 标记为 prerelease 且不覆盖 Latest；`main` 只发布稳定版。
+测试发布从 GitHub Releases 手动安装，本次未增加应用内 beta 更新源；现有自动更新仍指向稳定 Latest。
+存储版本、显示版本、系统资源版本仍为纯数字，GitHub tag 与发布名称保留 `.beta` 后缀。
+
+1. 从 `origin` 确认本仓库地址，显式指定仓库查询所有已发布版本（包括 prerelease），确认当前官方版本下最大的修订号。
+   稳定推广还需核对 main 与 dev 两个分支的版本，不能仅比较 Latest。
    查询失败时说明原因，待获得确切版本后继续。
-2. 选择比已发布版本更高的修订号，同一轮发布使用同一个目标版本。
+2. 稳定版与测试版共用递增修订号（0～99），新版本的 AppUpdateVersion 必须比已发布版本更高。
+   例如 `7.2.10.1.beta` 转稳定应使用 `7.2.10.2`，不能只删除 `.beta`；后续 dev 使用 `.3.beta`。
+   不改变既有更新码编码，避免影响已安装客户端；修订号耗尽时停止，不回绕。
+   稳定版本还要求 upstream.json 已登记 stable 基线，不能把 beta 上游伪装成稳定发布。
 3. 写好更新说明后修改版本号：
 
    ```bash
-   python scripts/build_support/version.py <官方版本>[.<本库修订号>]
+   python scripts/build_support/version.py <官方版本>[.<本库修订号>][.beta]
    ```
 
    脚本只改 `Telegram/build/version`，并检查前三段与已登记的官方版本一致、
@@ -77,4 +86,8 @@ python scripts/release_notes.py .github/CHANGELOG.md build/release-notes.md
 ```
 
 第一条显示当前版本，第二条按发布流程校验更新日志格式并生成发布正文。
-推送到 `main` 且版本文件有变化时，发布工作流会自动打标签、构建并公开发布。
+发布前运行 `python scripts/release_config.py --branch main` 或 `--branch dev` 核对通道。
+推送到 main 且版本文件有变化时自动发布稳定版；dev 上 BetaChannel=1 时自动发布测试版。
+dev 携带稳定版本文件时跳过远程构建与发布，支持新建分支、回合 main 和准备稳定推广。
+稳定推广通过 dev → main 的普通 merge，保留 dev，不 squash、不删除；随后 main 修复回合 dev。
+测试版不生成稳定更新清单 current6，也不改变稳定版自动更新入口。
