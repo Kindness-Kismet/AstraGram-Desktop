@@ -238,7 +238,8 @@ private:
 
 	void showFinished();
 	[[nodiscard]] Fn<void()> prepareFullWidthHideAnimation(
-		const Window::SectionShow &params);
+		const Window::SectionShow &params,
+		bool back);
 	[[nodiscard]] QRect fullWidthAnimationGeometry() const;
 	void handleAdaptiveLayoutUpdate();
 	void updateWindowAdaptiveLayout();

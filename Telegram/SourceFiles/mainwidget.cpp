@@ -1551,7 +1551,10 @@ void MainWidget::showHistory(
 		_controller->window().hideSettingsAndLayer();
 	}
 
-	const auto finishFullWidthAnimation = prepareFullWidthHideAnimation(params);
+	// 栈为空时关闭设置会以清空栈的方式回到对话列表，同样按后退方向过渡。
+	const auto finishFullWidthAnimation = prepareFullWidthHideAnimation(
+		params,
+		back);
 	const auto fullWidthAnimationGuard = gsl::finally([&] {
 		if (finishFullWidthAnimation) {
 			finishFullWidthAnimation();
@@ -1902,7 +1905,9 @@ Window::SectionSlideParams MainWidget::prepareMainSectionAnimation(
 	return prepareShowAnimation(section->hasTopBarShadow(), fromBottom);
 }
 
-Fn<void()> MainWidget::prepareFullWidthHideAnimation(const SectionShow &params) {
+Fn<void()> MainWidget::prepareFullWidthHideAnimation(
+		const SectionShow &params,
+		bool back) {
 	if (!_mainSection
 		|| !_mainSection->useFullWidth()
 		|| _showAnimation
@@ -1917,7 +1922,7 @@ Fn<void()> MainWidget::prepareFullWidthHideAnimation(const SectionShow &params) 
 	floatPlayerHideAll();
 	const auto oldContentCache = Ui::GrabWidget(parent, oldGeometry);
 	floatPlayerShowVisible();
-	const auto direction = params.way == SectionShow::Way::Backward
+	const auto direction = back
 		? Window::SlideDirection::FromLeft
 		: Window::SlideDirection::FromRight;
 	return [=] {
@@ -2014,7 +2019,9 @@ void MainWidget::showNewSection(
 		&& !newThirdSection
 		&& (_mainSection != nullptr);
 	const auto finishFullWidthAnimation = (!newThirdSection && !memento->instant())
-		? prepareFullWidthHideAnimation(params)
+		? prepareFullWidthHideAnimation(
+			params,
+			params.way == SectionShow::Way::Backward)
 		: nullptr;
 	const auto fullWidthAnimationGuard = gsl::finally([&] {
 		if (finishFullWidthAnimation) {
