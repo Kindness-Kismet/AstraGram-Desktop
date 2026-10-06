@@ -16,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_file_origin.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
+#include "extras/features/window_material/window_material.h"
 #include "inline_bots/bot_attach_web_view.h"
 #include "lang/lang_keys.h"
 #include "lottie/lottie_icon.h"
@@ -282,10 +283,13 @@ not_null<Ui::SettingsButton*> AddMyChannelsBox(
 
 void SetupMenuBots(
 		not_null<Ui::VerticalLayout*> container,
-		not_null<Window::SessionController*> controller) {
+		not_null<Window::SessionController*> controller,
+		const style::color &iconFg) {
 	const auto wrap = container->add(
 		object_ptr<Ui::VerticalLayout>(container));
 	const auto bots = &controller->session().attachWebView();
+	// 图标保存颜色地址，需指向调用方持有的颜色而非闭包副本。
+	const auto iconColor = &iconFg;
 	const auto iconLoadLifetime = wrap->lifetime().make_state<
 		rpl::lifetime
 	>();
@@ -318,6 +322,7 @@ void SetupMenuBots(
 				wrap,
 				rpl::single(bot.name),
 				st::mainMenuButton));
+			ExtrasFeatures::WindowMaterial::watchSurface(button);
 			const auto menu = button->lifetime().make_state<
 				base::unique_qptr<Ui::PopupMenu>
 			>();
@@ -330,7 +335,7 @@ void SetupMenuBots(
 				: Ui::CreateChild<InlineBots::MenuBotIcon>(
 					button,
 					bot.media);
-			icon->setColor(st::menuIconFg);
+			icon->setColor(*iconColor);
 			button->heightValue(
 			) | rpl::on_next([=](int height) {
 				icon->move(

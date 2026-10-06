@@ -84,6 +84,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/features/window_material/window_material.h"
 #include "extras/utils/telegram_helpers.h"
 #include "boxes/abstract_box.h"
 #include "styles/style_extras_icons.h"
@@ -91,6 +92,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/ui/settings/settings_main.h"
 #include "extras/ui/boxes/donation_box.h"
 #include "styles/style_info.h"
+
+#include <QtWidgets/QGraphicsEffect>
 
 
 namespace Window {
@@ -113,7 +116,7 @@ constexpr auto kPlayStatusLimit = 12;
 }
 
 // 外侧上下两角按 boxRadius 留空；贴窗口一侧的两角移出可见区域，保持直角。
-void FillBackground(QPainter &p, QSize size) {
+QPainterPath MenuBackgroundPath(QSize size) {
 	const auto radius = st::boxRadius;
 	auto path = QPainterPath();
 	path.addRoundedRect(
@@ -124,9 +127,42 @@ void FillBackground(QPainter &p, QSize size) {
 			size.height()),
 		radius,
 		radius);
-	auto hq = PainterHighQualityEnabler(p);
-	p.fillPath(path, st::mainMenuBg);
+	return path;
 }
+
+void FillBackground(QPainter &p, QSize size, bool windowBackdrop) {
+	if (windowBackdrop) {
+		return;
+	}
+	auto hq = PainterHighQualityEnabler(p);
+	p.fillPath(MenuBackgroundPath(size), st::mainMenuBg);
+}
+
+class MainMenuMaterialEffect final : public QGraphicsEffect {
+public:
+	explicit MainMenuMaterialEffect(not_null<MainMenu*> menu)
+	: QGraphicsEffect(menu.get())
+	, _menu(menu) {
+	}
+
+private:
+	void draw(QPainter *p) override {
+		auto offset = QPoint();
+		const auto content = sourcePixmap(Qt::LogicalCoordinates, &offset, NoPad);
+		// 前景完整合成后再清除底下的界面，避免子控件重绘擦掉相邻文字。
+		p->save();
+		{
+			auto hq = PainterHighQualityEnabler(*p);
+			p->setCompositionMode(QPainter::CompositionMode_Source);
+			p->fillPath(MenuBackgroundPath(_menu->size()), Qt::transparent);
+		}
+		p->setCompositionMode(QPainter::CompositionMode_SourceOver);
+		p->drawPixmap(offset, content);
+		p->restore();
+	}
+
+	const not_null<MainMenu*> _menu;
+};
 
 [[nodiscard]] rpl::producer<TextWithEntities> PreferencesLabel() {
 	return tr::extras_Preferences() | rpl::map([](const QString& text) {
@@ -258,6 +294,11 @@ MainMenu::MainMenu(
 	not_null<SessionController*> controller)
 : LayerWidget(parent)
 , _controller(controller)
+, _iconFg([=] {
+	return ExtrasFeatures::WindowMaterial::foregroundColor(
+		this,
+		st::menuIconFg->c);
+})
 , _userpicButton(
 	this,
 	_controller->session().user(),
@@ -311,6 +352,12 @@ MainMenu::MainMenu(
 	Ui::CreateChild<Ui::FlatLabel>(_footer.get(), st::mainMenuTelegramLabel))
 , _version(AddVersionLabel(_footer)) {
 	setObjectName(u"mainMenu"_q);
+	const auto material = new MainMenuMaterialEffect(this);
+	setGraphicsEffect(material);
+	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=](bool active) {
+		material->setEnabled(active);
+		_iconFg.refresh();
+	}, lifetime());
 	_scroll->setObjectName(u"mainMenu.scroll"_q);
 	_toggleAccounts->setObjectName(u"mainMenu.accounts"_q);
 	_setEmojiStatus->setObjectName(u"mainMenu.preferences"_q);
@@ -435,9 +482,11 @@ MainMenu::MainMenu(
 			snowRaw->paintRequest(
 			) | rpl::on_next([=](const QRect &r) {
 				auto p = Painter(snowRaw);
-				FillBackground(p, size());
-				drawCover(p);
-				drawName(p);
+				if (!hasWindowBackdrop()) {
+					FillBackground(p, size(), false);
+					drawCover(p);
+					drawName(p);
+				}
 				snow->paint(p, snowRaw->rect());
 			}, snowRaw->lifetime());
 			widthValue(
@@ -462,6 +511,10 @@ MainMenu::MainMenu(
 }
 
 MainMenu::~MainMenu() = default;
+
+bool MainMenu::hasWindowBackdrop() const {
+	return ExtrasFeatures::WindowMaterial::isActive(this);
+}
 
 void MainMenu::moveBadge() {
 	const auto badgeWidth = _badge->widget()
@@ -539,7 +592,7 @@ void MainMenu::setupArchive() {
 		inner,
 		tr::lng_archived_name(),
 		st::mainMenuButton,
-		{ .icon = &st::menuIconArchiveOpen, .color = &st::menuIconFg });
+		{ .icon = &st::menuIconArchiveOpen, .color = &_iconFg.color() });
 	inner->add(
 		object_ptr<Ui::PlainShadow>(inner, st::windowDividerFg),
 		st::mainMenuSeparatorPadding);
@@ -692,12 +745,13 @@ void MainMenu::setupMenu() {
 			rpl::producer<QString> text,
 			IconDescriptor &&descriptor,
 			QString name = {}) {
-		descriptor.color = &st::menuIconFg;
+		descriptor.color = &_iconFg.color();
 		const auto button = AddButtonWithIcon(
 			section,
 			std::move(text),
 			st::mainMenuButton,
 			std::move(descriptor));
+		ExtrasFeatures::WindowMaterial::watchSurface(button);
 		// name 是调试服务端的语义寻址标识（control.click menu.xxx），空则不打。
 		if (!name.isEmpty()) {
 			button->setObjectName(u"menu."_q + std::move(name));
@@ -717,7 +771,7 @@ void MainMenu::setupMenu() {
 		}
 
 		if (settings.showBotsInDrawer()) {
-			SetupMenuBots(section, controller);
+			SetupMenuBots(section, controller, _iconFg.color());
 		}
 		nextSection();
 
@@ -989,7 +1043,7 @@ void MainMenu::paintEvent(QPaintEvent *e) {
 	const auto clip = e->rect();
 	const auto cover = QRect(0, 0, width(), st::mainMenuCoverHeight);
 
-	FillBackground(p, size());
+	FillBackground(p, size(), hasWindowBackdrop());
 	if (cover.intersects(clip)) {
 		drawCover(p);
 		drawName(p);
@@ -999,7 +1053,9 @@ void MainMenu::paintEvent(QPaintEvent *e) {
 void MainMenu::drawCover(Painter &p) {
 	auto hq = PainterHighQualityEnabler(p);
 	p.setPen(Qt::NoPen);
-	p.setBrush(st::windowBgOver);
+	p.setBrush(ExtrasFeatures::WindowMaterial::cardColor(
+		this,
+		st::windowBgOver->c));
 	p.drawRoundedRect(
 		QRect(0, 0, width(), st::mainMenuCoverHeight).marginsRemoved(
 			QMargins(st::mainMenuCoverMargin, st::mainMenuCoverMargin,

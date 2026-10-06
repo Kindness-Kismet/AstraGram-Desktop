@@ -919,10 +919,11 @@ void MenuBotIcon::validate() {
 			_mask = Images::Colored(std::move(_mask), Qt::white);
 		}
 	}
-	if (_image.isNull()) {
-		_image = style::colorizeImage(
-			_mask,
-			_color ? *_color : st::menuIconColor);
+	// 颜色可能随窗口材质变化而调色板不变，缓存按实际颜色失效。
+	const auto color = (_color ? *_color : st::menuIconColor)->c;
+	if (_image.isNull() || _imageColor != color) {
+		_imageColor = color;
+		_image = style::colorizeImage(_mask, color);
 	}
 }
 

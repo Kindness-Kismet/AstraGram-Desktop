@@ -533,6 +533,7 @@ private:
 	const style::icon *_icon = nullptr;
 	const style::color *_color = nullptr;
 	QImage _image;
+	QColor _imageColor;
 	QImage _mask;
 
 };

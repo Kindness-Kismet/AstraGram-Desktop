@@ -28,6 +28,7 @@ class SessionController;
 
 void SetupMenuBots(
 	not_null<Ui::VerticalLayout*> container,
-	not_null<SessionController*> controller);
+	not_null<SessionController*> controller,
+	const style::color &iconFg);
 
 } // namespace Window

@@ -3,6 +3,7 @@
 #include "base/basic_types.h"
 #include "rpl/producer.h"
 #include <QtGui/QColor>
+#include <optional>
 #include <vector>
 
 class QWidget;
@@ -17,12 +18,17 @@ void initialize(not_null<Ui::RpWindow*> window);
 	const QWidget *widget,
 	QColor opaque,
 	int alpha = 0);
-// 只登记承载主界面的控件；弹窗和浮层保持不透明。
+// 主界面与主菜单共用窗口材质，其余弹窗和浮层保持不透明。
 void watchSurface(not_null<QWidget*> widget);
 // 有效模式或主题变化也会通知，即使生效状态仍为 true。
 [[nodiscard]] rpl::producer<bool> changes(not_null<QWidget*> widget);
 [[nodiscard]] QColor rootTintColor(const QWidget *widget);
 [[nodiscard]] QColor cardColor(const QWidget *widget, QColor opaque);
+// 材质背景随桌面变化，灰色图标与文字改用正文色，与设置页导航一致。
+// 生效时返回正文色，否则为空，可直接传给控件的颜色覆盖接口。
+[[nodiscard]] std::optional<QColor> foregroundOverride(const QWidget *widget);
+// 生效时返回正文色，否则返回 normal，供绘制代码直接使用。
+[[nodiscard]] QColor foregroundColor(const QWidget *widget, QColor normal);
 [[nodiscard]] std::vector<::WindowMaterial> availableModes();
 
 } // namespace ExtrasFeatures::WindowMaterial

@@ -8,6 +8,7 @@
 #include "ui/widgets/rp_window.h"
 #include "ui/ui_utility.h"
 #include "window/themes/window_theme.h"
+#include "window/window_main_menu.h"
 #include "styles/style_widgets.h"
 #include "styles/palette.h"
 
@@ -195,7 +196,8 @@ bool isActive(const QWidget *widget) {
 		return false;
 	}
 	for (auto ancestor = widget; ancestor; ancestor = ancestor->parentWidget()) {
-		if (dynamic_cast<const Ui::LayerWidget*>(ancestor)
+		if ((dynamic_cast<const Ui::LayerWidget*>(ancestor)
+				&& !dynamic_cast<const Window::MainMenu*>(ancestor))
 			|| dynamic_cast<const ChatHelpers::TabbedPanel*>(ancestor)) {
 			return false;
 		}
@@ -241,6 +243,16 @@ QColor cardColor(const QWidget *widget, QColor opaque) {
 	return Window::Theme::IsNightMode()
 		? QColor(0, 0, 0, 0xCC)
 		: QColor(0xFF, 0xFF, 0xFF, 0xCC);
+}
+
+std::optional<QColor> foregroundOverride(const QWidget *widget) {
+	return isActive(widget)
+		? std::make_optional(st::windowFg->c)
+		: std::nullopt;
+}
+
+QColor foregroundColor(const QWidget *widget, QColor normal) {
+	return foregroundOverride(widget).value_or(normal);
 }
 
 std::vector<::WindowMaterial> availableModes() {
