@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/ui/chat_search_in.h"
 
+#include "extras/features/window_material/window_material.h"
 #include "lang/lang_keys.h"
 #include "menu/menu_checked_action.h"
 #include "ui/text/text_utilities.h"
@@ -374,6 +375,7 @@ void ChatSearchIn::updateSection(
 		}, raw->lifetime());
 
 		section->shadow = std::make_unique<Ui::PlainShadow>(this);
+		ExtrasFeatures::WindowMaterial::watchSurface(section->shadow.get());
 		section->shadow->show();
 
 		const auto st = &st::dialogsCancelSearchInPeer;

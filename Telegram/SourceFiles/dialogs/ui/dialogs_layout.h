@@ -76,7 +76,7 @@ struct PaintContext {
 	bool narrow = false;
 	bool displayUnreadInfo = false;
 	bool insideCommunity = false;
-	// 材质背景下未选中行的灰色文字与图标改用正文色。
+	// 材质背景下未选中行的灰色文字与图标改用正文色，行间不画分隔线。
 	bool windowMaterial = false;
 };
 

@@ -1466,6 +1466,7 @@ void Suggestions::setupTabs() {
 	}, _tabs->lifetime());
 
 	const auto shadow = Ui::CreateChild<Ui::PlainShadow>(this);
+	ExtrasFeatures::WindowMaterial::watchSurface(shadow);
 	shadow->lower();
 
 	_tabsScroll->move(0, 0);

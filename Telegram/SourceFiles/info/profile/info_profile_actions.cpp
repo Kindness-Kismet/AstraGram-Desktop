@@ -91,6 +91,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_variant.h"
 #include "ui/toast/toast.h"
 #include "ui/vertical_list.h"
+#include "ui/widgets/box_content_divider.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/labels.h"
@@ -3035,7 +3036,8 @@ void ActionsFiller::addBalanceActions(not_null<UserData*> user) {
 	auto currencyBalance = AddCurrencyAction(user, inner, _controller);
 	auto creditsBalance = AddCreditsAction(user, inner, _controller);
 	Ui::AddSkip(inner);
-	Ui::AddDivider(inner);
+	ExtrasFeatures::WindowMaterial::watchSurface(
+		inner->add(object_ptr<Ui::BoxContentDivider>(inner)));
 	Ui::AddSkip(inner);
 	wrap->toggleOn(
 		rpl::combine(
@@ -3120,7 +3122,8 @@ void ActionsFiller::addFastButtonsMode(not_null<UserData*> user) {
 		st::infoSharedMediaButtonIconPosition);
 
 	AddSkip(_wrap);
-	AddDivider(_wrap);
+	ExtrasFeatures::WindowMaterial::watchSurface(
+		_wrap->add(object_ptr<Ui::BoxContentDivider>(_wrap)));
 	AddSkip(_wrap);
 
 	button->toggleOn(bots->enabledValue(user));

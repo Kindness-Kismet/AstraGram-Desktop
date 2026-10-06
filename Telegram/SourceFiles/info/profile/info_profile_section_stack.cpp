@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_section_stack.h"
 
+#include "extras/features/window_material/window_material.h"
 #include "ui/widgets/box_content_divider.h"
 #include "ui/widgets/labels.h"
 #include "ui/wrap/slide_wrap.h"
@@ -24,11 +25,12 @@ namespace {
 		not_null<Ui::VerticalLayout*> layout) {
 	auto inner = object_ptr<Ui::VerticalLayout>(layout);
 	Ui::AddSkip(inner.data(), st::infoProfileSkip);
-	inner->add(object_ptr<Ui::BoxContentDivider>(
+	const auto divider = inner->add(object_ptr<Ui::BoxContentDivider>(
 		inner.data(),
 		st::lineWidth,
 		st::infoProfileDivider),
 		st::infoProfileDividerPadding);
+	ExtrasFeatures::WindowMaterial::watchSurface(divider);
 	Ui::AddSkip(inner.data(), st::infoProfileSkip);
 	return layout->add(object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 		layout,
@@ -46,12 +48,18 @@ namespace {
 		std::move(text),
 		st::defaultDividerLabel.label);
 	const auto rawLabel = label.data();
-	inner->add(object_ptr<Ui::DividerLabel>(
+	const auto divider = inner->add(object_ptr<Ui::DividerLabel>(
 		inner.data(),
 		std::move(label),
 		st::defaultBoxDividerLabelPadding,
 		st::defaultDividerLabel.bar,
 		RectPart::Top | RectPart::Bottom));
+	// 材质背景下只保留说明文字，背景条随分隔线一起隐藏。
+	for (const auto child : divider->children()) {
+		if (const auto bar = dynamic_cast<Ui::BoxContentDivider*>(child)) {
+			ExtrasFeatures::WindowMaterial::watchSurface(bar);
+		}
+	}
 	Ui::AddSkip(inner.data(), st::infoProfileSkip);
 	const auto wrap = layout->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(

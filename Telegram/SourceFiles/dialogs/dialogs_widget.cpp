@@ -2288,6 +2288,7 @@ void Widget::toggleFiltersMenu(bool enabled) {
 		raw->stackUnder(_scroll);
 		raw->resizeToWidth(width());
 		const auto shadow = Ui::CreateChild<Ui::PlainShadow>(raw);
+		ExtrasFeatures::WindowMaterial::watchSurface(shadow);
 		shadow->show();
 		inner->sizeValue() | rpl::on_next([=, this](const QSize &s) {
 			raw->resize(s);
@@ -2711,6 +2712,7 @@ void Widget::refreshTopBars() {
 				true),
 			Core::App().appDeactivatedValue());
 		_forumTopShadow = std::make_unique<Ui::PlainShadow>(this);
+		ExtrasFeatures::WindowMaterial::watchSurface(_forumTopShadow.get());
 
 		_forumRequestsBar->barClicks(
 		) | rpl::on_next([=] {

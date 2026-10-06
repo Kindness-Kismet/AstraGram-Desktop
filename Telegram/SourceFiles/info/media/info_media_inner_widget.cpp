@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_forum_topic.h"
 #include "data/data_peer.h"
 #include "data/data_saved_sublist.h"
+#include "extras/features/window_material/window_material.h"
 #include "ui/widgets/discrete_sliders.h"
 #include "ui/widgets/shadow.h"
 #include "ui/widgets/buttons.h"
@@ -59,7 +60,8 @@ void InnerWidget::createOtherTypes() {
 	_otherTypes->show();
 
 	createTypeButtons();
-	_otherTypes->add(object_ptr<Ui::BoxContentDivider>(_otherTypes));
+	ExtrasFeatures::WindowMaterial::watchSurface(
+		_otherTypes->add(object_ptr<Ui::BoxContentDivider>(_otherTypes)));
 
 	_otherTypes->resizeToWidth(width());
 	_otherTypes->heightValue(

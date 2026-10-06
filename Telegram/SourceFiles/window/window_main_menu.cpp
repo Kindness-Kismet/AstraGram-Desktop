@@ -354,6 +354,7 @@ MainMenu::MainMenu(
 	setObjectName(u"mainMenu"_q);
 	const auto material = new MainMenuMaterialEffect(this);
 	setGraphicsEffect(material);
+	ExtrasFeatures::WindowMaterial::watchSurface(_shadow->entity());
 	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=](bool active) {
 		material->setEnabled(active);
 		_iconFg.refresh();
@@ -593,9 +594,9 @@ void MainMenu::setupArchive() {
 		tr::lng_archived_name(),
 		st::mainMenuButton,
 		{ .icon = &st::menuIconArchiveOpen, .color = &_iconFg.color() });
-	inner->add(
+	ExtrasFeatures::WindowMaterial::watchSurface(inner->add(
 		object_ptr<Ui::PlainShadow>(inner, st::windowDividerFg),
-		st::mainMenuSeparatorPadding);
+		st::mainMenuSeparatorPadding));
 	button->setAcceptBoth(true);
 	button->clicks(
 	) | rpl::on_next([=](Qt::MouseButton which) {
@@ -734,6 +735,7 @@ void MainMenu::setupMenu() {
 				_menu,
 				object_ptr<Ui::PlainShadow>(_menu, st::windowDividerFg),
 				st::mainMenuSeparatorPadding));
+		ExtrasFeatures::WindowMaterial::watchSurface(separator->entity());
 		// 分隔线随分组布局立即显隐，让菜单入场截图包含最终状态。
 		separator->setDuration(0)->toggleOn(
 			section->heightValue() | rpl::map([](int height) {

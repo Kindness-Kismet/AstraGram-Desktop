@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_session.h"
 #include "data/data_user.h"
 #include "dialogs/dialogs_inner_widget.h"
+#include "extras/features/window_material/window_material.h"
 #include "history/view/history_view_chat_section.h"
 #include "info/media/info_media_buttons.h"
 #include "info/profile/info_profile_icon.h"
@@ -138,7 +139,8 @@ void SublistsWidget::setupOtherTypes() {
 	wrap->toggleOn(tracker.atLeastOneShownValue());
 	wrap->finishAnimating();
 
-	_layout->add(object_ptr<Ui::BoxContentDivider>(_layout));
+	ExtrasFeatures::WindowMaterial::watchSurface(
+		_layout->add(object_ptr<Ui::BoxContentDivider>(_layout)));
 	_layout->add(object_ptr<Ui::FixedHeightWidget>(
 		content,
 		st::infoProfileSkip));

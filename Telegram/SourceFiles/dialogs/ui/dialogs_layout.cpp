@@ -514,7 +514,10 @@ void PaintRow(
 			: st::dialogsBgOver);
 		p.drawRoundedRect(highlight, radius, radius);
 	}
-	if (!context.active && !context.selected && !context.narrow) {
+	if (!context.active
+		&& !context.selected
+		&& !context.narrow
+		&& !context.windowMaterial) {
 		p.fillRect(
 			geometry.x() + context.st->nameLeft,
 			geometry.bottom(),
