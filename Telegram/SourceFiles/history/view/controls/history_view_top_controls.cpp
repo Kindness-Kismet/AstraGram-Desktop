@@ -88,7 +88,7 @@ TopControls::TopControls(
 , _repliesRootId(descriptor.repliesRootId)
 , _topic(descriptor.topic)
 , _sublist(descriptor.sublist)
-, _monoforumPeerId(descriptor.monoforumPeerId)
+, _monoforumPeerId(activeThread()->monoforumPeerId())
 , _scroll(descriptor.scroll)
 , _list(descriptor.list)
 , _keyboardReservedHeight(std::move(descriptor.keyboardReservedHeight))
@@ -321,7 +321,7 @@ void TopControls::updatePinnedViewer() {
 		const auto fullHistory = !_repliesRootId && !_topic && !_sublist;
 		_minPinnedId = Data::ResolveMinPinnedId(
 			_history->peer,
-			fullHistory ? MsgId(0) : _repliesRootId,
+			activeThread()->topicRootId(),
 			fullHistory ? PeerId(0) : _monoforumPeerId,
 			migrated);
 	}
@@ -744,12 +744,13 @@ void TopControls::setupPinnedTracker() {
 		checkPinnedBarState();
 		return;
 	}
+	const auto topicRootId = thread->topicRootId();
 
 	SharedMediaViewer(
 		&_history->session(),
 		Storage::SharedMediaKey(
 			_history->peer->id,
-			_repliesRootId,
+			topicRootId,
 			_monoforumPeerId,
 			Storage::SharedMediaType::Pinned,
 			ServerMaxMsgId - 1),
@@ -764,13 +765,13 @@ void TopControls::setupPinnedTracker() {
 			const auto peerId = _history->peer->id;
 			const auto hiddenId = settings.hiddenPinnedMessageId(
 				peerId,
-				_repliesRootId,
+				topicRootId,
 				_monoforumPeerId);
 			const auto last = result.size() ? result[result.size() - 1] : 0;
 			if (hiddenId && hiddenId != last) {
 				settings.setHiddenPinnedMessageId(
 					peerId,
-					_repliesRootId,
+					topicRootId,
 					_monoforumPeerId,
 					0);
 				_history->session().saveSettingsDelayed();
@@ -785,7 +786,7 @@ void TopControls::checkPinnedBarState() {
 
 	const auto fullHistory = !_repliesRootId && !_topic && !_sublist;
 	const auto migrated = migratedPeer();
-	const auto topicRootId = fullHistory ? MsgId(0) : _repliesRootId;
+	const auto topicRootId = activeThread()->topicRootId();
 	const auto monoforumPeerId = fullHistory ? PeerId(0) : _monoforumPeerId;
 	const auto hiddenId = _history->peer->canPinMessages()
 		? MsgId(0)
@@ -1068,7 +1069,7 @@ void TopControls::hidePinnedMessage() {
 		Window::HidePinnedBar(
 			_controller,
 			_history->peer,
-			fullHistory ? MsgId(0) : _repliesRootId,
+			activeThread()->topicRootId(),
 			fullHistory ? PeerId(0) : _monoforumPeerId,
 			crl::guard(_wrap.get(), [=] {
 				if (_pinnedTracker) {
