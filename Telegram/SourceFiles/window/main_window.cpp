@@ -410,9 +410,11 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 	}));
 }))
 , _body(body()) {
-	// 实色背景必须完整覆盖，让侧栏动画的截图缓存保持不透明。
+	// 实色背景必须完整覆盖，让侧栏动画的截图缓存保持不透明；
+	// 材质生效时撤销不透明标记，截图先填透明，避免露出未初始化的像素。
 	_body->setObjectName(u"window.body"_q);
 	_body->setAttribute(Qt::WA_OpaquePaintEvent);
+	ExtrasFeatures::WindowMaterial::watchSurface(_body.data());
 	_body->paintRequest() | rpl::on_next([=](QRect clip) {
 		if (ExtrasFeatures::WindowMaterial::isActive(_body)) {
 			return;

@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_slide_animation.h"
+#include "extras/features/window_material/window_material.h"
 #include "ui/rp_widget.h"
 #include "ui/ui_utility.h"
 #include "styles/style_basic.h"
@@ -32,6 +33,12 @@ void ShowSlideAnimation(
 	});
 	overlay->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(overlay);
+		if (ExtrasFeatures::WindowMaterial::isActive(overlay)) {
+			// 材质下截图是透明的，先清掉下层控件，只透出材质和截图。
+			p.setCompositionMode(QPainter::CompositionMode_Source);
+			p.fillRect(overlay->rect(), Qt::transparent);
+			p.setCompositionMode(QPainter::CompositionMode_SourceOver);
+		}
 		animation->paintContents(p);
 	}, overlay->lifetime());
 	overlay->show();

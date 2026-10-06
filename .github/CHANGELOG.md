@@ -10,6 +10,7 @@
 - Changed how starting the app again works; it now switches to the copy already running under your user account, even when started from another folder or with another data folder, and waits at most two seconds if that copy does not respond
 - Fixed an issue with the About page that previously caused it to show a generic icon instead of the selected app icon
 - Fixed an issue with the AI icons in chat automation and Premium AI compose that previously caused them to show solid blocks
+- Fixed an issue with leaving settings while a window material is on that previously caused a gray block to flash during the slide animation
 
 ---
 
@@ -25,3 +26,4 @@
 - 调整了重复启动应用时的行为，现在无论从哪个目录或数据目录启动，都会切换到当前用户已在运行的应用，该应用无响应时最多等待两秒
 - 修复了关于“关于”页面的错误，该问题曾导致页面显示通用图标而非所选的应用图标
 - 修复了关于聊天自动化和 Premium AI 撰写中人工智能图标的错误，该问题曾导致图标显示为实心色块
+- 修复了关于开启窗口材质时退出设置的错误，该问题曾导致滑动动画中闪过一块灰白色区域
