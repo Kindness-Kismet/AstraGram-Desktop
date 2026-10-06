@@ -23,7 +23,7 @@ STAGES: list[Stage] = [
         dependencies=[],
         commands=r"""git clone https://github.com/desktop-app/patches.git
 cd patches
-git checkout 519aaa084608fa6f9a2bfbd1959d133c44d94227
+git checkout c6b2868d527e2d00a2438e95225a22ce9346d79f
 """,
     ),
     Stage(
@@ -95,8 +95,7 @@ SET "RUSTUP_HOME=%THIRDPARTY_DIR%\rust\rustup"
 SET "CARGO_HOME=%THIRDPARTY_DIR%\rust\cargo"
 rustup-init.exe -y --no-modify-path --profile minimal ^
 --default-toolchain 1.96.1 ^
---component rust-src ^
---target aarch64-pc-windows-msvc
+--component rust-src
 del rustup-init.exe
 """,
     ),
@@ -295,29 +294,6 @@ cmake --install . --config Release
 """,
     ),
     Stage(
-        name="libde265",
-        location="Libraries",
-        version="0",
-        dependencies=[],
-        commands=r"""git clone -b v1.1.1 https://github.com/strukturag/libde265.git
-cd libde265
-cmake . ^
--DCMAKE_INSTALL_PREFIX=%LIBS_DIR%/local ^
--DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>" ^
--DCMAKE_POLICY_DEFAULT_CMP0091=NEW ^
--DCMAKE_C_FLAGS="/DLIBDE265_STATIC_BUILD" ^
--DCMAKE_CXX_FLAGS="/DLIBDE265_STATIC_BUILD" ^
--DENABLE_SDL=OFF ^
--DBUILD_SHARED_LIBS=OFF ^
--DENABLE_DECODER=OFF ^
--DENABLE_ENCODER=OFF
-cmake --build . --config Debug
-cmake --install . --config Debug
-cmake --build . --config Release
-cmake --install . --config Release
-""",
-    ),
-    Stage(
         name="libwebp",
         location="Libraries",
         version="0",
@@ -330,42 +306,6 @@ nmake /f Makefile.vc CFG=release-static OBJDIR=out RTLIBCFG=static ARCH=$X8664 a
 copy out\release-static\$X8664\lib\libwebp.lib out\release-static\$X8664\lib\webp.lib
 copy out\release-static\$X8664\lib\libwebpdemux.lib out\release-static\$X8664\lib\webpdemux.lib
 copy out\release-static\$X8664\lib\libwebpmux.lib out\release-static\$X8664\lib\webpmux.lib
-""",
-    ),
-    Stage(
-        name="libheif",
-        location="Libraries",
-        version="0",
-        dependencies=[],
-        commands=r"""git clone -b v1.23.1 https://github.com/strukturag/libheif.git
-cd libheif
-%THIRDPARTY_DIR%\msys64\usr\bin\sed.exe -i 's/LIBHEIF_EXPORTS/LIBDE265_STATIC_BUILD/g' libheif/CMakeLists.txt
-%THIRDPARTY_DIR%\msys64\usr\bin\sed.exe -i 's/HAVE_VISIBILITY/LIBHEIF_STATIC_BUILD/g' libheif/CMakeLists.txt
-%THIRDPARTY_DIR%\msys64\usr\bin\sed.exe -i 's/LIBHEIF_EXPORTS/LIBDE265_STATIC_BUILD/g' heifio/CMakeLists.txt
-%THIRDPARTY_DIR%\msys64\usr\bin\sed.exe -i 's/HAVE_VISIBILITY/LIBHEIF_STATIC_BUILD/g' heifio/CMakeLists.txt
-cmake . ^
--DCMAKE_INSTALL_PREFIX=%LIBS_DIR%/local ^
--DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>" ^
--DBUILD_SHARED_LIBS=OFF ^
--DBUILD_DOCUMENTATION=OFF ^
--DBUILD_TESTING=OFF ^
--DENABLE_PLUGIN_LOADING=OFF ^
--DWITH_LIBDE265=ON ^
--DWITH_X264=OFF ^
--DWITH_OpenH264_DECODER=OFF ^
--DWITH_SvtEnc=OFF ^
--DWITH_SvtEnc_PLUGIN=OFF ^
--DWITH_RAV1E=OFF ^
--DWITH_RAV1E_PLUGIN=OFF ^
--DWITH_LIBSHARPYUV=OFF ^
--DCMAKE_DISABLE_FIND_PACKAGE_TIFF=TRUE ^
--DCMAKE_DISABLE_FIND_PACKAGE_JPEG=TRUE ^
--DCMAKE_DISABLE_FIND_PACKAGE_PNG=TRUE ^
--DWITH_EXAMPLES=OFF
-cmake --build . --config Debug
-cmake --install . --config Debug
-cmake --build . --config Release
-cmake --install . --config Release
 """,
     ),
     Stage(
@@ -450,6 +390,43 @@ SET CHERE_INVOKING=enabled_from_arguments
 SET MSYS2_PATH_TYPE=inherit
 SET "ARCH_PARAM="
 bash --login ../patches/build_ffmpeg_win.sh
+""",
+    ),
+    Stage(
+        name="libheif",
+        location="Libraries",
+        version="0",
+        dependencies=["patches/libheif.patch"],
+        commands=r"""git clone -b v1.23.5 https://github.com/strukturag/libheif.git
+cd libheif
+git apply ../patches/libheif.patch
+%THIRDPARTY_DIR%\msys64\usr\bin\sed.exe -i 's/HAVE_VISIBILITY/LIBHEIF_STATIC_BUILD/g' libheif/CMakeLists.txt
+%THIRDPARTY_DIR%\msys64\usr\bin\sed.exe -i 's/HAVE_VISIBILITY/LIBHEIF_STATIC_BUILD/g' heifio/CMakeLists.txt
+cmake . ^
+-DCMAKE_INSTALL_PREFIX=%LIBS_DIR%/local ^
+-DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>" ^
+-DBUILD_SHARED_LIBS=OFF ^
+-DBUILD_DOCUMENTATION=OFF ^
+-DBUILD_TESTING=OFF ^
+-DENABLE_PLUGIN_LOADING=OFF ^
+-DWITH_LIBDE265=OFF ^
+-DWITH_FFMPEG_DECODER=ON ^
+-DFFMPEG_ROOT=%LIBS_DIR%/local ^
+-DWITH_X264=OFF ^
+-DWITH_OpenH264_DECODER=OFF ^
+-DWITH_SvtEnc=OFF ^
+-DWITH_SvtEnc_PLUGIN=OFF ^
+-DWITH_RAV1E=OFF ^
+-DWITH_RAV1E_PLUGIN=OFF ^
+-DWITH_LIBSHARPYUV=OFF ^
+-DCMAKE_DISABLE_FIND_PACKAGE_TIFF=TRUE ^
+-DCMAKE_DISABLE_FIND_PACKAGE_JPEG=TRUE ^
+-DCMAKE_DISABLE_FIND_PACKAGE_PNG=TRUE ^
+-DWITH_EXAMPLES=OFF
+cmake --build . --config Debug
+cmake --install . --config Debug
+cmake --build . --config Release
+cmake --install . --config Release
 """,
     ),
     Stage(

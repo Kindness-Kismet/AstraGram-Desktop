@@ -462,7 +462,7 @@ if customRunCommand:
 stage('patches', """
     git clone https://github.com/desktop-app/patches.git
     cd patches
-    git checkout 519aaa084608fa6f9a2bfbd1959d133c44d94227
+    git checkout c6b2868d527e2d00a2438e95225a22ce9346d79f
 mac:
     git clone https://github.com/desktop-app/qt6_highsierra_patches.git qt6_highsierra
     cd qt6_highsierra
@@ -532,8 +532,7 @@ win:
     SET "CARGO_HOME=%THIRDPARTY_DIR%\\rust\\cargo"
     rustup-init.exe -y --no-modify-path --profile minimal ^
         --default-toolchain """ + rustToolchain + """ ^
-        --component rust-src ^
-        --target aarch64-pc-windows-msvc
+        --component rust-src
     del rustup-init.exe
 mac:
     wget -O rustup-init.sh https://sh.rustup.rs
@@ -923,38 +922,6 @@ mac:
     cmake --install . --config MinSizeRel
 """)
 
-stage('libde265', """
-    git clone -b v1.1.1 https://github.com/strukturag/libde265.git
-    cd libde265
-win:
-    cmake . ^
-        -DCMAKE_INSTALL_PREFIX=%LIBS_DIR%/local ^
-        -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>" ^
-        -DCMAKE_POLICY_DEFAULT_CMP0091=NEW ^
-        -DCMAKE_C_FLAGS="/DLIBDE265_STATIC_BUILD" ^
-        -DCMAKE_CXX_FLAGS="/DLIBDE265_STATIC_BUILD" ^
-        -DENABLE_SDL=OFF ^
-        -DBUILD_SHARED_LIBS=OFF ^
-        -DENABLE_DECODER=OFF ^
-        -DENABLE_ENCODER=OFF
-    cmake --build . --config Debug
-    cmake --install . --config Debug
-release:
-    cmake --build . --config Release
-    cmake --install . --config Release
-mac:
-    cmake . \\
-        -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" \\
-        -D CMAKE_INSTALL_PREFIX:STRING=$USED_PREFIX \\
-        -D DISABLE_SSE=ON \\
-        -D ENABLE_SDL=OFF \\
-        -D BUILD_SHARED_LIBS=OFF \\
-        -D ENABLE_DECODER=ON \\
-        -D ENABLE_ENCODER=OFF
-    cmake --build . --config MinSizeRel
-    cmake --install . --config MinSizeRel
-""")
-
 stage('libwebp', """
     git clone -b v1.6.0 https://github.com/webmproject/libwebp.git
     cd libwebp
@@ -992,66 +959,6 @@ mac:
     lipo -create build.arm64/libwebpdemux.a build/libwebpdemux.a -output build/libwebpdemux.a
     lipo -create build.arm64/libwebpmux.a build/libwebpmux.a -output build/libwebpmux.a
     cmake --install build
-""")
-
-stage('libheif', """
-    git clone -b v1.23.1 https://github.com/strukturag/libheif.git
-    cd libheif
-win:
-    %THIRDPARTY_DIR%\\msys64\\usr\\bin\\sed.exe -i 's/LIBHEIF_EXPORTS/LIBDE265_STATIC_BUILD/g' libheif/CMakeLists.txt
-    %THIRDPARTY_DIR%\\msys64\\usr\\bin\\sed.exe -i 's/HAVE_VISIBILITY/LIBHEIF_STATIC_BUILD/g' libheif/CMakeLists.txt
-    %THIRDPARTY_DIR%\\msys64\\usr\\bin\\sed.exe -i 's/LIBHEIF_EXPORTS/LIBDE265_STATIC_BUILD/g' heifio/CMakeLists.txt
-    %THIRDPARTY_DIR%\\msys64\\usr\\bin\\sed.exe -i 's/HAVE_VISIBILITY/LIBHEIF_STATIC_BUILD/g' heifio/CMakeLists.txt
-    cmake . ^
-        -DCMAKE_INSTALL_PREFIX=%LIBS_DIR%/local ^
-        -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>" ^
-        -DBUILD_SHARED_LIBS=OFF ^
-        -DBUILD_DOCUMENTATION=OFF ^
-        -DBUILD_TESTING=OFF ^
-        -DENABLE_PLUGIN_LOADING=OFF ^
-        -DWITH_LIBDE265=ON ^
-        -DWITH_X264=OFF ^
-        -DWITH_OpenH264_DECODER=OFF ^
-        -DWITH_SvtEnc=OFF ^
-        -DWITH_SvtEnc_PLUGIN=OFF ^
-        -DWITH_RAV1E=OFF ^
-        -DWITH_RAV1E_PLUGIN=OFF ^
-        -DWITH_LIBSHARPYUV=OFF ^
-        -DCMAKE_DISABLE_FIND_PACKAGE_TIFF=TRUE ^
-        -DCMAKE_DISABLE_FIND_PACKAGE_JPEG=TRUE ^
-        -DCMAKE_DISABLE_FIND_PACKAGE_PNG=TRUE ^
-        -DWITH_EXAMPLES=OFF
-    cmake --build . --config Debug
-    cmake --install . --config Debug
-release:
-    cmake --build . --config Release
-    cmake --install . --config Release
-mac:
-    cmake . \\
-        -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" \\
-        -D CMAKE_INSTALL_PREFIX:STRING=$USED_PREFIX \\
-        -D BUILD_SHARED_LIBS=OFF \\
-        -D BUILD_DOCUMENTATION=OFF \\
-        -D BUILD_TESTING=OFF \\
-        -D ENABLE_PLUGIN_LOADING=OFF \\
-        -D WITH_AOM_ENCODER=OFF \\
-        -D WITH_AOM_DECODER=OFF \\
-        -D WITH_X265=OFF \\
-        -D WITH_X264=OFF \\
-        -D WITH_OpenH264_DECODER=OFF \\
-        -D WITH_SvtEnc=OFF \\
-        -D WITH_RAV1E=OFF \\
-        -D WITH_DAV1D=ON \\
-        -D WITH_LIBDE265=ON \\
-        -D LIBDE265_INCLUDE_DIR=$USED_PREFIX/include/ \\
-        -D LIBDE265_LIBRARY=$USED_PREFIX/lib/libde265.a \\
-        -D WITH_LIBSHARPYUV=OFF \\
-        -D CMAKE_DISABLE_FIND_PACKAGE_TIFF=TRUE \\
-        -D CMAKE_DISABLE_FIND_PACKAGE_JPEG=TRUE \\
-        -D CMAKE_DISABLE_FIND_PACKAGE_PNG=TRUE \\
-        -D WITH_EXAMPLES=OFF
-    cmake --build . --config MinSizeRel
-    cmake --install . --config MinSizeRel
 """)
 
 stage('libjxl', """
@@ -1384,6 +1291,68 @@ mac:
     lipo -create out.arm64/libavutil.a out.x86_64/libavutil.a -output libavutil/libavutil.a
 
     make install
+""")
+
+stage('libheif', """
+depends:patches/libheif.patch
+    git clone -b v1.23.5 https://github.com/strukturag/libheif.git
+    cd libheif
+    git apply ../patches/libheif.patch
+win:
+    %THIRDPARTY_DIR%\\msys64\\usr\\bin\\sed.exe -i 's/HAVE_VISIBILITY/LIBHEIF_STATIC_BUILD/g' libheif/CMakeLists.txt
+    %THIRDPARTY_DIR%\\msys64\\usr\\bin\\sed.exe -i 's/HAVE_VISIBILITY/LIBHEIF_STATIC_BUILD/g' heifio/CMakeLists.txt
+    cmake . ^
+        -DCMAKE_INSTALL_PREFIX=%LIBS_DIR%/local ^
+        -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>" ^
+        -DBUILD_SHARED_LIBS=OFF ^
+        -DBUILD_DOCUMENTATION=OFF ^
+        -DBUILD_TESTING=OFF ^
+        -DENABLE_PLUGIN_LOADING=OFF ^
+        -DWITH_LIBDE265=OFF ^
+        -DWITH_FFMPEG_DECODER=ON ^
+        -DFFMPEG_ROOT=%LIBS_DIR%/local ^
+        -DWITH_X264=OFF ^
+        -DWITH_OpenH264_DECODER=OFF ^
+        -DWITH_SvtEnc=OFF ^
+        -DWITH_SvtEnc_PLUGIN=OFF ^
+        -DWITH_RAV1E=OFF ^
+        -DWITH_RAV1E_PLUGIN=OFF ^
+        -DWITH_LIBSHARPYUV=OFF ^
+        -DCMAKE_DISABLE_FIND_PACKAGE_TIFF=TRUE ^
+        -DCMAKE_DISABLE_FIND_PACKAGE_JPEG=TRUE ^
+        -DCMAKE_DISABLE_FIND_PACKAGE_PNG=TRUE ^
+        -DWITH_EXAMPLES=OFF
+    cmake --build . --config Debug
+    cmake --install . --config Debug
+release:
+    cmake --build . --config Release
+    cmake --install . --config Release
+mac:
+    cmake . \\
+        -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" \\
+        -D CMAKE_INSTALL_PREFIX:STRING=$USED_PREFIX \\
+        -D BUILD_SHARED_LIBS=OFF \\
+        -D BUILD_DOCUMENTATION=OFF \\
+        -D BUILD_TESTING=OFF \\
+        -D ENABLE_PLUGIN_LOADING=OFF \\
+        -D WITH_AOM_ENCODER=OFF \\
+        -D WITH_AOM_DECODER=OFF \\
+        -D WITH_X265=OFF \\
+        -D WITH_X264=OFF \\
+        -D WITH_OpenH264_DECODER=OFF \\
+        -D WITH_SvtEnc=OFF \\
+        -D WITH_RAV1E=OFF \\
+        -D WITH_DAV1D=OFF \\
+        -D WITH_LIBDE265=OFF \\
+        -D WITH_FFMPEG_DECODER=ON \\
+        -D FFMPEG_ROOT=$USED_PREFIX \\
+        -D WITH_LIBSHARPYUV=OFF \\
+        -D CMAKE_DISABLE_FIND_PACKAGE_TIFF=TRUE \\
+        -D CMAKE_DISABLE_FIND_PACKAGE_JPEG=TRUE \\
+        -D CMAKE_DISABLE_FIND_PACKAGE_PNG=TRUE \\
+        -D WITH_EXAMPLES=OFF
+    cmake --build . --config MinSizeRel
+    cmake --install . --config MinSizeRel
 """)
 
 stage('openal-soft', """
