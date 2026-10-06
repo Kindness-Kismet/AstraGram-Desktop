@@ -62,6 +62,7 @@ private:
 	void showSource();
 	void saveCover();
 	void updateMenuGeometry();
+	void setupDropdownSwitching();
 	[[nodiscard]] AudioMsgId::Type playbackType() const;
 
 	const not_null<Window::SessionController*> _controller;

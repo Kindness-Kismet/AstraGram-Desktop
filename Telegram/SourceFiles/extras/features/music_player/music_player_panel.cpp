@@ -28,6 +28,7 @@
 #include "window/window_session_controller.h"
 
 #include <QtGui/QPainterPath>
+#include <array>
 
 namespace Extras::MusicPlayer {
 namespace {
@@ -193,6 +194,7 @@ CompactPanel::CompactPanel(
 	Core::App().settings().songVolumeChanges(
 	) | rpl::on_next(refreshVolume, lifetime());
 	refreshVolume();
+	setupDropdownSwitching();
 
 	_progress->setChangeProgressCallback([=](float64 value) { seek(value, false); });
 	_progress->setChangeFinishedCallback([=](float64 value) { seek(value, true); });
@@ -383,6 +385,37 @@ void CompactPanel::dismiss() {
 	if (const auto menu = _speedController->menu()) {
 		menu->hideFast();
 	}
+}
+
+void CompactPanel::setupDropdownSwitching() {
+	const auto controls = std::array<not_null<Ui::RpWidget*>, 3>{
+		_order.data(), _speed.data(), _volume.data(),
+	};
+	for (const auto control : controls) {
+		control->events(
+		) | rpl::filter([](not_null<QEvent*> event) {
+			return event->type() == QEvent::Enter;
+		}) | rpl::on_next([=] {
+			if (control.get() != _order.data()) {
+				if (const auto menu = _orderController->menu()) {
+					menu->hideFast();
+				}
+			}
+			if (control.get() != _speed.data()) {
+				if (const auto menu = _speedController->menu()) {
+					menu->hideFast();
+				}
+			}
+		}, lifetime());
+	}
+	const auto otherDropdownCheck = [=](QPoint position) {
+		return ranges::any_of(controls, [&](not_null<Ui::RpWidget*> control) {
+			return !control->isHidden()
+				&& control->rect().contains(control->mapFromGlobal(position));
+		});
+	};
+	_orderController->setOtherDropdownCheck(otherDropdownCheck);
+	_speedController->setOtherDropdownCheck(otherDropdownCheck);
 }
 
 void CompactPanel::setMenuBounds(QRect bounds) {
