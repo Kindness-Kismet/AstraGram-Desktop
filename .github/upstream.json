@@ -1,12 +1,13 @@
 {
   "$comment": [
-    "只登记已适配的官方 Telegram Desktop 稳定版。适配完成并编译通过后，由 python scripts/upstream.py done <版本> 更新。",
+    "登记已适配的官方 Telegram Desktop 版本及 tdesktop_channel（stable 或 beta）。适配完成并编译通过后，由 python scripts/upstream.py done <版本> 更新。",
     "子模块基线取官方该版本记录的子模块指针；本地定制用 git diff 计算，不需要登记。",
     "skip：长期不跟进的路径，报告里单独列出并注明原因。",
     "notes：跟进时要注意的路径，报告里随文件标注。",
     "deferred：暂缓跟进、以后要补的改动，每次报告都会列出，补上后删除。"
   ],
   "tdesktop": "7.2.9",
+  "tdesktop_channel": "stable",
   "skip": {
     ".agents/": "官方给 AI 工具的配置，本仓库自己维护一份。",
     ".claude/": "官方给 AI 工具的配置，本仓库自己维护一份。",

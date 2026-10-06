@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""同步官方 Telegram Desktop 稳定版。
+"""同步官方 Telegram Desktop 稳定版与测试版。
 
-.github/upstream.json 只登记已适配的官方稳定版号；子模块基线取官方该版本记录的
+.github/upstream.json 只登记已适配的官方版本号与通道；子模块基线取官方该版本记录的
 子模块指针，本地定制一律用 git diff 计算。
 """
 from __future__ import annotations
@@ -20,26 +20,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from build_support.cmake_patch import patch_anchors  # noqa: E402
 from build_support.paths import ROOT  # noqa: E402
+from build_support.upstream_releases import Release, parse_releases, pick, select_target, targets  # noqa: E402
 
 TRACKING = ROOT / ".github" / "upstream.json"
 OUT_DIR = ROOT / "build" / "upstream-sync"
 OFFICIAL_URL = "https://github.com/telegramdesktop/tdesktop.git"
 # 官方标签与 AyuGram 自己的发布标签同名，放进独立命名空间避免互相覆盖。
 TAG_REFS = "refs/upstream-tags/"
-_TAG = re.compile(r"v(\d+)\.(\d+)\.(\d+)")
 # 本地文件不到官方一半且官方超过这个大小时，按“可能已拆分”提示。
 _SPLIT_MIN_SIZE = 40_000
-
-
-@dataclass(frozen=True)
-class Release:
-    version: str
-    commit: str
-    date: str
-
-    @property
-    def key(self) -> tuple[int, ...]:
-        return tuple(int(part) for part in self.version.split("."))
 
 
 @dataclass
@@ -140,29 +129,14 @@ def fetch_releases() -> list[Release]:
 
 
 def releases() -> list[Release]:
-    """只保留正式版：提交标题以 Version x.y.z 开头，测试版是 Beta version。"""
+    """保留两种通道，基线查找不受目标通道限制。"""
     raw = git(
         "for-each-ref", TAG_REFS,
         "--format=%(refname:lstrip=2)\t%(if)%(*objectname)%(then)"
         "%(*objectname)\t%(*subject)\t%(*committerdate:short)%(else)"
         "%(objectname)\t%(subject)\t%(committerdate:short)%(end)",
     )
-    result = []
-    for line in raw.splitlines():
-        name, sha, subject, date = line.split("\t")
-        if not _TAG.fullmatch(name):
-            continue
-        version = name[1:]
-        if re.match(rf"Version {re.escape(version)}\b", subject):
-            result.append(Release(version, sha, date))
-    return sorted(result, key=lambda release: release.key)
-
-
-def pick(items: list[Release], version: str) -> Release:
-    for release in items:
-        if release.version == version:
-            return release
-    raise SystemExit(f"Upstream has no stable release {version}.")
+    return parse_releases(raw)
 
 
 def submodules(revision: str) -> dict[str, tuple[str, str]]:
@@ -370,20 +344,20 @@ def check(args: argparse.Namespace) -> int:
     current = load()["tdesktop"]
     items = fetch_releases()
     adapted = pick(items, current)
-    newer = [release for release in items if release.key > adapted.key]
-    print(f"Adapted upstream release: {current} ({adapted.date})")
+    newer = [release for release in targets(items, args.channel) if release.key > adapted.key]
+    print(f"Adapted upstream release: {current} ({adapted.channel}, {adapted.date})")
     if not newer:
-        print("Already at the latest upstream stable release; no synchronization needed.")
+        print(f"No newer upstream release in the {args.channel} channel; baseline stays at {current}.")
         return 0
     listed = ", ".join(f"{release.version} ({release.date})" for release in newer)
-    print(f"Upstream has {len(newer)} newer stable releases: {listed}")
+    print(f"Upstream has {len(newer)} newer releases in the {args.channel} channel: {listed}")
     target = newer[-1]
     count = len(git("rev-list", f"{adapted.commit}..{target.commit}").splitlines())
     old, new = submodules(adapted.commit), submodules(target.commit)
     moved = sorted(path for path in old.keys() | new.keys() if old.get(path) != new.get(path))
     print(f"{current} -> {target.version}: {count} new upstream commits, "
           f"{len(moved)} changed submodules{(': ' + ', '.join(moved)) if moved else ''}")
-    print("Generate a synchronization report: python scripts/upstream.py report")
+    print(f"Generate a synchronization report: python scripts/upstream.py report --channel {args.channel}")
     return 0
 
 
@@ -391,7 +365,7 @@ def report(args: argparse.Namespace) -> int:
     config = load()
     items = fetch_releases()
     base = pick(items, args.base or config["tdesktop"])
-    head = pick(items, args.to) if args.to else items[-1]
+    head = select_target(items, args.to, args.channel)
     if head.key <= base.key:
         print(f"Target {head.version} is not newer than baseline {base.version}; nothing to synchronize.")
         return 0
@@ -473,7 +447,7 @@ def report(args: argparse.Namespace) -> int:
         for entry in item.merge + item.take + item.added + item.deleted:
             if entry.note and entry.note not in ("本地改过", "本地未改"):
                 flagged.append(f"- {item.name}：`{entry.path}`：{entry.note}")
-    regenerate = f"python scripts/upstream.py report --base {base.version} --to {head.version}"
+    regenerate = f"python scripts/upstream.py report --channel {args.channel} --base {base.version} --to {head.version}"
     lines = [
         f"# 官方同步报告：{base.version} → {head.version}\n",
         f"生成于 {datetime.date.today().isoformat()}，按本地已提交的 HEAD "
@@ -512,8 +486,8 @@ def report(args: argparse.Namespace) -> int:
         "\n## 接下来\n",
         "1. 阅读各仓库的报告，按用户决定的范围合并；每个仓库的处理方式写在它的报告开头。",
         "2. 子模块指针或依赖配方有变化时先运行 `python scripts/prebuild.py`，再编译验证。",
-        f"3. 暂时不跟进的改动写进 `upstream.json` 的 `deferred`，然后登记：`python scripts/upstream.py done {head.version}`。",
-        f"4. 用 version-bump 把本应用版本改为 {head.version}。",
+        f"3. 暂时不跟进的改动写进 `upstream.json` 的 `deferred`，然后登记：`python scripts/upstream.py done {head.version} --channel {args.channel}`。",
+        f"4. 用 version-bump 把本应用版本改为 {head.version}，按目标发布分支选择 beta 或 stable 通道。",
     ]
     write(out, "README.md", "\n".join(lines) + "\n")
     print(f"Report saved to {out.relative_to(ROOT).as_posix()}/README.md")
@@ -540,7 +514,10 @@ def lagging(target: Release) -> list[str]:
 def done(args: argparse.Namespace) -> int:
     config = load()
     items = fetch_releases()
-    target, current = pick(items, args.version), pick(items, config["tdesktop"])
+    target = select_target(items, args.version, args.channel)
+    current = pick(items, config["tdesktop"])
+    if target.channel == "beta" and git("branch", "--show-current").strip() == "main":
+        raise SystemExit("Beta upstream adaptation must be recorded on dev or its feature branch, not main.")
     if target.key <= current.key:
         print(f"Upstream {current.version} is already recorded; {target.version} is not newer.")
         return 0 if target == current else 1
@@ -550,6 +527,7 @@ def done(args: argparse.Namespace) -> int:
         print("\n".join(f"  {problem}" for problem in problems))
         return 1
     config["tdesktop"] = target.version
+    config["tdesktop_channel"] = target.channel
     TRACKING.write_text(
         json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"Recorded upstream {target.version} ({target.date}).")
@@ -563,17 +541,21 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    command = sub.add_parser("check", help="查看官方是否有更新的稳定版")
+    command = sub.add_parser("check", help="查看官方是否有更新版本")
     command.set_defaults(run=check)
 
-    command = sub.add_parser("report", help="生成基线到目标稳定版之间每个仓库的改动报告")
-    command.add_argument("--to", help="目标版本，默认官方最新稳定版")
+    command = sub.add_parser("report", help="生成基线到目标版本之间每个仓库的改动报告")
+    command.add_argument("--to", help="目标版本，默认所选通道的最新版本")
     command.add_argument("--base", help="基线版本，默认 upstream.json 登记的版本")
     command.set_defaults(run=report)
 
-    command = sub.add_parser("done", help="适配完成后登记新的官方稳定版")
+    command = sub.add_parser("done", help="适配完成后登记新的官方版本")
     command.add_argument("version", help="已适配的官方版本，如 7.3.0")
     command.set_defaults(run=done)
+
+    for command in sub.choices.values():
+        command.add_argument("--channel", choices=("stable", "beta"), default="stable",
+                             help="目标通道；beta 同时包含测试版与稳定版，默认 stable")
 
     args = parser.parse_args()
     return args.run(args)
