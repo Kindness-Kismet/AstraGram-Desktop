@@ -40,20 +40,33 @@ constexpr auto kSong = AudioMsgId::Type::Song;
 class CompactPlayButton final : public Ui::IconButton {
 public:
 	explicit CompactPlayButton(QWidget *parent)
-	: IconButton(parent, st::extrasMusicCompactPlay) {
+	: IconButton(parent, st::extrasMusicCompactPlay)
+	, _layout(st::mediaPlayerPlayIcon, [=] { update(); }) {
+	}
+
+	void setState(PlayButtonLayout::State state) {
+		_layout.setState(state);
+	}
+	void finishTransform() {
+		_layout.finishTransform();
 	}
 
 protected:
 	void paintEvent(QPaintEvent *event) override {
-		{
-			auto p = QPainter(this);
-			p.setRenderHint(QPainter::Antialiasing);
-			p.setPen(Qt::NoPen);
-			p.setBrush(st::windowBgActive);
-			p.drawEllipse(rect());
-		}
-		IconButton::paintEvent(event);
+		auto p = QPainter(this);
+		p.setRenderHint(QPainter::Antialiasing);
+		p.setPen(Qt::NoPen);
+		p.setBrush(st::windowBgActive);
+		p.drawEllipse(rect());
+		paintRipple(p, st::extrasMusicCompactPlay.rippleAreaPosition);
+		p.translate(
+			(width() - st::mediaPlayerPlayIcon.size.width()) / 2,
+			(height() - st::mediaPlayerPlayIcon.size.height()) / 2);
+		_layout.paint(p, st::windowFgActive);
 	}
+
+private:
+	PlayButtonLayout _layout;
 };
 
 CompactPanel::CompactPanel(
@@ -221,6 +234,7 @@ CompactPanel::CompactPanel(
 	}, lifetime());
 	resize(st::extrasMusicCompactWidth, st::extrasMusicCompactHeight);
 	refreshTrack();
+	_play->finishTransform();
 }
 
 CompactPanel::~CompactPanel() {
@@ -277,9 +291,9 @@ void CompactPanel::refreshPlayback(const TrackState &state) {
 		return;
 	}
 	_playing = ShowPauseIcon(state.state);
-	_play->setIconOverride(state.id.audio()->loading()
-		? &st::extrasMusicCompactCancel
-		: _playing ? &st::extrasMusicCompactPause : nullptr);
+	_play->setState(state.id.audio()->loading()
+		? PlayButtonLayout::State::Cancel
+		: _playing ? PlayButtonLayout::State::Pause : PlayButtonLayout::State::Play);
 	_play->setAccessibleName(_playing
 		? tr::extras_MusicPause(tr::now) : tr::extras_MusicPlay(tr::now));
 	_durationMs = (state.frequency > 0 && state.length > 0)

@@ -8,6 +8,7 @@
 #include "history/history_item.h"
 #include "lang/lang_keys.h"
 #include "media/audio/media_audio.h"
+#include "media/player/media_player_button.h"
 #include "media/player/media_player_instance.h"
 #include "media/player/media_player_panel.h"
 #include "styles/style_extras_styles.h"
@@ -37,7 +38,10 @@ class FloatingButton final : public Ui::RippleButton, public Ui::AbstractTooltip
 public:
 	explicit FloatingButton(QWidget *parent)
 	: RippleButton(parent, st::defaultRippleAnimation)
-	, _animation([=] { update(); }) {
+	, _animation([=] { update(); })
+	, _pausedIcon(st::mediaPlayerPlayIcon, [=] { update(); }) {
+		_pausedIcon.setState(Media::Player::PlayButtonLayout::State::Pause);
+		_pausedIcon.finishTransform();
 		const auto side = st::extrasMusicFloatingSize + 2 * st::extrasMusicFloatingShadow;
 		resize(side, side);
 		setObjectName(u"music.floating"_q);
@@ -120,7 +124,10 @@ protected:
 		p.drawEllipse(circle);
 		paintRipple(p, shadow, shadow);
 		if (!_playing) {
-			st::mediaPlayerPauseIcon.paintInCenter(p, circle.toRect());
+			p.translate(circle.center() - QPointF(
+				st::mediaPlayerPlayIcon.size.width() / 2.,
+				st::mediaPlayerPlayIcon.size.height() / 2.));
+			_pausedIcon.paint(p, st::mediaPlayerActiveFg);
 			return;
 		}
 		p.setPen(Qt::NoPen);
@@ -139,6 +146,7 @@ protected:
 
 private:
 	base::Timer _animation;
+	Media::Player::PlayButtonLayout _pausedIcon;
 	QString _title;
 	bool _playing = false;
 	bool _expanded = false;
