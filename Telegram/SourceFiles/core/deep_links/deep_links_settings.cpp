@@ -511,7 +511,7 @@ void RegisterSettingsHandlers(Router &router) {
 	router.add(u"settings"_q, {
 		.path = u"profile-photo/use-emoji"_q,
 		.action = SettingsControl{
-			::Settings::MainId(),
+			::Settings::InformationId(),
 			u"profile-photo/use-emoji"_q,
 		},
 	});
@@ -1757,7 +1757,7 @@ void RegisterSettingsHandlers(Router &router) {
 	router.add(u"settings"_q, {
 		.path = u"edit/set-photo"_q,
 		.action = SettingsControl{
-			::Settings::MainId(),
+			::Settings::InformationId(),
 			u"profile-photo"_q,
 		},
 	});

@@ -12,7 +12,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_cloud_password.h"
 #include "api/api_global_privacy.h"
-#include "api/api_peer_photo.h"
 #include "api/api_premium.h"
 #include "api/api_sensitive_content.h"
 #include "apiwrap.h"
@@ -27,10 +26,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_cloud_themes.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
-#include "info/profile/info_profile_badge.h"
-#include "info/profile/info_profile_emoji_status_panel.h"
-#include "info/profile/info_profile_phone_menu.h"
-#include "info/profile/info_profile_values.h"
 #include "lang/lang_cloud_manager.h"
 #include "lang/lang_instance.h"
 #include "lang/lang_keys.h"
@@ -57,10 +52,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/localstorage.h"
 #include "ui/basic_click_handlers.h"
 #include "ui/boxes/confirm_box.h"
-#include "ui/boxes/peer_qr_box.h"
-#include "ui/controls/userpic_button.h"
 #include "ui/layers/generic_box.h"
-#include "ui/new_badges.h"
 #include "ui/power_saving.h"
 #include "ui/rect.h"
 #include "ui/text/format_values.h"
@@ -88,8 +80,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/ui/settings/settings_main.h"
-#include "extras/ui/utils/extras_profile_values.h"
-#include "extras/utils/telegram_helpers.h"
 
 
 namespace Settings {
@@ -98,285 +88,6 @@ namespace {
 using namespace Builder;
 
 constexpr auto kSugValidatePhone = "VALIDATE_PHONE_NUMBER"_cs;
-
-class Cover final : public Ui::FixedHeightWidget {
-public:
-	Cover(
-		QWidget *parent,
-		not_null<Window::SessionController*> controller,
-		not_null<UserData*> user);
-	~Cover();
-
-	[[nodiscard]] not_null<Ui::UserpicButton*> userpic() const {
-		return _userpic.data();
-	}
-
-private:
-	void setupChildGeometry();
-	void initViewers();
-	void updateIdText();
-	void refreshNameGeometry(int newWidth);
-	void refreshIdGeometry(int newWidth);
-	void refreshUsernameGeometry(int newWidth);
-	void refreshQrButtonGeometry(int newWidth);
-
-	const not_null<Window::SessionController*> _controller;
-	const not_null<UserData*> _user;
-	Info::Profile::EmojiStatusPanel _emojiStatusPanel;
-	Info::Profile::Badge _badge;
-	Info::Profile::Badge _exteraBadge;
-
-	object_ptr<Ui::UserpicButton> _userpic;
-	object_ptr<Ui::FlatLabel> _name = { nullptr };
-	object_ptr<Ui::FlatLabel> _id = { nullptr };
-	QString _idText;
-	object_ptr<Ui::FlatLabel> _username = { nullptr };
-	object_ptr<Ui::IconButton> _qrButton = { nullptr };
-
-};
-
-Cover::Cover(
-	QWidget *parent,
-	not_null<Window::SessionController*> controller,
-	not_null<UserData*> user)
-: FixedHeightWidget(
-	parent,
-	st::settingsPhotoTop
-		+ st::infoProfileCover.photo.size.height()
-		+ st::settingsPhotoBottom)
-, _controller(controller)
-, _user(user)
-, _badge(
-	this,
-	st::settingsCoverBadge,
-	&user->session(),
-	Info::Profile::BadgeContentForPeer(user),
-	&_emojiStatusPanel,
-	[=] {
-		return controller->isGifPausedAtLeastFor(
-			Window::GifPauseReason::Layer);
-	},
-	0, // customStatusLoopsLimit
-	Info::Profile::BadgeType::Premium)
-, _exteraBadge(
-	this,
-	st::infoPeerBadge,
-	&user->session(),
-	exteraBadgeTypeFromPeer(user),
-	&_emojiStatusPanel,
-	[=] {
-		return controller->isGifPausedAtLeastFor(
-			Window::GifPauseReason::Layer);
-	},
-	0, // customStatusLoopsLimit
-	Info::Profile::BadgeType::Extera
-		| Info::Profile::BadgeType::ExteraSupporter
-		| Info::Profile::BadgeType::ExteraCustom)
-, _userpic(
-	this,
-	controller,
-	_user,
-	Ui::UserpicButton::Role::OpenPhoto,
-	Ui::UserpicButton::Source::PeerPhoto,
-	st::infoProfileCover.photo)
-, _name(this, st::infoProfileCover.name)
-, _id(this, st::defaultFlatLabel, st::popupMenuWithIcons)
-, _username(this, st::infoProfileMegagroupCover.status) {
-	_user->updateFull();
-
-	_name->setSelectable(true);
-	_name->setContextCopyText(tr::lng_profile_copy_fullname(tr::now));
-
-	_id->setSelectable(true);
-	_id->setContextCopyText(tr::extras_ContextCopyID(tr::now));
-	const auto hook = [=](Ui::FlatLabel::ContextMenuRequest request) {
-		if (request.selection.empty()) {
-			const auto callback = [=] {
-				auto id = IDString(_user);
-				TextUtilities::SetClipboardText({ id });
-			};
-			request.menu->addAction(
-				tr::extras_ContextCopyID(tr::now),
-				callback,
-				&st::menuIconCopy);
-		} else {
-			_id->fillContextMenu(request);
-		}
-	};
-	_id->setContextMenuHook(hook);
-
-	initViewers();
-	setupChildGeometry();
-
-	_userpic->setVideoAllowed(true);
-	_userpic->switchChangePhotoOverlay(_user->isSelf(), [=](
-			Ui::UserpicButton::ChosenImage chosen) {
-		auto &image = chosen.image;
-		_userpic->showCustom(base::duplicate(image));
-		const auto isMarkup = (chosen.markup.documentId != 0);
-		_user->session().api().peerPhoto().upload(
-			_user,
-			{
-				.image = std::move(image),
-				.markupDocumentId = chosen.markup.documentId,
-				.markupColors = chosen.markup.colors,
-				.video = std::move(chosen.video),
-			});
-		if (!isMarkup) {
-			_userpic->showUploadProgress();
-		}
-	});
-
-	_badge.setPremiumClickCallback([=] {
-		_emojiStatusPanel.show(
-			_controller,
-			_badge.widget(),
-			_badge.sizeTag());
-	});
-	_exteraBadge.setPremiumClickCallback(badgeClickHandler(_user));
-	rpl::merge(
-		_badge.updated(),
-		_exteraBadge.updated()
-	) | rpl::on_next([=] {
-		refreshNameGeometry(width());
-	}, _name->lifetime());
-
-	_qrButton.create(this, st::infoProfileLabeledButtonQr);
-	_qrButton->setAccessibleName(tr::lng_group_invite_context_qr(tr::now));
-	_qrButton->setClickedCallback([=, show = controller->uiShow()] {
-		Ui::DefaultShowFillPeerQrBoxCallback(show, _user);
-	});
-	Info::Profile::UsernamesValue(
-		_user
-	) | rpl::on_next([=](const auto &usernames) {
-		_qrButton->setVisible(!usernames.empty());
-		refreshNameGeometry(width());
-		refreshQrButtonGeometry(width());
-	}, _qrButton->lifetime());
-}
-
-Cover::~Cover() = default;
-
-void Cover::setupChildGeometry() {
-	using namespace rpl::mappers;
-	widthValue(
-	) | rpl::on_next([=](int newWidth) {
-		_userpic->moveToLeft(
-			st::settingsPhotoLeft,
-			st::settingsPhotoTop,
-			newWidth);
-		refreshNameGeometry(newWidth);
-		refreshIdGeometry(newWidth);
-		refreshUsernameGeometry(newWidth);
-		refreshQrButtonGeometry(newWidth);
-	}, lifetime());
-}
-
-void Cover::initViewers() {
-	Info::Profile::NameValue(
-		_user
-	) | rpl::on_next([=](const QString &name) {
-		_name->setText(name);
-		refreshNameGeometry(width());
-	}, lifetime());
-
-	rpl::single(
-		tr::marked(IDString(_user))
-	) | rpl::on_next([=](const TextWithEntities &value) {
-		_idText = value.text;
-		updateIdText();
-	}, lifetime());
-
-	Info::Profile::UsernameValue(
-		_user
-	) | rpl::on_next([=](const TextWithEntities &value) {
-		_username->setMarkedText(tr::link(value.text.isEmpty()
-			? tr::lng_settings_username_add(tr::now)
-			: value.text));
-		refreshUsernameGeometry(width());
-	}, lifetime());
-
-	_username->overrideLinkClickHandler([=] {
-		if (_controller->showFrozenError()) {
-			return;
-		}
-		const auto username = _user->username();
-		if (username.isEmpty()) {
-			_controller->show(Box(UsernamesBox, _user));
-		} else {
-			QGuiApplication::clipboard()->setText(
-				_user->session().createInternalLinkFull(username));
-			_controller->showToast({
-				.text = { tr::lng_username_copied(tr::now) },
-				.iconLottie = u"toast/voip_invite"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
-		}
-	});
-}
-
-void Cover::refreshNameGeometry(int newWidth) {
-	const auto nameLeft = st::settingsNameLeft;
-	const auto nameTop = st::settingsNameTop;
-	const auto qrButtonWidth = (_qrButton && !_qrButton->isHidden())
-		? (_qrButton->width() + st::infoProfileCover.rightSkip)
-		: 0;
-	auto nameWidth = newWidth
-		- nameLeft
-		- st::infoProfileCover.rightSkip
-		- qrButtonWidth;
-	if (const auto width = _badge.widget() ? _badge.widget()->width() : 0) {
-		nameWidth -= st::infoVerifiedCheckPosition.x() + width;
-	}
-	if (const auto width = _exteraBadge.widget() ? _exteraBadge.widget()->width() : 0) {
-		nameWidth -= st::infoVerifiedCheckPosition.x() + width;
-	}
-	_name->resizeToNaturalWidth(nameWidth);
-	_name->moveToLeft(nameLeft, nameTop, newWidth);
-	const auto badgeLeft = nameLeft + _name->width();
-	const auto badgeTop = nameTop;
-	const auto badgeBottom = nameTop + _name->height();
-	_badge.move(badgeLeft, badgeTop, badgeBottom);
-	const auto exteraBadgeLeft = badgeLeft
-		+ (_badge.widget()
-			   ? (_badge.widget()->width() + st::infoVerifiedCheckPosition.x())
-			   : 0);
-	_exteraBadge.move(exteraBadgeLeft, badgeTop, badgeBottom);
-}
-
-void Cover::updateIdText() {
-	_id->setText(_idText);
-	refreshIdGeometry(width());
-}
-
-void Cover::refreshIdGeometry(int newWidth) {
-	const auto idLeft = st::settingsPhoneLeft;
-	const auto idTop = st::settingsPhoneTop;
-	const auto idWidth = newWidth
-		- idLeft
-		- st::infoProfileCover.rightSkip;
-	_id->resizeToWidth(idWidth);
-	_id->moveToLeft(idLeft, idTop, newWidth);
-}
-
-void Cover::refreshUsernameGeometry(int newWidth) {
-	const auto usernameLeft = st::settingsUsernameLeft;
-	const auto usernameTop = st::settingsUsernameTop;
-	const auto usernameRight = st::infoProfileCover.rightSkip;
-	const auto usernameWidth = newWidth - usernameLeft - usernameRight;
-	_username->resizeToWidth(usernameWidth);
-	_username->moveToLeft(usernameLeft, usernameTop, newWidth);
-}
-
-void Cover::refreshQrButtonGeometry(int newWidth) {
-	if (!_qrButton) {
-		return;
-	}
-	const auto buttonTop = (height() - _qrButton->height()) / 2;
-	const auto buttonRight = st::infoProfileCover.rightSkip;
-	const auto inset = st::infoProfileLabeledButtonQrInset;
-	_qrButton->moveToRight(buttonRight - inset, buttonTop, newWidth);
-}
 
 void BuildSectionButtons(SectionBuilder &builder) {
 	const auto session = builder.session();
@@ -414,6 +125,7 @@ void BuildSectionButtons(SectionBuilder &builder) {
 		.icon = { &st::menuIconLock },
 		.keywords = { u"security"_q, u"passcode"_q, u"password"_q, u"2fa"_q },
 	});
+	builder.addDivider();
 
 	builder.addSectionButton({
 		.title = tr::lng_settings_section_chat_settings(),
@@ -469,6 +181,7 @@ void BuildSectionButtons(SectionBuilder &builder) {
 		.icon = { &st::menuIconUnmute },
 		.keywords = { u"sessions"_q, u"calls"_q },
 	});
+	builder.addDivider();
 
 	builder.addButton({
 		.id = u"main/power"_q,
@@ -523,6 +236,8 @@ void BuildValidationSuggestions(SectionBuilder &builder) {
 	});
 }
 
+extern const SectionBuildMethod kMainSection;
+
 class Main final : public Section<Main> {
 public:
 	Main(QWidget *parent, not_null<Window::SessionController*> controller);
@@ -530,15 +245,12 @@ public:
 	[[nodiscard]] rpl::producer<QString> title() override;
 
 	void fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) override;
-	void showFinished() override;
 
 protected:
 	void keyPressEvent(QKeyEvent *e) override;
 
 private:
 	void setupContent();
-
-	QPointer<Ui::UserpicButton> _userpic;
 
 };
 
@@ -567,49 +279,8 @@ void Main::keyPressEvent(QKeyEvent *e) {
 void Main::setupContent() {
 	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
 
-	const auto window = controller();
-	const auto session = &window->session();
-	const auto cover = content->add(object_ptr<Cover>(
-		content,
-		window,
-		session->user()));
-	_userpic = cover->userpic();
-
-	const SectionBuildMethod buildMethod = [](
-			not_null<Ui::VerticalLayout*> container,
-			not_null<Window::SessionController*> controller,
-			Fn<void(Type)> showOther,
-			rpl::producer<> showFinished) {
-		auto &lifetime = container->lifetime();
-		const auto highlights = lifetime.make_state<HighlightRegistry>();
-		const auto isPaused = Window::PausedIn(
-			controller,
-			Window::GifPauseReason::Layer);
-		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
-			.highlights = highlights,
-		});
-		builder.addDivider();
-		builder.addSkip();
-		BuildValidationSuggestions(builder);
-		builder.addSkip();
-		BuildAppSection(builder);
-
-		std::move(showFinished) | rpl::on_next([=] {
-			for (const auto &[id, entry] : *highlights) {
-				if (entry.widget) {
-					controller->checkHighlightControl(
-						id,
-						entry.widget,
-						base::duplicate(entry.args));
-				}
-			}
-		}, lifetime);
-	};
-	build(content, buildMethod);
+	const auto session = &controller()->session();
+	build(content, kMainSection);
 
 	Ui::ResizeFitChild(this, content);
 
@@ -619,29 +290,6 @@ void Main::setupContent() {
 	session->api().globalPrivacy().reload();
 	session->api().premium().reload();
 	session->data().cloudThemes().refresh();
-}
-
-void Main::showFinished() {
-	controller()->checkHighlightControl(u"profile-photo"_q, _userpic.data(), {
-		.margin = st::settingsPhotoHighlightMargin,
-		.shape = HighlightShape::Ellipse,
-	});
-	const auto emojiId = u"profile-photo/use-emoji"_q;
-	if (controller()->takeHighlightControlId(emojiId)) {
-		if (const auto popupMenu = _userpic->showChangePhotoMenu()) {
-			const auto menu = popupMenu->menu();
-			for (const auto &action : menu->actions()) {
-				const auto controlId = "highlight-control-id";
-				if (action->property(controlId).toString() == emojiId) {
-					if (const auto item = menu->itemForAction(action)) {
-						HighlightWidget(item);
-					}
-					break;
-				}
-			}
-		}
-	}
-	Section<Main>::showFinished();
 }
 
 const auto kMeta = BuildHelper({
@@ -670,6 +318,8 @@ const auto kMeta = BuildHelper({
 
 	BuildAppSection(builder);
 });
+
+const SectionBuildMethod kMainSection = kMeta.build;
 
 } // namespace
 

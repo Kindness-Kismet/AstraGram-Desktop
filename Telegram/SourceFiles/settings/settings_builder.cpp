@@ -36,8 +36,7 @@ namespace Settings::Builder {
 namespace {
 
 [[nodiscard]] bool UseCardLayout(Type type) {
-	return (type != MainId())
-		&& (type != PremiumId())
+	return (type != PremiumId())
 		&& (type != CreditsId());
 }
 
@@ -78,7 +77,7 @@ BuildHelper::BuildHelper(
 	const auto isPaused = Window::PausedIn(
 		controller,
 		Window::GifPauseReason::Layer);
-	// 推广页与旧设置概览有独立封面和自绘布局，不套用普通设置卡片。
+	// 推广页有独立封面和自绘布局，不套用普通设置卡片。
 	const auto cards = UseCardLayout(_meta.id);
 	const auto content = cards
 		? container.get()
