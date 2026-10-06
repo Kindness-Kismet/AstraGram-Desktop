@@ -49,13 +49,24 @@ void DiscreteSlider::setActiveSectionFast(int index) {
 }
 
 void DiscreteSlider::finishAnimating() {
-	_a_left.stop();
-	_a_width.stop();
+	stopAnimation();
 	update();
 	_callbackAfterMs = 0;
 	if (_timerId >= 0) {
 		activateCallback();
 	}
+}
+
+void DiscreteSlider::setCrossFadeEnabled(bool enabled) {
+	Expects(!enabled || !_snapToLabel);
+	finishAnimating();
+	_crossFade = enabled;
+}
+
+float64 DiscreteSlider::sectionActiveWeight(int index) const {
+	const auto progress = _a_fade.value(1.);
+	return _sections[index].fadeFrom * (1. - progress)
+		+ (index == _selected ? progress : 0.);
 }
 
 void DiscreteSlider::selectSection(int index) {
@@ -239,12 +250,22 @@ void DiscreteSlider::setSelectedSection(int index) {
 
 	if (_selected != index) {
 		const auto from = getFinalActiveRange();
+		if (_crossFade) {
+			// 连续切换从当前透明度接续，避免中途跳回完整选中态。
+			for (auto i = 0; i != int(_sections.size()); ++i) {
+				_sections[i].fadeFrom = sectionActiveWeight(i);
+			}
+		}
 		_selected = index;
 		const auto to = getFinalActiveRange();
 		const auto duration = getAnimationDuration();
 		const auto updater = [this] { update(); };
-		_a_left.start(updater, from.left, to.left, duration);
-		_a_width.start(updater, from.width, to.width, duration);
+		if (_crossFade) {
+			_a_fade.start(updater, 0., 1., duration);
+		} else {
+			_a_left.start(updater, from.left, to.left, duration);
+			_a_width.start(updater, from.width, to.width, duration);
+		}
 		_callbackAfterMs = crl::now() + duration;
 	}
 }
@@ -448,6 +469,7 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 			p.fillRect(rect, active ? _st.barFgActive : _st.barFg);
 		}
 	};
+	auto sectionIndex = 0;
 	enumerateSections([&](Section &section) {
 		const auto activeWidth = _st.barSnapToLabel
 			? section.contentWidth
@@ -455,11 +477,14 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 		const auto activeLeft = section.left
 			+ (section.width - activeWidth) / 2;
 		const auto divider = std::max(std::min(activeWidth, range.width), 1);
-		const auto active = 1.
+		const auto active = crossFadeEnabled()
+			? sectionActiveWeight(sectionIndex)
+			: 1.
 			- std::clamp(
 				std::abs(range.left - activeLeft) / float64(divider),
 				0.,
 				1.);
+		++sectionIndex;
 		if (section.ripple) {
 			const auto color = anim::color(
 				_st.rippleBg,
@@ -470,7 +495,14 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 				section.ripple.reset();
 			}
 		}
-		if (!_st.barSnapToLabel) {
+		if (crossFadeEnabled()) {
+			const auto rect = myrtlrect(
+				activeLeft, _st.barTop, activeWidth, _st.barStroke);
+			drawRect(rect);
+			p.setOpacity(active);
+			drawRect(rect, true);
+			p.setOpacity(1.);
+		} else if (!_st.barSnapToLabel) {
 			auto from = activeLeft;
 			auto tofill = activeWidth;
 			if (range.left > from) {

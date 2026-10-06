@@ -45,6 +45,7 @@ public:
 	void setActiveSection(int index);
 	void setActiveSectionFast(int index);
 	void finishAnimating();
+	void setCrossFadeEnabled(bool enabled);
 	void selectSection(int index);
 
 	void setAdditionalContentWidthToSection(int index, int width);
@@ -76,6 +77,7 @@ protected:
 		int left = 0;
 		int width = 0;
 		int contentWidth = 0;
+		float64 fadeFrom = 0.;
 	};
 	struct Range {
 		int left = 0;
@@ -84,6 +86,8 @@ protected:
 
 	[[nodiscard]] Range getFinalActiveRange() const;
 	[[nodiscard]] Range getCurrentActiveRange() const;
+	[[nodiscard]] bool crossFadeEnabled() const { return _crossFade; }
+	[[nodiscard]] float64 sectionActiveWeight(int index) const;
 
 	[[nodiscard]] int getSectionsCount() const {
 		return _sections.size();
@@ -98,6 +102,7 @@ protected:
 	void stopAnimation() {
 		_a_left.stop();
 		_a_width.stop();
+		_a_fade.stop();
 	}
 	void refresh();
 
@@ -120,6 +125,7 @@ private:
 	int _activeIndex = 0;
 	bool _selectOnPress = true;
 	bool _snapToLabel = false;
+	bool _crossFade = false;
 
 	rpl::event_stream<int> _sectionActivated;
 
@@ -127,6 +133,7 @@ private:
 	int _selected = 0;
 	Ui::Animations::Simple _a_left;
 	Ui::Animations::Simple _a_width;
+	Ui::Animations::Simple _a_fade;
 
 	int _timerId = -1;
 	crl::time _callbackAfterMs = 0;

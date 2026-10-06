@@ -1232,6 +1232,8 @@ void ProxiesBox::setupModeBar() {
 		bar,
 		st::proxyModeSlider);
 	_modeSlider = slider;
+	slider->setCrossFadeEnabled(true);
+	slider->setObjectName(u"proxy-mode"_q);
 	slider->setSections({
 		tr::extras_ProxyModeOff(tr::now),
 		tr::extras_ProxyModeSystem(tr::now),
@@ -1761,6 +1763,7 @@ void ProxyBox::setupTypes() {
 		p.drawRoundedRect(QRectF(bar->rect()).adjusted(.5, .5, -.5, -.5), radius, radius);
 	}, bar->lifetime());
 	const auto slider = Ui::CreateChild<Ui::SettingsSlider>(bar, st::proxyFormSlider);
+	slider->setCrossFadeEnabled(true);
 	slider->setObjectName(u"proxy-type"_q);
 	slider->setSections({ u"SOCKS5"_q, u"HTTP"_q, u"MTProto"_q, u"Web"_q });
 	slider->setActiveSectionFast(int(ranges::find(types, _type->current()) - types.begin()));
