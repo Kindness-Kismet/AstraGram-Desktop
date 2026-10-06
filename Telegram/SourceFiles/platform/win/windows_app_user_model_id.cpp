@@ -22,7 +22,6 @@ namespace {
 constexpr auto kMaxFileLen = MAX_PATH * 2;
 
 const PROPERTYKEY pkey_AppUserModel_ID = { { 0x9F4C2855, 0x9F79, 0x4B39, { 0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3 } }, 5 };
-const PROPERTYKEY pkey_AppUserModel_StartPinOption = { { 0x9F4C2855, 0x9F79, 0x4B39, { 0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3 } }, 12 };
 const PROPERTYKEY pkey_AppUserModel_ToastActivator = { { 0x9F4C2855, 0x9F79, 0x4B39, { 0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3 } }, 26 };
 
 #ifdef OS_WIN_STORE
@@ -354,118 +353,16 @@ bool checkInstalled(QString path = {}) {
 }
 
 bool ValidateShortcut() {
-	QString path = systemShortcutPath();
+	const auto path = systemShortcutPath();
 	if (path.isEmpty() || cExeName().isEmpty()) {
 		return false;
 	}
 
 	if (cAlphaVersion()) {
-		path += u"AstraGramAlpha.lnk"_q;
-		if (validateShortcutAt(path)) {
-			return true;
-		}
-	} else {
-		if (checkInstalled(path)) {
-			return true;
-		}
-
-		path += u"AstraGram.lnk"_q;
-		if (validateShortcutAt(path)) {
-			return true;
-		}
+		return validateShortcutAt(path + u"AstraGramAlpha.lnk"_q);
 	}
-
-	auto shellLink = base::WinRT::TryCreateInstance<IShellLink>(
-		CLSID_ShellLink);
-	if (!shellLink) {
-		return false;
-	}
-
-	auto hr = shellLink->SetPath(MyExecutablePath().c_str());
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	hr = shellLink->SetArguments(L"");
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	hr = shellLink->SetWorkingDirectory(
-		QDir::toNativeSeparators(
-			QDir(cWorkingDir()).absolutePath()).toStdWString().c_str());
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	auto propertyStore = shellLink.try_as<IPropertyStore>();
-	if (!propertyStore) {
-		return false;
-	}
-
-	PROPVARIANT appIdPropVar;
-	hr = InitPropVariantFromString(Id().c_str(), &appIdPropVar);
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	hr = propertyStore->SetValue(Key(), appIdPropVar);
-	PropVariantClear(&appIdPropVar);
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	PROPVARIANT startPinPropVar;
-	hr = InitPropVariantFromUInt32(
-		APPUSERMODEL_STARTPINOPTION_NOPINONINSTALL,
-		&startPinPropVar);
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	hr = propertyStore->SetValue(
-		pkey_AppUserModel_StartPinOption,
-		startPinPropVar);
-	PropVariantClear(&startPinPropVar);
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	PROPVARIANT toastActivatorPropVar{};
-	hr = InitPropVariantFromCLSID(
-		__uuidof(ToastActivator),
-		&toastActivatorPropVar);
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	hr = propertyStore->SetValue(
-		pkey_AppUserModel_ToastActivator,
-		toastActivatorPropVar);
-	PropVariantClear(&toastActivatorPropVar);
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	hr = propertyStore->Commit();
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	auto persistFile = shellLink.try_as<IPersistFile>();
-	if (!persistFile) {
-		return false;
-	}
-
-	hr = persistFile->Save(
-		QDir::toNativeSeparators(path).toStdWString().c_str(),
-		TRUE);
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	LOG(("App Info: Shortcut created and validated at \"%1\"").arg(path));
-	return true;
+	return checkInstalled(path)
+		|| validateShortcutAt(path + u"AstraGram.lnk"_q);
 }
 
 const std::wstring &Id() {
