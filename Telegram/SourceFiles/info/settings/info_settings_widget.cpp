@@ -219,11 +219,16 @@ const Ui::RoundRect *Widget::bottomSkipRounding() const {
 }
 
 rpl::producer<bool> Widget::desiredShadowVisibility() const {
-	return (_type == ::Settings::MainId()
+	auto desired = (_type == ::Settings::MainId()
 		|| _type == ::Settings::InformationId()
 		|| _type == ::Settings::ExtrasMain::Id())
 		? ContentWidget::desiredShadowVisibility()
 		: rpl::single(true);
+	return rpl::combine(
+		std::move(desired),
+		ExtrasFeatures::WindowMaterial::changes(_inner.get()),
+		[](bool shown, bool material) { return shown && !material; }
+	) | rpl::distinct_until_changed();
 }
 
 bool Widget::closeByOutsideClick() const {

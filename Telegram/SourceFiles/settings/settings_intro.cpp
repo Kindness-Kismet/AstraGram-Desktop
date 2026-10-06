@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/settings_intro.h"
+#include "extras/features/window_material/window_material.h"
 #include "settings/settings_card_layout.h"
 
 #include "settings/sections/settings_advanced.h"
@@ -351,11 +352,13 @@ void IntroWidget::setInnerWidget(object_ptr<Ui::RpWidget> content) {
 }
 
 rpl::producer<bool> IntroWidget::topShadowToggledValue() const {
-	using namespace rpl::mappers;
 	return rpl::combine(
 		_scroll->scrollTopValue(),
-		_scrollTopSkip.value()
-	) | rpl::map((_1 > 0) || (_2 > 0));
+		_scrollTopSkip.value(),
+		ExtrasFeatures::WindowMaterial::changes(_topBar.data()),
+		[](int top, int skip, bool material) {
+			return (top > 0 || skip > 0) && !material;
+		});
 }
 
 void IntroWidget::showContent(not_null<Window::Controller*> window) {
