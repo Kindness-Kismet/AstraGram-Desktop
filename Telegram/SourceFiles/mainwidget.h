@@ -239,6 +239,7 @@ private:
 	void showFinished();
 	[[nodiscard]] Fn<void()> prepareFullWidthHideAnimation(
 		const Window::SectionShow &params);
+	[[nodiscard]] QRect fullWidthAnimationGeometry() const;
 	void handleAdaptiveLayoutUpdate();
 	void updateWindowAdaptiveLayout();
 	void handleAudioUpdate(const Media::Player::TrackState &state);

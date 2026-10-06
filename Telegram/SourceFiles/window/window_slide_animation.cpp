@@ -13,19 +13,48 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 
 namespace Window {
+namespace {
+
+[[nodiscard]] QPixmap PlaceContent(
+		const QPixmap &cache,
+		QSize size,
+		QPoint position,
+		QColor bg) {
+	const auto ratio = style::DevicePixelRatio();
+	if (position.isNull() && cache.size() == size * ratio) {
+		return cache;
+	}
+	auto result = QPixmap(size * ratio);
+	result.setDevicePixelRatio(ratio);
+	result.fill(bg);
+	QPainter(&result).drawPixmap(position, cache);
+	return result;
+}
+
+} // namespace
 
 void ShowSlideAnimation(
 		not_null<QWidget*> parent,
 		const QRect &geometry,
 		const QPixmap &oldContentCache,
+		QPoint oldContentPosition,
 		SlideDirection direction) {
 	const auto newContentCache = Ui::GrabWidget(parent, geometry);
+	const auto bg = ExtrasFeatures::WindowMaterial::isActive(parent)
+		? QColor(Qt::transparent)
+		: st::windowBg->c;
 	const auto overlay = Ui::CreateChild<Ui::RpWidget>(parent);
 	overlay->setObjectName(u"section-slide-overlay"_q);
 	overlay->setGeometry(geometry);
 	const auto animation = overlay->lifetime().make_state<SlideAnimation>();
 	animation->setDirection(direction);
-	animation->setPixmaps(oldContentCache, newContentCache);
+	animation->setPixmaps(
+		PlaceContent(
+			oldContentCache,
+			geometry.size(),
+			oldContentPosition,
+			bg),
+		newContentCache);
 	animation->setRepaintCallback([=] { overlay->update(); });
 	animation->setFinishedCallback([=] {
 		overlay->hide();

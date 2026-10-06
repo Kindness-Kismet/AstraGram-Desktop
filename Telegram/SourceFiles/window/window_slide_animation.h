@@ -17,10 +17,12 @@ enum class SlideDirection {
 	FromBottom,
 };
 
+// oldContentPosition 是旧画面左上角相对 geometry 的位置，露出的部分填背景。
 void ShowSlideAnimation(
 	not_null<QWidget*> parent,
 	const QRect &geometry,
 	const QPixmap &oldContentCache,
+	QPoint oldContentPosition,
 	SlideDirection direction);
 
 class SlideAnimation {

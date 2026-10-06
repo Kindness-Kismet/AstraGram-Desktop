@@ -1892,14 +1892,10 @@ Window::SectionSlideParams MainWidget::prepareMainSectionAnimation(
 		bool fromBottom) {
 	if (section->useFullWidth()) {
 		auto result = Window::SectionSlideParams();
-		const auto top = getMainSectionTop() + st::windowCardGap;
-		const auto filtersWidth = _controller->filtersWidth();
 		floatPlayerHideAll();
-		result.oldContentCache = Ui::GrabWidget(parentWidget(), QRect(
-			x() - filtersWidth,
-			y() + top,
-			width() + filtersWidth,
-			height() - top));
+		result.oldContentCache = Ui::GrabWidget(
+			parentWidget(),
+			fullWidthAnimationGeometry());
 		floatPlayerShowVisible();
 		return result;
 	}
@@ -1916,19 +1912,39 @@ Fn<void()> MainWidget::prepareFullWidthHideAnimation(const SectionShow &params) 
 	}
 	// 全宽页面退出时，分类栏和对话区需要放在同一张画面里过渡。
 	const auto parent = parentWidget();
-	const auto geometry = QRect(
-		mapToParent(_mainSection->pos()), _mainSection->size());
+	const auto oldGeometry = fullWidthAnimationGeometry();
+	const auto oldTopLeft = parent->mapToGlobal(oldGeometry.topLeft());
 	floatPlayerHideAll();
-	const auto oldContentCache = Ui::GrabWidget(parent, geometry);
+	const auto oldContentCache = Ui::GrabWidget(parent, oldGeometry);
 	floatPlayerShowVisible();
 	const auto direction = params.way == SectionShow::Way::Backward
 		? Window::SlideDirection::FromLeft
 		: Window::SlideDirection::FromRight;
 	return [=] {
+		// 退出设置会收起标题栏搜索框，正文区随之变高；
+		// 按退出后的布局覆盖，旧画面留在原来的屏幕位置。
+		const auto geometry = fullWidthAnimationGeometry();
+		const auto oldPosition = oldTopLeft
+			- parent->mapToGlobal(geometry.topLeft());
 		floatPlayerHideAll();
-		Window::ShowSlideAnimation(parent, geometry, oldContentCache, direction);
+		Window::ShowSlideAnimation(
+			parent,
+			geometry,
+			oldContentCache,
+			oldPosition,
+			direction);
 		floatPlayerShowVisible();
 	};
+}
+
+QRect MainWidget::fullWidthAnimationGeometry() const {
+	const auto top = getMainSectionTop() + st::windowCardGap;
+	const auto filtersWidth = _controller->filtersWidth();
+	return QRect(
+		x() - filtersWidth,
+		y() + top,
+		width() + filtersWidth,
+		height() - top);
 }
 
 Window::SectionSlideParams MainWidget::prepareHistoryAnimation(PeerId historyPeerId) {
