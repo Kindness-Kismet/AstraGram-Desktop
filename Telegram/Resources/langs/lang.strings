@@ -8911,6 +8911,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SettingsUnlimitedRecentStickers" = "Unlimited Recent Stickers";
 "extras_SettingsCustomizationHint" = "You must restart the application after making changes in the \"Customization\" section.";
 "extras_WindowMaterial" = "Window Background";
+"extras_WindowMaterialSearchKeywords" = "window material mica acrylic blur";
 "extras_AutoCheckUpdates" = "Check for updates automatically";
 "extras_WindowMaterialOff" = "Off";
 "extras_WindowMaterialMica" = "Mica";
@@ -9425,6 +9426,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SettingsSearchPlaceholder" = "Find a setting";
 "extras_SettingsSearchRecent" = "Recently opened settings";
 "extras_SettingsSearchEmpty" = "No matching settings. Try another keyword.";
+"extras_InterfaceScaleSearchKeywords" = "scale zoom size interface ui";
 
 "extras_DisableBubbleShadow" = "Disable bubble shadows";
 "extras_DisableBubbleShadowDescription" = "Remove shadows around incoming and outgoing message bubbles. Takes effect immediately.";

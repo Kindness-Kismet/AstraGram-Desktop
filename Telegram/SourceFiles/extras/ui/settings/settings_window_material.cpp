@@ -74,10 +74,7 @@ void buildWindowMaterial(Builder::SectionBuilder &builder) {
 					st::boxLabel));
 			}));
 		},
-		.keywords = {
-			u"window"_q, u"material"_q, u"mica"_q, u"acrylic"_q, u"blur"_q,
-			u"窗口"_q, u"材质"_q, u"云母"_q, u"亚克力"_q, u"磨砂"_q,
-		},
+		.keywords = tr::extras_WindowMaterialSearchKeywords(tr::now).split(' '),
 	});
 }
 

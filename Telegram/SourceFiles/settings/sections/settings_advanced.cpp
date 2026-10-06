@@ -106,8 +106,7 @@ void BuildInterfaceScaleSection(SectionBuilder &builder) {
 		return SearchEntry{
 			.id = u"main/scale"_q,
 			.title = tr::lng_settings_scale(tr::now),
-			.keywords = { u"scale"_q, u"zoom"_q, u"size"_q,
-				u"interface"_q, u"ui"_q, u"缩放"_q, u"显示比例"_q },
+			.keywords = tr::extras_InterfaceScaleSearchKeywords(tr::now).split(' '),
 		};
 	});
 	builder.addSkip();
