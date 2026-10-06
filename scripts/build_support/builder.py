@@ -66,7 +66,7 @@ def clean_output_dir(profile: str) -> int:
 def zip_output(profile: str) -> Path:
     directory = output_dir(profile)
     # release 是发布产物不带后缀，dev 本地调试用带 -dev 区分
-    version = parse_version(read_current_version()).original
+    version = parse_version(read_current_version()).text_small
     suffix = "" if profile == "release" else f"-{profile}"
     archive = BUILD_DIR / f"{APP_NAME}-v{version}-win-{TARGET_SUFFIX}{suffix}.zip"
     if archive.exists():

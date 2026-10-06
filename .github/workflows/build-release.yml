@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - dev
     paths:
       - 'Telegram/build/version'
 
@@ -31,6 +32,10 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       appversion: ${{ steps.version.outputs.appversion }}
+      publish: ${{ steps.version.outputs.publish }}
+      name: ${{ steps.version.outputs.name }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      make_latest: ${{ steps.version.outputs.make_latest }}
 
     steps:
       - name: Check out repository.
@@ -59,17 +64,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Read version.
+      - name: Test release and build helpers.
+        run: PYTHONPATH=scripts python3 -m unittest discover -s scripts/build_support/tests
+
+      - name: Read version and enforce release channel.
         id: version
-        run: |
-          set -euo pipefail
-          version=$(sed -n 's/^AppVersionStrSmall //p' Telegram/build/version)
-          test -n "$version"
-          appversion=$(sed -n 's/^AppUpdateVersion  *//p' Telegram/build/version)
-          test -n "$appversion"
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
-          echo "appversion=${appversion}" >> "$GITHUB_OUTPUT"
+        env:
+          SOURCE_BRANCH: ${{ github.ref_name }}
+        run: python3 scripts/release_config.py --branch "$SOURCE_BRANCH" --output "$GITHUB_OUTPUT"
 
       - name: Validate release inputs.
         run: |
@@ -86,6 +88,7 @@ jobs:
   windows-x64:
     name: Windows x64 remote build
     needs: validate
+    if: needs.validate.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -141,6 +144,7 @@ jobs:
   windows-arm64:
     name: Windows ARM64 remote build
     needs: validate
+    if: needs.validate.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -196,6 +200,7 @@ jobs:
   linux:
     name: Linux remote build
     needs: validate
+    if: needs.validate.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -250,6 +255,7 @@ jobs:
   macos:
     name: macOS remote build
     needs: validate
+    if: needs.validate.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -305,7 +311,7 @@ jobs:
   publish:
     name: Verify and publish release
     needs: [validate, windows-x64, windows-arm64, linux, macos]
-    if: ${{ !cancelled() && needs.validate.result == 'success' }}
+    if: ${{ !cancelled() && needs.validate.result == 'success' && needs.validate.outputs.publish == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -445,6 +451,7 @@ jobs:
           done < <(find artifacts -type f -print0)
 
       - name: Generate update map.
+        if: needs.validate.outputs.prerelease == 'false'
         env:
           APPVERSION: ${{ needs.validate.outputs.appversion }}
         run: |
@@ -493,10 +500,10 @@ jobs:
         with:
           tag_name: ${{ needs.validate.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: AstraGram ${{ needs.validate.outputs.version }}
+          name: AstraGram ${{ needs.validate.outputs.name }}
           body_path: ${{ runner.temp }}/release-notes.md
           files: release-artifacts/*
           draft: false
-          prerelease: false
+          prerelease: ${{ needs.validate.outputs.prerelease == 'true' }}
           overwrite_files: true
-          make_latest: true
+          make_latest: ${{ needs.validate.outputs.make_latest }}
