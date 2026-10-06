@@ -12,8 +12,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/platform/win/wrl/wrl_implements_h.h"
 
-// {F11932D3-6110-4BBC-9B02-B2EC07A1BD19}
+#if defined _DEBUG && !defined OS_WIN_STORE
+class DECLSPEC_UUID("48C93F92-B51B-443E-B1A5-7D3BCF122A30") ToastActivator
+#else
 class DECLSPEC_UUID("F11932D3-6110-4BBC-9B02-B2EC07A1BD19") ToastActivator
+#endif
 	: public ::Microsoft::WRL::RuntimeClass<
 		::Microsoft::WRL::RuntimeClassFlags<::Microsoft::WRL::ClassicCom>,
 		INotificationActivationCallback,
@@ -49,4 +52,11 @@ struct ToastActivation {
 
 	[[nodiscard]] static QString String(LPCWSTR value);
 };
-[[nodiscard]] rpl::producer<ToastActivation> ToastActivations();
+[[nodiscard]] bool RegisterToastActivator();
+bool UnregisterToastActivator();
+void QueueToastActivation(ToastActivation activation);
+void ClearToastActivations();
+void ProcessToastActivations(Fn<bool(const ToastActivation&)> process);
+[[nodiscard]] rpl::producer<> ToastActivations();
+[[nodiscard]] QByteArray SerializeToastActivation(const ToastActivation &activation);
+[[nodiscard]] std::optional<ToastActivation> ParseToastActivation(const QByteArray &data);

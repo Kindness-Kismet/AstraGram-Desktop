@@ -65,7 +65,7 @@ OpenGL 区域可能缺失。消息气泡等自绘内容主要通过图片观察�
 
 自动测试使用独立配置：先 `app.stop`，再 `app.start --profile scenarios + session.fake`。
 数据保存在 `build/debug-profiles/scenarios/`，CLI 会记住配置，后续调用无需重复指定。
-独立配置使用 `-debugprofile`，跳过链接协议注册、固定快捷方式迁移和原生通知快捷方式初始化。
+独立配置使用 `-debugprofile`，跳过链接协议注册，并禁用原生通知及其注册表操作。
 `-testagent` 专供自动测试，会拦截外部链接；日常调试不使用这个标记。
 不要在独立配置中放置官方测试运行器的 `testing` 标记，避免额外场景自动运行。
 配置名限 1 至 48 个小写字母、数字、下划线或连字符，首位为字母或数字；`default` 表示原默认目录。

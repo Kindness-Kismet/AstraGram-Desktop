@@ -29,6 +29,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mainwindow.h"
 #include "platform/platform_notifications_manager.h"
 #include "platform/platform_specific.h"
+#ifdef Q_OS_WIN
+#include "platform/win/notifications_manager_win.h"
+#endif
 #include "settings/settings_builder.h"
 #include "settings/settings_card_layout.h"
 #include "settings/sections/settings_main.h"
@@ -1405,13 +1408,37 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 	}
 
 	const auto &settings = Core::App().settings();
+	const auto nativeEnabled = std::make_shared<rpl::variable<bool>>(
+		settings.nativeNotifications());
 	const auto native = nativeText ? builder.addButton({
 		.id = u"notifications/use-native"_q,
 		.title = std::move(nativeText),
 		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(settings.nativeNotifications()),
+		.toggled = nativeEnabled->value(),
 		.keywords = { u"native"_q, u"system"_q, u"windows"_q },
 	}) : nullptr;
+
+#ifdef Q_OS_WIN
+#ifndef OS_WIN_STORE
+	if (Platform::Notifications::Supported()) {
+		builder.addButton({
+			.id = u"notifications/reset-registration"_q,
+			.title = tr::extras_NativeNotificationReset(),
+			.st = &st::settingsButtonNoIcon,
+			.onClick = [=] {
+				const auto ok = Platform::Notifications::ResetRegistration(
+					&Core::App().notifications());
+				*nativeEnabled = false;
+				Core::App().notifications().notifySettingsChanged(ChangeType::DesktopEnabled);
+				controller->showToast(ok
+					? tr::extras_NativeNotificationResetDone(tr::now)
+					: tr::extras_NativeNotificationCleanupFailed(tr::now));
+			},
+			.keywords = { u"notification"_q, u"reset"_q, u"registration"_q },
+		});
+	}
+#endif
+#endif
 
 	if (Core::App().notifications().nativeEnforced()) {
 		return;
@@ -1420,7 +1447,7 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 		return;
 	}
 
-	builder.addPageContent([native, controller](const WidgetContext &ctx) {
+	builder.addPageContent([native, nativeEnabled, controller](const WidgetContext &ctx) {
 		const auto container = ctx.container.get();
 		const auto advancedSlide = container->add(
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
@@ -1436,7 +1463,17 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 				Core::App().settings().setNativeNotifications(checked);
 				Core::App().saveSettingsDelayed();
 				Core::App().notifications().createManager();
-				advancedSlide->toggle(!checked, anim::type::normal);
+				const auto enabled = Core::App().settings().nativeNotifications();
+				*nativeEnabled = enabled;
+				if (checked && !enabled) {
+					controller->showToast(tr::extras_NativeNotificationEnableFailed(tr::now));
+				}
+#ifdef Q_OS_WIN
+				if (!checked && !Platform::Notifications::RegistrationCleanupSucceeded()) {
+					controller->showToast(tr::extras_NativeNotificationCleanupFailed(tr::now));
+				}
+#endif
+				advancedSlide->toggle(!enabled, anim::type::normal);
 			}, native->lifetime());
 		}
 

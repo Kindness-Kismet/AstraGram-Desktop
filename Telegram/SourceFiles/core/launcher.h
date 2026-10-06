@@ -32,6 +32,7 @@ public:
 	const QStringList &arguments() const;
 	QString initialWorkingDir() const;
 	bool customWorkingDir() const;
+	[[nodiscard]] bool toastActivated() const { return _toastActivated; }
 
 	uint64 installationTag() const;
 	QByteArray instanceHash() const;
@@ -90,6 +91,7 @@ private:
 
 	QString _initialWorkingDir;
 	QString _customWorkingDir;
+	bool _toastActivated = false;
 
 };
 

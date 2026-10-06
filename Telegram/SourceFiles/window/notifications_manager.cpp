@@ -1305,7 +1305,9 @@ void Manager::notificationActivated(
 		if (!options.draft.text.isEmpty()) {
 			const auto topicRootId = topic
 				? topic->rootId()
-				: id.contextId.topicRootId;
+				: history->peer->isForum()
+				? id.contextId.topicRootId
+				: MsgId();
 			const auto monoforumPeerId = (sublist && sublist->parentChat())
 				? sublist->sublistPeer()->id
 				: id.contextId.monoforumPeerId;

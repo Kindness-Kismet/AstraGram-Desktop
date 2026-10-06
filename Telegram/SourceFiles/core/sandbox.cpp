@@ -31,6 +31,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/ui_utility.h"
 #include "ui/effects/animations.h"
 
+#ifdef Q_OS_WIN
+#include "platform/win/windows_toast_activator.h"
+#endif
+
 #ifdef Q_OS_MAC
 #include "platform/mac/global_menu_mac.h"
 #endif // Q_OS_MAC
@@ -232,14 +236,41 @@ int Sandbox::start() {
 		manager.setRestartHint(QSessionManager::RestartNever);
 	});
 
-	LOG(("Connecting local socket to %1...").arg(_localServerName));
-	QTimer::singleShot(2000, this, [=] {
-		if (!_instanceCheckFinished && !Quitting()) {
-			LOG(("App Error: Single instance handshake timed out."));
-			Quit();
+	const auto connectToInstance = [=] {
+		LOG(("Connecting local socket to %1...").arg(_localServerName));
+		QTimer::singleShot(2000, this, [=] {
+			if (!_instanceCheckFinished && !Quitting()) {
+				LOG(("App Error: Single instance handshake timed out."));
+				Quit();
+			}
+		});
+		_localSocket.connectToServer(_localServerName);
+	};
+#ifdef Q_OS_WIN
+	if (Launcher::Instance().toastActivated()) {
+		// 系统启动的接收进程先取得通知参数，再进入单实例握手。
+		ToastActivations() | rpl::take(1) | rpl::on_next([=] {
+			ProcessToastActivations([=](const ToastActivation &activation) {
+				_toastActivation = SerializeToastActivation(activation);
+				return false;
+			});
+			connectToInstance();
+		}, _lifetime);
+		if (!RegisterToastActivator()) {
+			return 1;
 		}
-	});
-	_localSocket.connectToServer(_localServerName);
+		QTimer::singleShot(30000, this, [=] {
+			if (_toastActivation.isEmpty()) {
+				LOG(("Notifications Error: COM activation timed out."));
+				Quit();
+			}
+		});
+	} else {
+		connectToInstance();
+	}
+#else
+	connectToInstance();
+#endif
 
 	if (QuitOnStartRequested) {
 		closeApplication();
@@ -424,6 +455,12 @@ void Sandbox::socketConnected() {
 	_secondInstance = true;
 
 	QString commands;
+#ifdef Q_OS_WIN
+	if (!_toastActivation.isEmpty()) {
+		_localSocket.write("TOAST:" + _toastActivation + ';');
+		return;
+	}
+#endif
 	if (qEnvironmentVariableIsSet("XDG_ACTIVATION_TOKEN")) {
 		commands += u"XDG_ACTIVATION_TOKEN:"_q + qgetenv("XDG_ACTIVATION_TOKEN").toBase64() + ';';
 	}
@@ -634,6 +671,15 @@ void Sandbox::readClients() {
 					qputenv("XDG_ACTIVATION_TOKEN", QByteArray::fromBase64(cmd.mid(21).toLatin1()));
 				} else if (cmd.startsWith(u"OPEN:"_q)) {
 					urls.append(EscapeFrom7bit(cmd.mid(5)).mid(0, 8192));
+#ifdef Q_OS_WIN
+				} else if (cmd.startsWith(u"TOAST:"_q)) {
+					if (hasOpen) {
+						continue;
+					}
+					if (auto activation = ParseToastActivation(cmd.mid(6).toLatin1())) {
+						QueueToastActivation(std::move(*activation));
+					}
+#endif
 				} else if (cmd.startsWith(u"CTRL:"_q)) {
 					if (hasOpen) {
 						continue;
@@ -857,6 +903,10 @@ void Sandbox::closeApplication() {
 	SetLaunchState(LaunchState::QuitProcessed);
 
 	_application = nullptr;
+#ifdef Q_OS_WIN
+	UnregisterToastActivator();
+	ClearToastActivations();
+#endif
 
 	_localServer.close();
 	for (const auto &localClient : base::take(_localClients)) {

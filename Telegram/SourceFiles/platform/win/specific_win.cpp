@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/main_window_win.h"
 #include "platform/win/notifications_manager_win.h"
 #include "platform/win/windows_app_user_model_id.h"
+#include "platform/win/windows_notification_registration.h"
 #include "platform/win/windows_dlls.h"
 #include "platform/win/windows_autostart_task.h"
 #include "base/platform/base_platform_info.h"
@@ -269,7 +270,9 @@ void psDoCleanup() {
 	try {
 		Platform::AutostartToggle(false);
 		psSendToMenu(false, true);
-		AppUserModelId::CleanupShortcut();
+		if (!Platform::Notifications::UnregisterApplication()) {
+			LOG(("Notifications Error: Could not remove application registration."));
+		}
 		DeleteMyModules();
 	} catch (...) {
 	}
@@ -696,9 +699,6 @@ void NewVersionLaunched(int oldVersion) {
 #ifdef _DEBUG
 	if (cTestAgent() || cDebugProfile()) return;
 #endif
-	if (oldVersion <= 4009009) {
-		AppUserModelId::CheckPinned();
-	}
 	if (oldVersion > 0 && oldVersion < 2008012) {
 		// Reset icons cache, because we've changed the application icon.
 		if (Dlls::SHChangeNotify) {

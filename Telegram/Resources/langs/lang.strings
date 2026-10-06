@@ -9260,6 +9260,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_MusicCollapse" = "Collapse";
 "extras_MusicSaveCover" = "Save cover";
 "extras_MusicSaveFailed" = "Could not save the cover. Please choose another location.";
+"extras_NativeNotificationEnableFailed" = "Could not enable Windows notifications. Check the application log and try again.";
+"extras_NativeNotificationReset" = "Reset notification registration";
+"extras_NativeNotificationResetDone" = "Notifications are disabled and registration for this build has been removed.";
+"extras_NativeNotificationCleanupFailed" = "Some notification registration entries could not be removed. Check the application log.";
 "extras_MusicProgress" = "Playback progress";
 "extras_MusicRepeatOff" = "Repeat off";
 "extras_MusicRepeatOne" = "Repeat track";

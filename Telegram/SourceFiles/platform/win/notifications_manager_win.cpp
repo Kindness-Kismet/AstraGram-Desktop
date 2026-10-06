@@ -13,10 +13,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/win/base_windows_rpcndr_h.h"
 #include "base/platform/win/base_windows_winrt.h"
 #include "base/platform/base_platform_info.h"
-#include "base/platform/win/wrl/wrl_module_h.h"
 #include "base/qthelp_url.h"
 #include "platform/win/windows_app_user_model_id.h"
 #include "platform/win/windows_toast_activator.h"
+#include "platform/win/windows_notification_registration.h"
 #include "platform/win/windows_dlls.h"
 #include "platform/win/specific_win.h"
 #include "data/data_forum_topic.h"
@@ -28,6 +28,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/core_settings.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
+#include "main/main_domain.h"
+#include "window/window_controller.h"
 #include "mainwindow.h"
 #include "windows_quiethours_h.h"
 #include "styles/style_chat_helpers.h"
@@ -54,6 +56,18 @@ namespace Notifications {
 namespace {
 
 constexpr auto kQuerySettingsEachMs = 1000;
+
+bool LastCleanupSucceeded = true;
+
+bool CleanupRegistration(bool includePreviousPaths) {
+	const auto history = !Supported() || base::WinRT::Try([] {
+		ToastNotificationManager::History().Clear(AppUserModelId::Id());
+	});
+	ClearToastActivations();
+	const auto activator = UnregisterToastActivator();
+	const auto application = UnregisterApplication(includePreviousPaths);
+	return history && activator && application;
+}
 
 crl::time LastSettingsQueryMs/* = 0*/;
 
@@ -103,40 +117,6 @@ crl::time LastSettingsQueryMs/* = 0*/;
 	<audio silent="true"/>
 </toast>
 )";
-}
-
-bool init() {
-	if (!IsWindows8OrGreater() || !base::WinRT::Supported()) {
-		return false;
-	}
-
-	{
-		using namespace Microsoft::WRL;
-		const auto hr = Module<OutOfProc>::GetModule().RegisterObjects();
-		if (!SUCCEEDED(hr)) {
-			LOG(("App Error: Object registration failed."));
-		}
-	}
-#ifndef _DEBUG // Debug 构建不创建开始菜单快捷方式
-	if (!AppUserModelId::ValidateShortcut()) {
-		LOG(("App Error: Shortcut validation failed."));
-		return false;
-	}
-#endif
-
-	PWSTR appUserModelId = {};
-	if (!SUCCEEDED(GetCurrentProcessExplicitAppUserModelID(&appUserModelId))) {
-		return false;
-	}
-
-	const auto appUserModelIdGuard = gsl::finally([&] {
-		CoTaskMemFree(appUserModelId);
-	});
-
-	if (AppUserModelId::Id() != appUserModelId) {
-		return false;
-	}
-	return true;
 }
 
 // Throws.
@@ -217,13 +197,6 @@ void SetMarkAsReadText(
 				text);
 		}
 	}
-}
-
-auto Checked = false;
-auto InitSucceeded = false;
-
-void Check() {
-	InitSucceeded = init();
 }
 
 bool QuietHoursEnabled = false;
@@ -404,13 +377,11 @@ bool WaitForInputForCustom() {
 
 bool Supported() {
 #ifdef _DEBUG
-	if (cTestAgent() || cDebugProfile()) return false;
-#endif
-	if (!Checked) {
-		Checked = true;
-		Check();
+	if (cTestAgent() || cDebugProfile()) {
+		return false;
 	}
-	return InitSucceeded;
+#endif
+	return IsWindows10OrGreater() && base::WinRT::Supported();
 }
 
 bool Enforced() {
@@ -430,6 +401,40 @@ void Create(Window::Notifications::System *system) {
 		auto result = std::make_unique<Manager>(system);
 		return result->init() ? std::move(result) : nullptr;
 	});
+#ifdef _DEBUG
+	if (cTestAgent() || cDebugProfile()) {
+		return;
+	}
+#endif
+	if (system->manager().type() == Window::Notifications::ManagerType::Native) {
+		return;
+	}
+	if (Core::App().settings().nativeNotifications()) {
+		Core::App().settings().setNativeNotifications(false);
+		Core::App().saveSettingsDelayed();
+		LOG(("Notifications Error: Native notifications could not be enabled."));
+	}
+	LastCleanupSucceeded = CleanupRegistration(false);
+	if (!LastCleanupSucceeded) {
+		LOG(("Notifications Error: Could not remove application registration."));
+	}
+}
+
+bool ResetRegistration(Window::Notifications::System *system) {
+#ifdef _DEBUG
+	if (cTestAgent() || cDebugProfile()) {
+		return false;
+	}
+#endif
+	Core::App().settings().setNativeNotifications(false);
+	Core::App().saveSettingsDelayed();
+	Create(system);
+	LastCleanupSucceeded = CleanupRegistration(true);
+	return LastCleanupSucceeded;
+}
+
+bool RegistrationCleanupSucceeded() {
+	return LastCleanupSucceeded;
 }
 
 class Manager::Private {
@@ -452,7 +457,8 @@ public:
 		not_null<Window::SessionController*> window);
 	void clearNotification(NotificationId id);
 
-	void handleActivation(const ToastActivation &activation);
+	bool handleActivation(const ToastActivation &activation);
+	void processActivations();
 
 	~Private();
 
@@ -478,28 +484,51 @@ private:
 
 Manager::Private::Private(Manager *instance)
 : _guarded(std::make_shared<Manager*>(instance)) {
-	ToastActivations(
-	) | rpl::on_next([=](const ToastActivation &activation) {
-		handleActivation(activation);
+	rpl::merge(
+		ToastActivations(),
+		Core::App().passcodeLockChanges() | rpl::to_empty,
+		Core::App().domain().activeSessionChanges() | rpl::to_empty
+	) | rpl::on_next([=] {
+		const auto weak = std::weak_ptr(_guarded);
+		crl::on_main(weak, [=] { processActivations(); });
 	}, _lifetime);
 }
 
 bool Manager::Private::init() {
-	return base::WinRT::Try([&] {
+	if (!RegisterApplication() || !RegisterToastActivator()) {
+		return false;
+	}
+	const auto result = base::WinRT::Try([&] {
 		_notifier = ToastNotificationManager::CreateToastNotifier(
 			AppUserModelId::Id());
 	});
+	if (result) {
+		const auto weak = std::weak_ptr(_guarded);
+		crl::on_main(weak, [=] { processActivations(); });
+	}
+	return result;
 }
 
 Manager::Private::~Private() {
-	clearAll();
-
+	if (!Core::Quitting()) {
+		clearAll();
+	}
+	_guarded.reset();
 	_notifications.clear();
 	_notifier = nullptr;
 }
 
-void Manager::Private::clearAll() {
+void Manager::Private::processActivations() {
 	if (!_notifier) {
+		return;
+	}
+	ProcessToastActivations([=](const ToastActivation &activation) {
+		return handleActivation(activation);
+	});
+}
+
+void Manager::Private::clearAll() {
+	if (Core::Quitting() || !_notifier) {
 		return;
 	}
 
@@ -601,7 +630,7 @@ void Manager::Private::clearFromHistory(not_null<History*> history) {
 }
 
 void Manager::Private::clearFromSession(not_null<Main::Session*> session) {
-	if (!_notifier) {
+	if (Core::Quitting() || !_notifier) {
 		return;
 	}
 
@@ -639,21 +668,8 @@ void Manager::Private::clearNotification(NotificationId id) {
 	}
 }
 
-void Manager::Private::handleActivation(const ToastActivation &activation) {
+bool Manager::Private::handleActivation(const ToastActivation &activation) {
 	const auto parsed = qthelp::url_parse_params(activation.args);
-	const auto pid = parsed.value("pid").toULong();
-	const auto my = GetCurrentProcessId();
-	if (pid != my) {
-		DEBUG_LOG(("Toast Info: "
-			"Got activation \"%1\", my %2, activating %3."
-			).arg(activation.args
-			).arg(my
-			).arg(pid));
-		const auto processId = pid;
-		const auto windowId = 0; // Activate some window.
-		Platform::ActivateOtherProcess(processId, windowId);
-		return;
-	}
 	const auto action = parsed.value("action");
 	const auto id = NotificationId{
 		.contextId = ContextId{
@@ -665,15 +681,24 @@ void Manager::Private::handleActivation(const ToastActivation &activation) {
 		},
 		.msgId = MsgId(parsed.value("msg").toLongLong()),
 	};
-	if (!id.contextId.sessionId || !id.contextId.peerId || !id.msgId) {
-		DEBUG_LOG(("Toast Info: Got activation \"%1\", my %1, skipping."
-			).arg(activation.args
-			).arg(pid));
-		return;
+	if (!id.contextId.sessionId || !id.contextId.peerId || !id.msgId
+		|| (action != "open" && action != "reply" && action != "mark")) {
+		return true;
 	}
-	DEBUG_LOG(("Toast Info: Got activation \"%1\", my %1, handling."
-		).arg(activation.args
-		).arg(pid));
+	const auto manager = *_guarded;
+	if (Core::App().passcodeLocked()) {
+		if (const auto window = Core::App().activePrimaryWindow()) {
+			window->activate();
+		}
+		return false;
+	}
+	const auto session = manager->system()->findSession(id.contextId.sessionId);
+	if (!session) {
+		return false;
+	}
+	if (!session->tryResolveWindow()) {
+		return false;
+	}
 	auto text = TextWithTags();
 	for (const auto &entry : activation.input) {
 		if (entry.key == "fastReply") {
@@ -681,20 +706,19 @@ void Manager::Private::handleActivation(const ToastActivation &activation) {
 		}
 	}
 	const auto i = _notifications.find(id.contextId);
-	if (i == _notifications.cend() || !i->second.contains(id.msgId)) {
-		return;
+	const auto live = i != _notifications.cend() && i->second.contains(id.msgId);
+	// 重启后缺少消息和权限上下文，回复先保存为草稿，已读操作改为打开聊天。
+	if (live && (action == "reply" || action == "mark")) {
+		manager->notificationReplied(id, action == "reply" ? text : TextWithTags());
+		clearNotification(id);
+		return true;
 	}
-
-	const auto manager = *_guarded;
-	if (action == "reply") {
-		manager->notificationReplied(id, text);
-	} else if (action == "mark") {
-		manager->notificationReplied(id, TextWithTags());
-	} else {
-		manager->notificationActivated(id, {
-			.draft = std::move(text),
-		});
-	}
+	LOG(("Notifications Info: Opening notification for account %1, peer %2.")
+		.arg(id.contextId.sessionId).arg(id.contextId.peerId.value));
+	manager->notificationActivated(id, {
+		.draft = std::move(text),
+	});
+	return true;
 }
 
 bool Manager::Private::showNotification(
@@ -735,8 +759,7 @@ bool Manager::Private::showNotificationInTryCatch(
 		.contextId = key,
 		.msgId = info.itemId,
 	};
-	const auto idString = u"pid=%1&session=%2&peer=%3&topic=%4&monoforumpeer=%5&msg=%6"_q
-		.arg(GetCurrentProcessId())
+	const auto idString = u"session=%1&peer=%2&topic=%3&monoforumpeer=%4&msg=%5"_q
 		.arg(key.sessionId)
 		.arg(key.peerId.value)
 		.arg(info.topicRootId.bare)
@@ -837,7 +860,7 @@ bool Manager::Private::showNotificationInTryCatch(
 		}
 		crl::on_main([=, activation = std::move(activation)]() mutable {
 			if (const auto strong = weak.lock()) {
-				(*strong)->handleActivation(activation);
+				QueueToastActivation(std::move(activation));
 			}
 		});
 	});
@@ -860,6 +883,8 @@ bool Manager::Private::showNotificationInTryCatch(
 	const auto token3 = toast.Failed([=](
 			const ToastNotification &sender,
 			const ToastFailedEventArgs &args) {
+		LOG(("Notifications Error: Toast failed (%1).")
+			.arg(uint32(args.ErrorCode()), 0, 16));
 		performOnMainQueue([notificationId](Manager *manager) {
 			manager->clearNotification(notificationId);
 		});
@@ -908,10 +933,6 @@ bool Manager::init() {
 
 void Manager::clearNotification(NotificationId id) {
 	_private->clearNotification(id);
-}
-
-void Manager::handleActivation(const ToastActivation &activation) {
-	_private->handleActivation(activation);
 }
 
 Manager::~Manager() = default;

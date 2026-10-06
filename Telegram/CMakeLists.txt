@@ -2037,6 +2037,8 @@ PRIVATE
     platform/win/windows_autostart_task.h
     platform/win/windows_taskbar_buttons.cpp
     platform/win/windows_taskbar_buttons.h
+    platform/win/windows_notification_registration.cpp
+    platform/win/windows_notification_registration.h
     platform/win/windows_toast_activator.cpp
     platform/win/windows_toast_activator.h
     platform/platform_file_utilities.cpp

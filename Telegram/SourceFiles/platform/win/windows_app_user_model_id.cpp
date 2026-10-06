@@ -7,14 +7,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "platform/win/windows_app_user_model_id.h"
 
-#include "platform/win/windows_dlls.h"
-#include "platform/win/windows_toast_activator.h"
-#include "base/platform/win/base_windows_winrt.h"
-#include "core/launcher.h"
-
-#include <propvarutil.h>
-#include <propkey.h>
-
 namespace Platform {
 namespace AppUserModelId {
 namespace {
@@ -22,13 +14,6 @@ namespace {
 constexpr auto kMaxFileLen = MAX_PATH * 2;
 
 const PROPERTYKEY pkey_AppUserModel_ID = { { 0x9F4C2855, 0x9F79, 0x4B39, { 0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3 } }, 5 };
-const PROPERTYKEY pkey_AppUserModel_ToastActivator = { { 0x9F4C2855, 0x9F79, 0x4B39, { 0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3 } }, 26 };
-
-#ifdef OS_WIN_STORE
-const WCHAR AppUserModelIdBase[] = L"AstraGram.AstraGramDesktop.Store";
-#else // OS_WIN_STORE
-const WCHAR AppUserModelIdBase[] = L"AstraGram.AstraGramDesktop";
-#endif // OS_WIN_STORE
 
 } // namespace
 
@@ -88,114 +73,6 @@ UniqueFileId GetUniqueFileId(LPCWSTR path) {
 	};
 }
 
-void CheckPinned() {
-	if (!SUCCEEDED(CoInitialize(0))) {
-		return;
-	}
-	const auto coGuard = gsl::finally([] {
-		CoUninitialize();
-	});
-
-	const auto path = PinnedIconsPath();
-	const auto native = QDir::toNativeSeparators(path).toStdWString();
-
-	const auto srcid = MyExecutablePathId();
-	if (!srcid) {
-		return;
-	}
-
-	LOG(("Checking..."));
-	WIN32_FIND_DATA findData;
-	HANDLE findHandle = FindFirstFileEx(
-		(native + L"*").c_str(),
-		FindExInfoStandard,
-		&findData,
-		FindExSearchNameMatch,
-		0,
-		0);
-	if (findHandle == INVALID_HANDLE_VALUE) {
-		LOG(("Init Error: could not find files in pinned folder"));
-		return;
-	}
-	do {
-		std::wstring fname = native + findData.cFileName;
-		LOG(("Checking %1").arg(QString::fromStdWString(fname)));
-		if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-			continue;
-		} else {
-			DWORD attributes = GetFileAttributes(fname.c_str());
-			if (attributes >= 0xFFFFFFF) {
-				continue; // file does not exist
-			}
-
-			auto shellLink = base::WinRT::TryCreateInstance<IShellLink>(
-				CLSID_ShellLink);
-			if (!shellLink) {
-				continue;
-			}
-
-			auto persistFile = shellLink.try_as<IPersistFile>();
-			if (!persistFile) {
-				continue;
-			}
-
-			auto hr = persistFile->Load(fname.c_str(), STGM_READWRITE);
-			if (!SUCCEEDED(hr)) continue;
-
-			WCHAR dst[MAX_PATH] = { 0 };
-			hr = shellLink->GetPath(dst, MAX_PATH, nullptr, 0);
-			if (!SUCCEEDED(hr)) continue;
-
-			if (GetUniqueFileId(dst) == srcid) {
-				auto propertyStore = shellLink.try_as<IPropertyStore>();
-				if (!propertyStore) {
-					return;
-				}
-
-				PROPVARIANT appIdPropVar;
-				hr = propertyStore->GetValue(Key(), &appIdPropVar);
-				if (!SUCCEEDED(hr)) return;
-				LOG(("Reading..."));
-				WCHAR already[MAX_PATH];
-				hr = PropVariantToString(appIdPropVar, already, MAX_PATH);
-				if (SUCCEEDED(hr)) {
-					if (Id() == already) {
-						LOG(("Already!"));
-						PropVariantClear(&appIdPropVar);
-						return;
-					}
-				}
-				if (appIdPropVar.vt != VT_EMPTY) {
-					PropVariantClear(&appIdPropVar);
-					return;
-				}
-				PropVariantClear(&appIdPropVar);
-
-				hr = InitPropVariantFromString(Id().c_str(), &appIdPropVar);
-				if (!SUCCEEDED(hr)) return;
-
-				hr = propertyStore->SetValue(Key(), appIdPropVar);
-				PropVariantClear(&appIdPropVar);
-				if (!SUCCEEDED(hr)) return;
-
-				hr = propertyStore->Commit();
-				if (!SUCCEEDED(hr)) return;
-
-				if (persistFile->IsDirty() == S_OK) {
-					persistFile->Save(fname.c_str(), TRUE);
-				}
-				return;
-			}
-		}
-	} while (FindNextFile(findHandle, &findData));
-	DWORD errorCode = GetLastError();
-	if (errorCode && errorCode != ERROR_NO_MORE_FILES) {
-		LOG(("Init Error: could not find some files in pinned folder"));
-		return;
-	}
-	FindClose(findHandle);
-}
-
 QString systemShortcutPath() {
 	WCHAR wstrPath[kMaxFileLen] = {};
 	if (GetEnvironmentVariable(L"APPDATA", wstrPath, kMaxFileLen)) {
@@ -206,196 +83,15 @@ QString systemShortcutPath() {
 	return QString();
 }
 
-void CleanupShortcut() {
-	const auto myid = MyExecutablePathId();
-	if (!myid) {
-		return;
-	}
-
-	QString path = systemShortcutPath() + u"AstraGram.lnk"_q;
-	std::wstring p = QDir::toNativeSeparators(path).toStdWString();
-
-	DWORD attributes = GetFileAttributes(p.c_str());
-	if (attributes >= 0xFFFFFFF) return; // file does not exist
-
-	auto shellLink = base::WinRT::TryCreateInstance<IShellLink>(
-		CLSID_ShellLink);
-	if (!shellLink) {
-		return;
-	}
-
-	auto persistFile = shellLink.try_as<IPersistFile>();
-	if (!persistFile) {
-		return;
-	}
-
-	auto hr = persistFile->Load(p.c_str(), STGM_READWRITE);
-	if (!SUCCEEDED(hr)) return;
-
-	WCHAR szGotPath[MAX_PATH];
-	hr = shellLink->GetPath(szGotPath, MAX_PATH, nullptr, 0);
-	if (!SUCCEEDED(hr)) return;
-
-	if (GetUniqueFileId(szGotPath) == myid) {
-		QFile().remove(path);
-	}
-}
-
-bool validateShortcutAt(const QString &path) {
-	const auto native = QDir::toNativeSeparators(path).toStdWString();
-
-	DWORD attributes = GetFileAttributes(native.c_str());
-	if (attributes >= 0xFFFFFFF) {
-		return false; // file does not exist
-	}
-
-	auto shellLink = base::WinRT::TryCreateInstance<IShellLink>(
-		CLSID_ShellLink);
-	if (!shellLink) {
-		return false;
-	}
-
-	auto persistFile = shellLink.try_as<IPersistFile>();
-	if (!persistFile) {
-		return false;
-	}
-
-	auto hr = persistFile->Load(native.c_str(), STGM_READWRITE);
-	if (!SUCCEEDED(hr)) return false;
-
-	WCHAR szGotPath[kMaxFileLen] = { 0 };
-	hr = shellLink->GetPath(szGotPath, kMaxFileLen, nullptr, 0);
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	if (GetUniqueFileId(szGotPath) != MyExecutablePathId()) {
-		return false;
-	}
-
-	auto propertyStore = shellLink.try_as<IPropertyStore>();
-	if (!propertyStore) {
-		return false;
-	}
-
-	PROPVARIANT appIdPropVar;
-	PROPVARIANT toastActivatorPropVar;
-	hr = propertyStore->GetValue(Key(), &appIdPropVar);
-	if (!SUCCEEDED(hr)) return false;
-
-	hr = propertyStore->GetValue(
-		pkey_AppUserModel_ToastActivator,
-		&toastActivatorPropVar);
-	if (!SUCCEEDED(hr)) return false;
-
-	WCHAR already[MAX_PATH];
-	hr = PropVariantToString(appIdPropVar, already, MAX_PATH);
-	const auto good1 = SUCCEEDED(hr) && (Id() == already);
-	const auto bad1 = !good1 && (appIdPropVar.vt != VT_EMPTY);
-	PropVariantClear(&appIdPropVar);
-
-	auto clsid = CLSID();
-	hr = PropVariantToCLSID(toastActivatorPropVar, &clsid);
-	const auto good2 = SUCCEEDED(hr) && (clsid == __uuidof(ToastActivator));
-	const auto bad2 = !good2 && (toastActivatorPropVar.vt != VT_EMPTY);
-	PropVariantClear(&toastActivatorPropVar);
-	if (good1 && good2) {
-		LOG(("App Info: Shortcut validated at \"%1\"").arg(path));
-		return true;
-	} else if (bad1 || bad2) {
-		return false;
-	}
-
-	hr = InitPropVariantFromString(Id().c_str(), &appIdPropVar);
-	if (!SUCCEEDED(hr)) return false;
-
-	hr = propertyStore->SetValue(Key(), appIdPropVar);
-	PropVariantClear(&appIdPropVar);
-	if (!SUCCEEDED(hr)) return false;
-
-	hr = InitPropVariantFromCLSID(
-		__uuidof(ToastActivator),
-		&toastActivatorPropVar);
-	if (!SUCCEEDED(hr)) return false;
-
-	hr = propertyStore->SetValue(
-		pkey_AppUserModel_ToastActivator,
-		toastActivatorPropVar);
-	PropVariantClear(&toastActivatorPropVar);
-	if (!SUCCEEDED(hr)) return false;
-
-	hr = propertyStore->Commit();
-	if (!SUCCEEDED(hr)) return false;
-
-	if (persistFile->IsDirty() == S_OK) {
-		hr = persistFile->Save(native.c_str(), TRUE);
-		if (!SUCCEEDED(hr)) return false;
-	}
-
-	LOG(("App Info: Shortcut set and validated at \"%1\"").arg(path));
-	return true;
-}
-
-bool checkInstalled(QString path = {}) {
-	if (path.isEmpty()) {
-		path = systemShortcutPath();
-		if (path.isEmpty()) {
-			return false;
-		}
-	}
-
-	const auto installed = u"AstraGram/AstraGram.lnk"_q;
-	const auto previous = u"AyuGram Desktop/AyuGram.lnk"_q;
-	const auto old = u"AyuGram for Windows/AyuGram.lnk"_q;
-	return validateShortcutAt(path + installed)
-		|| validateShortcutAt(path + previous)
-		|| validateShortcutAt(path + old);
-}
-
-bool ValidateShortcut() {
-	const auto path = systemShortcutPath();
-	if (path.isEmpty() || cExeName().isEmpty()) {
-		return false;
-	}
-
-	if (cAlphaVersion()) {
-		return validateShortcutAt(path + u"AstraGramAlpha.lnk"_q);
-	}
-	return checkInstalled(path)
-		|| validateShortcutAt(path + u"AstraGram.lnk"_q);
-}
-
 const std::wstring &Id() {
-	static const auto BaseId = std::wstring(AppUserModelIdBase);
-	static auto CheckingInstalled = false;
-	if (CheckingInstalled) {
-		return BaseId;
-	}
-	static const auto Installed = [] {
 #ifdef OS_WIN_STORE
-		return true;
-#else // OS_WIN_STORE
-		CheckingInstalled = true;
-		const auto guard = gsl::finally([] {
-			CheckingInstalled = false;
-		});
-		if (!SUCCEEDED(CoInitialize(nullptr))) {
-			return false;
-		}
-		const auto coGuard = gsl::finally([] {
-			CoUninitialize();
-		});
-		return checkInstalled();
+	static const auto Result = std::wstring(L"AstraGram.AstraGramDesktop.Store");
+#elif defined _DEBUG
+	static const auto Result = std::wstring(L"AstraGram.AstraGramDesktop.Debug");
+#else
+	static const auto Result = std::wstring(L"AstraGram.AstraGramDesktop");
 #endif
-	}();
-	if (Installed) {
-		return BaseId;
-	}
-	static const auto PortableId = [] {
-		const auto h = Core::Launcher::Instance().instanceHash();
-		return BaseId + L'.' + std::wstring(h.begin(), h.end());
-	}();
-	return PortableId;
+	return Result;
 }
 
 const PROPERTYKEY &Key() {

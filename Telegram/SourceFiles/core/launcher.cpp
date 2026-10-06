@@ -600,6 +600,8 @@ void Launcher::processArguments() {
 #endif
 		{ Platform::kUntranslocatedArgument, KeyFormat::NoValues },
 		{ "-key"            , KeyFormat::OneValue },
+		{ "-toastactivated" , KeyFormat::NoValues },
+		{ "-Embedding"      , KeyFormat::NoValues },
 		{ "-autostart"      , KeyFormat::NoValues },
 		{ "-fixprevious"    , KeyFormat::NoValues },
 		{ "-cleanup"        , KeyFormat::NoValues },
@@ -659,7 +661,8 @@ void Launcher::processArguments() {
 		: LaunchModeNormal;
 	gNoStartUpdate = parseResult.contains("-noupdate");
 	gStartToSettings = parseResult.contains("-tosettings");
-	gStartInTray = parseResult.contains("-startintray");
+	_toastActivated = parseResult.contains("-toastactivated");
+	gStartInTray = parseResult.contains("-startintray") || _toastActivated;
 	gQuit = parseResult.contains("-quit");
 	gGhost = parseResult.contains("-ghost");
 	_customWorkingDir = parseResult.value("-workdir", {}).join(QString());

@@ -134,6 +134,7 @@ private:
 	std::unique_ptr<Application> _application;
 
 	QString _localServerName, _localSocketReadData;
+	QByteArray _toastActivation;
 	QLocalServer _localServer;
 	QLocalSocket _localSocket;
 	LocalClients _localClients;

@@ -15,11 +15,7 @@ namespace AppUserModelId {
 [[nodiscard]] QString PinnedIconsPath();
 QString systemShortcutPath();
 
-void CleanupShortcut();
-void CheckPinned();
-
 [[nodiscard]] const std::wstring &Id();
-bool ValidateShortcut();
 
 [[nodiscard]] const PROPERTYKEY &Key();
 

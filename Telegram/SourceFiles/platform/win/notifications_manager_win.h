@@ -14,6 +14,9 @@ struct ToastActivation;
 namespace Platform {
 namespace Notifications {
 
+[[nodiscard]] bool ResetRegistration(Window::Notifications::System *system);
+[[nodiscard]] bool RegistrationCleanupSucceeded();
+
 class Manager : public Window::Notifications::NativeManager {
 public:
 	Manager(Window::Notifications::System *system);
@@ -21,8 +24,6 @@ public:
 
 	bool init();
 	void clearNotification(NotificationId id);
-
-	void handleActivation(const ToastActivation &activation);
 
 protected:
 	void doShowNativeNotification(
