@@ -90,6 +90,29 @@ using namespace Builder;
 }
 #endif // Q_OS_MAC && !OS_MAC_STORE
 
+void BuildInterfaceScaleSection(SectionBuilder &builder) {
+	if (!HasInterfaceScale()) {
+		return;
+	}
+	builder.addSubsectionTitle({
+		.id = u"advanced/interface-scale"_q,
+		.title = tr::lng_settings_scale(),
+	});
+	builder.add([](const WidgetContext &ctx) {
+		auto wrap = object_ptr<Ui::VerticalLayout>(ctx.container);
+		SetupInterfaceScale(&ctx.controller->window(), wrap.data());
+		return SectionBuilder::WidgetToAdd{ .widget = std::move(wrap) };
+	}, [] {
+		return SearchEntry{
+			.id = u"main/scale"_q,
+			.title = tr::lng_settings_scale(tr::now),
+			.keywords = { u"scale"_q, u"zoom"_q, u"size"_q,
+				u"interface"_q, u"ui"_q, u"缩放"_q, u"显示比例"_q },
+		};
+	});
+	builder.addSkip();
+}
+
 void BuildDataStorageSection(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 	const auto container = builder.container();
@@ -1005,6 +1028,7 @@ const auto kMeta = BuildHelper({
 	.title = &tr::lng_settings_advanced,
 	.icon = &st::menuIconManage,
 }, [](SectionBuilder &builder) {
+	BuildInterfaceScaleSection(builder);
 	BuildDataStorageSection(builder);
 	BuildAutoDownloadSection(builder);
 #if !defined Q_OS_WIN && !defined Q_OS_MAC

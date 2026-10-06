@@ -496,30 +496,6 @@ void BuildSectionButtons(SectionBuilder &builder) {
 	});
 }
 
-void BuildInterfaceScale(SectionBuilder &builder) {
-	if (!HasInterfaceScale()) {
-		return;
-	}
-
-	builder.addDivider();
-	builder.addSkip();
-
-	builder.add([](const WidgetContext &ctx) {
-		const auto window = &ctx.controller->window();
-		auto wrap = object_ptr<Ui::VerticalLayout>(ctx.container);
-		SetupInterfaceScale(window, wrap.data());
-		return SectionBuilder::WidgetToAdd{ .widget = std::move(wrap) };
-	}, [] {
-		return SearchEntry{
-			.id = u"main/scale"_q,
-			.title = tr::lng_settings_default_scale(tr::now),
-			.keywords = { u"zoom"_q, u"size"_q, u"interface"_q, u"ui"_q },
-		};
-	});
-
-	builder.addSkip();
-}
-
 void BuildAppSection(SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSectionButton({
@@ -620,7 +596,6 @@ void Main::setupContent() {
 		builder.addSkip();
 		BuildValidationSuggestions(builder);
 		builder.addSkip();
-		BuildInterfaceScale(builder);
 		BuildAppSection(builder);
 
 		std::move(showFinished) | rpl::on_next([=] {
@@ -693,7 +668,6 @@ const auto kMeta = BuildHelper({
 
 	builder.addSkip();
 
-	BuildInterfaceScale(builder);
 	BuildAppSection(builder);
 });
 
