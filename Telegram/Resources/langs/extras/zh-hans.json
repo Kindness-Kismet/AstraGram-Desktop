@@ -574,7 +574,7 @@
   "LocalPremiumNotice_PC": "您正在使用**本地** Telegram Premium。\n它**不会**为您带来任何实际权益。\n**尽情欣赏昵称旁的星标吧！**",
   "LocalPremiumNotice_Android": "您正在使用**本地** Telegram Premium。\n您可以使用有频率限制的翻译功能，以及部分仅在**本地**生效的 Telegram Premium 功能。",
   "DeveloperPopup": "**{item}** 是 **AstraGram** 开发团队的成员。",
-  "OfficialResourcePopup": "**{item}** 是 **AstraGram** 的官方频道。",
+  "OfficialResourcePopup": "**{item}** 是 **AstraGram** 的官方资源。",
   "MutualContactInfo_PC": "互为联系人。",
   "SessionInfoOfficialApp": "官方应用",
   "SettingsWatermark": "AstraGram 基于 AyuGram 开发，AyuGram 由 Radolyn Labs 开发和维护。",
