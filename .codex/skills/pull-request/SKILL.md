@@ -5,9 +5,7 @@ description: Use this skill when the user asks to create, prepare, review, or de
 
 # 拉取请求
 
-普通修复默认以 `main` 为目标；上游适配从 `dev` 创建功能分支并向 `dev` 提 PR。
-功能分支使用 `feature/<名称>` 或 `fix/<名称>`。dev → main 的稳定推广必须普通 merge，
-保留提交关系；main 修复也普通 merge 回 dev。main/dev 是长期分支，禁止合并后删除。
+默认以 `main` 为目标，功能分支使用 `feature/<名称>` 或 `fix/<名称>`。
 用户指定分支时按指定值执行，准备前核对实际分支关系。
 
 描述先说明具体问题和修改后的行为，再给出必要的实现理由、验证结果及限制。

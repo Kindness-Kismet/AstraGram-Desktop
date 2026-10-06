@@ -1,12 +1,12 @@
 ---
 name: upstream-sync
-description: "同步官方 Telegram Desktop 稳定版或测试版：管理 main/dev 双分支，检查官方新版本，生成已适配版本到目标版本之间 tdesktop 与各子模块的改动报告，适配完成后登记新的官方版本。Use when the user asks whether Telegram Desktop has a new stable or beta release, how far behind upstream the fork is, what changed upstream, wants to sync or adapt upstream, or asks to record a completed upstream sync, or says phrases like \"同步上游\", \"官方更新\", \"适配官方\", \"上游有什么变化\"."
+description: "同步官方 Telegram Desktop 最新 tag，包含稳定版与测试版：检查官方新版本，生成已适配版本到目标版本之间 tdesktop 与各子模块的改动报告，适配完成后登记新的官方版本。Use when the user asks whether Telegram Desktop has a new stable or beta release, how far behind upstream the fork is, what changed upstream, wants to sync or adapt upstream, or asks to record a completed upstream sync, or says phrases like \"同步上游\", \"官方更新\", \"适配官方\", \"上游有什么变化\"."
 ---
 
 # 同步官方最新 tag
 
 `.github/upstream.json` 的 `tdesktop` 只记录已适配的官方 tag 版本号。
-两个长期分支各自维护自己的基线；上游是否为 beta 不决定 AstraGram 的发布通道。
+项目以 main 为主线；上游是否为 beta 不改变本项目的正常发版方式。
 其余基准都由它推导，不需要登记：
 
 - tdesktop 基线：官方 `v<版本>` 标签。
@@ -18,15 +18,10 @@ description: "同步官方 Telegram Desktop 稳定版或测试版：管理 main/
 保存在 `refs/upstream-tags/`，不依赖远程名，也不会和本仓库同名的发布标签混在一起。
 `upstream.json` 另有三类规则：`skip` 长期不跟进，`notes` 跟进时要注意，`deferred` 暂缓、以后要补。
 
-## 分支与发布
+## 同步范围
 
-- `dev` 是长期集成分支，接收官方最新 tag 的适配，我们的测试版从这里发布。
-- `main` 是长期稳定分支。dev 完成适配和验证后，由我们决定何时准备稳定版本，
-  经 PR 普通 merge 合入 main；无需等待上游把该基线标为 stable。
-- 不在 main 重做 dev 已完成的适配；main 的独立修复及时普通 merge 回 dev。
-  若版本文件或基线冲突，保留 dev 已适配的较新基线与测试版本，不用 main 的旧版本覆盖。
-- `dev` ↔ `main` 保留合并历史，不 squash、不 rebase、不删分支；只清理已合并的临时功能分支。
-- 比较依据始终是官方 tag；不要把上游开发分支直接合入本仓库。
+只取官方 tag，不追踪 tag 之间的开发分支提交。上游正式版与测试版标签都可作为基线，
+完成适配与验证后按本项目原有 main 发版流程发布，不因上游 beta 增加版本后缀。
 
 ## 检查与报告
 
@@ -57,8 +52,7 @@ python scripts/upstream.py report --base 7.2.7 --to 7.2.9 # 指定基线，用�
 ## 适配
 
 报告生成后先交给用户阅读，按用户决定的范围合并；生成报告本身不改动代码。
-从最新 dev 创建 `feature/upstream-<版本>` 分支进行，PR 目标为 dev。
-在 main 使用相同命令也会包含上游测试版，但实际适配工作在 dev 完成。
+从最新 main 创建临时 `feature/upstream-<版本>` 分支进行，PR 目标为 main。
 
 - **tdesktop**：本仓库与官方没有共同的 git 历史，不能 `git merge`，按报告开头的命令逐类处理：
   直接采用和官方新增用 `git checkout`，需要合并的用 `git diff <基线> <目标> | git apply -3`。
@@ -92,10 +86,8 @@ python scripts/upstream.py done <已适配的官方版本>
 ```
 
 `done` 会检查每个子模块已提交的指针等于或包含官方该版本的指针，不满足时拒绝登记；只能往更新的版本登记。
-随后用 version-bump 准备 `<官方版本>[.<修订号>].beta`（dev 测试发布）或
-`<官方版本>[.<修订号>]`（稳定推广）；正式发布的更新码必须高于此前测试版，不能只删除 `.beta`。
-版本文件推入 dev 且 BetaChannel=1 才发布 prerelease；dev 上的稳定版本文件不触发构建，留给 main 发布。
-更新说明写明所适配的 Telegram Desktop 版本；上游 beta 标签不会强制我们的发布为 beta。
+随后用 version-bump 准备 `<官方版本>[.<修订号>]`，按原有 main 发布流程处理。
+更新说明写明所适配的 Telegram Desktop 版本；不要把上游 beta 标记复制成我们的版本后缀或发布通道。
 
 ## 提交
 

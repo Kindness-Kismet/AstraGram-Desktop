@@ -12,7 +12,7 @@ if __package__ in (None, ""):
 from build_support.changelog import validate_changelog
 from build_support.paths import ROOT, VERSION_FILE
 
-_PATTERN = re.compile(r"^\s*(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?(\.beta)?\s*$")
+_PATTERN = re.compile(r"^\s*(\d+)\.(\d+)\.(\d+)(?:\.(\d+|beta))?\s*$")
 _PACKER_VERSION_MAX = 999_999_999
 
 _UPSTREAM_TRACKING = ROOT / ".github" / "upstream.json"
@@ -71,10 +71,10 @@ class Version:
 def parse_version(text: str) -> Version:
     match = _PATTERN.fullmatch(text)
     if not match:
-        raise SystemExit(f"Bad version '{text}'. Expected major.minor.patch[.revision][.beta].")
+        raise SystemExit(f"Bad version '{text}'. Expected major.minor.patch[.revision|.beta].")
 
-    raw_major, raw_minor, raw_patch, suffix, beta = match.groups()
-    raw_revision = suffix or "0"
+    raw_major, raw_minor, raw_patch, suffix = match.groups()
+    raw_revision = "0" if suffix in (None, "beta") else suffix
     limits = (
         ("major", raw_major, 99),
         ("minor", raw_minor, 99),
@@ -96,7 +96,7 @@ def parse_version(text: str) -> Version:
         minor=values["minor"],
         patch=values["patch"],
         revision=values["revision"],
-        beta=bool(beta),
+        beta=suffix == "beta",
     )
     if not 1_016 < version.update <= _PACKER_VERSION_MAX:
         raise SystemExit(f"Update version {version.update} is outside Packer range 1017..{_PACKER_VERSION_MAX}.")
@@ -114,7 +114,7 @@ def read_current_version() -> str:
 
 
 def read_upstream_version() -> str:
-    """已适配的官方版本号，由 scripts/upstream.py done 登记。"""
+    """已适配的官方 tag 版本号，由 scripts/upstream.py done 登记。"""
     try:
         data = json.loads(_UPSTREAM_TRACKING.read_text(encoding="utf-8"))
         return str(data["tdesktop"])
@@ -122,57 +122,26 @@ def read_upstream_version() -> str:
         raise SystemExit(f"Could not read official version from {_UPSTREAM_TRACKING}: {error}") from error
 
 
-def version_fields(version: Version) -> dict[str, str]:
-    return {
-        "AppVersion": str(version.full),
-        "AppUpdateVersion": str(version.update),
-        "AppStorageReadVersion": str(version.storage_read),
-        "AppVersionStrMajor": f"{version.major}.{version.minor}",
-        "AppVersionStrOfficial": version.text,
-        "AppVersionStrSmall": version.text_small,
-        "AppVersionStrFile": version.file_version,
-        "AppVersionStr": version.text_small,
-        "BetaChannel": "1" if version.beta else "0",
-        "AlphaVersion": "0",
-        "AppVersionOriginal": version.original,
-    }
-
-
-def read_version_file(path: Path = VERSION_FILE) -> Version:
-    fields = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        parts = line.split()
-        if len(parts) != 2:
-            raise ValueError(f"Invalid version field: {line!r}")
-        name, value = parts
-        if name in fields:
-            raise ValueError(f"Duplicate version field: {name}")
-        fields[name] = value
-    version = parse_version(fields.get("AppVersionOriginal", ""))
-    for name, expected in version_fields(version).items():
-        if fields.get(name) != expected:
-            raise ValueError(f"Version field {name}: expected {expected!r}, got {fields.get(name)!r}")
-    return version
-
-
-def validate_baseline(version: Version, tracking: dict) -> None:
-    upstream = tracking["tdesktop"]
-    if version.text != upstream:
-        raise ValueError(f"Version {version.original} must use official baseline {upstream} as its first three parts.")
-
-
 def apply_version(version: Version, check_changelog: bool = True) -> list[str]:
-    validate_baseline(version, json.loads(_UPSTREAM_TRACKING.read_text(encoding="utf-8")))
-    current = read_version_file(VERSION_FILE)
-    if version.original != current.original and version.update <= current.update:
-        raise ValueError("A new release must increase AppUpdateVersion, including beta-to-stable promotion.")
+    upstream = read_upstream_version()
+    if version.text != upstream:
+        raise SystemExit(f"Version {version.text_small} must use the official baseline {upstream} as its first three parts.")
     if check_changelog:
         _check_changelog()
 
-    # 显示和资源版本保持纯数字，beta 后缀仅用于发布标签与通道识别。
+    # 版本文件是唯一来源，代码与 Windows 资源在 CMake 配置阶段从它生成。
     return _replace(VERSION_FILE, [
-        (rf"(?m)^({name} +)\S+$", rf"\g<1>{value}")
-        for name, value in version_fields(version).items()
+        (r"(AppVersion\s+)\d+", r"\g<1>" + str(version.full)),
+        (r"(AppUpdateVersion\s+)\d+", r"\g<1>" + str(version.update)),
+        (r"(AppStorageReadVersion\s+)\d+", r"\g<1>" + str(version.storage_read)),
+        (r"(AppVersionStrMajor\s+)\d[\d\.]*", r"\g<1>" + f"{version.major}.{version.minor}"),
+        (r"(AppVersionStrOfficial\s+)\d[\d\.]*", r"\g<1>" + version.text),
+        (r"(AppVersionStrSmall\s+)\d[\d\.]*", r"\g<1>" + version.text_small),
+        (r"(AppVersionStrFile\s+)\d[\d\.]*", r"\g<1>" + version.file_version),
+        (r"(AppVersionStr\s+)\d[\d\.]*", r"\g<1>" + version.text_small),
+        (r"(BetaChannel\s+)\d", r"\g<1>" + ("1" if version.beta else "0")),
+        (r"(AlphaVersion\s+)\d+", r"\g<1>0"),
+        (r"(AppVersionOriginal\s+)\d[\d\.beta]*", r"\g<1>" + version.original),
     ])
 
 
@@ -215,7 +184,7 @@ def main(argv: list[str] | None = None) -> None:
         "version",
         nargs="?",
         metavar="VERSION",
-        help="New version as major.minor.patch[.revision][.beta]; omit to show the current one",
+        help="New version as major.minor.patch[.revision|.beta]; omit to show the current one",
     )
     parser.add_argument(
         "--skip-changelog",

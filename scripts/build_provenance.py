@@ -28,10 +28,10 @@ from build_support.artifact_provenance import (
     write_artifact_manifest,
 )
 
-from release_config import release_config
-
 
 ALLOWED_SOURCE_EVENTS = {"push"}
+# 发版由推送 main 上的版本文件触发，tag 由该运行自行创建。
+SOURCE_BRANCH = "main"
 SOURCE_WORKFLOW = ".github/workflows/build-release.yml"
 SOURCE_RUN_API_ATTEMPTS = 4
 SOURCE_RUN_API_TIMEOUT_SECONDS = 15
@@ -43,6 +43,24 @@ def _positive_int(value: str) -> int:
     if result <= 0:
         raise argparse.ArgumentTypeError("must be a positive integer")
     return result
+
+
+def _read_version_fields(root: Path) -> dict[str, str]:
+    path = root / "Telegram/build/version"
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
+        raise ProvenanceError(f"Could not read version file {path}: {error}") from error
+    fields = {}
+    for line in lines:
+        parts = line.split()
+        if len(parts) != 2:
+            continue
+        name, value = parts
+        if name in fields:
+            raise ProvenanceError(f"Duplicate version file field: {name}")
+        fields[name] = value
+    return fields
 
 
 def _git_head(root: Path) -> str:
@@ -179,6 +197,8 @@ def validate_source(
     sha = validate_sha(sha)
     ref = validate_source_ref(ref)
     version = validate_version(version)
+    if ref != f"refs/tags/v{version}":
+        raise ProvenanceError(f"Source tag does not match the version: {ref!r}")
     require_positive_integers(
         {"source run id": run_id, "source run attempt": run_attempt, "AppUpdateVersion": appupdateversion}
     )
@@ -187,25 +207,28 @@ def validate_source(
     if validate_sha(_git_head(root)) != sha:
         raise ProvenanceError("Current checkout HEAD does not match the source SHA")
 
+    fields = _read_version_fields(root)
+    expected_versions = {
+        "AppVersionStrSmall": version,
+        "AppVersionStr": version,
+        "AppVersionOriginal": version,
+        "AppUpdateVersion": str(appupdateversion),
+    }
+    for name, expected in expected_versions.items():
+        if fields.get(name) != expected:
+            raise ProvenanceError(
+                f"Telegram/build/version field {name} mismatch: expected {expected!r}, got {fields.get(name)!r}"
+            )
+
     loader = run_loader or fetch_workflow_run
     run = loader(repository, run_id, run_attempt)
-    branch = run.get("head_branch")
-    try:
-        config = release_config(root, branch)
-    except (OSError, ValueError, KeyError, SystemExit) as error:
-        raise ProvenanceError(f"Invalid source release configuration: {error}") from error
-    if config["publish"] != "true":
-        raise ProvenanceError("The source branch and version do not permit a release.")
-    if (ref, version, str(appupdateversion)) != (
-        f"refs/tags/{config['tag']}", config["version"], config["appversion"],
-    ):
-        raise ProvenanceError("Source tag or version does not match the committed release configuration.")
     actual_repository = run.get("repository", {}).get("full_name")
     checks = {
         "run id": (run.get("id"), run_id),
         "run attempt": (run.get("run_attempt"), run_attempt),
         "repository": (actual_repository, repository),
         "head SHA": (str(run.get("head_sha", "")).lower(), sha),
+        "head branch": (run.get("head_branch"), SOURCE_BRANCH),
         "workflow path": (run.get("path"), workflow_path),
     }
     for label, (actual, expected) in checks.items():
