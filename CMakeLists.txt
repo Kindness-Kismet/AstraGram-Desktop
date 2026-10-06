@@ -67,8 +67,7 @@ set(desktop_app_skip_libs
 
 add_subdirectory(cmake)
 
-if (LINUX AND NOT DESKTOP_APP_USE_PACKAGED
-    AND TARGET external_qt_static_plugins_kimageformats)
+if (LINUX AND TARGET external_qt_static_plugins_kimageformats)
     # libheif 的 FFmpeg 后端需要完整静态依赖，生成工具也会链接此图片插件。
     target_link_libraries(external_qt_static_plugins_kimageformats
     PRIVATE
