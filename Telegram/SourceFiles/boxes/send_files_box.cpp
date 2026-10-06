@@ -1389,7 +1389,7 @@ void SendFilesBox::updateCaptionVisibility() {
 	}
 	if (_aiButton) {
 		_aiButton->setVisible(can
-			&& Ui::HasEnoughLinesForAi(&_show->session(), _caption.data()));
+			&& Ui::CanShowAiComposeButton(&_show->session(), _caption.data()));
 	}
 }
 

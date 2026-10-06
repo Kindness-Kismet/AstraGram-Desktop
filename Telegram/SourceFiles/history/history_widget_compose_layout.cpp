@@ -656,16 +656,10 @@ bool HistoryWidget::hideExtraButtons() const {
 		|| shouldShowRichDraftPreview();
 }
 
-bool HistoryWidget::hasEnoughLinesForAi() const {
+bool HistoryWidget::canShowAiComposeButton() const {
 	return _history
 		&& !_voiceRecordBar->isActive()
-		&& Ui::HasEnoughLinesForAi(&session(), _field);
-}
-
-bool HistoryWidget::hasEnoughLinesForExpand() const {
-	return _history
-		&& !_voiceRecordBar->isActive()
-		&& Ui::HasEnoughLinesForExpand(_field);
+		&& Ui::CanShowAiComposeButton(&session(), _field);
 }
 
 bool HistoryWidget::textExceedsMaxSize() const {
@@ -676,7 +670,7 @@ bool HistoryWidget::textExceedsMaxSize() const {
 }
 
 void HistoryWidget::updateAiButtonVisibility() {
-	const auto hidden = !hasEnoughLinesForAi()
+	const auto hidden = !canShowAiComposeButton()
 		|| !_send->isVisible()
 		|| !_field->isVisible();
 	if (_aiButton->isHidden() == hidden) {
@@ -684,9 +678,7 @@ void HistoryWidget::updateAiButtonVisibility() {
 	}
 	const auto shown = !hidden;
 	_aiButton->setVisible(shown);
-	if (shown) {
-		updateAiButtonGeometry();
-	}
+	updateFieldSize();
 	if (_aiTooltipManager) {
 		_aiTooltipManager->updateVisibility(shown);
 	}
@@ -707,7 +699,8 @@ bool HistoryWidget::canShowRichEditor() const {
 }
 
 void HistoryWidget::updateExpandButtonVisibility() {
-	const auto hidden = !canShowRichEditor() || !hasEnoughLinesForExpand();
+	const auto hidden = !canShowRichEditor()
+		|| !Ui::HasEnoughTextForComposeTools(_field);
 	if (_expand->isHidden() != hidden) {
 		_expand->setVisible(!hidden);
 		updateFieldSize();
@@ -766,13 +759,10 @@ void HistoryWidget::updateDiscardRichDraftGeometry() {
 	_discardRichDraft->move(x, y);
 }
 
-void HistoryWidget::updateAiButtonGeometry() {
+void HistoryWidget::updateAiTooltipGeometry() {
 	if (_aiButton->isHidden()) {
 		return;
 	}
-	const auto x = _attachToggle->x() - st::historyAiComposeButtonPosition.x();
-	const auto y = _field->y() + st::historyAiComposeButtonPosition.y();
-	_aiButton->move(x, y);
 	if (_aiTooltipManager) {
 		_aiTooltipManager->updateGeometry();
 	}
@@ -868,6 +858,12 @@ void HistoryWidget::moveFieldControls() {
 	if (!_expand->isHidden()) {
 		right += _expand->width();
 	}
+	_aiButton->moveToRight(
+		right + (_expand->width() - _aiButton->width()) / 2,
+		buttonsBottom + (_expand->height() - _aiButton->height()) / 2);
+	if (!_aiButton->isHidden()) {
+		right += _expand->width();
+	}
 	_botKeyboardShow->moveToRight(right, buttonsBottom);
 	if (_silent) {
 		_silent->moveToRight(right, buttonsBottom);
@@ -891,7 +887,7 @@ void HistoryWidget::moveFieldControls() {
 	if (_ttlInfo) {
 		_ttlInfo->move(width() - right - _ttlInfo->width(), buttonsBottom);
 	}
-	updateAiButtonGeometry();
+	updateAiTooltipGeometry();
 	updateSendAsFileGeometry();
 	updateDiscardRichDraftGeometry();
 
@@ -938,7 +934,8 @@ void HistoryWidget::updateFieldSize() {
 			|| !_botKeyboardHide->isHidden())
 			? _botKeyboardHide->width()
 			: 0)
-		- (_expand->isHidden() ? 0 : _expand->width());
+		- (_expand->isHidden() ? 0 : _expand->width())
+		- (_aiButton->isHidden() ? 0 : _expand->width());
 	if (_botMenu.button) {
 		fieldWidth -= st::historyBotMenuSkip + _botMenu.button->width();
 	}

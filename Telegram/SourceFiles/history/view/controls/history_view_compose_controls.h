@@ -386,7 +386,7 @@ private:
 	void updateControlsVisibility();
 	void updateControlsGeometry(QSize size);
 	void updateAiButtonVisibility();
-	void updateAiButtonGeometry();
+	void updateAiTooltipGeometry();
 	void initSendAsFileButton();
 	void fireSendTextAsFile(
 		const QString &fileText,
@@ -450,8 +450,7 @@ private:
 	[[nodiscard]] bool hasVisibleSendText() const;
 	[[nodiscard]] bool hasSendableContent() const;
 	[[nodiscard]] bool hideExtraButtons() const;
-	[[nodiscard]] bool hasEnoughLinesForAi() const;
-	[[nodiscard]] bool hasEnoughLinesForExpand() const;
+	[[nodiscard]] bool canShowAiComposeButton() const;
 	[[nodiscard]] bool textExceedsMaxSize() const;
 
 	void cancelInlineBot();

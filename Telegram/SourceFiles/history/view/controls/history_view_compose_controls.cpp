@@ -4993,6 +4993,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 			? 0
 			: _tabbedSelectorToggle->width())
 		- (_expand->isHidden() ? 0 : _expand->width())
+		- (_aiButton->isHidden() ? 0 : _expand->width())
 		- (_likeShown ? _like->width() : 0)
 		- ((_silent && !_silent->isHidden()) ? _silent->width() : 0)
 		- ((_toggleSuggestPost && !_toggleSuggestPost->isHidden())
@@ -5092,6 +5093,12 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 	if (!_expand->isHidden()) {
 		right += _expand->width();
 	}
+	_aiButton->moveToRight(
+		right + (_expand->width() - _aiButton->width()) / 2,
+		buttonsTop + (_expand->height() - _aiButton->height()) / 2);
+	if (!_aiButton->isHidden()) {
+		right += _expand->width();
+	}
 	if (_like) {
 		using Type = Controls::WriteRestrictionType;
 		if (_writeRestriction.current().type == Type::PremiumRequired) {
@@ -5136,7 +5143,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 	if (_ttlInfo && settings.showAutoDeleteButtonInMessageField()) {
 		_ttlInfo->move(size.width() - right - _ttlInfo->width(), buttonsTop);
 	}
-	updateAiButtonGeometry();
+	updateAiTooltipGeometry();
 	updateSendAsFileGeometry();
 	updateDiscardRichDraftGeometry();
 
@@ -5204,7 +5211,7 @@ void ComposeControls::updateControlsVisibility() {
 }
 
 void ComposeControls::updateAiButtonVisibility() {
-	const auto hidden = !hasEnoughLinesForAi()
+	const auto hidden = !canShowAiComposeButton()
 		|| !_wrap->isVisible()
 		|| _recording.current()
 		|| !_field->isVisible();
@@ -5213,9 +5220,7 @@ void ComposeControls::updateAiButtonVisibility() {
 	}
 	const auto shown = !hidden;
 	_aiButton->setVisible(shown);
-	if (shown) {
-		updateAiButtonGeometry();
-	}
+	updateControlsGeometry(_wrap->size());
 	if (_aiTooltipManager) {
 		_aiTooltipManager->updateVisibility(shown);
 	}
@@ -5245,7 +5250,8 @@ bool ComposeControls::canShowRichEditor() const {
 }
 
 void ComposeControls::updateExpandButtonVisibility() {
-	const auto hidden = !canShowRichEditor() || !hasEnoughLinesForExpand();
+	const auto hidden = !canShowRichEditor()
+		|| !Ui::HasEnoughTextForComposeTools(_field);
 	if (_expand->isHidden() != hidden) {
 		_expand->setVisible(!hidden);
 		updateControlsGeometry(_wrap->size());
@@ -5281,14 +5287,10 @@ void ComposeControls::updateDiscardRichDraftGeometry() {
 	_discardRichDraft->move(x, y);
 }
 
-void ComposeControls::updateAiButtonGeometry() {
+void ComposeControls::updateAiTooltipGeometry() {
 	if (_aiButton->isHidden()) {
 		return;
 	}
-	const auto anchorLeft = _attachToggle ? _attachToggle->x() : _field->x();
-	const auto x = anchorLeft - st::historyAiComposeButtonPosition.x();
-	const auto y = _field->y() + st::historyAiComposeButtonPosition.y();
-	_aiButton->move(x, y);
 	if (_aiTooltipManager) {
 		_aiTooltipManager->updateGeometry();
 	}
@@ -5404,16 +5406,10 @@ bool ComposeControls::canSendAiComposeDirect() const {
 		&& !shownStarsPerMessage();
 }
 
-bool ComposeControls::hasEnoughLinesForAi() const {
+bool ComposeControls::canShowAiComposeButton() const {
 	return _history
 		&& !_recording.current()
-		&& Ui::HasEnoughLinesForAi(&session(), _field);
-}
-
-bool ComposeControls::hasEnoughLinesForExpand() const {
-	return _history
-		&& !_recording.current()
-		&& Ui::HasEnoughLinesForExpand(_field);
+		&& Ui::CanShowAiComposeButton(&session(), _field);
 }
 
 bool ComposeControls::textExceedsMaxSize() const {

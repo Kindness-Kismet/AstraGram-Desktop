@@ -37,7 +37,7 @@ base::options::toggle HideAiButtonOption({
 	.description = "Hide the AI Tools button in message compose fields.",
 });
 
-bool HasEnoughLinesForAi(
+bool CanShowAiComposeButton(
 		not_null<Main::Session*> session,
 		not_null<Ui::InputField*> field) {
 	if (HideAiButtonOption.value()
@@ -45,39 +45,14 @@ bool HasEnoughLinesForAi(
 		|| session->data().aiComposeTones().list().empty()) {
 		return false;
 	}
-	const auto &style = field->st().style;
-	const auto lineHeight = style.lineHeight
-		? style.lineHeight
-		: style.font->height;
-	const auto margins = field->fullTextMargins();
-	const auto contentHeight = field->height()
-		- margins.top()
-		- margins.bottom();
-	if (contentHeight < (3 * lineHeight)) {
-		return false;
-	}
-	const auto &text = field->getLastText();
-	if (text.size() > Data::PremiumLimits(session).messageLengthCurrent()) {
-		return false;
-	}
-	for (const auto &ch : text) {
-		if (!Text::IsTrimmed(ch) && !Text::IsReplacedBySpace(ch)) {
-			return true;
-		}
-	}
-	return false;
+	return HasEnoughTextForComposeTools(field)
+		&& (field->getLastText().size()
+			<= Data::PremiumLimits(session).messageLengthCurrent());
 }
 
-bool HasEnoughLinesForExpand(not_null<Ui::InputField*> field) {
-	const auto &style = field->st().style;
-	const auto lineHeight = style.lineHeight
-		? style.lineHeight
-		: style.font->height;
-	const auto margins = field->fullTextMargins();
-	const auto contentHeight = field->height()
-		- margins.top()
-		- margins.bottom();
-	if (contentHeight < (3 * lineHeight)) {
+bool HasEnoughTextForComposeTools(not_null<Ui::InputField*> field) {
+	constexpr auto kMinComposeToolCharacters = 10;
+	if (ComputeFieldCharacterCount(field) < kMinComposeToolCharacters) {
 		return false;
 	}
 	const auto &text = field->getLastText();
@@ -147,11 +122,11 @@ void UpdateCaptionAiButtonGeometry(
 	const auto &pos = st::boxAiComposeButtonPosition;
 	const auto x = field->x()
 		+ field->width()
+		- field->st().textMargins.right()
 		- button->width()
 		+ pos.x();
 	const auto y = field->y()
-		+ field->height()
-		- button->height()
+		+ field->st().textMargins.top()
 		+ pos.y();
 	button->moveToLeft(x, y);
 }
@@ -196,8 +171,12 @@ auto SetupCaptionAiButton(SetupCaptionAiButtonArgs &&args)
 
 	const auto updateVisibility = [=] {
 		const auto visible = !field->isHidden()
-			&& HasEnoughLinesForAi(session, field);
-		button->setVisible(visible);
+			&& CanShowAiComposeButton(session, field);
+		if (button->isHidden() == visible) {
+			button->setVisible(visible);
+			field->setAdditionalMargins({
+				0, 0, visible ? button->width() : 0, 0 });
+		}
 		if (visible) {
 			UpdateCaptionAiButtonGeometry(button, field);
 			button->raise();

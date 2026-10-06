@@ -578,7 +578,7 @@ private:
 	void updateFieldSize();
 	void initAiButton();
 	void updateAiButtonVisibility();
-	void updateAiButtonGeometry();
+	void updateAiTooltipGeometry();
 	void showAiComposeBox();
 	void triggerAiApplyInPlace();
 	void initSendAsFileButton();
@@ -601,8 +601,7 @@ private:
 	[[nodiscard]] MsgId resolveReplyToTopicRootId();
 	[[nodiscard]] Data::ForumTopic *resolveReplyToTopic();
 	[[nodiscard]] bool canWriteMessage() const;
-	[[nodiscard]] bool hasEnoughLinesForAi() const;
-	[[nodiscard]] bool hasEnoughLinesForExpand() const;
+	[[nodiscard]] bool canShowAiComposeButton() const;
 	[[nodiscard]] bool textExceedsMaxSize() const;
 	void orderWidgets();
 

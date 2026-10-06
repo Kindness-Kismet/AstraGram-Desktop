@@ -29,11 +29,12 @@ struct PreparedList;
 
 extern const char kOptionHideAiButton[];
 
-[[nodiscard]] bool HasEnoughLinesForAi(
+[[nodiscard]] bool CanShowAiComposeButton(
 	not_null<Main::Session*> session,
 	not_null<Ui::InputField*> field);
 
-[[nodiscard]] bool HasEnoughLinesForExpand(not_null<Ui::InputField*> field);
+[[nodiscard]] bool HasEnoughTextForComposeTools(
+	not_null<Ui::InputField*> field);
 
 struct SetupCaptionAiButtonArgs {
 	not_null<QWidget*> parent;
