@@ -187,10 +187,7 @@ settingsIconInterfaceScale: icon {{ "settings/interface_scale", settingsIconFg }
 settingsPremiumIconDouble: icon {{ "settings/premium/double", settingsIconFg }};
 settingsPremiumIconTags: icon {{ "settings/premium/tags", settingsIconFg }};
 
-settingsIconChatAutomation: icon {
-	{ size(24px, 24px), transparent },
-	{ "chat/ai_letters-20x20", menuIconColor, point(2px, 2px) },
-};
+settingsIconChatAutomation: icon {{ "chat/ai_letters", menuIconColor }};
 
 settingsStoriesIconOrder: icon {{ "settings/premium/stories_order", premiumButtonBg1 }};
 settingsStoriesIconStealth: icon {{ "menu/stealth", premiumButtonBg1 }};

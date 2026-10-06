@@ -28,10 +28,7 @@ settingsPremiumIconEffects: icon {{ "settings/premium/effects", settingsIconFg }
 settingsPremiumIconChecklist: icon {{ "settings/premium/checklist", settingsIconFg }};
 settingsPremiumIconPeerColors: icon {{ "settings/premium/peer_colors-24x24", settingsIconFg }};
 settingsPremiumIconNoForwards: icon {{ "menu/share_off-24x24", settingsIconFg }};
-settingsPremiumIconAiCompose: icon{
-	{ size(24px, 24px), transparent },
-	{ "chat/ai_letters-20x20", settingsIconFg, point(2px, 2px) },
-};
+settingsPremiumIconAiCompose: icon {{ "chat/ai_letters", settingsIconFg }};
 settingsPremiumIconRich: icon {{ "settings/premium/rich", settingsIconFg }};
 settingsPremiumUserHeight: 205px;
 settingsPremiumUserTitlePadding: margins(0px, 16px, 0px, 6px);
