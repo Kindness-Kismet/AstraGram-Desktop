@@ -84,7 +84,6 @@ DeclareSetting(bool, TestAgent);
 #ifdef _DEBUG
 DeclareSetting(bool, DebugProfile);
 #endif
-DeclareReadSetting(bool, ManyInstance);
 DeclareSetting(bool, Quit);
 DeclareSetting(bool, Ghost);
 

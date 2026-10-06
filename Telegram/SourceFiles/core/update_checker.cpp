@@ -1983,11 +1983,6 @@ void Updater::start(bool forceWait, bool manual) {
 			sendRequest = true;
 		}
 	}
-	if (cManyInstance() && !Logs::DebugEnabled()) {
-		// Only main instance is updating.
-		return;
-	}
-
 	if (KSandbox::isFlatpak()) {
 #if !defined Q_OS_WIN && !defined Q_OS_MAC
 		if (!_flatpakImplementation.checker) {

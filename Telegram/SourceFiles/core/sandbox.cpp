@@ -36,6 +36,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #endif // Q_OS_MAC
 
 #include <QtCore/QLockFile>
+#include <QtCore/QStandardPaths>
+#include <QtCore/QTimer>
 #include <QtGui/QSessionManager>
 #include <QtGui/QScreen>
 #include <QtGui/qpa/qplatformscreen.h>
@@ -51,6 +53,20 @@ base::options::toggle OptionDeadlockDetector({
 
 constexpr auto kCleanupIpcTimeout = 10 * crl::time(1000);
 constexpr auto kCleanupQuitTimeout = 30 * crl::time(1000);
+
+[[nodiscard]] bool TryInstanceLock(QLockFile &lock) {
+	if (lock.tryLock()) {
+		return true;
+	}
+	// Windows 的非英文主机名会影响过期锁识别，存活进程的锁无法被移除。
+	if constexpr (Platform::IsWindows()) {
+		if (lock.error() == QLockFile::LockFailedError
+			&& lock.removeStaleLockFile()) {
+			return lock.tryLock();
+		}
+	}
+	return false;
+}
 
 [[nodiscard]] QChar HexDigit(ushort value) {
 	value &= 0x000F;
@@ -121,10 +137,27 @@ Sandbox::Sandbox(int &argc, char **argv)
 
 int Sandbox::start() {
 	{
-		const auto d = QFile::encodeName(QDir(cWorkingDir()).absolutePath());
+		// 构建类型和用户目录决定实例身份，与程序及数据目录无关。
+		const auto userPath = QDir::homePath();
+		const auto d = (userPath
+#ifdef _DEBUG
+			+ u"/AstraGram.Debug"_q
+#else
+			+ u"/AstraGram.Release"_q
+#endif
+			).toUtf8();
 		char h[33] = { 0 };
 		hashMd5Hex(d.constData(), d.size(), h);
 		_localServerName = Platform::SingleInstanceLocalServerName(h);
+		const auto lockDirectory = QStandardPaths::writableLocation(
+			QStandardPaths::GenericCacheLocation) + u"/AstraGram"_q;
+		if (!QDir().mkpath(lockDirectory)) {
+			LOG(("App Error: Could not create single instance lock directory."));
+			return 1;
+		}
+		_lockFile = std::make_unique<QLockFile>(
+			lockDirectory + '/' + QString::fromLatin1(h) + u".lock"_q);
+		_lockFile->setStaleLockTime(0);
 	}
 
 	if (cLaunchMode() == LaunchModeCleanup) {
@@ -136,29 +169,6 @@ int Sandbox::start() {
 
 	if (!Core::UpdaterDisabled()) {
 		_updateChecker = std::make_unique<Core::UpdateChecker>();
-	}
-
-	{
-		const auto d = QFile::encodeName(cExeDir() + cExeName());
-		QByteArray h;
-		h.resize(32);
-		hashMd5Hex(d.constData(), d.size(), h.data());
-		_lockFile = std::make_unique<QLockFile>(QDir::tempPath() + '/' + h + '-' + cGUIDStr());
-		_lockFile->setStaleLockTime(0);
-		if (!_lockFile->tryLock()
-			&& Launcher::Instance().customWorkingDir()) {
-			// On Windows, QLockFile has problems detecting a stale lock
-			// if the machine's hostname contains characters outside the US-ASCII character set.
-			if constexpr (Platform::IsWindows()) {
-				// QLockFile::removeStaleLockFile returns false on Windows,
-				// when the application owning the lock is still running.
-				if (!_lockFile->removeStaleLockFile()) {
-					gManyInstance = true;
-				}
-			} else {
-				gManyInstance = true;
-			}
-		}
 	}
 
 #if defined Q_OS_LINUX && QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
@@ -223,6 +233,12 @@ int Sandbox::start() {
 	});
 
 	LOG(("Connecting local socket to %1...").arg(_localServerName));
+	QTimer::singleShot(10000, this, [=] {
+		if (!_instanceCheckFinished && !Quitting()) {
+			LOG(("App Error: Single instance handshake timed out."));
+			Quit();
+		}
+	});
 	_localSocket.connectToServer(_localServerName);
 
 	if (QuitOnStartRequested) {
@@ -475,6 +491,20 @@ void Sandbox::socketError(QLocalSocket::LocalSocketError e) {
 	}
 	_localSocket.close();
 
+	// 只有持锁进程能监听，其他启动者等待它完成初始化。
+	if (!TryInstanceLock(*_lockFile)) {
+		if (_lockFile->error() != QLockFile::LockFailedError) {
+			LOG(("App Error: Could not acquire single instance lock."));
+			return Quit();
+		}
+		QTimer::singleShot(100, this, [=] {
+			if (!Quitting()) {
+				_localSocket.connectToServer(_localServerName);
+			}
+		});
+		return;
+	}
+
 	// Local server does not work in WinRT build.
 #ifndef Q_OS_WINRT
 	psCheckLocalSocket(_localServerName);
@@ -484,6 +514,15 @@ void Sandbox::socketError(QLocalSocket::LocalSocketError e) {
 		return Quit();
 	}
 #endif // !Q_OS_WINRT
+	_instanceCheckFinished = true;
+	// 两种构建可以并行，但不能同时写入同一份账号数据。
+	_dataDirectoryLock = std::make_unique<QLockFile>(
+		QDir(cWorkingDir()).filePath(u".astragram-data.lock"_q));
+	_dataDirectoryLock->setStaleLockTime(0);
+	if (!TryInstanceLock(*_dataDirectoryLock)) {
+		LOG(("App Error: Data directory is already in use or cannot be locked."));
+		return Quit();
+	}
 
 	if (!Core::UpdaterDisabled()
 		&& !cNoStartUpdate()
@@ -501,10 +540,6 @@ void Sandbox::socketError(QLocalSocket::LocalSocketError e) {
 }
 
 void Sandbox::singleInstanceChecked() {
-	if (cManyInstance()) {
-		LOG(("App Info: Detected another instance"));
-	}
-
 	refreshGlobalProxy();
 	if (!Logs::started() || !Logs::instanceChecked()) {
 		new NotStartedWindow();
