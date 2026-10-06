@@ -157,13 +157,8 @@ def read_version_file(path: Path = VERSION_FILE) -> Version:
 
 def validate_baseline(version: Version, tracking: dict) -> None:
     upstream = tracking["tdesktop"]
-    channel = tracking.get("tdesktop_channel", "stable")
-    if channel not in ("stable", "beta"):
-        raise ValueError(f"Unknown upstream channel: {channel}")
     if version.text != upstream:
         raise ValueError(f"Version {version.original} must use official baseline {upstream} as its first three parts.")
-    if channel == "beta" and not version.beta:
-        raise ValueError("A stable application release requires a stable upstream baseline.")
 
 
 def apply_version(version: Version, check_changelog: bool = True) -> list[str]:

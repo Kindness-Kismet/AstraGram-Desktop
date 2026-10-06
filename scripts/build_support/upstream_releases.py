@@ -1,4 +1,4 @@
-"""解析官方发布标签，并区分稳定版与测试版目标。"""
+"""解析官方发布标签，按版本号选择最新目标。"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -38,18 +38,9 @@ def pick(items: list[Release], version: str) -> Release:
     raise SystemExit(f"Upstream has no release {version}.")
 
 
-def targets(items: list[Release], channel: str) -> list[Release]:
-    # beta 通道也接收稳定版，避免正式发布后无法继续向前同步。
-    return [item for item in items if channel == "beta" or item.channel == "stable"]
-
-
-def select_target(items: list[Release], version: str | None, channel: str) -> Release:
-    candidates = targets(items, channel)
+def select_target(items: list[Release], version: str | None) -> Release:
     if version:
-        target = pick(items, version)
-        if target not in candidates:
-            raise SystemExit(f"Upstream {version} is a beta release; use --channel beta on dev.")
-        return target
-    if not candidates:
-        raise SystemExit(f"Upstream has no releases for channel {channel}.")
-    return candidates[-1]
+        return pick(items, version)
+    if not items:
+        raise SystemExit("Upstream has no releases.")
+    return max(items, key=lambda release: release.key)

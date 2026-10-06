@@ -38,7 +38,7 @@ AyuGramDesktop/
 │   ├── lib_base / lib_crl / lib_rpl / lib_storage / ...  # 其余 desktop-app 子模块，一般不改
 │   └── 其余文件             # 均为上游原样
 ├── scripts/                 # prebuild.py / build.py（见构建章节）
-└── .github/upstream.json    # 已适配的官方版本、通道与同步跳过规则
+└── .github/upstream.json    # 已适配的官方 tag 版本与同步跳过规则
 ```
 
 **子模块约定**：`lib_ui`、`lib_tl`、`codegen` 是 fork，改动先推到 fork 仓库，再更新主仓库的子模块指针；`cmake` 用官方子模块，定制由构建脚本打补丁。其余 `lib_*` 视为只读依赖。
@@ -321,17 +321,16 @@ Settings → AstraGram Preferences → Debug，可见条件是 `#ifdef _DEBUG` �
 
 ## upstream-sync skill
 
-同步官方 Telegram Desktop 稳定版与测试版。`.github/upstream.json` 登记已适配的官方版本号和 `tdesktop_channel`，子模块基线取官方该版本记录的子模块指针，本地定制用 git diff 计算：
+同步官方 Telegram Desktop 稳定版与测试版。`.github/upstream.json` 登记已适配的官方 tag 版本号，子模块基线取官方该版本记录的子模块指针，本地定制用 git diff 计算：
 
 ```bash
-python scripts/upstream.py check              # 官方有没有更新的稳定版
-python scripts/upstream.py check --channel beta # dev 同时检查测试版
+python scripts/upstream.py check              # 官方有没有更新的 tag，包含测试版
 python scripts/upstream.py report             # 生成各仓库的改动报告，保存在 build/upstream-sync/
 python scripts/upstream.py done <官方版本>     # 适配并编译通过后登记
 ```
 
-- main 保持稳定版；dev 跟进官方 pre-release tag，使用 `--channel beta` 生成报告和登记
-- 正式发布后先在 dev 适配到确切稳定 tag、登记 stable，再普通 merge 到 main；main 修复及时 merge 回 dev
+- 上游统一按版本号选择最新官方 tag，包含 pre-release；上游通道不决定本应用发布通道
+- dev 适配和验证后可由我们决定稳定发布，普通 merge 到 main；main 修复及时 merge 回 dev
 - main/dev 均为长期分支，互相合并不 squash、不 rebase、不删除；临时功能分支按原规则清理
 - 官方标签放在 `refs/upstream-tags/`，不和本仓库发布标签混在一起；不用官方 master 作为基线
 - dev 的 beta 版本发布为 prerelease，不覆盖 Latest；版本编号与稳定推广见 version-bump skill

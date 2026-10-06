@@ -23,10 +23,10 @@ class ReleaseChannelsTests(unittest.TestCase):
         self.tracking = self.root / ".github/upstream.json"
         self.tracking.parent.mkdir()
 
-    def write_version(self, text, channel="stable"):
+    def write_version(self, text):
         version = versions.parse_version(text)
         self.version_file.write_text("".join(f"{k} {v}\n" for k, v in versions.version_fields(version).items()))
-        self.tracking.write_text(json.dumps({"tdesktop": version.text, "tdesktop_channel": channel}))
+        self.tracking.write_text(json.dumps({"tdesktop": version.text}))
         return version
 
     def test_stable_encoding_remains_compatible(self):
@@ -39,7 +39,7 @@ class ReleaseChannelsTests(unittest.TestCase):
 
     def test_beta_iterations_keep_numeric_platform_versions(self):
         first = versions.parse_version("7.2.10.beta")
-        next_version = self.write_version("7.2.10.1.beta", "beta")
+        next_version = self.write_version("7.2.10.1.beta")
         self.assertEqual(first.update + 1, next_version.update)
         self.assertEqual(next_version.text_small, "7.2.10.1")
         self.assertEqual(next_version.file_version, "7.2.10.1")
@@ -53,15 +53,20 @@ class ReleaseChannelsTests(unittest.TestCase):
         self.assertEqual(release_config(self.root, "dev")["publish"], "false")
         with self.assertRaises(ValueError):
             release_config(self.root, "feature/test")
-        self.write_version("7.2.10.1.beta", "beta")
-        with self.assertRaises(ValueError):
-            release_config(self.root, "main")
-        self.write_version("7.2.10.2", "beta")
+        self.write_version("7.2.10.1.beta")
         with self.assertRaises(ValueError):
             release_config(self.root, "main")
 
+    def test_app_channel_is_independent_of_upstream_beta(self):
+        # 7.2.10 是官方 beta，但自己的稳定发布只由版本文件的通道控制。
+        self.write_version("7.2.10.2")
+        config = release_config(self.root, "main")
+        self.assertEqual(config["tag"], "v7.2.10.2")
+        self.assertEqual((config["publish"], config["prerelease"]), ("true", "false"))
+        self.assertEqual(config["make_latest"], "true")
+
     def test_inconsistent_version_file_is_rejected(self):
-        self.write_version("7.2.10.1.beta", "beta")
+        self.write_version("7.2.10.1.beta")
         text = self.version_file.read_text()
         for bad in (text.replace("BetaChannel 1", "BetaChannel 0"), text + "BetaChannel 1\n", text.replace("70201001", "70201002")):
             with self.subTest(bad=bad):
@@ -84,7 +89,7 @@ class ReleaseChannelsTests(unittest.TestCase):
             self.assertTrue(versions.read_version_file(self.version_file).beta)
 
     def test_windows_beta_archive_passes_release_provenance(self):
-        version = self.write_version("7.2.10.1.beta", "beta")
+        version = self.write_version("7.2.10.1.beta")
         with patch.object(builder, "BUILD_DIR", self.root), \
                 patch.object(builder, "read_current_version", return_value=version.original), \
                 patch.object(builder, "TARGET_SUFFIX", "x64"):
