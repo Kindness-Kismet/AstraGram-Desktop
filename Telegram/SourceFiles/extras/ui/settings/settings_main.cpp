@@ -80,77 +80,6 @@ void buildCategories(SectionBuilder &builder) {
 
 }
 
-void addQuickToggle(
-		SectionBuilder &builder,
-		QString id,
-		rpl::producer<QString> title,
-		const style::icon &icon,
-		rpl::producer<bool> value,
-		Fn<bool()> getter,
-		Fn<void(bool)> setter) {
-	const auto button = builder.addButton({
-		.id = std::move(id),
-		.title = std::move(title),
-		.st = &st::settingsCardToggleButton,
-		.icon = { &icon },
-		.toggled = std::move(value),
-	});
-	if (!button) {
-		return;
-	}
-	button->toggledChanges(
-	) | rpl::filter([=](bool enabled) {
-		return enabled != getter();
-	}) | rpl::on_next(std::move(setter), button->lifetime());
-}
-
-void buildQuickToggles(SectionBuilder &builder) {
-	builder.addSubsectionTitle(tr::extras_SettingsQuickToggles());
-
-	const auto session = builder.session();
-	if (ExtrasSettings::getInstance().devFeaturesEnabled()) {
-		const auto readValue = ExtrasSettings::getInstance().useGlobalGhostModeValue(
-		) | rpl::map([=](bool) {
-			return ExtrasSettings::ghost(session).sendReadMessagesValue();
-		}) | rpl::flatten_latest() | rpl::map(rpl::mappers::_1 == false);
-		addQuickToggle(
-			builder,
-			u"extras/quick/sendReadMessages"_q,
-			tr::extras_DontReadMessages(),
-			st::menuIconMarkUnread,
-			readValue,
-			[=] { return !ExtrasSettings::ghost(session).sendReadMessages(); },
-			[=](bool enabled) {
-				ExtrasSettings::ghost(session).setSendReadMessages(!enabled);
-			});
-
-		const auto onlineValue = ExtrasSettings::getInstance().useGlobalGhostModeValue(
-		) | rpl::map([=](bool) {
-			return ExtrasSettings::ghost(session).sendOnlinePacketsValue();
-		}) | rpl::flatten_latest() | rpl::map(rpl::mappers::_1 == false);
-		addQuickToggle(
-			builder,
-			u"extras/quick/sendOnlinePackets"_q,
-			tr::extras_DontSendOnlinePackets(),
-			st::menuIconStealth,
-			onlineValue,
-			[=] { return !ExtrasSettings::ghost(session).sendOnlinePackets(); },
-			[=](bool enabled) {
-				ExtrasSettings::ghost(session).setSendOnlinePackets(!enabled);
-			});
-	}
-	addQuickToggle(
-		builder,
-		u"extras/quick/autoSpaceSending"_q,
-		tr::extras_AutoSpaceSending(),
-		st::menuIconEdit,
-		ExtrasSettings::getInstance().autoSpaceSendingValue(),
-		[] { return ExtrasSettings::getInstance().autoSpaceSending(); },
-		[](bool enabled) {
-			ExtrasSettings::getInstance().setAutoSpaceSending(enabled);
-		});
-}
-
 const auto kMeta = BuildHelper({
 	.id = ExtrasMain::Id(),
 	.parentId = MainId(),
@@ -158,7 +87,6 @@ const auto kMeta = BuildHelper({
 	.icon = &st::menuIconAstraGram,
 }, [](SectionBuilder &builder) {
 	buildCategories(builder);
-	buildQuickToggles(builder);
 	builder.addSubsectionTitle(tr::extras_SettingsMoreTitle());
 	builder.addSectionButton({
 		.id = u"extras/cat/general"_q,

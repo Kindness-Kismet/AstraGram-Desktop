@@ -8789,7 +8789,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_CategoryFilters" = "Filters";
 "extras_CategoryCustomization" = "Customization";
 "extras_GhostEssentialsHeader" = "Ghost essentials";
-"extras_SettingsQuickToggles" = "Quick Toggles";
 "extras_SettingsGhostDescription" = "Read receipts, online status and typing status";
 "extras_SettingsFiltersDescription" = "Hide messages using regular expressions";
 "extras_SettingsGeneralDescription" = "Translation, link previews and everyday options";
