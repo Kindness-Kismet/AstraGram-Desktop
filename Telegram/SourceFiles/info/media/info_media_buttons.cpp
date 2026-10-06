@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_stories_ids.h"
 #include "data/data_user.h"
 #include "data/stickers/data_custom_emoji.h"
+#include "extras/features/window_material/window_material.h"
 #include "history/history.h"
 #include "history/view/history_view_chat_section.h"
 #include "info/info_controller.h"
@@ -151,6 +152,7 @@ not_null<Ui::SlideWrap<Ui::SettingsButton>*> AddCountedButton(
 	)->toggleOn(
 		rpl::duplicate(forked) | rpl::map(rpl::mappers::_1 > 0)
 	);
+	ExtrasFeatures::WindowMaterial::watchSurface(button->entity());
 	tracker.track(button);
 	return button;
 };
