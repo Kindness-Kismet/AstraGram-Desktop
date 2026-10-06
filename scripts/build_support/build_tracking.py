@@ -12,7 +12,7 @@ def recover_failed_compilations(output: Path, configuration: str, backups: Path)
         if tracking.parent.name != configuration or tracking.suffix.lower() != ".tlog":
             continue
         if not tracking.resolve().is_relative_to(output):
-            raise RuntimeError(f"编译跟踪目录位于构建范围之外：{tracking}")
+            raise RuntimeError(f"Compiler tracking directory is outside the build tree: {tracking}")
         files = [path for path in tracking.iterdir()
                  if path.is_file() and path.name.lower().startswith("cl.")
                  and path.suffix.lower() == ".tlog"]

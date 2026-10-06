@@ -114,14 +114,14 @@ public:
 			const auto code = sqlite3_prepare_v2(
 				_owner.database, sql, -1, &_statement, nullptr);
 			if (code != SQLITE_OK) {
-				_owner.fail(u"准备留档数据库操作失败"_q, code);
+				_owner.fail(u"Could not prepare archive database operation"_q, code);
 			}
 		}
 
 		~Statement() {
 			const auto code = sqlite3_finalize(_statement);
 			if (code != SQLITE_OK && _owner.lastError.isEmpty()) {
-				_owner.fail(u"结束留档数据库操作失败"_q, code);
+				_owner.fail(u"Could not finalize archive database operation"_q, code);
 			}
 		}
 
@@ -153,7 +153,7 @@ public:
 		int step() {
 			const auto code = sqlite3_step(_statement);
 			if (code != SQLITE_ROW && code != SQLITE_DONE) {
-				_owner.fail(u"执行留档数据库操作失败"_q, code);
+				_owner.fail(u"Could not execute archive database operation"_q, code);
 			}
 			return code;
 		}
@@ -161,7 +161,7 @@ public:
 	private:
 		bool check(int code) {
 			return (code == SQLITE_OK)
-				|| _owner.fail(u"绑定留档数据库参数失败"_q, code);
+				|| _owner.fail(u"Could not bind archive database parameters"_q, code);
 		}
 
 		Private &_owner;
@@ -181,7 +181,7 @@ public:
 			const auto code = sqlite3_exec(
 				_owner.database, "ROLLBACK", nullptr, nullptr, nullptr);
 			if (code != SQLITE_OK) {
-				_owner.fail(u"回滚留档数据库操作失败"_q, code);
+				_owner.fail(u"Could not roll back archive database operation"_q, code);
 			}
 		}
 
@@ -209,7 +209,7 @@ public:
 	bool fail(const QString &message, int code = SQLITE_OK) {
 		lastError = code == SQLITE_OK
 			? message
-			: message + u"（错误码 %1）"_q.arg(code);
+			: message + u" (error code %1)"_q.arg(code);
 		return false;
 	}
 
@@ -222,7 +222,7 @@ public:
 		if (database) {
 			const auto code = sqlite3_close_v2(database);
 			if (code != SQLITE_OK) {
-				fail(u"关闭留档数据库失败"_q, code);
+				fail(u"Could not close archive database"_q, code);
 			}
 			database = nullptr;
 		}
@@ -231,7 +231,7 @@ public:
 	bool checkReady() {
 		if (!ready) {
 			if (lastError.isEmpty()) {
-				fail(u"消息留档尚未解锁"_q);
+				fail(u"Message archive is locked"_q);
 			}
 			return false;
 		}
@@ -242,7 +242,7 @@ public:
 	bool execute(const char *sql) {
 		const auto code = sqlite3_exec(database, sql, nullptr, nullptr, nullptr);
 		return (code == SQLITE_OK)
-			|| fail(u"执行留档数据库操作失败"_q, code);
+			|| fail(u"Could not execute archive database operation"_q, code);
 	}
 
 	std::optional<bool> tableExists(const char *name) {
@@ -291,7 +291,7 @@ public:
 		for (auto column = 0; column != 5; ++column) {
 			if (sqlite3_column_type(statement, column) != SQLITE_INTEGER) {
 				ready = false;
-				fail(u"消息留档索引格式损坏"_q);
+				fail(u"Message archive index format is corrupt"_q);
 				return std::nullopt;
 			}
 		}
@@ -299,7 +299,7 @@ public:
 		if (messageId < std::numeric_limits<int>::min()
 			|| messageId > std::numeric_limits<int>::max()) {
 			ready = false;
-			fail(u"消息留档索引编号损坏"_q);
+			fail(u"Message archive index ID is corrupt"_q);
 			return std::nullopt;
 		}
 		auto index = ExtrasMessageBase();
@@ -312,14 +312,14 @@ public:
 			sqlite3_column_blob(statement, 5));
 		const auto size = sqlite3_column_bytes(statement, 5);
 		if (sqlite3_errcode(database) == SQLITE_NOMEM) {
-			fail(u"读取消息留档内存不足"_q, SQLITE_NOMEM);
+			fail(u"Not enough memory to read message archive"_q, SQLITE_NOMEM);
 			return std::nullopt;
 		}
 		const auto payload = QByteArray(bytes, size);
 		auto result = ArchiveCrypto::decrypt(*context, payload, index, edited);
 		if (!result) {
 			ready = false;
-			fail(u"消息留档认证失败，已停止读取"_q);
+			fail(u"Message archive authentication failed; reading stopped"_q);
 		}
 		return result;
 	}
@@ -327,7 +327,7 @@ public:
 	bool insert(const ExtrasMessageBase &message, bool edited) {
 		const auto payload = ArchiveCrypto::encrypt(*context, message, edited);
 		if (!payload) {
-			return fail(u"消息留档加密失败"_q);
+			return fail(u"Message archive encryption failed"_q);
 		}
 		auto statement = Statement(*this,
 			"INSERT INTO EncryptedMessages("
@@ -360,14 +360,14 @@ public:
 			return false;
 		}
 		if (code == SQLITE_DONE) {
-			return fail(u"迁移后的消息留档不存在"_q);
+			return fail(u"Migrated message archive is missing"_q);
 		}
 		const auto restored = readRecord(statement.get(), edited);
 		if (!restored) {
 			return false;
 		}
 		return messageFields(message) == messageFields(*restored)
-			|| fail(u"迁移后的消息留档校验失败"_q);
+			|| fail(u"Migrated message archive validation failed"_q);
 	}
 
 	bool migrateTable(const char *table, bool edited, bool &migrated) {
@@ -386,7 +386,7 @@ public:
 			}
 			const auto message = legacyMessage(statement.get());
 			if (sqlite3_errcode(database) == SQLITE_NOMEM) {
-				return fail(u"读取旧消息留档内存不足"_q, SQLITE_NOMEM);
+				return fail(u"Not enough memory to read legacy message archive"_q, SQLITE_NOMEM);
 			}
 			if (!insert(message, edited) || !verifyInserted(message, edited)) {
 				return false;
@@ -407,7 +407,7 @@ public:
 		const auto code = sqlite3_wal_checkpoint_v2(
 			database, nullptr, SQLITE_CHECKPOINT_TRUNCATE, nullptr, nullptr);
 		return (code == SQLITE_OK)
-			|| fail(u"清理留档数据库日志失败"_q, code);
+			|| fail(u"Could not checkpoint archive database journal"_q, code);
 	}
 
 	bool cleanPlaintext() {
@@ -532,7 +532,7 @@ bool Store::unlock(const QString &databasePath, bytes::const_span localKey) {
 	_private->close();
 	_private->lastError.clear();
 	if (localKey.empty()) {
-		return _private->fail(u"消息留档缺少本地主密钥"_q);
+		return _private->fail(u"Message archive has no local master key"_q);
 	}
 	const auto path = databasePath.toUtf8();
 	const auto code = sqlite3_open_v2(
@@ -541,7 +541,7 @@ bool Store::unlock(const QString &databasePath, bytes::const_span localKey) {
 		SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,
 		nullptr);
 	if (code != SQLITE_OK) {
-		return _private->fail(u"打开留档数据库失败"_q, code);
+		return _private->fail(u"Could not open archive database"_q, code);
 	}
 	_private->context.emplace(ArchiveCrypto::makeContext(localKey));
 	if (!_private->createSchema() || !_private->migrate()) {
@@ -597,7 +597,7 @@ bool Store::add(const ExtrasMessageBase &message, bool edited) {
 		}
 		const auto latest = sqlite3_column_int64(statement.get(), 0);
 		if (latest == std::numeric_limits<ID>::max()) {
-			return _private->fail(u"消息留档编号已用尽"_q);
+			return _private->fail(u"Message archive IDs are exhausted"_q);
 		}
 		record.fakeId = latest + 1;
 	}

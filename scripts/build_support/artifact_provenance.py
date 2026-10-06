@@ -61,28 +61,28 @@ class ProvenanceError(ValueError):
 
 def validate_sha(value: str) -> str:
     if not _SHA_PATTERN.fullmatch(value):
-        raise ProvenanceError("source SHA 必须是 40 位十六进制提交哈希")
+        raise ProvenanceError("Source SHA must be a 40-character hexadecimal commit hash")
     return value.lower()
 
 
 def validate_repository(value: str) -> str:
     if not _REPOSITORY_PATTERN.fullmatch(value):
-        raise ProvenanceError(f"仓库名格式无效：{value!r}")
+        raise ProvenanceError(f"Invalid repository name: {value!r}")
     return value
 
 
 def validate_source_ref(value: str) -> str:
     tag = value.removeprefix("refs/tags/")
     if tag == value or not tag or ".." in tag or "\\" in tag:
-        raise ProvenanceError(f"source ref 必须是有效的 refs/tags/*：{value!r}")
+        raise ProvenanceError(f"Source ref must be a valid refs/tags/* reference: {value!r}")
     if any(character.isspace() or ord(character) < 32 for character in tag):
-        raise ProvenanceError(f"source ref 包含无效字符：{value!r}")
+        raise ProvenanceError(f"Source ref contains invalid characters: {value!r}")
     return value
 
 
 def validate_version(value: str) -> str:
     if not _VERSION_PATTERN.fullmatch(value):
-        raise ProvenanceError(f"版本格式无效：{value!r}")
+        raise ProvenanceError(f"Invalid version format: {value!r}")
     return value
 
 
@@ -93,13 +93,13 @@ def is_positive_integer(value: object) -> bool:
 def require_positive_integers(values: dict[str, object]) -> None:
     for name, value in values.items():
         if not is_positive_integer(value):
-            raise ProvenanceError(f"{name} 必须是正整数")
+            raise ProvenanceError(f"{name} must be a positive integer")
 
 
 def _target_key(platform: str, arch: str) -> str:
     key = f"{platform}-{arch}"
     if key not in TARGETS:
-        raise ProvenanceError(f"不支持的构建目标：{key}")
+        raise ProvenanceError(f"Unsupported build target: {key}")
     return key
 
 
@@ -141,7 +141,7 @@ def write_artifact_manifest(
     target = TARGETS[key]
     validate_repository(source_repository)
     if source_repository != SOURCE_REPOSITORY:
-        raise ProvenanceError(f"不受信任的 source 仓库：{source_repository}")
+        raise ProvenanceError(f"Untrusted source repository: {source_repository}")
     source_ref = validate_source_ref(source_ref)
     source_sha = validate_sha(source_sha)
     version = validate_version(version)
@@ -156,31 +156,31 @@ def write_artifact_manifest(
     )
     validate_repository(builder_repository)
     if builder_repository != target["repository"]:
-        raise ProvenanceError(f"{key} 必须由 {target['repository']} 构建")
+        raise ProvenanceError(f"{key} must be built by {target['repository']}")
     expected_output = f"provenance-{platform}-{arch}.json"
     if output.name != expected_output:
-        raise ProvenanceError(f"来源清单必须命名为 {expected_output}")
+        raise ProvenanceError(f"Provenance manifest must be named {expected_output}")
     expected_names = _expected_filenames(platform, arch, version, appupdateversion)
     if len(files) != len(expected_names):
-        raise ProvenanceError(f"{key} 必须记录完整的 archive 和 updater 文件集")
+        raise ProvenanceError(f"{key} must record the complete archive and updater file set")
     if any(path.parent.resolve() != output.parent.resolve() for path in files):
-        raise ProvenanceError("来源清单必须与 archive 和 updater 位于同一目录")
+        raise ProvenanceError("Provenance manifest must be in the same directory as the archive and updater")
 
     actual_names = [path.name for path in files]
     if len(set(actual_names)) != len(actual_names):
-        raise ProvenanceError("产物文件名重复")
+        raise ProvenanceError("Duplicate artifact filename")
     if set(actual_names) != expected_names:
         raise ProvenanceError(
-            f"{key} 文件集不一致：期待 {sorted(expected_names)}，实际 {sorted(actual_names)}"
+            f"{key} file set mismatch: expected {sorted(expected_names)}, got {sorted(actual_names)}"
         )
 
     entries = []
     for path in files:
         if not path.is_file():
-            raise ProvenanceError(f"产物文件不存在：{path}")
+            raise ProvenanceError(f"Artifact file does not exist: {path}")
         size = path.stat().st_size
         if size <= 0:
-            raise ProvenanceError(f"产物文件为空：{path}")
+            raise ProvenanceError(f"Artifact file is empty: {path}")
         entries.append({"name": path.name, "size": size, "sha256": _sha256(path)})
 
     manifest = {
@@ -212,7 +212,7 @@ def _reject_duplicate_pairs(pairs: list[tuple[str, object]]) -> dict:
     result = {}
     for key, value in pairs:
         if key in result:
-            raise ProvenanceError(f"JSON 字段重复：{key}")
+            raise ProvenanceError(f"Duplicate JSON field: {key}")
         result[key] = value
     return result
 
@@ -221,22 +221,22 @@ def _parse_build_runs(raw: str) -> dict[str, dict]:
     try:
         build_runs = json.loads(raw, object_pairs_hook=_reject_duplicate_pairs)
     except (json.JSONDecodeError, UnicodeError) as error:
-        raise ProvenanceError("--build-runs 必须是有效 JSON") from error
+        raise ProvenanceError("--build-runs must be valid JSON") from error
     if not isinstance(build_runs, dict):
-        raise ProvenanceError("--build-runs 必须是对象")
+        raise ProvenanceError("--build-runs must be an object")
     unknown = set(build_runs) - set(TARGETS)
     if unknown:
-        raise ProvenanceError("--build-runs 包含未知目标：" + ", ".join(sorted(unknown)))
+        raise ProvenanceError("--build-runs contains unknown targets: " + ", ".join(sorted(unknown)))
     # 单个平台失败不阻塞其余平台发布，至少要有一个目标。
     if not build_runs:
-        raise ProvenanceError("--build-runs 至少需要一个目标")
+        raise ProvenanceError("--build-runs requires at least one target")
     for key, build in build_runs.items():
         if not isinstance(build, dict) or set(build) != {"repository", "run_id", "run_attempt"}:
-            raise ProvenanceError(f"{key} build run 必须只包含 repository、run_id、run_attempt")
+            raise ProvenanceError(f"{key} build run must contain only repository, run_id and run_attempt")
         if build["repository"] != TARGETS[key]["repository"]:
-            raise ProvenanceError(f"{key} builder 仓库不匹配")
+            raise ProvenanceError(f"{key} builder repository mismatch")
         if not is_positive_integer(build["run_id"]) or not is_positive_integer(build["run_attempt"]):
-            raise ProvenanceError(f"{key} builder run id 和 attempt 必须是正整数")
+            raise ProvenanceError(f"{key} builder run ID and attempt must be positive integers")
     return build_runs
 
 
@@ -247,9 +247,9 @@ def _read_manifest(path: Path) -> dict:
             object_pairs_hook=_reject_duplicate_pairs,
         )
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
-        raise ProvenanceError(f"无法读取来源清单 {path}: {error}") from error
+        raise ProvenanceError(f"Could not read provenance manifest {path}: {error}") from error
     if not isinstance(manifest, dict):
-        raise ProvenanceError(f"来源清单必须是 JSON 对象：{path}")
+        raise ProvenanceError(f"Provenance manifest must be a JSON object: {path}")
     return manifest
 
 
@@ -259,32 +259,32 @@ def _validate_manifest_shape(manifest: dict, path: Path) -> None:
         "version", "appupdateversion", "files",
     }
     if set(manifest) != expected_keys:
-        raise ProvenanceError(f"来源清单字段不完整或包含未知字段：{path}")
+        raise ProvenanceError(f"Provenance manifest has missing or unknown fields: {path}")
     if not is_positive_integer(manifest["schema_version"]) or manifest["schema_version"] != SCHEMA_VERSION:
-        raise ProvenanceError(f"不支持的来源清单 schema：{path}")
+        raise ProvenanceError(f"Unsupported provenance manifest schema: {path}")
     if not isinstance(manifest["source"], dict) or set(manifest["source"]) != {
         "repository", "ref", "sha", "run_id", "run_attempt",
     }:
-        raise ProvenanceError(f"source 字段格式无效：{path}")
+        raise ProvenanceError(f"Invalid source field: {path}")
     if not isinstance(manifest["builder"], dict) or set(manifest["builder"]) != {
         "repository", "run_id", "run_attempt",
     }:
-        raise ProvenanceError(f"builder 字段格式无效：{path}")
+        raise ProvenanceError(f"Invalid builder field: {path}")
     if not isinstance(manifest["files"], list) or not manifest["files"]:
-        raise ProvenanceError(f"来源清单必须记录产物文件：{path}")
+        raise ProvenanceError(f"Provenance manifest must record artifact files: {path}")
 
 
 def _collect_artifacts(root: Path) -> tuple[list[Path], dict[str, Path]]:
     all_files = []
     for path in root.rglob("*"):
         if path.is_symlink():
-            raise ProvenanceError(f"产物目录不允许符号链接：{path}")
+            raise ProvenanceError(f"Symbolic links are not allowed in the artifact directory: {path}")
         if path.is_file():
             all_files.append(path)
     by_name = {}
     for path in all_files:
         if path.name in by_name:
-            raise ProvenanceError(f"产物文件名重复：{path.name}")
+            raise ProvenanceError(f"Duplicate artifact filename: {path.name}")
         by_name[path.name] = path
     return all_files, by_name
 
@@ -299,10 +299,10 @@ def _manifest_paths(all_files: list[Path]) -> dict[str, Path]:
             path.name,
         )
         if not match:
-            raise ProvenanceError(f"来源清单文件名无效：{path.name}")
+            raise ProvenanceError(f"Invalid provenance manifest filename: {path.name}")
         key = _target_key(match.group(1), match.group(2))
         if key in result:
-            raise ProvenanceError(f"来源清单重复：{key}")
+            raise ProvenanceError(f"Duplicate provenance manifest: {key}")
         result[key] = path
     return result
 
@@ -317,27 +317,27 @@ def _validate_manifest_files(
     entries = {}
     for entry in manifest["files"]:
         if not isinstance(entry, dict) or set(entry) != {"name", "size", "sha256"}:
-            raise ProvenanceError(f"{path.name} 的 files 项格式无效")
+            raise ProvenanceError(f"{path.name} has an invalid files entry")
         name = entry.get("name", "")
         if not name or name != Path(name).name or "/" in name or "\\" in name:
-            raise ProvenanceError(f"产物清单只能记录文件名，不能包含路径：{name!r}")
+            raise ProvenanceError(f"Artifact manifests must record filenames without paths: {name!r}")
         if name in entries or name in referenced_names:
-            raise ProvenanceError(f"来源清单重复引用文件：{name}")
+            raise ProvenanceError(f"Provenance manifest references a file more than once: {name}")
         if not is_positive_integer(entry.get("size")):
-            raise ProvenanceError(f"来源清单文件大小无效：{name}")
+            raise ProvenanceError(f"Invalid file size in provenance manifest: {name}")
         if not isinstance(entry.get("sha256"), str) or not _FILE_HASH_PATTERN.fullmatch(entry["sha256"]):
-            raise ProvenanceError(f"来源清单 SHA-256 无效：{name}")
+            raise ProvenanceError(f"Invalid SHA-256 in provenance manifest: {name}")
         entries[name] = entry
     if set(entries) != expected_names:
-        raise ProvenanceError(f"{path.name} 的文件集与目标版本不匹配")
+        raise ProvenanceError(f"{path.name} file set does not match the target version")
     for name, entry in entries.items():
         artifact = by_name.get(name)
         if artifact is None:
-            raise ProvenanceError(f"缺少清单声明的产物：{name}")
+            raise ProvenanceError(f"Artifact declared by the manifest is missing: {name}")
         if artifact.stat().st_size != entry["size"]:
-            raise ProvenanceError(f"产物大小与来源清单不匹配：{name}")
+            raise ProvenanceError(f"Artifact size does not match the provenance manifest: {name}")
         if _sha256(artifact) != entry["sha256"]:
-            raise ProvenanceError(f"产物 SHA-256 与来源清单不匹配：{name}")
+            raise ProvenanceError(f"Artifact SHA-256 does not match the provenance manifest: {name}")
     referenced_names.update(entries)
 
 
@@ -355,7 +355,7 @@ def verify_artifacts(
 ) -> None:
     """验证声明构建的完整来源链和文件内容，确保主仓库只发布匹配产物。"""
     if source_repository != SOURCE_REPOSITORY:
-        raise ProvenanceError(f"不受信任的 source 仓库：{source_repository}")
+        raise ProvenanceError(f"Untrusted source repository: {source_repository}")
     source_ref = validate_source_ref(source_ref)
     source_sha = validate_sha(source_sha)
     version = validate_version(version)
@@ -368,7 +368,7 @@ def verify_artifacts(
     )
     build_runs = _parse_build_runs(build_runs_json)
     if not root.is_dir():
-        raise ProvenanceError(f"产物目录不存在：{root}")
+        raise ProvenanceError(f"Artifact directory does not exist: {root}")
 
     all_files, by_name = _collect_artifacts(root)
     manifest_paths = _manifest_paths(all_files)
@@ -377,10 +377,10 @@ def verify_artifacts(
         extra = set(manifest_paths) - set(build_runs)
         details = []
         if missing:
-            details.append("缺少 " + ", ".join(sorted(missing)))
+            details.append("Missing " + ", ".join(sorted(missing)))
         if extra:
-            details.append("未声明 " + ", ".join(sorted(extra)))
-        raise ProvenanceError("来源清单与 build runs 不一致：" + "；".join(details))
+            details.append("Undeclared " + ", ".join(sorted(extra)))
+        raise ProvenanceError("Provenance manifests do not match build runs: " + "; ".join(details))
 
     referenced_names = set()
     for key, path in manifest_paths.items():
@@ -388,9 +388,9 @@ def verify_artifacts(
         _validate_manifest_shape(manifest, path)
         platform, arch = key.split("-", 1)
         if manifest["platform"] != platform or manifest["arch"] != arch:
-            raise ProvenanceError(f"来源清单目标与文件名不一致：{path.name}")
+            raise ProvenanceError(f"Provenance manifest target does not match its filename: {path.name}")
         if manifest["version"] != version or manifest["appupdateversion"] != appupdateversion:
-            raise ProvenanceError(f"来源清单版本不匹配：{path.name}")
+            raise ProvenanceError(f"Provenance manifest version mismatch: {path.name}")
         expected_source = {
             "repository": source_repository,
             "ref": source_ref,
@@ -401,19 +401,19 @@ def verify_artifacts(
         for field, expected in expected_source.items():
             actual = str(source.get(field, "")).lower() if field == "sha" else source.get(field)
             if actual != expected:
-                raise ProvenanceError(f"{path.name} 的 source {field} 不匹配")
+                raise ProvenanceError(f"{path.name} source {field} mismatch")
         # 重跑失败任务时，已成功平台沿用旧 attempt 的产物；同一 run 的各 attempt 共用同一提交。
         attempt = source.get("run_attempt")
         if not is_positive_integer(attempt) or attempt > source_run_attempt:
             raise ProvenanceError(
-                f"{path.name} 的 source run_attempt 必须在 1 到 {source_run_attempt} 之间，实际 {attempt!r}"
+                f"{path.name} source run_attempt must be between 1 and {source_run_attempt}, got {attempt!r}"
             )
         if manifest["builder"] != build_runs[key]:
-            raise ProvenanceError(f"{path.name} 的 builder run 不匹配")
+            raise ProvenanceError(f"{path.name} builder run mismatch")
         expected_names = _expected_filenames(platform, arch, version, appupdateversion)
         _validate_manifest_files(manifest, path, expected_names, by_name, referenced_names)
 
     allowed_names = referenced_names | {path.name for path in manifest_paths.values()}
     unexpected = set(by_name) - allowed_names
     if unexpected:
-        raise ProvenanceError("产物目录包含未声明文件：" + ", ".join(sorted(unexpected)))
+        raise ProvenanceError("Artifact directory contains undeclared files: " + ", ".join(sorted(unexpected)))

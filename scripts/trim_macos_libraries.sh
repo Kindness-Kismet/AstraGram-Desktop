@@ -34,7 +34,7 @@ find "$libraries_dir" \
 strip_failures=0
 while IFS= read -r -d '' file; do
   if ! "$strip_tool" -S "$file"; then
-    echo "::warning file=${file}::跳过 strip 不支持的依赖文件"
+    echo "::warning file=${file}::Skipping dependency file unsupported by strip"
     strip_failures=$((strip_failures + 1))
   fi
 done < <(find "$libraries_dir" -type f \( -name '*.a' -o -name '*.o' \) -print0)

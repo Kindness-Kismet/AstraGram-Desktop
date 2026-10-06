@@ -16,7 +16,7 @@ def main() -> None:
     notes = validate_changelog(args.changelog.read_text(encoding="utf-8"))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(notes, encoding="utf-8")
-    print(f"已生成发布说明：{args.output}")
+    print(f"Release notes generated: {args.output}")
 
 
 if __name__ == "__main__":

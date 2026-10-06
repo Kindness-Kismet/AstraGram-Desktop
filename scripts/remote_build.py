@@ -64,7 +64,7 @@ class GitHubApi:
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if not token:
-            raise ValueError("GitHub token 不能为空")
+            raise ValueError("GitHub token must not be empty")
         self._token = token
         self._timeout_seconds = timeout_seconds
         self._sleep = sleep
@@ -106,17 +106,17 @@ class GitHubApi:
                 else RemoteBuildError
             )
             raise error_type(
-                f"GitHub API {method} {path} 返回 HTTP {error.code}: {message}"
+                f"GitHub API {method} {path} returned HTTP {error.code}: {message}"
             ) from error
         except (URLError, TimeoutError) as error:
             reason = getattr(error, "reason", str(error))
             raise TransientGitHubApiError(
-                f"GitHub API {method} {path} 连接失败: {reason}"
+                f"GitHub API {method} {path} connection failed: {reason}"
             ) from error
 
         if status not in expected_statuses:
             raise RemoteBuildError(
-                f"GitHub API {method} {path} 返回意外状态 {status}"
+                f"GitHub API {method} {path} returned unexpected status {status}"
             )
         if not body:
             return {}
@@ -124,11 +124,11 @@ class GitHubApi:
             parsed = json.loads(body)
         except json.JSONDecodeError as error:
             raise RemoteBuildError(
-                f"GitHub API {method} {path} 返回了无效 JSON"
+                f"GitHub API {method} {path} returned invalid JSON"
             ) from error
         if not isinstance(parsed, dict):
             raise RemoteBuildError(
-                f"GitHub API {method} {path} 返回值不是对象"
+                f"GitHub API {method} {path} returned a value that is not an object"
             )
         return parsed
 
@@ -156,7 +156,7 @@ class GitHubApi:
         run_id = response.get("workflow_run_id")
         if not isinstance(run_id, int) or run_id <= 0:
             raise RemoteBuildError(
-                "dispatch 响应缺少有效 workflow_run_id；拒绝查询最新运行来猜测"
+                "Dispatch response has no valid workflow_run_id; refusing to infer it from the latest run"
             )
         return run_id
 
@@ -191,14 +191,14 @@ class GitHubApi:
 
 def _split_repository(repository: str) -> tuple[str, str]:
     if not _REPOSITORY.fullmatch(repository):
-        raise ValueError(f"无效仓库名: {repository}")
+        raise ValueError(f"Invalid repository name: {repository}")
     owner, name = repository.split("/", 1)
     return owner, name
 
 
 def _checked_input(name: str, value: str) -> str:
     if not value or "\n" in value or "\r" in value or "\0" in value:
-        raise ValueError(f"无效输入 {name}")
+        raise ValueError(f"Invalid input {name}")
     return value
 
 
@@ -212,7 +212,7 @@ def parse_run_details(
 ) -> RunDetails:
     """核对返回运行确属本次调度，避免接受其他仓库或工作流的结果。"""
     if payload.get("id") != run_id:
-        raise RemoteBuildError(f"远程运行 ID 与 dispatch 响应不一致: {run_id}")
+        raise RemoteBuildError(f"Remote run ID does not match the dispatch response: {run_id}")
 
     repository_data = payload.get("repository")
     actual_repository = (
@@ -222,10 +222,10 @@ def parse_run_details(
     )
     if actual_repository != repository:
         raise RemoteBuildError(
-            f"远程运行仓库不一致: 期望 {repository}，实际 {actual_repository}"
+            f"Remote run repository mismatch: expected {repository}, got {actual_repository}"
         )
     if payload.get("event") != "workflow_dispatch":
-        raise RemoteBuildError("远程运行不是 workflow_dispatch")
+        raise RemoteBuildError("Remote run is not a workflow_dispatch event")
 
     expected_path = (
         workflow
@@ -235,22 +235,22 @@ def parse_run_details(
     actual_path = payload.get("path")
     if not isinstance(actual_path, str) or actual_path.split("@", 1)[0] != expected_path:
         raise RemoteBuildError(
-            f"远程工作流不一致: 期望 {expected_path}，实际 {actual_path}"
+            f"Remote workflow mismatch: expected {expected_path}, got {actual_path}"
         )
     if payload.get("head_branch") != ref:
         raise RemoteBuildError(
-            f"远程运行分支不一致: 期望 {ref}，实际 {payload.get('head_branch')}"
+            f"Remote run branch mismatch: expected {ref}, got {payload.get('head_branch')}"
         )
 
     attempt = payload.get("run_attempt")
     status = payload.get("status")
     conclusion = payload.get("conclusion")
     if not isinstance(attempt, int) or attempt <= 0:
-        raise RemoteBuildError("远程运行缺少有效 run_attempt")
+        raise RemoteBuildError("Remote run has no valid run_attempt")
     if not isinstance(status, str) or not status:
-        raise RemoteBuildError("远程运行缺少有效 status")
+        raise RemoteBuildError("Remote run has no valid status")
     if conclusion is not None and not isinstance(conclusion, str):
-        raise RemoteBuildError("远程运行 conclusion 类型无效")
+        raise RemoteBuildError("Remote run conclusion has an invalid type")
 
     url = f"https://github.com/{repository}/actions/runs/{run_id}"
     return RunDetails(
@@ -278,7 +278,7 @@ def run_remote_build(
 ) -> RunDetails:
     """等待精确 dispatch 的终态，并在异常退出时尽力取消同一运行。"""
     if timeout_seconds <= 0 or poll_interval_seconds <= 0:
-        raise ValueError("超时和轮询间隔必须大于零")
+        raise ValueError("Timeout and polling interval must be greater than zero")
     deadline = monotonic() + timeout_seconds
     run_id: int | None = None
     terminal = False
@@ -295,7 +295,7 @@ def run_remote_build(
             remaining = deadline - monotonic()
             if remaining <= 0:
                 raise RemoteBuildError(
-                    f"等待远程构建超时: {timeout_seconds:g}s; {run_url}"
+                    f"Timed out waiting for remote build: {timeout_seconds:g}s; {run_url}"
                 )
             details = parse_run_details(
                 api.get_run(repository, run_id),
@@ -305,7 +305,7 @@ def run_remote_build(
                 run_id=run_id,
             )
             if details.run_attempt < highest_attempt:
-                raise RemoteBuildError("远程 run_attempt 出现回退")
+                raise RemoteBuildError("Remote run_attempt decreased")
             highest_attempt = details.run_attempt
             state = (details.run_attempt, details.status)
             if state != last_state:
@@ -320,7 +320,7 @@ def run_remote_build(
                 terminal = True
                 if details.conclusion != "success":
                     raise RemoteBuildFailed(
-                        f"远程构建失败: {details.conclusion}; {details.url}",
+                        f"Remote build failed: {details.conclusion}; {details.url}",
                         details,
                     )
                 return details
@@ -328,7 +328,7 @@ def run_remote_build(
             remaining = deadline - monotonic()
             if remaining <= 0:
                 raise RemoteBuildError(
-                    f"等待远程构建超时: {timeout_seconds:g}s; {details.url}"
+                    f"Timed out waiting for remote build: {timeout_seconds:g}s; {details.url}"
                 )
             sleep(min(poll_interval_seconds, remaining))
     finally:
@@ -339,7 +339,7 @@ def run_remote_build(
 def cancel_remote_run(api: GitHubApi, repository: str, run_id: int) -> bool:
     """按已记录的精确 ID 尽力取消远程运行，不用查询结果猜测目标。"""
     if run_id <= 0:
-        raise ValueError("远程 run ID 必须是正整数")
+        raise ValueError("Remote run ID must be a positive integer")
     try:
         api.cancel_run(repository, run_id)
         print(f"cancel requested for {repository} run {run_id}", flush=True)
@@ -405,7 +405,7 @@ def _install_signal_handlers() -> dict[int, object]:
 
     def interrupt(signum: int, _frame: object) -> None:
         name = signal.Signals(signum).name
-        raise RemoteBuildInterrupted(f"收到 {name}，正在取消远程构建")
+        raise RemoteBuildInterrupted(f"Received {name}; cancelling remote build")
 
     for signum in (signal.SIGINT, signal.SIGTERM):
         previous[signum] = signal.getsignal(signum)
@@ -450,12 +450,12 @@ def main() -> int:
         ),
     }
     if not _SHA.fullmatch(inputs["source_sha"]):
-        parser.error("--source-sha 必须是 40 位十六进制提交")
+        parser.error("--source-sha must be a 40-character hexadecimal commit hash")
     if not _VERSION.fullmatch(inputs["version"]):
-        parser.error("--version 格式无效")
+        parser.error("Invalid --version format")
     for name in ("source_run_id", "source_run_attempt", "appupdateversion"):
         if not inputs[name].isdigit() or int(inputs[name]) <= 0:
-            parser.error(f"--{name.replace('_', '-')} 必须是正整数")
+            parser.error(f"--{name.replace('_', '-')} must be a positive integer")
 
     try:
         token = os.environ.get("REMOTE_BUILD_TOKEN", "")

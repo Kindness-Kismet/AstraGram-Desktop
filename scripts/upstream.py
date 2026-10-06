@@ -87,7 +87,7 @@ def git(*args: str, cwd: Path = ROOT) -> str:
     done = run(list(args), cwd)
     if done.returncode != 0:
         error = done.stderr.decode("utf-8", errors="replace").strip()
-        raise SystemExit(f"git {' '.join(args)} 失败：\n{error}")
+        raise SystemExit(f"git {' '.join(args)} failed:\n{error}")
     return done.stdout.decode("utf-8", errors="replace")
 
 
@@ -134,7 +134,7 @@ def lookup(rules: dict[str, str], path: str) -> str | None:
 
 def fetch_releases() -> list[Release]:
     # 直接按官方地址拉取，不依赖远程名，避免把同名远程里的其它仓库当成官方。
-    print("正在拉取官方标签……")
+    print("Fetching upstream tags...")
     git("fetch", "--no-tags", "--force", OFFICIAL_URL, f"+refs/tags/v*:{TAG_REFS}v*")
     return releases()
 
@@ -162,7 +162,7 @@ def pick(items: list[Release], version: str) -> Release:
     for release in items:
         if release.version == version:
             return release
-    raise SystemExit(f"官方没有 {version} 这个稳定版。")
+    raise SystemExit(f"Upstream has no stable release {version}.")
 
 
 def submodules(revision: str) -> dict[str, tuple[str, str]]:
@@ -371,19 +371,19 @@ def check(args: argparse.Namespace) -> int:
     items = fetch_releases()
     adapted = pick(items, current)
     newer = [release for release in items if release.key > adapted.key]
-    print(f"已适配：官方 {current}（{adapted.date}）")
+    print(f"Adapted upstream release: {current} ({adapted.date})")
     if not newer:
-        print("官方最新稳定版就是它，不需要同步。")
+        print("Already at the latest upstream stable release; no synchronization needed.")
         return 0
-    listed = "、".join(f"{release.version}（{release.date}）" for release in newer)
-    print(f"官方有 {len(newer)} 个更新的稳定版：{listed}")
+    listed = ", ".join(f"{release.version} ({release.date})" for release in newer)
+    print(f"Upstream has {len(newer)} newer stable releases: {listed}")
     target = newer[-1]
     count = len(git("rev-list", f"{adapted.commit}..{target.commit}").splitlines())
     old, new = submodules(adapted.commit), submodules(target.commit)
     moved = sorted(path for path in old.keys() | new.keys() if old.get(path) != new.get(path))
-    print(f"{current} → {target.version}：官方新增 {count} 个提交，"
-          f"子模块变化 {len(moved)} 个{('：' + '、'.join(moved)) if moved else ''}")
-    print("生成同步报告：python scripts/upstream.py report")
+    print(f"{current} -> {target.version}: {count} new upstream commits, "
+          f"{len(moved)} changed submodules{(': ' + ', '.join(moved)) if moved else ''}")
+    print("Generate a synchronization report: python scripts/upstream.py report")
     return 0
 
 
@@ -393,17 +393,17 @@ def report(args: argparse.Namespace) -> int:
     base = pick(items, args.base or config["tdesktop"])
     head = pick(items, args.to) if args.to else items[-1]
     if head.key <= base.key:
-        print(f"目标 {head.version} 不比基线 {base.version} 新，没有可同步的内容。")
+        print(f"Target {head.version} is not newer than baseline {base.version}; nothing to synchronize.")
         return 0
     dirty = bool(git("status", "--porcelain", "--untracked-files=no").strip())
     if dirty:
-        print("提醒：工作区有未提交的改动，报告只按已提交的 HEAD 计算。")
+        print("Warning: the working tree has uncommitted changes; the report only uses committed HEAD.")
 
     out = OUT_DIR / f"{base.version}-{head.version}"
     out.mkdir(parents=True, exist_ok=True)
     old, new = submodules(base.commit), submodules(head.commit)
 
-    print(f"正在分析 tdesktop {base.version} → {head.version}……")
+    print(f"Analyzing tdesktop {base.version} -> {head.version}...")
     tdesktop = analyze(
         "tdesktop", ROOT, "", base.commit, head.commit, "HEAD", config,
         exclude=set(old) | set(new) | {".gitmodules"},
@@ -434,7 +434,7 @@ def report(args: argparse.Namespace) -> int:
         if not (cwd / ".git").exists() or not ours:
             changes.append(f"- `{path}`：本地没有这个子模块的仓库，无法分析")
             continue
-        print(f"正在分析 {path}……")
+        print(f"Analyzing {path}...")
         missing = [sha for sha in (before[0], after[0]) if not has_commit(cwd, sha)]
         if missing:
             git("fetch", "--no-tags", after[1], *missing, cwd=cwd)
@@ -516,7 +516,7 @@ def report(args: argparse.Namespace) -> int:
         f"4. 用 version-bump 把本应用版本改为 {head.version}。",
     ]
     write(out, "README.md", "\n".join(lines) + "\n")
-    print(f"报告已保存到 {out.relative_to(ROOT).as_posix()}/README.md")
+    print(f"Report saved to {out.relative_to(ROOT).as_posix()}/README.md")
     return 0
 
 
@@ -528,12 +528,12 @@ def lagging(target: Release) -> list[str]:
         if ours == sha:
             continue
         if not ours or not (cwd / ".git").exists():
-            problems.append(f"{path}：本地没有这个子模块，无法确认")
+            problems.append(f"{path}: local submodule is missing; cannot verify")
             continue
         if not has_commit(cwd, sha):
             git("fetch", "--no-tags", url, sha, cwd=cwd)
         if not contains(cwd, sha, ours):
-            problems.append(f"{path}：已提交的指针 {ours[:10]} 不包含官方 {sha[:10]}")
+            problems.append(f"{path}: committed revision {ours[:10]} does not contain upstream {sha[:10]}")
     return problems
 
 
@@ -542,20 +542,20 @@ def done(args: argparse.Namespace) -> int:
     items = fetch_releases()
     target, current = pick(items, args.version), pick(items, config["tdesktop"])
     if target.key <= current.key:
-        print(f"已登记官方 {current.version}，{target.version} 不比它新。")
+        print(f"Upstream {current.version} is already recorded; {target.version} is not newer.")
         return 0 if target == current else 1
     problems = lagging(target)
     if problems:
-        print(f"还不能登记 {target.version}，以下子模块没有跟上官方：")
+        print(f"Cannot record {target.version}; these submodules are behind upstream:")
         print("\n".join(f"  {problem}" for problem in problems))
         return 1
     config["tdesktop"] = target.version
     TRACKING.write_text(
         json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
-    print(f"已登记官方 {target.version}（{target.date}）。")
+    print(f"Recorded upstream {target.version} ({target.date}).")
     for path, reason in config.get("deferred", {}).items():
-        print(f"  暂缓项仍未补上：{path}：{reason}")
-    print(f"接下来用 version-bump 把本应用版本改为 {target.version}。")
+        print(f"  Still deferred: {path}: {reason}")
+    print(f"Next, use version-bump to update the application version to {target.version}.")
     return 0
 
 

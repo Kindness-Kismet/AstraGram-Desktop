@@ -41,7 +41,7 @@ MAX_RETRY_DELAY_SECONDS = 30
 def _positive_int(value: str) -> int:
     result = int(value)
     if result <= 0:
-        raise argparse.ArgumentTypeError("必须是正整数")
+        raise argparse.ArgumentTypeError("must be a positive integer")
     return result
 
 
@@ -50,7 +50,7 @@ def _read_version_fields(root: Path) -> dict[str, str]:
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except OSError as error:
-        raise ProvenanceError(f"无法读取版本文件 {path}: {error}") from error
+        raise ProvenanceError(f"Could not read version file {path}: {error}") from error
     fields = {}
     for line in lines:
         parts = line.split()
@@ -58,7 +58,7 @@ def _read_version_fields(root: Path) -> dict[str, str]:
             continue
         name, value = parts
         if name in fields:
-            raise ProvenanceError(f"版本文件字段重复：{name}")
+            raise ProvenanceError(f"Duplicate version file field: {name}")
         fields[name] = value
     return fields
 
@@ -73,7 +73,7 @@ def _git_head(root: Path) -> str:
             text=True,
         )
     except (OSError, subprocess.CalledProcessError) as error:
-        raise ProvenanceError("无法读取当前 checkout 的 Git HEAD") from error
+        raise ProvenanceError("Could not read Git HEAD for the current checkout") from error
     return result.stdout.strip()
 
 
@@ -157,8 +157,8 @@ def fetch_workflow_run(
                 sleep(_retry_delay(error, attempt))
                 continue
             raise ProvenanceError(
-                f"GitHub API 无法确认 source workflow run"
-                f"（尝试 {attempt}/{SOURCE_RUN_API_ATTEMPTS}，{diagnostic}）"
+                f"GitHub API could not verify the source workflow run"
+                f" (attempt {attempt}/{SOURCE_RUN_API_ATTEMPTS}, {diagnostic})"
             ) from error
         except OSError as error:
             diagnostic = _network_error_diagnostic(error)
@@ -166,13 +166,13 @@ def fetch_workflow_run(
                 sleep(_retry_delay(error, attempt))
                 continue
             raise ProvenanceError(
-                f"GitHub API 无法确认 source workflow run（尝试 {attempt}/{SOURCE_RUN_API_ATTEMPTS}，"
-                f"网络错误 {diagnostic}）"
+                f"GitHub API could not verify the source workflow run (attempt {attempt}/{SOURCE_RUN_API_ATTEMPTS}, "
+                f"network error {diagnostic})"
             ) from error
         except (UnicodeError, json.JSONDecodeError) as error:
-            raise ProvenanceError("GitHub API source workflow run 返回无效 JSON") from error
+            raise ProvenanceError("GitHub API returned invalid JSON for the source workflow run") from error
         if not isinstance(payload, dict):
-            raise ProvenanceError("GitHub API 返回的 source workflow run 格式无效")
+            raise ProvenanceError("GitHub API returned an invalid source workflow run")
         return payload
     raise AssertionError("unreachable")
 
@@ -193,19 +193,19 @@ def validate_source(
     """同时核对 checkout、版本文件和 GitHub source run，防止构建来源被替换。"""
     validate_repository(repository)
     if repository != SOURCE_REPOSITORY:
-        raise ProvenanceError(f"不受信任的 source 仓库：{repository}")
+        raise ProvenanceError(f"Untrusted source repository: {repository}")
     sha = validate_sha(sha)
     ref = validate_source_ref(ref)
     version = validate_version(version)
     if ref != f"refs/tags/v{version}":
-        raise ProvenanceError(f"source tag 与版本不一致：{ref!r}")
+        raise ProvenanceError(f"Source tag does not match the version: {ref!r}")
     require_positive_integers(
         {"source run id": run_id, "source run attempt": run_attempt, "AppUpdateVersion": appupdateversion}
     )
     if workflow_path != SOURCE_WORKFLOW:
-        raise ProvenanceError(f"不受信任的 source workflow：{workflow_path}")
+        raise ProvenanceError(f"Untrusted source workflow: {workflow_path}")
     if validate_sha(_git_head(root)) != sha:
-        raise ProvenanceError("当前 checkout HEAD 与 source SHA 不一致")
+        raise ProvenanceError("Current checkout HEAD does not match the source SHA")
 
     fields = _read_version_fields(root)
     expected_versions = {
@@ -217,7 +217,7 @@ def validate_source(
     for name, expected in expected_versions.items():
         if fields.get(name) != expected:
             raise ProvenanceError(
-                f"Telegram/build/version 的 {name} 不一致：期待 {expected!r}，实际 {fields.get(name)!r}"
+                f"Telegram/build/version field {name} mismatch: expected {expected!r}, got {fields.get(name)!r}"
             )
 
     loader = run_loader or fetch_workflow_run
@@ -233,9 +233,9 @@ def validate_source(
     }
     for label, (actual, expected) in checks.items():
         if actual != expected:
-            raise ProvenanceError(f"source workflow {label} 不一致：期待 {expected!r}，实际 {actual!r}")
+            raise ProvenanceError(f"Source workflow {label} mismatch: expected {expected!r}, got {actual!r}")
     if run.get("event") not in ALLOWED_SOURCE_EVENTS:
-        raise ProvenanceError(f"不允许的 source workflow 事件：{run.get('event')!r}")
+        raise ProvenanceError(f"Disallowed source workflow event: {run.get('event')!r}")
 
 
 def _build_parser() -> argparse.ArgumentParser:

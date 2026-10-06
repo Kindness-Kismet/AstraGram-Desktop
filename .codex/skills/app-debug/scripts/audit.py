@@ -13,10 +13,10 @@ def audit():
     files = list(directory.glob("*.cpp"))
     handlers = "\n".join(path.read_text(encoding="utf-8") for path in files)
     exceptions = {
-        "setLegacyEmojiVariants": "旧数据迁移，不增加调试兼容入口",
-        "setLegacyRecentEmojiPreload": "旧数据迁移，不增加调试兼容入口",
-        "setVideoPlaybackSpeedSerialized": "存储编码，已通过实际播放速度设置覆盖",
-        "setHiddenGroupCallTooltip": "提示已展示标记，不是用户设置选项",
+        "setLegacyEmojiVariants": "Legacy data migration; no debug compatibility entry is needed",
+        "setLegacyRecentEmojiPreload": "Legacy data migration; no debug compatibility entry is needed",
+        "setVideoPlaybackSpeedSerialized": "Storage encoding; covered by the playback speed setting",
+        "setHiddenGroupCallTooltip": "Tooltip display marker; not a user setting",
     }
     missing = []
     coverage = {}
@@ -32,16 +32,16 @@ def audit():
     cli.register_commands(sub)
     client = set(sub.choices) - {"app.start", "app.ensure", "app.restart", "app.stop"}
     server = set(re.findall(r'\{\s*u"([a-z][a-z.-]+)"_q,\s*&', handlers))
-    missing.extend(f"命令注册不一致：{name}" for name in sorted(client ^ server))
+    missing.extend(f"Command registration mismatch: {name}" for name in sorted(client ^ server))
     cmake = (cli.ROOT / "Telegram" / "CMakeLists.txt").read_text(encoding="utf-8")
     for path in files:
         text = path.read_text(encoding="utf-8")
         if path.relative_to(source).as_posix() not in cmake:
-            missing.append(f"未登记构建清单：{path.name}")
+            missing.append(f"Missing build manifest entry: {path.name}")
         if len(text.splitlines()) > 2000:
-            missing.append(f"源码超过行数限制：{path.name}")
+            missing.append(f"Source file exceeds the line limit: {path.name}")
         if not text.startswith("#ifdef _DEBUG"):
-            missing.append(f"缺少调试构建保护：{path.name}")
+            missing.append(f"Missing debug build guard: {path.name}")
 
     report = {"settings": coverage, "exceptions": exceptions, "commands": len(server), "issues": missing}
     output = cli.ROOT / "build" / "debug-command-audit.json"

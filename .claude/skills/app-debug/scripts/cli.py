@@ -96,7 +96,7 @@ def working_dir() -> Path:
     if not profile:
         return debug_dir()
     if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,47}", profile):
-        raise ValueError("调试配置名须为 1 至 48 个小写字母、数字、下划线或连字符")
+        raise ValueError("Debug profile name must contain 1 to 48 lowercase letters, digits, underscores or hyphens")
     return ROOT / "build" / "debug-profiles" / profile
 
 
@@ -325,7 +325,7 @@ def main() -> int:
         try:
             execute_command(args)
         except Exception as exception:
-            print(f"错误: {exception}", file=sys.stderr)
+            print(f"Error: {exception}", file=sys.stderr)
             return 1
     return 0
 
@@ -338,7 +338,7 @@ def split_command_segments(argv: list[str]) -> list[list[str]]:
         else:
             segments[-1].append(token)
     if any(not segment for segment in segments):
-        raise SystemExit(f"{COMMAND_SEPARATOR} 两侧都必须有指令。")
+        raise SystemExit(f"Commands are required on both sides of {COMMAND_SEPARATOR}.")
     return segments
 
 
@@ -355,17 +355,17 @@ def execute_command(args: argparse.Namespace) -> None:
         ensure_debug_app()
         if profile is not None:
             PROFILE_FILE.write_text(json.dumps({"profile": PROFILE_OVERRIDE}), encoding="utf-8")
-        print("应用已就绪。")
+        print("Application is ready.")
         return
     if command == "app.restart":
         restart_debug_app()
         if profile is not None:
             PROFILE_FILE.write_text(json.dumps({"profile": PROFILE_OVERRIDE}), encoding="utf-8")
-        print("应用已重启。")
+        print("Application restarted.")
         return
     if command == "app.stop":
         stop_debug_app_if_running()
-        print("应用已停止。")
+        print("Application stopped.")
         return
 
     if command == "screenshot.take":
@@ -405,13 +405,13 @@ def build_server_command(args: argparse.Namespace) -> str:
         return f"control.key {quote_arg(args.target)} {args.key}"
     if command == "control.pointer":
         if len(args.point) not in (0, 2):
-            raise ValueError("control.pointer 的 x 与 y 必须成对给出")
+            raise ValueError("control.pointer requires both x and y")
         return " ".join([command, quote_arg(args.target), *map(str, args.point)])
     if command == "control.scroll":
         return f"control.scroll {quote_arg(args.target)}" + (f" {args.top}" if args.top is not None else "")
     if command == "control.input":
         if (args.text is None) == (args.text_file is None):
-            raise SystemExit("文字和 --file 必须且只能提供一项")
+            raise SystemExit("Provide exactly one of text or --file")
         value = Path(args.text_file).read_text(encoding="utf-8") if args.text_file is not None else args.text
         encoded = base64.b64encode(value.encode("utf-8")).decode("ascii")
         return f"control.input {quote_arg(args.target)} b64:{encoded}"
@@ -480,11 +480,11 @@ def build_server_command(args: argparse.Namespace) -> str:
     if command == "message.send":
         if args.text_file is not None:
             if args.text is not None or args.extraText:
-                raise ValueError("文字和 --file 只能提供一项")
+                raise ValueError("Text and --file are mutually exclusive")
             path = Path(args.text_file).resolve()
             return f"message.send {args.peerId} --file {quote_arg(str(path))}"
         if args.text is None:
-            raise ValueError("请提供消息文字或 --file")
+            raise ValueError("Provide message text or --file")
         text = " ".join([args.text, *args.extraText])
         return f"message.send {args.peerId} {quote_arg(text)}"
     if command == "chat.history-stats":
@@ -494,7 +494,7 @@ def build_server_command(args: argparse.Namespace) -> str:
         if not args.size:
             return "window.resize"
         if len(args.size) != 2:
-            raise ValueError("window.resize 的 width 与 height 必须成对给出")
+            raise ValueError("window.resize requires both width and height")
         return f"window.resize {args.size[0]} {args.size[1]}"
     if command == "window.maximize":
         return f"window.maximize {args.maximized}"
@@ -509,18 +509,18 @@ def quote_arg(value: str) -> str:
 def ensure_debug_app() -> None:
     if (pid := port_owner_pid()) is not None:
         if not is_expected_process(pid):
-            raise RuntimeError(f"端口 {PORT} 属于其它应用，PID 为 {pid}")
+            raise RuntimeError(f"Port {PORT} belongs to another application with PID {pid}")
         info = json.loads(send_command("app.info"))
         actual = Path(info["workingDir"]).resolve()
         if actual != working_dir().resolve():
-            raise RuntimeError(f"当前数据目录为 {actual}，目标为 {working_dir()}。请先用 app.stop 退出当前调试应用。")
+            raise RuntimeError(f"Current data directory is {actual}; expected {working_dir()}. Stop the current debug application with app.stop first.")
         if actual != debug_dir().resolve() and not info.get("isolatedDebug"):
-            raise RuntimeError("独立配置未启用测试隔离，请重新构建并重启调试应用。")
+            raise RuntimeError("Test isolation is not enabled for this profile. Rebuild and restart the debug application.")
         return
     if not app_exe().is_file():
         raise SystemExit(
-            f"Debug 产物不存在：{app_exe()}\n"
-            f"先运行 python scripts/build.py --dev"
+            f"Debug executable does not exist: {app_exe()}\n"
+            f"Run python scripts/build.py --dev first"
         )
     launch_app()
     wait_for_port()
@@ -537,7 +537,7 @@ def launch_app() -> None:
         subprocess.Popen(command, cwd=directory, creationflags=subprocess.DETACHED_PROCESS)
     else:
         subprocess.Popen(command, cwd=directory, start_new_session=True)
-    print(f"已启动 {app_exe().name}，等待调试端口就绪...", flush=True)
+    print(f"Started {app_exe().name}; waiting for the debug port...", flush=True)
 
 
 def restart_debug_app() -> None:
@@ -552,8 +552,8 @@ def stop_debug_app_if_running() -> None:
     if pid is not None:
         if not is_expected_process(pid):
             raise RuntimeError(
-                f"端口 {PORT} 被意外 PID {pid} 占用，拒绝停止。\n"
-                f"手动核对路径：wmic process where \"ProcessId={pid}\" get ExecutablePath"
+                f"Port {PORT} is owned by unexpected PID {pid}; refusing to stop it.\n"
+                f"Verify the executable path manually: wmic process where \"ProcessId={pid}\" get ExecutablePath"
             )
         try:
             send_command("app.quit")
@@ -742,10 +742,10 @@ def wait_for_port() -> None:
     deadline = time.time() + PORT_WAIT_SECONDS
     while time.time() < deadline:
         if port_owner_pid() is not None:
-            print(f"调试端口 {PORT} 已就绪。")
+            print(f"Debug port {PORT} is ready.")
             return
         time.sleep(0.2)
-    raise TimeoutError(f"调试端口 {PORT_WAIT_SECONDS} 秒内未就绪，应用可能启动失败。")
+    raise TimeoutError(f"Debug port was not ready within {PORT_WAIT_SECONDS} seconds; the application may have failed to start.")
 
 
 def wait_for_port_closed() -> None:
@@ -753,7 +753,7 @@ def wait_for_port_closed() -> None:
         if port_owner_pid() is None:
             return
         time.sleep(0.1)
-    raise TimeoutError("调试端口在停止后仍被占用。")
+    raise TimeoutError("Debug port is still in use after stopping the application.")
 
 
 @contextmanager
@@ -771,7 +771,7 @@ def serialized_debug_command():
                     break
                 except OSError as exception:
                     if time.time() >= deadline:
-                        raise TimeoutError("等待调试 CLI 串行锁超时。") from exception
+                        raise TimeoutError("Timed out waiting for the debug CLI serialization lock.") from exception
                     time.sleep(0.1)
 
             try:
@@ -807,7 +807,7 @@ def send_command(line: str) -> str:
     if response.startswith("ERR "):
         raise RuntimeError(response[4:])
 
-    raise RuntimeError(f"未知响应格式: {response}")
+    raise RuntimeError(f"Unknown response format: {response}")
 
 
 if __name__ == "__main__":

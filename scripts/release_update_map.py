@@ -8,7 +8,7 @@ from pathlib import Path
 
 def generate_update_map(artifacts: Path, version: int) -> dict:
     if not 1_016 < version <= 999_999_999:
-        raise ValueError("更新版本必须在 Packer 支持的 1017..999999999 范围内")
+        raise ValueError("Update version must be within the range supported by Packer: 1017..999999999")
     prefixes = {
         "win64": "tx64upd",
         "winarm": "tarm64upd",
@@ -23,7 +23,7 @@ def generate_update_map(artifacts: Path, version: int) -> dict:
         if not package.is_file():
             continue
         if not package.stat().st_size:
-            raise ValueError(f"更新包为空：{package.name}")
+            raise ValueError(f"Update package is empty: {package.name}")
         result[platform] = {
             "stable": {
                 "released": version,
@@ -34,7 +34,7 @@ def generate_update_map(artifacts: Path, version: int) -> dict:
 
     # 每个键只登记本架构的更新包；缺席平台的客户端本次不提示更新。
     if not result:
-        raise ValueError("没有任何更新包")
+        raise ValueError("No update packages found")
     return result
 
 

@@ -216,6 +216,7 @@ void Process(const TextWithEntities &text) {
 - 失败用返回值表达：`std::optional<T>` 或 `Result { bool ok; QString payload; }`
 - 唯一允许的 `try/catch`：调试服务端的 `Execute()` 包住 handler，避免异常终止监听
 - 日志用 `LOG(("Category: message %1").arg(value))`，不要用 `qDebug()`
+- 内部错误返回、调试日志和脚本诊断信息使用英文；界面文案继续使用翻译键。
 
 ---
 

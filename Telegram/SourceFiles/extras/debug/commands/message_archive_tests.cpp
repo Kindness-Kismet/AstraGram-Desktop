@@ -616,27 +616,27 @@ Result verifyMessageArchive(const QStringList &args) {
 	if (const auto error = cryptoChecks(bytes::make_span(key)); !error.isEmpty()) {
 		return Result::Err(error);
 	}
-	checks.push_back("完整字段、二进制、随机性与密文认证");
+	checks.push_back("Complete fields, binary data, randomness and ciphertext authentication");
 	if (const auto error = storeChecks(directory.filePath(u"fresh.db"_q),
 			bytes::make_span(key)); !error.isEmpty()) {
 		return Result::Err(error);
 	}
-	checks.push_back("账号隔离、分页搜索、重启恢复与换钥");
+	checks.push_back("Account isolation, paginated search, restart recovery and key rotation");
 	if (const auto error = migrationChecks(directory.filePath(u"migration.db"_q),
 			bytes::make_span(key)); !error.isEmpty()) {
 		return Result::Err(error);
 	}
-	checks.push_back("旧库完整迁移、失败回滚、正则保留与明文清理");
+	checks.push_back("Complete legacy migration, rollback, regex preservation and plaintext cleanup");
 	if (const auto error = corruptionChecks(directory.filePath(u"corruption.db"_q),
 			bytes::make_span(key)); !error.isEmpty()) {
 		return Result::Err(error);
 	}
-	checks.push_back("损坏记录、归属篡改与数据库查询故障");
+	checks.push_back("Corrupt records, ownership tampering and database query failures");
 	if (const auto error = readOnlyChecks(directory.filePath(u"readonly.db"_q),
 			bytes::make_span(key)); !error.isEmpty()) {
 		return Result::Err(error);
 	}
-	checks.push_back("只读数据库拒绝写入并保留原文件");
+	checks.push_back("Read-only database rejects writes and preserves the original file");
 	return Result::Ok(Compact(Json{
 		{ "checks", checks },
 		{ "count", checks.size() },

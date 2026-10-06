@@ -11,9 +11,9 @@ def _entries(block: str, language: str) -> list[str]:
     lines = block.split("\n")
     for line in lines:
         if not line.startswith("- ") or not line[2:].strip():
-            raise SystemExit(f"{language}条目必须以“- ”开头且不能为空：{line!r}")
+            raise SystemExit(f"{language} entries must start with '- ' and must not be empty: {line!r}")
         if line.rstrip().endswith(_TRAILING_PUNCTUATION):
-            raise SystemExit(f"{language}条目末尾不加标点：{line!r}")
+            raise SystemExit(f"{language} entries must not end with punctuation: {line!r}")
     return lines
 
 
@@ -22,10 +22,10 @@ def validate_changelog(text: str) -> str:
     notes = text.replace("\r\n", "\n").strip()
     blocks = notes.split(_SEPARATOR)
     if len(blocks) != 2:
-        raise SystemExit("更新日志必须是英文条目、空行、---、空行、简体中文条目")
+        raise SystemExit("Changelog must contain English entries, a blank line, ---, a blank line, and Simplified Chinese entries")
 
-    english = _entries(blocks[0], "英文")
-    chinese = _entries(blocks[1], "中文")
+    english = _entries(blocks[0], "English")
+    chinese = _entries(blocks[1], "Chinese")
     if len(english) != len(chinese):
-        raise SystemExit(f"中英文条目数量不一致：英文 {len(english)} 条，中文 {len(chinese)} 条")
+        raise SystemExit(f"Changelog entry counts differ: {len(english)} English, {len(chinese)} Chinese")
     return notes + "\n"
