@@ -3405,9 +3405,7 @@ PointState Message::pointState(QPoint point) const {
 }
 
 bool Message::displayFromPhoto() const {
-	return hasFromPhoto()
-		&& !isAttachedToNext()
-		&& !data()->isSponsored();
+	return hasFromPhoto() && !isAttachedToNext();
 }
 
 void Message::clickHandlerPressedChanged(
@@ -3948,7 +3946,9 @@ bool Message::hasFromPhoto() const {
 	case Context::SavedSublist:
 	case Context::ScheduledTopic: {
 		const auto item = data();
-		if (item->isPostHidingAuthor()) {
+		if (item->isSponsored()) {
+			return false;
+		} else if (item->isPostHidingAuthor()) {
 			return false;
 		} else if (item->isPost()) {
 			return true;
