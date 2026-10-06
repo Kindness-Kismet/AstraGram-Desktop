@@ -233,7 +233,7 @@ int Sandbox::start() {
 	});
 
 	LOG(("Connecting local socket to %1...").arg(_localServerName));
-	QTimer::singleShot(10000, this, [=] {
+	QTimer::singleShot(2000, this, [=] {
 		if (!_instanceCheckFinished && !Quitting()) {
 			LOG(("App Error: Single instance handshake timed out."));
 			Quit();
