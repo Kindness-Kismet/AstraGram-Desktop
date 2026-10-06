@@ -65,14 +65,9 @@ set(desktop_app_skip_libs
     variant
 )
 
-add_subdirectory(cmake)
-
-if (LINUX AND TARGET external_qt_static_plugins_kimageformats)
-    # libheif 的 FFmpeg 后端需要完整静态依赖，生成工具也会链接此图片插件。
-    target_link_libraries(external_qt_static_plugins_kimageformats
-    PRIVATE
-        desktop-app::external_ffmpeg
-    )
+if (LINUX)
+    include(Telegram/cmake/linux_heif_linking.cmake)
 endif()
 
+add_subdirectory(cmake)
 add_subdirectory(Telegram)
