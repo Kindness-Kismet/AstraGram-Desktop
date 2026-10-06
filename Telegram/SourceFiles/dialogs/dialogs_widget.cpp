@@ -535,6 +535,16 @@ Widget::Widget(
 		return InnerWidget::ChildListShown{ peerId, shown };
 	};
 	ExtrasFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::watchIconButton(
+		_searchForNarrowLayout.data(),
+		st::menuIconFgOver);
+	for (const auto button : {
+			_downloadsButton.data(),
+			_lockUnlock->entity() }) {
+		ExtrasFeatures::WindowMaterial::watchIconButton(
+			button,
+			st::dialogsMenuIconFgOver);
+	}
 	ExtrasFeatures::WindowMaterial::changes(this) | rpl::skip(1) | rpl::on_next([=] {
 		if (_showAnimation) {
 			slideFinished();

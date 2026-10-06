@@ -215,6 +215,7 @@ private:
 		int availableWidth,
 		int outerWidth);
 	bool paintConnectingState(Painter &p, int left, int top, int outerWidth);
+	[[nodiscard]] QColor statusFg() const;
 	[[nodiscard]] QRect getMembersShowAreaGeometry() const;
 	[[nodiscard]] bool trackOnlineOf(not_null<PeerData*> user) const;
 	void updateMembersShowArea();

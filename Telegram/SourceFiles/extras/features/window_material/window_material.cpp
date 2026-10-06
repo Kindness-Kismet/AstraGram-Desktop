@@ -5,6 +5,7 @@
 #include "extras/features/window_material/platform/window_material_platform.h"
 #include "ui/layers/layer_widget.h"
 #include "rpl/map.h"
+#include "ui/widgets/buttons.h"
 #include "ui/widgets/rp_window.h"
 #include "ui/ui_utility.h"
 #include "window/themes/window_theme.h"
@@ -253,6 +254,26 @@ std::optional<QColor> foregroundOverride(const QWidget *widget) {
 
 QColor foregroundColor(const QWidget *widget, QColor normal) {
 	return foregroundOverride(widget).value_or(normal);
+}
+
+void applyIconButton(
+		not_null<Ui::IconButton*> button,
+		const style::color &over) {
+	const auto fg = foregroundOverride(button);
+	button->setIconColorOverride(fg);
+	button->setIconOverColorOverride(fg
+		? std::make_optional(over->c)
+		: std::nullopt);
+}
+
+void watchIconButton(
+		not_null<Ui::IconButton*> button,
+		const style::color &over) {
+	// 按地址读取样式色，主题切换后取到新值。
+	const auto overColor = &over;
+	changes(button) | rpl::on_next([=] {
+		applyIconButton(button, *overColor);
+	}, button->lifetime());
 }
 
 std::vector<::WindowMaterial> availableModes() {

@@ -150,6 +150,25 @@ TopBarWidget::TopBarWidget(
 , _onlineUpdater([=] { updateOnlineDisplay(); }) {
 	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	setAttribute(Qt::WA_OpaquePaintEvent, false);
+	for (const auto button : {
+			_call.data(), _videoCall.data(), _groupCall.data(),
+			_search.data(), _menuToggle.data(),
+			_recentActions.data(), _admins.data() }) {
+		ExtrasFeatures::WindowMaterial::watchIconButton(
+			button,
+			st::menuIconFgOver);
+	}
+	for (const auto button : {
+			_clear.data(), _back.data(), _cancelChoose.data() }) {
+		ExtrasFeatures::WindowMaterial::watchIconButton(
+			button,
+			st::boxTitleCloseFgOver);
+	}
+	ExtrasFeatures::WindowMaterial::changes(
+		_infoToggle.data()
+	) | rpl::on_next([=] {
+		updateInfoToggleActive();
+	}, _infoToggle->lifetime());
 
 	setupSelection();
 
@@ -561,7 +580,7 @@ void TopBarWidget::paintTopBar(Painter &p) {
 		p.drawTextLeft(nameleft, nametop, width(), text);
 
 		p.setFont(st::dialogsTextFont);
-		p.setPen(st::historyStatusFg);
+		p.setPen(statusFg());
 		p.drawTextLeft(
 			nameleft,
 			statustop,
@@ -595,7 +614,7 @@ void TopBarWidget::paintTopBar(Painter &p) {
 				width(),
 				st::historyStatusFgTyping,
 				now)) {
-			p.setPen(st::historyStatusFg);
+			p.setPen(statusFg());
 			p.drawTextLeft(nameleft, statustop, width(), _customTitleText);
 		}
 	} else if (folder
@@ -774,6 +793,12 @@ bool TopBarWidget::paintSendAction(
 	return true;
 }
 
+QColor TopBarWidget::statusFg() const {
+	return ExtrasFeatures::WindowMaterial::foregroundColor(
+		this,
+		st::historyStatusFg->c);
+}
+
 bool TopBarWidget::paintConnectingState(
 		Painter &p,
 		int left,
@@ -792,7 +817,7 @@ bool TopBarWidget::paintConnectingState(
 	left += st::topBarConnectingPosition.x()
 		+ st::topBarConnectingAnimation.size.width()
 		+ st::topBarConnectingSkip;
-	p.setPen(st::historyStatusFg);
+	p.setPen(statusFg());
 	p.drawTextLeft(left, top, outerWidth, tr::lng_status_connecting(tr::now));
 	return true;
 }
@@ -806,12 +831,12 @@ void TopBarWidget::paintStatus(
 	using Section = Dialogs::EntryState::Section;
 	const auto section = _activeChat.section;
 	if (section == Section::Replies || section == Section::SavedSublist) {
-		p.setPen(st::historyStatusFg);
+		p.setPen(statusFg());
 		p.drawTextLeft(left, top, outerWidth, _customTitleText);
 	} else {
 		p.setPen(_titlePeerTextOnline
-			? st::historyStatusFgActive
-			: st::historyStatusFg);
+			? st::historyStatusFgActive->c
+			: statusFg());
 		_titlePeerText.drawLeftElided(
 			p,
 			left,
@@ -1801,6 +1826,15 @@ void TopBarWidget::updateInfoToggleActive() {
 		: nullptr;
 	_infoToggle->setIconOverride(iconOverride, iconOverride);
 	_infoToggle->setRippleColorOverride(rippleOverride);
+	// 激活态保留强调色图标，不跟随材质改色。
+	if (infoThirdActive) {
+		_infoToggle->setIconColorOverride(std::nullopt);
+		_infoToggle->setIconOverColorOverride(std::nullopt);
+	} else {
+		ExtrasFeatures::WindowMaterial::applyIconButton(
+			_infoToggle.data(),
+			st::menuIconFgOver);
+	}
 }
 
 void TopBarWidget::setupDragOnBackButton() {

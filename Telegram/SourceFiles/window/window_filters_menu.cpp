@@ -572,8 +572,11 @@ base::unique_qptr<Ui::SideBarButton> FiltersMenu::prepareButton(
 	prepared->setShowText(mode != Ui::ChatsFiltersTabsMode::IconsOnly);
 	auto added = container->add(std::move(prepared));
 	auto button = base::unique_qptr<Ui::SideBarButton>(std::move(added));
-	ExtrasFeatures::WindowMaterial::watchSurface(button.get());
 	const auto raw = button.get();
+	ExtrasFeatures::WindowMaterial::changes(raw) | rpl::on_next([=] {
+		raw->setColorOverride(
+			ExtrasFeatures::WindowMaterial::foregroundOverride(raw));
+	}, raw->lifetime());
 	raw->setObjectName(u"chatFolders.folder.%1"_q.arg(id));
 	const auto nameText = id
 		? title.text.text

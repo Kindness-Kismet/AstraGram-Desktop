@@ -2,13 +2,17 @@
 
 #include "base/basic_types.h"
 #include "rpl/producer.h"
+#include "ui/style/style_core_types.h"
 #include <QtGui/QColor>
 #include <optional>
 #include <vector>
 
 class QWidget;
 enum class WindowMaterial;
-namespace Ui { class RpWindow; }
+namespace Ui {
+class RpWindow;
+class IconButton;
+} // namespace Ui
 
 namespace ExtrasFeatures::WindowMaterial {
 
@@ -29,6 +33,14 @@ void watchSurface(not_null<QWidget*> widget);
 [[nodiscard]] std::optional<QColor> foregroundOverride(const QWidget *widget);
 // 生效时返回正文色，否则返回 normal，供绘制代码直接使用。
 [[nodiscard]] QColor foregroundColor(const QWidget *widget, QColor normal);
+// 生效时图标常态改用正文色，悬停改用 over（传样式原有悬停色）；否则清除覆盖。
+void applyIconButton(
+	not_null<Ui::IconButton*> button,
+	const style::color &over);
+// 材质或主题变化时重新调用 applyIconButton。
+void watchIconButton(
+	not_null<Ui::IconButton*> button,
+	const style::color &over);
 [[nodiscard]] std::vector<::WindowMaterial> availableModes();
 
 } // namespace ExtrasFeatures::WindowMaterial

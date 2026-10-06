@@ -76,6 +76,8 @@ struct PaintContext {
 	bool narrow = false;
 	bool displayUnreadInfo = false;
 	bool insideCommunity = false;
+	// 材质背景下未选中行的灰色文字与图标改用正文色。
+	bool windowMaterial = false;
 };
 
 extern const char kOptionDialogsMuteIcon[];
@@ -87,6 +89,13 @@ extern const char kOptionDialogsMuteIcon[];
 
 [[nodiscard]] const style::VerifiedBadge &VerifiedStyle(
 	const PaintContext &context);
+
+// 按行状态选择灰色文字颜色，材质背景下未选中行改用正文色。
+[[nodiscard]] QColor SecondaryTextFg(
+	const PaintContext &context,
+	const style::color &active,
+	const style::color &over,
+	const style::color &normal);
 
 class RowPainter {
 public:

@@ -1070,6 +1070,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 	const auto r = e->rect();
 	auto dialogsClip = r;
 	const auto ms = crl::now();
+	const auto windowMaterial = ExtrasFeatures::WindowMaterial::isActive(this);
 	const auto childListShown = _childListShown.current();
 	auto context = Ui::PaintContext{
 		.st = _st,
@@ -1084,6 +1085,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		.paused = videoPaused,
 		.narrow = (fullWidth < st::columnMinimalWidthLeft / 2),
 		.insideCommunity = communityModeShown(),
+		.windowMaterial = windowMaterial,
 	};
 	const auto fillGuard = gsl::finally([&] {
 		// We translate painter down, but it'll be cropped below rect.
@@ -1563,6 +1565,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 						.active = active,
 						.selected = selected,
 						.paused = videoPaused,
+						.windowMaterial = windowMaterial,
 					});
 					p.translate(0, st::dialogsRowHeight);
 				}
@@ -1627,6 +1630,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 						.active = active,
 						.selected = selected,
 						.paused = videoPaused,
+						.windowMaterial = windowMaterial,
 					});
 					p.translate(0, st::dialogsRowHeight);
 				}
@@ -1706,6 +1710,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 						.search = true,
 						.narrow = (fullWidth < st::columnMinimalWidthLeft / 2),
 						.displayUnreadInfo = showUnreadInSearchResults,
+						.windowMaterial = windowMaterial,
 					});
 					p.translate(0, _st->height);
 				}
@@ -1790,6 +1795,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 						.search = true,
 						.narrow = (fullWidth < st::columnMinimalWidthLeft / 2),
 						.displayUnreadInfo = showUnreadInSearchResults,
+						.windowMaterial = windowMaterial,
 					});
 					p.translate(0, _st->height);
 				}
@@ -2065,7 +2071,11 @@ void InnerWidget::paintPeerSearchResult(
 		} else {
 			p.setPen(st::dialogsTextFgService);
 			p.drawText(tr.left(), tr.top() + st::dialogsTextFont->ascent, first);
-			p.setPen(st::dialogsTextFg);
+			p.setPen(Ui::SecondaryTextFg(
+				context,
+				st::dialogsTextFgActive,
+				st::dialogsTextFg,
+				st::dialogsTextFg));
 			p.drawText(tr.left() + w, tr.top() + st::dialogsTextFont->ascent, st::dialogsTextFont->elided(second, tr.width() - w));
 		}
 	} else {

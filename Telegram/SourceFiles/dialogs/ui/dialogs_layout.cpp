@@ -53,6 +53,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/features/filters/filters_controller.h"
+#include "extras/features/window_material/window_material.h"
 #include "styles/style_extras_icons.h"
 
 
@@ -89,6 +90,20 @@ const auto kPsaBadgePrefix = "cloud_lng_badge_psa_";
 		&& !history->amMonoforumAdmin();
 }
 
+// 置顶图标与灰色文字一起跟随材质背景改色。
+void PaintPinnedIcon(
+		QPainter &p,
+		const style::icon &icon,
+		int x,
+		int y,
+		const PaintContext &context) {
+	if (context.active || !context.windowMaterial) {
+		icon.paint(p, x, y, context.width);
+		return;
+	}
+	icon.paint(p, x, y, context.width, st::windowFg->c);
+}
+
 void PaintRowTopRight(
 		QPainter &p,
 		const QString &text,
@@ -100,11 +115,11 @@ void PaintRowTopRight(
 		: st::dialogsDateFont->width(text);
 	rectForName.setWidth(rectForName.width() - width - st::dialogsDateSkip);
 	p.setFont(st::dialogsDateFont);
-	p.setPen(context.active
-		? st::dialogsDateFgActive
-		: context.selected
-		? st::dialogsDateFgOver
-		: st::dialogsDateFg);
+	p.setPen(SecondaryTextFg(
+		context,
+		st::dialogsDateFgActive,
+		st::dialogsDateFgOver,
+		st::dialogsDateFg));
 	p.drawText(
 		rectForName.left() + rectForName.width() + st::dialogsDateSkip,
 		rectForName.top() + st::semiboldFont->height - st::normalFont->descent,
@@ -244,7 +259,7 @@ int PaintBadges(
 			st::dialogsPinnedIcon,
 			context.active,
 			context.selected);
-		icon.paint(p, right - icon.width(), pinnedIconTop, context.width);
+		PaintPinnedIcon(p, icon, right - icon.width(), pinnedIconTop, context);
 		right -= icon.width() + st::dialogsUnreadPadding;
 	}
 	if ((!narrow || (painted < 2))
@@ -356,11 +371,11 @@ void PaintFolderEntryText(
 	}
 	folder->validateListEntryCache();
 	p.setFont(st::dialogsTextFont);
-	p.setPen(context.active
-		? st::dialogsTextFgActive
-		: context.selected
-		? st::dialogsTextFgOver
-		: st::dialogsTextFg);
+	p.setPen(SecondaryTextFg(
+		context,
+		st::dialogsTextFgActive,
+		st::dialogsTextFgOver,
+		st::dialogsTextFg));
 	folder->listEntryCache().draw(p, {
 		.position = rect.topLeft(),
 		.availableWidth = rect.width(),
@@ -395,11 +410,11 @@ void PaintCommunityEntryText(
 	}
 	info->validateListEntryCache();
 	p.setFont(st::dialogsTextFont);
-	p.setPen(context.active
-		? st::dialogsTextFgActive
-		: context.selected
-		? st::dialogsTextFgOver
-		: st::dialogsTextFg);
+	p.setPen(SecondaryTextFg(
+		context,
+		st::dialogsTextFgActive,
+		st::dialogsTextFgOver,
+		st::dialogsTextFg));
 	info->listEntryCache().draw(p, {
 		.position = rect.topLeft(),
 		.availableWidth = rect.width(),
@@ -666,11 +681,11 @@ void PaintRow(
 				history->topPromotionMessage(),
 				DialogTextOptions());
 		}
-		p.setPen(context.active
-			? st::dialogsTextFgActive
-			: context.selected
-			? st::dialogsTextFgOver
-			: st::dialogsTextFg);
+		p.setPen(SecondaryTextFg(
+			context,
+			st::dialogsTextFgActive,
+			st::dialogsTextFgOver,
+			st::dialogsTextFg));
 		history->cloudDraftTextCache().draw(p, {
 			.position = { nameleft, texttop },
 			.availableWidth = availableWidth,
@@ -696,11 +711,12 @@ void PaintRow(
 				st::dialogsPinnedIcon,
 				context.active,
 				context.selected);
-			icon.paint(
+			PaintPinnedIcon(
 				p,
+				icon,
 				context.width - context.st->padding.right() - icon.width(),
 				texttop,
-				context.width);
+				context);
 			availableWidth -= icon.width() + st::dialogsUnreadPadding;
 		}
 
@@ -758,11 +774,11 @@ void PaintRow(
 					DialogTextOptions(),
 					context);
 			}
-			p.setPen(context.active
-				? st::dialogsTextFgActive
-				: context.selected
-				? st::dialogsTextFgOver
-				: st::dialogsTextFg);
+			p.setPen(SecondaryTextFg(
+				context,
+				st::dialogsTextFgActive,
+				st::dialogsTextFgOver,
+				st::dialogsTextFg));
 			cache.draw(p, {
 				.position = { nameleft, texttop },
 				.availableWidth = availableWidth,
@@ -794,7 +810,7 @@ void PaintRow(
 				st::dialogsPinnedIcon,
 				context.active,
 				context.selected);
-			icon.paint(p, context.width - context.st->padding.right() - icon.width(), texttop, context.width);
+			PaintPinnedIcon(p, icon, context.width - context.st->padding.right() - icon.width(), texttop, context);
 			availableWidth -= icon.width() + st::dialogsUnreadPadding;
 		}
 
@@ -834,11 +850,12 @@ void PaintRow(
 			st::dialogsPinnedIcon,
 			context.active,
 			context.selected);
-		icon.paint(
+		PaintPinnedIcon(
 			p,
+			icon,
 			context.width - context.st->padding.right() - icon.width(),
 			texttop,
-			context.width);
+			context);
 	}
 	const auto sendStateIcon = [&]() -> const style::icon* {
 		if (!thread) {
@@ -1152,6 +1169,19 @@ const style::VerifiedBadge &VerifiedStyle(const PaintContext &context) {
 		: context.selected
 		? st::dialogsVerifiedColorsOver
 		: st::dialogsVerifiedColors;
+}
+
+QColor SecondaryTextFg(
+		const PaintContext &context,
+		const style::color &active,
+		const style::color &over,
+		const style::color &normal) {
+	if (context.active) {
+		return active->c;
+	}
+	return context.windowMaterial
+		? st::windowFg->c
+		: (context.selected ? over : normal)->c;
 }
 
 void RowPainter::Paint(

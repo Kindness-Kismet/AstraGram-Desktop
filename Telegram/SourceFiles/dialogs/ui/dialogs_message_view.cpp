@@ -388,11 +388,11 @@ void MessageView::paint(
 	}
 	_lastPaintGeometry = geometry;
 	p.setFont(st::dialogsTextFont);
-	p.setPen(context.active
-		? st::dialogsTextFgActive
-		: context.selected
-		? st::dialogsTextFgOver
-		: st::dialogsTextFg);
+	p.setPen(SecondaryTextFg(
+		context,
+		st::dialogsTextFgActive,
+		st::dialogsTextFgOver,
+		st::dialogsTextFg));
 	const auto withTopic = _topics && context.st->topicsHeight;
 	const auto palette = &(withTopic
 		? (context.active
