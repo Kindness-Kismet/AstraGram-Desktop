@@ -16,7 +16,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/info_controller.h"
 #include "data/data_forum_topic.h"
 #include "data/data_peer.h"
-#include "data/data_saved_sublist.h"
 #include "extras/features/window_material/window_material.h"
 #include "ui/widgets/discrete_sliders.h"
 #include "ui/widgets/shadow.h"
@@ -84,9 +83,6 @@ void InnerWidget::createTypeButtons() {
 	const auto topic = _controller->key().topic();
 	const auto sublist = _controller->key().sublist();
 	const auto topicRootId = topic ? topic->rootId() : MsgId();
-	const auto monoforumPeerId = sublist
-		? sublist->sublistPeer()->id
-		: PeerId();
 	const auto migrated = _controller->migrated();
 	const auto addMediaButton = [&](
 			Type buttonType,
@@ -99,7 +95,7 @@ void InnerWidget::createTypeButtons() {
 			_controller,
 			peer,
 			topicRootId,
-			monoforumPeerId,
+			sublist,
 			migrated,
 			buttonType,
 			tracker);
