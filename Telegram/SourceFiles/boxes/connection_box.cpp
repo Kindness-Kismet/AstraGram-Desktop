@@ -1446,7 +1446,7 @@ void ProxiesBox::setupContent() {
 			st::boxMaxListHeight);
 	}) | rpl::distinct_until_changed(
 	) | rpl::on_next([=](int height) {
-		setDimensions(st::boxWideWidth, height);
+		setDimensions(st::boxWideWidth, height, true);
 	}, inner->lifetime());
 }
 
@@ -1665,7 +1665,7 @@ void ProxyBox::prepare() {
 	refreshButtons();
 	_content->heightValue() | rpl::on_next([=](int height) {
 		if (!_changingType) {
-			setDimensions(st::proxyEditWidth, std::max(height, _formHeight));
+			setDimensions(st::proxyEditWidth, std::max(height, _formHeight), true);
 		}
 	}, lifetime());
 }
@@ -1963,7 +1963,7 @@ void ProxyBox::setupControls(const ProxyData &data) {
 	};
 	_type->setChangedCallback([=](Type type) {
 		handleType(type);
-		setDimensions(st::proxyEditWidth, std::max(_formHeight, _content->height()));
+		setDimensions(st::proxyEditWidth, std::max(_formHeight, _content->height()), true);
 		refreshButtons();
 	});
 	// 各协议共用最大表单高度，切换时保留弹窗位置。
