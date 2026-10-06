@@ -547,20 +547,17 @@ std::optional<SavedWindow> SavedWindows::serializeWindow(
 	if (id.thread) {
 		result.thread = SavedChatFromThread(id.thread);
 		const auto topic = id.thread->asTopic();
-		if (id.type != SeparateType::SharedMedia
-			|| !_app->settings().windowTitleContent().hideChatName) {
-			const auto sublist = (id.type == SeparateType::SharedMedia)
-				? id.thread->asSublist()
-				: nullptr;
-			const auto peer = sublist
-				? sublist->sublistPeer()
-				: id.thread->peer();
-			result.title = topic
-				? topic->title()
-				: peer->isSelf()
-				? tr::lng_saved_messages(tr::now)
-				: peer->name();
-		}
+		const auto sublist = (id.type == SeparateType::SharedMedia)
+			? id.thread->asSublist()
+			: nullptr;
+		const auto peer = sublist
+			? sublist->sublistPeer()
+			: id.thread->peer();
+		result.title = topic
+			? topic->title()
+			: peer->isSelf()
+			? tr::lng_saved_messages(tr::now)
+			: peer->name();
 	}
 	result.position = window->widget()->countPositionForSave();
 	if (ReplayableType(id.type)) {
