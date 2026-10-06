@@ -2258,6 +2258,7 @@ PRIVATE
     test/test_hover.h
     test/test_ink.cpp
     test/test_ink.h
+    test/test_ink_self_test.cpp
     test/test_lang_pack.cpp
     test/test_lang_pack.h
     test/test_launch_fuse.cpp
