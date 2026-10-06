@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_list_widget.h"
 
+#include "ui/chat/message_bubble.h"
+
 #include "history/view/history_view_about_view.h"
 #include "base/unixtime.h"
 #include "base/qt/qt_key_modifiers.h"
@@ -3114,16 +3116,19 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 		std::min(st::msgMaxWidth / 2, width() / 2));
 
 	auto clip = e->rect();
+	const auto shadowPadding = Ui::BubbleShadowPadding();
+	const auto paintClip = clip.adjusted(0, -shadowPadding, 0, shadowPadding);
 
 	auto collapseGapTotal = 0;
 	for (const auto &gap : collapseGaps()) {
 		collapseGapTotal += gap.height;
 	}
 
-	auto from = std::lower_bound(begin(_items), end(_items), clip.top() - collapseGapTotal, [this](auto &elem, int top) {
+	// 相邻消息的阴影可能伸进本次刷新区域，必须一起绘制。
+	auto from = std::lower_bound(begin(_items), end(_items), paintClip.top() - collapseGapTotal, [this](auto &elem, int top) {
 		return this->itemTop(elem) + elem->height() <= top;
 	});
-	auto to = std::lower_bound(begin(_items), end(_items), clip.top() + clip.height(), [this](auto &elem, int bottom) {
+	auto to = std::lower_bound(begin(_items), end(_items), paintClip.top() + paintClip.height(), [this](auto &elem, int bottom) {
 		return this->itemTop(elem) < bottom;
 	});
 
@@ -3136,8 +3141,8 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 		if (!about || !about->view()) {
 			return;
 		}
-		if (clip.y() >= about->top + about->height
-			|| clip.y() + clip.height() <= about->top) {
+		if (paintClip.y() >= about->top + about->height
+			|| paintClip.y() + paintClip.height() <= about->top) {
 			return;
 		}
 		const auto view = about->view();

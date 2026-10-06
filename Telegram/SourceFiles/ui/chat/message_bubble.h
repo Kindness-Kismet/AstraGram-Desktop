@@ -104,6 +104,8 @@ struct BubblePattern {
 	not_null<const style::palette*> st);
 void FinishBubblePatternOnMain(not_null<BubblePattern*> pattern);
 
+[[nodiscard]] int BubbleShadowPadding();
+
 struct SimpleBubble {
 	not_null<const ChatStyle*> st;
 	QRect geometry;

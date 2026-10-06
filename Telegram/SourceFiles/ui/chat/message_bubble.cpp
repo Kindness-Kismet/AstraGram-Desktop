@@ -27,6 +27,8 @@ namespace {
 
 using Corner = BubbleCornerRounding;
 
+constexpr auto kBubbleShadowPadding = 6;
+
 // 拖尾与气泡共用外轮廓，连接处不能闭合描边。
 [[nodiscard]] QPainterPath BubbleOutlinePath(
 		const QRectF &rect,
@@ -225,7 +227,7 @@ void PaintBubbleShadow(QPainter &p, const SimpleBubble &args) {
 			style::ConvertScale(50), 2 * (large + tail.width()) + 2)),
 		std::min(args.geometry.height(), std::max(
 			style::ConvertScale(40), 2 * large + 2)));
-	const auto padding = 6;
+	const auto padding = kBubbleShadowPadding;
 	const auto margins = QMargins(
 		padding + tail.width(), padding, padding + tail.width(), padding);
 	const auto removeTail = ExtrasSettings::getInstance().removeMessageTail();
@@ -561,6 +563,12 @@ void PaintSolidBubble(QPainter &p, const SimpleBubble &args) {
 }
 
 } // namespace
+
+int BubbleShadowPadding() {
+	return ExtrasSettings::getInstance().disableBubbleShadow()
+		? 0
+		: kBubbleShadowPadding;
+}
 
 std::unique_ptr<BubblePattern> PrepareBubblePattern(
 		not_null<const style::palette*>) {

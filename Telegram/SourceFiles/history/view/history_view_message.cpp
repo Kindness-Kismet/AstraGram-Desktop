@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_message.h"
 
+#include "ui/chat/message_bubble.h"
+
 #include "api/api_suggest_post.h"
 #include "api/api_transcribes.h"
 #include "base/options.h"
@@ -5636,9 +5638,12 @@ void Message::itemDataChanged() {
 auto Message::verticalRepaintRange() const -> VerticalRepaintRange {
 	const auto media = this->media();
 	const auto add = media ? media->bubbleRollRepaintMargins() : QMargins();
+	const auto shadow = drawBubble() ? Ui::BubbleShadowPadding() : 0;
+	const auto top = std::max(add.top(), shadow);
+	const auto bottom = std::max(add.bottom(), shadow);
 	return {
-		.top = -add.top(),
-		.height = height() + add.top() + add.bottom()
+		.top = -top,
+		.height = height() + top + bottom
 	};
 }
 

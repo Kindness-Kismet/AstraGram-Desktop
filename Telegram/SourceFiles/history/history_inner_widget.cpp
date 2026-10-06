@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_inner_widget.h"
 
+#include "ui/chat/message_bubble.h"
+
 #include "extras/features/message_selection/selection_range.h"
 
 #include "api/api_polls.h"
@@ -1520,6 +1522,8 @@ void HistoryInner::paintHistory(
 		const QRect &clip,
 		bool backdrop) {
 
+	const auto shadowPadding = Ui::BubbleShadowPadding();
+	const auto paintClip = clip.adjusted(0, -shadowPadding, 0, shadowPadding);
 	auto context = preparePaintContext(clip);
 	context.gestureHorizontal = _gestureHorizontal;
 	context.highlightPathCache = &_highlightPathCache;
@@ -1531,8 +1535,8 @@ void HistoryInner::paintHistory(
 	const auto historyDisplayedEmpty = _history->isDisplayedEmpty()
 		&& (!_migrated || _migrated->isDisplayedEmpty());
 	if (const auto view = _aboutView ? _aboutView->view() : nullptr) {
-		if (clip.y() < _aboutView->top + _aboutView->height
-			&& clip.y() + clip.height() > _aboutView->top) {
+		if (paintClip.y() < _aboutView->top + _aboutView->height
+			&& paintClip.y() + paintClip.height() > _aboutView->top) {
 			const auto top = _aboutView->top;
 			context.translate(0, -top);
 			const auto selection = computeRenderSelection(&_selected, view);
@@ -1681,9 +1685,10 @@ void HistoryInner::paintHistory(
 			QPoint(0, top));
 	};
 
-	adjustCurrent(clip.top());
+	// 相邻消息的阴影可能伸进本次刷新区域，必须一起绘制。
+	adjustCurrent(paintClip.top());
 
-	const auto drawToY = clip.y() + clip.height();
+	const auto drawToY = paintClip.y() + paintClip.height();
 
 	auto selfromy = itemTop(_dragSelFrom);
 	auto seltoy = itemTop(_dragSelTo);
@@ -1712,7 +1717,7 @@ void HistoryInner::paintHistory(
 
 		context.translate(0, -top);
 		p.translate(0, top);
-		if (context.clip.y() < view->height()) while (top < drawToY) {
+		if (context.clip.y() < view->height() + shadowPadding) while (top < drawToY) {
 			while (nextGapIndex < int(collapseGaps().size())) {
 				const auto &gap = collapseGaps()[nextGapIndex];
 				if (top - collapseShift < gap.absY) break;
@@ -1791,7 +1796,7 @@ void HistoryInner::paintHistory(
 
 			const auto height = view->height();
 			const auto item = view->data();
-			if ((context.clip.y() < height)
+			if ((context.clip.y() < height + shadowPadding)
 				&& (hdrawtop < top + height)
 				&& !sendingAnimation.hasAnimatedMessage(item)) {
 				context.reactionInfo = backdrop
