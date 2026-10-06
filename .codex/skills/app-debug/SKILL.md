@@ -78,7 +78,7 @@ CLI 会核对已有进程的可执行文件路径和工作目录。恢复原调�
 
 ## 构建与验证
 
-C++ 修改后先 `app.stop`，再运行 `python scripts/build.py --dev --jobs 20`。
+C++ 修改后先 `app.stop`，再运行 `python scripts/build.py --dev --jobs 12`。
 产物位于 `build/AstraGram-v<版本>-win-x64-dev/`，默认不含 pdb；需要符号时加 `--pdb`，切换会全量重编。
 构建成功后 `app.start` 启动已有产物，最多等待 60 秒；单条服务端指令超时为 180 秒。
 
