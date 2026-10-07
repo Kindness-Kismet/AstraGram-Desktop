@@ -1,6 +1,7 @@
 #include "extras/ui/settings/settings_transfer.h"
 
 #include "extras/features/settings_transfer/settings_transfer.h"
+#include "extras/ui/settings/settings_extras_utils.h"
 #include "core/file_utilities.h"
 #include "crl/crl_on_main.h"
 #include "data/data_user.h"
@@ -190,6 +191,10 @@ void transferBox(
 								? tr::extras_SettingsTransferImported(tr::now)
 								: tr::extras_SettingsTransferSaveError(tr::now))
 								+ u"\n\n"_q + report(result);
+							if (ok && !result.restart.isEmpty()) {
+								ShowRestartPrompt(controller, text);
+								return;
+							}
 							crl::on_main(controller, [=] {
 								controller->show(Ui::MakeInformBox(text));
 							});

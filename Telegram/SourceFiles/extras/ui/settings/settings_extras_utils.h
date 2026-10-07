@@ -31,7 +31,9 @@ void SetupCopyLinkMenus(
 	const HighlightRegistry &highlights,
 	rpl::lifetime &lifetime);
 
-void ShowRestartPrompt(not_null<Window::SessionController*> controller);
+void ShowRestartPrompt(
+	not_null<Window::SessionController*> controller,
+	QString additionalText = {});
 
 not_null<Ui::RpWidget*> AddInnerToggle(not_null<Ui::VerticalLayout*> container,
 									   const style::SettingsButton &st,

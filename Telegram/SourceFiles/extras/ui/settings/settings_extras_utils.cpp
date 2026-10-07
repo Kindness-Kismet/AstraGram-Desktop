@@ -49,10 +49,16 @@ void applyLockLook(not_null<Ui::Checkbox*> checkbox, bool locked) {
 
 } // namespace
 
-void ShowRestartPrompt(not_null<Window::SessionController*> controller) {
-	crl::on_main([=] {
+void ShowRestartPrompt(
+		not_null<Window::SessionController*> controller,
+		QString additionalText) {
+	crl::on_main(controller, [=] {
 		controller->show(Ui::MakeConfirmBox({
-			.text = tr::lng_settings_need_restart(),
+			.text = tr::lng_settings_need_restart() | rpl::map([=](QString text) {
+				return additionalText.isEmpty()
+					? text
+					: additionalText + u"\n\n"_q + text;
+			}),
 			.confirmed = [] { Core::Restart(); },
 			.confirmText = tr::lng_settings_restart_now(),
 			.cancelText = tr::lng_settings_restart_later(),
