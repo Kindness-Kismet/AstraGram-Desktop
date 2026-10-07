@@ -15,6 +15,7 @@
 #include "crl/crl_async.h"
 #include "crl/crl_on_main.h"
 
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QSaveFile>
@@ -229,11 +230,15 @@ void prepare(
 		done(std::move(checked));
 		return;
 	}
-	const auto path = checked.document["official"]["downloadPath"].get<QString>();
+	const auto path = QDir::fromNativeSeparators(
+		checked.document["official"]["downloadPath"].get<QString>());
 	if (path.isEmpty() || path == u"tmp"_q) {
 		done(std::move(checked));
 		return;
 	}
+	checked.document["official"]["downloadPath"] = path.endsWith('/')
+		? path
+		: (path + '/');
 	crl::async([path, checked = std::move(checked),
 		done = std::move(done)]() mutable {
 		const auto exists = QFileInfo(path).isDir();
