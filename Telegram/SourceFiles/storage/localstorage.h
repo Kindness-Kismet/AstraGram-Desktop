@@ -53,6 +53,8 @@ void sync();
 void finish();
 
 void writeSettings();
+// 仅保存官方全局设置；定制设置由批量更新结束时单独确认。
+void writeSettings(Fn<void(bool)> done);
 void rewriteSettingsIfNeeded();
 
 void writeAutoupdatePrefix(const QString &prefix);

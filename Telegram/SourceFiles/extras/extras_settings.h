@@ -249,6 +249,9 @@ public:
 
 	static void load();
 	static void save();
+	// 批量更新须在主线程内配对，结束后异步确认定制设置保存结果。
+	static void beginBatchUpdate();
+	static void endBatchUpdate(Fn<void(bool)> done);
 	static void reset();
 
 	[[nodiscard]] static GhostModeAccountSettings &ghost(not_null<Main::Session*> session);

@@ -84,6 +84,7 @@ public:
 	}
 
 	void writeSessionSettings();
+	void writeSessionSettings(Fn<void(bool)> done);
 	void writeMtpData();
 	void writeMtpConfig();
 
@@ -244,7 +245,7 @@ private:
 	void clearLegacyFiles();
 	void writeMapDelayed();
 	void writeMapQueued();
-	void writeMap();
+	void writeMap(Fn<void(bool)> done = {});
 
 	void readLocations();
 	void writeLocations();
@@ -256,7 +257,9 @@ private:
 	void writePrefsDelayed();
 
 	std::unique_ptr<Main::SessionSettings> readSessionSettings();
-	void writeSessionSettings(Main::SessionSettings *stored);
+	void writeSessionSettings(
+		Main::SessionSettings *stored,
+		Fn<void(bool)> done = {});
 
 	std::unique_ptr<MTP::Config> readMtpConfig();
 	void readMtpData();

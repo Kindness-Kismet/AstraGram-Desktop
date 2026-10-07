@@ -595,20 +595,16 @@ void Account::writeMapQueued() {
 	});
 }
 
-void Account::writeMap() {
+void Account::writeMap(Fn<void(bool)> done) {
 	Expects(_localKey != nullptr);
 
 	_writeMapTimer.cancel();
-	if (!_mapChanged) {
+	if (!_mapChanged && !done) {
 		return;
 	}
 	_mapChanged = false;
 
-	if (!QDir().exists(_basePath)) {
-		QDir().mkpath(_basePath);
-	}
-
-	FileWriteDescriptor map(u"map"_q, _basePath);
+	FileWriteDescriptor map(u"map"_q, _basePath, false, std::move(done));
 	map.writeData(QByteArray());
 	map.writeData(QByteArray());
 
@@ -1011,12 +1007,21 @@ QByteArray Account::downloadsSerialized() const {
 }
 
 void Account::writeSessionSettings() {
-	writeSessionSettings(nullptr);
+	writeSessionSettings(nullptr, {});
 }
 
-void Account::writeSessionSettings(Main::SessionSettings *stored) {
+void Account::writeSessionSettings(Fn<void(bool)> done) {
+	writeSessionSettings(nullptr, std::move(done));
+}
+
+void Account::writeSessionSettings(
+		Main::SessionSettings *stored,
+		Fn<void(bool)> done) {
 	if (_readingUserSettings) {
 		LOG(("App Error: attempt to write settings while reading them!"));
+		if (done) {
+			crl::on_main([done = std::move(done)] { done(false); });
+		}
 		return;
 	}
 	LOG(("App Info: writing encrypted user settings..."));
@@ -1024,6 +1029,23 @@ void Account::writeSessionSettings(Main::SessionSettings *stored) {
 	if (!_settingsKey) {
 		_settingsKey = GenerateKey(_basePath);
 		writeMapQueued();
+	}
+	if (done) {
+		struct Completion {
+			Fn<void(bool)> done;
+			int remaining = 2;
+			bool success = true;
+		};
+		const auto completion = std::make_shared<Completion>(
+			Completion{ .done = std::move(done) });
+		done = [completion](bool success) {
+			completion->success = completion->success && success;
+			if (!--completion->remaining) {
+				completion->done(completion->success);
+			}
+		};
+		// 设置键与账号映射都保存成功，才能确认重启后可以恢复。
+		writeMap(done);
 	}
 
 	auto userDataInstance = stored
@@ -1059,7 +1081,7 @@ void Account::writeSessionSettings(Main::SessionSettings *stored) {
 	}
 	data.stream << quint32(dbiRecentStickers) << recentStickers;
 
-	FileWriteDescriptor file(_settingsKey, _basePath);
+	FileWriteDescriptor file(_settingsKey, _basePath, false, std::move(done));
 	file.writeEncrypted(data, _localKey);
 }
 

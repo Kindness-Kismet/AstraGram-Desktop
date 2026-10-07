@@ -10,6 +10,7 @@
 #include "extras/ui/settings/settings_filters.h"
 #include "extras/ui/settings/settings_general.h"
 #include "extras/ui/settings/settings_other.h"
+#include "extras/ui/settings/settings_transfer.h"
 #include "lang_auto.h"
 #include "settings/sections/settings_main.h"
 #include "settings/settings_builder.h"
@@ -109,6 +110,8 @@ const auto kMeta = BuildHelper({
 		.icon = { &st::menuIconFave },
 		.description = tr::extras_SettingsOtherDescription(),
 	});
+
+	addSettingsTransferButtons(builder);
 
 	if (DebugEntryVisible()) {
 		builder.addSubsectionTitle(tr::extras_SettingsDebugTitle());

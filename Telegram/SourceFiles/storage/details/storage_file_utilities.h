@@ -54,14 +54,17 @@ struct EncryptedDescriptor final {
 
 class FileWriteDescriptor final {
 public:
+	// 完成回调在主线程执行，合并写入也会保留每次回调。
 	FileWriteDescriptor(
 		const FileKey &key,
 		const QString &basePath,
-		bool sync = false);
+		bool sync = false,
+		Fn<void(bool)> done = {});
 	FileWriteDescriptor(
 		const QString &name,
 		const QString &basePath,
-		bool sync = false);
+		bool sync = false,
+		Fn<void(bool)> done = {});
 	~FileWriteDescriptor();
 
 	void writeData(const QByteArray &data);
@@ -81,8 +84,12 @@ private:
 	HashMd5 _md5;
 	int _fullSize = 0;
 	bool _sync = false;
+	Fn<void(bool)> _done;
 
 };
+
+// 纯文本文件与加密文件共用写入顺序，完成回调在主线程执行。
+void WriteFile(QString path, QByteArray data, Fn<void(bool)> done = {});
 
 bool ReadFile(
 	FileReadDescriptor &result,

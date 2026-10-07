@@ -9430,3 +9430,27 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 "extras_DisableBubbleShadow" = "Disable bubble shadows";
 "extras_DisableBubbleShadowDescription" = "Remove shadows around incoming and outgoing message bubbles. Takes effect immediately.";
+
+"extras_SettingsTransferTitle" = "Transfer settings";
+"extras_SettingsTransferExport" = "Export settings";
+"extras_SettingsTransferImport" = "Import settings";
+"extras_SettingsTransferReview" = "Review changes";
+"extras_SettingsTransferScope" = "Choose local preferences to transfer. Global preferences apply to every account; account preferences apply only to the account shown below.";
+"extras_SettingsTransferOfficial" = "Official global preferences: appearance, notifications, chat, downloads and playback";
+"extras_SettingsTransferCustom" = "AstraGram preferences: interface and features";
+"extras_SettingsTransferAccount" = "Account preferences and auto-download: {user}";
+"extras_SettingsTransferExcluded" = "This is a local preference export, not a complete backup. It excludes sign-in data, messages, archives, caches, proxy credentials, cloud settings, theme and sound files, custom shortcuts, filter rules, shadow bans and per-account ghost settings. Transfer those resources separately.";
+"extras_SettingsTransferSource" = "Source account ID: {user}. Imported account preferences will be applied to the account selected above.";
+"extras_SettingsTransferChoose" = "Select at least one settings group.";
+"extras_SettingsTransferFileFilter" = "Settings files (*.json)";
+"extras_SettingsTransferCount" = "Applicable settings: {amount}";
+"extras_SettingsTransferUnknown" = "Skipped: fields not supported by this version";
+"extras_SettingsTransferMissingPath" = "Skipped: the external path does not exist on this computer";
+"extras_SettingsTransferUnavailable" = "Skipped: unavailable on this platform";
+"extras_SettingsTransferRestart" = "Restart the app yourself for these changes to take full effect:";
+"extras_SettingsTransferConfirm" = "Apply the selected preferences? Missing fields will retain their current values.";
+"extras_SettingsTransferInvalid" = "Could not import this file. Check that it is a valid, supported settings file no larger than 4 MiB. No settings were changed.";
+"extras_SettingsTransferExported" = "Settings exported.";
+"extras_SettingsTransferWriteError" = "Could not save the settings file. Check the destination and available disk space.";
+"extras_SettingsTransferImported" = "Settings applied and saved.";
+"extras_SettingsTransferSaveError" = "Settings were applied, but saving failed. Check disk space and permissions, then retry before restarting.";

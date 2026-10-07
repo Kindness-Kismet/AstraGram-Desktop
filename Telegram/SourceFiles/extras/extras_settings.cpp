@@ -10,6 +10,7 @@
 #include "main/main_domain.h"
 #include "main/main_session.h"
 #include "platform/platform_translate_provider.h"
+#include "storage/details/storage_file_utilities.h"
 #include "rpl/combine.h"
 #include "ui/chat/chat_style_radius.h"
 #include "window/window_controller.h"
@@ -17,14 +18,26 @@
 #include "tray.h"
 
 #include <QApplication>
+#include <crl/crl_on_main.h>
 #include <fstream>
 
 using json = nlohmann::json;
 
 namespace {
 
-std::string getSettingsPath() {
-	return (cWorkingDir() + u"tdata/extras_settings.json"_q).toStdString();
+bool batchUpdating = false;
+bool batchDirty = false;
+
+QString getSettingsPath() {
+	return cWorkingDir() + u"tdata/extras_settings.json"_q;
+}
+
+void saveSettings(Fn<void(bool)> done = {}) {
+	const json data = ExtrasSettings::getInstance();
+	Storage::details::WriteFile(
+		getSettingsPath(),
+		QByteArray::fromStdString(data.dump(4)),
+		std::move(done));
 }
 
 void repaintApp() {
@@ -362,7 +375,7 @@ ExtrasSettings &ExtrasSettings::getInstance() {
 
 void ExtrasSettings::load() {
 	auto &settings = getInstance();
-	std::ifstream file(getSettingsPath());
+	std::ifstream file(getSettingsPath().toStdString());
 	if (!file.good()) {
 		if (Ui::TakeLegacySmallBubbleRadius()) {
 			settings._messageBubbleRadius = Ui::kBubbleRadiusSliderMidpoint;
@@ -429,13 +442,29 @@ void ExtrasSettings::load() {
 }
 
 void ExtrasSettings::save() {
-	auto &settings = getInstance();
-	json p = settings;
+	if (batchUpdating) {
+		batchDirty = true;
+		return;
+	}
+	saveSettings();
+}
 
-	std::ofstream file;
-	file.open(getSettingsPath());
-	file << p.dump(4);
-	file.close();
+void ExtrasSettings::beginBatchUpdate() {
+	Expects(!batchUpdating);
+	batchUpdating = true;
+	batchDirty = false;
+}
+
+void ExtrasSettings::endBatchUpdate(Fn<void(bool)> done) {
+	Expects(batchUpdating);
+	batchUpdating = false;
+	if (!base::take(batchDirty)) {
+		if (done) {
+			crl::on_main([done = std::move(done)] { done(true); });
+		}
+		return;
+	}
+	saveSettings(std::move(done));
 }
 
 void ExtrasSettings::reset() {

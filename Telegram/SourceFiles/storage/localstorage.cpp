@@ -432,8 +432,19 @@ void start() {
 }
 
 void writeSettings() {
+	if (!_basePath.isEmpty() && (_settingsWriteAllowed || !SettingsKey)) {
+		ExtrasSettings::save();
+	}
+	writeSettings(Fn<void(bool)>());
+}
+
+void writeSettings(Fn<void(bool)> done) {
 	if (!_settingsWriteAllowed) {
 		_settingsRewriteNeeded = true;
+		if (done) {
+			crl::on_main([done = std::move(done)] { done(false); });
+			return;
+		}
 
 		// We need to generate SettingsKey anyway,
 		// for the moveLegacyBackground to work.
@@ -443,17 +454,16 @@ void writeSettings() {
 	}
 	if (_basePath.isEmpty()) {
 		LOG(("App Error: _basePath is empty in writeSettings()"));
+		if (done) {
+			crl::on_main([done = std::move(done)] { done(false); });
+		}
 		return;
 	}
-
-	if (!QDir().exists(_basePath)) QDir().mkpath(_basePath);
-
-    ExtrasSettings::save();
 
 	// We dropped old test authorizations when migrated to multi auth.
 	//const auto name = cTestMode() ? u"settings_test"_q : u"settings"_q;
 	const auto name = u"settings"_q;
-	FileWriteDescriptor settings(name, _basePath);
+	FileWriteDescriptor settings(name, _basePath, false, std::move(done));
 	if (_settingsSalt.isEmpty() || !SettingsKey) {
 		_settingsSalt.resize(LocalEncryptSaltSize);
 		base::RandomFill(_settingsSalt.data(), _settingsSalt.size());

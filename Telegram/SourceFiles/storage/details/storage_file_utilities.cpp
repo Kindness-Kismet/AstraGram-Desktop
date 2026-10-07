@@ -14,8 +14,16 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/random.h"
 
 #include <crl/crl_object_on_thread.h>
+#include <crl/crl_on_main.h>
 #include <QtCore/QtEndian>
 #include <QtCore/QSaveFile>
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 
 namespace Storage {
 namespace details {
@@ -31,7 +39,25 @@ struct WriteEntry {
 	QString base;
 	QByteArray data;
 	QByteArray md5;
+	bool raw = false;
+	std::vector<Fn<void(bool)>> done;
 };
+
+[[nodiscard]] bool FlushFile(QFileDevice &file) {
+	if (!file.flush()) {
+		return false;
+	}
+	const auto descriptor = file.handle();
+	if (descriptor < 0) {
+		return false;
+	}
+#ifdef Q_OS_WIN
+	return FlushFileBuffers(reinterpret_cast<HANDLE>(
+		_get_osfhandle(descriptor))) != 0;
+#else
+	return fsync(descriptor) == 0;
+#endif
+}
 
 class WriteManager final {
 public:
@@ -46,6 +72,7 @@ private:
 	void writeScheduled();
 	bool writeOneScheduledNow();
 	void writeNow(WriteEntry &&entry);
+	[[nodiscard]] bool writeDataNow(const WriteEntry &entry);
 
 	template <typename File>
 	[[nodiscard]] bool open(File &file, const WriteEntry &entry, char postfix);
@@ -82,6 +109,10 @@ void WriteManager::write(WriteEntry &&entry) {
 	if (i == end(_scheduled)) {
 		_scheduled.push_back(std::move(entry));
 	} else {
+		for (auto &done : entry.done) {
+			i->done.push_back(std::move(done));
+		}
+		entry.done = std::move(i->done);
 		*i = std::move(entry);
 	}
 	scheduleWrite();
@@ -90,12 +121,40 @@ void WriteManager::write(WriteEntry &&entry) {
 void WriteManager::writeSync(WriteEntry &&entry) {
 	const auto i = ranges::find(_scheduled, entry.base, &WriteEntry::base);
 	if (i != end(_scheduled)) {
+		for (auto &done : entry.done) {
+			i->done.push_back(std::move(done));
+		}
+		entry.done = std::move(i->done);
 		_scheduled.erase(i);
 	}
 	writeNow(std::move(entry));
 }
 
 void WriteManager::writeNow(WriteEntry &&entry) {
+	const auto success = writeDataNow(entry);
+	if (!entry.done.empty()) {
+		crl::on_main([done = std::move(entry.done), success] {
+			for (const auto &callback : done) {
+				callback(success);
+			}
+		});
+	}
+}
+
+bool WriteManager::writeDataNow(const WriteEntry &entry) {
+	if (entry.raw) {
+		auto file = QSaveFile(entry.base);
+		if (!QDir().mkpath(entry.basePath)
+			|| !file.open(QIODevice::WriteOnly)
+			|| file.write(entry.data) != entry.data.size()
+			|| !FlushFile(file)
+			|| !file.commit()) {
+			LOG(("Storage Error: Could not save '%1': %2.")
+				.arg(entry.base, file.errorString()));
+			return false;
+		}
+		return true;
+	}
 	const auto path = [&](char postfix) {
 		return this->path(entry, postfix);
 	};
@@ -103,37 +162,47 @@ void WriteManager::writeNow(WriteEntry &&entry) {
 		return this->open(file, entry, postfix);
 	};
 	const auto write = [&](auto &file) {
-		file.write(entry.data);
-		file.write(entry.md5);
+		const auto success = (file.write(entry.data) == entry.data.size())
+			&& (file.write(entry.md5) == entry.md5.size())
+			&& FlushFile(file);
+		if (!success) {
+			LOG(("Storage Error: Could not write or flush '%1'.")
+				.arg(file.fileName()));
+		}
+		return success;
 	};
 	const auto safe = path('s');
 	const auto simple = path('0');
 	const auto backup = path('1');
 	QSaveFile save;
 	if (open(save, 's')) {
-		write(save);
+		if (!write(save)) {
+			save.cancelWriting();
+			return false;
+		}
 		if (save.commit()) {
 			QFile::remove(simple);
 			QFile::remove(backup);
-			return;
+			return true;
 		}
 		LOG(("Storage Error: Could not commit '%1'.").arg(safe));
 	}
 	QFile plain;
 	if (open(plain, '0')) {
-		write(plain);
-		base::Platform::FlushFileData(plain);
+		if (!write(plain)) {
+			return false;
+		}
 		plain.close();
 
-		QFile::remove(backup);
 		if (base::Platform::RenameWithOverwrite(simple, safe)) {
-			return;
+			QFile::remove(backup);
+			return true;
 		}
-		QFile::remove(safe);
-		LOG(("Storage Error: Could not rename '%1' to '%2', removing.").arg(
+		LOG(("Storage Error: Could not rename '%1' to '%2'.").arg(
 			simple,
 			safe));
 	}
+	return false;
 }
 
 void WriteManager::writeSyncAll() {
@@ -164,10 +233,10 @@ bool WriteManager::writeHeader(const QString &basePath, QFileDevice &file) {
 			return false;
 		}
 	}
-	file.write(TdfMagic, TdfMagicLen);
 	const auto version = qint32(AppVersion);
-	file.write((const char*)&version, sizeof(version));
-	return true;
+	return (file.write(TdfMagic, TdfMagicLen) == TdfMagicLen)
+		&& (file.write((const char*)&version, sizeof(version))
+			== sizeof(version));
 }
 
 QString WriteManager::path(const WriteEntry &entry, char postfix) const {
@@ -380,16 +449,19 @@ void EncryptedDescriptor::finish() {
 FileWriteDescriptor::FileWriteDescriptor(
 	const FileKey &key,
 	const QString &basePath,
-	bool sync)
-: FileWriteDescriptor(ToFilePart(key), basePath, sync) {
+	bool sync,
+	Fn<void(bool)> done)
+: FileWriteDescriptor(ToFilePart(key), basePath, sync, std::move(done)) {
 }
 
 FileWriteDescriptor::FileWriteDescriptor(
 	const QString &name,
 	const QString &basePath,
-	bool sync)
+	bool sync,
+	Fn<void(bool)> done)
 : _basePath(basePath)
-, _sync(sync) {
+, _sync(sync)
+, _done(std::move(done)) {
 	init(name);
 }
 
@@ -444,11 +516,27 @@ void FileWriteDescriptor::finish() {
 		.data = _safeData,
 		.md5 = QByteArray((const char*)_md5.result(), 0x10)
 	};
+	if (_done) {
+		entry.done.push_back(std::move(_done));
+	}
 	if (_sync) {
 		Manager.writeSync(std::move(entry));
 	} else {
 		Manager.write(std::move(entry));
 	}
+}
+
+void WriteFile(QString path, QByteArray data, Fn<void(bool)> done) {
+	auto entry = WriteEntry{
+		.basePath = QFileInfo(path).absolutePath(),
+		.base = std::move(path),
+		.data = std::move(data),
+		.raw = true,
+	};
+	if (done) {
+		entry.done.push_back(std::move(done));
+	}
+	Manager.write(std::move(entry));
 }
 
 [[nodiscard]] QByteArray PrepareEncrypted(

@@ -113,6 +113,12 @@ PRIVATE
 )
 
 set(extras_files
+        extras/features/settings_transfer/settings_transfer.cpp
+        extras/features/settings_transfer/settings_transfer.h
+        extras/features/settings_transfer/settings_transfer_fields.cpp
+        extras/features/settings_transfer/settings_transfer_fields.h
+        extras/ui/settings/settings_transfer.cpp
+        extras/ui/settings/settings_transfer.h
         extras/data/local_themes.cpp
         extras/data/local_themes.h
         extras/extras_worker.cpp
