@@ -11,15 +11,24 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/media/info_media_list_widget.h"
 #include "info/info_controller.h"
 #include "ui/widgets/labels.h"
-#include "ui/widgets/buttons.h"
-#include "ui/widgets/popup_menu.h"
-#include "ui/search_field_controller.h"
+#include "ui/widgets/discrete_sliders.h"
 #include "lang/lang_keys.h"
 #include "styles/style_info.h"
-#include "styles/style_media_player.h"
+#include "styles/style_dialogs.h"
+
+#include <QtGui/QWheelEvent>
+#include <array>
 
 namespace Info::Downloads {
 namespace {
+
+constexpr auto kTypeFilters = std::array{
+	TypeFilter::All,
+	TypeFilter::Archive,
+	TypeFilter::Music,
+	TypeFilter::Video,
+	TypeFilter::Other,
+};
 
 [[nodiscard]] QString TypeFilterLabel(TypeFilter filter) {
 	switch (filter) {
@@ -104,17 +113,9 @@ InnerWidget::InnerWidget(
 	not_null<Controller*> controller)
 : RpWidget(parent)
 , _controller(controller)
-, _empty(this) {
-	_typeButton.create(
-		this,
-		_typeFilter.value() | rpl::map([](TypeFilter filter) {
-			return tr::extras_DownloadsTypeFilter(
-				lt_type,
-				rpl::single(TypeFilterLabel(filter)));
-		}) | rpl::flatten_latest(),
-		st::infoProfileButton);
-	_typeButton->setObjectName(u"downloads/typeFilter"_q);
-	_typeButton->setClickedCallback([=] { showTypeMenu(); });
+, _empty(this)
+, _typeTabsScroll(this, st::dialogsTabsScroll, true) {
+	setupTypeTabs();
 	_empty->heightValue(
 	) | rpl::on_next(
 		[this] { refreshHeight(); },
@@ -172,26 +173,48 @@ void InnerWidget::restoreState(not_null<Memento*> memento) {
 	_list->restoreState(&memento->media());
 }
 
-void InnerWidget::showTypeMenu() {
-	_typeMenu = base::make_unique_q<Ui::PopupMenu>(this, st::popupMenuWithIcons);
-	for (const auto filter : {
-		TypeFilter::All,
-		TypeFilter::Archive,
-		TypeFilter::Music,
-		TypeFilter::Video,
-		TypeFilter::Other,
-	}) {
-		_typeMenu->addAction(TypeFilterLabel(filter), [=] {
-			if (_typeFilter.current() == filter) {
-				return;
-			}
-			setTypeFilter(filter);
-			_scrollToRequests.fire({ 0, -1 });
-		}, (filter == _typeFilter.current())
-			? &st::mediaPlayerMenuCheck
-			: nullptr);
-	}
-	_typeMenu->popup(_typeButton->mapToGlobal(QPoint(0, _typeButton->height())));
+void InnerWidget::setupTypeTabs() {
+	_typeTabs = _typeTabsScroll->setOwnedWidget(
+		object_ptr<Ui::SettingsSlider>(this, st::chatsFiltersTabs));
+	_typeTabs->setObjectName(u"downloads/typeTabs"_q);
+	_typeTabsScroll->setObjectName(u"downloads/typeTabsScroll"_q);
+	rpl::single(rpl::empty) | rpl::then(
+		Lang::Updated()
+	) | rpl::on_next([=] {
+		auto labels = std::vector<QString>();
+		for (const auto filter : kTypeFilters) {
+			labels.push_back(TypeFilterLabel(filter));
+		}
+		_typeTabs->setSections(labels);
+		_typeTabs->fitWidthToSections();
+		scrollToTypeFilter();
+	}, _typeTabs->lifetime());
+	_typeTabsScroll->resize(width(), _typeTabs->height());
+	_typeTabs->sectionActivated() | rpl::on_next([=](int index) {
+		const auto filter = kTypeFilters[index];
+		if (_typeFilter.current() == filter) {
+			return;
+		}
+		setTypeFilter(filter);
+		_scrollToRequests.fire({ 0, -1 });
+	}, _typeTabs->lifetime());
+	_typeTabsScroll->setCustomWheelProcess([=](not_null<QWheelEvent*> e) {
+		const auto pixels = e->pixelDelta();
+		const auto angle = e->angleDelta();
+		if (pixels.x() || angle.x()) {
+			return false;
+		}
+		const auto delta = pixels.y() ? pixels.y() : angle.y();
+		_typeTabsScroll->scrollToX(_typeTabsScroll->scrollLeft() - delta);
+		return true;
+	});
+}
+
+void InnerWidget::scrollToTypeFilter() {
+	const auto index = _typeTabs->activeSection();
+	_typeTabsScroll->scrollToX(index
+		? _typeTabs->centerOfSection(index) - _typeTabsScroll->width() / 2
+		: 0);
 }
 
 void InnerWidget::setTypeFilter(TypeFilter filter) {
@@ -199,6 +222,11 @@ void InnerWidget::setTypeFilter(TypeFilter filter) {
 		return;
 	}
 	_typeFilter = filter;
+	const auto index = int(ranges::find(kTypeFilters, filter) - begin(kTypeFilters));
+	if (_typeTabs->activeSection() != index) {
+		_typeTabs->setActiveSectionFast(index);
+	}
+	scrollToTypeFilter();
 	refreshEmptyText();
 	_list->setDownloadsTypeFilter(filter);
 }
@@ -225,7 +253,8 @@ int InnerWidget::resizeGetHeight(int newWidth) {
 
 	_list->resizeToWidth(newWidth);
 	_empty->resizeToWidth(newWidth);
-	_typeButton->resizeToWidth(newWidth);
+	_typeTabsScroll->resize(newWidth, _typeTabs->height());
+	scrollToTypeFilter();
 	return recountHeight();
 }
 
@@ -238,10 +267,8 @@ void InnerWidget::refreshHeight() {
 
 int InnerWidget::recountHeight() {
 	auto top = 0;
-	if (_typeButton) {
-		_typeButton->moveToLeft(0, top);
-		top += _typeButton->heightNoMargins();
-	}
+	_typeTabsScroll->moveToLeft(0, top);
+	top += _typeTabsScroll->height();
 	auto listHeight = 0;
 	if (_list) {
 		_list->moveToLeft(0, top);

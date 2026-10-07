@@ -6,6 +6,7 @@
 可选列表项还会返回 `selected`，可用于核对当前选中的会话分组。
 `control.set <target> <value>` 修改输入框、开关、单选项、选择框或滑块，并调用原有业务回调。
 滑块值为 0 至 1；输入字符串保留原文。单选项通过选择另一个选项切换，不直接取消选中。
+横向标签返回 `kind: tabs`、当前下标 `value` 和标签数 `count`；`control.set` 接收从 0 开始的下标，执行原有切换回调。
 
 `control.action <target> <action>` 执行 `control.get` 返回的辅助功能动作。
 `control.mouse <target> <x> <y> [left|right|double|press|release]` 在控件内部指定位置投递点击、右键或双击，

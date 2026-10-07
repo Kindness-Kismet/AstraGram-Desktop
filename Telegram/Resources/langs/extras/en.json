@@ -10,7 +10,6 @@
   "MentionByIdLoading": "Identifying user…",
   "MentionByIdFailed": "Could not retrieve this user. Check your connection or try again later.",
   "MentionByIdResolved": "Identified: {user}",
-  "DownloadsTypeFilter": "File type: {type}",
   "DownloadsTypeAll": "All",
   "DownloadsTypeArchive": "Archives",
   "DownloadsTypeMusic": "Music",

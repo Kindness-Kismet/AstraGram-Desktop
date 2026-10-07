@@ -100,7 +100,10 @@ ContentWidget::ContentWidget(
 		rpl::combine(
 			_controller->wrapValue(),
 			_controller->searchEnabledByContent(),
-			(_1 == Wrap::Layer) && _2
+			[=](Wrap wrap, bool enabled) {
+				return _controller->isDownloads()
+					|| (wrap == Wrap::Layer && enabled);
+			}
 		) | rpl::distinct_until_changed(
 		) | rpl::on_next([this](bool shown) {
 			refreshSearchField(shown);
@@ -498,6 +501,10 @@ void ContentWidget::refreshSearchField(bool shown) {
 			st::infoLayerMediaSearch);
 		_searchWrap = std::move(rowView.wrap);
 		_searchField = rowView.field;
+		if (_controller->isDownloads()) {
+			_searchWrap->setObjectName(u"downloads/searchRow"_q);
+			_searchField->setObjectName(u"downloads/search"_q);
+		}
 		_searchField->customUpDown(true);
 
 		const auto view = _searchWrap.get();

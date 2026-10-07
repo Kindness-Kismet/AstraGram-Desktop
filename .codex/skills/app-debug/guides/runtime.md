@@ -26,6 +26,7 @@
 `window.resize` 与 `window.maximize` 用来把窗口摆到指定状态，验证依赖窗口
 宽度的行为（宽屏布局、栏位折叠）。尺寸是 Qt 逻辑像素，与 `control.list` 的几何同一
 坐标系；最大化状态下 `resize` 不生效，指令会先还原窗口再设尺寸。
+这两条指令显示窗口时不请求激活；返回的 `visible`、`active` 分别表示可见和活动状态。
 
 ```bash
 python .claude/skills/app-debug/scripts/cli.py window.resize 1300 900 + screenshot.take

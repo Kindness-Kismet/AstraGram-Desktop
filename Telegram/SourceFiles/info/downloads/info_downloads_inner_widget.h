@@ -10,13 +10,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/rp_widget.h"
 #include "info/downloads/info_downloads_common.h"
 #include "ui/widgets/scroll_area.h"
-#include "base/unique_qptr.h"
 
 namespace Ui {
-class VerticalLayout;
-class SearchFieldController;
-class SettingsButton;
-class PopupMenu;
+class SettingsSlider;
 } // namespace Ui
 
 namespace Info {
@@ -62,7 +58,8 @@ protected:
 private:
 	int recountHeight();
 	void refreshHeight();
-	void showTypeMenu();
+	void setupTypeTabs();
+	void scrollToTypeFilter();
 	void setTypeFilter(TypeFilter filter);
 	void refreshEmptyText();
 
@@ -72,8 +69,8 @@ private:
 
 	object_ptr<Media::ListWidget> _list = { nullptr };
 	object_ptr<EmptyWidget> _empty;
-	object_ptr<Ui::SettingsButton> _typeButton = { nullptr };
-	base::unique_qptr<Ui::PopupMenu> _typeMenu;
+	object_ptr<Ui::ScrollArea> _typeTabsScroll;
+	Ui::SettingsSlider *_typeTabs = nullptr;
 	rpl::variable<TypeFilter> _typeFilter = TypeFilter::All;
 	QString _searchQuery;
 

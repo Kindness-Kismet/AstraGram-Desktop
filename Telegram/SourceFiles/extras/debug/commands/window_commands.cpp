@@ -15,12 +15,25 @@ using json = nlohmann::json;
 		{ "width", window->width() },
 		{ "height", window->height() },
 		{ "maximized", window->isMaximized() },
+		{ "visible", window->isVisible() },
+		{ "active", window->isActiveWindow() },
 	};
 }
 
 [[nodiscard]] ::MainWindow *ActiveWindow() {
 	const auto controller = Core::App().activeWindow();
 	return controller ? controller->widget().get() : nullptr;
+}
+
+void showWithoutActivating(not_null<::MainWindow*> window, bool maximized) {
+	const auto previous = window->testAttribute(Qt::WA_ShowWithoutActivating);
+	window->setAttribute(Qt::WA_ShowWithoutActivating);
+	if (maximized) {
+		window->showMaximized();
+	} else {
+		window->showNormal();
+	}
+	window->setAttribute(Qt::WA_ShowWithoutActivating, previous);
 }
 
 // 无参报告当前尺寸，有参按逻辑像素调整。
@@ -46,7 +59,7 @@ using json = nlohmann::json;
 	}
 	// 最大化状态下 resize 不生效，先还原。
 	if (window->isMaximized()) {
-		window->showNormal();
+		showWithoutActivating(window, false);
 	}
 	window->resize(width, height);
 	return Result::Ok(Compact(WindowState(window)));
@@ -64,11 +77,7 @@ using json = nlohmann::json;
 	if (!window) {
 		return Result::Err(u"no active window"_q);
 	}
-	if (text == u"true"_q) {
-		window->showMaximized();
-	} else {
-		window->showNormal();
-	}
+	showWithoutActivating(window, text == u"true"_q);
 	return Result::Ok(Compact(WindowState(window)));
 }
 

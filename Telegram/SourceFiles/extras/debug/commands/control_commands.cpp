@@ -31,6 +31,7 @@
 #include <QComboBox>
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/continuous_sliders.h"
+#include "ui/widgets/discrete_sliders.h"
 
 namespace ExtrasDebug::Commands {
 namespace {
@@ -473,6 +474,10 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 		data["kind"] = "slider";
 		data["minimum"] = 0;
 		data["maximum"] = 1;
+	} else if (const auto tabs = dynamic_cast<Ui::DiscreteSlider*>(target)) {
+		data["value"] = tabs->activeSection();
+		data["kind"] = "tabs";
+		data["count"] = tabs->sectionsCount();
 	} else if (const auto field = dynamic_cast<Ui::InputField*>(target)) {
 		data["value"] = field->getLastText().toStdString();
 		data["kind"] = "text";
@@ -537,6 +542,13 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 			return Result::Err(u"expected an enabled slider and a value between 0 and 1"_q);
 		}
 		slider->setValueForDebug(value);
+	} else if (const auto tabs = dynamic_cast<Ui::DiscreteSlider*>(target.data())) {
+		auto ok = false;
+		const auto index = args[1].toInt(&ok);
+		if (!ok || index < 0 || index >= tabs->sectionsCount()) {
+			return Result::Err(u"tab index out of range"_q);
+		}
+		tabs->setActiveSectionFast(index);
 	} else if (const auto field = dynamic_cast<Ui::InputField*>(target.data())) {
 		field->setTextWithTags({args[1], {}});
 	} else if (const auto line = qobject_cast<QLineEdit*>(target.data())) {

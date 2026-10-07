@@ -10,7 +10,6 @@
   "MentionByIdLoading": "正在识别用户…",
   "MentionByIdFailed": "无法获取这个用户的资料，请检查网络或稍后重试。",
   "MentionByIdResolved": "已识别：{user}",
-  "DownloadsTypeFilter": "类型：{type}",
   "DownloadsTypeAll": "全部",
   "DownloadsTypeArchive": "压缩包",
   "DownloadsTypeMusic": "音乐",
