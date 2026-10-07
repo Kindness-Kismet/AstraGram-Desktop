@@ -2,6 +2,9 @@
 
 #include "ui/rp_widget.h"
 
+class PeerListContent;
+class PeerListController;
+
 namespace Ui {
 class FlatLabel;
 class SettingsButton;
@@ -29,6 +32,9 @@ private:
 
 [[nodiscard]] not_null<Ui::VerticalLayout*> AddCardGroup(
 	not_null<Ui::VerticalLayout*> container);
+[[nodiscard]] not_null<PeerListContent*> AddCardList(
+	not_null<Ui::VerticalLayout*> container,
+	not_null<PeerListController*> controller);
 not_null<Ui::FlatLabel*> AddCardTitle(
 	not_null<Ui::VerticalLayout*> container,
 	rpl::producer<QString> title);

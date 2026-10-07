@@ -352,8 +352,7 @@ public:
 
 	[[nodiscard]] static std::unique_ptr<ListController> Add(
 		not_null<Ui::VerticalLayout*> container,
-		not_null<::Main::Session*> session,
-		style::margins margins = {});
+		not_null<::Main::Session*> session);
 
 private:
 	const not_null<::Main::Session*> _session;
@@ -718,8 +717,7 @@ rpl::producer<EntryData> Content::ListController::showRequests() const {
 
 auto Content::ListController::Add(
 	not_null<Ui::VerticalLayout*> container,
-	not_null<::Main::Session*> session,
-	style::margins margins)
+	not_null<::Main::Session*> session)
 -> std::unique_ptr<ListController> {
 	auto &lifetime = container->lifetime();
 	const auto delegate = lifetime.make_state<
@@ -727,11 +725,7 @@ auto Content::ListController::Add(
 	>();
 	auto controller = std::make_unique<ListController>(session);
 	controller->setStyleOverrides(&st::websiteList);
-	const auto content = container->add(
-		object_ptr<PeerListContent>(
-			container,
-			controller.get()),
-		margins);
+	const auto content = AddCardList(container, controller.get());
 	delegate->setContent(content);
 	controller->setDelegate(delegate);
 	return controller;

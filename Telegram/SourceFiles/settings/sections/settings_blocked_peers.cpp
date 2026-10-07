@@ -186,8 +186,8 @@ void Blocked::setupContent() {
 		auto controller = std::make_unique<BlockedBoxController>(
 			this->controller());
 		controller->setStyleOverrides(&st::settingsBlockedList);
-		const auto content = AddCardGroup(listWrap->entity())->add(
-			object_ptr<PeerListContent>(this, controller.get()));
+		const auto content = AddCardList(
+			AddCardGroup(listWrap->entity()), controller.get());
 
 		const auto state = content->lifetime().make_state<State>();
 		state->controller = std::move(controller);

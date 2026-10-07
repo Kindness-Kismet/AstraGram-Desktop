@@ -1,17 +1,65 @@
 #include "settings/settings_card_layout.h"
 #include "extras/features/window_material/window_material.h"
 #include "settings/settings_common.h"
+#include "boxes/peer_list_box.h"
 
 #include "ui/painter.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
 #include "ui/wrap/vertical_layout.h"
+#include "ui/wrap/padding_wrap.h"
 #include "styles/style_settings.h"
 
 #include <QPainterPath>
+#include <QtWidgets/QGraphicsEffect>
 
 namespace Settings {
 namespace {
+
+class CardClipEffect final : public QGraphicsEffect {
+public:
+	explicit CardClipEffect(not_null<QWidget*> widget)
+	: QGraphicsEffect(widget)
+	, _widget(widget) {
+	}
+
+protected:
+	void draw(QPainter *p) override {
+		auto offset = QPoint();
+		auto source = sourcePixmap(Qt::LogicalCoordinates, &offset, NoPad);
+		if (source.isNull()) {
+			return;
+		}
+		const auto ratio = source.devicePixelRatio();
+		const auto rect = QRect(-offset, _widget->size());
+		if (_mask.size() != source.size()
+			|| _mask.devicePixelRatio() != ratio
+			|| _maskRect != rect) {
+			_maskRect = rect;
+			_mask = QPixmap(source.size());
+			_mask.setDevicePixelRatio(ratio);
+			_mask.fill(Qt::transparent);
+			auto painter = QPainter(&_mask);
+			painter.setRenderHint(QPainter::Antialiasing);
+			painter.setPen(Qt::NoPen);
+			painter.setBrush(Qt::white);
+			painter.drawRoundedRect(QRectF(rect),
+				st::settingsCardRadius, st::settingsCardRadius);
+		}
+		// 将整张卡片连同子控件按透明度裁切，避免整数区域造成锯齿。
+		{
+			auto painter = QPainter(&source);
+			painter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+			painter.drawPixmap(0, 0, _mask);
+		}
+		p->drawPixmap(offset, source);
+	}
+
+private:
+	const not_null<QWidget*> _widget;
+	QPixmap _mask;
+	QRect _maskRect;
+};
 
 class CardGroup final : public Ui::RpWidget {
 public:
@@ -19,9 +67,10 @@ public:
 	: RpWidget(parent)
 	, _content(Ui::CreateChild<Ui::VerticalLayout>(this))
 	, _frame(Ui::CreateChild<Ui::RpWidget>(this)) {
+		setObjectName(u"settings.card"_q);
+		setGraphicsEffect(new CardClipEffect(this));
 		_content->setProperty("settingsCardGroup", true);
 		ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
-			updateMaterialClip();
 			_frame->update();
 		}, lifetime());
 		_frame->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -38,7 +87,6 @@ public:
 			}
 		}, lifetime());
 		sizeValue() | rpl::on_next([=](QSize size) {
-			updateMaterialClip();
 			_frame->resize(size);
 			_frame->raise();
 		}, lifetime());
@@ -61,17 +109,6 @@ protected:
 	}
 
 private:
-	void updateMaterialClip() {
-		if (!ExtrasFeatures::WindowMaterial::isActive(this)) {
-			clearMask();
-			return;
-		}
-		// 透明底层无法覆盖子控件的方角，直接裁切整张卡片。
-		auto shape = QPainterPath();
-		shape.addRoundedRect(QRectF(rect()), st::settingsCardRadius, st::settingsCardRadius);
-		setMask(QRegion(shape.toFillPolygon().toPolygon()));
-	}
-
 	void paintFrame() {
 		auto p = QPainter(_frame);
 		auto hq = PainterHighQualityEnabler(p);
@@ -79,12 +116,6 @@ private:
 		const auto area = QRectF(rect()).adjusted(.5, .5, -.5, -.5);
 		auto shape = QPainterPath();
 		shape.addRoundedRect(area, radius, radius);
-		auto corners = QPainterPath();
-		corners.addRect(rect());
-		corners.addPath(shape);
-		if (!ExtrasFeatures::WindowMaterial::isActive(this)) {
-			p.fillPath(corners, st::dialogsBg);
-		}
 		p.setPen(st::strokeFg);
 		p.setBrush(Qt::NoBrush);
 		p.drawPath(shape);
@@ -162,6 +193,19 @@ not_null<Ui::VerticalLayout*> AddCardGroup(
 	return container->add(
 		object_ptr<CardGroup>(container),
 		QMargins(0, 0, 0, st::settingsCardGroupSkip))->content();
+}
+
+not_null<PeerListContent*> AddCardList(
+		not_null<Ui::VerticalLayout*> container,
+		not_null<PeerListController*> controller) {
+	const auto &padding = controller->computeListSt().padding;
+	// 列表自带的上下留白属于旧页面，卡片内部从首行开始绘制。
+	const auto content = container->add(object_ptr<Ui::PaddingWrap<PeerListContent>>(
+		container,
+		object_ptr<PeerListContent>(container, controller),
+		QMargins(0, -padding.top(), 0, -padding.bottom())))->entity();
+	content->setObjectName(u"settings.cardList"_q);
+	return content;
 }
 
 not_null<Ui::FlatLabel*> AddCardTitle(

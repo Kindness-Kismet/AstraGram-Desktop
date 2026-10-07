@@ -324,9 +324,7 @@ LinksList AddLinksList(
 		window->uiShow());
 	const auto controller = lifetime.make_state<LinksController>(window);
 	controller->setStyleOverrides(&st::inviteLinkList);
-	const auto content = container->add(object_ptr<PeerListContent>(
-		container,
-		controller));
+	const auto content = AddCardList(container, controller);
 	delegate->setContent(content);
 	controller->setDelegate(delegate);
 
