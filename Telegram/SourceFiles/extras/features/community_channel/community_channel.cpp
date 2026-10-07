@@ -5,6 +5,7 @@
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
 #include "ui/boxes/confirm_box.h"
+#include "ui/text/text_utilities.h"
 #include "ui/widgets/buttons.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
@@ -34,17 +35,29 @@ void maybeShowInvite(not_null<Window::SessionController*> controller) {
 		inviteShown = true;
 		auto box = Box([=](not_null<Ui::GenericBox*> dialog) {
 			dialog->setObjectName(u"communityChannel/invite"_q);
+			const auto openChannel = crl::guard(controller, [=] {
+				ExtrasSettings::getInstance().setShowCommunityChannelInvite(false);
+				dialog->closeBox();
+				controller->showPeerByLink(Window::PeerByLinkInfo{
+					.usernameOrId = u"MaterialDesign3"_q,
+				});
+			});
 			Ui::ConfirmBox(dialog, {
-				.text = tr::extras_CommunityChannelInviteText(),
-				.confirmed = crl::guard(controller, [=](Fn<void()> close) {
-					ExtrasSettings::getInstance().setShowCommunityChannelInvite(false);
-					close();
-					controller->showPeerByLink(Window::PeerByLinkInfo{
-						.usernameOrId = u"MaterialDesign3"_q,
-					});
-				}),
+				.text = tr::extras_CommunityChannelInviteText(
+					lt_link,
+					rpl::single(Ui::Text::Link(
+						u"@MaterialDesign3"_q,
+						u"https://t.me/MaterialDesign3"_q)),
+					tr::marked),
+				.confirmed = openChannel,
 				.confirmText = tr::lng_box_ok(),
 				.cancelText = tr::lng_cancel(),
+				.labelFilter = [=](const ClickHandlerPtr &, Qt::MouseButton button) {
+					if (button == Qt::LeftButton || button == Qt::MiddleButton) {
+						openChannel();
+					}
+					return false;
+				},
 				.title = tr::extras_CommunityChannelInviteTitle(),
 			});
 			dialog->addLeftButton(tr::extras_CommunityChannelDontShow(), [=] {

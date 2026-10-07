@@ -1,6 +1,6 @@
 {
   "CommunityChannelInviteTitle": "Join our Telegram channel",
-  "CommunityChannelInviteText": "Follow @MaterialDesign3 for project updates and release announcements. Confirm to open the channel.",
+  "CommunityChannelInviteText": "Follow {link} for project updates and release announcements. Click the link or confirm to open the channel.",
   "CommunityChannelDontShow": "Don't show again",
   "MentionById": "Mention by user ID",
   "MentionByIdUserId": "User ID",

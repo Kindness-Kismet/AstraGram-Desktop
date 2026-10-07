@@ -9432,7 +9432,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DisableBubbleShadowDescription" = "Remove shadows around incoming and outgoing message bubbles. Takes effect immediately.";
 
 "extras_CommunityChannelInviteTitle" = "Join our Telegram channel";
-"extras_CommunityChannelInviteText" = "Follow @MaterialDesign3 for project updates and release announcements. Confirm to open the channel.";
+"extras_CommunityChannelInviteText" = "Follow {link} for project updates and release announcements. Click the link or confirm to open the channel.";
 "extras_CommunityChannelDontShow" = "Don't show again";
 "extras_MentionById" = "Mention by user ID";
 "extras_MentionByIdUserId" = "User ID";

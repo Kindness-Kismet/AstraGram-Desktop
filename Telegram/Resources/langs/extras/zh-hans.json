@@ -1,6 +1,6 @@
 {
   "CommunityChannelInviteTitle": "加入我们的 Telegram 频道",
-  "CommunityChannelInviteText": "关注 @MaterialDesign3，获取项目动态和版本更新。点击确认前往频道。",
+  "CommunityChannelInviteText": "关注 {link}，获取项目动态和版本更新。点击链接或确认即可前往频道。",
   "CommunityChannelDontShow": "不再显示",
   "MentionById": "通过用户编号提及",
   "MentionByIdUserId": "用户编号",
