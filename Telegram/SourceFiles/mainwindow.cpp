@@ -30,6 +30,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "main/main_account.h" // Account::sessionValue.
 #include "main/main_domain.h"
+#include "media/audio/media_audio.h"
+#include "media/player/media_player_instance.h"
 #include "mainwidget.h"
 #include "ui/boxes/confirm_box.h"
 #include "boxes/connection_box.h"
@@ -52,8 +54,27 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtGui/QPainterPath>
 #include <QtGui/QWindow>
+#include <QtWidgets/QAbstractButton>
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QLineEdit>
+#include <QtWidgets/QPlainTextEdit>
+#include <QtWidgets/QTextEdit>
 
 namespace {
+
+bool KeepsSpaceKey(QWidget *focus) {
+	for (auto widget = focus; widget; widget = widget->parentWidget()) {
+		if (widget->testAttribute(Qt::WA_InputMethodEnabled)
+			|| qobject_cast<QLineEdit*>(widget)
+			|| qobject_cast<QTextEdit*>(widget)
+			|| qobject_cast<QPlainTextEdit*>(widget)
+			|| qobject_cast<QAbstractButton*>(widget)
+			|| dynamic_cast<Ui::AbstractButton*>(widget)) {
+			return true;
+		}
+	}
+	return false;
+}
 
 // Code for testing languages is F7-F6-F7-F8
 void FeedLangTestingKey(int key) {
@@ -664,6 +685,47 @@ void MainWindow::setInnerFocus() {
 	} else if (_intro) {
 		_intro->setInnerFocus();
 	}
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *e) {
+	const auto focus = QApplication::focusWidget();
+	if (e->key() != Qt::Key_Space
+		|| e->modifiers() != Qt::NoModifier
+		|| QGuiApplication::applicationState() != Qt::ApplicationActive
+		|| QApplication::activeWindow() != this
+		|| QApplication::activePopupWidget()
+		|| QApplication::activeModalWidget()
+		|| !_main
+		|| _main->isHidden()
+		|| _passcodeLock
+		|| _setupEmailLock
+		|| _layer
+		|| _testingThemeWarning
+		|| (focus && focus->window() != this)
+		|| KeepsSpaceKey(focus)) {
+		Platform::MainWindow::keyPressEvent(e);
+		return;
+	}
+
+	const auto player = Media::Player::instance();
+	const auto type = player->getActiveType();
+	const auto state = player->getState(type);
+	const auto document = state.id.audio();
+	if (!document
+		|| &document->session() != &_main->session()
+		|| state.id != player->current(type)
+		|| Media::Player::IsStoppedOrStopping(state.state)
+		|| player->isSeeking(type)
+		|| !player->playbackAllowed()) {
+		Platform::MainWindow::keyPressEvent(e);
+		return;
+	}
+
+	// 子控件先处理空格；只有当前媒体可以响应，长按不重复切换。
+	if (!e->isAutoRepeat()) {
+		player->playPause(type);
+	}
+	e->accept();
 }
 
 bool MainWindow::eventFilter(QObject *object, QEvent *e) {

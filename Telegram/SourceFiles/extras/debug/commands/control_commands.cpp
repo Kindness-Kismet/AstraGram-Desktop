@@ -364,14 +364,16 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 		{ u"right"_q, Qt::Key_Right },
 		{ u"enter"_q, Qt::Key_Return },
 		{ u"tab"_q, Qt::Key_Tab },
+		{ u"space"_q, Qt::Key_Space },
 	};
 	const auto key = keys.constFind(args[1]);
 	const auto target = QPointer<QWidget>(findControl(args[0]));
 	if (key == keys.cend() || !target || !target->isVisible() || !target->isEnabled()) {
 		return Result::Err(u"expected a visible enabled control and a supported key"_q);
 	}
-	sendIfAlive(target, QKeyEvent(QEvent::KeyPress, *key, Qt::NoModifier));
-	sendIfAlive(target, QKeyEvent(QEvent::KeyRelease, *key, Qt::NoModifier));
+	const auto text = (*key == Qt::Key_Space) ? u" "_q : QString();
+	sendIfAlive(target, QKeyEvent(QEvent::KeyPress, *key, Qt::NoModifier, text));
+	sendIfAlive(target, QKeyEvent(QEvent::KeyRelease, *key, Qt::NoModifier, text));
 	return Result::Ok(u"sent"_q);
 }
 

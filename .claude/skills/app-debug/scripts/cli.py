@@ -291,7 +291,7 @@ def register_commands(sub) -> None:
     command.add_argument("state", choices=("on", "off"), help="开启或关闭悬停状态")
     command = sub.add_parser("control.key", help="向控件合成按键，用于菜单导航和关闭")
     command.add_argument("target", help="控件名称、#序号或 @menu")
-    command.add_argument("key", choices=("escape", "up", "down", "left", "right", "enter", "tab"))
+    command.add_argument("key", choices=("escape", "up", "down", "left", "right", "enter", "tab", "space"))
     command = sub.add_parser("control.pointer", help="向控件内部位置合成移动事件，不移动系统鼠标；省略坐标时离开")
     command.add_argument("target", help="控件名称或 control.list 默认模式的 #序号")
     command.add_argument("point", nargs="*", type=int, metavar="X Y", help="控件内的坐标，必须成对；省略则清除上一次合成悬停")

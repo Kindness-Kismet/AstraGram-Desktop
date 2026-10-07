@@ -120,6 +120,7 @@ CompactPanel::CompactPanel(
 		Core::App().saveSettingsDelayed();
 	})) {
 	setObjectName(u"music.compact"_q);
+	setFocusPolicy(Qt::ClickFocus);
 	_save->setObjectName(u"music.saveCover"_q);
 	_collapse->setObjectName(u"music.collapse"_q);
 	_close->setObjectName(u"music.close"_q);
