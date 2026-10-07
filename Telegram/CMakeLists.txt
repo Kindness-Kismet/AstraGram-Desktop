@@ -208,6 +208,8 @@ set(extras_files
         extras/ui/context_menu/context_menu.h
         extras/ui/context_menu/menu_item_subtext.cpp
         extras/ui/context_menu/menu_item_subtext.h
+        extras/ui/context_menu/forward_to_saved_menu.cpp
+        extras/ui/context_menu/forward_to_saved_menu.h
         extras/ui/message_history/history_inner.cpp
         extras/ui/message_history/history_inner.h
         extras/ui/message_history/history_item.cpp
@@ -294,6 +296,8 @@ set(extras_files
         extras/features/message_selection/selection_range.h
         extras/features/forward/extras_forward.cpp
         extras/features/forward/extras_forward.h
+        extras/features/forward/forward_to_saved.cpp
+        extras/features/forward/forward_to_saved.h
         extras/features/forward/extras_forward_rich.cpp
         extras/features/forward/extras_forward_rich.h
         extras/features/forward/extras_sync.cpp

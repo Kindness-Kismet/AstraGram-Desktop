@@ -11,10 +11,12 @@
 #include "data/data_document.h"
 #include "data/data_drafts.h"
 #include "data/data_history_messages.h"
+#include "data/data_photo.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "history/history_item_components.h"
 #include "history/view/history_view_element.h"
 #include "main/main_session.h"
 #include "storage/storage_media_prepare.h"
@@ -41,10 +43,21 @@ nlohmann::json describeMessage(not_null<HistoryItem*> item) {
 		entities.push_back(std::move(details));
 	}
 	const auto document = item->media() ? item->media()->document() : nullptr;
+	const auto photo = item->media() ? item->media()->photo() : nullptr;
+	const auto forwarded = item->Get<HistoryMessageForwarded>();
 	return {
 		{ "peerId", item->history()->peer->id.value },
 		{ "messageId", item->id.bare },
 		{ "senderId", item->from()->id.value },
+		{ "groupId", item->groupId().value },
+		{ "photoId", photo ? photo->id : uint64(0) },
+		{ "forwarded", forwarded ? nlohmann::json{
+			{ "senderId", forwarded->originalSender ? forwarded->originalSender->id.value : uint64(0) },
+			{ "messageId", forwarded->originalId.bare },
+			{ "hiddenSender", bool(forwarded->originalHiddenSenderInfo) },
+			{ "savedFromPeerId", forwarded->savedFromPeer ? forwarded->savedFromPeer->id.value : uint64(0) },
+			{ "savedFromMessageId", forwarded->savedFromMsgId.bare },
+		} : nlohmann::json(nullptr) },
 		{ "text", item->originalText().text.toStdString() },
 		{ "entities", std::move(entities) },
 		{ "outgoing", item->out() },

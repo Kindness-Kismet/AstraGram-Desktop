@@ -124,6 +124,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "extras/extras_settings.h"
 #include "extras/features/forward/extras_forward.h"
+#include "extras/ui/context_menu/forward_to_saved_menu.h"
 #include "extras/features/translator/message_translation.h"
 #include "extras/ui/context_menu/context_menu.h"
 
@@ -756,27 +757,10 @@ bool AddForwardMessageAction(
 			}
 		}, &st::menuIconCaptionHide);
 	}
-	fwdSubmenu->addAction(
-		tr::extras_ForwardToSavedMessage(tr::now),
-		[owner, itemId] {
-			const auto item = owner->message(itemId);
-			if (!item || !IsServerMsgId(item->id)) {
-				return;
-			}
-			const auto api = &item->history()->peer->session().api();
-			const auto history = owner->history(
-				api->session().user()->asUser());
-			auto action = Api::SendAction(history);
-			action.clearDraft = false;
-			action.generateLocal = false;
-			auto resolved = history->resolveForwardDraft(Data::ForwardDraft{
-				.ids = MessageIdsList(1, itemId),
-			});
-			api->forwardMessages(std::move(resolved), action, [] {
-				Ui::Toast::Show(tr::lng_share_done(tr::now));
-			});
-		},
-		&st::menuIconFave);
+	ExtrasUi::addForwardToSavedMenu(
+		fwdSubmenu.get(),
+		&item->history()->session(),
+		asGroup ? owner->itemOrItsGroup(item) : MessageIdsList{ itemId });
 	if (!fwdSubmenu->empty()) {
 		menu->addAction(tr::extras_ContextForward(tr::now), std::move(fwdSubmenu), &st::menuIconForward);
 	}

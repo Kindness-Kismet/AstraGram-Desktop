@@ -1,4 +1,10 @@
 {
+  "ForwardSavedOriginal": "Forward as is",
+  "ForwardSavedNoSource": "Without source",
+  "ForwardSavedNoSourceCaption": "Without source and caption",
+  "ForwardSavedDone": "Forwarded to Saved Messages",
+  "ForwardSavedUnavailable": "These messages are no longer available for forwarding.",
+  "ForwardSavedUnsupported": "This forwarding option is no longer available for these messages.",
   "CommunityChannelInviteTitle": "Join our Telegram channel",
   "CommunityChannelInviteText": "Follow {link} for project updates and release announcements. Click the link or confirm to open the channel.",
   "CommunityChannelDontShow": "Don't show again",

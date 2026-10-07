@@ -256,7 +256,9 @@ void intelligentForward(
 	const auto monoforumPeerId = action.replyTo.monoforumPeerId;
 	crl::on_main([=]
 	{
-		history->setForwardDraft(topicRootId, monoforumPeerId, {});
+		if (action.clearDraft) {
+			history->setForwardDraft(topicRootId, monoforumPeerId, {});
+		}
 	});
 
 	const auto items = draft.items;
@@ -297,7 +299,7 @@ void intelligentForward(
 
 	for (const auto &chunk : chunks) {
 		if (chunk.isExtrasForwardNeeded) {
-			forwardMessages(session, action, true, Data::ResolvedForwardDraft(chunk.items));
+			forwardMessages(session, action, true, Data::ResolvedForwardDraft(chunk.items, draft.options));
 		} else {
 			state->totalMessages = chunk.items.size();
 			state->sentMessages = 0;
@@ -328,7 +330,9 @@ void forwardMessages(
 	const auto monoforumPeerId = action.replyTo.monoforumPeerId;
 	crl::on_main([=]
 	{
-		history->setForwardDraft(topicRootId, monoforumPeerId, {});
+		if (action.clearDraft) {
+			history->setForwardDraft(topicRootId, monoforumPeerId, {});
+		}
 	});
 
 	std::shared_ptr<ForwardState> state;
@@ -415,7 +419,8 @@ void forwardMessages(
 		}
 
 		auto extractedText = extractText(item);
-		if (extractedText.empty() && !mediaDownloadable(item->media())) {
+		const auto hasDownloadableMedia = mediaDownloadable(item->media());
+		if (extractedText.empty() && !hasDownloadableMedia) {
 			continue;
 		}
 
@@ -426,11 +431,12 @@ void forwardMessages(
 		message.action.options.effectId = 0;
 		message.action.replaceMediaOf = 0;
 
-		if (draft.options != Data::ForwardOptions::NoNamesAndCaptions) {
+		if (draft.options != Data::ForwardOptions::NoNamesAndCaptions
+			|| !hasDownloadableMedia) {
 			message.textWithTags = extractedText;
 		}
 
-		if (!mediaDownloadable(item->media())) {
+		if (!hasDownloadableMedia) {
 			ExtrasSync::sendMessageSync(session, std::move(message));
 		} else if (const auto media = item->media()) {
 			if (media->poll()) {

@@ -9474,3 +9474,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SettingsTransferWriteError" = "Could not save the settings file. Check the destination and available disk space.";
 "extras_SettingsTransferImported" = "Settings applied and saved.";
 "extras_SettingsTransferSaveError" = "Settings were applied, but saving failed. Check disk space and permissions, then retry before restarting.";
+
+"extras_ForwardSavedOriginal" = "Forward as is";
+"extras_ForwardSavedNoSource" = "Without source";
+"extras_ForwardSavedNoSourceCaption" = "Without source and caption";
+"extras_ForwardSavedDone" = "Forwarded to Saved Messages";
+"extras_ForwardSavedUnavailable" = "These messages are no longer available for forwarding.";
+"extras_ForwardSavedUnsupported" = "This forwarding option is no longer available for these messages.";
