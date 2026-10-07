@@ -60,9 +60,3 @@
 返回 `jobId` 后通过 `job.status <id>` 查询 `running`、`succeeded` 或 `failed`。
 完成的任务可用 `job.forget <id>` 清理查询记录。任务只存在当前进程，重启后失效。
 不要把指令被接收、文件出现或界面变化当作异步任务完成。
-
-## 运行验证
-
-已有独立配置进入假会话后，运行 `python .codex/skills/app-debug/scripts/verify_business.py --profile <配置名>`。
-脚本核对账号与配置目录，生成自建素材，验证分类、进度、取消、另存、编号查询及设置迁移；结果保存在 `build/business-*/result.json`。
-这套验证不操作窗口、不发送真实消息，不代表联网发送、下载或系统集成已经通过实测。
