@@ -24,6 +24,8 @@ using Json = nlohmann::json;
 std::map<uint64, Json> Jobs;
 uint64 NextJob = 0;
 
+} // namespace
+
 uint64 beginJob(const char *kind) {
 	const auto id = ++NextJob;
 	Jobs[id] = {{"id", id}, {"kind", kind}, {"state", "running"}};
@@ -40,6 +42,8 @@ void finishJob(uint64 id, bool ok, Json result) {
 Result jobStarted(uint64 id) {
 	return Result::Ok(Compact(Json{{"jobId", id}}));
 }
+
+namespace {
 
 Result jobStatus(const QStringList &args) {
 	if (args.size() != 1) return Result::Err(u"usage: job.status <id>"_q);

@@ -93,7 +93,8 @@ Result inspectMessage(const QStringList &args) {
 	const auto item = findMessage(args[0], args[1]);
 	if (!item) return Result::Err(u"message not found"_q);
 	const auto translation = item->translation();
-	return Result::Ok(Compact(Json{
+	auto result = describeMessage(item);
+	result.update(Json{
 		{"peerId", item->history()->peer->id.value}, {"messageId", item->id.bare},
 		{"text", item->originalText().text.toStdString()}, {"outgoing", item->out()},
 		{"deleted", item->isDeleted()}, {"hidden", ExtrasState::isHidden(item)},
@@ -105,7 +106,8 @@ Result inspectMessage(const QStringList &args) {
 		{"translationRequested", translation && translation->requested},
 		{"translationFailed", translation && translation->failed},
 		{"chatTranslationActive", bool(item->history()->translatedTo())},
-	}));
+	});
+	return Result::Ok(Compact(result));
 }
 
 Result translateMessage(const QStringList &args) {

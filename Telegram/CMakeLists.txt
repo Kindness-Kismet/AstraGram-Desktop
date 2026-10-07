@@ -348,6 +348,9 @@ set(extras_files
         extras/debug/commands/feature_commands.cpp
         extras/debug/commands/account_commands.cpp
         extras/debug/commands/player_commands.cpp
+        extras/debug/commands/download_commands.cpp
+        extras/debug/commands/message_business_commands.cpp
+        extras/debug/commands/transfer_commands.cpp
         extras/debug/commands/ghost_commands.cpp
         extras/debug/commands/storage_commands.cpp
         extras/debug/commands/message_archive_tests.cpp
@@ -1492,6 +1495,7 @@ PRIVATE
     info/community_requests/info_community_requests_widget.cpp
     info/community_requests/info_community_requests_widget.h
     info/downloads/info_downloads_common.h
+    info/downloads/info_downloads_common.cpp
     info/downloads/info_downloads_inner_widget.cpp
     info/downloads/info_downloads_inner_widget.h
     info/downloads/info_downloads_provider.cpp

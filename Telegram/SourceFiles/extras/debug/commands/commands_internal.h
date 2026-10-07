@@ -37,6 +37,14 @@ using HandlerMap = std::map<QString, Handler>;
 [[nodiscard]] const HandlerMap &FeatureHandlers();
 [[nodiscard]] const HandlerMap &AccountHandlers();
 [[nodiscard]] const HandlerMap &playerHandlers();
+[[nodiscard]] const HandlerMap &downloadHandlers();
+[[nodiscard]] const HandlerMap &messageBusinessHandlers();
+[[nodiscard]] const HandlerMap &transferHandlers();
+
+[[nodiscard]] uint64 beginJob(const char *kind);
+void finishJob(uint64 id, bool ok, nlohmann::json result);
+[[nodiscard]] Result jobStarted(uint64 id);
+[[nodiscard]] nlohmann::json describeMessage(not_null<HistoryItem*> item);
 
 // 界面登录入口与命令入口共用同一份本地场景。
 void seedFakeScenarios(not_null<Main::Session*> session);
@@ -55,5 +63,6 @@ void seedFakeScenarios(not_null<Main::Session*> session);
 [[nodiscard]] Main::Session *ActiveSession();
 [[nodiscard]] PeerData *findPeer(const QString &id);
 [[nodiscard]] HistoryItem *findMessage(const QString &peerId, const QString &messageId);
+[[nodiscard]] HistoryItem *findSessionMessage(not_null<Main::Session*> session, FullMsgId id);
 
 } // namespace ExtrasDebug::Commands

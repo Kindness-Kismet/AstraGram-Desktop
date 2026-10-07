@@ -22,6 +22,25 @@
 namespace ExtrasDebug::Commands {
 namespace {
 
+Result controlPlayer(const QStringList &args) {
+	if (args.isEmpty() || args.size() > 2) {
+		return Result::Err(u"usage: player.control <play|pause|toggle|stop> [song|voice]"_q);
+	}
+	if (args.size() == 2 && args[1] != u"song"_q && args[1] != u"voice"_q) {
+		return Result::Err(u"unknown player type"_q);
+	}
+	const auto player = Media::Player::instance();
+	const auto type = args.size() == 1 ? player->getActiveType()
+		: args[1] == u"song"_q ? AudioMsgId::Type::Song : AudioMsgId::Type::Voice;
+	if (!player->current(type).audio()) return Result::Err(u"no current media"_q);
+	if (args[0] == u"play"_q) player->play(type);
+	else if (args[0] == u"pause"_q) player->pause(type);
+	else if (args[0] == u"toggle"_q) player->playPause(type);
+	else if (args[0] == u"stop"_q) player->stop(type);
+	else return Result::Err(u"unknown player action"_q);
+	return Result::Ok();
+}
+
 Result playerState(const QStringList &args) {
 	if (args.size() > 1 || (!args.empty() && args[0] != u"song"_q && args[0] != u"voice"_q)) {
 		return Result::Err(u"usage: player.state [song|voice]"_q);
@@ -128,6 +147,7 @@ Result fakePlayer(const QStringList &args) {
 
 const HandlerMap &playerHandlers() {
 	static const auto handlers = HandlerMap{
+		{ u"player.control"_q, &controlPlayer },
 		{ u"player.state"_q, &playerState },
 		{ u"player.fake"_q, &fakePlayer },
 	};

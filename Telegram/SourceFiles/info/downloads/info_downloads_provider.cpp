@@ -29,64 +29,31 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_overview.h"
 
 namespace Info::Downloads {
-namespace {
-
 using namespace Media;
 
-[[nodiscard]] TypeFilter ClassifyFile(
-		not_null<HistoryItem*> item,
-		const QString &path) {
-	const auto media = item->media();
-	const auto document = media ? media->document() : nullptr;
-	if (!document || document->isVoiceMessage() || document->sticker()) {
-		return TypeFilter::Other;
-	}
-	if (document->isSong()) {
-		return TypeFilter::Music;
-	}
-	if (document->isVideoFile() || document->isVideoMessage()) {
-		return TypeFilter::Video;
-	}
-	const auto filename = document->filename();
-	const auto name = filename.isEmpty() ? path : filename;
-	const auto nameType = filename.isEmpty()
-		? Core::DetectNameType(path)
-		: document->nameType();
-	if (nameType == Core::NameType::Archive) {
-		return TypeFilter::Archive;
-	}
-	const auto mime = document->mimeString();
-	if (mime.startsWith(u"video/"_q, Qt::CaseInsensitive)) {
-		return TypeFilter::Video;
-	}
-	if (document->isAudioFile()
-		|| mime.startsWith(u"audio/"_q, Qt::CaseInsensitive)) {
-		return TypeFilter::Music;
-	}
-	if (nameType == Core::NameType::Video) {
-		const auto extension = Core::FileExtension(name).toLower();
-		// 字幕、工程文件与动画贴纸不是视频文件。
-		return (extension == u"srt" || extension == u"aep"
-			|| extension == u"tgs" || extension == u"tgv")
-			? TypeFilter::Other
-			: TypeFilter::Video;
-	}
-	return (nameType == Core::NameType::Audio)
-		? TypeFilter::Music
-		: TypeFilter::Other;
+Provider::Provider(not_null<AbstractController*> controller)
+: Provider(&controller->session(), controller->storiesAddToAlbumId()) {
 }
 
-} // namespace
-
-Provider::Provider(not_null<AbstractController*> controller)
-: _controller(controller)
-, _storiesAddToAlbumId(_controller->storiesAddToAlbumId()) {
+Provider::Provider(not_null<Main::Session*> session, int storiesAddToAlbumId)
+: _session(session)
+, _storiesAddToAlbumId(storiesAddToAlbumId) {
 	style::PaletteChanged(
 	) | rpl::on_next([=] {
 		for (auto &layout : _layouts) {
 			layout.second.item->invalidateCache();
 		}
 	}, _lifetime);
+}
+
+std::vector<Provider::Entry> Provider::entries() const {
+	auto result = std::vector<Entry>();
+	for (const auto &element : ranges::views::reverse(_elements)) {
+		if (element.found) {
+			result.push_back({ element.item, element.started, element.path });
+		}
+	}
+	return result;
 }
 
 Type Provider::type() {
@@ -593,7 +560,7 @@ ListItemSelectionData Provider::computeSelectionData(
 	auto result = ListItemSelectionData(selection);
 	result.canDelete = true;
 	result.canForward = item->allowsForward()
-		&& (&item->history()->session() == &_controller->session());
+		&& (&item->history()->session() == _session.get());
 	return result;
 }
 
@@ -619,7 +586,7 @@ void Provider::applyDragSelection(
 		return;
 	}
 	const auto selectLimit = _storiesAddToAlbumId
-		? _controller->session().appConfig().storiesAlbumLimit()
+		? _session->appConfig().storiesAlbumLimit()
 		: MaxSelectedItems;
 	auto chosen = base::flat_set<not_null<const HistoryItem*>>();
 	chosen.reserve(till - from);

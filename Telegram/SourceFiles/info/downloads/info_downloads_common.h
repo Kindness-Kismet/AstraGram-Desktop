@@ -10,4 +10,8 @@ enum class TypeFilter {
 	Other,
 };
 
+[[nodiscard]] TypeFilter ClassifyFile(
+	not_null<HistoryItem*> item,
+	const QString &path);
+
 } // namespace Info::Downloads

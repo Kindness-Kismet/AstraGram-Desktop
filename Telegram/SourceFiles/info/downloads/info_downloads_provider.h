@@ -27,6 +27,13 @@ class Provider final
 	, public base::has_weak_ptr {
 public:
 	explicit Provider(not_null<AbstractController*> controller);
+	explicit Provider(not_null<Main::Session*> session, int storiesAddToAlbumId = 0);
+	struct Entry {
+		not_null<HistoryItem*> item;
+		int64 started = 0;
+		QString path;
+	};
+	[[nodiscard]] std::vector<Entry> entries() const;
 
 	Media::Type type() override;
 	bool hasSelectRestriction() override;
@@ -128,7 +135,7 @@ private:
 		Element element,
 		not_null<Overview::Layout::Delegate*> delegate);
 
-	const not_null<AbstractController*> _controller;
+	const not_null<Main::Session*> _session;
 
 	std::vector<Element> _elements;
 	std::optional<int> _fullCount;

@@ -38,8 +38,27 @@ BOOLEAN_CHOICES = ("true", "false")
 VERSION_FILE = ROOT / "Telegram" / "build" / "version"
 PROFILE_FILE = ROOT / "build" / "app-debug-profile.json"
 PROFILE_OVERRIDE = None
+BACKGROUND_START = False
 
 GENERIC_COMMANDS = {
+    'player.control': '直接控制当前播放器，不抢焦点：<play|pause|toggle|stop> [song|voice]',
+    'downloads.list': '查询真实下载列表及分类与搜索交集：[all|archives|music|videos|other] [关键词]',
+    'downloads.start': '指定路径保存消息附件，返回异步任务：<会话编号> <消息编号> <新文件绝对路径>',
+    'downloads.cancel': '取消指定附件下载：<会话编号> <消息编号>',
+    'downloads.fake': '向假会话下载管理器注入自建素材：<路径> <file|song|video|voice> <loading|done>',
+    'downloads.progress': '推进假会话下载进度或完成：<会话编号> <消息编号> <字节数|done>',
+    'peer.info': '查询已知会话或用户资料，不返回访问密钥：<会话编号>',
+    'chat.members': '列出已缓存的群成员：<会话编号> [no-username]',
+    'chat.draft': '查询已保存的本地草稿，不切换聊天：<会话编号>',
+    'message.list': '查询已缓存的消息及附件、实体：<会话编号> [条数]',
+    'message.fetch': '异步获取聊天消息，不切换界面或发送已读：<会话编号> [条数]',
+    'message.send-file': '直接发送指定附件，不打开文件窗口或修改草稿：<会话编号> <绝对路径> [说明]',
+    'mention.resolve': '按正式编号提及逻辑解析用户：<用户编号>',
+    'mention.send': '直接发送编号提及并保留草稿：<会话编号> <用户编号> <显示文字> <后续文字>',
+    'settings.export': '导出指定范围的设置：<新文件绝对路径> <all|official|custom|account>',
+    'settings.inspect-import': '检查设置导入结果，不修改设置：<路径> <all|official|custom|account>',
+    'settings.import': '应用设置文件并报告保存结果：<路径> <all|official|custom|account>',
+
     "session.thread-settings": "查询或修改话题与子会话配置：<会话编号> <话题编号> <子会话编号> [键 值]",
     "control.mouse": "在应用控件内部点击、打开菜单或分开按下松开：<目标> <横坐标> <纵坐标> [left|right|double|press|release]",
     "crash.log": "读取当前调试配置的崩溃日志",
@@ -140,6 +159,9 @@ def is_debug_app_exe(path: Path) -> bool:
 PORT_WAIT_SECONDS = 60
 
 COMMAND_CATEGORY_LABELS = {
+    "downloads": "下载业务与分类",
+    "mention": "编号提及",
+    "peer": "用户与会话资料",
     "action": "官方快捷动作",
     "crash": "崩溃信息",
     "emoji": "字体表情包",
@@ -191,10 +213,13 @@ def register_commands(sub) -> None:
         command.add_argument("params", nargs=argparse.REMAINDER)
     command = sub.add_parser("app.start", help="启动 Debug 应用：未运行时拉起并等到端口就绪，已在运行则保持不变")
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
+    command.add_argument("--background", action="store_true", help="启动时进入托盘，不主动显示窗口")
     command = sub.add_parser("app.ensure", help="app.start 的等价写法")
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
+    command.add_argument("--background", action="store_true", help="启动时进入托盘，不主动显示窗口")
     command = sub.add_parser("app.restart", help="先停止再启动 Debug 应用，重新编译后用它启动新产物")
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
+    command.add_argument("--background", action="store_true", help="启动时进入托盘，不主动显示窗口")
     sub.add_parser("app.stop", help="停止 Debug 应用，只认端口 PID 或本仓库 dev 产物路径")
     sub.add_parser("app.ping", help="探活，返回 pong")
     sub.add_parser("app.info", help="查询版本、配置目录、会话和窗口状态")
@@ -343,8 +368,10 @@ def split_command_segments(argv: list[str]) -> list[list[str]]:
 
 
 def execute_command(args: argparse.Namespace) -> None:
-    global PROFILE_OVERRIDE
+    global PROFILE_OVERRIDE, BACKGROUND_START
     command = args.command
+    if hasattr(args, "background"):
+        BACKGROUND_START = args.background
     profile = getattr(args, "profile", None)
     if profile is not None:
         PROFILE_OVERRIDE = "" if profile == "default" else profile
@@ -531,6 +558,8 @@ def launch_app() -> None:
     directory = working_dir()
     directory.mkdir(parents=True, exist_ok=True)
     command = [str(app_exe()), "-workdir", str(directory)]
+    if BACKGROUND_START:
+        command.append("-startintray")
     if directory.resolve() != debug_dir().resolve():
         command.append("-debugprofile")
     if sys.platform == "win32":

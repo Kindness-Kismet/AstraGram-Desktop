@@ -23,7 +23,6 @@
 #include <QtWidgets/QTextEdit>
 
 namespace ExtrasMentionById {
-namespace {
 
 [[nodiscard]] std::optional<UserId> parseUserId(QString text) {
 	text = text.trimmed();
@@ -45,6 +44,45 @@ namespace {
 		&& user->isLoaded()
 		&& (user->isSelf() || user->accessHash());
 }
+
+mtpRequestId resolveUser(
+		not_null<MTP::Sender*> api,
+		not_null<Main::Session*> session,
+		UserId id,
+		Fn<void(not_null<UserData*>)> done,
+		Fn<void(QString)> fail) {
+	const auto user = session->data().user(id);
+	if (canMention(user)) {
+		done(user);
+		return 0;
+	}
+	// 未知编号只能沿当前账号已有的消息上下文解析。
+	if (user->isLoaded() || user->isInaccessible()
+		|| !session->data().messageWithPeer(user->id)) {
+		fail(u"unknown_user"_q);
+		return 0;
+	}
+	return api->request(MTPusers_GetUsers(
+		MTP_vector<MTPInputUser>(1, user->inputUser())
+	)).done([=](const MTPVector<MTPUser> &result) {
+		if (result.v.size() != 1 || result.v.front().match([&](const MTPDuser &data) {
+			return UserId(data.vid()) != id;
+		}, [](const MTPDuserEmpty &) { return true; })) {
+			fail(u"unknown_user"_q);
+			return;
+		}
+		const auto user = session->data().processUser(result.v.front());
+		if (!canMention(user)) {
+			fail(u"unknown_user"_q);
+			return;
+		}
+		done(user);
+	}).fail([=](const MTP::Error &error) {
+		fail(error.type());
+	}).send();
+}
+
+namespace {
 
 void mentionBox(
 		not_null<Ui::GenericBox*> box,
@@ -187,45 +225,25 @@ void mentionBox(
 			failed(tr::extras_MentionByIdInvalid(tr::now));
 			return;
 		}
-		const auto user = session->data().user(*userId);
-		if (canMention(user)) {
-			resolved(user);
-			return;
-		}
-		// 只有已有消息上下文才允许解析不完整资料，不能猜测访问参数。
-		if (user->isLoaded() || user->isInaccessible()
-			|| !session->data().messageWithPeer(user->id)) {
-			failed(tr::extras_MentionByIdUnknown(tr::now));
-			return;
-		}
 		id->setEnabled(false);
 		state->status = tr::extras_MentionByIdLoading(tr::now);
-		state->requestId = api->request(MTPusers_GetUsers(
-			MTP_vector<MTPInputUser>(1, user->inputUser())
-		)).done([=](const MTPVector<MTPUser> &result) {
-			state->requestId = 0;
-			if (!valid()) {
-				box->closeBox();
-				return;
-			}
-			if (result.v.size() != 1 || result.v.front().match([&](
-					const MTPDuser &data) {
-				return UserId(data.vid()) != *userId;
-			}, [](const MTPDuserEmpty &) {
-				return true;
-			})) {
-				failed(tr::extras_MentionByIdUnknown(tr::now));
-				return;
-			}
-			resolved(session->data().processUser(result.v.front()));
-		}).fail([=] {
-			state->requestId = 0;
-			if (!valid()) {
-				box->closeBox();
-				return;
-			}
-			failed(tr::extras_MentionByIdFailed(tr::now));
-		}).send();
+		state->requestId = resolveUser(api, session, *userId,
+			[=](not_null<UserData*> user) {
+				if (!valid()) {
+					box->closeBox();
+					return;
+				}
+				resolved(user);
+			}, [=](QString error) {
+				state->requestId = 0;
+				if (!valid()) {
+					box->closeBox();
+					return;
+				}
+				failed(error == u"unknown_user"_q
+					? tr::extras_MentionByIdUnknown(tr::now)
+					: tr::extras_MentionByIdFailed(tr::now));
+			});
 	};
 	id->changes() | rpl::on_next([=] {
 		if (state->user && name->getLastText() == state->user->name()) {

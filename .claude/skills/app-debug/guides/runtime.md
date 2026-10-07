@@ -32,7 +32,7 @@ python .claude/skills/app-debug/scripts/cli.py window.resize 1300 900 + screensh
 python .claude/skills/app-debug/scripts/cli.py window.maximize true + screenshot.take
 ```
 
-`player.state [song|voice]` 查询指定类型或当前活动媒体的 `messageId`、播放状态 `playing`、位置 `position`、长度 `length`、时间单位 `frequency` 和循环模式 `repeat`（0 关闭、1 单曲、2 列表）。连续采样可验证自然结束后的重播，控制操作仍通过播放器控件执行。
+`player.state [song|voice]` 查询指定类型或当前活动媒体的 `messageId`、播放状态 `playing`、位置 `position`、长度 `length`、时间单位 `frequency` 和循环模式 `repeat`（0 关闭、1 单曲、2 列表）。连续采样可验证自然结束后的重播，业务控制使用 `player.control`；键盘与焦点检查才使用界面。
 
 ## CLI 本地指令
 
@@ -83,4 +83,6 @@ python .codex/skills/app-debug/scripts/cli.py session.fake
 
 `player.fake <song|voice|video> <path> <seconds>` 仅在本进程假会话中注入本地媒体消息并播放，不上传文件。
 文件限制为 16 MiB，时长为 1 至 600 秒；音乐和语音使用音频文件，圆形视频使用 320 × 320 的视频文件。
-播放、暂停、跳转、倍速、收起和关闭仍通过播放器控件操作，`player.state` 中的 `type` 与 `video` 可核对当前类型。
+播放、暂停、切换和停止使用 `player.control`；跳转、倍速、收起和关闭仍通过播放器控件操作。`player.state` 中的 `type` 与 `video` 可核对当前类型。
+
+`app.start`、`app.ensure`、`app.restart` 支持 `--background`，新启动时进入托盘，不主动显示窗口。已有实例保持原状；这不改变单实例规则，也不会操作系统鼠标。
