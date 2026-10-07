@@ -120,7 +120,8 @@ Fields officialFields() {
 	addField(fields, "systemDarkModeEnabled", settings,
 		&S::systemDarkModeEnabled, &S::setSystemDarkModeEnabled);
 	addField(fields, "systemAccentColorEnabled", settings,
-		&S::systemAccentColorEnabled, &S::setSystemAccentColorEnabled);
+		&S::systemAccentColorEnabled, &S::setSystemAccentColorEnabled,
+		0, 0, true);
 	addField(fields, "workMode", settings,
 		&S::workMode, &S::setWorkMode, 0, 2);
 	addField(fields, "closeBehavior", settings,
