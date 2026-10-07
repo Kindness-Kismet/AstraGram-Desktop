@@ -45,3 +45,6 @@ python .codex/skills/app-debug/scripts/cli.py settings.keys session.autoDownload
 `theme.set <dark|light>` 切换主题并解除跟随系统；`theme.reset-background` 恢复默认壁纸。
 
 下载入口设置键为 `showDownloadsButtonInHeader`，默认显示；旧配置文件中的 `showDownloadsButtonInSearch` 自动迁移。
+
+频道邀请开关为 `showCommunityChannelInvite`，默认开启；确认或“不再显示”会关闭，取消只跳过本次启动。
+邀请在登录并进入主界面后显示，每次启动最多一次；恢复开关后重启即可再次验证，弹窗标识为 `communityChannel/invite`。

@@ -289,6 +289,7 @@ public:
 	[[nodiscard]] bool hidePremiumStatuses() const { return _hidePremiumStatuses.current(); }
 	[[nodiscard]] bool hideProxySettingsIcon() const { return _hideProxySettingsIcon.current(); }
 	[[nodiscard]] bool showDownloadsButtonInHeader() const { return _showDownloadsButtonInHeader.current(); }
+	[[nodiscard]] bool showCommunityChannelInvite() const { return _showCommunityChannelInvite.current(); }
 	[[nodiscard]] bool showOnlyAddedEmojisAndStickers() const { return _showOnlyAddedEmojisAndStickers.current(); }
 	[[nodiscard]] bool collapseSimilarChannels() const { return _collapseSimilarChannels.current(); }
 	[[nodiscard]] bool hideSimilarChannels() const { return _hideSimilarChannels.current(); }
@@ -386,6 +387,7 @@ public:
 	void setHidePremiumStatuses(bool val);
 	void setHideProxySettingsIcon(bool val);
 	void setShowDownloadsButtonInHeader(bool val);
+	void setShowCommunityChannelInvite(bool val);
 	void setShowOnlyAddedEmojisAndStickers(bool val);
 	void setCollapseSimilarChannels(bool val);
 	void setHideSimilarChannels(bool val);
@@ -734,6 +736,7 @@ private:
 	rpl::variable<bool> _hidePremiumStatuses = false;
 	rpl::variable<bool> _hideProxySettingsIcon = false;
 	rpl::variable<bool> _showDownloadsButtonInHeader = true;
+	rpl::variable<bool> _showCommunityChannelInvite = true;
 	rpl::variable<QString> _monoFont;
 	rpl::variable<bool> _hideNotificationCounters = false;
 	rpl::variable<bool> _hideNotificationBadge = false;

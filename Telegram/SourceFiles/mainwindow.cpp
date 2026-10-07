@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "mainwindow.h"
+#include "extras/features/community_channel/community_channel.h"
 #include "extras/features/window_material/window_material.h"
 
 #include "data/data_document.h"
@@ -682,6 +683,7 @@ void MainWindow::setInnerFocus() {
 		_setupEmailLock->setInnerFocus();
 	} else if (_main) {
 		_main->setInnerFocus();
+		Extras::CommunityChannel::maybeShowInvite(sessionController());
 	} else if (_intro) {
 		_intro->setInnerFocus();
 	}

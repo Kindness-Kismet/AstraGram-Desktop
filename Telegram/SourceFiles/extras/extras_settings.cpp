@@ -686,6 +686,12 @@ void ExtrasSettings::setShowDownloadsButtonInHeader(bool val) {
 	save();
 }
 
+void ExtrasSettings::setShowCommunityChannelInvite(bool val) {
+	if (_showCommunityChannelInvite.current() == val) return;
+	_showCommunityChannelInvite = val;
+	save();
+}
+
 void ExtrasSettings::setShowOnlyAddedEmojisAndStickers(bool val) {
 	if (_showOnlyAddedEmojisAndStickers.current() == val) return;
 	_showOnlyAddedEmojisAndStickers = val;
@@ -1234,6 +1240,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"hidePremiumStatuses", s._hidePremiumStatuses.current()},
 		{"hideProxySettingsIcon", s._hideProxySettingsIcon.current()},
 		{"showDownloadsButtonInHeader", s._showDownloadsButtonInHeader.current()},
+		{"showCommunityChannelInvite", s._showCommunityChannelInvite.current()},
 		{"showOnlyAddedEmojisAndStickers", s._showOnlyAddedEmojisAndStickers.current()},
 		{"collapseSimilarChannels", s._collapseSimilarChannels.current()},
 		{"hideSimilarChannels", s._hideSimilarChannels.current()},
@@ -1351,6 +1358,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._showDownloadsButtonInHeader = j.contains("showDownloadsButtonInHeader")
 		? j.value("showDownloadsButtonInHeader", defaults._showDownloadsButtonInHeader.current())
 		: j.value("showDownloadsButtonInSearch", defaults._showDownloadsButtonInHeader.current());
+	s._showCommunityChannelInvite = j.value("showCommunityChannelInvite", defaults._showCommunityChannelInvite.current());
 	s._showOnlyAddedEmojisAndStickers = j.value("showOnlyAddedEmojisAndStickers", defaults._showOnlyAddedEmojisAndStickers.current());
 	s._collapseSimilarChannels = j.value("collapseSimilarChannels", defaults._collapseSimilarChannels.current());
 	s._hideSimilarChannels = j.value("hideSimilarChannels", defaults._hideSimilarChannels.current());
