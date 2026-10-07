@@ -37,9 +37,7 @@ class HideAllButton;
 class Manager;
 std::unique_ptr<Manager> Create(System *system);
 
-// 窗口四周为阴影预留的透明边距，卡片本体位于其内侧。
-[[nodiscard]] int ShadowSkip();
-// 绘制卡片的阴影、底色与描边，设置页的演示样图共用。
+// 绘制卡片的底色与描边，设置页的演示样图共用。
 void PaintCard(QPainter &p, const QRect &card, bool highlighted = false);
 
 class Manager final : public Notifications::Manager {
@@ -169,7 +167,6 @@ protected:
 	void hideFast();
 	void hideStop();
 	QPoint computePosition(int height) const;
-	[[nodiscard]] QRect cardRect() const;
 	void paintCard(QPainter &p, bool highlighted = false) const;
 
 	virtual void updateGeometry(int x, int y, int width, int height);

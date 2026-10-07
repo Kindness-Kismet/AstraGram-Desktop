@@ -405,8 +405,7 @@ void NotificationsCount::prepareNotificationSampleSmall() {
 		PainterHighQualityEnabler hq(p);
 
 		p.setPen(Qt::NoPen);
-		const auto shadow = Window::Notifications::Default::ShadowSkip();
-		const auto card = QRect(shadow, shadow, width - 2 * shadow, height - 2 * shadow);
+		const auto card = QRect(0, 0, width, height);
 		Window::Notifications::Default::PaintCard(p, card);
 
 		const auto padding = 5;
@@ -414,15 +413,15 @@ void NotificationsCount::prepareNotificationSampleSmall() {
 		p.setBrush(st::notificationSampleUserpicFg);
 		ExtrasUserpic::PaintShape(
 			p,
-			QRectF(padding + shadow, padding + shadow, userpicSize, userpicSize));
+			QRectF(padding, padding, userpicSize, userpicSize));
 
-		const auto rowLeft = shadow + userpicSize + padding * 2;
+		const auto rowLeft = userpicSize + padding * 2;
 		const auto rowHeight = 3;
-		const auto nameTop = shadow + 8;
+		const auto nameTop = 8;
 		p.setBrush(st::notificationSampleNameFg);
 		p.drawRoundedRect(rowLeft, nameTop, 42, rowHeight, rowHeight / 2., rowHeight / 2.);
 
-		const auto rowWidth = width - rowLeft - shadow - 10;
+		const auto rowWidth = width - rowLeft - 10;
 		const auto rowTop = nameTop + 8;
 		p.setBrush(st::notificationSampleTextFg);
 		p.drawRoundedRect(rowLeft, rowTop, rowWidth, rowHeight, rowHeight / 2., rowHeight / 2.);
@@ -447,18 +446,16 @@ void NotificationsCount::prepareNotificationSampleUserpic() {
 
 void NotificationsCount::prepareNotificationSampleLarge() {
 	using namespace Window::Notifications::Default;
-	const auto skip = ShadowSkip();
 	const auto w = st::notifyWidth;
 	const auto h = st::notifyMinHeight;
 	auto sampleImage = QImage(
-		QSize(w + 2 * skip, h + 2 * skip) * style::DevicePixelRatio(),
+		QSize(w, h) * style::DevicePixelRatio(),
 		QImage::Format_ARGB32_Premultiplied);
 	sampleImage.setDevicePixelRatio(style::DevicePixelRatio());
 	sampleImage.fill(Qt::transparent);
 	{
 		Painter p(&sampleImage);
-		PaintCard(p, QRect(skip, skip, w, h));
-		p.translate(skip, skip);
+		PaintCard(p, QRect(0, 0, w, h));
 
 		prepareNotificationSampleUserpic();
 		p.drawPixmap(st::notifyPhotoPos.x(), st::notifyPhotoPos.y(), _notificationSampleUserpic);
@@ -553,13 +550,11 @@ void NotificationsCount::setOverCorner(ScreenCorner corner) {
 			&_controller->window());
 		auto isLeft = Core::Settings::IsLeftCorner(_overCorner);
 		auto isTop = Core::Settings::IsTopCorner(_overCorner);
-		// 样图窗口带阴影边距，按卡片边缘对齐要扣掉。
-		const auto skip = Window::Notifications::Default::ShadowSkip();
-		auto sampleLeft = ((isLeft == rtl()) ? (r.x() + r.width() - st::notifyWidth - st::notifyDeltaX) : (r.x() + st::notifyDeltaX)) - skip;
-		auto sampleTop = (isTop ? (r.y() + st::notifyDeltaY) : (r.y() + r.height() - st::notifyDeltaY - st::notifyMinHeight)) - skip;
+		auto sampleLeft = (isLeft == rtl()) ? (r.x() + r.width() - st::notifyWidth - st::notifyDeltaX) : (r.x() + st::notifyDeltaX);
+		auto sampleTop = isTop ? (r.y() + st::notifyDeltaY) : (r.y() + r.height() - st::notifyDeltaY - st::notifyMinHeight);
 
 		if (Core::Settings::IsTopCenterCorner(_overCorner)) {
-			sampleLeft = (r.x() + r.width() / 2 - st::notifyWidth / 2) - skip;
+			sampleLeft = (r.x() + r.width() / 2 - st::notifyWidth / 2);
 		}
 
 		for (int i = samplesLeave; i != samplesNeeded; ++i) {

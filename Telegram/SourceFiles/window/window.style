@@ -45,12 +45,6 @@ chatFloatingBarGap: 4px;
 
 adaptiveChatWideWidth: 880px;
 
-// 圆角卡片：窗口四周为阴影留边，卡片本体是 notifyWidth × notifyMinHeight。
-notifyShadow: BoxShadow {
-	blurRadius: 10px;
-	offset: point(0px, 2px);
-	opacity: 0.18;
-}
 notifyRadius: 16px;
 notifyBorderWidth: 1px;
 notifySlowHide: 4000;
