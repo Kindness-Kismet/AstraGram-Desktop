@@ -454,7 +454,8 @@ void GroupedMedia::draw(Painter &p, const PaintContext &context) const {
 
 	auto anyDeleted = false;
 	const auto &settings = ExtrasSettings::getInstance();
-	const auto perItemOpacityEnabled = settings.semiTransparentDeletedMessages();
+	const auto perItemOpacityEnabled = settings.semiTransparentDeletedMessages()
+		&& _parent->context() != Context::AdminLog;
 	if (!perItemOpacityEnabled) {
 		for (const auto &part : _parts) {
 			part.deletedAnimation.stop();
@@ -511,12 +512,12 @@ void GroupedMedia::draw(Painter &p, const PaintContext &context) const {
 						return true;
 					},
 					1.,
-					0.7,
+					0.4,
 					500,
 					anim::easeOutCubic);
 				part.item->markDeletedAnimated();
 			}
-			const auto itemOpacity = part.deletedAnimation.value(0.7);
+			const auto itemOpacity = part.deletedAnimation.value(0.4);
 			const auto adjustedOpacity = (elementDeletedOpacity > 0.)
 				? (itemOpacity / elementDeletedOpacity)
 				: 0.;

@@ -1494,18 +1494,19 @@ float64 Element::deletedOpacity() const {
 		_deletedOpacityAnimationTarget = nullptr;
 		return 1.;
 	}
-	if (_context == Context::AdminLog) { // render normally in "View Deleted"
+	// 留档查看页始终按正常透明度显示。
+	if (_context == Context::AdminLog) {
 		return 1.;
 	}
 	if (_data->isDeleted()) {
 		if (const auto group = history()->owner().groups().find(_data)) {
-			// animation works weirdly on grouped messages, so only a fixed opacity here
+			// 相册由各项执行渐变，外层只负责整体透明度。
 			const auto allDeleted = ranges::all_of(
 				group->items,
 				&HistoryItem::isDeleted);
-			return allDeleted ? 0.7 : 1.;
+			return allDeleted ? 0.4 : 1.;
 		}
-		const auto opacity = _deletedOpacityAnimation.value(0.7);
+		const auto opacity = _deletedOpacityAnimation.value(0.4);
 		if (!_deletedOpacityAnimation.animating()) {
 			_deletedOpacityAnimationTarget = nullptr;
 		}
@@ -1533,7 +1534,7 @@ void Element::startDeletedAnimation() {
 			return false;
 		},
 		1.,
-		0.7,
+		0.4,
 		500,
 		anim::easeOutCubic);
 }

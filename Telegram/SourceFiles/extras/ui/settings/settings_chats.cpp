@@ -271,16 +271,13 @@ void BuildMarks(
 		.setter = &ExtrasSettings::setSimpleQuotesAndReplies,
 	});
 
-	const auto semiTransparent = extras.addSettingToggle({
+	extras.addSettingToggle({
 		.id = u"extras/semiTransparentDeletedMessages"_q,
 		.altIds = { u"extras/translucentDeletedMessages"_q },
 		.title = tr::extras_SemiTransparentDeletedMessages(),
 		.getter = &ExtrasSettings::semiTransparentDeletedMessages,
 		.setter = &ExtrasSettings::setSemiTransparentDeletedMessages,
 	});
-	if (semiTransparent) {
-		extras.addBetaBadge(semiTransparent);
-	}
 
 	extras.addSectionDivider();
 }
