@@ -1605,11 +1605,12 @@ void SetupMessages(
 	const auto skip = st::settingsSendTypeSkip;
 	auto wrap = object_ptr<Ui::VerticalLayout>(container);
 	const auto inner = wrap.data();
+	// 卡片按整体高度计算，底部外边距会变成末行开关下方的空隙。
 	container->add(
 		object_ptr<Ui::OverrideMargins>(
 			container,
 			std::move(wrap),
-			QMargins(0, skip, 0, skip)));
+			QMargins(0, skip, 0, 0)));
 
 	const auto groupSend = std::make_shared<Ui::RadioenumGroup<SendByType>>(
 		Core::App().settings().sendSubmitWay());
@@ -2438,7 +2439,18 @@ void SetupDefaultThemes(
 		apply(*scheme);
 	}, container->lifetime());
 
-	Ui::AddSkip(container);
+	// 强调色开关作末行时贴住卡片底边，开关隐藏时色板下方仍保留留白。
+	container->add(
+		object_ptr<Ui::SlideWrap<>>(
+			container,
+			object_ptr<Ui::FixedHeightWidget>(
+				container,
+				st::defaultVerticalListSkip))
+	)->setDuration(0)->toggleOn(
+		systemAccentWrap->toggledValue() | rpl::map([](bool shown) {
+			return !shown;
+		}),
+		anim::type::instant);
 }
 
 void SetupThemeOptions(
