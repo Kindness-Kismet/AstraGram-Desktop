@@ -54,7 +54,8 @@ void maybeShowInvite(not_null<Window::SessionController*> controller) {
 				.cancelText = tr::lng_cancel(),
 				.labelFilter = [=](const ClickHandlerPtr &, Qt::MouseButton button) {
 					if (button == Qt::LeftButton || button == Qt::MiddleButton) {
-						openChannel();
+						const auto callback = openChannel;
+						callback();
 					}
 					return false;
 				},
