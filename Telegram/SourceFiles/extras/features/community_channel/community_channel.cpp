@@ -1,9 +1,12 @@
 #include "extras/features/community_channel/community_channel.h"
 
+#include "data/components/promo_suggestions.h"
 #include "extras/extras_settings.h"
 #include "lang/lang_keys.h"
+#include "main/main_session.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/widgets/buttons.h"
+#include "window/window_controller.h"
 #include "window/window_session_controller.h"
 #include "window/window_session_controller_link_info.h"
 #include "crl/crl_on_main.h"
@@ -21,8 +24,14 @@ void maybeShowInvite(not_null<Window::SessionController*> controller) {
 		|| !ExtrasSettings::getInstance().showCommunityChannelInvite()) {
 		return;
 	}
-	inviteShown = true;
 	crl::on_main(controller, [=] {
+		if (inviteShown || controller->window().locked()
+			|| controller->session().promoSuggestions().setupEmailState()
+				!= Data::SetupEmailState::None
+			|| !ExtrasSettings::getInstance().showCommunityChannelInvite()) {
+			return;
+		}
+		inviteShown = true;
 		auto box = Box([=](not_null<Ui::GenericBox*> dialog) {
 			dialog->setObjectName(u"communityChannel/invite"_q);
 			Ui::ConfirmBox(dialog, {
