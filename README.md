@@ -22,6 +22,9 @@ AstraGram is a desktop client for Windows, Linux, and macOS, built on
 [AyuGram](https://github.com/AyuGram/AyuGramDesktop) and
 [re-zero001/AyuGramDesktop](https://github.com/re-zero001/AyuGramDesktop).
 
+Follow our [Telegram channel](https://t.me/MaterialDesign3) for project updates
+and release announcements.
+
 The whole point of this fork is making the client look and behave the way *you*
 want. Corner radii, bubble shapes, which buttons appear in the
 compose area, which entries live in the side drawer, how emoji are rendered,

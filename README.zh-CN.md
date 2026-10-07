@@ -22,6 +22,8 @@ AstraGram 是适用于 Windows、Linux 和 macOS 的桌面客户端，在
 [AyuGram](https://github.com/AyuGram/AyuGramDesktop) 和
 [re-zero001/AyuGramDesktop](https://github.com/re-zero001/AyuGramDesktop) 的定制功能继续开发。
 
+欢迎关注 [Telegram 频道](https://t.me/MaterialDesign3)，获取项目动态和版本更新。
+
 你可以按自己的习惯调整圆角、消息气泡、输入区按钮、侧边菜单、表情显示和中英文间距。
 夜间主题使用纯色背景，通过面板、控件和边框的颜色区分界面层次。
 
