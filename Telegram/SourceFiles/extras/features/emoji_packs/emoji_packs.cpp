@@ -27,7 +27,8 @@ namespace {
 // 与 ui/emoji_config.cpp 的图集格式一致；自定义编号避开官方表情包。
 constexpr auto kFirstId = 100;
 constexpr auto kLastId = 255;
-constexpr auto kSetVersion = 7;
+// 必须等于 lib_ui emoji_config.cpp 的 kSetVersion，不等时 lib_ui 拒绝加载。
+constexpr auto kSetVersion = 8;
 constexpr auto kSize = 72;
 constexpr auto kColumns = 32;
 constexpr auto kPerSprite = 512;
@@ -214,7 +215,9 @@ std::vector<Pack> installed() {
 	for (auto id = kFirstId; id <= kLastId; ++id) {
 		const auto folder = Ui::Emoji::internal::SetDataPath(id);
 		const auto config = readConfig(folder);
+		// 旧版本的图集布局已失效，只能重新导入。
 		if (config[u"id"_q].toInt() == id
+			&& config[u"version"_q].toInt() == kSetVersion
 			&& !config[u"fontHash"_q].toString().isEmpty()) {
 			result.push_back(packFromConfig(folder, config));
 		}
