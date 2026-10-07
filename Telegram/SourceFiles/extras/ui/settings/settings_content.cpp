@@ -44,7 +44,7 @@ void buildArchive(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 void buildText(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	const auto settings = &ExtrasSettings::getInstance();
 	const auto controller = builder.controller();
-	const auto zalgoButton = extras.addToggle({
+	extras.addToggle({
 		.id = u"extras/filterZalgo"_q,
 		.title = tr::extras_FilterZalgo(),
 		.getter = [=] { return settings->filterZalgo(); },
@@ -53,9 +53,6 @@ void buildText(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 			ShowRestartPrompt(controller);
 		},
 	});
-	if (zalgoButton) {
-		extras.addBetaBadge(zalgoButton);
-	}
 
 	extras.addSettingToggle({
 		.id = u"extras/autoSpaceSending"_q,

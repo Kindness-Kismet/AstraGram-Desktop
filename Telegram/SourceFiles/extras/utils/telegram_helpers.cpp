@@ -40,6 +40,7 @@
 #include "ui/text/text_entity.h"
 
 #include <atomic>
+#include <array>
 #include <functional>
 #include <latch>
 #include <QTimer>
@@ -54,10 +55,6 @@ const auto usernameResolverEmpty = QString("Error, username or id invalid/not fo
 
 constexpr auto regDateBotId = 6247153446L;
 const auto regDateBotUsername = QString("ayugrambot");
-
-const auto kZalgoPattern = QStringLiteral(
-	"\\p{Mn}{3,}|[\\x{202A}-\\x{202E}\\x{2066}-\\x{2069}\\x{200E}\\x{200F}\\x{061C}]");
-
 
 }
 
@@ -1064,30 +1061,34 @@ PeerData *getPeerFromDialogId(unsigned long long id) {
 
 QString filterZalgo(const QString &text) {
 	static const auto regex = QRegularExpression(
-		kZalgoPattern,
+		u"(?:\\P{M})?(\\p{M}{3,})"_q,
 		QRegularExpression::UseUnicodePropertiesOption);
-
-	auto match = regex.match(text);
-	if (!match.hasMatch()) {
-		return text;
-	}
-
-	QString output;
-	output.reserve(text.length());
-	int lastEnd = 0;
-
+	auto output = text;
 	auto it = regex.globalMatch(text);
 	while (it.hasNext()) {
-		match = it.next();
-		output.append(text.mid(lastEnd, match.capturedStart() - lastEnd));
-		const int matchLength = match.capturedLength();
-		for (int i = 0; i < matchLength; i++) {
-			output.append(QChar(0x2060));
+		const auto match = it.next();
+		auto counts = std::array<int, 256>();
+		// 规范组合仅用于判断；保留原文及实体的 UTF-16 偏移。
+		const auto normalized = match.captured().normalized(QString::NormalizationForm_C);
+		for (const auto codepoint : normalized.toUcs4()) {
+			if (QChar::script(codepoint) == QChar::Script_Inherited) {
+				++counts[QChar::combiningClass(codepoint)];
+			}
 		}
-		lastEnd = match.capturedEnd();
+		auto offset = match.capturedStart(1);
+		for (const auto codepoint : match.captured(1).toUcs4()) {
+			const auto length = QChar::requiresSurrogates(codepoint) ? 2 : 1;
+			const auto position = QChar::combiningClass(codepoint);
+			// 仅过滤规范组合后同位叠加超过两层的通用组合符。
+			if (position && counts[position] > 2
+				&& QChar::script(codepoint) == QChar::Script_Inherited) {
+				for (auto i = 0; i != length; ++i) {
+					output[offset + i] = QChar(0x2060);
+				}
+			}
+			offset += length;
+		}
 	}
-	output.append(text.mid(lastEnd));
-
 	return output;
 }
 
