@@ -66,7 +66,7 @@ void ShowRestartPrompt(
 	});
 }
 
-void AddBetaBadge(not_null<Button*> parent) {
+void AddBetaBadge(not_null<Button*> parent, rpl::producer<bool> visible) {
 	const auto badge = Ui::CreateChild<Ui::PaddingWrap<Ui::FlatLabel>>(
 		parent.get(),
 		object_ptr<Ui::FlatLabel>(
@@ -74,7 +74,9 @@ void AddBetaBadge(not_null<Button*> parent) {
 			rpl::single(QString("BETA")),
 			st::settingsPremiumNewBadge),
 		st::extrasBetaBadgePadding);
-	badge->show();
+	std::move(visible) | rpl::on_next([=](bool show) {
+		badge->setVisible(show);
+	}, badge->lifetime());
 	badge->setAttribute(Qt::WA_TransparentForMouseEvents);
 	badge->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(badge);

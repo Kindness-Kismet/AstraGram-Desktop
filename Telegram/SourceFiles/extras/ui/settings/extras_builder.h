@@ -75,7 +75,9 @@ public:
 	};
 	void addSlider(SliderArgs &&args);
 
-	void addBetaBadge(not_null<Ui::SettingsButton*> button);
+	void addBetaBadge(
+		not_null<Ui::SettingsButton*> button,
+		rpl::producer<bool> visible);
 
 	void addSectionDivider();
 

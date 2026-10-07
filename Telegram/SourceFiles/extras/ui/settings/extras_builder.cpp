@@ -268,8 +268,10 @@ void ExtrasSectionBuilder::addSlider(SliderArgs &&args) {
 	});
 }
 
-void ExtrasSectionBuilder::addBetaBadge(not_null<Ui::SettingsButton*> button) {
-	AddBetaBadge(button);
+void ExtrasSectionBuilder::addBetaBadge(
+		not_null<Ui::SettingsButton*> button,
+		rpl::producer<bool> visible) {
+	AddBetaBadge(button, std::move(visible));
 }
 
 void ExtrasSectionBuilder::addSectionDivider() {

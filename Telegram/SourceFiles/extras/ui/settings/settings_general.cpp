@@ -107,7 +107,11 @@ void BuildTranslator(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 		},
 	});
 	if (button) {
-		extras.addBetaBadge(button);
+		extras.addBetaBadge(button, settings->translationProviderValue()
+			| rpl::map([](TranslationProvider provider) {
+				return provider == TranslationProvider::Google
+					|| provider == TranslationProvider::Yandex;
+			}));
 	}
 }
 

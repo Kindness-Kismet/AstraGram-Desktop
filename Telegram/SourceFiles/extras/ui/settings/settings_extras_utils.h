@@ -24,7 +24,7 @@ struct NestedEntry
 	Fn<void(bool)> lockSetter;
 };
 
-void AddBetaBadge(not_null<Button*> parent);
+void AddBetaBadge(not_null<Button*> parent, rpl::producer<bool> visible);
 
 void SetupCopyLinkMenus(
 	not_null<Window::SessionController*> controller,
