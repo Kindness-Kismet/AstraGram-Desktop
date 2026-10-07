@@ -26,7 +26,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Core {
 
 QString TrayIconToolTip() {
-	const auto counter = Core::App().unreadBadge();
+	// extras: 隐藏未读角标时，提示也不带未读数。
+	const auto counter = ExtrasSettings::getInstance().hideNotificationBadge()
+		? 0
+		: Core::App().unreadBadge();
 	return (counter > 0)
 		? u"%1 (%2)"_q.arg(AppName.utf16()).arg(counter)
 		: AppName.utf16();
