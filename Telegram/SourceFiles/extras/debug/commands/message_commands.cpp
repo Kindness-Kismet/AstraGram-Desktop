@@ -222,16 +222,19 @@ using json = nlohmann::json;
 		}
 		auto bytes = QByteArray();
 		auto buffer = QBuffer(&bytes);
-		if (!image.save(&buffer, "PNG")) {
+		if (!image.save(&buffer, "JPG")) {
 			return Result::Err(u"could not encode the photo"_q);
 		}
 		const auto photo = MTP_photo(MTP_flags(0),
 			MTP_long(9000000000LL + messageId), MTP_long(0), MTP_bytes(),
 			MTP_int(base::unixtime::now()),
-			MTP_vector<MTPPhotoSize>({ MTP_photoCachedSize(
+			MTP_vector<MTPPhotoSize>({ MTP_photoSize(
 				MTP_string("y"), MTP_int(image.width()), MTP_int(image.height()),
-				MTP_bytes(bytes)) }),
+				MTP_int(bytes.size())) }),
 			MTPVector<MTPVideoSize>(), MTP_int(0));
+		session->data().processPhoto(photo, PreparedPhotoThumbs{
+			{ 'y', PreparedPhotoThumb{ .image = image, .bytes = bytes } },
+		});
 		media = MTP_messageMediaPhoto(
 			MTP_flags(MTPDmessageMediaPhoto::Flag::f_photo), photo, MTPint(), MTPDocument());
 	}
