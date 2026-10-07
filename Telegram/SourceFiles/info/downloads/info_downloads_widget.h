@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "info/info_content_widget.h"
+#include "info/downloads/info_downloads_common.h"
 #include "info/media/info_media_widget.h"
 
 namespace Ui {
@@ -37,9 +38,16 @@ public:
 	[[nodiscard]] const Media::Memento &media() const {
 		return _media;
 	}
+	void setTypeFilter(TypeFilter filter) {
+		_typeFilter = filter;
+	}
+	[[nodiscard]] TypeFilter typeFilter() const {
+		return _typeFilter;
+	}
 
 private:
 	Media::Memento _media;
+	TypeFilter _typeFilter = TypeFilter::All;
 
 };
 

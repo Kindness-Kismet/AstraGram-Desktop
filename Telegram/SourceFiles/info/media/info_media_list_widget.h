@@ -50,6 +50,10 @@ namespace Info {
 
 class AbstractController;
 
+namespace Downloads {
+enum class TypeFilter;
+} // namespace Downloads
+
 namespace Media {
 
 struct ListFoundItem;
@@ -99,6 +103,7 @@ public:
 	[[nodiscard]] bool allRowsDisplayed() const;
 	[[nodiscard]] bool hasRows() const;
 	void selectionAction(SelectionAction action);
+	void setDownloadsTypeFilter(Downloads::TypeFilter filter);
 	void setSelectOnClick(bool enabled);
 	void setSelectedLimit(int limit);
 

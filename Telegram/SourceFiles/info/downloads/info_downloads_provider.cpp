@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_item_helpers.h"
 #include "history/history.h"
 #include "core/application.h"
+#include "core/mime_type.h"
 #include "storage/storage_shared_media.h"
 #include "layout/layout_selection.h"
 #include "styles/style_overview.h"
@@ -31,6 +32,49 @@ namespace Info::Downloads {
 namespace {
 
 using namespace Media;
+
+[[nodiscard]] TypeFilter ClassifyFile(
+		not_null<HistoryItem*> item,
+		const QString &path) {
+	const auto media = item->media();
+	const auto document = media ? media->document() : nullptr;
+	if (!document || document->isVoiceMessage() || document->sticker()) {
+		return TypeFilter::Other;
+	}
+	if (document->isSong()) {
+		return TypeFilter::Music;
+	}
+	if (document->isVideoFile() || document->isVideoMessage()) {
+		return TypeFilter::Video;
+	}
+	const auto filename = document->filename();
+	const auto name = filename.isEmpty() ? path : filename;
+	const auto nameType = filename.isEmpty()
+		? Core::DetectNameType(path)
+		: document->nameType();
+	if (nameType == Core::NameType::Archive) {
+		return TypeFilter::Archive;
+	}
+	const auto mime = document->mimeString();
+	if (mime.startsWith(u"video/"_q, Qt::CaseInsensitive)) {
+		return TypeFilter::Video;
+	}
+	if (document->isAudioFile()
+		|| mime.startsWith(u"audio/"_q, Qt::CaseInsensitive)) {
+		return TypeFilter::Music;
+	}
+	if (nameType == Core::NameType::Video) {
+		const auto extension = Core::FileExtension(name).toLower();
+		// 字幕、工程文件与动画贴纸不是视频文件。
+		return (extension == u"srt" || extension == u"aep"
+			|| extension == u"tgs" || extension == u"tgv")
+			? TypeFilter::Other
+			: TypeFilter::Video;
+	}
+	return (nameType == Core::NameType::Audio)
+		? TypeFilter::Music
+		: TypeFilter::Other;
+}
 
 } // namespace
 
@@ -76,9 +120,7 @@ bool Provider::isPossiblyMyItem(not_null<const HistoryItem*> item) {
 }
 
 std::optional<int> Provider::fullCount() {
-	return _queryWords.empty()
-		? _fullCount
-		: (_foundCount || _fullCount.has_value())
+	return (_foundCount || _fullCount.has_value())
 		? _foundCount
 		: std::optional<int>();
 }
@@ -100,19 +142,31 @@ void Provider::setSearchQuery(QString query) {
 	}
 	_query = query;
 	auto words = TextUtilities::PrepareSearchWords(_query);
-	if (!_started || _queryWords == words) {
+	if (_queryWords == words) {
 		return;
 	}
 	_queryWords = std::move(words);
-	if (searchMode()) {
-		_foundCount = 0;
-		for (auto &element : _elements) {
-			if ((element.found = computeIsFound(element))) {
-				++_foundCount;
-			}
+	refreshFoundElements();
+}
+
+void Provider::setTypeFilter(TypeFilter filter) {
+	if (_typeFilter == filter) {
+		return;
+	}
+	_typeFilter = filter;
+	refreshFoundElements();
+}
+
+void Provider::refreshFoundElements() {
+	_foundCount = 0;
+	for (auto &element : _elements) {
+		if ((element.found = computeIsFound(element))) {
+			++_foundCount;
 		}
 	}
-	_refreshed.fire({});
+	if (_started) {
+		_refreshed.fire({});
+	}
 }
 
 void Provider::jumpToMessage(MsgId messageId, Fn<void(FullMsgId)>) {
@@ -124,33 +178,17 @@ void Provider::refreshViewer() {
 	}
 	_started = true;
 	auto &manager = Core::App().downloadManager();
-	rpl::single(rpl::empty) | rpl::then(
-		manager.loadingListChanges() | rpl::to_empty
-	) | rpl::on_next([=, &manager] {
-		auto copy = _downloading;
-		for (const auto id : manager.loadingList()) {
-			if (!id->done) {
-				const auto item = id->object.item;
-				if (!copy.remove(item) && !_downloaded.contains(item)) {
-					_downloading.emplace(item);
-					addElementNow({
-						.item = item,
-						.started = id->started,
-						.path = id->path,
-					});
-					trackItemSession(item);
-					refreshPostponed(true);
-				}
-			}
+	manager.loadingListChanges() | rpl::on_next([=] {
+		if (_postponedLoadingRefresh) {
+			return;
 		}
-		for (const auto &item : copy) {
-			Assert(!_downloaded.contains(item));
-			remove(item);
-		}
-		if (!_fullCount.has_value()) {
-			refreshPostponed(false);
-		}
+		_postponedLoadingRefresh = true;
+		Ui::PostponeCall(this, [=] {
+			_postponedLoadingRefresh = false;
+			refreshLoadingList();
+		});
 	}, _lifetime);
+	refreshLoadingList();
 
 	for (const auto id : manager.loadedList()) {
 		addPostponed(id);
@@ -177,11 +215,42 @@ void Provider::refreshViewer() {
 	) | rpl::on_next([=] {
 		if (!_fullCount.has_value()) {
 			_fullCount = 0;
+			refreshPostponed(false);
 		}
 	}, _lifetime);
 
 	performAdd();
 	performRefresh();
+}
+
+void Provider::refreshLoadingList() {
+	// 普通下载与外部下载的完成通知顺序不同，批次结束后统一核对。
+	performAdd();
+	auto copy = _downloading;
+	for (const auto id : Core::App().downloadManager().loadingList()) {
+		if (id->done) {
+			continue;
+		}
+		const auto item = id->object.item;
+		if (copy.remove(item) || _downloaded.contains(item)) {
+			continue;
+		}
+		_downloading.emplace(item);
+		addElementNow({
+			.item = item,
+			.started = id->started,
+			.path = id->path,
+		});
+		trackItemSession(item);
+		refreshPostponed(true);
+	}
+	for (const auto item : copy) {
+		Assert(!_downloaded.contains(item));
+		remove(item);
+	}
+	if (!_fullCount.has_value()) {
+		refreshPostponed(false);
+	}
 }
 
 void Provider::addPostponed(not_null<const Data::DownloadedId*> entry) {
@@ -191,6 +260,9 @@ void Provider::addPostponed(not_null<const Data::DownloadedId*> entry) {
 	trackItemSession(item);
 	const auto i = ranges::find(_addPostponed, item, &Element::item);
 	if (i != end(_addPostponed)) {
+		if (i->started > entry->started) {
+			return;
+		}
 		i->path = entry->path;
 		i->started = entry->started;
 	} else {
@@ -212,9 +284,25 @@ void Provider::performAdd() {
 		return;
 	}
 	for (auto &element : base::take(_addPostponed)) {
-		_downloaded.emplace(element.item);
-		if (!_downloading.remove(element.item)) {
+		const auto added = _downloaded.emplace(element.item).second;
+		const auto wasDownloading = _downloading.remove(element.item);
+		if (added && !wasDownloading) {
 			addElementNow(std::move(element));
+			continue;
+		}
+		const auto i = ranges::find(_elements, element.item, &Element::item);
+		Assert(i != end(_elements));
+		if (i->started > element.started) {
+			continue;
+		}
+		const auto dateChanged = i->started != element.started;
+		_foundCount -= i->found;
+		*i = std::move(element);
+		fillSearchIndex(*i);
+		i->found = computeIsFound(*i);
+		_foundCount += i->found;
+		if (dateChanged) {
+			_layoutsToRecreate.emplace(i->item);
 		}
 	}
 	refreshPostponed(true);
@@ -224,7 +312,7 @@ void Provider::addElementNow(Element &&element) {
 	_elements.push_back(std::move(element));
 	auto &added = _elements.back();
 	fillSearchIndex(added);
-	added.found = searchMode() && computeIsFound(added);
+	added.found = computeIsFound(added);
 	if (added.found) {
 		++_foundCount;
 	}
@@ -239,23 +327,25 @@ void Provider::remove(not_null<const HistoryItem*> item) {
 	const auto proj = [&](const Element &element) {
 		if (element.item != item) {
 			return false;
-		} else if (element.found && searchMode()) {
+		}
+		if (element.found) {
 			--_foundCount;
 		}
 		return true;
 	};
 	_elements.erase(ranges::remove_if(_elements, proj), end(_elements));
-	if (const auto i = _layouts.find(item); i != end(_layouts)) {
-		_layoutRemoved.fire(i->second.item.get());
-		// The list widget handles layoutRemoved() synchronously and may
-		// refresh its height from there, which can reach refreshViewer()
-		// -> refreshRows() -> fillSections() -> clearStaleLayouts() before
-		// we get back here, erasing this very entry, so look it up again.
-		if (const auto j = _layouts.find(item); j != end(_layouts)) {
-			_layouts.erase(j);
-		}
-	}
+	_layoutsToRecreate.remove(item);
+	removeLayout(item);
 	refreshPostponed(false);
+}
+
+void Provider::removeLayout(not_null<const HistoryItem*> item) {
+	if (const auto i = _layouts.find(item); i != end(_layouts)) {
+		auto layout = std::move(i->second.item);
+		_layouts.erase(i);
+		// 通知可能同步重建布局，旧布局在通知结束后才销毁。
+		_layoutRemoved.fire(layout.get());
+	}
 }
 
 void Provider::refreshPostponed(bool added) {
@@ -281,6 +371,9 @@ void Provider::performRefresh() {
 	if (base::take(_postponedRefreshSort)) {
 		ranges::sort(_elements, ranges::less(), &Element::started);
 	}
+	for (const auto item : base::take(_layoutsToRecreate)) {
+		removeLayout(item);
+	}
 	_refreshed.fire({});
 }
 
@@ -296,6 +389,19 @@ void Provider::trackItemSession(not_null<const HistoryItem*> item) {
 		itemRemoved(item);
 	}, lifetime);
 
+	session->data().itemDataChanges(
+	) | rpl::on_next([=](not_null<HistoryItem*> item) {
+		const auto i = ranges::find(_elements, item, &Element::item);
+		if (i == end(_elements)) {
+			return;
+		}
+		_foundCount -= i->found;
+		fillSearchIndex(*i);
+		i->found = computeIsFound(*i);
+		_foundCount += i->found;
+		refreshPostponed(false);
+	}, lifetime);
+
 	session->account().sessionChanges(
 	) | rpl::take(1) | rpl::on_next([=] {
 		_trackedSessions.remove(session);
@@ -308,14 +414,10 @@ rpl::producer<> Provider::refreshed() {
 
 std::vector<ListSection> Provider::fillSections(
 		not_null<Overview::Layout::Delegate*> delegate) {
-	const auto search = searchMode();
-
-	if (!search) {
-		markLayoutsStale();
-	}
+	markLayoutsStale();
 	const auto guard = gsl::finally([&] { clearStaleLayouts(); });
 
-	if (_elements.empty() || (search && !_foundCount)) {
+	if (!_foundCount) {
 		return {};
 	}
 
@@ -323,9 +425,10 @@ std::vector<ListSection> Provider::fillSections(
 	result.emplace_back(Type::File, sectionDelegate());
 	auto &section = result.back();
 	for (const auto &element : ranges::views::reverse(_elements)) {
-		if (search && !element.found) {
+		if (!element.found) {
 			continue;
-		} else if (auto layout = getLayout(element, delegate)) {
+		}
+		if (auto layout = getLayout(element, delegate)) {
 			section.addItem(layout);
 		}
 	}
@@ -359,7 +462,8 @@ BaseLayout *Provider::lookupLayout(const HistoryItem *item) {
 }
 
 bool Provider::isMyItem(not_null<const HistoryItem*> item) {
-	return _downloading.contains(item) || _downloaded.contains(item);
+	const auto i = ranges::find(_elements, item, &Element::item);
+	return (i != end(_elements)) && i->found;
 }
 
 bool Provider::isAfter(
@@ -375,10 +479,6 @@ bool Provider::isAfter(
 		}
 	}
 	return false;
-}
-
-bool Provider::searchMode() const {
-	return !_queryWords.empty();
 }
 
 void Provider::fillSearchIndex(Element &element) {
@@ -397,7 +497,10 @@ void Provider::fillSearchIndex(Element &element) {
 }
 
 bool Provider::computeIsFound(const Element &element) const {
-	Expects(!_queryWords.empty());
+	if (_typeFilter != TypeFilter::All
+		&& _typeFilter != ClassifyFile(element.item, element.path)) {
+		return false;
+	}
 
 	const auto has = [&](const QString &queryWord) {
 		if (!element.letters.contains(queryWord.front())) {
@@ -515,14 +618,13 @@ void Provider::applyDragSelection(
 		selected.clear();
 		return;
 	}
-	const auto search = !_queryWords.isEmpty();
 	const auto selectLimit = _storiesAddToAlbumId
 		? _controller->session().appConfig().storiesAlbumLimit()
 		: MaxSelectedItems;
 	auto chosen = base::flat_set<not_null<const HistoryItem*>>();
 	chosen.reserve(till - from);
 	for (auto i = from; i != till; ++i) {
-		if (search && !i->found) {
+		if (!i->found) {
 			continue;
 		}
 		const auto item = i->item;
@@ -535,7 +637,7 @@ void Provider::applyDragSelection(
 	}
 	if (selected.size() != chosen.size()) {
 		for (auto i = begin(selected); i != end(selected);) {
-			if (selected.contains(i->first)) {
+			if (chosen.contains(i->first)) {
 				++i;
 			} else {
 				i = selected.erase(i);
@@ -563,19 +665,24 @@ int64 Provider::scrollTopStatePosition(not_null<HistoryItem*> item) {
 }
 
 HistoryItem *Provider::scrollTopStateItem(ListScrollTopState state) {
-	if (!state.position) {
-		return _elements.empty() ? nullptr : _elements.back().item.get();
-	}
-	const auto i = ranges::lower_bound(
+	auto i = ranges::lower_bound(
 		_elements,
 		state.position,
 		ranges::less(),
 		&Element::started);
-	return (i != end(_elements))
-		? i->item.get()
-		: _elements.empty()
-		? nullptr
-		: _elements.back().item.get();
+	if (state.position) {
+		for (; i != end(_elements); ++i) {
+			if (i->found) {
+				return i->item.get();
+			}
+		}
+	}
+	for (const auto &element : ranges::views::reverse(_elements)) {
+		if (element.found) {
+			return element.item.get();
+		}
+	}
+	return nullptr;
 }
 
 void Provider::saveState(

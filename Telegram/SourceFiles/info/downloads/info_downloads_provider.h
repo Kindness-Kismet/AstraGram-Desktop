@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "info/media/info_media_common.h"
+#include "info/downloads/info_downloads_common.h"
 #include "base/weak_ptr.h"
 
 namespace Data {
@@ -45,6 +46,7 @@ public:
 	rpl::producer<> refreshed() override;
 
 	void setSearchQuery(QString query) override;
+	void setTypeFilter(TypeFilter filter);
 	void jumpToMessage(MsgId messageId, Fn<void(FullMsgId)> callback) override;
 
 	std::vector<Media::ListSection> fillSections(
@@ -101,15 +103,17 @@ private:
 		not_null<const Media::BaseLayout*> item,
 		not_null<const Media::BaseLayout*> previous) override;
 
-	[[nodiscard]] bool searchMode() const;
 	void fillSearchIndex(Element &element);
 	[[nodiscard]] bool computeIsFound(const Element &element) const;
+	void refreshFoundElements();
 
 	void itemRemoved(not_null<const HistoryItem*> item);
+	void removeLayout(not_null<const HistoryItem*> item);
 	void markLayoutsStale();
 	void clearStaleLayouts();
 
 	void refreshPostponed(bool added);
+	void refreshLoadingList();
 	void addPostponed(not_null<const Data::DownloadedId*> entry);
 	void performRefresh();
 	void performAdd();
@@ -137,16 +141,19 @@ private:
 	std::unordered_map<
 		not_null<const HistoryItem*>,
 		Media::CachedItem> _layouts;
+	base::flat_set<not_null<const HistoryItem*>> _layoutsToRecreate;
 	rpl::event_stream<not_null<Media::BaseLayout*>> _layoutRemoved;
 	rpl::event_stream<> _refreshed;
 
 	QString _query;
 	QStringList _queryWords;
+	TypeFilter _typeFilter = TypeFilter::All;
 	int _foundCount = 0;
 
 	base::flat_map<not_null<Main::Session*>, rpl::lifetime> _trackedSessions;
 	bool _postponedRefreshSort = false;
 	bool _postponedRefresh = false;
+	bool _postponedLoadingRefresh = false;
 	bool _started = false;
 
 	rpl::lifetime _lifetime;

@@ -213,6 +213,10 @@ void ListWidget::start() {
 		}
 		_heavyLayouts.remove(layout);
 		_rowsScrollCache.invalidate(GetLayoutCacheKey(layout));
+		if (_controller->isDownloads()
+			&& !_provider->isMyItem(layout->getItem())) {
+			itemRemoved(layout->getItem());
+		}
 		removeLayoutFromSections(layout);
 	}, lifetime());
 
@@ -226,6 +230,7 @@ void ListWidget::start() {
 
 		_controller->searchQueryValue(
 		) | rpl::on_next([this](QString &&query) {
+			clearSelected();
 			_provider->setSearchQuery(std::move(query));
 		}, lifetime());
 	} else if (_controller->storiesPeer()) {
@@ -478,6 +483,13 @@ void ListWidget::selectionAction(SelectionAction action) {
 
 void ListWidget::setSelectOnClick(bool enabled) {
 	_selectOnClick = enabled;
+}
+
+void ListWidget::setDownloadsTypeFilter(Downloads::TypeFilter filter) {
+	Expects(_controller->isDownloads());
+	clearSelected();
+	_scrollTopState = {};
+	static_cast<Downloads::Provider*>(_provider.get())->setTypeFilter(filter);
 }
 
 void ListWidget::setSelectedLimit(int limit) {

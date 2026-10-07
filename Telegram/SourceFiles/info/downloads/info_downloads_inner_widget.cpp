@@ -11,18 +11,35 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/media/info_media_list_widget.h"
 #include "info/info_controller.h"
 #include "ui/widgets/labels.h"
+#include "ui/widgets/buttons.h"
+#include "ui/widgets/popup_menu.h"
 #include "ui/search_field_controller.h"
 #include "lang/lang_keys.h"
 #include "styles/style_info.h"
+#include "styles/style_media_player.h"
 
 namespace Info::Downloads {
+namespace {
+
+[[nodiscard]] QString TypeFilterLabel(TypeFilter filter) {
+	switch (filter) {
+	case TypeFilter::All: return tr::extras_DownloadsTypeAll(tr::now);
+	case TypeFilter::Archive: return tr::extras_DownloadsTypeArchive(tr::now);
+	case TypeFilter::Music: return tr::extras_DownloadsTypeMusic(tr::now);
+	case TypeFilter::Video: return tr::extras_DownloadsTypeVideo(tr::now);
+	case TypeFilter::Other: return tr::extras_DownloadsTypeOther(tr::now);
+	}
+	Unexpected("Invalid download type filter.");
+}
+
+} // namespace
 
 class EmptyWidget : public Ui::RpWidget {
 public:
 	EmptyWidget(QWidget *parent);
 
 	void setFullHeight(rpl::producer<int> fullHeightValue);
-	void setSearchQuery(const QString &query);
+	void setFilter(const QString &query, TypeFilter filter);
 
 protected:
 	int resizeGetHeight(int newWidth) override;
@@ -53,8 +70,10 @@ void EmptyWidget::setFullHeight(rpl::producer<int> fullHeightValue) {
 	}, lifetime());
 }
 
-void EmptyWidget::setSearchQuery(const QString &query) {
-	_text->setText(query.isEmpty()
+void EmptyWidget::setFilter(const QString &query, TypeFilter filter) {
+	_text->setText(filter != TypeFilter::All
+		? tr::extras_DownloadsEmptyFilter(tr::now)
+		: query.isEmpty()
 		? tr::lng_media_file_empty(tr::now)
 		: tr::lng_media_file_empty_search(tr::now));
 	resizeToWidth(width());
@@ -86,6 +105,16 @@ InnerWidget::InnerWidget(
 : RpWidget(parent)
 , _controller(controller)
 , _empty(this) {
+	_typeButton.create(
+		this,
+		_typeFilter.value() | rpl::map([](TypeFilter filter) {
+			return tr::extras_DownloadsTypeFilter(
+				lt_type,
+				rpl::single(TypeFilterLabel(filter)));
+		}) | rpl::flatten_latest(),
+		st::infoProfileButton);
+	_typeButton->setObjectName(u"downloads/typeFilter"_q);
+	_typeButton->setClickedCallback([=] { showTypeMenu(); });
 	_empty->heightValue(
 	) | rpl::on_next(
 		[this] { refreshHeight(); },
@@ -127,17 +156,55 @@ object_ptr<Media::ListWidget> InnerWidget::setupList() {
 	_listTops.fire(result->topValue());
 	_controller->searchQueryValue(
 	) | rpl::on_next([this](const QString &query) {
-		_empty->setSearchQuery(query);
+		_searchQuery = query;
+		refreshEmptyText();
 	}, result->lifetime());
 	return result;
 }
 
 void InnerWidget::saveState(not_null<Memento*> memento) {
+	memento->setTypeFilter(_typeFilter.current());
 	_list->saveState(&memento->media());
 }
 
 void InnerWidget::restoreState(not_null<Memento*> memento) {
+	setTypeFilter(memento->typeFilter());
 	_list->restoreState(&memento->media());
+}
+
+void InnerWidget::showTypeMenu() {
+	_typeMenu = base::make_unique_q<Ui::PopupMenu>(this, st::popupMenuWithIcons);
+	for (const auto filter : {
+		TypeFilter::All,
+		TypeFilter::Archive,
+		TypeFilter::Music,
+		TypeFilter::Video,
+		TypeFilter::Other,
+	}) {
+		_typeMenu->addAction(TypeFilterLabel(filter), [=] {
+			if (_typeFilter.current() == filter) {
+				return;
+			}
+			setTypeFilter(filter);
+			_scrollToRequests.fire({ 0, -1 });
+		}, (filter == _typeFilter.current())
+			? &st::mediaPlayerMenuCheck
+			: nullptr);
+	}
+	_typeMenu->popup(_typeButton->mapToGlobal(QPoint(0, _typeButton->height())));
+}
+
+void InnerWidget::setTypeFilter(TypeFilter filter) {
+	if (_typeFilter.current() == filter) {
+		return;
+	}
+	_typeFilter = filter;
+	refreshEmptyText();
+	_list->setDownloadsTypeFilter(filter);
+}
+
+void InnerWidget::refreshEmptyText() {
+	_empty->setFilter(_searchQuery, _typeFilter.current());
 }
 
 rpl::producer<SelectedItems> InnerWidget::selectedListValue() const {
@@ -158,6 +225,7 @@ int InnerWidget::resizeGetHeight(int newWidth) {
 
 	_list->resizeToWidth(newWidth);
 	_empty->resizeToWidth(newWidth);
+	_typeButton->resizeToWidth(newWidth);
 	return recountHeight();
 }
 
@@ -170,6 +238,10 @@ void InnerWidget::refreshHeight() {
 
 int InnerWidget::recountHeight() {
 	auto top = 0;
+	if (_typeButton) {
+		_typeButton->moveToLeft(0, top);
+		top += _typeButton->heightNoMargins();
+	}
 	auto listHeight = 0;
 	if (_list) {
 		_list->moveToLeft(0, top);

@@ -9442,6 +9442,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_MentionByIdLoading" = "Identifying user…";
 "extras_MentionByIdFailed" = "Could not retrieve this user. Check your connection or try again later.";
 "extras_MentionByIdResolved" = "Identified: {user}";
+"extras_DownloadsTypeFilter" = "File type: {type}";
+"extras_DownloadsTypeAll" = "All";
+"extras_DownloadsTypeArchive" = "Archives";
+"extras_DownloadsTypeMusic" = "Music";
+"extras_DownloadsTypeVideo" = "Videos";
+"extras_DownloadsTypeOther" = "Other files";
+"extras_DownloadsEmptyFilter" = "No files match the current filters";
 "extras_SettingsTransferTitle" = "Transfer settings";
 "extras_SettingsTransferExport" = "Export settings";
 "extras_SettingsTransferImport" = "Import settings";
