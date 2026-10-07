@@ -9431,6 +9431,17 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DisableBubbleShadow" = "Disable bubble shadows";
 "extras_DisableBubbleShadowDescription" = "Remove shadows around incoming and outgoing message bubbles. Takes effect immediately.";
 
+"extras_MentionById" = "Mention by user ID";
+"extras_MentionByIdUserId" = "User ID";
+"extras_MentionByIdText" = "Display text (optional)";
+"extras_MentionByIdResolve" = "Identify user";
+"extras_MentionByIdInsert" = "Insert mention";
+"extras_MentionByIdHint" = "Enter a user ID, then confirm the name before inserting. This account needs existing user details or an accessible message context.";
+"extras_MentionByIdInvalid" = "Enter a valid positive user ID.";
+"extras_MentionByIdUnknown" = "This account cannot identify that user. Open a message sent by or mentioning them, then try again.";
+"extras_MentionByIdLoading" = "Identifying user…";
+"extras_MentionByIdFailed" = "Could not retrieve this user. Check your connection or try again later.";
+"extras_MentionByIdResolved" = "Identified: {user}";
 "extras_SettingsTransferTitle" = "Transfer settings";
 "extras_SettingsTransferExport" = "Export settings";
 "extras_SettingsTransferImport" = "Import settings";

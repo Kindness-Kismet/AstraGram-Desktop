@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/message_field.h"
 
 #include "extras/ui/components/chat_surface_button.h"
+#include "extras/features/mention_by_id/mention_by_id.h"
 #include "ui/chat/floating_bar.h"
 #include "history/history_widget.h"
 #include "history/history.h" // History::session
@@ -759,6 +760,7 @@ std::shared_ptr<Ui::ChatStyle> InitMessageField(
 		.allowPremiumEmoji = std::move(allowPremiumEmoji),
 	});
 	InitMessageFieldGeometry(field);
+	ExtrasMentionById::install(show, field);
 	return style;
 }
 

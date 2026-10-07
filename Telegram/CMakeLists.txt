@@ -113,6 +113,8 @@ PRIVATE
 )
 
 set(extras_files
+        extras/features/mention_by_id/mention_by_id.cpp
+        extras/features/mention_by_id/mention_by_id.h
         extras/features/settings_transfer/settings_transfer.cpp
         extras/features/settings_transfer/settings_transfer.h
         extras/features/settings_transfer/settings_transfer_fields.cpp
