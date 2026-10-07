@@ -18,6 +18,7 @@ VideoBubble::VideoBubble(
 	not_null<QWidget*> parent,
 	not_null<Webrtc::VideoTrack*> track)
 : _content(parent)
+, _shadow(st::boxRoundShadow)
 , _track(track)
 , _state(Webrtc::VideoState::Inactive) {
 	setup();
@@ -121,9 +122,8 @@ void VideoBubble::paint() {
 
 	prepareFrame();
 	if (!_frame.isNull()) {
-		const auto padding = st::boxRoundShadow.extend;
-		const auto inner = _content.rect().marginsRemoved(padding);
-		Ui::Shadow::paint(p, inner, _content.width(), st::boxRoundShadow);
+		const auto inner = _content.rect().marginsRemoved(_shadow.extend());
+		_shadow.paint(p, inner, st::roundRadiusLarge);
 		const auto factor = style::DevicePixelRatio();
 		const auto left = _mirrored
 			? (_frame.width() - (inner.width() * factor))
@@ -142,8 +142,7 @@ void VideoBubble::prepareFrame() {
 		_frame = QImage();
 		return;
 	}
-	const auto padding = st::boxRoundShadow.extend;
-	const auto size = (_content.rect() - padding).size()
+	const auto size = (_content.rect() - _shadow.extend()).size()
 		* style::DevicePixelRatio();
 
 	// Should we check 'original' and 'size' aspect ratios?..
@@ -250,7 +249,7 @@ void VideoBubble::setInnerSize(QSize size) {
 		Unexpected("Corner value in VideoBubble::setInnerSize.");
 	}();
 	const auto inner = QRect(topLeft, size);
-	_content.setGeometry(inner.marginsAdded(st::boxRoundShadow.extend));
+	_content.setGeometry(inner.marginsAdded(_shadow.extend()));
 }
 
 void VideoBubble::updateVisibility() {

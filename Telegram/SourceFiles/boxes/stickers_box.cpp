@@ -35,6 +35,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/discrete_sliders.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/shadow.h"
+#include "ui/layers/box_layer_shadow.h"
 #include "ui/cached_round_corners.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
@@ -1470,7 +1471,7 @@ void StickersBox::Inner::paintRow(
 				width() - _st.photoPosition.x() - _scrollbar,
 				_rowHeight - _st.photoPosition.y());
 			p.setOpacity(current);
-			Ui::Shadow::paint(p, rect, width(), st::boxRoundShadow);
+			Ui::PaintBoxLayerShadow(p, rect);
 			p.setOpacity(1);
 
 			Ui::FillRoundRect(p, rect, st::boxBg, Ui::BoxCorners);

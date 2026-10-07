@@ -50,7 +50,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/dropdown_menu.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/menu/menu_action.h"
-#include "ui/widgets/shadow.h"
+#include "ui/layers/box_layer_shadow.h"
 #include "ui/wrap/slide_wrap.h"
 #include "window/window_session_controller.h"
 #include "styles/style_boxes.h"
@@ -468,7 +468,7 @@ void ShowPollDocumentPreview(
 	}();
 
 	ShowWidgetPreview(controller, [=](not_null<Ui::RpWidget*> preview) {
-		const auto shadowExtend = st::boxRoundShadow.extend;
+		const auto shadowExtend = Ui::BoxLayerShadowExtend();
 		const auto fullW = st::mediaviewFileSize.width()
 			+ rect::m::sum::h(shadowExtend);
 		const auto fullH = st::mediaviewFileSize.height()
@@ -486,11 +486,7 @@ void ShowPollDocumentPreview(
 			auto p = Painter(preview);
 			const auto outer = preview->rect() - shadowExtend;
 
-			Ui::Shadow::paint(
-				p,
-				outer,
-				preview->width(),
-				st::boxRoundShadow);
+			Ui::PaintBoxLayerShadow(p, outer);
 			{
 				auto hq = PainterHighQualityEnabler(p);
 				p.setPen(Qt::NoPen);
@@ -595,7 +591,7 @@ void ShowPollGeoPreview(
 			side,
 			(side * st::locationSize.height()
 				/ st::locationSize.width()));
-		const auto shadowExtend = st::boxRoundShadow.extend;
+		const auto shadowExtend = Ui::BoxLayerShadowExtend();
 		const auto fullW = scaled.width()
 			+ rect::m::sum::h(shadowExtend);
 		const auto fullH = scaled.height()
@@ -611,11 +607,7 @@ void ShowPollGeoPreview(
 			auto p = Painter(preview);
 			const auto outer = preview->rect() - shadowExtend;
 
-			Ui::Shadow::paint(
-				p,
-				outer,
-				preview->width(),
-				st::boxRoundShadow);
+			Ui::PaintBoxLayerShadow(p, outer);
 			auto hq = PainterHighQualityEnabler(p);
 			p.setPen(Qt::NoPen);
 			p.setBrush(st::windowBg);

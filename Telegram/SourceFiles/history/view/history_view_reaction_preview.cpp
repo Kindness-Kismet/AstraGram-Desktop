@@ -19,13 +19,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
 #include "mainwindow.h"
-#include "ui/cached_special_layer_shadow_corners.h"
 #include "ui/effects/show_animation.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/dropdown_menu.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/popup_menu.h"
-#include "ui/widgets/shadow.h"
+#include "ui/layers/box_layer_shadow.h"
 #include "ui/wrap/fade_wrap.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
@@ -230,7 +229,7 @@ bool ShowReactionPreview(
 	const auto &state = overlay.state;
 
 	const auto mainwidget = controller->widget()->bodyWidget();
-	const auto shadowExtend = st::boxRoundShadow.extend;
+	const auto shadowExtend = Ui::BoxLayerShadowExtend();
 
 	if (reactionId.custom() && document->sticker()) {
 		const auto setId = document->sticker()->set;
@@ -262,13 +261,7 @@ bool ShowReactionPreview(
 
 			backgroundRaw->paintOn([=](QPainter &p) {
 				const auto innerRect = backgroundRaw->rect() - shadowExtend;
-				Ui::Shadow::paint(
-					p,
-					innerRect,
-					backgroundRaw->width(),
-					st::boxRoundShadow,
-					Ui::SpecialLayerShadowCorners(),
-					RectPart::Full);
+				Ui::PaintBoxLayerShadow(p, innerRect);
 				auto hq = PainterHighQualityEnabler(p);
 				p.setPen(Qt::NoPen);
 				p.setBrush(st::windowBg);

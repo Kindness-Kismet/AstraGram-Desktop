@@ -16,7 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_widget.h"
 #include "storage/localstorage.h"
 #include "lang/lang_keys.h"
-#include "ui/widgets/shadow.h"
+#include "ui/layers/box_layer_shadow.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "ui/cached_round_corners.h"
@@ -602,14 +602,14 @@ void DragArea::paintEvent(QPaintEvent *e) {
 
 	if (!_cache.isNull()) {
 		p.drawPixmapLeft(
-			inner.x() - st::boxRoundShadow.extend.left(),
-			inner.y() - st::boxRoundShadow.extend.top(),
+			inner.x() - Ui::BoxLayerShadowExtend().left(),
+			inner.y() - Ui::BoxLayerShadowExtend().top(),
 			width(),
 			_cache);
 		return;
 	}
 
-	Ui::Shadow::paint(p, inner, width(), st::boxRoundShadow);
+	Ui::PaintBoxLayerShadow(p, inner);
 	Ui::FillRoundRect(p, inner, st::boxBg, Ui::BoxCorners);
 
 	p.setPen(anim::pen(
@@ -672,7 +672,7 @@ void DragArea::hideStart() {
 	if (_cache.isNull()) {
 		_cache = Ui::GrabWidget(
 			this,
-			rect() - st::dragPadding + st::boxRoundShadow.extend);
+			rect() - st::dragPadding + Ui::BoxLayerShadowExtend());
 	}
 	_hiding = true;
 	setIn(false);
@@ -697,7 +697,7 @@ void DragArea::showStart() {
 	if (_cache.isNull()) {
 		_cache = Ui::GrabWidget(
 			this,
-			rect() - st::dragPadding + st::boxRoundShadow.extend);
+			rect() - st::dragPadding + Ui::BoxLayerShadowExtend());
 	}
 	show();
 	_a_opacity.start(

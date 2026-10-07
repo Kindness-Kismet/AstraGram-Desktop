@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/continuous_sliders.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/level_meter.h"
+#include "ui/widgets/shadow.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "webrtc/webrtc_audio_input_tester.h"
@@ -788,8 +789,9 @@ Webrtc::VideoTrack *AddCameraSubsection(
 		bubbleWrap,
 		track);
 	const auto padding = st::settingsButtonNoIcon.padding.left();
-	const auto top = st::boxRoundShadow.extend.top();
-	const auto bottom = st::boxRoundShadow.extend.bottom();
+	const auto shadowExtend = Ui::BoxShadow::ExtendFor(st::boxRoundShadow);
+	const auto top = shadowExtend.top();
+	const auto bottom = shadowExtend.bottom();
 
 	auto frameSize = track->renderNextFrame(
 	) | rpl::map([=] {

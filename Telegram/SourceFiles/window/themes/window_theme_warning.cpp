@@ -8,7 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/themes/window_theme_warning.h"
 
 #include "ui/widgets/buttons.h"
-#include "ui/widgets/shadow.h"
+#include "ui/layers/box_layer_shadow.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "ui/cached_round_corners.h"
@@ -62,7 +62,7 @@ void WarningWidget::paintEvent(QPaintEvent *e) {
 		return;
 	}
 
-	Ui::Shadow::paint(p, _inner, width(), st::boxRoundShadow);
+	Ui::PaintBoxLayerShadow(p, _inner);
 	Ui::FillRoundRect(p, _inner, st::boxBg, Ui::BoxCorners);
 
 	p.setFont(st::boxTitleFont);
@@ -76,7 +76,7 @@ void WarningWidget::paintEvent(QPaintEvent *e) {
 
 void WarningWidget::resizeEvent(QResizeEvent *e) {
 	_inner = QRect((width() - st::themeWarningWidth) / 2, (height() - st::themeWarningHeight) / 2, st::themeWarningWidth, st::themeWarningHeight);
-	_outer = _inner.marginsAdded(st::boxRoundShadow.extend);
+	_outer = _inner.marginsAdded(Ui::BoxLayerShadowExtend());
 	updateControlsGeometry();
 	update();
 }

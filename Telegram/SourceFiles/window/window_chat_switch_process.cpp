@@ -18,7 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
 #include "ui/widgets/labels.h"
-#include "ui/widgets/shadow.h"
+#include "ui/layers/box_layer_shadow.h"
 #include "ui/controls/userpic_button.h"
 #include "ui/painter.h"
 #include "ui/rp_widget.h"
@@ -406,7 +406,7 @@ void ChatSwitchProcess::setupView() {
 		}
 		auto p = QPainter(_view);
 		p.translate(-_shadowed.topLeft());
-		Ui::Shadow::paint(p, _outer, _view->width(), st::boxRoundShadow);
+		Ui::PaintBoxLayerShadow(p, _outer);
 		_bg.paint(p, _outer);
 	}, _view->lifetime());
 
@@ -467,7 +467,7 @@ void ChatSwitchProcess::layout(QSize size) {
 		height);
 	_outer = _inner.marginsAdded(st::chatSwitchPadding);
 
-	const auto padding = st::boxRoundShadow.extend + st::chatSwitchPadding;
+	const auto padding = Ui::BoxLayerShadowExtend() + st::chatSwitchPadding;
 
 	auto index = 0;
 	auto top = padding.top();
@@ -485,7 +485,7 @@ void ChatSwitchProcess::layout(QSize size) {
 		_entries[i].button->hide();
 	}
 
-	_shadowed = _outer.marginsAdded(st::boxRoundShadow.extend);
+	_shadowed = _outer.marginsAdded(Ui::BoxLayerShadowExtend());
 	_view->setGeometry(_shadowed);
 }
 

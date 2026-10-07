@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "ui/rect_part.h"
 #include "ui/rp_widget.h"
+#include "ui/widgets/shadow.h"
 
 namespace Webrtc {
 class VideoTrack;
@@ -55,6 +56,7 @@ private:
 	void prepareFrame();
 
 	Ui::RpWidget _content;
+	const Ui::BoxShadow _shadow;
 	const not_null<Webrtc::VideoTrack*> _track;
 	Webrtc::VideoState _state = Webrtc::VideoState();
 	QImage _frame, _pausedFrame;
