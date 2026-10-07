@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "mainwidget.h"
 
+#include "extras/features/community_channel/community_channel.h"
+
 #include "extras/features/window_material/window_material.h"
 #include "api/api_updates.h"
 #include "api/api_views.h"
@@ -2514,6 +2516,7 @@ void MainWidget::showFinished() {
 
 	showAll();
 	activate();
+	Extras::CommunityChannel::maybeShowInvite(controller());
 }
 
 void MainWidget::paintEvent(QPaintEvent *e) {
