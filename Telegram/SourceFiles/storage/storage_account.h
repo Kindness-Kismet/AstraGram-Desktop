@@ -85,6 +85,9 @@ public:
 
 	void writeSessionSettings();
 	void writeSessionSettings(Fn<void(bool)> done);
+#ifdef _DEBUG
+	[[nodiscard]] std::unique_ptr<Main::SessionSettings> readSessionSettingsForDebug();
+#endif
 	void writeMtpData();
 	void writeMtpConfig();
 

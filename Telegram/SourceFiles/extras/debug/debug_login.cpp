@@ -10,6 +10,7 @@
 #include "main/main_session.h"
 #include "mtproto/mtp_instance.h"
 #include "mtproto/mtproto_dc_options.h"
+#include "storage/storage_account.h"
 
 namespace ExtrasDebug {
 namespace {
@@ -41,6 +42,7 @@ QString CreateFakeSession(int64 userId) {
 	// main_account.cpp:459 的全局失败处理会把会话直接登出。换成空实现留住它。
 	account.mtp().setGlobalFailHandler(nullptr);
 
+	auto settings = account.local().readSessionSettingsForDebug();
 	using Flag = MTPDuser::Flag;
 	account.createSession(MTP_user(
 		MTP_flags(Flag::f_self | Flag::f_first_name),
@@ -64,7 +66,7 @@ QString CreateFakeSession(int64 userId) {
 		MTPint(), // bot_active_users
 		MTPlong(), // bot_verification_icon
 		MTPlong(), // send_paid_messages_stars
-		MTPlong())); // linked_community_id
+		MTPlong()), std::move(settings));
 	FakeSession = base::make_weak(&account.session());
 	ExtrasSettings::getInstance().setDevFeaturesEnabled(true);
 	Commands::seedFakeScenarios(&account.session());

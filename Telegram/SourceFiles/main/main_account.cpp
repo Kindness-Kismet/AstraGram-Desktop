@@ -28,6 +28,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_domain.h"
 #include "main/main_session_settings.h"
 
+#ifdef _DEBUG
+#include "extras/debug/debug_login.h"
+#endif
+
 namespace Main {
 namespace {
 
@@ -310,9 +314,17 @@ QByteArray Account::serializeMtpAuthorization() const {
 			QDataStream stream(&result, QIODevice::WriteOnly);
 			stream.setVersion(QDataStream::Qt_5_1);
 
-			const auto currentUserId = sessionExists()
-				? session().userId()
-				: UserId();
+			const auto currentUserId = [&] {
+				if (!sessionExists()) {
+					return UserId();
+				}
+#ifdef _DEBUG
+				if (ExtrasDebug::isFakeSession(&session())) {
+					return UserId();
+				}
+#endif
+				return session().userId();
+			}();
 			stream
 				<< quint64(kWideIdsTag)
 				<< quint64(currentUserId.bare)

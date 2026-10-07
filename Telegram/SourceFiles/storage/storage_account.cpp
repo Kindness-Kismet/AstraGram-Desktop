@@ -1091,6 +1091,14 @@ ReadSettingsContext Account::prepareReadSettingsContext() const {
 	};
 }
 
+#ifdef _DEBUG
+std::unique_ptr<Main::SessionSettings> Account::readSessionSettingsForDebug() {
+	Expects(!_owner->sessionExists());
+
+	return _settingsKey ? readSessionSettings() : nullptr;
+}
+#endif
+
 std::unique_ptr<Main::SessionSettings> Account::readSessionSettings() {
 	ReadSettingsContext context;
 	FileReadDescriptor userSettings;
