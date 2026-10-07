@@ -16,6 +16,7 @@
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/history_item_components.h"
+#include "history/view/history_view_element.h"
 #include "main/main_session.h"
 #include "settings.h"
 #include <QFileInfo>
@@ -100,6 +101,7 @@ Result inspectMessage(const QStringList &args) {
 		{"deleted", item->isDeleted()}, {"hidden", ExtrasState::isHidden(item)},
 		{"filtered", FiltersController::filtered(item)}, {"hasRevisions", ExtrasMessages::hasRevisions(item)},
 		{"hasView", item->mainView() != nullptr},
+		{"deletedOpacity", item->mainView() ? Json(item->mainView()->deletedOpacity()) : Json(nullptr)},
 		{"translatedText", item->translatedText().text.toStdString()},
 		{"translationShown", item->translationDisplayed()},
 		{"translationManual", translation && translation->manualTo.has_value()},

@@ -23,7 +23,7 @@
 前置条件：`domain` 已启动、无会话、且恰好只有一个账号。`addActivated` 会新建账号，多账号时
 切换会留下多余的空账号，官方 `testmode` 也是这个前提。
 
-## `message.fake <text> [--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] [--sticker <imagePath>]`
+## `message.fake <text> [--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] [--sticker <imagePath> | --photo <imagePath> [--group <positiveId>]]`
 
 往假会话插入一条本地构造的文本消息，走 `addNewMessage` 官方路径，
 渲染行为与真实消息一致。只存在内存，重启即消失，不触发任何网络请求。
@@ -34,6 +34,8 @@
 - `--blocked` 走 `hideFromBlocked` 真拉黑路线：需同时开 `filtersEnabled` + `hideFromBlocked`。
 - `--shadow-ban` 走影子拉黑路线：只需 `filtersEnabled`，名单可用 `settings.set` 独立维护。
 - `--sticker` 使用本地图片构造静态贴纸，各边不超过 512 像素；图片保存在内存中，不上传文件。
+- `--photo` 使用本地图片构造照片，各边不超过 2048 像素，与 `--sticker` 互斥。
+- `--group` 配合 `--photo` 指定正整数相册编号，同一对话中相同编号的照片会按真实相册布局显示。
 
 ## `notification.test [text] [--peer <userId>]`
 

@@ -133,9 +133,19 @@ using json = nlohmann::json;
 	auto shadowBan = false;
 	auto targetPeer = QString();
 	auto stickerPath = QString();
+	auto photoPath = QString();
+	auto groupId = uint64(0);
 	for (auto i = 0; i < args.size(); ++i) {
 		const auto &arg = args.at(i);
-		if (arg == u"--sticker"_q) {
+		if (arg == u"--photo"_q) {
+			if (++i >= args.size()) return Result::Err(u"usage: --photo <imagePath>"_q);
+			photoPath = args.at(i);
+		} else if (arg == u"--group"_q) {
+			if (++i >= args.size()) return Result::Err(u"usage: --group <positiveId>"_q);
+			auto ok = false;
+			groupId = args.at(i).toULongLong(&ok);
+			if (!ok || !groupId) return Result::Err(u"expected a positive group ID"_q);
+		} else if (arg == u"--sticker"_q) {
 			if (++i >= args.size()) return Result::Err(u"usage: --sticker <imagePath>"_q);
 			stickerPath = args.at(i);
 		} else if (arg == u"--peer"_q) {
@@ -160,18 +170,24 @@ using json = nlohmann::json;
 		} else {
 			return Result::Err(
 				u"usage: message.fake <text> "
-				u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] [--sticker <imagePath>]"_q);
+				u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] "
+				u"[--sticker <imagePath> | --photo <imagePath> [--group <positiveId>]]"_q);
 		}
 	}
 	if (text.isEmpty()) {
 		return Result::Err(
 			u"usage: message.fake <text> "
-			u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] [--sticker <imagePath>]"_q);
+			u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] "
+			u"[--sticker <imagePath> | --photo <imagePath> [--group <positiveId>]]"_q);
 	}
 
 	const auto session = ActiveSession();
 	if (!session || !isFakeSession(session)) {
 		return Result::Err(u"an in-process fake session is required"_q);
+	}
+	if ((!photoPath.isEmpty() && !stickerPath.isEmpty())
+		|| (groupId && photoPath.isEmpty())) {
+		return Result::Err(u"--photo and --sticker are exclusive; --group requires --photo"_q);
 	}
 	const auto selfPeer = session->userPeerId();
 	const auto peer = targetPeer.isEmpty() ? static_cast<PeerData*>(session->user()) : findPeer(targetPeer);
@@ -199,6 +215,26 @@ using json = nlohmann::json;
 
 	const auto messageId = NextFakeMsgId();
 	auto media = MTPMessageMedia();
+	if (!photoPath.isEmpty()) {
+		const auto image = QImage(photoPath);
+		if (image.isNull() || image.width() > 2048 || image.height() > 2048) {
+			return Result::Err(u"expected a photo up to 2048 pixels per side"_q);
+		}
+		auto bytes = QByteArray();
+		auto buffer = QBuffer(&bytes);
+		if (!image.save(&buffer, "PNG")) {
+			return Result::Err(u"could not encode the photo"_q);
+		}
+		const auto photo = MTP_photo(MTP_flags(0),
+			MTP_long(9000000000LL + messageId), MTP_long(0), MTP_bytes(),
+			MTP_int(base::unixtime::now()),
+			MTP_vector<MTPPhotoSize>({ MTP_photoCachedSize(
+				MTP_string("y"), MTP_int(image.width()), MTP_int(image.height()),
+				MTP_bytes(bytes)) }),
+			MTPVector<MTPVideoSize>(), MTP_int(0));
+		media = MTP_messageMediaPhoto(
+			MTP_flags(MTPDmessageMediaPhoto::Flag::f_photo), photo, MTPint(), MTPDocument());
+	}
 	if (!stickerPath.isEmpty()) {
 		const auto sticker = fakeStickerMedia(session, stickerPath, messageId);
 		if (!sticker) {
@@ -207,7 +243,9 @@ using json = nlohmann::json;
 		media = *sticker;
 	}
 	const auto flags = MTPDmessage::Flag::f_from_id
-		| (stickerPath.isEmpty() ? MTPDmessage::Flag() : MTPDmessage::Flag::f_media)
+		| ((stickerPath.isEmpty() && photoPath.isEmpty())
+			? MTPDmessage::Flag() : MTPDmessage::Flag::f_media)
+		| (groupId ? MTPDmessage::Flag::f_grouped_id : MTPDmessage::Flag())
 		| (fromPeer == selfPeer ? MTPDmessage::Flag::f_out : MTPDmessage::Flag());
 	const auto message = MTP_message(
 		MTP_flags(flags),
@@ -232,7 +270,7 @@ using json = nlohmann::json;
 		MTPMessageReplies(),
 		MTPint(), // edit_date
 		MTPstring(), // post_author
-		MTPlong(), // grouped_id
+		MTP_long(groupId),
 		MTPMessageReactions(),
 		MTPVector<MTPRestrictionReason>(),
 		MTPint(), // ttl_period

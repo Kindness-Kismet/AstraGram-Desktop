@@ -266,6 +266,8 @@ def register_commands(sub) -> None:
     command.add_argument("--shadow-ban", action="store_true", help="把发送者加入 AstraGram 影子拉黑名单")
     command.add_argument("--peer", help="插入到指定假会话，默认收藏夹")
     command.add_argument("--sticker", metavar="IMAGE_PATH", help="用本地图片生成静态贴纸，各边不超过 512 像素")
+    command.add_argument("--photo", metavar="IMAGE_PATH", help="用本地图片生成照片，各边不超过 2048 像素")
+    command.add_argument("--group", metavar="GROUP_ID", help="照片相册的正整数编号，配合 --photo 使用")
     command = sub.add_parser("notification.test", help="让假用户发一条消息，触发系统或应用自带通知；原生通知需默认配置")
     command.add_argument("text", nargs="?", help="消息文本，默认 Debug 通知测试")
     command.add_argument("--peer", metavar="USER_ID", help="发送通知的假用户编号，默认 830000001")
@@ -484,6 +486,10 @@ def build_server_command(args: argparse.Namespace) -> str:
             parts.extend(["--peer", args.peer])
         if args.sticker:
             parts.extend(["--sticker", quote_arg(str(Path(args.sticker).resolve()))])
+        if args.photo:
+            parts.extend(["--photo", quote_arg(str(Path(args.photo).resolve()))])
+        if args.group:
+            parts.extend(["--group", args.group])
         return " ".join(parts)
     if command == "notification.test":
         parts = ["notification.test"]
