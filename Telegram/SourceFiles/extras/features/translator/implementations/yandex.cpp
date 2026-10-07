@@ -3,6 +3,7 @@
 #include "extras/features/translator/html_parser.h"
 
 #include <memory>
+#include <QtCore/QCoreApplication>
 #include <QtCore/QPointer>
 #include <QtCore/QTimer>
 #include <QtCore/QUrl>
@@ -14,8 +15,15 @@
 namespace Extras::Translator {
 
 YandexTranslator &YandexTranslator::instance() {
-	static YandexTranslator inst;
-	return inst;
+	static auto instance = std::unique_ptr<YandexTranslator>();
+	if (!instance) {
+		instance.reset(new YandexTranslator());
+		QObject::connect(QCoreApplication::instance(),
+			&QCoreApplication::aboutToQuit, instance.get(), [] {
+				instance.reset();
+			});
+	}
+	return *instance;
 }
 
 YandexTranslator::YandexTranslator(QObject *parent)
@@ -57,7 +65,6 @@ QPointer<QNetworkReply> YandexTranslator::startSingleTranslation(
 	const MultiThreadArgs &args
 ) {
 	const auto &text = args.parsedData.text;
-	// const auto &fromLang = args.parsedData.fromLang;
 	const auto &toLang = args.parsedData.toLang;
 	const auto onSuccess = args.onSuccess;
 	const auto onFail = args.onFail;
@@ -81,10 +88,10 @@ QPointer<QNetworkReply> YandexTranslator::startSingleTranslation(
 	req.setHeader(QNetworkRequest::ContentTypeHeader,
 				  QStringLiteral("application/x-www-form-urlencoded"));
 
-	QUrlQuery postData;
-	postData.addQueryItem(QStringLiteral("lang"), to);
-	postData.addQueryItem(QStringLiteral("text"), shouldWrapInHtml() ? Html::entitiesToHtml(text) : text.text);
-	const auto postDataEncoded = postData.toString(QUrl::FullyEncoded).toUtf8();
+	const auto postDataEncoded = QByteArray("lang=")
+		+ QUrl::toPercentEncoding(to)
+		+ "&text="
+		+ QUrl::toPercentEncoding(text.text);
 
 	QPointer<QNetworkReply> reply = _nam.post(req, postDataEncoded);
 
@@ -123,9 +130,7 @@ QPointer<QNetworkReply> YandexTranslator::startSingleTranslation(
 							 if (onFail) onFail();
 							 return;
 						 }
-						 if (onSuccess) onSuccess(shouldWrapInHtml()
-													  ? Html::htmlToEntities(translatedText)
-													  : TextWithEntities{translatedText});
+						 if (onSuccess) onSuccess(Html::htmlToEntities(translatedText));
 					 });
 
 	return reply;

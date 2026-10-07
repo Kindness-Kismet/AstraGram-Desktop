@@ -47,11 +47,6 @@ QString textOf(const QJsonValue &value) {
 
 } // namespace
 
-bool shouldWrapInHtml() {
-	// todo: make an option
-	return true;
-}
-
 QString parseJsonPath(const QByteArray &body, const QString &jsonPath, bool *ok) {
 	if (ok) *ok = false;
 	if (body.isEmpty()) {

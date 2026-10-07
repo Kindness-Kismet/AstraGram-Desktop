@@ -3,6 +3,7 @@
 #include "extras/features/translator/html_parser.h"
 
 #include <memory>
+#include <QtCore/QCoreApplication>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
@@ -57,8 +58,15 @@ QStringList collectStrings(const QJsonValue &value) {
 } // namespace
 
 GoogleTranslator &GoogleTranslator::instance() {
-	static GoogleTranslator inst;
-	return inst;
+	static auto instance = std::unique_ptr<GoogleTranslator>();
+	if (!instance) {
+		instance.reset(new GoogleTranslator());
+		QObject::connect(QCoreApplication::instance(),
+			&QCoreApplication::aboutToQuit, instance.get(), [] {
+				instance.reset();
+			});
+	}
+	return *instance;
 }
 
 GoogleTranslator::GoogleTranslator(QObject *parent)
@@ -82,10 +90,7 @@ QPointer<QNetworkReply> GoogleTranslator::startSingleTranslation(
 	const auto from = fromLang.trimmed().isEmpty() ? QStringLiteral("auto") : fromLang.trimmed();
 	const auto to = toLang.trimmed();
 
-	auto textToTranslate = text.text;
-	textToTranslate = textToTranslate.replace(qsl("\n"), qsl("<br>"));
-
-	const auto preparedText = textToTranslate;
+	const auto preparedText = text.text.toHtmlEscaped().replace(u"\n"_q, u"<br>"_q);
 	QJsonArray requestRoot;
 	QJsonArray requestPayload;
 	QJsonArray requestText;
@@ -152,9 +157,7 @@ QPointer<QNetworkReply> GoogleTranslator::startSingleTranslation(
 						 	 return;
 						 }
 						 const auto decodedText = decodeHtmlEntities(textOutCombined);
-						 if (onSuccess) onSuccess(shouldWrapInHtml()
-						 			  ? Html::htmlToEntities(decodedText)
-						 			  : TextWithEntities{decodedText});
+						 if (onSuccess) onSuccess(Html::htmlToEntities(decodedText));
 					 });
 
 	return reply;

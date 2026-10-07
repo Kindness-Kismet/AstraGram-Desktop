@@ -22,8 +22,6 @@ using MultiThreadCallbackSuccess = std::function<void(const TextWithEntities &)>
 
 QString randomDesktopUserAgent();
 
-bool shouldWrapInHtml();
-
 QString parseJsonPath(const QByteArray &body, const QString &jsonPath, bool *ok);
 
 struct PassedData

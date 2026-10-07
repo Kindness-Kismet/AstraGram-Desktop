@@ -6,7 +6,6 @@
 
 namespace Extras::Translator::Html {
 
-[[nodiscard]] QString entitiesToHtml(const TextWithEntities &text);
 [[nodiscard]] TextWithEntities htmlToEntities(const QString &text);
 
 }
