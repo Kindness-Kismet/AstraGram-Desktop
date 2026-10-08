@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/widgets/discrete_sliders.h"
 
+#include "extras/ui/components/horizontal_tabs.h"
+
 #include "ui/effects/ripple_animation.h"
 #include "styles/style_widgets.h"
 
@@ -300,11 +302,23 @@ SettingsSlider::SettingsSlider(
 	const style::SettingsSlider &st)
 : DiscreteSlider(parent, st.barSnapToLabel)
 , _st(st) {
+	setMouseTracking(true);
 	if (_st.barRadius > 0) {
 		_bar.emplace(_st.barRadius, _st.barFg);
 		_barActive.emplace(_st.barRadius, _st.barFgActive);
 	}
 	setSelectOnPress(_st.ripple.showDuration == 0);
+	ExtrasUi::HorizontalTabs::watch(this, [=] {
+		enumerateSections([](Section &section) {
+			section.ripple = nullptr;
+			return true;
+		});
+		if (_fitWidthToSections) {
+			fitWidthToSections();
+		} else {
+			resizeSections(width());
+		}
+	});
 }
 
 const style::SettingsSlider &SettingsSlider::st() const {
@@ -325,6 +339,7 @@ int SettingsSlider::centerOfSection(int section) const {
 }
 
 void SettingsSlider::fitWidthToSections() {
+	_fitWidthToSections = true;
 	const auto widths = countSectionsWidths(0);
 	resizeToWidth(ranges::accumulate(widths, .0) + _st.padding * 2);
 }
@@ -350,7 +365,11 @@ void SettingsSlider::resizeSections(int newWidth) {
 	const auto sectionWidths = countSectionsWidths(newWidth);
 
 	auto skip = 0;
-	auto x = _st.padding * 1.;
+	const auto custom = ExtrasUi::HorizontalTabs::enabled(_st);
+	const auto usedWidth = ranges::accumulate(sectionWidths, .0);
+	auto x = custom && !_fitWidthToSections
+		? std::max(double(_st.padding), (newWidth - usedWidth) / 2.)
+		: _st.padding * 1.;
 	auto sectionWidth = sectionWidths.begin();
 	enumerateSections([&](Section &section) {
 		Expects(sectionWidth != sectionWidths.end());
@@ -358,7 +377,7 @@ void SettingsSlider::resizeSections(int newWidth) {
 		section.left = std::floor(x) + skip;
 		x += *sectionWidth;
 		section.width = int(base::SafeRound(x)) - (section.left - skip);
-		skip += _st.barSkip;
+		skip += custom ? 0 : _st.barSkip;
 		++sectionWidth;
 		return true;
 	});
@@ -367,6 +386,27 @@ void SettingsSlider::resizeSections(int newWidth) {
 
 std::vector<float64> SettingsSlider::countSectionsWidths(int newWidth) const {
 	const auto count = getSectionsCount();
+	if (!count) {
+		return {};
+	}
+	if (ExtrasUi::HorizontalTabs::enabled(_st)) {
+		auto result = std::vector<float64>();
+		result.reserve(count);
+		auto labelsWidth = 0;
+		enumerateSections([&](const Section &section) {
+			labelsWidth += section.contentWidth;
+			return true;
+		});
+		const auto padding = (newWidth && !_fitWidthToSections)
+			? std::clamp((newWidth - 2 * _st.padding - labelsWidth) / double(count),
+				double(style::ConvertScale(12)), double(style::ConvertScale(36)))
+			: style::ConvertScale(36);
+		enumerateSections([&](const Section &section) {
+			result.push_back(section.contentWidth + padding);
+			return true;
+		});
+		return result;
+	}
 	const auto sectionsWidth = newWidth
 		- 2 * _st.padding
 		- (count - 1) * _st.barSkip;
@@ -429,6 +469,9 @@ void SettingsSlider::startRipple(int sectionIndex) {
 QImage SettingsSlider::prepareRippleMask(
 		int sectionIndex,
 		const Section &section) {
+	if (ExtrasUi::HorizontalTabs::enabled(_st)) {
+		return ExtrasUi::HorizontalTabs::rippleMask(QSize(section.width, height()));
+	}
 	const auto size = QSize(section.width, height() - _st.rippleBottomSkip);
 	if (!_rippleTopRoundRadius
 		|| (sectionIndex > 0 && sectionIndex + 1 < getSectionsCount())) {
@@ -456,11 +499,25 @@ QImage SettingsSlider::prepareRippleMask(
 	});
 }
 
+bool SettingsSlider::eventHook(QEvent *e) {
+	if (ExtrasUi::HorizontalTabs::enabled(_st)
+		&& (e->type() == QEvent::Enter || e->type() == QEvent::Leave
+			|| e->type() == QEvent::MouseMove)) {
+		update();
+	}
+	return DiscreteSlider::eventHook(e);
+}
+
 void SettingsSlider::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 
 	const auto clip = e->rect();
 	const auto range = DiscreteSlider::getCurrentActiveRange();
+	const auto custom = ExtrasUi::HorizontalTabs::enabled(_st);
+	const auto mouse = mapFromGlobal(QCursor::pos());
+	const auto labelTop = custom
+		? (height() - _st.labelStyle.font->height) / 2
+		: _st.labelTop;
 
 	const auto drawRect = [&](QRect rect, bool active = false) {
 		const auto &bar = active ? _barActive : _bar;
@@ -486,8 +543,13 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 				0.,
 				1.);
 		++sectionIndex;
+		if (custom) {
+			const auto bounds = myrtlrect(section.left, 0, section.width, height());
+			ExtrasUi::HorizontalTabs::paint(p, bounds, active,
+				underMouse() && bounds.contains(mouse));
+		}
 		if (section.ripple) {
-			const auto color = anim::color(
+			const auto color = custom ? ExtrasUi::HorizontalTabs::ripple(active) : anim::color(
 				_st.rippleBg,
 				_st.rippleBgActive,
 				active);
@@ -496,14 +558,14 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 				section.ripple.reset();
 			}
 		}
-		if (crossFadeEnabled()) {
+		if (!custom && crossFadeEnabled()) {
 			const auto rect = myrtlrect(
 				activeLeft, _st.barTop, activeWidth, _st.barStroke);
 			drawRect(rect);
 			p.setOpacity(active);
 			drawRect(rect, true);
 			p.setOpacity(1.);
-		} else if (!_st.barSnapToLabel) {
+		} else if (!custom && !_st.barSnapToLabel) {
 			auto from = activeLeft;
 			auto tofill = activeWidth;
 			if (range.left > from) {
@@ -532,13 +594,15 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 			+ (section.width - section.contentWidth) / 2;
 		const auto rect = myrtlrect(
 			labelLeft,
-			_st.labelTop,
+			labelTop,
 			section.contentWidth,
 			_st.labelStyle.font->height);
 		if (rect.intersects(clip)) {
-			p.setPen(anim::pen(_st.labelFg, _st.labelFgActive, active));
+			p.setPen(custom
+				? ExtrasUi::HorizontalTabs::foreground(_st.labelFg->c, active)
+				: anim::color(_st.labelFg, _st.labelFgActive, active));
 			section.label.draw(p, {
-				.position = QPoint(labelLeft, _st.labelTop),
+				.position = QPoint(labelLeft, labelTop),
 				.outerWidth = width(),
 				.availableWidth = section.label.maxWidth(),
 				.paused = paused(),
@@ -546,7 +610,7 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 		}
 		return true;
 	});
-	if (_st.barSnapToLabel) {
+	if (!custom && _st.barSnapToLabel) {
 		const auto add = _st.barStroke / 2;
 		const auto from = std::max(range.left - add, 0);
 		const auto till = std::min(range.left + range.width + add, width());

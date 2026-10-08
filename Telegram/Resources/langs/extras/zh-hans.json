@@ -1,4 +1,9 @@
 {
+  "HorizontalTabsStyle": "横向标签栏款式",
+  "HorizontalTabsDefault": "默认",
+  "HorizontalTabsOutline": "细框标签",
+  "HorizontalTabsSolid": "实色胶囊",
+  "HorizontalTabsDescription": "统一横向标签栏的外观，跟随当前强调色。切换后立即生效，默认保留各页面的原有样式。",
   "lng_code_block_header_copy": "复制",
   "lng_error_nocopy_group": "抱歉，管理员已禁止从此群组复制内容。",
   "lng_error_nocopy_channel": "抱歉，管理员已禁止从此频道复制内容。",

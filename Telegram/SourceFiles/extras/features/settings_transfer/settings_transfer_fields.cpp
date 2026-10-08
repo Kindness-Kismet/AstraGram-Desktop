@@ -215,6 +215,8 @@ Fields customFields() {
 		&S::increaseWebviewWidth, &S::setIncreaseWebviewWidth);
 	addField(fields, "windowMaterial", settings,
 		&S::windowMaterial, &S::setWindowMaterial, 0, 3);
+	addField(fields, "horizontalTabStyle", settings,
+		&S::horizontalTabStyle, &S::setHorizontalTabStyle, 0, 2);
 	addField(fields, "removeMessageTail", settings,
 		&S::removeMessageTail, &S::setRemoveMessageTail);
 	addField(fields, "disableNotificationsDelay", settings,

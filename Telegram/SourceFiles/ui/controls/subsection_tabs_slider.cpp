@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/controls/subsection_tabs_slider.h"
 
+#include "extras/ui/components/horizontal_tabs.h"
+
 #include "dialogs/dialogs_three_state_icon.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/widgets/scroll_area.h"
@@ -96,6 +98,9 @@ private:
 	void dataUpdatedHook() override;
 	void invalidateCache() override;
 	QImage prepareRippleMask() const override final {
+		if (ExtrasUi::HorizontalTabs::enabled()) {
+			return ExtrasUi::HorizontalTabs::rippleMask(size());
+		}
 		return isPinned()
 			? _rippleMask
 			: Ui::RippleButton::prepareRippleMask();
@@ -290,6 +295,7 @@ HorizontalButton::HorizontalButton(
 , _st(st)
 , _roundRect(st::boxRadius, st::windowBgOver) {
 	dataUpdatedHook();
+	ExtrasUi::HorizontalTabs::watch(this, [=] { finishAnimating(); });
 }
 
 void HorizontalButton::updateSize() {
@@ -400,13 +406,23 @@ void HorizontalButton::invalidateCache() {
 void HorizontalButton::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 	const auto active = _delegate->buttonActive(this);
+	const auto custom = ExtrasUi::HorizontalTabs::enabled();
+	const auto labelTop = custom
+		? (height() - _st.labelStyle.font->height) / 2
+		: _st.labelTop;
 
-	const auto color = anim::color(
+	const auto color = custom ? ExtrasUi::HorizontalTabs::ripple(active) : anim::color(
 		_st.rippleBg,
 		_st.rippleBgActive,
 		active);
 
-	if (isPinned()) {
+	if (custom) {
+		ExtrasUi::HorizontalTabs::paint(p, rect(), active, isOver());
+		p.save();
+		p.setClipRect(ExtrasUi::HorizontalTabs::backgroundRect(rect()));
+		paintRipple(p, QPoint(), &color);
+		p.restore();
+	} else if (isPinned()) {
 		const auto bgRect = rect()
 			- QMargins(0, _backgroundMargin, 0, _backgroundMargin);
 		if (isFirstPinned() || isLastPinned()) {
@@ -418,9 +434,11 @@ void HorizontalButton::paintEvent(QPaintEvent *e) {
 		paintRipple(p, QPoint(0, 0), &color);
 	}
 
-	p.setPen(anim::pen(_st.labelFg, _st.labelFgActive, active));
+	p.setPen(custom
+		? ExtrasUi::HorizontalTabs::foreground(_st.labelFg->c, active)
+		: anim::color(_st.labelFg, _st.labelFgActive, active));
 	_text.draw(p, {
-		.position = QPoint(_st.strictSkip / 2, _st.labelTop),
+		.position = QPoint(_st.strictSkip / 2, labelTop),
 		.outerWidth = width(),
 		.availableWidth = _text.maxWidth(),
 		.paused = _delegate->buttonPaused(),
@@ -429,6 +447,7 @@ void HorizontalButton::paintEvent(QPaintEvent *e) {
 	auto right = width() - _st.strictSkip + (_st.strictSkip / 2);
 	UnreadBadgeStyle st;
 	const auto &state = _data.badges;
+	st.active = custom && ExtrasUi::HorizontalTabs::solid() && active > .5;
 	const auto badgeTop = (height() - st.size) / 2;
 	if (state.unread) {
 		st.muted = state.unreadMuted;
@@ -554,6 +573,7 @@ SubsectionSlider::~SubsectionSlider() = default;
 
 void SubsectionSlider::setupBar() {
 	_bar->setAttribute(Qt::WA_TransparentForMouseEvents);
+	ExtrasUi::HorizontalTabs::watch(_bar);
 	sizeValue() | rpl::on_next([=](QSize size) {
 		const auto thickness = _barSt.stroke - (_barSt.stroke / 2);
 		_bar->setGeometry(
@@ -563,6 +583,9 @@ void SubsectionSlider::setupBar() {
 			_vertical ? size.height() : thickness);
 	}, _bar->lifetime());
 	_bar->paintRequest() | rpl::on_next([=](QRect clip) {
+		if (!_vertical && ExtrasUi::HorizontalTabs::enabled()) {
+			return;
+		}
 		const auto start = -_barSt.stroke / 2;
 		const auto currentRange = getCurrentActiveRange();
 		const auto from = currentRange.from + _barSt.skip;

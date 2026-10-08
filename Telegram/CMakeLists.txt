@@ -152,6 +152,8 @@ set(extras_files
         extras/utils/rc_manager.h
         extras/ui/components/empty_state_icon.h
         extras/ui/components/empty_state_icon.cpp
+        extras/ui/components/horizontal_tabs.h
+        extras/ui/components/horizontal_tabs.cpp
         extras/ui/extras_logo.cpp
         extras/ui/voice_record_capsule.h
         extras/ui/voice_record_capsule.cpp

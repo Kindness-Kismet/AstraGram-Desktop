@@ -9451,6 +9451,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DownloadsTypeVideo" = "Videos";
 "extras_DownloadsTypeOther" = "Other files";
 "extras_DownloadsEmptyFilter" = "No files match the current filters";
+"extras_HorizontalTabsStyle" = "Horizontal tab style";
+"extras_HorizontalTabsDefault" = "Default";
+"extras_HorizontalTabsOutline" = "Outlined tabs";
+"extras_HorizontalTabsSolid" = "Solid pills";
+"extras_HorizontalTabsDescription" = "Applies to horizontal tabs throughout the app and follows your accent color.";
 "extras_SettingsTransferTitle" = "Transfer settings";
 "extras_SettingsTransferExport" = "Export settings";
 "extras_SettingsTransferImport" = "Import settings";

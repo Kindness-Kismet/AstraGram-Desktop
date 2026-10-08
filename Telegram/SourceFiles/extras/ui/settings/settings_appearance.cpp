@@ -20,6 +20,7 @@
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 #include "ui/painter.h"
+#include "ui/boxes/single_choice_box.h"
 #include "ui/widgets/labels.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/vertical_layout.h"
@@ -180,10 +181,49 @@ void BuildAvatarCorners(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	builder.addSkip();
 }
 
+QString horizontalTabStyleLabel(HorizontalTabStyle style) {
+	switch (style) {
+	case HorizontalTabStyle::Default: return tr::extras_HorizontalTabsDefault(tr::now);
+	case HorizontalTabStyle::Outline: return tr::extras_HorizontalTabsOutline(tr::now);
+	case HorizontalTabStyle::Solid: return tr::extras_HorizontalTabsSolid(tr::now);
+	}
+	Unexpected("Invalid horizontal tab style");
+}
+
+void buildHorizontalTabStyle(SectionBuilder &builder) {
+	const auto controller = builder.controller();
+	builder.addButton({
+		.id = u"extras/horizontalTabStyle"_q,
+		.title = tr::extras_HorizontalTabsStyle(),
+		.st = &st::settingsButtonNoIcon,
+		.label = ExtrasSettings::getInstance().horizontalTabStyleValue()
+			| rpl::map(horizontalTabStyleLabel),
+		.onClick = [=] {
+			controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+				SingleChoiceBox(box, {
+					.title = tr::extras_HorizontalTabsStyle(),
+					.options = {
+						tr::extras_HorizontalTabsDefault(tr::now),
+						tr::extras_HorizontalTabsOutline(tr::now),
+						tr::extras_HorizontalTabsSolid(tr::now),
+					},
+					.initialSelection = int(ExtrasSettings::getInstance().horizontalTabStyle()),
+					.callback = [](int index) {
+						ExtrasSettings::getInstance().setHorizontalTabStyle(HorizontalTabStyle(index));
+					},
+				});
+				box->addRow(object_ptr<Ui::FlatLabel>(box,
+					tr::extras_HorizontalTabsDescription(), st::boxLabel));
+			}));
+		},
+	});
+}
+
 void BuildAppearance(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	auto *settings = &ExtrasSettings::getInstance();
 
 	builder.addSubsectionTitle(tr::extras_CategoryAppearance());
+	buildHorizontalTabStyle(builder);
 
 	extras.addSettingToggle({
 		.id = u"extras/hidePremiumStatuses"_q,

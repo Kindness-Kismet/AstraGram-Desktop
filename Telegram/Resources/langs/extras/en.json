@@ -1,4 +1,9 @@
 {
+  "HorizontalTabsStyle": "Horizontal tab style",
+  "HorizontalTabsDefault": "Default",
+  "HorizontalTabsOutline": "Outlined tabs",
+  "HorizontalTabsSolid": "Solid pills",
+  "HorizontalTabsDescription": "Use one style for horizontal tabs with the current accent color. Changes apply immediately. Default preserves each page's original appearance.",
   "ForwardSavedOriginal": "Forward as is",
   "ForwardSavedNoSource": "Without source",
   "ForwardSavedNoSourceCaption": "Without source and caption",

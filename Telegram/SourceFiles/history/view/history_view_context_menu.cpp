@@ -61,6 +61,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/rect.h"
 #include "ui/ui_utility.h"
 #include "ui/widgets/pill_tabs.h"
+#include "extras/ui/components/horizontal_tabs.h"
 #include "menu/menu_item_download_files.h"
 #include "menu/menu_item_rate_transcribe.h"
 #include "menu/menu_item_rate_transcribe_session.h"
@@ -2442,6 +2443,7 @@ void AttachPollOptionTabs(
 		},
 		0,
 		tabsSt);
+	ExtrasUi::HorizontalTabs::apply(tabs, tabsSt);
 
 	const auto height = tabsSt.height;
 	const auto margin = tabsSt.margin;

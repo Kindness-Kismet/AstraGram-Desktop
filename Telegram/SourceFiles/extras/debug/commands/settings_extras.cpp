@@ -107,6 +107,7 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"increaseWebviewHeight"_q, [&] { return settings.increaseWebviewHeight(); }, settings, &ExtrasSettings::setIncreaseWebviewHeight);
 	addSetting(entries, u"increaseWebviewWidth"_q, [&] { return settings.increaseWebviewWidth(); }, settings, &ExtrasSettings::setIncreaseWebviewWidth);
 	addSetting(entries, u"windowMaterial"_q, [&] { return settings.windowMaterial(); }, settings, &ExtrasSettings::setWindowMaterial);
+	addSetting(entries, u"horizontalTabStyle"_q, [&] { return settings.horizontalTabStyle(); }, settings, &ExtrasSettings::setHorizontalTabStyle);
 	addSetting(entries, u"removeMessageTail"_q, [&] { return settings.removeMessageTail(); }, settings, &ExtrasSettings::setRemoveMessageTail);
 	addSetting(entries, u"disableNotificationsDelay"_q, [&] { return settings.disableNotificationsDelay(); }, settings, &ExtrasSettings::setDisableNotificationsDelay);
 	addSetting(entries, u"localPremium"_q, [&] { return settings.localPremium(); }, settings, &ExtrasSettings::setLocalPremium);

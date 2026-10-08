@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/widgets/chat_filters_tabs_slider.h"
 
+#include "extras/ui/components/horizontal_tabs.h"
+
 #include "ui/effects/ripple_animation.h"
 #include "ui/widgets/side_bar_button.h"
 #include "styles/style_dialogs.h"
@@ -244,15 +246,15 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 	const auto range = getCurrentActiveRange();
 	const auto activeIndex = activeSection();
 	const auto now = crl::now();
+	const auto custom = ExtrasUi::HorizontalTabs::enabled(_st);
+	const auto labelTop = custom
+		? (height() - _st.labelStyle.font->height) / 2
+		: _st.labelTop;
 
 	auto index = 0;
 	auto raisedIndex = -1;
 	auto activeHorizontalShift = 0;
 	const auto drawSection = [&](Section &section) {
-		// const auto activeWidth = _st.barSnapToLabel
-		// 	? section.contentWidth
-		// 	: section.width;
-
 		const auto horizontalShift = _sections[index].horizontalShift;
 		const auto shiftedLeft = section.left + horizontalShift;
 		if (_sections[index].raise) {
@@ -262,16 +264,13 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 			activeHorizontalShift = horizontalShift;
 		}
 
-		// const auto activeLeft = shiftedLeft
-		// 	+ (section.width - activeWidth) / 2;
-		// const auto active = 1.
-		// 	- std::clamp(
-		// 		std::abs(range.left - activeLeft) / float64(range.width),
-		// 		0.,
-		// 		1.);
 		const auto active = (index == activeIndex) ? 1. : 0.;
+		if (custom) {
+			ExtrasUi::HorizontalTabs::paint(p,
+				myrtlrect(shiftedLeft, 0, section.width, height()), active);
+		}
 		if (section.ripple) {
-			const auto color = anim::color(
+			const auto color = custom ? ExtrasUi::HorizontalTabs::ripple(active) : anim::color(
 				_st.rippleBg,
 				_st.rippleBgActive,
 				active);
@@ -284,7 +283,7 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 			+ (section.width - section.contentWidth) / 2;
 		const auto rect = myrtlrect(
 			labelLeft,
-			_st.labelTop,
+			labelTop,
 			section.contentWidth,
 			_st.labelStyle.font->height);
 		if (rect.intersects(clip)) {
@@ -299,19 +298,22 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 				== ChatsFiltersTabsMode::IconsOnly)
 				? 0
 				: section.label.maxWidth();
-			p.setPen(anim::pen(_st.labelFg, _st.labelFgActive, active));
+			const auto foreground = custom
+				? ExtrasUi::HorizontalTabs::foreground(_st.labelFg->c, active)
+				: anim::color(_st.labelFg, _st.labelFgActive, active);
+			p.setPen(foreground);
 			if (icon) {
 				icon->paint(
 					p,
 					labelLeft,
-					_st.labelTop
+					labelTop
 						+ (_st.labelStyle.font->height - icon->height()) / 2,
 					width(),
-					anim::color(_st.labelFg, _st.labelFgActive, active));
+					foreground);
 			}
 			if (labelWidth > 0) {
 				section.label.draw(p, {
-					.position = QPoint(labelLeft + iconExtra, _st.labelTop),
+					.position = QPoint(labelLeft + iconExtra, labelTop),
 					.outerWidth = width(),
 					.availableWidth = section.label.maxWidth(),
 					.now = now,
@@ -321,13 +323,16 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 			{
 				const auto it = _unreadCounts.find(index);
 				if (it != _unreadCounts.end()) {
-					p.drawImage(
-						labelLeft
-							+ iconExtra
-							+ labelWidth
-							+ _unreadSkip,
-						_st.labelTop,
-						it->second.cache);
+					const auto left = labelLeft + iconExtra + labelWidth + _unreadSkip;
+					if (custom && ExtrasUi::HorizontalTabs::solid() && active) {
+						auto badge = _unreadSt;
+						badge.active = true;
+						Ui::PaintUnreadBadge(p,
+							it->second.count > 999 ? _unreadMaxString : QString::number(it->second.count),
+							left, labelTop, badge, 0);
+					} else {
+						p.drawImage(left, labelTop, it->second.cache);
+					}
 				}
 			}
 			if (locked) {
@@ -351,7 +356,7 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 		index = raisedIndex;
 		drawSection(*_sections[raisedIndex].section);
 	}
-	if (_st.barSnapToLabel) {
+	if (!custom && _st.barSnapToLabel) {
 		const auto drawRect = [&](QRect rect, bool active) {
 			const auto &bar = active ? _barActive : _bar;
 			if (bar) {

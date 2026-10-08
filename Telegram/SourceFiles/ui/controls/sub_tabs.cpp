@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/controls/sub_tabs.h"
 
+#include "extras/ui/components/horizontal_tabs.h"
+
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "ui/effects/animation_value_f.h"
@@ -28,6 +30,7 @@ SubTabs::SubTabs(
 : RpWidget(parent)
 , _st(st)
 , _centered(options.centered) {
+	ExtrasUi::HorizontalTabs::watch(this);
 	setMouseTracking(true);
 	_reorderScrollAnimation.init([this] { updateScrollCallback(); });
 	setTabs(std::move(tabs), context);
@@ -334,6 +337,7 @@ void SubTabs::paintEvent(QPaintEvent *e) {
 	const auto shift = -scroll();
 	const auto now = crl::now();
 	const auto hasShake = _shakeAnimation.animating();
+	const auto custom = ExtrasUi::HorizontalTabs::enabled();
 	for (auto i = 0; i < _buttons.size(); ++i) {
 		const auto &button = _buttons[i];
 		const auto geometry = button.geometry.translated(shift);
@@ -345,7 +349,12 @@ void SubTabs::paintEvent(QPaintEvent *e) {
 		const auto shiftedGeometry = geometry.translated(
 			base::SafeRound(button.shift),
 			0);
-		if (button.active) {
+		if (custom) {
+			ExtrasUi::HorizontalTabs::paint(p, shiftedGeometry,
+				button.active, i == _selected);
+			p.setPen(ExtrasUi::HorizontalTabs::foreground(
+				st::giftBoxTabFg->c, button.active));
+		} else if (button.active) {
 			p.setBrush(st::giftBoxTabBgActive);
 			p.setPen(Qt::NoPen);
 			const auto radius = shiftedGeometry.height() / 2.;
@@ -671,4 +680,3 @@ int SubTabs::deltaFromEdge() {
 }
 
 } // namespace Ui
-

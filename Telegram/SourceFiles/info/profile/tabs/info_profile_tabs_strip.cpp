@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/tabs/info_profile_tabs_strip.h"
 
+#include "extras/ui/components/horizontal_tabs.h"
+
 #include "ui/effects/animation_value.h"
 #include "ui/effects/animation_value_f.h"
 #include "ui/effects/ripple_animation.h"
@@ -61,9 +63,12 @@ TabsStrip::TabsStrip(QWidget *parent, const style::ProfileTabsStrip &st)
 	setObjectName(u"profileTabsStrip"_q);
 	setMouseTracking(true);
 
-	style::PaletteChanged() | rpl::on_next([=] {
+	ExtrasUi::HorizontalTabs::watch(this, [=] {
+		for (auto &button : _buttons) {
+			button.ripple = nullptr;
+		}
 		invalidate();
-	}, lifetime());
+	});
 }
 
 void TabsStrip::setTextContext(Ui::Text::MarkedContext context) {
@@ -319,15 +324,17 @@ QPoint TabsStrip::contentOrigin() const {
 
 void TabsStrip::addRipple(int index, QPoint position) {
 	auto &button = _buttons[index];
+	const auto custom = ExtrasUi::HorizontalTabs::enabled();
+	const auto bounds = custom ? button.geometry : highlightRect(index);
 	if (!button.ripple) {
-		const auto size = highlightRect(index).size();
+		const auto size = bounds.size();
 		button.ripple = std::make_unique<Ui::RippleAnimation>(
 			_st.ripple,
-			Ui::RippleAnimation::RoundRectMask(size, size.height() / 2),
+			custom ? ExtrasUi::HorizontalTabs::rippleMask(size)
+				: Ui::RippleAnimation::RoundRectMask(size, size.height() / 2),
 			[=] { invalidate(); });
 	}
-	const auto highlight = highlightRect(index).translated(
-		contentOrigin());
+	const auto highlight = bounds.translated(contentOrigin());
 	button.ripple->add(position - highlight.topLeft());
 }
 
@@ -467,7 +474,12 @@ void TabsStrip::validateContent(QRect island) {
 	const auto origin = contentOrigin() - island.topLeft();
 	const auto progress = _activeAnimation.value(1.);
 	const auto animating = _activeAnimation.animating();
-	if (_active >= 0) {
+	const auto custom = ExtrasUi::HorizontalTabs::enabled();
+	const auto activeWeight = [&](int index) {
+		return index == _active ? (animating ? progress : 1.)
+			: (animating && index == _wasActive) ? (1. - progress) : 0.;
+	};
+	if (!custom && _active >= 0) {
 		const auto highlight = currentHighlightRect().translated(
 			origin.x(),
 			origin.y());
@@ -478,11 +490,17 @@ void TabsStrip::validateContent(QRect island) {
 	}
 	for (auto i = 0, c = int(_buttons.size()); i != c; ++i) {
 		auto &button = _buttons[i];
+		if (custom) {
+			ExtrasUi::HorizontalTabs::paint(p,
+				button.geometry.translated(origin), activeWeight(i), i == _selected);
+		}
 		if (!button.ripple) {
 			continue;
 		}
-		const auto highlight = highlightRect(i).translated(origin);
-		button.ripple->paint(p, highlight.x(), highlight.y(), island.width());
+		const auto highlight = (custom ? button.geometry : highlightRect(i)).translated(origin);
+		const auto color = ExtrasUi::HorizontalTabs::ripple(activeWeight(i));
+		button.ripple->paint(p, highlight.x(), highlight.y(), island.width(),
+			custom ? &color : nullptr);
 		if (button.ripple->empty()) {
 			button.ripple.reset();
 		}
@@ -491,7 +509,9 @@ void TabsStrip::validateContent(QRect island) {
 		- _st.style.font->height) / 2;
 	for (auto i = 0, c = int(_buttons.size()); i != c; ++i) {
 		const auto &button = _buttons[i];
-		if (i == _active) {
+		if (custom) {
+			p.setPen(ExtrasUi::HorizontalTabs::foreground(_st.fg->c, activeWeight(i)));
+		} else if (i == _active) {
 			p.setPen(animating
 				? QPen(anim::color(_st.fg, _st.fgActive, progress))
 				: QPen(_st.fgActive->c));

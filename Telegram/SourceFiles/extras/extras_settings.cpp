@@ -771,6 +771,17 @@ void ExtrasSettings::setWindowMaterial(WindowMaterial val) {
 	save();
 }
 
+void ExtrasSettings::setHorizontalTabStyle(HorizontalTabStyle val) {
+	if (val < HorizontalTabStyle::Default || val > HorizontalTabStyle::Solid) {
+		return;
+	}
+	if (_horizontalTabStyle.current() == val) {
+		return;
+	}
+	_horizontalTabStyle = val;
+	save();
+}
+
 void ExtrasSettings::setRemoveMessageTail(bool val) {
 	if (_removeMessageTail.current() == val) return;
 	_removeMessageTail = val;
@@ -1252,6 +1263,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"increaseWebviewHeight", s._increaseWebviewHeight.current()},
 		{"increaseWebviewWidth", s._increaseWebviewWidth.current()},
 		{"windowMaterial", static_cast<int>(s._windowMaterial.current())},
+		{"horizontalTabStyle", static_cast<int>(s._horizontalTabStyle.current())},
 		{"removeMessageTail", s._removeMessageTail.current()},
 		{"disableNotificationsDelay", s._disableNotificationsDelay.current()},
 		{"localPremium", s._localPremium.current()},
@@ -1370,6 +1382,13 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._increaseWebviewHeight = j.value("increaseWebviewHeight", defaults._increaseWebviewHeight.current());
 	s._increaseWebviewWidth = j.value("increaseWebviewWidth", defaults._increaseWebviewWidth.current());
 	const auto material = j.find("windowMaterial");
+	const auto tabStyle = j.find("horizontalTabStyle");
+	s._horizontalTabStyle = (tabStyle != j.end()
+		&& tabStyle->is_number_integer()
+		&& *tabStyle >= 0
+		&& *tabStyle <= static_cast<int>(HorizontalTabStyle::Solid))
+		? static_cast<HorizontalTabStyle>(tabStyle->get<int>())
+		: HorizontalTabStyle::Default;
 	s._windowMaterial = (material != j.end()
 		&& material->is_number_integer()
 		&& *material >= 0

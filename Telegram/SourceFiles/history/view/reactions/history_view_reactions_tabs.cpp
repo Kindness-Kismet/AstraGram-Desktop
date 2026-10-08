@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/reactions/history_view_reactions_tabs.h"
 
+#include "extras/ui/components/horizontal_tabs.h"
+
 #include "data/data_message_reaction_id.h"
 #include "lang/lang_tag.h"
 #include "ui/abstract_button.h"
@@ -46,6 +48,7 @@ not_null<Ui::AbstractButton*> CreateTab(
 		+ stm->padding.right();
 	result->resize(width, stm->height);
 	const auto state = result->lifetime().make_state<State>();
+	ExtrasUi::HorizontalTabs::watch(result, [=] { state->cache = QImage(); });
 	std::move(
 		selected
 	) | rpl::on_next([=](bool selected) {
@@ -66,6 +69,10 @@ not_null<Ui::AbstractButton*> CreateTab(
 		const auto height = stm->height;
 		const auto skip = st::reactionsTabIconSkip;
 		const auto icon = QRect(skip, 0, height, height);
+		const auto styled = ExtrasUi::HorizontalTabs::enabled();
+		const auto foreground = styled
+			? ExtrasUi::HorizontalTabs::foreground(stm->textFg->c, state->selected)
+			: (state->selected ? stm->textActiveFg : stm->textFg)->c;
 		if (state->cache.isNull()) {
 			state->cache = QImage(
 				result->size() * factor,
@@ -78,7 +85,9 @@ not_null<Ui::AbstractButton*> CreateTab(
 			const auto radius = height / 2;
 			p.setPen(Qt::NoPen);
 			p.setBrush(state->selected ? stm->textActiveBg : stm->textBg);
-			{
+			if (styled) {
+				ExtrasUi::HorizontalTabs::paint(p, result->rect(), state->selected);
+			} else {
 				PainterHighQualityEnabler hq(p);
 				p.drawRoundedRect(result->rect(), radius, radius);
 			}
@@ -86,7 +95,7 @@ not_null<Ui::AbstractButton*> CreateTab(
 			const auto icon = QRect(skip, 0, height, height);
 			if (!state->custom) {
 				using Type = Ui::WhoReadType;
-				(reaction.emoji().isEmpty()
+				const auto &tabIcon = (reaction.emoji().isEmpty()
 					? (state->selected
 						? st::reactionsTabAllSelected
 						: st::reactionsTabAll)
@@ -97,11 +106,16 @@ not_null<Ui::AbstractButton*> CreateTab(
 						: st::reactionsTabPlayed)
 					: (state->selected
 						? st::reactionsTabChecksSelected
-						: st::reactionsTabChecks)).paintInCenter(p, icon);
+						: st::reactionsTabChecks));
+				if (styled) {
+					tabIcon.paintInCenter(p, icon, foreground);
+				} else {
+					tabIcon.paintInCenter(p, icon);
+				}
 			}
 
 			const auto textLeft = height + stm->padding.left();
-			p.setPen(state->selected ? stm->textActiveFg : stm->textFg);
+			p.setPen(foreground);
 			p.setFont(font);
 			p.drawText(textLeft, stm->padding.top() + font->ascent, text);
 		}
@@ -113,9 +127,7 @@ not_null<Ui::AbstractButton*> CreateTab(
 			const auto shift = (height - size) / 2;
 			const auto skip = (size - AdjustCustomEmojiSize(size)) / 2;
 			custom->paint(p, {
-				.textColor = (state->selected
-					? stm->textActiveFg
-					: stm->textFg)->c,
+				.textColor = foreground,
 				.now = crl::now(),
 				.position = { icon.x() + shift + skip, shift + skip },
 			});

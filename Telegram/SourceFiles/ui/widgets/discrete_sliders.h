@@ -154,6 +154,7 @@ public:
 	void setRippleTopRoundRadius(int radius);
 
 protected:
+	bool eventHook(QEvent *e) override;
 	void paintEvent(QPaintEvent *e) override;
 
 	int resizeGetHeight(int newWidth) override;
@@ -173,6 +174,7 @@ private:
 	std::optional<Ui::RoundRect> _bar;
 	std::optional<Ui::RoundRect> _barActive;
 	int _rippleTopRoundRadius = 0;
+	bool _fitWidthToSections = false;
 
 
 };
