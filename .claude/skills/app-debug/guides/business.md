@@ -10,8 +10,6 @@
 | `downloads.list` | `[all|archives|music|videos|other] [query]` | 当前账号的下载记录、分类、路径、大小、已下载字节及状态，按下载时间倒序。 |
 | `downloads.start` | `<peerId> <messageId> <destination>` | 向新建的绝对路径保存附件，返回 `jobId`；父目录必须存在，不覆盖已有文件。 |
 | `downloads.cancel` | `<peerId> <messageId>` | 取消指定附件的活动下载。 |
-| `downloads.fake` | `<path> <file|song|video|voice> <loading|done>` | 仅假会话：将自建素材加入真实下载管理器，不上传或播放。 |
-| `downloads.progress` | `<peerId> <messageId> <bytes|done>` | 仅假会话：推进模拟下载或完成，用于检查分类和列表更新。 |
 
 列表使用下载页面的同一个数据提供器，类型与关键词取交集；查询不会改变页面筛选或选择状态。
 `resolved: false` 表示旧下载记录尚未解析完成，此时空列表不是最终结果。只返回当前账号的记录。
@@ -24,7 +22,7 @@
 同一消息另存后列表按最新记录显示，不增加重复行。禁止借此绕过媒体禁止保存的限制。
 取消不承诺删除已写入的部分文件，重试应选择新路径。
 
-假下载只表示在真实管理器中模拟事件，不能作为联网下载成功的证据；素材文件须由测试自行构造。
+本地下载样本及进度注入见[模拟模式](simulation.md#补充消息和下载)。
 
 ## 消息、成员与编号提及
 

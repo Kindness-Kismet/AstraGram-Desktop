@@ -15,7 +15,7 @@
 
 `app.quit` 一般不直接调，`app.stop` 内部先发它。
 
-`app.info` 返回字段：`version` / `versionCode` / `configuration` / `workingDir` / `debugLogs` / `hasSession` / `hasWindow` / `fakeSession` / `userId`（已登录时）。
+`app.info` 返回字段：`version` / `versionCode` / `configuration` / `workingDir` / `debugLogs` / `hasSession` / `hasWindow` / `simulationMode` / `userId`（已登录时）。
 
 `app.check-update` 只触发不等待：下载与验签是异步的，结果看工作目录下 `tupdates/`
 保存的文件和应用日志。更新被禁用时返回 `updater is disabled`。
@@ -67,12 +67,12 @@ cat build/AstraGram-v*-win-x64-dev/crash.log                   # 读调用栈定
 ## 独立数据目录
 
 先退出当前调试应用，再选择独立配置。CLI 会记住选择，后续无需重复指定；
-数据保存至 `build/debug-profiles/scenarios/`。
+数据保存至 `build/debug-profiles/simulation/`。
 
 ```bash
 python .codex/skills/app-debug/scripts/cli.py app.stop
-python .codex/skills/app-debug/scripts/cli.py app.start --profile scenarios
-python .codex/skills/app-debug/scripts/cli.py session.fake
+python .codex/skills/app-debug/scripts/cli.py app.start --profile simulation
+python .codex/skills/app-debug/scripts/cli.py simulation.enter
 ```
 
 独立配置使用 `-debugprofile`，`app.info` 应显示 `isolatedDebug: true`、`testAgent: false`。

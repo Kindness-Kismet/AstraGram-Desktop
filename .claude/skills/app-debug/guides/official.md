@@ -1,7 +1,7 @@
 # 官方设置与业务操作
 
 官方界面入口采用原生设置索引和控件事件。命令存在不代表服务端操作已通过验证；
-本轮自动验证仅使用假会话，本地状态与真实服务端状态要区分。
+模拟模式只验证本地状态；真实服务端行为通过已授权的测试账号验证。
 
 ## 页面和值
 
@@ -33,11 +33,11 @@ python .codex/skills/app-debug/scripts/cli.py control.get '<控件编号或名�
 
 ## 账号与服务端隐私
 
-- `session.list`：本地账号、激活状态和假会话标记。
+- `session.list`：本地账号、激活状态和模拟模式标记。
 - `session.activate <index>`：激活指定本地账号。
 - `session.peer-settings <peerId> [key value]`：查询／修改会话级配置。
 - `session.thread-settings <peerId> <topicId> <subpeerId> [key value]`：查询／修改话题及子会话配置；普通聊天后两个编号填 0。
-- `privacy.get`：读取已加载的全局隐私状态，假会话返回 `localOnly: true`。
+- `privacy.get`：读取已加载的全局隐私状态，模拟模式返回 `localOnly: true`。
 - `privacy.set <key> <value>`：提交全局隐私设置。
 - `privacy.reload`：重新请求服务端隐私设置。
 
@@ -49,4 +49,4 @@ python .codex/skills/app-debug/scripts/cli.py control.get '<控件编号或名�
 `subsectionTabsMode`、`groupStickersHidden`、`groupEmojiHidden`。
 话题级键为 `hiddenPinnedMessageId`、`ringtoneVolume`；默认通知音量用 `session.defaultRingtoneVolume.<0|1|2>`。
 
-操作系统集成、真实网络请求和真实账号业务不在假会话验证范围内；不要为了测试修改系统配置。
+操作系统集成、真实网络请求和真实账号业务不在模拟模式验证范围内；不要为了测试修改系统配置。

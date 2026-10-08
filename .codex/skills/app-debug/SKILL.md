@@ -1,6 +1,6 @@
 ---
 name: app-debug
-description: Use this skill when the user asks to debug, test, or verify AstraGram functionality, take a screenshot, read or change settings, inspect ghost mode, check deleted-message storage, control the running Debug app, restart or stop the app, or says phrases like "调试", "测试", "验证", "截图", "看一下设置", "改个设置", "隐身模式", "已删除消息", "重启应用", "停掉应用", "观察界面" in this AstraGram project.
+description: 调试、测试和控制 AstraGram 开发版。用于模拟模式、界面观察和截图、设置读写、业务状态查询、隐身模式、消息留档，以及应用启动、停止和重启。
 ---
 
 # 应用调试
@@ -23,7 +23,7 @@ python .codex/skills/app-debug/scripts/cli.py settings.get streamerMode + screen
 
 ## 验证方式
 
-指令分三类：业务逻辑直接执行；界面交互通过控件指令操作；除页面切换外，不提供直接打开界面的指令。
+业务逻辑通过业务指令执行，界面交互通过控件指令操作；模拟模式通过专门入口构造和打开本地场景。
 
 - 设置和业务状态：用 `settings.*`、`ghost.status`、`storage.stats` 查询。
 - 下载、附件、编号提及、设置迁移和播放优先使用[业务指令](guides/business.md)，不通过点击代替已有业务入口。
@@ -35,7 +35,7 @@ python .codex/skills/app-debug/scripts/cli.py settings.get streamerMode + screen
 - 控件交互：用 `control.click`、`control.key`、`control.pointer`，事件只投递到应用内部。
 - 悬停：`control.hover` 检查按钮绘制；`control.pointer` 检查自绘控件及菜单的内部事件。
 - 命中：`control.click --mouse` 从窗口内部查找目标。系统光标、原生窗口及焦点行为另行人工验证。
-- 修改输入文字只用于假会话或已获授权的测试对话，因为应用仍会保存草稿。
+- 修改输入文字只用于模拟模式或已获授权的测试对话，因为应用仍会保存草稿。
 - 真实发送、加入、通话等业务动作按用户明确指定的测试范围执行。
 
 截图来自 `QWidget::grab()`，包含宿主内菜单。需要等待切页、主题和弹层动画结束再截图；
@@ -48,8 +48,8 @@ OpenGL 区域可能缺失。消息气泡等自绘内容主要通过图片观察�
 | 任务 | 指南 |
 |---|---|
 | 应用启动、停止、版本、更新、窗口、崩溃 | [运行控制](guides/runtime.md) |
-| 假会话、消息、通知、打开聊天、测试环境 | [会话与消息](guides/session.md) |
-| 固定会话列表、顶部条、底部动作、各种输入区 | [场景](guides/scenarios.md) |
+| 消息、通知、打开聊天、官方测试环境 | [会话与消息](guides/session.md) |
+| 模拟模式、固定分类、话题、收藏来源、临时提示、样本注入 | [模拟模式](guides/simulation.md) |
 | 设置值、主题、设置页面 | [设置](guides/settings.md) |
 | 官方业务、账号、隐私、设置索引、快捷动作 | [官方业务](guides/official.md) |
 | 下载、消息附件、编号提及、设置迁移、不切换界面的播放控制 | [业务指令](guides/business.md) |
@@ -63,11 +63,10 @@ OpenGL 区域可能缺失。消息气泡等自绘内容主要通过图片观察�
 
 ## 数据与进程
 
-登录页点击“进入假会话”或执行 `session.fake`，会自动创建固定会话与消息，并显示开发者功能。
-每次新建假会话都会初始化，无需额外导入场景或环境变量。
+进入方式、固定场景清单和临时触发统一见[模拟模式](guides/simulation.md)。
 
-需要隔离测试数据时使用独立配置：先 `app.stop`，再 `app.start --profile scenarios + session.fake`，仍串行运行原开发版。
-数据保存在 `build/debug-profiles/scenarios/`，CLI 会记住配置，后续调用无需重复指定。
+需要隔离测试数据时使用独立配置：先 `app.stop`，再 `app.start --profile simulation + simulation.enter`，仍串行运行原开发版。
+数据保存在 `build/debug-profiles/simulation/`，CLI 会记住配置，后续调用无需重复指定。
 独立配置使用 `-debugprofile`，跳过链接协议注册，并禁用原生通知及其注册表操作。
 `-testagent` 专供自动测试，会拦截外部链接；日常调试不使用这个标记。
 不要在独立配置中放置官方测试运行器的 `testing` 标记，避免额外场景自动运行。
@@ -85,7 +84,7 @@ C++ 修改后先 `app.stop`，再运行 `python scripts/build.py --dev --jobs 12
 产物位于 `build/AstraGram-v<版本>-win-x64-dev/`，默认不含 pdb；需要符号时加 `--pdb`，切换会全量重编。
 构建成功后 `app.start` 启动已有产物，最多等待 60 秒；单条服务端指令超时为 180 秒。
 
-假会话身份与场景消息在重启后消失，重新进入假会话即恢复场景；设置、草稿与留档仍写入调试配置。
+模拟模式重启后重新生成固定场景；设置和草稿仍写入调试配置，模拟编辑、删除跳过消息留档。
 崩溃时先查看当前工作目录的 `crash.log`；默认只有模块内偏移，`--pdb` 构建才能定位文件与行号。
 
 按当前任务临时组合指令进行实测，操作前核对账号与目录，验证后恢复临时修改的设置和草稿。

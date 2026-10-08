@@ -171,8 +171,8 @@ extras/
 - 单行注释用 `//`，函数注释写在声明或定义上方
 
 ```cpp
-// 构造本地假会话绕过登录，不写入磁盘，重启后消失。
-[[nodiscard]] Result FakeSession(const QStringList &args);
+// 构造本地模拟模式绕过登录，不写入磁盘，重启后消失。
+[[nodiscard]] Result enterSimulationMode(const QStringList &args);
 ```
 
 ### 优先使用卫语句
@@ -290,8 +290,10 @@ Debug 构建会在 `ExtrasInfra::init()` 里启动 `QTcpServer`，监听 `127.0.
 | `app.ping` / `app.info` / `app.help` | 探活、应用信息、指令清单 |
 | `app.quit` | 走 `Core::Quit()` 正常退出（`app.stop` 内部先用它） |
 | `crash.log` | 读取崩溃日志 |
-| `session.fake [userId]` | 构造本地假会话绕过登录并自动生成固定场景，默认 999999999 |
-| `message.fake <text> [--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban]` | 往假会话插入本地文本消息（缺省 Saved Messages），用于验证渲染与隐藏逻辑 |
+| `simulation.enter [userId]` | 构造本地模拟模式绕过登录并自动生成固定场景，默认 999999999 |
+| `simulation.list` / `simulation.open <key>` | 查询七类固定场景和实际状态，打开话题、收藏来源或其他视图 |
+| `simulation.trigger [list|key]` / `simulation.clear` | 触发生日、更新、下载等临时提示，或清除列表提示 |
+| `simulation.message <text> [--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban]` | 往模拟模式插入本地文本消息（缺省 Saved Messages），用于验证渲染与隐藏逻辑 |
 | `chat.list [filter]` | 列出会话的 peerId 与名称，供 message.send / chat.open 定位目标 |
 | `message.send <peerId> <text\|--file path>` | 真实发送文本到指定对话（`--file` 按 UTF-8 读文件原样发送），走官方发送链路，仅发往自己掌控的测试对话 |
 | `chat.open [peerId]` | 打开指定聊天，缺省为 Saved Messages |
@@ -316,7 +318,7 @@ python .claude/skills/app-debug/scripts/cli.py app.info
 python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true
 ```
 
-- 绕过登录：登录页的“进入假会话”按钮（仅 `_DEBUG` 构建可见），每次进入自动生成固定场景
+- 绕过登录：登录页的“模拟模式”按钮（仅 `_DEBUG` 构建可见），每次进入自动生成固定场景
 - 自动测试用独立配置：`app.start --profile <名称>`，数据在 `build/debug-profiles/`，跳过链接协议注册等系统集成
 - 服务端代码全部在 `#ifdef _DEBUG` 内，Release 二进制里不存在
 - 指令在主线程同步执行，耗时指令会导致界面暂时无响应
@@ -385,7 +387,7 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 
 ## 禁止事项
 
-1. Release 构建里保留调试代码——调试服务端、假会话、测试数据中心开关全部要在 `#ifdef _DEBUG` 内
+1. Release 构建里保留调试代码——调试服务端、模拟模式、测试数据中心开关全部要在 `#ifdef _DEBUG` 内
 2. 按进程名结束 `AstraGram.exe`——应按可执行文件绝对路径或端口占用 PID 校验
 3. 在主线程调用阻塞接口——`ExtrasSync::*Sync` 系列会运行事件循环等待 MTProto 响应，导致界面无响应
 4. 在 `Telegram/lib_ui/` 之外引用 `extras/extras_ui_settings.h`——codegen 硬编码了该 include 路径（`codegen/style/generator.cpp:676`）
