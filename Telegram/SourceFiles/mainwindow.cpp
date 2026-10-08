@@ -683,7 +683,10 @@ void MainWindow::setInnerFocus() {
 		_setupEmailLock->setInnerFocus();
 	} else if (_main) {
 		_main->setInnerFocus();
-		Extras::CommunityChannel::maybeShowInvite(sessionController());
+		// 切到登录页时，旧主界面可能尚未销毁，会话控制器已清空。
+		if (const auto controller = sessionController()) {
+			Extras::CommunityChannel::maybeShowInvite(controller);
+		}
 	} else if (_intro) {
 		_intro->setInnerFocus();
 	}
