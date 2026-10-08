@@ -330,6 +330,13 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 			channel->forum()->applyTopicAdded(kTopicRootId,
 				u"话题输入布局"_q, 0x6FB9F0, 0,
 				session->userPeerId(), base::unixtime::now() - 600, true);
+			channel->setAdminRights(ChatAdminRight::InviteByLinkOrAdd
+				| ChatAdminRight::ProcessJoinRequests);
+			channel->setPendingRequestsCount(1,
+				std::vector<UserId>{ UserId(kFirstPeerId + 1) });
+			channel->setBarSettings(PeerBarSetting::ReportSpam);
+			channel->setGroupCall(MTP_inputGroupCall(MTP_long(810002), MTPlong()),
+				base::unixtime::now() + 3600);
 		}
 		if (spec.kind == Kind::Call) {
 			channel->setGroupCall(MTP_inputGroupCall(MTP_long(810001), MTPlong()),

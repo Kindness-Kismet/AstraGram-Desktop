@@ -67,10 +67,11 @@ inline void ApplyChatControlSurface(
 		.background = std::move(background),
 		.border = std::move(border),
 		.borderWidth = st::lineWidth,
+		.windowMaterial = true,
 	});
 }
 
-// 没有磨砂背景时保留原底色；磨砂表面的底色由表面绘制，控件只叠加悬停层。
+// 聊天磨砂或窗口材质由表面绘制，控件只叠加悬停层。
 inline void PaintChatBar(
 		QPainter &p,
 		QWidget *widget,
@@ -78,7 +79,7 @@ inline void PaintChatBar(
 		const QColor &fill,
 		const QColor &hover = {}) {
 	const auto surface = ExtrasUi::FloatingSurface::find(widget);
-	if (!surface || !surface->hasBackdrop()) {
+	if (!surface || (!surface->hasBackdrop() && !surface->usesWindowMaterial())) {
 		p.fillRect(rect, hover.isValid() ? hover : fill);
 	} else if (hover.isValid() && hover != fill) {
 		p.fillRect(rect, ExtrasUi::ChatSurfaceHover());

@@ -23,7 +23,7 @@ python .codex/skills/app-debug/scripts/cli.py scenario.open discussion + screens
 | restricted | 群聊发送限制 |
 | translate | 翻译与置顶组合 |
 | requests | 加入申请与置顶组合 |
-| topic | 话题输入区 |
+| topic | 话题输入区，以及列表顶部的计划通话、加入申请和举报提示 |
 | call | 计划通话、申请与置顶堆叠 |
 | business | 商业机器人提示 |
 | paid | 付费消息提示 |

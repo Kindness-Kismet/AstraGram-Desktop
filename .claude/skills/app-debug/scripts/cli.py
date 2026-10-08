@@ -320,6 +320,9 @@ def register_commands(sub) -> None:
     command = sub.add_parser("control.key", help="向控件合成按键，用于菜单导航和关闭")
     command.add_argument("target", help="控件名称、#序号或 @menu")
     command.add_argument("key", choices=("escape", "up", "down", "left", "right", "enter", "tab", "space"))
+    command = sub.add_parser("control.shortcut", help="向指定控件内已注册的快捷键投递事件，不操作系统键盘")
+    command.add_argument("target", help="控件名称或 #序号")
+    command.add_argument("sequence", help="快捷键组合，如 Ctrl+Shift+T")
     command = sub.add_parser("control.pointer", help="向控件内部位置合成移动事件，不移动系统鼠标；省略坐标时离开")
     command.add_argument("target", help="控件名称或 control.list 默认模式的 #序号")
     command.add_argument("point", nargs="*", type=int, metavar="X Y", help="控件内的坐标，必须成对；省略则清除上一次合成悬停")
@@ -433,6 +436,8 @@ def build_server_command(args: argparse.Namespace) -> str:
         return f"control.hover {quote_arg(args.target)} {args.state}"
     if command == "control.key":
         return f"control.key {quote_arg(args.target)} {args.key}"
+    if command == "control.shortcut":
+        return f"control.shortcut {quote_arg(args.target)} {quote_arg(args.sequence)}"
     if command == "control.pointer":
         if len(args.point) not in (0, 2):
             raise ValueError("control.pointer requires both x and y")

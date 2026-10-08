@@ -1,6 +1,7 @@
 #include "extras/ui/components/floating_surface.h"
 
 #include "extras/extras_settings.h"
+#include "extras/features/window_material/window_material.h"
 #include "extras/ui/components/floating_surface_host.h"
 #include "styles/palette.h"
 
@@ -49,6 +50,11 @@ void FloatingSurface::attach(QWidget *widget, FloatingSurfaceStyle style) {
 	auto surface = new FloatingSurface(widget, std::move(style));
 	widget->setAttribute(Qt::WA_OpaquePaintEvent, false);
 	widget->setGraphicsEffect(surface);
+	if (surface->_style.windowMaterial) {
+		ExtrasFeatures::WindowMaterial::changes(widget) | rpl::skip(1) | rpl::on_next([=] {
+			surface->update();
+		}, surface->_lifetime);
+	}
 	surface->rebind();
 	surface->refreshGeometry();
 }
@@ -83,6 +89,12 @@ QWidget *FloatingSurface::widget() const {
 
 bool FloatingSurface::hasBackdrop() const {
 	return !_host.isNull();
+}
+
+bool FloatingSurface::usesWindowMaterial() const {
+	return _style.windowMaterial
+		&& !hasBackdrop()
+		&& ExtrasFeatures::WindowMaterial::isActive(_widget);
 }
 
 void FloatingSurface::refreshGeometry() {
@@ -242,7 +254,10 @@ void FloatingSurface::draw(QPainter *p) {
 	updateMask(result.size(), ratio);
 	{
 		auto painter = QPainter(&result);
-		const auto tint = _style.background();
+		const auto windowMaterial = usesWindowMaterial();
+		const auto tint = windowMaterial
+			? QColor(Qt::transparent)
+			: _style.background();
 		painter.fillRect(_widget->rect(), tint);
 		if (_host) {
 			_host->paint(painter, this, tint);
@@ -250,7 +265,7 @@ void FloatingSurface::draw(QPainter *p) {
 		painter.drawPixmap(offset, source);
 		painter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
 		painter.drawPixmap(0, 0, _mask);
-		if (_style.border) {
+		if (_style.border && !windowMaterial) {
 			painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 			painter.setRenderHint(QPainter::Antialiasing);
 			painter.setPen(QPen(_style.border(), _style.borderWidth));

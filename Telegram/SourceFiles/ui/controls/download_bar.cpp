@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/controls/download_bar.h"
 
+#include "extras/features/window_material/window_material.h"
+
 #include "ui/widgets/buttons.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_utilities.h"
@@ -40,6 +42,11 @@ DownloadBar::DownloadBar(
 , _shadow(parent)
 , _progress(std::move(progress))
 , _radial([=](crl::time now) { radialAnimationCallback(now); }) {
+	ExtrasFeatures::WindowMaterial::watchSurface(_button.entity());
+	ExtrasFeatures::WindowMaterial::watchSurface(&_shadow);
+	ExtrasFeatures::WindowMaterial::changes(&_button) | rpl::skip(1) | rpl::on_next([=] {
+		_button.finishAnimating();
+	}, lifetime());
 	_button.hide(anim::type::instant);
 	_shadow.showOn(_button.shownValue());
 	_button.setDirectionUp(false);
@@ -182,7 +189,7 @@ void DownloadBar::paint(Painter &p, QRect clip) {
 	const auto outerw = button->width();
 	const auto over = button->isOver() || button->isDown();
 	const auto &icon = over ? st::downloadArrowOver : st::downloadArrow;
-	p.fillRect(clip, st::windowBg);
+	p.fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(button, st::windowBg->c));
 	button->paintRipple(p, 0, 0);
 
 	const auto finished = _finishedAnimation.value(_finished ? 1. : 0.);

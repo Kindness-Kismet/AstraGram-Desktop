@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/chat/more_chats_bar.h"
 
+#include "extras/features/window_material/window_material.h"
+
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/shadow.h"
 #include "ui/text/text_options.h"
@@ -29,9 +31,15 @@ MoreChatsBar::MoreChatsBar(
 
 	_wrap.entity()->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
-		QPainter(_wrap.entity()).fillRect(clip, st::historyPinnedBg);
+		QPainter(_wrap.entity()).fillRect(clip,
+			ExtrasFeatures::WindowMaterial::surfaceColor(_inner, st::historyPinnedBg->c));
 	}, lifetime());
 	_wrap.setAttribute(Qt::WA_OpaquePaintEvent);
+	ExtrasFeatures::WindowMaterial::watchSurface(_inner);
+	ExtrasFeatures::WindowMaterial::watchSurface(_shadow.get());
+	ExtrasFeatures::WindowMaterial::changes(&_wrap) | rpl::skip(1) | rpl::on_next([=] {
+		_wrap.finishAnimating();
+	}, lifetime());
 
 	auto copy = std::move(
 		content
@@ -111,7 +119,8 @@ void MoreChatsBar::setupInner() {
 }
 
 void MoreChatsBar::paint(Painter &p) {
-	p.fillRect(_inner->rect(), st::historyComposeAreaBg);
+	p.fillRect(_inner->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(
+		_inner, st::historyComposeAreaBg->c));
 
 	const auto width = std::max(
 		_inner->width(),

@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/message_field.h"
 
 #include "extras/ui/components/chat_surface_button.h"
+#include "extras/features/window_material/window_material.h"
 #include "extras/features/mention_by_id/mention_by_id.h"
 #include "ui/chat/floating_bar.h"
 #include "history/history_widget.h"
@@ -1530,6 +1531,11 @@ std::unique_ptr<Ui::AbstractButton> FrozenWriteRestriction(
 	const auto raw = result.get();
 
 	const auto bar = (type == FrozenWriteRestrictionType::DialogsList);
+	if (bar) {
+		Ui::ApplyChatControlSurface(raw, 0, false, [] {
+			return st::historyComposeButton.bgColor->c;
+		});
+	}
 	const auto title = CreateChild<FlatLabel>(
 		raw,
 		(bar ? tr::lng_frozen_bar_title : tr::lng_frozen_restrict_title)(
@@ -1550,6 +1556,9 @@ std::unique_ptr<Ui::AbstractButton> FrozenWriteRestriction(
 	subtitle->show();
 
 	const auto shadow = bar ? CreateChild<PlainShadow>(raw) : nullptr;
+	if (shadow) {
+		ExtrasFeatures::WindowMaterial::watchSurface(shadow);
+	}
 	const auto icon = bar ? CreateChild<RpWidget>(raw) : nullptr;
 	if (icon) {
 		icon->paintRequest() | rpl::on_next([=] {

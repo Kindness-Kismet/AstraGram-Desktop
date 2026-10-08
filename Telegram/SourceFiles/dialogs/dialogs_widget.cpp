@@ -365,6 +365,7 @@ Widget::BottomButton::BottomButton(
 , _icon(icon)
 , _iconOver(iconOver)
 , _hasTextIcon(hasTextIcon) {
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	resize(st::columnMinimalWidthLeft, _st.height);
 
 	if (_hasTextIcon) {
@@ -428,7 +429,8 @@ void Widget::BottomButton::paintEvent(QPaintEvent *e) {
 			paintRipple(p, 0, 0, &st::universalRippleAnimation.color->c);
 		}
 	} else {
-		p.fillRect(r, over ? _st.overBgColor : _st.bgColor);
+		p.fillRect(r, over ? _st.overBgColor->c
+			: ExtrasFeatures::WindowMaterial::surfaceColor(this, _st.bgColor->c));
 		if (!isDisabled()) {
 			paintRipple(p, 0, 0);
 		}
@@ -1605,11 +1607,14 @@ void Widget::updateCommunityAddChatButton() {
 		button->setFullWidth(width);
 		button->moveToLeft(0, 0, width);
 	}, row->lifetime());
+	ExtrasFeatures::WindowMaterial::watchSurface(entity);
 	entity->paintOn([=](QPainter &p) {
 		const auto fadeHeight = st::communityAddChatButtonMargin.top()
 			+ st::communityAddChatButton.height
 			+ st::communityAddChatButtonMargin.bottom();
-		PaintBottomFade(p, entity->width(), fadeHeight, st::dialogsBg);
+		if (!ExtrasFeatures::WindowMaterial::isActive(entity)) {
+			PaintBottomFade(p, entity->width(), fadeHeight, st::dialogsBg);
+		}
 	});
 
 	_communityAddChat.reset(wrap.release());
@@ -1618,6 +1623,7 @@ void Widget::updateCommunityAddChatButton() {
 	_communityAddChatPlaceholder.reset(_innerList->add(
 		object_ptr<Ui::RpWidget>(_innerList)));
 	const auto placeholder = _communityAddChatPlaceholder.get();
+	ExtrasFeatures::WindowMaterial::watchSurface(placeholder);
 	placeholder->paintOn([placeholder](QPainter &p) {
 		p.fillRect(placeholder->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(
 			placeholder, st::dialogsBg->c));
@@ -3348,7 +3354,7 @@ void Widget::refreshLoadMoreButton(bool mayBlock, bool isBlocked) {
 	if (!_loadMoreChats) {
 		_loadMoreChats.create(
 			this,
-			"Load more",
+			tr::lng_channels_your_more(tr::now),
 			st::dialogsLoadMoreButton,
 			st::dialogsLoadMore,
 			st::dialogsLoadMore,
@@ -3361,7 +3367,9 @@ void Widget::refreshLoadMoreButton(bool mayBlock, bool isBlocked) {
 	}
 	const auto loading = !isBlocked;
 	_loadMoreChats->setDisabled(loading);
-	_loadMoreChats->setText(loading ? "Loading..." : "Load more");
+	_loadMoreChats->setText(loading
+		? tr::lng_contacts_loading(tr::now)
+		: tr::lng_channels_your_more(tr::now));
 }
 
 void Widget::loadMoreBlockedByDate() {

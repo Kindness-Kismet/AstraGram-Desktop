@@ -15,6 +15,8 @@
 #include <QEnterEvent>
 #include <QLabel>
 #include <QKeyEvent>
+#include <QShortcut>
+#include <QShortcutEvent>
 #include <QMap>
 #include <QMouseEvent>
 #include <QDragEnterEvent>
@@ -378,6 +380,35 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	return Result::Ok(u"sent"_q);
 }
 
+[[nodiscard]] Result controlShortcut(const QStringList &args) {
+	if (args.size() != 2) {
+		return Result::Err(u"usage: control.shortcut <target> <sequence>"_q);
+	}
+	const auto target = findControl(args.front());
+	const auto sequence = QKeySequence::fromString(args[1], QKeySequence::PortableText);
+	if (!target || !target->isVisible() || !target->isEnabled() || sequence.isEmpty()) {
+		return Result::Err(u"expected a visible enabled control and a shortcut sequence"_q);
+	}
+	auto match = QPointer<QShortcut>();
+	for (const auto shortcut : target->findChildren<QShortcut*>()) {
+		if (!shortcut->isEnabled() || shortcut->key() != sequence
+			|| !shortcut->parentWidget()->isVisible()) {
+			continue;
+		}
+		if (match) {
+			return Result::Err(u"ambiguous shortcut; select a more specific target"_q);
+		}
+		match = shortcut;
+	}
+	if (!match) {
+		return Result::Err(u"registered shortcut not found"_q);
+	}
+	// 沿已注册快捷键的事件路径执行，不改变系统键盘或前台窗口。
+	QShortcutEvent event(sequence, match->id());
+	QApplication::sendEvent(match, &event);
+	return Result::Ok(u"sent"_q);
+}
+
 [[nodiscard]] Result controlHover(const QStringList &args) {
 	if (args.size() != 2 || (args[1] != u"on"_q && args[1] != u"off"_q)) {
 		return Result::Err(u"usage: control.hover <objectName | #index> <on|off>"_q);
@@ -669,6 +700,7 @@ const HandlerMap &ControlHandlers() {
 		{ u"control.hover"_q, &controlHover },
 		{ u"control.pointer"_q, &controlPointer },
 		{ u"control.key"_q, &controlKey },
+		{ u"control.shortcut"_q, &controlShortcut },
 		{ u"control.get"_q, &controlGet },
 		{ u"control.set"_q, &controlSet },
 		{ u"control.action"_q, &controlAction },

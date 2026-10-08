@@ -32,6 +32,7 @@ namespace Dialogs {
 
 int PaintSuggestionBubbleBackground(
 	QPainter &p,
+	not_null<QWidget*> widget,
 	QRect outer,
 	const Ui::BoxShadow &shadow,
 	int cornerRadius = 0);

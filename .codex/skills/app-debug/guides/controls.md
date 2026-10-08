@@ -43,6 +43,10 @@ python .codex/skills/app-debug/scripts/cli.py control.pointer historyScroll
 
 ## 点击命中检查
 
+`control.shortcut <目标> <组合>` 向目标内部唯一匹配的已注册快捷键投递事件，例如 `Ctrl+Shift+T`。
+快捷键不存在或匹配多个时返回错误；不操作系统键盘，也不改变前台窗口。
+对话列表已有生日和登录提醒调试快捷键，可在独立假会话内用 `Ctrl+Shift+T`、`Ctrl+Shift+A` 验证。
+
 control.drop-files <目标> <本地文件路径>... 仅限本进程假会话，向控件投递本地文件拖放事件，沿正常输入区流程打开附件预览；不会点击发送，也不使用系统剪贴板。
 
 `control.click <目标> --mouse` 从窗口开始命中测试，再发送鼠标事件。目标中心被遮挡时返回错误，

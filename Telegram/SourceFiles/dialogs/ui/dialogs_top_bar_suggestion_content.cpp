@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/call_delayed.h"
 #include "data/data_authorization.h"
 #include "dialogs/ui/dialogs_pill.h"
+#include "extras/features/window_material/window_material.h"
 #include "lang/lang_keys.h"
 #include "lottie/lottie_icon.h"
 #include "settings/settings_common.h"
@@ -24,7 +25,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/ui_rpl_filter.h"
 #include "ui/ui_utility.h"
 #include "ui/unread_badge_paint.h"
-#include "ui/vertical_list.h"
 #include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/elastic_scroll.h"
@@ -108,16 +108,20 @@ int PillRadius() {
 
 int PaintSuggestionBubbleBackground(
 		QPainter &p,
+		not_null<QWidget*> widget,
 		QRect outer,
 		const Ui::BoxShadow &shadow,
 		int cornerRadius) {
 	const auto &margins = st::dialogsTopBarSuggestionMargins;
 	const auto pill = outer - margins;
-	PaintTopFade(
-		p,
-		outer.width(),
-		margins.top() + pill.height() / 2,
-		st::dialogsBg->c);
+	const auto windowMaterial = ExtrasFeatures::WindowMaterial::isActive(widget);
+	if (!windowMaterial) {
+		PaintTopFade(
+			p,
+			outer.width(),
+			margins.top() + pill.height() / 2,
+			st::dialogsBg->c);
+	}
 	if (pill.isEmpty()) {
 		return 0;
 	}
@@ -126,6 +130,9 @@ int PaintSuggestionBubbleBackground(
 		pill.width() / 2,
 		pill.height() / 2,
 	});
+	if (windowMaterial) {
+		return radius;
+	}
 	shadow.paint(p, pill, radius);
 	auto hq = PainterHighQualityEnabler(p);
 	p.setBrush(st::dialogsBg);
@@ -140,6 +147,12 @@ UnconfirmedAuthWrap::UnconfirmedAuthWrap(
 	object_ptr<Ui::VerticalLayout> &&child)
 : Ui::SlideWrap<Ui::VerticalLayout>(parent, std::move(child))
 , _shadow(st::dialogsTopBarSuggestionShadow) {
+	setObjectName(u"dialogs.unconfirmedAuth"_q);
+	ExtrasFeatures::WindowMaterial::changes(this) | rpl::skip(1) | rpl::on_next([=] {
+		if (!_collapseSnapshot.isNull()) {
+			prepareCollapseSnapshot();
+		}
+	}, lifetime());
 	paintRequest() | rpl::on_next([=] {
 		if (!_collapseSnapshot.isNull()) {
 			auto p = QPainter(this);
@@ -168,10 +181,16 @@ void UnconfirmedAuthWrap::setCollapseProgress(
 }
 
 void UnconfirmedAuthWrap::prepareCollapseSnapshot() {
+	const auto fullSize = _collapseSnapshot.isNull()
+		? size()
+		: _collapseSnapshot.size() / _collapseSnapshot.devicePixelRatio();
+	releaseCollapseSnapshot();
+	resize(fullSize);
 	_collapseSnapshot = Ui::GrabWidget(this);
 	if (const auto w = wrapped()) {
 		w->hide();
 	}
+	resizeToWidth(fullSize.width());
 	update();
 }
 
@@ -216,9 +235,10 @@ not_null<UnconfirmedAuthWrap*> CreateUnconfirmedAuthContent(
 		object_ptr<Ui::VerticalLayout>(parent));
 	wrap->setCollapseProgress(std::move(collapseProgress));
 	const auto content = wrap->entity();
+	ExtrasFeatures::WindowMaterial::watchSurface(content);
 	const auto &margins = st::dialogsTopBarSuggestionMargins;
 	content->paintOn([=](QPainter &p) {
-		PaintSuggestionBubbleBackground(p, content->rect(), wrap->shadow());
+		PaintSuggestionBubbleBackground(p, content, content->rect(), wrap->shadow());
 	});
 
 	const auto &basePadding = st::dialogsUnconfirmedAuthPadding;
@@ -299,6 +319,12 @@ TopBarSuggestionContent::TopBarSuggestionContent(
 , _contentTextSt(st::dialogsTopBarSuggestionAboutStyle)
 , _shadow(st::dialogsTopBarSuggestionShadow)
 , _emojiPaused(std::move(emojiPaused)) {
+	setObjectName(u"dialogs.topBarSuggestion"_q);
+	ExtrasFeatures::WindowMaterial::changes(this) | rpl::skip(1) | rpl::on_next([=] {
+		if (!_collapseSnapshot.isNull()) {
+			prepareCollapseSnapshot();
+		}
+	}, lifetime());
 	_leftPadding = st::dialogsTopBarLeftPadding;
 	setRightIcon(RightIcon::Close);
 	Ui::AbstractButton::setClickedCallback([=] {
@@ -450,6 +476,7 @@ void TopBarSuggestionContent::draw(QPainter &p) {
 		const auto pill = outer - margins;
 		const auto radius = PaintSuggestionBubbleBackground(
 			p,
+			this,
 			outer,
 			_shadow,
 			_geometry.cornerRadius);
@@ -481,6 +508,7 @@ void TopBarSuggestionContent::draw(QPainter &p) {
 
 	const auto radius = PaintSuggestionBubbleBackground(
 		p,
+		this,
 		outer,
 		_shadow,
 		_geometry.cornerRadius);
@@ -611,12 +639,18 @@ void TopBarSuggestionContent::paintEvent(QPaintEvent *) {
 }
 
 void TopBarSuggestionContent::prepareCollapseSnapshot() {
+	const auto fullSize = _collapseSnapshot.isNull()
+		? size()
+		: _collapseSnapshot.size() / _collapseSnapshot.devicePixelRatio();
+	releaseCollapseSnapshot();
+	resize(fullSize);
 	_collapseSnapshot = Ui::GrabWidget(this);
 	for (const auto child : children()) {
 		if (const auto widget = qobject_cast<QWidget*>(child)) {
 			widget->hide();
 		}
 	}
+	resizeToWidth(fullSize.width());
 	update();
 }
 
@@ -786,8 +820,10 @@ void MountTopBarSuggestion(MountTopBarSuggestionArgs args) {
 			0,
 			object_ptr<Ui::RpWidget>(innerList)));
 		const auto raw = placeholder->get();
+		ExtrasFeatures::WindowMaterial::watchSurface(raw);
 		raw->paintOn([raw](QPainter &p) {
-			p.fillRect(raw->rect(), st::dialogsBg);
+			p.fillRect(raw->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(
+				raw, st::dialogsBg->c));
 		});
 	}
 	wrap->setParent(scroll);

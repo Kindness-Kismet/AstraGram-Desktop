@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base/basic_types.h"
+#include "rpl/lifetime.h"
 
 #include <QtCore/QPointer>
 #include <QtCore/QRect>
@@ -20,6 +21,7 @@ struct FloatingSurfaceStyle {
 	Fn<QColor()> background;
 	Fn<QColor()> border;
 	int borderWidth = 1;
+	bool windowMaterial = false;
 	bool maskInput = false;
 	Fn<qreal()> opacity;
 	Fn<std::vector<QRect>()> rects;
@@ -40,6 +42,7 @@ public:
 
 	[[nodiscard]] QWidget *widget() const;
 	[[nodiscard]] bool hasBackdrop() const;
+	[[nodiscard]] bool usesWindowMaterial() const;
 	void refreshGeometry();
 
 protected:
@@ -61,6 +64,7 @@ private:
 	std::vector<QPointer<QWidget>> _ancestors;
 	std::vector<QRect> _rects;
 	QPixmap _mask;
+	rpl::lifetime _lifetime;
 };
 
 } // namespace ExtrasUi
