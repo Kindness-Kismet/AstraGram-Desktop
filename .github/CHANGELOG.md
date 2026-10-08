@@ -42,6 +42,17 @@
 - Fixed an issue with brief on-screen messages that previously caused their requested display duration to be ignored
 - Fixed an issue with clearing download history that previously could cause crashes while older records were still loading in the background
 - Fixed an issue with closing an attachment-caption editor or logging out after media playback that previously could cause crashes from delayed operations
+- Added forwarding modes to the Saved Messages submenu, so you can now keep the source, remove it or remove both the source and media captions while preserving existing drafts
+- Improved settings cards, which now have consistent spacing and smoother rounded edges, including with translucent window materials
+- Added a bundled Bamum font, so you can now view basic and supplementary Bamum characters even when the system lacks a suitable font
+- Improved Simplified Chinese copy actions and notices, which now use consistent wording
+- Added a sticker timestamp option, so you can now show timestamps only when hovering over stickers while keeping sending and failure indicators visible
+- Added horizontal tab styles, so you can now switch between the original appearance, outlined tabs and solid pills throughout the app, with colors following your accent color
+- Improved the chat list, which now appears without separators between conversations while preserving the space needed by topics and tags
+- Fixed an issue with translucent search transitions that previously caused unwanted background blocks or abrupt animation changes
+- Fixed an issue with the download button that previously caused it to disappear briefly during chat-list animations
+- Fixed an issue with adding accounts that previously could cause a crash when an old panel restored focus during the switch to the login screen
+- Removed temporary message hiding; the session-only Hide Message menu action is no longer available
 
 ---
 
@@ -89,3 +100,14 @@
 - 修复了关于短暂提示消息的错误，该问题曾导致指定的显示时长被忽略
 - 修复了关于清空下载历史的错误，该问题曾导致后台仍在加载旧记录时可能崩溃
 - 修复了关于关闭附件说明编辑框或播放媒体后退出账号的错误，该问题曾导致后续操作可能引发崩溃
+- 新增了收藏夹转发子菜单中的转发方式，现在可以保留来源、移除来源，或同时移除来源和媒体说明，并保留已有草稿
+- 对设置卡片进行了改善，这使得卡片间距更一致、圆角边缘更平滑，半透明窗口材质下也能正常显示
+- 新增了内置巴穆姆文字字体，现在即使系统缺少相应字体，也能显示基本区和扩展区字符
+- 对简体中文复制操作和提示进行了改善，这使得相关文案用词更加统一
+- 新增了贴纸时间显示选项，现在可以仅在鼠标悬停贴纸时显示时间，同时保留发送中和发送失败提示
+- 新增了横向标签栏款式，现在可以在全应用的原有样式、细框标签和实色胶囊之间切换，颜色跟随当前强调色
+- 对对话列表进行了改善，这使得对话之间不再显示分隔线，同时保留话题和标签内容需要的空间
+- 修复了关于半透明材质下搜索切换的错误，该问题曾导致多余背景色块或动画突变
+- 修复了关于下载按钮的错误，该问题曾导致对话列表动画期间按钮短暂消失
+- 修复了关于添加账号的错误，该问题曾导致切换到登录页时旧面板恢复焦点并引发崩溃
+- 移除了临时隐藏消息功能，当前运行期间隐藏消息的菜单入口不再可用
