@@ -114,6 +114,7 @@ void ChatSearchIn::Section::update() {
 
 ChatSearchIn::ChatSearchIn(QWidget *parent)
 : RpWidget(parent) {
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	_in.clicks.events() | rpl::on_next([=] {
 		showMenu();
 	}, lifetime());
@@ -284,7 +285,9 @@ void ChatSearchIn::showMenu() {
 
 void ChatSearchIn::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
-	p.fillRect(rect(), st::dialogsBg);
+	p.fillRect(rect(), ExtrasFeatures::WindowMaterial::surfaceColor(
+		this,
+		st::dialogsBg->c));
 }
 
 int ChatSearchIn::resizeGetHeight(int newWidth) {

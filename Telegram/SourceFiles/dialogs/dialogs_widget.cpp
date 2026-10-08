@@ -2201,7 +2201,6 @@ void Widget::updateDownloadsButton() {
 		&& (_layout == Layout::Main)
 		&& header > 0
 		&& !_showAnimation
-		&& _widthAnimationCache.isNull()
 		&& !_childList
 		&& !_openedFolder
 		&& !_openedForum
@@ -3050,11 +3049,14 @@ void Widget::scrollToDefault(bool verytop) {
 	image.fill(Qt::transparent);
 	{
 		QPainter p(&image);
-		Ui::RenderWidget(
-			p,
-			this,
-			QPoint(),
-			QRect(0, top, wideGeometry.width(), skip));
+		// 空区域会触发整页截图，透明材质下会混入搜索框与重复列表。
+		if (skip > 0) {
+			Ui::RenderWidget(
+				p,
+				this,
+				QPoint(),
+				QRect(0, top, wideGeometry.width(), skip));
+		}
 		if (_chatFilters
 			&& _searchState.query.isEmpty()
 			&& !_openedForum
@@ -5253,7 +5255,11 @@ void Widget::paintEvent(QPaintEvent *e) {
 		if (top > aboveBottom) {
 			p.fillRect(0, aboveBottom, width(), top - aboveBottom, bg);
 		}
+		if (ExtrasFeatures::WindowMaterial::isActive(this)) {
+			p.setOpacity(1. - suggestionsShown);
+		}
 		p.drawPixmapLeft(0, top, width(), _widthAnimationCache);
+		p.setOpacity(1.);
 		belowTop = top
 			+ (_widthAnimationCache.height() / style::DevicePixelRatio());
 	}
