@@ -119,7 +119,7 @@ void paint(QPainter &p, QRect bounds, float64 active, bool hovered, bool compact
 	auto fill = filled ? selectedBackground() : st::windowActiveTextFg->c;
 	fill.setAlphaF(filled ? active : active * .04);
 	if (hovered) {
-		fill.setAlphaF(std::max(fill.alphaF(), .07));
+		fill.setAlphaF(std::max(float64(fill.alphaF()), .07));
 	}
 	p.save();
 	const auto hq = PainterHighQualityEnabler(p);
