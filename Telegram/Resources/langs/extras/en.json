@@ -596,6 +596,7 @@
   "FilterZalgo_PC": "Filter Zalgo",
   "ImproveLinkPreviews": "Improve Link Previews",
   "ShowOnlyAddedEmojisAndStickers": "Show Only Added Emojis & Stickers",
+  "StickerTimestampOnHover": "Show sticker timestamps on hover",
   "EmojiPacks": "Custom Emoji Packs",
   "EmojiPackDescription": "Download a preset or import your own color emoji font. This only changes emoji on this device. Missing emoji keep their default appearance.",
   "EmojiPackSearchKeywords": "emoji font preset pack",

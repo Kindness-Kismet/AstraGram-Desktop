@@ -730,6 +730,12 @@ void ExtrasSettings::setMessageStickerScale(double val) {
 	save();
 }
 
+void ExtrasSettings::setStickerTimestampOnHover(bool val) {
+	if (_stickerTimestampOnHover.current() == val) return;
+	_stickerTimestampOnHover = val;
+	save();
+}
+
 void ExtrasSettings::setSpoofWebviewAsAndroid(bool val) {
 	if (_spoofWebviewAsAndroid.current() == val) return;
 	_spoofWebviewAsAndroid = val;
@@ -1241,6 +1247,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"disableOpenLinkWarning", s._disableOpenLinkWarning.current()},
 		{"wideMultiplier", s._wideMultiplier.current()},
 		{"messageStickerScale", s._messageStickerScale.current()},
+		{"stickerTimestampOnHover", s._stickerTimestampOnHover.current()},
 		{"spoofWebviewAsAndroid", s._spoofWebviewAsAndroid.current()},
 		{"increaseWebviewHeight", s._increaseWebviewHeight.current()},
 		{"increaseWebviewWidth", s._increaseWebviewWidth.current()},
@@ -1358,6 +1365,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._disableOpenLinkWarning = j.value("disableOpenLinkWarning", defaults._disableOpenLinkWarning.current());
 	s._wideMultiplier = j.value("wideMultiplier", defaults._wideMultiplier.current());
 	s._messageStickerScale = j.value("messageStickerScale", defaults._messageStickerScale.current());
+	s._stickerTimestampOnHover = j.value("stickerTimestampOnHover", defaults._stickerTimestampOnHover.current());
 	s._spoofWebviewAsAndroid = j.value("spoofWebviewAsAndroid", defaults._spoofWebviewAsAndroid.current());
 	s._increaseWebviewHeight = j.value("increaseWebviewHeight", defaults._increaseWebviewHeight.current());
 	s._increaseWebviewWidth = j.value("increaseWebviewWidth", defaults._increaseWebviewWidth.current());

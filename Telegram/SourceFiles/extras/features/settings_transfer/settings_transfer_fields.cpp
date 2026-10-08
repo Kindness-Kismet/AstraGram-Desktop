@@ -205,6 +205,8 @@ Fields customFields() {
 		&S::wideMultiplier, &S::setWideMultiplier, 0.5, 4.0, true);
 	addField(fields, "messageStickerScale", settings,
 		&S::messageStickerScale, &S::setMessageStickerScale, 0.5, 1.6);
+	addField(fields, "stickerTimestampOnHover", settings,
+		&S::stickerTimestampOnHover, &S::setStickerTimestampOnHover);
 	addField(fields, "spoofWebviewAsAndroid", settings,
 		&S::spoofWebviewAsAndroid, &S::setSpoofWebviewAsAndroid);
 	addField(fields, "increaseWebviewHeight", settings,

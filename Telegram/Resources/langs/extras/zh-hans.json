@@ -747,6 +747,7 @@
   "SettingsShowMessageId": "显示消息 ID",
   "ShowPinnedMessages": "显示置顶消息",
   "StickerSizeScale": "贴纸尺寸缩放",
+  "StickerTimestampOnHover": "贴纸时间戳仅悬停时显示",
   "TitleForwardAsCopy": "复制到...",
   "TitleForwarded": "已转发",
   "TitleMultipleForward": "转发到...",

@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/media/history_view_media_unwrapped.h"
 
+#include "data/data_document.h"
+#include "data/data_media_types.h"
 #include "data/data_session.h"
 #include "history/history.h"
 #include "history/view/media/history_view_ephemeral_plate.h"
@@ -24,6 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat.h"
 
 // AyuGram includes
+#include "extras/extras_settings.h"
 #include "extras/features/message_shot/message_shot.h"
 
 
@@ -729,12 +732,23 @@ QPoint UnwrappedMedia::calculateFastActionPosition(
 }
 
 bool UnwrappedMedia::needInfoDisplay() const {
-	return _parent->data()->isSending()
-		|| _parent->data()->hasFailed()
+	const auto item = _parent->data();
+	if (item->isSending()
+		|| item->hasFailed()
 		|| _parent->isUnderCursor()
-		|| _parent->rightActionSize()
+		|| (_parent->delegate()->elementContext() == Context::ChatPreview)) {
+		return true;
+	}
+	if (ExtrasSettings::getInstance().stickerTimestampOnHover()) {
+		const auto media = item->media();
+		const auto document = media ? media->document() : nullptr;
+		// 按消息附件识别贴纸，排除共用贴纸渲染的大表情和骰子。
+		if (document && document->sticker()) {
+			return ExtrasFeatures::MessageShot::isTakingShot();
+		}
+	}
+	return _parent->rightActionSize()
 		|| _parent->isLastAndSelfMessage()
-		|| (_parent->delegate()->elementContext() == Context::ChatPreview)
 		|| (_parent->hasRightLayout()
 			&& _content->alwaysShowOutTimestamp());
 }

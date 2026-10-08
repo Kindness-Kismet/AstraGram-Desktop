@@ -8943,6 +8943,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SettingsWideMultiplier" = "Wide Messages Multiplier";
 "extras_SettingsWideMultiplierDescription" = "You can change message width for better display on wide monitors.";
 "extras_StickerSizeScale" = "Sticker size scale";
+"extras_StickerTimestampOnHover" = "Show sticker timestamps on hover";
 "extras_PinnedBarHidden" = "Pinned messages hidden. Click to re-show.";
 "extras_ShowPinnedMessages" = "Show pinned messages";
 "extras_SettingsSpoofWebviewAsAndroid" = "Spoof Client as Android";

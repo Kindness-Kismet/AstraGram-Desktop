@@ -85,8 +85,15 @@ void BuildStickersAndEmoji(SectionBuilder &builder, ExtrasSectionBuilder &extras
 	extras.addSectionDivider();
 }
 
-void buildMessageStickerScale(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
+void buildMessageStickers(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	auto *settings = &ExtrasSettings::getInstance();
+
+	extras.addSettingToggle({
+		.id = u"extras/stickerTimestampOnHover"_q,
+		.title = tr::extras_StickerTimestampOnHover(),
+		.getter = &ExtrasSettings::stickerTimestampOnHover,
+		.setter = &ExtrasSettings::setStickerTimestampOnHover,
+	});
 
 	constexpr auto kMessageStickerMinScale = 0.5;
 	constexpr auto kMessageStickerScaleStep = 0.1;
@@ -495,7 +502,7 @@ const auto kMeta = BuildHelper({
 
 	builder.addSkip();
 	BuildStickersAndEmoji(builder, extras);
-	buildMessageStickerScale(builder, extras);
+	buildMessageStickers(builder, extras);
 	BuildGroupsAndChannels(builder, extras);
 	BuildMarks(builder, extras, previewState);
 	BuildWideMessagesMultiplier(builder, extras, previewState);

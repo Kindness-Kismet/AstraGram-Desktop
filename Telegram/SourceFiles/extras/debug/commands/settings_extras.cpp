@@ -102,6 +102,7 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"disableOpenLinkWarning"_q, [&] { return settings.disableOpenLinkWarning(); }, settings, &ExtrasSettings::setDisableOpenLinkWarning);
 	addSetting(entries, u"wideMultiplier"_q, [&] { return settings.wideMultiplier(); }, settings, &ExtrasSettings::setWideMultiplier);
 	addSetting(entries, u"messageStickerScale"_q, [&] { return settings.messageStickerScale(); }, settings, &ExtrasSettings::setMessageStickerScale);
+	addSetting(entries, u"stickerTimestampOnHover"_q, [&] { return settings.stickerTimestampOnHover(); }, settings, &ExtrasSettings::setStickerTimestampOnHover);
 	addSetting(entries, u"spoofWebviewAsAndroid"_q, [&] { return settings.spoofWebviewAsAndroid(); }, settings, &ExtrasSettings::setSpoofWebviewAsAndroid);
 	addSetting(entries, u"increaseWebviewHeight"_q, [&] { return settings.increaseWebviewHeight(); }, settings, &ExtrasSettings::setIncreaseWebviewHeight);
 	addSetting(entries, u"increaseWebviewWidth"_q, [&] { return settings.increaseWebviewWidth(); }, settings, &ExtrasSettings::setIncreaseWebviewWidth);

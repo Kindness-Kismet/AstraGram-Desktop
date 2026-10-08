@@ -125,6 +125,10 @@ Sticker::Sticker(
 		}
 		_parent->history()->owner().requestViewResize(_parent);
 	}, _lifetime);
+	ExtrasSettings::getInstance().stickerTimestampOnHoverChanges(
+	) | rpl::on_next([=] {
+		_parent->history()->owner().requestViewRepaint(_parent);
+	}, _lifetime);
 	if ((_dataMedia = _data->activeMediaView())) {
 		dataMediaCreated();
 	} else {
