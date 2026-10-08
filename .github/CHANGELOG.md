@@ -53,6 +53,8 @@
 - Fixed an issue with the download button that previously caused it to disappear briefly during chat-list animations
 - Fixed an issue with adding accounts that previously could cause a crash when an old panel restored focus during the switch to the login screen
 - Removed temporary message hiding; the session-only Hide Message menu action is no longer available
+- Fixed an issue with chat list bars under translucent window materials that previously caused suggestion banners, search headers, download and folder bars, frozen-account notices and topic group status bars to show opaque backgrounds, outlines or shadows
+- Fixed an issue with chat list labels that previously caused the load-more button, its loading state and search result headers to stay in English regardless of the interface language
 
 ---
 
@@ -111,3 +113,5 @@
 - 修复了关于下载按钮的错误，该问题曾导致对话列表动画期间按钮短暂消失
 - 修复了关于添加账号的错误，该问题曾导致切换到登录页时旧面板恢复焦点并引发崩溃
 - 移除了临时隐藏消息功能，当前运行期间隐藏消息的菜单入口不再可用
+- 修复了关于半透明窗口材质下对话列表提示条的错误，该问题曾导致建议横幅、搜索标题栏、下载栏、文件夹栏、账号冻结提示和话题群组状态栏显示不透明背景、描边或阴影
+- 修复了关于对话列表文案的错误，该问题曾导致加载更多按钮、加载中提示和搜索结果标题不跟随界面语言，始终显示英文
