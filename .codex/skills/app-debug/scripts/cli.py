@@ -229,10 +229,6 @@ def register_commands(sub) -> None:
     sub.add_parser("app.help", help="列出服务端已注册的全部指令名")
     command = sub.add_parser("player.state", help="查询当前媒体的播放状态")
     command.add_argument("kind", nargs="?", choices=("song", "voice"))
-    command = sub.add_parser("player.fake", help="在假会话中播放本地音乐、语音或圆形视频")
-    command.add_argument("kind", choices=("song", "voice", "video"))
-    command.add_argument("path")
-    command.add_argument("seconds", type=int)
 
     command = sub.add_parser("settings.keys", help="列出全部设置键名")
     command.add_argument("prefix", nargs="?")
@@ -428,8 +424,6 @@ def build_server_command(args: argparse.Namespace) -> str:
         return command + (" " + quote_arg(args.prefix) if args.prefix is not None else "")
     if command == "player.state":
         return command + (" " + args.kind if args.kind else "")
-    if command == "player.fake":
-        return f"{command} {args.kind} {quote_arg(str(Path(args.path).resolve()))} {args.seconds}"
     if command == "scenario.open":
         return f"scenario.open {quote_arg(args.key)} --view {args.view} --input {args.input}"
     if command == "control.hover":

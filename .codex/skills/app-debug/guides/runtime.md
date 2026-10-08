@@ -82,8 +82,6 @@ python .codex/skills/app-debug/scripts/cli.py session.fake
 端口已有进程时，CLI 核对可执行路径和工作目录；目录不符会报告并停止执行。
 恢复原配置：先 `app.stop`，再 `app.start --profile default`。
 
-`player.fake <song|voice|video> <path> <seconds>` 仅在本进程假会话中注入本地媒体消息并播放，不上传文件。
-文件限制为 16 MiB，时长为 1 至 600 秒；音乐和语音使用音频文件，圆形视频使用 320 × 320 的视频文件。
 播放、暂停、切换和停止使用 `player.control`；跳转、倍速、收起和关闭仍通过播放器控件操作。`player.state` 中的 `type` 与 `video` 可核对当前类型。
 
 `app.start`、`app.ensure`、`app.restart` 支持 `--background`，新启动时进入托盘，不主动显示窗口。已有实例保持原状；这不改变单实例规则，也不会操作系统鼠标。
