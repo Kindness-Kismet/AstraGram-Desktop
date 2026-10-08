@@ -68,7 +68,11 @@ public:
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::RpWidget*> parent,
 		not_null<PeerData*> peer,
-		bool showInForum);
+		bool showInForum
+#ifdef _DEBUG
+		, Fn<void()> previewAction = nullptr
+#endif // _DEBUG
+	);
 
 	void show();
 	void hide();

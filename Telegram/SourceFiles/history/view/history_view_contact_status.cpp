@@ -739,7 +739,11 @@ ContactStatus::ContactStatus(
 	not_null<Window::SessionController*> window,
 	not_null<Ui::RpWidget*> parent,
 	not_null<PeerData*> peer,
-	bool showInForum)
+	bool showInForum
+#ifdef _DEBUG
+	, Fn<void()> previewAction
+#endif // _DEBUG
+)
 : _controller(window)
 , _inner(Ui::CreateChild<Bar>(
 	parent.get(),
@@ -748,6 +752,16 @@ ContactStatus::ContactStatus(
 , _bar(parent, object_ptr<Bar>::fromRaw(_inner)) {
 	FinalizeSetBotPhotoFirstOpenState(peer);
 	setupState(peer, showInForum);
+#ifdef _DEBUG
+	if (previewAction) {
+		rpl::merge(
+			_inner->reportClicks(),
+			_inner->unarchiveClicks(),
+			_inner->closeClicks()
+		) | rpl::on_next(std::move(previewAction), _bar.lifetime());
+		return;
+	}
+#endif // _DEBUG
 	setupHandlers(peer);
 }
 

@@ -763,6 +763,25 @@ PeerData *simulationPeer(not_null<Main::Session*> session, const QString &key) {
 	const auto index = findScenario(key);
 	return (index >= 0) ? session->data().peer(scenarioPeerId(index)).get() : nullptr;
 }
+Result triggerSimulationCountdown(const QStringList &args) {
+	if (!args.empty()) {
+		return Result::Err(u"usage: simulation.trigger delete-countdown"_q);
+	}
+	const auto session = ActiveSession();
+	if (!session || !isSimulationSession(session)) {
+		return Result::Err(u"simulation mode is required"_q);
+	}
+	const auto peer = simulationPeer(session, u"private"_q);
+	static auto nextId = 2600000;
+	const auto item = session->data().addNewMessage(
+		makeMessage(peer, peer->id, ++nextId, u"这条消息将在 15 秒后自动删除。"_q,
+			false, false), MessageFlags(), NewMessageType::Unread);
+	Expects(item != nullptr);
+	const auto expires = base::unixtime::now() + 15;
+	item->applyTTL(expires);
+	return Result::Ok(Compact({ { "peerId", peer->id.value },
+		{ "messageId", item->id.bare }, { "expiresAt", expires } }));
+}
 
 } // namespace ExtrasDebug::Commands
 #endif // _DEBUG

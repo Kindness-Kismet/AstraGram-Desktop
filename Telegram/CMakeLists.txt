@@ -347,6 +347,8 @@ set(extras_files
         extras/debug/commands/app_commands.cpp
         extras/debug/commands/session_commands.cpp
         extras/debug/commands/simulation_commands.cpp
+        extras/debug/dialogs_preview.cpp
+        extras/debug/dialogs_preview.h
         extras/debug/simulation_scenarios.cpp
         extras/debug/simulation_scenarios.h
         extras/debug/simulation_media.cpp
@@ -1133,6 +1135,7 @@ PRIVATE
     dialogs/dialogs_top_bar_suggestion.cpp
     dialogs/dialogs_top_bar_suggestion.h
     dialogs/dialogs_top_bar_suggestion_test.cpp
+    dialogs/dialogs_list_preview.cpp
     dialogs/suggestions/suggestion.cpp
     dialogs/suggestions/suggestion.h
     dialogs/suggestions/suggestion_birthday_contacts.cpp

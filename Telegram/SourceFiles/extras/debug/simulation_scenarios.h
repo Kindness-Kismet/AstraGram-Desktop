@@ -29,6 +29,7 @@ struct SimulationScene {
 [[nodiscard]] std::vector<SimulationScene> simulationScenes();
 [[nodiscard]] Result listSimulationScenes(const QStringList &args);
 [[nodiscard]] Result openSimulationScene(const QStringList &args);
+[[nodiscard]] Result triggerSimulationCountdown(const QStringList &args);
 
 } // namespace ExtrasDebug::Commands
 

@@ -186,7 +186,7 @@ COMMAND_CATEGORY_LABELS = {
     "storage": "已删除消息与编辑历史",
     "screenshot": "截图",
     "control": "控件树与合成交互",
-    "simulation": "模拟模式：固定场景",
+    "simulation": "模拟模式：固定场景与临时触发",
 }
 
 
@@ -250,6 +250,9 @@ def register_commands(sub) -> None:
     sub.add_parser("session.test-mode", help="在生产环境与官方测试数据中心之间切换")
 
     sub.add_parser("simulation.list", help="列出固定场景的名称、键名与会话编号")
+    sub.add_parser("simulation.clear", help="清除临时提示并恢复普通列表")
+    command = sub.add_parser("simulation.trigger", help="列出或触发临时提示，none 恢复普通列表")
+    command.add_argument("key", nargs="?", default="list")
     command = sub.add_parser("simulation.open", help="打开模拟模式自动生成的固定场景")
     command.add_argument("key")
     command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts", "pinned", "actions", "topic-unread", "topic-closed", "source-self", "source-private", "source-channel"), default="main", help="主聊天、计划消息、置顶、管理、话题或收藏来源")
@@ -318,7 +321,7 @@ def register_commands(sub) -> None:
     command.add_argument("key", choices=("escape", "up", "down", "left", "right", "enter", "tab", "space"))
     command = sub.add_parser("control.shortcut", help="向指定控件内已注册的快捷键投递事件，不操作系统键盘")
     command.add_argument("target", help="控件名称或 #序号")
-    command.add_argument("sequence", help="快捷键组合，如 Ctrl+Shift+T")
+    command.add_argument("sequence", help="快捷键组合，如 Ctrl+K")
     command = sub.add_parser("control.pointer", help="向控件内部位置合成移动事件，不移动系统鼠标；省略坐标时离开")
     command.add_argument("target", help="控件名称或 control.list 默认模式的 #序号")
     command.add_argument("point", nargs="*", type=int, metavar="X Y", help="控件内的坐标，必须成对；省略则清除上一次合成悬停")
@@ -426,6 +429,8 @@ def build_server_command(args: argparse.Namespace) -> str:
         return command + (" " + args.kind if args.kind else "")
     if command == "simulation.open":
         return f"simulation.open {quote_arg(args.key)} --view {args.view} --input {args.input}"
+    if command == "simulation.trigger":
+        return f"simulation.trigger {quote_arg(args.key)}"
     if command == "control.hover":
         return f"control.hover {quote_arg(args.target)} {args.state}"
     if command == "control.key":

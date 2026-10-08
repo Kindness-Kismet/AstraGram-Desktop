@@ -6,6 +6,10 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_widget.h"
+
+#ifdef _DEBUG
+#include "extras/debug/debug_login.h"
+#endif // _DEBUG
 #include "extras/features/music_player/music_player_floating.h"
 
 #include "extras/features/window_material/window_material.h"
@@ -994,9 +998,6 @@ Widget::Widget(
 			this, controller);
 		updateControlsGeometry();
 	}
-#ifdef _DEBUG
-	setupTopBarSuggestionTestHotkeys();
-#endif // _DEBUG
 }
 
 void Widget::setupSwipeBack() {
@@ -1421,6 +1422,11 @@ void Widget::setupTopBarSuggestions() {
 	}
 	using namespace rpl::mappers;
 	crl::on_main(_innerList, [=] {
+#ifdef _DEBUG
+		if (ExtrasDebug::isSimulationSession(&session())) {
+			return;
+		}
+#endif // _DEBUG
 		const auto owner = &session().data();
 		session().api().authorizations().unreviewedChanges(
 		) | rpl::on_next([=] {
@@ -1476,11 +1482,15 @@ void Widget::setupTopBarSuggestions() {
 }
 
 void Widget::updateFrozenAccountBar() {
+	auto frozen = bool(session().frozen());
+#ifdef _DEBUG
+	frozen = frozen || listPreviewIs(ExtrasDebug::DialogsPreview::Frozen);
+#endif // _DEBUG
 	if (_layout == Layout::Child
 		|| _openedForum
 		|| _openedFolder
 		|| _openedCommunity
-		|| !session().frozen()) {
+		|| !frozen) {
 		_frozenAccountBar = nullptr;
 	} else if (!_frozenAccountBar) {
 		_frozenAccountBar = FrozenWriteRestriction(
@@ -1499,6 +1509,12 @@ void Widget::updateTopBarSuggestions() {
 }
 
 bool Widget::communityOverlaysShown() const {
+#ifdef _DEBUG
+	if (listPreviewIs(ExtrasDebug::DialogsPreview::CommunityRequests)
+		|| listPreviewIs(ExtrasDebug::DialogsPreview::CommunityAdd)) {
+		return true;
+	}
+#endif // _DEBUG
 	return _openedCommunity
 		&& !_openedForum
 		&& (_inner->state() == WidgetState::Default);
@@ -1524,14 +1540,22 @@ void Widget::updateCommunityRequestsBubble() {
 	const auto channel = _openedCommunity
 		? _openedCommunity->channel().get()
 		: nullptr;
-	if (!channel || !channel->canManageLinkedPeers()) {
+	if ((!channel || !channel->canManageLinkedPeers())
+#ifdef _DEBUG
+		&& !listPreviewIs(ExtrasDebug::DialogsPreview::CommunityRequests)
+#endif // _DEBUG
+	) {
 		_scroll->setBarTopInset(0);
 		_topBarSuggestionHeightChanged.fire(0);
 		return;
 	}
 
-	auto count = Info::Profile::PendingRequestsCountValue(
-		channel
+	auto count = (
+#ifdef _DEBUG
+		listPreviewIs(ExtrasDebug::DialogsPreview::CommunityRequests)
+			? rpl::single(3) :
+#endif // _DEBUG
+		Info::Profile::PendingRequestsCountValue(channel)
 	) | rpl::start_spawning(_communityRequestsLifetime);
 
 	const auto content = Ui::CreateChild<TopBarSuggestionContent>(this);
@@ -1552,6 +1576,11 @@ void Widget::updateCommunityRequestsBubble() {
 		tr::lng_community_requests_title(tr::now, tr::marked),
 		TextWithEntities());
 	const auto open = [=] {
+#ifdef _DEBUG
+		if (handleListPreviewAction()) {
+			return;
+		}
+#endif // _DEBUG
 		ShowCommunityPendingRequestsBox(controller(), channel);
 	};
 	content->setRightBadge(rpl::duplicate(count));
@@ -1587,7 +1616,11 @@ void Widget::updateCommunityAddChatButton() {
 	const auto channel = _openedCommunity
 		? _openedCommunity->channel().get()
 		: nullptr;
-	if (!channel || !channel->canManageLinkedPeers()) {
+	if ((!channel || !channel->canManageLinkedPeers())
+#ifdef _DEBUG
+		&& !listPreviewIs(ExtrasDebug::DialogsPreview::CommunityAdd)
+#endif // _DEBUG
+	) {
 		_scroll->setBarBottomInset(0);
 		return;
 	}
@@ -1600,6 +1633,11 @@ void Widget::updateCommunityAddChatButton() {
 		object_ptr<Ui::RpWidget>(entity),
 		st::communityAddChatButtonMargin);
 	const auto button = MakeCommunityAddChatButton(row, [=] {
+#ifdef _DEBUG
+		if (handleListPreviewAction()) {
+			return;
+		}
+#endif // _DEBUG
 		ShowChooseChatToAddBox(controller(), channel);
 	});
 	row->resize(row->width(), st::communityAddChatButton.height);
@@ -1636,6 +1674,11 @@ void Widget::updateCommunityAddChatButton() {
 		_scroll.data());
 	_communityAddChatNarrow.reset(narrowButton);
 	narrowButton->setClickedCallback([=] {
+#ifdef _DEBUG
+		if (handleListPreviewAction()) {
+			return;
+		}
+#endif // _DEBUG
 		ShowChooseChatToAddBox(controller(), channel);
 	});
 	narrowButton->resize(
@@ -1749,6 +1792,12 @@ void Widget::setupDownloadBar() {
 
 	Data::MakeDownloadBarContent(
 	) | rpl::on_next([=](Ui::DownloadBarContent &&content) {
+#ifdef _DEBUG
+		if (listPreviewIs(ExtrasDebug::DialogsPreview::Download)
+			|| listPreviewIs(ExtrasDebug::DialogsPreview::DownloadDone)) {
+			return;
+		}
+#endif // _DEBUG
 		const auto create = (content.count && !_downloadBar);
 		if (create) {
 			_downloadBar = std::make_unique<Ui::DownloadBar>(
@@ -2702,7 +2751,12 @@ void Widget::refreshTopBars() {
 			controller(),
 			this,
 			peer,
-			true);
+			true
+#ifdef _DEBUG
+			, (_listPreview != ExtrasDebug::DialogsPreview::None)
+				? Fn<void()>([=] { handleListPreviewAction(); }) : nullptr
+#endif // _DEBUG
+		);
 		_forumRequestsBar = std::make_unique<Ui::RequestsBar>(
 			this,
 			HistoryView::RequestsBarContentByPeer(
@@ -2721,6 +2775,11 @@ void Widget::refreshTopBars() {
 
 		_forumRequestsBar->barClicks(
 		) | rpl::on_next([=] {
+#ifdef _DEBUG
+			if (handleListPreviewAction()) {
+				return;
+			}
+#endif // _DEBUG
 			RequestsBoxController::Start(controller(), peer);
 		}, _forumRequestsBar->lifetime());
 
@@ -2728,6 +2787,11 @@ void Widget::refreshTopBars() {
 			_forumGroupCallBar->barClicks(),
 			_forumGroupCallBar->joinClicks()
 		) | rpl::on_next([=] {
+#ifdef _DEBUG
+			if (handleListPreviewAction()) {
+				return;
+			}
+#endif // _DEBUG
 			if (peer->groupCall()) {
 				controller()->startOrJoinGroupCall(peer);
 			}
@@ -2892,14 +2956,18 @@ QPixmap Widget::grabForFolderSlideAnimation() {
 }
 
 void Widget::checkUpdateStatus() {
-	Expects(!Core::UpdaterDisabled());
+#ifdef _DEBUG
+	const auto preview = listPreviewIs(ExtrasDebug::DialogsPreview::UpdateReady);
+#else
+	constexpr auto preview = false;
+#endif // _DEBUG
 
 	if (_layout == Layout::Child) {
 		return;
 	}
 
 	using Checker = Core::UpdateChecker;
-	if (Checker().state() == Checker::State::Ready) {
+	if (preview || (!Core::UpdaterDisabled() && Checker().state() == Checker::State::Ready)) {
 		if (_updateTelegram) {
 			return;
 		}
@@ -2911,7 +2979,12 @@ void Widget::checkUpdateStatus() {
 			st::dialogsInstallUpdateOver,
 			true);
 		_updateTelegram->show();
-		_updateTelegram->setClickedCallback([] {
+		_updateTelegram->setClickedCallback([=] {
+#ifdef _DEBUG
+			if (handleListPreviewAction()) {
+				return;
+			}
+#endif // _DEBUG
 			Core::checkReadyUpdate();
 			Core::Restart();
 		});
@@ -3340,6 +3413,13 @@ void Widget::submit() {
 }
 
 void Widget::refreshLoadMoreButton(bool mayBlock, bool isBlocked) {
+#ifdef _DEBUG
+	if (listPreviewIs(ExtrasDebug::DialogsPreview::LoadMore)
+		|| listPreviewIs(ExtrasDebug::DialogsPreview::Loading)) {
+		mayBlock = true;
+		isBlocked = listPreviewIs(ExtrasDebug::DialogsPreview::LoadMore);
+	}
+#endif // _DEBUG
 	if (_layout == Layout::Child) {
 		return;
 	}
@@ -3361,6 +3441,11 @@ void Widget::refreshLoadMoreButton(bool mayBlock, bool isBlocked) {
 			false);
 		_loadMoreChats->show();
 		_loadMoreChats->addClickHandler([=] {
+#ifdef _DEBUG
+			if (handleListPreviewAction()) {
+				return;
+			}
+#endif // _DEBUG
 			loadMoreBlockedByDate();
 		});
 		updateControlsGeometry();
@@ -3382,6 +3467,12 @@ void Widget::loadMoreBlockedByDate() {
 }
 
 bool Widget::search(bool inCache, SearchRequestDelay delay) {
+#ifdef _DEBUG
+	if (_listPreview >= ExtrasDebug::DialogsPreview::SearchId
+		&& _listPreview <= ExtrasDebug::DialogsPreview::SearchMessages) {
+		return true;
+	}
+#endif // _DEBUG
 	_processingSearch = true;
 	const auto guard = gsl::finally([&] {
 		_processingSearch = false;

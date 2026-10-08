@@ -19,6 +19,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mtproto/sender.h"
 #include "api/api_single_message_search.h"
 
+#ifdef _DEBUG
+#include "extras/debug/dialogs_preview.h"
+#endif // _DEBUG
+
 class ChannelData;
 
 namespace Extras::MusicPlayer {
@@ -98,6 +102,10 @@ enum class HashOrCashtag : uchar;
 
 class Widget final : public Window::AbstractSectionWidget {
 public:
+#ifdef _DEBUG
+	void setListPreview(ExtrasDebug::DialogsPreview preview);
+	[[nodiscard]] bool isMainListPreview() const;
+#endif // _DEBUG
 	enum class Layout {
 		Main,
 		Child,
@@ -231,7 +239,11 @@ private:
 	void setupSwipeBack();
 	void setupTopBarSuggestions();
 #ifdef _DEBUG
-	void setupTopBarSuggestionTestHotkeys();
+	void installListPreviewSuggestion(ExtrasDebug::DialogsPreview preview);
+	void clearListPreviewSuggestion();
+	[[nodiscard]] bool listPreviewIs(ExtrasDebug::DialogsPreview preview) const;
+	bool handleListPreviewAction();
+	ExtrasDebug::DialogsPreview _listPreview = {};
 #endif // _DEBUG
 	void storiesExplicitCollapse();
 	void collectStoriesUserpicsViews(Data::StorySourcesList list);
