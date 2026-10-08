@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/gui">
+        <file alias="fonts/NotoSansBamum-Regular.ttf">../../fonts/NotoSansBamum-Regular.ttf</file>
         <file alias="art/extras/alt/app.svg">../../art/extras/alt/app.svg</file>
         <file alias="art/extras/alt/app_icon.ico">../../art/extras/alt/app_icon.ico</file>
         <file alias="art/extras/bard/app.svg">../../art/extras/bard/app.svg</file>

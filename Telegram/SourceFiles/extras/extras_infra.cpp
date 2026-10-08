@@ -14,11 +14,23 @@
 #include "ui/chat/chat_style_radius.h"
 #include "utils/rc_manager.h"
 
+#include <QtGui/QFontDatabase>
+
 #ifdef Q_OS_WIN
 #include "extras/utils/windows_utils.h"
 #endif
 
 namespace ExtrasInfra {
+
+void initFontFallbacks() {
+	// 字体加载后、创建界面字体前注册，覆盖系统字体与自定义字体。
+	const auto fallback = u"Noto Sans Bamum"_q;
+	for (const auto &family : QFontDatabase().families()) {
+		if (family != fallback) {
+			QFont::insertSubstitution(family, fallback);
+		}
+	}
+}
 
 void initLang() {
 	QString id = Lang::GetInstance().id();

@@ -312,6 +312,7 @@ void Application::run() {
 
 	style::SetCustomFont(settings().customFontFamily());
 	style::internal::StartFonts();
+	ExtrasInfra::initFontFallbacks();
 
 	Test::ApplyStartupOverrides();
 
