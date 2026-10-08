@@ -1550,7 +1550,6 @@ void AddMessageActions(
 		not_null<ListWidget*> list) {
 	if (request.item) {
 		ExtrasUi::AddHistoryAction(menu, request.item);
-		ExtrasUi::AddHideMessageAction(menu, request.item);
 		ExtrasUi::AddUserMessagesAction(menu, request.item);
 		ExtrasUi::AddMessageDetailsAction(menu, request.item);
 	}

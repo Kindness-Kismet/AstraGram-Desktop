@@ -5,7 +5,6 @@
 #include "mainwidget.h"
 #include "api/api_sending.h"
 #include "extras/extras_settings.h"
-#include "extras/extras_state.h"
 #include "extras/data/messages_storage.h"
 #include "extras/features/delete_messages/delete_own_messages.h"
 #include "extras/features/filters/filters_controller.h"
@@ -515,34 +514,6 @@ void AddHistoryAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 			}
 		},
 		&st::extrasEditsHistoryIcon);
-}
-
-void AddHideMessageAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
-	const auto &settings = ExtrasSettings::getInstance();
-	if (!ShouldShowContextMenuItem(settings.showHideMessageInContextMenu())) {
-		return;
-	}
-
-	if (item->history()->peer->isSelf()) {
-		return;
-	}
-
-	menu->addAction(
-		tr::extras_ContextHideMessage(tr::now),
-		[=] { HideMessage(item); },
-		&st::menuIconClear);
-}
-
-void HideMessage(not_null<HistoryItem*> item) {
-	const auto history = item->history();
-	const auto owner = &history->owner();
-	for (const auto &fullId : owner->itemOrItsGroup(item)) {
-		if (const auto current = owner->message(fullId)) {
-			ExtrasState::hide(current);
-			current->destroy();
-		}
-	}
-	history->requestChatListMessage();
 }
 
 void AddUserMessagesAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {

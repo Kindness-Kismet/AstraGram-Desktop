@@ -239,8 +239,6 @@ Fields customFields() {
 		&S::showReactionsPanelInContextMenu, &S::setShowReactionsPanelInContextMenu, 0, 2);
 	addField(fields, "showViewsPanelInContextMenu", settings,
 		&S::showViewsPanelInContextMenu, &S::setShowViewsPanelInContextMenu, 0, 2);
-	addField(fields, "showHideMessageInContextMenu", settings,
-		&S::showHideMessageInContextMenu, &S::setShowHideMessageInContextMenu, 0, 2);
 	addField(fields, "showUserMessagesInContextMenu", settings,
 		&S::showUserMessagesInContextMenu, &S::setShowUserMessagesInContextMenu, 0, 2);
 	addField(fields, "showMessageDetailsInContextMenu", settings,

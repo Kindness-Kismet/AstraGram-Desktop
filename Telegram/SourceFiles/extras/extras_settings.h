@@ -317,7 +317,6 @@ public:
 	[[nodiscard]] bool unlimitedRecentStickers() const { return _unlimitedRecentStickers.current(); }
 	[[nodiscard]] ContextMenuVisibility showReactionsPanelInContextMenu() const { return _showReactionsPanelInContextMenu.current(); }
 	[[nodiscard]] ContextMenuVisibility showViewsPanelInContextMenu() const { return _showViewsPanelInContextMenu.current(); }
-	[[nodiscard]] ContextMenuVisibility showHideMessageInContextMenu() const { return _showHideMessageInContextMenu.current(); }
 	[[nodiscard]] ContextMenuVisibility showUserMessagesInContextMenu() const { return _showUserMessagesInContextMenu.current(); }
 	[[nodiscard]] ContextMenuVisibility showMessageDetailsInContextMenu() const { return _showMessageDetailsInContextMenu.current(); }
 	[[nodiscard]] ContextMenuVisibility showRepeatMessageInContextMenu() const { return _showRepeatMessageInContextMenu.current(); }
@@ -416,7 +415,6 @@ public:
 	void setUnlimitedRecentStickers(bool val);
 	void setShowReactionsPanelInContextMenu(ContextMenuVisibility val);
 	void setShowViewsPanelInContextMenu(ContextMenuVisibility val);
-	void setShowHideMessageInContextMenu(ContextMenuVisibility val);
 	void setShowUserMessagesInContextMenu(ContextMenuVisibility val);
 	void setShowMessageDetailsInContextMenu(ContextMenuVisibility val);
 	void setShowRepeatMessageInContextMenu(ContextMenuVisibility val);
@@ -551,8 +549,6 @@ public:
 	[[nodiscard]] rpl::producer<ContextMenuVisibility> showReactionsPanelInContextMenuChanges() const { return _showReactionsPanelInContextMenu.changes(); }
 	[[nodiscard]] rpl::producer<ContextMenuVisibility> showViewsPanelInContextMenuValue() const { return _showViewsPanelInContextMenu.value(); }
 	[[nodiscard]] rpl::producer<ContextMenuVisibility> showViewsPanelInContextMenuChanges() const { return _showViewsPanelInContextMenu.changes(); }
-	[[nodiscard]] rpl::producer<ContextMenuVisibility> showHideMessageInContextMenuValue() const { return _showHideMessageInContextMenu.value(); }
-	[[nodiscard]] rpl::producer<ContextMenuVisibility> showHideMessageInContextMenuChanges() const { return _showHideMessageInContextMenu.changes(); }
 	[[nodiscard]] rpl::producer<ContextMenuVisibility> showUserMessagesInContextMenuValue() const { return _showUserMessagesInContextMenu.value(); }
 	[[nodiscard]] rpl::producer<ContextMenuVisibility> showUserMessagesInContextMenuChanges() const { return _showUserMessagesInContextMenu.changes(); }
 	[[nodiscard]] rpl::producer<ContextMenuVisibility> showMessageDetailsInContextMenuValue() const { return _showMessageDetailsInContextMenu.value(); }
@@ -706,7 +702,6 @@ private:
 	rpl::variable<bool> _unlimitedRecentStickers = false;
 	rpl::variable<ContextMenuVisibility> _showReactionsPanelInContextMenu = ContextMenuVisibility::Visible;
 	rpl::variable<ContextMenuVisibility> _showViewsPanelInContextMenu = ContextMenuVisibility::Visible;
-	rpl::variable<ContextMenuVisibility> _showHideMessageInContextMenu = ContextMenuVisibility::Hidden;
 	rpl::variable<ContextMenuVisibility> _showUserMessagesInContextMenu = ContextMenuVisibility::VisibleWithModifier;
 	rpl::variable<ContextMenuVisibility> _showMessageDetailsInContextMenu = ContextMenuVisibility::VisibleWithModifier;
 	rpl::variable<ContextMenuVisibility> _showRepeatMessageInContextMenu = ContextMenuVisibility::Hidden;

@@ -610,7 +610,6 @@
   "EmojiPackSwitchError": "Could not load this emoji pack. Please import the font again.",
   "ContextCopyID": "Copy ID",
   "IDCopiedToast": "ID copied to clipboard.",
-  "ContextHideMessage": "Hide",
   "SearchByIDResults": "Found by ID",
   "ContextCopyCallbackData": "Copy Callback Data",
   "RepeatMessage": "Repeat Message",

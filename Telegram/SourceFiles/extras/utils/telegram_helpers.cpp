@@ -4,7 +4,6 @@
 #include "lang_auto.h"
 #include "api/api_common.h"
 #include "extras/extras_settings.h"
-#include "extras/extras_state.h"
 #include "extras/extras_worker.h"
 #include "extras/data/entities.h"
 #include "extras/data/messages_storage.h"
@@ -101,10 +100,6 @@ ID getBareID(not_null<PeerData*> peer) {
 }
 
 bool isMessageHidden(const not_null<HistoryItem*> item) {
-	if (ExtrasState::isHidden(item)) {
-		return true;
-	}
-
 	return FiltersController::filtered(item);
 }
 

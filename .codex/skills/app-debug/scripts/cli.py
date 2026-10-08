@@ -90,7 +90,6 @@ GENERIC_COMMANDS = {
     "message.show-original": "恢复消息原文并取消待处理翻译：<会话编号> <消息编号>",
     "message.edit-local": "在假会话触发原生编辑流程：<会话编号> <消息编号> <文字>",
     "message.delete-local": "在假会话触发原生删除流程：<会话编号> <消息编号>",
-    "message.hide": "按右键菜单流程隐藏消息及所在相册：<会话编号> <消息编号>",
     "text.process": "验证文本处理与实体偏移：<send|edit|receive|auto-space|zalgo> <文字> [实体 JSON]",
     "translate.start": "按当前翻译服务发起请求：<语言> <文字>",
     "translate.clear-cache": "清空应用翻译缓存",

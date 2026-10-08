@@ -554,7 +554,6 @@ void ExtrasSettings::validate() {
 	validateEnum(_channelBottomButton, defaults._channelBottomButton);
 	validateEnum(_showReactionsPanelInContextMenu, defaults._showReactionsPanelInContextMenu);
 	validateEnum(_showViewsPanelInContextMenu, defaults._showViewsPanelInContextMenu);
-	validateEnum(_showHideMessageInContextMenu, defaults._showHideMessageInContextMenu);
 	validateEnum(_showUserMessagesInContextMenu, defaults._showUserMessagesInContextMenu);
 	validateEnum(_showMessageDetailsInContextMenu, defaults._showMessageDetailsInContextMenu);
 	validateEnum(_showRepeatMessageInContextMenu, defaults._showRepeatMessageInContextMenu);
@@ -869,12 +868,6 @@ void ExtrasSettings::setShowReactionsPanelInContextMenu(ContextMenuVisibility va
 void ExtrasSettings::setShowViewsPanelInContextMenu(ContextMenuVisibility val) {
 	if (_showViewsPanelInContextMenu.current() == val) return;
 	_showViewsPanelInContextMenu = val;
-	save();
-}
-
-void ExtrasSettings::setShowHideMessageInContextMenu(ContextMenuVisibility val) {
-	if (_showHideMessageInContextMenu.current() == val) return;
-	_showHideMessageInContextMenu = val;
 	save();
 }
 
@@ -1269,7 +1262,6 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"unlimitedRecentStickers", s._unlimitedRecentStickers.current()},
 		{"showReactionsPanelInContextMenu", s._showReactionsPanelInContextMenu.current()},
 		{"showViewsPanelInContextMenu", s._showViewsPanelInContextMenu.current()},
-		{"showHideMessageInContextMenu", s._showHideMessageInContextMenu.current()},
 		{"showUserMessagesInContextMenu", s._showUserMessagesInContextMenu.current()},
 		{"showMessageDetailsInContextMenu", s._showMessageDetailsInContextMenu.current()},
 		{"showRepeatMessageInContextMenu", s._showRepeatMessageInContextMenu.current()},
@@ -1397,7 +1389,6 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._unlimitedRecentStickers = j.value("unlimitedRecentStickers", defaults._unlimitedRecentStickers.current());
 	s._showReactionsPanelInContextMenu = j.value("showReactionsPanelInContextMenu", defaults._showReactionsPanelInContextMenu.current());
 	s._showViewsPanelInContextMenu = j.value("showViewsPanelInContextMenu", defaults._showViewsPanelInContextMenu.current());
-	s._showHideMessageInContextMenu = j.value("showHideMessageInContextMenu", defaults._showHideMessageInContextMenu.current());
 	s._showUserMessagesInContextMenu = j.value("showUserMessagesInContextMenu", defaults._showUserMessagesInContextMenu.current());
 	s._showMessageDetailsInContextMenu = j.value("showMessageDetailsInContextMenu", defaults._showMessageDetailsInContextMenu.current());
 	s._showRepeatMessageInContextMenu = j.value("showRepeatMessageInContextMenu", defaults._showRepeatMessageInContextMenu.current());

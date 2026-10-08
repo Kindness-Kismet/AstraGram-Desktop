@@ -122,7 +122,6 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"unlimitedRecentStickers"_q, [&] { return settings.unlimitedRecentStickers(); }, settings, &ExtrasSettings::setUnlimitedRecentStickers);
 	addSetting(entries, u"showReactionsPanelInContextMenu"_q, [&] { return settings.showReactionsPanelInContextMenu(); }, settings, &ExtrasSettings::setShowReactionsPanelInContextMenu);
 	addSetting(entries, u"showViewsPanelInContextMenu"_q, [&] { return settings.showViewsPanelInContextMenu(); }, settings, &ExtrasSettings::setShowViewsPanelInContextMenu);
-	addSetting(entries, u"showHideMessageInContextMenu"_q, [&] { return settings.showHideMessageInContextMenu(); }, settings, &ExtrasSettings::setShowHideMessageInContextMenu);
 	addSetting(entries, u"showUserMessagesInContextMenu"_q, [&] { return settings.showUserMessagesInContextMenu(); }, settings, &ExtrasSettings::setShowUserMessagesInContextMenu);
 	addSetting(entries, u"showMessageDetailsInContextMenu"_q, [&] { return settings.showMessageDetailsInContextMenu(); }, settings, &ExtrasSettings::setShowMessageDetailsInContextMenu);
 	addSetting(entries, u"showRepeatMessageInContextMenu"_q, [&] { return settings.showRepeatMessageInContextMenu(); }, settings, &ExtrasSettings::setShowRepeatMessageInContextMenu);

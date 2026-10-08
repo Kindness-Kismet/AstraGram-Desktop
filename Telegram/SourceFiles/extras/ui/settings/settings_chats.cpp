@@ -373,15 +373,6 @@ void BuildContextMenuElements(SectionBuilder &builder, ExtrasSectionBuilder &ext
 		.icon = { &st::menuIconShowInChat },
 	});
 	extras.addChooseButton({
-		.id = u"extras/showHideMessageInContextMenu"_q,
-		.title = tr::extras_ContextHideMessage(),
-		.boxTitle = tr::extras_SettingsContextMenuTitle(),
-		.initialSelection = static_cast<int>(settings->showHideMessageInContextMenu()),
-		.options = options,
-		.setter = [](int i) { ExtrasSettings::getInstance().setShowHideMessageInContextMenu(static_cast<ContextMenuVisibility>(i)); },
-		.icon = { &st::menuIconClear },
-	});
-	extras.addChooseButton({
 		.id = u"extras/showUserMessagesInContextMenu"_q,
 		.title = tr::extras_UserMessagesMenuText(),
 		.boxTitle = tr::extras_SettingsContextMenuTitle(),

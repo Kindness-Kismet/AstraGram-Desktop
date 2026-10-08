@@ -609,7 +609,6 @@
   "EmojiPackSwitchError": "无法加载这个表情包，请重新导入字体。",
   "ContextCopyID": "复制 ID",
   "IDCopiedToast": "ID 已复制到剪贴板",
-  "ContextHideMessage": "隐藏",
   "SearchByIDResults": "ID 搜索结果",
   "ContextCopyCallbackData": "复制回调数据",
   "RepeatMessage": "复读",

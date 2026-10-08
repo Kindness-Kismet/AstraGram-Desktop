@@ -9195,7 +9195,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_EmojiPackSwitchError" = "Could not load this emoji pack. Please import the font again.";
 "extras_ContextCopyID" = "Copy ID";
 "extras_IDCopiedToast" = "ID copied to clipboard.";
-"extras_ContextHideMessage" = "Hide";
 "extras_SearchByIDResults" = "Found by ID";
 "extras_ContextCopyCallbackData" = "Copy Callback Data";
 "extras_RepeatMessage" = "Repeat Message";

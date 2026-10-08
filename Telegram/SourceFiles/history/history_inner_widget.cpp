@@ -3263,7 +3263,6 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		}
 
 		ExtrasUi::AddHistoryAction(_menu, item);
-		ExtrasUi::AddHideMessageAction(_menu, item);
 		ExtrasUi::AddUserMessagesAction(_menu, item);
 		ExtrasUi::AddMessageDetailsAction(_menu, item);
 	};

@@ -2,14 +2,12 @@
 #include "extras/debug/commands/commands_internal.h"
 
 #include "extras/extras_settings.h"
-#include "extras/extras_state.h"
 #include "extras/data/extras_database.h"
 #include "extras/data/messages_storage.h"
 #include "extras/debug/debug_login.h"
 #include "extras/debug/commands/message_archive_tests.h"
 #include "extras/features/filters/filters_controller.h"
 #include "extras/features/translator/message_translation.h"
-#include "extras/ui/context_menu/context_menu.h"
 #include "extras/utils/telegram_helpers.h"
 #include "core/application.h"
 #include "data/data_session.h"
@@ -98,7 +96,7 @@ Result inspectMessage(const QStringList &args) {
 	result.update(Json{
 		{"peerId", item->history()->peer->id.value}, {"messageId", item->id.bare},
 		{"text", item->originalText().text.toStdString()}, {"outgoing", item->out()},
-		{"deleted", item->isDeleted()}, {"hidden", ExtrasState::isHidden(item)},
+		{"deleted", item->isDeleted()},
 		{"filtered", FiltersController::filtered(item)}, {"hasRevisions", ExtrasMessages::hasRevisions(item)},
 		{"hasView", item->mainView() != nullptr},
 		{"deletedOpacity", item->mainView() ? Json(item->mainView()->deletedOpacity()) : Json(nullptr)},
@@ -152,15 +150,6 @@ Result deleteLocalMessage(const QStringList &args) {
 	return Result::Ok();
 }
 
-Result hideMessage(const QStringList &args) {
-	if (args.size() != 2) return Result::Err(u"usage: message.hide <peerId> <messageId>"_q);
-	const auto item = findMessage(args[0], args[1]);
-	if (!item) return Result::Err(u"message not found"_q);
-	if (item->history()->peer->isSelf()) return Result::Err(u"hiding is unavailable in Saved Messages"_q);
-	ExtrasUi::HideMessage(item);
-	return Result::Ok();
-}
-
 } // namespace
 
 const HandlerMap &StorageHandlers() {
@@ -174,7 +163,6 @@ const HandlerMap &StorageHandlers() {
 		{u"message.show-original"_q, &showOriginalMessage},
 		{u"message.edit-local"_q, &editLocalMessage},
 		{u"message.delete-local"_q, &deleteLocalMessage},
-		{u"message.hide"_q, &hideMessage},
 	};
 	return result;
 }
