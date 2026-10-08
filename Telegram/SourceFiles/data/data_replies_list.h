@@ -50,7 +50,10 @@ public:
 
 	void setInboxReadTill(MsgId readTillId, std::optional<int> unreadCount);
 #ifdef _DEBUG
-	void setLocalMessagesForDebug(std::vector<MsgId> ids);
+	void setLocalMessagesForDebug(
+		std::vector<MsgId> ids,
+		std::optional<MsgId> readTill = std::nullopt,
+		int unreadCount = 0);
 #endif
 	[[nodiscard]] MsgId inboxReadTillId() const;
 	[[nodiscard]] MsgId computeInboxReadTillFull() const;

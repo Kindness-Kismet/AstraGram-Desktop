@@ -9486,3 +9486,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_ForwardSavedDone" = "Forwarded to Saved Messages";
 "extras_ForwardSavedUnavailable" = "These messages are no longer available for forwarding.";
 "extras_ForwardSavedUnsupported" = "This forwarding option is no longer available for these messages.";
+"extras_SimulationPrivate" = "Private";
+"extras_SimulationGroups" = "Groups";
+"extras_SimulationChannels" = "Channels";
+"extras_SimulationBots" = "Bots";
+"extras_SimulationTopics" = "Topics";
+"extras_SimulationSaved" = "Saved";
+"extras_SimulationArchive" = "Archive";

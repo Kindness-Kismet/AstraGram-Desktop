@@ -13,6 +13,8 @@
 #include "data/data_folder.h"
 #include "data/data_msg_id.h"
 #include "data/data_peer.h"
+#include "data/data_photo.h"
+#include "data/data_photo_media.h"
 #include "data/data_session.h"
 #include "data/data_thread.h"
 #include "data/data_types.h"
@@ -50,7 +52,7 @@ using json = nlohmann::json;
 	return counter++;
 }
 
-// 与 simulation.enter 同源的模拟用户构造，塞进 data() 供 from_id 引用。
+// 与 simulation.enter 同源的模拟用户，放入 data() 供 from_id 引用。
 [[nodiscard]] not_null<UserData*> simulationUser(
 		not_null<Main::Session*> session,
 		int64 userId) {
@@ -116,10 +118,10 @@ using json = nlohmann::json;
 	if (!data->sticker()) {
 		return std::nullopt;
 	}
-	auto media = data->createMediaView();
+	auto &media = *session->lifetime().make_state<std::shared_ptr<Data::DocumentMedia>>(
+		data->createMediaView());
 	media->setBytes(bytes);
 	media->setThumbnail(image);
-	session->data().keepAlive(std::move(media));
 	return MTP_messageMediaDocument(
 		MTP_flags(MTPDmessageMediaDocument::Flag::f_document),
 		document, MTPVector<MTPDocument>(), MTPPhoto(), MTPint(), MTPint());
@@ -232,9 +234,12 @@ using json = nlohmann::json;
 				MTP_string("y"), MTP_int(image.width()), MTP_int(image.height()),
 				MTP_int(bytes.size())) }),
 			MTPVector<MTPVideoSize>(), MTP_int(0));
-		session->data().processPhoto(photo, PreparedPhotoThumbs{
+		const auto data = session->data().processPhoto(photo, PreparedPhotoThumbs{
 			{ 'y', PreparedPhotoThumb{ .image = image, .bytes = bytes } },
 		});
+		auto &view = *session->lifetime().make_state<std::shared_ptr<Data::PhotoMedia>>(
+			data->createMediaView());
+		view->set(Data::PhotoSize::Large, Data::PhotoSize::Large, image, bytes);
 		media = MTP_messageMediaPhoto(
 			MTP_flags(MTPDmessageMediaPhoto::Flag::f_photo), photo, MTPint(), MTPDocument());
 	}

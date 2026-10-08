@@ -45,8 +45,8 @@ GENERIC_COMMANDS = {
     'downloads.list': '查询真实下载列表及分类与搜索交集：[all|archives|music|videos|other] [关键词]',
     'downloads.start': '指定路径保存消息附件，返回异步任务：<会话编号> <消息编号> <新文件绝对路径>',
     'downloads.cancel': '取消指定附件下载：<会话编号> <消息编号>',
-    'simulation.download': '向模拟模式下载管理器注入自建素材：<路径> <file|song|video|voice> <loading|done>',
-    'simulation.download-progress': '推进模拟模式下载进度或完成：<会话编号> <消息编号> <字节数|done>',
+    'simulation.download': '构造本地文件下载：<路径> <loading|done>，不支持音视频',
+    'simulation.download-progress': '推进模拟下载进度或完成：<会话编号> <消息编号> <字节数|done>',
     'peer.info': '查询已知会话或用户资料，不返回访问密钥：<会话编号>',
     'chat.members': '列出已缓存的群成员：<会话编号> [no-username]',
     'chat.draft': '查询已保存的本地草稿，不切换聊天：<会话编号>',
@@ -245,14 +245,14 @@ def register_commands(sub) -> None:
     command = sub.add_parser("theme.set", help="切换浅色或暗色主题")
     command.add_argument("state", choices=["dark", "light"])
 
-    command = sub.add_parser("simulation.enter", help="造本地模拟模式绕过登录，直接进主界面")
+    command = sub.add_parser("simulation.enter", help="进入模拟模式，自动构造分类会话和消息状态")
     command.add_argument("userId", nargs="?")
     sub.add_parser("session.test-mode", help="在生产环境与官方测试数据中心之间切换")
 
     sub.add_parser("simulation.list", help="列出固定场景的名称、键名与会话编号")
     command = sub.add_parser("simulation.open", help="打开模拟模式自动生成的固定场景")
     command.add_argument("key")
-    command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts", "pinned", "actions"), default="main", help="主聊天、另一套聊天、计划消息、快捷回复、置顶消息列表或最近操作")
+    command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts", "pinned", "actions", "topic-unread", "topic-closed", "source-self", "source-private", "source-channel"), default="main", help="主聊天、计划消息、置顶、管理、话题或收藏来源")
 
     command.add_argument("--input", choices=("keep", "empty", "reply", "edit"), default="keep", help="保留、清空、回复或编辑输入状态，仅用于普通私聊和话题")
 
@@ -261,7 +261,7 @@ def register_commands(sub) -> None:
     command.add_argument("--from", dest="from_user", metavar="USER_ID", help="指定另一个模拟用户作为发送者")
     command.add_argument("--blocked", action="store_true", help="把发送者标记为已拉黑（真拉黑）")
     command.add_argument("--shadow-ban", action="store_true", help="把发送者加入 AstraGram 影子拉黑名单")
-    command.add_argument("--peer", help="插入到指定模拟模式，默认收藏夹")
+    command.add_argument("--peer", help="插入到指定模拟对话，默认收藏夹")
     command.add_argument("--sticker", metavar="IMAGE_PATH", help="用本地图片生成静态贴纸，各边不超过 512 像素")
     command.add_argument("--photo", metavar="IMAGE_PATH", help="用本地图片生成照片，各边不超过 2048 像素")
     command.add_argument("--group", metavar="GROUP_ID", help="照片相册的正整数编号，配合 --photo 使用")

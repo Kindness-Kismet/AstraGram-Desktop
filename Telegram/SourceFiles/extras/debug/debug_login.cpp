@@ -32,7 +32,7 @@ QString enterSimulation(int64 userId) {
 	}
 	auto &account = Core::App().activeAccount();
 	if (account.sessionExists()) {
-		return u"session already exists"_q;
+		return isSimulationSession(&account.session()) ? QString() : u"an authenticated session is already active"_q;
 	}
 	if (userId <= 0) {
 		return u"expected a positive userId"_q;

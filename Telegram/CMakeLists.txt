@@ -346,7 +346,11 @@ set(extras_files
         extras/debug/commands/commands_internal.h
         extras/debug/commands/app_commands.cpp
         extras/debug/commands/session_commands.cpp
-        extras/debug/commands/scenario_commands.cpp
+        extras/debug/commands/simulation_commands.cpp
+        extras/debug/simulation_scenarios.cpp
+        extras/debug/simulation_scenarios.h
+        extras/debug/simulation_media.cpp
+        extras/debug/simulation_media.h
         extras/debug/commands/settings_commands.cpp
         extras/debug/commands/settings_registry.h
         extras/debug/commands/settings_extras.cpp

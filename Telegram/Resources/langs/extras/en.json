@@ -697,5 +697,12 @@
   "DonationDetails": "Donation details",
   "DonationMessage": "If you like my work, please consider supporting me. Your donation will help with everyday software development and new features.",
   "DonationOpenAfdian": "Open Afdian",
-  "DonationBadgeInstructions": "1. Donate through the Afdian link below.\n\n2. Send your payment confirmation and Telegram user ID through Afdian messages. For a channel badge, also include its channel ID.\n\n3. After verification, your badge will appear in AstraGram. Custom badges use Telegram custom emoji."
+  "DonationBadgeInstructions": "1. Donate through the Afdian link below.\n\n2. Send your payment confirmation and Telegram user ID through Afdian messages. For a channel badge, also include its channel ID.\n\n3. After verification, your badge will appear in AstraGram. Custom badges use Telegram custom emoji.",
+  "SimulationPrivate": "Private",
+  "SimulationGroups": "Groups",
+  "SimulationChannels": "Channels",
+  "SimulationBots": "Bots",
+  "SimulationTopics": "Topics",
+  "SimulationSaved": "Saved",
+  "SimulationArchive": "Archive"
 }

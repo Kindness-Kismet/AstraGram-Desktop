@@ -48,6 +48,8 @@ void finishJob(uint64 id, bool ok, nlohmann::json result);
 
 // 界面登录入口与命令入口共用同一份本地场景。
 void seedSimulationScenarios(not_null<Main::Session*> session);
+[[nodiscard]] PeerData *simulationPeer(
+	not_null<Main::Session*> session, const QString &key);
 [[nodiscard]] MTPMessage simulationTextMessage(not_null<PeerData*> peer, PeerId sender,
 	int id, const QString &text, bool edited = false);
 

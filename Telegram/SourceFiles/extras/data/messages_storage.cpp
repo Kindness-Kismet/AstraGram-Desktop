@@ -1,6 +1,10 @@
 ﻿#include "extras/data/messages_storage.h"
 
 #include "extras/data/extras_database.h"
+
+#ifdef _DEBUG
+#include "extras/debug/debug_login.h"
+#endif // _DEBUG
 #include "extras/utils/extras_mapper.h"
 #include "extras/utils/telegram_helpers.h"
 #include "base/unixtime.h"
@@ -79,6 +83,11 @@ void map(not_null<HistoryItem*> item, ExtrasMessageBase &message) {
 }
 
 void addEditedMessage(not_null<HistoryItem *> item) {
+#ifdef _DEBUG
+	if (ExtrasDebug::isSimulationSession(&item->history()->session())) {
+		return;
+	}
+#endif // _DEBUG
 	EditedMessage message;
 	map(item, message);
 
@@ -106,6 +115,11 @@ bool hasRevisions(not_null<HistoryItem*> item) {
 }
 
 void addDeletedMessage(not_null<HistoryItem*> item) {
+#ifdef _DEBUG
+	if (ExtrasDebug::isSimulationSession(&item->history()->session())) {
+		return;
+	}
+#endif // _DEBUG
 	DeletedMessage message;
 	map(item, message);
 

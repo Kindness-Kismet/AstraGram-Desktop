@@ -6,6 +6,7 @@
 #include "core/application.h"
 #include "main/main_account.h"
 #include "main/main_domain.h"
+#include "main/main_session.h"
 #include "mtproto/mtp_instance.h"
 #include "mtproto/mtproto_dc_options.h"
 
@@ -31,7 +32,7 @@ using json = nlohmann::json;
 		return Result::Err(error);
 	}
 	return Result::Ok(Compact(json{
-		{ "userId", userId },
+		{ "userId", ActiveSession()->userId().bare },
 		{ "note", "local simulation mode" },
 	}));
 }

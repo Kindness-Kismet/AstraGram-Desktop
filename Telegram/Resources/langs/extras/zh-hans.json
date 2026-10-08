@@ -821,5 +821,12 @@
   "SupporterPopup": "**{item}** 为 **AstraGram** 的开发提供了支持。",
   "CustomBadgePopup": "**{item}** 拥有 **AstraGram** 自定义勋章。",
   "BadgeAccessibleName": "AstraGram 勋章",
-  "DonationBadgeInstructions": "1. 通过下方爱发电链接捐赠。\n\n2. 在爱发电私信中发送付款凭证和你的 Telegram 用户 ID；申请频道徽章时，请一并提供频道 ID。\n\n3. 核实后，徽章会在 AstraGram 中显示。自定义勋章使用 Telegram 自定义表情。"
+  "DonationBadgeInstructions": "1. 通过下方爱发电链接捐赠。\n\n2. 在爱发电私信中发送付款凭证和你的 Telegram 用户 ID；申请频道徽章时，请一并提供频道 ID。\n\n3. 核实后，徽章会在 AstraGram 中显示。自定义勋章使用 Telegram 自定义表情。",
+  "SimulationPrivate": "私聊",
+  "SimulationGroups": "群组",
+  "SimulationChannels": "频道",
+  "SimulationBots": "机器人",
+  "SimulationTopics": "话题",
+  "SimulationSaved": "收藏夹",
+  "SimulationArchive": "归档"
 }

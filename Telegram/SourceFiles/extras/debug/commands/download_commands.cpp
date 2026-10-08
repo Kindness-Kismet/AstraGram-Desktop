@@ -236,30 +236,26 @@ Result cancelDownload(const QStringList &args) {
 }
 
 Result simulationDownload(const QStringList &args) {
-	if (args.size() != 3) return Result::Err(u"usage: simulation.download <path> <file|song|video|voice> <loading|done>"_q);
+	if (args.size() != 2) return Result::Err(u"usage: simulation.download <path> <loading|done>"_q);
 	const auto session = ActiveSession();
 	if (!session || !isSimulationSession(session)) return Result::Err(u"simulation mode is required"_q);
 	const auto path = QFileInfo(args[0]);
 	if (!path.isFile() || path.size() <= 0) return Result::Err(u"expected a nonempty fixture file"_q);
-	const auto kind = args[1];
-	if (kind != u"file"_q && kind != u"song"_q && kind != u"video"_q && kind != u"voice"_q) return Result::Err(u"invalid media kind"_q);
-	if (args[2] != u"loading"_q && args[2] != u"done"_q) return Result::Err(u"invalid download state"_q);
-	auto attributes = QVector<MTPDocumentAttribute>{ MTP_documentAttributeFilename(MTP_string(path.fileName())) };
-	if (kind == u"song"_q || kind == u"voice"_q) {
-		attributes.push_back(MTP_documentAttributeAudio(
-			MTP_flags(kind == u"voice"_q ? MTPDdocumentAttributeAudio::Flag::f_voice : MTPDdocumentAttributeAudio::Flags()),
-			MTP_int(1), MTPstring(), MTPstring(), MTPbytes()));
-	} else if (kind == u"video"_q) {
-		attributes.push_back(MTP_documentAttributeVideo(MTP_flags(0),
-			MTP_double(1), MTP_int(320), MTP_int(320), MTPint(), MTPdouble(), MTPstring()));
+	if (args[1] != u"loading"_q && args[1] != u"done"_q) return Result::Err(u"invalid download state"_q);
+	const auto mime = Core::MimeTypeForFile(path).name();
+	if (mime.startsWith(u"audio/"_q) || mime.startsWith(u"video/"_q)) {
+		return Result::Err(u"audio and video fixtures are not supported"_q);
 	}
+	const auto attributes = QVector<MTPDocumentAttribute>{
+		MTP_documentAttributeFilename(MTP_string(path.fileName())),
+	};
 	const auto document = session->data().document(base::RandomValue<DocumentId>(),
 		0, QByteArray(), base::unixtime::now(), attributes,
-		Core::MimeTypeForName(kind == u"voice"_q ? u"audio/ogg"_q : Core::MimeTypeForFile(path).name()).name(),
+		mime,
 		InlineImageLocation(), ImageWithLocation(), ImageWithLocation(), false, 0, path.size());
 	auto &manager = Core::App().downloadManager();
 	const auto item = manager.generateExternalItem(document);
-	if (args[2] == u"done"_q) {
+	if (args[1] == u"done"_q) {
 		document->setLocation(Core::FileLocation(path.absoluteFilePath()));
 		manager.addLoaded({ item, document }, path.absoluteFilePath(), manager.computeNextStartDate());
 	} else {

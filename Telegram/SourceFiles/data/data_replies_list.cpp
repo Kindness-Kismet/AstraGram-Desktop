@@ -100,13 +100,16 @@ RepliesList::~RepliesList() {
 }
 
 #ifdef _DEBUG
-void RepliesList::setLocalMessagesForDebug(std::vector<MsgId> ids) {
+void RepliesList::setLocalMessagesForDebug(
+		std::vector<MsgId> ids,
+		std::optional<MsgId> readTill,
+		int unreadCount) {
 	Expects(ExtrasDebug::isSimulationSession(&_history->session()));
 	_list = std::move(ids);
 	ranges::sort(_list, std::greater<>());
 	_skippedBefore = _skippedAfter = 0;
 	_fullCount = int(_list.size());
-	setInboxReadTill(_list.empty() ? MsgId() : _list.front(), 0);
+	setInboxReadTill(readTill.value_or(_list.empty() ? MsgId() : _list.front()), unreadCount);
 	_listChanges.fire({});
 }
 #endif

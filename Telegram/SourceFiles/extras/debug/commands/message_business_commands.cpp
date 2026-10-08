@@ -61,6 +61,13 @@ nlohmann::json describeMessage(not_null<HistoryItem*> item) {
 		{ "text", item->originalText().text.toStdString() },
 		{ "entities", std::move(entities) },
 		{ "outgoing", item->out() },
+		{ "deleted", item->isDeleted() },
+		{ "pinned", item->isPinned() },
+		{ "replyToId", item->replyToId().bare },
+		{ "topicRootId", item->topicRootId().bare },
+		{ "comments", item->repliesAreComments() },
+		{ "repliesCount", item->repliesCount() },
+		{ "ttlDestroyAt", item->ttlDestroyAt() },
 		{ "serverMessage", IsServerMsgId(item->id) && !isSimulationSession(&item->history()->session()) },
 		{ "document", document ? nlohmann::json{
 			{ "id", document->id }, { "filename", document->filename().toStdString() },

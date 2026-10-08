@@ -55,6 +55,9 @@ public:
 	void applyMaybeLast(not_null<HistoryItem*> item);
 	void applyItemAdded(not_null<HistoryItem*> item);
 	void applyItemRemoved(MsgId id);
+#ifdef _DEBUG
+	void setLocalMessagesForDebug(std::vector<MsgId> ids);
+#endif // _DEBUG
 
 	[[nodiscard]] rpl::producer<> changes() const;
 	[[nodiscard]] std::optional<int> fullCount() const;

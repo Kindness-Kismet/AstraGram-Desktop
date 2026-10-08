@@ -7,6 +7,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_saved_sublist.h"
 
+#ifdef _DEBUG
+#include "extras/debug/debug_login.h"
+#endif // _DEBUG
+
 #include "api/api_unread_things.h"
 #include "apiwrap.h"
 #include "core/application.h"
@@ -27,6 +31,21 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/notifications_manager.h"
 
 namespace Data {
+#ifdef _DEBUG
+void SavedSublist::setLocalMessagesForDebug(std::vector<MsgId> ids) {
+	Expects(ExtrasDebug::isSimulationSession(&owningHistory()->session()));
+	_list = std::move(ids);
+	ranges::sort(_list, std::greater<>());
+	_skippedBefore = _skippedAfter = 0;
+	_fullCount = int(_list.size());
+	if (!_list.empty()) {
+		applyMaybeLast(owningHistory()->owner().message(
+			owningHistory()->peer->id, _list.front()));
+	}
+	_listChanges.fire({});
+}
+#endif // _DEBUG
+
 namespace {
 
 constexpr auto kMessagesPerPage = 50;
