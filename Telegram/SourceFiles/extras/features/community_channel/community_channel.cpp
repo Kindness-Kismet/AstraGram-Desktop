@@ -13,14 +13,17 @@
 #include "crl/crl_on_main.h"
 
 namespace Extras::CommunityChannel {
+#ifndef _DEBUG
 namespace {
 
 // 每次启动最多提示一次；取消不改变下次启动的选择。
 bool inviteShown = false;
 
 } // namespace
+#endif // !_DEBUG
 
 void maybeShowInvite(not_null<Window::SessionController*> controller) {
+#ifndef _DEBUG
 	if (inviteShown || !controller->isPrimary()
 		|| !ExtrasSettings::getInstance().showCommunityChannelInvite()) {
 		return;
@@ -69,6 +72,7 @@ void maybeShowInvite(not_null<Window::SessionController*> controller) {
 		controller->show(std::move(box),
 			Ui::LayerOption::KeepOther | Ui::LayerOption::ShowAfterOther);
 	});
+#endif // !_DEBUG
 }
 
 } // namespace Extras::CommunityChannel
