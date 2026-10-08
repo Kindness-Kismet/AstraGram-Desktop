@@ -135,7 +135,7 @@ void scheduleDeleteOwnMessages(
 			return;
 		}
 #ifdef _DEBUG
-		if (ExtrasDebug::isFakeSession(session)) {
+		if (ExtrasDebug::isSimulationSession(session)) {
 			deleteFakeOwnMessages(peer);
 			return;
 		}

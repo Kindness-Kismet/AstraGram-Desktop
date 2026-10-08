@@ -45,13 +45,13 @@ using json = nlohmann::json;
 
 // 本地消息 id 从远离服务端空间的正数递增，肉眼可辨且不与真实 id 冲突。
 // addNewMessage 的 id 取自 MTPMessage，不能用负数本地 id。
-[[nodiscard]] int32 NextFakeMsgId() {
+[[nodiscard]] int32 nextSimulationMessageId() {
 	static auto counter = int32(1000001);
 	return counter++;
 }
 
-// 与 session.fake 同源的假用户构造，塞进 data() 供 from_id 引用。
-[[nodiscard]] not_null<UserData*> FakeUser(
+// 与 simulation.enter 同源的模拟用户构造，塞进 data() 供 from_id 引用。
+[[nodiscard]] not_null<UserData*> simulationUser(
 		not_null<Main::Session*> session,
 		int64 userId) {
 	using Flag = MTPDuser::Flag;
@@ -59,7 +59,7 @@ using json = nlohmann::json;
 		MTP_flags(Flag::f_first_name),
 		MTP_long(userId),
 		MTPlong(), // access_hash
-		MTP_string("Fake"),
+		MTP_string("模拟用户"),
 		MTPstring(), // last_name
 		MTPstring(), // username
 		MTPstring(), // phone
@@ -80,8 +80,8 @@ using json = nlohmann::json;
 		MTPlong())); // linked_community_id
 }
 
-// 本地图片只放入假会话的内存媒体，不上传文件。
-[[nodiscard]] std::optional<MTPMessageMedia> fakeStickerMedia(
+// 本地图片只放入模拟模式的内存媒体，不上传文件。
+[[nodiscard]] std::optional<MTPMessageMedia> simulationStickerMedia(
 		not_null<Main::Session*> session,
 		const QString &path,
 		int32 messageId) {
@@ -125,8 +125,8 @@ using json = nlohmann::json;
 		document, MTPVector<MTPDocument>(), MTPPhoto(), MTPint(), MTPint());
 }
 
-// 走正式消息渲染路径，假消息仅存在内存，重启后消失。
-[[nodiscard]] Result FakeMessage(const QStringList &args) {
+// 走正式消息渲染路径，模拟消息仅存在内存，重启后消失。
+[[nodiscard]] Result simulationMessage(const QStringList &args) {
 	auto text = QString();
 	auto fromUserId = int64(0); // 0 = self
 	auto blocked = false;
@@ -169,21 +169,21 @@ using json = nlohmann::json;
 			text = arg;
 		} else {
 			return Result::Err(
-				u"usage: message.fake <text> "
+				u"usage: simulation.message <text> "
 				u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] "
 				u"[--sticker <imagePath> | --photo <imagePath> [--group <positiveId>]]"_q);
 		}
 	}
 	if (text.isEmpty()) {
 		return Result::Err(
-			u"usage: message.fake <text> "
+			u"usage: simulation.message <text> "
 			u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] "
 			u"[--sticker <imagePath> | --photo <imagePath> [--group <positiveId>]]"_q);
 	}
 
 	const auto session = ActiveSession();
-	if (!session || !isFakeSession(session)) {
-		return Result::Err(u"an in-process fake session is required"_q);
+	if (!session || !isSimulationSession(session)) {
+		return Result::Err(u"simulation mode is required"_q);
 	}
 	if ((!photoPath.isEmpty() && !stickerPath.isEmpty())
 		|| (groupId && photoPath.isEmpty())) {
@@ -194,7 +194,7 @@ using json = nlohmann::json;
 	if (!peer) return Result::Err(u"peer not found"_q);
 	auto fromUser = not_null<UserData*>(session->user());
 	if (fromUserId > 0) {
-		fromUser = FakeUser(session, fromUserId);
+		fromUser = simulationUser(session, fromUserId);
 	}
 
 	// --blocked/--shadow-ban 必须配合 --from：self 消息是 out 消息，
@@ -213,7 +213,7 @@ using json = nlohmann::json;
 	}
 	const auto fromPeer = fromUser->id;
 
-	const auto messageId = NextFakeMsgId();
+	const auto messageId = nextSimulationMessageId();
 	auto media = MTPMessageMedia();
 	if (!photoPath.isEmpty()) {
 		const auto image = QImage(photoPath);
@@ -239,7 +239,7 @@ using json = nlohmann::json;
 			MTP_flags(MTPDmessageMediaPhoto::Flag::f_photo), photo, MTPint(), MTPDocument());
 	}
 	if (!stickerPath.isEmpty()) {
-		const auto sticker = fakeStickerMedia(session, stickerPath, messageId);
+		const auto sticker = simulationStickerMedia(session, stickerPath, messageId);
 		if (!sticker) {
 			return Result::Err(u"expected a valid sticker image up to 512 pixels per side"_q);
 		}
@@ -299,12 +299,12 @@ using json = nlohmann::json;
 		{ "fromUserId", (fromUserId > 0) ? json(fromUserId) : json(nullptr) },
 		{ "blocked", blocked },
 		{ "shadowBanned", shadowBan },
-		{ "note", "local fake message, no server data" },
+		{ "note", "local simulation message, no server data" },
 	}));
 }
 
-// 假会话没有服务端下发的通知设置，通知会被判为“未知”而跳过；
-// 先本地标记为已知且未静音，再借 message.fake 触发真实的通知链路。
+// 模拟模式没有服务端下发的通知设置，通知会被判为“未知”而跳过；
+// 先本地标记为已知且未静音，再借 simulation.message 触发真实的通知链路。
 [[nodiscard]] Result notificationTest(const QStringList &args) {
 	auto text = u"Debug 通知测试"_q;
 	auto userId = int64(830000001);
@@ -322,8 +322,8 @@ using json = nlohmann::json;
 	}
 
 	const auto session = ActiveSession();
-	if (!session || !isFakeSession(session)) {
-		return Result::Err(u"an in-process fake session is required"_q);
+	if (!session || !isSimulationSession(session)) {
+		return Result::Err(u"simulation mode is required"_q);
 	}
 	// 必须显式带 mute_until，缺省会被当成静音。
 	const auto known = MTP_peerNotifySettings(
@@ -339,13 +339,13 @@ using json = nlohmann::json;
 		MTPNotificationSound(),
 		MTPNotificationSound(),
 		MTPNotificationSound());
-	const auto user = FakeUser(session, userId);
+	const auto user = simulationUser(session, userId);
 	auto &notify = session->data().notifySettings();
 	notify.apply(user, known);
 	notify.apply(Data::DefaultNotify::User, known);
 
 	const auto id = QString::number(userId);
-	const auto result = FakeMessage({ text, u"--peer"_q, id, u"--from"_q, id });
+	const auto result = simulationMessage({ text, u"--peer"_q, id, u"--from"_q, id });
 	if (!result.ok) {
 		return result;
 	}
@@ -454,7 +454,7 @@ using json = nlohmann::json;
 		return Result::Err(u"text must not be empty"_q);
 	}
 	const auto session = ActiveSession();
-	if (!session || isFakeSession(session)) {
+	if (!session || isSimulationSession(session)) {
 		return Result::Err(u"an authenticated session is required"_q);
 	}
 	const auto peer = ResolvePeer(session, peerIdValue);
@@ -494,7 +494,7 @@ using json = nlohmann::json;
 	}
 	const auto session = ActiveSession();
 	if (!session) {
-		return Result::Err(u"no active session, run session.fake first"_q);
+		return Result::Err(u"no active session, run simulation.enter first"_q);
 	}
 	const auto controller = session->tryResolveWindow();
 	if (!controller) {
@@ -522,7 +522,7 @@ using json = nlohmann::json;
 	}
 	const auto session = ActiveSession();
 	if (!session) {
-		return Result::Err(u"no active session, run session.fake first"_q);
+		return Result::Err(u"no active session, run simulation.enter first"_q);
 	}
 	const auto controller = session->tryResolveWindow();
 	if (!controller) {
@@ -668,7 +668,7 @@ using json = nlohmann::json;
 
 const HandlerMap &MessageHandlers() {
 	static const auto result = HandlerMap{
-		{ u"message.fake"_q, &FakeMessage },
+		{ u"simulation.message"_q, &simulationMessage },
 		{ u"notification.test"_q, &notificationTest },
 		{ u"notification.hover"_q, &notificationHover },
 		{ u"notification.click"_q, &notificationClick },

@@ -601,8 +601,8 @@ Result verifyMessageArchive(const QStringList &args) {
 	const auto session = ActiveSession();
 	if ((!cDebugProfile() && !cTestAgent())
 		|| !session
-		|| !isFakeSession(session)) {
-		return Result::Err(u"an isolated debug profile and fake session are required"_q);
+		|| !isSimulationSession(session)) {
+		return Result::Err(u"an isolated debug profile and simulation mode are required"_q);
 	}
 	QTemporaryDir directory(QDir::tempPath() + u"/astragram-archive-tests-XXXXXX"_q);
 	if (!directory.isValid()) {

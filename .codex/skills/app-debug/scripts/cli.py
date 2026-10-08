@@ -45,8 +45,8 @@ GENERIC_COMMANDS = {
     'downloads.list': '查询真实下载列表及分类与搜索交集：[all|archives|music|videos|other] [关键词]',
     'downloads.start': '指定路径保存消息附件，返回异步任务：<会话编号> <消息编号> <新文件绝对路径>',
     'downloads.cancel': '取消指定附件下载：<会话编号> <消息编号>',
-    'downloads.fake': '向假会话下载管理器注入自建素材：<路径> <file|song|video|voice> <loading|done>',
-    'downloads.progress': '推进假会话下载进度或完成：<会话编号> <消息编号> <字节数|done>',
+    'simulation.download': '向模拟模式下载管理器注入自建素材：<路径> <file|song|video|voice> <loading|done>',
+    'simulation.download-progress': '推进模拟模式下载进度或完成：<会话编号> <消息编号> <字节数|done>',
     'peer.info': '查询已知会话或用户资料，不返回访问密钥：<会话编号>',
     'chat.members': '列出已缓存的群成员：<会话编号> [no-username]',
     'chat.draft': '查询已保存的本地草稿，不切换聊天：<会话编号>',
@@ -84,12 +84,12 @@ GENERIC_COMMANDS = {
     "filter.visible": "查询或修改过滤消息显示状态：<会话编号> [true|false]",
     "storage.deleted": "查询本地已删除消息：<会话编号> [条数] [关键词]",
     "storage.edits": "查询本地编辑历史：<会话编号> <消息编号> [条数]",
-    "storage.verify-archive": "在临时数据库验证留档加密、篡改拒绝和旧库迁移，仅限独立假会话",
+    "storage.verify-archive": "在临时数据库验证留档加密、篡改拒绝和旧库迁移，仅限独立模拟模式",
     "message.inspect": "查询消息正文与删除、过滤、视图状态：<会话编号> <消息编号>",
     "message.translate": "调用消息业务逻辑在原气泡翻译：<会话编号> <消息编号>",
     "message.show-original": "恢复消息原文并取消待处理翻译：<会话编号> <消息编号>",
-    "message.edit-local": "在假会话触发原生编辑流程：<会话编号> <消息编号> <文字>",
-    "message.delete-local": "在假会话触发原生删除流程：<会话编号> <消息编号>",
+    "message.edit-local": "在模拟模式触发原生编辑流程：<会话编号> <消息编号> <文字>",
+    "message.delete-local": "在模拟模式触发原生删除流程：<会话编号> <消息编号>",
     "text.process": "验证文本处理与实体偏移：<send|edit|receive|auto-space|zalgo> <文字> [实体 JSON]",
     "translate.start": "按当前翻译服务发起请求：<语言> <文字>",
     "translate.clear-cache": "清空应用翻译缓存",
@@ -186,7 +186,7 @@ COMMAND_CATEGORY_LABELS = {
     "storage": "已删除消息与编辑历史",
     "screenshot": "截图",
     "control": "控件树与合成交互",
-    "scenario": "固定假会话场景",
+    "simulation": "模拟模式：固定场景",
 }
 
 
@@ -245,29 +245,29 @@ def register_commands(sub) -> None:
     command = sub.add_parser("theme.set", help="切换浅色或暗色主题")
     command.add_argument("state", choices=["dark", "light"])
 
-    command = sub.add_parser("session.fake", help="造本地假会话绕过登录，直接进主界面")
+    command = sub.add_parser("simulation.enter", help="造本地模拟模式绕过登录，直接进主界面")
     command.add_argument("userId", nargs="?")
     sub.add_parser("session.test-mode", help="在生产环境与官方测试数据中心之间切换")
 
-    sub.add_parser("scenario.list", help="列出固定场景的名称、键名与会话编号")
-    command = sub.add_parser("scenario.open", help="打开假会话自动生成的固定场景")
+    sub.add_parser("simulation.list", help="列出固定场景的名称、键名与会话编号")
+    command = sub.add_parser("simulation.open", help="打开模拟模式自动生成的固定场景")
     command.add_argument("key")
     command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts", "pinned", "actions"), default="main", help="主聊天、另一套聊天、计划消息、快捷回复、置顶消息列表或最近操作")
 
     command.add_argument("--input", choices=("keep", "empty", "reply", "edit"), default="keep", help="保留、清空、回复或编辑输入状态，仅用于普通私聊和话题")
 
-    command = sub.add_parser("message.fake", help="往假会话插入本地文本消息，默认收藏夹，验证渲染与隐藏逻辑")
+    command = sub.add_parser("simulation.message", help="往模拟模式插入本地文本消息，默认收藏夹，验证渲染与隐藏逻辑")
     command.add_argument("text", help="消息文本")
-    command.add_argument("--from", dest="from_user", metavar="USER_ID", help="指定另一个假用户作为发送者")
+    command.add_argument("--from", dest="from_user", metavar="USER_ID", help="指定另一个模拟用户作为发送者")
     command.add_argument("--blocked", action="store_true", help="把发送者标记为已拉黑（真拉黑）")
     command.add_argument("--shadow-ban", action="store_true", help="把发送者加入 AstraGram 影子拉黑名单")
-    command.add_argument("--peer", help="插入到指定假会话，默认收藏夹")
+    command.add_argument("--peer", help="插入到指定模拟模式，默认收藏夹")
     command.add_argument("--sticker", metavar="IMAGE_PATH", help="用本地图片生成静态贴纸，各边不超过 512 像素")
     command.add_argument("--photo", metavar="IMAGE_PATH", help="用本地图片生成照片，各边不超过 2048 像素")
     command.add_argument("--group", metavar="GROUP_ID", help="照片相册的正整数编号，配合 --photo 使用")
-    command = sub.add_parser("notification.test", help="让假用户发一条消息，触发系统或应用自带通知；原生通知需默认配置")
+    command = sub.add_parser("notification.test", help="让模拟用户发一条消息，触发系统或应用自带通知；原生通知需默认配置")
     command.add_argument("text", nargs="?", help="消息文本，默认 Debug 通知测试")
-    command.add_argument("--peer", metavar="USER_ID", help="发送通知的假用户编号，默认 830000001")
+    command.add_argument("--peer", metavar="USER_ID", help="发送通知的模拟用户编号，默认 830000001")
     command = sub.add_parser("notification.hover", help="给自绘通知窗口发合成的进入／离开事件，模拟鼠标悬停")
     command.add_argument("state", choices=["on", "off"], help="on 进入，off 离开")
     command = sub.add_parser("notification.click", help="点击自绘通知中可见的按钮：reply 展开回复输入框，close 关闭")
@@ -326,7 +326,7 @@ def register_commands(sub) -> None:
     command.add_argument("target", help="输入框的 objectName，如 messageInput")
     command.add_argument("text", nargs="?", help="待输入文字，空字符串用于清空")
     command.add_argument("--file", dest="text_file", help="按 UTF-8 读取文字，保留换行和引号")
-    command = sub.add_parser("control.drop-files", help="仅在假会话向控件拖入本地文件，不点击发送")
+    command = sub.add_parser("control.drop-files", help="仅在模拟模式向控件拖入本地文件，不点击发送")
     command.add_argument("target", help="目标控件名称，如 messageInput")
     command.add_argument("paths", nargs="+", help="本地文件路径")
 
@@ -424,8 +424,8 @@ def build_server_command(args: argparse.Namespace) -> str:
         return command + (" " + quote_arg(args.prefix) if args.prefix is not None else "")
     if command == "player.state":
         return command + (" " + args.kind if args.kind else "")
-    if command == "scenario.open":
-        return f"scenario.open {quote_arg(args.key)} --view {args.view} --input {args.input}"
+    if command == "simulation.open":
+        return f"simulation.open {quote_arg(args.key)} --view {args.view} --input {args.input}"
     if command == "control.hover":
         return f"control.hover {quote_arg(args.target)} {args.state}"
     if command == "control.key":
@@ -471,11 +471,11 @@ def build_server_command(args: argparse.Namespace) -> str:
         if args.mouse:
             parts.append("--mouse")
         return " ".join(parts)
-    if command == "session.fake":
-        return ("session.fake" if args.userId is None
-                else f"session.fake {quote_arg(args.userId)}")
-    if command == "message.fake":
-        parts = ["message.fake", quote_arg(args.text)]
+    if command == "simulation.enter":
+        return ("simulation.enter" if args.userId is None
+                else f"simulation.enter {quote_arg(args.userId)}")
+    if command == "simulation.message":
+        parts = ["simulation.message", quote_arg(args.text)]
         if args.from_user:
             parts.extend(["--from", args.from_user])
         if args.blocked:

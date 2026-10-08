@@ -101,7 +101,7 @@ RepliesList::~RepliesList() {
 
 #ifdef _DEBUG
 void RepliesList::setLocalMessagesForDebug(std::vector<MsgId> ids) {
-	Expects(ExtrasDebug::isFakeSession(&_history->session()));
+	Expects(ExtrasDebug::isSimulationSession(&_history->session()));
 	_list = std::move(ids);
 	ranges::sort(_list, std::greater<>());
 	_skippedBefore = _skippedAfter = 0;

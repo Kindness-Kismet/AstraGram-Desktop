@@ -356,7 +356,7 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 
 [[nodiscard]] Result listScenarios(const QStringList &args) {
 	if (!args.empty()) {
-		return Result::Err(u"usage: scenario.list"_q);
+		return Result::Err(u"usage: simulation.list"_q);
 	}
 	return Result::Ok(Compact(scenarioList()));
 }
@@ -440,7 +440,7 @@ void installScenarioDraft(
 		return Result::Ok();
 	}
 	if (view == u"actions"_q) {
-		// 假会话拿不到服务器日志，只用于检查分区外框与底部按钮。
+		// 模拟模式拿不到服务器日志，只用于检查分区外框与底部按钮。
 		const auto channel = peer->asChannel();
 		if (!channel || !(channel->hasAdminRights() || channel->amCreator())) {
 			return Result::Err(u"scenario has no recent actions"_q);
@@ -469,7 +469,7 @@ void installScenarioDraft(
 
 [[nodiscard]] Result openScenario(const QStringList &args) {
 	if (args.empty() || !(args.size() % 2)) {
-		return Result::Err(u"usage: scenario.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions] [--input keep|empty|reply|edit]"_q);
+		return Result::Err(u"usage: simulation.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions] [--input keep|empty|reply|edit]"_q);
 	}
 	auto view = u"main"_q;
 	auto input = u"keep"_q;
@@ -498,7 +498,7 @@ void installScenarioDraft(
 	}
 	const auto session = ActiveSession();
 	if (!session || SeededSession.get() != session) {
-		return Result::Err(u"an in-process fake session is required"_q);
+		return Result::Err(u"simulation mode is required"_q);
 	}
 	const auto controller = session->tryResolveWindow();
 	if (!controller) {
@@ -506,7 +506,7 @@ void installScenarioDraft(
 	}
 	const auto index = findScenario(args.front());
 	if (index < 0) {
-		return Result::Err(u"unknown scenario, use scenario.list"_q);
+		return Result::Err(u"unknown scenario, use simulation.list"_q);
 	}
 	const auto kind = kScenarios[index].kind;
 	if (input != u"keep"_q && kind != Kind::Private && kind != Kind::Topic) {
@@ -527,8 +527,8 @@ void installScenarioDraft(
 
 } // namespace
 
-void seedFakeScenarios(not_null<Main::Session*> session) {
-	Expects(isFakeSession(session));
+void seedSimulationScenarios(not_null<Main::Session*> session) {
+	Expects(isSimulationSession(session));
 	if (SeededSession.get() == session) {
 		return;
 	}
@@ -551,15 +551,15 @@ void seedFakeScenarios(not_null<Main::Session*> session) {
 	SeededSession = base::make_weak(session);
 }
 
-MTPMessage fakeTextMessage(not_null<PeerData*> peer, PeerId sender,
+MTPMessage simulationTextMessage(not_null<PeerData*> peer, PeerId sender,
 		int id, const QString &text, bool edited) {
 	return makeMessage(peer, sender, id, text, false, false, 0, false, edited);
 }
 
-const HandlerMap &ScenarioHandlers() {
+const HandlerMap &simulationHandlers() {
 	static const auto result = HandlerMap{
-		{ u"scenario.list"_q, &listScenarios },
-		{ u"scenario.open"_q, &openScenario },
+		{ u"simulation.list"_q, &listScenarios },
+		{ u"simulation.open"_q, &openScenario },
 	};
 	return result;
 }

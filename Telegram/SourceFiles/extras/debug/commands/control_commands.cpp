@@ -653,8 +653,8 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 		return Result::Err(u"usage: control.drop-files <target> <path>..."_q);
 	}
 	const auto session = ActiveSession();
-	if (!session || !isFakeSession(session)) {
-		return Result::Err(u"an in-process fake session is required"_q);
+	if (!session || !isSimulationSession(session)) {
+		return Result::Err(u"simulation mode is required"_q);
 	}
 	const auto target = findControl(args[0]);
 	if (!target || !target->isVisible() || !target->isEnabled()) {

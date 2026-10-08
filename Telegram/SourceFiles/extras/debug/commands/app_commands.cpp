@@ -25,7 +25,7 @@ using json = nlohmann::json;
 		{ "workingDir", cWorkingDir().toStdString() },
 		{ "debugLogs", Logs::DebugEnabled() },
 		{ "hasSession", session != nullptr },
-		{ "fakeSession", session && isFakeSession(session) },
+		{ "simulationMode", session && isSimulationSession(session) },
 		{ "isolatedDebug", cDebugProfile() || cTestAgent() },
 		{ "testAgent", cTestAgent() },
 		{ "hasWindow", window != nullptr },

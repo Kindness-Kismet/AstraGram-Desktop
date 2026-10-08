@@ -311,7 +311,7 @@ HistoryItem *SponsoredMessages::injectItem(
 
 bool SponsoredMessages::canHaveFor(not_null<History*> history) const {
 #ifdef _DEBUG
-	if (ExtrasDebug::isFakeSession(_session) && _data.contains(history)) {
+	if (ExtrasDebug::isSimulationSession(_session) && _data.contains(history)) {
 		return true;
 	}
 #endif
@@ -345,7 +345,7 @@ bool SponsoredMessages::isTopBarFor(not_null<History*> history) const {
 
 #ifdef _DEBUG
 void SponsoredMessages::setLocalForDebug(not_null<History*> history) {
-	Expects(ExtrasDebug::isFakeSession(_session));
+	Expects(ExtrasDebug::isSimulationSession(_session));
 	auto &list = _data[history];
 	list.entries.clear();
 	list.state = State::AppendToTopBar;
@@ -372,7 +372,7 @@ void SponsoredMessages::request(not_null<History*> history, Fn<void()> done) {
 		return;
 	}
 #ifdef _DEBUG
-	if (ExtrasDebug::isFakeSession(_session)) {
+	if (ExtrasDebug::isSimulationSession(_session)) {
 		if (done) {
 			crl::on_main(_session, std::move(done));
 		}

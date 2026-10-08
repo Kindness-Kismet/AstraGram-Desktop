@@ -187,15 +187,15 @@ Widget::Widget(
 #ifdef _DEBUG
 	_testSession = object_ptr<Ui::LinkButton>(
 		this,
-		tr::extras_DebugTestMode(tr::now),
+		tr::extras_SimulationMode(tr::now),
 		st::introTestMode);
-	_testSession->setObjectName(u"debugFakeSession"_q);
+	_testSession->setObjectName(u"simulation.enter"_q);
 	_testSession->show();
 	_testSession->setClickedCallback([=] {
-		const auto error = ExtrasDebug::CreateFakeSession();
+		const auto error = ExtrasDebug::enterSimulation();
 		if (!error.isEmpty()) {
-			LOG(("Debug: Could not create fake session: %1").arg(error));
-			getStep()->showError(tr::extras_DebugFakeSessionFailed());
+			LOG(("Debug: Could not enter simulation mode: %1").arg(error));
+			getStep()->showError(tr::extras_SimulationEnterFailed());
 		}
 	});
 #endif

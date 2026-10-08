@@ -61,7 +61,7 @@ nlohmann::json describeMessage(not_null<HistoryItem*> item) {
 		{ "text", item->originalText().text.toStdString() },
 		{ "entities", std::move(entities) },
 		{ "outgoing", item->out() },
-		{ "serverMessage", IsServerMsgId(item->id) && !isFakeSession(&item->history()->session()) },
+		{ "serverMessage", IsServerMsgId(item->id) && !isSimulationSession(&item->history()->session()) },
 		{ "document", document ? nlohmann::json{
 			{ "id", document->id }, { "filename", document->filename().toStdString() },
 			{ "mime", document->mimeString().toStdString() }, { "size", document->size },
@@ -138,7 +138,7 @@ Result fetchMessages(const QStringList &args) {
 	const auto peer = findPeer(args[0]);
 	if (!peer) return Result::Err(u"peer not found"_q);
 	const auto session = &peer->session();
-	if (isFakeSession(session)) return Result::Err(u"an authenticated session is required"_q);
+	if (isSimulationSession(session)) return Result::Err(u"an authenticated session is required"_q);
 	auto ok = true;
 	const auto limit = args.size() == 2 ? args[1].toInt(&ok) : 20;
 	if (!ok || limit < 1 || limit > 100) return Result::Err(u"limit must be between 1 and 100"_q);
@@ -198,7 +198,7 @@ Result sendMention(const QStringList &args) {
 	if (!peer) return Result::Err(u"peer not found"_q);
 	if (!userId || args[2].trimmed().isEmpty()) return Result::Err(u"invalid userId or empty display text"_q);
 	const auto session = &peer->session();
-	if (isFakeSession(session)) return Result::Err(u"an authenticated session is required"_q);
+	if (isSimulationSession(session)) return Result::Err(u"an authenticated session is required"_q);
 	const auto id = beginJob("mention-send");
 	session->lifetime().add([id] { finishJob(id, false, "session closed"); });
 	ExtrasMentionById::resolveUser(&session->api(), session, *userId,
@@ -221,7 +221,7 @@ Result sendFile(const QStringList &args) {
 	const auto peer = findPeer(args[0]);
 	if (!peer) return Result::Err(u"peer not found"_q);
 	const auto session = &peer->session();
-	if (isFakeSession(session)) return Result::Err(u"an authenticated session is required"_q);
+	if (isSimulationSession(session)) return Result::Err(u"an authenticated session is required"_q);
 	const auto path = QFileInfo(args[1]);
 	if (!path.isAbsolute() || !path.isFile()) return Result::Err(u"expected an absolute file path"_q);
 	const auto id = beginJob("file-send");

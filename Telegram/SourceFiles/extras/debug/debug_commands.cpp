@@ -61,7 +61,7 @@ namespace {
 		for (const auto *part : {
 			&Commands::AppHandlers(),
 			&Commands::SessionHandlers(),
-			&Commands::ScenarioHandlers(),
+			&Commands::simulationHandlers(),
 			&Commands::SettingsHandlers(),
 			&Commands::GhostHandlers(),
 			&Commands::StorageHandlers(),

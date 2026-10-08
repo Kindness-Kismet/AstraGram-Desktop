@@ -26,7 +26,7 @@ Result listAccounts(const QStringList &args) {
 		const auto session = account.sessionExists() ? &account.session() : nullptr;
 		result.push_back({{"index", entry.index}, {"active", &account == &Core::App().activeAccount()},
 			{"hasSession", session != nullptr}, {"userId", session ? Json(session->userId().bare) : Json(nullptr)},
-			{"fake", session && isFakeSession(session)}});
+			{"fake", session && isSimulationSession(session)}});
 	}
 	return Result::Ok(Compact(result));
 }
@@ -134,7 +134,7 @@ Result globalPrivacy(const QStringList &args) {
 	if (!session) return Result::Err(u"an active session is required"_q);
 	const auto &privacy = session->api().globalPrivacy();
 	return Result::Ok(Compact(Json{
-		{"localOnly", isFakeSession(session)},
+		{"localOnly", isSimulationSession(session)},
 		{"archiveAndMute", privacy.archiveAndMuteCurrent()},
 		{"unarchiveOnNewMessage", int(privacy.unarchiveOnNewMessageCurrent())},
 		{"hideReadTime", privacy.hideReadTimeCurrent()},
@@ -148,7 +148,7 @@ Result globalPrivacy(const QStringList &args) {
 Result setPrivacy(const QStringList &args) {
 	if (args.size() != 2) return Result::Err(u"usage: privacy.set <key> <value>"_q);
 	const auto session = ActiveSession();
-	if (!session || isFakeSession(session)) return Result::Err(u"an authenticated session is required"_q);
+	if (!session || isSimulationSession(session)) return Result::Err(u"an authenticated session is required"_q);
 	auto &privacy = session->api().globalPrivacy();
 	const auto &key = args[0];
 	const auto value = Json::parse(args[1].toStdString(), nullptr, false);
@@ -183,7 +183,7 @@ Result setPrivacy(const QStringList &args) {
 Result reloadPrivacy(const QStringList &args) {
 	if (!args.empty()) return Result::Err(u"usage: privacy.reload"_q);
 	const auto session = ActiveSession();
-	if (!session || isFakeSession(session)) return Result::Err(u"an authenticated session is required"_q);
+	if (!session || isSimulationSession(session)) return Result::Err(u"an authenticated session is required"_q);
 	session->api().globalPrivacy().reload();
 	return Result::Ok(u"reload requested"_q);
 }

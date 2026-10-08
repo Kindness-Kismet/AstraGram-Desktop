@@ -131,11 +131,11 @@ Result showOriginalMessage(const QStringList &args) {
 Result editLocalMessage(const QStringList &args) {
 	if (args.size() != 3) return Result::Err(u"usage: message.edit-local <peerId> <messageId> <text>"_q);
 	const auto session = ActiveSession();
-	if (!session || !isFakeSession(session)) return Result::Err(u"an in-process fake session is required"_q);
+	if (!session || !isSimulationSession(session)) return Result::Err(u"simulation mode is required"_q);
 	const auto item = findMessage(args[0], args[1]);
 	if (!item) return Result::Err(u"message not found"_q);
 	if (item->media() || item->isService()) return Result::Err(u"only local text samples can be edited"_q);
-	session->data().updateEditedMessage(fakeTextMessage(
+	session->data().updateEditedMessage(simulationTextMessage(
 		item->history()->peer, item->from()->id, item->id.bare, args[2], true));
 	return inspectMessage({args[0], args[1]});
 }
@@ -143,7 +143,7 @@ Result editLocalMessage(const QStringList &args) {
 Result deleteLocalMessage(const QStringList &args) {
 	if (args.size() != 2) return Result::Err(u"usage: message.delete-local <peerId> <messageId>"_q);
 	const auto session = ActiveSession();
-	if (!session || !isFakeSession(session)) return Result::Err(u"an in-process fake session is required"_q);
+	if (!session || !isSimulationSession(session)) return Result::Err(u"simulation mode is required"_q);
 	const auto item = findMessage(args[0], args[1]);
 	if (!item) return Result::Err(u"message not found"_q);
 	processMessageDelete(item);

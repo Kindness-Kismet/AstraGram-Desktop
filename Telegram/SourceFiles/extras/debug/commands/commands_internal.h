@@ -24,7 +24,7 @@ using HandlerMap = std::map<QString, Handler>;
 // 每个域一个注册表，实现文件在 commands/ 下与域同名。
 [[nodiscard]] const HandlerMap &AppHandlers();
 [[nodiscard]] const HandlerMap &SessionHandlers();
-[[nodiscard]] const HandlerMap &ScenarioHandlers();
+[[nodiscard]] const HandlerMap &simulationHandlers();
 [[nodiscard]] const HandlerMap &SettingsHandlers();
 [[nodiscard]] const HandlerMap &GhostHandlers();
 [[nodiscard]] const HandlerMap &StorageHandlers();
@@ -47,8 +47,8 @@ void finishJob(uint64 id, bool ok, nlohmann::json result);
 [[nodiscard]] nlohmann::json describeMessage(not_null<HistoryItem*> item);
 
 // 界面登录入口与命令入口共用同一份本地场景。
-void seedFakeScenarios(not_null<Main::Session*> session);
-[[nodiscard]] MTPMessage fakeTextMessage(not_null<PeerData*> peer, PeerId sender,
+void seedSimulationScenarios(not_null<Main::Session*> session);
+[[nodiscard]] MTPMessage simulationTextMessage(not_null<PeerData*> peer, PeerId sender,
 	int id, const QString &text, bool edited = false);
 
 // json 序列化为单行字符串，所有 payload 的统一出口。

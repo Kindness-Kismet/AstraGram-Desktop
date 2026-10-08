@@ -15,9 +15,9 @@ namespace {
 using json = nlohmann::json;
 
 // 与登录页共用初始化入口，场景数据随会话创建，不依赖客户端环境变量。
-[[nodiscard]] Result FakeSession(const QStringList &args) {
+[[nodiscard]] Result enterSimulationMode(const QStringList &args) {
 	if (args.size() > 1) {
-		return Result::Err(u"usage: session.fake [userId]"_q);
+		return Result::Err(u"usage: simulation.enter [userId]"_q);
 	}
 	auto userId = int64(999999999);
 	if (args.size() == 1) {
@@ -27,12 +27,12 @@ using json = nlohmann::json;
 			return Result::Err(u"expected a positive integer userId"_q);
 		}
 	}
-	if (const auto error = CreateFakeSession(userId); !error.isEmpty()) {
+	if (const auto error = enterSimulation(userId); !error.isEmpty()) {
 		return Result::Err(error);
 	}
 	return Result::Ok(Compact(json{
 		{ "userId", userId },
-		{ "note", "offline fake session, no server data" },
+		{ "note", "local simulation mode" },
 	}));
 }
 
@@ -61,7 +61,7 @@ using json = nlohmann::json;
 
 const HandlerMap &SessionHandlers() {
 	static const auto result = HandlerMap{
-		{ u"session.fake"_q, &FakeSession },
+		{ u"simulation.enter"_q, &enterSimulationMode },
 		{ u"session.test-mode"_q, &TestMode },
 	};
 	return result;

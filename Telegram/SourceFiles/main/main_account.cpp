@@ -319,7 +319,7 @@ QByteArray Account::serializeMtpAuthorization() const {
 					return UserId();
 				}
 #ifdef _DEBUG
-				if (ExtrasDebug::isFakeSession(&session())) {
+				if (ExtrasDebug::isSimulationSession(&session())) {
 					return UserId();
 				}
 #endif

@@ -115,7 +115,7 @@ Result translateText(const QStringList &args) {
 	const auto manager = Extras::Translator::TranslateManager::currentInstance();
 	if (!session || !manager) return Result::Err(u"translation requires an active session"_q);
 	const auto provider = ExtrasSettings::getInstance().translationProvider();
-	if (isFakeSession(session) && provider == TranslationProvider::Telegram) {
+	if (isSimulationSession(session) && provider == TranslationProvider::Telegram) {
 		return Result::Err(u"Telegram translation requires an authenticated session"_q);
 	}
 	const auto id = beginJob("translation");
@@ -263,7 +263,7 @@ Result forwardSaved(const QStringList &args) {
 	const auto item = findMessage(args[0], args[1]);
 	if (!item) return Result::Err(u"message not found"_q);
 	const auto session = &item->history()->session();
-	if (isFakeSession(session)) return Result::Err(u"an authenticated session is required"_q);
+	if (isSimulationSession(session)) return Result::Err(u"an authenticated session is required"_q);
 	const auto ids = savedIds(item, args.size() == 4);
 	const auto error = ExtrasForward::forwardToSaved(
 		session, ids, Data::ForwardOptions(mode - begin(kSavedModes)));

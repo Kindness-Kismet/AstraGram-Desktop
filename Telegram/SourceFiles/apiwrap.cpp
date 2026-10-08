@@ -1349,7 +1349,7 @@ void ApiWrap::gotUserFull(
 
 void ApiWrap::requestPeerSettings(not_null<PeerData*> peer) {
 #ifdef _DEBUG
-	if (ExtrasDebug::isFakeSession(_session)) {
+	if (ExtrasDebug::isSimulationSession(_session)) {
 		return;
 	}
 #endif

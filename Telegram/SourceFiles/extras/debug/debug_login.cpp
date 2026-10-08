@@ -15,16 +15,16 @@
 namespace ExtrasDebug {
 namespace {
 
-base::weak_ptr<Main::Session> FakeSession;
+base::weak_ptr<Main::Session> SimulationSession;
 
 } // namespace
 
-bool isFakeSession(not_null<Main::Session*> session) {
-	return FakeSession.get() == session.get();
+bool isSimulationSession(not_null<Main::Session*> session) {
+	return SimulationSession.get() == session.get();
 }
 
 // 复用原生会话恢复流程，每次进入自动生成本地场景；身份与场景消息不持久化。
-QString CreateFakeSession(int64 userId) {
+QString enterSimulation(int64 userId) {
 	// mtp() 直接解引用 _mtp，没有公开的就绪查询；domain.started() 是 tdesktop
 	// 自己在 settings_codes.cpp:152 用的同一前提。
 	if (!Core::App().domain().started()) {
@@ -48,7 +48,7 @@ QString CreateFakeSession(int64 userId) {
 		MTP_flags(Flag::f_self | Flag::f_first_name),
 		MTP_long(userId),
 		MTPlong(), // access_hash
-		MTP_string("Debug"),
+		MTP_string("模拟用户"),
 		MTPstring(), // last_name
 		MTPstring(), // username
 		MTPstring(), // phone
@@ -67,9 +67,9 @@ QString CreateFakeSession(int64 userId) {
 		MTPlong(), // bot_verification_icon
 		MTPlong(), // send_paid_messages_stars
 		MTPlong()), std::move(settings));
-	FakeSession = base::make_weak(&account.session());
+	SimulationSession = base::make_weak(&account.session());
 	ExtrasSettings::getInstance().setDevFeaturesEnabled(true);
-	Commands::seedFakeScenarios(&account.session());
+	Commands::seedSimulationScenarios(&account.session());
 
 	return QString();
 }

@@ -235,10 +235,10 @@ Result cancelDownload(const QStringList &args) {
 	return Result::Ok();
 }
 
-Result fakeDownload(const QStringList &args) {
-	if (args.size() != 3) return Result::Err(u"usage: downloads.fake <path> <file|song|video|voice> <loading|done>"_q);
+Result simulationDownload(const QStringList &args) {
+	if (args.size() != 3) return Result::Err(u"usage: simulation.download <path> <file|song|video|voice> <loading|done>"_q);
 	const auto session = ActiveSession();
-	if (!session || !isFakeSession(session)) return Result::Err(u"a fake session is required"_q);
+	if (!session || !isSimulationSession(session)) return Result::Err(u"simulation mode is required"_q);
 	const auto path = QFileInfo(args[0]);
 	if (!path.isFile() || path.size() <= 0) return Result::Err(u"expected a nonempty fixture file"_q);
 	const auto kind = args[1];
@@ -269,9 +269,9 @@ Result fakeDownload(const QStringList &args) {
 }
 
 Result progressDownload(const QStringList &args) {
-	if (args.size() != 3) return Result::Err(u"usage: downloads.progress <peerId> <messageId> <bytes|done>"_q);
+	if (args.size() != 3) return Result::Err(u"usage: simulation.download-progress <peerId> <messageId> <bytes|done>"_q);
 	const auto session = ActiveSession();
-	if (!session || !isFakeSession(session)) return Result::Err(u"a fake session is required"_q);
+	if (!session || !isSimulationSession(session)) return Result::Err(u"simulation mode is required"_q);
 	const auto item = findMessage(args[0], args[1]);
 	if (!item) return Result::Err(u"message not found"_q);
 	auto &manager = Core::App().downloadManager();
@@ -300,8 +300,8 @@ const HandlerMap &downloadHandlers() {
 		{ u"downloads.list"_q, &listDownloads },
 		{ u"downloads.start"_q, &startDownload },
 		{ u"downloads.cancel"_q, &cancelDownload },
-		{ u"downloads.fake"_q, &fakeDownload },
-		{ u"downloads.progress"_q, &progressDownload },
+		{ u"simulation.download"_q, &simulationDownload },
+		{ u"simulation.download-progress"_q, &progressDownload },
 	};
 	return handlers;
 }
