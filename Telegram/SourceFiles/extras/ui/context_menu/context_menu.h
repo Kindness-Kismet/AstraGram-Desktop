@@ -40,7 +40,6 @@ void AddDeleteOwnMessagesAction(PeerData *peerData,
 								const Window::PeerMenuCallback &addCallback);
 
 void AddHistoryAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
-// 本地隐藏消息及其所在相册，并从当前列表移除。
 void AddUserMessagesAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
 void AddMessageDetailsAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
 void AddRepeatMessageAction(
