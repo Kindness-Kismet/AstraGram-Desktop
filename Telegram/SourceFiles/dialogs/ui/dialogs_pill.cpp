@@ -7,8 +7,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/ui/dialogs_pill.h"
 
+#include "extras/features/window_material/window_material.h"
 #include "ui/painter.h"
 #include "styles/style_basic.h"
+#include "styles/style_dialogs.h"
 
 
 namespace Dialogs {
@@ -60,6 +62,20 @@ void PaintBottomFade(QPainter &p, int outerWidth, int fadeHeight, QColor bg) {
 	grad.setColorAt(0, transparent);
 	grad.setColorAt(1, bg);
 	p.fillRect(QRect(0, 0, outerWidth, fadeHeight), grad);
+}
+
+void PaintSearchedBarBg(QPainter &p, const QWidget *widget, QRect rect) {
+	if (ExtrasFeatures::WindowMaterial::isActive(widget)) {
+		return;
+	}
+	const auto &st = st::defaultDialogRow;
+	auto hq = PainterHighQualityEnabler(p);
+	p.setPen(Qt::NoPen);
+	p.setBrush(st::searchedBarBg);
+	p.drawRoundedRect(
+		rect.marginsRemoved(st.activeMargin),
+		st.activeRadius,
+		st.activeRadius);
 }
 
 } // namespace Dialogs

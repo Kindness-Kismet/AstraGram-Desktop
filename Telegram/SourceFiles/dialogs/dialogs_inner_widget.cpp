@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "dialogs/ui/chat_search_in.h"
 #include "dialogs/ui/dialogs_layout.h"
 #include "dialogs/ui/dialogs_message_view.h"
+#include "dialogs/ui/dialogs_pill.h"
 #include "dialogs/ui/dialogs_video_userpic.h"
 #include "dialogs/dialogs_indexed_list.h"
 #include "dialogs/dialogs_row.h"
@@ -1443,6 +1444,18 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			p.translate(0, communitySectionsBottom());
 		}
 	} else if (_state == WidgetState::Filtered) {
+		const auto paintSearchedBar = [&](const QString &text) {
+			const auto bar = QRect(0, 0, fullWidth, st::searchedBarHeight);
+			p.fillRect(bar, context.currentBg);
+			PaintSearchedBarBg(p, this, bar);
+			p.setFont(st::searchedBarFont);
+			p.setPen(st::searchedBarFg);
+			p.drawTextLeft(
+				st::searchedBarPosition.x(),
+				st::searchedBarPosition.y(),
+				width(),
+				text);
+		};
 		if (_searchTags) {
 			paintSearchTags(p, {
 				.st = &st::forumTopicRow,
@@ -1531,11 +1544,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		}
 
 		if (!_idSearchResults.empty()) {
-			p.fillRect(0, 0, fullWidth, st::searchedBarHeight,
-				ExtrasFeatures::WindowMaterial::surfaceColor(this, st::searchedBarBg->c));
-			p.setFont(st::searchedBarFont);
-			p.setPen(st::searchedBarFg);
-			p.drawTextLeft(st::searchedBarPosition.x(), st::searchedBarPosition.y(), width(), tr::extras_SearchByIDResults(tr::now));
+			paintSearchedBar(tr::extras_SearchByIDResults(tr::now));
 			p.translate(0, st::searchedBarHeight);
 
 			auto skip = idSearchOffset();
@@ -1577,11 +1586,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		}
 
 		if (!_peerSearchResults.empty()) {
-			p.fillRect(0, 0, fullWidth, st::searchedBarHeight,
-				ExtrasFeatures::WindowMaterial::surfaceColor(this, st::searchedBarBg->c));
-			p.setFont(st::searchedBarFont);
-			p.setPen(st::searchedBarFg);
-			p.drawTextLeft(st::searchedBarPosition.x(), st::searchedBarPosition.y(), width(), tr::lng_search_global_results(tr::now));
+			paintSearchedBar(tr::lng_search_global_results(tr::now));
 			p.translate(0, st::searchedBarHeight);
 
 			auto skip = peerSearchOffset();
@@ -1645,23 +1650,14 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		const auto showUnreadInSearchResults = uniqueSearchResults();
 		if (_idSearchResults.empty() && _previewResults.empty() && _searchResults.empty()) {
 			if (_loadingAnimation) {
-				const auto text = tr::lng_contacts_loading(tr::now);
-				p.fillRect(0, 0, fullWidth, st::searchedBarHeight,
-					ExtrasFeatures::WindowMaterial::surfaceColor(this, st::searchedBarBg->c));
-				p.setFont(st::searchedBarFont);
-				p.setPen(st::searchedBarFg);
-				p.drawTextLeft(st::searchedBarPosition.x(), st::searchedBarPosition.y(), width(), text);
+				paintSearchedBar(tr::lng_contacts_loading(tr::now));
 				p.translate(0, st::searchedBarHeight);
 			}
 			return;
 		}
 		if (!_previewResults.empty()) {
 			const auto text = tr::lng_search_tab_public_posts(tr::now);
-			p.fillRect(0, 0, fullWidth, st::searchedBarHeight,
-				ExtrasFeatures::WindowMaterial::surfaceColor(this, st::searchedBarBg->c));
-			p.setFont(st::searchedBarFont);
-			p.setPen(st::searchedBarFg);
-			p.drawTextLeft(st::searchedBarPosition.x(), st::searchedBarPosition.y(), width(), text);
+			paintSearchedBar(text);
 			const auto moreFont = (_selectedMorePosts || _pressedMorePosts)
 				? st::searchedBarFont->underline()
 				: st::searchedBarFont;
@@ -1738,11 +1734,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			const auto searchLowerText = (_searchHashOrCashtag == HashOrCashtag::None)
 				? _searchState.query.toLower()
 				: QString();
-			p.fillRect(0, 0, fullWidth, st::searchedBarHeight,
-				ExtrasFeatures::WindowMaterial::surfaceColor(this, st::searchedBarBg->c));
-			p.setFont(st::searchedBarFont);
-			p.setPen(st::searchedBarFg);
-			p.drawTextLeft(st::searchedBarPosition.x(), st::searchedBarPosition.y(), width(), text);
+			paintSearchedBar(text);
 			const auto filterOver = _selectedChatTypeFilter
 				|| _pressedChatTypeFilter;
 			const auto filterFont = filterOver

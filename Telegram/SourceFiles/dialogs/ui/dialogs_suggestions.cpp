@@ -30,6 +30,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_user.h"
 #include "dialogs/ui/chat_search_empty.h"
 #include "dialogs/ui/chat_search_in.h"
+#include "dialogs/ui/dialogs_pill.h"
 #include "dialogs/ui/posts_search_intro.h"
 #include "dialogs/dialogs_inner_widget.h"
 #include "dialogs/dialogs_search_posts.h"
@@ -88,16 +89,8 @@ constexpr auto kProbablyMaxApps = 100;
 constexpr auto kSearchQueryDelay = crl::time(900);
 
 void PaintSuggestionDivider(not_null<QWidget*> widget) {
-	auto p = Painter(widget.get());
-	auto hq = PainterHighQualityEnabler(p);
-	p.setPen(Qt::NoPen);
-	p.setBrush(ExtrasFeatures::WindowMaterial::surfaceColor(
-		widget.get(), st::searchedBarBg->c));
-	const auto &st = st::defaultDialogRow;
-	p.drawRoundedRect(
-		widget->rect().marginsRemoved(st.activeMargin),
-		st.activeRadius,
-		st.activeRadius);
+	auto p = QPainter(widget.get());
+	PaintSearchedBarBg(p, widget, widget->rect());
 }
 
 class RecentRow final : public PeerListRow {
