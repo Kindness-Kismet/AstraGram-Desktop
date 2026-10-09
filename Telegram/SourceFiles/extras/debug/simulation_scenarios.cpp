@@ -68,6 +68,7 @@ enum class Kind {
 	ArchivedGroup,
 	ArchivedChannel,
 	SendAs,
+	VoiceRestricted,
 };
 struct Scenario {
 	const char *key;
@@ -104,6 +105,7 @@ constexpr auto kScenarios = std::array{
 	Scenario{ "archived-group", u"归档 · 群组", Kind::ArchivedGroup, Category::Archive, "archived,muted" },
 	Scenario{ "archived-channel", u"归档 · 频道", Kind::ArchivedChannel, Category::Archive, "archived,pinned" },
 	Scenario{ "send-as", u"群组 · 频道身份", Kind::SendAs, Category::Groups, "send-as,identity-switcher" },
+	Scenario{ "voice-restricted", u"群组 · 禁止语音视频", Kind::VoiceRestricted, Category::Groups, "restricted-voice,restricted-round" },
 };
 constexpr auto kFirstPeerId = uint64(810000001);
 constexpr auto kFirstMessageId = 2000001;
@@ -422,7 +424,11 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 		channel->setLoadedStatus(PeerData::LoadedStatus::Full);
 		channel->setBarSettings(PeerBarSettings());
 		channel->setMembersCount(128);
-		channel->setDefaultRestrictions(kind == Kind::Restricted ? Data::AllSendRestrictions() : ChatRestrictions());
+		channel->setDefaultRestrictions((kind == Kind::Restricted)
+			? Data::AllSendRestrictions()
+			: (kind == Kind::VoiceRestricted)
+			? (ChatRestriction::SendVoiceMessages | ChatRestriction::SendVideoMessages)
+			: ChatRestrictions());
 		if (kind == Kind::Discussion) {
 			channel->setDiscussionLink(session->data().channel(peerToChannel(scenarioPeerId(findScenario(u"group"_q)))));
 		}
