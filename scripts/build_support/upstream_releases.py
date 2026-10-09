@@ -24,10 +24,16 @@ def parse_releases(raw: str) -> list[Release]:
         if not re.fullmatch(r"v\d+\.\d+\.\d+", name):
             continue
         version = name[1:]
-        match = re.match(rf"(Version|Beta version) {re.escape(version)}(?:\.|$)", subject)
-        if match:
-            channel = "beta" if match[1] == "Beta version" else "stable"
-            result.append(Release(version, sha, date, channel))
+        match = re.match(r"(Version|Beta version) (\d+\.\d+(?:\.\d+)?)(?:\.(?!\d)|$)", subject)
+        if not match:
+            continue
+        subject_version = match[2]
+        if subject_version.count(".") == 1:
+            subject_version += ".0"
+        if subject_version != version:
+            continue
+        channel = "beta" if match[1] == "Beta version" else "stable"
+        result.append(Release(version, sha, date, channel))
     return sorted(result, key=lambda release: release.key)
 
 

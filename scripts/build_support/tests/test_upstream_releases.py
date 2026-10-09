@@ -19,6 +19,20 @@ RELEASES = [
 
 
 class UpstreamReleasesTests(unittest.TestCase):
+    def test_zero_patch_version_can_be_omitted_in_subject(self):
+        raw = "\n".join([
+            "v7.3.0\ta\tVersion 7.3.\t2026-10-09",
+            "v7.4.0\tb\tBeta version 7.4.\t2026-10-10",
+            "v7.5.0\tc\tVersion 7.5.0.\t2026-10-11",
+            "v7.6.0\td\tVersion 7.6.1.\t2026-10-12",
+            "v7.7.1\te\tVersion 7.7.\t2026-10-13",
+            "v7.8.0\tf\tVersion 7.8.0.1.\t2026-10-14",
+        ])
+        self.assertEqual(
+            [(item.version, item.channel) for item in parse_releases(raw)],
+            [("7.3.0", "stable"), ("7.4.0", "beta"), ("7.5.0", "stable")],
+        )
+
     def test_tag_subjects_and_numeric_order(self):
         raw = "\n".join([
             "v7.2.10\tb\tBeta version 7.2.10.\t2026-09-27",
