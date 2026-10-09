@@ -308,6 +308,7 @@ def register_commands(sub) -> None:
     mode = command.add_mutually_exclusive_group()
     mode.add_argument("--popup", action="store_true", help="改为截取活动浮动菜单")
     mode.add_argument("--notification", action="store_true", help="改为截取应用自绘通知，合成到底色上保存为 PNG")
+    mode.add_argument("--screen", action="store_true", help="改为从屏幕拷贝窗口区域保存为 PNG，包含系统材质；窗口须可见且未被遮挡")
     command.add_argument("--bg", default="#5b6b7f", help="--notification 的底色，格式 #RRGGBB")
 
     command = sub.add_parser("control.list", help="列出活动窗口的控件树：标识、类名、几何、可见性")
@@ -410,11 +411,13 @@ def execute_command(args: argparse.Namespace) -> None:
     if command == "screenshot.take":
         ensure_debug_app()
         SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
-        extension = "png" if args.notification else "jpg"
+        extension = "png" if (args.notification or args.screen) else "jpg"
         target = SCREENSHOT_DIR / datetime.now().strftime(f"shot-%Y%m%d-%H%M%S-%f.{extension}")
         suffix = ""
         if args.popup:
             suffix = " popup"
+        elif args.screen:
+            suffix = " screen"
         elif args.notification:
             suffix = f" notification {quote_arg(args.bg)}"
         print(send_command(f"screenshot.take {quote_arg(str(target))}{suffix}"))

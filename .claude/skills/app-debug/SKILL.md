@@ -38,7 +38,7 @@ python .codex/skills/app-debug/scripts/cli.py settings.get streamerMode + screen
 - 修改输入文字只用于模拟模式或已获授权的测试对话，因为应用仍会保存草稿。
 - 真实发送、加入、通话等业务动作按用户明确指定的测试范围执行。
 
-截图来自 `QWidget::grab()`，包含宿主内菜单。需要等待切页、主题和弹层动画结束再截图；
+截图默认来自 `QWidget::grab()`，包含宿主内菜单；系统材质等合成效果用 `--screen` 从屏幕拷贝。需要等待切页、主题和弹层动画结束再截图；
 OpenGL 区域可能缺失。消息气泡等自绘内容主要通过图片观察。
 
 ## 按任务查参数
