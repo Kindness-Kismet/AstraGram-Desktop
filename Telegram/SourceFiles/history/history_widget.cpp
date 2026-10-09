@@ -917,6 +917,7 @@ HistoryWidget::HistoryWidget(
 
 	rpl::merge(
 		ExtrasSettings::getInstance().showAttachButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showSendAsButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showEmojiButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showMicrophoneButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showAutoDeleteButtonInMessageFieldChanges() | rpl::to_empty,

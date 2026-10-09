@@ -255,6 +255,8 @@ Fields customFields() {
 		&S::showAddFilterInContextMenu, &S::setShowAddFilterInContextMenu, 0, 2);
 	addField(fields, "showAttachButtonInMessageField", settings,
 		&S::showAttachButtonInMessageField, &S::setShowAttachButtonInMessageField);
+	addField(fields, "showSendAsButtonInMessageField", settings,
+		&S::showSendAsButtonInMessageField, &S::setShowSendAsButtonInMessageField);
 	addField(fields, "showEmojiButtonInMessageField", settings,
 		&S::showEmojiButtonInMessageField, &S::setShowEmojiButtonInMessageField);
 	addField(fields, "showMicrophoneButtonInMessageField", settings,

@@ -14,6 +14,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "apiwrap.h"
 
+#ifdef _DEBUG
+#include "extras/debug/debug_login.h"
+#endif
+
 namespace Main {
 namespace {
 
@@ -60,6 +64,11 @@ bool SendAsPeers::shouldChoose(SendAsKey key) {
 }
 
 void SendAsPeers::refresh(SendAsKey key, bool force) {
+#ifdef _DEBUG
+	if (ExtrasDebug::isSimulationSession(_session)) {
+		return;
+	}
+#endif
 	if (key.type != SendAsType::VideoStream && !key.peer->isChannel()) {
 		return;
 	}
@@ -91,6 +100,12 @@ rpl::producer<SendAsKey> SendAsPeers::updated() const {
 void SendAsPeers::saveChosen(
 		not_null<PeerData*> peer,
 		not_null<PeerData*> chosen) {
+#ifdef _DEBUG
+	if (ExtrasDebug::isSimulationSession(_session)) {
+		setChosen(peer, chosen->id);
+		return;
+	}
+#endif
 	peer->session().api().request(MTPmessages_SaveDefaultSendAs(
 		peer->input(),
 		chosen->input()
@@ -118,6 +133,16 @@ PeerId SendAsPeers::chosen(not_null<PeerData*> peer) const {
 	const auto i = _chosen.find(peer);
 	return (i != end(_chosen)) ? i->second : PeerId();
 }
+
+#ifdef _DEBUG
+void SendAsPeers::setSimulationPeers(
+		SendAsKey key,
+		std::vector<SendAsPeer> peers) {
+	Expects(ExtrasDebug::isSimulationSession(_session));
+	_lists[key] = std::move(peers);
+	_updates.fire_copy(key);
+}
+#endif
 
 not_null<PeerData*> SendAsPeers::resolveChosen(
 		not_null<PeerData*> peer) const {

@@ -2955,6 +2955,7 @@ void ComposeControls::init() {
 
 	rpl::merge(
 		ExtrasSettings::getInstance().showAttachButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showSendAsButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showEmojiButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showMicrophoneButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showAutoDeleteButtonInMessageFieldChanges() | rpl::to_empty,
@@ -4965,6 +4966,7 @@ void ComposeControls::finishAnimating() {
 
 void ComposeControls::updateControlsGeometry(QSize size) {
 	const auto &settings = ExtrasSettings::getInstance();
+	const auto showSendAs = _sendAs && settings.showSendAsButtonInMessageField();
 
 	const auto oldComposeHeight = composeFieldHeight();
 	const auto commentsShown = _commentsShown
@@ -4973,7 +4975,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		&& !_giftToUser->isHidden();
 	const auto leftPadding = ComposeOuterMargin(_st)
 		? st::historyComposeCapsulePadding
-		: ((_attachToggle && settings.showAttachButtonInMessageField()) || _sendAs)
+		: ((_attachToggle && settings.showAttachButtonInMessageField()) || showSendAs)
 		? _st.padding.left()
 		: _st.fieldLeft;
 	const auto rightPadding = ComposeOuterMargin(_st)
@@ -4990,7 +4992,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		- ((_attachToggle && settings.showAttachButtonInMessageField())
 			? _attachToggle->width()
 			: 0)
-		- (_sendAs ? _sendAs->width() : 0)
+		- (showSendAs ? _sendAs->width() : 0)
 		- rightPadding
 		- _send->width()
 		- (_editStars ? _editStars->width() : 0)
@@ -5054,7 +5056,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		_attachToggle->moveToLeft(left, buttonsTop);
 		left += _attachToggle->width();
 	}
-	if (_sendAs) {
+	if (showSendAs) {
 		_sendAs->moveToLeft(left, buttonsTop);
 		left += _sendAs->width();
 	}
@@ -5178,7 +5180,7 @@ void ComposeControls::updateControlsVisibility() {
 		_ttlInfo->setVisible(!hide);
 	}
 	if (_sendAs) {
-		_sendAs->show();
+		_sendAs->setVisible(settings.showSendAsButtonInMessageField());
 	}
 	if (_replaceMedia) {
 		_replaceMedia->show();
@@ -5606,6 +5608,7 @@ bool ComposeControls::updateSendAsButton(
 	}
 	const auto &st = _st.chooseSendAs;
 	_sendAs = std::make_unique<Ui::SendAsButton>(_wrap.get(), st.button);
+	_sendAs->setObjectName(u"sendAsButton"_q);
 	if (videoStream) {
 		Ui::SetupSendAsButton(_sendAs.get(), st, videoStream, _show);
 		_videoStreamAdmin = videoStream->creator();

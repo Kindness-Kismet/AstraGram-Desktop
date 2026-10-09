@@ -427,6 +427,15 @@ void BuildMessageFieldElements(SectionBuilder &builder, ExtrasSectionBuilder &ex
 	builder.addSubsectionTitle(tr::extras_MessageFieldElementsHeader());
 
 	extras.addSettingToggle({
+		.id = u"extras/showSendAsButtonInMessageField"_q,
+		.title = tr::extras_MessageFieldElementSendAs(),
+		.getter = &ExtrasSettings::showSendAsButtonInMessageField,
+		.setter = &ExtrasSettings::setShowSendAsButtonInMessageField,
+		.icon = { &st::menuIconChannel },
+	});
+	builder.addDividerText(tr::extras_MessageFieldElementSendAsDescription());
+
+	extras.addSettingToggle({
 		.id = u"extras/showAttachButtonInMessageField"_q,
 		.title = tr::extras_MessageFieldElementAttach(),
 		.getter = &ExtrasSettings::showAttachButtonInMessageField,

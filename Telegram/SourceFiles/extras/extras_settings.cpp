@@ -932,6 +932,14 @@ void ExtrasSettings::setShowAttachButtonInMessageField(bool val) {
 	save();
 }
 
+void ExtrasSettings::setShowSendAsButtonInMessageField(bool val) {
+	if (_showSendAsButtonInMessageField.current() == val) {
+		return;
+	}
+	_showSendAsButtonInMessageField = val;
+	save();
+}
+
 void ExtrasSettings::setShowEmojiButtonInMessageField(bool val) {
 	if (_showEmojiButtonInMessageField.current() == val) return;
 	_showEmojiButtonInMessageField = val;
@@ -1301,6 +1309,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"showRepeatMessageInContextMenu", s._showRepeatMessageInContextMenu.current()},
 		{"showAddFilterInContextMenu", s._showAddFilterInContextMenu.current()},
 		{"showAttachButtonInMessageField", s._showAttachButtonInMessageField.current()},
+		{"showSendAsButtonInMessageField", s._showSendAsButtonInMessageField.current()},
 		{"showEmojiButtonInMessageField", s._showEmojiButtonInMessageField.current()},
 		{"showMicrophoneButtonInMessageField", s._showMicrophoneButtonInMessageField.current()},
 		{"showAutoDeleteButtonInMessageField", s._showAutoDeleteButtonInMessageField.current()},
@@ -1437,6 +1446,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._showRepeatMessageInContextMenu = j.value("showRepeatMessageInContextMenu", defaults._showRepeatMessageInContextMenu.current());
 	s._showAddFilterInContextMenu = j.value("showAddFilterInContextMenu", defaults._showAddFilterInContextMenu.current());
 	s._showAttachButtonInMessageField = j.value("showAttachButtonInMessageField", defaults._showAttachButtonInMessageField.current());
+	s._showSendAsButtonInMessageField = j.value("showSendAsButtonInMessageField", defaults._showSendAsButtonInMessageField.current());
 	s._showEmojiButtonInMessageField = j.value("showEmojiButtonInMessageField", defaults._showEmojiButtonInMessageField.current());
 	s._showMicrophoneButtonInMessageField = j.value("showMicrophoneButtonInMessageField", defaults._showMicrophoneButtonInMessageField.current());
 	s._showAutoDeleteButtonInMessageField = j.value("showAutoDeleteButtonInMessageField", defaults._showAutoDeleteButtonInMessageField.current());

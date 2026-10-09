@@ -830,7 +830,7 @@ void HistoryWidget::moveFieldControls() {
 		_attachToggle->moveToLeft(left, buttonsBottom);
 		left += _attachToggle->width();
 	}
-	if (_sendAs) {
+	if (_sendAs && settings.showSendAsButtonInMessageField()) {
 		_sendAs->moveToLeft(left, buttonsBottom);
 		left += _sendAs->width();
 	}
@@ -939,7 +939,7 @@ void HistoryWidget::updateFieldSize() {
 	if (_botMenu.button) {
 		fieldWidth -= st::historyBotMenuSkip + _botMenu.button->width();
 	}
-	if (_sendAs) {
+	if (_sendAs && settings.showSendAsButtonInMessageField()) {
 		fieldWidth -= _sendAs->width();
 	}
 	if (kbShowShown) {

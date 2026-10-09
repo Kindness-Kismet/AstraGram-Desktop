@@ -1,5 +1,7 @@
 {
   "CustomAppName": "App name",
+  "MessageFieldElementSendAs": "Channel identity",
+  "MessageFieldElementSendAsDescription": "Show the identity switcher in the message field. Hiding it keeps the current sender identity.",
   "CustomAppNameDescription": "Customize the name at the top left of the main window and in the window title. Leave empty to use AstraGram. Changes apply immediately after saving.",
   "HorizontalTabsStyle": "Horizontal tab style",
   "HorizontalTabsDefault": "Default",

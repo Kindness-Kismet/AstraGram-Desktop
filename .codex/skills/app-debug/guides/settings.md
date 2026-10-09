@@ -50,5 +50,8 @@ python .codex/skills/app-debug/scripts/cli.py settings.keys session.autoDownload
 
 应用名称为 `customAppName`：修改主界面左上角和窗口标题，即时生效；合并连续空白，留空恢复默认名称。
 
+频道身份按钮为 `showSendAsButtonInMessageField`，归入“聊天 → 输入框元素”，默认显示。
+开关即时改变按钮和输入区占位，不改变当前发送身份；使用 `simulation.open send-as` 及 `--view alternate` 验证两套输入区。
+
 频道邀请开关为 `showCommunityChannelInvite`，默认开启；确认或“不再显示”会关闭，取消只跳过本次启动。
 邀请在登录并进入主界面后显示，每次启动最多一次；恢复开关后重启即可再次验证，弹窗标识为 `communityChannel/invite`。

@@ -535,7 +535,7 @@ void HistoryWidget::updateControlsVisibility() {
 			}
 		}
 		if (_sendAs) {
-			_sendAs->show();
+			_sendAs->setVisible(settings.showSendAsButtonInMessageField());
 		}
 		updateFieldPlaceholder();
 

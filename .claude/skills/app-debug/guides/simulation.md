@@ -3,7 +3,7 @@
 ## 进入和操作
 
 仅开发版提供。登录页点击“模拟模式”或执行 `simulation.enter [userId]`，默认用户编号 `999999999`。
-进入时自动构造 26 个会话、3 个话题和 3 个收藏来源，无需下载素材。
+进入时自动构造 27 个会话、3 个话题和 3 个收藏来源，无需下载素材。
 固定场景按原生会话标签分类；使用 `simulation.open` 定位，使用 `simulation.trigger` 触发临时提示。
 
 ```bash
@@ -37,6 +37,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 | 群组 | `requests` | 管理权限、加入申请和置顶 |
 | 群组 | `slow` | 慢速模式；每次打开刷新倒计时 |
 | 群组 | `protected-group` | 内容保护和置顶 |
+| 群组 | `send-as` | 本人与频道两种发送身份，默认选中频道，可通过输入框按钮在本地切换 |
 | 频道 | `channel` | 公告、置顶、浏览次数、通知按钮 |
 | 频道 | `discussion` | 评论入口、关联讨论群和置顶 |
 | 频道 | `join` | 未加入频道的加入按钮；对话置顶使其常驻固定列表 |
@@ -69,6 +70,9 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 `--input` 只用于私聊和话题的聊天视图：`keep` 保留草稿，`empty` 清空，`reply` 安装回复草稿，`edit` 安装编辑草稿。
 未读话题只有来信，不能安装编辑草稿；已关闭话题只允许保留状态。
 归档分组用于分类浏览；`chat.open-archive` 打开真正的归档列表，返回时点击界面可见的返回按钮。
+
+`send-as` 同时支持 `main` 与 `alternate`，使用 `showSendAsButtonInMessageField` 检查身份按钮的显示、隐藏及输入区占位。
+`simulation.list` 中的 `sendAsCount` 和 `sendAsPeerId` 报告可选身份数量与实际选中身份；隐藏按钮应保留后者，切换身份不请求服务器。
 
 ## 临时触发
 

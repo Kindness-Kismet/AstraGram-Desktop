@@ -130,6 +130,7 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"showRepeatMessageInContextMenu"_q, [&] { return settings.showRepeatMessageInContextMenu(); }, settings, &ExtrasSettings::setShowRepeatMessageInContextMenu);
 	addSetting(entries, u"showAddFilterInContextMenu"_q, [&] { return settings.showAddFilterInContextMenu(); }, settings, &ExtrasSettings::setShowAddFilterInContextMenu);
 	addSetting(entries, u"showAttachButtonInMessageField"_q, [&] { return settings.showAttachButtonInMessageField(); }, settings, &ExtrasSettings::setShowAttachButtonInMessageField);
+	addSetting(entries, u"showSendAsButtonInMessageField"_q, [&] { return settings.showSendAsButtonInMessageField(); }, settings, &ExtrasSettings::setShowSendAsButtonInMessageField);
 	addSetting(entries, u"showEmojiButtonInMessageField"_q, [&] { return settings.showEmojiButtonInMessageField(); }, settings, &ExtrasSettings::setShowEmojiButtonInMessageField);
 	addSetting(entries, u"showMicrophoneButtonInMessageField"_q, [&] { return settings.showMicrophoneButtonInMessageField(); }, settings, &ExtrasSettings::setShowMicrophoneButtonInMessageField);
 	addSetting(entries, u"showAutoDeleteButtonInMessageField"_q, [&] { return settings.showAutoDeleteButtonInMessageField(); }, settings, &ExtrasSettings::setShowAutoDeleteButtonInMessageField);

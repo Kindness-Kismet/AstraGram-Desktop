@@ -332,6 +332,7 @@ public:
 	[[nodiscard]] ContextMenuVisibility showRepeatMessageInContextMenu() const { return _showRepeatMessageInContextMenu.current(); }
 	[[nodiscard]] ContextMenuVisibility showAddFilterInContextMenu() const { return _showAddFilterInContextMenu.current(); }
 	[[nodiscard]] bool showAttachButtonInMessageField() const { return _showAttachButtonInMessageField.current(); }
+	[[nodiscard]] bool showSendAsButtonInMessageField() const { return _showSendAsButtonInMessageField.current(); }
 	[[nodiscard]] bool showEmojiButtonInMessageField() const { return _showEmojiButtonInMessageField.current(); }
 	[[nodiscard]] bool showMicrophoneButtonInMessageField() const { return _showMicrophoneButtonInMessageField.current(); }
 	[[nodiscard]] bool showAutoDeleteButtonInMessageField() const { return _showAutoDeleteButtonInMessageField.current(); }
@@ -433,6 +434,7 @@ public:
 	void setShowRepeatMessageInContextMenu(ContextMenuVisibility val);
 	void setShowAddFilterInContextMenu(ContextMenuVisibility val);
 	void setShowAttachButtonInMessageField(bool val);
+	void setShowSendAsButtonInMessageField(bool val);
 	void setShowEmojiButtonInMessageField(bool val);
 	void setShowMicrophoneButtonInMessageField(bool val);
 	void setShowAutoDeleteButtonInMessageField(bool val);
@@ -577,6 +579,8 @@ public:
 	[[nodiscard]] rpl::producer<ContextMenuVisibility> showAddFilterInContextMenuChanges() const { return _showAddFilterInContextMenu.changes(); }
 	[[nodiscard]] rpl::producer<bool> showAttachButtonInMessageFieldValue() const { return _showAttachButtonInMessageField.value(); }
 	[[nodiscard]] rpl::producer<bool> showAttachButtonInMessageFieldChanges() const { return _showAttachButtonInMessageField.changes(); }
+	[[nodiscard]] rpl::producer<bool> showSendAsButtonInMessageFieldValue() const { return _showSendAsButtonInMessageField.value(); }
+	[[nodiscard]] rpl::producer<bool> showSendAsButtonInMessageFieldChanges() const { return _showSendAsButtonInMessageField.changes(); }
 	[[nodiscard]] rpl::producer<bool> showEmojiButtonInMessageFieldValue() const { return _showEmojiButtonInMessageField.value(); }
 	[[nodiscard]] rpl::producer<bool> showEmojiButtonInMessageFieldChanges() const { return _showEmojiButtonInMessageField.changes(); }
 	[[nodiscard]] rpl::producer<bool> showMicrophoneButtonInMessageFieldValue() const { return _showMicrophoneButtonInMessageField.value(); }
@@ -728,6 +732,7 @@ private:
 	rpl::variable<ContextMenuVisibility> _showRepeatMessageInContextMenu = ContextMenuVisibility::Hidden;
 	rpl::variable<ContextMenuVisibility> _showAddFilterInContextMenu = ContextMenuVisibility::Visible;
 	rpl::variable<bool> _showAttachButtonInMessageField = true;
+	rpl::variable<bool> _showSendAsButtonInMessageField = true;
 	rpl::variable<bool> _showEmojiButtonInMessageField = true;
 	rpl::variable<bool> _showMicrophoneButtonInMessageField = true;
 	rpl::variable<bool> _showAutoDeleteButtonInMessageField = true;

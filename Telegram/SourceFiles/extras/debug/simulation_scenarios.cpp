@@ -30,6 +30,7 @@
 #include "history/view/history_view_pinned_section.h"
 #include "history/view/history_view_scheduled_section.h"
 #include "main/main_session.h"
+#include "main/session/send_as_peers.h"
 #include "spellcheck/spellcheck_types.h"
 #include "settings/business/settings_shortcut_messages.h"
 #include "window/window_session_controller.h"
@@ -66,6 +67,7 @@ enum class Kind {
 	ArchivedPrivate,
 	ArchivedGroup,
 	ArchivedChannel,
+	SendAs,
 };
 struct Scenario {
 	const char *key;
@@ -101,6 +103,7 @@ constexpr auto kScenarios = std::array{
 	Scenario{ "archived-private", u"归档 · 私聊", Kind::ArchivedPrivate, Category::Archive, "archived,unread" },
 	Scenario{ "archived-group", u"归档 · 群组", Kind::ArchivedGroup, Category::Archive, "archived,muted" },
 	Scenario{ "archived-channel", u"归档 · 频道", Kind::ArchivedChannel, Category::Archive, "archived,pinned" },
+	Scenario{ "send-as", u"群组 · 频道身份", Kind::SendAs, Category::Groups, "send-as,identity-switcher" },
 };
 constexpr auto kFirstPeerId = uint64(810000001);
 constexpr auto kFirstMessageId = 2000001;
@@ -441,6 +444,15 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 			}
 		}
 	}
+	if (kind == Kind::SendAs) {
+		const auto identity = session->data().peer(
+			scenarioPeerId(findScenario(u"channel"_q)));
+		session->sendAsPeers().setSimulationPeers({ peer }, {
+			{ .peer = session->user() },
+			{ .peer = identity },
+		});
+		session->sendAsPeers().setChosen(peer, identity->id);
+	}
 	fillHistory(session, peer, index);
 	if (kind == Kind::Translate) {
 		peer->setTranslationDisabled(false);
@@ -681,7 +693,10 @@ Result listSimulationScenes(const QStringList &args) {
 		if (const auto session = SeededSession.get()) {
 			const auto peer = session->data().peer(scene.peerId);
 			const auto history = session->data().history(peer);
+			const auto &sendAs = session->sendAsPeers();
 			entry["state"] = {
+				{ "sendAsCount", sendAs.list({ peer }).size() },
+				{ "sendAsPeerId", sendAs.resolveChosen(peer)->id.value },
 				{ "unread", history->unreadCount() }, { "unreadMark", history->unreadMark() },
 				{ "muted", history->muted() }, { "archived", history->folder() != nullptr },
 				{ "pinned", history->hasPinnedMessages() },

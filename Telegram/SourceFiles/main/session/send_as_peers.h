@@ -54,6 +54,11 @@ public:
 	void setChosen(not_null<PeerData*> peer, PeerId chosenId);
 	[[nodiscard]] PeerId chosen(not_null<PeerData*> peer) const;
 
+#ifdef _DEBUG
+	// 模拟身份仅保存在当前模拟会话，不请求服务器。
+	void setSimulationPeers(SendAsKey key, std::vector<SendAsPeer> peers);
+#endif
+
 	[[nodiscard]] const std::vector<not_null<PeerData*>> &paidReactionList(
 		not_null<PeerData*> peer) const;
 
