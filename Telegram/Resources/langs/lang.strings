@@ -8931,6 +8931,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_ContextMenuElementsHeader" = "Context Menu Elements";
 "extras_MessageFieldElementsHeader" = "Message Field Elements";
 "extras_MessageFieldPopupsHeader" = "Message Field Popups";
+"extras_MessageFieldElementSendAs" = "Channel identity";
+"extras_MessageFieldElementSendAsDescription" = "Show the identity switcher in the message field. Hiding it keeps the current sender identity.";
 "extras_MessageFieldElementAttach" = "Attach";
 "extras_MessageFieldElementTTL" = "TTL";
 "extras_MessageFieldElementEmoji" = "Emoji";
@@ -9024,8 +9026,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_FiltersClearPopupAltActionText" = "Clear unknown";
 "extras_AppIconHeader" = "App Icon";
 "extras_CustomAppName" = "App name";
-"extras_MessageFieldElementSendAs" = "Channel identity";
-"extras_MessageFieldElementSendAsDescription" = "Show the identity switcher in the message field. Hiding it keeps the current sender identity.";
 "extras_CustomAppNameDescription" = "Customize the name at the top left of the main window and in the window title. Leave empty to use AstraGram. Changes apply immediately after saving.";
 "extras_IconDefault" = "Default";
 "extras_IconAlternative" = "AstraGram Alt";

@@ -1,7 +1,5 @@
 {
   "CustomAppName": "应用名称",
-  "MessageFieldElementSendAs": "频道身份",
-  "MessageFieldElementSendAsDescription": "在输入框中显示身份切换按钮。隐藏按钮不改变当前发送身份。",
   "CustomAppNameDescription": "自定义主界面左上角和窗口标题中的应用名称。留空恢复 AstraGram，保存后立即生效。",
   "HorizontalTabsStyle": "横向标签栏款式",
   "HorizontalTabsDefault": "默认",
@@ -402,6 +400,8 @@
   "ContextMenuElementsHeader": "右键菜单项",
   "MessageFieldElementsHeader": "消息输入框控件",
   "MessageFieldPopupsHeader": "消息输入框弹出面板",
+  "MessageFieldElementSendAs": "频道身份",
+  "MessageFieldElementSendAsDescription": "在输入框中显示身份切换按钮。隐藏按钮不改变当前发送身份。",
   "MessageFieldElementAttach": "附件",
   "MessageFieldElementTTL": "TTL",
   "MessageFieldElementEmoji": "Emoji",
