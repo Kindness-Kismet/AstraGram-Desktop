@@ -48,6 +48,7 @@ def main() -> None:
             pack=args.pack,
             clean_pack=args.clean_pack,
             pdb=args.pdb,
+            tests=args.test,
         )
 
 
@@ -99,6 +100,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--api-hash", metavar="HASH", default=DEFAULT_API_HASH, help="Telegram API hash")
     parser.add_argument("--reconfigure", action="store_true", help="Discard the CMake cache before configuring")
     parser.add_argument(
+        "--test",
+        action="append",
+        choices=("updates", "storage", "wallet"),
+        default=[],
+        help="Build and run the selected test suite instead of the app; repeatable",
+    )
+    parser.add_argument(
         "--pdb",
         action="store_true",
         help="Debug only: link without incremental mode and write a fresh AstraGram.pdb;\n"
@@ -122,6 +130,8 @@ def parse_args() -> argparse.Namespace:
         help="Remove runtime leftovers from the output directory before packaging",
     )
     args = parser.parse_args()
+    if args.test and (args.pack or args.clean_pack):
+        parser.error("--test cannot be combined with packaging options")
     if not 1 <= args.jobs <= MAX_BUILD_JOBS:
         parser.error(f"--jobs must be between 1 and {MAX_BUILD_JOBS}")
     args.configurations = resolve_configurations(args)

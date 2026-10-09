@@ -6,6 +6,7 @@
 
 from build_support import recipes_arm64
 from build_support.recipe import Stage
+from build_support.recipes_rust import RUST_STAGES
 from build_support.qt_native_backdrop_patch import PATCH_SCRIPT, patch_command
 
 # Qt 版本决定补丁目录与产物前缀，随上游 qt_version 同步
@@ -23,7 +24,7 @@ STAGES: list[Stage] = [
         dependencies=[],
         commands=r"""git clone https://github.com/desktop-app/patches.git
 cd patches
-git checkout c6b2868d527e2d00a2438e95225a22ce9346d79f
+git checkout aec474953ff7ee9b6e4cd9b8658288ea86d124f3
 """,
     ),
     Stage(
@@ -34,17 +35,17 @@ git checkout c6b2868d527e2d00a2438e95225a22ce9346d79f
         commands=r"""SET PATH=%THIRDPARTY_DIR%\msys64\usr\bin;%PATH%
 SET CHERE_INVOKING=enabled_from_arguments
 SET MSYS2_PATH_TYPE=inherit
-$FETCH download https://github.com/msys2/msys2-installer/releases/download/2025-08-30/msys2-base-x86_64-20250830.sfx.exe msys64.exe
+$FETCH download https://github.com/msys2/msys2-installer/releases/download/2026-09-27/msys2-base-x86_64-20260927.sfx.exe msys64.exe
 msys64.exe
 del msys64.exe
 bash -c "pacman-key --init; pacman-key --populate; pacman -Syu --noconfirm"
 pacman -Syu --noconfirm ^
 make ^
 diffutils ^
-mingw-w64-x86_64-gperf ^
-mingw-w64-x86_64-nasm ^
-mingw-w64-x86_64-perl ^
-mingw-w64-x86_64-pkgconf
+mingw-w64-ucrt-x86_64-gperf ^
+mingw-w64-ucrt-x86_64-nasm ^
+mingw-w64-ucrt-x86_64-perl ^
+mingw-w64-ucrt-x86_64-pkgconf
 """,
     ),
     Stage(
@@ -151,7 +152,7 @@ cmake --build . --config Release
         location="Libraries",
         version="0",
         dependencies=[],
-        commands=r"""git clone -b openssl-3.2.1 https://github.com/openssl/openssl openssl3
+        commands=r"""git clone -b openssl-3.5.9 https://github.com/openssl/openssl openssl3
 cd openssl3
 perl Configure no-shared no-tests debug-VC-WIN64A /FS
 jom -j%NUMBER_OF_PROCESSORS% build_libs
@@ -382,7 +383,7 @@ deactivate
         location="Libraries",
         version="0",
         dependencies=["patches/ffmpeg.patch", "patches/build_ffmpeg_win.sh"],
-        commands=r"""git clone -b n6.1.6 https://github.com/FFmpeg/FFmpeg.git ffmpeg
+        commands=r"""git clone -b n8.1.3 https://github.com/FFmpeg/FFmpeg.git ffmpeg
 cd ffmpeg
 git apply ../patches/ffmpeg.patch
 SET PATH=%THIRDPARTY_DIR%\msys64\usr\bin;%PATH%
@@ -481,7 +482,7 @@ deactivate
         dependencies=[],
         commands=r"""git clone https://github.com/desktop-app/tg_angle.git
 cd tg_angle
-git checkout d4c3606e47
+git checkout f62ce7f6efe014cf1f7d95830c505fd2ac1c49e0
 cmake -B out ^
 -DTG_ANGLE_SPECIAL_TARGET=%SPECIAL_TARGET% ^
 -DTG_ANGLE_ZLIB_INCLUDE_PATH=%LIBS_DIR%/zlib
@@ -572,7 +573,7 @@ jom -j%NUMBER_OF_PROCESSORS% install
         dependencies=[],
         commands=r"""git clone https://github.com/desktop-app/tg_owt.git
 cd tg_owt
-git checkout 89df288dd6ba5b2ec95b3c5eaf1e7e0c3a870fc4
+git checkout d1cf250ea73de26c4c1f0a3c8173eb2648efbb04
 git submodule update --init --recursive
 SET MOZJPEG_PATH=$LIBS_DIR/mozjpeg
 SET OPUS_PATH=$USED_PREFIX/include/opus
@@ -590,7 +591,7 @@ cmake --build out --config Release
         location="Libraries",
         version="0",
         dependencies=[],
-        commands=r"""git clone -b v3.2.4 https://github.com/ada-url/ada.git
+        commands=r"""git clone -b v3.2.9 https://github.com/ada-url/ada.git
 cd ada
 cmake -B out . ^
 -D ADA_TESTING=OFF ^
@@ -658,34 +659,7 @@ cmake ^
 cmake --build . --config Release
 """,
     ),
-    Stage(
-        name="tlottie",
-        location="Libraries",
-        dependencies=["patches/tlottie.patch"],
-        commands=r"""git clone https://github.com/dkaraush/tlottie.git
-cd tlottie
-git checkout 31f1b542f8
-git apply ../patches/tlottie.patch
-SET "RUSTUP_HOME=%THIRDPARTY_DIR%\rust\rustup"
-SET "CARGO_HOME=%THIRDPARTY_DIR%\rust\cargo"
-SET RUSTUP_TOOLCHAIN=1.96.1
-SET "PATH=%CARGO_HOME%\bin;%PATH%"
-SET "RUST_TARGET=x86_64-win7-windows-msvc"
-SET "RUST_BUILD_STD=-Z build-std=std,panic_abort"
-SET "RUSTC_BOOTSTRAP=1"
-if "%SPECIAL_TARGET%"=="winarm" SET "RUST_TARGET=aarch64-pc-windows-msvc"
-if "%SPECIAL_TARGET%"=="winarm" SET "RUST_BUILD_STD="
-cargo rustc --lib --release --locked ^
---features c-api --crate-type staticlib ^
-%RUST_BUILD_STD% ^
---target %RUST_TARGET% ^
---config "target.%RUST_TARGET%.rustflags=['-C','target-feature=+crt-static']" ^
--- --print native-static-libs
-mkdir out\lib out\include
-copy target\%RUST_TARGET%\release\tlottie.lib out\lib\tlottie.lib
-copy include\tlottie.h out\include\tlottie.h
-""",
-    ),
+    *RUST_STAGES,
 ]
 
 

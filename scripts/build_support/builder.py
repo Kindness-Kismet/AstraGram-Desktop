@@ -81,7 +81,7 @@ def zip_output(profile: str) -> Path:
     return archive
 
 
-def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bool, jobs: int, pack: bool = False, clean_pack: bool = False, pdb: bool = False) -> None:
+def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bool, jobs: int, pack: bool = False, clean_pack: bool = False, pdb: bool = False, tests: list[str] | None = None) -> None:
     environment = msvc_environment()
     # cmake/external/qt 靠 %QT% 定位 Qt-<版本> 目录，缺失会直接 FATAL_ERROR
     environment["QT"] = qt_version(TARGET)
@@ -99,7 +99,11 @@ def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bo
             print(f"  removed {CMAKE_OUT_DIR}", flush=True)
 
     with timed_step("Configure CMake"):
-        configure(environment, api_id, api_hash, pdb)
+        configure(environment, api_id, api_hash, pdb, tests)
+
+    if tests:
+        run_tests(environment, configurations, jobs, tests)
+        return
 
     # 运行中的实例会占住产物，编译完再停就白等一轮链接，开工前先腾出来
     with timed_step("Release running instances"):
@@ -140,7 +144,7 @@ def cmake_executable(environment: dict[str, str]) -> str:
     return found
 
 
-def configure(environment: dict[str, str], api_id: str, api_hash: str, pdb: bool) -> None:
+def configure(environment: dict[str, str], api_id: str, api_hash: str, pdb: bool, tests: list[str] | None = None) -> None:
     CMAKE_OUT_DIR.mkdir(parents=True, exist_ok=True)
     command = [
         cmake_executable(environment),
@@ -168,6 +172,9 @@ def configure(environment: dict[str, str], api_id: str, api_hash: str, pdb: bool
     # 官方发布语义：非空 SPECIAL_TARGET 关闭该选项的默认禁用，但缓存里的旧值
     # 不会被 option() 覆盖，故显式传 OFF，让 Updater 参与构建。
     command.append("-DDESKTOP_APP_DISABLE_AUTOUPDATE=OFF")
+    suites = tests or []
+    command.append(f"-DTDESKTOP_BUILD_UPDATE_TESTS={'ON' if 'updates' in suites else 'OFF'}")
+    command.append(f"-DASTRAGRAM_BUILD_STORAGE_TESTS={'ON' if 'storage' in suites else 'OFF'}")
 
     # 默认不生成调试信息；--pdb 时 Debug 把调试信息嵌进 obj，链接据此完整生成 pdb。
     # 切换会改变全部编译参数，触发全量重编。
@@ -179,7 +186,7 @@ def configure(environment: dict[str, str], api_id: str, api_hash: str, pdb: bool
     run(command, ROOT, environment, "CMake configure")
 
 
-def compile_target(environment: dict[str, str], cmake_config: str, jobs: int) -> None:
+def compile_target(environment: dict[str, str], cmake_config: str, jobs: int, target: str = "Telegram") -> None:
     for project in recover_failed_compilations(
         CMAKE_OUT_DIR, cmake_config, BUILD_DIR / "build-recovery"
     ):
@@ -191,12 +198,28 @@ def compile_target(environment: dict[str, str], cmake_config: str, jobs: int) ->
         "--config",
         cmake_config,
         "--target",
-        "Telegram",
+        target,
     ]
     # 项目串行、源文件并行，避免两级并发相乘突破指定上限。
     command.extend(["--parallel", "1", "--", f"/p:CL_MPCount={jobs}"])
     command.extend(ccache_properties(environment))
     run(command, ROOT, environment, f"Build {cmake_config}")
+
+
+def run_tests(environment: dict[str, str], configurations: list[str], jobs: int, suites: list[str]) -> None:
+    targets = {
+        "updates": ("test_update_verify", "test_update_unpack", "test_updater_win"),
+        "storage": ("test_search_suggestions",),
+        "wallet": ("td_gram_test",),
+    }
+    for profile in configurations:
+        cmake_config = _CONFIGURATIONS[profile]
+        for suite in dict.fromkeys(suites):
+            for target in targets[suite]:
+                with timed_step(f"Test {target} {cmake_config}"):
+                    compile_target(environment, cmake_config, jobs, target)
+                    executable = CMAKE_OUT_DIR / cmake_config / f"{target}.exe"
+                    run([str(executable)], ROOT, environment, f"Run {target}")
 
 
 def ccache_properties(environment: dict[str, str]) -> list[str]:

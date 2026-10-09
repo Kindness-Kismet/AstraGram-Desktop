@@ -70,7 +70,7 @@ meson install -C builddir-release
 copy %LIBS_DIR%\local\lib\libdav1d.a %LIBS_DIR%\local\lib\dav1d.lib
 deactivate
 """,
-	"ffmpeg": r"""git clone -b n6.1.6 https://github.com/FFmpeg/FFmpeg.git ffmpeg
+	"ffmpeg": r"""git clone -b n8.1.3 https://github.com/FFmpeg/FFmpeg.git ffmpeg
 cd ffmpeg
 git apply ../patches/ffmpeg.patch
 SET PATH=%THIRDPARTY_DIR%\msys64\usr\bin;%PATH%
@@ -105,7 +105,7 @@ meson install -C builddir-release
 copy %LIBS_DIR%\local\lib\libopenh264.a %LIBS_DIR%\local\lib\openh264.lib
 deactivate
 """,
-	"openssl3": r"""git clone -b openssl-3.2.1 https://github.com/openssl/openssl openssl3
+	"openssl3": r"""git clone -b openssl-3.5.9 https://github.com/openssl/openssl openssl3
 cd openssl3
 perl Configure no-shared no-tests debug-VC-WIN64-ARM /FS
 jom -j%NUMBER_OF_PROCESSORS% build_libs

@@ -23,7 +23,7 @@ _IGNORE_FOR_THIRD_PARTY = frozenset({"USED_PREFIX", "LIBS_DIR", "SPECIAL_TARGET"
 
 # 上游把工具目录拼进 PATH，路径改到 build/tmp 后同样处理
 _PATH_PREFIXES = (
-    THIRD_PARTY_DIR / "msys64" / "mingw64" / "bin",
+    THIRD_PARTY_DIR / "msys64" / "ucrt64" / "bin",
     THIRD_PARTY_DIR / "jom",
     THIRD_PARTY_DIR / "gyp",
 )

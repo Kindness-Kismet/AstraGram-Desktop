@@ -21,6 +21,9 @@ find "$libraries_dir" \
         -o -path '*/objects-*' \
         -o -path '*/cache_keys/*' \
         -o -path '*/patches/*' \
+        -o -path '*/tlottie/*' \
+        -o -path '*/wallet-engine/*' \
+        -o -path '*/src/wallet_engine/*' \
         -o -perm +111 \
       ')' \
       -type f \

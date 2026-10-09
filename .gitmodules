@@ -108,3 +108,6 @@
 	path = Telegram/lib_ui
 	url = https://github.com/Kindness-Kismet/lib_ui.git
 	branch = master-ui
+[submodule "Telegram/ThirdParty/zxcvbn"]
+	path = Telegram/ThirdParty/zxcvbn
+	url = https://github.com/tsyrogit/zxcvbn-c.git
