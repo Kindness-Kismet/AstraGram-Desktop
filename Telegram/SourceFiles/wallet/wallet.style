@@ -648,6 +648,7 @@ walletReceiveAboutLabel: FlatLabel(walletPhraseTextLabel) {
 walletReceiveAboutMargin: margins(24px, 12px, 24px, 0px);
 walletReceiveBuyButton: RoundButton(defaultLightButton) {
 	height: 42px;
+	radius: 10px;
 	textTop: 12px;
 	style: semiboldTextStyle;
 }

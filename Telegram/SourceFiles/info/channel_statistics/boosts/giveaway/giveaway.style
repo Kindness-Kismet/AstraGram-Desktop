@@ -163,6 +163,7 @@ giveawayGiftCodeFooter: FlatLabel(defaultFlatLabel) {
 giveawayGiftCodeFooterMargin: margins(0px, 9px, 0px, 4px);
 giveawayGiftCodeBoxButton: RoundButton(defaultActiveButton) {
 	height: 42px;
+	radius: 10px;
 	textTop: 12px;
 	style: semiboldTextStyle;
 }

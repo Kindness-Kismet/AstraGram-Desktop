@@ -253,6 +253,7 @@ downloadPathSkip: 10px;
 
 changePhoneButton: RoundButton(defaultActiveButton) {
 	width: 256px;
+	radius: 10px;
 }
 changePhoneTitle: FlatLabel(boxTitle) {
 }
