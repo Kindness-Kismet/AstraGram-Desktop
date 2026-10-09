@@ -55,6 +55,12 @@
 - Removed temporary message hiding; the session-only Hide Message menu action is no longer available
 - Fixed an issue with chat list bars under translucent window materials that previously caused suggestion banners, search headers, download and folder bars, frozen-account notices and topic group status bars to show opaque backgrounds, outlines or shadows
 - Fixed an issue with chat list labels that previously caused the load-more button, its loading state and search result headers to stay in English regardless of the interface language
+- Added an app name setting, so you can now replace AstraGram at the top left of the main window and in the window title with your own name, or leave it empty to restore the default
+- Added a channel identity setting to the message field elements, so you can now hide the button for choosing which identity you send as without changing the current identity
+- Added attach menu item settings, so you can now choose whether photo or video, document, poll, checklist, article, location, music and Record Message appear in the attach menu; the existing Record Message switch moves to this section and keeps its value
+- Changed how unavailable recording options work in the attach menu; voice and video message entries now stay visible but grayed out and cannot be clicked when chat permissions, the microphone or camera, system privacy settings or an ongoing call or recording prevent them
+- Fixed an issue with the message field element settings that previously caused their icons to differ from the actual attach, emoji, auto-delete, gift and AI editor buttons
+- Fixed an issue with the chat list header in the top folder tabs layout that previously caused two overlapping menu logos while the list slid in or out, such as when opening or leaving the archive
 
 ---
 
@@ -115,3 +121,9 @@
 - 移除了临时隐藏消息功能，当前运行期间隐藏消息的菜单入口不再可用
 - 修复了关于半透明窗口材质下对话列表提示条的错误，该问题曾导致建议横幅、搜索标题栏、下载栏、文件夹栏、账号冻结提示和话题群组状态栏显示不透明背景、描边或阴影
 - 修复了关于对话列表文案的错误，该问题曾导致加载更多按钮、加载中提示和搜索结果标题不跟随界面语言，始终显示英文
+- 新增了应用名称设置，现在可以把主界面左上角和窗口标题中的 AstraGram 换成自定义名称，留空即可恢复默认
+- 新增了消息输入框控件中的频道身份设置，现在可以隐藏选择发送身份的按钮，当前发送身份保持不变
+- 新增了附件菜单项设置，现在可以选择附件菜单中是否显示照片或视频、文件、投票、待办清单、文章、位置、音乐和录制消息，原有的录制消息开关移到这里并保留原设置
+- 调整了附件菜单中不可用录制选项的行为，现在聊天权限、麦克风或摄像头、系统隐私设置、正在进行的通话或录制导致无法使用时，语音消息和视频消息选项仍会显示，但会置灰且无法点击
+- 修复了关于消息输入框控件设置的错误，该问题曾导致设置图标与实际的附件、表情、自动删除、礼物和人工智能编辑按钮不一致
+- 修复了关于顶部文件夹标签布局下对话列表标题栏的错误，该问题曾导致打开或退出归档等列表滑动过程中出现两个重叠的菜单图标
