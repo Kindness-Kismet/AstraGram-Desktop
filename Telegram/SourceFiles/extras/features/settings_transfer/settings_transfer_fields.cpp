@@ -229,6 +229,8 @@ Fields customFields() {
 		&S::showPrivateChatReactions, &S::setShowPrivateChatReactions);
 	addField(fields, "simpleQuotesAndReplies", settings,
 		&S::simpleQuotesAndReplies, &S::setSimpleQuotesAndReplies);
+	addField(fields, "customAppName", settings,
+		&S::customAppName, &S::setCustomAppName);
 	addField(fields, "hideFastShare", settings,
 		&S::hideFastShare, &S::setHideFastShare);
 	addField(fields, "replaceBottomInfoWithIcons", settings,

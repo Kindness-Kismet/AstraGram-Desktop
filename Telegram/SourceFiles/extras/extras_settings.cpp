@@ -840,6 +840,20 @@ void ExtrasSettings::setAppIcon(const QString &val) {
 	save();
 }
 
+QString ExtrasSettings::appDisplayName() const {
+	const auto &name = _customAppName.current();
+	return name.isEmpty() ? u"AstraGram"_q : name;
+}
+
+void ExtrasSettings::setCustomAppName(const QString &val) {
+	const auto name = val.simplified();
+	if (_customAppName.current() == name) {
+		return;
+	}
+	_customAppName = name;
+	save();
+}
+
 void ExtrasSettings::setSimpleQuotesAndReplies(bool val) {
 	if (_simpleQuotesAndReplies.current() == val) return;
 	_simpleQuotesAndReplies = val;
@@ -1273,6 +1287,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"showGroupReactions", s._showGroupReactions.current()},
 		{"showPrivateChatReactions", s._showPrivateChatReactions.current()},
 		{"appIcon", s._appIcon.current()},
+		{"customAppName", s._customAppName.current()},
 		{"simpleQuotesAndReplies", s._simpleQuotesAndReplies.current()},
 		{"hideFastShare", s._hideFastShare.current()},
 		{"replaceBottomInfoWithIcons", s._replaceBottomInfoWithIcons.current()},
@@ -1408,6 +1423,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._appIcon = ExtrasAssets::appIcons().contains(appIcon)
 		? appIcon
 		: defaults._appIcon.current();
+	s._customAppName = j.value("customAppName", defaults._customAppName.current()).simplified();
 	s._simpleQuotesAndReplies = j.value("simpleQuotesAndReplies", defaults._simpleQuotesAndReplies.current());
 	s._hideFastShare = j.value("hideFastShare", defaults._hideFastShare.current());
 	s._replaceBottomInfoWithIcons = j.value("replaceBottomInfoWithIcons", defaults._replaceBottomInfoWithIcons.current());

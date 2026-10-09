@@ -1912,6 +1912,11 @@ void Widget::setupSupportMode() {
 }
 
 void Widget::setupMainMenuToggle() {
+	ExtrasSettings::getInstance().customAppNameValue(
+	) | rpl::on_next([=] {
+		updateDownloadsButton();
+		update(0, 0, width(), listHeaderHeight());
+	}, lifetime());
 	_headingMenu->setObjectName(u"brandMenuButton"_q);
 	_headingMenu->setAccessibleName(tr::lng_main_menu(tr::now));
 	_headingMenu->setIsMenuButton(true);
@@ -2250,8 +2255,12 @@ void Widget::updateDownloadsButton() {
 		+ (_headingMenu->isHidden()
 			? 0
 			: _headingMenu->width() + st::dialogsFilterSkip);
+	// 按默认标题宽度保留下载入口，过长的自定义名称在绘制时省略。
 	const auto titleRight = titleLeft
-		+ st::dialogsHeadingFont->width(u"AstraGram"_q);
+		+ std::min(
+			st::dialogsHeadingFont->width(
+				ExtrasSettings::getInstance().appDisplayName()),
+			st::dialogsHeadingFont->width(u"AstraGram"_q));
 	const auto show = ExtrasSettings::getInstance().showDownloadsButtonInHeader()
 		&& (_layout == Layout::Main)
 		&& header > 0
@@ -5332,9 +5341,16 @@ void Widget::paintEvent(QPaintEvent *e) {
 				+ (_headingMenu->isHidden()
 					? 0
 					: _headingMenu->width() + st::dialogsFilterSkip);
+			const auto right = width() - st::dialogsFilterPadding.x()
+				- (_downloadsButton->isHidden()
+					? 0
+					: _downloadsButton->width() + st::dialogsFilterSkip);
+			const auto name = st::dialogsHeadingFont->elided(
+				ExtrasSettings::getInstance().appDisplayName(),
+				std::max(right - left, 0));
 			p.drawTextLeft(left,
 				(header - st::dialogsHeadingFont->height) / 2,
-				width(), u"AstraGram"_q);
+				width(), name);
 		}
 	}
 

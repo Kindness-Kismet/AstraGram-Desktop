@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/main_window.h"
+#include "extras/extras_settings.h"
 #include "extras/features/window_material/window_material.h"
 
 #include "api/api_updates.h"
@@ -576,7 +577,10 @@ void MainWindow::init() {
 		setupCanaryTitleLabel();
 	}
 
-	updateTitle();
+	ExtrasSettings::getInstance().customAppNameValue(
+	) | rpl::on_next([=] {
+		updateTitle();
+	}, lifetime());
 	updateWindowIcon();
 }
 
@@ -874,7 +878,7 @@ void MainWindow::updateTitle() {
 		return;
 	}
 
-	setTitle(u"AstraGram"_q + nativeTitleSuffix());
+	setTitle(ExtrasSettings::getInstance().appDisplayName() + nativeTitleSuffix());
 }
 
 QRect MainWindow::computeDesktopRect() const {

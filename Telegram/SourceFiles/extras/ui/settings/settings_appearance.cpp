@@ -19,8 +19,10 @@
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
+#include "styles/style_widgets.h"
 #include "ui/painter.h"
 #include "ui/boxes/single_choice_box.h"
+#include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/labels.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/vertical_layout.h"
@@ -32,6 +34,51 @@ using namespace Builder;
 using namespace ExtrasBuilder;
 
 namespace {
+
+void editAppNameBox(not_null<Ui::GenericBox*> box) {
+	box->setObjectName(u"customAppNameBox"_q);
+	box->setTitle(tr::extras_CustomAppName());
+	const auto field = box->addRow(object_ptr<Ui::InputField>(
+		box,
+		st::defaultInputField,
+		Ui::InputField::Mode::SingleLine,
+		rpl::single(u"AstraGram"_q),
+		ExtrasSettings::getInstance().customAppName()));
+	field->setObjectName(u"customAppNameInput"_q);
+	field->selectAll();
+	box->addRow(object_ptr<Ui::FlatLabel>(
+		box, tr::extras_CustomAppNameDescription(), st::boxLabel));
+	box->setFocusCallback([=] {
+		field->setFocusFast();
+	});
+	const auto save = [=] {
+		ExtrasSettings::getInstance().setCustomAppName(field->getLastText());
+		box->closeBox();
+	};
+	box->addButton(tr::lng_settings_save(), save);
+	box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
+	box->addLeftButton(tr::extras_BoxActionReset(), [=] {
+		field->setText(QString());
+		field->setFocusFast();
+	});
+	field->submits() | rpl::on_next(save, box->lifetime());
+}
+
+void buildAppName(SectionBuilder &builder) {
+	const auto controller = builder.controller();
+	builder.addButton({
+		.id = u"extras/customAppName"_q,
+		.title = tr::extras_CustomAppName(),
+		.st = &st::settingsButtonNoIcon,
+		.label = ExtrasSettings::getInstance().customAppNameValue()
+			| rpl::map([] {
+				return ExtrasSettings::getInstance().appDisplayName();
+			}),
+		.onClick = [=] {
+			controller->show(Box(editAppNameBox));
+		},
+	});
+}
 
 bool HasDrawerBots(not_null<Window::SessionController*> controller) {
 	// todo: maybe iterate through all accounts
@@ -223,6 +270,7 @@ void BuildAppearance(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	auto *settings = &ExtrasSettings::getInstance();
 
 	builder.addSubsectionTitle(tr::extras_CategoryAppearance());
+	buildAppName(builder);
 	buildHorizontalTabStyle(builder);
 
 	extras.addSettingToggle({

@@ -48,5 +48,7 @@ python .codex/skills/app-debug/scripts/cli.py settings.keys session.autoDownload
 
 横向标签款式为 `horizontalTabStyle`：0 默认、1 细框标签、2 实色胶囊；即时生效并跟随强调色，不修改竖向导航或数值刻度。
 
+应用名称为 `customAppName`：修改主界面左上角和窗口标题，即时生效；合并连续空白，留空恢复默认名称。
+
 频道邀请开关为 `showCommunityChannelInvite`，默认开启；确认或“不再显示”会关闭，取消只跳过本次启动。
 邀请在登录并进入主界面后显示，每次启动最多一次；恢复开关后重启即可再次验证，弹窗标识为 `communityChannel/invite`。

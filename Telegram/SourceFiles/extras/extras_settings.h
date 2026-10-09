@@ -317,6 +317,8 @@ public:
 	[[nodiscard]] bool showGroupReactions() const { return _showGroupReactions.current(); }
 	[[nodiscard]] bool showPrivateChatReactions() const { return _showPrivateChatReactions.current(); }
 	[[nodiscard]] const QString &appIcon() const { return _appIcon.current(); }
+	[[nodiscard]] const QString &customAppName() const { return _customAppName.current(); }
+	[[nodiscard]] QString appDisplayName() const;
 	[[nodiscard]] bool simpleQuotesAndReplies() const { return _simpleQuotesAndReplies.current(); }
 	[[nodiscard]] bool hideFastShare() const { return _hideFastShare.current(); }
 	[[nodiscard]] bool replaceBottomInfoWithIcons() const { return _replaceBottomInfoWithIcons.current(); }
@@ -417,6 +419,7 @@ public:
 	void setShowGroupReactions(bool val);
 	void setShowPrivateChatReactions(bool val);
 	void setAppIcon(const QString &val);
+	void setCustomAppName(const QString &val);
 	void setSimpleQuotesAndReplies(bool val);
 	void setHideFastShare(bool val);
 	void setReplaceBottomInfoWithIcons(bool val);
@@ -547,6 +550,7 @@ public:
 	[[nodiscard]] rpl::producer<bool> showPrivateChatReactionsChanges() const { return _showPrivateChatReactions.changes(); }
 	[[nodiscard]] rpl::producer<QString> appIconValue() const { return _appIcon.value(); }
 	[[nodiscard]] rpl::producer<QString> appIconChanges() const { return _appIcon.changes(); }
+	[[nodiscard]] rpl::producer<QString> customAppNameValue() const { return _customAppName.value(); }
 	[[nodiscard]] rpl::producer<bool> simpleQuotesAndRepliesValue() const { return _simpleQuotesAndReplies.value(); }
 	[[nodiscard]] rpl::producer<bool> simpleQuotesAndRepliesChanges() const { return _simpleQuotesAndReplies.changes(); }
 	[[nodiscard]] rpl::producer<bool> hideFastShareValue() const { return _hideFastShare.value(); }
@@ -710,6 +714,7 @@ private:
 	rpl::variable<bool> _showGroupReactions = true;
 	rpl::variable<bool> _showPrivateChatReactions = true;
 	rpl::variable<QString> _appIcon;
+	rpl::variable<QString> _customAppName;
 	rpl::variable<bool> _simpleQuotesAndReplies = false;
 	rpl::variable<bool> _hideFastShare = false;
 	rpl::variable<bool> _replaceBottomInfoWithIcons = true;
