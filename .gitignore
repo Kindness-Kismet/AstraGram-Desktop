@@ -27,7 +27,6 @@ ipch/
 .cache/
 compile_commands.json
 
-/Telegram/log.txt
 /Telegram/data
 /Telegram/data_config
 /Telegram/DebugLogs/
@@ -96,9 +95,15 @@ __pycache__/
 # Project specific
 Telegram/SourceFiles/_other/packer_private.h
 /Telegram/build/CMakeFiles/
-/Telegram/build/CMakeCache.txt
 /Telegram/build/.cmake/
 
 # Session exports (local conversation dumps)
 pi-session*.html
 codex-session*
+
+# 文本文件默认忽略（日志、对话导出等）；构建清单、许可证和词表单独放行。
+*.txt
+!CMakeLists.txt
+!/Telegram/Resources/fonts/OFL.txt
+!/Telegram/Resources/numbers.txt
+!/Telegram/Resources/zxcvbn/*.txt
