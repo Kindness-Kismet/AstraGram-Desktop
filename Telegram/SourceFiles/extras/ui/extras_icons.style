@@ -19,13 +19,16 @@ extrasContactsMutualIcon: icon {{ "extras/contacts_mutual", contactsStatusFg }};
 extrasContactsMutualIconOver: icon {{ "extras/contacts_mutual", contactsStatusFgOver }};
 extrasWalletBotIcon: icon {{ "extras/wallet_bot", menuIconColor }};
 
-messageFieldAttachIcon: icon {{ "extras/message_field/attach", menuIconColor }};
+// 设置页的输入框控件图标与输入框按钮同一图形和尺寸，画布统一为 24px。
+messageFieldAttachIcon: icon {{ "chat/input_attach", menuIconColor }};
 messageFieldEmojiIcon: icon {{ "extras/message_field/emoji", menuIconColor }};
+messageFieldTTLIcon: icon {{ "extras/message_field/ttl", menuIconColor }};
+messageFieldGiftIcon: icon {{ "chat/input_gift", menuIconColor }};
+messageFieldCocoonAiIcon: icon {{ "chat/ai_letters-20x20", menuIconColor, point(2px, 2px) }};
+
 messageFieldVoiceIcon: icon {{ "extras/message_field/voice", menuIconColor }};
 extrasRecordMessageIcon: icon {{ "extras/record_message", menuIconColor }};
 extrasRecordRoundIcon: icon {{ "extras/record_round", menuIconColor }};
-messageFieldTTLIcon: icon {{ "extras/message_field/ttl", menuIconColor }};
-messageFieldCocoonAiIcon: icon {{ "chat/ai_letters-24x24", menuIconColor }};
 
 inChannelBadgeIcon: icon {{ "extras/channel", msgInDateFg }};
 inChannelBadgeSelectedIcon: icon {{ "extras/channel", msgInDateFgSelected }};

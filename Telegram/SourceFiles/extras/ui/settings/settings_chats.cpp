@@ -468,7 +468,7 @@ void BuildMessageFieldElements(SectionBuilder &builder, ExtrasSectionBuilder &ex
 		.title = tr::lng_profile_action_short_gift(),
 		.getter = &ExtrasSettings::showGiftButtonInMessageField,
 		.setter = &ExtrasSettings::setShowGiftButtonInMessageField,
-		.icon = { &st::settingsButtonIconGift },
+		.icon = { &st::messageFieldGiftIcon },
 	});
 	extras.addSettingToggle({
 		.id = u"extras/showAiEditorButtonInMessageField"_q,
