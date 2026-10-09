@@ -1,129 +1,17 @@
-- Adapted to official Telegram Desktop 7.2.10
-- Added local settings import and export, so you can now choose supported official, AstraGram and current-account preferences to transfer, with a restart prompt when required and without including login data, message history or proxy credentials
-- Added mentions by user ID, so you can now insert a mention from the message input menu using user details or message context already available to your account, with optional display text
-- Added a space-key playback shortcut, so you can now pause or resume active media in the main window when you are not typing or using a control that needs the space key
-- Added download category tabs and a persistent search field, so you can now combine filename searches with archive, music, video and other-file filters
-- Changed when writing tools appear; available AI and rich-text editor buttons now appear after ten characters instead of requiring three lines of text
-- Improved playback controls, which now use rounded play, pause and cancel transitions and close overlapping speed and playback-order menus
-- Added Ctrl+Enter submission in the rich-text editor, so you can now submit without clicking the button
-- Added audio navigation within rich-text messages, so you can now move between their audio tracks with the previous and next controls
-- Added Unicode 17 emoji, so you can now use the new emoji with the updated built-in and downloadable sets
-- Changed custom emoji pack compatibility; packs using an older emoji layout now need to be reimported before they can be selected
-- Fixed an issue with message bubble shadows that previously caused neighboring shadows to be clipped or left behind during partial updates
-- Fixed an issue with dialog corners and shadows that previously caused rounded panels to look square, show shadows with mismatched corners or change their shadows abruptly after opening
-- Improved tray tooltips, which now show the unread count on Windows and Linux and hide it when notification badges are hidden
-- Changed how custom message notifications look; notification cards and their settings previews now appear without shadows
-- Fixed an issue with shared media in topics and Saved Messages sublists that previously caused incorrect counts, mixed search results or navigation to the wrong context
-- Fixed an issue with rich-text conversion that previously caused blank paragraphs to disappear when converting to plain text
-- Fixed an issue with premium emoji effects that previously caused read messages to replay their automatic effects
-- Fixed an issue with embedded web pages on Windows that previously caused repeated failed system logon attempts and could lock the Windows account
-- Added an invitation to our Telegram channel, so you can now open @MaterialDesign3 from the message link or confirmation button, dismiss the invitation for this launch or stop showing it
-- Fixed an issue with combining-character filtering that previously caused normal accents and bidirectional text to be altered; the filter now preserves formatting offsets and is no longer marked as beta
-- Fixed an issue with deleted-message transparency that previously caused albums in archive views to appear faded; enabling the setting now gives deleted messages in chats 40% opacity, and the setting is no longer marked as beta
-- Fixed an issue with third-party translation requests that previously caused literal HTML or plus signs in the source text to be misinterpreted
-- Changed how translation beta labels work; only Google and Yandex now carry the label, while official and system translation no longer do
-- Fixed an issue with pinned messages that previously caused uncached pins to be missed or pinned bars to use the wrong topic or Saved Messages sublist
-- Improved screen-reader support, which now reports message selection, browsing focus and settings switches correctly and excludes unread separators from message counts
-- Fixed an issue with system media controls that previously caused incorrect track information or controls to target the wrong player during voice playback or after unlocking
-- Fixed an issue with rotated videos that previously caused incorrect scaling dimensions
-- Fixed an issue with emoji and sticker selectors that previously could cause crashes during search, variant refreshes or sticker installation
-- Fixed an issue with rich-text selection that previously caused repeated selection events when dragging beyond the visible area and scrolling
-- Fixed an issue with maximized Windows windows that previously caused display problems when moving them between monitors
-- Improved Linux text rendering, which now uses more accurate character spacing and pixel alignment while respecting disabled antialiasing
-- Fixed an issue with forwarding into topics that previously caused a separate window to open the forum instead of the selected topic
-- Fixed an issue with account-switching links that previously caused other pending links to be lost
-- Fixed an issue with profile photos from the clipboard that previously could cause failures or crashes when the clipboard changed while the menu was open
-- Fixed an issue with deleted messages that previously caused their selection state to remain in the message list
-- Fixed an issue with music attachment dialogs that previously caused them to remain open after their parent interface closed
-- Fixed an issue with task deletion that previously caused repeated clicks during the disappearance animation to target a removed task
-- Fixed an issue with moving chats between folders that previously caused them to use the wrong community chat list
-- Changed how the group topics entry looks; it no longer shows an outdated new-feature badge
-- Fixed an issue with restriction badges that previously caused jagged edges
-- Fixed an issue with brief on-screen messages that previously caused their requested display duration to be ignored
-- Fixed an issue with clearing download history that previously could cause crashes while older records were still loading in the background
-- Fixed an issue with closing an attachment-caption editor or logging out after media playback that previously could cause crashes from delayed operations
-- Added forwarding modes to the Saved Messages submenu, so you can now keep the source, remove it or remove both the source and media captions while preserving existing drafts
-- Improved settings cards, which now have consistent spacing and smoother rounded edges, including with translucent window materials
-- Added a bundled Bamum font, so you can now view basic and supplementary Bamum characters even when the system lacks a suitable font
-- Improved Simplified Chinese copy actions and notices, which now use consistent wording
-- Added a sticker timestamp option, so you can now show timestamps only when hovering over stickers while keeping sending and failure indicators visible
-- Added horizontal tab styles, so you can now switch between the original appearance, outlined tabs and solid pills throughout the app, with colors following your accent color
-- Improved the chat list, which now appears without separators between conversations while preserving the space needed by topics and tags
-- Fixed an issue with translucent search transitions that previously caused unwanted background blocks or abrupt animation changes
-- Fixed an issue with the download button that previously caused it to disappear briefly during chat-list animations
-- Fixed an issue with adding accounts that previously could cause a crash when an old panel restored focus during the switch to the login screen
-- Removed temporary message hiding; the session-only Hide Message menu action is no longer available
-- Fixed an issue with chat list bars under translucent window materials that previously caused suggestion banners, search headers, download and folder bars, frozen-account notices and topic group status bars to show opaque backgrounds, outlines or shadows
-- Fixed an issue with chat list labels that previously caused the load-more button, its loading state and search result headers to stay in English regardless of the interface language
-- Added an app name setting, so you can now replace AstraGram at the top left of the main window and in the window title with your own name, or leave it empty to restore the default
-- Added a channel identity setting to the message field elements, so you can now hide the button for choosing which identity you send as without changing the current identity
-- Added attach menu item settings, so you can now choose whether photo or video, document, poll, checklist, article, location, music and Record Message appear in the attach menu; the existing Record Message switch moves to this section and keeps its value
-- Changed how unavailable recording options work in the attach menu; voice and video message entries now stay visible but grayed out and cannot be clicked when chat permissions, the microphone or camera, system privacy settings or an ongoing call or recording prevent them
-- Fixed an issue with the message field element settings that previously caused their icons to differ from the actual attach, emoji, auto-delete, gift and AI editor buttons
-- Fixed an issue with the chat list header in the top folder tabs layout that previously caused two overlapping menu logos while the list slid in or out, such as when opening or leaving the archive
+- Adapted to official Telegram Desktop 7.3.0
+- Added a built-in wallet, so you can now manage GRAM payments, view balances and transaction history, and access recovery and backup options from the application
+- Added message stashing, so you can now set aside and restore text, replies, forwards and attachments, or exchange drafts with Ctrl+S
+- Improved photo and video editing, which now supports adding audio tracks, trimming their duration and adjusting their volume while preserving edits when you reopen the editor
+- Improved local passcode setup, which now shows password strength and suggestions while preserving access to encrypted message archives when you change or remove the passcode
+- Improved interface consistency, which now applies the application's icon style, theme colors, horizontal tabs and menu materials to the new wallet controls and uses rounded chat-search headings
+- Changed how forwarding options are presented; the standard forwarding dialog now offers hiding sender names and media captions, and the direct Saved Messages submenu has been removed
 
 ---
 
-- 适配了官方 Telegram Desktop 7.2.10
-- 新增了本地设置导入导出功能，现在可以选择迁移支持的官方设置、AstraGram 设置和当前账号偏好，需要时会提示重启，不包含登录数据、消息历史或代理凭据
-- 新增了通过用户编号提及的功能，现在可以从消息输入框菜单插入提及，使用当前账号已有的用户资料或消息上下文，并自定义显示文字
-- 新增了空格播放快捷键，现在可以在主窗口暂停或继续当前媒体，输入文字或操作需要空格的控件时不受影响
-- 新增了下载分类标签和常驻搜索框，现在可以按文件名搜索，并同时筛选压缩包、音乐、视频或其他文件
-- 调整了写作工具的显示时机，现在输入十个字符后即可显示可用的人工智能和富文本编辑按钮，无需输入三行文字
-- 对播放控件进行了改善，这使得播放、暂停和取消图标以圆角形状过渡，速度与播放顺序菜单也不会互相覆盖
-- 新增了富文本编辑器的 Ctrl+Enter 提交快捷键，现在可以直接用键盘提交
-- 新增了富文本消息内的音频切换功能，现在可以用上一首和下一首按钮切换其中的音轨
-- 新增了 Unicode 17 表情，现在可以通过更新后的内置和可下载表情包使用新表情
-- 调整了自定义表情包的兼容规则，使用旧版表情布局的包现在需要重新导入后才能选择
-- 修复了关于消息气泡阴影的错误，该问题曾导致局部刷新时相邻阴影被裁切或留下残影
-- 修复了关于对话框圆角和阴影的错误，该问题曾导致圆角面板看起来像直角、阴影与面板圆角不匹配，或打开动画结束后阴影突然变化
-- 对托盘提示进行了改善，这使得 Windows 和 Linux 下可以查看未读数量，隐藏通知角标时也会隐藏该数量
-- 调整了自定义消息通知的外观，现在通知卡片和设置页预览均不再显示阴影
-- 修复了关于话题和收藏夹子会话中共享媒体的错误，该问题曾导致数量不准确、搜索结果混杂或跳转到错误的会话
-- 修复了关于富文本转换的错误，该问题曾导致转换为纯文本时空白段落消失
-- 修复了关于高级表情特效的错误，该问题曾导致已读消息重复自动播放特效
-- 修复了关于 Windows 内嵌网页的错误，该问题曾导致系统反复记录登录失败，并可能锁定 Windows 账号
-- 新增了项目 Telegram 频道邀请，现在可以点击正文链接或确认按钮前往 @MaterialDesign3，也可以取消本次提示或选择不再显示
-- 修复了关于组合字符过滤的错误，该问题曾导致正常重音和双向文字被改动，现在会保留文字格式偏移，并移除测试版标记
-- 修复了关于已删除消息半透明显示的错误，该问题曾导致留档查看页中的相册也变淡，开启该设置时聊天中的已删除消息现在保留 40% 不透明度，并移除该设置的测试版标记
-- 修复了关于第三方翻译请求的错误，该问题曾导致原文中的网页标签文字或加号被错误解释
-- 调整了翻译测试版标记的显示范围，现在仅 Google 和 Yandex 保留标记，官方和系统翻译不再显示
-- 修复了关于置顶消息的错误，该问题曾导致未缓存的置顶消息遗漏，或置顶栏使用错误的话题或收藏夹子会话
-- 对读屏软件支持进行了改善，这使得消息选择、浏览焦点和设置开关能被正确识别，未读分隔条也不再计入消息数量
-- 修复了关于系统媒体控件的错误，该问题曾导致播放语音或解锁后显示错误的曲目信息，或控制错误的播放器
-- 修复了关于旋转视频的错误，该问题曾导致缩放尺寸不正确
-- 修复了关于表情和贴纸选择器的错误，该问题曾导致搜索、刷新变体或安装贴纸时可能崩溃
-- 修复了关于富文本选区的错误，该问题曾导致拖动超出可见区域并滚动时反复触发选择事件
-- 修复了关于 Windows 最大化窗口的错误，该问题曾导致跨显示器移动时显示异常
-- 对 Linux 文字绘制进行了改善，这使得字距和像素对齐更准确，并遵守关闭抗锯齿的设置
-- 修复了关于转发到话题的错误，该问题曾导致独立窗口打开论坛主页，而非选定的话题
-- 修复了关于切换账号链接的错误，该问题曾导致其他待处理链接丢失
-- 修复了关于从剪贴板设置头像的错误，该问题曾导致菜单打开后剪贴板变化时可能设置失败或崩溃
-- 修复了关于已删除消息的错误，该问题曾导致消息列表中残留其选中状态
-- 修复了关于音乐附件选择框的错误，该问题曾导致所属界面关闭后选择框仍然保留
-- 修复了关于删除待办任务的错误，该问题曾导致消失动画期间连续点击时重复操作已移除的任务
-- 修复了关于聊天移入其他文件夹的错误，该问题曾导致使用错误的社区会话列表
-- 调整了群话题入口的外观，现在不再显示过期的新功能标记
-- 修复了关于限制标记的错误，该问题曾导致边缘出现锯齿
-- 修复了关于短暂提示消息的错误，该问题曾导致指定的显示时长被忽略
-- 修复了关于清空下载历史的错误，该问题曾导致后台仍在加载旧记录时可能崩溃
-- 修复了关于关闭附件说明编辑框或播放媒体后退出账号的错误，该问题曾导致后续操作可能引发崩溃
-- 新增了收藏夹转发子菜单中的转发方式，现在可以保留来源、移除来源，或同时移除来源和媒体说明，并保留已有草稿
-- 对设置卡片进行了改善，这使得卡片间距更一致、圆角边缘更平滑，半透明窗口材质下也能正常显示
-- 新增了内置巴穆姆文字字体，现在即使系统缺少相应字体，也能显示基本区和扩展区字符
-- 对简体中文复制操作和提示进行了改善，这使得相关文案用词更加统一
-- 新增了贴纸时间显示选项，现在可以仅在鼠标悬停贴纸时显示时间，同时保留发送中和发送失败提示
-- 新增了横向标签栏款式，现在可以在全应用的原有样式、细框标签和实色胶囊之间切换，颜色跟随当前强调色
-- 对对话列表进行了改善，这使得对话之间不再显示分隔线，同时保留话题和标签内容需要的空间
-- 修复了关于半透明材质下搜索切换的错误，该问题曾导致多余背景色块或动画突变
-- 修复了关于下载按钮的错误，该问题曾导致对话列表动画期间按钮短暂消失
-- 修复了关于添加账号的错误，该问题曾导致切换到登录页时旧面板恢复焦点并引发崩溃
-- 移除了临时隐藏消息功能，当前运行期间隐藏消息的菜单入口不再可用
-- 修复了关于半透明窗口材质下对话列表提示条的错误，该问题曾导致建议横幅、搜索标题栏、下载栏、文件夹栏、账号冻结提示和话题群组状态栏显示不透明背景、描边或阴影
-- 修复了关于对话列表文案的错误，该问题曾导致加载更多按钮、加载中提示和搜索结果标题不跟随界面语言，始终显示英文
-- 新增了应用名称设置，现在可以把主界面左上角和窗口标题中的 AstraGram 换成自定义名称，留空即可恢复默认
-- 新增了消息输入框控件中的频道身份设置，现在可以隐藏选择发送身份的按钮，当前发送身份保持不变
-- 新增了附件菜单项设置，现在可以选择附件菜单中是否显示照片或视频、文件、投票、待办清单、文章、位置、音乐和录制消息，原有的录制消息开关移到这里并保留原设置
-- 调整了附件菜单中不可用录制选项的行为，现在聊天权限、麦克风或摄像头、系统隐私设置、正在进行的通话或录制导致无法使用时，语音消息和视频消息选项仍会显示，但会置灰且无法点击
-- 修复了关于消息输入框控件设置的错误，该问题曾导致设置图标与实际的附件、表情、自动删除、礼物和人工智能编辑按钮不一致
-- 修复了关于顶部文件夹标签布局下对话列表标题栏的错误，该问题曾导致打开或退出归档等列表滑动过程中出现两个重叠的菜单图标
+- 适配了官方 Telegram Desktop 7.3.0
+- 新增了内置钱包，现在可以在应用内管理 GRAM 收付款、查看余额和交易记录，以及使用恢复与备份选项
+- 新增了消息暂存，现在可以暂存和恢复文字、回复、转发及附件，也可以通过 Ctrl+S 交换草稿
+- 对图片和视频编辑进行了改善，这使得添加音轨、裁剪音轨时长和调整音量更方便，重新打开编辑器时也会保留修改
+- 对本地口令设置进行了改善，这使得设置口令时可以查看强度和建议，修改或移除口令后仍可访问加密消息留档
+- 对界面一致性进行了改善，这使得钱包新增控件能沿用本应用的图标风格、主题颜色、横向标签和菜单材质，聊天搜索标题也改为圆角样式
+- 调整了转发选项的展示方式，现在统一在标准转发窗口中提供隐藏发送者姓名和媒体说明的选项，并移除直接转发到收藏夹的子菜单
