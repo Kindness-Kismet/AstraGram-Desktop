@@ -42,9 +42,6 @@
 预览打开后用控件指令调整并保存；截图设置可通过 `messageShotSettings.*` 修改。
 
 `forward.status <peerId>` 查询转发任务，`forward.cancel <peerId>` 取消正在进行的任务。
-`forward.options <peerId> <messageId> [single]` 查询收藏夹可用方式与消息数量，默认包含所在相册。
-`forward.saved <peerId> <messageId> <original|no-source|no-source-caption> [single]` 复用收藏夹业务入口直接转发；仅在已授权的真实会话中使用。
-三种方式依次为原样、不带来源、不带来源和说明文字。返回 `submitted` 只代表已提交；用收藏夹的 `message.fetch/list/inspect` 核对实际送达、文字、`forwarded` 来源、`photoId` 和 `groupId`。
 定制复制转发沿用 `forward.status` 的进度；其状态不代表服务端逐条确认，不据此判定全部成功。
 发起转发、重复发送和更多消息动作可通过消息右键菜单操作，保留原有选项与目标确认流程。
 

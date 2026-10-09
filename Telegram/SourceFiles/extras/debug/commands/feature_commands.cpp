@@ -8,10 +8,6 @@
 #include "extras/features/translator/extras_translator.h"
 #include "extras/features/window_material/window_material.h"
 #include "extras/features/forward/extras_forward.h"
-#include "extras/features/forward/forward_to_saved.h"
-#include "data/data_session.h"
-#include "data/data_user.h"
-#include "history/history_item.h"
 #include "extras/utils/telegram_helpers.h"
 #include "core/application.h"
 #include "main/main_session.h"
@@ -226,56 +222,6 @@ Result forwardStatus(const QStringList &args) {
 	return Result::Ok(Compact(Json{{"active", active}, {"state", state.first.toStdString()}, {"progress", state.second.toStdString()}}));
 }
 
-const auto kSavedModes = std::array{
-	u"original"_q, u"no-source"_q, u"no-source-caption"_q,
-};
-
-MessageIdsList savedIds(not_null<HistoryItem*> item, bool single) {
-	return single ? MessageIdsList{ item->fullId() }
-		: item->history()->owner().itemOrItsGroup(item);
-}
-
-Result savedOptions(const QStringList &args) {
-	if (args.size() < 2 || args.size() > 3
-		|| (args.size() == 3 && args[2] != u"single"_q)) {
-		return Result::Err(u"usage: forward.options <peerId> <messageId> [single]"_q);
-	}
-	const auto item = findMessage(args[0], args[1]);
-	if (!item) return Result::Err(u"message not found"_q);
-	const auto ids = savedIds(item, args.size() == 3);
-	auto modes = Json::array();
-	for (const auto mode : ExtrasForward::savedForwardOptions(
-			&item->history()->session(), ids)) {
-		modes.push_back(kSavedModes[int(mode)].toStdString());
-	}
-	return Result::Ok(Compact(Json{
-		{ "modes", std::move(modes) }, { "count", ids.size() },
-	}));
-}
-
-Result forwardSaved(const QStringList &args) {
-	if (args.size() < 3 || args.size() > 4
-		|| (args.size() == 4 && args[3] != u"single"_q)) {
-		return Result::Err(u"usage: forward.saved <peerId> <messageId> <original|no-source|no-source-caption> [single]"_q);
-	}
-	const auto mode = ranges::find(kSavedModes, args[2]);
-	if (mode == end(kSavedModes)) return Result::Err(u"invalid forwarding mode"_q);
-	const auto item = findMessage(args[0], args[1]);
-	if (!item) return Result::Err(u"message not found"_q);
-	const auto session = &item->history()->session();
-	if (isSimulationSession(session)) return Result::Err(u"an authenticated session is required"_q);
-	const auto ids = savedIds(item, args.size() == 4);
-	const auto error = ExtrasForward::forwardToSaved(
-		session, ids, Data::ForwardOptions(mode - begin(kSavedModes)));
-	using Error = ExtrasForward::SavedForwardError;
-	if (error == Error::Unavailable) return Result::Err(u"messages are unavailable"_q);
-	if (error == Error::UnsupportedMode) return Result::Err(u"forwarding mode is unavailable"_q);
-	return Result::Ok(Compact(Json{
-		{ "state", "submitted" }, { "count", ids.size() },
-		{ "destination", session->user()->id.value },
-	}));
-}
-
 Result cancelForward(const QStringList &args) {
 	if (args.size() != 1) return Result::Err(u"usage: forward.cancel <peerId>"_q);
 	const auto peer = findPeer(args[0]);
@@ -297,7 +243,6 @@ const HandlerMap &FeatureHandlers() {
 		{u"emoji.cancel"_q, &cancelEmoji},
 		{u"feature.status"_q, &featureStatus}, {u"forward.status"_q, &forwardStatus},
 		{u"forward.cancel"_q, &cancelForward},
-		{u"forward.options"_q, &savedOptions}, {u"forward.saved"_q, &forwardSaved},
 	};
 	return result;
 }

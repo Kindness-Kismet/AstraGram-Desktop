@@ -125,7 +125,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "extras/extras_settings.h"
 #include "extras/features/forward/extras_forward.h"
-#include "extras/ui/context_menu/forward_to_saved_menu.h"
 #include "extras/features/translator/message_translation.h"
 #include "extras/ui/context_menu/context_menu.h"
 
@@ -758,10 +757,6 @@ bool AddForwardMessageAction(
 			}
 		}, &st::menuIconCaptionHide);
 	}
-	ExtrasUi::addForwardToSavedMenu(
-		fwdSubmenu.get(),
-		&item->history()->session(),
-		asGroup ? owner->itemOrItsGroup(item) : MessageIdsList{ itemId });
 	if (!fwdSubmenu->empty()) {
 		menu->addAction(tr::extras_ContextForward(tr::now), std::move(fwdSubmenu), &st::menuIconForward);
 	}

@@ -9283,7 +9283,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_ContextForwardMsgNoQuote" = "Forward Without Quote";
 "extras_ContextForwardMsgNoCaption" = "Forward Without Caption";
 "extras_ContextForwardSelectedNoCaption" = "Forward Selected Without Caption";
-"extras_ForwardToSavedMessage" = "Forward to Saved Messages";
 "extras_TitleForwardAsCopy" = "Copy to...";
 "extras_TitleMultipleForward" = "Forward to...";
 "extras_TitleForwarded" = "Forwarded";
@@ -9522,12 +9521,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SettingsTransferImported" = "Settings applied and saved.";
 "extras_SettingsTransferSaveError" = "Settings were applied, but saving failed. Check disk space and permissions, then retry before restarting.";
 
-"extras_ForwardSavedOriginal" = "Forward as is";
-"extras_ForwardSavedNoSource" = "Without source";
-"extras_ForwardSavedNoSourceCaption" = "Without source and caption";
-"extras_ForwardSavedDone" = "Forwarded to Saved Messages";
-"extras_ForwardSavedUnavailable" = "These messages are no longer available for forwarding.";
-"extras_ForwardSavedUnsupported" = "This forwarding option is no longer available for these messages.";
 "extras_SimulationPrivate" = "Private";
 "extras_SimulationGroups" = "Groups";
 "extras_SimulationChannels" = "Channels";

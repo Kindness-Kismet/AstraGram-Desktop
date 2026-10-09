@@ -100,8 +100,6 @@ GENERIC_COMMANDS = {
     "emoji.cancel": "取消预设表情包下载：<预设编号>",
     "feature.status": "查询窗口材质、隐私遮挡、翻译与表情包状态",
     "forward.status": "查询转发任务进度：<会话编号>",
-    "forward.options": "查询收藏夹可用转发方式：<会话编号> <消息编号> [single]",
-    "forward.saved": "转发到收藏夹：<会话编号> <消息编号> <original|no-source|no-source-caption> [single]",
     "forward.cancel": "取消正在运行的转发任务：<会话编号>",
     "job.status": "查询异步任务结果：<任务编号>",
     "job.forget": "移除已结束任务的查询记录：<任务编号>",

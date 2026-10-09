@@ -145,7 +145,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/features/translator/message_translation.h"
 #include "extras/features/filters/filters_cache_controller.h"
 #include "extras/features/forward/extras_forward.h"
-#include "extras/ui/context_menu/forward_to_saved_menu.h"
 #include "extras/ui/context_menu/context_menu.h"
 #include "extras/ui/settings/filters/edit_filter.h"
 #include "extras/utils/telegram_helpers.h"
@@ -3688,10 +3687,6 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 							[=] { forwardItemNoCaption(itemId); },
 							&st::menuIconCaptionHide);
 					}
-					ExtrasUi::addForwardToSavedMenu(
-						fwdSubmenu.get(),
-						session,
-						MessageIdsList{ itemId });
 					if (!fwdSubmenu->empty()) {
 						_menu->addAction(
 							tr::extras_ContextForward(tr::now),
@@ -4029,10 +4024,6 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 							forwardAsGroupNoCaption(itemId);
 						}, &st::menuIconCaptionHide);
 					}
-					ExtrasUi::addForwardToSavedMenu(
-						fwdSubmenu.get(),
-						session,
-						session->data().itemOrItsGroup(item));
 					if (!fwdSubmenu->empty()) {
 						_menu->addAction(tr::extras_ContextForward(tr::now), std::move(fwdSubmenu), &st::menuIconForward);
 					}
