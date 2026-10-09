@@ -946,9 +946,67 @@ void ExtrasSettings::setShowEmojiButtonInMessageField(bool val) {
 	save();
 }
 
-void ExtrasSettings::setShowMicrophoneButtonInMessageField(bool val) {
-	if (_showMicrophoneButtonInMessageField.current() == val) return;
-	_showMicrophoneButtonInMessageField = val;
+void ExtrasSettings::setShowPhotoInAttachMenu(bool val) {
+	if (_showPhotoInAttachMenu.current() == val) {
+		return;
+	}
+	_showPhotoInAttachMenu = val;
+	save();
+}
+
+void ExtrasSettings::setShowFileInAttachMenu(bool val) {
+	if (_showFileInAttachMenu.current() == val) {
+		return;
+	}
+	_showFileInAttachMenu = val;
+	save();
+}
+
+void ExtrasSettings::setShowPollInAttachMenu(bool val) {
+	if (_showPollInAttachMenu.current() == val) {
+		return;
+	}
+	_showPollInAttachMenu = val;
+	save();
+}
+
+void ExtrasSettings::setShowTodoListInAttachMenu(bool val) {
+	if (_showTodoListInAttachMenu.current() == val) {
+		return;
+	}
+	_showTodoListInAttachMenu = val;
+	save();
+}
+
+void ExtrasSettings::setShowArticleInAttachMenu(bool val) {
+	if (_showArticleInAttachMenu.current() == val) {
+		return;
+	}
+	_showArticleInAttachMenu = val;
+	save();
+}
+
+void ExtrasSettings::setShowLocationInAttachMenu(bool val) {
+	if (_showLocationInAttachMenu.current() == val) {
+		return;
+	}
+	_showLocationInAttachMenu = val;
+	save();
+}
+
+void ExtrasSettings::setShowMusicInAttachMenu(bool val) {
+	if (_showMusicInAttachMenu.current() == val) {
+		return;
+	}
+	_showMusicInAttachMenu = val;
+	save();
+}
+
+void ExtrasSettings::setShowRecordMessageInAttachMenu(bool val) {
+	if (_showRecordMessageInAttachMenu.current() == val) {
+		return;
+	}
+	_showRecordMessageInAttachMenu = val;
 	save();
 }
 
@@ -1311,7 +1369,14 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"showAttachButtonInMessageField", s._showAttachButtonInMessageField.current()},
 		{"showSendAsButtonInMessageField", s._showSendAsButtonInMessageField.current()},
 		{"showEmojiButtonInMessageField", s._showEmojiButtonInMessageField.current()},
-		{"showMicrophoneButtonInMessageField", s._showMicrophoneButtonInMessageField.current()},
+		{"showPhotoInAttachMenu", s._showPhotoInAttachMenu.current()},
+		{"showFileInAttachMenu", s._showFileInAttachMenu.current()},
+		{"showPollInAttachMenu", s._showPollInAttachMenu.current()},
+		{"showTodoListInAttachMenu", s._showTodoListInAttachMenu.current()},
+		{"showArticleInAttachMenu", s._showArticleInAttachMenu.current()},
+		{"showLocationInAttachMenu", s._showLocationInAttachMenu.current()},
+		{"showMusicInAttachMenu", s._showMusicInAttachMenu.current()},
+		{"showRecordMessageInAttachMenu", s._showRecordMessageInAttachMenu.current()},
 		{"showAutoDeleteButtonInMessageField", s._showAutoDeleteButtonInMessageField.current()},
 		{"showGiftButtonInMessageField", s._showGiftButtonInMessageField.current()},
 		{"showAiEditorButtonInMessageField", s._showAiEditorButtonInMessageField.current()},
@@ -1448,7 +1513,16 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._showAttachButtonInMessageField = j.value("showAttachButtonInMessageField", defaults._showAttachButtonInMessageField.current());
 	s._showSendAsButtonInMessageField = j.value("showSendAsButtonInMessageField", defaults._showSendAsButtonInMessageField.current());
 	s._showEmojiButtonInMessageField = j.value("showEmojiButtonInMessageField", defaults._showEmojiButtonInMessageField.current());
-	s._showMicrophoneButtonInMessageField = j.value("showMicrophoneButtonInMessageField", defaults._showMicrophoneButtonInMessageField.current());
+	s._showPhotoInAttachMenu = j.value("showPhotoInAttachMenu", defaults._showPhotoInAttachMenu.current());
+	s._showFileInAttachMenu = j.value("showFileInAttachMenu", defaults._showFileInAttachMenu.current());
+	s._showPollInAttachMenu = j.value("showPollInAttachMenu", defaults._showPollInAttachMenu.current());
+	s._showTodoListInAttachMenu = j.value("showTodoListInAttachMenu", defaults._showTodoListInAttachMenu.current());
+	s._showArticleInAttachMenu = j.value("showArticleInAttachMenu", defaults._showArticleInAttachMenu.current());
+	s._showLocationInAttachMenu = j.value("showLocationInAttachMenu", defaults._showLocationInAttachMenu.current());
+	s._showMusicInAttachMenu = j.value("showMusicInAttachMenu", defaults._showMusicInAttachMenu.current());
+	s._showRecordMessageInAttachMenu = j.contains("showRecordMessageInAttachMenu")
+		? j.value("showRecordMessageInAttachMenu", defaults._showRecordMessageInAttachMenu.current())
+		: j.value("showMicrophoneButtonInMessageField", defaults._showRecordMessageInAttachMenu.current());
 	s._showAutoDeleteButtonInMessageField = j.value("showAutoDeleteButtonInMessageField", defaults._showAutoDeleteButtonInMessageField.current());
 	s._showGiftButtonInMessageField = j.value("showGiftButtonInMessageField", defaults._showGiftButtonInMessageField.current());
 	s._showAiEditorButtonInMessageField = j.value("showAiEditorButtonInMessageField", defaults._showAiEditorButtonInMessageField.current());

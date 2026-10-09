@@ -457,13 +457,6 @@ void BuildMessageFieldElements(SectionBuilder &builder, ExtrasSectionBuilder &ex
 		.icon = { &st::messageFieldEmojiIcon },
 	});
 	extras.addSettingToggle({
-		.id = u"extras/showMicrophoneButtonInMessageField"_q,
-		.title = tr::extras_RecordMessage(),
-		.getter = &ExtrasSettings::showMicrophoneButtonInMessageField,
-		.setter = &ExtrasSettings::setShowMicrophoneButtonInMessageField,
-		.icon = { &st::extrasRecordMessageIcon },
-	});
-	extras.addSettingToggle({
 		.id = u"extras/showGiftButtonInMessageField"_q,
 		.title = tr::lng_profile_action_short_gift(),
 		.getter = &ExtrasSettings::showGiftButtonInMessageField,
@@ -479,6 +472,71 @@ void BuildMessageFieldElements(SectionBuilder &builder, ExtrasSectionBuilder &ex
 	});
 
 	extras.addSectionDivider();
+}
+
+void BuildAttachMenuElements(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
+	builder.addSubsectionTitle(tr::extras_AttachMenuElementsHeader());
+
+	extras.addSettingToggle({
+		.id = u"extras/showPhotoInAttachMenu"_q,
+		.title = tr::lng_attach_photo_or_video(),
+		.getter = &ExtrasSettings::showPhotoInAttachMenu,
+		.setter = &ExtrasSettings::setShowPhotoInAttachMenu,
+		.icon = { &st::menuIconPhoto },
+	});
+	extras.addSettingToggle({
+		.id = u"extras/showFileInAttachMenu"_q,
+		.title = tr::lng_attach_document(),
+		.getter = &ExtrasSettings::showFileInAttachMenu,
+		.setter = &ExtrasSettings::setShowFileInAttachMenu,
+		.icon = { &st::menuIconFile },
+	});
+	extras.addSettingToggle({
+		.id = u"extras/showPollInAttachMenu"_q,
+		.title = tr::lng_polls_menu_item(),
+		.getter = &ExtrasSettings::showPollInAttachMenu,
+		.setter = &ExtrasSettings::setShowPollInAttachMenu,
+		.icon = { &st::menuIconCreatePoll },
+	});
+	extras.addSettingToggle({
+		.id = u"extras/showTodoListInAttachMenu"_q,
+		.title = tr::lng_todo_menu_item(),
+		.getter = &ExtrasSettings::showTodoListInAttachMenu,
+		.setter = &ExtrasSettings::setShowTodoListInAttachMenu,
+		.icon = { &st::menuIconCreateTodoList },
+	});
+	extras.addSettingToggle({
+		.id = u"extras/showArticleInAttachMenu"_q,
+		.title = tr::lng_article_menu_item(),
+		.getter = &ExtrasSettings::showArticleInAttachMenu,
+		.setter = &ExtrasSettings::setShowArticleInAttachMenu,
+		.icon = { &st::menuIconArticle },
+	});
+	extras.addSettingToggle({
+		.id = u"extras/showLocationInAttachMenu"_q,
+		.title = tr::lng_maps_point(),
+		.getter = &ExtrasSettings::showLocationInAttachMenu,
+		.setter = &ExtrasSettings::setShowLocationInAttachMenu,
+		.icon = { &st::menuIconAddress },
+	});
+	extras.addSettingToggle({
+		.id = u"extras/showMusicInAttachMenu"_q,
+		.title = tr::lng_all_music(),
+		.getter = &ExtrasSettings::showMusicInAttachMenu,
+		.setter = &ExtrasSettings::setShowMusicInAttachMenu,
+		.icon = { &st::menuIconSoundOn },
+	});
+	extras.addSettingToggle({
+		.id = u"extras/showRecordMessageInAttachMenu"_q,
+		.title = tr::extras_RecordMessage(),
+		.getter = &ExtrasSettings::showRecordMessageInAttachMenu,
+		.setter = &ExtrasSettings::setShowRecordMessageInAttachMenu,
+		.icon = { &st::extrasRecordMessageIcon },
+	});
+
+	builder.addSkip();
+	builder.addDividerText(tr::extras_AttachMenuElementsDescription());
+	builder.addSkip();
 }
 
 void BuildMessageFieldPopups(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
@@ -517,6 +575,7 @@ const auto kMeta = BuildHelper({
 	BuildWideMessagesMultiplier(builder, extras, previewState);
 	BuildContextMenuElements(builder, extras);
 	BuildMessageFieldElements(builder, extras);
+	BuildAttachMenuElements(builder, extras);
 	BuildMessageFieldPopups(builder, extras);
 	builder.addSkip();
 });

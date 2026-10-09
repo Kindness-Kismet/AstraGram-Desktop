@@ -799,7 +799,7 @@ void HistoryWidget::refreshAttachBotsMenu() {
 			migrateFieldToRichEditor();
 		}));
 	const auto record = recordMenuOptions();
-	if (!_attachBotsMenu && (record.voice || record.round)) {
+	if (!_attachBotsMenu && record.shown) {
 		_attachBotsMenu = std::make_unique<Ui::DropdownMenu>(
 			this,
 			st::dropdownMenuWithIcons);

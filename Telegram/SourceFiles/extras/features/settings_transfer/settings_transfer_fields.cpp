@@ -259,8 +259,22 @@ Fields customFields() {
 		&S::showSendAsButtonInMessageField, &S::setShowSendAsButtonInMessageField);
 	addField(fields, "showEmojiButtonInMessageField", settings,
 		&S::showEmojiButtonInMessageField, &S::setShowEmojiButtonInMessageField);
-	addField(fields, "showMicrophoneButtonInMessageField", settings,
-		&S::showMicrophoneButtonInMessageField, &S::setShowMicrophoneButtonInMessageField);
+	addField(fields, "showPhotoInAttachMenu", settings,
+		&S::showPhotoInAttachMenu, &S::setShowPhotoInAttachMenu);
+	addField(fields, "showFileInAttachMenu", settings,
+		&S::showFileInAttachMenu, &S::setShowFileInAttachMenu);
+	addField(fields, "showPollInAttachMenu", settings,
+		&S::showPollInAttachMenu, &S::setShowPollInAttachMenu);
+	addField(fields, "showTodoListInAttachMenu", settings,
+		&S::showTodoListInAttachMenu, &S::setShowTodoListInAttachMenu);
+	addField(fields, "showArticleInAttachMenu", settings,
+		&S::showArticleInAttachMenu, &S::setShowArticleInAttachMenu);
+	addField(fields, "showLocationInAttachMenu", settings,
+		&S::showLocationInAttachMenu, &S::setShowLocationInAttachMenu);
+	addField(fields, "showMusicInAttachMenu", settings,
+		&S::showMusicInAttachMenu, &S::setShowMusicInAttachMenu);
+	addField(fields, "showRecordMessageInAttachMenu", settings,
+		&S::showRecordMessageInAttachMenu, &S::setShowRecordMessageInAttachMenu);
 	addField(fields, "showAutoDeleteButtonInMessageField", settings,
 		&S::showAutoDeleteButtonInMessageField, &S::setShowAutoDeleteButtonInMessageField);
 	addField(fields, "showGiftButtonInMessageField", settings,

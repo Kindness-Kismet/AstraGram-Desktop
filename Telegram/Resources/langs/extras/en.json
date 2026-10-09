@@ -328,6 +328,8 @@
   "MessageFieldElementAttach": "Attach",
   "MessageFieldElementTTL": "TTL",
   "MessageFieldElementEmoji": "Emoji",
+  "AttachMenuElementsHeader": "Attach Menu Elements",
+  "AttachMenuElementsDescription": "Choose which items appear in the attach menu. Record Message stays collapsed and expands on click; unavailable recording options are grayed out.",
   "RecordMessage": "Record Message",
   "RecordVoiceMessage": "Voice Message",
   "RecordVideoMessage": "Video Message",

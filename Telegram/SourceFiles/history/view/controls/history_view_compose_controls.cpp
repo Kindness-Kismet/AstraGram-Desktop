@@ -2946,8 +2946,7 @@ void ComposeControls::init() {
 			| rpl::filter(!rpl::mappers::_1) | rpl::to_empty,
 		_header->editMsgIdValue() | rpl::to_empty,
 		ExtrasSettings::getInstance().showAttachPopupChanges() | rpl::to_empty,
-		ExtrasSettings::getInstance().showMicrophoneButtonInMessageFieldChanges(
-		) | rpl::to_empty,
+		ExtrasUi::attachMenuChanges(),
 		ExtrasUi::recordMenuChanges()
 	) | rpl::on_next([=] {
 		updateAttachBotsMenu();
@@ -2957,7 +2956,6 @@ void ComposeControls::init() {
 		ExtrasSettings::getInstance().showAttachButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showSendAsButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showEmojiButtonInMessageFieldChanges() | rpl::to_empty,
-		ExtrasSettings::getInstance().showMicrophoneButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showAutoDeleteButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showAiEditorButtonInMessageFieldChanges() | rpl::to_empty,
 		base::options::lookup<bool>(Ui::kOptionHideAiButton).changes(),
@@ -5643,17 +5641,25 @@ void ComposeControls::updateAttachBotsMenu() {
 			}));
 	} else {
 		// 计划消息、快捷回复等输入区只提供照片和文件选项。
+		const auto &settings = ExtrasSettings::getInstance();
 		_attachBotsMenu = std::make_unique<Ui::DropdownMenu>(
 			_panelsParent, st::dropdownMenuWithIcons);
-		_attachBotsMenu->addAction(tr::lng_attach_photo_or_video(tr::now), [=] {
-			_attachRequests.fire_copy(true);
-		}, &st::menuIconPhoto);
-		_attachBotsMenu->addAction(tr::lng_attach_document(tr::now), [=] {
-			_attachRequests.fire_copy(false);
-		}, &st::menuIconFile);
+		if (settings.showPhotoInAttachMenu()) {
+			_attachBotsMenu->addAction(tr::lng_attach_photo_or_video(tr::now), [=] {
+				_attachRequests.fire_copy(true);
+			}, &st::menuIconPhoto);
+		}
+		if (settings.showFileInAttachMenu()) {
+			_attachBotsMenu->addAction(tr::lng_attach_document(tr::now), [=] {
+				_attachRequests.fire_copy(false);
+			}, &st::menuIconFile);
+		}
+		if (_attachBotsMenu->empty()) {
+			_attachBotsMenu = nullptr;
+		}
 	}
 	const auto record = recordMenuOptions();
-	if (!_attachBotsMenu && (record.voice || record.round)) {
+	if (!_attachBotsMenu && record.shown) {
 		_attachBotsMenu = std::make_unique<Ui::DropdownMenu>(
 			_panelsParent,
 			st::dropdownMenuWithIcons);

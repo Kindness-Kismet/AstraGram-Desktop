@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "inline_bots/bot_attach_web_view.h"
+#include "extras/extras_settings.h"
 
 #include "api/api_blocked_peers.h"
 #include "api/api_common.h"
@@ -3035,7 +3036,9 @@ std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
 		st::dropdownMenuWithIcons);
 	const auto bots = &peer->session().attachWebView();
 	const auto raw = result.get();
-	if (Data::CanSend(peer, ChatRestriction::SendPhotos, false)) {
+	const auto &settings = ExtrasSettings::getInstance();
+	if (settings.showPhotoInAttachMenu()
+		&& Data::CanSend(peer, ChatRestriction::SendPhotos, false)) {
 		raw->addAction(tr::lng_attach_photo_or_video(tr::now), [=] {
 			attach(true);
 		}, &st::menuIconPhoto);
@@ -3045,12 +3048,13 @@ std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
 		| ChatRestriction::SendStickers
 		| ChatRestriction::SendMusic
 		| ChatRestriction::SendFiles;
-	if (Data::CanSendAnyOf(peer, fileTypes, false)) {
+	if (settings.showFileInAttachMenu()
+		&& Data::CanSendAnyOf(peer, fileTypes, false)) {
 		raw->addAction(tr::lng_attach_document(tr::now), [=] {
 			attach(false);
 		}, &st::menuIconFile);
 	}
-	if (peer->canCreatePolls(false)) {
+	if (settings.showPollInAttachMenu() && peer->canCreatePolls(false)) {
 		raw->addAction(tr::lng_polls_menu_item(tr::now), [=] {
 			const auto action = actionFactory();
 			const auto source = action.options.scheduled
@@ -3068,7 +3072,8 @@ std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
 				sendMenuDetails());
 		}, &st::menuIconCreatePoll);
 	}
-	if (peer->canCreateTodoLists(false)) {
+	if (settings.showTodoListInAttachMenu()
+		&& peer->canCreateTodoLists(false)) {
 		raw->addAction(tr::lng_todo_menu_item(tr::now), [=] {
 			const auto action = actionFactory();
 			const auto source = action.options.scheduled
@@ -3083,7 +3088,8 @@ std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
 				sendMenuDetails());
 		}, &st::menuIconCreateTodoList);
 	}
-	if (Iv::Editor::CanAuthorRichMessages(&controller->session())
+	if (settings.showArticleInAttachMenu()
+		&& Iv::Editor::CanAuthorRichMessages(&controller->session())
 		&& Data::CanSendAnyOf(peer, ChatRestriction::SendOther, false)) {
 		raw->addAction(tr::lng_article_menu_item(tr::now), [=] {
 			const auto action = actionFactory();
@@ -3100,14 +3106,16 @@ std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
 	const auto session = &controller->session();
 	const auto locationType = ChatRestriction::SendOther;
 	const auto config = ResolveMapsConfig(session);
-	if (Data::CanSendAnyOf(peer, locationType, false)
+	if (settings.showLocationInAttachMenu()
+		&& Data::CanSendAnyOf(peer, locationType, false)
 		&& Ui::LocationPicker::Available(config)) {
 		raw->addAction(tr::lng_maps_point(tr::now), [=] {
 			Ui::PreventDelayedActivation();
 			ChooseAndSendLocation(controller, config, actionFactory());
 		}, &st::menuIconAddress);
 	}
-	if (Data::CanSend(peer, ChatRestriction::SendMusic, false)) {
+	if (settings.showMusicInAttachMenu()
+		&& Data::CanSend(peer, ChatRestriction::SendMusic, false)) {
 		raw->addAction(tr::lng_all_music(tr::now), [=] {
 			const auto box = controller->show(
 				Box(MusicAttachBox, controller, peer, actionFactory));

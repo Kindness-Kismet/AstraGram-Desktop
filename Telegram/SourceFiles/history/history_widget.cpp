@@ -919,7 +919,7 @@ HistoryWidget::HistoryWidget(
 		ExtrasSettings::getInstance().showAttachButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showSendAsButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showEmojiButtonInMessageFieldChanges() | rpl::to_empty,
-		ExtrasSettings::getInstance().showMicrophoneButtonInMessageFieldChanges() | rpl::to_empty,
+		ExtrasUi::attachMenuChanges(),
 		ExtrasSettings::getInstance().showAutoDeleteButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showGiftButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showAiEditorButtonInMessageFieldChanges() | rpl::to_empty,

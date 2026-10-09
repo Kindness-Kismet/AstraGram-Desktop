@@ -53,5 +53,8 @@ python .codex/skills/app-debug/scripts/cli.py settings.keys session.autoDownload
 频道身份按钮为 `showSendAsButtonInMessageField`，归入“聊天 → 输入框元素”，默认显示。
 开关即时改变按钮和输入区占位，不改变当前发送身份；使用 `simulation.open send-as` 及 `--view alternate` 验证两套输入区。
 
+附件菜单各项归入“聊天 → 附件菜单项”，默认全部显示：`showPhotoInAttachMenu`、`showFileInAttachMenu`、`showPollInAttachMenu`、`showTodoListInAttachMenu`、`showArticleInAttachMenu`、`showLocationInAttachMenu`、`showMusicInAttachMenu`，以及“录制消息”分组 `showRecordMessageInAttachMenu`；旧配置中的 `showMicrophoneButtonInMessageField` 自动迁移。开关只隐藏菜单项，聊天权限不允许的项仍按官方逻辑隐藏。
+录制分组每次打开菜单都从折叠状态开始；聊天权限、录制设备、系统授权或通话占用不满足时，对应录制项置灰。
+
 频道邀请开关为 `showCommunityChannelInvite`，默认开启；确认或“不再显示”会关闭，取消只跳过本次启动。
 邀请在登录并进入主界面后显示，每次启动最多一次；恢复开关后重启即可再次验证，弹窗标识为 `communityChannel/invite`。

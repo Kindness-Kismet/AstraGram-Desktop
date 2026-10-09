@@ -51,10 +51,50 @@ struct RecordPermissions {
 #endif
 }
 
-// 折叠时箭头朝右，展开后朝下。
-class RecordGroupAction final : public Ui::Menu::Action {
+struct GroupItem {
+	QString text;
+	const style::icon *icon = nullptr;
+	Fn<void()> callback;
+	bool enabled = true;
+};
+
+[[nodiscard]] not_null<QAction*> createAction(
+		not_null<Ui::Menu::Menu*> menu,
+		const QString &text,
+		Fn<void()> callback,
+		bool enabled) {
+	const auto result = Ui::Menu::CreateAction(
+		menu,
+		text,
+		std::move(callback));
+	result->setEnabled(enabled);
+	return result;
+}
+
+// 禁用时图标随文字置灰；分组标题右侧的箭头折叠时朝右，展开后朝下。
+class MenuItem final : public Ui::Menu::Action {
 public:
-	using Action::Action;
+	MenuItem(
+		not_null<Ui::Menu::Menu*> menu,
+		const QString &text,
+		Fn<void()> callback,
+		const style::icon *icon,
+		bool enabled,
+		bool group)
+	: Action(
+		menu,
+		menu->st(),
+		createAction(menu, text, std::move(callback), enabled),
+		enabled ? icon : nullptr,
+		enabled ? icon : nullptr)
+	, _disabledIcon(enabled ? nullptr : icon)
+	, _group(group) {
+		if (!_group) {
+			return;
+		}
+		setPreventClose(true);
+		setMinWidth(minWidth() + st().itemRightSkip + st().arrow.width());
+	}
 
 	void setExpanded(bool expanded) {
 		_expanded = expanded;
@@ -65,6 +105,13 @@ protected:
 	void paintEvent(QPaintEvent *e) override {
 		Action::paintEvent(e);
 		auto p = QPainter(this);
+		const auto disabled = st().itemFgDisabled->c;
+		if (_disabledIcon) {
+			_disabledIcon->paint(p, st().itemIconPosition, width(), disabled);
+		}
+		if (!_group) {
+			return;
+		}
 		const auto &arrow = st().arrow;
 		p.translate(
 			width() - st().itemRightSkip - arrow.width() / 2.,
@@ -72,17 +119,81 @@ protected:
 		if (_expanded) {
 			p.rotate(90.);
 		}
-		arrow.paintInCenter(p, QRect(
+		const auto rect = QRect(
 			-arrow.width() / 2,
 			-arrow.height() / 2,
 			arrow.width(),
-			arrow.height()));
+			arrow.height());
+		if (isEnabled()) {
+			arrow.paintInCenter(p, rect);
+		} else {
+			arrow.paintInCenter(p, rect, disabled);
+		}
 	}
 
 private:
+	const style::icon *_disabledIcon = nullptr;
+	bool _group = false;
 	bool _expanded = false;
 
 };
+
+// 在菜单末尾追加可展开的分组，展开项紧跟分组标题；全部子项禁用时标题置灰。
+void addGroup(
+		not_null<Ui::DropdownMenu*> menu,
+		const QString &title,
+		const style::icon *icon,
+		std::vector<GroupItem> items) {
+	Expects(!items.empty());
+
+	const auto inner = menu->menu();
+	const auto enabled = ranges::any_of(items, &GroupItem::enabled);
+	struct State {
+		std::vector<GroupItem> items;
+		MenuItem *group = nullptr;
+		int shown = 0;
+	};
+	const auto state = inner->lifetime().make_state<State>(State{
+		.items = std::move(items),
+	});
+	const auto collapse = [=] {
+		const auto position = state->group->index() + 1;
+		while (state->shown > 0) {
+			inner->removeAction(position + --state->shown);
+		}
+		state->group->setExpanded(false);
+	};
+	const auto expand = [=] {
+		auto position = state->group->index() + 1;
+		for (const auto &item : state->items) {
+			inner->insertAction(position++, base::make_unique_q<MenuItem>(
+				inner,
+				item.text,
+				item.callback,
+				item.icon,
+				item.enabled,
+				false));
+			++state->shown;
+		}
+		state->group->setExpanded(true);
+	};
+	auto group = base::make_unique_q<MenuItem>(inner, title, [=] {
+		if (state->shown) {
+			collapse();
+		} else {
+			expand();
+		}
+	}, icon, enabled, true);
+	state->group = group.get();
+	menu->addAction(std::move(group));
+	// 菜单隐藏后收起，每次打开都从折叠状态开始，避免误触。
+	base::install_event_filter(menu, menu, [=](not_null<QEvent*> event) {
+		if (event->type() == QEvent::Hide && state->shown) {
+			collapse();
+		}
+		return base::EventFilterResult::Continue;
+	});
+}
 
 } // namespace
 
@@ -90,23 +201,22 @@ RecordMenuOptions recordMenuOptions(
 		not_null<PeerData*> peer,
 		Webrtc::RecordAvailability availability) {
 	using Availability = Webrtc::RecordAvailability;
-	if (!ExtrasSettings::getInstance().showMicrophoneButtonInMessageField()
-		|| availability == Availability::None
-		|| Media::Capture::instance()->started()
+	if (!ExtrasSettings::getInstance().showRecordMessageInAttachMenu()) {
+		return {};
+	}
+	const auto busy = Media::Capture::instance()->started()
 		|| Core::App().calls().currentCall()
-		|| Core::App().calls().currentGroupCall()) {
-		return {};
-	}
+		|| Core::App().calls().currentGroupCall();
 	const auto permissions = readRecordPermissions();
-	if (!permissions.microphone) {
-		return {};
-	}
+	const auto audio = !busy
+		&& permissions.microphone
+		&& (availability != Availability::None);
 	return {
-		.voice = Data::CanSend(
-			peer,
-			ChatRestriction::SendVoiceMessages,
-			false),
-		.round = permissions.camera
+		.shown = true,
+		.voice = audio
+			&& Data::CanSend(peer, ChatRestriction::SendVoiceMessages, false),
+		.round = audio
+			&& permissions.camera
 			&& (availability == Availability::VideoAndAudio)
 			&& Data::CanSend(peer, ChatRestriction::SendVideoMessages, false),
 	};
@@ -171,85 +281,42 @@ void setupAttachMenu(
 	});
 }
 
+rpl::producer<> attachMenuChanges() {
+	const auto &settings = ExtrasSettings::getInstance();
+	return rpl::merge(
+		settings.showPhotoInAttachMenuChanges() | rpl::to_empty,
+		settings.showFileInAttachMenuChanges() | rpl::to_empty,
+		settings.showPollInAttachMenuChanges() | rpl::to_empty,
+		settings.showTodoListInAttachMenuChanges() | rpl::to_empty,
+		settings.showArticleInAttachMenuChanges() | rpl::to_empty,
+		settings.showLocationInAttachMenuChanges() | rpl::to_empty,
+		settings.showMusicInAttachMenuChanges() | rpl::to_empty,
+		settings.showRecordMessageInAttachMenuChanges() | rpl::to_empty);
+}
+
 void addRecordMenu(
 		not_null<Ui::DropdownMenu*> menu,
 		RecordMenuOptions options,
 		Fn<void(bool round)> record) {
-	if (!options.voice && !options.round) {
+	if (!options.shown) {
 		return;
 	}
-	const auto inner = menu->menu();
-	if (!inner->empty()) {
+	if (!menu->menu()->empty()) {
 		menu->addSeparator();
 	}
-	struct State {
-		RecordGroupAction *group = nullptr;
-		int shown = 0;
-	};
-	const auto state = inner->lifetime().make_state<State>();
-	// 展开项位于菜单末尾，删除时不影响其他项的序号。
-	const auto collapse = [=] {
-		const auto position = state->group->index() + 1;
-		while (state->shown > 0) {
-			inner->removeAction(position + --state->shown);
-		}
-		state->group->setExpanded(false);
-	};
-	const auto expand = [=] {
-		auto position = state->group->index() + 1;
-		const auto add = [&](
-				const QString &text,
-				const style::icon *icon,
-				bool round) {
-			inner->insertAction(
-				position++,
-				base::make_unique_q<Ui::Menu::Action>(
-					inner,
-					inner->st(),
-					Ui::Menu::CreateAction(inner, text, [=] {
-						record(round);
-					}),
-					icon,
-					icon));
-			++state->shown;
-		};
-		if (options.voice) {
-			add(
-				tr::extras_RecordVoiceMessage(tr::now),
-				&st::messageFieldVoiceIcon,
-				false);
-		}
-		if (options.round) {
-			add(
-				tr::extras_RecordVideoMessage(tr::now),
-				&st::extrasRecordRoundIcon,
-				true);
-		}
-		state->group->setExpanded(true);
-	};
-	auto group = base::make_unique_q<RecordGroupAction>(
-		inner,
-		inner->st(),
-		Ui::Menu::CreateAction(inner, tr::extras_RecordMessage(tr::now), [=] {
-			if (state->shown) {
-				collapse();
-			} else {
-				expand();
-			}
-		}),
-		&st::extrasRecordMessageIcon,
-		&st::extrasRecordMessageIcon);
-	group->setPreventClose(true);
-	group->setMinWidth(group->minWidth()
-		+ inner->st().itemRightSkip
-		+ inner->st().arrow.width());
-	state->group = group.get();
-	menu->addAction(std::move(group));
-	// 每次打开都从折叠状态开始，避免误触录制。
-	menu->setShowStartCallback([=] {
-		if (state->shown) {
-			collapse();
-		}
+	addGroup(menu, tr::extras_RecordMessage(tr::now), &st::extrasRecordMessageIcon, {
+		{
+			.text = tr::extras_RecordVoiceMessage(tr::now),
+			.icon = &st::messageFieldVoiceIcon,
+			.callback = [=] { record(false); },
+			.enabled = options.voice,
+		},
+		{
+			.text = tr::extras_RecordVideoMessage(tr::now),
+			.icon = &st::extrasRecordRoundIcon,
+			.callback = [=] { record(true); },
+			.enabled = options.round,
+		},
 	});
 }
 

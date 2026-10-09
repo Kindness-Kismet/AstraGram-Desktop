@@ -8936,6 +8936,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_MessageFieldElementAttach" = "Attach";
 "extras_MessageFieldElementTTL" = "TTL";
 "extras_MessageFieldElementEmoji" = "Emoji";
+"extras_AttachMenuElementsHeader" = "Attach Menu Elements";
+"extras_AttachMenuElementsDescription" = "Choose which items appear in the attach menu. Record Message stays collapsed and expands on click; unavailable recording options are grayed out.";
 "extras_RecordMessage" = "Record Message";
 "extras_RecordVoiceMessage" = "Voice Message";
 "extras_RecordVideoMessage" = "Video Message";

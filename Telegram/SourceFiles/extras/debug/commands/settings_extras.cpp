@@ -132,7 +132,14 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"showAttachButtonInMessageField"_q, [&] { return settings.showAttachButtonInMessageField(); }, settings, &ExtrasSettings::setShowAttachButtonInMessageField);
 	addSetting(entries, u"showSendAsButtonInMessageField"_q, [&] { return settings.showSendAsButtonInMessageField(); }, settings, &ExtrasSettings::setShowSendAsButtonInMessageField);
 	addSetting(entries, u"showEmojiButtonInMessageField"_q, [&] { return settings.showEmojiButtonInMessageField(); }, settings, &ExtrasSettings::setShowEmojiButtonInMessageField);
-	addSetting(entries, u"showMicrophoneButtonInMessageField"_q, [&] { return settings.showMicrophoneButtonInMessageField(); }, settings, &ExtrasSettings::setShowMicrophoneButtonInMessageField);
+	addSetting(entries, u"showPhotoInAttachMenu"_q, [&] { return settings.showPhotoInAttachMenu(); }, settings, &ExtrasSettings::setShowPhotoInAttachMenu);
+	addSetting(entries, u"showFileInAttachMenu"_q, [&] { return settings.showFileInAttachMenu(); }, settings, &ExtrasSettings::setShowFileInAttachMenu);
+	addSetting(entries, u"showPollInAttachMenu"_q, [&] { return settings.showPollInAttachMenu(); }, settings, &ExtrasSettings::setShowPollInAttachMenu);
+	addSetting(entries, u"showTodoListInAttachMenu"_q, [&] { return settings.showTodoListInAttachMenu(); }, settings, &ExtrasSettings::setShowTodoListInAttachMenu);
+	addSetting(entries, u"showArticleInAttachMenu"_q, [&] { return settings.showArticleInAttachMenu(); }, settings, &ExtrasSettings::setShowArticleInAttachMenu);
+	addSetting(entries, u"showLocationInAttachMenu"_q, [&] { return settings.showLocationInAttachMenu(); }, settings, &ExtrasSettings::setShowLocationInAttachMenu);
+	addSetting(entries, u"showMusicInAttachMenu"_q, [&] { return settings.showMusicInAttachMenu(); }, settings, &ExtrasSettings::setShowMusicInAttachMenu);
+	addSetting(entries, u"showRecordMessageInAttachMenu"_q, [&] { return settings.showRecordMessageInAttachMenu(); }, settings, &ExtrasSettings::setShowRecordMessageInAttachMenu);
 	addSetting(entries, u"showAutoDeleteButtonInMessageField"_q, [&] { return settings.showAutoDeleteButtonInMessageField(); }, settings, &ExtrasSettings::setShowAutoDeleteButtonInMessageField);
 	addSetting(entries, u"showGiftButtonInMessageField"_q, [&] { return settings.showGiftButtonInMessageField(); }, settings, &ExtrasSettings::setShowGiftButtonInMessageField);
 	addSetting(entries, u"showAiEditorButtonInMessageField"_q, [&] { return settings.showAiEditorButtonInMessageField(); }, settings, &ExtrasSettings::setShowAiEditorButtonInMessageField);

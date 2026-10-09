@@ -334,7 +334,14 @@ public:
 	[[nodiscard]] bool showAttachButtonInMessageField() const { return _showAttachButtonInMessageField.current(); }
 	[[nodiscard]] bool showSendAsButtonInMessageField() const { return _showSendAsButtonInMessageField.current(); }
 	[[nodiscard]] bool showEmojiButtonInMessageField() const { return _showEmojiButtonInMessageField.current(); }
-	[[nodiscard]] bool showMicrophoneButtonInMessageField() const { return _showMicrophoneButtonInMessageField.current(); }
+	[[nodiscard]] bool showPhotoInAttachMenu() const { return _showPhotoInAttachMenu.current(); }
+	[[nodiscard]] bool showFileInAttachMenu() const { return _showFileInAttachMenu.current(); }
+	[[nodiscard]] bool showPollInAttachMenu() const { return _showPollInAttachMenu.current(); }
+	[[nodiscard]] bool showTodoListInAttachMenu() const { return _showTodoListInAttachMenu.current(); }
+	[[nodiscard]] bool showArticleInAttachMenu() const { return _showArticleInAttachMenu.current(); }
+	[[nodiscard]] bool showLocationInAttachMenu() const { return _showLocationInAttachMenu.current(); }
+	[[nodiscard]] bool showMusicInAttachMenu() const { return _showMusicInAttachMenu.current(); }
+	[[nodiscard]] bool showRecordMessageInAttachMenu() const { return _showRecordMessageInAttachMenu.current(); }
 	[[nodiscard]] bool showAutoDeleteButtonInMessageField() const { return _showAutoDeleteButtonInMessageField.current(); }
 	[[nodiscard]] bool showGiftButtonInMessageField() const { return _showGiftButtonInMessageField.current(); }
 	[[nodiscard]] bool showAiEditorButtonInMessageField() const { return _showAiEditorButtonInMessageField.current(); }
@@ -436,7 +443,14 @@ public:
 	void setShowAttachButtonInMessageField(bool val);
 	void setShowSendAsButtonInMessageField(bool val);
 	void setShowEmojiButtonInMessageField(bool val);
-	void setShowMicrophoneButtonInMessageField(bool val);
+	void setShowPhotoInAttachMenu(bool val);
+	void setShowFileInAttachMenu(bool val);
+	void setShowPollInAttachMenu(bool val);
+	void setShowTodoListInAttachMenu(bool val);
+	void setShowArticleInAttachMenu(bool val);
+	void setShowLocationInAttachMenu(bool val);
+	void setShowMusicInAttachMenu(bool val);
+	void setShowRecordMessageInAttachMenu(bool val);
 	void setShowAutoDeleteButtonInMessageField(bool val);
 	void setShowGiftButtonInMessageField(bool val);
 	void setShowAiEditorButtonInMessageField(bool val);
@@ -583,8 +597,14 @@ public:
 	[[nodiscard]] rpl::producer<bool> showSendAsButtonInMessageFieldChanges() const { return _showSendAsButtonInMessageField.changes(); }
 	[[nodiscard]] rpl::producer<bool> showEmojiButtonInMessageFieldValue() const { return _showEmojiButtonInMessageField.value(); }
 	[[nodiscard]] rpl::producer<bool> showEmojiButtonInMessageFieldChanges() const { return _showEmojiButtonInMessageField.changes(); }
-	[[nodiscard]] rpl::producer<bool> showMicrophoneButtonInMessageFieldValue() const { return _showMicrophoneButtonInMessageField.value(); }
-	[[nodiscard]] rpl::producer<bool> showMicrophoneButtonInMessageFieldChanges() const { return _showMicrophoneButtonInMessageField.changes(); }
+	[[nodiscard]] rpl::producer<bool> showPhotoInAttachMenuChanges() const { return _showPhotoInAttachMenu.changes(); }
+	[[nodiscard]] rpl::producer<bool> showFileInAttachMenuChanges() const { return _showFileInAttachMenu.changes(); }
+	[[nodiscard]] rpl::producer<bool> showPollInAttachMenuChanges() const { return _showPollInAttachMenu.changes(); }
+	[[nodiscard]] rpl::producer<bool> showTodoListInAttachMenuChanges() const { return _showTodoListInAttachMenu.changes(); }
+	[[nodiscard]] rpl::producer<bool> showArticleInAttachMenuChanges() const { return _showArticleInAttachMenu.changes(); }
+	[[nodiscard]] rpl::producer<bool> showLocationInAttachMenuChanges() const { return _showLocationInAttachMenu.changes(); }
+	[[nodiscard]] rpl::producer<bool> showMusicInAttachMenuChanges() const { return _showMusicInAttachMenu.changes(); }
+	[[nodiscard]] rpl::producer<bool> showRecordMessageInAttachMenuChanges() const { return _showRecordMessageInAttachMenu.changes(); }
 	[[nodiscard]] rpl::producer<bool> showAutoDeleteButtonInMessageFieldValue() const { return _showAutoDeleteButtonInMessageField.value(); }
 	[[nodiscard]] rpl::producer<bool> showAutoDeleteButtonInMessageFieldChanges() const { return _showAutoDeleteButtonInMessageField.changes(); }
 	[[nodiscard]] rpl::producer<bool> showGiftButtonInMessageFieldValue() const { return _showGiftButtonInMessageField.value(); }
@@ -734,7 +754,14 @@ private:
 	rpl::variable<bool> _showAttachButtonInMessageField = true;
 	rpl::variable<bool> _showSendAsButtonInMessageField = true;
 	rpl::variable<bool> _showEmojiButtonInMessageField = true;
-	rpl::variable<bool> _showMicrophoneButtonInMessageField = true;
+	rpl::variable<bool> _showPhotoInAttachMenu = true;
+	rpl::variable<bool> _showFileInAttachMenu = true;
+	rpl::variable<bool> _showPollInAttachMenu = true;
+	rpl::variable<bool> _showTodoListInAttachMenu = true;
+	rpl::variable<bool> _showArticleInAttachMenu = true;
+	rpl::variable<bool> _showLocationInAttachMenu = true;
+	rpl::variable<bool> _showMusicInAttachMenu = true;
+	rpl::variable<bool> _showRecordMessageInAttachMenu = true;
 	rpl::variable<bool> _showAutoDeleteButtonInMessageField = true;
 	rpl::variable<bool> _showGiftButtonInMessageField = true;
 	rpl::variable<bool> _showAiEditorButtonInMessageField = true;

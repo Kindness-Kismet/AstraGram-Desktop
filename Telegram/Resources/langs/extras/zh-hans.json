@@ -405,6 +405,8 @@
   "MessageFieldElementAttach": "附件",
   "MessageFieldElementTTL": "TTL",
   "MessageFieldElementEmoji": "Emoji",
+  "AttachMenuElementsHeader": "附件菜单项",
+  "AttachMenuElementsDescription": "选择附件菜单中显示的项目。“录制消息”折叠显示，点击展开；无法使用的录制选项会置灰显示。",
   "RecordMessage": "录制消息",
   "RecordVoiceMessage": "语音消息",
   "RecordVideoMessage": "视频消息",
