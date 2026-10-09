@@ -3168,7 +3168,15 @@ QPointer<Ui::BoxContent> ShowNewForwardMessagesBox(
 		FnMut<void()>&& successCallback) {
 	if (!ExtrasSettings::getInstance().useQuickForwardMenu()) {
 		auto shared = std::make_shared<FnMut<void()>>(std::move(successCallback));
-		ShowForwardMessagesBox(navigation, std::move(msgIds), [shared]() {
+		// 官方转发框按所选方式预设选项，rich 消息等受限情况由框内规范化退回。
+		ShowForwardMessagesBox(navigation, Data::ForwardDraft{
+			.ids = std::move(msgIds),
+			.options = (no_caption
+				? Data::ForwardOptions::NoNamesAndCaptions
+				: no_quote
+				? Data::ForwardOptions::NoSenderNames
+				: Data::ForwardOptions::PreserveInfo),
+		}, [shared]() {
 			if (*shared) { (*shared)(); }
 		});
 		return nullptr;
