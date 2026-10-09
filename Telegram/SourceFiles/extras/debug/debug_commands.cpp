@@ -77,6 +77,7 @@ namespace {
 			&Commands::downloadHandlers(),
 			&Commands::messageBusinessHandlers(),
 			&Commands::transferHandlers(),
+			&Commands::animHandlers(),
 		}) {
 			all.insert(part->begin(), part->end());
 		}

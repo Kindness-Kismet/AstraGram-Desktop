@@ -40,6 +40,7 @@ using HandlerMap = std::map<QString, Handler>;
 [[nodiscard]] const HandlerMap &downloadHandlers();
 [[nodiscard]] const HandlerMap &messageBusinessHandlers();
 [[nodiscard]] const HandlerMap &transferHandlers();
+[[nodiscard]] const HandlerMap &animHandlers();
 
 [[nodiscard]] uint64 beginJob(const char *kind);
 void finishJob(uint64 id, bool ok, nlohmann::json result);

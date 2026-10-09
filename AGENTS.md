@@ -301,6 +301,7 @@ Debug 构建会在 `ExtrasInfra::init()` 里启动 `QTcpServer`，监听 `127.0.
 | `chat.history-stats <msgId>...` | 查询收藏夹中指定消息的存在、隐藏与视图状态 |
 | `theme.set <dark|light>` | 切换暗色或浅色主题 |
 | `theme.reset-background` | 重置聊天背景 |
+| `anim.speed [速度]` | 临时调整过渡动画速度（0.01 至 10，0.1 为放慢十倍），只存内存，重启恢复 |
 | `settings.keys` / `settings.dump` | 设置键名清单、全量 JSON 导出 |
 | `settings.get <key>` / `settings.set <key> <value>` | 读写单个设置 |
 | `page.list [filter]` / `page.open <id>` | 查询官方与定制设置索引，按编号打开设置页 |

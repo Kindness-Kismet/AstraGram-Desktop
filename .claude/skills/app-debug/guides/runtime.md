@@ -12,6 +12,7 @@
 | `app.quit` | 空 | 让应用走正常退出流程；退出动作排在事件循环尾部，确保 `OK` 写完 socket 再退。 |
 | `window.resize` | `[width height]` | 报告窗口尺寸与最大化状态；给出尺寸时按逻辑像素调整窗口。 |
 | `window.maximize` | `true\|false` | 最大化或还原窗口。 |
+| `anim.speed` | `[speed]` | 查询或临时调整过渡动画速度，范围 0.01 至 10，1 为正常；只存内存，重启恢复。 |
 
 `app.quit` 一般不直接调，`app.stop` 内部先发它。
 
@@ -31,6 +32,18 @@
 ```bash
 python .claude/skills/app-debug/scripts/cli.py window.resize 1300 900 + screenshot.take
 python .claude/skills/app-debug/scripts/cli.py window.maximize true + screenshot.take
+```
+
+`anim.speed` 用来观察过渡动画：`0.1` 放慢十倍，`2` 加快一倍。它缩放全部
+`Ui::Animations::Simple` 动画（页面滑动、弹出菜单、开关、渐隐渐显、点击波纹），
+只影响设置之后启动的动画；加载圈、贴纸、视频这类逐帧播放不受影响。返回 `speed`、
+`durationMultiplier`（时长倍率，即速度的倒数）和 `disabled`；`disabled` 为 true
+表示动画已被关闭，调速不起作用。Debug 版的 Ctrl+F11 / Ctrl+F12 改的是同一个倍率。
+观察结束后用 `anim.speed 1` 恢复。
+
+```bash
+python .claude/skills/app-debug/scripts/cli.py anim.speed 0.1 + chat.open-archive + screenshot.take
+python .claude/skills/app-debug/scripts/cli.py anim.speed 1
 ```
 
 `player.state [song|voice]` 查询指定类型或当前活动媒体的 `messageId`、播放状态 `playing`、位置 `position`、长度 `length`、时间单位 `frequency` 和循环模式 `repeat`（0 关闭、1 单曲、2 列表）。连续采样可验证自然结束后的重播，业务控制使用 `player.control`；键盘与焦点检查才使用界面。
