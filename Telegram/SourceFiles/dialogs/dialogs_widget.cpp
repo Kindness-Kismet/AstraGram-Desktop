@@ -3312,6 +3312,7 @@ void Widget::startSlideAnimation(
 		_stories->setToggledHidden(true, false);
 	}
 	_searchControls->hide();
+	_headingMenu->hide();
 	_downloadsButton->hide();
 	if (_subsectionTopBar) {
 		_subsectionTopBar->hide();
@@ -3363,6 +3364,7 @@ void Widget::slideFinished() {
 	_showAnimation = nullptr;
 	_shownProgressValue = 1.;
 	updateControlsVisibility(true);
+	updateControlsGeometry();
 	if ((!_subsectionTopBar || !_subsectionTopBar->searchHasFocus())
 		&& !_searchHasFocus) {
 		controller()->widget()->setInnerFocus();
@@ -4954,7 +4956,8 @@ void Widget::updateControlsGeometry() {
 	const auto filterAreaTop = header
 		+ (_archiveSearchShown ? st::topBarHeight : 0);
 	const auto filtersHidden = !controller()->filtersWidth();
-	_headingMenu->setVisible(filtersHidden && header > 0);
+	// 标题按钮不在 _searchControls 里，滑动动画期间单独隐藏，避免和截图叠成两个。
+	_headingMenu->setVisible(!_showAnimation && filtersHidden && header > 0);
 	_headingMenu->moveToLeft(st::dialogsHeadingLeft,
 		(filterAreaTop - _headingMenu->height()) / 2);
 	_mainMenu.toggle->setVisible(filtersHidden && !header && !_openedFolder);
