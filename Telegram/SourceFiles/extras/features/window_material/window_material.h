@@ -12,11 +12,14 @@ enum class WindowMaterial;
 namespace Ui {
 class RpWindow;
 class IconButton;
+class SeparatePanel;
 } // namespace Ui
 
 namespace ExtrasFeatures::WindowMaterial {
 
 void initialize(not_null<Ui::RpWindow*> window);
+// 独立面板跟随系统材质：生效时去掉自绘阴影，主体透出材质，平台不支持时保持原样。
+void attachPanel(not_null<Ui::SeparatePanel*> panel);
 [[nodiscard]] bool isActive(const QWidget *widget);
 [[nodiscard]] QColor surfaceColor(
 	const QWidget *widget,

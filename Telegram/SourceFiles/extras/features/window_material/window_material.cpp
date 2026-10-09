@@ -7,6 +7,7 @@
 #include "rpl/map.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/rp_window.h"
+#include "ui/widgets/separate_panel.h"
 #include "ui/ui_utility.h"
 #include "window/themes/window_theme.h"
 #include "window/window_main_menu.h"
@@ -179,6 +180,61 @@ private:
 	bool _refreshing = false;
 };
 
+// 面板四周是自绘阴影的半透明边距：未生效时必须完整释放，交回分层窗口绘制。
+class PanelController final : public QObject {
+public:
+	explicit PanelController(not_null<Ui::SeparatePanel*> panel)
+	: QObject(panel.get())
+	, _panel(panel)
+	, _backend(Platform::create(panel)) {
+		_panel->installEventFilter(this);
+		ExtrasSettings::getInstance().windowMaterialValue(
+		) | rpl::on_next([=] { refresh(); }, _panel->lifetime());
+		style::PaletteChanged(
+		) | rpl::on_next([=] { refresh(true); }, _panel->lifetime());
+		_timer.setInterval(1500);
+		QObject::connect(&_timer, &QTimer::timeout, this, [=] { refresh(); });
+		_timer.start();
+		refresh();
+	}
+
+private:
+	void refresh(bool paletteChanged = false) {
+		const auto mode = ExtrasSettings::getInstance().windowMaterial();
+		const auto active = _panel->windowHandle()
+			&& _backend->panelSupported(mode)
+			&& _backend->apply(mode, Window::Theme::IsNightMode())
+			&& _backend->setRoundedCorners(true);
+		if (!active) {
+			_backend->release();
+		}
+		const auto effective = active ? mode : ::WindowMaterial::Off;
+		if (!paletteChanged
+			&& _panel->property(kActiveProperty).toBool() == active
+			&& _panel->property(kModeProperty).toInt() == int(effective)) {
+			return;
+		}
+		_panel->setProperty(kModeProperty, int(effective));
+		_panel->setProperty(kActiveProperty, active);
+		_panel->setSystemBackdrop(active);
+		_panel->setProperty(kRevisionProperty, ++_revision);
+		Ui::ForceFullRepaint(_panel);
+	}
+
+	bool eventFilter(QObject *, QEvent *event) override {
+		if (event->type() == QEvent::WinIdChange
+			|| event->type() == QEvent::Show) {
+			QTimer::singleShot(0, this, [=] { refresh(); });
+		}
+		return false;
+	}
+
+	const not_null<Ui::SeparatePanel*> _panel;
+	const std::unique_ptr<Platform::Backend> _backend;
+	QTimer _timer;
+	int _revision = 0;
+};
+
 } // namespace
 
 void initialize(not_null<Ui::RpWindow*> window) {
@@ -190,6 +246,13 @@ void initialize(not_null<Ui::RpWindow*> window) {
 		watchSurface(title);
 	}
 	new Controller(window);
+}
+
+void attachPanel(not_null<Ui::SeparatePanel*> panel) {
+	if (availableModes().size() <= 1) {
+		return;
+	}
+	new PanelController(panel);
 }
 
 bool isActive(const QWidget *widget) {

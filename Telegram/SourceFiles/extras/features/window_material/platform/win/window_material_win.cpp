@@ -14,6 +14,9 @@ namespace {
 
 constexpr auto kBackdropAttribute = DWORD(38);
 constexpr auto kDarkAttribute = DWORD(20);
+constexpr auto kCornerAttribute = DWORD(33);
+constexpr auto kCornerDefault = DWORD(0);
+constexpr auto kCornerRound = DWORD(2);
 constexpr auto kCapability = "_q_extrasNativeBackdropSupported";
 constexpr auto kMarker = L"ExtrasNativeBackdrop";
 constexpr auto kOwner = L"ExtrasNativeBackdropOwner";
@@ -125,6 +128,35 @@ public:
 		return true;
 	}
 
+	bool panelSupported(::WindowMaterial mode) override {
+		const auto requested = (mode == ::WindowMaterial::Mica)
+			|| (mode == ::WindowMaterial::Acrylic);
+		return requested && supported() && !transparencyFailure().reason;
+	}
+
+	bool setRoundedCorners(bool rounded) override {
+		if (!_handle || _rounded == rounded) {
+			return _handle && rounded;
+		}
+		const auto preference = rounded ? kCornerRound : kCornerDefault;
+		const auto hr = DwmSetWindowAttribute(
+			_handle,
+			kCornerAttribute,
+			&preference,
+			sizeof(preference));
+		if (FAILED(hr)) {
+			report("set-corner-preference", hr);
+			return false;
+		}
+		_rounded = rounded;
+		return true;
+	}
+
+	void release() override {
+		setRoundedCorners(false);
+		releaseHandle();
+	}
+
 private:
 	bool ownsMarker() {
 		return _handle && GetPropW(_handle, kOwner) == reinterpret_cast<HANDLE>(this)
@@ -231,6 +263,7 @@ private:
 		}
 		_handle = nullptr;
 		_frameChangePending = false;
+		_rounded = false;
 	}
 
 	const not_null<QWidget*> _widget;
@@ -242,6 +275,7 @@ private:
 	bool _active = false;
 	bool _configured = false;
 	bool _frameChangePending = false;
+	bool _rounded = false;
 };
 
 } // namespace

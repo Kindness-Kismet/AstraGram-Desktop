@@ -1,5 +1,7 @@
 #include "wallet/wallet_content_internal.h"
 
+#include "extras/features/window_material/window_material.h"
+
 namespace Wallet {
 using namespace ContentDetails;
 
@@ -134,6 +136,7 @@ void Content::setupProtectRow() {
 		tr::lng_wallet_protect_account(),
 		st::walletProtectRow,
 		{ .icon = &st::walletProtectRowIcon });
+	ExtrasFeatures::WindowMaterial::watchSurface(button);
 	AddRowChevron(button);
 	button->setClickedCallback([=] {
 		_show->showBox(Box(WalletCloudPasswordIntroBox, _show));
@@ -371,6 +374,9 @@ void Content::setupStrip() {
 	_strip = Ui::CreateChild<Ui::RpWidget>(this);
 	_strip->paintRequest(
 	) | rpl::on_next([=] {
+		if (ExtrasFeatures::WindowMaterial::isActive(_strip)) {
+			return;
+		}
 		auto p = QPainter(_strip);
 		PaintBottomRoundedPlate(p, _strip->rect(), st::windowBgOver);
 	}, _strip->lifetime());
@@ -863,6 +869,10 @@ void Content::resizeEvent(QResizeEvent *e) {
 }
 
 void Content::paintEvent(QPaintEvent *e) {
+	// 窗口材质生效时主体透出材质，与主窗口一致。
+	if (ExtrasFeatures::WindowMaterial::isActive(this)) {
+		return;
+	}
 	auto p = QPainter(this);
 	if (_stripShown) {
 		p.fillRect(0, 0, width(), _strip->y(), st::windowBg);

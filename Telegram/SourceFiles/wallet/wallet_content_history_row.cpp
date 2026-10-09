@@ -1,5 +1,7 @@
 #include "wallet/wallet_content_internal.h"
 
+#include "extras/features/window_material/window_material.h"
+
 namespace Wallet {
 using namespace ContentDetails;
 
@@ -537,6 +539,7 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 	const auto button = Ui::CreateChild<HistoryRowButton>(
 		wrap,
 		rpl::single(QString()));
+	ExtrasFeatures::WindowMaterial::watchSurface(button);
 	button->setClickedCallback(std::move(clicked));
 	const auto major = Ui::CreateChild<Ui::FlatLabel>(
 		wrap,

@@ -1,5 +1,7 @@
 #include "wallet/wallet_content_internal.h"
 
+#include "extras/features/window_material/window_material.h"
+
 namespace Wallet {
 using namespace ContentDetails;
 
@@ -18,6 +20,11 @@ Content::Content(
 
 	setupContent();
 	_scroll->show();
+
+	// 材质切换会增减面板阴影边距，标题层按窗口坐标摆放，需要重新定位。
+	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+		updateRegions();
+	}, lifetime());
 }
 
 Content::~Content() {
@@ -703,6 +710,9 @@ void Content::setupPinned() {
 
 	_pinnedBackground->paintRequest(
 	) | rpl::on_next([=] {
+		if (ExtrasFeatures::WindowMaterial::isActive(_pinnedBackground)) {
+			return;
+		}
 		auto p = QPainter(_pinnedBackground);
 		const auto height = _pinnedBackground->height();
 		const auto tabsTop = height - pinnedMin();

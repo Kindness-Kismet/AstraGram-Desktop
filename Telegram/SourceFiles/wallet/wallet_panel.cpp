@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/application.h"
 #include "core/shortcuts.h"
 #include "data/data_user.h"
+#include "extras/features/window_material/window_material.h"
 #include "lang/lang_keys.h"
 #include "main/session/session_show.h"
 #include "main/main_account.h"
@@ -79,6 +80,7 @@ not_null<Ui::SeparatePanel*> ShowWallet(not_null<Main::Session*> session) {
 	panel->setWindowFlag(Qt::WindowStaysOnTopHint, false);
 	Shortcuts::Listen(panel); // Main window may be hidden to tray.
 	panel->setInnerSize(st::walletPanelSize);
+	ExtrasFeatures::WindowMaterial::attachPanel(panel);
 	rpl::single(rpl::empty) | rpl::then(
 		style::PaletteChanged()
 	) | rpl::on_next([=] {
