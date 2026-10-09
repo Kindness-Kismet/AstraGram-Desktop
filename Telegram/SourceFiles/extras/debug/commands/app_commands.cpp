@@ -1,13 +1,17 @@
 #ifdef _DEBUG
 #include "extras/debug/commands/commands_internal.h"
 #include "extras/debug/debug_login.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "core/application.h"
 #include "core/update_checker.h"
 #include "core/version.h"
 #include "logs.h"
+#include "main/main_domain.h"
 #include "main/main_session.h"
 #include "storage/localstorage.h"
+#include "storage/storage_domain.h"
+#include "ui/widgets/rp_window.h"
 #include "window/window_controller.h"
 
 namespace ExtrasDebug::Commands {
@@ -29,6 +33,11 @@ using json = nlohmann::json;
 		{ "isolatedDebug", cDebugProfile() || cTestAgent() },
 		{ "testAgent", cTestAgent() },
 		{ "hasWindow", window != nullptr },
+		{ "windowMaterialActive", window
+			&& ExtrasFeatures::WindowMaterial::isActive(window->widget().get()) },
+		{ "passcodeLocked", Core::App().passcodeLocked() },
+		{ "hasPasscode", Core::App().domain().local().hasPasscode() },
+		{ "appLockEnabled", Core::App().domain().local().appLockEnabled() },
 	};
 	if (session) {
 		info["userId"] = session->userId().bare;

@@ -10,13 +10,16 @@
 #include "extras/features/translator/message_translation.h"
 #include "extras/utils/telegram_helpers.h"
 #include "core/application.h"
+#include "base/unixtime.h"
 #include "data/data_session.h"
+#include "data/data_user.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/history_item_components.h"
 #include "history/view/history_view_element.h"
 #include "main/main_session.h"
 #include "settings.h"
+#include <algorithm>
 #include <QFileInfo>
 
 namespace ExtrasDebug::Commands {
@@ -65,6 +68,43 @@ Result deletedMessages(const QStringList &args) {
 		return Result::Err(u"message archive is unavailable; stored data was preserved"_q);
 	}
 	return Result::Ok(Compact(result));
+}
+
+Result seedArchive(const QStringList &args) {
+	if (!args.empty()) {
+		return Result::Err(u"usage: storage.seed-archive"_q);
+	}
+	const auto session = ActiveSession();
+	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	if (Core::App().passcodeLocked() || !Database::messageArchiveReady()) {
+		return Result::Err(u"an unlocked message archive is required"_q);
+	}
+	constexpr auto kMessageId = 730000001;
+	const auto userId = session->userId().bare & PeerId::kChatTypeMask;
+	auto message = DeletedMessage();
+	message.userId = userId;
+	message.dialogId = getDialogIdFromPeer(session->user());
+	message.peerId = userId;
+	message.fromId = userId;
+	message.messageId = kMessageId;
+	message.date = message.entityCreateDate = base::unixtime::now();
+	message.text = u"上游适配留档验证样本"_q.toStdString();
+	Database::addDeletedMessage(message);
+	const auto stored = Database::getDeletedMessages(
+		userId, message.dialogId, 0, 0, 0, 100);
+	const auto i = std::find_if(stored.begin(), stored.end(), [&](const auto &entry) {
+		return entry.messageId == kMessageId && entry.text == message.text;
+	});
+	if (i == stored.end()) {
+		return Result::Err(u"archive fixture could not be saved and read back"_q);
+	}
+	return Result::Ok(Compact(Json{
+		{ "peerId", session->user()->id.value },
+		{ "messageId", kMessageId },
+		{ "text", i->text },
+	}));
 }
 
 Result editedMessages(const QStringList &args) {
@@ -156,6 +196,7 @@ const HandlerMap &StorageHandlers() {
 	static const auto result = HandlerMap{
 		{u"storage.stats"_q, &storageStats},
 		{u"storage.verify-archive"_q, &verifyMessageArchive},
+		{u"storage.seed-archive"_q, &seedArchive},
 		{u"storage.deleted"_q, &deletedMessages},
 		{u"storage.edits"_q, &editedMessages},
 		{u"message.inspect"_q, &inspectMessage},

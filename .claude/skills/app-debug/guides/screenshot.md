@@ -2,7 +2,7 @@
 
 ## `screenshot.take`
 
-截取活动窗口并保存为 JPG（质量 80）。CLI 自动生成路径 `build/screenshots/shot-<时间戳>.jpg`，
+截取当前选定窗口并保存为 JPG（质量 80）。CLI 自动生成路径 `build/screenshots/shot-<时间戳>.jpg`，
 时间戳包含微秒，连续截图不会因同秒命名而覆盖；不接受路径参数。
 
 ```bash
@@ -10,7 +10,7 @@ python .claude/skills/app-debug/scripts/cli.py screenshot.take
 # {"height":938,"path":"<repo>/build/screenshots/shot-20260901-190750-123456.jpg","width":1200}
 ```
 
-**前提**：必须有活动窗口（`hasWindow: true`）。
+**前提**：必须有可见窗口。默认使用主窗口，`control.window <窗口标识>` 可选择其他顶层窗口；关闭目标后恢复主窗口。
 
 截图走 `QWidget::grab()`，抓窗口自身渲染内容而非屏幕像素，被其他窗口遮挡时也能正常截图；
 但 OpenGL 渲染的区域可能抓不全。
@@ -28,4 +28,4 @@ python .claude/skills/app-debug/scripts/cli.py screenshot.take
 
 仅截取当前活动的浮动菜单，用于检查菜单分隔、圆角和子菜单。嵌入菜单从宿主截图裁切，保留真实背景。
 先打开菜单并等待展开动画结束，再执行截图。没有活动菜单时报错，不会悄悄改截主窗口。
-默认不传 `--popup` 时截取主窗口及其内部菜单，路径与图片格式不变。
+默认不传 `--popup` 时截取选定窗口及其内部菜单，路径与图片格式不变。

@@ -249,6 +249,10 @@ rpl::producer<QString> Widget::title() {
 	return _inner->title();
 }
 
+rpl::producer<QString> Widget::titleBadge() {
+	return _inner->titleBadge();
+}
+
 void Widget::paintEvent(QPaintEvent *e) {
 	if (!_inner->paintOuter(this, maxVisibleHeight(), e->rect())) {
 		if (_inner->property("settingsCardBackground").toBool()) {

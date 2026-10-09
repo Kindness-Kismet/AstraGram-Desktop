@@ -8,6 +8,7 @@
 #include "chat_helpers/message_field.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
+#include "data/data_compose_stash.h"
 #include "data/data_document.h"
 #include "data/data_drafts.h"
 #include "data/data_history_messages.h"
@@ -175,13 +176,42 @@ Result fetchMessages(const QStringList &args) {
 }
 
 Result draftInfo(const QStringList &args) {
-	if (args.size() != 1) return Result::Err(u"usage: chat.draft <peerId>"_q);
+	if (args.empty() || args.size() > 2) {
+		return Result::Err(u"usage: chat.draft <peerId> [topicRootId]"_q);
+	}
 	const auto peer = findPeer(args[0]);
-	if (!peer) return Result::Err(u"peer not found"_q);
-	const auto draft = peer->owner().history(peer)->localDraft(MsgId(), PeerId());
-	return Result::Ok(Compact(Json{ { "peerId", peer->id.value },
+	if (!peer) {
+		return Result::Err(u"peer not found"_q);
+	}
+	auto topicOk = true;
+	const auto topicRootId = MsgId(args.size() == 2
+		? args[1].toLongLong(&topicOk)
+		: 0);
+	if (!topicOk || (args.size() == 2 && !IsServerMsgId(topicRootId))) {
+		return Result::Err(u"expected a positive topic root message id"_q);
+	}
+	const auto history = peer->owner().history(peer);
+	const auto draft = history->localDraft(topicRootId, PeerId());
+	const auto &forward = history->forwardDraft(topicRootId, PeerId());
+	const auto stash = history->composeStash(
+		Data::DraftKey::Local(topicRootId, PeerId()));
+	return Result::Ok(Compact(Json{
+		{ "peerId", peer->id.value },
+		{ "topicRootId", topicRootId.bare },
 		{ "text", draft ? draft->textWithTags.text.toStdString() : "" },
-		{ "present", draft != nullptr } }));
+		{ "present", draft != nullptr },
+		{ "replyToId", draft ? draft->reply.messageId.msg.bare : 0 },
+		{ "forwardCount", forward.ids.size() },
+		{ "forwardOptions", int(forward.options) },
+		{ "stash", stash ? Json{
+			{ "text", stash->draft.textWithTags.text.toStdString() },
+			{ "replyToId", stash->draft.reply.messageId.msg.bare },
+			{ "forwardCount", stash->forward.ids.size() },
+			{ "forwardOptions", int(stash->forward.options) },
+			{ "filesCount", stash->files.files.size() + stash->files.filesToProcess.size() },
+			{ "richMessage", stash->draft.hasRichMessage() },
+		} : Json(nullptr) },
+	}));
 }
 
 Result resolveMention(const QStringList &args) {

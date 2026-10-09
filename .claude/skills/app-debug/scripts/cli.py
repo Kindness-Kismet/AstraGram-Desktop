@@ -41,6 +41,11 @@ PROFILE_OVERRIDE = None
 BACKGROUND_START = False
 
 GENERIC_COMMANDS = {
+    'control.window': '选择控件与截图的目标窗口，不改变系统焦点：[main|窗口标识]',
+    'editor.video-state': '查询独立模拟配置中视频时间线的裁剪起止、封面与播放位置',
+    'editor.state': '查询独立模拟配置中编辑器的图层数量、音轨裁剪与音量',
+    'editor.add-file': '在独立模拟配置中沿编辑器粘贴链路添加本地媒体：<路径>',
+    'simulation.wallet': '在独立模拟配置中打开钱包及固定公开状态，不安装私钥或提交交易：[keep|missing|ready|collectibles|close]',
     'player.control': '直接控制当前播放器，不抢焦点：<play|pause|toggle|stop> [song|voice]',
     'downloads.list': '查询真实下载列表及分类与搜索交集：[all|archives|music|videos|other] [关键词]',
     'downloads.start': '指定路径保存消息附件，返回异步任务：<会话编号> <消息编号> <新文件绝对路径>',
@@ -49,7 +54,7 @@ GENERIC_COMMANDS = {
     'simulation.download-progress': '推进模拟下载进度或完成：<会话编号> <消息编号> <字节数|done>',
     'peer.info': '查询已知会话或用户资料，不返回访问密钥：<会话编号>',
     'chat.members': '列出已缓存的群成员：<会话编号> [no-username]',
-    'chat.draft': '查询已保存的本地草稿，不切换聊天：<会话编号>',
+    'chat.draft': '查询草稿、回复、转发和暂存状态，不切换聊天：<会话编号> [话题根消息编号]',
     'message.list': '查询已缓存的消息及附件、实体：<会话编号> [条数]',
     'message.fetch': '异步获取聊天消息，不切换界面或发送已读：<会话编号> [条数]',
     'message.send-file': '直接发送指定附件，不打开文件窗口或修改草稿：<会话编号> <绝对路径> [说明]',
@@ -85,6 +90,7 @@ GENERIC_COMMANDS = {
     "storage.deleted": "查询本地已删除消息：<会话编号> [条数] [关键词]",
     "storage.edits": "查询本地编辑历史：<会话编号> <消息编号> [条数]",
     "storage.verify-archive": "在临时数据库验证留档加密、篡改拒绝和旧库迁移，仅限独立模拟模式",
+    "storage.seed-archive": "在独立模拟配置保存并核对固定留档样本，供口令修改与重启验证",
     "message.inspect": "查询消息正文与删除、过滤、视图状态：<会话编号> <消息编号>",
     "message.translate": "调用消息业务逻辑在原气泡翻译：<会话编号> <消息编号>",
     "message.show-original": "恢复消息原文并取消待处理翻译：<会话编号> <消息编号>",
@@ -256,7 +262,7 @@ def register_commands(sub) -> None:
     command.add_argument("key")
     command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts", "pinned", "actions", "topic-unread", "topic-closed", "source-self", "source-private", "source-channel"), default="main", help="主聊天、计划消息、置顶、管理、话题或收藏来源")
 
-    command.add_argument("--input", choices=("keep", "empty", "reply", "edit"), default="keep", help="保留、清空、回复或编辑输入状态，仅用于普通私聊和话题")
+    command.add_argument("--input", choices=("keep", "empty", "reply", "edit", "forward"), default="keep", help="保留、清空、回复、编辑或转发输入状态，仅用于普通私聊和话题")
 
     command = sub.add_parser("simulation.message", help="往模拟模式插入本地文本消息，默认收藏夹，验证渲染与隐藏逻辑")
     command.add_argument("text", help="消息文本")

@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/chat_style_radius.h"
 
 #include "base/options.h"
+#include "ui/chat/message_bubble.h"
 
 #include <algorithm>
 
@@ -115,6 +116,16 @@ int BubbleRadiusLarge() {
 		EffectiveBubbleRadiusValue(),
 		st::bubbleRadiusSmall,
 		st::bubbleRadiusLarge);
+}
+
+int BubbleCornerRadius(BubbleCornerRounding corner) {
+	switch (corner) {
+	case BubbleCornerRounding::None:
+	case BubbleCornerRounding::Tail: return 0;
+	case BubbleCornerRounding::Small: return BubbleRadiusSmall();
+	case BubbleCornerRounding::Large: return BubbleRadiusLarge();
+	}
+	Unexpected("Corner in BubbleCornerRadius.");
 }
 
 int MsgFileThumbRadiusSmall() {

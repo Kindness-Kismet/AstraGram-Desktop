@@ -27,10 +27,13 @@
     "Telegram/build/version": "本应用版本号的唯一来源，由 version-bump 维护。",
     "Telegram/SourceFiles/core/version.h": "版本数值改为从 Telegram/build/version 生成，官方每次发版都会改这里。",
     "Telegram/Resources/winrc/Telegram.rc": "版本数值改为从 Telegram/build/version 生成，官方每次发版都会改这里。",
-    "Telegram/Resources/winrc/Updater.rc": "版本数值改为从 Telegram/build/version 生成，官方每次发版都会改这里。"
+    "Telegram/Resources/winrc/Updater.rc": "版本数值改为从 Telegram/build/version 生成，官方每次发版都会改这里。",
+    "tasks/": "官方临时任务记录，本仓库使用 build/docs 与 build/record。"
   },
   "notes": {
-    "Telegram/build/prepare/prepare.py": "依赖配方固化在 scripts/build_support/recipes.py 与 recipes_arm64.py，官方改动要对照同步到那里，只合并本文件不会影响构建。"
+    "Telegram/build/prepare/prepare.py": "依赖配方固化在 scripts/build_support/recipes.py、recipes_arm64.py 与 recipes_rust.py，官方改动要对照同步到这些文件，只合并本文件不会影响构建。"
   },
-  "deferred": {}
+  "deferred": {
+    "Telegram/SourceFiles/core/update_checker.cpp": "暂缓删除旧格式更新包兼容：本项目发布流程仍以自有签名生成旧格式包，待配套发包流程迁移后再移除；解压与路径校验已采用新版共用实现。"
+  }
 }

@@ -846,7 +846,8 @@ int HistoryWidget::topBarsOverlap() const {
 	auto bars = Ui::ChatBarStack();
 	bars.add(_groupCallBar ? _groupCallBar->height() : 0);
 	bars.add(_requestsBar ? _requestsBar->height() : 0);
-	bars.add(_pinnedBar ? _pinnedBar->height() : 0);
+	const auto pinnedBar = visiblePinnedBar();
+	bars.add(pinnedBar ? pinnedBar->height() : 0);
 	bars.add(_sponsoredMessageBar ? _sponsoredMessageBar->height() : 0);
 	bars.add(_translateBar ? _translateBar->height() : 0);
 	bars.add(_paysStatus ? _paysStatus->bar().height() : 0);
@@ -1135,10 +1136,11 @@ void HistoryWidget::updateControlsGeometry() {
 		_requestsBar->move(0, requestsTop);
 		_requestsBar->resizeToWidth(innerWidth);
 	}
-	const auto pinnedBarTop = place(_pinnedBar ? _pinnedBar->height() : 0);
-	if (_pinnedBar) {
-		_pinnedBar->move(0, pinnedBarTop);
-		_pinnedBar->resizeToWidth(innerWidth);
+	const auto pinnedBar = visiblePinnedBar();
+	const auto pinnedBarTop = place(pinnedBar ? pinnedBar->height() : 0);
+	if (pinnedBar) {
+		pinnedBar->move(0, pinnedBarTop);
+		pinnedBar->resizeToWidth(innerWidth);
 	}
 	const auto sponsoredMessageBarTop = place(
 		_sponsoredMessageBar ? _sponsoredMessageBar->height() : 0);
@@ -1446,7 +1448,8 @@ void HistoryWidget::updateHistoryGeometry(
 	auto bars = Ui::ChatBarStack();
 	bars.add(_groupCallBar ? _groupCallBar->height() : 0);
 	bars.add(_requestsBar ? _requestsBar->height() : 0);
-	bars.add(_pinnedBar ? _pinnedBar->height() : 0);
+	const auto pinnedBar = visiblePinnedBar();
+	bars.add(pinnedBar ? pinnedBar->height() : 0);
 	bars.add(_sponsoredMessageBar ? _sponsoredMessageBar->height() : 0);
 	bars.add(_translateBar ? _translateBar->height() : 0);
 	bars.add(_paysStatus ? _paysStatus->bar().height() : 0);

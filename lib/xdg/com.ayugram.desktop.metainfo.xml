@@ -66,5 +66,8 @@
     <launchable type="desktop-id">com.ayugram.desktop.desktop</launchable>
     <provides>
         <binary>AstraGram</binary>
+        <mediatype>x-scheme-handler/tg</mediatype>
+        <mediatype>x-scheme-handler/tonsite</mediatype>
+        <mediatype>x-scheme-handler/ton</mediatype>
     </provides>
 </component>

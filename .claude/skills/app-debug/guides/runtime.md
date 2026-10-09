@@ -17,6 +17,8 @@
 `app.quit` 一般不直接调，`app.stop` 内部先发它。
 
 `app.info` 返回字段：`version` / `versionCode` / `configuration` / `workingDir` / `debugLogs` / `hasSession` / `hasWindow` / `simulationMode` / `userId`（已登录时）。
+口令状态另含 `passcodeLocked`、`hasPasscode` 和 `appLockEnabled`，分别表示当前已锁定、设置了口令和启用了应用锁。
+`windowMaterialActive` 表示主窗口的材质实际生效状态，可与 `windowMaterial` 设置对照；截图不包含系统合成的桌面背景。
 
 `app.check-update` 只触发不等待：下载与验签是异步的，结果看工作目录下 `tupdates/`
 保存的文件和应用日志。更新被禁用时返回 `updater is disabled`。

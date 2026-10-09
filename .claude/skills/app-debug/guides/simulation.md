@@ -54,7 +54,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 | 归档 | `archived-group` | 静音群组 |
 | 归档 | `archived-channel` | 置顶频道 |
 
-`simulation.open <key> [--view <view>] [--input keep|empty|reply|edit]` 打开场景。
+`simulation.open <key> [--view <view>] [--input keep|empty|reply|edit|forward]` 打开场景。
 打开时切换到对应的会话分类，并退出上一场景的归档或话题导航。
 默认 `main` 使用主聊天；话题会先在左栏展开话题列表，再打开常规话题。
 
@@ -68,7 +68,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 | `topic-unread` / `topic-closed` | `topic` 的未读或已关闭话题 |
 | `source-self` / `source-private` / `source-channel` | `saved` 的三个收藏来源 |
 
-`--input` 只用于私聊和话题的聊天视图：`keep` 保留草稿，`empty` 清空，`reply` 安装回复草稿，`edit` 安装编辑草稿。
+`--input` 只用于私聊和话题的聊天视图：`keep` 保留草稿，`empty` 清空，`reply` 安装回复草稿，`edit` 安装编辑草稿，`forward` 安装隐藏发送者的固定转发草稿。
 未读话题只有来信，不能安装编辑草稿；已关闭话题只允许保留状态。
 归档分组用于分类浏览；`chat.open-archive` 打开真正的归档列表，返回时点击界面可见的返回按钮。
 
@@ -113,6 +113,11 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 这类事件用于检查下载列表、分类和进度，真实下载验证见[业务指令](business.md)。
 
 ## 验证入口
+
+`simulation.wallet [keep|missing|ready|collectibles|close]` 仅在独立模拟配置中打开或关闭钱包窗口。
+`missing` 显示未创建状态，`ready` 注入固定公开地址、余额和交易记录，`collectibles` 另加固定藏品以显示标签页。
+列表沿正式响应处理入口更新；不安装私钥或提交交易，状态随模拟会话销毁。
+打开后用 `control.window simulation.wallet` 选择该窗口，检查结束用 `simulation.wallet close` 关闭并恢复主窗口目标。
 
 先用 `simulation.list`、`message.list/inspect`、`chat.draft` 核对状态，再截图观察布局。
 `message.inspect` 返回实际删除、置顶、引用、话题、评论和 `ttlDestroyAt`；短倒计时到期后再次查询存在状态。

@@ -40,6 +40,42 @@ namespace {
 
 using json = nlohmann::json;
 
+QPointer<QWidget> selectedWindow;
+
+[[nodiscard]] Result describeControlWindow() {
+	const auto window = controlWindow();
+	if (!window) {
+		return Result::Err(u"no visible control window"_q);
+	}
+	return Result::Ok(Compact(json{
+		{ "target", selectedWindow ? window->objectName().toStdString() : "main" },
+		{ "width", window->width() },
+		{ "height", window->height() },
+	}));
+}
+
+[[nodiscard]] Result selectControlWindow(const QStringList &args) {
+	if (args.empty()) {
+		return describeControlWindow();
+	}
+	if (args.size() != 1) {
+		return Result::Err(u"usage: control.window [main|objectName]"_q);
+	}
+	if (args.front() == u"main"_q) {
+		selectedWindow.clear();
+		return describeControlWindow();
+	}
+	const auto windows = QApplication::topLevelWidgets();
+	const auto i = ranges::find_if(windows, [&](QWidget *window) {
+		return window->isVisible() && window->objectName() == args.front();
+	});
+	if (i == windows.end()) {
+		return Result::Err(u"visible top-level window not found"_q);
+	}
+	selectedWindow = *i;
+	return describeControlWindow();
+}
+
 // ---- UI 探查与合成交互 ----
 
 // list 的 #index 与 click 的序号寻址共用这份先序 DFS 顺序，改遍历顺序等于
@@ -62,9 +98,9 @@ struct WidgetInfo {
 			pushRoot(*i);
 		}
 	} else {
-		const auto window = Core::App().activeWindow();
+		const auto window = controlWindow();
 		if (window) {
-			pushRoot(window->widget());
+			pushRoot(window);
 		}
 	}
 	while (!stack.empty()) {
@@ -691,9 +727,19 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 
 } // namespace
 
+QWidget *controlWindow() {
+	if (selectedWindow && selectedWindow->isVisible()) {
+		return selectedWindow.data();
+	}
+	selectedWindow.clear();
+	const auto window = Core::App().activeWindow();
+	return window ? window->widget().get() : nullptr;
+}
+
 const HandlerMap &ControlHandlers() {
 	static const auto result = HandlerMap{
 		{ u"control.list"_q, &ControlList },
+		{ u"control.window"_q, &selectControlWindow },
 		{ u"control.click"_q, &ControlClick },
 		{ u"control.input"_q, &controlInput },
 		{ u"control.scroll"_q, &controlScroll },

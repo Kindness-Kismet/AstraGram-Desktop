@@ -11,6 +11,7 @@ struct SearchSuggestions {
 	QByteArray topPeers;
 	QByteArray recentPeers;
 	QByteArray topGuestChatBots;
+	QByteArray recentMoneyRecipients;
 };
 
 struct SearchSuggestionsReadResult {

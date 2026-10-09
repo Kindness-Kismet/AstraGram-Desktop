@@ -96,6 +96,10 @@ public:
 		bool hasUnreadBadgesAbove) const final override;
 
 	[[nodiscard]] bool lookupIsInTopicJump(int x, int y) const;
+	[[nodiscard]] bool lookupIsInCommunityBadge(
+		int x,
+		int y,
+		const style::DialogRow &st) const;
 
 	[[nodiscard]] Key key() const {
 		return _id;
@@ -163,6 +167,7 @@ private:
 		uint32 storiesHasVideoStream : 1 = 0;
 		uint32 active : 1 = 0;
 		uint32 hidden : 1 = 0;
+		uint32 communityMember : 1 = 0;
 	};
 
 	void setCornerBadgeShown(

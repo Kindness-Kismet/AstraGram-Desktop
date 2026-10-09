@@ -78,6 +78,7 @@ namespace {
 			&Commands::messageBusinessHandlers(),
 			&Commands::transferHandlers(),
 			&Commands::animHandlers(),
+			&Commands::editorHandlers(),
 		}) {
 			all.insert(part->begin(), part->end());
 		}

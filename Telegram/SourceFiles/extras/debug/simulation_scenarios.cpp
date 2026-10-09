@@ -485,10 +485,20 @@ void installScenarioDraft(
 		? MsgId(kTopicRootId + 100 * topicOffset) : MsgId();
 	history->clearLocalDraft(topicId, {});
 	history->clearLocalEditDraft(topicId, {});
+	history->setForwardDraft(topicId, {}, {});
 	if (input == u"empty"_q) {
 		return;
 	}
 	auto draft = std::make_unique<Data::Draft>();
+	if (input == u"forward"_q) {
+		history->setForwardDraft(topicId, {}, {
+			.ids = { FullMsgId(peer->id, kFirstMessageId + 100 * index + 20 * topicOffset) },
+			.options = Data::ForwardOptions::NoSenderNames,
+		});
+		draft->textWithTags.text = u"本地转发暂存验证"_q;
+		history->setDraft(Data::DraftKey::Local(topicId, PeerId()), std::move(draft));
+		return;
+	}
 	draft->reply = {
 		.messageId = FullMsgId(peer->id, kFirstMessageId + 100 * index + 20 * topicOffset
 			+ ((input == u"edit"_q) ? 5 : 0)),
@@ -582,7 +592,7 @@ void installScenarioDraft(
 
 Result openSimulationSceneImpl(const QStringList &args) {
 	if (args.empty() || !(args.size() % 2)) {
-		return Result::Err(u"usage: simulation.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions|topic-unread|topic-closed|source-self|source-private|source-channel] [--input keep|empty|reply|edit]"_q);
+		return Result::Err(u"usage: simulation.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions|topic-unread|topic-closed|source-self|source-private|source-channel] [--input keep|empty|reply|edit|forward]"_q);
 	}
 	auto view = u"main"_q;
 	auto input = u"keep"_q;
@@ -603,7 +613,7 @@ Result openSimulationSceneImpl(const QStringList &args) {
 		return Result::Err(u"unknown view"_q);
 	}
 	if (input != u"keep"_q && input != u"empty"_q
-		&& input != u"reply"_q && input != u"edit"_q) {
+		&& input != u"reply"_q && input != u"edit"_q && input != u"forward"_q) {
 		return Result::Err(u"unknown input state"_q);
 	}
 	if ((view == u"scheduled"_q || view == u"shortcuts"_q

@@ -133,12 +133,7 @@ int PaintSuggestionBubbleBackground(
 	if (windowMaterial) {
 		return radius;
 	}
-	shadow.paint(p, pill, radius);
-	auto hq = PainterHighQualityEnabler(p);
-	p.setBrush(st::dialogsBg);
-	p.setPen(Qt::NoPen);
-	p.drawRoundedRect(pill, radius, radius);
-	PaintPillOutline(p, pill, radius);
+	PaintPillBackground(p, shadow, pill, radius);
 	return radius;
 }
 

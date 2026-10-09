@@ -1,8 +1,6 @@
 #ifdef _DEBUG
 #include "extras/debug/commands/commands_internal.h"
 
-#include "core/application.h"
-#include "window/window_controller.h"
 #include "ui/widgets/popup_menu.h"
 
 #include <QDir>
@@ -71,11 +69,11 @@ using json = nlohmann::json;
 		return Result::Err(u"usage: screenshot.take <path> [popup|notification [#rrggbb]]"_q);
 	}
 	const auto popup = (args.size() == 2);
-	const auto window = Core::App().activeWindow();
+	const auto window = controlWindow();
 	const auto menu = Ui::PopupMenu::Active();
 	const auto widget = popup
 		? menu ? menu : QApplication::activePopupWidget()
-		: window ? window->widget().get() : nullptr;
+		: window;
 	if (!widget) {
 		return Result::Err(popup ? u"no active popup"_q : u"no active window"_q);
 	}

@@ -119,6 +119,7 @@ const std::map<QString, Shortcuts::Command> &actions() {
 		{u"toggle-web-page-preview"_q, Shortcuts::Command::ToggleWebPagePreview},
 		{u"record-voice"_q, Shortcuts::Command::RecordVoice},
 		{u"record-round"_q, Shortcuts::Command::RecordRound},
+		{u"stash-message"_q, Shortcuts::Command::StashMessage},
 		{u"read-chat"_q, Shortcuts::Command::ReadChat},
 		{u"archive-chat"_q, Shortcuts::Command::ArchiveChat},
 		{u"media-viewer-fullscreen"_q, Shortcuts::Command::MediaViewerFullscreen},

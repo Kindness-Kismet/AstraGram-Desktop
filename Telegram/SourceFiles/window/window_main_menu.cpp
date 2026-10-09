@@ -35,6 +35,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/stories/info_stories_widget.h"
 #include "lang/lang_keys.h"
 #include "main/main_account.h"
+#include "main/main_app_config.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
@@ -53,6 +54,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/controls/userpic_button.h"
 #include "ui/effects/snowflakes.h"
 #include "ui/effects/toggle_arrow.h"
+#include "ui/new_badges.h"
 #include "ui/painter.h"
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
@@ -64,6 +66,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/scroll_area.h"
 #include "ui/widgets/shadow.h"
 #include "ui/wrap/slide_wrap.h"
+#include "wallet/wallet_panel.h"
 #include "window/themes/window_theme.h"
 #include "window/window_controller.h"
 #include "window/window_main_menu_helpers.h"
@@ -73,6 +76,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
+#include "styles/style_wallet.h"
 #include "styles/style_window.h"
 #include "styles/style_window_main_menu.h"
 
@@ -573,6 +577,7 @@ void MainMenu::setupArchive() {
 				controller->openFolder(f);
 			}
 			controller->window().hideSettingsAndLayer();
+			controller->removeLayerBlackout();
 		}
 	};
 	const auto checkArchive = [=] {
@@ -768,7 +773,7 @@ void MainMenu::setupMenu() {
 				u"myProfile"_q);
 			myProfile->setClickedCallback([=] {
 				controller->showSection(
-					Info::Stories::Make(controller->session().user()));
+					Info::Stories::MakeMyProfile(controller->session().user()));
 			});
 		}
 
@@ -837,6 +842,30 @@ void MainMenu::setupMenu() {
 			controller->window().hideSettingsAndLayer();
 		});
 		}
+		const auto session = &controller->session();
+		const auto wallet = section->add(
+			object_ptr<Ui::SlideWrap<Ui::SettingsButton>>(
+				section,
+				CreateButtonWithIcon(
+					section,
+					tr::lng_wallet_menu(),
+					st::mainMenuButton,
+					{ .icon = &st::walletMenuIcon, .color = &_iconFg.color() })));
+		ExtrasFeatures::WindowMaterial::watchSurface(wallet->entity());
+		wallet->entity()->setObjectName(u"menu.wallet"_q);
+		Ui::NewBadge::AddAfterButtonText(
+			wallet->entity(),
+			tr::lng_wallet_menu(),
+			st::mainMenuButton);
+		wallet->toggleOn(session->appConfig().value(
+		) | rpl::map([=] {
+			return session->appConfig().walletAvailable();
+		}) | rpl::distinct_until_changed());
+		wallet->finishAnimating();
+		wallet->entity()->setClickedCallback([=] {
+			controller->window().hideSettingsAndLayer();
+			Wallet::ShowWallet(session);
+		});
 	} else {
 		addAction(
 			tr::lng_profile_add_contact(),

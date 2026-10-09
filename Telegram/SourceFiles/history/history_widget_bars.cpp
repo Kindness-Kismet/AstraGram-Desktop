@@ -521,6 +521,10 @@ void HistoryWidget::clearHidingPinnedBar() {
 	_hidingPinnedBar = nullptr;
 }
 
+Ui::PinnedBar *HistoryWidget::visiblePinnedBar() const {
+	return _pinnedBar ? _pinnedBar.get() : _hidingPinnedBar.get();
+}
+
 void HistoryWidget::checkMessagesTTL() {
 	if (!_peer || !_peer->messagesTTL()) {
 		if (_ttlInfo) {

@@ -14,6 +14,7 @@ constexpr auto kVersion = quint32(1);
 const auto kTopPeers = QStringLiteral("topPeers");
 const auto kRecentPeers = QStringLiteral("recentPeers");
 const auto kTopGuestChatBots = QStringLiteral("topGuestChatBots");
+const auto kRecentMoneyRecipients = QStringLiteral("recentMoneyRecipients");
 
 [[nodiscard]] std::optional<SearchSuggestionsReadResult> ReadLegacySuggestions(
 		QDataStream &stream,
@@ -30,6 +31,9 @@ const auto kTopGuestChatBots = QStringLiteral("topGuestChatBots");
 	if (!stream.atEnd()) {
 		stream >> result.data.topGuestChatBots;
 	}
+	if (!stream.atEnd()) {
+		stream >> result.data.recentMoneyRecipients;
+	}
 	if (stream.status() != QDataStream::Ok) {
 		return std::nullopt;
 	}
@@ -45,6 +49,7 @@ void WriteSearchSuggestions(
 		{ kTopPeers, data.topPeers },
 		{ kRecentPeers, data.recentPeers },
 		{ kTopGuestChatBots, data.topGuestChatBots },
+		{ kRecentMoneyRecipients, data.recentMoneyRecipients },
 	};
 	stream << kFormat << kVersion << fields;
 }
@@ -74,6 +79,7 @@ std::optional<SearchSuggestionsReadResult> ReadSearchSuggestions(
 			.topPeers = fields.value(kTopPeers),
 			.recentPeers = fields.value(kRecentPeers),
 			.topGuestChatBots = fields.value(kTopGuestChatBots),
+			.recentMoneyRecipients = fields.value(kRecentMoneyRecipients),
 		},
 	};
 }

@@ -1,5 +1,9 @@
 # 控件树与合成交互
 
+`control.window [main|objectName]` 查询或选择控件与截图的目标顶层窗口，不改变系统焦点。
+默认目标为主窗口；例如 `control.window simulation.wallet` 选择模拟钱包，关闭该窗口后自动恢复主窗口。
+切换目标后重新查询控件序号；`--all` 的遍历范围保持不变。
+
 ## 值与动作
 
 `control.get <target>` 查询当前值、类型、文字、启用状态及辅助功能动作。
