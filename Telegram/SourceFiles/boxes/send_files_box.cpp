@@ -42,7 +42,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/send_credits_box.h"
 #include "boxes/send_files_box_reply_header.h"
 #include "ui/boxes/time_picker_box.h"
-#include "ui/effects/scroll_content_shadow.h"
 #include "ui/text/format_values.h"
 #include "ui/widgets/fields/number_input.h"
 #include "ui/widgets/checkbox.h"
@@ -900,7 +899,6 @@ void SendFilesBox::prepare() {
 	setupSendWayControls();
 	preparePreview();
 	initPreview();
-	SetupShadowsToScrollContent(this, _scroll, _inner->heightValue());
 	setCloseByOutsideClick(false);
 
 	boxClosing() | rpl::on_next([=] {

@@ -8,7 +8,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/peers/edit_forum_topic_box.h"
 
 #include "ui/widgets/fields/input_field.h"
-#include "ui/widgets/shadow.h"
 #include "ui/effects/emoji_fly_animation.h"
 #include "ui/abstract_button.h"
 #include "ui/vertical_list.h"
@@ -305,22 +304,11 @@ struct IconSelector {
 
 	placeFooter(selector->createFooter());
 
-	const auto shadow = Ui::CreateChild<Ui::PlainShadow>(box.get());
-	shadow->show();
-
-	rpl::combine(
-		rpl::duplicate(coverHeight),
-		selector->widthValue()
-	) | rpl::on_next([=](int top, int width) {
-		shadow->setGeometry(0, top, width, st::lineWidth);
-	}, shadow->lifetime());
-
 	selector->refreshEmoji();
 
 	selector->scrollToRequests(
 	) | rpl::on_next([=](int y) {
 		box->scrollToY(y);
-		shadow->update();
 	}, selector->lifetime());
 
 	rpl::combine(

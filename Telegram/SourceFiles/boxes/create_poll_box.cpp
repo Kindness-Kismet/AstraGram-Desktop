@@ -83,7 +83,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/format_values.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/scroll_area.h"
-#include "ui/widgets/shadow.h"
 #include "ui/wrap/fade_wrap.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
@@ -192,10 +191,6 @@ private:
 		void show(anim::type animated);
 		void destroy(FnMut<void()> done);
 
-		[[nodiscard]] bool hasShadow() const;
-		void createShadow();
-		void destroyShadow();
-
 		[[nodiscard]] bool isEmpty() const;
 		[[nodiscard]] bool isGood() const;
 		[[nodiscard]] bool isTooLong() const;
@@ -228,7 +223,6 @@ private:
 		base::unique_qptr<Ui::FadeWrapScaled<Ui::RpWidget>> _handle;
 		bool _hasCorrect = false;
 		Ui::InputField *_field = nullptr;
-		base::unique_qptr<Ui::PlainShadow> _shadow;
 		base::unique_qptr<PollMediaButton> _attach;
 		AttachCallback _attachCallback;
 		FieldDropCallback _fieldDropCallback;
@@ -239,8 +233,6 @@ private:
 	};
 
 	[[nodiscard]] bool full() const;
-	[[nodiscard]] bool correctShadows() const;
-	void fixShadows();
 	void removeEmptyTail();
 	void addEmptyOption();
 	void insertOption(
@@ -446,7 +438,6 @@ Options::Option::Option(
 		}));
 	}, _field->lifetime());
 
-	createShadow();
 	createAttach();
 	createWarning();
 	createHandle();
@@ -458,33 +449,6 @@ Options::Option::Option(
 		_handle->finishAnimating();
 	}
 	updateFieldGeometry();
-}
-
-bool Options::Option::hasShadow() const {
-	return (_shadow != nullptr);
-}
-
-void Options::Option::createShadow() {
-	Expects(_content != nullptr);
-
-	if (_shadow) {
-		return;
-	}
-	_shadow.reset(Ui::CreateChild<Ui::PlainShadow>(field().get()));
-	_shadow->show();
-	field()->sizeValue(
-	) | rpl::on_next([=](QSize size) {
-		const auto left = st::createPollFieldPadding.left();
-		_shadow->setGeometry(
-			left,
-			size.height() - st::lineWidth,
-			size.width() - left,
-			st::lineWidth);
-	}, _shadow->lifetime());
-}
-
-void Options::Option::destroyShadow() {
-	_shadow = nullptr;
 }
 
 void Options::Option::createAttach() {
@@ -910,25 +874,6 @@ void Options::enableChooseCorrect(bool enabled, bool multiCorrect) {
 	restartReorder();
 }
 
-bool Options::correctShadows() const {
-	// Last one should be without shadow.
-	const auto noShadow = ranges::find(
-		_list,
-		true,
-		ranges::not_fn(&Option::hasShadow));
-	return (noShadow == end(_list) - 1);
-}
-
-void Options::fixShadows() {
-	if (correctShadows()) {
-		return;
-	}
-	for (auto &option : _list) {
-		option->createShadow();
-	}
-	_list.back()->destroyShadow();
-}
-
 void Options::removeEmptyTail() {
 	// Only one option at the end of options list can be empty.
 	// Remove all other trailing empty options.
@@ -974,7 +919,6 @@ void Options::fixAfterErase() {
 		(*(last - 1))->setPlaceholder();
 		(*(last - 1))->showAddIcon(false);
 	}
-	fixShadows();
 }
 
 void Options::addEmptyOption() {
@@ -1039,7 +983,6 @@ void Options::insertOption(
 		raw->showAddIcon(true);
 	}
 	raw->show(animated);
-	fixShadows();
 	restartReorder();
 }
 
@@ -1227,7 +1170,6 @@ void Options::setupReorder() {
 					_list,
 					data.oldPosition,
 					data.newPosition);
-				fixShadows();
 			}
 		}
 	}, _box->lifetime());

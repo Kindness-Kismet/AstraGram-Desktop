@@ -16,9 +16,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/painter.h"
 #include "ui/text/text_utilities.h"
 #include "ui/top_background_gradient.h"
+#include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
-#include "ui/widgets/shadow.h"
 #include "styles/style_chat.h"
 #include "styles/style_credits.h"
 #include "styles/style_info.h" // infoStarsUnderstood
@@ -280,9 +280,7 @@ void AboutCocoonBox(not_null<Ui::GenericBox*> box) {
 		margin = {};
 	}
 
-	box->addRow(
-		object_ptr<Ui::PlainShadow>(box),
-		st::cocoonJoinSeparatorPadding);
+	Ui::AddSkip(box->verticalLayout(), st::cocoonJoinSkip);
 
 	box->addRow(
 		object_ptr<Ui::FlatLabel>(

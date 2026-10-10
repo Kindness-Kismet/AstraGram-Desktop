@@ -112,7 +112,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/popup_menu.h"
-#include "ui/widgets/shadow.h"
 #include "ui/wrap/fade_wrap.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/table_layout.h"
@@ -3201,11 +3200,7 @@ void UniqueGiftSellBox(
 		}),
 		st::boxLabel));
 
-	Ui::AddSkip(container);
-	Ui::AddSkip(container);
-	box->addRow(object_ptr<Ui::PlainShadow>(box));
-	Ui::AddSkip(container);
-	Ui::AddSkip(container);
+	Ui::AddSkip(container, st::defaultVerticalListSkip * 4);
 
 	const auto onlyTon = box->addRow(
 		object_ptr<Ui::Checkbox>(
@@ -4093,10 +4088,7 @@ void UpgradeBox(
 		std::move(args.prices),
 		std::move(args.nextPrices));
 	if (!preview && !gifting) {
-		const auto skip = st::defaultVerticalListSkip;
-		container->add(
-			object_ptr<PlainShadow>(container),
-			st::boxRowPadding + QMargins(0, skip, 0, skip));
+		AddSkip(container, st::defaultVerticalListSkip * 2);
 		const auto checkbox = container->add(
 			object_ptr<Checkbox>(
 				container,

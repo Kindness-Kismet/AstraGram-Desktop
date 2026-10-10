@@ -32,7 +32,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/labels.h"
-#include "ui/widgets/shadow.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/vertical_list.h"
 
@@ -207,8 +206,6 @@ private:
 	const not_null<Ui::VerticalLayout*> _layout;
 	const not_null<Ui::FlatLabel*> _beforeTitle;
 	const not_null<Ui::FlatLabel*> _beforeBody;
-	const style::complex_color _shadowColor;
-	const not_null<Ui::PlainShadow*> _shadow;
 	const not_null<Ui::FlatLabel*> _afterTitle;
 	const not_null<Ui::FlatLabel*> _afterBody;
 	const not_null<Ui::RoundButton*> _another;
@@ -242,18 +239,6 @@ PreviewAiToneExampleCard::PreviewAiToneExampleCard(
 		st::aiTonePreviewExampleCardTitleSkip,
 		st::aiTonePreviewExampleCardPadding.right(),
 		0)))
-, _shadowColor([] {
-	auto color = st::windowSubTextFg->c;
-	color.setAlphaF(st::aiComposeShadowOpacity);
-	return color;
-})
-, _shadow(_layout->add(
-	object_ptr<Ui::PlainShadow>(_layout, _shadowColor.color()),
-	QMargins(
-		st::aiTonePreviewExampleCardPadding.left(),
-		st::aiTonePreviewExampleCardSectionSkip / 2,
-		st::aiTonePreviewExampleCardPadding.right(),
-		0)))
 , _afterTitle(_layout->add(
 	object_ptr<Ui::FlatLabel>(
 		_layout,
@@ -261,7 +246,7 @@ PreviewAiToneExampleCard::PreviewAiToneExampleCard(
 		st::aiComposeCardTitle),
 	QMargins(
 		st::aiTonePreviewExampleCardPadding.left(),
-		st::aiTonePreviewExampleCardSectionSkip / 2,
+		st::aiTonePreviewExampleCardSectionSkip,
 		st::aiTonePreviewExampleCardPadding.right(),
 		0)))
 , _afterBody(_layout->add(

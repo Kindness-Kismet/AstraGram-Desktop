@@ -34,7 +34,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/discrete_sliders.h"
 #include "ui/widgets/labels.h"
-#include "ui/widgets/shadow.h"
 #include "ui/layers/box_layer_shadow.h"
 #include "ui/cached_round_corners.h"
 #include "ui/painter.h"
@@ -336,7 +335,6 @@ private:
 	StickerSetIdentifier _megagroupSetInput;
 	std::unique_ptr<Row> _megagroupSelectedSet;
 	object_ptr<AddressField> _megagroupSetField = { nullptr };
-	object_ptr<Ui::PlainShadow> _megagroupSelectedShadow = { nullptr };
 	object_ptr<Ui::CrossButton> _megagroupSelectedRemove = { nullptr };
 	object_ptr<Ui::BoxContentDivider> _megagroupDivider = { nullptr };
 	object_ptr<Ui::FlatLabel> _megagroupSubTitle = { nullptr };
@@ -1382,12 +1380,6 @@ void StickersBox::Inner::updateControlsGeometry() {
 		_megagroupSetField->height());
 	top += _megagroupSetField->height() + fieldPadding.bottom();
 	if (_megagroupSelectedRemove) {
-		_megagroupSelectedShadow->setGeometryToLeft(
-			0,
-			top,
-			width(),
-			st::lineWidth);
-		top += st::lineWidth;
 		_megagroupSelectedRemove->moveToRight(
 			st::groupStickersRemovePosition.x(),
 			top + st::groupStickersRemovePosition.y());
@@ -2373,7 +2365,6 @@ void StickersBox::Inner::rebuildMegagroupSet() {
 		}
 		_megagroupSelectedSet = nullptr;
 		_megagroupSelectedRemove.destroy();
-		_megagroupSelectedShadow.destroy();
 	};
 	if (!_megagroupSetInput.id) {
 		clearCurrent();
@@ -2413,7 +2404,7 @@ void StickersBox::Inner::rebuildMegagroupSet() {
 		title,
 		flagsOverride,
 		removed);
-	_itemsTop += st::lineWidth + _rowHeight;
+	_itemsTop += _rowHeight;
 
 	if (!_megagroupSelectedRemove) {
 		_megagroupSelectedRemove.create(this, st::groupStickersRemove);
@@ -2421,7 +2412,6 @@ void StickersBox::Inner::rebuildMegagroupSet() {
 		_megagroupSelectedRemove->setClickedCallback([=] {
 			setMegagroupSelectedSet({});
 		});
-		_megagroupSelectedShadow.create(this);
 		updateControlsGeometry();
 	}
 }

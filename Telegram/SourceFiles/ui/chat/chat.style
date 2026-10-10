@@ -854,7 +854,7 @@ cocoonSubtitle: FlatLabel(defaultFlatLabel) {
 }
 cocoonSubtitleTop: 8px;
 cocoonSubtitleBottom: 16px;
-cocoonJoinSeparatorPadding: margins(24px, 4px, 24px, 12px);
+cocoonJoinSkip: 16px;
 cocoonJoinLabel: FlatLabel(defaultFlatLabel) {
 	style: TextStyle(defaultTextStyle) {
 		font: font(12px);

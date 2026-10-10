@@ -168,6 +168,5 @@ private:
 	rpl::event_stream<> _editMediaClicks;
 	rpl::event_stream<> _photoEditorOpens;
 	rpl::event_stream<> _previewRebuilds;
-	rpl::event_stream<int> _contentHeight;
 
 };

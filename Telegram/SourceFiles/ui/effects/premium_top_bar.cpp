@@ -16,7 +16,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/premium_diamond.h"
 #include "ui/effects/premium_coin.h"
 #include "ui/widgets/labels.h"
-#include "ui/wrap/fade_wrap.h"
 #include "ui/rect.h"
 #include "styles/style_layers.h"
 #include "styles/style_premium.h"
@@ -277,20 +276,6 @@ TopBar::TopBar(
 		auto event = QResizeEvent(size(), size());
 		resizeEvent(&event);
 	}, lifetime());
-
-	if (_light) {
-		const auto smallTopShadow = CreateChild<FadeShadow>(this);
-		smallTopShadow->setDuration(st::fadeWrapDuration);
-		sizeValue(
-		) | rpl::on_next([=](QSize size) {
-			smallTopShadow->resizeToWidth(size.width());
-			smallTopShadow->moveToLeft(
-				0,
-				height() - smallTopShadow->height());
-			const auto shown = (minimumHeight() * 2 > size.height());
-			smallTopShadow->toggle(shown, anim::type::normal);
-		}, lifetime());
-	}
 }
 
 TopBar::~TopBar() = default;

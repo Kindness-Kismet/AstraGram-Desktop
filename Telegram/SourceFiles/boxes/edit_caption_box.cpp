@@ -55,7 +55,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/attach/attach_single_media_preview.h"
 #include "ui/controls/compose_ai_button_factory.h"
 #include "ui/controls/emoji_button.h"
-#include "ui/effects/scroll_content_shadow.h"
 #include "ui/image/image.h"
 #include "ui/toast/toast.h"
 #include "ui/painter.h"
@@ -461,7 +460,6 @@ void EditCaptionBox::prepare() {
 		return;
 	}
 	setupEditEventHandler();
-	SetupShadowsToScrollContent(this, _scroll, _contentHeight.events());
 
 	setupControls();
 	setupPhotoEditorEventHandler();
@@ -543,9 +541,6 @@ void EditCaptionBox::rebuildPreview() {
 
 	_content->modifyRequests(
 	) | rpl::start_to_stream(_photoEditorOpens, _content->lifetime());
-
-	_content->heightValue(
-	) | rpl::start_to_stream(_contentHeight, _content->lifetime());
 
 	if (const auto file = dynamic_cast<Ui::AbstractSingleFilePreview*>(
 			_content.get())) {

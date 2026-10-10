@@ -187,4 +187,3 @@ aiComposeBoxInfoButton: IconButton(boxTitleClose) {
 	iconOver: icon {{ "menu/info", boxTitleCloseFgOver }};
 	ripple: defaultRippleAnimation;
 }
-aiComposeShadowOpacity: 0.3;

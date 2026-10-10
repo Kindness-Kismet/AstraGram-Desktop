@@ -510,8 +510,6 @@ private:
 	bool _originalExpanded = false;
 	bool _originalVisible = true;
 	bool _emojifyVisible = false;
-	bool _dividerVisible = false;
-	int _dividerTop = 0;
 	CardState _state = CardState::Waiting;
 	ComposeAiRichBody *_richBody = nullptr;
 	Ui::SkeletonAnimation _skeleton;
@@ -996,7 +994,6 @@ int ComposeAiPreviewCard::resizeGetHeight(int newWidth) {
 	const auto contentWidth = newWidth - padding.left() - padding.right();
 	auto y = padding.top();
 
-	_dividerVisible = false;
 	if (_originalVisible) {
 		_originalTitle->show();
 		_originalBody->show();
@@ -1038,10 +1035,7 @@ int ComposeAiPreviewCard::resizeGetHeight(int newWidth) {
 			newWidth);
 		const auto expandable = fullOriginalHeight > lineHeight;
 		_originalToggle->setVisible(expandable);
-		y += originalHeight + st::aiComposeCardSectionSkip;
-		_dividerTop = y;
-		_dividerVisible = true;
-		y += st::lineWidth + st::aiComposeCardSectionSkip;
+		y += originalHeight + 2 * st::aiComposeCardSectionSkip;
 	} else {
 		_originalTitle->hide();
 		_originalBody->hide();
@@ -1126,17 +1120,6 @@ void ComposeAiPreviewCard::paintEvent(QPaintEvent *e) {
 		rect(),
 		st::aiComposeCardRadius,
 		st::aiComposeCardRadius);
-	if (_dividerVisible) {
-		p.setBrush(Qt::NoBrush);
-		auto color = st::windowSubTextFg->c;
-		color.setAlphaF(st::aiComposeShadowOpacity);
-		p.setPen(color);
-		p.drawLine(
-			st::aiComposeCardPadding.left(),
-			_dividerTop,
-			width() - st::aiComposeCardPadding.right(),
-			_dividerTop);
-	}
 }
 
 void ComposeAiPreviewCard::refreshGeometry() {

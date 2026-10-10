@@ -36,7 +36,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/continuous_sliders.h"
 #include "ui/widgets/popup_menu.h"
-#include "ui/widgets/shadow.h"
 #include "ui/wrap/slide_wrap.h"
 #include "window/window_session_controller.h"
 #include "styles/style_chat_helpers.h"
@@ -967,7 +966,6 @@ void EditMessagesPrivacyBox(
 	};
 	const auto privacy = &session->api().globalPrivacy();
 	const auto inner = box->verticalLayout();
-	inner->add(object_ptr<Ui::PlainShadow>(box));
 
 	auto highlightCharged = (Ui::RpWidget*)nullptr;
 	auto highlightRemoveFee = (Ui::RpWidget*)nullptr;

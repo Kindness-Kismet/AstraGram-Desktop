@@ -38,7 +38,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/labels.h"
-#include "ui/widgets/shadow.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_session_controller.h"
@@ -127,22 +126,11 @@ void ChooseToneIconBox(
 
 	top->add(selector->createFooter());
 
-	const auto shadow = Ui::CreateChild<Ui::PlainShadow>(box.get());
-	shadow->show();
-
-	rpl::combine(
-		top->heightValue(),
-		selector->widthValue()
-	) | rpl::on_next([=](int topHeight, int width) {
-		shadow->setGeometry(0, topHeight, width, st::lineWidth);
-	}, shadow->lifetime());
-
 	selector->refreshEmoji();
 
 	selector->scrollToRequests(
 	) | rpl::on_next([=](int y) {
 		box->scrollToY(y);
-		shadow->update();
 	}, selector->lifetime());
 
 	rpl::combine(
