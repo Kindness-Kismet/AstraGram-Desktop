@@ -40,9 +40,10 @@ python .codex/skills/app-debug/scripts/cli.py control.pointer historyScroll 160 
 python .codex/skills/app-debug/scripts/cli.py control.pointer historyScroll
 ```
 
-## `control.key <目标> <escape|up|down|left|right|enter|tab|space>`
+## `control.key <目标> <escape|up|down|left|right|enter|tab|space|数字串>`
 
 向控件投递按下和释放事件，不操作系统键盘。菜单可使用 `@menu`，用于退出键和方向键导航。
+最多 16 位的数字串逐位按下，用于登录验证码等逐位输入的控件，例如 `control.key "#47" 12345`。
 `control.list @menu` 列出菜单，`isWindow` 区分原生窗口与宿主内浮层；`@menu` 同样可用于点击、移动和悬停指令。
 
 ## 点击命中检查

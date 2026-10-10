@@ -406,9 +406,26 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 		{ u"space"_q, Qt::Key_Space },
 	};
 	const auto key = keys.constFind(args[1]);
+	// 一串数字逐位按下，供验证码这类逐位输入的控件使用。
+	const auto digits = !args[1].isEmpty()
+		&& (args[1].size() <= 16)
+		&& ranges::all_of(args[1], [](QChar ch) {
+			return (ch >= u'0') && (ch <= u'9');
+		});
 	const auto target = QPointer<QWidget>(findControl(args[0]));
-	if (key == keys.cend() || !target || !target->isVisible() || !target->isEnabled()) {
+	if ((key == keys.cend() && !digits)
+		|| !target
+		|| !target->isVisible()
+		|| !target->isEnabled()) {
 		return Result::Err(u"expected a visible enabled control and a supported key"_q);
+	}
+	if (digits) {
+		for (const auto ch : args[1]) {
+			const auto digit = Qt::Key(Qt::Key_0 + ch.digitValue());
+			sendIfAlive(target, QKeyEvent(QEvent::KeyPress, digit, Qt::NoModifier, ch));
+			sendIfAlive(target, QKeyEvent(QEvent::KeyRelease, digit, Qt::NoModifier, ch));
+		}
+		return Result::Ok(u"sent"_q);
 	}
 	const auto text = (*key == Qt::Key_Space) ? u" "_q : QString();
 	sendIfAlive(target, QKeyEvent(QEvent::KeyPress, *key, Qt::NoModifier, text));
