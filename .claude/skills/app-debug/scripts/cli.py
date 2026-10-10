@@ -97,6 +97,7 @@ GENERIC_COMMANDS = {
     "message.edit-local": "在模拟模式触发原生编辑流程：<会话编号> <消息编号> <文字>",
     "message.delete-local": "在模拟模式触发原生删除流程：<会话编号> <消息编号>",
     "text.process": "验证文本处理与实体偏移：<send|edit|receive|auto-space|zalgo> <文字> [实体 JSON]",
+    "text.glyphs": "逐个码点用界面字体排版，返回各字体负责的区间与缺字区间：<UTF-8 文件> [附加回退字体...]",
     "translate.start": "按当前翻译服务发起请求：<语言> <文字>",
     "translate.clear-cache": "清空应用翻译缓存",
     "emoji.list": "查询当前表情包、已安装包与预设",

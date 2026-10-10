@@ -14,8 +14,12 @@
 #include "ui/emoji_config.h"
 #include "ui/text/text_entity.h"
 #include "window/window_controller.h"
+#include "styles/style_basic.h"
 
 #include <QFileInfo>
+#include <QGlyphRun>
+#include <QRawFont>
+#include <QTextLayout>
 
 namespace ExtrasDebug::Commands {
 namespace {
@@ -103,6 +107,60 @@ Result processText(const QStringList &args) {
 			{"length", entity.length()}, {"data", entity.data().toStdString()}});
 	}
 	return Result::Ok(Compact(Json{{"text", text.text.toStdString()}, {"entities", entities}}));
+}
+
+// 逐个码点用界面字体排版，返回各字体负责的码点区间与缺字区间。
+// 附加字体排在现有替换字体之后、系统回退之前，等同于新增替换字体。
+Result glyphCoverage(const QStringList &args) {
+	if (args.isEmpty()) return Result::Err(u"usage: text.glyphs <utf8File> [fallbackFamily...]"_q);
+	auto file = QFile(args[0]);
+	if (!file.open(QIODevice::ReadOnly)) return Result::Err(u"cannot open file"_q);
+	auto font = st::normalFont->f;
+	if (args.size() > 1) {
+		const auto family = font.family();
+		font.setFamilies(QStringList(family) + QFont::substitutes(family) + args.mid(1));
+	}
+	auto ranges = std::map<QString, std::vector<std::pair<uint, uint>>>();
+	auto total = 0;
+	for (const auto codepoint : QString::fromUtf8(file.readAll()).toUcs4()) {
+		if (codepoint == '\n' || codepoint == '\r') continue;
+		++total;
+		QTextLayout layout(QString::fromUcs4(&codepoint, 1), font);
+		layout.beginLayout();
+		layout.createLine();
+		layout.endLayout();
+		const auto runs = layout.glyphRuns();
+		auto family = QString();
+		auto found = !runs.isEmpty();
+		for (const auto &run : runs) {
+			found = found && !run.glyphIndexes().contains(0);
+			family = run.rawFont().familyName();
+		}
+		auto &list = ranges[found ? family : QString()];
+		if (!list.empty() && list.back().second + 1 == codepoint) {
+			list.back().second = codepoint;
+		} else {
+			list.emplace_back(codepoint, codepoint);
+		}
+	}
+	const auto serialize = [](const std::vector<std::pair<uint, uint>> &list) {
+		auto result = Json::array();
+		for (const auto &[from, till] : list) {
+			const auto hex = [](uint value) { return QString::number(value, 16).toUpper(); };
+			result.push_back(((from == till) ? hex(from) : hex(from) + u'-' + hex(till)).toStdString());
+		}
+		return result;
+	};
+	auto families = Json::object();
+	for (const auto &[family, list] : ranges) {
+		if (!family.isEmpty()) families[family.toStdString()] = serialize(list);
+	}
+	const auto missing = ranges.find(QString());
+	return Result::Ok(Compact(Json{
+		{"total", total},
+		{"families", families},
+		{"missing", (missing != end(ranges)) ? serialize(missing->second) : Json::array()},
+	}));
 }
 
 Result translateText(const QStringList &args) {
@@ -236,7 +294,8 @@ Result cancelForward(const QStringList &args) {
 const HandlerMap &FeatureHandlers() {
 	static const auto result = HandlerMap{
 		{u"job.status"_q, &jobStatus}, {u"job.forget"_q, &forgetJob},
-		{u"text.process"_q, &processText}, {u"translate.start"_q, &translateText},
+		{u"text.process"_q, &processText}, {u"text.glyphs"_q, &glyphCoverage},
+		{u"translate.start"_q, &translateText},
 		{u"translate.clear-cache"_q, &clearTranslationCache},
 		{u"emoji.list"_q, &emojiList}, {u"emoji.import"_q, &importEmoji},
 		{u"emoji.install"_q, &installEmoji}, {u"emoji.select"_q, &selectEmoji},
