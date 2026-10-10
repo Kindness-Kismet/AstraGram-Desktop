@@ -318,7 +318,6 @@
   "MessageFieldElementsHeader": "Message Field Elements",
   "MessageFieldPopupsHeader": "Message Field Popups",
   "MessageFieldElementSendAs": "Channel identity",
-  "MessageFieldElementSendAsDescription": "Show the identity switcher in the message field. Hiding it keeps the current sender identity.",
   "MessageFieldElementAttach": "Attach",
   "MessageFieldElementTTL": "TTL",
   "MessageFieldElementEmoji": "Emoji",

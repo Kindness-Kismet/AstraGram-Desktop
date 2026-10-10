@@ -9338,7 +9338,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_MessageFieldElementsHeader" = "Message Field Elements";
 "extras_MessageFieldPopupsHeader" = "Message Field Popups";
 "extras_MessageFieldElementSendAs" = "Channel identity";
-"extras_MessageFieldElementSendAsDescription" = "Show the identity switcher in the message field. Hiding it keeps the current sender identity.";
 "extras_MessageFieldElementAttach" = "Attach";
 "extras_MessageFieldElementTTL" = "TTL";
 "extras_MessageFieldElementEmoji" = "Emoji";

@@ -433,7 +433,6 @@ void BuildMessageFieldElements(SectionBuilder &builder, ExtrasSectionBuilder &ex
 		.setter = &ExtrasSettings::setShowSendAsButtonInMessageField,
 		.icon = { &st::menuIconChannel },
 	});
-	builder.addDividerText(tr::extras_MessageFieldElementSendAsDescription());
 
 	extras.addSettingToggle({
 		.id = u"extras/showAttachButtonInMessageField"_q,
