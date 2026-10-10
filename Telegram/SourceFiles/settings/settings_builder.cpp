@@ -359,7 +359,6 @@ Ui::RpWidget *SectionBuilder::addControl(ControlArgs &&args) {
 Ui::SettingsButton *SectionBuilder::addButton(ButtonArgs &&args) {
 	const auto &st = args.st ? *args.st : st::settingsButton;
 	auto iconForSearch = IconDescriptor{ args.icon.icon };
-	const auto hasIcon = bool(args.icon);
 	// id 先拷贝：ControlArgs 构造时会 move 走 args.id，而 factory 引用捕获 args
 	const auto id = args.id;
 	const auto factory = [&](not_null<Ui::VerticalLayout*> container) {
@@ -368,8 +367,6 @@ Ui::SettingsButton *SectionBuilder::addButton(ButtonArgs &&args) {
 			rpl::duplicate(args.title),
 			st,
 			std::move(args.icon));
-		button->setProperty("settingsSeparatorInset", hasIcon
-			? button->st().padding.left() : st::settingsCardRowInset);
 		// id 挂到 objectName，调试指令可用 control.click <id> 寻址
 		if (button && !id.isEmpty()) {
 			button->setObjectName(id);

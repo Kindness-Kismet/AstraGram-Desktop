@@ -144,7 +144,7 @@ not_null<Ui::RpWidget*> AddInnerToggle(not_null<Ui::VerticalLayout*> container,
 									   bool toggledWhenAll,
 									   std::vector<Fn<bool()>> lockChecks,
 									   rpl::event_stream<> *lockChanges) {
-	// 卡片内沿用统一的行距与左缩进，标题和分隔线才能与相邻行对齐。
+	// 卡片内沿用统一的行距与左缩进，标题才能与相邻行对齐。
 	const auto button = container->add(Settings::CreateButtonWithIcon(
 		container,
 		nullptr,
@@ -441,7 +441,6 @@ CollapsibleToggleResult AddCollapsibleToggle(not_null<Ui::VerticalLayout*> conta
 	refreshLockLooks();
 
 	const auto raw = wrap.data();
-	raw->setProperty("settingsSeparatorAttached", true);
 	raw->hide(anim::type::instant);
 	const auto toggleWidget = AddInnerToggle(
 		container,

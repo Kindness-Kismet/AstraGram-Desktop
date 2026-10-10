@@ -520,7 +520,6 @@ object_ptr<Button> CreateButtonWithIcon(
 		button->lifetime().add([rowStyle] {});
 	}
 	button->setProperty("settingsCardRow", card);
-	button->setProperty("settingsSeparatorInset", button->st().padding.left());
 	if (descriptor) {
 		AddButtonIcon(button, button->st(), std::move(descriptor));
 	}
