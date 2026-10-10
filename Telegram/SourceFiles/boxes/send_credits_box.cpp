@@ -124,8 +124,6 @@ void AddTerms(
 		.title = stBox.title,
 		.bg = stBox.bg,
 		.titleAdditionalFg = stBox.titleAdditionalFg,
-		.shadowIgnoreTopSkip = stBox.shadowIgnoreTopSkip,
-		.shadowIgnoreBottomSkip = stBox.shadowIgnoreBottomSkip,
 	});
 	button->geometryValue() | rpl::on_next([=](const QRect &rect) {
 		terms->resizeToWidth(box->width()

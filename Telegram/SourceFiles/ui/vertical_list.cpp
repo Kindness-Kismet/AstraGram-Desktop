@@ -37,22 +37,19 @@ not_null<Ui::FlatLabel*> AddDividerText(
 		not_null<Ui::VerticalLayout*> container,
 		rpl::producer<QString> text,
 		const style::margins &margins,
-		const style::DividerLabel &st,
-		RectParts parts) {
+		const style::DividerLabel &st) {
 	return AddDividerText(
 		container,
 		std::move(text) | rpl::map(tr::marked),
 		margins,
-		st,
-		parts);
+		st);
 }
 
 not_null<Ui::FlatLabel*> AddDividerText(
 		not_null<Ui::VerticalLayout*> container,
 		rpl::producer<TextWithEntities> text,
 		const style::margins &margins,
-		const style::DividerLabel &st,
-		RectParts parts) {
+		const style::DividerLabel &st) {
 	auto label = object_ptr<Ui::FlatLabel>(
 		container,
 		std::move(text),
@@ -62,8 +59,7 @@ not_null<Ui::FlatLabel*> AddDividerText(
 		container,
 		std::move(label),
 		margins,
-		st.bar,
-		parts));
+		st.bar));
 	return result;
 }
 

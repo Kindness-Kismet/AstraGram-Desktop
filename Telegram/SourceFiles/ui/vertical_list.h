@@ -7,8 +7,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
-#include "ui/rect_part.h"
-
 namespace style {
 struct FlatLabel;
 struct DividerBar;
@@ -35,14 +33,12 @@ not_null<Ui::FlatLabel*> AddDividerText(
 	not_null<Ui::VerticalLayout*> container,
 	rpl::producer<QString> text,
 	const style::margins &margins = st::defaultBoxDividerLabelPadding,
-	const style::DividerLabel &st = st::defaultDividerLabel,
-	RectParts parts = RectPart::Top | RectPart::Bottom);
+	const style::DividerLabel &st = st::defaultDividerLabel);
 not_null<Ui::FlatLabel*> AddDividerText(
 	not_null<Ui::VerticalLayout*> container,
 	rpl::producer<TextWithEntities> text,
 	const style::margins &margins = st::defaultBoxDividerLabelPadding,
-	const style::DividerLabel &st = st::defaultDividerLabel,
-	RectParts parts = RectPart::Top | RectPart::Bottom);
+	const style::DividerLabel &st = st::defaultDividerLabel);
 not_null<Ui::FlatLabel*> AddSubsectionTitle(
 	not_null<Ui::VerticalLayout*> container,
 	rpl::producer<QString> text,

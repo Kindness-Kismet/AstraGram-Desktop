@@ -161,8 +161,7 @@ void ShowReportFlowBox(
 								= CreateChild<BoxContentDivider>(
 									widget,
 									st::boxDividerHeight,
-									st->divider.bar,
-									RectPart::Top | RectPart::Bottom);
+									st->divider.bar);
 							background->lower();
 							widget->sizeValue(
 							) | rpl::on_next([=](const QSize &s) {

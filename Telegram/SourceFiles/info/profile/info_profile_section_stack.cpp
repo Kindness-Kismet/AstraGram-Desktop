@@ -13,7 +13,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/vertical_list.h"
-#include "ui/rect_part.h"
 #include "ui/ui_utility.h"
 
 #include "styles/style_info.h"
@@ -52,8 +51,7 @@ namespace {
 		inner.data(),
 		std::move(label),
 		st::defaultBoxDividerLabelPadding,
-		st::defaultDividerLabel.bar,
-		RectPart::Top | RectPart::Bottom));
+		st::defaultDividerLabel.bar));
 	// 材质背景下只保留说明文字，背景条随分隔线一起隐藏。
 	for (const auto child : divider->children()) {
 		if (const auto bar = dynamic_cast<Ui::BoxContentDivider*>(child)) {

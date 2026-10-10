@@ -519,9 +519,6 @@ settingsReactionsAboutLabel: FlatLabel(defaultFlatLabel) {
 	minWidth: 240px;
 }
 settingsReactionsAboutPadding: margins(22px, 9px, 22px, 2px);
-reactionsSettingsBox: Box(defaultBox) {
-	shadowIgnoreTopSkip: true;
-}
 
 notifyPreviewMargins: margins(40px, 20px, 40px, 58px);
 notifyPreviewUserpicSize: 36px;

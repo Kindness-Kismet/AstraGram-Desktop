@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/settings_common.h"
 #include "ui/rect.h"
 #include "ui/vertical_list.h"
+#include "ui/widgets/box_content_divider.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/fields/password_input.h"
@@ -58,29 +59,6 @@ Icon CreateInteractiveLottieIcon(
 
 } // namespace
 
-void OneEdgeBoxContentDivider::skipEdge(Qt::Edge edge, bool skip) {
-	const auto was = _skipEdges;
-	if (skip) {
-		_skipEdges |= edge;
-	} else {
-		_skipEdges &= ~edge;
-	}
-	if (was != _skipEdges) {
-		update();
-	}
-}
-
-void OneEdgeBoxContentDivider::paintEvent(QPaintEvent *e) {
-	auto p = QPainter(this);
-	p.fillRect(e->rect(), Ui::BoxContentDivider::color());
-	if (!(_skipEdges & Qt::TopEdge)) {
-		Ui::BoxContentDivider::paintTop(p);
-	}
-	if (!(_skipEdges & Qt::BottomEdge)) {
-		Ui::BoxContentDivider::paintBottom(p);
-	}
-}
-
 BottomButton CreateBottomDisableButton(
 		not_null<Ui::RpWidget*> parent,
 		rpl::producer<QRect> &&sectionGeometryValue,
@@ -96,9 +74,8 @@ BottomButton CreateBottomDisableButton(
 		st::settingsAttentionButton));
 	button->addClickHandler(std::move(callback));
 
-	const auto divider = Ui::CreateChild<OneEdgeBoxContentDivider>(
+	const auto divider = Ui::CreateChild<Ui::BoxContentDivider>(
 		parent.get());
-	divider->skipEdge(Qt::TopEdge, true);
 	rpl::combine(
 		std::move(sectionGeometryValue),
 		parent->geometryValue(),

@@ -1743,7 +1743,7 @@ void GiftBox(
 		not_null<PeerData*> peer,
 		MyGiftsDescriptor my) {
 	box->setWidth(st::boxWideWidth);
-	box->setStyle(st::creditsGiftBox);
+	box->setStyle(st::defaultBox);
 	box->setNoContentMargin(true);
 	box->setCustomCornersFilling(RectPart::FullTop);
 	box->addButton(tr::lng_create_group_back(), [=] { box->closeBox(); });

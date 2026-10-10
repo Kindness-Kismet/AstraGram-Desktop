@@ -1082,8 +1082,6 @@ void AttributesList::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 
 	p.fillRect(rect(), st::boxDividerBg->c);
-	paintTop(p);
-	paintBottom(p);
 }
 
 void AttributesList::refreshButtons() {

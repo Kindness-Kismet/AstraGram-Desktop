@@ -625,10 +625,6 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		: QSize();
 	const auto skips = QMargins(0, 0, 0, aboutSize.height());
 	p.fillRect(rect().marginsRemoved(skips), st::boxDividerBg->c);
-	paintTop(p);
-	if (const auto bottom = skips.bottom()) {
-		paintBottom(p, bottom);
-	}
 }
 
 void InnerWidget::collectionAdded(MTPStarGiftCollection result) {

@@ -7,8 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+#include "ui/rp_widget.h"
 #include "ui/text/text_variant.h"
-#include "ui/widgets/box_content_divider.h"
 
 #include "styles/style_boxes.h"
 #include "styles/style_settings.h"
@@ -128,20 +128,6 @@ BottomButton CreateBottomDisableButton(
 	rpl::producer<QRect> &&sectionGeometryValue,
 	rpl::producer<QString> &&buttonText,
 	Fn<void()> &&callback);
-
-class OneEdgeBoxContentDivider : public Ui::BoxContentDivider {
-public:
-	using Ui::BoxContentDivider::BoxContentDivider;
-
-	void skipEdge(Qt::Edge edge, bool skip);
-
-protected:
-	void paintEvent(QPaintEvent *e) override;
-
-private:
-	Qt::Edges _skipEdges;
-
-};
 
 } // namespace Settings::CloudPassword
 

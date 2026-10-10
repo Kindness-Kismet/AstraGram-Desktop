@@ -112,7 +112,7 @@ void GiftCreditsBox(
 		not_null<PeerData*> peer,
 		Fn<void()> gifted) {
 	box->setWidth(st::boxWideWidth);
-	box->setStyle(st::creditsGiftBox);
+	box->setStyle(st::defaultBox);
 	box->setNoContentMargin(true);
 	box->addButton(tr::lng_create_group_back(), [=] { box->closeBox(); });
 

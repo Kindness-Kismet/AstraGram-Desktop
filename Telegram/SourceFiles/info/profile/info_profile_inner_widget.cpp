@@ -131,9 +131,7 @@ void AddUnofficialSecurityRiskWarning(
 			content->add(object_ptr<Ui::DividerLabel>(
 				content,
 				std::move(label),
-				st::defaultBoxDividerLabelPadding,
-				st::defaultDividerLabel.bar,
-				RectParts()));
+				st::defaultBoxDividerLabelPadding));
 		}
 		content->resizeToWidth(content->width());
 	}, content->lifetime());

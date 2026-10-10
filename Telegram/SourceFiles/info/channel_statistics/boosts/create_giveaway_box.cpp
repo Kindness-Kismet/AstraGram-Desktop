@@ -50,6 +50,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_giveaway.h"
 #include "styles/style_info.h"
 #include "styles/style_layers.h"
+#include "styles/style_premium.h"
 #include "styles/style_settings.h"
 
 #include <xxhash.h> // XXH64.
@@ -124,7 +125,7 @@ void AddPremiumTopBarWithDefaultTitleBar(
 	std::move(
 		titleText
 	) | rpl::on_next([=](const QString &s) {
-		state->title.setText(st::startGiveawayBox.title.style, s);
+		state->title.setText(st::premiumGiftBox.title.style, s);
 	}, box->lifetime());
 
 	const auto hPadding = rect::m::sum::h(st::boxRowPadding);
@@ -172,7 +173,7 @@ void AddPremiumTopBarWithDefaultTitleBar(
 				p.setBrush(st::boxBg);
 				p.drawRoundedRect(resultRect, radius, radius);
 
-				p.setPen(st::startGiveawayBox.title.textFg);
+				p.setPen(st::premiumGiftBox.title.textFg);
 				p.setBrush(Qt::NoBrush);
 				state->title.draw(p, titlePaintContext);
 			}
@@ -210,9 +211,7 @@ void AddPremiumTopBarWithDefaultTitleBar(
 			st::giveawayGiftCodeTopHeight
 				- st::boxTitleHeight
 				+ st::boxDividerHeight
-				+ st::defaultVerticalListSkip,
-			st::defaultDividerBar,
-			RectPart::Bottom),
+				+ st::defaultVerticalListSkip),
 		style::margins());
 	bar->setPaused(true);
 	bar->setRoundEdges(false);
@@ -1351,7 +1350,7 @@ void CreateGiveawayBox(
 
 	{
 		using namespace Info::Statistics;
-		const auto &stButton = st::startGiveawayBox;
+		const auto &stButton = st::premiumGiftBox;
 		box->setStyle(stButton);
 		auto button = object_ptr<Ui::RoundButton>(
 			box,

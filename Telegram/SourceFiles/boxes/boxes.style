@@ -613,7 +613,6 @@ aiComposeBox: Box(defaultBox) {
 	buttonHeight: 42px;
 	buttonWide: true;
 	button: aiComposeBoxButton;
-	shadowIgnoreTopSkip: true;
 	bg: boxDividerBg;
 }
 aiComposeBoxClose: IconButton(boxTitleClose) {

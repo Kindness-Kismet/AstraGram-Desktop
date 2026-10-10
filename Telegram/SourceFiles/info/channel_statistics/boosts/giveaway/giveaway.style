@@ -172,7 +172,6 @@ giveawayGiftCodeBox: Box(defaultBox) {
 	buttonHeight: 42px;
 	buttonWide: true;
 	button: giveawayGiftCodeBoxButton;
-	shadowIgnoreTopSkip: true;
 }
 giveawayGiftCodeBoxUpgradeNext: RoundButton(defaultLightButton, giveawayGiftCodeBoxButton) {
 }
@@ -183,9 +182,6 @@ giveawayRefundedLabel: FlatLabel(boxLabel) {
 }
 giveawayRefundedPadding: margins(8px, 10px, 8px, 10px);
 
-startGiveawayBox: Box(premiumGiftBox) {
-	shadowIgnoreTopSkip: true;
-}
 startGiveawayBoxTitleClose: IconButton(boxTitleClose) {
 	ripple: universalRippleAnimation;
 }

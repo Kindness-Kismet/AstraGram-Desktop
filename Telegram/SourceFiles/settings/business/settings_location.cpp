@@ -278,7 +278,6 @@ void Location::setupUnsupported(not_null<Ui::VerticalLayout*> content) {
 		.showFinished = showFinishes(),
 		.about = tr::lng_location_fallback(tr::marked),
 		.aboutMargins = st::peerAppearanceCoverLabelMargin,
-		.parts = RectPart::Top,
 		.showDivider = false,
 	});
 }

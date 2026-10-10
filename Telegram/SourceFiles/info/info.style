@@ -537,8 +537,6 @@ infoProfileSkip: 12px;
 infoProfileDividerPadding: margins(18px, 0px, 18px, 0px);
 infoProfileDivider: DividerBar {
 	bg: windowDividerFg;
-	top: icon {};
-	bottom: icon {};
 }
 
 infoProfileLabeledButtonQr: IconButton(defaultIconButton) {

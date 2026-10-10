@@ -633,7 +633,7 @@ void ReactionsSettingsBox(
 		st::settingsReactionsAboutPadding,
 		style::al_top);
 
-	box->setStyle(st::reactionsSettingsBox);
+	box->setStyle(st::defaultBox);
 	box->setTitle(tr::lng_settings_chat_reactions_title());
 	box->setWidth(st::boxWideWidth);
 	box->addButton(tr::lng_box_ok(), [=] { box->closeBox(); });

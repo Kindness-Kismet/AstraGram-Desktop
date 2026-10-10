@@ -1777,9 +1777,6 @@ paidTagPadding: margins(16px, 6px, 16px, 6px);
 
 pickLocationRowHeight: 52px;
 
-sendGifBox: Box(defaultBox) {
-	shadowIgnoreBottomSkip: true;
-}
 
 processingVideoTipMaxWidth: 364px;
 processingVideoTipShift: 8px;
@@ -1821,7 +1818,6 @@ frozenInfoBox: Box(defaultBox) {
 		textTop: 12px;
 		style: semiboldTextStyle;
 	}
-	shadowIgnoreTopSkip: true;
 }
 
 menuTranscribeItemPadding: margins(0px, 10px, 0px, 10px);

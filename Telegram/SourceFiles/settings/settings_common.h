@@ -314,7 +314,6 @@ struct DividerWithLottieDescriptor {
 	rpl::producer<> showFinished;
 	rpl::producer<TextWithEntities> about;
 	std::optional<QMargins> aboutMargins;
-	RectParts parts = RectPart::Top | RectPart::Bottom;
 	bool showDivider = true;
 };
 void AddDividerTextWithLottie(

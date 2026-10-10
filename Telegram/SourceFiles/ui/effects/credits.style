@@ -120,9 +120,6 @@ creditsHistoryEntryStarGiftSkip: 10px;
 creditsHistoryEntryStarGiftSize: 120px;
 creditsHistoryEntryStarGiftSpace: 125px;
 
-creditsGiftBox: Box(defaultBox) {
-	shadowIgnoreTopSkip: true;
-}
 
 giftBox: Box(defaultBox) {
 	buttonPadding: margins(22px, 11px, 22px, 12px);

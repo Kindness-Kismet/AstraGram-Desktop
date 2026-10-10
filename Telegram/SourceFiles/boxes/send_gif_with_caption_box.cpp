@@ -512,7 +512,7 @@ void CaptionBox(
 		return;
 	}
 	box->setWidth(st::boxWidth);
-	box->getDelegate()->setStyle(st::sendGifBox);
+	box->getDelegate()->setStyle(st::defaultBox);
 
 	const auto input = AddInputField(box, controller);
 	box->setFocusCallback([=] {

@@ -112,7 +112,7 @@ void CreateManagedBotBox(
 		&session->mtp());
 	const auto state = box->lifetime().make_state<State>();
 
-	box->setStyle(st::createBotBox);
+	box->setStyle(st::defaultBox);
 	box->setWidth(st::boxWidth);
 	box->setNoContentMargin(true);
 	box->addTopButton(st::boxTitleClose, [=] {

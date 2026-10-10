@@ -1280,7 +1280,6 @@ suggestPriceBox: Box(defaultBox) {
 		textTop: 12px;
 		style: semiboldTextStyle;
 	}
-	shadowIgnoreTopSkip: true;
 }
 suggestPriceEstimate: FlatLabel(defaultFlatLabel) {
 	textFg: windowSubTextFg;
@@ -1351,7 +1350,6 @@ stakeBox: Box(defaultBox) {
 		textTop: 12px;
 		style: semiboldTextStyle;
 	}
-	shadowIgnoreTopSkip: true;
 }
 stakeEmojiSize: 20px;
 stakeEmojiTop: 8px;

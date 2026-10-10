@@ -156,5 +156,4 @@ proxyApplyBox: Box(defaultBox) {
 	buttonHeight: 38px;
 	buttonWide: true;
 	button: proxyApplyBoxButton;
-	shadowIgnoreTopSkip: true;
 }

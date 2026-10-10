@@ -1154,8 +1154,6 @@ groupCallLayerBox: Box(groupCallBox) {
 }
 groupCallDividerBar: DividerBar {
 	bg: groupCallBg;
-	top: icon {{ size(1px, 1px), groupCallMemberNotJoinedStatus }};
-	bottom: icon {{ size(1px, 1px), groupCallMemberNotJoinedStatus }};
 }
 groupCallDividerLabel: DividerLabel {
 	bar: groupCallDividerBar;
@@ -1696,7 +1694,6 @@ confcallLinkBoxInitial: Box(defaultBox) {
 	buttonHeight: 42px;
 	buttonWide: true;
 	button: confcallLinkButton;
-	shadowIgnoreTopSkip: true;
 }
 confcallLinkBox: Box(confcallLinkBoxInitial) {
 	buttonPadding: margins(12px, 11px, 24px, 24px);

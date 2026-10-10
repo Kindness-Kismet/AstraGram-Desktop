@@ -702,9 +702,7 @@ void AddDividerTextWithLottie(
 	if (descriptor.showDivider) {
 		const auto divider = Ui::CreateChild<Ui::BoxContentDivider>(
 			container.get(),
-			0,
-			st::defaultDividerBar,
-			descriptor.parts);
+			0);
 		divider->lower();
 		verticalLayout->geometryValue(
 		) | rpl::on_next([=](const QRect &r) {

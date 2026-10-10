@@ -102,9 +102,6 @@ inviteForbiddenLockBg: dialogsUnreadBgMuted;
 inviteForbiddenLockIcon: icon {{ "emoji/premium_lock", dialogsUnreadFg }};
 guardBotReplaceBox: Box(futureOwnerBox) {
 }
-createBotBox: Box(defaultBox) {
-	shadowIgnoreTopSkip: true;
-}
 createBotUserpicPadding: margins(0px, 16px, 0px, 10px);
 createBotTitlePadding: margins(0px, 0px, 0px, 8px);
 createBotSubtitlePadding: margins(0px, 0px, 0px, 4px);

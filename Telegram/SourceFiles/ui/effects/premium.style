@@ -496,7 +496,6 @@ starrefFooterBox: Box(defaultBox) {
 	buttonHeight: 42px;
 	buttonWide: true;
 	button: starrefFooterButton;
-	shadowIgnoreTopSkip: true;
 }
 starrefCopyButton: RoundButton(starrefFooterButton) {
 	icon: icon {{ "info/edit/links_copy", activeButtonFg }};
