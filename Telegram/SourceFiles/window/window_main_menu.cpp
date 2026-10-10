@@ -64,7 +64,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/scroll_area.h"
-#include "ui/widgets/shadow.h"
 #include "ui/wrap/slide_wrap.h"
 #include "wallet/wallet_panel.h"
 #include "window/themes/window_theme.h"
@@ -338,11 +337,6 @@ MainMenu::MainMenu(
 , _accounts(_inner->add(object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 	_inner.get(),
 	object_ptr<Ui::VerticalLayout>(_inner.get()))))
-, _shadow(_inner->add(object_ptr<Ui::SlideWrap<Ui::PlainShadow>>(
-	_inner.get(),
-	object_ptr<Ui::PlainShadow>(_inner.get(), st::windowDividerFg)),
-	{ st::defaultBoxDividerLabelPadding.left(), 0,
-		st::defaultBoxDividerLabelPadding.right(), 0 }))
 , _menu(_inner->add(
 	object_ptr<Ui::VerticalLayout>(_inner.get()),
 	{ st::mainMenuContentMargin, st::mainMenuSkip,
@@ -358,7 +352,6 @@ MainMenu::MainMenu(
 	setObjectName(u"mainMenu"_q);
 	const auto material = new MainMenuMaterialEffect(this);
 	setGraphicsEffect(material);
-	ExtrasFeatures::WindowMaterial::watchSurface(_shadow->entity());
 	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=](bool active) {
 		material->setEnabled(active);
 		_iconFg.refresh();
@@ -391,16 +384,6 @@ MainMenu::MainMenu(
 	) | rpl::on_next([=] {
 		_telegram->moveToLeft(st::mainMenuFooterLeft, _footer->height() - st::mainMenuTelegramBottom - _telegram->height());
 		_version->moveToLeft(st::mainMenuFooterLeft, _footer->height() - st::mainMenuVersionBottom - _version->height());
-	}, _footer->lifetime());
-	_footer->paintRequest(
-	) | rpl::on_next([=] {
-		auto p = QPainter(_footer);
-		p.fillRect(
-			st::mainMenuFooterLeft,
-			0,
-			_footer->width() - 2 * st::mainMenuFooterLeft,
-			st::lineWidth,
-			st::windowDividerFg);
 	}, _footer->lifetime());
 
 	parentResized();
@@ -599,9 +582,7 @@ void MainMenu::setupArchive() {
 		tr::lng_archived_name(),
 		st::mainMenuButton,
 		{ .icon = &st::menuIconArchiveOpen, .color = &_iconFg.color() });
-	ExtrasFeatures::WindowMaterial::watchSurface(inner->add(
-		object_ptr<Ui::PlainShadow>(inner, st::windowDividerFg),
-		st::mainMenuSeparatorPadding));
+	Ui::AddSkip(inner, st::mainMenuSectionSkip);
 	button->setAcceptBoth(true);
 	button->clicks(
 	) | rpl::on_next([=](Qt::MouseButton which) {
@@ -690,8 +671,6 @@ void MainMenu::setupAccounts() {
 
 	_accounts->toggleOn(Core::App().settings().mainMenuAccountsShownValue());
 	_accounts->finishAnimating();
-
-	_shadow->setDuration(0)->toggleOn(_accounts->shownValue());
 }
 
 void MainMenu::setupAccountsToggle() {
@@ -735,14 +714,14 @@ void MainMenu::setupMenu() {
 	const auto controller = _controller;
 	auto section = _menu->add(object_ptr<Ui::VerticalLayout>(_menu));
 	const auto nextSection = [&] {
-		const auto separator = _menu->add(
-			object_ptr<Ui::SlideWrap<Ui::PlainShadow>>(
+		const auto gap = _menu->add(
+			object_ptr<Ui::SlideWrap<>>(
 				_menu,
-				object_ptr<Ui::PlainShadow>(_menu, st::windowDividerFg),
-				st::mainMenuSeparatorPadding));
-		ExtrasFeatures::WindowMaterial::watchSurface(separator->entity());
-		// 分隔线随分组布局立即显隐，让菜单入场截图包含最终状态。
-		separator->setDuration(0)->toggleOn(
+				object_ptr<Ui::FixedHeightWidget>(
+					_menu,
+					st::mainMenuSectionSkip)));
+		// 分组间距随分组布局立即显隐，让菜单入场截图包含最终状态。
+		gap->setDuration(0)->toggleOn(
 			section->heightValue() | rpl::map([](int height) {
 				return height > 0;
 			}));

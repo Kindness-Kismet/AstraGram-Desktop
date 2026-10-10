@@ -27,7 +27,6 @@ class PopupMenu;
 class ScrollArea;
 class VerticalLayout;
 class RippleButton;
-class PlainShadow;
 class SettingsButton;
 template <typename Widget>
 class SlideWrap;
@@ -103,7 +102,6 @@ private:
 	not_null<Ui::VerticalLayout*> _inner;
 	not_null<Ui::RpWidget*> _topShadowSkip;
 	not_null<Ui::SlideWrap<Ui::VerticalLayout>*> _accounts;
-	not_null<Ui::SlideWrap<Ui::PlainShadow>*> _shadow;
 	not_null<Ui::VerticalLayout*> _menu;
 	not_null<Ui::RpWidget*> _footer;
 	not_null<Ui::FlatLabel*> _telegram;
