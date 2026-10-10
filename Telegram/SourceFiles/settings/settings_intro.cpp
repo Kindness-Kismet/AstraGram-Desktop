@@ -6,7 +6,6 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/settings_intro.h"
-#include "extras/features/window_material/window_material.h"
 #include "settings/settings_card_layout.h"
 
 #include "settings/sections/settings_advanced.h"
@@ -15,9 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_update.h"
 #include "settings/settings_codes.h"
 #include "ui/basic_click_handlers.h"
-#include "ui/wrap/fade_wrap.h"
 #include "ui/wrap/vertical_layout.h"
-#include "ui/widgets/shadow.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/cached_round_corners.h"
@@ -185,7 +182,6 @@ private:
 	QRect contentGeometry() const;
 	void setInnerWidget(object_ptr<Ui::RpWidget> content);
 	void showContent(not_null<Window::Controller*> window);
-	rpl::producer<bool> topShadowToggledValue() const;
 	void createTopBar(not_null<Window::Controller*> window);
 	void applyAdditionalScroll(int additionalScroll);
 
@@ -199,8 +195,6 @@ private:
 	int _additionalScroll = 0;
 	object_ptr<TopBar> _topBar = { nullptr };
 
-	object_ptr<Ui::FadeShadow> _topShadow;
-
 };
 
 IntroWidget::IntroWidget(
@@ -208,8 +202,7 @@ IntroWidget::IntroWidget(
 	not_null<Window::Controller*> window)
 : RpWidget(parent)
 , _wrap(this)
-, _scroll(Ui::CreateChild<Ui::ScrollArea>(_wrap.data()))
-, _topShadow(this) {
+, _scroll(Ui::CreateChild<Ui::ScrollArea>(_wrap.data())) {
 	_wrap->setAttribute(Qt::WA_OpaquePaintEvent);
 	_wrap->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
@@ -224,11 +217,6 @@ IntroWidget::IntroWidget(
 
 	createTopBar(window);
 	showContent(window);
-	_topShadow->toggleOn(
-		topShadowToggledValue(
-		) | rpl::filter([](bool shown) {
-			return true;
-		}));
 }
 
 QString IntroWidget::accessibilityName() {
@@ -241,8 +229,6 @@ void IntroWidget::updateControlsGeometry() {
 	}
 
 	_topBar->resizeToWidth(width());
-	_topShadow->resizeToWidth(width());
-	_topShadow->moveToLeft(0, _topBar->height());
 	_wrap->setGeometry(contentGeometry());
 
 	auto scrollGeometry = _wrap->rect().marginsRemoved(
@@ -314,23 +300,11 @@ void IntroWidget::setInnerWidget(object_ptr<Ui::RpWidget> content) {
 	}, _innerWrap->lifetime());
 }
 
-rpl::producer<bool> IntroWidget::topShadowToggledValue() const {
-	return rpl::combine(
-		_scroll->scrollTopValue(),
-		_scrollTopSkip.value(),
-		ExtrasFeatures::WindowMaterial::changes(_topBar.data()),
-		[](int top, int skip, bool material) {
-			return (top > 0 || skip > 0) && !material;
-		});
-}
-
 void IntroWidget::showContent(not_null<Window::Controller*> window) {
 	setInnerWidget(CreateIntroSettings(_scroll, window));
 
 	_additionalScroll = 0;
 	updateControlsGeometry();
-	_topShadow->raise();
-	_topShadow->finishAnimating();
 }
 
 void IntroWidget::setInnerFocus() {

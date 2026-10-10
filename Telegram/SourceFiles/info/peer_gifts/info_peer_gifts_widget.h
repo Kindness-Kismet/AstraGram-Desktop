@@ -117,8 +117,6 @@ public:
 
 	rpl::producer<QString> title() override;
 
-	rpl::producer<bool> desiredBottomShadowVisibility() override;
-
 	void showFinished() override;
 
 private:
@@ -133,7 +131,6 @@ private:
 
 	InnerWidget *_inner = nullptr;
 	QPointer<Ui::SlideWrap<Ui::RpWidget>> _pinnedToBottom;
-	rpl::variable<bool> _hasPinnedToBottom;
 	rpl::variable<bool> _emptyCollectionShown;
 	rpl::variable<Descriptor> _descriptor;
 	std::optional<bool> _notifyEnabled;

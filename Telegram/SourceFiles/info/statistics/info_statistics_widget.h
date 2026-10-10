@@ -42,7 +42,6 @@ public:
 
 	bool showInternal(not_null<ContentMemento*> memento) override;
 	rpl::producer<QString> title() override;
-	rpl::producer<bool> desiredShadowVisibility() const override;
 	void showFinished() override;
 	void fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) override;
 	[[nodiscard]] rpl::producer<> topBarMenuFilledChanges() const override;

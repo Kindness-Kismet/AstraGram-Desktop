@@ -18,8 +18,6 @@ namespace Ui {
 namespace Controls {
 struct SwipeHandlerArgs;
 } // namespace Controls
-class FadeShadow;
-class PlainShadow;
 class PopupMenu;
 class IconButton;
 class RoundRect;
@@ -113,7 +111,6 @@ public:
 		return _controller.get();
 	}
 
-	bool hasTopBarShadow() const override;
 	QPixmap grabForShowAnimation(
 		const Window::SectionSlideParams &params) override;
 
@@ -210,7 +207,6 @@ private:
 	QRect contentGeometry() const;
 	rpl::producer<int> desiredHeightForContent() const;
 	void finishShowContent();
-	rpl::producer<bool> topShadowToggledValue() const;
 	void updateContentGeometry();
 
 	void showContent(object_ptr<ContentWidget> content);
@@ -247,8 +243,6 @@ private:
 	Fn<void()> _settingsRootBack;
 	Ui::Animations::Simple _topBarOverrideAnimation;
 
-	object_ptr<Ui::FadeShadow> _topShadow;
-	object_ptr<Ui::FadeShadow> _bottomShadow;
 	base::unique_qptr<Ui::IconButton> _topBarMenuToggle;
 	base::unique_qptr<Ui::PopupMenu> _topBarMenu;
 
@@ -258,8 +252,6 @@ private:
 	bool _shortcutsSetup = false;
 
 	rpl::event_stream<rpl::producer<int>> _desiredHeights;
-	rpl::event_stream<rpl::producer<bool>> _desiredShadowVisibilities;
-	rpl::event_stream<rpl::producer<bool>> _desiredBottomShadowVisibilities;
 	rpl::event_stream<rpl::producer<SelectedItems>> _selectedLists;
 	rpl::event_stream<rpl::producer<int>> _scrollTillBottomChanges;
 	rpl::event_stream<> _contentChanges;

@@ -10,7 +10,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_widgets.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/widgets/fields/input_field.h"
-#include "ui/widgets/shadow.h"
 #include "ui/widgets/buttons.h"
 #include "lang/lang_keys.h"
 
@@ -46,9 +45,6 @@ auto SearchFieldController::createRowView(
 	}, cancel->lifetime());
 	cancel->finishAnimating();
 
-	auto shadow = CreateChild<Ui::PlainShadow>(wrap);
-	shadow->show();
-
 	wrap->widthValue(
 	) | rpl::on_next([=, &st](int newWidth) {
 		auto availableWidth = newWidth
@@ -60,11 +56,6 @@ auto SearchFieldController::createRowView(
 			availableWidth,
 			field->height());
 		cancel->moveToRight(0, 0);
-		shadow->setGeometry(
-			0,
-			st.height - st::lineWidth,
-			newWidth,
-			st::lineWidth);
 	}, wrap->lifetime());
 	wrap->paintRequest(
 	) | rpl::on_next([=, &st] {

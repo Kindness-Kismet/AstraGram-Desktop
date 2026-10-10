@@ -107,8 +107,6 @@ public:
 
 	rpl::producer<int> scrollHeightValue() const;
 	rpl::producer<int> desiredHeightValue() const override;
-	virtual rpl::producer<bool> desiredShadowVisibility() const;
-	bool hasTopBarShadow() const;
 
 	virtual void setInnerFocus();
 	virtual void showFinished() {
@@ -169,8 +167,6 @@ public:
 
 	[[nodiscard]] int scrollBottomSkip() const;
 	[[nodiscard]] rpl::producer<int> scrollBottomSkipValue() const;
-	[[nodiscard]] virtual auto desiredBottomShadowVisibility()
-		-> rpl::producer<bool>;
 
 	void replaceSwipeHandler(Ui::Controls::SwipeHandlerArgs *incompleteArgs);
 

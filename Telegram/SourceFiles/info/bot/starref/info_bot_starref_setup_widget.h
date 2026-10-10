@@ -48,7 +48,6 @@ public:
 
 	bool showInternal(not_null<ContentMemento*> memento) override;
 	rpl::producer<QString> title() override;
-	rpl::producer<bool> desiredShadowVisibility() const override;
 	void showFinished() override;
 	void setInnerFocus() override;
 	void enableBackButton() override;

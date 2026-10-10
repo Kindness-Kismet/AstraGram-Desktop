@@ -37,7 +37,6 @@ public:
 
 	Dialogs::RowDescriptor activeChat() const override;
 
-	bool hasTopBarShadow() const override;
 	QPixmap grabForShowAnimation(
 		const Window::SectionSlideParams &params) override;
 

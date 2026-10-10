@@ -88,8 +88,6 @@ public:
 	void setInnerFocus() override;
 	const Ui::RoundRect *bottomSkipRounding() const override;
 
-	rpl::producer<bool> desiredShadowVisibility() const override;
-
 	bool closeByOutsideClick() const override;
 	void checkBeforeClose(Fn<void()> close) override;
 	void checkBeforeCloseByEscape(Fn<void()> close) override;

@@ -27,9 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/menu/menu_item_base.h"
 #include "ui/widgets/discrete_sliders.h"
 #include "ui/widgets/buttons.h"
-#include "ui/widgets/shadow.h"
 #include "ui/widgets/popup_menu.h"
-#include "ui/wrap/fade_wrap.h"
 #include "ui/ui_utility.h"
 #include "core/application.h"
 #include "calls/calls_instance.h"
@@ -132,19 +130,7 @@ WrapWidget::WrapWidget(
 	window->windowId().type == Window::SeparateType::SharedMedia)
 , _wrap(wrap)
 , _controller(createController(window, memento->content()))
-, _settingsNavigation(settingsNavigation)
-, _topShadow(this)
-, _bottomShadow(this) {
-	_topShadow->toggleOn(
-		topShadowToggledValue(
-		) | rpl::filter([](bool shown) {
-			return true;
-		}));
-
-	_bottomShadow->toggleOn(
-		_desiredBottomShadowVisibilities.events(
-		) | rpl::flatten_latest() | rpl::distinct_until_changed());
-
+, _settingsNavigation(settingsNavigation) {
 	_wrap.changes(
 	) | rpl::on_next([this] {
 		setupTop();
@@ -798,9 +784,6 @@ void WrapWidget::finishShowContent() {
 		_topBar->setStories(_content->titleStories());
 	}
 	_desiredHeights.fire(desiredHeightForContent());
-	_desiredShadowVisibilities.fire(_content->desiredShadowVisibility());
-	_desiredBottomShadowVisibilities.fire(
-		_content->desiredBottomShadowVisibility());
 	if (auto selection = _content->selectedListValue()) {
 		_selectedLists.fire(std::move(selection));
 	} else {
@@ -808,10 +791,6 @@ void WrapWidget::finishShowContent() {
 			SelectedItems(Storage::SharedMediaType::Photo)));
 	}
 	_scrollTillBottomChanges.fire(_content->scrollTillBottomChanges());
-	_topShadow->raise();
-	_topShadow->finishAnimating();
-	_bottomShadow->raise();
-	_bottomShadow->finishAnimating();
 	_contentChanges.fire({});
 
 	_content->scrollBottomSkipValue(
@@ -835,12 +814,6 @@ void WrapWidget::finishShowContent() {
 
 		showInternal(sectionMemento.get(), params);
 	}, _content->lifetime());
-}
-
-rpl::producer<bool> WrapWidget::topShadowToggledValue() const {
-	return _desiredShadowVisibilities.events()
-		| rpl::flatten_latest(
-		) | rpl::map([=](bool v) { return v && (_topBar != nullptr); });
 }
 
 rpl::producer<int> WrapWidget::desiredHeightForContent() const {
@@ -918,17 +891,8 @@ rpl::producer<> WrapWidget::contentChanged() const {
 	return _contentChanges.events();
 }
 
-bool WrapWidget::hasTopBarShadow() const {
-	return _topShadow->toggled();
-}
-
 QPixmap WrapWidget::grabForShowAnimation(
 		const Window::SectionSlideParams &params) {
-	if (params.withTopBarShadow) {
-		_topShadow->setVisible(false);
-	} else {
-		_topShadow->setVisible(_topShadow->toggled());
-	}
 	const auto expanding = _expanding;
 	if (expanding) {
 		_grabbingForExpanding = true;
@@ -937,17 +901,11 @@ QPixmap WrapWidget::grabForShowAnimation(
 	if (expanding) {
 		_grabbingForExpanding = false;
 	}
-	if (params.withTopBarShadow) {
-		_topShadow->setVisible(true);
-	}
 	return result;
 }
 
 void WrapWidget::showAnimatedHook(
 		const Window::SectionSlideParams &params) {
-	if (params.withTopBarShadow) {
-		_topShadow->setVisible(true);
-	}
 	_topBarSurrogate = createTopBarSurrogate(this);
 }
 
@@ -958,9 +916,6 @@ void WrapWidget::doSetInnerFocus() {
 }
 
 void WrapWidget::showFinishedHook() {
-	// Restore shadow visibility after showChildren() call.
-	_topShadow->toggle(_topShadow->toggled(), anim::type::instant);
-	_bottomShadow->toggle(_bottomShadow->toggled(), anim::type::instant);
 	_topBarSurrogate.destroy();
 	_content->showFinished();
 
@@ -1115,8 +1070,6 @@ void WrapWidget::showNewContent(
 		newContent = createContent(memento, newController.get());
 	}
 	if (needAnimation) {
-		animationParams.withTopBarShadow = hasTopBarShadow()
-			&& newContent->hasTopBarShadow();
 		animationParams.oldContentCache = grabForShowAnimation(
 			animationParams);
 		const auto layer = (wrap() == Wrap::Layer);
@@ -1228,17 +1181,7 @@ bool WrapWidget::closeByBackButton() {
 
 void WrapWidget::updateContentGeometry() {
 	if (_content) {
-		if (_topBar) {
-			_topShadow->resizeToWidth(width());
-			_topShadow->moveToLeft(0, _topBar->height());
-		}
 		_content->setGeometry(contentGeometry());
-		_bottomShadow->resizeToWidth(width());
-		_bottomShadow->moveToLeft(
-			0,
-			_content->y()
-				+ _content->height()
-				- _content->scrollBottomSkip());
 	}
 }
 

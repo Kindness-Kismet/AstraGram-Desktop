@@ -113,10 +113,6 @@ void Widget::setInternalState(
 	restoreState(memento);
 }
 
-rpl::producer<bool> Widget::desiredShadowVisibility() const {
-	return rpl::single<bool>(true);
-}
-
 void Widget::showFinished() {
 	_inner->showFinished();
 }

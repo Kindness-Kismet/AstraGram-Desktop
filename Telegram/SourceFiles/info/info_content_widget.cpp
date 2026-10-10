@@ -351,18 +351,6 @@ rpl::producer<int> ContentWidget::desiredHeightValue() const {
 	});
 }
 
-rpl::producer<bool> ContentWidget::desiredShadowVisibility() const {
-	using namespace rpl::mappers;
-	return rpl::combine(
-		_scroll->scrollTopValue(),
-		_scrollTopSkip.value()
-	) | rpl::map((_1 > 0) || (_2 > 0));
-}
-
-bool ContentWidget::hasTopBarShadow() const {
-	return (_scroll->scrollTop() > 0);
-}
-
 void ContentWidget::setInnerFocus() {
 	if (_searchField) {
 		_searchField->setFocus();
@@ -531,17 +519,6 @@ int ContentWidget::scrollBottomSkip() const {
 
 rpl::producer<int> ContentWidget::scrollBottomSkipValue() const {
 	return _scrollBottomSkip.value();
-}
-
-rpl::producer<bool> ContentWidget::desiredBottomShadowVisibility() {
-	using namespace rpl::mappers;
-	return rpl::combine(
-		_scroll->scrollTopValue(),
-		_scrollBottomSkip.value(),
-		_scroll->heightValue()
-	) | rpl::map([=](int scroll, int skip, int) {
-		return ((skip > 0) && (scroll < _scroll->scrollTopMax()));
-	});
 }
 
 not_null<Ui::ScrollArea*> ContentWidget::scroll() const {

@@ -214,7 +214,6 @@ void Widget::refreshBottom() {
 	delete _pinnedToBottom.data();
 	if (!withButton) {
 		setScrollBottomSkip(0);
-		_hasPinnedToBottom = false;
 	} else {
 		setupBottomButton(wasBottom);
 	}
@@ -258,7 +257,6 @@ void Widget::setupBottomButton(int wasBottomHeight) {
 		return Ui::Text::IconEmoji(&st::collectionAddIcon).append(text);
 	}));
 	button->show();
-	_hasPinnedToBottom = true;
 
 	button->setClickedCallback([=] {
 		if (const auto id = _albumId.current()) {
@@ -314,10 +312,6 @@ rpl::producer<QString> Widget::title() {
 		: (peer && peer->isSelf())
 		? tr::lng_menu_my_profile()
 		: tr::lng_stories_my_title();
-}
-
-rpl::producer<bool> Widget::desiredBottomShadowVisibility() {
-	return _hasPinnedToBottom.value();
 }
 
 std::shared_ptr<Info::Memento> Make(not_null<PeerData*> peer, int albumId) {

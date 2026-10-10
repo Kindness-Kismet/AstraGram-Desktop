@@ -9,16 +9,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/features/window_material/window_material.h"
 
 #include "info/info_memento.h"
-#include "settings/sections/settings_main.h"
-#include "settings/sections/settings_information.h"
 #include "settings/settings_common_session.h"
 #include "menu/menu_send.h"
 #include "ui/ui_utility.h"
 #include "styles/style_layers.h"
-
-// AyuGram includes
-#include "extras/ui/settings/settings_main.h"
-
 
 namespace Info {
 namespace Settings {
@@ -216,19 +210,6 @@ void Widget::setInnerFocus() {
 
 const Ui::RoundRect *Widget::bottomSkipRounding() const {
 	return _inner->bottomSkipRounding();
-}
-
-rpl::producer<bool> Widget::desiredShadowVisibility() const {
-	auto desired = (_type == ::Settings::MainId()
-		|| _type == ::Settings::InformationId()
-		|| _type == ::Settings::ExtrasMain::Id())
-		? ContentWidget::desiredShadowVisibility()
-		: rpl::single(true);
-	return rpl::combine(
-		std::move(desired),
-		ExtrasFeatures::WindowMaterial::changes(_inner.get()),
-		[](bool shown, bool material) { return shown && !material; }
-	) | rpl::distinct_until_changed();
 }
 
 bool Widget::closeByOutsideClick() const {

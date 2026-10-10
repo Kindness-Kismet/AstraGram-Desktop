@@ -76,8 +76,6 @@ public:
 
 	rpl::producer<QString> title() override;
 
-	rpl::producer<bool> desiredBottomShadowVisibility() override;
-
 	void enableBackButton() override;
 	void showFinished() override;
 
@@ -95,7 +93,6 @@ private:
 	InnerWidget *_inner = nullptr;
 	base::weak_qptr<Ui::RpWidget> _pinnedToTop;
 	QPointer<Ui::SlideWrap<Ui::RpWidget>> _pinnedToBottom;
-	rpl::variable<bool> _hasPinnedToBottom;
 	rpl::variable<bool> _emptyAlbumShown;
 	bool _shown = false;
 	std::unique_ptr<FlexibleScrollHelper> _flexibleScrollHelper;

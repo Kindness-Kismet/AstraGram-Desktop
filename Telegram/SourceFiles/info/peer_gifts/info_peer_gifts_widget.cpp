@@ -2507,7 +2507,6 @@ void Widget::refreshBottom() {
 	delete _pinnedToBottom.data();
 	if (!notify && !withButton) {
 		setScrollBottomSkip(0);
-		_hasPinnedToBottom = false;
 	} else if (withButton) {
 		setupBottomButton(wasBottom);
 	} else {
@@ -2534,7 +2533,6 @@ void Widget::setupBottomButton(int wasBottomHeight) {
 		return Ui::Text::IconEmoji(&st::collectionAddIcon).append(text);
 	}));
 	button->show();
-	_hasPinnedToBottom = true;
 
 	button->setClickedCallback([=] {
 		if (const auto id = _descriptor.current().collectionId) {
@@ -2651,7 +2649,6 @@ void Widget::setupNotifyCheckbox(int wasBottomHeight, bool enabled) {
 			true,
 			wasBottomHeight ? anim::type::instant : anim::type::normal);
 	}
-	_hasPinnedToBottom = true;
 }
 
 void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
@@ -2660,10 +2657,6 @@ void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 
 rpl::producer<QString> Widget::title() {
 	return tr::lng_peer_gifts_title();
-}
-
-rpl::producer<bool> Widget::desiredBottomShadowVisibility() {
-	return _hasPinnedToBottom.value();
 }
 
 not_null<PeerData*> Widget::peer() const {

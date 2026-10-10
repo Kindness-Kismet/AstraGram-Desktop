@@ -20,20 +20,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Info::Profile {
 namespace {
 
+// 分组之间只留空白，不画分隔线。
 [[nodiscard]] not_null<Ui::SlideWrap<>*> CreatePlainSeparator(
 		not_null<Ui::VerticalLayout*> layout) {
-	auto inner = object_ptr<Ui::VerticalLayout>(layout);
-	Ui::AddSkip(inner.data(), st::infoProfileSkip);
-	const auto divider = inner->add(object_ptr<Ui::BoxContentDivider>(
-		inner.data(),
-		st::lineWidth,
-		st::infoProfileDivider),
-		st::infoProfileDividerPadding);
-	ExtrasFeatures::WindowMaterial::watchSurface(divider);
-	Ui::AddSkip(inner.data(), st::infoProfileSkip);
-	return layout->add(object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+	return layout->add(object_ptr<Ui::SlideWrap<>>(
 		layout,
-		std::move(inner)));
+		object_ptr<Ui::FixedHeightWidget>(layout, 2 * st::infoProfileSkip)));
 }
 
 [[nodiscard]] not_null<Ui::SlideWrap<>*> CreateTextSeparator(
@@ -52,7 +44,7 @@ namespace {
 		std::move(label),
 		st::defaultBoxDividerLabelPadding,
 		st::defaultDividerLabel.bar));
-	// 材质背景下只保留说明文字，背景条随分隔线一起隐藏。
+	// 材质背景下只保留说明文字，不画背景条。
 	for (const auto child : divider->children()) {
 		if (const auto bar = dynamic_cast<Ui::BoxContentDivider*>(child)) {
 			ExtrasFeatures::WindowMaterial::watchSurface(bar);

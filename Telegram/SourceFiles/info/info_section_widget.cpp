@@ -79,10 +79,6 @@ Dialogs::RowDescriptor SectionWidget::activeChat() const {
 	return _content->activeChat();
 }
 
-bool SectionWidget::hasTopBarShadow() const {
-	return _content->hasTopBarShadow();
-}
-
 QPixmap SectionWidget::grabForShowAnimation(
 		const Window::SectionSlideParams &params) {
 	return _content->grabForShowAnimation(params);
