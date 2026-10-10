@@ -1304,6 +1304,7 @@ PRIVATE
     history/view/media/history_view_game.h
     history/view/media/history_view_gif.cpp
     history/view/media/history_view_gif.h
+    history/view/media/history_view_gif_grouped_download.cpp
     history/view/media/history_view_giveaway.cpp
     history/view/media/history_view_giveaway.h
     history/view/media/history_view_gram_transfer.cpp
