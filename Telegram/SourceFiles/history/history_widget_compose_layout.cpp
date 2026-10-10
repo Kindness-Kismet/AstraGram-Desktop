@@ -812,16 +812,16 @@ void HistoryWidget::moveFieldControls() {
 	// 胶囊底部留边,键盘弹出时悬在键盘上方
 	bottom -= st::historyComposeCapsuleMargin;
 
-// (_botMenu.button) (_attachToggle|_replaceMedia) (_sendAs) ---- _inlineResults ------------------------------ _tabbedPanel ------ _fieldBarCancel
+// (_botMenu) (_attachToggle|_replaceMedia) (_sendAs) ---- _inlineResults ------------------------------ _tabbedPanel ------ _fieldBarCancel
 // (_attachDocument|_attachPhoto) _field (_ttlInfo) (_scheduled) (_giftToUser) (_silent|_cmdStart|_kbShow) (_toggleSuggestPost) (_kbHide|_tabbedSelectorToggle) _send
 // (_botStart|_unblock|_joinChannel|_muteUnmute|_reportMessages)
 
 	auto buttonsBottom = bottom - _attachToggle->height();
 	auto left = st::historyComposeCapsuleMargin + st::historyComposeCapsulePadding;
-	if (_botMenu.button) {
+	if (_botMenu) {
 		const auto skip = st::historyBotMenuSkip;
-		_botMenu.button->moveToLeft(left + skip, buttonsBottom + skip);
-		left += skip + _botMenu.button->width();
+		_botMenu->moveToLeft(left + skip, buttonsBottom + skip);
+		left += skip + _botMenu->width();
 	}
 	if (_replaceMedia) {
 		_replaceMedia->moveToLeft(left, buttonsBottom);
@@ -936,8 +936,8 @@ void HistoryWidget::updateFieldSize() {
 			: 0)
 		- (_expand->isHidden() ? 0 : _expand->width())
 		- (_aiButton->isHidden() ? 0 : _expand->width());
-	if (_botMenu.button) {
-		fieldWidth -= st::historyBotMenuSkip + _botMenu.button->width();
+	if (_botMenu) {
+		fieldWidth -= st::historyBotMenuSkip + _botMenu->width();
 	}
 	if (_sendAs && settings.showSendAsButtonInMessageField()) {
 		fieldWidth -= _sendAs->width();

@@ -49,8 +49,6 @@ const auto kPsaAboutPrefix = "cloud_lng_about_psa_";
 [[nodiscard]] rpl::producer<PeerData*> ActivePeerValue(
 		not_null<Window::SessionController*> controller);
 
-[[nodiscard]] QString FirstEmoji(const QString &s);
-
 } // namespace HistoryWidgetDetails
 
 #define SWITCH_BUTTON(button, show_v) \

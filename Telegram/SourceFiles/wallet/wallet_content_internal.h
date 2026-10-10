@@ -1339,7 +1339,7 @@ void WalletHowItWorksBox(
 [[nodiscard]] Ui::LayerStackWidget *BoxLayerStack(
 		not_null<Ui::GenericBox*> box);
 
-void CloseFirstGramsByOutsideClick(not_null<Ui::GenericBox*> box);
+void CloseByOutsideClick(not_null<Ui::GenericBox*> box);
 
 void WalletFirstGramsBox(
 		not_null<Ui::GenericBox*> box,

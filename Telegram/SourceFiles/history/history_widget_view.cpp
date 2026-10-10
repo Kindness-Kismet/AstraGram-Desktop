@@ -402,8 +402,8 @@ void HistoryWidget::updateControlsVisibility() {
 		_tabbedSelectorToggle->hide();
 		_botKeyboardShow->hide();
 		_botKeyboardHide->hide();
-		if (_botMenu.button) {
-			_botMenu.button->hide();
+		if (_botMenu) {
+			_botMenu->hide();
 		}
 		if (_tabbedPanel) {
 			_tabbedPanel->hide();
@@ -481,8 +481,8 @@ void HistoryWidget::updateControlsVisibility() {
 		} else {
 			SWITCH_BUTTON(_attachToggle, settings.showAttachButtonInMessageField());
 		}
-		if (_botMenu.button) {
-			_botMenu.button->show();
+		if (_botMenu) {
+			_botMenu->show();
 		}
 		if (_sendRestriction) {
 			_sendRestriction->hide();
@@ -589,8 +589,8 @@ void HistoryWidget::updateControlsVisibility() {
 		if (_sendAs) {
 			_sendAs->hide();
 		}
-		if (_botMenu.button) {
-			_botMenu.button->hide();
+		if (_botMenu) {
+			_botMenu->hide();
 		}
 		_kbScroll->hide();
 		if (_replyTo || readyToForward() || _kbReplyTo) {

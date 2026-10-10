@@ -877,68 +877,41 @@ bool HistoryWidget::refreshBotMenuButton() {
 	if (!bot
 		|| (bot->botInfo->botMenuButtonUrl.isEmpty()
 			&& bot->botInfo->commands.empty())) {
-		buttonChanged = (_botMenu.button != nullptr);
-		_botMenu.button.destroy();
-	} else if (!_botMenu.button) {
+		buttonChanged = (_botMenu != nullptr);
+		_botMenu = nullptr;
+		_botMenuPeer = 0;
+	} else if (!_botMenu || _botMenuPeer != bot->id) {
 		buttonChanged = true;
-		_botMenu.text = bot->botInfo->botMenuButtonText;
-		_botMenu.small = (_fieldCharsCountManager.count() > kSmallMenuAfter);
-		if (_botMenu.small) {
-			if (const auto e = FirstEmoji(_botMenu.text); !e.isEmpty()) {
-				_botMenu.text = e;
-			}
-		}
-		_botMenu.button.create(
+		_botMenu = std::make_unique<HistoryView::BotMenuButton>(
 			this,
-			(_botMenu.text.isEmpty()
-				? tr::lng_bot_menu_button()
-				: rpl::single(_botMenu.text)),
-			st::historyBotMenuButton);
+			bot->botInfo->botMenuButtonText,
+			_fieldCharsCountManager.count() > kSmallMenuAfter,
+			[=] {
+				const auto user = _peer ? _peer->asUser() : nullptr;
+				const auto bot = (user && user->isBot()) ? user : nullptr;
+				if (bot && !bot->botInfo->botMenuButtonUrl.isEmpty()) {
+					session().attachWebView().open({
+						.bot = bot,
+						.context = { .controller = controller() },
+						.button = {
+							.url = bot->botInfo->botMenuButtonUrl.toUtf8(),
+						},
+						.source = InlineBots::WebViewSourceBotMenu(),
+					});
+				} else if (_autocomplete && !_autocomplete->isHidden()) {
+					_autocomplete->hideAnimated();
+				} else if (_autocomplete) {
+					_autocomplete->showFiltered(_peer, "/", true);
+				}
+			},
+			[=] { updateFieldSize(); },
+			session().data().customEmojiManager().factory());
+		_botMenuPeer = bot->id;
 		orderWidgets();
-
-		_botMenu.button->setFullRadius(true);
-		_botMenu.button->setClickedCallback([=] {
-			const auto user = _peer ? _peer->asUser() : nullptr;
-			const auto bot = (user && user->isBot()) ? user : nullptr;
-			if (bot && !bot->botInfo->botMenuButtonUrl.isEmpty()) {
-				session().attachWebView().open({
-					.bot = bot,
-					.context = { .controller = controller() },
-					.button = {
-						.url = bot->botInfo->botMenuButtonUrl.toUtf8(),
-					},
-					.source = InlineBots::WebViewSourceBotMenu(),
-				});
-			} else if (_autocomplete && !_autocomplete->isHidden()) {
-				_autocomplete->hideAnimated();
-			} else if (_autocomplete) {
-				_autocomplete->showFiltered(_peer, "/", true);
-			}
-		});
-		_botMenu.button->widthValue(
-		) | rpl::on_next([=](int width) {
-			if (width > st::historyBotMenuMaxWidth) {
-				_botMenu.button->setFullWidth(st::historyBotMenuMaxWidth);
-			} else {
-				updateFieldSize();
-			}
-		}, _botMenu.button->lifetime());
 	}
 	const auto textSmall = _fieldCharsCountManager.count() > kSmallMenuAfter;
-	const auto textChanged = _botMenu.button
-		&& ((_botMenu.text != bot->botInfo->botMenuButtonText)
-			|| (_botMenu.small != textSmall));
-	if (textChanged) {
-		_botMenu.text = bot->botInfo->botMenuButtonText;
-		if ((_botMenu.small = textSmall)) {
-			if (const auto e = FirstEmoji(_botMenu.text); !e.isEmpty()) {
-				_botMenu.text = e;
-			}
-		}
-		_botMenu.button->setText(_botMenu.text.isEmpty()
-			? tr::lng_bot_menu_button()
-			: rpl::single(_botMenu.text));
-	}
+	const auto textChanged = _botMenu
+		&& _botMenu->refresh(bot->botInfo->botMenuButtonText, textSmall);
 	return buttonChanged || textChanged;
 }
 

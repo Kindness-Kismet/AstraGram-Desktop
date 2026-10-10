@@ -418,6 +418,8 @@ void AppendSecrecyScanSelfTest(not_null<Runner*> runner) {
 			u"secrecy_self_prints_nothing"_q,
 			[=] { SelfPrintsNothing(state); },
 		},
+		{ u"secrecy_self_telemetry"_q, [] { SelfTelemetry(); } },
+		{ u"secrecy_self_helper_numbers"_q, [] { SelfHelperNumbers(); } },
 	};
 	for (const auto &[name, then] : stages) {
 		runner->add({

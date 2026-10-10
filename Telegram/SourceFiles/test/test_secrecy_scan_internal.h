@@ -433,6 +433,10 @@ void SelfIdentity(const std::shared_ptr<SelfState> &state);
 
 void SelfPrintsNothing(const std::shared_ptr<SelfState> &state);
 
+void SelfTelemetry();
+
+void SelfHelperNumbers();
+
 }
 
 QString SecrecyClassName(SecrecyClass value);

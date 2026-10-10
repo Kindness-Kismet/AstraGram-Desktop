@@ -1248,6 +1248,8 @@ PRIVATE
     history/admin_log/history_admin_log_section.cpp
     history/admin_log/history_admin_log_section.h
     history/view/controls/compose_controls_common.h
+    history/view/controls/history_view_bot_menu_button.cpp
+    history/view/controls/history_view_bot_menu_button.h
     history/view/controls/history_view_bottom_controls.cpp
     history/view/controls/history_view_bottom_controls.h
     history/view/controls/history_view_compose_ai_button.cpp
@@ -2398,6 +2400,7 @@ PRIVATE
     test/test_secrecy_scan.cpp
     test/test_secrecy_scan_internal.h
     test/test_secrecy_scan_matcher.cpp
+    test/test_secrecy_scan_self_numbers.cpp
     test/test_secrecy_scan_self_test.cpp
     test/test_secrecy_scan.h
     test/test_style.cpp
@@ -2422,6 +2425,8 @@ PRIVATE
     test/test_wheel.h
     test/test_widgets.cpp
     test/test_widgets.h
+    test/test_window_exposure.cpp
+    test/test_window_exposure.h
     ui/boxes/edit_invite_link_session.cpp
     ui/boxes/edit_invite_link_session.h
     ui/boxes/emoji_stake_box.cpp

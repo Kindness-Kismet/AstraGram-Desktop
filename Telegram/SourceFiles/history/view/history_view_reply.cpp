@@ -403,6 +403,7 @@ void Reply::update(
 	_hiddenSenderColorIndexPlusOne = (!_colorPeer && message)
 		? (message->originalHiddenSenderInfo()->colorIndex + 1)
 		: 0;
+	_hasBackgroundEmoji = hasBackgroundEmoji();
 	const auto pollMediaPtr = pollAnswer
 		? &pollAnswer->media
 		: (messagePoll && fields.pollOption.isEmpty())
@@ -626,6 +627,9 @@ QString Reply::senderName(
 bool Reply::isNameUpdated(
 		not_null<const Element*> view,
 		not_null<HistoryMessageReply*> data) const {
+	if (hasBackgroundEmoji() != _hasBackgroundEmoji) {
+		return true;
+	}
 	if (const auto from = sender(view, data)) {
 		if (_nameVersion < from->nameVersion()) {
 			updateName(view, data, from);
@@ -717,10 +721,7 @@ void Reply::updateName(
 	}
 	const auto nameMaxWidth = previewSkip
 		+ _name.maxWidth()
-		+ st::messageGiftIconSkip
-		+ (_hasQuoteIcon
-			? st::messageTextStyle.blockquote.icon.width()
-			: 0);
+		+ nameIconsSkip();
 	const auto optimalTextSize = _multiline
 		? countMultilineOptimalSize(previewSkip)
 		: QSize(
@@ -751,6 +752,17 @@ void Reply::updateName(
 		+ st::historyReplyPadding.bottom();
 }
 
+bool Reply::hasBackgroundEmoji() const {
+	return _colorPeer && (_colorPeer->backgroundEmojiId() != 0);
+}
+
+int Reply::nameIconsSkip() const {
+	return (_hasQuoteIcon
+		? st::messageTextStyle.blockquote.icon.width()
+		: 0)
+		+ (_hasBackgroundEmoji ? st::messageGiftIconSkip : 0);
+}
+
 int Reply::resizeToWidth(int width) const {
 	_ripple.animation = nullptr;
 
@@ -770,7 +782,7 @@ int Reply::resizeToWidth(int width) const {
 	const auto innerw = width
 		- st::historyReplyPadding.left()
 		- st::historyReplyPadding.right();
-	const auto namew = innerw - previewSkip;
+	const auto namew = innerw - previewSkip - nameIconsSkip();
 	const auto desiredNameHeight = _name.countHeight(namew);
 	_nameTwoLines = (desiredNameHeight > st::semiboldFont->height) ? 1 : 0;
 	const auto nameh = (_nameTwoLines ? 2 : 1) * st::semiboldFont->height;
@@ -1021,12 +1033,7 @@ void Reply::paint(
 			const auto textw = w
 				- st::historyReplyPadding.left()
 				- st::historyReplyPadding.right();
-			const auto namew = textw
-				- previewSkip
-				- st::messageGiftIconSkip
-				- (_hasQuoteIcon
-					? st::messageTextStyle.blockquote.icon.width()
-					: 0);
+			const auto namew = textw - previewSkip - nameIconsSkip();
 			auto firstLineSkip = _nameTwoLines ? 0 : previewSkip;
 			if (namew > 0) {
 				p.setPen(!inBubble
