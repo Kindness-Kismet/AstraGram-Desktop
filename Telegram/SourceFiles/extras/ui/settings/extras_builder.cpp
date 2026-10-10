@@ -191,10 +191,10 @@ void ExtrasSectionBuilder::addSlider(SliderArgs &&args) {
 		v::match(ctx, [&](const Builder::WidgetContext &wctx) {
 			const auto container = wctx.container;
 			const auto titleButton = args.showTitle
-				? container->add(
-					object_ptr<Settings::RowButton>(container,
-						std::move(args.title),
-						st::settingsButtonNoIcon))
+				? container->add(Settings::CreateButtonWithIcon(
+					container,
+					std::move(args.title),
+					st::settingsButtonNoIcon))
 				: nullptr;
 			if (titleButton) {
 				titleButton->setAttribute(
@@ -217,9 +217,12 @@ void ExtrasSectionBuilder::addSlider(SliderArgs &&args) {
 				0,
 				args.showTitle ? st::settingsScaleLabel.style.font->width("8%%%") : 0,
 				true);
-			container->add(
-				std::move(sliderWithLabel.widget),
-				st::recentStickersLimitPadding);
+			// 卡片内滑块与行标题共用左缩进。
+			auto padding = st::recentStickersLimitPadding;
+			if (Settings::IsInCardGroup(container)) {
+				padding.setLeft(st::settingsCardRowInset);
+			}
+			container->add(std::move(sliderWithLabel.widget), padding);
 			const auto slider = sliderWithLabel.slider;
 			const auto label = sliderWithLabel.label;
 

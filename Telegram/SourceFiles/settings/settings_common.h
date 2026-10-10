@@ -272,6 +272,8 @@ void AddButtonIcon(
 	not_null<Ui::AbstractButton*> button,
 	const style::SettingsButton &st,
 	IconDescriptor &&descriptor);
+// 控件位于设置卡片内时，行内容统一使用卡片缩进。
+[[nodiscard]] bool IsInCardGroup(not_null<QWidget*> widget);
 object_ptr<Button> CreateButtonWithIcon(
 	not_null<QWidget*> parent,
 	rpl::producer<QString> text,

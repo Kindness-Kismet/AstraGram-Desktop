@@ -479,18 +479,21 @@ void AddButtonIcon(
 	}, icon->widget.lifetime());
 }
 
+bool IsInCardGroup(not_null<QWidget*> widget) {
+	for (auto parent = widget.get(); parent; parent = parent->parentWidget()) {
+		if (parent->property("settingsCardGroup").toBool()) {
+			return true;
+		}
+	}
+	return false;
+}
+
 object_ptr<Button> CreateButtonWithIcon(
 		not_null<QWidget*> parent,
 		rpl::producer<QString> text,
 		const style::SettingsButton &st,
 		IconDescriptor &&descriptor) {
-	auto card = false;
-	for (auto widget = parent.get(); widget; widget = widget->parentWidget()) {
-		if (widget->property("settingsCardGroup").toBool()) {
-			card = true;
-			break;
-		}
-	}
+	const auto card = IsInCardGroup(parent);
 	const auto rowStyle = card
 		? std::make_shared<style::SettingsButton>(st)
 		: std::shared_ptr<style::SettingsButton>();

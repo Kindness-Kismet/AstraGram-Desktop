@@ -120,20 +120,57 @@ private:
 		p.setBrush(Qt::NoBrush);
 		p.drawPath(shape);
 
-		// 分隔线只连接相邻的操作行，说明和自绘内容保留自己的间距。
-		Ui::SettingsButton *previous = nullptr;
-		for (auto i = 0; i != _content->count(); ++i) {
-			const auto row = dynamic_cast<Ui::SettingsButton*>(
-				_content->widgetAt(i).get());
-			if (row && previous && row->y() == previous->geometry().bottom() + 1) {
-				p.drawLine(
-					row->property("settingsSeparatorInset").toInt(),
-					row->y(),
-					width() - st::lineWidth,
-					row->y());
-			}
-			previous = row;
+		auto previousBottom = -1;
+		paintSeparators(p, _content, previousBottom);
+	}
+
+	// 分隔线只连接相邻的操作行，说明和自绘内容保留自己的间距。
+	// 布局与包装容器逐层展开，隐藏或收起的控件不打断相邻关系。
+	void paintSeparators(
+			QPainter &p,
+			not_null<QWidget*> widget,
+			int &previousBottom) {
+		if (widget->isHidden() || !widget->height()) {
+			return;
 		}
+		const auto top = widget->mapTo(this, QPoint()).y();
+		if (const auto row = dynamic_cast<Ui::SettingsButton*>(widget.get())) {
+			if (top == previousBottom) {
+				const auto inset = row->property("settingsSeparatorInset");
+				p.drawLine(
+					inset.isValid() ? inset.toInt() : st::settingsCardRowInset,
+					top,
+					width() - st::lineWidth,
+					top);
+			}
+			previousBottom = top + row->height();
+			return;
+		}
+		// 附属内容跟随上一行，内部不画线，下方仍与后续行分隔。
+		if (widget->property("settingsSeparatorAttached").toBool()) {
+			previousBottom = top + widget->height();
+			return;
+		}
+		if (const auto layout = dynamic_cast<Ui::VerticalLayout*>(widget.get())) {
+			for (auto i = 0; i != layout->count(); ++i) {
+				paintSeparators(p, layout->widgetAt(i), previousBottom);
+			}
+			return;
+		}
+		if (const auto wrap = dynamic_cast<Ui::Wrap<Ui::RpWidget>*>(widget.get())) {
+			const auto wrapped = wrap->wrapped();
+			if (!wrapped) {
+				return;
+			}
+			// 展开动画中内容被裁切，整体视为附属内容，避免线画到后续行上。
+			if (wrapped->height() > widget->height()) {
+				previousBottom = top + widget->height();
+				return;
+			}
+			paintSeparators(p, wrapped, previousBottom);
+			return;
+		}
+		previousBottom = -1;
 	}
 
 	const not_null<Ui::VerticalLayout*> _content;
