@@ -247,6 +247,16 @@ private:
 	void validateRoundingMask(QSize size) const;
 
 	[[nodiscard]] bool downloadInCorner() const;
+	[[nodiscard]] bool smallGroupDownloadAvailable() const;
+	[[nodiscard]] QRect smallGroupDownloadRect(const QRect &geometry) const;
+	void clipSmallGroupDownload(Painter &p, const QRect &geometry) const;
+	void drawSmallGroupDownload(
+		Painter &p,
+		const PaintContext &context,
+		const QRect &geometry) const;
+	[[nodiscard]] TextState smallGroupDownloadTextState(
+		const QRect &geometry,
+		QPoint point) const;
 	void drawCornerStatus(
 		Painter &p,
 		const PaintContext &context,

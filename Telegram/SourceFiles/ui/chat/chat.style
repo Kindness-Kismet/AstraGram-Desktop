@@ -508,6 +508,10 @@ historyGroupWidthMax: maxMediaSize;
 historyGroupWidthMin: minPhotoSize;
 historyGroupSkip: 4px;
 historyGroupRadialSize: 44px;
+historyGroupDownloadSize: 20px;
+historyGroupDownloadOffset: 16px;
+historyGroupDownloadGap: 1px;
+historyGroupDownloadRadialLine: 2px;
 historyGroupRadialLine: 3px;
 
 historyMapPoint: icon {{ "map_point", mapPointDrop }};

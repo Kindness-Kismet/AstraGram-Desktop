@@ -2817,7 +2817,10 @@ Fn<void(Api::SendOptions)> SendFilesBox::sendCallback() {
 	});
 }
 
-SendFilesBox::~SendFilesBox() = default;
+SendFilesBox::~SendFilesBox() {
+	// 先断开尺寸订阅，避免预览控件析构时重新访问正在销毁的弹窗。
+	_dimensionsLifetime.destroy();
+}
 
 // AyuGram files reordering
 

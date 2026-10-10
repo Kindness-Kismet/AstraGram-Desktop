@@ -1814,7 +1814,9 @@ void Gif::drawGrouped(
 	const auto st = context.st;
 	const auto sti = context.imageStyle();
 	_smallGroupPart = !fullFeaturedGrouped(sides);
-	const auto cornerDownload = !_smallGroupPart && downloadInCorner();
+	const auto separateDownload = _smallGroupPart
+		? !smallGroupDownloadRect(geometry).isEmpty()
+		: downloadInCorner();
 
 	const auto revealed = mediaEditor ? 1. : revealedProgress();
 	const auto fullHiddenBySpoiler = (revealed == 0.);
@@ -1851,7 +1853,7 @@ void Gif::drawGrouped(
 		&& (!streamedForWaiting
 			|| item->isSending()
 			|| _data->uploading()
-			|| (cornerDownload && _data->loading()))) {
+			|| (separateDownload && _data->loading()))) {
 		ensureAnimation();
 		if (!_animation->radial.animating()) {
 			_animation->radial.start(dataProgress());
@@ -1929,6 +1931,10 @@ void Gif::drawGrouped(
 			|| (!streamingMode
 				&& ((!loaded && !_data->loading()) || !autoplay)));
 	if (paintInCenter && !ExtrasFeatures::MessageShot::isTakingShot()) {
+		p.save();
+		if (_smallGroupPart) {
+			clipSmallGroupDownload(p, geometry);
+		}
 		const auto radialRevealed = 1.;
 		const auto opacity = (item->isSending() || _data->uploading())
 			? 1.
@@ -1999,7 +2005,7 @@ void Gif::drawGrouped(
 					width(),
 					sti->historyFileThumbRadialFg,
 					st::msgFileRadialLine);
-			} else if (!cornerDownload) {
+			} else if (!separateDownload) {
 				_animation->radial.draw(
 					p,
 					rinner,
@@ -2007,10 +2013,12 @@ void Gif::drawGrouped(
 					sti->historyFileThumbRadialFg);
 			}
 		}
-		p.setOpacity(1.);
+		p.restore();
 	}
 	if (!_smallGroupPart && !mediaEditor) {
 		drawCornerStatus(p, context, geometry.topLeft());
+	} else if (_smallGroupPart) {
+		drawSmallGroupDownload(p, context, geometry);
 	}
 }
 
@@ -2023,14 +2031,14 @@ TextState Gif::getStateGrouped(
 		return {};
 	}
 	const auto fullFeatured = fullFeaturedGrouped(sides);
-	if (fullFeatured) {
-		const auto state = cornerStatusTextState(
+	const auto downloadState = fullFeatured
+		? cornerStatusTextState(
 			point,
 			request,
-			geometry.topLeft());
-		if (state.link) {
-			return state;
-		}
+			geometry.topLeft())
+		: smallGroupDownloadTextState(geometry, point);
+	if (downloadState.link) {
+		return downloadState;
 	}
 	ensureDataMediaCreated();
 
@@ -2053,9 +2061,11 @@ Gif::Action Gif::currentAction(bool fullFeatured) const {
 		|| autoplayEligible(fullFeatured)) {
 		return Action::Streaming;
 	}
-	const auto cornerDownload = fullFeatured && downloadInCorner();
+	const auto separateDownload = fullFeatured
+		? downloadInCorner()
+		: smallGroupDownloadAvailable();
 	if ((dataLoaded() || _dataMedia->canBePlayed())
-		&& (!_data->displayLoading() || cornerDownload)) {
+		&& (!_data->displayLoading() || separateDownload)) {
 		return Action::Open;
 	} else if (_data->loading()) {
 		return Action::Cancel;
