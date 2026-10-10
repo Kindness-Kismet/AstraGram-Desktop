@@ -18,7 +18,7 @@
 	url = https://github.com/desktop-app/lib_base.git
 [submodule "Telegram/codegen"]
 	path = Telegram/codegen
-	url = https://github.com/Kindness-Kismet/codegen.git
+	url = https://github.com/Kindness-Net/codegen.git
 [submodule "Telegram/lib_lottie"]
 	path = Telegram/lib_lottie
 	url = https://github.com/desktop-app/lib_lottie.git
@@ -106,7 +106,7 @@
 	url = https://github.com/Yubico/libfido2.git
 [submodule "Telegram/lib_ui"]
 	path = Telegram/lib_ui
-	url = https://github.com/Kindness-Kismet/lib_ui.git
+	url = https://github.com/Kindness-Net/lib_ui.git
 	branch = master-ui
 [submodule "Telegram/ThirdParty/zxcvbn"]
 	path = Telegram/ThirdParty/zxcvbn
