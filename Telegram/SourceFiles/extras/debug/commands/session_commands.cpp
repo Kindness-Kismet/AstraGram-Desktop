@@ -3,12 +3,7 @@
 
 #include "extras/debug/debug_login.h"
 
-#include "core/application.h"
-#include "main/main_account.h"
-#include "main/main_domain.h"
 #include "main/main_session.h"
-#include "mtproto/mtp_instance.h"
-#include "mtproto/mtproto_dc_options.h"
 
 namespace ExtrasDebug::Commands {
 namespace {
@@ -37,33 +32,11 @@ using json = nlohmann::json;
 	}));
 }
 
-// 切到官方测试数据中心。测试号无需真手机号，能拿到真实会话和真实消息事件。
-// 等价于登录界面输入 testmode（settings_codes.cpp:147）。
-[[nodiscard]] Result TestMode(const QStringList &) {
-	auto &domain = Core::App().domain();
-	const auto was = domain.started()
-		? domain.active().mtp().environment()
-		: MTP::Environment::Production;
-	if (const auto error = SwitchTestEnvironment(); !error.isEmpty()) {
-		return Result::Err(error);
-	}
-	const auto target = (was == MTP::Environment::Production)
-		? MTP::Environment::Test
-		: MTP::Environment::Production;
-	return Result::Ok(Compact(json{
-		{ "from", (was == MTP::Environment::Production)
-			? "production" : "test" },
-		{ "to", (target == MTP::Environment::Production)
-			? "production" : "test" },
-	}));
-}
-
 } // namespace
 
 const HandlerMap &SessionHandlers() {
 	static const auto result = HandlerMap{
 		{ u"simulation.enter"_q, &enterSimulationMode },
-		{ u"session.test-mode"_q, &TestMode },
 	};
 	return result;
 }

@@ -9,7 +9,6 @@
 #include "main/main_session_settings.h"
 #include "main/main_session.h"
 #include "mtproto/mtp_instance.h"
-#include "mtproto/mtproto_dc_options.h"
 #include "storage/storage_account.h"
 
 namespace ExtrasDebug {
@@ -71,26 +70,6 @@ QString enterSimulation(int64 userId) {
 	ExtrasSettings::getInstance().setDevFeaturesEnabled(true);
 	Commands::seedSimulationScenarios(&account.session());
 
-	return QString();
-}
-
-QString SwitchTestEnvironment() {
-	auto &domain = Core::App().domain();
-	if (!domain.started()) {
-		return u"domain is not started"_q;
-	}
-	if (domain.active().sessionExists()) {
-		return u"already logged in; log out before switching environment"_q;
-	}
-	// addActivated 会新建账号，多账号时切换会留下多余的空账号，官方 testmode
-	// 也是这个前提（settings_codes.cpp:150）。
-	if (domain.accounts().size() != 1) {
-		return u"expected exactly one account"_q;
-	}
-	const auto was = domain.active().mtp().environment();
-	domain.addActivated((was == MTP::Environment::Production)
-		? MTP::Environment::Test
-		: MTP::Environment::Production);
 	return QString();
 }
 

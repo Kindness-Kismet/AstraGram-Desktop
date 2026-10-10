@@ -12,8 +12,4 @@ namespace ExtrasDebug {
 // 前置条件不满足时返回原因。模拟模式不写入 tdata，重启即消失。
 [[nodiscard]] QString enterSimulation(int64 userId = 999999999);
 
-// 在测试数据中心与生产环境之间切换，等价于登录界面输入 testmode。
-// 成功返回空字符串，前置条件不满足时返回原因。
-[[nodiscard]] QString SwitchTestEnvironment();
-
 } // namespace ExtrasDebug

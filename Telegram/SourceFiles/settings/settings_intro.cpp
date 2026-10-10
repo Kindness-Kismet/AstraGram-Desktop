@@ -28,11 +28,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_settings.h"
 #include "styles/style_layers.h"
 #include "styles/style_info.h"
-#ifdef _DEBUG
-#include "extras/debug/debug_login.h"
-#include "ui/boxes/confirm_box.h"
-#include "styles/style_menu_icons.h"
-#endif
 
 namespace Settings {
 namespace {
@@ -63,34 +58,6 @@ private:
 	QPointer<Ui::FlatLabel> _title;
 
 };
-
-#ifdef _DEBUG
-// 登录前提供测试数据中心切换入口。
-void SetupTestEnvironment(
-		not_null<Window::Controller*> window,
-		not_null<Ui::VerticalLayout*> container) {
-	AddButtonWithIcon(
-		container,
-		rpl::single(u"Switch to the test environment"_q),
-		st::settingsButton,
-		{ &st::menuIconStats }
-	)->addClickHandler([=] {
-		window->show(Ui::MakeConfirmBox({
-			.text = u"Switch to Telegram's test datacenters?\n\n"
-				"Test accounts need no real phone number and give a real "
-				"session with real message events."_q,
-			.confirmed = [=](Fn<void()> &&close) {
-				close();
-				const auto error = ExtrasDebug::SwitchTestEnvironment();
-				if (!error.isEmpty()) {
-					window->show(Ui::MakeInformBox(error));
-				}
-			},
-			.confirmText = rpl::single(u"Switch"_q),
-		}));
-	});
-}
-#endif
 
 object_ptr<Ui::RpWidget> CreateIntroSettings(
 		QWidget *parent,
@@ -126,10 +93,6 @@ object_ptr<Ui::RpWidget> CreateIntroSettings(
 	)->addClickHandler([] {
 		OpenFaq(nullptr);
 	});
-
-#ifdef _DEBUG
-	SetupTestEnvironment(window, AddCardGroup(content));
-#endif
 
 	return result;
 }

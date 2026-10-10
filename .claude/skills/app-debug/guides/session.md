@@ -2,18 +2,6 @@
 
 本地模拟身份、固定场景和消息注入统一见[模拟模式](simulation.md)。
 
-## `session.test-mode`
-
-切到官方测试数据中心，再在登录界面用测试号登录。拿到的是**真实会话**，有真实消息、真实的
-删除和编辑事件。
-
-等价于在登录界面输入 `testmode`（`settings_codes.cpp:147`）。再次执行可切回生产环境。
-
-测试服的账号与生产环境完全隔离，登录方式见 Telegram 官方 API 文档的 test accounts 一节。
-
-前置条件：`domain` 已启动、无会话、且恰好只有一个账号。`addActivated` 会新建账号，多账号时
-切换会留下多余的空账号，官方 `testmode` 也是这个前提。
-
 ## `notification.test [text] [--peer <userId>]`
 
 让模拟用户发一条消息，触发真实的通知链路。模拟模式的对话没有服务端下发的通知设置，
@@ -77,7 +65,6 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 | 目标 | 用 |
 |---|---|
 | 看界面、改设置、验证 Debug 入口 | `simulation.enter` |
-| 测已删除消息、编辑历史、隐身模式、过滤器 | `session.test-mode` + 测试号登录 |
 | 发文本验证发送链路 | `chat.list` 定位 + `message.send` |
 
 ## 默认背景验证

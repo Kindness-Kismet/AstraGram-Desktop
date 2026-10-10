@@ -297,7 +297,6 @@ Debug 构建会在 `ExtrasInfra::init()` 里启动 `QTcpServer`，监听 `127.0.
 | `chat.list [filter]` | 列出会话的 peerId 与名称，供 message.send / chat.open 定位目标 |
 | `message.send <peerId> <text\|--file path>` | 真实发送文本到指定对话（`--file` 按 UTF-8 读文件原样发送），走官方发送链路，仅发往自己掌控的测试对话 |
 | `chat.open [peerId]` | 打开指定聊天，缺省为 Saved Messages |
-| `session.test-mode` | 切换到官方测试数据中心（+99966 号段，验证码 22222） |
 | `chat.history-stats <msgId>...` | 查询收藏夹中指定消息的存在、隐藏与视图状态 |
 | `theme.set <dark|light>` | 切换暗色或浅色主题 |
 | `theme.reset-background` | 重置聊天背景 |
@@ -388,7 +387,7 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 
 ## 禁止事项
 
-1. Release 构建里保留调试代码——调试服务端、模拟模式、测试数据中心开关全部要在 `#ifdef _DEBUG` 内
+1. Release 构建里保留调试代码——调试服务端、模拟模式全部要在 `#ifdef _DEBUG` 内
 2. 按进程名结束 `AstraGram.exe`——应按可执行文件绝对路径或端口占用 PID 校验
 3. 在主线程调用阻塞接口——`ExtrasSync::*Sync` 系列会运行事件循环等待 MTProto 响应，导致界面无响应
 4. 在 `Telegram/lib_ui/` 之外引用 `extras/extras_ui_settings.h`——codegen 硬编码了该 include 路径（`codegen/style/generator.cpp:676`）

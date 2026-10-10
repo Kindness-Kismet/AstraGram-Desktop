@@ -178,7 +178,7 @@ COMMAND_CATEGORY_LABELS = {
     "text": "文本处理",
     "translate": "文本翻译",
     "app": "应用生命周期",
-    "session": "会话与测试环境",
+    "session": "会话与消息",
     "chat": "会话导航与消息统计",
     "message": "消息样本与发送",
     "notification": "通知触发",
@@ -259,7 +259,6 @@ def register_commands(sub) -> None:
 
     command = sub.add_parser("simulation.enter", help="进入模拟模式，自动构造分类会话和消息状态")
     command.add_argument("userId", nargs="?")
-    sub.add_parser("session.test-mode", help="在生产环境与官方测试数据中心之间切换")
 
     sub.add_parser("simulation.list", help="列出固定场景的名称、键名与会话编号")
     sub.add_parser("simulation.clear", help="清除临时提示并恢复普通列表")
