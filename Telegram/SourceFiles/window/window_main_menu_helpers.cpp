@@ -10,7 +10,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "base/platform/base_platform_info.h"
 #include "boxes/about_box.h" // currentVersionShortText
-#include "core/update_channel.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
 #include "data/data_document.h"
@@ -48,13 +47,8 @@ not_null<Ui::AbstractButton*> AddVersionButton(
 		not_null<Ui::RpWidget*> parent,
 		const style::FlatLabel &st) {
 	const auto button = Ui::CreateChild<Ui::AbstractButton>(parent.get());
-	// The canary version is too long for the "Version {version}" form.
-	const auto version = Core::BuildIsCanary
-		? currentVersionShortText()
-		: tr::lng_settings_current_version(
-			tr::now,
-			lt_version,
-			currentVersionShortText());
+	// 格式为“AstraGram v版本号 架构 [DEBUG]”，后两项由版本文本自带。
+	const auto version = u"v"_q + currentVersionShortText();
 	const auto label = Ui::CreateChild<Ui::FlatLabel>(
 		button,
 		rpl::single(tr::semibold(u"AstraGram"_q).append(' ').append(version)),
