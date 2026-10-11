@@ -109,24 +109,17 @@ ScheduledMemento::ScheduledMemento(
 : _history(history)
 , _forumTopic(nullptr)
 , _sentToScheduledId(sentToScheduledId) {
-	const auto list = _history->session().scheduledMessages().list(_history);
+	// 没有指定消息时与普通聊天一致，停在最晚的一条。
 	if (sentToScheduledId) {
 		_list.setScrollTopState({
 			.item = { .fullId = { _history->peer->id, sentToScheduledId } },
 		});
-	} else if (!list.ids.empty()) {
-		_list.setScrollTopState({ .item = { .fullId = list.ids.front() } });
 	}
 }
 
 ScheduledMemento::ScheduledMemento(not_null<Data::ForumTopic*> forumTopic)
 : _history(forumTopic->owningHistory())
 , _forumTopic(forumTopic) {
-	const auto list = _history->session().scheduledMessages().list(
-		_forumTopic);
-	if (!list.ids.empty()) {
-		_list.setScrollTopState({ .item = {.fullId = list.ids.front() } });
-	}
 }
 
 object_ptr<Window::SectionWidget> ScheduledMemento::createWidget(
