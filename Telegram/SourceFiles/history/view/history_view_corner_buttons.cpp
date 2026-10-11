@@ -641,7 +641,7 @@ void CornerButtons::updatePositions() {
 				0,
 				_pollVotes.widget->height() + skip,
 				unreadPollVotesShown);
-		const auto top = _parent->height()
+		const auto top = _column.height()
 			- _stash.widget->height()
 			- st::historyToDownPosition.y()
 			- shift;
