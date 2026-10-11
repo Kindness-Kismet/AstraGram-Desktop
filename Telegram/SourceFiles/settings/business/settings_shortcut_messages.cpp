@@ -29,6 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/controls/history_view_compose_controls.h"
 #include "history/view/history_view_corner_buttons.h"
 #include "history/view/history_view_empty_list_bubble.h"
+#include "history/view/history_view_list_frosted.h"
 #include "history/view/history_view_list_widget.h"
 #include "history/view/history_view_service_message.h"
 #include "history/view/history_view_sticker_toast.h"
@@ -61,6 +62,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/screen_reader_mode.h"
 #include "window/themes/window_theme.h"
 #include "window/section_widget.h"
+#include "extras/ui/components/floating_surface_host.h"
 #include "window/window_peer_menu.h"
 #include "window/window_session_controller.h"
 #include "styles/style_boxes.h"
@@ -269,6 +271,8 @@ private:
 	QPointer<ListWidget> _inner;
 	std::unique_ptr<Ui::RpWidget> _controlsWrap;
 	std::unique_ptr<ComposeControls> _composeControls;
+	std::unique_ptr<ExtrasUi::FloatingSurfaceHost> _floatingSurfaceHost;
+	int _composeOverlap = 0;
 	rpl::event_stream<> _showBackRequests;
 	bool _skipScrollEvent = false;
 
@@ -485,7 +489,9 @@ void ShortcutMessages::updateInnerVisibleArea() {
 		checkReplyReturns();
 	}
 	const auto scrollTop = _scroll->scrollTop();
-	_inner->setVisibleTopBottom(scrollTop, scrollTop + _scroll->height());
+	_inner->setVisibleTopBottom(
+		scrollTop,
+		scrollTop + _scroll->height() - _composeOverlap);
 	_cornerButtons.updateJumpDownVisibility();
 	_cornerButtons.updateUnreadThingsVisibility();
 }
@@ -619,7 +625,15 @@ void ShortcutMessages::updateComposeControlsPosition() {
 	const auto bottom = _scroll->parentWidget()->height();
 	const auto controlsHeight = _composeControls->heightCurrent();
 	_composeControls->move(0, bottom - controlsHeight);
-	_composeControls->setAutocompleteBoundingRect(_scroll->geometry());
+	// 输入区浮在列表底部之上，可见区只占用胶囊上方一半留白。
+	_composeOverlap = controlsHeight - st::historyComposeCapsuleMargin / 2;
+	_composeControls->setAutocompleteBoundingRect(
+		_scroll->geometry().marginsRemoved({ 0, 0, 0, _composeOverlap }));
+	_cornerButtons.setBottomSkip(_composeOverlap);
+	if (_inner->setBottomPadding(_composeOverlap)
+		&& !_scroll->size().isEmpty()) {
+		outerResized();
+	}
 }
 
 void ShortcutMessages::setupComposeControls() {
@@ -777,7 +791,6 @@ void ShortcutMessages::setupComposeControls() {
 	_composeControls->height(
 	) | rpl::on_next([=](int height) {
 		const auto wasMax = (_scroll->scrollTop() >= _scroll->scrollTopMax());
-		_controlsWrap->resize(width(), height - st::boxRadius);
 		updateComposeControlsPosition();
 		if (wasMax) {
 			listScrollTo(_scroll->scrollTopMax());
@@ -800,6 +813,8 @@ base::weak_qptr<Ui::RpWidget> ShortcutMessages::createPinnedToBottom(
 	}) | rpl::flatten_latest();
 
 	_controlsWrap = std::make_unique<Ui::RpWidget>(parent);
+	// 输入区浮在列表之上，占位只提供宽度，不压缩滚动区。
+	_controlsWrap->resize(0, 0);
 	_composeControls = std::make_unique<ComposeControls>(
 		dynamic_cast<Ui::RpWidget*>(_scroll->parentWidget()),
 		ComposeControlsDescriptor{
@@ -827,6 +842,23 @@ base::weak_qptr<Ui::RpWidget> ShortcutMessages::createPinnedToBottom(
 		});
 
 	setupComposeControls();
+	const auto root = not_null(
+		dynamic_cast<Ui::RpWidget*>(_scroll->parentWidget()));
+	_floatingSurfaceHost = SetupListFrostedBackground({
+		.root = root,
+		.scroll = _scroll,
+		.list = _inner.data(),
+		.scrolls = _scroll->scrolls(),
+		.paletteChanged = _controller->chatStyle()->paletteChanged(),
+		.paintBackground = [=](QPainter &p, QRect area) {
+			Window::SectionWidget::PaintBackground(
+				p,
+				_theme.get(),
+				root->size(),
+				area);
+			return true;
+		},
+	});
 
 	showAtEnd();
 

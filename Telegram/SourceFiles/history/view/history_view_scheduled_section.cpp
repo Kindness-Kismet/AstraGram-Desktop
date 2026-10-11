@@ -69,6 +69,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/features/message_shot/message_shot.h"
+#include "extras/ui/components/floating_surface_host.h"
+#include "history/view/history_view_list_frosted.h"
 
 
 namespace HistoryView {
@@ -254,6 +256,16 @@ ScheduledWidget::ScheduledWidget(
 	) | rpl::on_next([=] {
 		onScroll();
 	}, lifetime());
+	_floatingSurfaceHost = SetupListFrostedBackground({
+		.root = this,
+		.scroll = _scroll.data(),
+		.list = _inner.data(),
+		.scrolls = _scroll->scrolls(),
+		.paletteChanged = controller->chatStyle()->paletteChanged(),
+		.paintBackground = SectionFrostedBackground(this, [=] {
+			return _theme.get();
+		}),
+	});
 
 	_inner->editMessageRequested(
 	) | rpl::on_next([=](auto fullId) {
@@ -1208,9 +1220,12 @@ void ScheduledWidget::updateControlsGeometry() {
 
 	const auto bottom = height();
 	const auto controlsHeight = _composeControls->heightCurrent();
-	const auto scrollHeight = bottom - _topBar->height() - controlsHeight;
+	// 输入区浮在列表底部之上，可见区只占用胶囊上方一半留白。
+	_composeOverlap = controlsHeight - st::historyComposeCapsuleMargin / 2;
+	const auto scrollHeight = bottom - _topBar->height();
 	const auto scrollSize = QSize(contentWidth, scrollHeight);
-	if (_scroll->size() != scrollSize) {
+	const auto paddingChanged = _inner->setBottomPadding(_composeOverlap);
+	if (_scroll->size() != scrollSize || paddingChanged) {
 		_skipScrollEvent = true;
 		_scroll->resize(scrollSize);
 		_inner->resizeToWidth(scrollSize.width(), _scroll->height());
@@ -1222,9 +1237,12 @@ void ScheduledWidget::updateControlsGeometry() {
 		}
 		updateInnerVisibleArea();
 	}
+	_scroll->setBarBottomInset(_composeOverlap);
 	_composeControls->move(0, bottom - controlsHeight);
-	_composeControls->setAutocompleteBoundingRect(_scroll->geometry());
+	_composeControls->setAutocompleteBoundingRect(
+		_scroll->geometry().marginsRemoved({ 0, 0, 0, _composeOverlap }));
 
+	_cornerButtons.setBottomSkip(_composeOverlap);
 	_cornerButtons.updatePositions();
 }
 
@@ -1258,7 +1276,7 @@ void ScheduledWidget::updateInnerVisibleArea() {
 		checkReplyReturns();
 	}
 	const auto scrollTop = _scroll->scrollTop();
-	const auto scrollBottom = scrollTop + _scroll->height();
+	const auto scrollBottom = scrollTop + _scroll->height() - _composeOverlap;
 	_inner->setVisibleTopBottom(scrollTop, scrollBottom);
 	_cornerButtons.updateJumpDownVisibility();
 	_cornerButtons.updateUnreadThingsVisibility();

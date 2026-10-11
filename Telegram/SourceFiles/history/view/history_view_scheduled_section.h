@@ -62,6 +62,10 @@ namespace Window {
 class SessionController;
 } // namespace Window
 
+namespace ExtrasUi {
+class FloatingSurfaceHost;
+} // namespace ExtrasUi
+
 namespace HistoryView {
 
 class Element;
@@ -298,6 +302,8 @@ private:
 	object_ptr<TopBarWidget> _topBar;
 	object_ptr<Ui::PlainShadow> _topBarShadow;
 	std::unique_ptr<ComposeControls> _composeControls;
+	std::unique_ptr<ExtrasUi::FloatingSurfaceHost> _floatingSurfaceHost;
+	int _composeOverlap = 0;
 	bool _skipScrollEvent = false;
 
 	Data::MessagePosition _processingVideoPosition;
