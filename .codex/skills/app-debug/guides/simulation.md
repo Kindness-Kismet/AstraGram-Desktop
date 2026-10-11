@@ -2,7 +2,7 @@
 
 ## 进入和操作
 
-仅开发版提供。登录页点击“模拟模式”或执行 `simulation.enter [userId]`，默认用户编号 `999999999`。
+仅开发版提供。登录页点击“模拟模式”或执行 `simulation.enter [userId]`，默认用户编号 `999999999`，带会员身份。
 进入时自动构造 29 个会话、15 个话题和 3 个收藏来源，无需下载素材。
 固定场景按原生会话标签分类；使用 `simulation.open` 定位，使用 `simulation.trigger` 触发临时提示。
 
@@ -64,7 +64,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 |---|---|
 | `alternate` | 另一套聊天组件 |
 | `scheduled` | 计划消息；`saved` 有 30 条可滚动的提醒样本 |
-| `shortcuts` | 本地快捷回复页，18 条可滚动的样本，低于 20 条上限以保留输入框 |
+| `shortcuts` | 快捷回复 `/layout` 的编辑页，18 条可滚动的样本，低于 20 条上限以保留输入框；进入模拟模式时生成，也可从 Telegram Business 页进入 |
 | `pinned` | 含置顶消息的场景 |
 | `actions` | 有管理权限的 `requests`；没有服务器日志，只显示分区外框 |
 | `topic-unread` / `topic-closed` | `topic` 与 `topic-tabs` 的未读或已关闭话题 |

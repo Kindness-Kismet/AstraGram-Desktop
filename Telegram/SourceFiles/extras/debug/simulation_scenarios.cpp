@@ -8,6 +8,7 @@
 #include "base/unixtime.h"
 #include "data/data_channel.h"
 #include "data/data_chat_filters.h"
+#include "data/business/data_business_info.h"
 #include "data/business/data_shortcut_messages.h"
 #include "data/components/sponsored_messages.h"
 #include "data/components/scheduled_messages.h"
@@ -173,6 +174,8 @@ base::weak_ptr<Main::Session> SeededSession;
 constexpr auto kListSampleCount = 30;
 // 快捷回复默认上限 20 条，达到上限会隐藏输入框，样本留出余量。
 constexpr auto kShortcutSampleCount = 18;
+constexpr auto kShortcutId = 1;
+constexpr auto kShortcutMessageId = kFirstMessageId + 2000;
 [[nodiscard]] QString listSampleText(int index) {
 	const auto texts = std::array{
 		u"一小时后提醒检查模拟场景。",
@@ -581,6 +584,27 @@ void fillHistory(not_null<Main::Session*> session, not_null<PeerData*> peer, int
 	history->updateChatListExistence();
 }
 
+// 本地给出快捷回复和问候、离开设置，Business 页无需等待服务器即可进入。
+void seedBusiness(not_null<Main::Session*> session) {
+	auto &messages = session->data().shortcutMessages();
+	const auto now = base::unixtime::now();
+	for (auto i = 0; i != kShortcutSampleCount; ++i) {
+		messages.apply(MTP_updateQuickReplyMessage(makeMessage(
+			session->user(), session->userPeerId(), kShortcutMessageId + i,
+			listSampleText(i), false, false, kShortcutId, false, false, false,
+			0, 0, {}, false, std::nullopt, 0,
+			now - 3600 + 60 * i)).c_updateQuickReplyMessage());
+	}
+	// 消息先于列表写入，列表的最新消息已在本地时才会标记为已加载。
+	messages.apply(MTP_updateQuickReplies(MTP_vector<MTPQuickReply>({
+		MTP_quickReply(MTP_int(kShortcutId), MTP_string("layout"),
+			MTP_int(kShortcutMessageId + kShortcutSampleCount - 1),
+			MTP_int(kShortcutSampleCount)),
+	})).c_updateQuickReplies());
+	session->data().businessInfo().applyAwaySettings({});
+	session->data().businessInfo().applyGreetingSettings({});
+}
+
 void seedScenario(not_null<Main::Session*> session, int index) {
 	const auto &spec = kScenarios[index];
 	const auto kind = spec.kind;
@@ -751,22 +775,7 @@ void installScenarioDraft(
 		return Result::Ok();
 	}
 	if (view == u"shortcuts"_q) {
-		auto &messages = session->data().shortcutMessages();
-		constexpr auto kShortcutMessageId = kFirstMessageId + 2000;
-		const auto now = base::unixtime::now();
-		for (auto i = 0; i != kShortcutSampleCount; ++i) {
-			messages.apply(MTP_updateQuickReplyMessage(makeMessage(
-				session->user(), session->userPeerId(), kShortcutMessageId + i,
-				listSampleText(i), false, false, 1, false, false, false,
-				0, 0, {}, false, std::nullopt, 0,
-				now - 3600 + 60 * i)).c_updateQuickReplyMessage());
-		}
-		messages.apply(MTP_updateQuickReplies(MTP_vector<MTPQuickReply>({
-			MTP_quickReply(MTP_int(1), MTP_string("layout"),
-				MTP_int(kShortcutMessageId + kShortcutSampleCount - 1),
-				MTP_int(kShortcutSampleCount)),
-		})).c_updateQuickReplies());
-		controller->showSettings(Settings::ShortcutMessagesId(1));
+		controller->showSettings(Settings::ShortcutMessagesId(kShortcutId));
 		return Result::Ok();
 	}
 	if (view.startsWith(u"source-"_q)) {
@@ -1006,6 +1015,7 @@ void seedSimulationScenarios(not_null<Main::Session*> session) {
 	for (auto i = 0; i != kScenarios.size(); ++i) {
 		seedScenario(session, i);
 	}
+	seedBusiness(session);
 	auto &filters = session->data().chatsFilters();
 	for (auto category = 0; category != 7; ++category) {
 		auto histories = base::flat_set<not_null<History*>>();

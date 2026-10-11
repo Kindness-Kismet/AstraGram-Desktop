@@ -43,8 +43,9 @@ QString enterSimulation(int64 userId) {
 
 	auto settings = account.local().readSessionSettingsForDebug();
 	using Flag = MTPDuser::Flag;
+	// 带会员身份，快捷回复等会员入口可以直接从界面进入。
 	account.createSession(MTP_user(
-		MTP_flags(Flag::f_self | Flag::f_first_name),
+		MTP_flags(Flag::f_self | Flag::f_first_name | Flag::f_premium),
 		MTP_long(userId),
 		MTPlong(), // access_hash
 		MTP_string("模拟用户"),
