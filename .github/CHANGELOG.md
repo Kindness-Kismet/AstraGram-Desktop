@@ -1,15 +1,15 @@
-- Improved the message field, which now smoothly animates its height when lines are added or removed and when the reply, edit or link preview bar appears or disappears
-- Changed how the search field in the emoji, sticker and GIF panels works; it now matches the chat list search bar and spans the full width without the emoji category shortcuts
-- Fixed an issue with the multi-line message field that previously caused its bottom-right corner to be off-center from the send button
-- Fixed an issue with the message stash button that previously caused it to be hidden behind the floating message field
-- Fixed an issue with the settings import and export window that previously caused option checkboxes to be misaligned with their wrapped labels and the options to sit too close together
-- Fixed an issue with Windows taskbar and Start menu shortcuts that previously caused AstraGram to replace the pinned icons of other apps such as AyuGram with its own on startup
+- Improved message bubbles, which now smoothly resize and crossfade the old and new text when an edit changes their size
+- Changed how hover highlights work; they now use a neutral dark or light tint instead of each theme's own color, and side menu buttons let the window material show through
+- Changed how the side menu account header works; it now sits directly on the menu background without a card or a hover outline
+- Changed how the side menu footer works; it now shows the app name and version on one line and no longer opens a website or the changelog when clicked
+- Fixed an issue with side menu icons and footer text that previously caused their colors to differ from the menu labels in dark themes or with window material
+- Fixed an issue with the recent actions, deleted messages and edit history views that previously caused their top bar to stay opaque with window material enabled
 
 ---
 
-- 对消息输入框进行了改善，这使得行数增减以及回复、编辑或链接预览栏出现和消失时，输入框高度会平滑过渡
-- 调整了表情、贴纸和 GIF 面板搜索框的行为，现在外观与对话列表搜索栏一致并占满整行，不再显示表情分类快捷按钮
-- 修复了关于多行消息输入框的错误，该问题曾导致右下角圆弧与发送按钮不同心
-- 修复了关于消息暂存按钮的错误，该问题曾导致按钮被悬浮的消息输入框遮住
-- 修复了关于设置导入导出窗口的错误，该问题曾导致选项的勾选框与换行后的说明文字没有对齐，选项之间也过于拥挤
-- 修复了关于 Windows 任务栏和开始菜单快捷方式的错误，该问题曾导致 AstraGram 启动时把 AyuGram 等其他应用固定在任务栏上的图标改成自己的图标
+- 对消息气泡进行了改善，这使得编辑导致尺寸变化时，气泡会平滑缩放，新旧文字淡入淡出切换
+- 调整了悬停高亮的行为，现在统一使用中性的深色或浅色叠加，不再沿用各主题自带的颜色，侧边栏按钮在窗口材质下也能透出背后的材质
+- 调整了侧边栏账号区域的行为，现在直接显示在菜单背景上，不再有卡片背景和悬停描边
+- 调整了侧边栏底部版本信息的行为，现在应用名和版本号显示在同一行，点击不再打开网页或更新日志
+- 修复了关于侧边栏图标和底部文字的错误，该问题曾导致暗色主题或开启窗口材质时它们的颜色与菜单文字不一致
+- 修复了关于最近操作、已删除消息和编辑历史页面的错误，该问题曾导致开启窗口材质后顶栏仍然不透明
