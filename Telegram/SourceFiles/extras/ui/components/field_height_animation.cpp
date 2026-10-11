@@ -3,7 +3,6 @@
 #include "base/algorithm.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/ui_utility.h"
-#include "styles/style_chat_helpers.h"
 
 #include <QtGui/QAbstractTextDocumentLayout>
 #include <QtGui/QGuiApplication>
@@ -33,8 +32,9 @@ FieldHeightAnimation::FieldHeightAnimation(
 				strong->scheduleRefresh();
 			}
 		});
-	_target = targetHeight();
-	apply(_target);
+	const auto target = targetHeight();
+	_height.jumpTo(target);
+	apply(target);
 }
 
 void FieldHeightAnimation::setMaxHeight(int height) {
@@ -43,18 +43,17 @@ void FieldHeightAnimation::setMaxHeight(int height) {
 	}
 	_maxHeight = height;
 	const auto target = targetHeight();
-	if (_target == target) {
+	if (_height.target() == target) {
 		return;
 	}
-	_target = target;
-	_animation.stop();
+	_height.jumpTo(target);
 	apply(target);
 }
 
 void FieldHeightAnimation::finish() {
-	_target = targetHeight();
-	_animation.stop();
-	if (apply(_target)) {
+	const auto target = targetHeight();
+	_height.jumpTo(target);
+	if (apply(target)) {
 		_changed();
 	}
 }
@@ -81,19 +80,11 @@ void FieldHeightAnimation::scheduleRefresh() {
 void FieldHeightAnimation::refresh() {
 	_refreshScheduled = false;
 	const auto target = targetHeight();
-	if (_target == target) {
+	if (_height.target() == target) {
 		return;
 	}
-	_target = target;
-	if (anim::Disabled() || !_field->isVisible()) {
-		_animation.stop();
-		if (apply(target)) {
-			_changed();
-		}
-		return;
-	}
-	const auto step = [=](float64 value) {
-		if (!apply(int(base::SafeRound(value)))) {
+	const auto step = [=] {
+		if (!apply(int(base::SafeRound(_height.value())))) {
 			return;
 		}
 		_changed();
@@ -103,13 +94,15 @@ void FieldHeightAnimation::refresh() {
 			QGuiApplication::inputMethod()->update(Qt::ImCursorRectangle);
 		}
 	};
-	// 中途换向时从当前显示高度继续，不排队。
-	_animation.start(
-		step,
-		_field->height(),
-		target,
-		st::historyComposeResizeDuration,
-		anim::easeOutCubic);
+	if (_field->isVisible()) {
+		_height.animateTo(target, step);
+	}
+	if (!_height.animating()) {
+		_height.jumpTo(target);
+		if (apply(target)) {
+			_changed();
+		}
+	}
 }
 
 bool FieldHeightAnimation::apply(int height) {

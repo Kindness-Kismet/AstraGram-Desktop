@@ -268,6 +268,8 @@ set(extras_files
         extras/ui/components/avatar_corners_preview.h
         extras/ui/components/message_preview.cpp
         extras/ui/components/message_preview.h
+        extras/ui/components/smooth_transition.cpp
+        extras/ui/components/smooth_transition.h
         extras/ui/components/sticker_preview.cpp
         extras/ui/components/sticker_preview.h
         extras/ui/components/saved_music.cpp

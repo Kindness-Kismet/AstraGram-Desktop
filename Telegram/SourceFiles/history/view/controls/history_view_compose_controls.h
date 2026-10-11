@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/rp_widget.h"
 #include "ui/effects/animations.h"
 #include "ui/widgets/fields/input_field.h"
+#include "extras/ui/components/smooth_transition.h"
 
 class History;
 class DocumentData;
@@ -616,8 +617,7 @@ private:
 
 	friend class FieldHeader;
 	const std::unique_ptr<FieldHeader> _header;
-	Ui::Animations::Simple _headerAnimation;
-	bool _headerShown = false;
+	ExtrasUi::SmoothTransition _headerReveal;
 	const std::unique_ptr<Controls::VoiceRecordBar> _voiceRecordBar;
 	std::unique_ptr<Controls::AiTooltipManager> _aiTooltipManager;
 	std::unique_ptr<Controls::AiTooltipManager> _sendAsFileTooltipManager;

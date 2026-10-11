@@ -898,7 +898,7 @@ void HistoryWidget::moveFieldControls() {
 	// 回复条展开途中，关闭按钮同样只露出胶囊内的部分。
 	// 空遮罩会被 Qt 视为取消遮罩，所以至少保留一行透明像素。
 	refreshComposeHeader();
-	const auto headerHidden = _composeHeaderShown
+	const auto headerHidden = (_composeHeader.target() > 0.)
 		? std::min(
 			st::historyReplyHeight - composeHeaderHeight(),
 			_fieldBarCancel->height() - 1)

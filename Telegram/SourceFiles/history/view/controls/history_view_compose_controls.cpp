@@ -1577,8 +1577,7 @@ void ComposeControls::setHistory(SetHistoryArgs &&args) {
 	_field->setMode(args.videoStream
 		? Ui::InputField::Mode::NoNewlines
 		: Ui::InputField::Mode::MultiLine);
-	_headerShown = _header->isDisplayed();
-	_headerAnimation.stop();
+	_headerReveal.jumpTo(_header->isDisplayed() ? 1. : 0.);
 	_fieldHeight->finish();
 	updateHeight();
 }
@@ -5942,22 +5941,16 @@ int ComposeControls::composeFieldHeight() const {
 }
 
 void ComposeControls::refreshHeaderShown() {
-	const auto shown = _header->isDisplayed();
-	if (_headerShown == shown) {
+	const auto target = _header->isDisplayed() ? 1. : 0.;
+	if (_headerReveal.target() == target) {
 		return;
 	}
-	_headerShown = shown;
-	if (anim::Disabled() || !_wrap->isVisible()) {
-		_headerAnimation.stop();
+	if (!_wrap->isVisible()) {
+		_headerReveal.jumpTo(target);
 		return;
 	}
 	// 回复条固定在输入框上方，外框顶边移动时逐步露出或收起。
-	_headerAnimation.start(
-		[=] { updateHeight(); },
-		shown ? 0. : 1.,
-		shown ? 1. : 0.,
-		st::historyComposeResizeDuration,
-		anim::easeOutCubic);
+	_headerReveal.animateTo(target, [=] { updateHeight(); });
 }
 
 void ComposeControls::updateHeight() {
@@ -5965,7 +5958,7 @@ void ComposeControls::updateHeight() {
 	const auto headerHeight = anim::interpolate(
 		0,
 		_header->height(),
-		_headerAnimation.value(_headerShown ? 1. : 0.));
+		_headerReveal.value());
 	const auto height = headerHeight
 		+ _st.padding.top()
 		+ composeFieldHeight()

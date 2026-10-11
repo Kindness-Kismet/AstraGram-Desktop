@@ -1,7 +1,7 @@
 #pragma once
 
 #include "base/weak_ptr.h"
-#include "ui/effects/animations.h"
+#include "extras/ui/components/smooth_transition.h"
 
 namespace Ui {
 class InputField;
@@ -9,7 +9,7 @@ class InputField;
 
 namespace ExtrasUi {
 
-// 接管输入框的自适应高度，行数变化时逐帧过渡并回调；底边位置由调用方保持。
+// 接管输入框的自适应高度，行数变化时按平滑过渡逐帧回调；底边位置由调用方保持。
 class FieldHeightAnimation final : public base::has_weak_ptr {
 public:
 	FieldHeightAnimation(
@@ -31,10 +31,9 @@ private:
 
 	const not_null<Ui::InputField*> _field;
 	const Fn<void()> _changed;
-	Ui::Animations::Simple _animation;
+	SmoothTransition _height;
 	int _minHeight = 0;
 	int _maxHeight = 0;
-	int _target = 0;
 	bool _refreshScheduled = false;
 
 };

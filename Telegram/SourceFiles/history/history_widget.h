@@ -22,6 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/controls/history_view_bot_menu_button.h"
 #include "ui/widgets/fields/input_field.h"
 #include "mtproto/sender.h"
+#include "extras/ui/components/smooth_transition.h"
 
 enum class SendMediaType;
 class MessageLinksParser;
@@ -1013,8 +1014,7 @@ private:
 	base::unique_qptr<CharactersLimitLabel> _charsLimitation;
 	QString _sendRestrictionKey;
 	Ui::Animations::Simple _inPhotoEditOver;
-	Ui::Animations::Simple _composeHeaderAnimation;
-	bool _composeHeaderShown = false;
+	ExtrasUi::SmoothTransition _composeHeader;
 	bool _inDetails = false;
 	bool _inPhotoEdit = false;
 	bool _inClickable = false;
