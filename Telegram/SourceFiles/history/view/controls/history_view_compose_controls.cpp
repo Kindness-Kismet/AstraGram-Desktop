@@ -1324,7 +1324,7 @@ ComposeControls::ComposeControls(
 	}
 	if (ComposeOuterMargin(_st)) {
 		Ui::ApplyChatControlSurface(
-			_wrap.get(), st::historyComposeCapsuleRadius, false, [] {
+			_wrap.get(), MessageFieldCapsuleRadius(), false, [] {
 				return QColor(Qt::transparent);
 			});
 	}
@@ -5804,7 +5804,7 @@ void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
 		const auto outline = QRectF(full).adjusted(
 			halfStroke, halfStroke, -halfStroke, -halfStroke);
 		const auto radius = std::min(
-			qreal(st::historyComposeCapsuleRadius), outline.height() / 2.);
+			qreal(MessageFieldCapsuleRadius()), outline.height() / 2.);
 		auto hq = PainterHighQualityEnabler(p);
 		p.setBrush(ExtrasFeatures::WindowMaterial::cardColor(
 			_wrap.get(), (flat ? st::windowBgOver : _st.bg)->c));

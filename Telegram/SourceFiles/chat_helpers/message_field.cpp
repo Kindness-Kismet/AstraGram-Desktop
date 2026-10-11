@@ -711,6 +711,10 @@ void InitMessageFieldHandlers(
 	});
 }
 
+int MessageFieldCapsuleRadius() {
+	return st::historySendSize.height() / 2;
+}
+
 QMargins MessageFieldCenteringMargins(
 		not_null<const Ui::InputField*> field) {
 	const auto &fieldStyle = field->st();

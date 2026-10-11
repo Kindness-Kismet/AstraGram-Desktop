@@ -98,6 +98,8 @@ void InitMessageFieldHandlers(
 	not_null<Ui::InputField*> field,
 	ChatHelpers::PauseReason pauseReasonLevel,
 	Fn<bool(not_null<DocumentData*>)> allowPremiumEmoji = nullptr);
+// 胶囊圆角取单行胶囊高度的一半，多行时发送按钮仍与右下圆弧同心。
+[[nodiscard]] int MessageFieldCapsuleRadius();
 // 单行时把最小高度多出的空白上下平分，文字、光标与占位文字垂直居中。
 // 须在 InitMessageField 之后调用，仅用于聊天输入胶囊。
 [[nodiscard]] QMargins MessageFieldCenteringMargins(

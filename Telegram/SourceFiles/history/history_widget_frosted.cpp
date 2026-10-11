@@ -1,5 +1,6 @@
 #include "history/history_widget.h"
 
+#include "chat_helpers/message_field.h"
 #include "extras/ui/components/floating_surface_host.h"
 #include "history/history_inner_widget.h"
 #include "mainwidget.h"
@@ -14,7 +15,7 @@ void HistoryWidget::setupFrostedBackground() {
 	_composeSurface->setMouseTracking(true);
 	_composeSurface->hide();
 	ExtrasUi::FloatingSurface::attach(_composeSurface.data(), {
-		.radius = st::historyComposeCapsuleRadius,
+		.radius = MessageFieldCapsuleRadius(),
 		.background = ExtrasUi::ChatSurfaceBackground,
 		.border = ExtrasUi::ChatSurfaceBorder,
 		.borderWidth = st::lineWidth,
