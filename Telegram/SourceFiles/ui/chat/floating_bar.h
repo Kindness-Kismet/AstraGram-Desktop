@@ -56,11 +56,11 @@ inline void ApplyChatControlSurface(
 		bool outline = true,
 		Fn<QColor()> background = nullptr) {
 	if (!background) {
-		background = ExtrasUi::ChatSurfaceBackground;
+		background = ExtrasUi::chatSurfaceBackground;
 	}
 	auto border = Fn<QColor()>();
 	if (outline) {
-		border = ExtrasUi::ChatSurfaceBorder;
+		border = ExtrasUi::chatSurfaceBorder;
 	}
 	ExtrasUi::FloatingSurface::attach(widget.get(), {
 		.radius = radius,
@@ -82,7 +82,7 @@ inline void PaintChatBar(
 	if (!surface || (!surface->hasBackdrop() && !surface->usesWindowMaterial())) {
 		p.fillRect(rect, hover.isValid() ? hover : fill);
 	} else if (hover.isValid() && hover != fill) {
-		p.fillRect(rect, ExtrasUi::ChatSurfaceHover());
+		p.fillRect(rect, ExtrasUi::chatSurfaceHover());
 	}
 }
 
@@ -98,10 +98,10 @@ inline void ApplyAutocompleteSurface(
 	ExtrasUi::FloatingSurface::attach(widget.get(), {
 		.radius = st::windowCardRadius,
 		.background = [=] {
-			return frosted() ? ExtrasUi::ChatSurfaceBackground() : background->c;
+			return frosted() ? ExtrasUi::chatSurfaceBackground() : background->c;
 		},
 		.border = [=] {
-			return frosted() ? ExtrasUi::ChatSurfaceBorder() : st::windowDividerFg->c;
+			return frosted() ? ExtrasUi::chatSurfaceBorder() : st::windowDividerFg->c;
 		},
 		.borderWidth = st::lineWidth,
 		.maskInput = true,

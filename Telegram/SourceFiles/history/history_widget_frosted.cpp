@@ -17,8 +17,8 @@ void HistoryWidget::setupFrostedBackground() {
 	_composeSurface->hide();
 	ExtrasUi::FloatingSurface::attach(_composeSurface.data(), {
 		.radius = MessageFieldCapsuleRadius(),
-		.background = ExtrasUi::ChatSurfaceBackground,
-		.border = ExtrasUi::ChatSurfaceBorder,
+		.background = ExtrasUi::chatSurfaceBackground,
+		.border = ExtrasUi::chatSurfaceBorder,
 		.borderWidth = st::lineWidth,
 		.maskInput = true,
 	});

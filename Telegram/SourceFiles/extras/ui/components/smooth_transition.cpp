@@ -12,11 +12,11 @@ constexpr auto kY1 = 0.010644531250000006;
 constexpr auto kX2 = 0.27920937042459737;
 constexpr auto kY2 = 0.91025390625;
 
-} // namespace
-
-float64 SmoothTransition::Ease(float64 progress) {
+[[nodiscard]] float64 ease(float64 progress) {
 	return Ui::Premium::CubicBezier(kX1, kY1, kX2, kY2, progress);
 }
+
+} // namespace
 
 void SmoothTransition::animateTo(float64 target, Fn<void()> callback) {
 	const auto from = value();
@@ -30,7 +30,7 @@ void SmoothTransition::animateTo(float64 target, Fn<void()> callback) {
 		from,
 		target,
 		kDuration,
-		[](float64 delta, float64 dt) { return delta * Ease(dt); });
+		[](float64 delta, float64 dt) { return delta * ease(dt); });
 }
 
 void SmoothTransition::jumpTo(float64 value) {

@@ -8,8 +8,6 @@ namespace ExtrasUi {
 // 参数与 Telegram Android 聊天列表一致；中途换向从当前值继续。
 class SmoothTransition final {
 public:
-	[[nodiscard]] static float64 Ease(float64 progress);
-
 	// 过渡到目标值并逐帧回调；关闭动画或已在目标值时直接到位，不回调。
 	void animateTo(float64 target, Fn<void()> callback);
 	// 直接到位，不回调。

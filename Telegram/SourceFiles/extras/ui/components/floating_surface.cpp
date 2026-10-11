@@ -22,26 +22,26 @@ constexpr auto kHoverOpacity = 0.08;
 
 } // namespace
 
-QColor ChatSurfaceBackground() {
+QColor chatSurfaceBackground() {
 	return (ExtrasSettings::getInstance().disableChatBackground()
 		? st::windowBgOver
 		: st::historyComposeAreaBg)->c;
 }
 
-QColor ChatSurfaceBorder() {
+QColor chatSurfaceBorder() {
 	return (ExtrasSettings::getInstance().disableChatBackground()
 		? st::filterInputBorderFg
 		: st::windowDividerFg)->c;
 }
 
-QColor HoverOverlay(bool dark) {
+QColor hoverOverlay(bool dark) {
 	auto result = dark ? QColor(Qt::white) : QColor(Qt::black);
 	result.setAlphaF(kHoverOpacity);
 	return result;
 }
 
-QColor ChatSurfaceHover() {
-	return HoverOverlay(Ui::IsDarkPalette(*style::main_palette::get()));
+QColor chatSurfaceHover() {
+	return hoverOverlay(Ui::IsDarkPalette(*style::main_palette::get()));
 }
 
 void FloatingSurface::attach(QWidget *widget, FloatingSurfaceStyle style) {

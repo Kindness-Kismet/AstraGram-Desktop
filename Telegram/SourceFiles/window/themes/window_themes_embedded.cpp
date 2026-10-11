@@ -267,7 +267,7 @@ using LinearRgb = std::array<double, 3>;
 // 悬停底色按叠加色与各自底色先混合成不透明色，
 // 避免不擦除背景的控件重绘时越叠越深。
 void ApplyHoverPalette(style::palette &palette) {
-	const auto overlay = ExtrasUi::HoverOverlay(Ui::IsDarkPalette(palette));
+	const auto overlay = ExtrasUi::hoverOverlay(Ui::IsDarkPalette(palette));
 	const auto ratio = overlay.alphaF();
 	const auto solid = QColor(overlay.red(), overlay.green(), overlay.blue());
 	const auto over = [&](const style::color &base) {

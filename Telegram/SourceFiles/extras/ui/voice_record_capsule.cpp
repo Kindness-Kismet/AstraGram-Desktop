@@ -28,8 +28,8 @@ VoiceRecordCapsule::VoiceRecordCapsule(
 	// 复用输入框的磨砂、配色、边框和圆角，录音层只提供内容。
 	FloatingSurface::attach(this, {
 		.radius = st::historyComposeCapsuleRadius,
-		.background = ChatSurfaceBackground,
-		.border = ChatSurfaceBorder,
+		.background = chatSurfaceBackground,
+		.border = chatSurfaceBorder,
 		.borderWidth = st::lineWidth,
 		.maskInput = true,
 	});

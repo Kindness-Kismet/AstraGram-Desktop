@@ -28,14 +28,14 @@ struct FloatingSurfaceStyle {
 };
 
 // 聊天磨砂表面统一沿用输入框配色，关闭聊天背景时改用扁平配色。
-[[nodiscard]] QColor ChatSurfaceBackground();
-[[nodiscard]] QColor ChatSurfaceBorder();
+[[nodiscard]] QColor chatSurfaceBackground();
+[[nodiscard]] QColor chatSurfaceBorder();
 
 // 悬停叠加色：亮色主题叠黑色 8%，暗色主题叠白色 8%。
-[[nodiscard]] QColor HoverOverlay(bool dark);
+[[nodiscard]] QColor hoverOverlay(bool dark);
 
 // 当前主题的半透明悬停色，叠加在磨砂表面或窗口材质这类透明背景上。
-[[nodiscard]] QColor ChatSurfaceHover();
+[[nodiscard]] QColor chatSurfaceHover();
 
 class FloatingSurface final : public QGraphicsEffect {
 public:

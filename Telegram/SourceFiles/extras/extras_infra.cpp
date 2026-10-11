@@ -105,7 +105,7 @@ void initUiSettings() {
 	ExtrasUiSettings::setWideMultiplier(settings.wideMultiplier());
 	ExtrasUiSettings::setMaterialSwitches(true);
 	ExtrasUiSettings::setAvatarCorners(settings.avatarCorners());
-	ExtrasUiSettings::setHoverOverlay(ExtrasUi::ChatSurfaceHover);
+	ExtrasUiSettings::setHoverOverlay(ExtrasUi::chatSurfaceHover);
 	Ui::SetAppliedBubbleRadius(settings.messageBubbleRadius());
 }
 
