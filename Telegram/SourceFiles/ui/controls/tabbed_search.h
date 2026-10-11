@@ -38,6 +38,8 @@ public:
 
 private:
 	int resizeGetHeight(int newWidth) override;
+	void updateCancelShown();
+	void dropFocus();
 
 	const style::TabbedSearch &_st;
 	not_null<InputField*> _field;

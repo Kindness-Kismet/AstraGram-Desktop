@@ -43,14 +43,14 @@ TabbedSearchField::TabbedSearchField(
 	_search->setObjectName(u"panelSearchIcon"_q);
 	_search->setAccessibleName(tr::lng_dlg_filter(tr::now));
 	_cancel->setObjectName(u"panelSearchClear"_q);
-	_cancel->setAccessibleName(tr::lng_sr_clear_search(tr::now));
+	_cancel->setAccessibleName(tr::lng_sr_cancel_search(tr::now));
 	_cancel->toggle(false, anim::type::instant);
 
 	_field->changes(
 	) | rpl::on_next([=] {
 		const auto query = FieldQuery(_field);
 		_query = query;
-		_cancel->toggle(!query.empty(), anim::type::normal);
+		updateCancelShown();
 		if (query.empty()) {
 			_debounceTimer.cancel();
 			_debouncedQuery = query;
@@ -63,8 +63,52 @@ TabbedSearchField::TabbedSearchField(
 		_field->setFocus();
 	});
 	_cancel->setClickedCallback([=] {
+		const auto focused = _field->hasFocus();
 		cancel();
+		if (focused) {
+			dropFocus();
+		}
 	});
+
+	_field->focusedChanges(
+	) | rpl::on_next([=] {
+		updateCancelShown();
+	}, _field->lifetime());
+
+	// 记下聚焦前的控件供交还；焦点移到别处就作废，窗口失活不算。
+	QObject::connect(qApp, &QApplication::focusChanged, this, [=](
+			QWidget *was,
+			QWidget *now) {
+		const auto inside = [&](QWidget *widget) {
+			return widget && (widget == this || isAncestorOf(widget));
+		};
+		if (inside(now) && was && !inside(was)) {
+			if (!_focusTakenFrom) {
+				_focusTakenFrom = was;
+			}
+		} else if (inside(was) && now && !inside(now)) {
+			_focusTakenFrom = nullptr;
+		}
+	});
+}
+
+// 与对话列表搜索框一致：聚焦或有内容时显示 X，点击即可退出输入框。
+void TabbedSearchField::updateCancelShown() {
+	const auto empty = _query.current().empty();
+	_cancel->toggle(!empty || _field->hasFocus(), anim::type::normal);
+	_cancel->setAccessibleName(empty
+		? tr::lng_sr_cancel_search(tr::now)
+		: tr::lng_sr_clear_search(tr::now));
+}
+
+// 焦点交还给聚焦前的控件；它已不可见或在别的窗口时由自身接住。
+void TabbedSearchField::dropFocus() {
+	const auto to = base::take(_focusTakenFrom);
+	if (to && to->isVisible() && to->window() == window()) {
+		to->setFocus();
+	} else {
+		setFocus();
+	}
 }
 
 rpl::producer<> TabbedSearchField::escapes() const {
