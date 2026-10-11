@@ -78,21 +78,28 @@ void transferBox(
 	box->addRow(object_ptr<Ui::FlatLabel>(box,
 		tr::extras_SettingsTransferScope(), st::boxLabel));
 	box->addSkip(st::boxPadding.bottom());
-	const auto official = box->addRow(object_ptr<Ui::Checkbox>(box,
+	const auto addOption = [&](QString name, QString text, bool checked) {
+		auto option = object_ptr<Ui::Checkbox>(
+			box, text, checked, st::defaultBoxCheckbox);
+		option->setObjectName(name);
+		option->setAllowTextLines();
+		option->setCheckAlignment(style::al_topleft);
+		return box->addRow(std::move(option));
+	};
+	const auto official = addOption(
+		u"settingsTransfer/official"_q,
 		tr::extras_SettingsTransferOfficial(tr::now),
-		!importing || document.contains("official"), st::defaultBoxCheckbox));
-	official->setObjectName(u"settingsTransfer/official"_q);
-	official->setAllowTextLines();
-	const auto custom = box->addRow(object_ptr<Ui::Checkbox>(box,
+		!importing || document.contains("official"));
+	box->addSkip(st::boxLittleSkip);
+	const auto custom = addOption(
+		u"settingsTransfer/custom"_q,
 		tr::extras_SettingsTransferCustom(tr::now),
-		!importing || document.contains("custom"), st::defaultBoxCheckbox));
-	custom->setObjectName(u"settingsTransfer/custom"_q);
-	custom->setAllowTextLines();
-	const auto account = box->addRow(object_ptr<Ui::Checkbox>(box,
+		!importing || document.contains("custom"));
+	box->addSkip(st::boxLittleSkip);
+	const auto account = addOption(
+		u"settingsTransfer/account"_q,
 		tr::extras_SettingsTransferAccount(tr::now, lt_user, accountName(session)),
-		!importing || document.contains("account"), st::defaultBoxCheckbox));
-	account->setObjectName(u"settingsTransfer/account"_q);
-	account->setAllowTextLines();
+		!importing || document.contains("account"));
 	if (importing) {
 		official->setDisabled(!document.contains("official"));
 		custom->setDisabled(!document.contains("custom"));
