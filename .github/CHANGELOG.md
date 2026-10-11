@@ -1,13 +1,15 @@
-- Adapted to official Telegram Desktop 7.3.1
-- Added individual download controls to album videos, so you can now download or cancel each video in an album without affecting the others, and videos that support streaming stay playable while they download
-- Changed how settings pages, dialogs, profile panels and the main menu separate their content; they now use spacing instead of divider lines, and the Channel identity toggle now sits together with the other Message Field Elements
-- Fixed an issue with font fallback on Windows that previously caused many characters from less common scripts to appear as boxes or black blocks even when an installed font could display them
-- Fixed an issue with closing the send files window that previously caused the application to crash
+- Improved the message field, which now smoothly animates its height when lines are added or removed and when the reply, edit or link preview bar appears or disappears
+- Changed how the search field in the emoji, sticker and GIF panels works; it now matches the chat list search bar and spans the full width without the emoji category shortcuts
+- Fixed an issue with the multi-line message field that previously caused its bottom-right corner to be off-center from the send button
+- Fixed an issue with the message stash button that previously caused it to be hidden behind the floating message field
+- Fixed an issue with the settings import and export window that previously caused option checkboxes to be misaligned with their wrapped labels and the options to sit too close together
+- Fixed an issue with Windows taskbar and Start menu shortcuts that previously caused AstraGram to replace the pinned icons of other apps such as AyuGram with its own on startup
 
 ---
 
-- 适配了官方 Telegram Desktop 7.3.1
-- 新增了相册视频的单独下载按钮，现在可以单独下载或取消相册中的每个视频，不影响其他视频，支持边下边播的视频在下载期间仍可播放
-- 调整了设置页面、对话框、资料面板和主菜单区分内容的行为，现在改用留白代替分隔线，「频道身份」开关也与其他消息输入框控件归在一起
-- 修复了关于 Windows 字体回退的错误，该问题曾导致许多少见文字即使已安装可用字体，仍显示为方框或黑色方块
-- 修复了关于关闭发送文件窗口的错误，该问题曾导致应用崩溃
+- 对消息输入框进行了改善，这使得行数增减以及回复、编辑或链接预览栏出现和消失时，输入框高度会平滑过渡
+- 调整了表情、贴纸和 GIF 面板搜索框的行为，现在外观与对话列表搜索栏一致并占满整行，不再显示表情分类快捷按钮
+- 修复了关于多行消息输入框的错误，该问题曾导致右下角圆弧与发送按钮不同心
+- 修复了关于消息暂存按钮的错误，该问题曾导致按钮被悬浮的消息输入框遮住
+- 修复了关于设置导入导出窗口的错误，该问题曾导致选项的勾选框与换行后的说明文字没有对齐，选项之间也过于拥挤
+- 修复了关于 Windows 任务栏和开始菜单快捷方式的错误，该问题曾导致 AstraGram 启动时把 AyuGram 等其他应用固定在任务栏上的图标改成自己的图标
