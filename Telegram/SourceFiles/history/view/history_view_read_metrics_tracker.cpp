@@ -278,7 +278,11 @@ void ReadMetricsTracker::restartTimer() {
 			updateNearest(tracked.entryGraceStart + kGracePeriod);
 		} else if (tracked.exitGracePending && !_paused) {
 			updateNearest(tracked.exitGraceStart + kGracePeriod);
-		} else if (tracked.viewId) {
+		} else if (tracked.viewId
+			&& !tracked.entryGracePending
+			&& !tracked.exitGracePending) {
+			// 与 processTransitions 一致：暂停中的宽限项不会按时长结束，
+			// 为它们排定已过的时限会让计时器以零间隔空转。
 			updateNearest(tracked.trackingStarted + kMaxTrackingDuration);
 			if (!_paused && _currentlyVisible.contains(msgId) && activityDeadline > now) {
 				updateNearest(activityDeadline);
