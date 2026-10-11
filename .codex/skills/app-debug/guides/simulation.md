@@ -49,7 +49,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 | 机器人 | `inline-bot` | 消息内联按钮 |
 | 机器人 | `sponsored` | 本地广告样本 |
 | 话题 | `topic` | 常规与置顶、未读与草稿、已关闭三个真实话题 |
-| 话题 | `topic-tabs` | 标签布局论坛：常规话题与 11 个话题，含多种颜色、超长标题、置顶、未读、已关闭、法语话题，以及管理权限、加入申请和翻译提示 |
+| 话题 | `topic-tabs` | 标签布局论坛：常规话题与 11 个话题，每个话题 40 条消息可滚动，含多种颜色、超长标题、置顶、未读、已关闭、法语话题，以及管理权限、加入申请和翻译提示 |
 | 收藏夹 | `saved` | 本人、私聊、频道来源，置顶、一小时后的提醒与非音视频内容 |
 | 归档 | `archived-private` | 未读私聊 |
 | 归档 | `archived-group` | 静音群组 |

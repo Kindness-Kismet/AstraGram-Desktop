@@ -139,7 +139,9 @@ constexpr auto kTabTopics = std::array{
 	TabTopic{ .title = u"闲聊", .colorId = 0xFF93B2 },
 	TabTopic{ .title = u"周报", .colorId = 0xFFD67E },
 };
-constexpr auto kTabTopicMessages = 6;
+// 每个话题的消息超过一屏，用于滚动检查浮动卡片；编号间隔须大于消息数。
+constexpr auto kTabTopicMessages = 40;
+constexpr auto kTabTopicStride = 100;
 // 下标与 HistoryView::SubsectionTabsMode 的取值一致。
 constexpr auto kTabsModes = std::array{ "top", "left", "bottom" };
 base::weak_ptr<Main::Session> SeededSession;
@@ -346,7 +348,14 @@ void fillTabTopics(
 		u"这条消息比较长，用来检查话题内气泡的换行效果，以及顶栏下方第一条消息是否被遮挡。",
 		u"收到。",
 		u"Mixed 中英文 text 与数字 123。",
-		u"最后一条消息，检查列表底部与输入区的间距。",
+		u"多行消息的第一行。\n第二行滚动到置顶条下方时，文字不应透过卡片。\n第三行。",
+		u"好的，我晚点再看。",
+		u"这一段文字故意写得很长，滚动时可以清楚看到消息经过顶栏、标签栏、置顶条和翻译条下方时的遮挡效果，检查卡片是否保持不透明。",
+	};
+	const auto frenchTexts = std::array{
+		u"Bonjour, voici un message pour vérifier la traduction.",
+		u"Merci, je regarde cela plus tard dans la journée.",
+		u"Ce paragraphe est volontairement long pour vérifier le défilement sous la barre de traduction.",
 	};
 	auto order = ranges::views::iota(0, int(kTabTopics.size())) | ranges::to_vector;
 	ranges::stable_partition(order, [](int index) { return !kTabTopics[index].unread; });
@@ -356,23 +365,26 @@ void fillTabTopics(
 		const auto index = order[slot];
 		const auto &spec = kTabTopics[index];
 		for (auto i = 0; i != kTabTopicMessages; ++i) {
-			const auto id = baseId + 20 * slot + i;
-			const auto sender = (i == 3)
+			const auto id = baseId + kTabTopicStride * slot + i;
+			// 每两条换一个发送者，用来检查连续消息的分组。
+			const auto sender = (i % 5 == 3)
 				? session->userPeerId()
-				: peerFromUser(UserId(kFirstPeerId + i % 3));
-			const auto text = spec.french
-				? u"Bonjour, voici un message pour vérifier la traduction."_q
-				: QString::fromUtf16(texts[i]);
+				: peerFromUser(UserId(kFirstPeerId + (i / 2) % 3));
+			const auto body = spec.french
+				? frenchTexts[i % frenchTexts.size()]
+				: texts[i % texts.size()];
+			const auto text = u"%1. %2"_q.arg(i + 1).arg(QString::fromUtf16(body));
+			const auto date = now - 10800 + 15 * (slot * kTabTopicMessages + i);
 			messages.prepend(makeMessage(peer, sender, id, text, spec.pinned && i < 2,
 				index != 0, 0, false, false, false, MsgId(), tabTopicRoot(index), {}, false,
-				std::nullopt, 0, now - 7200 + 25 * (id - baseId)));
+				std::nullopt, 0, date));
 			topicIds[index].push_back(MsgId(id));
 		}
 	}
 	for (auto index = int(kTabTopics.size()) - 1; index > 0; --index) {
 		const auto &spec = kTabTopics[index];
 		messages.push_back(makeTopicCreated(peer, session->userPeerId(), tabTopicRoot(index),
-			QString::fromUtf16(spec.title), spec.colorId, now - 7800 + 10 * index));
+			QString::fromUtf16(spec.title), spec.colorId, now - 11000 + 10 * index));
 	}
 	history->addNewerSlice(messages);
 	history->addNewerSlice({});
@@ -397,7 +409,9 @@ void fillTabTopics(
 	}
 	session->data().setPinnedFromEntryList(forum->topicFor(tabTopicRoot(1)), true);
 	forum->topicsList()->setLoaded();
-	const auto lastId = baseId + 20 * (int(order.size()) - 1) + kTabTopicMessages - 1;
+	const auto lastId = baseId
+		+ kTabTopicStride * (int(order.size()) - 1)
+		+ kTabTopicMessages - 1;
 	history->setUnreadCount(unread);
 	history->setInboxReadTill(lastId - unread);
 	history->outboxRead(lastId);
