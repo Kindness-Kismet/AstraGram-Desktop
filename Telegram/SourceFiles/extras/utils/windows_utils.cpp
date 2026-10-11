@@ -6,159 +6,96 @@
 #include "base/platform/win/base_windows_winrt.h"
 #include "platform/win/windows_app_user_model_id.h"
 
-#include <propvarutil.h>
 #include <ShlObj_core.h>
 
-void processIcon(QString shortcut, QString iconPath) {
-	if (!QFile::exists(shortcut)) {
+namespace {
+
+using Platform::AppUserModelId::UniqueFileId;
+
+// 只改指向本程序的快捷方式，其他客户端的同名或同目录快捷方式保持原样。
+void processIcon(
+		const std::wstring &shortcut,
+		const std::wstring &iconPath,
+		UniqueFileId selfId) {
+	const auto shellLink = base::WinRT::TryCreateInstance<IShellLink>(
+		CLSID_ShellLink);
+	if (!shellLink) {
 		return;
 	}
-
-	IShellLink *pShellLink = NULL;
-	IPersistFile *pPersistFile = NULL;
-
-	HRESULT hr = CoCreateInstance(CLSID_ShellLink,
-								  NULL,
-								  CLSCTX_INPROC_SERVER,
-								  IID_IShellLink,
-								  (void**) &pShellLink);
-	if (SUCCEEDED(hr)) {
-		hr = pShellLink->QueryInterface(IID_IPersistFile, (void**) &pPersistFile);
-		if (SUCCEEDED(hr)) {
-			const auto shortcutPath = shortcut.toStdWString();
-
-			if (SUCCEEDED(pPersistFile->Load(shortcutPath.c_str(), STGM_READWRITE))) {
-				pShellLink->SetIconLocation(iconPath.toStdWString().c_str(), 0);
-				pPersistFile->Save(shortcutPath.c_str(), TRUE);
-			}
-
-			pPersistFile->Release();
-		}
-
-		pShellLink->Release();
+	const auto persistFile = shellLink.try_as<IPersistFile>();
+	if (!persistFile
+		|| FAILED(persistFile->Load(shortcut.c_str(), STGM_READWRITE))) {
+		return;
 	}
+	WCHAR target[MAX_PATH] = { 0 };
+	if (FAILED(shellLink->GetPath(target, MAX_PATH, nullptr, 0))
+		|| Platform::AppUserModelId::GetUniqueFileId(target) != selfId) {
+		return;
+	}
+	shellLink->SetIconLocation(iconPath.c_str(), 0);
+	persistFile->Save(shortcut.c_str(), TRUE);
 }
 
-void processLegacy(const QString &iconPath) {
-	const auto appdata = QDir::fromNativeSeparators(qgetenv("APPDATA"));
-	auto shortcut = appdata + "/Microsoft/Internet Explorer/Quick Launch/User Pinned/TaskBar/AyuGram Desktop.lnk";
-	if (!QFile::exists(shortcut)) {
-		shortcut = appdata + "/Microsoft/Internet Explorer/Quick Launch/User Pinned/TaskBar/AyuGram.lnk";
-	}
-	if (!QFile::exists(shortcut)) {
-		return;
-	}
-
-	processIcon(shortcut, iconPath);
-}
-
-void processNewPinned(const QString &iconPath) {
-	if (!SUCCEEDED(CoInitialize(0))) {
-		return;
-	}
-	const auto coGuard = gsl::finally([]
-	{
-		CoUninitialize();
-	});
-
+void processPinned(const std::wstring &iconPath, UniqueFileId selfId) {
 	const auto path = Platform::AppUserModelId::PinnedIconsPath();
-	const auto native = QDir::toNativeSeparators(path).toStdWString();
-
-	const auto srcid = Platform::AppUserModelId::MyExecutablePathId();
-	if (!srcid) {
+	if (path.isEmpty()) {
 		return;
 	}
-
-	WIN32_FIND_DATA findData;
-	HANDLE findHandle = FindFirstFileEx(
+	const auto native = QDir::toNativeSeparators(path).toStdWString();
+	auto findData = WIN32_FIND_DATA();
+	const auto findHandle = FindFirstFileEx(
 		(native + L"*").c_str(),
 		FindExInfoStandard,
 		&findData,
 		FindExSearchNameMatch,
-		0,
+		nullptr,
 		0);
 	if (findHandle == INVALID_HANDLE_VALUE) {
 		return;
 	}
-
 	do {
-		std::wstring fname = native + findData.cFileName;
-		const auto filePath = QString::fromStdWString(fname);
 		if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 			continue;
 		}
-
-		DWORD attributes = GetFileAttributes(fname.c_str());
-		if (attributes >= 0xFFFFFFF) {
-			continue; // file does not exist
-		}
-
-		auto shellLink = base::WinRT::TryCreateInstance<IShellLink>(
-			CLSID_ShellLink);
-		if (!shellLink) {
-			continue;
-		}
-
-		auto persistFile = shellLink.try_as<IPersistFile>();
-		if (!persistFile) {
-			continue;
-		}
-
-		auto hr = persistFile->Load(fname.c_str(), STGM_READWRITE);
-		if (!SUCCEEDED(hr)) continue;
-
-		WCHAR dst[MAX_PATH] = {0};
-		hr = shellLink->GetPath(dst, MAX_PATH, nullptr, 0);
-		if (!SUCCEEDED(hr)) continue;
-
-		if (Platform::AppUserModelId::GetUniqueFileId(dst) != srcid) {
-			continue;
-		}
-		if (!shellLink.try_as<IPropertyStore>()) {
-			continue;
-		}
-		processIcon(filePath, iconPath);
+		processIcon(native + findData.cFileName, iconPath, selfId);
 	} while (FindNextFile(findHandle, &findData));
-	DWORD errorCode = GetLastError();
-	if (errorCode && errorCode != ERROR_NO_MORE_FILES) {
-		return;
-	}
 	FindClose(findHandle);
 }
 
-void processNewShortcuts(const QString &iconPath) {
+void processStartMenu(const std::wstring &iconPath, UniqueFileId selfId) {
 	const auto path = Platform::AppUserModelId::systemShortcutPath();
 	if (path.isEmpty()) {
 		return;
 	}
-
 	const auto shortcuts = {
 		path + u"AstraGram/AstraGram.lnk"_q,
 		path + u"AstraGram.lnk"_q,
-		path + u"AyuGram Desktop/AyuGram.lnk"_q,
-		path + u"AyuGram/AyuGram.lnk"_q,
-		path + u"AyuGram.lnk"_q,
 	};
 	for (const auto &shortcut : shortcuts) {
-		const auto native = QDir::toNativeSeparators(shortcut).toStdWString();
-
-		DWORD attributes = GetFileAttributes(native.c_str());
-		if (attributes >= 0xFFFFFFF) {
+		if (!QFile::exists(shortcut)) {
 			continue;
 		}
-
-		processIcon(QString::fromStdWString(native), iconPath);
+		processIcon(
+			QDir::toNativeSeparators(shortcut).toStdWString(),
+			iconPath,
+			selfId);
 	}
 }
 
+} // namespace
+
 void reloadAppIconFromTaskBar() {
-	const auto iconPath = ExtrasAssets::appIcoPath();
+	const auto selfId = Platform::AppUserModelId::MyExecutablePathId();
+	if (!selfId || FAILED(CoInitialize(nullptr))) {
+		return;
+	}
+	const auto coGuard = gsl::finally([] { CoUninitialize(); });
 
-	processNewPinned(iconPath);
-	processNewShortcuts(iconPath);
-	processLegacy(iconPath);
+	const auto iconPath = ExtrasAssets::appIcoPath().toStdWString();
+	processPinned(iconPath, selfId);
+	processStartMenu(iconPath, selfId);
 
-	SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, NULL, NULL);
+	SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
 }
 
 bool isCapabilityDenied(const QString &capability) {
