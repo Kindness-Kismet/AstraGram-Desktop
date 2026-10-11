@@ -438,6 +438,11 @@ bool InitializeFromCache(
 	if (!style::main_palette::load(cache.colors)) {
 		return false;
 	}
+	// 缓存可能来自旧版本，统一覆盖的配色按当前规则重新计算。
+	auto palette = style::palette();
+	palette = *style::main_palette::get();
+	ApplyAccentPalette(palette);
+	style::main_palette::apply(palette);
 	Background()->saveAdjustableColors();
 	if (!background.isNull()) {
 		applyBackground(std::move(background), cache.tiled, nullptr);

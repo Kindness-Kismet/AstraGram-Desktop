@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/core_settings.h"
 #include "data/data_wall_paper.h"
 #include "ui/chat/chat_theme.h"
+#include "ui/chat/chat_theme_readability.h"
 #include "ui/style/style_palette_colorizer.h"
 #include "ui/effects/animations.h"
 #include "window/themes/window_theme.h"
@@ -262,6 +263,32 @@ using LinearRgb = std::array<double, 3>;
 	return result;
 }
 
+// 悬停底色：亮色叠加 #212121 10%，暗色叠加 #FAFAFA 5%。
+// 先与各自底色混合成不透明色，避免不擦除背景的控件重绘时越叠越深。
+void ApplyHoverPalette(style::palette &palette) {
+	const auto dark = Ui::IsDarkPalette(palette);
+	const auto overlay = dark
+		? QColor(0xFA, 0xFA, 0xFA)
+		: QColor(0x21, 0x21, 0x21);
+	const auto ratio = dark ? 0.05 : 0.10;
+	const auto over = [&](const style::color &base) {
+		return anim::color(base->c, overlay, ratio);
+	};
+	const std::pair<const char*, QColor> colors[] = {
+		{ "windowBgOver", over(palette.windowBg()) },
+		{ "menuBgOver", over(palette.menuBg()) },
+		{ "contactsBgOver", over(palette.contactsBg()) },
+		{ "dialogsBgOver", over(palette.dialogsBg()) },
+		{ "historyComposeButtonBgOver", over(palette.historyComposeButtonBg()) },
+		{ "historyToDownBgOver", over(palette.historyToDownBg()) },
+		{ "titleButtonBgOver", over(palette.titleBg()) },
+		{ "titleButtonBgActiveOver", over(palette.titleBgActive()) },
+	};
+	for (const auto &[name, color] : colors) {
+		palette.setColor(QLatin1String(name), color);
+	}
+}
+
 } // namespace
 
 style::colorizer ColorizerFrom(
@@ -441,6 +468,7 @@ void ApplyAccentPalette(style::palette &palette) {
 	for (const auto &[name, color] : colors) {
 		palette.setColor(QLatin1String(name), color);
 	}
+	ApplyHoverPalette(palette);
 }
 
 std::vector<EmbeddedScheme> EmbeddedThemes() {
