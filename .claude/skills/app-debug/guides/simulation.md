@@ -3,7 +3,7 @@
 ## 进入和操作
 
 仅开发版提供。登录页点击“模拟模式”或执行 `simulation.enter [userId]`，默认用户编号 `999999999`。
-进入时自动构造 28 个会话、3 个话题和 3 个收藏来源，无需下载素材。
+进入时自动构造 29 个会话、15 个话题和 3 个收藏来源，无需下载素材。
 固定场景按原生会话标签分类；使用 `simulation.open` 定位，使用 `simulation.trigger` 触发临时提示。
 
 ```bash
@@ -20,7 +20,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 
 原生会话分组按私聊、群组、频道、机器人、话题、收藏夹、归档排列，尊重“隐藏全部对话”设置。
 `simulation.list` 返回每项的 `key`、`name`、`category`、`categoryName`、`features` 和 `peerId`。
-进入后还返回 `state`，查询实际未读、静音、归档、置顶、草稿、分类归属、话题状态及收藏来源数量。
+进入后还返回 `state`，查询实际未读、静音、归档、置顶、草稿、分类归属、话题状态及收藏来源数量；标签论坛另有 `tabs` 布局。
 编号供 `message.list/inspect`、`chat.draft` 等查询使用，不手写内部会话编号。
 
 | 分类 | 键名 | 内容 |
@@ -49,14 +49,16 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 | 机器人 | `inline-bot` | 消息内联按钮 |
 | 机器人 | `sponsored` | 本地广告样本 |
 | 话题 | `topic` | 常规与置顶、未读与草稿、已关闭三个真实话题 |
+| 话题 | `topic-tabs` | 标签布局论坛：常规话题与 11 个话题，含多种颜色、超长标题、置顶、未读、已关闭、法语话题，以及管理权限、加入申请和翻译提示 |
 | 收藏夹 | `saved` | 本人、私聊、频道来源，置顶、一小时后的提醒与非音视频内容 |
 | 归档 | `archived-private` | 未读私聊 |
 | 归档 | `archived-group` | 静音群组 |
 | 归档 | `archived-channel` | 置顶频道 |
 
-`simulation.open <key> [--view <view>] [--input keep|empty|reply|edit|forward]` 打开场景。
+`simulation.open <key> [--view <view>] [--input keep|empty|reply|edit|forward] [--tabs top|bottom|left]` 打开场景。
 打开时切换到对应的会话分类，并退出上一场景的归档或话题导航。
-默认 `main` 使用主聊天；话题会先在左栏展开话题列表，再打开常规话题。
+默认 `main` 使用主聊天；`topic` 会先在左栏展开话题列表，再打开第一个话题；`topic-tabs` 打开带标签的“全部”消息页。
+`--tabs` 只用于 `topic-tabs`，打开前切换标签在顶部、底部或左侧；不指定时沿用上次的布局。
 
 | 视图 | 适用范围 |
 |---|---|
@@ -65,7 +67,8 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 | `shortcuts` | 本地快捷回复输入区 |
 | `pinned` | 含置顶消息的场景 |
 | `actions` | 有管理权限的 `requests`；没有服务器日志，只显示分区外框 |
-| `topic-unread` / `topic-closed` | `topic` 的未读或已关闭话题 |
+| `topic-unread` / `topic-closed` | `topic` 与 `topic-tabs` 的未读或已关闭话题 |
+| `topic-general` / `topic-pinned` / `topic-long` / `topic-french` | `topic-tabs` 的常规话题、含置顶的话题、超长标题话题、法语话题 |
 | `source-self` / `source-private` / `source-channel` | `saved` 的三个收藏来源 |
 
 `--input` 只用于私聊和话题的聊天视图：`keep` 保留草稿，`empty` 清空，`reply` 安装回复草稿，`edit` 安装编辑草稿，`forward` 安装隐藏发送者的固定转发草稿。

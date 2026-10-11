@@ -30,9 +30,12 @@
 #include "history/view/history_view_pinned_section.h"
 #include "history/view/history_view_scheduled_section.h"
 #include "main/main_session.h"
+#include "main/main_session_settings.h"
 #include "main/session/send_as_peers.h"
 #include "spellcheck/spellcheck_types.h"
 #include "settings/business/settings_shortcut_messages.h"
+#include "storage/storage_facade.h"
+#include "storage/storage_shared_media.h"
 #include "window/window_session_controller.h"
 
 namespace ExtrasDebug::Commands {
@@ -69,6 +72,7 @@ enum class Kind {
 	ArchivedChannel,
 	SendAs,
 	VoiceRestricted,
+	TopicTabs,
 };
 struct Scenario {
 	const char *key;
@@ -106,10 +110,38 @@ constexpr auto kScenarios = std::array{
 	Scenario{ "archived-channel", u"归档 · 频道", Kind::ArchivedChannel, Category::Archive, "archived,pinned" },
 	Scenario{ "send-as", u"群组 · 频道身份", Kind::SendAs, Category::Groups, "send-as,identity-switcher" },
 	Scenario{ "voice-restricted", u"群组 · 禁止语音视频", Kind::VoiceRestricted, Category::Groups, "restricted-voice,restricted-round" },
+	Scenario{ "topic-tabs", u"话题 · 标签布局", Kind::TopicTabs, Category::Topics, "tabs,general,colors,long-title,pinned,unread,closed,translate,requests" },
 };
 constexpr auto kFirstPeerId = uint64(810000001);
 constexpr auto kFirstMessageId = 2000001;
 constexpr auto kTopicRootId = 500;
+// 标签布局场景的话题，首项为常规话题；view 是可直接打开的视图名。
+struct TabTopic {
+	const char16_t *title;
+	int32 colorId = 0x6FB9F0;
+	const char *view = nullptr;
+	bool pinned = false;
+	bool unread = false;
+	bool closed = false;
+	bool french = false;
+};
+constexpr auto kTabTopics = std::array{
+	TabTopic{ .title = u"General", .view = "topic-general", .pinned = true },
+	TabTopic{ .title = u"公告与置顶", .view = "topic-pinned", .pinned = true },
+	TabTopic{ .title = u"设计讨论", .colorId = 0xFFD67E, .view = "topic-unread", .unread = true },
+	TabTopic{ .title = u"Release Notes", .colorId = 0xCB86DB },
+	TabTopic{ .title = u"这是一个非常长的话题标题，用来检查标签栏与顶栏的截断和省略效果", .colorId = 0x8EEE98, .view = "topic-long" },
+	TabTopic{ .title = u"问题反馈", .colorId = 0xFF93B2 },
+	TabTopic{ .title = u"已关闭的旧话题", .colorId = 0xFB6F5F, .view = "topic-closed", .closed = true },
+	TabTopic{ .title = u"Français", .colorId = 0xCB86DB, .view = "topic-french", .french = true },
+	TabTopic{ .title = u"测试" },
+	TabTopic{ .title = u"资源分享", .colorId = 0x8EEE98 },
+	TabTopic{ .title = u"闲聊", .colorId = 0xFF93B2 },
+	TabTopic{ .title = u"周报", .colorId = 0xFFD67E },
+};
+constexpr auto kTabTopicMessages = 6;
+// 下标与 HistoryView::SubsectionTabsMode 的取值一致。
+constexpr auto kTabsModes = std::array{ "top", "left", "bottom" };
 base::weak_ptr<Main::Session> SeededSession;
 
 [[nodiscard]] bool isUser(Kind kind) {
@@ -134,6 +166,36 @@ base::weak_ptr<Main::Session> SeededSession;
 		}
 	}
 	return -1;
+}
+[[nodiscard]] MsgId tabTopicRoot(int index) {
+	return MsgId(index ? (kTopicRootId + 100 * index) : Data::ForumTopic::kGeneralId);
+}
+[[nodiscard]] std::vector<MsgId> scenarioTopicRoots(Kind kind) {
+	auto result = std::vector<MsgId>();
+	const auto tabs = (kind == Kind::TopicTabs);
+	const auto count = tabs ? int(kTabTopics.size()) : (kind == Kind::Topic) ? 3 : 0;
+	for (auto i = 0; i != count; ++i) {
+		result.push_back(tabs ? tabTopicRoot(i) : MsgId(kTopicRootId + 100 * i));
+	}
+	return result;
+}
+// 视图对应的话题根消息；0 表示该视图不进入话题。
+[[nodiscard]] MsgId topicViewRoot(Kind kind, const QString &view) {
+	if (kind == Kind::Topic) {
+		return (view == u"main"_q) ? MsgId(kTopicRootId)
+			: (view == u"topic-unread"_q) ? MsgId(kTopicRootId + 100)
+			: (view == u"topic-closed"_q) ? MsgId(kTopicRootId + 200)
+			: MsgId();
+	}
+	if (kind != Kind::TopicTabs) {
+		return MsgId();
+	}
+	for (auto i = 0; i != kTabTopics.size(); ++i) {
+		if (kTabTopics[i].view && view == QLatin1String(kTabTopics[i].view)) {
+			return tabTopicRoot(i);
+		}
+	}
+	return MsgId();
 }
 void initialiseUser(
 		not_null<UserData*> user,
@@ -243,6 +305,104 @@ void initialiseUser(
 		MTPRichMessage());
 }
 
+// 话题创建服务消息即话题的根消息，服务器把它计入话题消息总数。
+[[nodiscard]] MTPMessage makeTopicCreated(
+		not_null<PeerData*> peer,
+		PeerId sender,
+		MsgId rootId,
+		const QString &title,
+		int32 colorId,
+		TimeId date) {
+	using Flag = MTPDmessageService::Flag;
+	return MTP_messageService(
+		MTP_flags(Flag::f_from_id
+			| ((sender == peer->session().userPeerId()) ? Flag::f_out : Flag())),
+		MTP_int(rootId.bare), peerToMTP(sender), peerToMTP(peer->id), MTPPeer(),
+		MTPMessageReplyHeader(), MTP_int(date),
+		MTP_messageActionTopicCreate(MTP_flags(0), MTP_string(title),
+			MTP_int(colorId), MTPlong()),
+		MTPMessageReactions(), MTPint());
+}
+
+// 话题置顶栏只读话题维度的存储，本地插入的消息只写入整个聊天维度。
+void addTopicPinned(not_null<PeerData*> peer, MsgId rootId, std::vector<MsgId> ids) {
+	const auto count = int(ids.size());
+	peer->session().storage().add(Storage::SharedMediaAddSlice(
+		peer->id, rootId, PeerId(), Storage::SharedMediaType::Pinned,
+		std::move(ids), { 0, ServerMaxMsgId }, count));
+}
+
+// 标签布局下整个聊天的已读位置会同步到各话题，未读话题的消息编号排在最后。
+void fillTabTopics(
+		not_null<Main::Session*> session,
+		not_null<History*> history,
+		int baseId) {
+	const auto peer = history->peer;
+	const auto forum = peer->forum();
+	const auto now = base::unixtime::now();
+	const auto texts = std::array{
+		u"大家好，这是话题里的第一条消息。",
+		u"补充一下上面的内容，检查连续消息的分组。",
+		u"这条消息比较长，用来检查话题内气泡的换行效果，以及顶栏下方第一条消息是否被遮挡。",
+		u"收到。",
+		u"Mixed 中英文 text 与数字 123。",
+		u"最后一条消息，检查列表底部与输入区的间距。",
+	};
+	auto order = ranges::views::iota(0, int(kTabTopics.size())) | ranges::to_vector;
+	ranges::stable_partition(order, [](int index) { return !kTabTopics[index].unread; });
+	auto messages = QVector<MTPMessage>();
+	auto topicIds = std::vector<std::vector<MsgId>>(kTabTopics.size());
+	for (auto slot = 0; slot != order.size(); ++slot) {
+		const auto index = order[slot];
+		const auto &spec = kTabTopics[index];
+		for (auto i = 0; i != kTabTopicMessages; ++i) {
+			const auto id = baseId + 20 * slot + i;
+			const auto sender = (i == 3)
+				? session->userPeerId()
+				: peerFromUser(UserId(kFirstPeerId + i % 3));
+			const auto text = spec.french
+				? u"Bonjour, voici un message pour vérifier la traduction."_q
+				: QString::fromUtf16(texts[i]);
+			messages.prepend(makeMessage(peer, sender, id, text, spec.pinned && i < 2,
+				index != 0, 0, false, false, false, MsgId(), tabTopicRoot(index), {}, false,
+				std::nullopt, 0, now - 7200 + 25 * (id - baseId)));
+			topicIds[index].push_back(MsgId(id));
+		}
+	}
+	for (auto index = int(kTabTopics.size()) - 1; index > 0; --index) {
+		const auto &spec = kTabTopics[index];
+		messages.push_back(makeTopicCreated(peer, session->userPeerId(), tabTopicRoot(index),
+			QString::fromUtf16(spec.title), spec.colorId, now - 7800 + 10 * index));
+	}
+	history->addNewerSlice(messages);
+	history->addNewerSlice({});
+	auto unread = 0;
+	for (auto index = 0; index != kTabTopics.size(); ++index) {
+		const auto &spec = kTabTopics[index];
+		const auto &ids = topicIds[index];
+		const auto root = tabTopicRoot(index);
+		const auto topic = forum->topicFor(root);
+		auto list = ids;
+		if (index) {
+			list.push_back(root);
+		}
+		const auto topicUnread = spec.unread ? int(ids.size()) - 1 : 0;
+		topic->replies()->setLocalMessagesForDebug(std::move(list),
+			spec.unread ? ids.front() : ids.back(), topicUnread);
+		topic->applyMaybeLast(session->data().message(peer->id, ids.back()));
+		if (spec.pinned) {
+			addTopicPinned(peer, root, { ids[0], ids[1] });
+		}
+		unread += topicUnread;
+	}
+	session->data().setPinnedFromEntryList(forum->topicFor(tabTopicRoot(1)), true);
+	forum->topicsList()->setLoaded();
+	const auto lastId = baseId + 20 * (int(order.size()) - 1) + kTabTopicMessages - 1;
+	history->setUnreadCount(unread);
+	history->setInboxReadTill(lastId - unread);
+	history->outboxRead(lastId);
+}
+
 
 void fillHistory(not_null<Main::Session*> session, not_null<PeerData*> peer, int index) {
 	const auto &spec = kScenarios[index];
@@ -254,6 +414,12 @@ void fillHistory(not_null<Main::Session*> session, not_null<PeerData*> peer, int
 		history->clearFolder();
 	}
 	history->addOlderSlice({});
+	if (kind == Kind::TopicTabs) {
+		fillTabTopics(session, history, kFirstMessageId + 100 * index);
+		history->setChatListTimeId(base::unixtime::now() - index);
+		history->updateChatListExistence();
+		return;
+	}
 	const auto rich = kind == Kind::Private || kind == Kind::Group || kind == Kind::Saved;
 	const auto pinned = spec.category == Category::Groups
 		|| kind == Kind::Broadcast || kind == Kind::Discussion
@@ -319,6 +485,11 @@ void fillHistory(not_null<Main::Session*> session, not_null<PeerData*> peer, int
 			}
 		}
 	}
+	for (auto topic = (kind == Kind::Topic) ? topicCount : 0; topic != 0; --topic) {
+		const auto root = MsgId(kTopicRootId + 100 * (topic - 1));
+		messages.push_back(makeTopicCreated(peer, session->userPeerId(), root,
+			peer->forum()->topicFor(root)->title(), 0x6FB9F0, base::unixtime::now() - 600));
+	}
 	history->addNewerSlice(messages);
 	history->addNewerSlice({});
 	if (rich) {
@@ -333,11 +504,15 @@ void fillHistory(not_null<Main::Session*> session, not_null<PeerData*> peer, int
 	}
 	if (kind == Kind::Topic) {
 		for (auto i = 0; i != topicCount; ++i) {
-			const auto topic = peer->forum()->topicFor(kTopicRootId + 100 * i);
+			const auto root = MsgId(kTopicRootId + 100 * i);
+			const auto topic = peer->forum()->topicFor(root);
 			const auto last = session->data().message(peer->id, topicIds[i].back());
-			topic->replies()->setLocalMessagesForDebug(topicIds[i],
+			auto ids = topicIds[i];
+			ids.push_back(root);
+			topic->replies()->setLocalMessagesForDebug(std::move(ids),
 				(i == 1) ? topicIds[i].front() : topicIds[i].back(), (i == 1) ? count - 1 : 0);
 			topic->applyMaybeLast(last);
+			addTopicPinned(peer, root, { topicIds[i][0], topicIds[i][1] });
 			if (i == 0) {
 				session->data().setPinnedFromEntryList(topic, true);
 			}
@@ -419,6 +594,7 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 			| (kind == Kind::Join ? Flag::Left : Flag())
 			| (kind == Kind::Discussion ? Flag::HasLink : Flag())
 			| (kind == Kind::Topic ? Flag::Forum : Flag())
+			| (kind == Kind::TopicTabs ? (Flag::Forum | Flag::ForumTabs) : Flag())
 			| (kind == Kind::Slow ? Flag::SlowmodeEnabled : Flag())
 			| ((kind == Kind::ProtectedGroup || kind == Kind::ProtectedChannel) ? Flag::NoForwards : Flag()));
 		channel->setLoadedStatus(PeerData::LoadedStatus::Full);
@@ -432,8 +608,9 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 		if (kind == Kind::Discussion) {
 			channel->setDiscussionLink(session->data().channel(peerToChannel(scenarioPeerId(findScenario(u"group"_q)))));
 		}
-		if (kind == Kind::Requests) {
-			channel->setAdminRights(ChatAdminRight::InviteByLinkOrAdd | ChatAdminRight::ProcessJoinRequests);
+		if (kind == Kind::Requests || kind == Kind::TopicTabs) {
+			channel->setAdminRights(ChatAdminRight::InviteByLinkOrAdd | ChatAdminRight::ProcessJoinRequests
+				| (kind == Kind::TopicTabs ? (ChatAdminRight::ManageTopics | ChatAdminRight::PinMessages) : ChatAdminRight()));
 			channel->setPendingRequestsCount(1, { UserId(kFirstPeerId + 1) });
 		}
 		if (kind == Kind::Slow) {
@@ -449,6 +626,15 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 				channel->forum()->topicFor(root)->setClosed(i == 2);
 			}
 		}
+		if (kind == Kind::TopicTabs) {
+			for (auto i = 0; i != kTabTopics.size(); ++i) {
+				const auto &topic = kTabTopics[i];
+				const auto root = tabTopicRoot(i);
+				channel->forum()->applyTopicAdded(root, QString::fromUtf16(topic.title), topic.colorId, 0,
+					session->userPeerId(), base::unixtime::now() - 7800 + 10 * i, true);
+				channel->forum()->topicFor(root)->setClosed(topic.closed);
+			}
+		}
 	}
 	if (kind == Kind::SendAs) {
 		const auto identity = session->data().peer(
@@ -460,7 +646,7 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 		session->sendAsPeers().setChosen(peer, identity->id);
 	}
 	fillHistory(session, peer, index);
-	if (kind == Kind::Translate) {
+	if (kind == Kind::Translate || kind == Kind::TopicTabs) {
 		peer->setTranslationDisabled(false);
 		session->data().history(peer)->translateOfferFrom({ QLocale::French });
 	}
@@ -524,9 +710,11 @@ void installScenarioDraft(
 	if (kind == Kind::Slow) {
 		peer->asChannel()->growSlowmodeLastMessage(base::unixtime::now());
 	}
-	if (view == u"topic-unread"_q || view == u"topic-closed"_q) {
-		const auto root = kTopicRootId + (view == u"topic-unread"_q ? 100 : 200);
-		controller->showForum(peer->forum(), Window::SectionShow(way).withChildColumn());
+	if (const auto root = topicViewRoot(kind, view)) {
+		// 与在会话列表里点开一致：普通论坛先在左栏展开话题列表，标签论坛直接进入话题。
+		if (kind == Kind::Topic) {
+			controller->showForum(peer->forum(), Window::SectionShow(way).withChildColumn());
+		}
 		controller->showTopic(peer->forum()->topicFor(root), ShowAtTheEndMsgId, way);
 		return Result::Ok();
 	}
@@ -580,27 +768,30 @@ void installScenarioDraft(
 			HistoryView::ChatViewId{ .history = history }), way);
 		return Result::Ok();
 	}
-	if (kind == Kind::Topic) {
-		// 与在会话列表里点开论坛一致：先在左栏展开话题列表，再进入话题。
-		controller->showForum(peer->forum(), Window::SectionShow(way).withChildColumn());
-		controller->showTopic(peer->forum()->topicFor(kTopicRootId), ShowAtTheEndMsgId, way);
-		return Result::Ok();
-	}
 	controller->showPeerHistory(peer, way, ShowAtTheEndMsgId);
 	return Result::Ok();
 }
 
 Result openSimulationSceneImpl(const QStringList &args) {
 	if (args.empty() || !(args.size() % 2)) {
-		return Result::Err(u"usage: simulation.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions|topic-unread|topic-closed|source-self|source-private|source-channel] [--input keep|empty|reply|edit|forward]"_q);
+		return Result::Err(u"usage: simulation.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions|topic-unread|topic-closed|topic-general|topic-pinned|topic-long|topic-french|source-self|source-private|source-channel] [--input keep|empty|reply|edit|forward] [--tabs top|bottom|left]"_q);
 	}
 	auto view = u"main"_q;
 	auto input = u"keep"_q;
+	auto tabs = -1;
 	for (auto i = 1; i < args.size(); i += 2) {
 		if (args[i] == u"--view"_q) {
 			view = args[i + 1];
 		} else if (args[i] == u"--input"_q) {
 			input = args[i + 1];
+		} else if (args[i] == u"--tabs"_q) {
+			const auto mode = ranges::find_if(kTabsModes, [&](const char *name) {
+				return args[i + 1] == QLatin1String(name);
+			});
+			if (mode == end(kTabsModes)) {
+				return Result::Err(u"unknown tabs layout"_q);
+			}
+			tabs = int(mode - begin(kTabsModes));
 		} else {
 			return Result::Err(u"unknown scenario option"_q);
 		}
@@ -609,6 +800,8 @@ Result openSimulationSceneImpl(const QStringList &args) {
 		&& view != u"scheduled"_q && view != u"shortcuts"_q
 		&& view != u"pinned"_q && view != u"actions"_q
 		&& view != u"topic-unread"_q && view != u"topic-closed"_q
+		&& view != u"topic-general"_q && view != u"topic-pinned"_q
+		&& view != u"topic-long"_q && view != u"topic-french"_q
 		&& view != u"source-self"_q && view != u"source-private"_q && view != u"source-channel"_q) {
 		return Result::Err(u"unknown view"_q);
 	}
@@ -634,8 +827,11 @@ Result openSimulationSceneImpl(const QStringList &args) {
 		return Result::Err(u"unknown scenario, use simulation.list"_q);
 	}
 	const auto kind = kScenarios[index].kind;
-	if (view.startsWith(u"topic-"_q) && kind != Kind::Topic) {
-		return Result::Err(u"topic view requires the topic scene"_q);
+	if (view.startsWith(u"topic-"_q) && !topicViewRoot(kind, view)) {
+		return Result::Err(u"topic view is not available in this scene"_q);
+	}
+	if (tabs >= 0 && kind != Kind::TopicTabs) {
+		return Result::Err(u"tabs layout requires the topic-tabs scene"_q);
 	}
 	if (view.startsWith(u"source-"_q) && kind != Kind::Saved) {
 		return Result::Err(u"source view requires the saved scene"_q);
@@ -653,6 +849,13 @@ Result openSimulationSceneImpl(const QStringList &args) {
 		Window::SectionShow(Window::SectionShow::Way::ClearStack, anim::type::instant));
 	installScenarioDraft(controller, index, view, input);
 	const auto peer = session->data().peer(scenarioPeerId(index));
+	if (tabs >= 0) {
+		// 标签布局只在创建时读取：先离开并丢弃缓存的标签，再按新布局打开。
+		controller->showPeerHistory(session->userPeerId(),
+			Window::SectionShow(Window::SectionShow::Way::ClearStack, anim::type::instant));
+		controller->dropSubsectionTabs();
+		session->settings().setSubsectionTabsMode(peer->id, qint32(tabs));
+	}
 	if (kind == Kind::Bot) {
 		peer->asUser()->botInfo->startToken = u"layout"_q;
 	}
@@ -724,15 +927,19 @@ Result listSimulationScenes(const QStringList &args) {
 			};
 			if (scene.category == Category::Topics) {
 				auto topics = json::array();
-				for (auto i = 0; i != 3; ++i) {
-					const auto topic = peer->forum()->topicFor(kTopicRootId + 100 * i);
+				for (const auto root : scenarioTopicRoots(kScenarios[findScenario(scene.key)].kind)) {
+					const auto topic = peer->forum()->topicFor(root);
 					topics.push_back({ { "rootId", topic->rootId().bare },
+						{ "title", topic->title().toStdString() },
 						{ "unread", topic->replies()->unreadCountCurrent() },
 						{ "closed", topic->closed() }, { "pinned", topic->hasPinnedMessages() },
 						{ "draft", history->localDraft(topic->rootId(), {}) != nullptr },
 						{ "listDraft", history->cloudDraft(topic->rootId(), {}) != nullptr } });
 				}
 				entry["state"]["topics"] = std::move(topics);
+				if (peer->useSubsectionTabs()) {
+					entry["state"]["tabs"] = kTabsModes[session->settings().subsectionTabsMode(peer->id)];
+				}
 			}
 			if (scene.category == Category::Saved) {
 				auto sources = json::array();

@@ -267,9 +267,10 @@ def register_commands(sub) -> None:
     command.add_argument("key", nargs="?", default="list")
     command = sub.add_parser("simulation.open", help="打开模拟模式自动生成的固定场景")
     command.add_argument("key")
-    command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts", "pinned", "actions", "topic-unread", "topic-closed", "source-self", "source-private", "source-channel"), default="main", help="主聊天、计划消息、置顶、管理、话题或收藏来源")
+    command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts", "pinned", "actions", "topic-unread", "topic-closed", "topic-general", "topic-pinned", "topic-long", "topic-french", "source-self", "source-private", "source-channel"), default="main", help="主聊天、计划消息、置顶、管理、话题或收藏来源")
 
     command.add_argument("--input", choices=("keep", "empty", "reply", "edit", "forward"), default="keep", help="保留、清空、回复、编辑或转发输入状态，仅用于普通私聊和话题")
+    command.add_argument("--tabs", choices=("top", "bottom", "left"), help="打开前切换话题标签布局，仅用于 topic-tabs")
 
     command = sub.add_parser("simulation.message", help="往模拟模式插入本地文本消息，默认收藏夹，验证渲染与隐藏逻辑")
     command.add_argument("text", help="消息文本")
@@ -448,7 +449,7 @@ def build_server_command(args: argparse.Namespace) -> str:
     if command == "player.state":
         return command + (" " + args.kind if args.kind else "")
     if command == "simulation.open":
-        return f"simulation.open {quote_arg(args.key)} --view {args.view} --input {args.input}"
+        return f"simulation.open {quote_arg(args.key)} --view {args.view} --input {args.input}" + (f" --tabs {args.tabs}" if args.tabs else "")
     if command == "simulation.trigger":
         return f"simulation.trigger {quote_arg(args.key)}"
     if command == "control.hover":
