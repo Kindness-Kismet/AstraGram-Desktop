@@ -30,6 +30,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/features/message_shot/message_shot.h"
+#include "extras/ui/components/floating_surface.h"
 
 
 namespace Window {
@@ -263,16 +264,14 @@ using LinearRgb = std::array<double, 3>;
 	return result;
 }
 
-// 悬停底色：亮色叠加 #212121 10%，暗色叠加 #FAFAFA 5%。
-// 先与各自底色混合成不透明色，避免不擦除背景的控件重绘时越叠越深。
+// 悬停底色按叠加色与各自底色先混合成不透明色，
+// 避免不擦除背景的控件重绘时越叠越深。
 void ApplyHoverPalette(style::palette &palette) {
-	const auto dark = Ui::IsDarkPalette(palette);
-	const auto overlay = dark
-		? QColor(0xFA, 0xFA, 0xFA)
-		: QColor(0x21, 0x21, 0x21);
-	const auto ratio = dark ? 0.05 : 0.10;
+	const auto overlay = ExtrasUi::HoverOverlay(Ui::IsDarkPalette(palette));
+	const auto ratio = overlay.alphaF();
+	const auto solid = QColor(overlay.red(), overlay.green(), overlay.blue());
 	const auto over = [&](const style::color &base) {
-		return anim::color(base->c, overlay, ratio);
+		return anim::color(base->c, solid, ratio);
 	};
 	const std::pair<const char*, QColor> colors[] = {
 		{ "windowBgOver", over(palette.windowBg()) },

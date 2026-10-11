@@ -3,6 +3,8 @@
 #include "extras/extras_settings.h"
 #include "extras/features/window_material/window_material.h"
 #include "extras/ui/components/floating_surface_host.h"
+#include "ui/chat/chat_theme_readability.h"
+#include "ui/style/style_core_palette.h"
 #include "styles/palette.h"
 
 #include <QtCore/QEvent>
@@ -14,11 +16,6 @@
 #include <utility>
 
 namespace ExtrasUi {
-namespace {
-
-constexpr auto kHoverOpacity = 0.08;
-
-} // namespace
 
 QColor ChatSurfaceBackground() {
 	return (ExtrasSettings::getInstance().disableChatBackground()
@@ -32,10 +29,14 @@ QColor ChatSurfaceBorder() {
 		: st::windowDividerFg)->c;
 }
 
+QColor HoverOverlay(bool dark) {
+	return dark
+		? QColor(0xFA, 0xFA, 0xFA, 0x0D)
+		: QColor(0x21, 0x21, 0x21, 0x1A);
+}
+
 QColor ChatSurfaceHover() {
-	auto result = st::windowFg->c;
-	result.setAlphaF(kHoverOpacity);
-	return result;
+	return HoverOverlay(Ui::IsDarkPalette(*style::main_palette::get()));
 }
 
 void FloatingSurface::attach(QWidget *widget, FloatingSurfaceStyle style) {

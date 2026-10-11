@@ -31,7 +31,10 @@ struct FloatingSurfaceStyle {
 [[nodiscard]] QColor ChatSurfaceBackground();
 [[nodiscard]] QColor ChatSurfaceBorder();
 
-// 悬停时在表面上叠加半透明前景色，深浅主题下都能看清，磨砂仍可透出。
+// 悬停叠加色：亮色主题 #212121 的 10%，暗色主题 #FAFAFA 的 5%。
+[[nodiscard]] QColor HoverOverlay(bool dark);
+
+// 磨砂表面悬停时直接叠加半透明的悬停色，磨砂仍可透出。
 [[nodiscard]] QColor ChatSurfaceHover();
 
 class FloatingSurface final : public QGraphicsEffect {
