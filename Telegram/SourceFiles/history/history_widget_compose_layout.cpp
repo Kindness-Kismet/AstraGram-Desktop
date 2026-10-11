@@ -221,6 +221,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/ui/components/field_height_animation.h"
 #include "extras/features/filters/filters_cache_controller.h"
 #include "extras/utils/telegram_helpers.h"
 #include "extras/features/message_shot/message_shot.h"
@@ -435,7 +436,7 @@ void HistoryWidget::toggleKeyboard(bool manual) {
 			_kbScroll->hide();
 			_kbShown = false;
 
-			_field->setMaxHeight(computeMaxFieldHeight());
+			_fieldHeight->setMaxHeight(computeMaxFieldHeight());
 
 			_kbReplyTo = nullptr;
 			if (!readyToForward()
@@ -459,7 +460,7 @@ void HistoryWidget::toggleKeyboard(bool manual) {
 		_kbScroll->hide();
 		_kbShown = false;
 
-		_field->setMaxHeight(computeMaxFieldHeight());
+		_fieldHeight->setMaxHeight(computeMaxFieldHeight());
 
 		_kbReplyTo = (false
 			|| _peer->isChat()
@@ -484,7 +485,7 @@ void HistoryWidget::toggleKeyboard(bool manual) {
 		const auto kbheight = std::min(
 			_keyboard->height(),
 			maxheight - (maxheight / 2));
-		_field->setMaxHeight(maxheight - kbheight);
+		_fieldHeight->setMaxHeight(maxheight - kbheight);
 
 		_kbReplyTo = (false
 			|| _peer->isChat()
@@ -894,6 +895,23 @@ void HistoryWidget::moveFieldControls() {
 	_fieldBarCancel->moveToRight(
 		st::historyComposeCapsuleMargin + st::historyComposeCapsulePadding,
 		_field->y() - st::historySendPadding - _fieldBarCancel->height());
+	// 回复条展开途中，关闭按钮同样只露出胶囊内的部分。
+	// 空遮罩会被 Qt 视为取消遮罩，所以至少保留一行透明像素。
+	refreshComposeHeader();
+	const auto headerHidden = _composeHeaderShown
+		? std::min(
+			st::historyReplyHeight - composeHeaderHeight(),
+			_fieldBarCancel->height() - 1)
+		: 0;
+	if (headerHidden > 0) {
+		_fieldBarCancel->setMask(QRect(
+			0,
+			headerHidden,
+			_fieldBarCancel->width(),
+			_fieldBarCancel->height() - headerHidden));
+	} else {
+		_fieldBarCancel->clearMask();
+	}
 	if (_inlineResults) {
 		_inlineResults->moveBottom(_field->y() - st::historySendPadding);
 	}
@@ -1157,7 +1175,7 @@ void HistoryWidget::updateBotKeyboard(History *h, bool force) {
 			const auto kbheight = hasMarkup
 				? std::min(_keyboard->height(), maxheight - (maxheight / 2))
 				: 0;
-			_field->setMaxHeight(maxheight - kbheight);
+			_fieldHeight->setMaxHeight(maxheight - kbheight);
 			_kbShown = hasMarkup;
 			_kbReplyTo = (_peer->isChat()
 					|| _peer->isChannel()
@@ -1175,7 +1193,7 @@ void HistoryWidget::updateBotKeyboard(History *h, bool force) {
 				_botKeyboardHide->hide();
 				_botKeyboardShow->show();
 			}
-			_field->setMaxHeight(computeMaxFieldHeight());
+			_fieldHeight->setMaxHeight(computeMaxFieldHeight());
 			_kbShown = false;
 			_kbReplyTo = nullptr;
 			if (!readyToForward()
@@ -1194,7 +1212,7 @@ void HistoryWidget::updateBotKeyboard(History *h, bool force) {
 			_botKeyboardHide->hide();
 			_botKeyboardShow->hide();
 		}
-		_field->setMaxHeight(computeMaxFieldHeight());
+		_fieldHeight->setMaxHeight(computeMaxFieldHeight());
 		_kbShown = false;
 		_kbReplyTo = nullptr;
 		if (!readyToForward()

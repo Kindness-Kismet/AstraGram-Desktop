@@ -98,6 +98,8 @@ void InitMessageFieldHandlers(
 	not_null<Ui::InputField*> field,
 	ChatHelpers::PauseReason pauseReasonLevel,
 	Fn<bool(not_null<DocumentData*>)> allowPremiumEmoji = nullptr);
+// 输入胶囊的最小高度，即单行文字区高度。
+[[nodiscard]] int MessageFieldMinHeight();
 // 胶囊圆角取单行胶囊高度的一半，多行时发送按钮仍与右下圆弧同心。
 [[nodiscard]] int MessageFieldCapsuleRadius();
 // 单行时把最小高度多出的空白上下平分，文字、光标与占位文字垂直居中。

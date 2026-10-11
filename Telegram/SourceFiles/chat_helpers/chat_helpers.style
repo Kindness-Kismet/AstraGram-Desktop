@@ -1304,6 +1304,8 @@ historySendPadding: 9px;
 historyComposeCapsuleMargin: 12px;
 historyComposeCapsuleRadius: 27px;
 historyComposeCapsulePadding: 4px;
+// 输入区随文字行数、回复条伸缩的过渡时长
+historyComposeResizeDuration: 160;
 // historyMinHeight: 56px;
 
 historyAttach: IconButton(defaultIconButton) {

@@ -256,6 +256,8 @@ set(extras_files
         extras/ui/components/chat_frosted_background.h
         extras/ui/components/chat_surface_button.cpp
         extras/ui/components/chat_surface_button.h
+        extras/ui/components/field_height_animation.cpp
+        extras/ui/components/field_height_animation.h
         extras/ui/components/floating_surface.cpp
         extras/ui/components/floating_surface.h
         extras/ui/components/floating_surface_host.cpp

@@ -605,6 +605,7 @@ void HistoryWidget::showHistory(
 		}
 		checkCharsCount();
 		_send->finishAnimating();
+		finishComposeAnimations();
 
 		updateControlsGeometry();
 

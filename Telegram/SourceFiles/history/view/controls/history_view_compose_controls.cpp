@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/controls/history_view_compose_controls.h"
 
 #include "extras/features/window_material/window_material.h"
+#include "extras/ui/components/field_height_animation.h"
 #include "extras/ui/controls/attach_menu.h"
 #include "history/view/controls/history_view_bot_menu_button.h"
 
@@ -1576,6 +1577,10 @@ void ComposeControls::setHistory(SetHistoryArgs &&args) {
 	_field->setMode(args.videoStream
 		? Ui::InputField::Mode::NoNewlines
 		: Ui::InputField::Mode::MultiLine);
+	_headerShown = _header->isDisplayed();
+	_headerAnimation.stop();
+	_fieldHeight->finish();
+	updateHeight();
 }
 
 void ComposeControls::initLikeButton() {
@@ -1781,7 +1786,7 @@ bool ComposeControls::fieldHeaderShownCurrent() const {
 
 void ComposeControls::setFieldMaxHeight(int height) {
 	const auto oldFieldHeight = _field->height();
-	_field->setMaxHeight(height);
+	_fieldHeight->setMaxHeight(height);
 	updateControlsGeometry(_wrap->size());
 	if (_field->height() != oldFieldHeight) {
 		updateHeight();
@@ -3262,7 +3267,6 @@ void ComposeControls::initKeyHandler() {
 }
 
 void ComposeControls::initField() {
-	_field->setMaxHeight(st::historyComposeFieldMaxHeight);
 	updateSubmitSettings();
 	_field->submits(
 	) | rpl::on_next([=](Qt::KeyboardModifiers modifiers) {
@@ -3281,13 +3285,6 @@ void ComposeControls::initField() {
 	_field->cancelled(
 	) | rpl::on_next([=] {
 		escape();
-	}, _field->lifetime());
-	_field->heightChanges(
-	) | rpl::on_next([=] {
-		updateHeight();
-		updateAiButtonVisibility();
-		updateSendAsFileVisibility();
-		updateExpandButtonVisibility();
 	}, _field->lifetime());
 	_field->changes(
 	) | rpl::on_next([=] {
@@ -3324,6 +3321,16 @@ void ComposeControls::initField() {
 	if (ComposeOuterMargin(_st)) {
 		CenterMessageFieldText(_field);
 	}
+	_fieldHeight = std::make_unique<ExtrasUi::FieldHeightAnimation>(
+		_field,
+		MessageFieldMinHeight(),
+		st::historyComposeFieldMaxHeight,
+		[=] {
+			updateHeight();
+			updateAiButtonVisibility();
+			updateSendAsFileVisibility();
+			updateExpandButtonVisibility();
+		});
 	InitMessageFieldFade(_field, _st.field.textBg);
 	_field->setEditLinkCallback(
 		DefaultEditLinkCallback(_show, _field, &_st.boxField));
@@ -5934,8 +5941,32 @@ int ComposeControls::composeFieldHeight() const {
 		: _field->height();
 }
 
+void ComposeControls::refreshHeaderShown() {
+	const auto shown = _header->isDisplayed();
+	if (_headerShown == shown) {
+		return;
+	}
+	_headerShown = shown;
+	if (anim::Disabled() || !_wrap->isVisible()) {
+		_headerAnimation.stop();
+		return;
+	}
+	// 回复条固定在输入框上方，外框顶边移动时逐步露出或收起。
+	_headerAnimation.start(
+		[=] { updateHeight(); },
+		shown ? 0. : 1.,
+		shown ? 1. : 0.,
+		st::historyComposeResizeDuration,
+		anim::easeOutCubic);
+}
+
 void ComposeControls::updateHeight() {
-	const auto height = (_header->isDisplayed() ? _header->height() : 0)
+	refreshHeaderShown();
+	const auto headerHeight = anim::interpolate(
+		0,
+		_header->height(),
+		_headerAnimation.value(_headerShown ? 1. : 0.));
+	const auto height = headerHeight
 		+ _st.padding.top()
 		+ composeFieldHeight()
 		+ _st.padding.bottom();

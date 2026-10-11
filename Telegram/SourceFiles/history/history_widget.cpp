@@ -223,6 +223,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/ui/components/field_height_animation.h"
 #include "extras/ui/components/floating_surface_host.h"
 #include "extras/ui/controls/attach_menu.h"
 #include "extras/features/filters/filters_cache_controller.h"
@@ -490,10 +491,6 @@ HistoryWidget::HistoryWidget(
 			request->handled = true;
 		}
 	}, _field->lifetime());
-	_field->heightChanges(
-	) | rpl::on_next([=] {
-		fieldResized();
-	}, _field->lifetime());
 	_field->focusedChanges(
 	) | rpl::filter(rpl::mappers::_1) | rpl::on_next([=] {
 		fieldFocused();
@@ -572,6 +569,11 @@ HistoryWidget::HistoryWidget(
 		return false;
 	});
 	CenterMessageFieldText(_field);
+	_fieldHeight = std::make_unique<ExtrasUi::FieldHeightAnimation>(
+		_field.data(),
+		MessageFieldMinHeight(),
+		st::historyComposeFieldMaxHeight,
+		[=] { fieldResized(); });
 	InitMessageFieldFade(_field, st::historyComposeField.textBg);
 	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
 		if (_showAnimation) {

@@ -29,6 +29,7 @@ struct InlineBotQuery;
 class SendFilesBox;
 
 namespace ExtrasUi {
+class FieldHeightAnimation;
 class FloatingSurfaceHost;
 struct RecordMenuOptions;
 } // namespace ExtrasUi
@@ -739,6 +740,10 @@ private:
 	void setupFrostedBackground();
 	void updateComposeSurface();
 	void updateComposeSurfaceVisibility();
+	[[nodiscard]] bool hasComposeHeader() const;
+	[[nodiscard]] int composeHeaderHeight() const;
+	void refreshComposeHeader();
+	void finishComposeAnimations();
 	void resetFrostedBackground();
 	[[nodiscard]] bool fieldOrDisabledShown() const;
 	[[nodiscard]] bool fieldHasSendText() const;
@@ -1000,6 +1005,7 @@ private:
 	std::unique_ptr<HistoryView::Controls::StashHintManager> _stashHintManager;
 	std::shared_ptr<Ui::ChatStyle> _fieldChatStyle;
 	object_ptr<Ui::InputField> _field;
+	std::unique_ptr<ExtrasUi::FieldHeightAnimation> _fieldHeight;
 	std::unique_ptr<HistoryView::Controls::RichDraftPreview> _richDraftPreview;
 	base::unique_qptr<Ui::RpWidget> _fieldDisabled;
 	std::unique_ptr<Ui::RpWidget> _sendRestriction;
@@ -1007,6 +1013,8 @@ private:
 	base::unique_qptr<CharactersLimitLabel> _charsLimitation;
 	QString _sendRestrictionKey;
 	Ui::Animations::Simple _inPhotoEditOver;
+	Ui::Animations::Simple _composeHeaderAnimation;
+	bool _composeHeaderShown = false;
 	bool _inDetails = false;
 	bool _inPhotoEdit = false;
 	bool _inClickable = false;

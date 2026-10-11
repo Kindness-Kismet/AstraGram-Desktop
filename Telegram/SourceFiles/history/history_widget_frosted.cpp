@@ -1,6 +1,7 @@
 #include "history/history_widget.h"
 
 #include "chat_helpers/message_field.h"
+#include "extras/ui/components/field_height_animation.h"
 #include "extras/ui/components/floating_surface_host.h"
 #include "history/history_inner_widget.h"
 #include "mainwidget.h"
@@ -62,9 +63,8 @@ void HistoryWidget::setupFrostedBackground() {
 }
 
 void HistoryWidget::updateComposeSurface() {
-	const auto header = _editMsgId || _replyTo || readyToForward()
-		|| _kbReplyTo || _previewDrawPreview || _suggestOptions;
-	const auto headerHeight = header ? st::historyReplyHeight : 0;
+	refreshComposeHeader();
+	const auto headerHeight = composeHeaderHeight();
 	const auto margin = st::historyComposeCapsuleMargin;
 	// 使用输入控件的实际位置，底部标签栏和只显示回复条时也走同一表面。
 	_composeSurface->setGeometry(myrtlrect(
@@ -85,6 +85,48 @@ void HistoryWidget::updateComposeSurfaceVisibility() {
 		updateComposeSurface();
 	}
 	_composeSurface->setVisible(visible);
+}
+
+bool HistoryWidget::hasComposeHeader() const {
+	return _editMsgId || _replyTo || readyToForward()
+		|| _kbReplyTo || _previewDrawPreview || _suggestOptions;
+}
+
+int HistoryWidget::composeHeaderHeight() const {
+	return anim::interpolate(
+		0,
+		st::historyReplyHeight,
+		_composeHeaderAnimation.value(_composeHeaderShown ? 1. : 0.));
+}
+
+void HistoryWidget::refreshComposeHeader() {
+	const auto shown = hasComposeHeader();
+	if (_composeHeaderShown == shown) {
+		return;
+	}
+	_composeHeaderShown = shown;
+	if (anim::Disabled() || _composeSurface->isHidden()) {
+		_composeHeaderAnimation.stop();
+		return;
+	}
+	const auto step = [=] {
+		moveFieldControls();
+		updateHistoryGeometry();
+		updateField();
+	};
+	// 回复条内容固定在输入框上方，胶囊顶边移动时逐步露出或收起。
+	_composeHeaderAnimation.start(
+		step,
+		shown ? 0. : 1.,
+		shown ? 1. : 0.,
+		st::historyComposeResizeDuration,
+		anim::easeOutCubic);
+}
+
+void HistoryWidget::finishComposeAnimations() {
+	_composeHeaderShown = hasComposeHeader();
+	_composeHeaderAnimation.stop();
+	_fieldHeight->finish();
 }
 
 void HistoryWidget::invalidateFrostedBackground(QRect area) {

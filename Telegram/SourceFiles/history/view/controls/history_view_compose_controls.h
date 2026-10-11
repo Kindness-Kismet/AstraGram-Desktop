@@ -32,6 +32,7 @@ struct ComposeControls;
 } // namespace style
 
 namespace ExtrasUi {
+class FieldHeightAnimation;
 struct RecordMenuOptions;
 } // namespace ExtrasUi
 
@@ -392,6 +393,7 @@ private:
 	[[nodiscard]] ExtrasUi::RecordMenuOptions recordMenuOptions() const;
 	void startRecordFromMenu(bool round);
 	void updateHeight();
+	void refreshHeaderShown();
 	void updateWrappingVisibility();
 	void refreshSendGiftToggle();
 	void updateControlsVisibility();
@@ -588,6 +590,7 @@ private:
 	ChatHelpers::RichPasteOfferThrottle _richPasteOfferThrottle;
 	std::shared_ptr<QMimeData> _pendingRichPaste;
 	const not_null<Ui::InputField*> _field;
+	std::unique_ptr<ExtrasUi::FieldHeightAnimation> _fieldHeight;
 	std::unique_ptr<Controls::RichDraftPreview> _richDraftPreview;
 	base::unique_qptr<Ui::RpWidget> _fieldDisabled;
 	std::unique_ptr<BotMenuButton> _botMenu;
@@ -613,6 +616,8 @@ private:
 
 	friend class FieldHeader;
 	const std::unique_ptr<FieldHeader> _header;
+	Ui::Animations::Simple _headerAnimation;
+	bool _headerShown = false;
 	const std::unique_ptr<Controls::VoiceRecordBar> _voiceRecordBar;
 	std::unique_ptr<Controls::AiTooltipManager> _aiTooltipManager;
 	std::unique_ptr<Controls::AiTooltipManager> _sendAsFileTooltipManager;

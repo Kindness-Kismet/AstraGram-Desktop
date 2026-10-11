@@ -711,6 +711,10 @@ void InitMessageFieldHandlers(
 	});
 }
 
+int MessageFieldMinHeight() {
+	return st::historySendSize.height() - 2 * st::historySendPadding;
+}
+
 int MessageFieldCapsuleRadius() {
 	return st::historySendSize.height() / 2;
 }
@@ -724,10 +728,8 @@ QMargins MessageFieldCenteringMargins(
 	const auto documentMargins = 2 * int(std::ceil(
 		field->document()->documentMargin()));
 	const auto scaledMargin = style::ConvertScale(4) - 4;
-	const auto minHeight = st::historySendSize.height()
-		- 2 * st::historySendPadding;
 	const auto remaining = std::max(0,
-		minHeight - lineHeight - documentMargins
+		MessageFieldMinHeight() - lineHeight - documentMargins
 			- fieldStyle.textMargins.top() - fieldStyle.textMargins.bottom()
 			- 2 * scaledMargin);
 	const auto top = remaining / 2;
@@ -742,8 +744,7 @@ void CenterMessageFieldText(not_null<Ui::InputField*> field) {
 }
 
 void InitMessageFieldGeometry(not_null<Ui::InputField*> field) {
-	field->setMinHeight(
-		st::historySendSize.height() - 2 * st::historySendPadding);
+	field->setMinHeight(MessageFieldMinHeight());
 	field->setMaxHeight(st::historyComposeFieldMaxHeight);
 
 	// st::messageSendingAnimationTextFromOffset.

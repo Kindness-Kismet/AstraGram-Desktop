@@ -1477,13 +1477,8 @@ void HistoryWidget::updateHistoryGeometry(
 		} else if (_sendRestriction) {
 			composeHeight = _sendRestriction->height() + 2 * margin;
 		}
-		if (_editMsgId
-			|| replyTo()
-			|| readyToForward()
-			|| _previewDrawPreview
-			|| _suggestOptions) {
-			composeHeight += st::historyReplyHeight;
-		}
+		refreshComposeHeader();
+		composeHeight += composeHeaderHeight();
 		if (_kbShown) {
 			newScrollHeight -= _kbScroll->height();
 		}
