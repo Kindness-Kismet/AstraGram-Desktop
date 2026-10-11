@@ -217,6 +217,11 @@ constexpr auto kShortcutMessageId = kFirstMessageId + 2000;
 	}
 	return MsgId();
 }
+// 话题样本的首条消息编号；未读话题编号最大，论坛行的最新消息才落在它上面并显示跳转。
+[[nodiscard]] int topicMessageBase(int index, int topic) {
+	const auto slot = (topic == 1) ? 2 : (topic == 2) ? 1 : 0;
+	return kFirstMessageId + 100 * index + 20 * slot;
+}
 void initialiseUser(
 		not_null<UserData*> user,
 		const QString &name) {
@@ -480,7 +485,7 @@ void fillHistory(not_null<Main::Session*> session, not_null<PeerData*> peer, int
 	for (auto topic = 0; topic != topicCount; ++topic) {
 		const auto root = MsgId(kTopicRootId + 100 * topic);
 		for (auto i = 0; i != count; ++i) {
-			const auto id = baseId + 20 * topic + i;
+			const auto id = topicMessageBase(index, topic) + i;
 			const auto outgoing = (i == 5 && !unread && !(kind == Kind::Topic && topic == 1))
 				|| kind == Kind::Saved;
 			const auto sender = peer->isBroadcast() ? peer->id
@@ -522,6 +527,10 @@ void fillHistory(not_null<Main::Session*> session, not_null<PeerData*> peer, int
 		messages.push_back(makeTopicCreated(peer, session->userPeerId(), root,
 			peer->forum()->topicFor(root)->title(), 0x6FB9F0, base::unixtime::now() - 600));
 	}
+	// 历史按传入顺序排列，话题编号与创建顺序不同，先按编号从新到旧排好。
+	ranges::sort(messages, std::greater<>(), [](const MTPMessage &message) {
+		return message.match([](const auto &data) { return data.vid().v; });
+	});
 	history->addNewerSlice(messages);
 	history->addNewerSlice({});
 	if (rich) {
@@ -734,7 +743,7 @@ void installScenarioDraft(
 	auto draft = std::make_unique<Data::Draft>();
 	if (input == u"forward"_q) {
 		history->setForwardDraft(topicId, {}, {
-			.ids = { FullMsgId(peer->id, kFirstMessageId + 100 * index + 20 * topicOffset) },
+			.ids = { FullMsgId(peer->id, topicMessageBase(index, topicOffset)) },
 			.options = Data::ForwardOptions::NoSenderNames,
 		});
 		draft->textWithTags.text = u"本地转发暂存验证"_q;
@@ -742,7 +751,7 @@ void installScenarioDraft(
 		return;
 	}
 	draft->reply = {
-		.messageId = FullMsgId(peer->id, kFirstMessageId + 100 * index + 20 * topicOffset
+		.messageId = FullMsgId(peer->id, topicMessageBase(index, topicOffset)
 			+ ((input == u"edit"_q) ? 5 : 0)),
 		.topicRootId = topicId,
 	};
