@@ -22,6 +22,7 @@
 #include "data/notify/data_notify_settings.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "history/history_item_text.h"
 #include "history/view/history_view_element.h"
 #include "history/view/media/history_view_media.h"
 #include "main/main_account.h"
@@ -127,6 +128,39 @@ using json = nlohmann::json;
 		document, MTPVector<MTPDocument>(), MTPPhoto(), MTPint(), MTPint());
 }
 
+// 富消息样本：正文段落加一张带表头的两列表格。
+[[nodiscard]] MTPRichMessage simulationRichTable(const QString &text) {
+	const auto cell = [](const QString &value, bool header) {
+		using Flag = MTPDpageTableCell::Flag;
+		return MTP_pageTableCell(
+			MTP_flags(Flag::f_text | (header ? Flag::f_header : Flag())),
+			MTP_textPlain(MTP_string(value)),
+			MTPint(),
+			MTPint());
+	};
+	const auto row = [&](const QString &name, const QString &value, bool header) {
+		return MTP_pageTableRow(MTP_vector<MTPPageTableCell>({
+			cell(name, header),
+			cell(value, header),
+		}));
+	};
+	return MTP_richMessage(
+		MTP_flags(MTPDrichMessage::Flags(0)),
+		MTP_vector<MTPPageBlock>({
+			MTP_pageBlockParagraph(MTP_textPlain(MTP_string(text))),
+			MTP_pageBlockTable(
+				MTP_flags(MTPDpageBlockTable::Flag::f_bordered),
+				MTP_textEmpty(),
+				MTP_vector<MTPPageTableRow>({
+					row(u"Name"_q, u"Value"_q, true),
+					row(u"Alpha"_q, u"1"_q, false),
+					row(u"Beta"_q, u"2"_q, false),
+				})),
+		}),
+		MTP_vector<MTPPhoto>(),
+		MTP_vector<MTPDocument>());
+}
+
 // 走正式消息渲染路径，模拟消息仅存在内存，重启后消失。
 [[nodiscard]] Result simulationMessage(const QStringList &args) {
 	auto text = QString();
@@ -137,6 +171,7 @@ using json = nlohmann::json;
 	auto stickerPath = QString();
 	auto photoPath = QString();
 	auto groupId = uint64(0);
+	auto richTable = false;
 	for (auto i = 0; i < args.size(); ++i) {
 		const auto &arg = args.at(i);
 		if (arg == u"--photo"_q) {
@@ -167,29 +202,31 @@ using json = nlohmann::json;
 			blocked = true;
 		} else if (arg == u"--shadow-ban"_q) {
 			shadowBan = true;
+		} else if (arg == u"--rich-table"_q) {
+			richTable = true;
 		} else if (text.isEmpty()) {
 			text = arg;
 		} else {
 			return Result::Err(
 				u"usage: simulation.message <text> "
 				u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] "
-				u"[--sticker <imagePath> | --photo <imagePath> [--group <positiveId>]]"_q);
+				u"[--sticker <imagePath> | --photo <imagePath> [--group <positiveId>] | --rich-table]"_q);
 		}
 	}
 	if (text.isEmpty()) {
 		return Result::Err(
 			u"usage: simulation.message <text> "
 			u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] "
-			u"[--sticker <imagePath> | --photo <imagePath> [--group <positiveId>]]"_q);
+			u"[--sticker <imagePath> | --photo <imagePath> [--group <positiveId>] | --rich-table]"_q);
 	}
 
 	const auto session = ActiveSession();
 	if (!session || !isSimulationSession(session)) {
 		return Result::Err(u"simulation mode is required"_q);
 	}
-	if ((!photoPath.isEmpty() && !stickerPath.isEmpty())
+	if ((int(!photoPath.isEmpty()) + int(!stickerPath.isEmpty()) + int(richTable) > 1)
 		|| (groupId && photoPath.isEmpty())) {
-		return Result::Err(u"--photo and --sticker are exclusive; --group requires --photo"_q);
+		return Result::Err(u"--photo, --sticker and --rich-table are exclusive; --group requires --photo"_q);
 	}
 	const auto selfPeer = session->userPeerId();
 	const auto peer = targetPeer.isEmpty() ? static_cast<PeerData*>(session->user()) : findPeer(targetPeer);
@@ -254,6 +291,7 @@ using json = nlohmann::json;
 		| ((stickerPath.isEmpty() && photoPath.isEmpty())
 			? MTPDmessage::Flag() : MTPDmessage::Flag::f_media)
 		| (groupId ? MTPDmessage::Flag::f_grouped_id : MTPDmessage::Flag())
+		| (richTable ? MTPDmessage::Flag::f_rich_message : MTPDmessage::Flag())
 		| (fromPeer == selfPeer ? MTPDmessage::Flag::f_out : MTPDmessage::Flag());
 	const auto message = MTP_message(
 		MTP_flags(flags),
@@ -290,7 +328,7 @@ using json = nlohmann::json;
 		MTPSuggestedPost(),
 		MTPint(), // schedule_repeat_period
 		MTPstring(), // summary_from_language
-		MTPRichMessage());
+		richTable ? simulationRichTable(text) : MTPRichMessage());
 	const auto item = session->data().addNewMessage(
 		message,
 		MessageFlags(),
@@ -590,6 +628,11 @@ using json = nlohmann::json;
 			{ "fromId", item->from()->id.value },
 			{ "hidden", isMessageHidden(item) },
 			{ "hasMainView", item->mainView() != nullptr },
+			// 右键“复制文本”写入剪贴板的纯文本，不读写系统剪贴板。
+			{ "copyText", HistoryItemText(item).expanded.toStdString() },
+			{ "richPageText", view
+				? json(view->richPageText().expanded.toStdString())
+				: json(nullptr) },
 			{ "mediaSize", media ? json{
 				{ "width", media->width() },
 				{ "height", media->height() },

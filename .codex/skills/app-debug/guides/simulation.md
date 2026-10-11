@@ -106,7 +106,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 
 图片参数：`--sticker <imagePath>` 生成不超过 512 像素的静态贴纸；`--photo <imagePath>` 生成不超过 2048 像素的照片。
 两者互斥。照片可配合 `--group <positiveId>` 构造相册，同一对话内使用相同编号。
-图片只保存在内存中，不上传。
+图片只保存在内存中，不上传。`--rich-table` 生成富消息：`text` 作为正文段落，后接一张带表头的两列表格，与图片参数互斥。
 
 `simulation.download <path> <loading|done>` 将本地文件加入下载管理器；拒绝音视频素材。
 `simulation.download-progress <peerId> <messageId> <bytes|done>` 推进模拟进度。
