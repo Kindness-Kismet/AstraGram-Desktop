@@ -87,7 +87,6 @@ private:
 	void drawName(Painter &p);
 
 	const not_null<SessionController*> _controller;
-	style::complex_color _iconFg;
 	object_ptr<Ui::UserpicButton> _userpicButton;
 	Ui::Text::String _name;
 	int _nameVersion = 0;

@@ -288,11 +288,6 @@ MainMenu::MainMenu(
 	not_null<SessionController*> controller)
 : LayerWidget(parent)
 , _controller(controller)
-, _iconFg([=] {
-	return ExtrasFeatures::WindowMaterial::foregroundColor(
-		this,
-		st::menuIconFg->c);
-})
 , _userpicButton(
 	this,
 	_controller->session().user(),
@@ -345,7 +340,6 @@ MainMenu::MainMenu(
 	setGraphicsEffect(material);
 	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=](bool active) {
 		material->setEnabled(active);
-		_iconFg.refresh();
 	}, lifetime());
 	_scroll->setObjectName(u"mainMenu.scroll"_q);
 	_toggleAccounts->setObjectName(u"mainMenu.accounts"_q);
@@ -571,7 +565,7 @@ void MainMenu::setupArchive() {
 		inner,
 		tr::lng_archived_name(),
 		st::mainMenuButton,
-		{ .icon = &st::menuIconArchiveOpen, .color = &_iconFg.color() });
+		{ .icon = &st::menuIconArchiveOpen, .color = &st::windowFg });
 	Ui::AddSkip(inner, st::mainMenuSectionSkip);
 	button->setAcceptBoth(true);
 	button->clicks(
@@ -721,7 +715,7 @@ void MainMenu::setupMenu() {
 			rpl::producer<QString> text,
 			IconDescriptor &&descriptor,
 			QString name = {}) {
-		descriptor.color = &_iconFg.color();
+		descriptor.color = &st::windowFg;
 		const auto button = AddButtonWithIcon(
 			section,
 			std::move(text),
@@ -747,7 +741,7 @@ void MainMenu::setupMenu() {
 		}
 
 		if (settings.showBotsInDrawer()) {
-			SetupMenuBots(section, controller, _iconFg.color());
+			SetupMenuBots(section, controller, st::windowFg);
 		}
 		nextSection();
 
@@ -819,7 +813,7 @@ void MainMenu::setupMenu() {
 					section,
 					tr::lng_wallet_menu(),
 					st::mainMenuButton,
-					{ .icon = &st::walletMenuIcon, .color = &_iconFg.color() })));
+					{ .icon = &st::walletMenuIcon, .color = &st::windowFg })));
 		ExtrasFeatures::WindowMaterial::watchSurface(wallet->entity());
 		wallet->entity()->setObjectName(u"menu.wallet"_q);
 		Ui::NewBadge::AddAfterButtonText(
