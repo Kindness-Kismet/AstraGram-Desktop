@@ -553,6 +553,14 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 [[nodiscard]] Result describeControlValue(QWidget *target) {
 	auto data = json{{"name", target->objectName().toStdString()}, {"text", WidgetText(target).toStdString()},
 		{"enabled", target->isEnabled()}};
+	// 只报告控件自己设置的光标，未设置时沿用父控件。
+	if (target->testAttribute(Qt::WA_SetCursor)) {
+		const auto shape = target->cursor().shape();
+		data["cursor"] = (shape == Qt::PointingHandCursor) ? std::string("pointer")
+			: (shape == Qt::IBeamCursor) ? std::string("text")
+			: (shape == Qt::ArrowCursor) ? std::string("default")
+			: std::to_string(int(shape));
+	}
 	if (const auto slider = dynamic_cast<Ui::ContinuousSlider*>(target)) {
 		data["value"] = slider->value();
 		data["kind"] = "slider";
