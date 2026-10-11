@@ -390,17 +390,19 @@ void SendButton::paintSchedule(QPainter &p, bool over) {
 	{
 		PainterHighQualityEnabler hq(p);
 		p.setPen(Qt::NoPen);
-		p.setBrush(over ? st::historySendIconFgOver : st::historySendIconFg);
+		p.setBrush(over ? st::activeButtonBgOver : st::windowBgActive);
 		p.drawEllipse(ellipse);
 	}
 	if (!isDisabled()) {
-		auto color = st::historyComposeAreaBg->c;
+		auto color = st::windowFgActive->c;
 		color.setAlpha(25);
 		paintRipple(p, ellipse.topLeft(), &color);
 	}
-	st::historyScheduleIcon.paint(
+	const auto &icon = st::historyScheduleIcon;
+	icon.paint(
 		p,
-		st::historyScheduleIconPosition,
+		ellipse.x() + (ellipse.width() - icon.width()) / 2,
+		ellipse.y() + (ellipse.height() - icon.height()) / 2,
 		width());
 }
 
@@ -483,12 +485,9 @@ QRect SendButton::sendEllipseRect() const {
 		side);
 }
 
+// 与发送键共用填充圆，切换类型时位置和大小不跳动。
 QRect SendButton::scheduleEllipseRect() const {
-	return QRect(
-		st::historyScheduleIconPosition,
-		QSize(
-			st::historyScheduleIcon.width(),
-			st::historyScheduleIcon.height()));
+	return sendEllipseRect();
 }
 
 void SendButton::updateSize() {

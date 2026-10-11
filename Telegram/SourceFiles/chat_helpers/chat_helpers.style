@@ -1402,8 +1402,7 @@ boxAttachEmojiTop: 20px;
 historySendIcon: icon {{ "chat/input_send", historySendIconFg }};
 historySendIconOver: icon {{ "chat/input_send", historySendIconFgOver }};
 historySendSize: size(44px, 46px);
-historyScheduleIcon: icon {{ "chat/input_schedule", historyComposeAreaBg }};
-historyScheduleIconPosition: point(7px, 8px);
+historyScheduleIcon: icon {{ "chat/input_schedule-22x22", windowFgActive }};
 historyEditSaveIcon: icon {{ "chat/input_save", historySendIconFg }};
 historyEditSaveIconOver: icon {{ "chat/input_save", historySendIconFgOver }};
 
