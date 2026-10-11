@@ -29,6 +29,10 @@ class RoundCheckbox;
 struct TornEdgeCache;
 } // namespace Ui
 
+namespace ExtrasUi {
+class BubbleTransition;
+} // namespace ExtrasUi
+
 namespace HistoryView {
 
 class ViewButton;
@@ -310,6 +314,9 @@ public:
 	void requestRichPageRepaint(QRect articleRect) const;
 	void requestRichPageRelayout(QRect articleRect);
 
+	// 文字即将按新数据重建：记下旧尺寸和旧文字，下次排版时平滑过渡。
+	void prepareBubbleTransition(Ui::Text::String &&previous);
+
 private:
 	struct CommentsButton;
 	struct LinkRipple;
@@ -529,6 +536,15 @@ private:
 	[[nodiscard]] int textAppearTargetHeight(
 		not_null<TextAppearing*> appearing) const;
 
+	[[nodiscard]] bool bubbleTransitionAllowed() const;
+	void initBubbleTransition(not_null<Message*> was);
+	[[nodiscard]] int bubbleTransitionHeight(int newWidth, int finalHeight);
+	void bubbleTransitionCallback();
+	void paintBubbleTransitionText(
+		Painter &p,
+		QRect trect,
+		const PaintContext &context) const;
+
 	void refreshRightBadge();
 	[[nodiscard]] int rightBadgeWidth() const;
 	void validateFromNameText(PeerData *from) const;
@@ -560,6 +576,7 @@ private:
 	Ui::Animations::Simple _infoWidthAnimation;
 	int _infoWidthFrom = 0;
 	mutable QPoint _lastMediaPosition;
+	std::unique_ptr<ExtrasUi::BubbleTransition> _bubbleTransition;
 
 };
 

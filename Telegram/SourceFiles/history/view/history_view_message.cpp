@@ -47,6 +47,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_custom_emoji.h"
 #include "ui/text/text_extended_data.h"
 #include "ui/power_saving.h"
+#include "ui/item_text_options.h"
 #include "ui/rect.h"
 //#include "ui/round_rect.h"
 #include "data/components/factchecks.h"
@@ -75,6 +76,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/ui/components/bubble_transition.h"
 #include "extras/features/filters/filters_controller.h"
 #include "extras/features/message_shot/message_shot.h"
 #include "styles/style_extras_icons.h"
@@ -661,6 +663,9 @@ Message::Message(
 			&& !appearing->heightAnimation.animating()) {
 			skipInactiveTextAppearing();
 		}
+	}
+	if (const auto was = dynamic_cast<Message*>(replacing)) {
+		initBubbleTransition(was);
 	}
 }
 
@@ -3185,6 +3190,19 @@ void Message::paintText(
 		});
 	}
 
+	const auto transition = (_bubbleTransition
+		&& _bubbleTransition->animating())
+		? _bubbleTransition.get()
+		: nullptr;
+	if (transition) {
+		// 过渡期间文字按最终排版绘制，只露出气泡当前尺寸内的部分。
+		p.save();
+		p.setClipRect(trect, Qt::IntersectClip);
+		if (transition->oldText()) {
+			paintBubbleTransitionText(p, trect, context);
+			p.setOpacity(p.opacity() * transition->progress());
+		}
+	}
 	auto highlightRequest = context.computeHighlightCache();
 	text().draw(p, {
 		.position = trect.topLeft(),
@@ -3216,9 +3234,37 @@ void Message::paintText(
 	} else if (needRippleMask) {
 		_linkRipple = nullptr;
 	}
+	if (transition) {
+		p.restore();
+	}
 	if (appearingClip) {
 		p.restore();
 	}
+}
+
+void Message::paintBubbleTransitionText(
+		Painter &p,
+		QRect trect,
+		const PaintContext &context) const {
+	const auto stm = context.messageStyle();
+	const auto opacity = p.opacity();
+	p.setOpacity(opacity * (1. - _bubbleTransition->progress()));
+	_bubbleTransition->oldText()->draw(p, {
+		.position = trect.topLeft(),
+		.availableWidth = _bubbleTransition->oldTextWidth(),
+		.palette = &stm->textPalette,
+		.pre = stm->preCache.get(),
+		.blockquote = context.quoteCache(
+			contentColorCollectible(),
+			contentColorIndex()),
+		.colors = context.st->highlightColors(),
+		.spoiler = Ui::Text::DefaultSpoilerCache(),
+		.now = context.now,
+		.pausedEmoji = true,
+		.pausedSpoiler = true,
+		.useFullWidth = true,
+	});
+	p.setOpacity(opacity);
 }
 
 void Message::paintRichText(
@@ -6695,6 +6741,9 @@ QRect Message::countGeometry() const {
 			accumulate_min(contentWidth, shrunk);
 		}
 	}
+	if (_bubbleTransition) {
+		contentWidth = _bubbleTransition->bubbleWidth(contentWidth);
+	}
 	if (contentWidth < availableWidth
 		&& delegate()->elementChatMode() != ElementChatMode::Wide) {
 		if (outbg) {
@@ -7379,7 +7428,108 @@ int Message::visibleMediaTextLength() const {
 QSize Message::performCountCurrentSize(int newWidth) {
 	const auto newHeight = resizeContentGetHeight(newWidth);
 
-	return { newWidth, newHeight };
+	return { newWidth, bubbleTransitionHeight(newWidth, newHeight) };
+}
+
+bool Message::bubbleTransitionAllowed() const {
+	const auto media = this->media();
+	return !isHidden()
+		&& drawBubble()
+		&& !(media && media->isDisplayed())
+		&& !hasRichPage()
+		&& !Has<TextAppearing>();
+}
+
+void Message::prepareBubbleTransition(Ui::Text::String &&previous) {
+	// 尚未开始的过渡保留最早的旧状态，连续刷新时旧文字已被清空。
+	if ((_bubbleTransition && !_bubbleTransition->started())
+		|| anim::Disabled()
+		|| width() < st::msgMinWidth
+		|| !bubbleTransitionAllowed()) {
+		return;
+	}
+	const auto geometry = countGeometry();
+	_bubbleTransition = std::make_unique<ExtrasUi::BubbleTransition>(
+		height(),
+		geometry.width(),
+		std::move(previous),
+		geometry.width() - st::msgPadding.left() - st::msgPadding.right());
+}
+
+void Message::initBubbleTransition(not_null<Message*> was) {
+	if (anim::Disabled() || !was->bubbleTransitionAllowed()) {
+		return;
+	}
+	const auto pending = was->_bubbleTransition.get();
+	if (!pending
+		&& (was->pendingResize() || was->width() < st::msgMinWidth)) {
+		return;
+	}
+	// 旧视图可能已原地开始过渡，接手当前更显眼的那份文字。
+	const auto previous = (pending && pending->progress() < 0.5)
+		? pending->oldText()
+		: &was->text();
+	const auto prepared = pending && !pending->started();
+	const auto fromHeight = prepared ? pending->fromHeight() : was->height();
+	const auto fromWidth = prepared
+		? pending->fromWidth()
+		: was->countGeometry().width();
+	auto text = Ui::Text::String(st::msgMinWidth);
+	if (previous && !previous->isEmpty()) {
+		// 旧文字绑定到新视图重建，旧视图销毁后自定义表情仍能安全重绘。
+		text.setMarkedText(
+			st::messageTextStyle,
+			previous->toTextWithEntities(),
+			Ui::ItemTextOptions(data()),
+			Core::TextContext({
+				.session = &history()->session(),
+				.repaint = [=] { customEmojiRepaint(); },
+			}));
+		if (previous->hasSkipBlock()) {
+			text.updateSkipBlock(
+				was->skipBlockWidth(),
+				was->skipBlockHeight());
+		}
+	}
+	_bubbleTransition = std::make_unique<ExtrasUi::BubbleTransition>(
+		fromHeight,
+		fromWidth,
+		std::move(text),
+		fromWidth - st::msgPadding.left() - st::msgPadding.right());
+}
+
+int Message::bubbleTransitionHeight(int newWidth, int finalHeight) {
+	const auto transition = _bubbleTransition.get();
+	if (!transition) {
+		return finalHeight;
+	}
+	const auto keep = bubbleTransitionAllowed()
+		&& transition->update(newWidth, finalHeight, text(), [=] {
+			bubbleTransitionCallback();
+		});
+	if (!keep) {
+		_bubbleTransition = nullptr;
+		return finalHeight;
+	}
+	return transition->height();
+}
+
+void Message::bubbleTransitionCallback() {
+	const auto transition = _bubbleTransition.get();
+	const auto finished = (transition->progress() >= 1.);
+	if (const auto delta = transition->height() - height()) {
+		adjustHeight(delta);
+		history()->viewHeightAdjusted(this, delta);
+	}
+	repaint();
+	if (finished) {
+		// 正处于过渡动画的回调中，延后释放。
+		crl::on_main(this, [=] {
+			if (_bubbleTransition && !_bubbleTransition->animating()) {
+				_bubbleTransition = nullptr;
+			}
+		});
+	}
 }
 
 void Message::refreshInfoSkipBlock(HistoryItem *textItem) {

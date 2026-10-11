@@ -3218,6 +3218,9 @@ void Element::itemDataChanged() {
 }
 
 void Element::itemTextUpdated() {
+	if (const auto message = dynamic_cast<Message*>(this)) {
+		message->prepareBubbleTransition(std::move(_text));
+	}
 	if (const auto media = _media.get()) {
 		media->parentTextUpdated();
 	}
