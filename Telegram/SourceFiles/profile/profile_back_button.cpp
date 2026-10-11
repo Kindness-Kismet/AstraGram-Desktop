@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "profile/profile_back_button.h"
 
+#include "extras/features/window_material/window_material.h"
 #include "ui/text/text.h"
 #include "styles/style_profile.h"
 #include "styles/style_info.h"
@@ -19,6 +20,7 @@ namespace Profile {
 
 BackButton::BackButton(QWidget *parent) : Ui::AbstractButton(parent) {
 	setCursor(style::cur_pointer);
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
 }
 
 void BackButton::setText(const QString &text) {
@@ -86,12 +88,17 @@ void BackButton::paintEvent(QPaintEvent *e) {
 
 	auto p = QPainter(this);
 
-	p.fillRect(e->rect(), st::profileBg);
-	st::topBarBack.paint(
-		p,
-		st::historyAdminLogTopBarLeft,
-		(st::topBarHeight - st::topBarBack.height()) / 2,
-		width());
+	namespace Material = ExtrasFeatures::WindowMaterial;
+	p.fillRect(
+		e->rect(),
+		Material::surfaceColor(this, st::profileBg->c));
+	const auto backLeft = st::historyAdminLogTopBarLeft;
+	const auto backTop = (st::topBarHeight - st::topBarBack.height()) / 2;
+	if (const auto fg = Material::foregroundOverride(this)) {
+		st::topBarBack.paint(p, backLeft, backTop, width(), *fg);
+	} else {
+		st::topBarBack.paint(p, backLeft, backTop, width());
+	}
 	p.setOpacity(_opacity);
 
 	const auto textHeight = st::semiboldFont->height;
@@ -121,7 +128,8 @@ void BackButton::paintEvent(QPaintEvent *e) {
 			.availableWidth = _elisionWidth,
 			.elisionLines = 1,
 		};
-		p.setPen(st::historyStatusFg);
+		p.setPen(
+			Material::foregroundColor(this, st::historyStatusFg->c));
 		_subtext.draw(p, subtextContext);
 	}
 }

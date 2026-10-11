@@ -8,6 +8,7 @@
 #include "data/data_session.h"
 #include "info/profile/info_profile_values.h"
 #include "lang/lang_keys.h"
+#include "extras/features/window_material/window_material.h"
 #include "profile/profile_back_button.h"
 #include "styles/style_chat.h"
 #include "styles/style_chat_helpers.h"
@@ -106,6 +107,11 @@ FixedBar::FixedBar(
 , _search(this, st::topBarSearch)
 , _cancel(this, st::historyAdminLogCancelSearch)
 , _searchEnabled(searchEnabled) {
+	// 与聊天顶栏一致：窗口材质生效时透出材质，图标改用正文色。
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::watchIconButton(
+		_search.data(),
+		st::menuIconFgOver);
 	_backButton->moveToLeft(0, 0);
 	_backButton->setClickedCallback([=] { goBack(); });
 	_search->setClickedCallback([=] { showSearch(); });
@@ -251,7 +257,6 @@ void FixedBar::setAnimatingMode(bool enabled) {
 			setAttribute(Qt::WA_OpaquePaintEvent, false);
 			hideChildren();
 		} else {
-			setAttribute(Qt::WA_OpaquePaintEvent);
 			showChildren();
 			_field->hide();
 			_cancel->setVisible(false);
@@ -266,7 +271,11 @@ void FixedBar::setAnimatingMode(bool enabled) {
 void FixedBar::paintEvent(QPaintEvent *e) {
 	if (!_animatingMode) {
 		auto p = QPainter(this);
-		p.fillRect(e->rect(), st::topBarBg);
+		p.fillRect(
+			e->rect(),
+			ExtrasFeatures::WindowMaterial::surfaceColor(
+				this,
+				st::topBarBg->c));
 	}
 }
 
@@ -303,6 +312,7 @@ Widget::Widget(
 	_fixedBar->show();
 
 	_fixedBarShadow->raise();
+	ExtrasFeatures::WindowMaterial::watchSurface(_fixedBarShadow.data());
 
 	controller->adaptive().value(
 	) | rpl::on_next([=]

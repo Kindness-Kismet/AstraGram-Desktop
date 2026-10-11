@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "history/admin_log/history_admin_log_inner.h"
 #include "history/admin_log/history_admin_log_filter.h"
+#include "extras/features/window_material/window_material.h"
 #include "profile/profile_back_button.h"
 #include "core/shortcuts.h"
 #include "info/profile/info_profile_values.h"
@@ -115,6 +116,11 @@ FixedBar::FixedBar(
 , _backButton(this)
 , _search(this, st::topBarSearch)
 , _cancel(this, st::historyAdminLogCancelSearch) {
+	// 与聊天顶栏一致：窗口材质生效时透出材质，图标改用正文色。
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::watchIconButton(
+		_search.data(),
+		st::menuIconFgOver);
 	_backButton->moveToLeft(0, 0);
 	_backButton->setClickedCallback([=] { goBack(); });
 	_search->setClickedCallback([=] { showSearch(); });
@@ -261,7 +267,6 @@ void FixedBar::setAnimatingMode(bool enabled) {
 			setAttribute(Qt::WA_OpaquePaintEvent, false);
 			hideChildren();
 		} else {
-			setAttribute(Qt::WA_OpaquePaintEvent);
 			showChildren();
 			_field->hide();
 			_cancel->setVisible(false);
@@ -273,7 +278,11 @@ void FixedBar::setAnimatingMode(bool enabled) {
 void FixedBar::paintEvent(QPaintEvent *e) {
 	if (!_animatingMode) {
 		auto p = QPainter(this);
-		p.fillRect(e->rect(), st::topBarBg);
+		p.fillRect(
+			e->rect(),
+			ExtrasFeatures::WindowMaterial::surfaceColor(
+				this,
+				st::topBarBg->c));
 	}
 }
 
@@ -313,6 +322,7 @@ Widget::Widget(
 
 	_whatIsThis->raise();
 	_fixedBarShadow->raise();
+	ExtrasFeatures::WindowMaterial::watchSurface(_fixedBarShadow.data());
 
 	controller->adaptive().value(
 	) | rpl::on_next([=] {
