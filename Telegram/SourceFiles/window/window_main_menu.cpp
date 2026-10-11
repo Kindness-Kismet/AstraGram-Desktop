@@ -472,7 +472,6 @@ MainMenu::MainMenu(
 				auto p = Painter(snowRaw);
 				if (!hasWindowBackdrop()) {
 					FillBackground(p, size(), false);
-					drawCover(p);
 					drawName(p);
 				}
 				snow->paint(p, snowRaw->rect());
@@ -1055,23 +1054,8 @@ void MainMenu::paintEvent(QPaintEvent *e) {
 
 	FillBackground(p, size(), hasWindowBackdrop());
 	if (cover.intersects(clip)) {
-		drawCover(p);
 		drawName(p);
 	}
-}
-
-void MainMenu::drawCover(Painter &p) {
-	auto hq = PainterHighQualityEnabler(p);
-	p.setPen(Qt::NoPen);
-	p.setBrush(ExtrasFeatures::WindowMaterial::cardColor(
-		this,
-		st::windowBgOver->c));
-	p.drawRoundedRect(
-		QRect(0, 0, width(), st::mainMenuCoverHeight).marginsRemoved(
-			QMargins(st::mainMenuCoverMargin, st::mainMenuCoverMargin,
-				st::mainMenuCoverMargin, st::mainMenuCoverMargin)),
-		st::mainMenuCoverRadius,
-		st::mainMenuCoverRadius);
 }
 
 void MainMenu::drawName(Painter &p) {

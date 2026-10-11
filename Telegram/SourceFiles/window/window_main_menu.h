@@ -84,7 +84,6 @@ private:
 	[[nodiscard]] base::EventFilterResult redirectToInnerChecked(
 		not_null<QEvent*> e);
 
-	void drawCover(Painter &p);
 	void drawName(Painter &p);
 
 	const not_null<SessionController*> _controller;
