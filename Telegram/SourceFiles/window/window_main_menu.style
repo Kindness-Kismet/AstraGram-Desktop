@@ -41,7 +41,7 @@ mainMenuScroll: ScrollArea(defaultSolidScroll) {
 mainMenuSkip: 6px;
 mainMenuContentMargin: 4px;
 mainMenuSectionSkip: 12px;
-mainMenuFooterHeight: 72px;
+mainMenuFooterHeight: 51px;
 mainMenu: Menu(defaultMenu) {
 	itemFg: windowBoldFg;
 	itemFgOver: windowBoldFgOver;
@@ -57,7 +57,6 @@ mainMenu: Menu(defaultMenu) {
 	itemToggleShift: 11px;
 }
 mainMenuFooterLeft: 24px;
-mainMenuTelegramBottom: 38px;
 mainMenuVersionBottom: 17px;
 mainMenuToggleSize: 6px;
 mainMenuTogglePosition: point(20px, 44px);

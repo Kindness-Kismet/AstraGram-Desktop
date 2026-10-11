@@ -9,6 +9,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "apiwrap.h"
 #include "base/platform/base_platform_info.h"
+#include "boxes/about_box.h" // currentVersionShortText
+#include "core/update_channel.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
 #include "data/data_document.h"
@@ -21,11 +23,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "lottie/lottie_icon.h"
 #include "main/main_session.h"
+#include "ui/abstract_button.h"
 #include "ui/controls/userpic_button.h"
 #include "ui/layers/generic_box.h"
 #include "ui/new_badges.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
+#include "ui/widgets/labels.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/tooltip.h"
 #include "ui/wrap/slide_wrap.h"
@@ -40,14 +44,29 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Window {
 
-[[nodiscard]] not_null<Ui::FlatLabel*> AddVersionLabel(
-		not_null<Ui::RpWidget*> parent) {
+not_null<Ui::AbstractButton*> AddVersionButton(
+		not_null<Ui::RpWidget*> parent,
+		const style::FlatLabel &st) {
+	const auto button = Ui::CreateChild<Ui::AbstractButton>(parent.get());
+	// The canary version is too long for the "Version {version}" form.
+	const auto version = Core::BuildIsCanary
+		? currentVersionShortText()
+		: tr::lng_settings_current_version(
+			tr::now,
+			lt_version,
+			currentVersionShortText());
 	const auto label = Ui::CreateChild<Ui::FlatLabel>(
-		parent.get(),
-		st::mainMenuVersionLabel);
+		button,
+		rpl::single(tr::semibold(u"AstraGram"_q).append(' ').append(version)),
+		st);
+	label->setAttribute(Qt::WA_TransparentForMouseEvents);
+	label->sizeValue(
+	) | rpl::on_next([=](QSize size) {
+		button->resize(size);
+	}, button->lifetime());
 	if constexpr (!Platform::IsMacStoreBuild()
 		&& !Platform::IsWindowsStoreBuild()) {
-		Ui::InstallTooltip(label, [] {
+		Ui::InstallTooltip(button, [] {
 			if constexpr (Platform::IsLinux()) {
 				return u"Qt version: %1."_q.arg(QT_VERSION_STR);
 			} else {
@@ -57,7 +76,7 @@ namespace Window {
 			}
 		});
 	}
-	return label;
+	return button;
 }
 
 not_null<Ui::SettingsButton*> AddMyChannelsBox(

@@ -7,8 +7,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+namespace style {
+struct FlatLabel;
+} // namespace style
+
 namespace Ui {
-class FlatLabel;
+class AbstractButton;
 class RpWidget;
 class SettingsButton;
 class VerticalLayout;
@@ -18,8 +22,10 @@ namespace Window {
 
 class SessionController;
 
-[[nodiscard]] not_null<Ui::FlatLabel*> AddVersionLabel(
-	not_null<Ui::RpWidget*>);
+// 页脚一行显示应用名和版本号，整体可点击，悬停提示构建信息。
+[[nodiscard]] not_null<Ui::AbstractButton*> AddVersionButton(
+	not_null<Ui::RpWidget*> parent,
+	const style::FlatLabel &st);
 
 [[nodiscard]] not_null<Ui::SettingsButton*> AddMyChannelsBox(
 	not_null<Ui::SettingsButton*> button,

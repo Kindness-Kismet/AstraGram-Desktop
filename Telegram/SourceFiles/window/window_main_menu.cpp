@@ -10,16 +10,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "base/event_filter.h"
 #include "base/qt_signal_producer.h"
-#include "boxes/about_box.h" // currentVersionShortText
 #include "boxes/connection_box.h"
-#include "core/update_channel.h"
 #include "boxes/peer_list_controllers.h"
 #include "boxes/premium_preview_box.h"
 #include "calls/group/calls_group_common.h"
 #include "calls/calls_box_controller.h"
 #include "calls/calls_instance.h"
 #include "core/application.h"
-#include "core/click_handler_types.h"
 #include "data/data_changes.h"
 #include "data/data_document_media.h"
 #include "data/data_folder.h"
@@ -173,6 +170,15 @@ private:
 	});
 }
 
+// 页脚文字颜色跟随窗口材质，材质下与其他侧栏文字一致。
+[[nodiscard]] std::unique_ptr<style::FlatLabel> FooterLabelStyle(
+		const style::FlatLabel &st,
+		const style::color &fg) {
+	auto result = std::make_unique<style::FlatLabel>(st);
+	result->textFg = fg;
+	return result;
+}
+
 } // namespace
 
 class MainMenu::ToggleAccountsButton final : public Ui::AbstractButton {
@@ -288,6 +294,11 @@ MainMenu::MainMenu(
 	not_null<SessionController*> controller)
 : LayerWidget(parent)
 , _controller(controller)
+, _footerFg([=] {
+	return ExtrasFeatures::WindowMaterial::foregroundColor(
+		this,
+		st::windowSubTextFg->c);
+})
 , _userpicButton(
 	this,
 	_controller->session().user(),
@@ -332,17 +343,18 @@ MainMenu::MainMenu(
 		_inner.get(),
 		st::mainMenuFooterHeight),
 	{ 0, st::mainMenuSkip, 0, 0 }))
-, _telegram(
-	Ui::CreateChild<Ui::FlatLabel>(_footer.get(), st::mainMenuTelegramLabel))
-, _version(AddVersionLabel(_footer)) {
+, _versionSt(FooterLabelStyle(st::mainMenuVersionLabel, _footerFg.color()))
+, _version(AddVersionButton(_footer, *_versionSt)) {
 	setObjectName(u"mainMenu"_q);
 	const auto material = new MainMenuMaterialEffect(this);
 	setGraphicsEffect(material);
 	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=](bool active) {
 		material->setEnabled(active);
+		_footerFg.refresh();
 	}, lifetime());
 	_scroll->setObjectName(u"mainMenu.scroll"_q);
 	_toggleAccounts->setObjectName(u"mainMenu.accounts"_q);
+	_version->setObjectName(u"mainMenu.version"_q);
 	_setEmojiStatus->setObjectName(u"mainMenu.preferences"_q);
 
 	setupUserpicButton();
@@ -364,19 +376,14 @@ MainMenu::MainMenu(
 
 	rpl::combine(
 		_footer->heightValue(),
-		_telegram->heightValue(),
 		_version->heightValue()
 	) | rpl::on_next([=] {
-		_telegram->moveToLeft(st::mainMenuFooterLeft, _footer->height() - st::mainMenuTelegramBottom - _telegram->height());
 		_version->moveToLeft(st::mainMenuFooterLeft, _footer->height() - st::mainMenuVersionBottom - _version->height());
 	}, _footer->lifetime());
 
 	parentResized();
 
-	_telegram->setMarkedText(tr::link(
-		u"AstraGram"_q,
-		u"https://ayugram.one"_q));
-	_telegram->setLink(1, std::make_shared<LambdaClickHandler>([=] {
+	_version->setClickedCallback([=] {
 		static auto clicks = 0;
 		static auto last = crl::time(0);
 		const auto now = crl::now();
@@ -403,21 +410,7 @@ MainMenu::MainMenu(
 			? tr::extras_DevFeaturesHint2(tr::now)
 			: tr::extras_DevFeaturesHint3(tr::now);
 		controller->showToast(hint);
-	}));
-	// The canary version is too long for the "Version {version}" form.
-	// 「关于」入口已移至设置页，页脚只保留版本号链接。
-	_version->setMarkedText(
-		tr::link(
-			Core::BuildIsCanary
-				? currentVersionShortText()
-				: tr::lng_settings_current_version(
-					tr::now,
-					lt_version,
-					currentVersionShortText()),
-			1)); // Link 1.
-	_version->setLink(
-		1,
-		std::make_shared<UrlClickHandler>(Core::App().changelogLink()));
+	});
 
 	rpl::combine(
 		rpl::single(rpl::empty) | rpl::then(_badge->updated()),

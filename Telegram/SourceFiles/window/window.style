@@ -150,18 +150,9 @@ mainMenuAccountLine: 2px;
 mainMenuBadgeFont: font(11px bold);
 mainMenuBadgeSize: 18px;
 
-mainMenuTelegramLabel: FlatLabel(defaultFlatLabel) {
+mainMenuVersionLabel: FlatLabel(defaultFlatLabel) {
 	align: align(left);
 	textFg: windowSubTextFg;
-	style: TextStyle(defaultTextStyle) {
-		font: semiboldFont;
-	}
-	palette: TextPalette(defaultTextPalette) {
-		linkFg: windowSubTextFg;
-	}
-}
-mainMenuVersionLabel: FlatLabel(mainMenuTelegramLabel) {
-	style: defaultTextStyle;
 }
 
 mainMenuToggleFourStrokes: 3px;

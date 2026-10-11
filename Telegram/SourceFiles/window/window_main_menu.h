@@ -19,7 +19,12 @@ namespace base {
 enum class EventFilterResult;
 } // namespace base
 
+namespace style {
+struct FlatLabel;
+} // namespace style
+
 namespace Ui {
+class AbstractButton;
 class IconButton;
 class FlatLabel;
 class UserpicButton;
@@ -87,6 +92,7 @@ private:
 	void drawName(Painter &p);
 
 	const not_null<SessionController*> _controller;
+	style::complex_color _footerFg;
 	object_ptr<Ui::UserpicButton> _userpicButton;
 	Ui::Text::String _name;
 	int _nameVersion = 0;
@@ -102,8 +108,8 @@ private:
 	not_null<Ui::SlideWrap<Ui::VerticalLayout>*> _accounts;
 	not_null<Ui::VerticalLayout*> _menu;
 	not_null<Ui::RpWidget*> _footer;
-	not_null<Ui::FlatLabel*> _telegram;
-	not_null<Ui::FlatLabel*> _version;
+	const std::unique_ptr<const style::FlatLabel> _versionSt;
+	not_null<Ui::AbstractButton*> _version;
 	QPointer<Ui::SettingsButton> _nightThemeToggle;
 	rpl::event_stream<bool> _nightThemeSwitches;
 	base::Timer _nightThemeSwitch;
