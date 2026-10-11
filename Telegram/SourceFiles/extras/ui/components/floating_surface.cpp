@@ -5,6 +5,7 @@
 #include "extras/ui/components/floating_surface_host.h"
 #include "ui/chat/chat_theme_readability.h"
 #include "ui/style/style_core_palette.h"
+#include "window/section_widget.h"
 #include "styles/palette.h"
 
 #include <QtCore/QEvent>
@@ -19,6 +20,19 @@ namespace ExtrasUi {
 namespace {
 
 constexpr auto kHoverOpacity = 0.08;
+
+// 话题、回复等聊天分区的卡片浮在滚动的消息上方，没有磨砂背景源时不能透出材质。
+[[nodiscard]] bool insideChatSection(const QWidget *widget) {
+	for (auto parent = widget; parent; parent = parent->parentWidget()) {
+		if (dynamic_cast<const Window::SectionWidget*>(parent)) {
+			return true;
+		}
+		if (parent->isWindow()) {
+			break;
+		}
+	}
+	return false;
+}
 
 } // namespace
 
@@ -100,7 +114,8 @@ bool FloatingSurface::hasBackdrop() const {
 bool FloatingSurface::usesWindowMaterial() const {
 	return _style.windowMaterial
 		&& !hasBackdrop()
-		&& ExtrasFeatures::WindowMaterial::isActive(_widget);
+		&& ExtrasFeatures::WindowMaterial::isActive(_widget)
+		&& !insideChatSection(_widget);
 }
 
 void FloatingSurface::refreshGeometry() {
