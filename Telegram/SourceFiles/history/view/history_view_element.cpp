@@ -3410,6 +3410,11 @@ Iv::RichPageBlocksSlice Element::selectedRichBlocks(
 	};
 }
 
+TextForMimeData Element::richPageText() const {
+	const auto rich = richpage();
+	return rich ? rich->article.textForAll() : TextForMimeData();
+}
+
 SelectedQuote Element::selectedQuote(
 		const MessageSelection &selection) const {
 	if (const auto flat = selection.flatSelection(); !flat.empty()) {

@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_todo_list.h"
 #include "data/data_web_page.h"
 #include "history/history.h"
+#include "history/view/history_view_element.h"
 #include "history/view/history_view_item_preview.h"
 #include "history/history_item.h"
 #include "history/history_item_components.h"
@@ -91,7 +92,16 @@ TextForMimeData ShownSummaryText(not_null<HistoryItem*> item) {
 		: TextForMimeData();
 }
 
+// 富消息的条目文本只是摘要，表格只剩一个词；主视图排版后取文章全文。
+TextForMimeData RichArticleText(not_null<HistoryItem*> item) {
+	const auto view = item->richPage() ? item->mainView() : nullptr;
+	return view ? view->richPageText() : TextForMimeData();
+}
+
 TextForMimeData HistoryItemMainText(not_null<HistoryItem*> item) {
+	if (auto rich = RichArticleText(item); !rich.empty()) {
+		return rich;
+	}
 	const auto media = item->media();
 
 	auto mediaResult = media ? media->clipboardText() : TextForMimeData();

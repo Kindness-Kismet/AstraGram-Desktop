@@ -594,6 +594,8 @@ public:
 		const MessageSelection &selection) const;
 	[[nodiscard]] Iv::RichPageBlocksSlice selectedRichBlocks(
 		const MessageSelection &selection) const;
+	// 富消息排版后的全文，表格保留单元格；非富消息或尚未排版时为空。
+	[[nodiscard]] TextForMimeData richPageText() const;
 	virtual SelectedQuote selectedQuote(
 		TextSelection selection) const = 0;
 	virtual SelectedQuote selectedQuote(

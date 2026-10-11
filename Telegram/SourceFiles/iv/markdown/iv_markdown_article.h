@@ -553,6 +553,8 @@ public:
 		MarkdownArticleSelection selection,
 		const MarkdownArticleSelectionEndpoints *endpoints,
 		const PreparedEditSelection *structuralSelection = nullptr) const;
+	// 整篇文章的选中文本，表格保留单元格内容；未排版时为空。
+	[[nodiscard]] TextForMimeData textForAll() const;
 	[[nodiscard]] std::vector<RichPage::Block> richPageSliceForSelection(
 		MarkdownArticleSelection selection) const;
 	[[nodiscard]] bool richPageRtl() const;

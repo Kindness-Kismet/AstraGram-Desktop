@@ -4087,6 +4087,8 @@ public:
 		const MarkdownArticleSelectionEndpoints *endpoints,
 		const PreparedEditSelection *structuralSelection) const;
 
+	[[nodiscard]] TextForMimeData textForAll() const;
+
 	[[nodiscard]] std::vector<RichPage::Block> richPageSliceForSelection(
 		MarkdownArticleSelection selection) const;
 
@@ -5465,6 +5467,17 @@ TextForMimeData MarkdownArticle::Impl::textForSelection(
 		selection,
 		endpoints,
 		structuralSelection);
+}
+
+TextForMimeData MarkdownArticle::Impl::textForAll() const {
+	if (_segments.empty()) {
+		return {};
+	}
+	const auto &last = _segments.back();
+	return TextForSelectedSegments(_segments, {
+		.from = { .segment = _segments.front().index },
+		.to = { .segment = last.index, .offset = SegmentLength(last) },
+	}, nullptr);
 }
 
 std::vector<RichPage::Block> MarkdownArticle::Impl::richPageSliceForSelection(
@@ -7461,6 +7474,10 @@ TextForMimeData MarkdownArticle::textForSelection(
 		selection,
 		endpoints,
 		structuralSelection);
+}
+
+TextForMimeData MarkdownArticle::textForAll() const {
+	return _impl->textForAll();
 }
 
 std::vector<RichPage::Block> MarkdownArticle::richPageSliceForSelection(
