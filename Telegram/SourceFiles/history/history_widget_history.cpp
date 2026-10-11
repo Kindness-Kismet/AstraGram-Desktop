@@ -1286,6 +1286,14 @@ int HistoryWidget::countInitialScrollTop() {
 		const auto item = getItemFromHistoryOrMigrated(_showAtMsgId);
 		const auto itemTop = _list->itemTop(item);
 		if (itemTop < 0) {
+			// 不在历史列表里的消息永远不会绘制，未读回应、提及或投票无法消费；
+			// 直接标记已读，避免角标按钮一直跳到这一条。
+			if (item
+				&& (item->hasUnreadReaction()
+					|| item->isUnreadMention()
+					|| item->hasUnreadPollVote())) {
+				session().api().markContentsRead(item);
+			}
 			setMsgId(ShowAtUnreadMsgId);
 			controller()->showToast(tr::lng_message_not_found(tr::now));
 			return countInitialScrollTop();
