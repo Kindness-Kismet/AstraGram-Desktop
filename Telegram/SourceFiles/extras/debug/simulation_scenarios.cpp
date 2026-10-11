@@ -169,6 +169,21 @@ base::weak_ptr<Main::Session> SeededSession;
 	}
 	return -1;
 }
+// 定时消息和快捷回复页的样本超过一屏，用于滚动检查浮动输入区。
+constexpr auto kListSampleCount = 30;
+// 快捷回复默认上限 20 条，达到上限会隐藏输入框，样本留出余量。
+constexpr auto kShortcutSampleCount = 18;
+[[nodiscard]] QString listSampleText(int index) {
+	const auto texts = std::array{
+		u"一小时后提醒检查模拟场景。",
+		u"多行样本的第一行。\n第二行滚到输入框下方时应透出模糊内容。\n第三行。",
+		u"这条样本比较长，用来检查气泡换行，以及滚动经过磨砂输入框时的模糊效果。",
+		u"短样本。",
+		u"Mixed 中英文 sample 与数字 123。",
+	};
+	return u"%1. %2"_q.arg(index + 1).arg(
+		QString::fromUtf16(texts[index % texts.size()]));
+}
 [[nodiscard]] MsgId tabTopicRoot(int index) {
 	return MsgId(index ? (kTopicRootId + 100 * index) : Data::ForumTopic::kGeneralId);
 }
@@ -534,11 +549,14 @@ void fillHistory(not_null<Main::Session*> session, not_null<PeerData*> peer, int
 		peer->forum()->topicsList()->setLoaded();
 	}
 	if (kind == Kind::Saved) {
-		session->scheduledMessages().apply(MTP_updateNewScheduledMessage(
-			makeMessage(peer, session->userPeerId(), baseId + 90,
-				u"一小时后提醒检查模拟场景。"_q, false, false, 0, false, false, false,
-				0, 0, {}, false, std::nullopt, 0, base::unixtime::now() + 3600)
-		).c_updateNewScheduledMessage());
+		for (auto i = 0; i != kListSampleCount; ++i) {
+			session->scheduledMessages().apply(MTP_updateNewScheduledMessage(
+				makeMessage(peer, session->userPeerId(), baseId + 50 + i,
+					listSampleText(i), false, false, 0, false, false, false,
+					0, 0, {}, false, std::nullopt, 0,
+					base::unixtime::now() + 3600 + 900 * i)
+			).c_updateNewScheduledMessage());
+		}
 		for (auto i = 0; i != 3; ++i) {
 			const auto source = i == 0 ? session->userPeerId()
 				: scenarioPeerId(findScenario(i == 1 ? u"private"_q : u"channel"_q));
@@ -735,13 +753,18 @@ void installScenarioDraft(
 	if (view == u"shortcuts"_q) {
 		auto &messages = session->data().shortcutMessages();
 		constexpr auto kShortcutMessageId = kFirstMessageId + 2000;
-		messages.apply(MTP_updateQuickReplyMessage(makeMessage(
-			session->user(), session->userPeerId(), kShortcutMessageId,
-			u"快捷回复样本：检查独立设置页的输入区。"_q,
-			false, false, 1)).c_updateQuickReplyMessage());
+		const auto now = base::unixtime::now();
+		for (auto i = 0; i != kShortcutSampleCount; ++i) {
+			messages.apply(MTP_updateQuickReplyMessage(makeMessage(
+				session->user(), session->userPeerId(), kShortcutMessageId + i,
+				listSampleText(i), false, false, 1, false, false, false,
+				0, 0, {}, false, std::nullopt, 0,
+				now - 3600 + 60 * i)).c_updateQuickReplyMessage());
+		}
 		messages.apply(MTP_updateQuickReplies(MTP_vector<MTPQuickReply>({
 			MTP_quickReply(MTP_int(1), MTP_string("layout"),
-				MTP_int(kShortcutMessageId), MTP_int(1)),
+				MTP_int(kShortcutMessageId + kShortcutSampleCount - 1),
+				MTP_int(kShortcutSampleCount)),
 		})).c_updateQuickReplies());
 		controller->showSettings(Settings::ShortcutMessagesId(1));
 		return Result::Ok();

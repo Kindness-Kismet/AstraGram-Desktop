@@ -63,8 +63,8 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 | 视图 | 适用范围 |
 |---|---|
 | `alternate` | 另一套聊天组件 |
-| `scheduled` | 计划消息；`saved` 已有提醒样本 |
-| `shortcuts` | 本地快捷回复输入区 |
+| `scheduled` | 计划消息；`saved` 有 30 条可滚动的提醒样本 |
+| `shortcuts` | 本地快捷回复页，18 条可滚动的样本，低于 20 条上限以保留输入框 |
 | `pinned` | 含置顶消息的场景 |
 | `actions` | 有管理权限的 `requests`；没有服务器日志，只显示分区外框 |
 | `topic-unread` / `topic-closed` | `topic` 与 `topic-tabs` 的未读或已关闭话题 |
