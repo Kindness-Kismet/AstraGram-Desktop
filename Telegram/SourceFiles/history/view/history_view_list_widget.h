@@ -345,6 +345,10 @@ public:
 
 	void resizeToWidth(int newWidth, int minHeight);
 	[[nodiscard]] bool setTopPadding(int padding);
+	// 底部留白被浮动输入区覆盖，可见区不含这部分。
+	[[nodiscard]] bool setBottomPadding(int padding);
+	// 只绘制内容供磨砂背景采样，不改变已读、翻译或播放状态。
+	bool paintBackdrop(Painter &p, const QRect &clip);
 
 	void saveState(not_null<ListMemento*> memento);
 	void restoreState(not_null<ListMemento*> memento);
@@ -890,6 +894,7 @@ private:
 	void showPremiumStickerTooltip(
 		not_null<const HistoryView::Element*> view);
 
+	void paintList(Painter &p, QRect clip, bool backdrop);
 	void paintUserpics(
 		Painter &p,
 		const Ui::ChatPaintContext &context,
@@ -993,6 +998,7 @@ private:
 
 	int _minHeight = 0;
 	int _topPadding = 0;
+	int _bottomPadding = 0;
 	int _visibleTop = 0;
 	int _visibleBottom = 0;
 	Element *_visibleTopItem = nullptr;

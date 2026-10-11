@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "extras/features/window_material/window_material.h"
 #include "extras/ui/components/field_height_animation.h"
+#include "extras/ui/components/floating_surface.h"
 #include "extras/ui/controls/attach_menu.h"
 #include "history/view/controls/history_view_bot_menu_button.h"
 
@@ -132,7 +133,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/controls/send_as_button.h"
 #include "ui/controls/silent_toggle.h"
 #include "ui/chat/choose_send_as.h"
-#include "ui/chat/floating_bar.h"
 #include "ui/effects/spoiler_mess.h"
 #include "ui/effects/reaction_fly_animation.h"
 #include "webrtc/webrtc_environment.h"
@@ -159,6 +159,28 @@ namespace {
 // 自带圆角的专用样式自行决定外部布局。
 [[nodiscard]] int ComposeOuterMargin(const style::ComposeControls &style) {
 	return style.radius ? 0 : st::historyComposeCapsuleMargin;
+}
+
+[[nodiscard]] bool HasChatBackdrop(not_null<QWidget*> widget) {
+	const auto surface = dynamic_cast<ExtrasUi::FloatingSurface*>(
+		widget->graphicsEffect());
+	return surface && surface->hasBackdrop();
+}
+
+// 有磨砂背景源时由表面绘制底色和描边，否则沿用 paintBackground 的卡片。
+void ApplyComposeSurface(not_null<QWidget*> widget, int radius) {
+	const auto backdrop = [=](QColor color) {
+		return HasChatBackdrop(widget) ? color : QColor(Qt::transparent);
+	};
+	ExtrasUi::FloatingSurface::attach(widget.get(), {
+		.radius = radius,
+		.background = [=] {
+			return backdrop(ExtrasUi::chatSurfaceBackground());
+		},
+		.border = [=] { return backdrop(ExtrasUi::chatSurfaceBorder()); },
+		.borderWidth = st::lineWidth,
+		.windowMaterial = true,
+	});
 }
 
 constexpr auto kSaveDraftTimeout = crl::time(1000);
@@ -1324,10 +1346,7 @@ ComposeControls::ComposeControls(
 		_attachToggle->setObjectName(u"attachButton"_q);
 	}
 	if (ComposeOuterMargin(_st)) {
-		Ui::ApplyChatControlSurface(
-			_wrap.get(), MessageFieldCapsuleRadius(), false, [] {
-				return QColor(Qt::transparent);
-			});
+		ApplyComposeSurface(_wrap.get(), MessageFieldCapsuleRadius());
 	}
 	rpl::combine(
 		replyingToMessageValue(),
@@ -2908,6 +2927,9 @@ void ComposeControls::init() {
 
 	_wrap->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
+		if (HasChatBackdrop(_wrap.get())) {
+			return;
+		}
 		auto p = QPainter(_wrap.get());
 		paintBackground(p, _wrap->rect(), clip);
 	}, _wrap->lifetime());
@@ -4473,10 +4495,9 @@ void ComposeControls::initWriteRestriction() {
 	}
 	_writeRestricted = std::make_unique<Ui::RpWidget>(_parent);
 	if (ComposeOuterMargin(_st)) {
-		Ui::ApplyChatControlSurface(
-			_writeRestricted.get(), st::historyComposeCapsuleRadius, false, [] {
-				return QColor(Qt::transparent);
-			});
+		ApplyComposeSurface(
+			_writeRestricted.get(),
+			st::historyComposeCapsuleRadius);
 	}
 	_writeRestricted->move(_wrap->pos());
 	_writeRestricted->resizeToWidth(_wrap->widthNoMargins());
@@ -4489,6 +4510,9 @@ void ComposeControls::initWriteRestriction() {
 		_writeRestricted->width(),
 		_st.send.inner.height);
 	const auto background = [=](QPainter &p, QRect clip) {
+		if (HasChatBackdrop(_writeRestricted.get())) {
+			return;
+		}
 		paintBackground(p, _writeRestricted->rect(), clip);
 	};
 	SetupRestrictionView(

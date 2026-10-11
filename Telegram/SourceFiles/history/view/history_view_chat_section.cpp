@@ -138,6 +138,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/ui/components/floating_surface_host.h"
 #include "extras/features/message_shot/message_shot.h"
 #include "base/unixtime.h"
 
@@ -642,6 +643,9 @@ ChatWidget::ChatWidget(
 	) | rpl::on_next([=] {
 		onScroll();
 	}, lifetime());
+	// 列表延伸到浮动输入区下方，层级要低于输入区和顶部卡片。
+	_scroll->lower();
+	setupFrostedBackground();
 	if (session().supportMode() && mode() == Mode::History && !_topic) {
 		_supportAutocomplete = std::make_unique<Support::Autocomplete>(
 			this,
@@ -4429,6 +4433,7 @@ void ChatWidget::updateControlsGeometry() {
 	const auto top = topControlsTop + _topControls->height();
 
 	auto bottom = height();
+	auto floatingCompose = false;
 	const auto bottomHeight = _bottom->contentHeight();
 	if (bottomHeight > 0) {
 		_bottom->setGeometry(0, bottom - bottomHeight, width(), bottomHeight);
@@ -4465,6 +4470,7 @@ void ChatWidget::updateControlsGeometry() {
 		} else {
 			_composeControls->setFieldMaxHeight(
 				st::historyComposeFieldMaxHeight);
+			floatingCompose = !bottomHeight;
 		}
 		if (!bottomHeight) {
 			bottom -= _composeControls->heightCurrent();
@@ -4482,11 +4488,23 @@ void ChatWidget::updateControlsGeometry() {
 		? std::min(_topControls->pinnedOverlayHeight(),
 			std::max(0, bottom - topControlsTop - 1))
 		: 0;
-	const auto scrollHeight = readableHeight + overlap;
+	// 输入区浮在列表底部之上，可见区只占用胶囊上方一半留白。
+	const auto composeHeight = (floatingCompose
+		&& !_suggestOptions
+		&& !tabsBottomSkip
+		&& readableHeight > 0)
+		? _composeControls->heightCurrent()
+		: 0;
+	const auto composeOverlap = composeHeight
+		? (composeHeight - st::historyComposeCapsuleMargin / 2)
+		: 0;
+	const auto scrollHeight = readableHeight + overlap + composeHeight;
 	const auto scrollSize = QSize(innerWidth, scrollHeight);
 	_topBarsOverlap = overlap;
-	const auto paddingChanged = _inner->setTopPadding(overlap);
-	if (_scroll->size() != scrollSize || paddingChanged) {
+	_composeOverlap = composeOverlap;
+	const auto topChanged = _inner->setTopPadding(overlap);
+	const auto bottomChanged = _inner->setBottomPadding(composeOverlap);
+	if (_scroll->size() != scrollSize || topChanged || bottomChanged) {
 		_skipScrollEvent = true;
 		_scroll->resize(scrollSize);
 		_inner->resizeToWidth(scrollSize.width(), _scroll->height());
@@ -4494,6 +4512,7 @@ void ChatWidget::updateControlsGeometry() {
 	}
 	_scroll->move(tabsLeftSkip, top - overlap);
 	_scroll->setBarTopInset(overlap);
+	_scroll->setBarBottomInset(composeOverlap);
 	if (!_scroll->isHidden()) {
 		if (wasAtBottom) {
 			_scroll->scrollToY(_scroll->scrollTopMax());
@@ -4503,9 +4522,11 @@ void ChatWidget::updateControlsGeometry() {
 		updateInnerVisibleArea();
 	}
 	_composeControls->move(0, composeTop);
-	_composeControls->setAutocompleteBoundingRect(_scroll->geometry());
+	const auto visibleGeometry = _scroll->geometry().marginsRemoved(
+		{ 0, overlap, 0, composeOverlap });
+	_composeControls->setAutocompleteBoundingRect(visibleGeometry);
 	if (_supportAutocomplete) {
-		_supportAutocomplete->setBoundings(_scroll->geometry());
+		_supportAutocomplete->setBoundings(visibleGeometry);
 	}
 	_composeControlsTop = composeTop;
 
@@ -4513,7 +4534,9 @@ void ChatWidget::updateControlsGeometry() {
 		updateSubsectionTabsGeometry();
 	}
 
+	_cornerButtons.setBottomSkip(composeOverlap);
 	_cornerButtons.updatePositions();
+	_pullToNext->setBottomSkip(composeOverlap);
 	_pullToNext->updateGeometry();
 	if (_membersDropdown) {
 		_membersDropdown->moveToLeft(0, _topBar->height());
@@ -4526,7 +4549,9 @@ void ChatWidget::updateSubsectionTabsGeometry() {
 		return;
 	}
 	const auto subsectionTabsTop = _topBar->bottomNoMargins();
-	const auto scrollBottom = _scroll->y() + _scroll->height();
+	const auto scrollBottom = _scroll->y()
+		+ _scroll->height()
+		- _composeOverlap;
 	const auto areaHeight = scrollBottom
 		+ _subsectionTabs->bottomSkip()
 		- subsectionTabsTop;
@@ -4609,7 +4634,7 @@ void ChatWidget::updateInnerVisibleArea() {
 	const auto scrollTop = _scroll->scrollTop();
 	_inner->setVisibleTopBottom(
 		scrollTop + _topBarsOverlap,
-		scrollTop + _scroll->height());
+		scrollTop + _scroll->height() - _composeOverlap);
 	updatePinnedVisibility();
 	_topControls->updatePinnedViewer();
 	_cornerButtons.updateJumpDownVisibility();

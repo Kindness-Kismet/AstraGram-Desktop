@@ -1074,7 +1074,7 @@ std::optional<int> ListWidget::scrollTopForPosition(
 				return 0;
 			}
 		} else if (loadedAtBottom()) {
-			return height() - (_visibleBottom - _visibleTop);
+			return height() - _bottomPadding - (_visibleBottom - _visibleTop);
 		}
 		return std::nullopt;
 	} else if (!_items.empty()
@@ -1134,7 +1134,10 @@ void ListWidget::scrollTo(
 	const auto transition = (type == AnimatedScroll::Full)
 		? anim::sineInOut
 		: anim::easeOutCubic;
-	if (delta > 0 && scrollTop == height() - (_visibleBottom - _visibleTop)) {
+	const auto bottomScrollTop = height()
+		- _bottomPadding
+		- (_visibleBottom - _visibleTop);
+	if (delta > 0 && scrollTop == bottomScrollTop) {
 		// Animated scroll to bottom.
 		_scrollToAnimation.start(
 			[=] { scrollToAnimationCallback(FullMsgId(), 0); },
@@ -1207,6 +1210,7 @@ void ListWidget::scrollToAnimationCallback(
 		const auto current = int(base::SafeRound(
 			_scrollToAnimation.value(0)));
 		_delegate->listScrollTo(height()
+			- _bottomPadding
 			- (_visibleBottom - _visibleTop)
 			+ current);
 		return;
@@ -1595,7 +1599,7 @@ void ListWidget::applyUpdatedScrollState() {
 bool ListWidget::atNewestEdge() const {
 	return _inverted
 		? (_visibleTop == _topPadding)
-		: (_visibleBottom == height());
+		: (_visibleBottom + _bottomPadding == height());
 }
 
 void ListWidget::updateVisibleTopItem() {
@@ -2791,6 +2795,10 @@ bool ListWidget::setTopPadding(int padding) {
 	return std::exchange(_topPadding, padding) != padding;
 }
 
+bool ListWidget::setBottomPadding(int padding) {
+	return std::exchange(_bottomPadding, padding) != padding;
+}
+
 void ListWidget::startItemRevealAnimations() {
 	for (const auto &view : base::take(_itemRevealPending)) {
 		if (const auto height = view->height()) {
@@ -3074,10 +3082,25 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 	}
 	if (overlapped) {
 		return;
-	} else if (_translateTracker) {
+	}
+	Painter p(this);
+	paintList(p, e->rect(), false);
+}
+
+bool ListWidget::paintBackdrop(Painter &p, const QRect &clip) {
+	p.save();
+	p.setClipRect(clip, Qt::IntersectClip);
+	paintList(p, clip, true);
+	p.restore();
+	return true;
+}
+
+void ListWidget::paintList(Painter &p, QRect clip, bool backdrop) {
+	if (!backdrop && _translateTracker) {
 		_translateTracker->startBunch();
 	}
-	const auto metricsStale = _readMetricsTracker
+	const auto metricsStale = !backdrop
+		&& _readMetricsTracker
 		&& base::take(_readMetricsStale);
 	if (metricsStale) {
 		_readMetricsTracker->startBatch(_visibleTop, _visibleBottom);
@@ -3090,6 +3113,10 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 	const auto markingContentRead = markingContentsRead();
 	const auto interactionsWindow = controllerOrNull();
 	const auto guard = gsl::finally([&] {
+		_userpicsCache.clear();
+		if (backdrop) {
+			return;
+		}
 		if (_translateTracker) {
 			_delegate->listAddTranslatedItems(_translateTracker.get());
 			_translateTracker->finishBunch();
@@ -3114,17 +3141,13 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 		if (!readContents.empty() && markingContentRead) {
 			_delegate->listMarkContentsRead(readContents);
 		}
-		_userpicsCache.clear();
 	});
-
-	Painter p(this);
 
 	_pathGradient->startFrame(
 		0,
 		width(),
 		std::min(st::msgMaxWidth / 2, width() / 2));
 
-	auto clip = e->rect();
 	const auto shadowPadding = Ui::BubbleShadowPadding();
 	const auto paintClip = clip.adjusted(0, -shadowPadding, 0, shadowPadding);
 
@@ -3170,7 +3193,7 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 		_delegate->listPaintEmpty(p, context);
 		return;
 	}
-	if (_reactionsManager) {
+	if (_reactionsManager && !backdrop) {
 		_reactionsManager->startEffectsCollection();
 	}
 
@@ -3205,7 +3228,7 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 		const auto height = view->height();
 		if (!sendingAnimation
 			|| !sendingAnimation->hasAnimatedMessage(item)) {
-			if (_reactionsManager) {
+			if (_reactionsManager && !backdrop) {
 				context.reactionInfo
 					= _reactionsManager->currentReactionPaintInfo();
 			}
@@ -3216,6 +3239,12 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 			context.messageSelection = selection.messageSelection;
 			context.highlight = _highlighter.state(item);
 			view->draw(p, context);
+		}
+		if (backdrop) {
+			top += height;
+			context.translate(0, -height);
+			p.translate(0, height);
+			continue;
 		}
 		if (_translateTracker) {
 			_translateTracker->add(view);
@@ -3300,6 +3329,9 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 	paintDates(p, context, clip);
 	paintForumThreadBars(p, context, clip);
 
+	if (backdrop) {
+		return;
+	}
 	if (_replyButtonManager) {
 		_replyButtonManager->paint(p, context);
 	}
@@ -5606,9 +5638,10 @@ AboutView *ListWidget::aboutView() const {
 
 int ListWidget::countBottomPadding() const {
 	const auto about = aboutView();
-	return (about && about->view() && !about->aboveHistory())
+	const auto padding = (about && about->view() && !about->aboveHistory())
 		? std::max(st::historyPaddingBottom, about->height)
 		: st::historyPaddingBottom;
+	return padding + _bottomPadding;
 }
 
 int ListWidget::countItemsTop() const {

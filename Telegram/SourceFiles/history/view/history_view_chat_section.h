@@ -73,6 +73,10 @@ class Autocomplete;
 struct Contact;
 } // namespace Support
 
+namespace ExtrasUi {
+class FloatingSurfaceHost;
+} // namespace ExtrasUi
+
 namespace HistoryView {
 
 namespace Controls {
@@ -329,6 +333,8 @@ private:
 	void unreadCountUpdated();
 	void updateInnerVisibleArea();
 	void updateControlsGeometry();
+	// 与普通聊天一致，浮动卡片和输入区透出模糊后的消息列表。
+	void setupFrostedBackground();
 	void updateAdaptiveLayout();
 	void saveHistoryScrollState(const ListMemento &state);
 	void saveState(not_null<ChatMemento*> memento);
@@ -589,6 +595,7 @@ private:
 
 	std::unique_ptr<Ui::ElasticScroll> _scroll;
 	std::unique_ptr<PullToNextChannel> _pullToNext;
+	std::unique_ptr<ExtrasUi::FloatingSurfaceHost> _floatingSurfaceHost;
 	base::unique_qptr<Ui::ScrollArea> _kbScroll;
 	BotKeyboard *_keyboard = nullptr;
 	HistoryItem *_kbReplyTo = nullptr;
@@ -618,6 +625,7 @@ private:
 	int _lastScrollTop = 0;
 	int _scrollTopDelta = 0;
 	int _topBarsOverlap = 0;
+	int _composeOverlap = 0;
 	int _composeControlsTop = 0;
 	crl::time _lastUserScrolled = 0;
 
