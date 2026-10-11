@@ -333,8 +333,6 @@ private:
 	void unreadCountUpdated();
 	void updateInnerVisibleArea();
 	void updateControlsGeometry();
-	// 与普通聊天一致，浮动卡片和输入区透出模糊后的消息列表。
-	void setupFrostedBackground();
 	void updateAdaptiveLayout();
 	void saveHistoryScrollState(const ListMemento &state);
 	void saveState(not_null<ChatMemento*> memento);

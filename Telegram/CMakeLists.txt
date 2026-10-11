@@ -1403,7 +1403,6 @@ PRIVATE
     history/view/history_view_chat_preview.h
     history/view/history_view_chat_section.cpp
     history/view/history_view_chat_section.h
-    history/view/history_view_chat_section_frosted.cpp
     history/view/history_view_contact_status.cpp
     history/view/history_view_contact_status.h
     history/view/history_view_context_menu.cpp
@@ -1435,6 +1434,8 @@ PRIVATE
     history/view/history_view_item_preview.h
     history/view/history_view_keyboard_text_selection.cpp
     history/view/history_view_keyboard_text_selection.h
+    history/view/history_view_list_frosted.cpp
+    history/view/history_view_list_frosted.h
     history/view/history_view_list_widget.cpp
     history/view/history_view_list_widget.h
     history/view/history_view_list_selection.cpp

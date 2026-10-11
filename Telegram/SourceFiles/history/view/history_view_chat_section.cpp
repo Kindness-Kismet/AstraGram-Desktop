@@ -139,6 +139,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "extras/extras_settings.h"
 #include "extras/ui/components/floating_surface_host.h"
+#include "history/view/history_view_list_frosted.h"
 #include "extras/features/message_shot/message_shot.h"
 #include "base/unixtime.h"
 
@@ -645,7 +646,16 @@ ChatWidget::ChatWidget(
 	}, lifetime());
 	// 列表延伸到浮动输入区下方，层级要低于输入区和顶部卡片。
 	_scroll->lower();
-	setupFrostedBackground();
+	_floatingSurfaceHost = SetupListFrostedBackground({
+		.root = this,
+		.scroll = _scroll.get(),
+		.list = _inner.data(),
+		.scrolls = _scroll->scrolls(),
+		.paletteChanged = controller->chatStyle()->paletteChanged(),
+		.paintBackground = SectionFrostedBackground(this, [=] {
+			return _theme.get();
+		}),
+	});
 	if (session().supportMode() && mode() == Mode::History && !_topic) {
 		_supportAutocomplete = std::make_unique<Support::Autocomplete>(
 			this,

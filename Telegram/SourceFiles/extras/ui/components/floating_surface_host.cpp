@@ -107,6 +107,10 @@ void FloatingSurfaceHost::clear() {
 	_background.clear();
 }
 
+rpl::lifetime &FloatingSurfaceHost::lifetime() {
+	return _lifetime;
+}
+
 void FloatingSurfaceHost::paint(
 		QPainter &p,
 		FloatingSurface *surface,
