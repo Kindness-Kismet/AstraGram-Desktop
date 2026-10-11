@@ -228,15 +228,6 @@ MainMenu::ToggleAccountsButton::ToggleAccountsButton(
 void MainMenu::ToggleAccountsButton::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
 	auto hq = PainterHighQualityEnabler(p);
-	if (isOver() || isDown()) {
-		p.setPen(st::windowDividerFg);
-		p.setBrush(Qt::NoBrush);
-		p.drawRoundedRect(
-			QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5),
-			st::mainMenuCoverRadius,
-			st::mainMenuCoverRadius);
-	}
-
 	const auto path = Ui::ToggleUpDownArrowPath(
 		0. + width() - st::mainMenuTogglePosition.x(),
 		0. + height() - st::mainMenuTogglePosition.y(),

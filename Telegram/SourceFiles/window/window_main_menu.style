@@ -10,7 +10,6 @@ using "window/window.style";
 mainMenuWidth: 296px;
 mainMenuCoverHeight: 112px;
 mainMenuCoverMargin: 12px;
-mainMenuCoverRadius: 12px;
 mainMenuUserpicLeft: 24px;
 mainMenuUserpicTop: 32px;
 mainMenuCloudButton: IconButton {
