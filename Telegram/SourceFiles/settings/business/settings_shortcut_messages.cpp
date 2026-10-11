@@ -630,6 +630,7 @@ void ShortcutMessages::updateComposeControlsPosition() {
 	_composeControls->setAutocompleteBoundingRect(
 		_scroll->geometry().marginsRemoved({ 0, 0, 0, _composeOverlap }));
 	_cornerButtons.setBottomSkip(_composeOverlap);
+	_scroll->setVerticalBarBottomSkip(_composeOverlap);
 	if (_inner->setBottomPadding(_composeOverlap)
 		&& !_scroll->size().isEmpty()) {
 		outerResized();
