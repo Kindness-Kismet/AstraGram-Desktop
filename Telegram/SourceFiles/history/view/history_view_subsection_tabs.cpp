@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_user.h"
 #include "data/stickers/data_custom_emoji.h"
 #include "dialogs/dialogs_main_list.h"
+#include "extras/features/window_material/window_material.h"
 #include "history/history.h"
 #include "lang/lang_keys.h"
 #include "main/main_session_settings.h"
@@ -167,6 +168,7 @@ void SubsectionTabs::setupHorizontal(
 		shadow->setGeometry(togglew, 0, st::lineWidth, height);
 	}, scroll->lifetime());
 
+	watchWindowMaterial(widget);
 	widget->paintRequest() | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(widget);
 
@@ -175,8 +177,8 @@ void SubsectionTabs::setupHorizontal(
 			clip.intersected(
 				widget->rect().marginsRemoved(
 					{ 0, bottom ? line : 0, 0, bottom ? 0 : line })),
-			st::windowBg);
-		if (bottom) {
+			ExtrasFeatures::WindowMaterial::surfaceColor(widget, st::windowBg->c));
+		if (bottom && !ExtrasFeatures::WindowMaterial::isActive(widget)) {
 			const auto shadow = QRect(
 				0,
 				widget->height() - line,
@@ -244,8 +246,11 @@ void SubsectionTabs::setupVertical(not_null<QWidget*> parent) {
 		shadow->setGeometry(0, toggleh, width, st::lineWidth);
 	}, scroll->lifetime());
 
+	watchWindowMaterial(_vertical);
 	_vertical->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(_vertical).fillRect(clip, st::windowBg);
+		QPainter(_vertical).fillRect(
+			clip,
+			ExtrasFeatures::WindowMaterial::surfaceColor(_vertical, st::windowBg->c));
 	}, _vertical->lifetime());
 
 	_layoutRequests.fire({});
@@ -691,9 +696,21 @@ void SubsectionTabs::extractToParent(not_null<Ui::RpWidget*> parent) {
 	_shadow->setParent(parent);
 }
 
+void SubsectionTabs::watchWindowMaterial(not_null<Ui::RpWidget*> widget) {
+	ExtrasFeatures::WindowMaterial::changes(
+		widget
+	) | rpl::skip(1) | rpl::on_next([=] {
+		_layoutRequests.fire({});
+	}, widget->lifetime());
+}
+
 void SubsectionTabs::setBoundingRect(QRect boundingRect) {
 	Expects((_horizontal || _vertical || _bottom) && _shadow);
 
+	// 窗口材质下与顶栏一致不画分隔线；阴影在多处直接显示，改为零尺寸。
+	const auto line = ExtrasFeatures::WindowMaterial::isActive(_shadow)
+		? 0
+		: st::lineWidth;
 	if (_horizontal) {
 		_horizontal->setGeometry(
 			boundingRect.x(),
@@ -704,7 +721,7 @@ void SubsectionTabs::setBoundingRect(QRect boundingRect) {
 			boundingRect.x(),
 			_horizontal->y() + _horizontal->height() - st::lineWidth,
 			boundingRect.width(),
-			st::lineWidth);
+			line);
 	} else if (_vertical) {
 		_vertical->setGeometry(
 			boundingRect.x(),
@@ -714,7 +731,7 @@ void SubsectionTabs::setBoundingRect(QRect boundingRect) {
 		_shadow->setGeometry(
 			_vertical->x() + _vertical->width(),
 			boundingRect.y(),
-			st::lineWidth,
+			line,
 			boundingRect.height());
 	} else {
 		_bottom->setGeometry(
@@ -727,7 +744,7 @@ void SubsectionTabs::setBoundingRect(QRect boundingRect) {
 			boundingRect.x(),
 			_bottom->y(),
 			boundingRect.width(),
-			st::lineWidth);
+			line);
 	}
 }
 

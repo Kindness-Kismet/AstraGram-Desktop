@@ -89,6 +89,8 @@ private:
 	void track();
 	void setupHorizontal(not_null<QWidget*> parent, bool bottom);
 	void setupVertical(not_null<QWidget*> parent);
+	// 窗口材质切换后重新布局，同步分隔线尺寸。
+	void watchWindowMaterial(not_null<Ui::RpWidget*> widget);
 	void toggleModes();
 	void setVisible(bool shown);
 	void refreshSlice();
