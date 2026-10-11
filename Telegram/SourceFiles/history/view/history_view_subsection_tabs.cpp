@@ -402,6 +402,7 @@ void SubsectionTabs::startFillingSlider(
 	using ImagePointer = std::shared_ptr<Ui::DynamicImage>;
 	struct Cache {
 		base::flat_map<not_null<PeerData*>, ImagePointer> userpics;
+		Data::Thread *active = nullptr;
 	};
 	const auto cache = std::make_shared<Cache>();
 
@@ -507,6 +508,8 @@ void SubsectionTabs::startFillingSlider(
 			auto &section = sections.back();
 			section.badges = item.badges;
 		}
+		const auto activeChanged = (cache->active != _active.get());
+		updated.active = (activeIndex >= 0) ? _active.get() : cache->active;
 		*cache = std::move(updated);
 
 		auto scrollSavingThread = (Data::Thread*)nullptr;
@@ -568,7 +571,9 @@ void SubsectionTabs::startFillingSlider(
 			_reorder->addPinnedInterval(from, slider->sectionsCount() - from);
 		}
 
-		const auto ignoreActiveScroll = (scrollSavingIndex >= 0);
+		// 经消息里的话题入口等外部导航切换时，沿用旧滚动位置会让当前标签停在可视区外。
+		const auto showActive = activeChanged && (activeIndex >= 0);
+		const auto ignoreActiveScroll = (scrollSavingIndex >= 0) && !showActive;
 		slider->setActiveSectionFast(activeIndex, ignoreActiveScroll);
 
 		_sectionsSlice = _slice;
