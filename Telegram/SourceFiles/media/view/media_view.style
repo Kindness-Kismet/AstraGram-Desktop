@@ -614,28 +614,26 @@ storiesComposePremium: PremiumLimits(defaultPremiumLimits) {
 	nonPremiumBg: storiesComposeBgOver;
 	nonPremiumFg: storiesComposeWhiteText;
 }
+storiesEmojiSearchField: InputField(defaultTabbedSearchField) {
+	textBg: storiesComposeBgOver;
+	textBgActive: storiesComposeBgOver;
+	textFg: storiesComposeWhiteText;
+	placeholderFg: storiesComposeGrayText;
+	placeholderFgActive: storiesComposeGrayText;
+	placeholderFgError: storiesComposeGrayText;
+	borderFg: storiesComposeBgRipple;
+	borderFgActive: storiesComposeBlue;
+}
 storiesEmojiTabbedSearch: TabbedSearch(defaultTabbedSearch) {
-	outer: storiesComposeBg;
-	bg: storiesComposeBgOver;
-	bgActive: storiesComposeBgRipple;
-	fg: storiesComposeGrayIcon;
-	fgActive: storiesComposeWhiteText;
-	fadeLeft: icon {{ "fade_horizontal-flip_horizontal", storiesComposeBgOver }};
-	fadeRight: icon {{ "fade_horizontal", storiesComposeBgOver }};
-	field: InputField(defaultTabbedSearchField) {
-		textFg: storiesComposeWhiteText;
-		placeholderFg: storiesComposeGrayText;
-		placeholderFgActive: storiesComposeGrayText;
-		placeholderFgError: storiesComposeGrayText;
-	}
+	field: storiesEmojiSearchField;
 	search: IconButton(defaultTabbedSearchButton) {
-		icon: icon{{ "emoji/emoji_search_input", storiesComposeGrayIcon }};
-		iconOver: icon{{ "emoji/emoji_search_input", storiesComposeGrayIcon }};
+		icon: icon {{ "menu/search", storiesComposeGrayIcon }};
+		iconOver: icon {{ "menu/search", storiesComposeGrayIcon }};
 		ripple: storiesComposeRipple;
 	}
 	back: IconButton(defaultTabbedSearchBack) {
-		icon: icon{{ "emoji/emoji_back", storiesComposeGrayIcon }};
-		iconOver: icon{{ "emoji/emoji_back", storiesComposeGrayIcon }};
+		icon: icon {{ "emoji/emoji_back", storiesComposeGrayIcon }};
+		iconOver: icon {{ "emoji/emoji_back", storiesComposeGrayIcon }};
 		ripple: storiesComposeRipple;
 	}
 	cancel: CrossButton(defaultTabbedSearchCancel) {
@@ -989,14 +987,11 @@ mediaviewEmojiPan: EmojiPan(storiesEmojiPan) {
 		rippleBgActive: groupCallMenuBgOver;
 	}
 	search: TabbedSearch(storiesEmojiTabbedSearch) {
-		outer: groupCallMenuBg;
-		bg: groupCallMenuBgOver;
-		bgActive: groupCallMenuBgRipple;
-		fadeLeft: icon {{
-			"fade_horizontal-flip_horizontal",
-			groupCallMenuBgOver
-		}};
-		fadeRight: icon {{ "fade_horizontal", groupCallMenuBgOver }};
+		field: InputField(storiesEmojiSearchField) {
+			textBg: groupCallMenuBgOver;
+			textBgActive: groupCallMenuBgOver;
+			borderFg: groupCallMenuBgRipple;
+		}
 	}
 }
 
@@ -1006,9 +1001,6 @@ storiesReactionsPan: EmojiPan(storiesEmojiPan) {
 	desiredSize: reactStripSize;
 	verticalSizeSub: 0px;
 	overBg: transparent;
-	search: TabbedSearch(storiesEmojiTabbedSearch) {
-		defaultFieldWidth: 88px;
-	}
 	searchMargin: margins(1px, 10px, 2px, 6px);
 }
 

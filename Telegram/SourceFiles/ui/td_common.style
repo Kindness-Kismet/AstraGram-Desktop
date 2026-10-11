@@ -7,3 +7,31 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 using "ui/colors.palette";
 using "ui/widgets/widgets.style";
+
+defaultSearchFieldIcon: icon {{ "menu/search", windowSubTextFg }};
+defaultSearchField: InputField(defaultInputField) {
+	textBg: filterInputInactiveBg;
+	textBgActive: filterInputActiveBg;
+	textMargins: margins(42px, 10px, 30px, 8px);
+
+	placeholderFg: placeholderFg;
+	placeholderFgActive: placeholderFgActive;
+	placeholderFgError: placeholderFgActive;
+	placeholderMargins: margins(0px, 0px, 2px, 0px);
+	placeholderScale: 0.;
+	placeholderShift: -50px;
+	placeholderFont: normalFont;
+
+	borderFg: windowDividerFg;
+	borderFgActive: filterInputBorderFg;
+	borderFgError: activeLineFgError;
+
+	border: 1px;
+	borderActive: 1px;
+	borderRadius: 10px;
+	borderDenominator: 1;
+
+	style: defaultTextStyle;
+
+	heightMin: 40px;
+}

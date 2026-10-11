@@ -16,7 +16,7 @@ namespace Ui {
 class AbstractButton;
 class FlatLabel;
 class ScrollArea;
-class SearchWithGroups;
+class TabbedSearchField;
 } // namespace Ui
 
 namespace ChatHelpers {
@@ -100,7 +100,7 @@ private:
 	std::unique_ptr<Ui::FlatLabel> _about;
 	Strip *_strip = nullptr;
 	Ui::AbstractButton *_expandButton = nullptr;
-	Ui::SearchWithGroups *_search = nullptr;
+	Ui::TabbedSearchField *_search = nullptr;
 	std::unique_ptr<Ui::ScrollArea> _scroll;
 	Grid *_grid = nullptr;
 	Ui::FlatLabel *_notFound = nullptr;

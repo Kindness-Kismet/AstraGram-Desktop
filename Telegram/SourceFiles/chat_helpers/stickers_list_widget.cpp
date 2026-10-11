@@ -637,14 +637,6 @@ void StickersListWidget::sendSearchRequest() {
 	_searchRequestTimer.cancel();
 	_searchQuery = _searchNextQuery;
 
-	if (_searchQuery == Ui::PremiumGroupFakeEmoticon()) {
-		toggleSearchLoading(false);
-		_searchSetsCache.emplace(_searchQuery, std::vector<uint64>());
-		_searchStickersCache.emplace(_searchQuery, std::vector<DocumentId>());
-		showSearchResults();
-		return;
-	}
-
 	const auto stickersCached = (_searchStickersCache.find(_searchQuery)
 		!= _searchStickersCache.cend());
 	const auto setsCached = (_searchSetsCache.find(_searchQuery)
@@ -715,8 +707,6 @@ void StickersListWidget::searchForSets(
 	_filterStickersCornerEmoji.clear();
 	if (_isEffects) {
 		filterEffectsByEmoji(std::move(emoji));
-	} else if (query == Ui::PremiumGroupFakeEmoticon()) {
-		_filteredStickers = session().data().stickers().getPremiumList(0);
 	} else {
 		_filteredStickers = session().data().stickers().getListByEmoji(
 			std::move(emoji),
@@ -4052,15 +4042,9 @@ void StickersListWidget::beforeHiding() {
 }
 
 void StickersListWidget::setupSearch() {
-	const auto session = &_show->session();
-	const auto type = (_mode == Mode::UserpicBuilder)
-		? TabbedSearchType::ProfilePhoto
-		: (_mode == Mode::ChatIntro)
-		? TabbedSearchType::Greeting
-		: TabbedSearchType::Stickers;
 	_search = MakeSearch(this, st(), [=](std::vector<QString> &&query) {
 		applySearchQuery(std::move(query));
-	}, session, type);
+	});
 }
 
 void StickersListWidget::applySearchQuery(std::vector<QString> &&query) {

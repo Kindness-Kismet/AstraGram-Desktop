@@ -31,7 +31,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session_settings.h"
 #include "storage/localstorage.h"
 #include "data/data_channel.h"
-#include "data/data_emoji_statuses.h"
 #include "data/data_session.h"
 #include "data/data_changes.h"
 #include "data/stickers/data_stickers.h"
@@ -308,44 +307,11 @@ void TabbedSelector::Tab::saveScrollTop() {
 	_scrollTop = widget()->getVisibleTop();
 }
 
-[[nodiscard]] rpl::producer<std::vector<Ui::EmojiGroup>> GreetingGroupFirst(
-		not_null<Data::Session*> owner) {
-	return owner->emojiStatuses().stickerGroupsValue(
-	) | rpl::map([](std::vector<Ui::EmojiGroup> &&groups) {
-		const auto i = ranges::find(
-			groups,
-			Ui::EmojiGroupType::Greeting,
-			&Ui::EmojiGroup::type);
-		if (i != begin(groups) && i != end(groups)) {
-			ranges::rotate(begin(groups), i, i + 1);
-		}
-		return std::move(groups);
-	});
-}
-
 std::unique_ptr<Ui::TabbedSearch> MakeSearch(
 		not_null<Ui::RpWidget*> parent,
 		const style::EmojiPan &st,
-		Fn<void(std::vector<QString>&&)> callback,
-		not_null<Main::Session*> session,
-		TabbedSearchType type) {
-	using Descriptor = Ui::SearchDescriptor;
-	const auto owner = &session->data();
-	auto result = std::make_unique<Ui::TabbedSearch>(parent, st, Descriptor{
-		.st = st.search,
-		.groups = ((type == TabbedSearchType::ProfilePhoto)
-			? owner->emojiStatuses().profilePhotoGroupsValue()
-			: (type == TabbedSearchType::Status)
-			? owner->emojiStatuses().statusGroupsValue()
-			: (type == TabbedSearchType::Stickers)
-			? owner->emojiStatuses().stickerGroupsValue()
-			: (type == TabbedSearchType::Greeting)
-			? GreetingGroupFirst(owner)
-			: owner->emojiStatuses().emojiGroupsValue()),
-		.customEmojiFactory = owner->customEmojiManager().factory(
-			Data::CustomEmojiManager::SizeTag::SetIcon,
-			Ui::SearchWithGroups::IconSizeOverride())
-	});
+		Fn<void(std::vector<QString>&&)> callback) {
+	auto result = std::make_unique<Ui::TabbedSearch>(parent, st);
 
 	result->queryValue(
 	) | rpl::skip(1) | rpl::on_next(

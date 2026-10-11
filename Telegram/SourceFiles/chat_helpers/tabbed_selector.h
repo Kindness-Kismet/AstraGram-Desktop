@@ -108,19 +108,10 @@ struct TabbedSelectorDescriptor {
 	int searchRightReserved = 0;
 };
 
-enum class TabbedSearchType {
-	Emoji,
-	Status,
-	ProfilePhoto,
-	Stickers,
-	Greeting,
-};
 [[nodiscard]] std::unique_ptr<Ui::TabbedSearch> MakeSearch(
 	not_null<Ui::RpWidget*> parent,
 	const style::EmojiPan &st,
-	Fn<void(std::vector<QString>&&)> callback,
-	not_null<Main::Session*> session,
-	TabbedSearchType type);
+	Fn<void(std::vector<QString>&&)> callback);
 
 class TabbedSelector : public Ui::RpWidget {
 public:

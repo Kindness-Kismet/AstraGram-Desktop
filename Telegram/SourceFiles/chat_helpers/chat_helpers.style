@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 using "ui/basic.style";
+using "ui/td_common.style";
 
 using "boxes/boxes.style";
 using "ui/layers/layers.style";
@@ -22,20 +23,10 @@ GroupCallUserpics {
 }
 
 TabbedSearch {
-	outer: color;
-	bg: color;
-	bgActive: color;
-	fg: color;
-	fgActive: color;
-	fadeLeft: icon;
-	fadeRight: icon;
 	field: InputField;
 	search: IconButton;
 	back: IconButton;
 	cancel: CrossButton;
-	defaultFieldWidth: pixels;
-	groupWidth: pixels;
-	groupSkip: pixels;
 	height: pixels;
 }
 
@@ -525,7 +516,7 @@ emojiPanEmojiPreviewRadius: 8px + 8px + 4px;
 
 defaultTabbedSearchCancel: CrossButton {
 	width: 33px;
-	height: 33px;
+	height: 36px;
 
 	cross: CrossAnimation {
 		size: 27px;
@@ -533,49 +524,41 @@ defaultTabbedSearchCancel: CrossButton {
 		stroke: 1.;
 		minScale: 0.3;
 	}
-	crossFg: menuIconFg;
-	crossFgOver: menuIconFg;
-	crossPosition: point(1px, 3px);
+	crossFg: windowSubTextFg;
+	crossFgOver: windowSubTextFg;
+	crossPosition: point(1px, 4px);
 
 	duration: 150;
 	loadingPeriod: 1000;
 	ripple: emptyRippleAnimation;
 }
-defaultTabbedSearchField: InputField(defaultMultiSelectSearchField) {
-	textMargins: margins(2px, 7px, 2px, 0px);
+defaultTabbedSearchField: InputField(defaultSearchField) {
+	textMargins: margins(38px, 8px, 33px, 6px);
+	borderRadius: 9px;
+	heightMin: 36px;
 }
 defaultTabbedSearchButton: IconButton(defaultIconButton) {
-	width: 33px;
-	height: 33px;
-	icon: icon{{ "emoji/emoji_search_input", emojiIconFg }};
-	iconOver: icon{{ "emoji/emoji_search_input", emojiIconFg }};
-	iconPosition: point(7px, -1px);
+	width: 36px;
+	height: 36px;
+	icon: defaultSearchFieldIcon;
+	iconOver: defaultSearchFieldIcon;
+	iconPosition: point(-1px, -1px);
 	ripple: emptyRippleAnimation;
 }
 defaultTabbedSearchBack: IconButton(defaultIconButton) {
 	width: 33px;
 	height: 33px;
-	icon: icon{{ "emoji/emoji_back", menuIconFg }};
-	iconOver: icon{{ "emoji/emoji_back", menuIconFg }};
+	icon: icon {{ "emoji/emoji_back", menuIconFg }};
+	iconOver: icon {{ "emoji/emoji_back", menuIconFg }};
 	iconPosition: point(7px, -1px);
 	ripple: emptyRippleAnimation;
 }
 defaultTabbedSearch: TabbedSearch {
-	outer: emojiPanBg;
-	bg: emojiPanHover;
-	bgActive: windowBgRipple;
-	fg: emojiIconFg;
-	fgActive: emojiSubIconFgActive;
-	fadeLeft: icon {{ "fade_horizontal-flip_horizontal", emojiPanHover }};
-	fadeRight: icon {{ "fade_horizontal", emojiPanHover }};
 	field: defaultTabbedSearchField;
 	search: defaultTabbedSearchButton;
 	back: defaultTabbedSearchBack;
 	cancel: defaultTabbedSearchCancel;
-	defaultFieldWidth: 103px;
-	groupWidth: 30px;
-	groupSkip: 2px;
-	height: 33px;
+	height: 36px;
 }
 
 inlineResultsMinHeight: 278px;
@@ -947,9 +930,6 @@ userpicBuilderEmojiPan: EmojiPan(statusEmojiPan) {
 	desiredSize: reactStripSize;
 	verticalSizeSub: 0px;
 	overBg: transparent;
-	search: TabbedSearch(defaultTabbedSearch) {
-		defaultFieldWidth: 88px;
-	}
 }
 reactPanelEmojiPan: EmojiPan(userpicBuilderEmojiPan) {
 	searchMargin: margins(1px, 10px, 2px, 6px);

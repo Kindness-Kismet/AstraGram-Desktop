@@ -877,7 +877,6 @@ bool GifsListWidget::refreshInlineRows(int32 *added) {
 }
 
 void GifsListWidget::setupSearch() {
-	const auto session = &_show->session();
 	_search = MakeSearch(this, st(), [=](std::vector<QString> &&query) {
 		const auto accumulated = ranges::accumulate(query, QString(), [](
 				QString a,
@@ -889,7 +888,7 @@ void GifsListWidget::setupSearch() {
 			: SearchEmojiSectionSetId();
 		refreshIcons();
 		searchForGifs(accumulated);
-	}, session, TabbedSearchType::Emoji);
+	});
 }
 
 int32 GifsListWidget::showInlineRows(bool newResults) {
