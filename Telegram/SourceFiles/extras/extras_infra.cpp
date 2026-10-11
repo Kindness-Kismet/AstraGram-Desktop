@@ -32,11 +32,16 @@ namespace {
 // 保留这段头部，后接系统自带的语种字体，让它们排在字母序之前。
 [[nodiscard]] QStringList windowsFallbacks() {
 	const auto database = QGuiApplicationPrivate::platformIntegration()->fontDatabase();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+	constexpr auto script = QFontDatabasePrivate::Script_Common;
+#else
+	constexpr auto script = QChar::Script_Common;
+#endif
 	auto result = database->fallbacksForFamily(
 		u"Open Sans"_q,
 		QFont::StyleNormal,
 		QFont::AnyStyle,
-		QChar::Script_Common);
+		script);
 	result = result.mid(0, result.indexOf(u"Segoe UI Symbol"_q) + 1);
 	const auto installed = QFontDatabase().families();
 	for (const auto &family : {
