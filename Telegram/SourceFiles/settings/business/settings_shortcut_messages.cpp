@@ -71,6 +71,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_menu_icons.h"
 #include "styles/style_layers.h"
 
+#include <QtWidgets/QScrollBar>
+
 namespace Settings {
 namespace {
 
@@ -275,6 +277,10 @@ private:
 	int _composeOverlap = 0;
 	rpl::event_stream<> _showBackRequests;
 	bool _skipScrollEvent = false;
+	// 打开或发送后保持在底部，用户滚离底部后失效。
+	bool _stickToBottom = false;
+	// 创建分区的同一轮事件里用户无法滚动，离开底部只可能来自设置页恢复旧位置。
+	bool _creating = true;
 
 	QSize _inOuterResize;
 	QSize _pendingOuterResize;
@@ -389,6 +395,29 @@ ShortcutMessages::ShortcutMessages(
 	) | rpl::on_next([=] {
 		processScroll();
 	}, lifetime());
+	// 设置页容器晚于列表增高，贴底时等滚动范围更新后再补滚到底部。
+	_scroll->innerResizes() | rpl::filter([=] {
+		return _stickToBottom;
+	}) | rpl::on_next([=] {
+		_scroll->scrollToY(ScrollMax);
+	}, lifetime());
+	// 布局调整中的位置变化不算用户滚动；滚动条与内容范围不同步时取较小值判断。
+	_scroll->scrollTopChanges() | rpl::filter([=](int top) {
+		return _stickToBottom
+			&& !_skipScrollEvent
+			&& (top < std::min(
+				_scroll->verticalScrollBar()->maximum(),
+				_scroll->scrollTopMax()));
+	}) | rpl::on_next([=] {
+		if (_creating) {
+			_scroll->scrollToY(ScrollMax);
+			return;
+		}
+		_stickToBottom = false;
+	}, lifetime());
+	crl::on_main(this, [=] {
+		_creating = false;
+	});
 
 	_shortcut.value() | rpl::on_next([=] {
 		refreshEmptyText();
@@ -609,7 +638,7 @@ void ShortcutMessages::outerResized() {
 		_skipScrollEvent = false;
 
 		if (!_scroll->isHidden() && newScrollTop) {
-			_scroll->scrollToY(*newScrollTop);
+			_scroll->scrollToY(_stickToBottom ? ScrollMax : *newScrollTop);
 		}
 		_inOuterResize = base::take(_pendingOuterResize);
 	} while (!_inOuterResize.isEmpty());
@@ -1504,6 +1533,7 @@ bool ShortcutMessages::processChosenSticker(ChatHelpers::FileChosen &&chosen) {
 }
 
 void ShortcutMessages::showAtEnd() {
+	_stickToBottom = true;
 	showAtPosition(Data::MaxMessagePosition);
 }
 
