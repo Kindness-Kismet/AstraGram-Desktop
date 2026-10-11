@@ -305,6 +305,8 @@ def register_commands(sub) -> None:
     command.add_argument("size", nargs="*", type=int, metavar="WIDTH HEIGHT", help="省略则只报告当前尺寸，给出时须成对")
     command = sub.add_parser("window.maximize", help="最大化或还原窗口")
     command.add_argument("maximized", choices=["true", "false"], help="true 最大化，false 还原")
+    command = sub.add_parser("window.activation", help="只切换 Qt 内部的焦点窗口与应用激活状态，不抢系统前台")
+    command.add_argument("state", choices=["active", "inactive"])
     command = sub.add_parser("anim.speed", help="查询或临时调整过渡动画速度：0.1 放慢十倍，2 加快一倍，1 恢复；不保存")
     command.add_argument("speed", nargs="?", type=float, help="0.01 至 10，省略则只报告当前速度")
 
@@ -556,6 +558,8 @@ def build_server_command(args: argparse.Namespace) -> str:
         return f"window.resize {args.size[0]} {args.size[1]}"
     if command == "window.maximize":
         return f"window.maximize {args.maximized}"
+    if command == "window.activation":
+        return f"window.activation {args.state}"
     if command == "anim.speed":
         return ("anim.speed" if args.speed is None
                 else f"anim.speed {args.speed}")

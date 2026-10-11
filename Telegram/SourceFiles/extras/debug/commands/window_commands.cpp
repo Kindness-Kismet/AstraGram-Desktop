@@ -4,6 +4,10 @@
 #include "core/application.h"
 #include "window/window_controller.h"
 
+#include <QGuiApplication>
+#include <QWindow>
+#include <qpa/qwindowsysteminterface.h>
+
 namespace ExtrasDebug::Commands {
 namespace {
 
@@ -17,6 +21,8 @@ using json = nlohmann::json;
 		{ "maximized", window->isMaximized() },
 		{ "visible", window->isVisible() },
 		{ "active", window->isActiveWindow() },
+		{ "applicationActive",
+			QGuiApplication::applicationState() == Qt::ApplicationActive },
 	};
 }
 
@@ -81,12 +87,30 @@ void showWithoutActivating(not_null<::MainWindow*> window, bool maximized) {
 	return Result::Ok(Compact(WindowState(window)));
 }
 
+// 只改 Qt 内部的焦点窗口，系统前台不变，真实的焦点切换会覆盖它；
+// Windows 不支持直接设置应用状态，应用状态随焦点窗口一起切换。
+[[nodiscard]] Result windowActivation(const QStringList &args) {
+	const auto text = args.size() == 1 ? args.front().trimmed() : QString();
+	if (text != u"active"_q && text != u"inactive"_q) {
+		return Result::Err(u"usage: window.activation <active|inactive>"_q);
+	}
+	const auto window = ActiveWindow();
+	if (!window) {
+		return Result::Err(u"no active window"_q);
+	}
+	using Interface = QWindowSystemInterface;
+	Interface::handleWindowActivated<Interface::SynchronousDelivery>(
+		(text == u"active"_q) ? window->windowHandle() : nullptr);
+	return Result::Ok(Compact(WindowState(window)));
+}
+
 } // namespace
 
 const HandlerMap &WindowHandlers() {
 	static const auto result = HandlerMap{
 		{ u"window.resize"_q, &WindowSize },
 		{ u"window.maximize"_q, &WindowMaximize },
+		{ u"window.activation"_q, &windowActivation },
 	};
 	return result;
 }
