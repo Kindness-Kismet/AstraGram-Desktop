@@ -16,6 +16,11 @@
 #include <utility>
 
 namespace ExtrasUi {
+namespace {
+
+constexpr auto kHoverOpacity = 0.08;
+
+} // namespace
 
 QColor ChatSurfaceBackground() {
 	return (ExtrasSettings::getInstance().disableChatBackground()
@@ -30,9 +35,9 @@ QColor ChatSurfaceBorder() {
 }
 
 QColor HoverOverlay(bool dark) {
-	return dark
-		? QColor(0xFA, 0xFA, 0xFA, 0x0D)
-		: QColor(0x21, 0x21, 0x21, 0x1A);
+	auto result = dark ? QColor(Qt::white) : QColor(Qt::black);
+	result.setAlphaF(kHoverOpacity);
+	return result;
 }
 
 QColor ChatSurfaceHover() {
