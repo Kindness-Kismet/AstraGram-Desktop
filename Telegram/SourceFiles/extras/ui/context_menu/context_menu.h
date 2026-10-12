@@ -48,6 +48,11 @@ void AddRepeatMessageAction(
 	HistoryView::Context context = HistoryView::Context::History);
 void AddReadUntilAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
 void AddBurnAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
+void AddVideoPreviewAction(
+	not_null<Ui::PopupMenu*> menu,
+	not_null<Window::SessionController*> controller,
+	HistoryItem *item,
+	not_null<DocumentData*> document);
 void AddCreateFilterAction(not_null<Ui::PopupMenu*> menu,
 						   not_null<Window::SessionController*> controller,
 						   HistoryItem *item,

@@ -562,6 +562,15 @@ void DocumentData::setVideoQualities(
 	if (!data) {
 		return;
 	}
+	// 缩略图拼图随附带文件下发，单独保存，不参与清晰度筛选。
+	for (const auto &document : qualities) {
+		if (document->hasMimeType(u"application/x-tgstoryboard"_q)) {
+			data->storyboard = document;
+		} else if (document->hasMimeType(
+				u"application/x-tgstoryboardmap"_q)) {
+			data->storyboardMap = document;
+		}
+	}
 	auto count = int(qualities.size());
 	if (qualities.empty()) {
 		return;

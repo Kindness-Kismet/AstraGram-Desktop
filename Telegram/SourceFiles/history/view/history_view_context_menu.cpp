@@ -496,6 +496,7 @@ void AddDocumentActions(
 			[=] { ToggleFavedSticker(controller, document, contextId); },
 			isFaved ? &st::menuIconUnfave : &st::menuIconFave);
 	}
+	ExtrasUi::AddVideoPreviewAction(menu, controller, item, document);
 	if (!document->filepath(true).isEmpty()) {
 		menu->addAction(
 			(Platform::IsMac()

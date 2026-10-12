@@ -10,6 +10,7 @@
 #include "extras/features/filters/filters_controller.h"
 #include "extras/features/forward/extras_forward.h"
 #include "extras/features/forward/extras_forward_rich.h"
+#include "extras/features/video_preview/video_preview.h"
 #include "extras/ui/context_menu/menu_item_subtext.h"
 #include "extras/ui/message_history/history_section.h"
 #include "extras/ui/settings/filters/edit_filter.h"
@@ -971,6 +972,23 @@ void AddBurnAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 				}).send();
 		},
 		&st::menuIconTTLAny);
+}
+
+void AddVideoPreviewAction(
+		not_null<Ui::PopupMenu*> menu,
+		not_null<Window::SessionController*> controller,
+		HistoryItem *item,
+		not_null<DocumentData*> document) {
+	if (!item || !ExtrasVideoPreview::hasPreview(document)) {
+		return;
+	}
+	const auto itemId = item->fullId();
+	menu->addAction(tr::extras_ContextVideoPreview(tr::now), [=] {
+		// 菜单打开期间消息可能被删除，点击时重新查找。
+		if (const auto item = document->owner().message(itemId)) {
+			ExtrasVideoPreview::showBox(controller, item, document);
+		}
+	}, &st::menuIconShowAll);
 }
 
 void AddCreateFilterAction(not_null<Ui::PopupMenu*> menu,

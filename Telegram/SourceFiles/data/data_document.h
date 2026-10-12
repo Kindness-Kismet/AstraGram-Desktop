@@ -101,6 +101,9 @@ struct VoiceData : public DocumentAdditionalData {
 struct VideoData : public DocumentAdditionalData {
 	QString codec;
 	std::vector<not_null<DocumentData*>> qualities;
+	// 服务器生成的缩略图拼图及其时间索引，没有时为空。
+	DocumentData *storyboard = nullptr;
+	DocumentData *storyboardMap = nullptr;
 	QSize realVideoSize;
 	crl::time startTs = 0;
 };
