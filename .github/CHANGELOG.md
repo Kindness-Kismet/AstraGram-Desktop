@@ -1,29 +1,17 @@
-- Changed how topics are switched in forums shown as tabs; the top bar now shows the current topic and opens a compact searchable topic list instead of top, left or bottom tabs
-- Improved topic and reply views, which now float the composer over the messages and give it and the pinned and translate bars the same frosted look as the main chat
-- Improved the scheduled messages page and the quick reply editor, which now float the composer over the messages with the same frosted look as regular chats
-- Improved the emoji, sticker and GIF search fields, which now show the clear button while focused so you can leave an empty search
-- Changed how default topic icons look; they now use a flat bubble instead of a glossy gradient
-- Changed how the sending status icon looks; it now shows a clock instead of a pin with a check mark
-- Changed how forum rows in the chat list show unread topics; they no longer paint a colored block behind the topic names and the last message
-- Removed the Cocoon credit from the translate bar menu; the "How does it work?" item at the end of the menu is no longer available
-- Fixed an issue with the scheduled messages page and the quick reply editor that previously caused long lists to open at the first message instead of the latest one
-- Fixed an issue with the schedule send button that previously caused its calendar icon to look much larger than the regular send button
-- Fixed an issue with copying rich messages that previously caused tables to be copied as the single word "Table"
-- Fixed an issue with channel post view tracking that previously caused one CPU core to stay busy while the app was inactive
-- Fixed an issue with the unread reactions and mentions buttons that previously caused them to keep jumping to the same message when it could not be shown
+- Added video previews for supported channel videos, so you can now open a grid of timestamped frames from the context menu and start playback from any frame
+- Improved switching chats, which now fades the chat area and the selected chat row in place, and messages that finish loading after the switch fade in instead of popping up
+- Improved opening the archive, forums and folder tabs, which now blends the chat list in place instead of sliding the whole column
+- Improved settings navigation, which now covers the window from the right when settings open and blends between settings pages in place instead of sliding them sideways
+- Changed how settings search works; it now opens from a search button as a floating panel over the dimmed window instead of a field in the title bar
+- Changed how the folder sidebar looks; it no longer shows a scrollbar, and scrolling works as before
+- Fixed an issue with emoji picked right after sending a message that previously caused them to sit slightly above the text line in the input field
 
 ---
 
-- 调整了标签式论坛切换话题的方式，现在顶栏显示当前话题，点击后打开可搜索的精简话题列表，取代原来的顶部、左侧和底部标签
-- 对话题和回复页面进行了改善，这使得输入框悬浮在消息上方，并和置顶栏、翻译栏一起呈现与主聊天相同的磨砂效果
-- 对定时消息页面和快捷回复编辑器进行了改善，这使得输入框悬浮在消息上方，呈现与普通聊天相同的磨砂效果
-- 对表情、贴纸和 GIF 搜索框进行了改善，这使得搜索框获得焦点时就显示清除按钮，可以直接退出空白搜索
-- 调整了默认话题图标的样式，现在使用扁平气泡，不再使用带光泽的渐变
-- 调整了发送中状态图标的样式，现在显示为时钟，不再是带对勾的定位图钉
-- 调整了对话列表中论坛行显示未读话题的方式，现在话题名和最后一条消息后面不再有彩色色块
-- 移除了翻译栏菜单中的 Cocoon 说明，菜单末尾的“这是如何运作的？”入口不再可用
-- 修复了关于定时消息页面和快捷回复编辑器的错误，该问题曾导致长列表打开时停在第一条消息，而不是最新一条
-- 修复了关于定时发送按钮的错误，该问题曾导致日历图标比普通发送按钮大很多
-- 修复了关于复制富文本消息的错误，该问题曾导致表格只被复制成一个单词“Table”
-- 修复了关于频道帖子浏览统计的错误，该问题曾导致应用不在前台时持续占用一个 CPU 核心
-- 修复了关于未读回应和提及按钮的错误，该问题曾导致消息无法显示时按钮反复跳到同一条消息
+- 新增了视频预览，现在可以在支持的频道视频右键菜单中打开带时间的缩略图网格，并从任意一帧开始播放
+- 对切换对话进行了改善，这使得对话区和选中的对话行原地淡入淡出，切换后才加载出来的消息也会淡入，不再突然出现
+- 对进入归档、论坛和切换文件夹标签进行了改善，这使得对话列表原地过渡，不再整列左右滑动
+- 对设置页的切换进行了改善，这使得设置页打开时从右侧覆盖窗口，各设置页之间原地淡入淡出，不再左右滑动
+- 调整了设置搜索的方式，现在通过搜索按钮打开悬浮在变暗窗口上的搜索面板，不再显示在标题栏里
+- 调整了左侧文件夹栏的样式，现在不再显示滚动条，滚动照常可用
+- 修复了关于发送消息后立刻插入表情的错误，该问题曾导致表情在输入框中比文字略高
