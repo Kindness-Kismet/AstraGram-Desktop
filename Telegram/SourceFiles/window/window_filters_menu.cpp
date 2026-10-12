@@ -99,7 +99,7 @@ FiltersMenu::FiltersMenu(
 , _parent(parent)
 , _outer(_parent)
 , _menu(&_outer, TextWithEntities(), st::windowFiltersMainMenu)
-, _scroll(&_outer)
+, _scroll(&_outer, st::windowFiltersScroll)
 , _container(
 	_scroll.setOwnedWidget(
 		object_ptr<Ui::VerticalLayout>(&_scroll))) {

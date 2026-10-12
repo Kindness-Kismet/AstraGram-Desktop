@@ -244,6 +244,10 @@ createThemeLink: InputField(defaultInputField) {
 }
 
 windowFiltersWidth: 76px;
+// 文件夹栏只隐藏滚动条，滚轮与触控照常滚动。
+windowFiltersScroll: ScrollArea(defaultScrollArea) {
+	barHidden: true;
+}
 windowFiltersButton: SideBarButton(defaultSideBarButton) {
 	textBg: windowBg;
 	textBgActive: windowBg;
