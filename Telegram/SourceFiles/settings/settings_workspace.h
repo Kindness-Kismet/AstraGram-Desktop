@@ -8,10 +8,6 @@ class Memento;
 class WrapWidget;
 } // namespace Info
 
-namespace style {
-struct WindowTitle;
-} // namespace style
-
 namespace Settings {
 
 namespace Builder {
@@ -19,7 +15,6 @@ struct SearchEntry;
 } // namespace Builder
 
 class Navigation;
-class WorkspaceSearch;
 
 class Workspace final : public Window::SectionWidget {
 public:
@@ -44,13 +39,13 @@ public:
 
 protected:
 	void resizeEvent(QResizeEvent *e) override;
-	void hideEvent(QHideEvent *e) override;
 	void paintEvent(QPaintEvent *e) override;
 	void doSetInnerFocus() override;
 	void showFinishedHook() override;
 
 private:
 	void showCategory(Type type);
+	void showSearch();
 	void showSearchResult(Builder::SearchEntry entry);
 	void backFromCategory();
 	void closeWorkspace();
@@ -59,11 +54,10 @@ private:
 
 	object_ptr<Navigation> _navigation;
 	object_ptr<Info::WrapWidget> _content;
-	object_ptr<WorkspaceSearch> _search;
-	std::unique_ptr<style::WindowTitle> _titleStyle;
+	// 最近打开的设置项，搜索浮层每次新建，记录随设置页保留。
+	const std::shared_ptr<std::vector<QString>> _searchRecent;
 	bool _listShown = true;
 	bool _updatingLayout = false;
-	bool _searchInTitle = false;
 	Type _category;
 };
 

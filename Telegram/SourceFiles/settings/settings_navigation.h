@@ -23,6 +23,7 @@ public:
 		QWidget *parent,
 		not_null<Window::SessionController*> controller,
 		Fn<void(Type)> navigate,
+		Fn<void()> search,
 		Fn<void()> close);
 	~Navigation();
 

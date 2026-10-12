@@ -7,24 +7,26 @@
 #include "main/main_session.h"
 #include "settings/settings_common.h"
 #include "ui/painter.h"
-#include "ui/chat/floating_bar.h"
 #include "ui/search_field_controller.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/wrap/vertical_layout.h"
-#include "styles/style_dialogs.h"
 #include "styles/style_chat_helpers.h"
+#include "styles/style_dialogs.h"
+#include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
-#include "styles/style_widgets.h"
 
-#include <QApplication>
 #include <QTextEdit>
 
 namespace Settings {
 namespace {
+
+// 结果区最多显示的行数，超出后滚动。
+constexpr auto kMaxVisibleRows = 6.5;
+constexpr auto kMaxRecent = 5;
 
 QString searchTerms(const QString &text) {
 	return text.normalized(QString::NormalizationForm_KC).toCaseFolded().simplified();
@@ -56,8 +58,13 @@ protected:
 	}
 	void paintEvent(QPaintEvent *e) override {
 		auto p = Painter(this);
-		Ui::PaintChatBar(p, this, rect(), st::defaultEmojiPan.bg->c,
-			isOver() ? st::mentionBgOver->c : QColor());
+		if (isOver()) {
+			auto hq = PainterHighQualityEnabler(p);
+			const auto radius = style::ConvertScale(10);
+			p.setPen(Qt::NoPen);
+			p.setBrush(st::windowBgOver);
+			p.drawRoundedRect(rect(), radius, radius);
+		}
 		const auto left = 2 * st::mentionPadding.left() + st::mentionPhotoSize;
 		const auto available = width() - left - st::mentionPadding.right();
 		_icon->paint(p, st::mentionPadding.left()
@@ -82,17 +89,15 @@ private:
 } // namespace
 
 WorkspaceSearch::WorkspaceSearch(
-	QWidget *parent,
-	QWidget *popupParent,
 	not_null<Main::Session*> session,
+	std::shared_ptr<std::vector<QString>> recent,
 	Fn<void(Builder::SearchEntry)> activate)
-: RpWidget(parent)
-, _session(session)
+: _session(session)
+, _recent(std::move(recent))
 , _activate(std::move(activate))
-, _search(std::make_unique<Ui::SearchFieldController>(QString()))
-, _popup(popupParent) {
+, _search(std::make_unique<Ui::SearchFieldController>(QString())) {
 	setObjectName(u"settings-search"_q);
-	_field = _search->createField(this, st::settingsSearchField).release();
+	_field = _search->createField(this, st::dialogsFilter).release();
 	_field->setObjectName(u"settings-search-input"_q);
 	_field->rawTextEdit()->setObjectName(u"settings-search-editor"_q);
 	_field->setPlaceholder(tr::extras_SettingsSearchPlaceholder());
@@ -118,73 +123,74 @@ WorkspaceSearch::WorkspaceSearch(
 		icon->moveToLeft(style::ConvertScale(12), (size.height() - icon->height()) / 2);
 		_clear->moveToRight(0, (size.height() - _clear->height()) / 2);
 	}, lifetime());
-	_popup->setObjectName(u"settings-search-results"_q);
-	Ui::ApplyAutocompleteSurface(_popup.data(), st::defaultEmojiPan.bg);
-	_scroll = Ui::CreateChild<Ui::ScrollArea>(_popup.data());
-	_scroll->setAutoFillBackground(false);
-	_scroll->setVerticalBarTopSkip(st::windowCardRadius);
-	_scroll->setVerticalBarBottomSkip(st::windowCardRadius);
+	_scroll = Ui::CreateChild<Ui::ScrollArea>(this);
 	_scroll->setObjectName(u"settings-search-scroll"_q);
 	_list = _scroll->setOwnedWidget(object_ptr<Ui::VerticalLayout>(_scroll));
-	_scroll->show();
-	_popup->hide();
 	_clear->toggle(false, anim::type::instant);
 	_search->queryChanges() | rpl::on_next([=](const QString &query) {
 		_clear->toggle(!query.isEmpty(), anim::type::instant);
-		if (_entries.empty()) {
-			rebuildIndex();
-		}
 		refreshResults();
-	}, lifetime());
-	_field->focusedChanges() | rpl::on_next([=](bool focused) {
-		_focused = focused;
-		if (focused) {
-			rebuildIndex();
-			refreshResults();
-		}
 	}, lifetime());
 	base::install_event_filter(this, _field->rawTextEdit(), [=](not_null<QEvent*> e) {
 		return (e->type() == QEvent::KeyPress && handleKey(static_cast<QKeyEvent*>(e.get())))
 			? base::EventFilterResult::Cancel
 			: base::EventFilterResult::Continue;
 	});
-	base::install_event_filter(this, qApp, [=](not_null<QEvent*> e) {
-		if (!isVisible()) {
-			return base::EventFilterResult::Continue;
-		}
-		if (e->type() == QEvent::KeyPress) {
-			const auto key = static_cast<QKeyEvent*>(e.get());
-			if (key->key() == Qt::Key_F && key->modifiers() == Qt::ControlModifier
-				&& !QApplication::activeModalWidget()) {
-				_field->setFocusFast();
-				_field->selectAll();
-				return base::EventFilterResult::Cancel;
-			}
-		}
-		if (e->type() == QEvent::MouseButtonPress) {
-			const auto global = static_cast<QMouseEvent*>(e.get())->globalPos();
-			if (_field->rect().contains(_field->mapFromGlobal(global))) {
-				if (!_popup->isVisible()) {
-					rebuildIndex();
-					refreshResults();
-				}
-			} else if (!_popup->rect().contains(_popup->mapFromGlobal(global))) {
-				hideResults();
-			}
-		}
-		return base::EventFilterResult::Continue;
-	});
 	Lang::Updated() | rpl::on_next([=] {
 		rebuildIndex();
-		if (_focused) {
-			refreshResults();
-		}
+		refreshResults();
 	}, lifetime());
+	rebuildIndex();
+	refreshResults();
 }
 
-WorkspaceSearch::~WorkspaceSearch() {
-	lifetime().destroy();
-	_popup.destroy();
+WorkspaceSearch::~WorkspaceSearch() = default;
+
+void WorkspaceSearch::parentResized() {
+	const auto parent = parentWidget()->size();
+	const auto available = parent.width() - 2 * st::settingsCardPagePadding;
+	resizeToWidth(std::max(1, std::min(st::settingsSearchLayerWidth, available)));
+	moveToLeft((parent.width() - width()) / 2, st::settingsSearchLayerTop);
+}
+
+int WorkspaceSearch::resizeGetHeight(int newWidth) {
+	const auto &padding = st::settingsSearchLayerPadding;
+	const auto inner = std::max(1, newWidth - padding.left() - padding.right());
+	_field->resizeToWidth(inner);
+	_field->moveToLeft(padding.left(), padding.top(), newWidth);
+	const auto fieldBlock = padding.top() + _field->height() + padding.bottom();
+	_list->resizeToWidth(inner);
+	if (!_list->height()) {
+		_scroll->hide();
+		return fieldBlock;
+	}
+	// 浮层上下各留出与顶部相同的距离，结果区在剩余高度内滚动。
+	const auto parent = parentWidget();
+	const auto available = parent
+		? (parent->height() - 2 * st::settingsSearchLayerTop
+			- fieldBlock - padding.bottom())
+		: _list->height();
+	const auto scrollHeight = std::max(resultRowHeight(), std::min({
+		_list->height(),
+		int(kMaxVisibleRows * resultRowHeight()),
+		available,
+	}));
+	_scroll->setGeometry(padding.left(), fieldBlock, inner, scrollHeight);
+	_scroll->show();
+	return fieldBlock + scrollHeight + padding.bottom();
+}
+
+void WorkspaceSearch::paintEvent(QPaintEvent *e) {
+	auto p = QPainter(this);
+	auto hq = PainterHighQualityEnabler(p);
+	const auto radius = cornerRadius();
+	p.setPen(Qt::NoPen);
+	p.setBrush(st::boxBg);
+	p.drawRoundedRect(rect(), radius, radius);
+}
+
+void WorkspaceSearch::doSetInnerFocus() {
+	_field->setFocusFast();
 }
 
 void WorkspaceSearch::rebuildIndex() {
@@ -224,7 +230,7 @@ void WorkspaceSearch::refreshResults() {
 	_selected = -1;
 	const auto query = searchTerms(_search->query());
 	if (query.isEmpty()) {
-		for (const auto &key : _recent) {
+		for (const auto &key : *_recent) {
 			for (auto i = 0; i != int(_entries.size()); ++i) {
 				if (entryKey(_entries[i].entry, _entries[i].path) == key) {
 					_results.push_back(i);
@@ -232,13 +238,11 @@ void WorkspaceSearch::refreshResults() {
 				}
 			}
 		}
-		if (_results.empty()) {
-			hideResults();
-			return;
+		if (!_results.empty()) {
+			_list->add(object_ptr<Ui::FlatLabel>(_list,
+				tr::extras_SettingsSearchRecent(), st::settingsCardHint),
+				st::settingsSearchHintPadding);
 		}
-		_list->add(object_ptr<Ui::FlatLabel>(_list,
-			tr::extras_SettingsSearchRecent(), st::settingsCardHint),
-			st::settingsSearchHintPadding);
 	} else {
 		const auto words = query.split(' ', Qt::SkipEmptyParts);
 		auto ranked = std::vector<std::pair<int, int>>();
@@ -292,8 +296,7 @@ void WorkspaceSearch::refreshResults() {
 		}, button->lifetime());
 		_buttons.push_back(button);
 	}
-	_resultsShown = true;
-	updateLayout();
+	resizeToWidth(width());
 	_scroll->scrollToY(0);
 	if (!query.isEmpty()) {
 		selectResult(0);
@@ -307,15 +310,16 @@ void WorkspaceSearch::activateResult(int index) {
 	const auto &indexed = _entries[_results[index]];
 	const auto entry = indexed.entry;
 	const auto key = entryKey(entry, indexed.path);
-	_recent.erase(std::remove(_recent.begin(), _recent.end(), key), _recent.end());
-	_recent.insert(_recent.begin(), key);
-	if (_recent.size() > 5) {
-		_recent.resize(5);
+	auto &recent = *_recent;
+	recent.erase(std::remove(recent.begin(), recent.end(), key), recent.end());
+	recent.insert(recent.begin(), key);
+	if (int(recent.size()) > kMaxRecent) {
+		recent.resize(kMaxRecent);
 	}
-	_field->rawTextEdit()->clearFocus();
-	_field->setText({});
-	hideResults();
-	_activate(entry);
+	// 关闭浮层可能立即销毁自身，之后只使用局部副本。
+	const auto activate = _activate;
+	closeLayer();
+	activate(entry);
 }
 
 void WorkspaceSearch::selectResult(int index) {
@@ -333,78 +337,16 @@ void WorkspaceSearch::selectResult(int index) {
 bool WorkspaceSearch::handleKey(QKeyEvent *event) {
 	const auto key = event->key();
 	if (key == Qt::Key_Escape) {
-		if (!dismiss()) {
-			_field->rawTextEdit()->clearFocus();
-			_field->setText({});
-			hideResults();
-		}
+		closeLayer();
+		return true;
+	} else if (key == Qt::Key_Return || key == Qt::Key_Enter) {
+		activateResult(std::max(_selected, 0));
+		return true;
+	} else if (key == Qt::Key_Up || key == Qt::Key_Down) {
+		selectResult(_selected + ((key == Qt::Key_Down) ? 1 : -1));
 		return true;
 	}
-	if (key != Qt::Key_Up && key != Qt::Key_Down
-		&& key != Qt::Key_Return && key != Qt::Key_Enter) {
-		return false;
-	}
-	if (!_popup->isVisible()) {
-		rebuildIndex();
-		refreshResults();
-	}
-	if (key == Qt::Key_Return || key == Qt::Key_Enter) {
-		activateResult(std::max(_selected, 0));
-	} else {
-		selectResult(_selected + ((key == Qt::Key_Down) ? 1 : -1));
-	}
-	return true;
-}
-
-bool WorkspaceSearch::dismiss() {
-	if (!_resultsShown) {
-		return false;
-	}
-	hideResults();
-	return true;
-}
-
-void WorkspaceSearch::hideResults() {
-	_resultsShown = false;
-	_popup->hide();
-	_selected = -1;
-}
-
-bool WorkspaceSearch::containsGlobalPoint(QPoint point) const {
-	return isVisible() && _field->rect().contains(_field->mapFromGlobal(point));
-}
-
-void WorkspaceSearch::updateLayout() {
-	const auto padding = st::settingsCardPagePadding;
-	const auto fieldWidth = std::max(1, std::min(width() - 2 * padding,
-		style::ConvertScale(560)));
-	_field->resizeToWidth(fieldWidth);
-	_field->moveToLeft((width() - fieldWidth) / 2,
-		(height() - _field->height() + 1) / 2);
-	_list->resizeToWidth(fieldWidth);
-	const auto popupParent = _popup->parentWidget();
-	const auto position = popupParent->mapFromGlobal(_field->mapToGlobal(QPoint(0,
-		_field->height() + style::ConvertScale(4))));
-	const auto top = std::max(0, position.y());
-	const auto available = std::max(1, popupParent->height() - top - padding);
-	const auto popupHeight = std::min({ _list->height(),
-		int(4.5 * resultRowHeight()), available });
-	_popup->setGeometry(position.x(), top, fieldWidth, popupHeight);
-	_scroll->setGeometry(0, 0, fieldWidth, popupHeight);
-	// 页面动画会显示所有直接子控件，这里恢复结果面板自身的显示状态。
-	_popup->setVisible(_resultsShown);
-	if (_resultsShown) {
-		_popup->raise();
-	}
-}
-
-void WorkspaceSearch::resizeEvent(QResizeEvent *e) {
-	updateLayout();
-}
-
-void WorkspaceSearch::hideEvent(QHideEvent *e) {
-	hideResults();
-	Ui::RpWidget::hideEvent(e);
+	return false;
 }
 
 } // namespace Settings

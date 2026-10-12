@@ -151,6 +151,7 @@ Navigation::Navigation(
 	QWidget *parent,
 	not_null<Window::SessionController*> controller,
 	Fn<void(Type)> navigate,
+	Fn<void()> search,
 	Fn<void()> close)
 : RpWidget(parent)
 , _navigate(std::move(navigate))
@@ -172,6 +173,11 @@ Navigation::Navigation(
 		_header.data(), st::settingsPageMenu);
 	accountMenu->setObjectName(u"settings-account-menu"_q);
 	accountMenu->setAccessibleName(tr::lng_sr_profile_menu(tr::now));
+	const auto searchButton = Ui::CreateChild<Ui::IconButton>(
+		_header.data(), st::settingsPageSearch);
+	searchButton->setObjectName(u"settings-search-open"_q);
+	searchButton->setAccessibleName(tr::extras_SettingsSearchPlaceholder(tr::now));
+	searchButton->setClickedCallback(std::move(search));
 	accountMenu->setClickedCallback([=] {
 		_accountMenu = base::make_unique_q<Ui::PopupMenu>(accountMenu, st::popupMenuWithIcons);
 		const auto menu = _accountMenu.get();
@@ -185,6 +191,8 @@ Navigation::Navigation(
 		title->moveToLeft(0, (size.height() - title->height()) / 2);
 		exit->moveToRight(0, (size.height() - exit->height()) / 2);
 		accountMenu->moveToRight(exit->width(), (size.height() - accountMenu->height()) / 2);
+		searchButton->moveToRight(exit->width() + accountMenu->width(),
+			(size.height() - searchButton->height()) / 2);
 	}, lifetime());
 
 	_list = _scroll->setOwnedWidget(object_ptr<Ui::VerticalLayout>(this));

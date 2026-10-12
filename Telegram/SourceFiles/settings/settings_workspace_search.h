@@ -1,8 +1,7 @@
 #pragma once
 
-#include "base/object_ptr.h"
 #include "settings/settings_builder.h"
-#include "ui/rp_widget.h"
+#include "ui/layers/layer_widget.h"
 
 namespace Ui {
 class CrossButton;
@@ -15,21 +14,21 @@ class VerticalLayout;
 
 namespace Settings {
 
-class WorkspaceSearch final : public Ui::RpWidget {
+// 设置搜索浮层：固定在页面上方居中，结果列表向下展开。
+class WorkspaceSearch final : public Ui::LayerWidget {
 public:
 	WorkspaceSearch(
-		QWidget *parent,
-		QWidget *popupParent,
 		not_null<Main::Session*> session,
+		std::shared_ptr<std::vector<QString>> recent,
 		Fn<void(Builder::SearchEntry)> activate);
 	~WorkspaceSearch();
-	void updateLayout();
-	bool dismiss();
-	bool containsGlobalPoint(QPoint point) const;
+
+	void parentResized() override;
 
 protected:
-	void resizeEvent(QResizeEvent *e) override;
-	void hideEvent(QHideEvent *e) override;
+	int resizeGetHeight(int newWidth) override;
+	void paintEvent(QPaintEvent *e) override;
+	void doSetInnerFocus() override;
 
 private:
 	struct IndexedEntry {
@@ -43,24 +42,20 @@ private:
 	void refreshResults();
 	void activateResult(int index);
 	void selectResult(int index);
-	void hideResults();
 	bool handleKey(QKeyEvent *event);
 
 	const not_null<Main::Session*> _session;
+	const std::shared_ptr<std::vector<QString>> _recent;
 	const Fn<void(Builder::SearchEntry)> _activate;
 	std::unique_ptr<Ui::SearchFieldController> _search;
 	Ui::InputField *_field = nullptr;
 	Ui::CrossButton *_clear = nullptr;
-	object_ptr<Ui::RpWidget> _popup;
 	Ui::ScrollArea *_scroll = nullptr;
 	Ui::VerticalLayout *_list = nullptr;
 	std::vector<IndexedEntry> _entries;
 	std::vector<int> _results;
 	std::vector<Ui::AbstractButton*> _buttons;
-	std::vector<QString> _recent;
 	int _selected = -1;
-	bool _focused = false;
-	bool _resultsShown = false;
 };
 
 } // namespace Settings
