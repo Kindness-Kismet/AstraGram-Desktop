@@ -6,6 +6,7 @@
   "HorizontalTabsOutline": "Outlined tabs",
   "HorizontalTabsSolid": "Solid pills",
   "HorizontalTabsDescription": "Use one style for horizontal tabs with the current accent color. Changes apply immediately. Default preserves each page's original appearance.",
+  "TopicSwitcherAllTopics": "All topics",
   "CommunityChannelInviteTitle": "Join our Telegram channel",
   "CommunityChannelInviteText": "Follow {link} for project updates and release announcements. Click the link or confirm to open the channel.",
   "CommunityChannelDontShow": "Don't show again",

@@ -295,6 +295,51 @@ void TopBarWidget::refreshLang() {
 	});
 }
 
+void TopBarWidget::setSubsectionSwitcher(Ui::RpWidget *switcher) {
+	if (_subsectionSwitcher == switcher) {
+		return;
+	}
+	_subsectionSwitcherLifetime.destroy();
+	_subsectionSwitcher = switcher;
+	_titleNameVersion = 0;
+	const auto refresh = [=] {
+		refreshInfoButton();
+		updateControlsVisibility();
+		update();
+	};
+	if (!switcher) {
+		// 移除可能发生在会话区析构中，此时控制器已没有内容区，刷新放到下一轮。
+		InvokeQueued(this, refresh);
+		return;
+	}
+	switcher->naturalWidthValue(
+	) | rpl::skip(1) | rpl::on_next([=] {
+		updateControlsGeometry();
+	}, _subsectionSwitcherLifetime);
+	refresh();
+}
+
+// 按钮文字与原状态行左对齐、垂直居中，宽度不超过标题可用宽度。
+void TopBarWidget::updateSubsectionSwitcherGeometry(int top) {
+	if (!_subsectionSwitcher) {
+		return;
+	}
+	const auto &padding = st::topicSwitcherPadding;
+	const auto &font = st::dialogsTextFont;
+	const auto statusTop = st::topBarHeight
+		- st::topBarArrowPadding.bottom()
+		- font->height;
+	const auto available = width()
+		- _rightTaken
+		- _leftTaken
+		- st::topBarNameRightPadding
+		+ padding.left();
+	_subsectionSwitcher->resizeToNaturalWidth(std::max(available, 0));
+	_subsectionSwitcher->moveToLeft(
+		_leftTaken - padding.left(),
+		top + statusTop + (font->height - _subsectionSwitcher->height()) / 2);
+}
+
 void TopBarWidget::resizeEvent(QResizeEvent *e) {
 	updateSearchVisibility();
 	updateControlsGeometry();

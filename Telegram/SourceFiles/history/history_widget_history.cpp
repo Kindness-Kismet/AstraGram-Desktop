@@ -1111,19 +1111,13 @@ void HistoryWidget::updateControlsGeometry() {
 	_topBar->resizeToWidth(width);
 	_topBar->moveToLeft(0, 0);
 
-	const auto tabsLeftSkip = _subsectionTabs
-		? _subsectionTabs->leftSkip()
-		: 0;
-	const auto innerWidth = std::max(0, width - tabsLeftSkip - 2 * margin);
+	const auto innerWidth = std::max(0, width - 2 * margin);
 
 	_voiceRecordBar->resizeToWidth(width);
 
 	moveFieldControls();
 
-	_topBars->move(
-		tabsLeftSkip + margin,
-		_topBar->bottomNoMargins()
-			+ (_subsectionTabs ? _subsectionTabs->topSkip() : 0));
+	_topBars->move(margin, _topBar->bottomNoMargins());
 	auto stack = Ui::ChatBarStack();
 	const auto place = [&](int height) { return stack.add(height); };
 	const auto groupCallTop = place(_groupCallBar ? _groupCallBar->height() : 0);
@@ -1177,8 +1171,8 @@ void HistoryWidget::updateControlsGeometry() {
 		_topBars->clearMask();
 	}
 	_scroll->setBarTopInset(overlap);
-	if (_scroll->y() != scrollAreaTop || _scroll->x() != tabsLeftSkip) {
-		_scroll->moveToLeft(tabsLeftSkip, scrollAreaTop);
+	if (_scroll->y() != scrollAreaTop) {
+		_scroll->moveToLeft(0, scrollAreaTop);
 		if (_autocomplete) {
 			_autocomplete->setBoundings(autocompleteBoundingRect());
 		}
@@ -1446,13 +1440,8 @@ void HistoryWidget::updateHistoryGeometry(
 		return;
 	}
 
-	const auto newScrollWidth = width()
-		- (_subsectionTabs ? _subsectionTabs->leftSkip() : 0);
-	const auto subsectionTabsTop = _topBar->bottomNoMargins();
-	auto newScrollHeight = height()
-		- subsectionTabsTop
-		- (_subsectionTabs ? _subsectionTabs->topSkip() : 0)
-		- (_subsectionTabs ? _subsectionTabs->bottomSkip() : 0);
+	const auto newScrollWidth = width();
+	auto newScrollHeight = height() - _topBar->bottomNoMargins();
 	auto bars = Ui::ChatBarStack();
 	bars.add(_groupCallBar ? _groupCallBar->height() : 0);
 	bars.add(_requestsBar ? _requestsBar->height() : 0);
@@ -1490,11 +1479,6 @@ void HistoryWidget::updateHistoryGeometry(
 		if (_kbShown) {
 			newScrollHeight -= _kbScroll->height();
 		}
-	}
-	if (_subsectionTabs && _subsectionTabs->bottomSkip()) {
-		// 底部标签栏夹在列表与输入区之间，此时不重叠。
-		newScrollHeight -= composeHeight;
-		composeHeight = 0;
 	}
 	if (newScrollHeight - composeHeight - topBarsOverlap() <= 0) {
 		return;
@@ -1544,17 +1528,6 @@ void HistoryWidget::updateHistoryGeometry(
 		_pullToNext->setBottomSkip(_composeOverlap);
 		_pullToNext->updateGeometry();
 		controller()->floatPlayerAreaUpdated();
-	}
-	if (_subsectionTabs) {
-		const auto tabsBottomSkip = _subsectionTabs->bottomSkip();
-		const auto scrollBottom = _scroll->y()
-			+ newScrollHeight
-			- _composeOverlap;
-		const auto areaHeight = scrollBottom
-			+ tabsBottomSkip
-			- subsectionTabsTop;
-		_subsectionTabs->setBoundingRect(
-			{ 0, subsectionTabsTop, width(), areaHeight });
 	}
 	if (_firstLoadRequest) {
 		// The scroll area stays visible (and possibly focused) while the

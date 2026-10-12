@@ -9903,6 +9903,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_HorizontalTabsOutline" = "Outlined tabs";
 "extras_HorizontalTabsSolid" = "Solid pills";
 "extras_HorizontalTabsDescription" = "Applies to horizontal tabs throughout the app and follows your accent color.";
+"extras_TopicSwitcherAllTopics" = "All topics";
 "extras_SettingsTransferTitle" = "Transfer settings";
 "extras_SettingsTransferExport" = "Export settings";
 "extras_SettingsTransferImport" = "Import settings";

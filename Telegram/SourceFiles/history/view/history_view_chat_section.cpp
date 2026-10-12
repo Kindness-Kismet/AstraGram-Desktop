@@ -1186,9 +1186,6 @@ void ChatWidget::orderWidgets() {
 	if (_topControls) {
 		_topControls->raise();
 	}
-	if (_subsectionTabs) {
-		_subsectionTabs->raise();
-	}
 	_topBar->raise();
 	_topBarShadow->raise();
 	if (_kbScroll) {
@@ -1201,6 +1198,9 @@ void ChatWidget::orderWidgets() {
 	}
 	if (_chooseTheme) {
 		_chooseTheme->raise();
+	}
+	if (_subsectionTabs) {
+		_subsectionTabs->raise();
 	}
 }
 
@@ -2899,11 +2899,13 @@ void ChatWidget::validateSubsectionTabs() {
 	} else if (_subsectionTabs) {
 		return;
 	}
-	_subsectionTabs = controller()->restoreSubsectionTabsFor(this, thread);
+	_subsectionTabs = controller()->restoreSubsectionTabsFor(
+		_topBar.data(),
+		thread);
 	if (!_subsectionTabs) {
 		_subsectionTabs = std::make_unique<HistoryView::SubsectionTabs>(
 			controller(),
-			this,
+			_topBar.data(),
 			thread);
 	}
 	_subsectionTabs->removeRequests() | rpl::on_next([=] {
@@ -2911,20 +2913,7 @@ void ChatWidget::validateSubsectionTabs() {
 		_subsectionTabs = nullptr;
 		updateControlsGeometry();
 	}, _subsectionTabsLifetime);
-	_subsectionTabs->layoutRequests() | rpl::on_next([=] {
-		_inner->overrideChatMode((_subsectionTabs->leftSkip() > 0)
-			? ElementChatMode::Narrow
-			: std::optional<ElementChatMode>());
-		updateControlsGeometry();
-		updateSubsectionTabsGeometry();
-		orderWidgets();
-	}, _subsectionTabsLifetime);
-	_inner->overrideChatMode((_subsectionTabs->leftSkip() > 0)
-		? ElementChatMode::Narrow
-		: std::optional<ElementChatMode>());
 	updateControlsGeometry();
-	updateSubsectionTabsGeometry();
-	orderWidgets();
 }
 
 void ChatWidget::unblockUser() {
@@ -3912,17 +3901,11 @@ QPixmap ChatWidget::grabForShowAnimation(const Window::SectionSlideParams &param
 		_composeControls->showForGrab();
 	}
 	updateControlsVisibility();
-	if (params.fromBottom && _subsectionTabs) {
-		_subsectionTabs->hide();
-	}
 	auto result = Ui::GrabWidget(this);
 	if (hideTopBarShadow) {
 		_topBarShadow->show();
 	}
 	_topControls->hide();
-	if (_subsectionTabs) {
-		_subsectionTabs->hide();
-	}
 	return result;
 }
 
@@ -4428,18 +4411,9 @@ void ChatWidget::updateControlsGeometry() {
 	_topBar->resizeToWidth(contentWidth);
 	// 顶栏已是浮动卡片，分隔线高度置 0；多处直接调用 show，不能只靠隐藏。
 	_topBarShadow->resize(contentWidth, 0);
-	const auto tabsLeftSkip = _subsectionTabs
-		? _subsectionTabs->leftSkip()
-		: 0;
-	const auto tabsBottomSkip = _subsectionTabs
-		? _subsectionTabs->bottomSkip()
-		: 0;
-	const auto innerWidth = contentWidth - tabsLeftSkip;
-	const auto subsectionTabsTop = _topBar->bottomNoMargins();
-	const auto topControlsTop = subsectionTabsTop
-		+ (_subsectionTabs ? _subsectionTabs->topSkip() : 0);
-	_topControls->move(tabsLeftSkip, topControlsTop);
-	_topControls->resizeToWidth(innerWidth);
+	const auto topControlsTop = _topBar->bottomNoMargins();
+	_topControls->move(0, topControlsTop);
+	_topControls->resizeToWidth(contentWidth);
 	const auto top = topControlsTop + _topControls->height();
 
 	auto bottom = height();
@@ -4454,11 +4428,9 @@ void ChatWidget::updateControlsGeometry() {
 	} else {
 		const auto maxFieldHeight = computeMaxFieldHeightForKeyboard(
 			top,
-			bottom
-				- tabsBottomSkip
-				- (_suggestOptions ? st::historyReplyHeight : 0));
+			bottom - (_suggestOptions ? st::historyReplyHeight : 0));
 		if (_kbScroll && _kbShown && keyboardRowsVisible() && _keyboard) {
-			_keyboard->resizeToWidth(innerWidth, maxFieldHeight);
+			_keyboard->resizeToWidth(contentWidth, maxFieldHeight);
 			const auto keyboardReserve = std::min(
 				_keyboard->height(),
 				maxFieldHeight - (maxFieldHeight / 2));
@@ -4467,14 +4439,14 @@ void ChatWidget::updateControlsGeometry() {
 			const auto maxKbHeight = std::max(
 				0,
 				maxFieldHeight - _composeControls->fieldHeightCurrent());
-			_keyboard->resizeToWidth(innerWidth, maxKbHeight);
+			_keyboard->resizeToWidth(contentWidth, maxKbHeight);
 			const auto kbHeight = std::min(
 				_keyboard->height(),
 				maxKbHeight);
 			_kbScroll->setGeometry(
-				tabsLeftSkip,
+				0,
 				bottom - kbHeight,
-				innerWidth,
+				contentWidth,
 				kbHeight);
 			bottom -= kbHeight;
 		} else {
@@ -4490,7 +4462,6 @@ void ChatWidget::updateControlsGeometry() {
 	if (_suggestOptions) {
 		bottom -= st::historyReplyHeight;
 	}
-	bottom -= tabsBottomSkip;
 
 	const auto readableHeight = std::max(0, bottom - top);
 	// 置顶卡片覆盖列表，只有卡片下方才参与已读和定位。
@@ -4501,7 +4472,6 @@ void ChatWidget::updateControlsGeometry() {
 	// 输入区浮在列表底部之上，可见区只占用胶囊上方一半留白。
 	const auto composeHeight = (floatingCompose
 		&& !_suggestOptions
-		&& !tabsBottomSkip
 		&& readableHeight > 0)
 		? _composeControls->heightCurrent()
 		: 0;
@@ -4509,7 +4479,7 @@ void ChatWidget::updateControlsGeometry() {
 		? (composeHeight - st::historyComposeCapsuleMargin / 2)
 		: 0;
 	const auto scrollHeight = readableHeight + overlap + composeHeight;
-	const auto scrollSize = QSize(innerWidth, scrollHeight);
+	const auto scrollSize = QSize(contentWidth, scrollHeight);
 	_topBarsOverlap = overlap;
 	_composeOverlap = composeOverlap;
 	const auto topChanged = _inner->setTopPadding(overlap);
@@ -4520,7 +4490,7 @@ void ChatWidget::updateControlsGeometry() {
 		_inner->resizeToWidth(scrollSize.width(), _scroll->height());
 		_skipScrollEvent = false;
 	}
-	_scroll->move(tabsLeftSkip, top - overlap);
+	_scroll->move(0, top - overlap);
 	_scroll->setBarTopInset(overlap);
 	_scroll->setBarBottomInset(composeOverlap);
 	if (!_scroll->isHidden()) {
@@ -4540,10 +4510,6 @@ void ChatWidget::updateControlsGeometry() {
 	}
 	_composeControlsTop = composeTop;
 
-	if (!animatingShow()) {
-		updateSubsectionTabsGeometry();
-	}
-
 	_cornerButtons.setBottomSkip(composeOverlap);
 	_cornerButtons.updatePositions();
 	_pullToNext->setBottomSkip(composeOverlap);
@@ -4552,21 +4518,6 @@ void ChatWidget::updateControlsGeometry() {
 		_membersDropdown->moveToLeft(0, _topBar->height());
 		_membersDropdown->setMaxHeight(countMembersDropdownHeightMax());
 	}
-}
-
-void ChatWidget::updateSubsectionTabsGeometry() {
-	if (!_subsectionTabs) {
-		return;
-	}
-	const auto subsectionTabsTop = _topBar->bottomNoMargins();
-	const auto scrollBottom = _scroll->y()
-		+ _scroll->height()
-		- _composeOverlap;
-	const auto areaHeight = scrollBottom
-		+ _subsectionTabs->bottomSkip()
-		- subsectionTabsTop;
-	_subsectionTabs->setBoundingRect(
-		{ 0, subsectionTabsTop, width(), areaHeight });
 }
 
 bool ChatWidget::contentOverlapped(const QRect &globalRect) {
@@ -4705,10 +4656,6 @@ void ChatWidget::showAnimatedHook(
 	if (params.withTopBarShadow && !params.fromBottom) {
 		_topBarShadow->show();
 	}
-	if (params.fromBottom && _subsectionTabs) {
-		_subsectionTabs->show();
-		orderWidgets();
-	}
 	_composeControls->showStarted();
 }
 
@@ -4729,12 +4676,8 @@ void ChatWidget::showFinishedHook() {
 		_composeControls->showFinished();
 	}
 	_inner->showFinished();
-	updateSubsectionTabsGeometry();
 	_topControls->show();
 	_topControls->finishAnimating();
-	if (_subsectionTabs) {
-		_subsectionTabs->show();
-	}
 
 	// We should setup the drag area only after
 	// the section animation is finished,

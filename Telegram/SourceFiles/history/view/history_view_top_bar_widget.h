@@ -85,6 +85,8 @@ public:
 		SendActionPainter *sendAction);
 	void setCustomTitle(const QString &title);
 	void setTitleShownRatio(float64 shown);
+	// 话题切换按钮占用标题第二行，标题与头像随之改为所属论坛。
+	void setSubsectionSwitcher(Ui::RpWidget *switcher);
 	[[nodiscard]] int titleLeft() const;
 
 	void showChooseMessagesForReport(Data::ReportInput reportInput);
@@ -171,6 +173,7 @@ private:
 	void updateChooseFromUserGeometry();
 	void updateSearchAdditionalMargins();
 	void updateControlsGeometry();
+	void updateSubsectionSwitcherGeometry(int top);
 	void setupTooltips();
 	void setupSelection();
 	void updateSelectionGeometry(int selectedButtonsTop);
@@ -292,6 +295,8 @@ private:
 	base::weak_qptr<Ui::IconButton> _menuButton;
 
 	object_ptr<RpWidget> _membersShowArea = { nullptr };
+	QPointer<Ui::RpWidget> _subsectionSwitcher;
+	rpl::lifetime _subsectionSwitcherLifetime;
 	rpl::event_stream<bool> _membersShowAreaActive;
 
 	float64 _narrowRatio = 0.;

@@ -4079,12 +4079,12 @@ void SessionController::saveSubsectionTabs(
 }
 
 auto SessionController::restoreSubsectionTabsFor(
-	not_null<Ui::RpWidget*> parent,
+	not_null<HistoryView::TopBarWidget*> topBar,
 	not_null<Data::Thread*> thread)
 -> std::unique_ptr<HistoryView::SubsectionTabs> {
 	if (!_savedSubsectionTabs) {
 		return nullptr;
-	} else if (_savedSubsectionTabs->switchTo(thread, parent)) {
+	} else if (_savedSubsectionTabs->switchTo(thread, topBar)) {
 		_savedSubsectionTabsLifetime.destroy();
 		return base::take(_savedSubsectionTabs);
 	}

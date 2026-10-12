@@ -941,11 +941,13 @@ void HistoryWidget::validateSubsectionTabs() {
 	} else if (_subsectionTabs) {
 		return;
 	}
-	_subsectionTabs = controller()->restoreSubsectionTabsFor(this, _history);
+	_subsectionTabs = controller()->restoreSubsectionTabsFor(
+		_topBar.data(),
+		_history);
 	if (!_subsectionTabs) {
 		_subsectionTabs = std::make_unique<HistoryView::SubsectionTabs>(
 			controller(),
-			this,
+			_topBar.data(),
 			_history);
 	}
 	_subsectionTabs->removeRequests() | rpl::on_next([=] {
@@ -953,14 +955,7 @@ void HistoryWidget::validateSubsectionTabs() {
 		_subsectionTabs = nullptr;
 		updateControlsGeometry();
 	}, _subsectionTabsLifetime);
-	_subsectionTabs->layoutRequests() | rpl::on_next([=] {
-		_list->toggleRemoveFromUserpics(_subsectionTabs->leftSkip() > 0);
-		updateControlsGeometry();
-		orderWidgets();
-	}, _subsectionTabsLifetime);
-	_list->toggleRemoveFromUserpics(_subsectionTabs->leftSkip() > 0);
 	updateControlsGeometry();
-	orderWidgets();
 }
 
 void HistoryWidget::checkCharsCount() {

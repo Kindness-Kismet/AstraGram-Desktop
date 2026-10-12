@@ -96,6 +96,7 @@ class WallPaper;
 
 namespace HistoryView {
 class SubsectionTabs;
+class TopBarWidget;
 } // namespace HistoryView
 
 namespace HistoryView::Reactions {
@@ -725,7 +726,7 @@ public:
 	void saveSubsectionTabs(
 		std::unique_ptr<HistoryView::SubsectionTabs> tabs);
 	[[nodiscard]] auto restoreSubsectionTabsFor(
-		not_null<Ui::RpWidget*> parent,
+		not_null<HistoryView::TopBarWidget*> topBar,
 		not_null<Data::Thread*> thread)
 		-> std::unique_ptr<HistoryView::SubsectionTabs>;
 	void dropSubsectionTabs();

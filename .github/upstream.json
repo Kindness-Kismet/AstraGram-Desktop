@@ -31,7 +31,9 @@
     "tasks/": "官方临时任务记录，本仓库使用 build/docs 与 build/record。"
   },
   "notes": {
-    "Telegram/build/prepare/prepare.py": "依赖配方固化在 scripts/build_support/recipes.py、recipes_arm64.py 与 recipes_rust.py，官方改动要对照同步到这些文件，只合并本文件不会影响构建。"
+    "Telegram/build/prepare/prepare.py": "依赖配方固化在 scripts/build_support/recipes.py、recipes_arm64.py 与 recipes_rust.py，官方改动要对照同步到这些文件，只合并本文件不会影响构建。",
+    "Telegram/SourceFiles/history/view/history_view_subsection_tabs.cpp": "已改写为顶栏话题切换按钮与下拉面板，只保留单一布局；官方对话题标签的行为改动按需移植到 extras/features/topic_switcher，不恢复顶部、左侧、底部标签。",
+    "Telegram/SourceFiles/history/view/history_view_subsection_tabs.h": "已改写为顶栏话题切换按钮与下拉面板，只保留单一布局；官方对话题标签的行为改动按需移植到 extras/features/topic_switcher，不恢复顶部、左侧、底部标签。"
   },
   "deferred": {
     "Telegram/SourceFiles/core/update_checker.cpp": "暂缓删除旧格式更新包兼容：本项目发布流程仍以自有签名生成旧格式包，待配套发包流程迁移后再移除；解压与路径校验已采用新版共用实现。"

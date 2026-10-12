@@ -945,15 +945,15 @@ void HistoryWidget::orderWidgets() {
 	if (_chooseTheme) {
 		_chooseTheme->raise();
 	}
-	if (_subsectionTabs) {
-		_subsectionTabs->raise();
-	}
 	_topShadow->raise();
 	if (_autocomplete) {
 		_autocomplete->raise();
 	}
 	if (_membersDropdown) {
 		_membersDropdown->raise();
+	}
+	if (_subsectionTabs) {
+		_subsectionTabs->raise();
 	}
 	if (_inlineResults) {
 		_inlineResults->raise();

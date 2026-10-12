@@ -480,9 +480,6 @@ void HistoryWidget::hideChildWidgets() {
 		_sponsoredMessageBar->toggle(false, anim::type::instant);
 	}
 	_topBars->hide();
-	if (_subsectionTabs) {
-		_subsectionTabs->hide();
-	}
 	if (_voiceRecordBar) {
 		_voiceRecordBar->hideFast();
 	}

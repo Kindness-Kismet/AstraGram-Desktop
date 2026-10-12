@@ -30,6 +30,9 @@ public:
 	[[nodiscard]] rpl::producer<std::vector<QString>> queryValue() const;
 	[[nodiscard]] auto debouncedQueryValue() const
 		-> rpl::producer<std::vector<QString>>;
+	[[nodiscard]] not_null<InputField*> field() const {
+		return _field;
+	}
 
 	void cancel();
 	void setLoading(bool loading);

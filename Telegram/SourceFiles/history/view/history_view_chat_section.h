@@ -510,7 +510,6 @@ private:
 		std::optional<MsgId> localMessageId);
 
 	void validateSubsectionTabs() override;
-	void updateSubsectionTabsGeometry();
 	void setupEmptyPainter();
 	void refreshAboutView(bool force = false);
 	void checkSuggestToGigagroup();

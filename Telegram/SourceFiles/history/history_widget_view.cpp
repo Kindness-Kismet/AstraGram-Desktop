@@ -306,9 +306,6 @@ void HistoryWidget::updateControlsVisibility() {
 	if (_businessBotStatus) {
 		_businessBotStatus->show();
 	}
-	if (_subsectionTabs) {
-		_subsectionTabs->show();
-	}
 	if (isChoosingTheme()
 		|| (!editingMessage()
 			&& (isSearching()

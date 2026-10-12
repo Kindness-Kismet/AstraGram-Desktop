@@ -235,3 +235,20 @@ topBarSelectionBetween: IconButton(topBarSelectionForward) {
 	icon: icon {{ "menu/select", menuIconFg }};
 	iconOver: icon {{ "menu/select", menuIconFgOver }};
 }
+
+topicSwitcherHeight: 22px;
+topicSwitcherRadius: 7px;
+topicSwitcherPadding: margins(6px, 0px, 6px, 0px);
+topicSwitcherSkip: 5px;
+topicSwitcherTextStyle: TextStyle(defaultTextStyle) {
+	font: font(13px semibold);
+}
+topicSwitcherChevron: size(9px, 5px);
+topicSwitcherRipple: RippleAnimation(defaultRippleAnimation) {
+}
+topicSwitcherPanelWidth: 360px;
+topicSwitcherPanelMaxHeight: 520px;
+topicSwitcherPanelSkip: 2px;
+topicSwitcherAllIcon: icon {{ "menu/chats", windowSubTextFg }};
+topicSwitcherAllIconActive: icon {{ "menu/chats", dialogsNameFgActive }};
+topicSwitcherEmptyHeight: 64px;

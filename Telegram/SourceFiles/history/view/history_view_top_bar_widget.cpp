@@ -606,7 +606,9 @@ void TopBarWidget::paintTopBar(Painter &p) {
 	const auto folder = _activeChat.key.folder();
 	const auto topic = _activeChat.key.topic();
 	const auto namePeer = titleNamePeer();
-	if (topic && _activeChat.section == Section::Replies) {
+	if (topic
+		&& _activeChat.section == Section::Replies
+		&& !_subsectionSwitcher) {
 		p.setPen(st::dialogsNameFg);
 		topic->chatListNameText().drawElided(
 			p,
@@ -668,7 +670,8 @@ void TopBarWidget::paintTopBar(Painter &p) {
 				text);
 			p.setOpacity(1.);
 		}
-	} else if (_activeChat.section == Section::Replies) {
+	} else if (_activeChat.section == Section::Replies
+		&& !_subsectionSwitcher) {
 		p.setPen(st::dialogsNameFg);
 		p.setFont(st::semiboldFont);
 		p.drawTextLeft(
@@ -740,6 +743,9 @@ void TopBarWidget::paintTopBar(Painter &p) {
 			.availableWidth = namewidth,
 			.elisionLines = 1,
 		});
+		if (_subsectionSwitcher) {
+			return;
+		}
 
 		p.setFont(st::dialogsTextFont);
 		if (!paintConnectingState(p, statusleft, statustop, width())
@@ -757,6 +763,11 @@ void TopBarWidget::paintTopBar(Painter &p) {
 }
 
 PeerData *TopBarWidget::titleNamePeer() const {
+	if (_subsectionSwitcher) {
+		const auto peer = _activeChat.key.peer();
+		const auto broadcast = peer ? peer->monoforumBroadcast() : nullptr;
+		return broadcast ? broadcast : peer;
+	}
 	const auto history = _activeChat.key.history();
 	const auto broadcastForMonoforum = history
 		? history->peer->monoforumBroadcast()
@@ -888,6 +899,8 @@ void TopBarWidget::infoClicked() {
 	const auto key = _activeChat.key;
 	if (!key) {
 		return;
+	} else if (_subsectionSwitcher) {
+		_controller->showPeerInfo(titleNamePeer());
 	} else if (const auto topic = key.topic()) {
 		_controller->showSection(std::make_shared<Info::Memento>(topic));
 	} else if (const auto sublist = key.sublist()) {
@@ -1101,14 +1114,16 @@ const style::UserpicButton &TopBarWidget::infoButtonStyle() const {
 }
 
 void TopBarWidget::refreshInfoButton() {
-	if (_activeChat.key.topic()
+	if ((_activeChat.key.topic() && !_subsectionSwitcher)
 		|| (_activeChat.section == Section::ChatsList
 			&& !rootChatsListBar()
 			&& !communityChatsListBar())) {
 		_info.destroy();
 	} else if (const auto peer = _activeChat.key.peer()) {
 		const auto sublist = _activeChat.key.sublist();
-		const auto infoPeer = sublist ? sublist->sublistPeer().get() : peer;
+		const auto infoPeer = (sublist && !_subsectionSwitcher)
+			? sublist->sublistPeer().get()
+			: peer;
 		auto info = object_ptr<Ui::UserpicButton>(
 			this,
 			_controller,
@@ -1289,6 +1304,7 @@ void TopBarWidget::updateControlsGeometry() {
 		_rightTaken += _search->width() + st::topBarCallSkip;
 	}
 
+	updateSubsectionSwitcherGeometry(otherButtonsTop);
 	updateMembersShowArea();
 }
 
@@ -1455,6 +1471,9 @@ void TopBarWidget::updateControlsVisibility() {
 	if (_membersShowArea) {
 		_membersShowArea->setVisible(!_chooseForReportReason);
 	}
+	if (_subsectionSwitcher) {
+		_subsectionSwitcher->setVisible(!_chooseForReportReason);
+	}
 	updateControlsGeometry();
 }
 
@@ -1463,6 +1482,7 @@ void TopBarWidget::updateMembersShowArea() {
 		const auto peer = _activeChat.key.peer();
 		if (showSelectedState()
 			|| !peer
+			|| _subsectionSwitcher
 			|| _activeChat.section == Section::ChatsList
 			|| _activeChat.key.topic()) {
 			return false;

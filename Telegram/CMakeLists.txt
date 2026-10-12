@@ -296,6 +296,10 @@ set(extras_files
         extras/features/window_material/platform/linux/window_material_linux.cpp
         extras/features/streamer_mode/streamer_mode.cpp
         extras/features/streamer_mode/streamer_mode.h
+        extras/features/topic_switcher/topic_switcher_button.cpp
+        extras/features/topic_switcher/topic_switcher_button.h
+        extras/features/topic_switcher/topic_switcher_panel.cpp
+        extras/features/topic_switcher/topic_switcher_panel.h
         extras/features/music_player/music_player_cover.cpp
         extras/features/music_player/music_player_cover.h
         extras/features/music_player/music_player_floating.cpp
