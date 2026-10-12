@@ -46,7 +46,7 @@ python .codex/skills/app-debug/scripts/cli.py control.get '<控件编号或名�
 提交与重新加载要求真实登录；返回已提交不等于服务器确认保存成功。
 
 会话级键包括 `autoDownload`（0 默认、1 允许、2 禁止）、
-`subsectionTabsMode`、`groupStickersHidden`、`groupEmojiHidden`。
+`groupStickersHidden`、`groupEmojiHidden`。
 话题级键为 `hiddenPinnedMessageId`、`ringtoneVolume`；默认通知音量用 `session.defaultRingtoneVolume.<0|1|2>`。
 
 操作系统集成、真实网络请求和真实账号业务不在模拟模式验证范围内；不要为了测试修改系统配置。

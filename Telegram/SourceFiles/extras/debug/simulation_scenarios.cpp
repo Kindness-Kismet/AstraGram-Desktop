@@ -143,8 +143,6 @@ constexpr auto kTabTopics = std::array{
 // 每个话题的消息超过一屏，用于滚动检查浮动卡片；编号间隔须大于消息数。
 constexpr auto kTabTopicMessages = 40;
 constexpr auto kTabTopicStride = 100;
-// 下标与 HistoryView::SubsectionTabsMode 的取值一致。
-constexpr auto kTabsModes = std::array{ "top", "left", "bottom" };
 base::weak_ptr<Main::Session> SeededSession;
 
 [[nodiscard]] bool isUser(Kind kind) {
@@ -829,24 +827,15 @@ void installScenarioDraft(
 
 Result openSimulationSceneImpl(const QStringList &args) {
 	if (args.empty() || !(args.size() % 2)) {
-		return Result::Err(u"usage: simulation.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions|topic-unread|topic-closed|topic-general|topic-pinned|topic-long|topic-french|source-self|source-private|source-channel] [--input keep|empty|reply|edit|forward] [--tabs top|bottom|left]"_q);
+		return Result::Err(u"usage: simulation.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions|topic-unread|topic-closed|topic-general|topic-pinned|topic-long|topic-french|source-self|source-private|source-channel] [--input keep|empty|reply|edit|forward]"_q);
 	}
 	auto view = u"main"_q;
 	auto input = u"keep"_q;
-	auto tabs = -1;
 	for (auto i = 1; i < args.size(); i += 2) {
 		if (args[i] == u"--view"_q) {
 			view = args[i + 1];
 		} else if (args[i] == u"--input"_q) {
 			input = args[i + 1];
-		} else if (args[i] == u"--tabs"_q) {
-			const auto mode = ranges::find_if(kTabsModes, [&](const char *name) {
-				return args[i + 1] == QLatin1String(name);
-			});
-			if (mode == end(kTabsModes)) {
-				return Result::Err(u"unknown tabs layout"_q);
-			}
-			tabs = int(mode - begin(kTabsModes));
 		} else {
 			return Result::Err(u"unknown scenario option"_q);
 		}
@@ -885,9 +874,6 @@ Result openSimulationSceneImpl(const QStringList &args) {
 	if (view.startsWith(u"topic-"_q) && !topicViewRoot(kind, view)) {
 		return Result::Err(u"topic view is not available in this scene"_q);
 	}
-	if (tabs >= 0 && kind != Kind::TopicTabs) {
-		return Result::Err(u"tabs layout requires the topic-tabs scene"_q);
-	}
 	if (view.startsWith(u"source-"_q) && kind != Kind::Saved) {
 		return Result::Err(u"source view requires the saved scene"_q);
 	}
@@ -904,13 +890,6 @@ Result openSimulationSceneImpl(const QStringList &args) {
 		Window::SectionShow(Window::SectionShow::Way::ClearStack, anim::type::instant));
 	installScenarioDraft(controller, index, view, input);
 	const auto peer = session->data().peer(scenarioPeerId(index));
-	if (tabs >= 0) {
-		// 标签布局只在创建时读取：先离开并丢弃缓存的标签，再按新布局打开。
-		controller->showPeerHistory(session->userPeerId(),
-			Window::SectionShow(Window::SectionShow::Way::ClearStack, anim::type::instant));
-		controller->dropSubsectionTabs();
-		session->settings().setSubsectionTabsMode(peer->id, qint32(tabs));
-	}
 	if (kind == Kind::Bot) {
 		peer->asUser()->botInfo->startToken = u"layout"_q;
 	}
@@ -992,9 +971,6 @@ Result listSimulationScenes(const QStringList &args) {
 						{ "listDraft", history->cloudDraft(topic->rootId(), {}) != nullptr } });
 				}
 				entry["state"]["topics"] = std::move(topics);
-				if (peer->useSubsectionTabs()) {
-					entry["state"]["tabs"] = kTabsModes[session->settings().subsectionTabsMode(peer->id)];
-				}
 			}
 			if (scene.category == Category::Saved) {
 				auto sources = json::array();

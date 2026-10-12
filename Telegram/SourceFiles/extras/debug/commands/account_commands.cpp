@@ -48,7 +48,6 @@ Result describePeerSettings(not_null<PeerData*> peer) {
 	auto &settings = peer->session().settings();
 	return Result::Ok(Compact(Json{
 		{"autoDownload", int(settings.autoDownload().peerOverride(peer->id))},
-		{"subsectionTabsMode", settings.subsectionTabsMode(peer->id)},
 		{"groupStickersHidden", settings.isGroupStickersSectionHidden(peer->id)},
 		{"groupEmojiHidden", settings.isGroupEmojiSectionHidden(peer->id)},
 	}));
@@ -63,11 +62,6 @@ Result applyPeerSetting(not_null<PeerData*> peer, const QString &key, const QStr
 		if (!ok) return Result::Err(u"expected an integer"_q);
 		if (number < 0 || number > 2) return Result::Err(u"autoDownload override must be between 0 and 2"_q);
 		settings.autoDownload().setPeerOverride(peer->id, Data::AutoDownload::Override(number));
-		return Result::Ok();
-	}
-	if (key == u"subsectionTabsMode"_q) {
-		if (!ok) return Result::Err(u"expected an integer"_q);
-		settings.setSubsectionTabsMode(peer->id, number);
 		return Result::Ok();
 	}
 	if (key != u"groupStickersHidden"_q && key != u"groupEmojiHidden"_q) return Result::Err(u"unknown peer setting"_q);
