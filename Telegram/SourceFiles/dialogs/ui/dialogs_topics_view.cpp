@@ -253,29 +253,40 @@ bool TopicsView::isInTopicJumpArea(int x, int y) const {
 }
 
 JumpToLastGeometry FillJumpToLastBg(QPainter &p, JumpToLastBg context) {
+	const auto result = CountJumpToLastGeometry(
+		context.st,
+		context.geometry,
+		context.width1,
+		context.width2);
+	FillJumpToLastPrepared(p, {
+		.st = context.st,
+		.corners = context.corners,
+		.bg = context.bg,
+		.prepared = result,
+	});
+	return result;
+}
+
+JumpToLastGeometry CountJumpToLastGeometry(
+		not_null<const style::DialogRow*> st,
+		QRect geometry,
+		int width1,
+		int width2) {
 	const auto padding = st::forumDialogJumpPadding;
-	const auto availableWidth = context.geometry.width();
-	const auto want1 = std::min(context.width1, availableWidth);
+	const auto availableWidth = geometry.width();
+	const auto want1 = std::min(width1, availableWidth);
 	const auto use1 = std::min(want1, availableWidth - padding.right());
-	const auto use2 = std::min(context.width2, availableWidth);
+	const auto use2 = std::min(width2, availableWidth);
 	const auto rightCut = want1 - use1;
-	const auto origin = context.geometry.topLeft();
+	const auto origin = geometry.topLeft();
 	const auto delta = std::abs(use1 - use2);
-	if (delta <= context.st->topicsSkip / 2) {
+	if (delta <= st->topicsSkip / 2) {
 		const auto w = std::max(use1, use2);
-		const auto h = context.st->topicsHeight + st::normalFont->height;
+		const auto h = st->topicsHeight + st::normalFont->height;
 		const auto fill = QRect(origin, QSize(w, h));
-		const auto full = fill.marginsAdded(padding);
-		auto result = JumpToLastGeometry{ rightCut, full };
-		FillJumpToLastPrepared(p, {
-			.st = context.st,
-			.corners = context.corners,
-			.bg = context.bg,
-			.prepared = result,
-		});
-		return result;
+		return JumpToLastGeometry{ rightCut, fill.marginsAdded(padding) };
 	}
-	const auto h1 = context.st->topicsHeight;
+	const auto h1 = st->topicsHeight;
 	const auto h2 = st::normalFont->height;
 	const auto rect1 = QRect(origin, QSize(use1, h1));
 	const auto fill1 = rect1.marginsAdded({
@@ -292,14 +303,7 @@ JumpToLastGeometry FillJumpToLastBg(QPainter &p, JumpToLastBg context) {
 		padding.right(),
 		padding.bottom(),
 	});
-	auto result = JumpToLastGeometry{ rightCut, fill1, fill2 };
-	FillJumpToLastPrepared(p, {
-		.st = context.st,
-		.corners = context.corners,
-		.bg = context.bg,
-		.prepared = result,
-	});
-	return result;
+	return JumpToLastGeometry{ rightCut, fill1, fill2 };
 }
 
 void FillJumpToLastPrepared(QPainter &p, JumpToLastPrepared context) {

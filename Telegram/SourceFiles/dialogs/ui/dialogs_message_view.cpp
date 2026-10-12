@@ -534,29 +534,11 @@ void MessageView::paintJumpToLast(
 		return;
 	}
 	const auto width2 = countWidth() + st::forumDialogJumpArrowSkip;
-	const auto geometry = FillJumpToLastBg(p, {
-		.st = context.st,
-		.corners = (context.selected
-			? &context.topicJumpCache->over
-			: &context.topicJumpCache->corners),
-		.geometry = rect,
-		.bg = (context.selected
-			? st::dialogsRippleBg
-			: st::dialogsBgOver),
-		.width1 = width1,
-		.width2 = width2,
-	});
-	if (context.topicJumpSelected) {
-		p.setOpacity(0.1);
-		FillJumpToLastPrepared(p, {
-			.st = context.st,
-			.corners = &context.topicJumpCache->selected,
-			.bg = st::dialogsTextFg,
-			.prepared = geometry,
-		});
-		p.setOpacity(1.);
-	}
-	_topics->changeTopicJumpGeometry(geometry);
+	_topics->changeTopicJumpGeometry(CountJumpToLastGeometry(
+		context.st,
+		rect,
+		width1,
+		width2));
 }
 
 HistoryView::ItemPreview PreviewWithSender(

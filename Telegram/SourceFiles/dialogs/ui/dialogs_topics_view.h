@@ -46,6 +46,13 @@ struct JumpToLastGeometry {
 };
 JumpToLastGeometry FillJumpToLastBg(QPainter &p, JumpToLastBg context);
 
+// 计算跳转到未读话题的点击区域。
+[[nodiscard]] JumpToLastGeometry CountJumpToLastGeometry(
+	not_null<const style::DialogRow*> st,
+	QRect geometry,
+	int width1,
+	int width2);
+
 struct JumpToLastPrepared {
 	not_null<const style::DialogRow*> st;
 	not_null<TopicJumpCorners*> corners;
