@@ -5689,8 +5689,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_translate_settings" = "Settings";
 "lng_translate_undo" = "Undo";
 
-"lng_translate_cocoon_menu" = "Translations are powered by\n**{emoji} Cocoon**. {link}";
-"lng_translate_cocoon_link" = "How does it work?";
 "lng_translate_cocoon_title" = "Cocoon";
 "lng_translate_cocoon_subtitle" = "**Cocoon** ({text}) handles AI tasks **safely** and **efficiently**.";
 "lng_translate_cocoon_explain" = "**Co**nfidential **Co**mpute **O**pen **N**etwork";

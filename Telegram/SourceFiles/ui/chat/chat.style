@@ -837,12 +837,6 @@ historyTranslateSettings: IconButton(defaultIconButton) {
 	}
 }
 historyTranslateMenuPosition: point(-6px, 30px);
-historyTranslateCocoonLabel: FlatLabel(historyHasCustomEmoji) {
-	style: TextStyle(defaultTextStyle) {
-		font: font(12px);
-	}
-	margin: margins(4px, 8px, 4px, 8px);
-}
 
 cocoonLogoTop: 32px;
 cocoonLogoSize: 96px;
