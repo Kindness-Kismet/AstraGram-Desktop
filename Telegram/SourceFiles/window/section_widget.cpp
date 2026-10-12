@@ -332,6 +332,9 @@ void SectionWidget::showAnimated(
 	_showAnimation->setWithFade(params.withFade);
 	_showAnimation->setTopSkip(params.topSkip);
 	_showAnimation->setTopBarMask(params.topMask);
+	if (params.crossFade) {
+		_showAnimation->setCrossFade({ .overlay = true });
+	}
 	_showAnimation->start();
 
 	show();

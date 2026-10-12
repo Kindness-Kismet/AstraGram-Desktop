@@ -99,6 +99,8 @@ struct SectionSlideParams {
 	bool withTabs = false;
 	bool withFade = false;
 	bool fromBottom = false;
+	// 新旧画面原地叠加淡化，不平移。
+	bool crossFade = false;
 
 	explicit operator bool() const {
 		return !oldContentCache.isNull();

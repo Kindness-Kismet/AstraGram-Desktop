@@ -1075,6 +1075,9 @@ void WrapWidget::showNewContent(
 		const auto layer = (wrap() == Wrap::Layer);
 		animationParams.withFade = layer;
 		animationParams.topSkip = layer ? st::boxRadius : 0;
+		// 设置子页面之间原地淡化，与切换对话一致。
+		animationParams.crossFade
+			= (memento->section().type() == Section::Type::Settings);
 
 		if (HasCustomTopBar(_controller.get())
 			|| HasCustomTopBar(newController.get())) {
