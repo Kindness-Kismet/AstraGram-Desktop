@@ -524,16 +524,25 @@ using json = nlohmann::json;
 // 打开对话并清空导航栈；参数取 chat.list 输出的 peerId，
 // 不指定会话时打开收藏夹。
 [[nodiscard]] Result OpenChat(const QStringList &args) {
-	if (args.size() > 1) {
-		return Result::Err(u"usage: chat.open [peerId]"_q);
+	if (args.size() > 2) {
+		return Result::Err(u"usage: chat.open [peerId] [msgId]"_q);
 	}
 	auto idValue = int64(0);
-	if (args.size() == 1) {
+	if (!args.isEmpty()) {
 		auto ok = false;
 		idValue = args.front().toLongLong(&ok);
 		if (!ok || idValue == 0) {
 			return Result::Err(u"expected a non-zero integer peerId"_q);
 		}
+	}
+	auto msgId = ShowAtTheEndMsgId;
+	if (args.size() == 2) {
+		auto ok = false;
+		const auto value = args[1].toLongLong(&ok);
+		if (!ok || value <= 0) {
+			return Result::Err(u"expected a positive integer msgId"_q);
+		}
+		msgId = MsgId(value);
 	}
 	const auto session = ActiveSession();
 	if (!session) {
@@ -550,7 +559,7 @@ using json = nlohmann::json;
 	controller->showPeerHistory(
 		peer,
 		Window::SectionShow::Way::ClearStack,
-		ShowAtTheEndMsgId);
+		msgId);
 	return Result::Ok(Compact(json{
 		{ "peerId", peer->id.value },
 		{ "name", peer->name().toStdString() },

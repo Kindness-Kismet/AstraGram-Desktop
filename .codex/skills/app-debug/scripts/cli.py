@@ -293,6 +293,7 @@ def register_commands(sub) -> None:
     command.add_argument("button", choices=["reply", "close"], help="要点击的按钮")
     command = sub.add_parser("chat.open", help="打开指定对话并清空导航栈；参数取 chat.list 的 peerId，缺省 Saved Messages")
     command.add_argument("peerId", nargs="?")
+    command.add_argument("msgId", nargs="?", help="定位到的消息编号，缺省为对话末尾")
     command = sub.add_parser("chat.open-archive", help="打开归档文件夹")
     command = sub.add_parser("chat.list", help="列出已加载对话的 peerId 与名称，filter 为名称子串")
     command.add_argument("filter", nargs="?")
@@ -533,8 +534,11 @@ def build_server_command(args: argparse.Namespace) -> str:
     if command == "notification.click":
         return f"notification.click {args.button}"
     if command == "chat.open":
-        return ("chat.open" if args.peerId is None
-                else f"chat.open {quote_arg(args.peerId)}")
+        if args.peerId is None:
+            return "chat.open"
+        if args.msgId is None:
+            return f"chat.open {quote_arg(args.peerId)}"
+        return f"chat.open {quote_arg(args.peerId)} {quote_arg(args.msgId)}"
     if command == "chat.open-archive":
         return "chat.open-archive"
     if command == "chat.list":

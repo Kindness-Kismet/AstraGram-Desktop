@@ -42,10 +42,10 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 - 返回只表示请求已提交，服务器确认是异步的，验证效果稍等片刻再 `screenshot.take`。
 - 不清除目标对话的草稿，不影响输入框。
 
-## `chat.open [peerId]`
+## `chat.open [peerId] [msgId]`
 
 打开指定对话并清空导航栈；参数取 `chat.list` 输出的 peerId，缺省 self（Saved Messages）。配合 `screenshot.take` 做 UI 观测，
-免去找列表项点击的不稳定。
+免去找列表项点击的不稳定。`msgId` 定位到指定消息，缺省为对话末尾；目标尚未加载时走首次加载流程。
 
 ## `chat.open-archive`
 
