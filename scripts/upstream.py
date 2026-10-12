@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import functools
 import json
 import re
 import subprocess
@@ -113,12 +114,31 @@ def load() -> dict:
     return json.loads(TRACKING.read_text(encoding="utf-8"))
 
 
+@functools.cache
+def wildcard(key: str) -> re.Pattern:
+    tokens = {"**/": "(?:.*/)?", "**": ".*", "*": "[^/]*", "?": "[^/]"}
+    parts = re.split(r"(\*\*/|\*\*|\*|\?)", key)
+    return re.compile("".join(tokens.get(part, re.escape(part)) for part in parts))
+
+
+# 键含 * 或 ? 时按通配匹配，* 限一层目录，** 跨任意层；其余键按路径前缀匹配。
 def lookup(rules: dict[str, str], path: str) -> str | None:
     for key, text in rules.items():
+        if "*" in key or "?" in key:
+            if wildcard(key).fullmatch(path):
+                return text
+            continue
         prefix = key.rstrip("/")
         if path == prefix or path.startswith(prefix + "/"):
             return text
     return None
+
+
+def svg_sibling(path: str) -> str | None:
+    """png 图标 1x、2x、3x 共用的同名 svg 路径。"""
+    if not path.endswith(".png"):
+        return None
+    return re.sub(r"(@[23]x)?\.png$", ".svg", path)
 
 
 def fetch_releases() -> list[Release]:
@@ -209,7 +229,7 @@ def analyze(
         exclude: set[str]) -> Report:
     """按本地状态分类官方改动；exclude 里的路径由调用方单独处理。"""
     skip, notes = config.get("skip", {}), config.get("notes", {})
-    deferred = config.get("deferred", {})
+    deferred, replaced = config.get("deferred", {}), config.get("svgReplaced", {})
     report = Report(name, base, head, commits(cwd, base, head))
     for line in git("diff", "--numstat", "--no-renames", base, head, cwd=cwd).splitlines():
         added, removed, path = line.split("\t", 2)
@@ -223,6 +243,11 @@ def analyze(
         full = prefix + path
         reason = lookup(skip, full)
         if reason:
+            report.skipped.append(Entry(path, reason))
+            continue
+        # 本地同名 svg 盖住 png，官方对 png 的新增和修改归入跳过；删除照常分类。
+        reason = lookup(replaced, full) if kind != "D" else None
+        if reason and svg_sibling(path) in mine:
             report.skipped.append(Entry(path, reason))
             continue
         postponed = lookup(deferred, full)

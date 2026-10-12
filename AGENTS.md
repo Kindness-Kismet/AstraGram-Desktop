@@ -349,6 +349,8 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 - 官方标签放在 `refs/upstream-tags/`，不和本仓库同名的发布标签混在一起
 - 报告按“需要合并 / 直接采用 / 官方新增 / 官方删除 / 已与目标一致 / 按 skip 跳过”分类，需要合并的文件已预演三方合并
 - `upstream.json` 里 `skip` 是长期不跟进的路径，`notes` 是跟进时要注意的路径，`deferred` 是暂缓、以后要补的改动
+- `svgReplaced` 登记已改用同名 svg 的 png 图标：官方新增或修改这些 png 时归入跳过，删除照常列出
+- 规则键含 `*` 或 `?` 时按通配匹配，`*` 限一层目录，`**` 跨任意层；其余键按路径前缀匹配
 - `lib_ui` 是 fork 的子模块：改动先推到 fork 仓库，再在主仓库更新子模块指针，两步都要做
 - `cmake` 是官方子模块，定制由 `scripts/build_support/cmake_patch.py` 构建时动态 patch，`git status` 里 `modified: cmake (modified content)` 是预期状态；报告会检查补丁锚点在官方新版里是否还在
 

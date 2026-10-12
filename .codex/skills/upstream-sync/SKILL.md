@@ -16,7 +16,9 @@ description: "同步官方 Telegram Desktop 最新 tag，包含稳定版与测�
 默认选取版本号最高的官方 `vX.Y.Z` tag，正式版和 pre-release 一同参与比较，
 不使用仅返回稳定版的 Latest 接口；`--to` 仍可固定目标。脚本按官方地址拉取标签，
 保存在 `refs/upstream-tags/`，不依赖远程名，也不会和本仓库同名的发布标签混在一起。
-`upstream.json` 另有三类规则：`skip` 长期不跟进，`notes` 跟进时要注意，`deferred` 暂缓、以后要补。
+`upstream.json` 另有四类规则：`skip` 长期不跟进，`notes` 跟进时要注意，`deferred` 暂缓、以后要补，
+`svgReplaced` 登记已改用同名 svg 的 png 图标。规则键含 `*` 或 `?` 时按通配匹配，
+`*` 限一层目录，`**` 跨任意层；其余键按路径前缀匹配。
 
 ## 同步范围
 
@@ -47,7 +49,7 @@ python scripts/upstream.py report --base 7.2.7 --to 7.2.9 # 指定基线，用�
 | 直接采用 | 本地没改过，可以直接检出官方版本 |
 | 官方新增 / 官方删除 | 逐个决定是否跟随，删除项注明本地是否改过 |
 | 已与目标一致 | 本地内容已经和目标版本相同，不用处理 |
-| 按 skip 跳过 | 命中 `skip`，附原因 |
+| 按 skip 跳过 | 命中 `skip`，或命中 `svgReplaced` 且本地有同名 svg 的 png 新增与修改，附原因 |
 
 ## 适配
 

@@ -4,7 +4,9 @@
     "子模块基线取官方该版本记录的子模块指针；本地定制用 git diff 计算，不需要登记。",
     "skip：长期不跟进的路径，报告里单独列出并注明原因。",
     "notes：跟进时要注意的路径，报告里随文件标注。",
-    "deferred：暂缓跟进、以后要补的改动，每次报告都会列出，补上后删除。"
+    "deferred：暂缓跟进、以后要补的改动，每次报告都会列出，补上后删除。",
+    "svgReplaced：本地已有同名 svg 的 png 图标，官方新增或修改时归入跳过，删除照常列出。",
+    "各类规则的键含 * 或 ? 时按通配匹配，* 限一层目录，** 跨任意层；其余键按路径前缀匹配。"
   ],
   "tdesktop": "7.3.1",
   "skip": {
@@ -33,6 +35,9 @@
     "Telegram/SourceFiles/ui/controls/subsection_tabs_slider.h": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。",
     "Telegram/SourceFiles/ui/controls/subsection_tabs_slider_reorder.cpp": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。",
     "Telegram/SourceFiles/ui/controls/subsection_tabs_slider_reorder.h": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。"
+  },
+  "svgReplaced": {
+    "Telegram/Resources/icons/**/*.png": "本地已改用同名 svg 图标，样式生成器只读 svg；官方重绘了图形时按需对照更新 svg。"
   },
   "notes": {
     "Telegram/build/prepare/prepare.py": "依赖配方固化在 scripts/build_support/recipes.py、recipes_arm64.py 与 recipes_rust.py，官方改动要对照同步到这些文件，只合并本文件不会影响构建。",
