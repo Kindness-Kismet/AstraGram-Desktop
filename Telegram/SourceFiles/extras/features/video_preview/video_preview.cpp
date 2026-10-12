@@ -294,8 +294,9 @@ void PreviewGrid::mouseReleaseEvent(QMouseEvent *e) {
 		|| pressed != indexAt(e->pos())) {
 		return;
 	}
-	// 选中后弹窗随即关闭，回调之后不再访问成员。
-	_chosen(_storyboard.frames[pressed].time);
+	// 回调会同步关闭弹窗并销毁本控件和 _chosen，先复制到栈上再调用。
+	const auto onstack = _chosen;
+	onstack(_storyboard.frames[pressed].time);
 }
 
 void PreviewGrid::leaveEventHook(QEvent *e) {
