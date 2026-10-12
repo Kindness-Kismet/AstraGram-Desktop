@@ -33,6 +33,9 @@
 | `chat.draft` | `<peerId> [topicRootId]` | 已保存的草稿、回复、转发及暂存状态；话题编号取 `simulation.list` 或 `message.inspect`，尚未保存的文字以控件查询为准。 |
 | `message.list` | `<peerId> [limit]` | 当前缓存中的消息，默认 20 条，最多 100 条。 |
 | `message.fetch` | `<peerId> [limit]` | 异步获取指定对话的最近消息；不打开对话，不发送已读回执。 |
+| `message.media` | `<peerId> [limit] [offsetId]` | 异步读取文件附件的原始结构：类型、大小、视频属性、缩略图及全部附带文件；不写入本地消息。 |
+| `message.media-file` | `<peerId> <messageId> <mime> <destination>` | 异步保存附带文件中第一个指定类型的文件，例如缩略图拼图 `application/x-tgstoryboard`；只请求一次，超过 1 MB 直接拒绝。 |
+| `peer.resolve` | `<username>` | 异步按用户名解析公开频道或用户，返回会话编号；不加入、不关注。 |
 | `message.inspect` | `<peerId> <messageId>` | 原有消息状态，以及发送者、提及实体、附件名、类型、大小和下载状态。 |
 | `message.send-file` | `<peerId> <absolutePath> [caption]` | 后台准备单个文件并沿官方附件发送链路提交，不打开附件预览、不清除草稿。 |
 | `mention.resolve` | `<userId>` | 与编号提及弹窗共用解析逻辑，返回异步任务，不插入输入框。 |
