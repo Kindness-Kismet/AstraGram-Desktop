@@ -470,8 +470,11 @@ Result sendMention(const QStringList &args) {
 	return jobStarted(id);
 }
 
-Result sendFile(const QStringList &args) {
-	if (args.size() < 2 || args.size() > 3) return Result::Err(u"usage: message.send-file <peerId> <path> [caption]"_q);
+// --media 对应发送窗口里的“压缩”，视频按可播放的媒体发送。
+Result sendFile(const QStringList &arguments) {
+	auto args = arguments;
+	const auto asMedia = (args.removeAll(u"--media"_q) > 0);
+	if (args.size() < 2 || args.size() > 3) return Result::Err(u"usage: message.send-file <peerId> <path> [caption] [--media]"_q);
 	const auto peer = findPeer(args[0]);
 	if (!peer) return Result::Err(u"peer not found"_q);
 	const auto session = &peer->session();
@@ -496,9 +499,10 @@ Result sendFile(const QStringList &args) {
 			list.files.front().caption = { caption };
 			auto action = Api::SendAction(weak->data().history(peerId));
 			action.clearDraft = false;
-			weak->api().sendFiles(std::move(list), SendMediaType::File, nullptr, action);
+			const auto type = asMedia ? SendMediaType::Photo : SendMediaType::File;
+			weak->api().sendFiles(std::move(list), type, nullptr, action);
 			finishJob(id, true, Json{ { "state", "submitted" }, { "peerId", peerId.value },
-				{ "filename", QFileInfo(filename).fileName().toStdString() } });
+				{ "filename", QFileInfo(filename).fileName().toStdString() }, { "media", asMedia } });
 		});
 	});
 	return jobStarted(id);
