@@ -20,7 +20,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 
 原生会话分组按私聊、群组、频道、机器人、话题、收藏夹、归档排列，尊重“隐藏全部对话”设置。
 `simulation.list` 返回每项的 `key`、`name`、`category`、`categoryName`、`features` 和 `peerId`。
-进入后还返回 `state`，查询实际未读、静音、归档、置顶、草稿、分类归属、话题状态及收藏来源数量。
+进入后还返回 `state`，查询实际未读、静音、归档、置顶、草稿、最新消息是否发送中、分类归属、话题状态及收藏来源数量。
 编号供 `message.list/inspect`、`chat.draft` 等查询使用，不手写内部会话编号。
 
 | 分类 | 键名 | 内容 |
@@ -32,6 +32,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 | 私聊 | `deleted-account` | 已注销账号 |
 | 私聊 | `business` | 商业机器人管理提示 |
 | 私聊 | `paid` | 付费消息提示 |
+| 私聊 | `sending` | 停在发送中的文字和图片，气泡、图片角标与对话列表显示时钟 |
 | 群组 | `group` | 讨论、置顶和消息状态，图片、相册、文件、联系人、投票、静态贴纸 |
 | 群组 | `restricted` | 发送限制 |
 | 群组 | `requests` | 管理权限、加入申请和置顶 |
@@ -39,7 +40,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 | 群组 | `protected-group` | 内容保护和置顶 |
 | 群组 | `send-as` | 本人与频道两种发送身份，默认选中频道，可通过输入框按钮在本地切换 |
 | 群组 | `voice-restricted` | 只禁止语音和视频消息，附件菜单的录制项置灰 |
-| 频道 | `channel` | 公告、置顶、浏览次数、通知按钮 |
+| 频道 | `channel` | 公告、置顶、浏览次数、通知按钮，最新帖子停在发送中 |
 | 频道 | `discussion` | 评论入口、关联讨论群和置顶 |
 | 频道 | `join` | 未加入频道的加入按钮；对话置顶使其常驻固定列表 |
 | 频道 | `translate` | 外语消息、翻译与置顶组合 |

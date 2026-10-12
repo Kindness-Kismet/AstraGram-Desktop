@@ -74,6 +74,7 @@ enum class Kind {
 	SendAs,
 	VoiceRestricted,
 	TopicTabs,
+	Sending,
 };
 struct Scenario {
 	const char *key;
@@ -95,7 +96,7 @@ constexpr auto kScenarios = std::array{
 	Scenario{ "requests", u"群组 · 管理与申请", Kind::Requests, Category::Groups, "requests,pinned" },
 	Scenario{ "slow", u"群组 · 慢速模式", Kind::Slow, Category::Groups, "slowmode" },
 	Scenario{ "protected-group", u"群组 · 内容保护", Kind::ProtectedGroup, Category::Groups, "protected,pinned" },
-	Scenario{ "channel", u"频道 · 公告与置顶", Kind::Broadcast, Category::Channels, "pinned,views" },
+	Scenario{ "channel", u"频道 · 公告与置顶", Kind::Broadcast, Category::Channels, "pinned,views,sending" },
 	Scenario{ "discussion", u"频道 · 评论讨论", Kind::Discussion, Category::Channels, "discussion,pinned" },
 	Scenario{ "join", u"频道 · 尚未加入", Kind::Join, Category::Channels, "join,pinned-dialog" },
 	Scenario{ "translate", u"频道 · 翻译内容", Kind::Translate, Category::Channels, "translation,pinned" },
@@ -112,6 +113,7 @@ constexpr auto kScenarios = std::array{
 	Scenario{ "send-as", u"群组 · 频道身份", Kind::SendAs, Category::Groups, "send-as,identity-switcher" },
 	Scenario{ "voice-restricted", u"群组 · 禁止语音视频", Kind::VoiceRestricted, Category::Groups, "restricted-voice,restricted-round" },
 	Scenario{ "topic-tabs", u"话题 · 标签布局", Kind::TopicTabs, Category::Topics, "tabs,general,colors,long-title,pinned,unread,closed,translate,requests" },
+	Scenario{ "sending", u"私聊 · 发送中", Kind::Sending, Category::Private, "sending,sending-photo" },
 };
 constexpr auto kFirstPeerId = uint64(810000001);
 constexpr auto kFirstMessageId = 2000001;
@@ -150,7 +152,8 @@ base::weak_ptr<Main::Session> SeededSession;
 		|| kind == Kind::Contact || kind == Kind::Blocked
 		|| kind == Kind::DeletedAccount || kind == Kind::Business || kind == Kind::Paid
 		|| kind == Kind::Bot || kind == Kind::Keyboard || kind == Kind::InlineBot
-		|| kind == Kind::Sponsored || kind == Kind::Saved || kind == Kind::ArchivedPrivate;
+		|| kind == Kind::Sponsored || kind == Kind::Saved || kind == Kind::ArchivedPrivate
+		|| kind == Kind::Sending;
 }
 [[nodiscard]] PeerId scenarioPeerId(int index) {
 	if (kScenarios[index].kind == Kind::Saved) {
@@ -438,6 +441,28 @@ void fillTabTopics(
 	history->outboxRead(lastId);
 }
 
+// 本地标记为发送中的最新消息，状态保持发送中；返回最后一条的编号。
+[[nodiscard]] MsgId addSendingMessages(
+		not_null<Main::Session*> session,
+		not_null<PeerData*> peer,
+		int baseId) {
+	const auto now = base::unixtime::now();
+	const auto sender = peer->isBroadcast() ? peer->id : session->userPeerId();
+	const auto add = [&](int offset, const QString &text, std::optional<MTPMessageMedia> media) {
+		session->data().addNewMessage(
+			makeMessage(peer, sender, baseId + offset, text, false, false, 0, false, false,
+				false, MsgId(), kTopicRootId, {}, false, std::move(media), 0, now - 3 + offset),
+			MessageFlag::BeingSent,
+			NewMessageType::Unread);
+		return MsgId(baseId + offset);
+	};
+	if (peer->isBroadcast()) {
+		return add(0, u"这条频道消息正在发送，浏览次数的位置显示时钟。"_q, std::nullopt);
+	}
+	add(0, u"这条消息正在发送，时间旁显示时钟。"_q, std::nullopt);
+	add(1, QString(), simulationMedia(session, SimulationMedia::Photo, baseId + 1));
+	return add(2, u"最后一条也在发送，对话列表的时间旁同样显示时钟。"_q, std::nullopt);
+}
 
 void fillHistory(not_null<Main::Session*> session, not_null<PeerData*> peer, int index) {
 	const auto &spec = kScenarios[index];
@@ -578,6 +603,11 @@ void fillHistory(not_null<Main::Session*> session, not_null<PeerData*> peer, int
 	history->setUnreadCount(unread ? 3 : 0);
 	history->setInboxReadTill(baseId + count - (unread ? 4 : 1));
 	history->outboxRead(baseId + count - 1);
+	if (kind == Kind::Sending || kind == Kind::Broadcast) {
+		// 频道帖子按收到的消息计入未读，已读位置跟到最新。
+		history->setInboxReadTill(addSendingMessages(session, peer, baseId + 50));
+		history->setUnreadCount(0);
+	}
 	history->setUnreadMark(kind == Kind::ArchivedPrivate);
 	history->setMuted(kind == Kind::Draft || kind == Kind::ArchivedGroup);
 	if (kind == Kind::Draft || kind == Kind::Topic) {
@@ -620,7 +650,7 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 		if (kind != Kind::Saved) {
 			initialiseUser(user, QString::fromUtf16(spec.name));
 		}
-		if (kind == Kind::Private || kind == Kind::Draft) {
+		if (kind == Kind::Private || kind == Kind::Draft || kind == Kind::Sending) {
 			user->setFlags(UserDataFlag::MessageMoneyRestrictionsKnown | UserDataFlag::Contact);
 		} else if (kind == Kind::Contact) {
 			user->setBarSettings(PeerBarSetting::AddContact | PeerBarSetting::BlockContact);
@@ -958,6 +988,7 @@ Result listSimulationScenes(const QStringList &args) {
 				{ "slowmodeSecondsLeft", peer->slowmodeSecondsLeft() },
 				{ "draft", history->localDraft({}, {}) != nullptr },
 				{ "listDraft", history->cloudDraft({}, {}) != nullptr },
+				{ "lastSending", history->lastMessage() && history->lastMessage()->isSending() },
 			};
 			if (scene.category == Category::Topics) {
 				auto topics = json::array();
