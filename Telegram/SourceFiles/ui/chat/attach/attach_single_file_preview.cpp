@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/ui_utility.h"
 #include "core/mime_type.h"
+#include "styles/style_basic.h"
 #include "styles/style_chat.h"
 
 #include <QtCore/QFileInfo>

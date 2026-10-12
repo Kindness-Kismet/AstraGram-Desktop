@@ -28,7 +28,11 @@
     "Telegram/SourceFiles/core/version.h": "版本数值改为从 Telegram/build/version 生成，官方每次发版都会改这里。",
     "Telegram/Resources/winrc/Telegram.rc": "版本数值改为从 Telegram/build/version 生成，官方每次发版都会改这里。",
     "Telegram/Resources/winrc/Updater.rc": "版本数值改为从 Telegram/build/version 生成，官方每次发版都会改这里。",
-    "tasks/": "官方临时任务记录，本仓库使用 build/docs 与 build/record。"
+    "tasks/": "官方临时任务记录，本仓库使用 build/docs 与 build/record。",
+    "Telegram/SourceFiles/ui/controls/subsection_tabs_slider.cpp": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。",
+    "Telegram/SourceFiles/ui/controls/subsection_tabs_slider.h": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。",
+    "Telegram/SourceFiles/ui/controls/subsection_tabs_slider_reorder.cpp": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。",
+    "Telegram/SourceFiles/ui/controls/subsection_tabs_slider_reorder.h": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。"
   },
   "notes": {
     "Telegram/build/prepare/prepare.py": "依赖配方固化在 scripts/build_support/recipes.py、recipes_arm64.py 与 recipes_rust.py，官方改动要对照同步到这些文件，只合并本文件不会影响构建。",

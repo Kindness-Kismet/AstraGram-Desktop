@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/text/text_options.h"
 
+#include "styles/style_basic.h"
 #include "styles/style_window.h"
 #include "styles/style_chat.h"
 
