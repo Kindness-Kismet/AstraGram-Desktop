@@ -4,7 +4,14 @@
 #include "ui/text/text.h"
 #include "ui/widgets/buttons.h"
 
+namespace Ui {
+struct UnreadBadgeStyle;
+} // namespace Ui
+
 namespace ExtrasFeatures::TopicSwitcher {
+
+// 切换按钮与面板共用的小号未读徽标。
+[[nodiscard]] Ui::UnreadBadgeStyle UnreadBadge(bool muted);
 
 struct ButtonContent {
 	TextWithEntities label;
@@ -14,7 +21,7 @@ struct ButtonContent {
 };
 
 // 顶栏标题第二行的切换按钮：当前话题、展开箭头、其他话题的未读总数。
-class Button final : public Ui::RippleButton {
+class Button final : public Ui::AbstractButton {
 public:
 	Button(QWidget *parent, Fn<bool()> paused);
 
@@ -23,7 +30,6 @@ public:
 
 private:
 	void paintEvent(QPaintEvent *e) override;
-	QImage prepareRippleMask() const override;
 
 	void paintChevron(QPainter &p, int left, float64 opened) const;
 	void refreshNaturalWidth();

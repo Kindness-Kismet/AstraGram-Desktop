@@ -16,7 +16,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_saved_sublist.h"
 #include "data/data_session.h"
 #include "data/data_thread.h"
-#include "data/stickers/data_custom_emoji.h"
 #include "dialogs/dialogs_indexed_list.h"
 #include "dialogs/dialogs_main_list.h"
 #include "dialogs/dialogs_row.h"
@@ -25,7 +24,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history.h"
 #include "history/view/history_view_top_bar_widget.h"
 #include "main/main_session.h"
-#include "ui/text/text_utilities.h"
 #include "ui/ui_utility.h"
 #include "window/window_separate_id.h"
 #include "window/window_session_controller.h"
@@ -138,19 +136,7 @@ void SubsectionTabs::scheduleRefresh() {
 void SubsectionTabs::refreshButton() {
 	_refreshScheduled = false;
 
-	auto label = TextWithEntities();
-	if (const auto topic = _active->asTopic()) {
-		label = topic->titleWithIconOrLogo();
-	} else if (const auto sublist = _active->asSublist()) {
-		const auto peer = sublist->sublistPeer();
-		const auto manager = &_history->owner().customEmojiManager();
-		label.append(Ui::Text::SingleCustomEmoji(
-			manager->peerUserpicEmojiData(peer),
-			u"@"_q)
-		).append(' ').append(peer->shortName());
-	} else {
-		label.text = ExtrasFeatures::TopicSwitcher::AllLabel(_history);
-	}
+	auto label = ExtrasFeatures::TopicSwitcher::ThreadLabel(_active);
 
 	// 只统计有未读数的其他话题，全部静音时徽标用灰色。
 	const auto forum = _history->peer->forum();

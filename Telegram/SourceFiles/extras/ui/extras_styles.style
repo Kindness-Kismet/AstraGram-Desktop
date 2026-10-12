@@ -237,18 +237,21 @@ topBarSelectionBetween: IconButton(topBarSelectionForward) {
 }
 
 topicSwitcherHeight: 22px;
-topicSwitcherRadius: 7px;
 topicSwitcherPadding: margins(6px, 0px, 6px, 0px);
 topicSwitcherSkip: 5px;
 topicSwitcherTextStyle: TextStyle(defaultTextStyle) {
 	font: font(13px semibold);
 }
 topicSwitcherChevron: size(9px, 5px);
-topicSwitcherRipple: RippleAnimation(defaultRippleAnimation) {
-}
-topicSwitcherPanelWidth: 360px;
-topicSwitcherPanelMaxHeight: 520px;
+topicSwitcherPanelWidth: 260px;
+topicSwitcherPanelMaxHeight: 380px;
 topicSwitcherPanelSkip: 2px;
-topicSwitcherAllIcon: icon {{ "menu/chats", windowSubTextFg }};
-topicSwitcherAllIconActive: icon {{ "menu/chats", dialogsNameFgActive }};
+// 左右边距与表情面板搜索框一致，行高亮与搜索框同宽、同圆角。
+topicSwitcherPanelPadding: margins(8px, 8px, 8px, 7px);
+topicSwitcherSearchSkip: 6px;
+topicSwitcherRowHeight: 32px;
+topicSwitcherRowMargin: margins(0px, 1px, 0px, 1px);
+topicSwitcherRowRadius: 9px;
+topicSwitcherRowPadding: margins(8px, 0px, 8px, 0px);
+topicSwitcherAllIcon: icon {{ "menu/chats-18x18", windowSubTextFg }};
 topicSwitcherEmptyHeight: 64px;

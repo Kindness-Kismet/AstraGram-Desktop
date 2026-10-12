@@ -1,18 +1,19 @@
 #include "extras/features/topic_switcher/topic_switcher_panel.h"
 
 #include "base/unique_qptr.h"
+#include "core/ui_integration.h"
 #include "data/data_changes.h"
 #include "data/data_forum.h"
 #include "data/data_forum_topic.h"
 #include "data/data_peer.h"
 #include "data/data_saved_messages.h"
 #include "data/data_saved_sublist.h"
-#include "data/data_send_action.h"
 #include "data/data_session.h"
+#include "data/stickers/data_custom_emoji.h"
 #include "dialogs/dialogs_indexed_list.h"
 #include "dialogs/dialogs_main_list.h"
 #include "dialogs/dialogs_row.h"
-#include "dialogs/ui/dialogs_layout.h"
+#include "extras/features/topic_switcher/topic_switcher_button.h"
 #include "history/history.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
@@ -20,7 +21,10 @@
 #include "ui/effects/panel_animation.h"
 #include "ui/image/image_prepare.h"
 #include "ui/painter.h"
+#include "ui/text/text_utilities.h"
 #include "ui/ui_utility.h"
+#include "ui/unread_badge_paint.h"
+#include "ui/unread_counter_format.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/menu/menu_add_action_callback.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
@@ -30,7 +34,6 @@
 #include "window/window_session_controller.h"
 #include "styles/style_chat.h"
 #include "styles/style_chat_helpers.h"
-#include "styles/style_dialogs.h"
 #include "styles/style_extras_styles.h"
 #include "styles/style_widgets.h"
 
@@ -79,12 +82,26 @@ void LoadMore(not_null<History*> history) {
 	}
 }
 
-} // namespace
-
-QString AllLabel(not_null<History*> history) {
+[[nodiscard]] QString AllLabel(not_null<History*> history) {
 	return history->peer->forum()
 		? tr::extras_TopicSwitcherAllTopics(tr::now)
 		: tr::lng_filters_all(tr::now);
+}
+
+} // namespace
+
+TextWithEntities ThreadLabel(not_null<Data::Thread*> thread) {
+	if (const auto topic = thread->asTopic()) {
+		return topic->titleWithIconOrLogo();
+	} else if (const auto sublist = thread->asSublist()) {
+		const auto peer = sublist->sublistPeer();
+		const auto manager = &thread->owner().customEmojiManager();
+		return Ui::Text::SingleCustomEmoji(
+			manager->peerUserpicEmojiData(peer),
+			u"@"_q
+		).append(' ').append(peer->shortName());
+	}
+	return { AllLabel(thread->owningHistory()) };
 }
 
 class Panel::List final : public Ui::RpWidget {
@@ -113,8 +130,14 @@ private:
 	void refilter();
 	void setSelected(int index);
 	void showMenu(not_null<Data::Thread*> thread, QPoint globalPosition);
-	void paintAll(Painter &p, QRect geometry, bool active, bool selected);
+	void paintRow(
+		Painter &p,
+		QRect geometry,
+		not_null<Data::Thread*> thread,
+		bool selected);
 	void paintEmpty(Painter &p);
+	[[nodiscard]] const Ui::Text::String &label(
+		not_null<Data::Thread*> thread);
 
 	[[nodiscard]] int count() const;
 	[[nodiscard]] int indexAt(QPoint position) const;
@@ -125,7 +148,11 @@ private:
 	const not_null<History*> _history;
 	const not_null<Data::Thread*> _active;
 	const Fn<void(not_null<Data::Thread*>, bool)> _chosen;
-	const not_null<const style::DialogRow*> _st;
+	struct Label {
+		TextWithEntities source;
+		Ui::Text::String text;
+	};
+	base::flat_map<not_null<Data::Thread*>, Label> _labels;
 	QStringList _query;
 	std::vector<not_null<Data::Thread*>> _filtered;
 	int _selected = -1;
@@ -140,10 +167,7 @@ Panel::List::List(QWidget *parent, const PanelDescriptor &descriptor)
 , _controller(descriptor.controller)
 , _history(descriptor.history)
 , _active(descriptor.active)
-, _chosen(descriptor.chosen)
-, _st(_history->peer->forum()
-	? &st::forumTopicRow
-	: &st::defaultDialogRow) {
+, _chosen(descriptor.chosen) {
 	setObjectName(u"topicSwitcherList"_q);
 	setMouseTracking(true);
 	setupSubscriptions();
@@ -162,11 +186,16 @@ void Panel::List::setupSubscriptions() {
 		update();
 	}, lifetime());
 
-	using AnimationUpdate = Data::SendActionManager::AnimationUpdate;
-	session->data().sendActionManager().animationUpdated(
-	) | rpl::filter([=](const AnimationUpdate &update) {
-		return ours(update.thread);
-	}) | rpl::on_next([=] {
+	rpl::merge(
+		session->changes().topicUpdates(
+			Data::TopicUpdate::Flag::Title
+			| Data::TopicUpdate::Flag::IconId
+			| Data::TopicUpdate::Flag::ColorId
+		) | rpl::to_empty,
+		session->changes().peerUpdates(
+			Data::PeerUpdate::Flag::Name
+		) | rpl::to_empty
+	) | rpl::on_next([=] {
 		update();
 	}, lifetime());
 
@@ -183,13 +212,14 @@ void Panel::List::setupSubscriptions() {
 		refresh();
 	}, lifetime());
 
-	// 话题先发销毁事件再析构，这里同步移除，绘制时不会碰到失效指针。
+	// 话题先发销毁事件再析构，这里同步移除，保证绘制时指针有效。
 	ThreadDestroyed(
 		_history
 	) | rpl::on_next([=](not_null<Data::Thread*> thread) {
 		_filtered.erase(
 			ranges::remove(_filtered, thread),
 			end(_filtered));
+		_labels.remove(thread);
 		refresh();
 	}, lifetime());
 }
@@ -239,7 +269,7 @@ int Panel::List::count() const {
 }
 
 int Panel::List::rowHeight() const {
-	return _st->height;
+	return st::topicSwitcherRowHeight;
 }
 
 Data::Thread *Panel::List::threadAt(int index) const {
@@ -383,75 +413,101 @@ void Panel::List::showMenu(
 
 void Panel::List::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
+	const auto clip = e->rect();
+	p.fillRect(clip, st::emojiPanBg);
 	const auto rows = count();
 	if (!rows) {
 		paintEmpty(p);
 		return;
 	}
-	const auto clip = e->rect();
 	const auto height = rowHeight();
 	const auto from = std::max(clip.y() / height, 0);
 	const auto till = std::min((clip.y() + clip.height() + height - 1) / height, rows);
-	const auto forum = _history->peer->forum();
-	auto context = Dialogs::Ui::PaintContext{
-		.st = _st,
-		.forum = forum,
-		.currentBg = st::emojiPanBg->b,
-		.now = crl::now(),
-		.width = width(),
-		.paused = _controller->isGifPausedAtLeastFor(
-			Window::GifPauseReason::Any),
-	};
-	p.translate(0, from * height);
+	// 行与搜索框左右对齐。
+	const auto &padding = st::topicSwitcherPanelPadding;
+	const auto rowWidth = width() - padding.left() - padding.right();
 	for (auto i = from; i != till; ++i) {
-		const auto thread = threadAt(i);
-		const auto active = (thread == _active);
-		const auto selected = (i == _selected);
-		if (thread == _history) {
-			paintAll(p, QRect(0, 0, width(), height), active, selected);
-		} else if (const auto links = thread->chatListLinks(FilterId())) {
-			context.active = active;
-			context.selected = selected;
-			Dialogs::Ui::RowPainter::Paint(p, links->main, nullptr, context);
-		}
-		p.translate(0, height);
+		paintRow(
+			p,
+			QRect(padding.left(), i * height, rowWidth, height),
+			threadAt(i),
+			(i == _selected));
 	}
 }
 
-void Panel::List::paintAll(
+const Ui::Text::String &Panel::List::label(not_null<Data::Thread*> thread) {
+	auto source = ThreadLabel(thread);
+	auto &entry = _labels[thread];
+	if (entry.source != source) {
+		entry.text.setMarkedText(
+			st::defaultTextStyle,
+			source,
+			kDefaultTextOptions,
+			Core::TextContext({
+				.session = &thread->session(),
+				.repaint = [=] { update(); },
+			}));
+		entry.source = std::move(source);
+	}
+	return entry.text;
+}
+
+void Panel::List::paintRow(
 		Painter &p,
 		QRect geometry,
-		bool active,
+		not_null<Data::Thread*> thread,
 		bool selected) {
+	const auto active = (thread == _active);
 	if (active || selected) {
 		auto hq = PainterHighQualityEnabler(p);
 		p.setPen(Qt::NoPen);
-		p.setBrush(active ? st::dialogsBgActive : st::dialogsBgOver);
-		const auto radius = _st->activeRadius;
+		p.setBrush(active ? st::lightButtonBgOver : st::dialogsBgOver);
+		const auto radius = st::topicSwitcherRowRadius;
 		p.drawRoundedRect(
-			geometry.marginsRemoved(_st->activeMargin),
+			geometry.marginsRemoved(st::topicSwitcherRowMargin),
 			radius,
 			radius);
 	}
-	const auto size = _st->photoSize;
-	const auto photo = QRect(
-		_st->padding.left(),
-		geometry.y() + (geometry.height() - size) / 2,
-		size,
-		size);
-	(active
-		? st::topicSwitcherAllIconActive
-		: st::topicSwitcherAllIcon).paintInCenter(p, photo);
-
-	const auto &font = st::semiboldFont;
-	const auto available = width() - _st->nameLeft - _st->padding.right();
-	p.setPen(active ? st::dialogsNameFgActive : st::dialogsNameFg);
-	p.setFont(font);
-	p.drawTextLeft(
-		_st->nameLeft,
-		geometry.y() + (geometry.height() - font->height) / 2,
-		width(),
-		font->elided(AllLabel(_history), available));
+	const auto &padding = st::topicSwitcherRowPadding;
+	auto left = geometry.x() + padding.left();
+	auto right = geometry.x() + geometry.width() - padding.right();
+	const auto badges = (thread == _history)
+		? Dialogs::BadgesState()
+		: thread->chatListBadgesState();
+	if (badges.unreadCounter > 0) {
+		const auto style = UnreadBadge(badges.unreadMuted);
+		const auto text = FormatUnreadCounter(badges.unreadCounter, false);
+		right -= Ui::CountUnreadBadgeSize(text, style).width();
+		Ui::PaintUnreadBadge(
+			p,
+			text,
+			right,
+			geometry.y() + (geometry.height() - style.size) / 2,
+			style);
+		right -= st::topicSwitcherSkip;
+	}
+	// 全部入口的图标占一个表情的宽度，与话题图标对齐。
+	const auto &font = st::normalFont;
+	if (thread == _history) {
+		const auto icon = st::emojiSize + 2 * st::emojiPadding;
+		st::topicSwitcherAllIcon.paintInCenter(
+			p,
+			QRect(left, geometry.y(), icon, geometry.height()));
+		left += icon + font->spacew;
+	}
+	p.setPen(active ? st::lightButtonFg : st::windowBoldFg);
+	label(thread).draw(p, {
+		.position = {
+			left,
+			geometry.y() + (geometry.height() - font->height) / 2,
+		},
+		.outerWidth = width(),
+		.availableWidth = std::max(right - left, 0),
+		.now = crl::now(),
+		.paused = _controller->isGifPausedAtLeastFor(
+			Window::GifPauseReason::Any),
+		.elisionLines = 1,
+	});
 }
 
 void Panel::List::paintEmpty(Painter &p) {
@@ -474,7 +530,7 @@ Panel::Panel(not_null<QWidget*> parent, PanelDescriptor &&descriptor)
 , _search(Ui::CreateChild<Ui::TabbedSearchField>(
 	this,
 	st::defaultEmojiPan.search))
-, _scroll(Ui::CreateChild<Ui::ScrollArea>(this, st::defaultSolidScroll))
+, _scroll(Ui::CreateChild<Ui::ScrollArea>(this, st::defaultScrollArea))
 , _list(_scroll->setOwnedWidget(
 	object_ptr<List>(_scroll, descriptor)).data()) {
 	setObjectName(u"topicSwitcherPanel"_q);
@@ -539,14 +595,13 @@ void Panel::showAt(QPoint position, int maxBottom) {
 
 void Panel::updateSize() {
 	const auto margins = st::emojiPanMargins;
-	const auto &searchMargin = st::defaultEmojiPan.searchMargin;
+	const auto &padding = st::topicSwitcherPanelPadding;
 	const auto width = st::topicSwitcherPanelWidth;
-	const auto searchTop = searchMargin.top();
-	_search->resizeToWidth(width - searchMargin.left() - searchMargin.right());
-	const auto searchHeight = _search->height();
-	const auto listTop = searchTop + searchHeight + searchMargin.bottom();
-	// 列表底部留出圆角高度，行背景不会画出圆角外。
-	const auto bottomSkip = st::emojiPanRadius;
+	_search->resizeToWidth(width - padding.left() - padding.right());
+	const auto listTop = padding.top()
+		+ _search->height()
+		+ st::topicSwitcherSearchSkip;
+	const auto bottomSkip = padding.bottom();
 	const auto available = std::min(
 		st::topicSwitcherPanelMaxHeight,
 		_maxBottom - y() - margins.top() - margins.bottom());
@@ -559,8 +614,8 @@ void Panel::updateSize() {
 		margins.left() + width + margins.right(),
 		margins.top() + inner + margins.bottom());
 	_search->moveToLeft(
-		margins.left() + searchMargin.left(),
-		margins.top() + searchTop);
+		margins.left() + padding.left(),
+		margins.top() + padding.top());
 	_scroll->setGeometry(
 		margins.left(),
 		margins.top() + listTop,
@@ -685,7 +740,7 @@ void Panel::keyPressEvent(QKeyEvent *e) {
 	}
 }
 
-// 只看本窗口内的点击，弹出菜单等独立窗口不会误关面板。
+// 只统计本窗口内的点击，弹出菜单等独立窗口忽略。
 bool Panel::outside(QObject *o) const {
 	if (!o->isWidgetType()) {
 		return false;

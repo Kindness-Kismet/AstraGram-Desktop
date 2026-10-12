@@ -1,6 +1,5 @@
 #include "extras/features/topic_switcher/topic_switcher_button.h"
 
-#include "ui/effects/ripple_animation.h"
 #include "ui/painter.h"
 #include "ui/unread_badge_paint.h"
 #include "ui/unread_counter_format.h"
@@ -8,9 +7,8 @@
 #include "styles/style_window.h"
 
 namespace ExtrasFeatures::TopicSwitcher {
-namespace {
 
-[[nodiscard]] Ui::UnreadBadgeStyle BadgeStyle(bool muted) {
+Ui::UnreadBadgeStyle UnreadBadge(bool muted) {
 	auto result = Ui::UnreadBadgeStyle();
 	result.font = st::mainMenuBadgeFont;
 	result.size = st::mainMenuBadgeSize;
@@ -20,10 +18,8 @@ namespace {
 	return result;
 }
 
-} // namespace
-
 Button::Button(QWidget *parent, Fn<bool()> paused)
-: RippleButton(parent, st::topicSwitcherRipple)
+: AbstractButton(parent)
 , _paused(std::move(paused)) {
 	resize(width(), st::topicSwitcherHeight);
 	setObjectName(u"topicSwitcher"_q);
@@ -61,7 +57,7 @@ void Button::setOpened(bool opened) {
 int Button::badgeWidth() const {
 	return _unread.isEmpty()
 		? 0
-		: Ui::CountUnreadBadgeSize(_unread, BadgeStyle(_unreadMuted)).width();
+		: Ui::CountUnreadBadgeSize(_unread, UnreadBadge(_unreadMuted)).width();
 }
 
 void Button::refreshNaturalWidth() {
@@ -75,27 +71,9 @@ void Button::refreshNaturalWidth() {
 		+ padding.right());
 }
 
-QImage Button::prepareRippleMask() const {
-	return Ui::RippleAnimation::RoundRectMask(size(), st::topicSwitcherRadius);
-}
-
 void Button::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
 	const auto opened = _openedAnimation.value(_opened ? 1. : 0.);
-	const auto accent = st::windowActiveTextFg->c;
-
-	// 底色用半透明强调色，在磨砂与实色顶栏上都可辨认。
-	const auto over = std::max(isOver() ? 1. : 0., opened);
-	if (over > 0.) {
-		auto hq = PainterHighQualityEnabler(p);
-		p.setPen(Qt::NoPen);
-		p.setBrush(anim::with_alpha(accent, 0.1 * over));
-		p.drawRoundedRect(
-			rect(),
-			st::topicSwitcherRadius,
-			st::topicSwitcherRadius);
-	}
-	paintRipple(p, 0, 0);
 
 	const auto &padding = st::topicSwitcherPadding;
 	const auto badge = badgeWidth();
@@ -107,7 +85,7 @@ void Button::paintEvent(QPaintEvent *e) {
 		width() - padding.left() - padding.right() - tail,
 		0);
 	const auto textHeight = st::topicSwitcherTextStyle.font->height;
-	p.setPen(accent);
+	p.setPen(st::windowActiveTextFg);
 	_text.draw(p, {
 		.position = { padding.left(), (height() - textHeight) / 2 },
 		.outerWidth = width(),
@@ -123,7 +101,7 @@ void Button::paintEvent(QPaintEvent *e) {
 	paintChevron(p, left, opened);
 	if (badge) {
 		left += chevron + st::topicSwitcherSkip;
-		const auto style = BadgeStyle(_unreadMuted);
+		const auto style = UnreadBadge(_unreadMuted);
 		Ui::PaintUnreadBadge(
 			p,
 			_unread,

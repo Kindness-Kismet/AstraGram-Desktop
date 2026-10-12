@@ -308,7 +308,7 @@ void TopBarWidget::setSubsectionSwitcher(Ui::RpWidget *switcher) {
 		update();
 	};
 	if (!switcher) {
-		// 移除可能发生在会话区析构中，此时控制器已没有内容区，刷新放到下一轮。
+		// 移除可能发生在会话区析构中，此时窗口内容区已销毁，刷新放到下一轮。
 		InvokeQueued(this, refresh);
 		return;
 	}

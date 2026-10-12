@@ -3,6 +3,7 @@
 #include "ui/effects/animations.h"
 #include "ui/round_rect.h"
 #include "ui/rp_widget.h"
+#include "ui/text/text_entity.h"
 #include "ui/widgets/shadow.h"
 
 class History;
@@ -23,14 +24,14 @@ class TabbedSearchField;
 
 namespace ExtrasFeatures::TopicSwitcher {
 
-// 列表首行的名称：论坛为全部话题，频道私信为全部会话。
-[[nodiscard]] QString AllLabel(not_null<History*> history);
+// 话题为图标加标题，私信会话为头像加名字，会话本身为全部入口的名称。
+[[nodiscard]] TextWithEntities ThreadLabel(not_null<Data::Thread*> thread);
 
 struct PanelDescriptor {
 	not_null<Window::SessionController*> controller;
 	not_null<History*> history;
 	not_null<Data::Thread*> active;
-	// 点在切换按钮上由按钮自己处理开关，不算面板外。
+	// 切换按钮自行处理开关，点击它按面板内处理。
 	not_null<QWidget*> toggle;
 	Fn<void(not_null<Data::Thread*> thread, bool newWindow)> chosen;
 	// 开始收起时通知；淡出结束后面板自行销毁。
