@@ -237,10 +237,11 @@ private:
 		not_null<QWidget*> widget) const;
 
 	void showFinished();
-	[[nodiscard]] Fn<void()> prepareFullWidthHideAnimation(
+	// 进出全宽页面前截取窗口正文，返回的回调在新页面就位后原地过渡。
+	[[nodiscard]] Fn<void()> prepareFullWidthAnimation(
 		const Window::SectionShow &params,
 		bool back);
-	[[nodiscard]] QRect fullWidthAnimationGeometry() const;
+	[[nodiscard]] QPixmap grabFullWidthAnimationContent();
 	void handleAdaptiveLayoutUpdate();
 	void updateWindowAdaptiveLayout();
 	void handleAudioUpdate(const Media::Player::TrackState &state);

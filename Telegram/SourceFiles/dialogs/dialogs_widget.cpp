@@ -105,6 +105,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_dialogs_widget.h"
+#include "styles/style_extras_styles.h"
 #include "styles/style_info.h"
 #include "styles/style_window.h"
 #include "base/qt/qt_common_adapters.h"
@@ -2560,10 +2561,12 @@ void Widget::changeOpenedSubsection(
 		if (_connecting) {
 			_connecting->setForceHidden(false);
 		}
+		// 侧栏本身不动，只有栏内内容原地过渡。
 		startSlideAnimation(
 			std::move(oldContentCache),
 			std::move(newContentCache),
-			showDirection);
+			showDirection,
+			true);
 	}
 }
 
@@ -2872,9 +2875,7 @@ void Widget::switchToChatsFilter(FilterId id) {
 	const auto was = _inner->filterId();
 	const auto animated = (was != id)
 		&& !isHidden()
-		&& !_showAnimation
-		&& (_chatsFilterSwipeSwitch
-			|| (_chatFilters && !_chatFilters->isHidden()));
+		&& !_showAnimation;
 	if (!animated) {
 		_inner->switchToFilter(id);
 		return;
@@ -2885,20 +2886,24 @@ void Widget::switchToChatsFilter(FilterId id) {
 			- begin(list));
 	};
 	const auto slideLeft = (indexOf(id) < indexOf(was));
-	const auto duration = _chatsFilterSwipeSwitch
-		? st::dialogsFilterSwipeSlideDuration
-		: st::dialogsFilterSlideDuration;
 	_chatsFilterSlideCanvas = nullptr;
 	auto wasCache = grabForChatsFilterSlide();
 	_inner->switchToFilter(id);
 	if (_inner->filterId() == was) {
 		return;
 	}
-	startChatsFilterSlide(
-		std::move(wasCache),
-		grabForChatsFilterSlide(),
-		slideLeft,
-		duration);
+	// 滑动手势沿手势方向整页滑过，点击切换只让列表内容原地过渡。
+	if (_chatsFilterSwipeSwitch) {
+		startChatsFilterSlide(
+			std::move(wasCache),
+			grabForChatsFilterSlide(),
+			slideLeft,
+			st::dialogsFilterSwipeSlideDuration);
+	} else {
+		startChatsFilterCrossFade(
+			std::move(wasCache),
+			grabForChatsFilterSlide());
+	}
 }
 
 QPixmap Widget::grabForChatsFilterSlide() {
@@ -2948,6 +2953,32 @@ void Widget::startChatsFilterSlide(
 			_chatsFilterSlideCanvas = nullptr;
 		}
 	}, duration);
+}
+
+void Widget::startChatsFilterCrossFade(QPixmap wasCache, QPixmap nowCache) {
+	_chatsFilterSlideCanvas = std::make_unique<Ui::RpWidget>(this);
+	const auto canvas = _chatsFilterSlideCanvas.get();
+	canvas->setAttribute(Qt::WA_TransparentForMouseEvents);
+	canvas->setAttribute(Qt::WA_OpaquePaintEvent);
+	ExtrasFeatures::WindowMaterial::watchSurface(canvas);
+	canvas->setGeometry(_scroll->geometry());
+	const auto animation
+		= canvas->lifetime().make_state<Window::SlideAnimation>();
+	// 各文件夹常有相同的对话，原地叠加淡入，相同的行全程不动。
+	animation->setCrossFade({ .overlay = true });
+	animation->setPixmaps(std::move(wasCache), std::move(nowCache));
+	animation->setRepaintCallback([=] { canvas->update(); });
+	animation->setFinishedCallback([=] {
+		_chatsFilterSlideCanvas = nullptr;
+	});
+	canvas->paintOn([=](QPainter &p) {
+		animation->paintContents(p);
+	});
+	canvas->show();
+	if (_connecting) {
+		_connecting->raise();
+	}
+	animation->start();
 }
 
 QPixmap Widget::grabForFolderSlideAnimation() {
@@ -3302,13 +3333,15 @@ void Widget::showAnimated(
 	startSlideAnimation(
 		std::move(oldContentCache),
 		std::move(newContentCache),
-		direction);
+		direction,
+		false);
 }
 
 void Widget::startSlideAnimation(
 		QPixmap oldContentCache,
 		QPixmap newContentCache,
-		Window::SlideDirection direction) {
+		Window::SlideDirection direction,
+		bool crossFade) {
 	_scroll->hide();
 	if (_stories) {
 		_stories->setToggledHidden(true, false);
@@ -3343,6 +3376,14 @@ void Widget::startSlideAnimation(
 
 	_showAnimation = std::make_unique<Window::SlideAnimation>();
 	_showAnimation->setDirection(direction);
+	if (crossFade) {
+		_showAnimation->setCrossFade({
+			.shift = st::extrasSectionCrossFadeShift,
+			.bg = ExtrasFeatures::WindowMaterial::surfaceColor(
+				this,
+				st::dialogsBg->c),
+		});
+	}
 	_showAnimation->setRepaintCallback([=] {
 		if (_shownProgressValue.current() < 1.) {
 			_shownProgressValue = _showAnimation->progress();

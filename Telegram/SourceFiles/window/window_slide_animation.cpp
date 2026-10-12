@@ -6,55 +6,30 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_slide_animation.h"
-#include "extras/features/window_material/window_material.h"
 #include "ui/rp_widget.h"
 #include "ui/ui_utility.h"
 #include "styles/style_basic.h"
 
 
 namespace Window {
-namespace {
 
-[[nodiscard]] QPixmap PlaceContent(
-		const QPixmap &cache,
-		QSize size,
-		QPoint position,
-		QColor bg) {
-	const auto ratio = style::DevicePixelRatio();
-	if (position.isNull() && cache.size() == size * ratio) {
-		return cache;
-	}
-	auto result = QPixmap(size * ratio);
-	result.setDevicePixelRatio(ratio);
-	result.fill(bg);
-	QPainter(&result).drawPixmap(position, cache);
-	return result;
-}
-
-} // namespace
-
-void ShowSlideAnimation(
+void ShowCrossFadeAnimation(
 		not_null<QWidget*> parent,
 		const QRect &geometry,
-		const QPixmap &oldContentCache,
-		QPoint oldContentPosition,
-		SlideDirection direction) {
-	const auto newContentCache = Ui::GrabWidget(parent, geometry);
-	const auto bg = ExtrasFeatures::WindowMaterial::isActive(parent)
-		? QColor(Qt::transparent)
-		: st::windowBg->c;
+		QPixmap oldContentCache,
+		QPixmap newContentCache,
+		SlideDirection direction,
+		CrossFadeArgs args) {
 	const auto overlay = Ui::CreateChild<Ui::RpWidget>(parent);
 	overlay->setObjectName(u"section-slide-overlay"_q);
+	overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
 	overlay->setGeometry(geometry);
 	const auto animation = overlay->lifetime().make_state<SlideAnimation>();
 	animation->setDirection(direction);
+	animation->setCrossFade(std::move(args));
 	animation->setPixmaps(
-		PlaceContent(
-			oldContentCache,
-			geometry.size(),
-			oldContentPosition,
-			bg),
-		newContentCache);
+		std::move(oldContentCache),
+		std::move(newContentCache));
 	animation->setRepaintCallback([=] { overlay->update(); });
 	animation->setFinishedCallback([=] {
 		overlay->hide();
@@ -62,12 +37,6 @@ void ShowSlideAnimation(
 	});
 	overlay->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(overlay);
-		if (ExtrasFeatures::WindowMaterial::isActive(overlay)) {
-			// 材质下截图是透明的，先清掉下层控件，只透出材质和截图。
-			p.setCompositionMode(QPainter::CompositionMode_Source);
-			p.fillRect(overlay->rect(), Qt::transparent);
-			p.setCompositionMode(QPainter::CompositionMode_SourceOver);
-		}
 		animation->paintContents(p);
 	}, overlay->lifetime());
 	overlay->show();
@@ -76,6 +45,10 @@ void ShowSlideAnimation(
 }
 
 void SlideAnimation::paintContents(QPainter &p) const {
+	if (_crossFade) {
+		paintCrossFade(p);
+		return;
+	}
 	const auto retina = style::DevicePixelRatio();
 
 	const auto slideLeft = (_direction == SlideDirection::FromLeft);
@@ -216,6 +189,88 @@ void SlideAnimation::paintContents(QPainter &p) const {
 	}
 }
 
+void SlideAnimation::paintCrossFade(QPainter &p) const {
+	const auto &args = *_crossFade;
+	const auto slideLeft = (_direction == SlideDirection::FromLeft);
+	const auto &was = slideLeft ? _cacheOver : _cacheUnder;
+	const auto &now = slideLeft ? _cacheUnder : _cacheOver;
+	const auto shown = progress();
+	const auto shift = slideLeft ? args.shift : -args.shift;
+	const auto ratio = style::DevicePixelRatio();
+	if (_crossFadeFrame.size() != was.size()) {
+		_crossFadeFrame = QImage(
+			was.size(),
+			QImage::Format_ARGB32_Premultiplied);
+		_crossFadeFrame.setDevicePixelRatio(ratio);
+	}
+	auto q = QPainter(&_crossFadeFrame);
+	// Source 模式带不透明度 o 时结果为 o * 本层 + (1 - o) * 底，透明像素同样成立。
+	q.setCompositionMode(QPainter::CompositionMode_Source);
+	if (args.overlay) {
+		// 平移露出的部分不绘制上层，直接透出下层。
+		q.drawPixmap(0, 0, slideLeft ? now : was);
+		q.setOpacity(slideLeft ? (1. - shown) : shown);
+		q.drawPixmap(
+			slideLeft
+				? anim::interpolate(0, shift, shown)
+				: anim::interpolate(-shift, 0, shown),
+			0,
+			slideLeft ? was : now);
+		q.end();
+		paintCrossFadeFrame(p);
+		return;
+	}
+	// 旧内容前半程淡出、新内容稍后淡入，余量由 bg 补足。
+	constexpr auto kWasPart = 0.5;
+	constexpr auto kNowDelay = 0.2;
+	const auto wasAlpha = std::max(1. - shown / kWasPart, 0.);
+	const auto nowAlpha = std::clamp(
+		(shown - kNowDelay) / (1. - kNowDelay),
+		0.,
+		1.);
+	// 平移露出的边缘按 bg 计入同一层；纯色填充不随不透明度插值，改用图片。
+	auto edge = QImage();
+	if (shift) {
+		edge = QImage(
+			QSize(
+				std::abs(shift) * ratio,
+				std::max(was.height(), now.height())),
+			QImage::Format_ARGB32_Premultiplied);
+		edge.fill(args.bg);
+	}
+	const auto layer = [&](const QPixmap &cache, int x, float64 opacity) {
+		if (opacity <= 0.) {
+			return;
+		}
+		const auto width = cache.width() / ratio;
+		const auto height = cache.height() / ratio;
+		q.setOpacity(opacity);
+		q.drawPixmap(x, 0, cache);
+		if (x) {
+			q.drawImage(
+				QRect((x > 0) ? 0 : (width + x), 0, std::abs(x), height),
+				edge,
+				QRect(0, 0, std::abs(x) * ratio, cache.height()));
+		}
+	};
+	// 依次插值后各层权重：bg 为 1 - a - b，旧内容为 a，新内容为 b。
+	q.fillRect(QRect(QPoint(), was.size() / ratio), args.bg);
+	layer(
+		was,
+		anim::interpolate(0, shift, shown),
+		(wasAlpha > 0.) ? (wasAlpha / (1. - nowAlpha)) : 0.);
+	layer(now, anim::interpolate(-shift, 0, shown), nowAlpha);
+	q.end();
+	paintCrossFadeFrame(p);
+}
+
+void SlideAnimation::paintCrossFadeFrame(QPainter &p) const {
+	// 整帧替换下层：材质下画布并不遮挡，底下已是切换后的内容。
+	p.setCompositionMode(QPainter::CompositionMode_Source);
+	p.drawImage(0, 0, _crossFadeFrame);
+	p.setCompositionMode(QPainter::CompositionMode_SourceOver);
+}
+
 float64 SlideAnimation::progress() const {
 	const auto slideLeft = (_direction == SlideDirection::FromLeft);
 	const auto progress = _animation.value(slideLeft ? 0. : 1.);
@@ -245,6 +300,10 @@ void SlideAnimation::setWithFade(bool withFade) {
 	_withFade = withFade;
 }
 
+void SlideAnimation::setCrossFade(CrossFadeArgs args) {
+	_crossFade = std::move(args);
+}
+
 void SlideAnimation::setRepaintCallback(RepaintCallback &&callback) {
 	_repaintCallback = std::move(callback);
 }
@@ -263,7 +322,11 @@ void SlideAnimation::start() {
 		std::swap(_cacheUnder, _cacheOver);
 	}
 	const auto fromBottom = (_direction == SlideDirection::FromBottom);
-	const auto curve = fromBottom ? anim::easeOutQuint : transition();
+	const auto curve = fromBottom
+		? anim::easeOutQuint
+		: _crossFade
+		? anim::easeOutCubic
+		: transition();
 	const auto duration = fromBottom
 		? (st::slideDuration * 2)
 		: st::slideDuration;

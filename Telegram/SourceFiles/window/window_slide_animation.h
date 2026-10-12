@@ -17,13 +17,23 @@ enum class SlideDirection {
 	FromBottom,
 };
 
-// oldContentPosition 是旧画面左上角相对 geometry 的位置，露出的部分填背景。
-void ShowSlideAnimation(
+// 原地交叉淡化：内容沿方向平移 shift，bg 铺满且保持不动。
+struct CrossFadeArgs {
+	int shift = 0;
+	QColor bg;
+	// 上层直接盖在下层上，前后相同的像素全程不变，不使用 bg。
+	// 前进时新内容是上层，后退时旧内容是上层，只有上层平移。
+	bool overlay = false;
+};
+
+// 在 parent 的 geometry 区域把旧画面原地交叉淡化到新画面。
+void ShowCrossFadeAnimation(
 	not_null<QWidget*> parent,
 	const QRect &geometry,
-	const QPixmap &oldContentCache,
-	QPoint oldContentPosition,
-	SlideDirection direction);
+	QPixmap oldContentCache,
+	QPixmap newContentCache,
+	SlideDirection direction,
+	CrossFadeArgs args);
 
 class SlideAnimation {
 public:
@@ -39,6 +49,7 @@ public:
 	void setTopSkip(int skip);
 	void setTopBarMask(const QPixmap &mask);
 	void setWithFade(bool withFade);
+	void setCrossFade(CrossFadeArgs args);
 
 	using RepaintCallback = Fn<void()>;
 	void setRepaintCallback(RepaintCallback &&callback);
@@ -54,11 +65,15 @@ public:
 
 private:
 	void animationCallback();
+	void paintCrossFade(QPainter &p) const;
+	void paintCrossFadeFrame(QPainter &p) const;
 
 	SlideDirection _direction = SlideDirection::FromRight;
 	int _topSkip = 0;
 	bool _topBarShadowEnabled = false;
 	bool _withFade = false;
+	std::optional<CrossFadeArgs> _crossFade;
+	mutable QImage _crossFadeFrame;
 
 	mutable Ui::Animations::Simple _animation;
 	QPixmap _cacheUnder, _cacheOver;

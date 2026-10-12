@@ -101,6 +101,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_dialogs.h"
 #include "styles/style_chat.h"
 #include "styles/style_window.h"
+#include "styles/style_extras_styles.h"
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QMimeData>
@@ -1561,9 +1562,10 @@ void MainWidget::showHistory(
 	}
 
 	// 栈为空时关闭设置会以清空栈的方式回到对话列表，同样按后退方向过渡。
-	const auto finishFullWidthAnimation = prepareFullWidthHideAnimation(
-		params,
-		back);
+	const auto finishFullWidthAnimation = (_mainSection
+		&& _mainSection->useFullWidth())
+		? prepareFullWidthAnimation(params, back)
+		: nullptr;
 	const auto fullWidthAnimationGuard = gsl::finally([&] {
 		if (finishFullWidthAnimation) {
 			finishFullWidthAnimation();
@@ -1902,63 +1904,44 @@ Window::SectionSlideParams MainWidget::prepareShowAnimation(
 Window::SectionSlideParams MainWidget::prepareMainSectionAnimation(
 		Window::SectionWidget *section,
 		bool fromBottom) {
-	if (section->useFullWidth()) {
-		auto result = Window::SectionSlideParams();
-		floatPlayerHideAll();
-		result.oldContentCache = Ui::GrabWidget(
-			parentWidget(),
-			fullWidthAnimationGeometry());
-		floatPlayerShowVisible();
-		return result;
-	}
 	return prepareShowAnimation(section->hasTopBarShadow(), fromBottom);
 }
 
-Fn<void()> MainWidget::prepareFullWidthHideAnimation(
+Fn<void()> MainWidget::prepareFullWidthAnimation(
 		const SectionShow &params,
 		bool back) {
-	if (!_mainSection
-		|| !_mainSection->useFullWidth()
-		|| _showAnimation
+	if (_showAnimation
 		|| Core::App().passcodeLocked()
-		|| params.animated == anim::type::instant) {
+		|| params.animated == anim::type::instant
+		|| params.activation == anim::activation::background) {
 		return nullptr;
 	}
-	// 全宽页面退出时，分类栏和对话区需要放在同一张画面里过渡。
-	const auto parent = parentWidget();
-	const auto oldGeometry = fullWidthAnimationGeometry();
-	const auto oldTopLeft = parent->mapToGlobal(oldGeometry.topLeft());
-	floatPlayerHideAll();
-	const auto oldContentCache = Ui::GrabWidget(parent, oldGeometry);
-	floatPlayerShowVisible();
+	// 分类栏和对话区都在正文里，进出全宽页面时整块正文一起过渡。
+	// 正在收起的菜单与弹窗留在旧画面里，由新页面盖住。
+	const auto oldContentCache = grabFullWidthAnimationContent();
 	const auto direction = back
 		? Window::SlideDirection::FromLeft
 		: Window::SlideDirection::FromRight;
 	return [=] {
-		// 退出设置会收起标题栏搜索框，正文区随之变高；
-		// 按退出后的布局覆盖，旧画面留在原来的屏幕位置。
-		const auto geometry = fullWidthAnimationGeometry();
-		const auto oldPosition = oldTopLeft
-			- parent->mapToGlobal(geometry.topLeft());
-		floatPlayerHideAll();
-		Window::ShowSlideAnimation(
-			parent,
-			geometry,
+		_controller->window().hideSettingsAndLayer(anim::type::instant);
+		const auto body = parentWidget();
+		Window::ShowCrossFadeAnimation(
+			body,
+			body->rect(),
 			oldContentCache,
-			oldPosition,
-			direction);
-		floatPlayerShowVisible();
+			grabFullWidthAnimationContent(),
+			direction,
+			{ .shift = st::extrasSectionCrossFadeShift, .overlay = true });
+		// 页面圆角与媒体预览仍在过渡之上。
+		_controller->widget()->fixOrder();
 	};
 }
 
-QRect MainWidget::fullWidthAnimationGeometry() const {
-	const auto top = getMainSectionTop() + st::windowCardGap;
-	const auto filtersWidth = _controller->filtersWidth();
-	return QRect(
-		x() - filtersWidth,
-		y() + top,
-		width() + filtersWidth,
-		height() - top);
+QPixmap MainWidget::grabFullWidthAnimationContent() {
+	floatPlayerHideAll();
+	auto result = Ui::GrabWidget(parentWidget());
+	floatPlayerShowVisible();
+	return result;
 }
 
 Window::SectionSlideParams MainWidget::prepareHistoryAnimation(PeerId historyPeerId) {
@@ -2027,8 +2010,12 @@ void MainWidget::showNewSection(
 	const auto fromBottom = params.slideFromBottom
 		&& !newThirdSection
 		&& (_mainSection != nullptr);
-	const auto finishFullWidthAnimation = (!newThirdSection && !memento->instant())
-		? prepareFullWidthHideAnimation(
+	const auto fullWidthChange = useFullWidth
+		|| (_mainSection && _mainSection->useFullWidth());
+	const auto finishFullWidthAnimation = (fullWidthChange
+		&& !newThirdSection
+		&& !memento->instant())
+		? prepareFullWidthAnimation(
 			params,
 			params.way == SectionShow::Way::Backward)
 		: nullptr;
@@ -2039,7 +2026,7 @@ void MainWidget::showNewSection(
 	});
 
 	auto animatedShow = [&] {
-		if (_mainSection && _mainSection->useFullWidth()) {
+		if (fullWidthChange) {
 			return false;
 		}
 		if (_showAnimation
@@ -2047,9 +2034,6 @@ void MainWidget::showNewSection(
 			|| (params.animated == anim::type::instant)
 			|| memento->instant()) {
 			return false;
-		}
-		if (useFullWidth) {
-			return true;
 		}
 		if (fromBottom) {
 			return true;

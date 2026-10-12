@@ -233,6 +233,7 @@ private:
 		QPixmap nowCache,
 		bool slideLeft,
 		crl::time duration);
+	void startChatsFilterCrossFade(QPixmap wasCache, QPixmap nowCache);
 	void setupDownloadBar();
 	void setupShortcuts();
 	void setupStories();
@@ -298,7 +299,8 @@ private:
 	void startSlideAnimation(
 		QPixmap oldContentCache,
 		QPixmap newContentCache,
-		Window::SlideDirection direction);
+		Window::SlideDirection direction,
+		bool crossFade);
 
 	void openChildList(
 		not_null<Data::Forum*> forum,
