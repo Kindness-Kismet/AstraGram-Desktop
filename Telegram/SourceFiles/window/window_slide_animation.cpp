@@ -329,6 +329,8 @@ void SlideAnimation::start() {
 		: transition();
 	const auto duration = fromBottom
 		? (st::slideDuration * 2)
+		: (_crossFade && _crossFade->duration)
+		? _crossFade->duration
 		: st::slideDuration;
 	_animation.start(
 		[this] { animationCallback(); },

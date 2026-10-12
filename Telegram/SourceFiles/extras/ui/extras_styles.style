@@ -256,6 +256,6 @@ topicSwitcherRowPadding: margins(8px, 0px, 8px, 0px);
 topicSwitcherAllIcon: icon {{ "menu/chats-18x18", windowSubTextFg }};
 topicSwitcherEmptyHeight: 64px;
 
-// 侧栏子页面与全宽页面原地过渡的平移距离；切换对话时旧画面淡出的时长。
+// 侧栏子页面与全宽页面原地过渡的平移距离；切换对话与设置子页面淡化的时长。
 extrasSectionCrossFadeShift: 24px;
-extrasChatSwitchFadeDuration: 200;
+extrasInPlaceFadeDuration: 200;

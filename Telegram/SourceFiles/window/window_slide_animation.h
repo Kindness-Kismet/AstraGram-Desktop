@@ -24,6 +24,8 @@ struct CrossFadeArgs {
 	// 上层直接盖在下层上，前后相同的像素全程不变，不使用 bg。
 	// 前进时新内容是上层，后退时旧内容是上层，只有上层平移。
 	bool overlay = false;
+	// 为 0 时沿用 st::slideDuration。
+	int duration = 0;
 };
 
 // 在 parent 的 geometry 区域把旧画面原地交叉淡化到新画面。

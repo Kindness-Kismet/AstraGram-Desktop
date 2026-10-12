@@ -1999,7 +1999,7 @@ Fn<void()> MainWidget::prepareChatSwitchFade(const SectionShow &params) {
 					_chatSwitchFade = nullptr;
 				}
 			});
-		}, 1., 0., st::extrasChatSwitchFadeDuration, anim::easeOutCubic);
+		}, 1., 0., st::extrasInPlaceFadeDuration, anim::easeOutCubic);
 	};
 }
 
