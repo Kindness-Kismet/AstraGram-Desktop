@@ -9,6 +9,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "ui/effects/animations.h"
 
+namespace Ui {
+class RpWidget;
+} // namespace Ui
+
 namespace Window {
 
 enum class SlideDirection {
@@ -36,6 +40,14 @@ void ShowCrossFadeAnimation(
 	QPixmap newContentCache,
 	SlideDirection direction,
 	CrossFadeArgs args);
+
+// 旧画面盖住 parent 的 geometry 区域原地淡出，底下实时内容的变化同样随之淡入。
+// 返回结束后自行删除的过渡层。
+not_null<Ui::RpWidget*> ShowFadeOutAnimation(
+	not_null<QWidget*> parent,
+	const QRect &geometry,
+	QPixmap cache,
+	crl::time duration);
 
 class SlideAnimation {
 public:

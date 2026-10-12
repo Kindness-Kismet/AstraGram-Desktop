@@ -699,6 +699,8 @@ private:
 	void jumpToReply(FullReplyTo to);
 
 	void messagesReceived(not_null<PeerData*> peer, const MTPmessages_Messages &messages, int requestId);
+	// 首屏消息就位前用当前画面盖住消息区，随后原地淡出。
+	void startFirstLoadFade();
 	void messagesFailed(const MTP::Error &error, int requestId);
 	void addMessagesToFront(not_null<PeerData*> peer, const QVector<MTPMessage> &messages);
 	void addMessagesToBack(not_null<PeerData*> peer, const QVector<MTPMessage> &messages);

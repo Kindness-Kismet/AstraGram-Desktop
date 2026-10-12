@@ -1972,34 +1972,15 @@ Fn<void()> MainWidget::prepareChatSwitchFade(const SectionShow &params) {
 	auto cache = Ui::GrabWidget(this, geometry);
 	floatPlayerShowVisible();
 	return [=, cache = std::move(cache)] {
-		_chatSwitchFade = base::make_unique_q<Ui::RpWidget>(this);
-		const auto overlay = _chatSwitchFade.get();
-		overlay->setObjectName(u"chat-switch-fade"_q);
-		overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
-		overlay->setGeometry(geometry);
-		const auto animation
-			= overlay->lifetime().make_state<Ui::Animations::Simple>();
-		overlay->paintRequest() | rpl::on_next([=] {
-			auto p = QPainter(overlay);
-			p.setOpacity(animation->value(0.));
-			p.drawPixmap(0, 0, cache);
-		}, overlay->lifetime());
-		overlay->show();
-		// 盖在对话区之上，顶栏、浮动播放器与卡片圆角仍在最上层。
-		overlay->raise();
+		// 旧画面盖在切换后的实时内容上淡出，过渡中到达的消息同样随之淡入。
+		_chatSwitchFade.reset(Window::ShowFadeOutAnimation(
+			this,
+			geometry,
+			cache,
+			st::extrasInPlaceFadeDuration).get());
+		_chatSwitchFade->setObjectName(u"chat-switch-fade"_q);
+		// 顶栏、浮动播放器与卡片圆角仍在过渡之上。
 		orderWidgets();
-		animation->start([=] {
-			overlay->update();
-			if (animation->animating()) {
-				return;
-			}
-			overlay->hide();
-			crl::on_main(overlay, [=] {
-				if (_chatSwitchFade.get() == overlay) {
-					_chatSwitchFade = nullptr;
-				}
-			});
-		}, 1., 0., st::extrasInPlaceFadeDuration, anim::easeOutCubic);
 	};
 }
 

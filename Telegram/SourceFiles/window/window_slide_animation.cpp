@@ -44,6 +44,37 @@ void ShowCrossFadeAnimation(
 	animation->start();
 }
 
+not_null<Ui::RpWidget*> ShowFadeOutAnimation(
+		not_null<QWidget*> parent,
+		const QRect &geometry,
+		QPixmap cache,
+		crl::time duration) {
+	const auto overlay = Ui::CreateChild<Ui::RpWidget>(parent);
+	overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
+	overlay->setGeometry(geometry);
+	const auto animation
+		= overlay->lifetime().make_state<Ui::Animations::Simple>();
+	overlay->paintRequest() | rpl::on_next([=] {
+		auto p = QPainter(overlay);
+		// Source 模式带不透明度 o 时结果为 o * 旧画面 + (1 - o) * 底下已绘制的内容，
+		// 材质下的透明像素同样按比例插值。
+		p.setCompositionMode(QPainter::CompositionMode_Source);
+		p.setOpacity(animation->value(0.));
+		p.drawPixmap(0, 0, cache);
+	}, overlay->lifetime());
+	overlay->show();
+	overlay->raise();
+	animation->start([=] {
+		overlay->update();
+		if (animation->animating()) {
+			return;
+		}
+		overlay->hide();
+		overlay->deleteLater();
+	}, 1., 0., duration, anim::easeOutCubic);
+	return overlay;
+}
+
 void SlideAnimation::paintContents(QPainter &p) const {
 	if (_crossFade) {
 		paintCrossFade(p);

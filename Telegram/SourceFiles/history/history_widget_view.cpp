@@ -215,6 +215,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_info.h"
 #include "styles/style_iv.h"
 #include "styles/style_layers.h"
+#include "styles/style_extras_styles.h"
 
 #include <QtGui/QWindow>
 #include <QtCore/QMimeData>
@@ -915,6 +916,14 @@ void HistoryWidget::messagesReceived(
 	} break;
 	}
 
+	// 首次加载尚未排版，或已有消息填不满一屏时，带回的消息原地淡入。
+	if (!histList->isEmpty()
+		&& ((requestId == _firstLoadRequest)
+			|| (!_scroll->scrollTopMax()
+				&& ((requestId == _preloadRequest)
+					|| (requestId == _preloadDownRequest))))) {
+		startFirstLoadFade();
+	}
 	if (_preloadRequest == requestId) {
 		addMessagesToFront(peer, *histList);
 		_preloadRequest = 0;
@@ -1002,6 +1011,19 @@ void HistoryWidget::messagesReceived(
 	if (session().supportMode()) {
 		crl::on_main(this, [=] { checkSupportPreload(); });
 	}
+}
+
+void HistoryWidget::startFirstLoadFade() {
+	if (!isVisible() || _showAnimation || _scroll->isHidden()) {
+		return;
+	}
+	const auto geometry = _scroll->geometry();
+	Window::ShowFadeOutAnimation(
+		this,
+		geometry,
+		Ui::GrabWidget(this, geometry),
+		st::extrasInPlaceFadeDuration
+	)->setObjectName(u"history-first-load-fade"_q);
 }
 
 void HistoryWidget::historyLoaded() {
