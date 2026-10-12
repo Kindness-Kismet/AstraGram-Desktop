@@ -242,6 +242,9 @@ private:
 		const Window::SectionShow &params,
 		bool back);
 	[[nodiscard]] QPixmap grabFullWidthAnimationContent();
+	// 宽屏原地切换对话前截取对话区，返回的回调在新内容就位后让旧画面淡出。
+	[[nodiscard]] Fn<void()> prepareChatSwitchFade(
+		const Window::SectionShow &params);
 	void handleAdaptiveLayoutUpdate();
 	void updateWindowAdaptiveLayout();
 	void handleAudioUpdate(const Media::Player::TrackState &state);
@@ -360,6 +363,7 @@ private:
 	object_ptr<Ui::PlainShadow> _thirdShadow = { nullptr };
 	// 卡片圆角与描边遮罩层:透明鼠标、置顶,一次画所有卡的圆角和边框
 	object_ptr<Ui::RpWidget> _cardOverlay = { nullptr };
+	base::unique_qptr<Ui::RpWidget> _chatSwitchFade;
 	object_ptr<Ui::ResizeArea> _firstColumnResizeArea = { nullptr };
 	object_ptr<Ui::ResizeArea> _thirdColumnResizeArea = { nullptr };
 
