@@ -109,6 +109,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/ui/extras_userpic.h"
 #include "extras/utils/telegram_helpers.h"
 #include "styles/style_extras_icons.h"
+#include "styles/style_extras_styles.h"
 
 
 namespace Dialogs {
@@ -283,6 +284,37 @@ const style::icon &SearchFilterIcon(Api::SearchFilter filter) {
 		return tr::lng_search_filter_channel(tr::now);
 	}
 	Unexpected("Chat type filter in search results.");
+}
+
+// 两种选中状态分别画到离屏再逐像素插值，透明底色下也是线性过渡。
+void PaintActiveFade(
+		Painter &p,
+		QSize size,
+		float64 active,
+		Fn<void(Painter&, bool)> paint) {
+	const auto ratio = style::DevicePixelRatio();
+	const auto layer = [&](bool state) {
+		auto result = QImage(
+			size * ratio,
+			QImage::Format_ARGB32_Premultiplied);
+		result.setDevicePixelRatio(ratio);
+		result.fill(Qt::transparent);
+		{
+			auto q = Painter(&result);
+			q.setInactive(p.inactive());
+			paint(q, state);
+		}
+		return result;
+	};
+	auto frame = layer(false);
+	{
+		auto q = QPainter(&frame);
+		// Source 模式带不透明度 o 时结果为 o * 本层 + (1 - o) * 底。
+		q.setCompositionMode(QPainter::CompositionMode_Source);
+		q.setOpacity(active);
+		q.drawImage(0, 0, layer(true));
+	}
+	p.drawImage(0, 0, frame);
 }
 
 } // namespace
@@ -598,7 +630,7 @@ InnerWidget::InnerWidget(
 	) | rpl::on_next([=](
 			RowDescriptor previous,
 			RowDescriptor next) {
-		const auto update = [&](const RowDescriptor &descriptor) {
+		const auto update = [=](const RowDescriptor &descriptor) {
 			const auto msgId = descriptor.fullId;
 			if (const auto topic = descriptor.key.topic()) {
 				if (_openedForum == topic->forum()) {
@@ -618,6 +650,22 @@ InnerWidget::InnerWidget(
 		};
 		update(previous);
 		update(next);
+		_activeFadeFrom = previous;
+		_activeFade.start([=] {
+			update(previous);
+			update(next);
+		}, 0., 1., st::extrasInPlaceFadeDuration, anim::easeOutCubic);
+	}, lifetime());
+
+	// 淡出中的话题或子列表被删除时结束淡化，不再访问它。
+	session().changes().entryUpdates(
+		Data::EntryUpdate::Flag::Destroyed
+	) | rpl::on_next([=](const Data::EntryUpdate &update) {
+		if (_activeFadeFrom.key
+			&& _activeFadeFrom.key.entry() == update.entry) {
+			_activeFade.stop();
+			_activeFadeFrom = RowDescriptor();
+		}
 	}, lifetime());
 
 	_controller->window().widget()->globalForceClicks(
@@ -1116,12 +1164,12 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		// We translate painter down, but it'll be cropped below rect.
 		p.fillRect(rect(), context.currentBg);
 	});
-	const auto paintRow = [&](
+	const auto paintRowState = [&](
+			Painter &p,
 			not_null<Row*> row,
 			bool selected,
-			bool mayBeActive) {
+			bool active) {
 		const auto &key = row->key();
-		const auto active = mayBeActive && isRowActive(row, activeEntry);
 		const auto history = key.history();
 		const auto forum = history && history->peer->displayAsForum();
 		const auto monoforum = history && history->amMonoforumAdmin();
@@ -1306,6 +1354,27 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		if (context.quickActionContext) {
 			context.quickActionContext = nullptr;
 		}
+	};
+	const auto paintRow = [&](
+			not_null<Row*> row,
+			bool selected,
+			bool mayBeActive) {
+		const auto active = mayBeActive && isRowActive(row, activeEntry);
+		const auto wasActive = mayBeActive
+			&& _activeFade.animating()
+			&& isRowActive(row, _activeFadeFrom);
+		if (active == wasActive) {
+			paintRowState(p, row, selected, active);
+			return;
+		}
+		const auto shown = _activeFade.value(1.);
+		PaintActiveFade(
+			p,
+			QSize(fullWidth, row->height()),
+			active ? shown : (1. - shown),
+			[&](Painter &q, bool state) {
+				paintRowState(q, row, selected, state);
+			});
 	};
 	if (_state == WidgetState::Default) {
 		if (communityModeShown()) {

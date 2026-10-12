@@ -820,6 +820,9 @@ private:
 
 	RowDescriptor _chatPreviewRow;
 	bool _chatPreviewScheduled = false;
+	// 切换选中对话时旧行的选中效果淡出、新行淡入。
+	RowDescriptor _activeFadeFrom;
+	Ui::Animations::Simple _activeFade;
 	std::optional<QPoint> _chatPreviewTouchGlobal;
 	base::Timer _touchDragPinnedTimer;
 	std::optional<QPoint> _touchDragStartGlobal;
