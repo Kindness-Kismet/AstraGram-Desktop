@@ -48,7 +48,7 @@ void AddRepeatMessageAction(
 	HistoryView::Context context = HistoryView::Context::History);
 void AddReadUntilAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
 void AddBurnAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
-void AddVideoPreviewAction(
+void AddVideoCoverAction(
 	not_null<Ui::PopupMenu*> menu,
 	not_null<Window::SessionController*> controller,
 	HistoryItem *item,

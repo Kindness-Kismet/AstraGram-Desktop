@@ -3318,7 +3318,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				}, &st::menuIconGif);
 			}
 		}
-		ExtrasUi::AddVideoPreviewAction(_menu, controller, item, document);
+		ExtrasUi::AddVideoCoverAction(_menu, controller, item, document);
 		if (!document->filepath(true).isEmpty()) {
 			_menu->addAction(Platform::IsMac() ? tr::lng_context_show_in_finder(tr::now) : tr::lng_context_show_in_folder(tr::now), [=] {
 				showContextInFolder(document);

@@ -866,8 +866,5 @@
   "SimulationArchive": "归档",
   "SimulationCountdown": "消息在 15 秒后删除",
   "SimulationUpdateReady": "更新已就绪",
-  "ContextVideoPreview": "查看视频预览",
-  "VideoPreviewLoading": "正在加载预览…",
-  "VideoPreviewUnavailable": "无法显示预览",
-  "VideoPreviewPlayFrom": "从 {time} 开始播放"
+  "ContextVideoCover": "查看视频封面"
 }

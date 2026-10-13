@@ -308,8 +308,8 @@ set(extras_files
         extras/features/music_player/music_player_panel.h
         extras/features/message_shot/message_shot.cpp
         extras/features/message_shot/message_shot.h
-        extras/features/video_preview/video_preview.cpp
-        extras/features/video_preview/video_preview.h
+        extras/features/video_cover/video_cover.cpp
+        extras/features/video_cover/video_cover.h
         extras/features/auto_space/auto_space.cpp
         extras/features/auto_space/auto_space.h
         extras/features/emoji_packs/emoji_font.cpp

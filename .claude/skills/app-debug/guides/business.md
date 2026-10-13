@@ -35,7 +35,7 @@
 | `message.fetch` | `<peerId> [limit]` | 异步获取指定对话的最近消息；不打开对话，不发送已读回执。 |
 | `message.media` | `<peerId> [limit] [offsetId]` | 异步读取文件附件的原始结构：类型、大小、视频属性、缩略图及全部附带文件；不写入本地消息。 |
 | `message.media-file` | `<peerId> <messageId> <mime> <destination>` | 异步保存附带文件中第一个指定类型的文件，例如缩略图拼图 `application/x-tgstoryboard`；只请求一次，超过 1 MB 直接拒绝。 |
-| `video.preview` | `<peerId> <messageId>` | 与右键“查看视频预览”相同，在媒体查看器中逐帧浏览；消息需已加载，视频没有服务器缩略图拼图时报错。返回拼图与索引文件大小。 |
+| `video.cover` | `<peerId> <messageId>` | 与右键“查看视频封面”相同，在媒体查看器中查看上传者设置的封面，没有时查看服务器缩略图；消息需已加载，两者都没有时报错。返回封面来源与缩略图大小。 |
 | `peer.resolve` | `<username>` | 异步按用户名解析公开频道或用户，返回会话编号；不加入、不关注。 |
 | `message.inspect` | `<peerId> <messageId>` | 原有消息状态，以及发送者、提及实体、附件名、类型、大小和下载状态。 |
 | `message.send-file` | `<peerId> <absolutePath> [caption] [--media]` | 后台准备单个文件并沿官方附件发送链路提交，不打开附件预览、不清除草稿；默认按文件发送，`--media` 对应“压缩”，视频按可播放的媒体发送。 |

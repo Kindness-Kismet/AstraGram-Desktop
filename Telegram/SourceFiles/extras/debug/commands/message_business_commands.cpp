@@ -2,7 +2,7 @@
 #include "extras/debug/commands/commands_internal.h"
 #include "extras/debug/debug_login.h"
 #include "extras/features/mention_by_id/mention_by_id.h"
-#include "extras/features/video_preview/video_preview.h"
+#include "extras/features/video_cover/video_cover.h"
 
 #include "apiwrap.h"
 #include "api/api_common.h"
@@ -511,9 +511,9 @@ Result sendFile(const QStringList &arguments) {
 	return jobStarted(id);
 }
 
-// 与右键“查看视频预览”打开同一个弹窗；视频没有缩略图拼图时直接报错。
-Result openVideoPreview(const QStringList &args) {
-	if (args.size() != 2) return Result::Err(u"usage: video.preview <peerId> <messageId>"_q);
+// 与右键“查看视频封面”相同；视频没有封面和缩略图时直接报错。
+Result openVideoCover(const QStringList &args) {
+	if (args.size() != 2) return Result::Err(u"usage: video.cover <peerId> <messageId>"_q);
 	const auto peer = findPeer(args[0]);
 	if (!peer) return Result::Err(u"peer not found"_q);
 	const auto item = peer->owner().message(peer->id, MsgId(args[1].toLongLong()));
@@ -521,14 +521,14 @@ Result openVideoPreview(const QStringList &args) {
 	const auto media = item->media();
 	const auto document = media ? media->document() : nullptr;
 	if (!document) return Result::Err(u"message has no document"_q);
-	if (!ExtrasVideoPreview::hasPreview(document)) return Result::Err(u"video has no storyboard"_q);
+	if (!ExtrasVideoCover::hasCover(item, document)) return Result::Err(u"video has no cover or thumbnail"_q);
 	const auto controller = peer->session().tryResolveWindow();
 	if (!controller) return Result::Err(u"no window controller"_q);
-	ExtrasVideoPreview::showFrames(controller, item, document);
-	const auto video = document->video();
+	const auto cover = LookupVideoCover(document, item);
+	ExtrasVideoCover::showCover(controller, item, document);
 	return Result::Ok(Compact(Json{
-		{ "storyboardSize", video->storyboard->size },
-		{ "mapSize", video->storyboardMap->size } }));
+		{ "source", cover ? "cover" : "thumbnail" },
+		{ "thumbnailSize", document->thumbnailByteSize() } }));
 }
 
 } // namespace
@@ -544,7 +544,7 @@ const HandlerMap &messageBusinessHandlers() {
 		{ u"message.media-file"_q, &saveAltFile },
 		{ u"peer.resolve"_q, &resolvePeer },
 		{ u"message.send-file"_q, &sendFile },
-		{ u"video.preview"_q, &openVideoPreview },
+		{ u"video.cover"_q, &openVideoCover },
 		{ u"mention.resolve"_q, &resolveMention },
 		{ u"mention.send"_q, &sendMention },
 	};
