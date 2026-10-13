@@ -360,8 +360,6 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 
 `.claude/skills/` 与 `.codex/skills/` 内容完全相同，分别供不同的 AI 工具读取，修改时两边同步。`CLAUDE.md` 只有一行 `@AGENTS.md`，规范只维护本文件这一份。
 
-`.pi/` 只有 `settings.json` 进入版本控制，运行时产生的 `tasks/` 已被忽略。
-
 ---
 
 ## Git 协作
@@ -380,10 +378,9 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 1. **nlohmann::json 临时对象**：`for (const auto &[k, v] : SettingsJson().items())` 会产生悬空引用，range-for 的生命周期延长不覆盖 `items()` 返回的代理对象。先把结果存进具名变量再调用 `.items()`。
 2. **`value()` 与 `current()`**：前者返回数据流用于订阅，后者返回引用用于一次性读取。不要在 lambda 里捕获 `current()` 返回的引用。
 3. **`not_null<T*>`**：GSL 类型，不能隐式转换成 `T*`，需要调用 `.get()`。不要让它指向栈上对象之后返回。
-4. **`.gitignore` 大小写**：Windows 文件系统大小写不敏感，`Debug/` 规则会连带忽略 `extras/debug/`（已显式放行）。新增路径前先跑 `git check-ignore -v <path>`。
-5. **配置与构建**：`build.py` 自己处理配置步骤；改 `CMakeLists.txt` 会自动重新配置，不需要删除 build 目录。
-6. **静态持有 QObject**：任何静态或全局的 QObject 都无法安全存活到 QApplication 析构之后，在析构阶段操作 Qt 对象是未定义行为。见调试章节最后一条。
-7. **字符串字面量拼接**：`"(" kPattern ")"` 这种写法要求 `kPattern` 是宏，`constexpr` 变量不能参与字面量拼接。同理 `QStringLiteral` 本身是宏，参数里不能拼接标识符，这种场合改用 `QLatin1String`。
+4. **配置与构建**：`build.py` 自己处理配置步骤；改 `CMakeLists.txt` 会自动重新配置，不需要删除 build 目录。
+5. **静态持有 QObject**：任何静态或全局的 QObject 都无法安全存活到 QApplication 析构之后，在析构阶段操作 Qt 对象是未定义行为。见调试章节最后一条。
+6. **字符串字面量拼接**：`"(" kPattern ")"` 这种写法要求 `kPattern` 是宏，`constexpr` 变量不能参与字面量拼接。同理 `QStringLiteral` 本身是宏，参数里不能拼接标识符，这种场合改用 `QLatin1String`。
 
 ---
 
@@ -406,7 +403,6 @@ python scripts/upstream.py done <官方版本>     # 适配并编译通过后登
 - [ ] 新代码放在正确的目录？（见"改动位置对照表"）
 - [ ] 新文件登记进 `Telegram/CMakeLists.txt` 的 `extras_files`？
 - [ ] 新增或拆分后的 `.cpp` 文件不超过 2000 行？
-- [ ] `extras/debug/` 下的新文件没有被 `.gitignore` 误拦？
 - [ ] 调试代码包在 `#ifdef _DEBUG` 内？
 - [ ] 新设置项在 `extras_settings` 的成员、`to_json`、`from_json` 三处同步？
 - [ ] rpl 订阅绑定了 `lifetime()`？
