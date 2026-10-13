@@ -5,6 +5,10 @@
 #include "ui/rect.h"
 
 #include <QSvgRenderer>
+#include <QtCore/QCryptographicHash>
+#include <QtCore/QHash>
+#include <QtCore/QResource>
+#include <QtCore/QSaveFile>
 
 static QString LAST_LOADED_NAME;
 static QImage LAST_LOADED;
@@ -27,24 +31,63 @@ const QVector<QString> &appIcons() {
 }
 
 QString appIcoPath() {
-	const auto &settings = ExtrasSettings::getInstance();
-	return cWorkingDir()
-		+ u"tdata/extras-"_q
-		+ settings.appIcon()
-		+ u".ico"_q;
+	const auto iconName = ExtrasSettings::getInstance().appIcon();
+	static auto fileNames = QHash<QString, QString>();
+	auto i = fileNames.constFind(iconName);
+	if (i == fileNames.cend()) {
+		const auto resource = QResource(
+			u":/gui/art/extras/%1/app_icon.ico"_q.arg(iconName));
+		const auto digest = QCryptographicHash::hash(
+			resource.uncompressedData(),
+			QCryptographicHash::Sha256).toHex().left(16);
+		// 资源变化时更换缓存路径，避免系统复用旧位图；同一资源保持路径稳定。
+		i = fileNames.insert(iconName, u"extras-%1-%2.ico"_q.arg(
+			iconName,
+			QString::fromLatin1(digest)));
+	}
+	return cWorkingDir() + u"tdata/"_q + *i;
 }
 
-void loadAppIco() {
+AppIcoStatus loadAppIco() {
 	const auto &settings = ExtrasSettings::getInstance();
 	const auto iconPath = appIcoPath();
-
-	auto f = QFile(iconPath);
-	if (f.exists()) {
-		f.setPermissions(QFile::WriteOther);
-		f.remove();
+	auto source = QFile(u":/gui/art/extras/%1/app_icon.ico"_q.arg(
+		settings.appIcon()));
+	if (!source.open(QIODevice::ReadOnly)) {
+		LOG(("Icon Error: Could not open icon resource: %1").arg(source.errorString()));
+		return AppIcoStatus::Failed;
 	}
-	f.close();
-	QFile::copy(qsl(":/gui/art/extras/%1/app_icon.ico").arg(settings.appIcon()), iconPath);
+	const auto bytes = source.readAll();
+	auto existing = QFile(iconPath);
+	if (existing.exists()) {
+		if (!existing.open(QIODevice::ReadOnly)) {
+			LOG(("Icon Error: Could not read %1: %2")
+				.arg(iconPath).arg(existing.errorString()));
+			return AppIcoStatus::Failed;
+		}
+		const auto same = (existing.readAll() == bytes);
+		if (existing.error() != QFileDevice::NoError) {
+			LOG(("Icon Error: Could not read %1: %2")
+				.arg(iconPath).arg(existing.errorString()));
+			return AppIcoStatus::Failed;
+		}
+		existing.close();
+		if (same) {
+			return AppIcoStatus::Unchanged;
+		}
+	}
+
+	// 原子替换，避免短暂移除系统正在引用的图标。
+	auto output = QSaveFile(iconPath);
+	if (!output.open(QIODevice::WriteOnly)
+		|| output.write(bytes) != bytes.size()
+		|| !output.commit()) {
+		LOG(("Icon Error: Could not save %1: %2")
+			.arg(iconPath).arg(output.errorString()));
+		return AppIcoStatus::Failed;
+	}
+	DEBUG_LOG(("Icon: Updated file %1").arg(iconPath));
+	return AppIcoStatus::Updated;
 }
 
 QImage CreateImage(const QString &name, const QSize resultImageSize, const int padding = 0) {

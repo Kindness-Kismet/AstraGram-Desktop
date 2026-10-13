@@ -23,7 +23,6 @@ namespace {
 
 void applyIcon() {
 #ifdef Q_OS_WIN
-	ExtrasAssets::loadAppIco();
 	reloadAppIconFromTaskBar();
 #endif
 

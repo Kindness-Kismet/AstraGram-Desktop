@@ -16,7 +16,13 @@ ICON(YAPLUS, "yaplus");
 // 图标选择器提供的全部预设，顺序即界面顺序。
 [[nodiscard]] const QVector<QString> &appIcons();
 
-void loadAppIco();
+enum class AppIcoStatus {
+	Unchanged,
+	Updated,
+	Failed,
+};
+
+[[nodiscard]] AppIcoStatus loadAppIco();
 QString appIcoPath();
 
 QImage loadPreview(const QString& name);
