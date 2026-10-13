@@ -28,7 +28,9 @@
 #include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
+#include "media/clip/media_clip_reader.h"
 #include "platform/platform_notifications_manager.h"
+#include "ui/chat/attach/attach_prepare.h"
 #include "ui/text/text_entity.h"
 #include "window/window_session_controller.h"
 
@@ -36,6 +38,7 @@
 
 #include <QBuffer>
 #include <QFile>
+#include <QFileInfo>
 #include <QImage>
 #include <QtGui/QEnterEvent>
 #include <QtGui/QMouseEvent>
@@ -128,6 +131,51 @@ using json = nlohmann::json;
 		document, MTPVector<MTPDocument>(), MTPPhoto(), MTPint(), MTPint());
 }
 
+// 本地视频样本：首帧作缩略图，播放直接读取本地文件。
+[[nodiscard]] std::optional<MTPMessageMedia> simulationVideoMedia(
+		not_null<Main::Session*> session,
+		const QString &path,
+		int32 messageId) {
+	const auto info = Media::Clip::PrepareForSending(path, QByteArray());
+	using Video = Ui::PreparedFileInformation::Video;
+	const auto video = std::get_if<Video>(&info.media);
+	if (!video || video->thumbnail.isNull() || video->duration <= 0) {
+		return std::nullopt;
+	}
+	const auto file = QFileInfo(path);
+	const auto size = video->thumbnail.size();
+	const auto document = MTP_document(
+		MTP_flags(0),
+		MTP_long(7000000000LL + messageId),
+		MTP_long(0),
+		MTP_bytes(),
+		MTP_int(base::unixtime::now()),
+		MTP_string("video/mp4"),
+		MTP_long(file.size()),
+		MTP_vector<MTPPhotoSize>(),
+		MTPVector<MTPVideoSize>(),
+		MTP_int(0),
+		MTP_vector<MTPDocumentAttribute>({
+			MTP_documentAttributeVideo(
+				MTP_flags(MTPDdocumentAttributeVideo::Flag::f_supports_streaming),
+				MTP_double(video->duration / 1000.),
+				MTP_int(size.width()),
+				MTP_int(size.height()),
+				MTPint(),
+				MTPdouble(),
+				MTPstring()),
+			MTP_documentAttributeFilename(MTP_string(file.fileName())),
+		}));
+	const auto data = session->data().processDocument(document);
+	data->setLocation(Core::FileLocation(file.absoluteFilePath()));
+	auto &media = *session->lifetime().make_state<std::shared_ptr<Data::DocumentMedia>>(
+		data->createMediaView());
+	media->setThumbnail(video->thumbnail);
+	return MTP_messageMediaDocument(
+		MTP_flags(MTPDmessageMediaDocument::Flag::f_document),
+		document, MTPVector<MTPDocument>(), MTPPhoto(), MTPint(), MTPint());
+}
+
 // 富消息样本：正文段落加一张带表头的两列表格。
 [[nodiscard]] MTPRichMessage simulationRichTable(const QString &text) {
 	const auto cell = [](const QString &value, bool header) {
@@ -170,6 +218,7 @@ using json = nlohmann::json;
 	auto targetPeer = QString();
 	auto stickerPath = QString();
 	auto photoPath = QString();
+	auto videoPath = QString();
 	auto groupId = uint64(0);
 	auto richTable = false;
 	for (auto i = 0; i < args.size(); ++i) {
@@ -177,6 +226,9 @@ using json = nlohmann::json;
 		if (arg == u"--photo"_q) {
 			if (++i >= args.size()) return Result::Err(u"usage: --photo <imagePath>"_q);
 			photoPath = args.at(i);
+		} else if (arg == u"--video"_q) {
+			if (++i >= args.size()) return Result::Err(u"usage: --video <videoPath>"_q);
+			videoPath = args.at(i);
 		} else if (arg == u"--group"_q) {
 			if (++i >= args.size()) return Result::Err(u"usage: --group <positiveId>"_q);
 			auto ok = false;
@@ -210,23 +262,27 @@ using json = nlohmann::json;
 			return Result::Err(
 				u"usage: simulation.message <text> "
 				u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] "
-				u"[--sticker <imagePath> | --photo <imagePath> [--group <positiveId>] | --rich-table]"_q);
+				u"[--sticker <imagePath> | --photo <imagePath> | --video <videoPath> [--group <positiveId>] | --rich-table]"_q);
 		}
 	}
 	if (text.isEmpty()) {
 		return Result::Err(
 			u"usage: simulation.message <text> "
 			u"[--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban] "
-			u"[--sticker <imagePath> | --photo <imagePath> [--group <positiveId>] | --rich-table]"_q);
+			u"[--sticker <imagePath> | --photo <imagePath> | --video <videoPath> [--group <positiveId>] | --rich-table]"_q);
 	}
 
 	const auto session = ActiveSession();
 	if (!session || !isSimulationSession(session)) {
 		return Result::Err(u"simulation mode is required"_q);
 	}
-	if ((int(!photoPath.isEmpty()) + int(!stickerPath.isEmpty()) + int(richTable) > 1)
-		|| (groupId && photoPath.isEmpty())) {
-		return Result::Err(u"--photo, --sticker and --rich-table are exclusive; --group requires --photo"_q);
+	const auto hasMedia = !photoPath.isEmpty() || !videoPath.isEmpty();
+	if ((int(!photoPath.isEmpty())
+			+ int(!videoPath.isEmpty())
+			+ int(!stickerPath.isEmpty())
+			+ int(richTable) > 1)
+		|| (groupId && !hasMedia)) {
+		return Result::Err(u"--photo, --video, --sticker and --rich-table are exclusive; --group requires --photo or --video"_q);
 	}
 	const auto selfPeer = session->userPeerId();
 	const auto peer = targetPeer.isEmpty() ? static_cast<PeerData*>(session->user()) : findPeer(targetPeer);
@@ -287,8 +343,15 @@ using json = nlohmann::json;
 		}
 		media = *sticker;
 	}
+	if (!videoPath.isEmpty()) {
+		const auto video = simulationVideoMedia(session, videoPath, messageId);
+		if (!video) {
+			return Result::Err(u"expected a readable video file"_q);
+		}
+		media = *video;
+	}
 	const auto flags = MTPDmessage::Flag::f_from_id
-		| ((stickerPath.isEmpty() && photoPath.isEmpty())
+		| ((stickerPath.isEmpty() && !hasMedia)
 			? MTPDmessage::Flag() : MTPDmessage::Flag::f_media)
 		| (groupId ? MTPDmessage::Flag::f_grouped_id : MTPDmessage::Flag())
 		| (richTable ? MTPDmessage::Flag::f_rich_message : MTPDmessage::Flag())

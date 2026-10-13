@@ -285,7 +285,8 @@ def register_commands(sub) -> None:
     command.add_argument("--peer", help="插入到指定模拟对话，默认收藏夹")
     command.add_argument("--sticker", metavar="IMAGE_PATH", help="用本地图片生成静态贴纸，各边不超过 512 像素")
     command.add_argument("--photo", metavar="IMAGE_PATH", help="用本地图片生成照片，各边不超过 2048 像素")
-    command.add_argument("--group", metavar="GROUP_ID", help="照片相册的正整数编号，配合 --photo 使用")
+    command.add_argument("--video", metavar="VIDEO_PATH", help="用本地视频生成视频消息，播放直接读取该文件")
+    command.add_argument("--group", metavar="GROUP_ID", help="相册的正整数编号，配合 --photo 或 --video 使用")
     command.add_argument("--rich-table", action="store_true", help="生成富消息：正文段落加一张两列表格")
     command = sub.add_parser("notification.test", help="让模拟用户发一条消息，触发系统或应用自带通知；原生通知需默认配置")
     command.add_argument("text", nargs="?", help="消息文本，默认 Debug 通知测试")
@@ -520,6 +521,8 @@ def build_server_command(args: argparse.Namespace) -> str:
             parts.extend(["--sticker", quote_arg(str(Path(args.sticker).resolve()))])
         if args.photo:
             parts.extend(["--photo", quote_arg(str(Path(args.photo).resolve()))])
+        if args.video:
+            parts.extend(["--video", quote_arg(str(Path(args.video).resolve()))])
         if args.group:
             parts.extend(["--group", args.group])
         if args.rich_table:
