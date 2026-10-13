@@ -358,8 +358,8 @@ bool OverlayWidget::RendererGL::handleHideWorkaround(QOpenGLFunctions &f) {
 }
 
 void OverlayWidget::RendererGL::paintBackground() {
-	if (_owner->backdropShown()) {
-		paintBackdrop();
+	if (const auto opacity = _owner->backdropOpacity(); opacity > 0.) {
+		paintBackdrop(opacity);
 	}
 	_contentBuffer->bind();
 	if (const auto notch = _owner->topNotchSkip()) {
@@ -386,19 +386,20 @@ void OverlayWidget::RendererGL::paintBackground() {
 	}
 }
 
-void OverlayWidget::RendererGL::paintBackdrop() {
+void OverlayWidget::RendererGL::paintBackdrop(float64 opacity) {
 	const auto &image = _owner->_backdrop;
 	_f->glActiveTexture(GL_TEXTURE0);
 	_backdropImage.setImage(image);
 	_backdropImage.bind(*_f);
 
-	toggleBlending(false);
+	// 展开到全屏时毛玻璃逐渐淡出，露出纯色底。
+	toggleBlending(opacity < 1.);
 	paintTexturedQuad(
 		_backdropImage,
 		QRect(QPoint(), _viewport),
 		QRect(QPoint(), image.size()),
 		extrasBufferOffset(),
-		1.);
+		opacity);
 }
 
 void OverlayWidget::RendererGL::paintTopBarSeparator(

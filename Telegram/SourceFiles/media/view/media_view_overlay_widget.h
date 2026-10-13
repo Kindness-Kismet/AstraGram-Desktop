@@ -359,10 +359,18 @@ private:
 	void updateGeometryToScreen(bool inMove = false);
 	void prepareOpenMode(const OpenRequest &request);
 	void updateGeometryToHost();
+	void updateBodyGeometry();
+	void updateWindowMask();
+	// 宿主在查看器窗口里的位置，窗口坐标。
+	[[nodiscard]] QRect hostRect() const;
+	void startFullScreenAnimation(float64 from);
 	void refreshBackdrop();
 	[[nodiscard]] bool inWindowShown() const;
 	[[nodiscard]] bool lightboxStyle() const;
-	[[nodiscard]] bool backdropShown() const;
+	// 窗口内为 0，全屏为 1，展开和收回时取中间值。
+	[[nodiscard]] float64 fullScreenProgress() const;
+	[[nodiscard]] float64 backdropOpacity() const;
+	[[nodiscard]] int hostCornerRadius() const;
 	bool moveToNext(int delta);
 	void preloadData(int delta);
 
@@ -661,10 +669,11 @@ private:
 	bool _fullscreen = true;
 	bool _windowed = false;
 
-	// 非空表示本次以窗口内模式打开；全屏时保留，退出全屏回到宿主窗口内。
+	// 非空表示本次以窗口内模式打开：窗口始终全屏，窗口内时只露出宿主那块。
 	std::unique_ptr<ExtrasFeatures::MediaViewer::ViewerHost> _viewerHost;
 	QImage _backdrop;
 	base::Timer _backdropRefreshTimer;
+	Ui::Animations::Simple _fullScreenAnimation;
 	bool _fullscreenForVideo = false;
 
 	base::weak_ptr<Window::Controller> _openedFrom;

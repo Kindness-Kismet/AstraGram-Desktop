@@ -6,6 +6,7 @@
 #include "ui/image/image_prepare.h"
 #include "ui/ui_utility.h"
 #include "styles/style_basic.h"
+#include "styles/style_extras_styles.h"
 
 #include <QtGui/QWindow>
 
@@ -66,6 +67,20 @@ ViewerHost::~ViewerHost() {
 
 QRect ViewerHost::geometry() const {
 	return _host ? _host->geometry() : QRect();
+}
+
+QScreen *ViewerHost::screen() const {
+	return _host ? _host->screen() : nullptr;
+}
+
+int ViewerHost::cornerRadius() const {
+	const auto squared = Qt::WindowMaximized | Qt::WindowFullScreen;
+	if (!_host
+		|| !Platform::IsWindows11OrGreater()
+		|| (_host->windowState() & squared)) {
+		return 0;
+	}
+	return st::extrasViewerHostRadius;
 }
 
 QImage ViewerHost::grabBackdrop() const {

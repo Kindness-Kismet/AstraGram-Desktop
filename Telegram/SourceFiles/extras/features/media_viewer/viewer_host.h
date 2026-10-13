@@ -18,6 +18,9 @@ public:
 	~ViewerHost();
 
 	[[nodiscard]] QRect geometry() const;
+	[[nodiscard]] QScreen *screen() const;
+	// 宿主带系统圆角时返回圆角半径，否则为 0。
+	[[nodiscard]] int cornerRadius() const;
 	// 宿主画面缩小模糊后叠暗色，作为查看器的毛玻璃背景。
 	[[nodiscard]] QImage grabBackdrop() const;
 	[[nodiscard]] bool hosts(not_null<QWidget*> window) const;

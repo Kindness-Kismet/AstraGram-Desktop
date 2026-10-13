@@ -83,7 +83,7 @@ private:
 		const QImage &image,
 		ContentGeometry geometry,
 		float64 opacity);
-	void paintBackdrop();
+	void paintBackdrop(float64 opacity);
 	void paintTopBarSeparator(QRect rect, float64 opacity) override;
 	[[nodiscard]] int extrasBufferOffset() const;
 	void paintTexturedQuad(

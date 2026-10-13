@@ -280,3 +280,8 @@ extrasViewerDateFont: font(12px);
 extrasViewerFullScreen: icon {{ "player/player_fullscreen", mediaviewControlFg }};
 extrasViewerFullScreenOut: icon {{ "player/player_minimize", mediaviewControlFg }};
 extrasViewerClose: icon {{ "extras/viewer_close", mediaviewControlFg }};
+
+// 窗口内查看器展开到全屏、收回窗口内的时长。
+extrasViewerFullScreenDuration: 260;
+// Win11 未最大化窗口的系统圆角半径，查看器盖在宿主上时按它裁角。
+extrasViewerHostRadius: 8px;

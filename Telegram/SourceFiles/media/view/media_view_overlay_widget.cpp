@@ -278,12 +278,6 @@ constexpr auto kBackdropRefreshDelay = crl::time(100);
 constexpr auto kTopBarSecondaryOpacity = 0.62;
 constexpr auto kTopBarSeparatorOpacity = 0.2;
 
-// 撤销窗口内模式的固定尺寸，恢复查看器原本的尺寸限制。
-void ReleaseFixedSize(not_null<Ui::RpWindow*> window) {
-	window->setMinimumSize({ st::mediaviewMinWidth, st::mediaviewMinHeight });
-	window->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
-}
-
 PipDelegate::PipDelegate(QWidget *parent, not_null<Main::Session*> session)
 : _parent(parent)
 , _session(session) {
@@ -694,8 +688,8 @@ OverlayWidget::OverlayWidget()
 , _helper(Platform::CreateOverlayWidgetHelper(_window.get(), [=](bool maximized) {
 	toggleFullScreen(maximized);
 }))
-, _body(_wrap->widget())
-, _titleBugWorkaround(std::make_unique<Ui::RpWidget>(_body))
+, _body(Ui::CreateChild<Ui::RpWidget>(_wrap->widget()))
+, _titleBugWorkaround(std::make_unique<Ui::RpWidget>(_wrap->widget()))
 , _surface(
 	Ui::GL::CreateSurface(_body, chooseRenderer(_wrap->backend())))
 , _widget(_surface->rpWidget())
@@ -809,7 +803,7 @@ OverlayWidget::OverlayWidget()
 			const auto event = static_cast<QContextMenuEvent*>(e.get());
 			const auto mouse = (event->reason() == QContextMenuEvent::Mouse);
 			const auto position = mouse
-				? std::make_optional(event->pos())
+				? std::make_optional(_widget->mapFrom(_window, event->pos()))
 				: std::nullopt;
 			if (handleContextMenu(position)) {
 				return base::EventFilterResult::Cancel;
@@ -824,6 +818,14 @@ OverlayWidget::OverlayWidget()
 							_window->windowState() & ~Qt::WindowMinimized);
 						if (_viewerHost) {
 							_viewerHost->minimizeHost();
+						}
+					});
+				} else if (!(state & Qt::WindowFullScreen)) {
+					// 窗口内模式依赖全屏窗口，被系统还原时重新铺满。
+					InvokeQueued(_window, [=] {
+						if (_viewerHost && !isHidden()) {
+							_window->showFullScreen();
+							updateGeometryToHost();
 						}
 					});
 				}
@@ -848,25 +850,6 @@ OverlayWidget::OverlayWidget()
 		const auto type = e->type();
 		if (type == QEvent::Resize) {
 			const auto size = static_cast<QResizeEvent*>(e.get())->size();
-
-			// Somehow Windows 11 knows the geometry of first widget below
-			// the semi-native title control widgets and it uses
-			// it's geometry to show the snap grid popup around it when
-			// you put the mouse over the Maximize button. In the 4.6.4 beta
-			// the first widget was `_widget`, so the popup was shown
-			// either above the window or, if not enough space above, below
-			// the whole window, you couldn't even put the mouse on it.
-			//
-			// So now here is this weird workaround that places our
-			// `_titleBugWorkaround` widget as the first one under the title
-			// controls and the system shows the popup around its geometry,
-			// so we set it's height to the title controls height
-			// and everything works as expected.
-			//
-			// This doesn't make sense. But it works. :shrug:
-			_titleBugWorkaround->setGeometry(
-				{ 0, 0, size.width(), st::mediaviewTitleButton.height });
-
 			_widget->setGeometry({ QPoint(), size });
 			updateControlsGeometry();
 		} else if (type == QEvent::MouseButtonDblClick
@@ -874,7 +857,7 @@ OverlayWidget::OverlayWidget()
 			&& mouseButton(e) == Qt::LeftButton
 			&& mousePosition(e).y() <= st::mediaviewTitleButton.height
 			&& !topBarControlAt(mousePosition(e))) {
-			// 窗口内模式切换全屏要先解除固定尺寸，顶部双击不走系统的全屏切换。
+			// 窗口内模式的窗口始终全屏，顶部双击不走系统的全屏切换。
 			toggleFullScreen(!_fullscreen);
 			return base::EventFilterResult::Cancel;
 		} else if (type == QEvent::KeyPress) {
@@ -884,6 +867,32 @@ OverlayWidget::OverlayWidget()
 		}
 		return base::EventFilterResult::Continue;
 	});
+	_wrap->widget()->sizeValue(
+	) | rpl::on_next([=](QSize size) {
+		// Somehow Windows 11 knows the geometry of first widget below
+		// the semi-native title control widgets and it uses
+		// it's geometry to show the snap grid popup around it when
+		// you put the mouse over the Maximize button. In the 4.6.4 beta
+		// the first widget was `_widget`, so the popup was shown
+		// either above the window or, if not enough space above, below
+		// the whole window, you couldn't even put the mouse on it.
+		//
+		// So now here is this weird workaround that places our
+		// `_titleBugWorkaround` widget as the first one under the title
+		// controls and the system shows the popup around its geometry,
+		// so we set it's height to the title controls height
+		// and everything works as expected.
+		//
+		// This doesn't make sense. But it works. :shrug:
+		_titleBugWorkaround->setGeometry(
+			{ 0, 0, size.width(), st::mediaviewTitleButton.height });
+
+		updateBodyGeometry();
+	}, _body->lifetime());
+
+	// 沿用上游层级：绕过控件排在内容容器之下。
+	_titleBugWorkaround->stackUnder(_body);
+
 	base::install_event_filter(_widget, [=](not_null<QEvent*> e) {
 		const auto type = e->type();
 		if (type == QEvent::Leave) {
@@ -1081,9 +1090,10 @@ void OverlayWidget::orderWidgets() {
 }
 
 void OverlayWidget::setupWindow() {
-	_window->setBodyTitleArea([=](QPoint widgetPoint) {
+	_window->setBodyTitleArea([=](QPoint bodyPoint) {
 		using Flag = Ui::WindowTitleHitTestFlag;
 		Ui::WindowTitleHitTestFlags result;
+		const auto widgetPoint = _widget->mapFrom(_wrap->widget(), bodyPoint);
 		if (!_widget->rect().contains(widgetPoint)
 			|| _helper->skipTitleHitTest(_widget->mapTo(_window, widgetPoint))) {
 			return result;
@@ -1147,7 +1157,12 @@ void OverlayWidget::refreshLang() {
 }
 
 void OverlayWidget::moveToScreen(bool inMove) {
-	if (!_fullscreen || _wasWindowedMode) {
+	if (_viewerHost) {
+		if (!isHidden()) {
+			updateGeometryToHost();
+		}
+		return;
+	} else if (!_fullscreen || _wasWindowedMode) {
 		return;
 	}
 	const auto applicationWindow = Core::App().activeWindow()
@@ -1266,7 +1281,7 @@ void OverlayWidget::savePosition() {
 
 void OverlayWidget::updateGeometry(bool inMove) {
 	initFullScreen();
-	if (inWindowShown()) {
+	if (_viewerHost) {
 		updateGeometryToHost();
 		return;
 	}
@@ -1332,6 +1347,7 @@ void OverlayWidget::prepareOpenMode(const OpenRequest &request) {
 	_viewerHost = nullptr;
 	_backdrop = QImage();
 	_fullscreenForVideo = false;
+	_fullScreenAnimation.stop();
 	const auto window = !inWindowEnabled()
 		? nullptr
 		: (request.story() || request.call())
@@ -1353,29 +1369,90 @@ void OverlayWidget::prepareOpenMode(const OpenRequest &request) {
 		_backdrop = _viewerHost->grabBackdrop();
 		_fullscreen = _windowed = false;
 		_helper->setTitleControlsHidden(true);
+		// 自绘标题栏会在屏幕顶端留一条细边，窗口内样式用不到它。
+		_window->setNativeFrame(true);
 		return;
 	}
 	if (!wasInWindow) {
 		return;
 	}
 	_helper->setTitleControlsHidden(false);
-	ReleaseFixedSize(_window);
+	_window->setNativeFrame(false);
+	updateWindowMask();
+	updateBodyGeometry();
 	const auto mode = Core::App().settings().mediaViewPosition().maximized;
 	_fullscreen = (mode == 2) || (mode == 1 && Platform::IsMac());
 	_windowed = (mode == 0);
 }
 
 void OverlayWidget::updateGeometryToHost() {
-	if (!inWindowShown()) {
+	if (!_viewerHost) {
 		return;
 	}
-	// 整个查看器窗口与宿主重合，标题区的顶部边距算在窗口内。
-	const auto geometry = _viewerHost->geometry();
-	_window->Ui::RpWidget::setFixedSize(geometry.size());
-	_window->Ui::RpWidget::setGeometry(geometry);
-	if (_backdrop.size() != geometry.size() * _backdrop.devicePixelRatio()) {
+	// 窗口始终铺满宿主所在屏幕，进出全屏只改内容容器和窗口区域。
+	if (const auto screen = _viewerHost->screen()) {
+		if (_window->screen() != screen) {
+			_window->createWinId();
+			window()->setScreen(screen);
+		}
+		const auto available = screen->geometry();
+		if (_window->geometry() != available) {
+			_window->Ui::RpWidget::setGeometry(available);
+		}
+	}
+	updateBodyGeometry();
+	updateWindowMask();
+	const auto size = _viewerHost->geometry().size();
+	if (inWindowShown()
+		&& _backdrop.size() != size * _backdrop.devicePixelRatio()) {
 		_backdropRefreshTimer.callOnce(kBackdropRefreshDelay);
 	}
+}
+
+QRect OverlayWidget::hostRect() const {
+	return _viewerHost->geometry().translated(-_window->geometry().topLeft());
+}
+
+void OverlayWidget::updateBodyGeometry() {
+	const auto outer = _wrap->widget()->rect();
+	if (!_viewerHost) {
+		_body->setGeometry(outer);
+		return;
+	}
+	const auto host = hostRect().translated(-_wrap->widget()->pos());
+	const auto progress = fullScreenProgress();
+	const auto lerp = [&](int from, int to) {
+		return anim::interpolate(from, to, progress);
+	};
+	_body->setGeometry(
+		lerp(host.x(), outer.x()),
+		lerp(host.y(), outer.y()),
+		lerp(host.width(), outer.width()),
+		lerp(host.height(), outer.height()));
+}
+
+void OverlayWidget::updateWindowMask() {
+	// 窗口内只露出宿主那块，区域外的点击落到下层窗口；展开和全屏时整窗可见。
+	if (!_viewerHost || _fullscreen || _fullScreenAnimation.animating()) {
+		window()->setMask(QRegion());
+	} else if (_window->isFullScreen()) {
+		// 全屏前窗口带系统外框，Qt 会按外框偏移区域，所以全屏后再设置；
+		// 设在 QWindow 上，区域相同也会重新应用。
+		window()->setMask(QRegion(hostRect()));
+	}
+}
+
+void OverlayWidget::startFullScreenAnimation(float64 from) {
+	const auto to = _fullscreen ? 1. : 0.;
+	_fullScreenAnimation.start([=] {
+		updateBodyGeometry();
+		if (!_fullScreenAnimation.animating()) {
+			updateWindowMask();
+		}
+	}, from, to, st::extrasViewerFullScreenDuration, anim::easeOutCubic);
+	updateWindowMask();
+	updateBodyGeometry();
+	update();
 }
 
 void OverlayWidget::refreshBackdrop() {
@@ -1394,8 +1471,22 @@ bool OverlayWidget::lightboxStyle() const {
 	return _viewerHost != nullptr;
 }
 
-bool OverlayWidget::backdropShown() const {
-	return inWindowShown() && !_backdrop.isNull();
+float64 OverlayWidget::fullScreenProgress() const {
+	return _fullScreenAnimation.value(_fullscreen ? 1. : 0.);
+}
+
+float64 OverlayWidget::backdropOpacity() const {
+	return (_viewerHost && !_backdrop.isNull())
+		? (1. - fullScreenProgress())
+		: 0.;
+}
+
+int OverlayWidget::hostCornerRadius() const {
+	if (!_viewerHost) {
+		return 0;
+	}
+	const auto radius = _viewerHost->cornerRadius();
+	return int(base::SafeRound(radius * (1. - fullScreenProgress())));
 }
 
 void OverlayWidget::updateControlsGeometry() {
@@ -3338,25 +3429,23 @@ void OverlayWidget::toggleFullScreen() {
 
 void OverlayWidget::toggleFullScreen(bool fullscreen) {
 	_helper->clearState();
+	const auto progress = fullScreenProgress();
 	_fullscreen = fullscreen;
 	_windowed = !fullscreen && !_viewerHost;
 	if (!fullscreen) {
 		_fullscreenForVideo = false;
 	}
 	initNormalGeometry();
-	if constexpr (Platform::IsMac()) {
+	if (_viewerHost) {
+		// 窗口始终全屏，只在窗口里把画面从宿主区域展开或收回。
+		startFullScreenAnimation(progress);
+	} else if constexpr (Platform::IsMac()) {
 		_helper->beforeShow(_fullscreen);
 		updateGeometry();
 		_helper->afterShow(_fullscreen);
 	} else if (_fullscreen) {
-		if (_viewerHost) {
-			ReleaseFixedSize(_window);
-		}
 		updateGeometry();
 		_window->showFullScreen();
-	} else if (_viewerHost) {
-		_window->showNormal();
-		updateGeometryToHost();
 	} else {
 		_wasWindowedMode = false;
 		_window->showNormal();
@@ -3454,7 +3543,7 @@ void OverlayWidget::subscribeToScreenGeometry() {
 		screen,
 		&QScreen::geometryChanged
 	) | rpl::filter([=] {
-		return !isHidden() && !isMinimized() && _fullscreen;
+		return !isHidden() && !isMinimized() && (_fullscreen || _viewerHost);
 	}) | rpl::on_next([=] {
 		updateGeometry();
 	}, _screenGeometryLifetime);
@@ -5170,9 +5259,8 @@ void OverlayWidget::showAndActivate() {
 		_wasWindowedMode = false;
 	}
 	updateGeometry();
-	if (inWindowShown()) {
-		// 上次以全屏关闭时，还原窗口会套用旧几何，显示后再贴合宿主。
-		_window->showNormal();
+	if (_viewerHost) {
+		_window->showFullScreen();
 		updateGeometryToHost();
 	} else if (_windowed || Platform::IsMac()) {
 		_window->showNormal();
@@ -6708,7 +6796,10 @@ void OverlayWidget::paint(not_null<Renderer*> renderer) {
 		}
 	}
 	checkGroupThumbsAnimation();
-	if (const auto radius = _window->manualRoundingRadius()) {
+	const auto radius = _viewerHost
+		? hostCornerRadius()
+		: _window->manualRoundingRadius();
+	if (radius) {
 		renderer->paintRoundedCorners(radius);
 	}
 }
@@ -9284,6 +9375,7 @@ void OverlayWidget::clearBeforeHide() {
 void OverlayWidget::clearAfterHide() {
 	_backdrop = QImage();
 	_backdropRefreshTimer.cancel();
+	_fullScreenAnimation.stop();
 	_recognitionResult = {};
 	_recognitionPendingSessionUniqueId = 0;
 	_recognitionPendingPhotoId = 0;

@@ -85,14 +85,22 @@ void OverlayWidget::RendererSW::paintBackground() {
 	const auto &bg = _owner->_fullScreenVideo
 		? st::mediaviewVideoBg
 		: st::mediaviewBg;
-	if (_owner->backdropShown()) {
-		_p->setClipRegion(region);
-		_p->drawImage(_owner->_widget->rect(), _owner->_backdrop);
-		_p->setClipping(false);
-	} else {
+	const auto backdrop = _owner->backdropOpacity();
+	if (backdrop < 1.) {
 		for (const auto &rect : region) {
 			_p->fillRect(rect, bg);
 		}
+	}
+	if (backdrop > 0.) {
+		if (backdrop < 1.) {
+			_p->setCompositionMode(QPainter::CompositionMode_SourceOver);
+			_p->setOpacity(backdrop);
+		}
+		_p->setClipRegion(region);
+		_p->drawImage(_owner->_widget->rect(), _owner->_backdrop);
+		_p->setClipping(false);
+		_p->setOpacity(1.);
+		_p->setCompositionMode(QPainter::CompositionMode_Source);
 	}
 	if (const auto notch = _owner->topNotchSkip()) {
 		const auto top = QRect(0, 0, _owner->width(), notch);
@@ -360,7 +368,21 @@ void OverlayWidget::RendererSW::paintGroupThumbs(
 }
 
 void OverlayWidget::RendererSW::paintRoundedCorners(int radius) {
-	// The RpWindow rounding overlay will do the job.
+	if (!_owner->lightboxStyle()) {
+		// The RpWindow rounding overlay will do the job.
+		return;
+	}
+	// 窗口内查看器的窗口没有系统圆角，按宿主圆角把四角擦成透明。
+	const auto rect = QRectF(_owner->_widget->rect());
+	auto corners = QPainterPath();
+	corners.addRect(rect);
+	auto rounded = QPainterPath();
+	rounded.addRoundedRect(rect, radius, radius);
+	auto hq = PainterHighQualityEnabler(*_p);
+	const auto mode = _p->compositionMode();
+	_p->setCompositionMode(QPainter::CompositionMode_DestinationOut);
+	_p->fillPath(corners.subtracted(rounded), Qt::black);
+	_p->setCompositionMode(mode);
 }
 
 void OverlayWidget::RendererSW::paintStoriesSiblingPart(
