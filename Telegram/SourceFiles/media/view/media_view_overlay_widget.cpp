@@ -2235,7 +2235,7 @@ void OverlayWidget::refreshCaptionGeometry() {
 		? (_voteButton->y() - st::mediaviewCaptionMargin.height())
 		: _pollVotersWidget
 		? (_pollVotersWidget->y() - st::mediaviewCaptionMargin.height())
-		: (_streamed && _streamed->controls)
+		: (_streamed && _streamed->controls && !controllerOverContent())
 		? (_streamed->controls->y() - st::mediaviewCaptionMargin.height())
 		: _groupThumbs
 		? _groupThumbsTop
@@ -3017,14 +3017,16 @@ void OverlayWidget::recountSkipTop() {
 	// to count correct _availableHeight in non-full-screen-video mode.
 	//
 	// Originally this is controls->y() - padding.bottom().
-	const auto bottom = (_streamed && _streamed->controls)
+	const auto bottom = (_streamed
+		&& _streamed->controls
+		&& !controllerOverContent())
 		? (controllerBottomNoFullScreenVideo
 			- _streamed->controls->height()
 			- 2 * st::mediaviewCaptionPadding.bottom())
 		: height();
 	const auto skipHeightBottom = (height() - bottom);
 	if (lightboxStyle() && !_fullScreenVideo) {
-		// 四周固定留白，底部至少让出视频控制条。
+		// 四周固定留白，底部至少让出缩略图条。
 		const auto &padding = st::extrasViewerContentPadding;
 		_skipTop = _minUsedTop + padding.top();
 		_availableHeight = height()
@@ -3113,6 +3115,10 @@ void OverlayWidget::resizeContentByScreenSize() {
 		? (_minUsedTop + (_maxUsedHeight - _h) / 2)
 		: (_skipTop + (useh - _h) / 2);
 	_geometryAnimation.stop();
+	_fitContentRect = finalContentRect();
+	if (controllerOverContent()) {
+		refreshClipControllerGeometry();
+	}
 }
 
 float64 OverlayWidget::radialProgress() const {
@@ -5755,13 +5761,33 @@ void OverlayWidget::refreshClipControllerGeometry() {
 		? _groupThumbsTop
 		: height();
 	const auto skip = st::mediaviewCaptionPadding.bottom();
-	const auto controllerWidth = std::min(
-		st::mediaviewControllerSize.width(),
-		width() - 2 * skip);
 	const auto controllerHeight = st::mediaviewControllerSize.height()
 		+ (_streamed->controls->hasTimestamps()
 			? st::mediaviewTimestampLabelHeight
 			: 0);
+	if (controllerOverContent()) {
+		// 宽度跟随视频，视频太窄或太矮时按最小宽度居中、不超出缩略图条。
+		const auto inner = st::extrasViewerControllerSkip;
+		const auto video = _fitContentRect;
+		const auto controllerWidth = std::clamp(
+			video.width() - 2 * inner,
+			std::min(st::extrasViewerControllerMinWidth, width() - 2 * skip),
+			st::mediaviewControllerSize.width());
+		const auto bottom = std::min(
+			std::max(
+				video.y() + video.height(),
+				video.y() + controllerHeight + 2 * inner),
+			controllerBottom);
+		_streamed->controls->resize(controllerWidth, controllerHeight);
+		_streamed->controls->move(
+			video.x() + (video.width() - controllerWidth) / 2,
+			bottom - inner - controllerHeight);
+		Ui::SendPendingMoveResizeEvents(_streamed->controls.get());
+		return;
+	}
+	const auto controllerWidth = std::min(
+		st::mediaviewControllerSize.width(),
+		width() - 2 * skip);
 	_streamed->controls->resize(controllerWidth, controllerHeight);
 	_streamed->controls->move(
 		(width() - controllerWidth) / 2,
@@ -5769,6 +5795,10 @@ void OverlayWidget::refreshClipControllerGeometry() {
 			- _streamed->controls->height()
 			- st::mediaviewCaptionPadding.bottom()));
 	Ui::SendPendingMoveResizeEvents(_streamed->controls.get());
+}
+
+bool OverlayWidget::controllerOverContent() const {
+	return lightboxStyle() && !_fullScreenVideo;
 }
 
 void OverlayWidget::playbackControlsPlay() {

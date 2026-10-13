@@ -288,3 +288,6 @@ extrasViewerHostRadius: 8px;
 // 窗口内查看器的翻页按钮：左右两侧垂直居中的圆形。
 extrasViewerNavSize: 48px;
 extrasViewerNavSkip: 20px;
+// 窗口内查看器的视频控制条贴在视频底边内侧，视频太窄时按最小宽度显示。
+extrasViewerControllerSkip: 10px;
+extrasViewerControllerMinWidth: 320px;

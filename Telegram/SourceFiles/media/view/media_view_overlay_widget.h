@@ -484,6 +484,8 @@ private:
 	void flushPendingFrameStep();
 
 	void refreshClipControllerGeometry();
+	// 窗口内样式的视频控制条盖在视频底边内侧，不占用内容下方的空间。
+	[[nodiscard]] bool controllerOverContent() const;
 	void refreshCaptionGeometry();
 
 	bool initStreaming(
@@ -751,6 +753,8 @@ private:
 	int _minUsedTop = 0; // Geometry without top notch on macOS.
 	int _maxUsedHeight = 0;
 	int _x = 0, _y = 0, _w = 0, _h = 0;
+	// 缩放复位时的内容位置，窗口内样式的视频控制条贴在它的底边。
+	QRect _fitContentRect;
 	bool _photoRedisplayQueued = false;
 	int _xStart = 0, _yStart = 0;
 	int _zoom = 0; // < 0 - out, 0 - none, > 0 - in
