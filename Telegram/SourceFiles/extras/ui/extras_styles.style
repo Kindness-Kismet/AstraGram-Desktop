@@ -259,10 +259,3 @@ topicSwitcherEmptyHeight: 64px;
 // 侧栏子页面与全宽页面原地过渡的平移距离；切换对话与设置子页面淡化的时长。
 extrasSectionCrossFadeShift: 24px;
 extrasInPlaceFadeDuration: 200;
-
-// 视频预览弹窗：缩略图间距、时间标签边距、悬停描边、加载占位高度与弹窗最大高度。
-extrasVideoPreviewSkip: 6px;
-extrasVideoPreviewBadgeMargin: 4px;
-extrasVideoPreviewBorder: 2px;
-extrasVideoPreviewPlaceholderHeight: 120px;
-extrasVideoPreviewMaxHeight: 640px;

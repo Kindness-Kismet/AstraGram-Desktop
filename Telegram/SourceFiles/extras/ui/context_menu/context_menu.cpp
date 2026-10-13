@@ -986,7 +986,7 @@ void AddVideoPreviewAction(
 	menu->addAction(tr::extras_ContextVideoPreview(tr::now), [=] {
 		// 菜单打开期间消息可能被删除，点击时重新查找。
 		if (const auto item = document->owner().message(itemId)) {
-			ExtrasVideoPreview::showBox(controller, item, document);
+			ExtrasVideoPreview::showFrames(controller, item, document);
 		}
 	}, &st::menuIconShowAll);
 }

@@ -9936,6 +9936,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SimulationCountdown" = "Delete message after 15 seconds";
 "extras_SimulationUpdateReady" = "Update ready";
 "extras_ContextVideoPreview" = "View Video Preview";
-"extras_VideoPreviewTitle" = "Video Preview";
 "extras_VideoPreviewLoading" = "Loading preview…";
 "extras_VideoPreviewUnavailable" = "Preview is unavailable";
+"extras_VideoPreviewPlayFrom" = "Play from {time}";

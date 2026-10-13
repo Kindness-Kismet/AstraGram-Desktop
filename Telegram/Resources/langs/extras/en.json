@@ -744,7 +744,7 @@
   "SimulationCountdown": "Delete message after 15 seconds",
   "SimulationUpdateReady": "Update ready",
   "ContextVideoPreview": "View Video Preview",
-  "VideoPreviewTitle": "Video Preview",
   "VideoPreviewLoading": "Loading preview…",
-  "VideoPreviewUnavailable": "Preview is unavailable"
+  "VideoPreviewUnavailable": "Preview is unavailable",
+  "VideoPreviewPlayFrom": "Play from {time}"
 }

@@ -1,4 +1,4 @@
-- Added video previews for supported channel videos, so you can now open a grid of timestamped frames from the context menu and start playback from any frame
+- Added video previews for supported channel videos, so you can now browse their frames full size in the media viewer from the context menu and start playback from any frame
 - Improved switching chats, which now fades the chat area and the selected chat row in place, and messages that finish loading after the switch fade in instead of popping up
 - Improved opening the archive, forums and folder tabs, which now blends the chat list in place instead of sliding the whole column
 - Improved settings navigation, which now covers the window from the right when settings open and blends between settings pages in place instead of sliding them sideways
@@ -8,7 +8,7 @@
 
 ---
 
-- 新增了视频预览，现在可以在支持的频道视频右键菜单中打开带时间的缩略图网格，并从任意一帧开始播放
+- 新增了视频预览，现在可以在支持的频道视频右键菜单中打开媒体查看器逐帧大图浏览，并从任意一帧开始播放
 - 对切换对话进行了改善，这使得对话区和选中的对话行原地淡入淡出，切换后才加载出来的消息也会淡入，不再突然出现
 - 对进入归档、论坛和切换文件夹标签进行了改善，这使得对话列表原地过渡，不再整列左右滑动
 - 对设置页的切换进行了改善，这使得设置页打开时从右侧覆盖窗口，各设置页之间原地淡入淡出，不再左右滑动

@@ -524,7 +524,7 @@ Result openVideoPreview(const QStringList &args) {
 	if (!ExtrasVideoPreview::hasPreview(document)) return Result::Err(u"video has no storyboard"_q);
 	const auto controller = peer->session().tryResolveWindow();
 	if (!controller) return Result::Err(u"no window controller"_q);
-	ExtrasVideoPreview::showBox(controller, item, document);
+	ExtrasVideoPreview::showFrames(controller, item, document);
 	const auto video = document->video();
 	return Result::Ok(Compact(Json{
 		{ "storyboardSize", video->storyboard->size },
