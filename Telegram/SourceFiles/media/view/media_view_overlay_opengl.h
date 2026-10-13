@@ -170,8 +170,8 @@ private:
 	static constexpr auto kControlsCount = 11;
 	[[nodiscard]] Control controlMeta(Over control) const;
 
-	// After icons: over circle, rounded over and solid fill images.
-	std::array<QRect, kControlsCount + 3> _controlsTextures;
+	// 图标之后依次是悬停圆形、圆角悬停底、纯色块和翻页圆形。
+	std::array<QRect, kControlsCount + 4> _controlsTextures;
 
 	bool _shadowTopFlip = false;
 	bool _shadowsForStories = false;

@@ -858,12 +858,15 @@ void OverlayWidget::RendererGL::paintControl(
 	const auto overAlpha = overOpacity * kOverBackgroundOpacity;
 	const auto offset = kControlsOffset + (meta.index * kControlValues) / 4;
 	const auto fgOffset = offset + 4;
-	const auto roundedOver = _owner->lightboxStyle()
-		&& (control != Over::Left)
-		&& (control != Over::Right);
+	const auto nav = (control == Over::Left) || (control == Over::Right);
+	const auto overTexture = !_owner->lightboxStyle()
+		? kControlsCount
+		: nav
+		? (kControlsCount + 3)
+		: (kControlsCount + 1);
 	const auto overRect = _controlsImage.texturedRect(
 		over,
-		_controlsTextures[kControlsCount + (roundedOver ? 1 : 0)]);
+		_controlsTextures[overTexture]);
 	const auto overGeometry = transformRect(over);
 	const auto iconRect = _controlsImage.texturedRect(
 		inner,
@@ -964,6 +967,7 @@ void OverlayWidget::RendererGL::validateControls() {
 		Control{ 10, &st::extrasViewerClose },
 	};
 	const auto rounded = st::extrasViewerTopBarButton;
+	const auto nav = st::extrasViewerNavSize;
 	// 纯色块四周留空，取中间部分采样，避免线性过滤混入透明像素。
 	const auto solid = 8;
 	const auto solidSkip = 2;
@@ -973,8 +977,8 @@ void OverlayWidget::RendererGL::validateControls() {
 		maxWidth = std::max(meta.icon->width(), maxWidth);
 		fullHeight += meta.icon->height();
 	}
-	maxWidth = std::max({ st::mediaviewIconOver, rounded, maxWidth });
-	fullHeight += st::mediaviewIconOver + rounded + solid;
+	maxWidth = std::max({ st::mediaviewIconOver, rounded, nav, maxWidth });
+	fullHeight += st::mediaviewIconOver + rounded + solid + nav;
 	auto image = QImage(
 		QSize(maxWidth, fullHeight) * _ifactor,
 		QImage::Format_ARGB32_Premultiplied);
@@ -1013,6 +1017,12 @@ void OverlayWidget::RendererGL::validateControls() {
 			QPoint(solidSkip, height + solidSkip) * _ifactor,
 			QSize(solid - 2 * solidSkip, solid - 2 * solidSkip) * _ifactor);
 		height += solid;
+
+		p.drawEllipse(QRect(0, height, nav, nav));
+		_controlsTextures[index++] = QRect(
+			QPoint(0, height) * _ifactor,
+			QSize(nav, nav) * _ifactor);
+		height += nav;
 	}
 	_controlsImage.setImage(std::move(image));
 }

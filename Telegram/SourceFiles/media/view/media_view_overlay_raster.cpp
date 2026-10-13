@@ -315,16 +315,17 @@ void OverlayWidget::RendererSW::paintControl(
 	if (!over.isEmpty() && !over.intersects(_clipOuter)) {
 		return;
 	}
-	const auto roundedOver = _owner->lightboxStyle()
-		&& (control != Over::Left)
-		&& (control != Over::Right);
-	if (!over.isEmpty() && overOpacity > 0 && roundedOver) {
+	if (!over.isEmpty() && overOpacity > 0 && _owner->lightboxStyle()) {
 		auto hq = PainterHighQualityEnabler(*_p);
-		const auto radius = st::extrasViewerTopBarButtonRadius;
 		_p->setOpacity(overOpacity * kOverBackgroundOpacity);
 		_p->setPen(Qt::NoPen);
 		_p->setBrush(OverBackgroundColor());
-		_p->drawRoundedRect(over, radius, radius);
+		if (control == Over::Left || control == Over::Right) {
+			_p->drawEllipse(over);
+		} else {
+			const auto radius = st::extrasViewerTopBarButtonRadius;
+			_p->drawRoundedRect(over, radius, radius);
+		}
 	} else if (!over.isEmpty() && overOpacity > 0) {
 		if (_overControlImage.isNull()) {
 			validateOverControlImage();

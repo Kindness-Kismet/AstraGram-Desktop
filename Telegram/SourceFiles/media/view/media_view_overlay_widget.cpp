@@ -278,6 +278,10 @@ constexpr auto kBackdropRefreshDelay = crl::time(100);
 constexpr auto kTopBarSecondaryOpacity = 0.62;
 constexpr auto kTopBarSeparatorOpacity = 0.2;
 
+// 窗口内翻页按钮的底色强度：常驻约为白色 10%，悬停约为 22%。
+constexpr auto kLightboxNavIdleLevel = 0.36;
+constexpr auto kLightboxNavOverLevel = 0.8;
+
 PipDelegate::PipDelegate(QWidget *parent, not_null<Main::Session*> session)
 : _parent(parent)
 , _session(session) {
@@ -1625,13 +1629,25 @@ void OverlayWidget::updateNavigationControlsGeometry() {
 	const auto overRect = QRect(
 		QPoint(),
 		QSize(st::mediaviewIconOver, st::mediaviewIconOver));
+	if (lightboxStyle() && !_stories) {
+		// 窗口内样式的翻页按钮是左右两侧垂直居中的圆形，只有圆形可点。
+		const auto size = st::extrasViewerNavSize;
+		const auto skip = st::extrasViewerNavSkip;
+		const auto top = _minUsedTop + (_maxUsedHeight - size) / 2;
+		_leftNav = _leftNavOver = QRect(skip, top, size, size);
+		_rightNav = _rightNavOver = QRect(
+			width() - skip - size,
+			top,
+			size,
+			size);
+		_leftNavIcon = style::centerrect(_leftNav, st::mediaviewLeft);
+		_rightNavIcon = style::centerrect(_rightNav, st::mediaviewRight);
+		return;
+	}
 	const auto navSize = _stories
 		? st::storiesControlSize
 		: st::mediaviewControlSize;
-	// 窗口内样式的翻页热区从顶栏下方开始，不和顶栏按钮重叠。
-	const auto navSkip = lightboxStyle()
-		? ExtrasFeatures::MediaViewer::topBarHeight()
-		: st::mediaviewHeaderTop;
+	const auto navSkip = st::mediaviewHeaderTop;
 	const auto xLeft = _stories ? (_x - navSize) : 0;
 	const auto xRight = _stories ? (_x + _w) : (width() - navSize);
 	_leftNav = QRect(
@@ -7438,12 +7454,18 @@ void OverlayWidget::paintControls(
 	};
 
 	renderer->paintControlsStart();
+	const auto lightboxNav = lightboxStyle() && !_stories;
 	for (const auto &control : controls) {
 		if (!control.visible) {
 			continue;
 		}
 		const auto progress = overLevel(control.state);
-		const auto bg = progress;
+		const auto nav = lightboxNav
+			&& (control.state == Over::Left || control.state == Over::Right);
+		const auto bg = nav
+			? (kLightboxNavIdleLevel
+				+ (kLightboxNavOverLevel - kLightboxNavIdleLevel) * progress)
+			: progress;
 		const auto icon = controlOpacity(progress, control.nonbright);
 		renderer->paintControl(
 			control.state,
