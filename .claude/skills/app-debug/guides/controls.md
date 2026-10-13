@@ -1,7 +1,8 @@
 # 控件树与合成交互
 
-`control.window [main|objectName]` 查询或选择控件与截图的目标顶层窗口，不改变系统焦点。
+`control.window [main|objectName|#序号]` 查询或选择控件与截图的目标顶层窗口，不改变系统焦点。
 默认目标为主窗口；例如 `control.window simulation.wallet` 选择模拟钱包，关闭该窗口后自动恢复主窗口。
+媒体查看器等没有 objectName 的窗口，用 `control.list --all` 中 `isWindow` 为 true 的序号选择。
 切换目标后重新查询控件序号；`--all` 的遍历范围保持不变。
 
 ## 值与动作

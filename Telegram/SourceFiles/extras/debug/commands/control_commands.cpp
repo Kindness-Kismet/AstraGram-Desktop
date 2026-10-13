@@ -42,40 +42,6 @@ using json = nlohmann::json;
 
 QPointer<QWidget> selectedWindow;
 
-[[nodiscard]] Result describeControlWindow() {
-	const auto window = controlWindow();
-	if (!window) {
-		return Result::Err(u"no visible control window"_q);
-	}
-	return Result::Ok(Compact(json{
-		{ "target", selectedWindow ? window->objectName().toStdString() : "main" },
-		{ "width", window->width() },
-		{ "height", window->height() },
-	}));
-}
-
-[[nodiscard]] Result selectControlWindow(const QStringList &args) {
-	if (args.empty()) {
-		return describeControlWindow();
-	}
-	if (args.size() != 1) {
-		return Result::Err(u"usage: control.window [main|objectName]"_q);
-	}
-	if (args.front() == u"main"_q) {
-		selectedWindow.clear();
-		return describeControlWindow();
-	}
-	const auto windows = QApplication::topLevelWidgets();
-	const auto i = ranges::find_if(windows, [&](QWidget *window) {
-		return window->isVisible() && window->objectName() == args.front();
-	});
-	if (i == windows.end()) {
-		return Result::Err(u"visible top-level window not found"_q);
-	}
-	selectedWindow = *i;
-	return describeControlWindow();
-}
-
 // ---- UI 探查与合成交互 ----
 
 // list 的 #index 与 click 的序号寻址共用这份先序 DFS 顺序，改遍历顺序等于
@@ -250,6 +216,49 @@ struct WidgetInfo {
 		}
 	}
 	return nullptr;
+}
+
+[[nodiscard]] Result describeControlWindow() {
+	const auto window = controlWindow();
+	if (!window) {
+		return Result::Err(u"no visible control window"_q);
+	}
+	return Result::Ok(Compact(json{
+		{ "target", selectedWindow ? window->objectName().toStdString() : "main" },
+		{ "width", window->width() },
+		{ "height", window->height() },
+	}));
+}
+
+[[nodiscard]] Result selectControlWindow(const QStringList &args) {
+	if (args.empty()) {
+		return describeControlWindow();
+	}
+	if (args.size() != 1) {
+		return Result::Err(u"usage: control.window [main|objectName|#index]"_q);
+	}
+	if (args.front() == u"main"_q) {
+		selectedWindow.clear();
+		return describeControlWindow();
+	}
+	// 没有 objectName 的窗口（如媒体查看器）按 control.list --all 的序号选择。
+	if (args.front().startsWith(u'#')) {
+		const auto window = findControl(args.front(), true);
+		if (!window || !window->isWindow() || !window->isVisible()) {
+			return Result::Err(u"visible top-level window not found"_q);
+		}
+		selectedWindow = window;
+		return describeControlWindow();
+	}
+	const auto windows = QApplication::topLevelWidgets();
+	const auto i = ranges::find_if(windows, [&](QWidget *window) {
+		return window->isVisible() && window->objectName() == args.front();
+	});
+	if (i == windows.end()) {
+		return Result::Err(u"visible top-level window not found"_q);
+	}
+	selectedWindow = *i;
+	return describeControlWindow();
 }
 
 // 事件回调可能销毁控件；控件已销毁时跳过发送并返回 false。

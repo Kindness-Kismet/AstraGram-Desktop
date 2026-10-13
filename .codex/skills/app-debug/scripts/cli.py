@@ -41,7 +41,7 @@ PROFILE_OVERRIDE = None
 BACKGROUND_START = False
 
 GENERIC_COMMANDS = {
-    'control.window': '选择控件与截图的目标窗口，不改变系统焦点：[main|窗口标识]',
+    'control.window': '选择控件与截图的目标窗口，不改变系统焦点：[main|窗口标识|#序号]',
     'editor.video-state': '查询独立模拟配置中视频时间线的裁剪起止、封面与播放位置',
     'editor.state': '查询独立模拟配置中编辑器的图层数量、音轨裁剪与音量',
     'editor.add-file': '在独立模拟配置中沿编辑器粘贴链路添加本地媒体：<路径>',
