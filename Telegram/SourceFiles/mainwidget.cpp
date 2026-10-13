@@ -1933,13 +1933,25 @@ Fn<void()> MainWidget::prepareFullWidthAnimation(
 	return [=] {
 		_controller->window().hideSettingsAndLayer(anim::type::instant);
 		const auto body = parentWidget();
-		Window::ShowCrossFadeAnimation(
-			body,
-			body->rect(),
-			oldContentCache,
-			grabFullWidthAnimationContent(),
-			direction,
-			{ .shift = st::extrasSectionCrossFadeShift, .overlay = true });
+		if (_mainSection && _mainSection->useFullWidth()) {
+			Window::ShowCrossFadeAnimation(
+				body,
+				body->rect(),
+				oldContentCache,
+				grabFullWidthAnimationContent(),
+				direction,
+				{ .shift = st::extrasSectionCrossFadeShift, .overlay = true });
+		} else {
+			// 离开全宽页面时旧画面向右揭开，底下保持实时绘制，
+			// 对话页重新加载的贴纸与图片随之淡入，不会定格成占位色块。
+			Window::ShowFadeOutAnimation(
+				body,
+				body->rect(),
+				oldContentCache,
+				st::slideDuration,
+				st::extrasSectionCrossFadeShift
+			)->setObjectName(u"section-slide-overlay"_q);
+		}
 		// 页面圆角与媒体预览仍在过渡之上。
 		_controller->widget()->fixOrder();
 	};

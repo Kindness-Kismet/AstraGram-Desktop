@@ -48,7 +48,8 @@ not_null<Ui::RpWidget*> ShowFadeOutAnimation(
 		not_null<QWidget*> parent,
 		const QRect &geometry,
 		QPixmap cache,
-		crl::time duration) {
+		crl::time duration,
+		int shift) {
 	const auto overlay = Ui::CreateChild<Ui::RpWidget>(parent);
 	overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
 	overlay->setGeometry(geometry);
@@ -56,11 +57,12 @@ not_null<Ui::RpWidget*> ShowFadeOutAnimation(
 		= overlay->lifetime().make_state<Ui::Animations::Simple>();
 	overlay->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(overlay);
+		const auto opacity = animation->value(0.);
 		// Source 模式带不透明度 o 时结果为 o * 旧画面 + (1 - o) * 底下已绘制的内容，
-		// 材质下的透明像素同样按比例插值。
+		// 材质下的透明像素同样按比例插值；平移露出的部分直接透出底下。
 		p.setCompositionMode(QPainter::CompositionMode_Source);
-		p.setOpacity(animation->value(0.));
-		p.drawPixmap(0, 0, cache);
+		p.setOpacity(opacity);
+		p.drawPixmap(anim::interpolate(shift, 0, opacity), 0, cache);
 	}, overlay->lifetime());
 	overlay->show();
 	overlay->raise();

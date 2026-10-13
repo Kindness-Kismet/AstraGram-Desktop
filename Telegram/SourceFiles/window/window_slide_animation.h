@@ -41,13 +41,14 @@ void ShowCrossFadeAnimation(
 	SlideDirection direction,
 	CrossFadeArgs args);
 
-// 旧画面盖住 parent 的 geometry 区域原地淡出，底下实时内容的变化同样随之淡入。
+// 旧画面盖住 parent 的 geometry 区域淡出并向右平移 shift，底下实时内容的变化同样随之淡入。
 // 返回结束后自行删除的过渡层。
 not_null<Ui::RpWidget*> ShowFadeOutAnimation(
 	not_null<QWidget*> parent,
 	const QRect &geometry,
 	QPixmap cache,
-	crl::time duration);
+	crl::time duration,
+	int shift = 0);
 
 class SlideAnimation {
 public:
