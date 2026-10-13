@@ -356,7 +356,10 @@ private:
 	void updateGeometryToScreen(bool inMove = false);
 	void prepareOpenMode(const OpenRequest &request);
 	void updateGeometryToHost();
+	void refreshBackdrop();
 	[[nodiscard]] bool inWindowShown() const;
+	[[nodiscard]] bool lightboxStyle() const;
+	[[nodiscard]] bool backdropShown() const;
 	bool moveToNext(int delta);
 	void preloadData(int delta);
 
@@ -649,6 +652,8 @@ private:
 
 	// 非空表示本次以窗口内模式打开；全屏时保留，退出全屏回到宿主窗口内。
 	std::unique_ptr<ExtrasFeatures::MediaViewer::ViewerHost> _viewerHost;
+	QImage _backdrop;
+	base::Timer _backdropRefreshTimer;
 	bool _fullscreenForVideo = false;
 
 	base::weak_ptr<Window::Controller> _openedFrom;

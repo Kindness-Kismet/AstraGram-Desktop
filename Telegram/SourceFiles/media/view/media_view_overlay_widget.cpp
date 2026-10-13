@@ -140,6 +140,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/extras_state.h"
 #include "extras/features/media_viewer/viewer_host.h"
 #include "extras/features/streamer_mode/streamer_mode.h"
+#include "styles/style_extras_styles.h"
 
 
 namespace Media {
@@ -266,6 +267,9 @@ private:
 		.h = st::mediaviewDefaultHeight,
 	};
 }
+
+// 宿主缩放后等它完成布局再重新截取背景。
+constexpr auto kBackdropRefreshDelay = crl::time(100);
 
 // 撤销窗口内模式的固定尺寸，恢复查看器原本的尺寸限制。
 void ReleaseFixedSize(not_null<Ui::RpWindow*> window) {
@@ -1007,6 +1011,7 @@ OverlayWidget::OverlayWidget()
 	_touchTimer.setCallback([=] { handleTouchTimer(); });
 
 	_controlsHideTimer.setCallback([=] { hideControls(); });
+	_backdropRefreshTimer.setCallback([=] { refreshBackdrop(); });
 	_helper->controlsActivations(
 	) | rpl::on_next([=] {
 		activateControls();
@@ -1316,6 +1321,7 @@ void OverlayWidget::prepareOpenMode(const OpenRequest &request) {
 	initFullScreen();
 	const auto wasInWindow = (_viewerHost != nullptr);
 	_viewerHost = nullptr;
+	_backdrop = QImage();
 	_fullscreenForVideo = false;
 	const auto window = !inWindowEnabled()
 		? nullptr
@@ -1335,6 +1341,7 @@ void OverlayWidget::prepareOpenMode(const OpenRequest &request) {
 				}
 			},
 			[=] { close(); });
+		_backdrop = _viewerHost->grabBackdrop();
 		_fullscreen = _windowed = false;
 		return;
 	}
@@ -1355,10 +1362,29 @@ void OverlayWidget::updateGeometryToHost() {
 	const auto geometry = _viewerHost->geometry();
 	_window->Ui::RpWidget::setFixedSize(geometry.size());
 	_window->Ui::RpWidget::setGeometry(geometry);
+	if (_backdrop.size() != geometry.size() * _backdrop.devicePixelRatio()) {
+		_backdropRefreshTimer.callOnce(kBackdropRefreshDelay);
+	}
+}
+
+void OverlayWidget::refreshBackdrop() {
+	if (!inWindowShown() || isHidden()) {
+		return;
+	}
+	_backdrop = _viewerHost->grabBackdrop();
+	update();
 }
 
 bool OverlayWidget::inWindowShown() const {
 	return _viewerHost && !_fullscreen;
+}
+
+bool OverlayWidget::lightboxStyle() const {
+	return _viewerHost != nullptr;
+}
+
+bool OverlayWidget::backdropShown() const {
+	return inWindowShown() && !_backdrop.isNull();
 }
 
 void OverlayWidget::updateControlsGeometry() {
@@ -2833,6 +2859,15 @@ void OverlayWidget::recountSkipTop() {
 			- 2 * st::mediaviewCaptionPadding.bottom())
 		: height();
 	const auto skipHeightBottom = (height() - bottom);
+	if (lightboxStyle() && !_fullScreenVideo) {
+		// 四周固定留白，底部至少让出视频控制条。
+		const auto &padding = st::extrasViewerContentPadding;
+		_skipTop = _minUsedTop + padding.top();
+		_availableHeight = height()
+			- _skipTop
+			- std::max(padding.bottom(), skipHeightBottom);
+		return;
+	}
 	_skipTop = _minUsedTop + std::min(
 		std::max(
 			st::mediaviewCaptionMargin.height(),
@@ -2870,7 +2905,10 @@ void OverlayWidget::resizeContentByScreenSize() {
 		return;
 	}
 	recountSkipTop();
-	const auto availableWidth = width();
+	const auto &padding = st::extrasViewerContentPadding;
+	const auto availableWidth = (lightboxStyle() && !_fullScreenVideo)
+		? (width() - padding.left() - padding.right())
+		: width();
 	const auto countZoomFor = [&](int outerw, int outerh) {
 		auto result = float64(outerw) / _width;
 		if (_height * result > outerh) {
@@ -9012,6 +9050,8 @@ void OverlayWidget::clearBeforeHide() {
 }
 
 void OverlayWidget::clearAfterHide() {
+	_backdrop = QImage();
+	_backdropRefreshTimer.cancel();
 	_recognitionResult = {};
 	_recognitionPendingSessionUniqueId = 0;
 	_recognitionPendingPhotoId = 0;

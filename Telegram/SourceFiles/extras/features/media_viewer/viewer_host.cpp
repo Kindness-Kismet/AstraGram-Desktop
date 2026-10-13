@@ -3,10 +3,24 @@
 #include "base/event_filter.h"
 #include "base/platform/base_platform_info.h"
 #include "extras/extras_settings.h"
+#include "ui/image/image_prepare.h"
+#include "ui/ui_utility.h"
+#include "styles/style_basic.h"
 
 #include <QtGui/QWindow>
 
 namespace ExtrasFeatures::MediaViewer {
+namespace {
+
+// 先缩小再模糊，等效于大半径模糊，放大回原尺寸时顺带柔化。
+constexpr auto kBackdropDownscale = 8;
+constexpr auto kBackdropBlurRadius = 3;
+
+[[nodiscard]] QColor backdropOverlay() {
+	return QColor(10, 12, 16, 189);
+}
+
+} // namespace
 
 bool inWindowEnabled() {
 	return Platform::IsWindows()
@@ -52,6 +66,28 @@ ViewerHost::~ViewerHost() {
 
 QRect ViewerHost::geometry() const {
 	return _host ? _host->geometry() : QRect();
+}
+
+QImage ViewerHost::grabBackdrop() const {
+	if (!_host) {
+		return QImage();
+	}
+	// 宿主可能用了透明材质，先垫窗口底色，背景才是不透明的。
+	auto image = Ui::GrabWidgetToImage(_host, QRect(), st::windowBg->c);
+	const auto ratio = image.devicePixelRatio();
+	const auto full = image.size();
+	auto small = image.scaled(
+		full / kBackdropDownscale,
+		Qt::IgnoreAspectRatio,
+		Qt::SmoothTransformation);
+	small = Images::BlurLargeImage(std::move(small), kBackdropBlurRadius);
+	auto result = small.scaled(
+		full,
+		Qt::IgnoreAspectRatio,
+		Qt::SmoothTransformation);
+	QPainter(&result).fillRect(result.rect(), backdropOverlay());
+	result.setDevicePixelRatio(ratio);
+	return result;
 }
 
 bool ViewerHost::hosts(not_null<QWidget*> window) const {

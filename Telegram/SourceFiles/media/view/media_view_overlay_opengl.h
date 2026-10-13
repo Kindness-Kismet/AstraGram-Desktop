@@ -83,6 +83,7 @@ private:
 		const QImage &image,
 		ContentGeometry geometry,
 		float64 opacity);
+	void paintBackdrop();
 
 	//void invalidate();
 
@@ -156,6 +157,7 @@ private:
 
 	static constexpr auto kStoriesSiblingPartsCount = 4;
 	Ui::GL::Image _storiesSiblingParts[kStoriesSiblingPartsCount];
+	Ui::GL::Image _backdropImage;
 
 	static constexpr auto kControlsCount = 8;
 	[[nodiscard]] Control controlMeta(Over control) const;

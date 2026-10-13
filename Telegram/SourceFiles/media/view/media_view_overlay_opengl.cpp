@@ -177,10 +177,12 @@ void OverlayWidget::RendererGL::init(QOpenGLFunctions &f) {
 	constexpr auto kRoundingVertices = kRoundingQuads * 6;
 	constexpr auto kRoundingValues = kRoundingVertices * 2;
 	constexpr auto kStoriesSiblingValues = kStoriesSiblingPartsCount * 16;
+	constexpr auto kBackdropValues = 16;
 	constexpr auto kValues = kQuadValues
 		+ kControlsValues
 		+ kRoundingValues
-		+ kStoriesSiblingValues;
+		+ kStoriesSiblingValues
+		+ kBackdropValues;
 
 	_contentBuffer.emplace();
 	_contentBuffer->setUsagePattern(QOpenGLBuffer::DynamicDraw);
@@ -304,6 +306,7 @@ void OverlayWidget::RendererGL::deinit(QOpenGLFunctions *f) {
 	for (auto &part : _storiesSiblingParts) {
 		part.destroy(f);
 	}
+	_backdropImage.destroy(f);
 }
 
 void OverlayWidget::RendererGL::paint(
@@ -354,6 +357,9 @@ bool OverlayWidget::RendererGL::handleHideWorkaround(QOpenGLFunctions &f) {
 }
 
 void OverlayWidget::RendererGL::paintBackground() {
+	if (_owner->backdropShown()) {
+		paintBackdrop();
+	}
 	_contentBuffer->bind();
 	if (const auto notch = _owner->topNotchSkip()) {
 		const auto top = transformRect(QRect(0, 0, _owner->width(), notch));
@@ -377,6 +383,47 @@ void OverlayWidget::RendererGL::paintBackground() {
 			offset,
 			QColor(0, 0, 0));
 	}
+}
+
+void OverlayWidget::RendererGL::paintBackdrop() {
+	const auto &image = _owner->_backdrop;
+	_f->glActiveTexture(GL_TEXTURE0);
+	_backdropImage.setImage(image);
+	_backdropImage.bind(*_f);
+
+	const auto textured = _backdropImage.texturedRect(
+		QRect(QPoint(), _viewport),
+		QRect(QPoint(), image.size()));
+	const auto geometry = transformRect(textured.geometry);
+	const GLfloat coords[] = {
+		geometry.left(), geometry.top(),
+		textured.texture.left(), textured.texture.bottom(),
+
+		geometry.right(), geometry.top(),
+		textured.texture.right(), textured.texture.bottom(),
+
+		geometry.right(), geometry.bottom(),
+		textured.texture.right(), textured.texture.top(),
+
+		geometry.left(), geometry.bottom(),
+		textured.texture.left(), textured.texture.top(),
+	};
+	// 缓冲区末尾的一块，排在快拍邻图之后。
+	const auto offset = kControlsOffset
+		+ (kControlsCount * kControlValues) / 4
+		+ (6 * 2 * 4) / 4 // rounding
+		+ (kStoriesSiblingPartsCount * 4);
+	_contentBuffer->bind();
+	_contentBuffer->write(
+		offset * 4 * sizeof(GLfloat),
+		coords,
+		sizeof(coords));
+
+	toggleBlending(false);
+	_controlsProgram->bind();
+	_controlsProgram->setUniformValue("viewport", _uniformViewport);
+	_controlsProgram->setUniformValue("g_opacity", GLfloat(1));
+	FillTexturedRectangle(*_f, &*_controlsProgram, offset);
 }
 
 void OverlayWidget::RendererGL::paintVideoStream() {

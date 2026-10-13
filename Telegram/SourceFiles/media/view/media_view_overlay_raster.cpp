@@ -84,8 +84,14 @@ void OverlayWidget::RendererSW::paintBackground() {
 	const auto &bg = _owner->_fullScreenVideo
 		? st::mediaviewVideoBg
 		: st::mediaviewBg;
-	for (const auto &rect : region) {
-		_p->fillRect(rect, bg);
+	if (_owner->backdropShown()) {
+		_p->setClipRegion(region);
+		_p->drawImage(_owner->_widget->rect(), _owner->_backdrop);
+		_p->setClipping(false);
+	} else {
+		for (const auto &rect : region) {
+			_p->fillRect(rect, bg);
+		}
 	}
 	if (const auto notch = _owner->topNotchSkip()) {
 		const auto top = QRect(0, 0, _owner->width(), notch);
