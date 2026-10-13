@@ -331,6 +331,8 @@ Fields customFields() {
 		&S::useQuickForwardMenu, &S::setUseQuickForwardMenu);
 	addField(fields, "sendForwardFirst", settings,
 		&S::sendForwardFirst, &S::setSendForwardFirst);
+	addField(fields, "mediaViewerInWindow", settings,
+		&S::mediaViewerInWindow, &S::setMediaViewerInWindow);
 	addField(fields, "showPeerId", settings,
 		&S::showPeerId, &S::setShowPeerId, 0, 2);
 	addField(fields, "showMessageSeconds", settings,

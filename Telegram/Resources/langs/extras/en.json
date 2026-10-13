@@ -265,6 +265,7 @@
   "HideReactionsInPrivateChats_PC": "Private Chats",
   "QuickAdminShortcuts": "Quick Admin Shortcuts",
   "DisableGreetingSticker_PC": "Disable Greeting Sticker",
+  "MediaViewerInWindow": "Open photos and videos inside the window",
   "TranslationProvider": "Translation Provider",
   "TranslationPending": "Translating…",
   "TranslationUnsupported": "This translation service does not support rich messages.",

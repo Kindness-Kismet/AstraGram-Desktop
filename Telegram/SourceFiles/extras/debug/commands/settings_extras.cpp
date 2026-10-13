@@ -169,6 +169,7 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"disableGreetingSticker"_q, [&] { return settings.disableGreetingSticker(); }, settings, &ExtrasSettings::setDisableGreetingSticker);
 	addSetting(entries, u"useQuickForwardMenu"_q, [&] { return settings.useQuickForwardMenu(); }, settings, &ExtrasSettings::setUseQuickForwardMenu);
 	addSetting(entries, u"sendForwardFirst"_q, [&] { return settings.sendForwardFirst(); }, settings, &ExtrasSettings::setSendForwardFirst);
+	addSetting(entries, u"mediaViewerInWindow"_q, [&] { return settings.mediaViewerInWindow(); }, settings, &ExtrasSettings::setMediaViewerInWindow);
 	addSetting(entries, u"showPeerId"_q, [&] { return settings.showPeerId(); }, settings, &ExtrasSettings::setShowPeerId);
 	addSetting(entries, u"showMessageSeconds"_q, [&] { return settings.showMessageSeconds(); }, settings, &ExtrasSettings::setShowMessageSeconds);
 	addSetting(entries, u"showMessageId"_q, [&] { return settings.showMessageId(); }, settings, &ExtrasSettings::setShowMessageId);

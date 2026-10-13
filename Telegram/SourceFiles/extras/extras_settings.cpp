@@ -1199,6 +1199,12 @@ void ExtrasSettings::setSendForwardFirst(bool val) {
 	save();
 }
 
+void ExtrasSettings::setMediaViewerInWindow(bool val) {
+	if (_mediaViewerInWindow.current() == val) return;
+	_mediaViewerInWindow = val;
+	save();
+}
+
 void ExtrasSettings::setShowPeerId(PeerIdDisplay val) {
 	if (_showPeerId.current() == val) return;
 	_showPeerId = val;
@@ -1420,6 +1426,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"disableGreetingSticker", s._disableGreetingSticker.current()},
 		{"useQuickForwardMenu", s._useQuickForwardMenu.current()},
 		{"sendForwardFirst", s._sendForwardFirst.current()},
+		{"mediaViewerInWindow", s._mediaViewerInWindow.current()},
 		{"showPeerId", s._showPeerId.current()},
 		{"showMessageSeconds", s._showMessageSeconds.current()},
 		{"showMessageId", s._showMessageId.current()},
@@ -1571,6 +1578,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._disableGreetingSticker = j.value("disableGreetingSticker", defaults._disableGreetingSticker.current());
 	s._useQuickForwardMenu = j.value("useQuickForwardMenu", defaults._useQuickForwardMenu.current());
 	s._sendForwardFirst = j.value("sendForwardFirst", defaults._sendForwardFirst.current());
+	s._mediaViewerInWindow = j.value("mediaViewerInWindow", defaults._mediaViewerInWindow.current());
 	s._showPeerId = j.value("showPeerId", defaults._showPeerId.current());
 	s._showMessageSeconds = j.value("showMessageSeconds", defaults._showMessageSeconds.current());
 	s._showMessageId = j.value("showMessageId", defaults._showMessageId.current());

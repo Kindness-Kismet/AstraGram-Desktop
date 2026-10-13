@@ -138,6 +138,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "extras/extras_settings.h"
 #include "extras/extras_state.h"
+#include "extras/features/media_viewer/viewer_host.h"
 #include "extras/features/streamer_mode/streamer_mode.h"
 
 
@@ -264,6 +265,12 @@ private:
 		.w = st::mediaviewDefaultWidth,
 		.h = st::mediaviewDefaultHeight,
 	};
+}
+
+// 撤销窗口内模式的固定尺寸，恢复查看器原本的尺寸限制。
+void ReleaseFixedSize(not_null<Ui::RpWindow*> window) {
+	window->setMinimumSize({ st::mediaviewMinWidth, st::mediaviewMinHeight });
+	window->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
 }
 
 PipDelegate::PipDelegate(QWidget *parent, not_null<Main::Session*> session)
@@ -798,7 +805,18 @@ OverlayWidget::OverlayWidget()
 			}
 		} else if (e->type() == QEvent::WindowStateChange) {
 			const auto state = window()->windowState();
-			if (state == Qt::WindowMinimized || Platform::IsMac()) {
+			if (_viewerHost) {
+				// 窗口内模式不单独最小化，恢复后连同宿主一起最小化。
+				if (state & Qt::WindowMinimized) {
+					InvokeQueued(_window, [=] {
+						_window->setWindowState(
+							_window->windowState() & ~Qt::WindowMinimized);
+						if (_viewerHost) {
+							_viewerHost->minimizeHost();
+						}
+					});
+				}
+			} else if (state == Qt::WindowMinimized || Platform::IsMac()) {
 			} else if (state == Qt::WindowMaximized) {
 				if (_fullscreen || _windowed) {
 					_fullscreen = _windowed = false;
@@ -840,6 +858,13 @@ OverlayWidget::OverlayWidget()
 
 			_widget->setGeometry({ QPoint(), size });
 			updateControlsGeometry();
+		} else if (type == QEvent::MouseButtonDblClick
+			&& _viewerHost
+			&& mouseButton(e) == Qt::LeftButton
+			&& mousePosition(e).y() <= st::mediaviewTitleButton.height) {
+			// 窗口内模式切换全屏要先解除固定尺寸，顶部双击不走系统的全屏切换。
+			toggleFullScreen(!_fullscreen);
+			return base::EventFilterResult::Cancel;
 		} else if (type == QEvent::KeyPress) {
 			handleKeyPress(static_cast<QKeyEvent*>(e.get()));
 		} else if (type == QEvent::KeyRelease) {
@@ -1169,7 +1194,10 @@ void OverlayWidget::initNormalGeometry() {
 }
 
 void OverlayWidget::savePosition() {
-	if (isHidden() || isMinimized() || !_normalGeometryInited) {
+	if (isHidden()
+		|| isMinimized()
+		|| !_normalGeometryInited
+		|| _viewerHost) {
 		return;
 	}
 	const auto &savedPosition = Core::App().settings().mediaViewPosition();
@@ -1224,6 +1252,10 @@ void OverlayWidget::savePosition() {
 
 void OverlayWidget::updateGeometry(bool inMove) {
 	initFullScreen();
+	if (inWindowShown()) {
+		updateGeometryToHost();
+		return;
+	}
 	if (_fullscreen) {
 		updateGeometryToScreen(inMove);
 	} else if (_windowed && _normalGeometryInited) {
@@ -1276,6 +1308,57 @@ void OverlayWidget::updateGeometryToScreen(bool inMove) {
 		.arg(available.width())
 		.arg(available.height()));
 	_window->Ui::RpWidget::setGeometry(available);
+}
+
+void OverlayWidget::prepareOpenMode(const OpenRequest &request) {
+	using namespace ExtrasFeatures::MediaViewer;
+
+	initFullScreen();
+	const auto wasInWindow = (_viewerHost != nullptr);
+	_viewerHost = nullptr;
+	_fullscreenForVideo = false;
+	const auto window = !inWindowEnabled()
+		? nullptr
+		: (request.story() || request.call())
+		? nullptr
+		: request.controller()
+		? &request.controller()->window()
+		: Core::App().activeWindow();
+	const auto host = window ? window->widget().get() : nullptr;
+	if (host && !host->isHidden() && !host->isMinimized()) {
+		_viewerHost = std::make_unique<ViewerHost>(
+			_window,
+			host,
+			[=] {
+				if (!isHidden()) {
+					updateGeometryToHost();
+				}
+			},
+			[=] { close(); });
+		_fullscreen = _windowed = false;
+		return;
+	}
+	if (!wasInWindow) {
+		return;
+	}
+	ReleaseFixedSize(_window);
+	const auto mode = Core::App().settings().mediaViewPosition().maximized;
+	_fullscreen = (mode == 2) || (mode == 1 && Platform::IsMac());
+	_windowed = (mode == 0);
+}
+
+void OverlayWidget::updateGeometryToHost() {
+	if (!inWindowShown()) {
+		return;
+	}
+	// 整个查看器窗口与宿主重合，标题区的顶部边距算在窗口内。
+	const auto geometry = _viewerHost->geometry();
+	_window->Ui::RpWidget::setFixedSize(geometry.size());
+	_window->Ui::RpWidget::setGeometry(geometry);
+}
+
+bool OverlayWidget::inWindowShown() const {
+	return _viewerHost && !_fullscreen;
 }
 
 void OverlayWidget::updateControlsGeometry() {
@@ -3161,15 +3244,24 @@ void OverlayWidget::toggleFullScreen() {
 void OverlayWidget::toggleFullScreen(bool fullscreen) {
 	_helper->clearState();
 	_fullscreen = fullscreen;
-	_windowed = !fullscreen;
+	_windowed = !fullscreen && !_viewerHost;
+	if (!fullscreen) {
+		_fullscreenForVideo = false;
+	}
 	initNormalGeometry();
 	if constexpr (Platform::IsMac()) {
 		_helper->beforeShow(_fullscreen);
 		updateGeometry();
 		_helper->afterShow(_fullscreen);
 	} else if (_fullscreen) {
+		if (_viewerHost) {
+			ReleaseFixedSize(_window);
+		}
 		updateGeometry();
 		_window->showFullScreen();
+	} else if (_viewerHost) {
+		_window->showNormal();
+		updateGeometryToHost();
 	} else {
 		_wasWindowedMode = false;
 		_window->showNormal();
@@ -4479,7 +4571,8 @@ bool OverlayWidget::isMinimized() const {
 }
 
 bool OverlayWidget::isFullScreen() const {
-	return _fullscreen;
+	// 窗口内模式同样盖住主窗口，打开链接等跳转前需要关闭查看器。
+	return _fullscreen || _viewerHost;
 }
 
 not_null<QWidget*> OverlayWidget::widget() const {
@@ -4506,6 +4599,9 @@ void OverlayWidget::setFocus() {
 }
 
 bool OverlayWidget::takeFocusFrom(not_null<QWidget*> window) const {
+	if (inWindowShown()) {
+		return !isHidden() && _viewerHost->hosts(window);
+	}
 	return _fullscreen
 		&& !isHidden()
 		&& !isMinimized()
@@ -4545,6 +4641,9 @@ void OverlayWidget::show(OpenRequest request) {
 				return close();
 			}
 		}
+	}
+	if (isHidden()) {
+		prepareOpenMode(request);
 	}
 	if (isHidden() || isMinimized()) {
 		// Count top notch on macOS before counting geometry.
@@ -4976,7 +5075,11 @@ void OverlayWidget::showAndActivate() {
 		_wasWindowedMode = false;
 	}
 	updateGeometry();
-	if (_windowed || Platform::IsMac()) {
+	if (inWindowShown()) {
+		// 上次以全屏关闭时，还原窗口会套用旧几何，显示后再贴合宿主。
+		_window->showNormal();
+		updateGeometryToHost();
+	} else if (_windowed || Platform::IsMac()) {
 		_window->showNormal();
 		_wasWindowedMode = true;
 	} else if (_fullscreen) {
@@ -6008,6 +6111,13 @@ void OverlayWidget::playbackToggleFullScreen() {
 	_fullScreenVideo = !_fullScreenVideo;
 	if (_fullScreenVideo) {
 		_fullScreenZoomCache = _zoom;
+	}
+	// 窗口内模式下视频全屏连带窗口全屏，退出时只撤销由视频带来的那次。
+	if (_fullScreenVideo && inWindowShown()) {
+		toggleFullScreen(true);
+		_fullscreenForVideo = true;
+	} else if (!_fullScreenVideo && _fullscreenForVideo) {
+		toggleFullScreen(false);
 	}
 	resizeCenteredControls();
 	recountSkipTop();
@@ -7406,6 +7516,11 @@ void OverlayWidget::handleKeyPress(not_null<QKeyEvent*> e) {
 			}
 			return;
 		}
+	}
+	if (!_menu && key == Qt::Key_Escape && _viewerHost && _fullscreen) {
+		// 窗口内模式先退出全屏，再按一次才关闭。
+		toggleFullScreen(false);
+		return;
 	}
 	if (!_menu && key == Qt::Key_Escape) {
 		if (_document && _document->loading() && !_streamed) {

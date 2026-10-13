@@ -372,6 +372,7 @@ public:
 	[[nodiscard]] bool disableGreetingSticker() const { return _disableGreetingSticker.current(); }
 	[[nodiscard]] bool useQuickForwardMenu() const { return _useQuickForwardMenu.current(); }
 	[[nodiscard]] bool sendForwardFirst() const { return _sendForwardFirst.current(); }
+	[[nodiscard]] bool mediaViewerInWindow() const { return _mediaViewerInWindow.current(); }
 	[[nodiscard]] PeerIdDisplay showPeerId() const { return _showPeerId.current(); }
 	[[nodiscard]] bool showMessageSeconds() const { return _showMessageSeconds.current(); }
 	[[nodiscard]] bool showMessageId() const { return _showMessageId.current(); }
@@ -483,6 +484,7 @@ public:
 	void setDisableGreetingSticker(bool val);
 	void setUseQuickForwardMenu(bool val);
 	void setSendForwardFirst(bool val);
+	void setMediaViewerInWindow(bool val);
 	void setShowPeerId(PeerIdDisplay val);
 	void setShowMessageSeconds(bool val);
 	void setShowMessageId(bool val);
@@ -664,6 +666,7 @@ public:
 	[[nodiscard]] rpl::producer<bool> useQuickForwardMenuChanges() const { return _useQuickForwardMenu.changes(); }
 	[[nodiscard]] rpl::producer<bool> sendForwardFirstValue() const { return _sendForwardFirst.value(); }
 	[[nodiscard]] rpl::producer<bool> sendForwardFirstChanges() const { return _sendForwardFirst.changes(); }
+	[[nodiscard]] rpl::producer<bool> mediaViewerInWindowValue() const { return _mediaViewerInWindow.value(); }
 	[[nodiscard]] rpl::producer<PeerIdDisplay> showPeerIdValue() const { return _showPeerId.value(); }
 	[[nodiscard]] rpl::producer<PeerIdDisplay> showPeerIdChanges() const { return _showPeerId.changes(); }
 	[[nodiscard]] rpl::producer<bool> showMessageSecondsValue() const { return _showMessageSeconds.value(); }
@@ -803,6 +806,8 @@ private:
 	rpl::variable<bool> _disableGreetingSticker = false;
 	rpl::variable<bool> _useQuickForwardMenu = false;
 	rpl::variable<bool> _sendForwardFirst = false;
+	// 图片和视频查看器只铺满主窗口，全屏改为按需进入。
+	rpl::variable<bool> _mediaViewerInWindow = true;
 	rpl::variable<PeerIdDisplay> _showPeerId = PeerIdDisplay::BotApi;
 	rpl::variable<bool> _showMessageSeconds = false;
 	rpl::variable<bool> _showMessageId = false;

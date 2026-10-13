@@ -9273,6 +9273,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DisableGreetingSticker" = "Disable Greeting Sticker";
 "extras_UseQuickForwardMenu" = "Use quick forward menu";
 "extras_SendForwardFirst" = "Send comment after forwarding";
+"extras_MediaViewerInWindow" = "Open photos and videos inside the window";
 "extras_TranslationProvider" = "Translation Provider";
 "extras_TranslationPending" = "Translating…";
 "extras_TranslationUnsupported" = "This translation service does not support rich messages.";

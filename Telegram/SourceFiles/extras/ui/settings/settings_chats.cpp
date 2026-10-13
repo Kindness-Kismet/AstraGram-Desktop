@@ -183,6 +183,12 @@ void BuildGroupsAndChannels(SectionBuilder &builder, ExtrasSectionBuilder &extra
 		.setter = &ExtrasSettings::setSendForwardFirst,
 	});
 	extras.addSettingToggle({
+		.id = u"extras/mediaViewerInWindow"_q,
+		.title = tr::extras_MediaViewerInWindow(),
+		.getter = &ExtrasSettings::mediaViewerInWindow,
+		.setter = &ExtrasSettings::setMediaViewerInWindow,
+	});
+	extras.addSettingToggle({
 		.id = u"extras/showMessageShot"_q,
 		.title = tr::extras_SettingsShowMessageShot(),
 		.getter = &ExtrasSettings::showMessageShot,

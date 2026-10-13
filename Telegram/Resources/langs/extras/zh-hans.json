@@ -757,6 +757,7 @@
   "SearchFilterVoice": "语音消息",
   "SelectedForwardNoQuote": "转发（不引用）",
   "SendForwardFirst": "转发后发送评论",
+  "MediaViewerInWindow": "在窗口内打开图片和视频",
   "SettingsShowMessageId": "显示消息 ID",
   "ShowPinnedMessages": "显示置顶消息",
   "StickerSizeScale": "贴纸尺寸缩放",

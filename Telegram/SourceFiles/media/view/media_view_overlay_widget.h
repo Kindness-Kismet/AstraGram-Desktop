@@ -86,6 +86,10 @@ class View;
 struct ContentLayout;
 } // namespace Media::Stories
 
+namespace ExtrasFeatures::MediaViewer {
+class ViewerHost;
+} // namespace ExtrasFeatures::MediaViewer
+
 namespace Media::View {
 
 class VideoStream;
@@ -350,6 +354,9 @@ private:
 	void moveToScreen(bool inMove = false);
 	void updateGeometry(bool inMove = false);
 	void updateGeometryToScreen(bool inMove = false);
+	void prepareOpenMode(const OpenRequest &request);
+	void updateGeometryToHost();
+	[[nodiscard]] bool inWindowShown() const;
 	bool moveToNext(int delta);
 	void preloadData(int delta);
 
@@ -639,6 +646,10 @@ private:
 	bool _normalGeometryInited = false;
 	bool _fullscreen = true;
 	bool _windowed = false;
+
+	// 非空表示本次以窗口内模式打开；全屏时保留，退出全屏回到宿主窗口内。
+	std::unique_ptr<ExtrasFeatures::MediaViewer::ViewerHost> _viewerHost;
+	bool _fullscreenForVideo = false;
 
 	base::weak_ptr<Window::Controller> _openedFrom;
 	Main::Session *_session = nullptr;
