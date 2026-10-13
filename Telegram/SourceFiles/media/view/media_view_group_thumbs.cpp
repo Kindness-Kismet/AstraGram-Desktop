@@ -631,6 +631,10 @@ void GroupThumbs::fillItems(
 	Expects(index < till);
 	Expects(from + 1 < till);
 
+	// 内存图片在创建缩略图时同步加载完成，会触发查看器重入刷新，这里跳过。
+	if (_filling) {
+		return;
+	}
 	const auto current = (index - from);
 	const auto old = base::take(_items);
 
@@ -638,9 +642,11 @@ void GroupThumbs::fillItems(
 
 	markCacheStale();
 	_items.reserve(till - from);
+	_filling = true;
 	for (auto i = from; i != till; ++i) {
 		_items.push_back(validateCacheEntry(ComputeKey(slice, i)));
 	}
+	_filling = false;
 	animateAliveItems(current);
 	fillDyingItems(old);
 	startDelayedAnimation();

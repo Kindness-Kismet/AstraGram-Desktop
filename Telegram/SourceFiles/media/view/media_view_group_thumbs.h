@@ -160,6 +160,7 @@ private:
 	const not_null<Main::Session*> _session;
 	Context _context;
 	bool _waitingForAnimationStart = true;
+	bool _filling = false;
 	Ui::Animations::Simple _animation;
 	std::vector<not_null<Thumb*>> _items;
 	std::vector<not_null<Thumb*>> _dying;
