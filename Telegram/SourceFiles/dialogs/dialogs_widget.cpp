@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #ifdef _DEBUG
 #include "extras/debug/debug_login.h"
 #endif // _DEBUG
+#include "extras/features/custom_logo/custom_logo.h"
 #include "extras/features/music_player/music_player_floating.h"
 
 #include "extras/features/window_material/window_material.h"
@@ -1922,6 +1923,13 @@ void Widget::setupMainMenuToggle() {
 	_headingMenu->setAccessibleName(tr::lng_main_menu(tr::now));
 	_headingMenu->setIsMenuButton(true);
 	_headingMenu->setClickedCallback([=] { showMainMenu(); });
+	ExtrasFeatures::CustomLogo::attach(
+		_headingMenu.data(),
+		st::dialogsHeadingMenu.icon,
+		[=](bool custom) {
+			const auto icon = custom ? &st::extrasEmptyIcon : nullptr;
+			_headingMenu->setIconOverride(icon, icon);
+		});
 	_mainMenu.under->setClickedCallback([=] {
 		_mainMenu.toggle->clicked({}, Qt::LeftButton);
 	});

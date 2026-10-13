@@ -3,6 +3,7 @@
 #include "extras/ui/extras_logo.h"
 #include "extras/extras_ui_settings.h"
 #include "extras/extras_worker.h"
+#include "extras/features/custom_logo/custom_logo.h"
 #include "extras/features/streamer_mode/streamer_mode.h"
 #include "core/application.h"
 #include "features/filters/filters_cache_controller.h"
@@ -854,6 +855,18 @@ void ExtrasSettings::setCustomAppName(const QString &val) {
 	save();
 }
 
+void ExtrasSettings::setCustomLogo(const QString &val) {
+	if (_customLogo.current() == val) return;
+	_customLogo = val;
+	save();
+}
+
+void ExtrasSettings::setCustomLogoTint(bool val) {
+	if (_customLogoTint.current() == val) return;
+	_customLogoTint = val;
+	save();
+}
+
 void ExtrasSettings::setSimpleQuotesAndReplies(bool val) {
 	if (_simpleQuotesAndReplies.current() == val) return;
 	_simpleQuotesAndReplies = val;
@@ -1354,6 +1367,8 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"showPrivateChatReactions", s._showPrivateChatReactions.current()},
 		{"appIcon", s._appIcon.current()},
 		{"customAppName", s._customAppName.current()},
+		{"customLogo", s._customLogo.current()},
+		{"customLogoTint", s._customLogoTint.current()},
 		{"simpleQuotesAndReplies", s._simpleQuotesAndReplies.current()},
 		{"hideFastShare", s._hideFastShare.current()},
 		{"replaceBottomInfoWithIcons", s._replaceBottomInfoWithIcons.current()},
@@ -1498,6 +1513,11 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 		? appIcon
 		: defaults._appIcon.current();
 	s._customAppName = j.value("customAppName", defaults._customAppName.current()).simplified();
+	const auto customLogo = j.value("customLogo", defaults._customLogo.current());
+	s._customLogo = ExtrasFeatures::CustomLogo::isStoredName(customLogo)
+		? customLogo
+		: QString();
+	s._customLogoTint = j.value("customLogoTint", defaults._customLogoTint.current());
 	s._simpleQuotesAndReplies = j.value("simpleQuotesAndReplies", defaults._simpleQuotesAndReplies.current());
 	s._hideFastShare = j.value("hideFastShare", defaults._hideFastShare.current());
 	s._replaceBottomInfoWithIcons = j.value("replaceBottomInfoWithIcons", defaults._replaceBottomInfoWithIcons.current());

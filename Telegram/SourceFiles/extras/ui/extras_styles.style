@@ -8,6 +8,8 @@ using "media/player/media_player.style";
 extrasMusicPlaceholder: icon {{ "menu/rich/audio", windowSubTextFg }};
 extrasMediaVoice: icon {{ "extras/message_field/voice", windowSubTextFg }};
 extrasMediaVideo: icon {{ "chat/input_video", windowSubTextFg }};
+// 自定义图标叠加绘制时替换按钮原图标。
+extrasEmptyIcon: icon {};
 
 extrasMusicPlay: IconButton(mediaPlayerRepeatButton) {
 	icon: icon {{ "player/player_play", mediaPlayerActiveFg }};

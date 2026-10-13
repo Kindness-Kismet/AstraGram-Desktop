@@ -1,8 +1,10 @@
 #include "extras/ui/settings/settings_appearance.h"
 
 #include "lang_auto.h"
+#include "core/file_utilities.h"
 #include "extras/extras_settings.h"
 #include "extras/extras_ui_settings.h"
+#include "extras/features/custom_logo/custom_logo.h"
 #include "extras/ui/boxes/font_selector.h"
 #include "extras/ui/components/avatar_corners_preview.h"
 #include "extras/ui/components/icon_picker.h"
@@ -20,6 +22,7 @@
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 #include "styles/style_widgets.h"
+#include "styles/style_window.h"
 #include "ui/painter.h"
 #include "ui/boxes/single_choice_box.h"
 #include "ui/widgets/fields/input_field.h"
@@ -62,6 +65,103 @@ void editAppNameBox(not_null<Ui::GenericBox*> box) {
 		field->setFocusFast();
 	});
 	field->submits() | rpl::on_next(save, box->lifetime());
+}
+
+QString customLogoError(ExtrasFeatures::CustomLogo::ImportError error) {
+	using Error = ExtrasFeatures::CustomLogo::ImportError;
+	switch (error) {
+	case Error::TooLarge: return tr::extras_CustomLogoTooLarge(tr::now);
+	case Error::Unreadable: return tr::extras_CustomLogoUnreadable(tr::now);
+	case Error::WriteFailed: return tr::extras_CustomLogoWriteFailed(tr::now);
+	case Error::None: break;
+	}
+	Unexpected("Custom logo import error.");
+}
+
+void editCustomLogoBox(not_null<Ui::GenericBox*> box) {
+	namespace CustomLogo = ExtrasFeatures::CustomLogo;
+	auto &settings = ExtrasSettings::getInstance();
+	box->setObjectName(u"customLogoBox"_q);
+	box->setTitle(tr::extras_CustomLogo());
+
+	// 按左侧文件夹栏按钮的尺寸预览，未设置时显示原图标。
+	const auto rail = &st::windowFiltersMainMenu;
+	const auto preview = box->addRow(
+		object_ptr<Ui::FixedHeightWidget>(box, rail->minHeight));
+	const auto cache = preview->lifetime().make_state<QImage>();
+	rpl::combine(
+		settings.customLogoValue(),
+		settings.customLogoTintValue()
+	) | rpl::to_empty | rpl::on_next([=] {
+		*cache = CustomLogo::prepare(CustomLogo::displaySize(rail->icon));
+		preview->update();
+	}, preview->lifetime());
+	preview->paintRequest() | rpl::on_next([=] {
+		auto p = QPainter(preview);
+		if (cache->isNull()) {
+			rail->icon.paintInCenter(p, preview->rect());
+			return;
+		}
+		const auto size = cache->size() / cache->devicePixelRatio();
+		p.drawImage(
+			(preview->width() - size.width()) / 2,
+			(preview->height() - size.height()) / 2,
+			*cache);
+	}, preview->lifetime());
+
+	const auto tint = AddButtonWithIcon(
+		box->verticalLayout(),
+		tr::extras_CustomLogoTint(),
+		st::settingsButtonNoIcon);
+	tint->setObjectName(u"customLogoTint"_q);
+	tint->toggleOn(rpl::single(settings.customLogoTint()))->toggledValue(
+	) | rpl::skip(1) | rpl::on_next([](bool enabled) {
+		ExtrasSettings::getInstance().setCustomLogoTint(enabled);
+	}, tint->lifetime());
+
+	box->addRow(object_ptr<Ui::FlatLabel>(
+		box,
+		tr::extras_CustomLogoDescription(),
+		st::boxLabel));
+
+	box->addButton(tr::extras_CustomLogoChoose(), [=] {
+		FileDialog::GetOpenPath(
+			box.get(),
+			tr::extras_CustomLogoChoose(tr::now),
+			FileDialog::ImagesOrAllFilter(),
+			crl::guard(box, [=](FileDialog::OpenResult &&result) {
+				if (result.paths.isEmpty()) {
+					return;
+				}
+				const auto error = CustomLogo::importFile(
+					result.paths.front());
+				if (error != CustomLogo::ImportError::None) {
+					box->showToast(customLogoError(error));
+				}
+			}));
+	});
+	box->addButton(tr::lng_close(), [=] { box->closeBox(); });
+	box->addLeftButton(tr::extras_BoxActionReset(), [] {
+		CustomLogo::reset();
+	});
+}
+
+void buildCustomLogo(SectionBuilder &builder) {
+	const auto controller = builder.controller();
+	builder.addButton({
+		.id = u"extras/customLogo"_q,
+		.title = tr::extras_CustomLogo(),
+		.st = &st::settingsButtonNoIcon,
+		.label = ExtrasSettings::getInstance().customLogoValue()
+			| rpl::map([](const QString &name) {
+				return name.isEmpty()
+					? tr::extras_CustomLogoDefault(tr::now)
+					: tr::extras_CustomLogoCustom(tr::now);
+			}),
+		.onClick = [=] {
+			controller->show(Box(editCustomLogoBox));
+		},
+	});
 }
 
 void buildAppName(SectionBuilder &builder) {
@@ -271,6 +371,7 @@ void BuildAppearance(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 
 	builder.addSubsectionTitle(tr::extras_CategoryAppearance());
 	buildAppName(builder);
+	buildCustomLogo(builder);
 	buildHorizontalTabStyle(builder);
 
 	extras.addSettingToggle({

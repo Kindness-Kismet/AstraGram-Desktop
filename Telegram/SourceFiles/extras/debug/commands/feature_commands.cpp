@@ -4,6 +4,7 @@
 #include "extras/extras_settings.h"
 #include "extras/debug/debug_login.h"
 #include "extras/features/auto_space/auto_space.h"
+#include "extras/features/custom_logo/custom_logo.h"
 #include "extras/features/emoji_packs/emoji_packs.h"
 #include "extras/features/translator/extras_translator.h"
 #include "extras/features/window_material/window_material.h"
@@ -258,6 +259,27 @@ Result cancelEmoji(const QStringList &args) {
 	return Result::Ok();
 }
 
+// 与设置页“选择图片”相同，跳过文件选择窗口；返回保存后的文件名与尺寸。
+Result importLogo(const QStringList &args) {
+	if (args.size() != 1) return Result::Err(u"usage: logo.import <imagePath>"_q);
+	using Error = ExtrasFeatures::CustomLogo::ImportError;
+	switch (ExtrasFeatures::CustomLogo::importFile(args[0])) {
+	case Error::TooLarge: return Result::Err(u"image is larger than 10 MB"_q);
+	case Error::Unreadable: return Result::Err(u"image cannot be read"_q);
+	case Error::WriteFailed: return Result::Err(u"image cannot be saved"_q);
+	case Error::None: break;
+	}
+	const auto name = ExtrasSettings::getInstance().customLogo();
+	const auto size = QImageReader(cWorkingDir() + u"tdata/"_q + name).size();
+	return Result::Ok(Compact(Json{{"name", name.toStdString()}, {"width", size.width()}, {"height", size.height()}}));
+}
+
+Result resetLogo(const QStringList &args) {
+	if (!args.empty()) return Result::Err(u"usage: logo.reset"_q);
+	ExtrasFeatures::CustomLogo::reset();
+	return Result::Ok();
+}
+
 Result featureStatus(const QStringList &args) {
 	if (!args.empty()) return Result::Err(u"usage: feature.status"_q);
 	const auto window = Core::App().activeWindow();
@@ -300,6 +322,7 @@ const HandlerMap &FeatureHandlers() {
 		{u"emoji.list"_q, &emojiList}, {u"emoji.import"_q, &importEmoji},
 		{u"emoji.install"_q, &installEmoji}, {u"emoji.select"_q, &selectEmoji},
 		{u"emoji.cancel"_q, &cancelEmoji},
+		{u"logo.import"_q, &importLogo}, {u"logo.reset"_q, &resetLogo},
 		{u"feature.status"_q, &featureStatus}, {u"forward.status"_q, &forwardStatus},
 		{u"forward.cancel"_q, &cancelForward},
 	};

@@ -109,6 +109,8 @@ GENERIC_COMMANDS = {
     "emoji.install": "下载并安装预设表情包：<预设编号>",
     "emoji.select": "切换已安装表情包：<编号>",
     "emoji.cancel": "取消预设表情包下载：<预设编号>",
+    "logo.import": "导入左上角图标，与设置页一致：<图片路径>",
+    "logo.reset": "恢复默认左上角图标",
     "feature.status": "查询窗口材质、隐私遮挡、翻译与表情包状态",
     "forward.status": "查询转发任务进度：<会话编号>",
     "forward.cancel": "取消正在运行的转发任务：<会话编号>",

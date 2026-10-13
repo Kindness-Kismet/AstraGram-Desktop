@@ -319,6 +319,8 @@ public:
 	[[nodiscard]] const QString &appIcon() const { return _appIcon.current(); }
 	[[nodiscard]] const QString &customAppName() const { return _customAppName.current(); }
 	[[nodiscard]] QString appDisplayName() const;
+	[[nodiscard]] const QString &customLogo() const { return _customLogo.current(); }
+	[[nodiscard]] bool customLogoTint() const { return _customLogoTint.current(); }
 	[[nodiscard]] bool simpleQuotesAndReplies() const { return _simpleQuotesAndReplies.current(); }
 	[[nodiscard]] bool hideFastShare() const { return _hideFastShare.current(); }
 	[[nodiscard]] bool replaceBottomInfoWithIcons() const { return _replaceBottomInfoWithIcons.current(); }
@@ -428,6 +430,8 @@ public:
 	void setShowPrivateChatReactions(bool val);
 	void setAppIcon(const QString &val);
 	void setCustomAppName(const QString &val);
+	void setCustomLogo(const QString &val);
+	void setCustomLogoTint(bool val);
 	void setSimpleQuotesAndReplies(bool val);
 	void setHideFastShare(bool val);
 	void setReplaceBottomInfoWithIcons(bool val);
@@ -567,6 +571,8 @@ public:
 	[[nodiscard]] rpl::producer<QString> appIconValue() const { return _appIcon.value(); }
 	[[nodiscard]] rpl::producer<QString> appIconChanges() const { return _appIcon.changes(); }
 	[[nodiscard]] rpl::producer<QString> customAppNameValue() const { return _customAppName.value(); }
+	[[nodiscard]] rpl::producer<QString> customLogoValue() const { return _customLogo.value(); }
+	[[nodiscard]] rpl::producer<bool> customLogoTintValue() const { return _customLogoTint.value(); }
 	[[nodiscard]] rpl::producer<bool> simpleQuotesAndRepliesValue() const { return _simpleQuotesAndReplies.value(); }
 	[[nodiscard]] rpl::producer<bool> simpleQuotesAndRepliesChanges() const { return _simpleQuotesAndReplies.changes(); }
 	[[nodiscard]] rpl::producer<bool> hideFastShareValue() const { return _hideFastShare.value(); }
@@ -739,6 +745,9 @@ private:
 	rpl::variable<bool> _showPrivateChatReactions = true;
 	rpl::variable<QString> _appIcon;
 	rpl::variable<QString> _customAppName;
+	// 导入后保存在 tdata 里的图片文件名，为空时显示原图标。
+	rpl::variable<QString> _customLogo;
+	rpl::variable<bool> _customLogoTint = false;
 	rpl::variable<bool> _simpleQuotesAndReplies = false;
 	rpl::variable<bool> _hideFastShare = false;
 	rpl::variable<bool> _replaceBottomInfoWithIcons = true;

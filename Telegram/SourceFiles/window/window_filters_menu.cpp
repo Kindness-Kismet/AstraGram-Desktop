@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_filters_menu.h"
 
+#include "extras/features/custom_logo/custom_logo.h"
 #include "extras/features/window_material/window_material.h"
 #include "menu/menu_mark_as_read.h"
 #include "mainwindow.h"
@@ -120,6 +121,10 @@ void FiltersMenu::setup() {
 	setupDragAndDrop();
 	_menu.setIsMenuButton(true);
 	_menu.setAccessibleName(tr::lng_main_menu(tr::now));
+	ExtrasFeatures::CustomLogo::attach(
+		&_menu,
+		st::windowFiltersMainMenu.icon,
+		[=](bool custom) { _menu.setShowIcon(!custom); });
 
 	_outer.setAttribute(Qt::WA_OpaquePaintEvent);
 	ExtrasFeatures::WindowMaterial::watchSurface(&_outer);

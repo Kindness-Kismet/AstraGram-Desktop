@@ -38,6 +38,11 @@
 终态为 `succeeded/failed`；`job.forget <id>` 清理已结束的查询记录。
 异步工作不会在调试服务端主线程中等待。
 
+## 左上角图标
+
+`logo.import <imagePath>` 与设置页“选择图片”相同：文件不超过 10 MB，裁掉透明边距后等比缩到 256px 内另存到 `tdata`，
+返回保存的文件名与尺寸；`logo.reset` 恢复默认图标并删除已保存的图片。主题色开关用 `settings.set customLogoTint true`。
+
 ## 消息截图与转发
 
 消息截图先从消息右键菜单点击“选择”，再点击顶部 `selection.messageShot`。
