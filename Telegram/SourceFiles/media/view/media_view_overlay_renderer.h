@@ -44,6 +44,9 @@ public:
 		float64 innerOpacity,
 		const style::icon &icon) = 0;
 	virtual void paintFooter(QRect outer, float64 opacity) = 0;
+	// 窗口内查看器顶栏两组按钮之间的分隔线。
+	virtual void paintTopBarSeparator(QRect rect, float64 opacity) {
+	}
 	virtual void paintCaption(QRect outer, float64 opacity) = 0;
 	virtual void paintGroupThumbs(QRect outer, float64 opacity) = 0;
 	virtual void paintRoundedCorners(int radius) = 0;

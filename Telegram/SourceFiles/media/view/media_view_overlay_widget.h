@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/media_common.h"
 #include "media/system_media_controls_video.h"
 #include "platform/platform_text_recognition.h"
+#include "ui/userpic_view.h"
 
 class History;
 struct PollAnswer;
@@ -173,6 +174,8 @@ private:
 		More,
 		Draw,
 		Recognize,
+		FullScreen,
+		Close,
 		Icon,
 		Video,
 		Caption,
@@ -556,6 +559,14 @@ private:
 		QRect clip,
 		float64 opacity);
 	[[nodiscard]] QRect footerGeometry() const;
+	void updateTopBarHeaderGeometry();
+	void paintTopBarHeaderContent(
+		Painter &p,
+		QRect outer,
+		QRect clip,
+		float64 opacity);
+	[[nodiscard]] bool topBarControlAt(QPoint point) const;
+	void moveDropdown();
 	void paintCaptionContent(
 		Painter &p,
 		QRect outer,
@@ -690,6 +701,9 @@ private:
 	QRect _recognizeNav, _recognizeNavOver, _recognizeNavIcon;
 	QRect _saveNav, _saveNavOver, _saveNavIcon;
 	QRect _moreNav, _moreNavOver, _moreNavIcon;
+	QRect _fullScreenNav, _fullScreenNavOver, _fullScreenNavIcon;
+	QRect _closeNav, _closeNavOver, _closeNavIcon;
+	QRect _userpicNav, _topBarSeparator;
 	bool _leftNavVisible = false;
 	bool _rightNavVisible = false;
 	bool _saveVisible = false;
@@ -805,6 +819,7 @@ private:
 	PeerData *_from = nullptr;
 	QString _fromName;
 	Ui::Text::String _fromNameLabel;
+	Ui::PeerUserpicView _fromUserpicView;
 
 	std::optional<int> _index; // Index in current _sharedMedia data.
 	std::optional<int> _fullIndex; // Index in full shared media.

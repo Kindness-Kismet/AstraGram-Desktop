@@ -54,6 +54,7 @@ private:
 		float64 innerOpacity,
 		const style::icon &icon) override;
 	void paintFooter(QRect outer, float64 opacity) override;
+	void paintTopBarSeparator(QRect rect, float64 opacity) override;
 	void paintCaption(QRect outer, float64 opacity) override;
 	void paintGroupThumbs(QRect outer, float64 opacity) override;
 	void paintRoundedCorners(int radius) override;

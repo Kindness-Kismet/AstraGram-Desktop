@@ -139,7 +139,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/extras_settings.h"
 #include "extras/extras_state.h"
 #include "extras/features/media_viewer/viewer_host.h"
+#include "extras/features/media_viewer/viewer_layout.h"
 #include "extras/features/streamer_mode/streamer_mode.h"
+#include "history/history_item_components.h"
+#include "ui/empty_userpic.h"
 #include "styles/style_extras_styles.h"
 
 
@@ -270,6 +273,10 @@ private:
 
 // 宿主缩放后等它完成布局再重新截取背景。
 constexpr auto kBackdropRefreshDelay = crl::time(100);
+
+// 窗口内顶栏：时间和标题行的常态不透明度，分隔线的不透明度。
+constexpr auto kTopBarSecondaryOpacity = 0.62;
+constexpr auto kTopBarSeparatorOpacity = 0.2;
 
 // 撤销窗口内模式的固定尺寸，恢复查看器原本的尺寸限制。
 void ReleaseFixedSize(not_null<Ui::RpWindow*> window) {
@@ -865,7 +872,8 @@ OverlayWidget::OverlayWidget()
 		} else if (type == QEvent::MouseButtonDblClick
 			&& _viewerHost
 			&& mouseButton(e) == Qt::LeftButton
-			&& mousePosition(e).y() <= st::mediaviewTitleButton.height) {
+			&& mousePosition(e).y() <= st::mediaviewTitleButton.height
+			&& !topBarControlAt(mousePosition(e))) {
 			// 窗口内模式切换全屏要先解除固定尺寸，顶部双击不走系统的全屏切换。
 			toggleFullScreen(!_fullscreen);
 			return base::EventFilterResult::Cancel;
@@ -1080,7 +1088,8 @@ void OverlayWidget::setupWindow() {
 			|| _helper->skipTitleHitTest(_widget->mapTo(_window, widgetPoint))) {
 			return result;
 		}
-		if (widgetPoint.y() <= st::mediaviewTitleButton.height) {
+		if (widgetPoint.y() <= st::mediaviewTitleButton.height
+			&& !topBarControlAt(widgetPoint)) {
 			result |= Flag::Menu | Flag::FullScreen;
 		}
 		const auto inControls = ((_over != Over::None) && (_over != Over::Video));
@@ -1343,11 +1352,13 @@ void OverlayWidget::prepareOpenMode(const OpenRequest &request) {
 			[=] { close(); });
 		_backdrop = _viewerHost->grabBackdrop();
 		_fullscreen = _windowed = false;
+		_helper->setTitleControlsHidden(true);
 		return;
 	}
 	if (!wasInWindow) {
 		return;
 	}
+	_helper->setTitleControlsHidden(false);
 	ReleaseFixedSize(_window);
 	const auto mode = Core::App().settings().mediaViewPosition().maximized;
 	_fullscreen = (mode == 2) || (mode == 1 && Platform::IsMac());
@@ -1406,11 +1417,10 @@ void OverlayWidget::updateControlsGeometry() {
 		QPoint(topShadowOnTheRight() ? (width() - top.width()) : 0, 0),
 		top);
 
-	if (_dropdown && !_dropdown->isHidden()) {
-		_dropdown->moveToRight(0, height() - _dropdown->height());
-	}
-
 	updateControls();
+	if (_dropdown && !_dropdown->isHidden()) {
+		moveDropdown();
+	}
 	updateTtlBadgePosition();
 	resizeContentByScreenSize();
 	update();
@@ -1473,7 +1483,9 @@ void OverlayWidget::updateTtlBadgePosition() {
 	const auto left = topShadowOnTheRight()
 		? (skip - margin)
 		: (width() - _ttlBadge->width() - skip + margin);
-	_ttlBadge->move(left, _minUsedTop + skip - margin);
+	const auto top = _minUsedTop
+		+ (lightboxStyle() ? ExtrasFeatures::MediaViewer::topBarHeight() : 0);
+	_ttlBadge->move(left, top + skip - margin);
 	_ttlBadge->raise();
 	if (_ttlTooltip) {
 		const auto badge = QRect(
@@ -1525,7 +1537,10 @@ void OverlayWidget::updateNavigationControlsGeometry() {
 	const auto navSize = _stories
 		? st::storiesControlSize
 		: st::mediaviewControlSize;
-	const auto navSkip = st::mediaviewHeaderTop;
+	// 窗口内样式的翻页热区从顶栏下方开始，不和顶栏按钮重叠。
+	const auto navSkip = lightboxStyle()
+		? ExtrasFeatures::MediaViewer::topBarHeight()
+		: st::mediaviewHeaderTop;
 	const auto xLeft = _stories ? (_x - navSize) : 0;
 	const auto xRight = _stories ? (_x + _w) : (width() - navSize);
 	_leftNav = QRect(
@@ -1870,11 +1885,14 @@ void OverlayWidget::updateControls() {
 	updateThemePreviewGeometry();
 
 	const auto story = _stories ? _stories->story() : nullptr;
-	const auto overRect = QRect(
-		QPoint(),
-		QSize(st::mediaviewIconOver, st::mediaviewIconOver));
+	const auto lightbox = lightboxStyle();
+	const auto overSize = lightbox
+		? st::extrasViewerTopBarButton
+		: st::mediaviewIconOver;
+	const auto overRect = QRect(QPoint(), QSize(overSize, overSize));
 	_saveVisible = computeSaveButtonVisible();
-	_shareVisible = story && story->canShare();
+	_shareVisible = (story && story->canShare())
+		|| (lightbox && _message && _message->allowsForward());
 	_rotateVisible = !_themePreviewShown && !story;
 	_drawVisible = _drawButtonEnabled
 		&& !_themePreviewShown
@@ -1886,6 +1904,13 @@ void OverlayWidget::updateControls() {
 	_recognizeVisible = _recognitionResult.success
 		&& !_recognitionResult.items.empty();
 	const auto navRect = [&](int i) {
+		if (lightbox) {
+			// 顶栏自右向左：关闭、更多、全屏，其余媒体操作排在全屏左侧。
+			return ExtrasFeatures::MediaViewer::topBarButtonRect(
+				width(),
+				_minUsedTop,
+				(i == 1) ? 2 : (i + 2));
+		}
 		return QRect(
 			width() - st::mediaviewIconSize.width() * i,
 			height() - st::mediaviewIconSize.height(),
@@ -1925,6 +1950,30 @@ void OverlayWidget::updateControls() {
 	_recognizeNavOver = style::centerrect(_recognizeNav, overRect);
 	_recognizeNavIcon = style::centerrect(_recognizeNav, st::mediaviewRecognize);
 	Assert(st::mediaviewSave.size() == st::mediaviewSaveLocked.size());
+	if (lightbox) {
+		using namespace ExtrasFeatures::MediaViewer;
+		_closeNav = topBarButtonRect(width(), _minUsedTop, 1);
+		_fullScreenNav = topBarButtonRect(
+			width(),
+			_minUsedTop,
+			kTopBarGroupSize);
+		const auto actions = _rotateVisible
+			|| _shareVisible
+			|| _saveVisible
+			|| _drawVisible
+			|| _recognizeVisible;
+		_topBarSeparator = actions
+			? topBarSeparatorRect(width(), _minUsedTop)
+			: QRect();
+	} else {
+		_closeNav = _fullScreenNav = _topBarSeparator = QRect();
+	}
+	_closeNavOver = style::centerrect(_closeNav, overRect);
+	_closeNavIcon = style::centerrect(_closeNav, st::extrasViewerClose);
+	_fullScreenNavOver = style::centerrect(_fullScreenNav, overRect);
+	_fullScreenNavIcon = style::centerrect(
+		_fullScreenNav,
+		st::extrasViewerFullScreen);
 
 	const auto dNow = QDateTime::currentDateTime();
 	const auto d = [&] {
@@ -1959,7 +2008,7 @@ void OverlayWidget::updateControls() {
 	refreshTtlBadge(destroyAt);
 	if (!_fromName.isEmpty()) {
 		_fromNameLabel.setText(
-			st::mediaviewTextStyle,
+			lightbox ? st::semiboldTextStyle : st::mediaviewTextStyle,
 			_fromName,
 			Ui::NameTextOptions());
 		_nameNav = QRect(
@@ -1994,6 +2043,11 @@ void OverlayWidget::updateControls() {
 			st::mediaviewFont->height);
 	}
 	updateHeader();
+	if (lightbox) {
+		updateTopBarHeaderGeometry();
+	} else {
+		_userpicNav = QRect();
+	}
 	refreshNavVisibility();
 	resizeCenteredControls();
 
@@ -2002,10 +2056,13 @@ void OverlayWidget::updateControls() {
 }
 
 void OverlayWidget::resizeCenteredControls() {
-	const auto bottomSkip = std::max(
-		_dateNav.left() + _dateNav.width(),
-		_headerNav.left() + _headerNav.width())
-		+ st::mediaviewCaptionMargin.width();
+	// 窗口内样式的名字和时间在顶栏，底部只需让出翻页按钮。
+	const auto bottomSkip = lightboxStyle()
+		? st::extrasViewerContentPadding.left()
+		: (std::max(
+			_dateNav.left() + _dateNav.width(),
+			_headerNav.left() + _headerNav.width())
+			+ st::mediaviewCaptionMargin.width());
 	_groupThumbsAvailableWidth = std::max(
 		width() - 2 * bottomSkip,
 		st::msgMinWidth
@@ -7273,6 +7330,20 @@ void OverlayWidget::paintControls(
 			_recognizeNavOver,
 			_recognizeNavIcon,
 			st::mediaviewRecognize },
+		{
+			Over::FullScreen,
+			lightboxStyle(),
+			_fullScreenNavOver,
+			_fullScreenNavIcon,
+			(_fullscreen
+				? st::extrasViewerFullScreenOut
+				: st::extrasViewerFullScreen) },
+		{
+			Over::Close,
+			lightboxStyle(),
+			_closeNavOver,
+			_closeNavIcon,
+			st::extrasViewerClose },
 	};
 
 	renderer->paintControlsStart();
@@ -7291,6 +7362,11 @@ void OverlayWidget::paintControls(
 			icon * opacity,
 			control.icon);
 	}
+	if (!_topBarSeparator.isEmpty()) {
+		renderer->paintTopBarSeparator(
+			_topBarSeparator,
+			kTopBarSeparatorOpacity * opacity);
+	}
 }
 
 float64 OverlayWidget::controlOpacity(
@@ -7300,7 +7376,7 @@ float64 OverlayWidget::controlOpacity(
 		return progress * kStoriesNavOverOpacity
 			+ (1. - progress) * kStoriesNavOpacity;
 	}
-	const auto normal = _windowed
+	const auto normal = (_windowed || lightboxStyle())
 		? kNormalIconOpacity
 		: kMaximizedIconOpacity;
 	return progress + (1. - progress) * normal;
@@ -7311,6 +7387,10 @@ void OverlayWidget::paintFooterContent(
 		QRect outer,
 		QRect clip,
 		float64 opacity) {
+	if (lightboxStyle()) {
+		paintTopBarHeaderContent(p, outer, clip, opacity);
+		return;
+	}
 	p.setPen(st::mediaviewControlFg);
 	p.setFont(st::mediaviewThickFont);
 
@@ -7370,7 +7450,141 @@ void OverlayWidget::paintFooterContent(
 }
 
 QRect OverlayWidget::footerGeometry() const {
-	return _headerNav.united(_nameNav).united(_separatorNav).united(_dateNav);
+	return _headerNav.united(_nameNav).united(_separatorNav).united(_dateNav)
+		.united(_userpicNav);
+}
+
+void OverlayWidget::updateTopBarHeaderGeometry() {
+	// 文字最多排到最左侧可见按钮之前。
+	auto right = _fullScreenNav.x();
+	const auto take = [&](bool visible, const QRect &rect) {
+		if (visible) {
+			right = std::min(right, rect.x());
+		}
+	};
+	take(_rotateVisible, _rotateNav);
+	take(_shareVisible, _shareNav);
+	take(_saveVisible, _saveNav);
+	take(_drawVisible, _drawNav);
+	take(_recognizeVisible, _recognizeNav);
+	const auto hidden = _message
+		? _message->originalHiddenSenderInfo()
+		: nullptr;
+	const auto header = ExtrasFeatures::MediaViewer::layoutTopBarHeader({
+		.top = _minUsedTop,
+		.right = right - st::extrasViewerUserpicSkip,
+		.userpic = (_from != nullptr) || (hidden != nullptr),
+		.nameWidth = _fromName.isEmpty() ? 0 : _fromNameLabel.maxWidth(),
+		.date = _dateText,
+		.header = _headerText,
+	});
+	_userpicNav = header.userpic;
+	_nameNav = header.name;
+	_dateNav = header.date;
+	_separatorNav = header.separator;
+	_headerNav = header.header;
+	_headerText = header.headerText;
+}
+
+void OverlayWidget::paintTopBarHeaderContent(
+		Painter &p,
+		QRect outer,
+		QRect clip,
+		float64 opacity) {
+	const auto shift = outer.topLeft() - footerGeometry().topLeft();
+	const auto userpic = _userpicNav.translated(shift);
+	if (!_userpicNav.isEmpty() && userpic.intersects(clip)) {
+		p.setOpacity(opacity);
+		const auto size = userpic.width();
+		const auto hidden = _message
+			? _message->originalHiddenSenderInfo()
+			: nullptr;
+		if (_from) {
+			_from->paintUserpic(
+				p,
+				_fromUserpicView,
+				userpic.x(),
+				userpic.y(),
+				size);
+		} else if (hidden && !hidden->paintCustomUserpic(
+				p,
+				_fromUserpicView,
+				userpic.x(),
+				userpic.y(),
+				outer.width(),
+				size)) {
+			hidden->emptyUserpic.paintCircle(
+				p,
+				userpic.x(),
+				userpic.y(),
+				outer.width(),
+				size);
+		}
+	}
+	p.setPen(st::mediaviewControlFg);
+	const auto underline = [&](QRect rect, int ascent, float64 over) {
+		if (over > 0) {
+			p.setOpacity(over * opacity);
+			const auto y = rect.top() + ascent + 1;
+			p.drawLine(rect.left(), y, rect.right(), y);
+		}
+	};
+	const auto name = _nameNav.translated(shift);
+	if (!_nameNav.isEmpty() && name.intersects(clip)) {
+		p.setOpacity(opacity);
+		_fromNameLabel.drawElided(p, name.left(), name.top(), name.width());
+		underline(
+			name,
+			st::semiboldFont->ascent,
+			_from ? overLevel(Over::Name) : 0.);
+	}
+
+	const auto &font = st::extrasViewerDateFont;
+	p.setFont(font);
+	const auto secondary = [&](float64 over) {
+		return (kTopBarSecondaryOpacity
+			+ (1. - kTopBarSecondaryOpacity) * over) * opacity;
+	};
+	const auto paintText = [&](QRect rect, const QString &text, Over state) {
+		const auto shifted = rect.translated(shift);
+		if (rect.isEmpty() || !shifted.intersects(clip)) {
+			return;
+		}
+		const auto over = (state != Over::None) ? overLevel(state) : 0.;
+		p.setOpacity(secondary(over));
+		p.drawText(
+			shifted.left(),
+			shifted.top() + font->ascent,
+			font->elided(text, shifted.width()));
+		underline(shifted, font->ascent, over);
+	};
+	paintText(_dateNav, _dateText, Over::Date);
+	paintText(_separatorNav, Ui::kQBullet, Over::None);
+	paintText(
+		_headerNav,
+		_headerText,
+		_headerHasLink ? Over::Header : Over::None);
+}
+
+bool OverlayWidget::topBarControlAt(QPoint point) const {
+	if (!lightboxStyle()) {
+		return false;
+	}
+	const auto at = [&](bool visible, const QRect &rect) {
+		return visible && rect.contains(point);
+	};
+	return at(true, _closeNav)
+		|| at(true, _fullScreenNav)
+		|| at(true, _moreNav)
+		|| at(_rotateVisible, _rotateNav)
+		|| at(_shareVisible, _shareNav)
+		|| at(_saveVisible, _saveNav)
+		|| at(_drawVisible, _drawNav)
+		|| at(_recognizeVisible, _recognizeNav)
+		|| at(true, _userpicNav)
+		|| at(true, _nameNav)
+		|| at(true, _dateNav)
+		|| at(true, _headerNav);
 }
 
 void OverlayWidget::paintCaptionContent(
@@ -8168,6 +8382,8 @@ void OverlayWidget::handleMousePress(
 				|| _over == Over::Recognize
 				|| _over == Over::Icon
 				|| _over == Over::More
+				|| _over == Over::FullScreen
+				|| _over == Over::Close
 				|| _over == Over::Video) {
 				_down = _over;
 				if (_over == Over::Video && _stories) {
@@ -8413,7 +8629,7 @@ void OverlayWidget::updateOverRect(Over state) {
 			? _stories->sibling(Type::Right).layout.geometry
 			: QRect());
 		break;
-	case Over::Name: update(_nameNav); break;
+	case Over::Name: update(_nameNav.united(_userpicNav)); break;
 	case Over::Date: update(_dateNav); break;
 	case Over::Save: update(_saveNavOver); break;
 	case Over::Share: update(_shareNavOver); break;
@@ -8423,6 +8639,8 @@ void OverlayWidget::updateOverRect(Over state) {
 	case Over::Header: update(_headerNav); break;
 	case Over::More: update(_moreNavOver); break;
 	case Over::Recognize: update(_recognizeNavOver); break;
+	case Over::FullScreen: update(_fullScreenNavOver); break;
+	case Over::Close: update(_closeNavOver); break;
 	}
 }
 
@@ -8540,7 +8758,9 @@ void OverlayWidget::updateOver(QPoint pos) {
 		&& _stories->sibling(
 			SiblingType::Right).layout.geometry.contains(pos)) {
 		updateOverState(Over::RightStories);
-	} else if (!_stories && _from && _nameNav.contains(pos)) {
+	} else if (!_stories
+		&& _from
+		&& (_nameNav.contains(pos) || _userpicNav.contains(pos))) {
 		updateOverState(Over::Name);
 	} else if (!_stories
 		&& _message
@@ -8559,6 +8779,10 @@ void OverlayWidget::updateOver(QPoint pos) {
 		&& documentBubbleShown()
 		&& _docIconRect.contains(pos)) {
 		updateOverState(Over::Icon);
+	} else if (lightboxStyle() && _fullScreenNav.contains(pos)) {
+		updateOverState(Over::FullScreen);
+	} else if (lightboxStyle() && _closeNav.contains(pos)) {
+		updateOverState(Over::Close);
 	} else if (_moreNav.contains(pos)) {
 		updateOverState(Over::More);
 	} else if (_drawVisible && _drawNav.contains(pos)) {
@@ -8669,6 +8893,12 @@ void OverlayWidget::handleMouseRelease(
 		downloadMedia();
 	} else if (_over == Over::Share && _down == Over::Share && _stories) {
 		_stories->shareRequested();
+	} else if (_over == Over::Share && _down == Over::Share) {
+		forwardMedia();
+	} else if (_over == Over::FullScreen && _down == Over::FullScreen) {
+		toggleFullScreen(!_fullscreen);
+	} else if (_over == Over::Close && _down == Over::Close) {
+		close();
 	} else if (_over == Over::Rotate && _down == Over::Rotate) {
 		playbackControlsRotate();
 	} else if (_over == Over::Icon && _down == Over::Icon) {
@@ -8719,7 +8949,9 @@ void OverlayWidget::handleMouseRelease(
 			_dragging = 0;
 			setCursor(style::cur_default);
 		} else if (!_windowed
-			&& position.y() > st::mediaviewTitleButton.height
+			&& position.y() > (lightboxStyle()
+				? (_minUsedTop + ExtrasFeatures::MediaViewer::topBarHeight())
+				: st::mediaviewTitleButton.height)
 			&& (position - _lastAction).manhattanLength()
 				>= st::mediaviewDeltaFromLastAction) {
 			if (_recognition.hasSelection()) {
@@ -9084,12 +9316,25 @@ void OverlayWidget::receiveMouse() {
 void OverlayWidget::showDropdown() {
 	_dropdown->clearActions();
 	fillContextMenuActions(Ui::Menu::CreateAddActionCallback(_dropdown));
-	_dropdown->moveToRight(0, height() - _dropdown->height());
-	_dropdown->showAnimated(Ui::PanelAnimation::Origin::BottomRight);
+	moveDropdown();
+	_dropdown->showAnimated(lightboxStyle()
+		? Ui::PanelAnimation::Origin::TopRight
+		: Ui::PanelAnimation::Origin::BottomRight);
 	_dropdown->setFocus();
 	if (_stories) {
 		_stories->menuShown(true);
 	}
+}
+
+void OverlayWidget::moveDropdown() {
+	if (!lightboxStyle()) {
+		_dropdown->moveToRight(0, height() - _dropdown->height());
+		return;
+	}
+	// 更多按钮在顶栏，菜单从按钮下方展开。
+	_dropdown->moveToRight(
+		width() - rect::right(_moreNav),
+		rect::bottom(_moreNav));
 }
 
 void OverlayWidget::handleTouchTimer() {

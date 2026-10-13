@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/base_platform_info.h"
 #include "core/crash_reports.h"
 #include "styles/style_media_view.h"
+#include "styles/style_extras_styles.h"
 
 namespace Media::View {
 namespace {
@@ -177,12 +178,12 @@ void OverlayWidget::RendererGL::init(QOpenGLFunctions &f) {
 	constexpr auto kRoundingVertices = kRoundingQuads * 6;
 	constexpr auto kRoundingValues = kRoundingVertices * 2;
 	constexpr auto kStoriesSiblingValues = kStoriesSiblingPartsCount * 16;
-	constexpr auto kBackdropValues = 16;
+	constexpr auto kExtrasValues = 2 * 16; // backdrop + top bar separator
 	constexpr auto kValues = kQuadValues
 		+ kControlsValues
 		+ kRoundingValues
 		+ kStoriesSiblingValues
-		+ kBackdropValues;
+		+ kExtrasValues;
 
 	_contentBuffer.emplace();
 	_contentBuffer->setUsagePattern(QOpenGLBuffer::DynamicDraw);
@@ -391,9 +392,45 @@ void OverlayWidget::RendererGL::paintBackdrop() {
 	_backdropImage.setImage(image);
 	_backdropImage.bind(*_f);
 
-	const auto textured = _backdropImage.texturedRect(
+	toggleBlending(false);
+	paintTexturedQuad(
+		_backdropImage,
 		QRect(QPoint(), _viewport),
-		QRect(QPoint(), image.size()));
+		QRect(QPoint(), image.size()),
+		extrasBufferOffset(),
+		1.);
+}
+
+void OverlayWidget::RendererGL::paintTopBarSeparator(
+		QRect rect,
+		float64 opacity) {
+	validateControls();
+	_f->glActiveTexture(GL_TEXTURE0);
+	_controlsImage.bind(*_f);
+	toggleBlending(true);
+	paintTexturedQuad(
+		_controlsImage,
+		rect,
+		_controlsTextures[kControlsCount + 2],
+		extrasBufferOffset() + 4,
+		opacity);
+}
+
+int OverlayWidget::RendererGL::extrasBufferOffset() const {
+	// 排在快拍邻图之后：毛玻璃背景，然后是顶栏分隔线。
+	return kControlsOffset
+		+ (kControlsCount * kControlValues) / 4
+		+ (6 * 2 * 4) / 4 // rounding
+		+ (kStoriesSiblingPartsCount * 4);
+}
+
+void OverlayWidget::RendererGL::paintTexturedQuad(
+		Ui::GL::Image &image,
+		QRect rect,
+		QRect texture,
+		int offset,
+		float64 opacity) {
+	const auto textured = image.texturedRect(rect, texture);
 	const auto geometry = transformRect(textured.geometry);
 	const GLfloat coords[] = {
 		geometry.left(), geometry.top(),
@@ -408,21 +445,14 @@ void OverlayWidget::RendererGL::paintBackdrop() {
 		geometry.left(), geometry.bottom(),
 		textured.texture.left(), textured.texture.top(),
 	};
-	// 缓冲区末尾的一块，排在快拍邻图之后。
-	const auto offset = kControlsOffset
-		+ (kControlsCount * kControlValues) / 4
-		+ (6 * 2 * 4) / 4 // rounding
-		+ (kStoriesSiblingPartsCount * 4);
 	_contentBuffer->bind();
 	_contentBuffer->write(
 		offset * 4 * sizeof(GLfloat),
 		coords,
 		sizeof(coords));
-
-	toggleBlending(false);
 	_controlsProgram->bind();
 	_controlsProgram->setUniformValue("viewport", _uniformViewport);
-	_controlsProgram->setUniformValue("g_opacity", GLfloat(1));
+	_controlsProgram->setUniformValue("g_opacity", GLfloat(opacity));
 	FillTexturedRectangle(*_f, &*_controlsProgram, offset);
 }
 
@@ -827,9 +857,12 @@ void OverlayWidget::RendererGL::paintControl(
 	const auto overAlpha = overOpacity * kOverBackgroundOpacity;
 	const auto offset = kControlsOffset + (meta.index * kControlValues) / 4;
 	const auto fgOffset = offset + 4;
+	const auto roundedOver = _owner->lightboxStyle()
+		&& (control != Over::Left)
+		&& (control != Over::Right);
 	const auto overRect = _controlsImage.texturedRect(
 		over,
-		_controlsTextures[kControlsCount]);
+		_controlsTextures[kControlsCount + (roundedOver ? 1 : 0)]);
 	const auto overGeometry = transformRect(over);
 	const auto iconRect = _controlsImage.texturedRect(
 		inner,
@@ -904,6 +937,10 @@ auto OverlayWidget::RendererGL::controlMeta(Over control) const -> Control {
 	case Over::More: return { 5, &st::mediaviewMore };
 	case Over::Draw: return { 6, &st::mediaviewDraw };
 	case Over::Recognize: return { 7, &st::mediaviewRecognize };
+	case Over::FullScreen: return _owner->_fullscreen
+		? Control{ 9, &st::extrasViewerFullScreenOut }
+		: Control{ 8, &st::extrasViewerFullScreen };
+	case Over::Close: return { 10, &st::extrasViewerClose };
 	}
 	Unexpected("Control value in OverlayWidget::RendererGL::ControlIndex.");
 }
@@ -921,15 +958,22 @@ void OverlayWidget::RendererGL::validateControls() {
 		controlMeta(Over::More),
 		controlMeta(Over::Draw),
 		controlMeta(Over::Recognize),
+		Control{ 8, &st::extrasViewerFullScreen },
+		Control{ 9, &st::extrasViewerFullScreenOut },
+		Control{ 10, &st::extrasViewerClose },
 	};
+	const auto rounded = st::extrasViewerTopBarButton;
+	// 纯色块四周留空，取中间部分采样，避免线性过滤混入透明像素。
+	const auto solid = 8;
+	const auto solidSkip = 2;
 	auto maxWidth = 0;
 	auto fullHeight = 0;
 	for (const auto &meta : metas) {
 		maxWidth = std::max(meta.icon->width(), maxWidth);
 		fullHeight += meta.icon->height();
 	}
-	maxWidth = std::max(st::mediaviewIconOver, maxWidth);
-	fullHeight += st::mediaviewIconOver;
+	maxWidth = std::max({ st::mediaviewIconOver, rounded, maxWidth });
+	fullHeight += st::mediaviewIconOver + rounded + solid;
 	auto image = QImage(
 		QSize(maxWidth, fullHeight) * _ifactor,
 		QImage::Format_ARGB32_Premultiplied);
@@ -955,6 +999,19 @@ void OverlayWidget::RendererGL::validateControls() {
 			QPoint(0, height) * _ifactor,
 			QSize(st::mediaviewIconOver, st::mediaviewIconOver) * _ifactor);
 		height += st::mediaviewIconOver;
+
+		const auto radius = st::extrasViewerTopBarButtonRadius;
+		p.drawRoundedRect(QRect(0, height, rounded, rounded), radius, radius);
+		_controlsTextures[index++] = QRect(
+			QPoint(0, height) * _ifactor,
+			QSize(rounded, rounded) * _ifactor);
+		height += rounded;
+
+		p.fillRect(QRect(0, height, solid, solid), st::mediaviewControlFg);
+		_controlsTextures[index++] = QRect(
+			QPoint(solidSkip, height + solidSkip) * _ifactor,
+			QSize(solid - 2 * solidSkip, solid - 2 * solidSkip) * _ifactor);
+		height += solid;
 	}
 	_controlsImage.setImage(std::move(image));
 }

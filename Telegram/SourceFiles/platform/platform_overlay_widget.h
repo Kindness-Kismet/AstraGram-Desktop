@@ -54,6 +54,9 @@ public:
 	}
 	virtual void setControlsOpacity(float64 opacity) {
 	}
+	// 窗口内查看器自绘全屏和关闭按钮，系统标题按钮需要隐藏。
+	virtual void setTitleControlsHidden(bool hidden) {
+	}
 	[[nodiscard]] virtual auto mouseEvents() const
 	-> rpl::producer<not_null<QMouseEvent*>> {
 		return rpl::never<not_null<QMouseEvent*>>();
@@ -80,6 +83,7 @@ public:
 	void beforeShow(bool fullscreen) override;
 	void clearState() override;
 	void setControlsOpacity(float64 opacity) override;
+	void setTitleControlsHidden(bool hidden) override;
 	rpl::producer<bool> controlsSideRightValue() override;
 	rpl::producer<not_null<QMouseEvent*>> mouseEvents() const override;
 
@@ -87,6 +91,7 @@ private:
 	class Buttons;
 
 	const not_null<Buttons*> _buttons;
+	rpl::variable<int> _controlsTop = 0;
 	const std::unique_ptr<Ui::Platform::SeparateTitleControls> _controls;
 
 };

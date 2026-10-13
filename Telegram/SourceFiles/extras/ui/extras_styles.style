@@ -264,3 +264,19 @@ extrasInPlaceFadeDuration: 200;
 
 // 窗口内查看器：图片四周留白，给顶栏、翻页按钮和底部缩略图条让出位置。
 extrasViewerContentPadding: margins(92px, 66px, 92px, 122px);
+
+// 窗口内查看器顶栏：左侧头像、名字和时间，右侧操作按钮自右向左排列。
+extrasViewerTopBarHeight: 64px;
+extrasViewerTopBarPadding: margins(18px, 0px, 12px, 0px);
+extrasViewerTopBarButton: 38px;
+extrasViewerTopBarButtonSkip: 2px;
+extrasViewerTopBarButtonRadius: 10px;
+// 分隔线把全屏、更多、关闭与媒体操作分成两组。
+extrasViewerTopBarSeparator: size(1px, 18px);
+extrasViewerTopBarSeparatorSkip: 6px;
+extrasViewerUserpicSize: 34px;
+extrasViewerUserpicSkip: 10px;
+extrasViewerDateFont: font(12px);
+extrasViewerFullScreen: icon {{ "player/player_fullscreen", mediaviewControlFg }};
+extrasViewerFullScreenOut: icon {{ "player/player_minimize", mediaviewControlFg }};
+extrasViewerClose: icon {{ "extras/viewer_close", mediaviewControlFg }};

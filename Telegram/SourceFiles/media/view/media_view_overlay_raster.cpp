@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/view/media_view_video_stream.h"
 #include "platform/platform_overlay_widget.h"
 #include "styles/style_media_view.h"
+#include "styles/style_extras_styles.h"
 
 namespace Media::View {
 namespace {
@@ -306,7 +307,17 @@ void OverlayWidget::RendererSW::paintControl(
 	if (!over.isEmpty() && !over.intersects(_clipOuter)) {
 		return;
 	}
-	if (!over.isEmpty() && overOpacity > 0) {
+	const auto roundedOver = _owner->lightboxStyle()
+		&& (control != Over::Left)
+		&& (control != Over::Right);
+	if (!over.isEmpty() && overOpacity > 0 && roundedOver) {
+		auto hq = PainterHighQualityEnabler(*_p);
+		const auto radius = st::extrasViewerTopBarButtonRadius;
+		_p->setOpacity(overOpacity * kOverBackgroundOpacity);
+		_p->setPen(Qt::NoPen);
+		_p->setBrush(OverBackgroundColor());
+		_p->drawRoundedRect(over, radius, radius);
+	} else if (!over.isEmpty() && overOpacity > 0) {
 		if (_overControlImage.isNull()) {
 			validateOverControlImage();
 		}
@@ -322,6 +333,15 @@ void OverlayWidget::RendererSW::paintControl(
 void OverlayWidget::RendererSW::paintFooter(QRect outer, float64 opacity) {
 	if (outer.intersects(_clipOuter)) {
 		_owner->paintFooterContent(*_p, outer, _clipOuter, opacity);
+	}
+}
+
+void OverlayWidget::RendererSW::paintTopBarSeparator(
+		QRect rect,
+		float64 opacity) {
+	if (rect.intersects(_clipOuter)) {
+		_p->setOpacity(opacity);
+		_p->fillRect(rect, st::mediaviewControlFg);
 	}
 }
 

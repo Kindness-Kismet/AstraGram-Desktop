@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/rp_window.h"
 #include "ui/abstract_button.h"
 #include "styles/style_media_view.h"
+#include "styles/style_widgets.h"
 
 namespace Media::View {
 
@@ -205,7 +206,8 @@ DefaultOverlayWidgetHelper::DefaultOverlayWidgetHelper(
 		window->body(),
 		st::mediaviewTitle,
 		std::unique_ptr<DefaultOverlayWidgetHelper::Buttons>(_buttons.get()),
-		std::move(maximize)))) {
+		std::move(maximize)),
+	_controlsTop.value())) {
 }
 
 DefaultOverlayWidgetHelper::~DefaultOverlayWidgetHelper() = default;
@@ -240,6 +242,12 @@ void DefaultOverlayWidgetHelper::clearState() {
 
 void DefaultOverlayWidgetHelper::setControlsOpacity(float64 opacity) {
 	_buttons->setMasterOpacity(opacity);
+}
+
+void DefaultOverlayWidgetHelper::setTitleControlsHidden(bool hidden) {
+	// 命中测试不检查可见性，隐藏时把按钮移到窗口上方之外。
+	_controls->wrap.setVisible(!hidden);
+	_controlsTop = hidden ? -st::mediaviewTitleButton.height : 0;
 }
 
 auto DefaultOverlayWidgetHelper::mouseEvents() const

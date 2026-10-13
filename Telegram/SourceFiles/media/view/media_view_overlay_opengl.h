@@ -84,6 +84,14 @@ private:
 		ContentGeometry geometry,
 		float64 opacity);
 	void paintBackdrop();
+	void paintTopBarSeparator(QRect rect, float64 opacity) override;
+	[[nodiscard]] int extrasBufferOffset() const;
+	void paintTexturedQuad(
+		Ui::GL::Image &image,
+		QRect rect,
+		QRect texture,
+		int offset,
+		float64 opacity);
 
 	//void invalidate();
 
@@ -159,11 +167,11 @@ private:
 	Ui::GL::Image _storiesSiblingParts[kStoriesSiblingPartsCount];
 	Ui::GL::Image _backdropImage;
 
-	static constexpr auto kControlsCount = 8;
+	static constexpr auto kControlsCount = 11;
 	[[nodiscard]] Control controlMeta(Over control) const;
 
-	// Last one is for the over circle image.
-	std::array<QRect, kControlsCount + 1> _controlsTextures;
+	// After icons: over circle, rounded over and solid fill images.
+	std::array<QRect, kControlsCount + 3> _controlsTextures;
 
 	bool _shadowTopFlip = false;
 	bool _shadowsForStories = false;
