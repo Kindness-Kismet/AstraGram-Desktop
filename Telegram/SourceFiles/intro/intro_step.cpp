@@ -29,13 +29,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/labels.h"
 #include "ui/wrap/fade_wrap.h"
-#include "ui/effects/slide_animation.h"
 #include "ui/ui_utility.h"
 #include "data/data_user.h"
 #include "data/data_auto_download.h"
 #include "data/data_session.h"
 #include "data/data_chat_filters.h"
 #include "window/window_controller.h"
+#include "window/window_slide_animation.h"
+#include "styles/style_extras_styles.h"
 #include "styles/style_intro.h"
 #include "styles/style_window.h"
 
@@ -309,21 +310,13 @@ void Step::setDescriptionText(v::text::data &&descriptionText) {
 void Step::showFinished() {
 	_a_show.stop();
 	_coverAnimation = CoverAnimation();
-	_slideAnimation.reset();
+	_fadeCache = QPixmap();
+	_fadeOverlay = nullptr;
 	prepareCoverMask();
 	activate();
 }
 
 bool Step::paintAnimated(QPainter &p, QRect clip) {
-	if (_slideAnimation) {
-		_slideAnimation->paintFrame(p, (width() - st::introStepWidth) / 2, contentTop(), width());
-		if (!_slideAnimation->animating()) {
-			showFinished();
-			return false;
-		}
-		return true;
-	}
-
 	auto dt = _a_show.value(1.);
 	if (!_a_show.animating()) {
 		if (hasCover()) {
@@ -537,11 +530,8 @@ void Step::prepareShowAnimated(Step *after) {
 		_coverAnimation = prepareCoverAnimation(after);
 		prepareCoverMask();
 	} else {
-		auto leftSnapshot = after->prepareSlideAnimation();
-		auto rightSnapshot = prepareSlideAnimation();
-		_slideAnimation = std::make_unique<Ui::SlideAnimation>();
-		_slideAnimation->setSnapshots(std::move(leftSnapshot), std::move(rightSnapshot));
-		_slideAnimation->setOverflowHidden(false);
+		_fadeGeometry = after->childrenRect().united(childrenRect());
+		_fadeCache = Ui::GrabWidget(after, _fadeGeometry, st::windowBg->c);
 	}
 }
 
@@ -570,27 +560,22 @@ QPixmap Step::prepareContentSnapshot() {
 	return Ui::GrabWidget(this, otherRect);
 }
 
-QPixmap Step::prepareSlideAnimation() {
-	auto grabLeft = (width() - st::introStepWidth) / 2;
-	auto grabTop = contentTop();
-	return Ui::GrabWidget(
-		this,
-		QRect(grabLeft, grabTop, st::introStepWidth, st::introStepHeight));
-}
-
-void Step::showAnimated(Animate animate) {
+void Step::showAnimated(Animate) {
 	setFocus();
 	show();
-	hideChildren();
-	if (_slideAnimation) {
-		auto slideLeft = (animate == Animate::Back);
-		_slideAnimation->start(
-			slideLeft,
-			[=] { update(0, contentTop(), width(), st::introStepHeight); },
-			st::introSlideDuration);
-	} else {
-		_a_show.start([this] { update(); }, 0., 1., st::introCoverDuration);
+	if (!_fadeCache.isNull()) {
+		// 新步骤保持实时绘制，二维码和异步提示随旧画面淡出而显现。
+		activate();
+		_fadeOverlay.reset(Window::ShowFadeOutAnimation(
+			this,
+			_fadeGeometry,
+			base::take(_fadeCache),
+			st::extrasInPlaceFadeDuration).get());
+		_fadeOverlay->setObjectName(u"intro-step-fade"_q);
+		return;
 	}
+	hideChildren();
+	_a_show.start([this] { update(); }, 0., 1., st::introCoverDuration);
 }
 
 void Step::setShowAnimationClipping(QRect clipping) {
@@ -629,8 +614,7 @@ void Step::showFast() {
 }
 
 bool Step::animating() const {
-	return (_slideAnimation && _slideAnimation->animating())
-		|| _a_show.animating();
+	return _fadeOverlay || _a_show.animating();
 }
 
 bool Step::hasCover() const {

@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "base/object_ptr.h"
+#include "base/unique_qptr.h"
 #include "mtproto/sender.h"
 #include "ui/text/text_variant.h"
 #include "ui/rp_widget.h"
@@ -22,7 +23,6 @@ class Account;
 } // namespace Main;
 
 namespace Ui {
-class SlideAnimation;
 class CrossFadeAnimation;
 class FlatLabel;
 template <typename Widget>
@@ -198,7 +198,6 @@ private:
 
 	[[nodiscard]] CoverAnimation prepareCoverAnimation(Step *step);
 	[[nodiscard]] QPixmap prepareContentSnapshot();
-	[[nodiscard]] QPixmap prepareSlideAnimation();
 	void showFinished();
 
 	void prepareCoverMask();
@@ -227,7 +226,9 @@ private:
 
 	Ui::Animations::Simple _a_show;
 	CoverAnimation _coverAnimation;
-	std::unique_ptr<Ui::SlideAnimation> _slideAnimation;
+	QPixmap _fadeCache;
+	QRect _fadeGeometry;
+	base::unique_qptr<Ui::RpWidget> _fadeOverlay;
 	QPixmap _coverMask;
 
 };

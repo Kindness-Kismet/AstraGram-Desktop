@@ -147,7 +147,9 @@ void CodeWidget::updateCallText() {
 		return QString();
 	})();
 	_callLabel->setText(text);
-	_callLabel->setVisible(!text.isEmpty() && !animating());
+	if (!animating()) {
+		_callLabel->setVisible(!text.isEmpty());
+	}
 }
 
 void CodeWidget::resizeEvent(QResizeEvent *e) {
