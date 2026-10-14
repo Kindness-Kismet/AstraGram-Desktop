@@ -19,6 +19,7 @@
   "NotificationStyleCards": "卡片",
   "NotificationStyleStack": "叠放",
   "TopicSwitcherAllTopics": "全部话题",
+  "lng_archived_name": "归档会话",
   "lng_code_block_header_copy": "复制",
   "lng_error_nocopy_group": "抱歉，管理员已禁止从此群组复制内容。",
   "lng_error_nocopy_channel": "抱歉，管理员已禁止从此频道复制内容。",

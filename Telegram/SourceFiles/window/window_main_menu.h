@@ -27,6 +27,7 @@ class AbstractButton;
 class IconButton;
 class FlatLabel;
 class UserpicButton;
+class PopupMenu;
 class ScrollArea;
 class VerticalLayout;
 class RippleButton;
@@ -76,6 +77,7 @@ private:
 	void setupAccountsToggle();
 	void setupSetEmojiStatus();
 	void setupEmojiStatusDismiss();
+	void setupArchive();
 	void setupMenu();
 	void updateControlsGeometry();
 	void initResetScaleButton();
@@ -110,6 +112,7 @@ private:
 	QPointer<Ui::SettingsButton> _nightThemeToggle;
 	rpl::event_stream<bool> _nightThemeSwitches;
 	base::Timer _nightThemeSwitch;
+	base::unique_qptr<Ui::PopupMenu> _contextMenu;
 
 	Ui::Controls::SwipeBackResult _swipeBackData;
 
