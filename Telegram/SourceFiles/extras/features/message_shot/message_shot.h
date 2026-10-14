@@ -13,7 +13,7 @@ struct ShotConfig
 {
 	not_null<Window::SessionController*> controller;
 	std::shared_ptr<Ui::ChatStyle> st;
-	std::vector<not_null<HistoryItem*>> messages;
+	MessageIdsList messages;
 };
 
 enum RenderPart
@@ -22,10 +22,6 @@ enum RenderPart
 	Reactions,
 	HeaderDecorations,
 };
-
-void setShotConfig(ShotConfig &config);
-void resetShotConfig();
-ShotConfig getShotConfig();
 
 bool ignoreRender(RenderPart part);
 bool isTakingShot();

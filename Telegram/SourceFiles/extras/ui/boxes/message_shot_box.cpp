@@ -4,10 +4,10 @@
 #include "extras/extras_settings.h"
 #include "extras/ui/boxes/theme_selector_box.h"
 #include "extras/ui/components/image_view.h"
-#include "extras/utils/telegram_helpers.h"
 #include "boxes/abstract_box.h"
 #include "data/data_chat.h"
 #include "data/data_channel.h"
+#include "data/data_session.h"
 #include "data/data_todo_list.h"
 #include "data/data_user.h"
 #include "history/history.h"
@@ -129,6 +129,7 @@ MessageShotBox::MessageShotBox(
 	QWidget *parent,
 	ExtrasFeatures::MessageShot::ShotConfig config)
 	: _config(std::move(config)) {
+	setObjectName(u"messageShot.preview"_q);
 }
 
 void MessageShotBox::prepare() {
@@ -166,8 +167,6 @@ void MessageShotBox::setupContent() {
 		}
 	}
 
-	ExtrasFeatures::MessageShot::setShotConfig(_config);
-
 	setTitle(tr::extras_MessageShotTopBarText());
 
 	auto wrap = object_ptr<Ui::VerticalLayout>(this);
@@ -177,6 +176,7 @@ void MessageShotBox::setupContent() {
 	AddSubsectionTitle(content, tr::extras_MessageShotPreview());
 
 	const auto imageView = content->add(object_ptr<ImageView>(content), st::imageViewPadding);
+	imageView->setObjectName(u"messageShot.image"_q);
 
 	AddSkip(content);
 	AddDivider(content);
@@ -187,7 +187,7 @@ void MessageShotBox::setupContent() {
 	auto hasReplies = false;
 	auto hasHeaderDecorations = false;
 	auto hasSpoilers = false;
-	for (const auto &item : _config.messages) {
+	for (const auto &item : _config.controller->session().data().idsToItems(_config.messages)) {
 		hasReactions = hasReactions || !item->reactions().empty();
 		hasReplies = hasReplies
 			|| item->replyTo().replying()
@@ -205,7 +205,6 @@ void MessageShotBox::setupContent() {
 		}
 	}
 
-	const auto firstPreviewLatch = std::make_shared<TimedCountDownLatch>(1);
 	const auto generation = content->lifetime().make_state<int>(0);
 	const auto weak = base::make_weak(this);
 
@@ -221,7 +220,6 @@ void MessageShotBox::setupContent() {
 			if (final || imageView->getImage().isNull()) {
 				imageView->setImage(image);
 			}
-			firstPreviewLatch->countDown();
 		});
 	};
 
@@ -314,6 +312,7 @@ void MessageShotBox::setupContent() {
 		tr::extras_MessageShotShowDate(),
 		st::settingsButtonNoIcon
 	);
+	latestToggle->setObjectName(u"messageShot.showDate"_q);
 	latestToggle->toggleOn(rpl::single(shotSettings.showDate())
 	)->toggledValue(
 	) | rpl::skip(1) | on_next(
@@ -425,7 +424,6 @@ void MessageShotBox::setupContent() {
 			  });
 
 	updatePreview();
-	firstPreviewLatch->await(std::chrono::seconds(1));
 
 	const auto boxWidth = imageView->getImage().width() / style::DevicePixelRatio() + (st::boxPadding.left() + st::boxPadding.right()) * 4;
 
@@ -434,7 +432,6 @@ void MessageShotBox::setupContent() {
 		{
 			ExtrasFeatures::MessageShot::resetCustomSelected();
 			ExtrasFeatures::MessageShot::resetDefaultSelected();
-			ExtrasFeatures::MessageShot::resetShotConfig();
 
 			ExtrasSettings::getInstance().setSimpleQuotesAndReplies(savedSimpleQuotesAndReplies);
 		},

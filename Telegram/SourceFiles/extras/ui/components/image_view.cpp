@@ -1,7 +1,7 @@
 #include "extras/ui/components/image_view.h"
 
 #include "extras/features/message_shot/message_shot.h"
-#include "extras/utils/telegram_helpers.h"
+#include "base/call_delayed.h"
 #include "styles/style_extras_styles.h"
 #include "styles/style_chat.h"
 #include "ui/painter.h"
@@ -58,7 +58,7 @@ void ImageView::setImage(const QImage &image) {
 		return;
 	}
 
-	dispatchToMainThread(set, 100);
+	base::call_delayed(100, this, set);
 }
 
 void ImageView::computeDiffImages(const QImage &prev, const QImage &curr) {

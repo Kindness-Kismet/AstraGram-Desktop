@@ -97,6 +97,8 @@ GENERIC_COMMANDS = {
     "storage.verify-archive": "在临时数据库验证留档加密、篡改拒绝和旧库迁移，仅限独立模拟模式",
     "storage.seed-archive": "在独立模拟配置保存并核对固定留档样本，供口令修改与重启验证",
     "message.inspect": "查询消息正文与删除、过滤、视图状态：<会话编号> <消息编号>",
+    "message.shot": "打开消息截图预览：<会话编号> <消息编号>...",
+    "simulation.remove-message": "销毁本地模拟消息，验证消息消失后的界面：<会话编号> <消息编号>",
     "message.translate": "调用消息业务逻辑在原气泡翻译：<会话编号> <消息编号>",
     "message.show-original": "恢复消息原文并取消待处理翻译：<会话编号> <消息编号>",
     "message.edit-local": "在模拟模式触发原生编辑流程：<会话编号> <消息编号> <文字>",

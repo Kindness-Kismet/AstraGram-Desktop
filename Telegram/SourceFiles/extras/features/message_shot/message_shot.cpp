@@ -32,28 +32,10 @@
 
 namespace ExtrasFeatures::MessageShot {
 
-ShotConfig *config = nullptr;
-
 bool takingShot = false;
 bool choosingTheme = false;
 
-void setShotConfig(ShotConfig &config) {
-	MessageShot::config = &config;
-}
-
-void resetShotConfig() {
-	config = nullptr;
-}
-
-ShotConfig getShotConfig() {
-	return *config;
-}
-
 bool ignoreRender(RenderPart part) {
-	if (!config) {
-		return false;
-	}
-
 	const auto &s = ExtrasSettings::getInstance().messageShotSettings();
 	return isTakingShot()
 		&& ((part == RenderPart::Date && !s.showDate())
@@ -205,70 +187,12 @@ QColor makeDefaultBackgroundColor() {
 void Make(not_null<QWidget*> box, const ShotConfig &config, const Fn<void(QImage&,bool)>& callback) {
 	const auto controller = config.controller;
 	const auto st = config.st;
-	auto messages = config.messages;
+	const auto messages = controller->session().data().idsToItems(config.messages);
 
 	if (messages.empty()) {
+		auto image = QImage();
+		callback(image, true);
 		return;
-	}
-
-	auto delegate = std::make_shared<MessageShotDelegate>(
-		box,
-		st.get(),
-		[=]
-		{
-			box->update();
-		},
-		messages.front()->history());
-
-	// remove deleted messages
-	messages.erase(
-		std::ranges::remove_if(
-			messages,
-			[=](const auto &message)
-			{
-				return !message || !controller->session().data().message(message->fullId());
-			}).begin(),
-		messages.end()
-	);
-
-	if (messages.empty()) {
-		return;
-	}
-
-	auto createdViews = std::make_shared<std::unordered_map<not_null<HistoryItem*>, std::shared_ptr<HistoryView::Element>>>();
-	createdViews->reserve(messages.size());
-	for (const auto &message : messages) {
-		createdViews->emplace(message, message->createView(delegate.get()));
-	}
-
-	auto getView = [createdViews](not_null<HistoryItem*> msg)
-	{
-		return createdViews->at(msg).get();
-	};
-
-	// recalculate blocks
-	if (messages.size() > 1) {
-		auto currentMsg = messages[0].get();
-
-		for (auto i = 1; i != messages.size(); ++i) {
-			const auto nextMsg = messages[i].get();
-			if (getView(nextMsg)->isHidden()) {
-				getView(nextMsg)->setDisplayDate(false);
-			} else {
-				const auto viewDate = getView(currentMsg)->dateTime();
-				const auto nextDate = getView(nextMsg)->dateTime();
-				getView(nextMsg)->setDisplayDate(nextDate.date() != viewDate.date());
-				auto attached = getView(nextMsg)->computeIsAttachToPrevious(getView(currentMsg));
-				getView(nextMsg)->setAttachToPrevious(attached, getView(currentMsg));
-				getView(currentMsg)->setAttachToNext(attached, getView(nextMsg));
-				currentMsg = nextMsg;
-			}
-		}
-
-		getView(messages[messages.size() - 1])->setAttachToNext(false);
-	} else {
-		getView(messages[0])->setAttachToPrevious(false);
-		getView(messages[0])->setAttachToNext(false);
 	}
 
 	struct MediaPreload {
@@ -301,8 +225,45 @@ void Make(not_null<QWidget*> box, const ShotConfig &config, const Fn<void(QImage
 	}
 
 	const auto showBackground = ExtrasSettings::getInstance().messageShotSettings().showBackground();
-	auto render = [=, messages = std::move(messages), delegate = std::move(delegate)](bool final)
-	{
+	const auto render = crl::guard(box, crl::guard(controller, [=](bool final) {
+		// 等待下载期间消息可能被删除，视图只在本次同步绘制期间持有。
+		const auto messages = controller->session().data().idsToItems(config.messages);
+		if (messages.empty()) {
+			auto image = QImage();
+			callback(image, final);
+			return;
+		}
+		auto delegate = MessageShotDelegate(box, st.get(), [=] {
+			box->update();
+		}, messages.front()->history());
+		auto createdViews = std::unordered_map<
+			not_null<HistoryItem*>, std::unique_ptr<HistoryView::Element>>();
+		createdViews.reserve(messages.size());
+		for (const auto &message : messages) {
+			createdViews.emplace(message, message->createView(&delegate));
+		}
+		const auto getView = [&](not_null<HistoryItem*> message) {
+			return createdViews.at(message).get();
+		};
+		getView(messages.front())->setAttachToPrevious(false);
+		if (messages.size() > 1) {
+			auto current = messages.front();
+			for (auto i = 1; i != messages.size(); ++i) {
+				const auto next = messages[i];
+				if (getView(next)->isHidden()) {
+					getView(next)->setDisplayDate(false);
+					continue;
+				}
+				const auto viewDate = getView(current)->dateTime();
+				const auto nextDate = getView(next)->dateTime();
+				getView(next)->setDisplayDate(nextDate.date() != viewDate.date());
+				const auto attached = getView(next)->computeIsAttachToPrevious(getView(current));
+				getView(next)->setAttachToPrevious(attached, getView(current));
+				getView(current)->setAttachToNext(attached, getView(next));
+				current = next;
+			}
+		}
+		getView(messages.back())->setAttachToNext(false);
 		takingShot = true;
 
 		// calculate the size of the image
@@ -331,7 +292,6 @@ void Make(not_null<QWidget*> box, const ShotConfig &config, const Fn<void(QImage
 		const auto viewport = QRect(0, 0, width, height);
 
 		base::flat_map<not_null<PeerData*>, Ui::PeerUserpicView> userpics;
-		base::flat_map<MsgId, Ui::PeerUserpicView> hiddenSenderUserpics;
 
 		Painter p(&image);
 
@@ -401,7 +361,7 @@ void Make(not_null<QWidget*> box, const ShotConfig &config, const Fn<void(QImage
 		painter.drawImage(0, 0, result);
 
 		callback(newResult, final);
-	};
+	}));
 
 	if (!preload->documents.empty() || !preload->photos.empty()) {
 		render(false); // render immediately to give box width
@@ -493,7 +453,7 @@ void Show(
 	const ShotConfig config = {
 		controller,
 		BuildShotChatStyle(controller),
-		messages,
+		ids,
 	};
 	auto box = Box<MessageShotBox>(config);
 	const auto raw = box.data();

@@ -2,6 +2,7 @@
 #include "extras/debug/commands/commands_internal.h"
 #include "extras/debug/debug_login.h"
 #include "extras/features/mention_by_id/mention_by_id.h"
+#include "extras/features/message_shot/message_shot.h"
 #include "extras/features/video_cover/video_cover.h"
 
 #include "apiwrap.h"
@@ -557,6 +558,49 @@ Result openMedia(const QStringList &args) {
 	return Result::Ok(Compact(Json{ { "type", photo ? "photo" : "document" } }));
 }
 
+Result openMessageShot(const QStringList &args) {
+	if (args.size() < 2) {
+		return Result::Err(u"usage: message.shot <peerId> <messageId>..."_q);
+	}
+	const auto peer = findPeer(args[0]);
+	if (!peer) {
+		return Result::Err(u"peer not found"_q);
+	}
+	const auto controller = peer->session().tryResolveWindow();
+	if (!controller) {
+		return Result::Err(u"no window controller"_q);
+	}
+	auto ids = MessageIdsList();
+	for (const auto &arg : args.mid(1)) {
+		auto ok = false;
+		const auto id = arg.toLongLong(&ok);
+		if (!ok || !peer->owner().message(peer->id, MsgId(id))) {
+			return Result::Err(u"message not found"_q);
+		}
+		ids.push_back(FullMsgId(peer->id, MsgId(id)));
+	}
+	ExtrasFeatures::MessageShot::Show(controller, ids, [] {});
+	return Result::Ok();
+}
+
+Result removeSimulationMessage(const QStringList &args) {
+	if (args.size() != 2) {
+		return Result::Err(u"usage: simulation.remove-message <peerId> <messageId>"_q);
+	}
+	const auto peer = findPeer(args[0]);
+	if (!peer || !isSimulationSession(&peer->session())) {
+		return Result::Err(u"simulation mode is required"_q);
+	}
+	auto ok = false;
+	const auto id = args[1].toLongLong(&ok);
+	const auto item = ok ? peer->owner().message(peer->id, MsgId(id)) : nullptr;
+	if (!item) {
+		return Result::Err(u"message not found"_q);
+	}
+	item->destroy();
+	return Result::Ok();
+}
+
 } // namespace
 
 const HandlerMap &messageBusinessHandlers() {
@@ -572,6 +616,8 @@ const HandlerMap &messageBusinessHandlers() {
 		{ u"message.send-file"_q, &sendFile },
 		{ u"video.cover"_q, &openVideoCover },
 		{ u"media.open"_q, &openMedia },
+		{ u"message.shot"_q, &openMessageShot },
+		{ u"simulation.remove-message"_q, &removeSimulationMessage },
 		{ u"mention.resolve"_q, &resolveMention },
 		{ u"mention.send"_q, &sendMention },
 	};

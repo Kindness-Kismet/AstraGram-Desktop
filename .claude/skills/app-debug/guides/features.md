@@ -46,6 +46,7 @@
 ## 消息截图与转发
 
 消息截图先从消息右键菜单点击“选择”，再点击顶部 `selection.messageShot`。
+也可用 `message.shot <peerId> <messageId>...` 直接打开同一截图预览，不发送消息。
 用 `control.mouse "#0" <x> <y> right` 打开菜单；截图像素按截图宽度与 `#0` 宽度之比换算坐标。
 预览打开后用控件指令调整并保存；截图设置可通过 `messageShotSettings.*` 修改。
 

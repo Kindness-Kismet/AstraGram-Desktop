@@ -104,6 +104,8 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 
 ## 补充消息和下载
 
+`simulation.remove-message <peerId> <messageId>` 销毁指定模拟消息，用于验证弹窗和延迟回调在消息消失后的行为；不发网络请求，不操作真实账号。
+
 `simulation.message <text> [--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban]`
 向指定会话插入本地消息，默认收藏夹、自己发送。屏蔽标记须配合 `--from`，自己发送的消息不进入隐藏链。
 `--blocked` 配合 `filtersEnabled` 与 `hideFromBlocked`；`--shadow-ban` 配合 `filtersEnabled`。
