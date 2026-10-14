@@ -558,7 +558,15 @@ private:
 	[[nodiscard]] crl::time radialTimeShift() const;
 
 	void updateHeader();
+	// 内容左上角允许停留的范围，四条边界都可以取到。
+	[[nodiscard]] QRect snapLimits() const;
 	void snapXY();
+	// 拖到可移动范围外时带阻尼跟随，只作用于内容超出、能拖动的方向。
+	void dragTo(QPoint position);
+	void resumeDragOvershoot();
+	void startDragReturn();
+	void clearDragOvershoot();
+	[[nodiscard]] QPoint dragOvershoot() const;
 
 	void clearControlsState();
 	bool stateAnimationCallback(crl::time ms);
@@ -797,6 +805,9 @@ private:
 	bool _pressed = false;
 	bool _cursorOverriden = false;
 	int32 _dragging = 0;
+	// 越界拖动的显示偏移，松手后随回弹动画缩回 0。
+	QPoint _dragOvershoot;
+	Ui::Animations::Simple _dragReturnAnimation;
 	QImage _staticContent;
 	bool _staticContentTransparent = false;
 	bool _blurred = true;

@@ -289,6 +289,24 @@ constexpr auto kShowControlsFrom = 0.4;
 constexpr auto kLightboxNavIdleLevel = 0.36;
 constexpr auto kLightboxNavOverLevel = 0.8;
 
+// 越界拖动的阻尼系数与松手回弹时长。
+constexpr auto kDragOvershootFactor = 0.55;
+constexpr auto kDragReturnDuration = crl::time(240);
+
+// 越界位移随拖动距离递减增长，始终小于可见区域的尺寸 size。
+[[nodiscard]] float64 DragOvershoot(float64 distance, float64 size) {
+	const auto value = std::abs(distance) * kDragOvershootFactor;
+	return std::copysign(value / (value / size + 1.), distance);
+}
+
+// DragOvershoot 的反函数：由显示偏移换算回拖动距离。
+[[nodiscard]] float64 DragOvershootDistance(float64 shown, float64 size) {
+	const auto value = std::min(std::abs(shown), size - 1.);
+	return std::copysign(
+		value / (kDragOvershootFactor * (1. - value / size)),
+		shown);
+}
+
 PipDelegate::PipDelegate(QWidget *parent, not_null<Main::Session*> session)
 : _parent(parent)
 , _session(session) {
@@ -2999,7 +3017,7 @@ int OverlayWidget::finalContentRotation() const {
 }
 
 QRect OverlayWidget::finalContentRect() const {
-	return { _x, _y, _w, _h };
+	return QRect(_x, _y, _w, _h).translated(dragOvershoot());
 }
 
 OverlayWidget::ContentGeometry OverlayWidget::contentGeometry() const {
@@ -3157,6 +3175,7 @@ void OverlayWidget::resizeContentByScreenSize() {
 		return;
 	}
 	recountSkipTop();
+	clearDragOvershoot();
 	const auto availableWidth = (lightboxStyle() && !_fullScreenVideo)
 		? (width() - 2 * lightboxSidePadding())
 		: width();
@@ -4911,6 +4930,7 @@ void OverlayWidget::clearControlsState() {
 	_over = _down = Over::None;
 	_pressed = false;
 	_dragging = 0;
+	clearDragOvershoot();
 	setCursor(style::cur_default);
 	if (!_animations.empty()) {
 		_animations.clear();
@@ -8850,20 +8870,71 @@ bool OverlayWidget::handleDoubleClick(
 	return true;
 }
 
-void OverlayWidget::snapXY() {
-	auto xmin = width() - _w, xmax = 0;
-	auto ymin = height() - _h, ymax = _minUsedTop;
-	accumulate_min(xmin, (width() - _w) / 2);
-	accumulate_max(xmax, (width() - _w) / 2);
+QRect OverlayWidget::snapLimits() const {
+	const auto centerX = (width() - _w) / 2;
 	const auto centerY = _fullScreenVideo
 		? (_minUsedTop + (_maxUsedHeight - _h) / 2)
 		: (_skipTop + (_availableHeight - _h) / 2);
-	accumulate_min(ymin, centerY);
-	accumulate_max(ymax, centerY);
-	accumulate_max(_x, xmin);
-	accumulate_min(_x, xmax);
-	accumulate_max(_y, ymin);
-	accumulate_min(_y, ymax);
+	return QRect(
+		QPoint(
+			std::min(width() - _w, centerX),
+			std::min(height() - _h, centerY)),
+		QPoint(std::max(0, centerX), std::max(_minUsedTop, centerY)));
+}
+
+void OverlayWidget::snapXY() {
+	const auto limits = snapLimits();
+	_x = std::clamp(_x, limits.left(), limits.right());
+	_y = std::clamp(_y, limits.top(), limits.bottom());
+}
+
+void OverlayWidget::dragTo(QPoint position) {
+	const auto limits = snapLimits();
+	const auto wanted = QPoint(_xStart, _yStart) + (position - _mStart);
+	_x = std::clamp(wanted.x(), limits.left(), limits.right());
+	_y = std::clamp(wanted.y(), limits.top(), limits.bottom());
+	const auto overshoot = [](int distance, int from, int till, int size) {
+		return (from < till)
+			? int(base::SafeRound(DragOvershoot(distance, size)))
+			: 0;
+	};
+	_dragOvershoot = QPoint(
+		overshoot(wanted.x() - _x, limits.left(), limits.right(), width()),
+		overshoot(wanted.y() - _y, limits.top(), limits.bottom(), height()));
+	update();
+}
+
+void OverlayWidget::resumeDragOvershoot() {
+	// 回弹途中再次拖动时，从当前显示位置接着拖。
+	const auto shown = dragOvershoot();
+	_dragReturnAnimation.stop();
+	_dragOvershoot = shown;
+	_xStart += int(base::SafeRound(DragOvershootDistance(shown.x(), width())));
+	_yStart += int(base::SafeRound(DragOvershootDistance(shown.y(), height())));
+}
+
+void OverlayWidget::startDragReturn() {
+	if (_dragOvershoot.isNull()) {
+		return;
+	}
+	_dragReturnAnimation.start([=] {
+		if (!_dragReturnAnimation.animating()) {
+			_dragOvershoot = QPoint();
+		}
+		update();
+	}, 1., 0., kDragReturnDuration, anim::easeOutCubic);
+}
+
+void OverlayWidget::clearDragOvershoot() {
+	_dragReturnAnimation.stop();
+	_dragOvershoot = QPoint();
+}
+
+QPoint OverlayWidget::dragOvershoot() const {
+	const auto ratio = _dragReturnAnimation.value(1.);
+	return QPoint(
+		int(base::SafeRound(_dragOvershoot.x() * ratio)),
+		int(base::SafeRound(_dragOvershoot.y() * ratio)));
 }
 
 auto OverlayWidget::scaledRecognitionRect(QPoint position)
@@ -8991,8 +9062,9 @@ void OverlayWidget::handleMouseMove(QPoint position) {
 		if (!_dragging
 			&& ((position - _mStart).manhattanLength()
 				>= QApplication::startDragDistance())) {
-			_dragging = QRect(_x, _y, _w, _h).contains(_mStart) ? 1 : -1;
+			_dragging = finalContentRect().contains(_mStart) ? 1 : -1;
 			if (_dragging > 0) {
+				resumeDragOvershoot();
 				if (_w > width() || _h > _maxUsedHeight) {
 					setCursor(style::cur_sizeall);
 				} else {
@@ -9001,10 +9073,7 @@ void OverlayWidget::handleMouseMove(QPoint position) {
 			}
 		}
 		if (_dragging > 0) {
-			_x = _xStart + (position - _mStart).x();
-			_y = _yStart + (position - _mStart).y();
-			snapXY();
-			update();
+			dragTo(position);
 		}
 	}
 }
@@ -9380,10 +9449,8 @@ void OverlayWidget::handleMouseRelease(
 	} else if (_pressed) {
 		if (_dragging) {
 			if (_dragging > 0) {
-				_x = _xStart + (position - _mStart).x();
-				_y = _yStart + (position - _mStart).y();
-				snapXY();
-				update();
+				dragTo(position);
+				startDragReturn();
 			}
 			_dragging = 0;
 			setCursor(style::cur_default);
