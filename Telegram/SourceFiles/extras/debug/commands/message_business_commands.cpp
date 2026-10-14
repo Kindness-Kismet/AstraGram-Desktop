@@ -531,6 +531,32 @@ Result openVideoCover(const QStringList &args) {
 		{ "thumbnailSize", document->thumbnailByteSize() } }));
 }
 
+// 与点击消息里的照片或视频相同，在媒体查看器中打开，可继续左右翻看同一会话的媒体。
+Result openMedia(const QStringList &args) {
+	if (args.size() != 2) return Result::Err(u"usage: media.open <peerId> <messageId>"_q);
+	const auto peer = findPeer(args[0]);
+	if (!peer) return Result::Err(u"peer not found"_q);
+	const auto item = peer->owner().message(peer->id, MsgId(args[1].toLongLong()));
+	if (!item) return Result::Err(u"message is not loaded"_q);
+	const auto media = item->media();
+	const auto photo = media ? media->photo() : nullptr;
+	const auto document = media ? media->document() : nullptr;
+	if (!photo && !document) return Result::Err(u"message has no photo or document"_q);
+	const auto controller = peer->session().tryResolveWindow();
+	if (!controller) return Result::Err(u"no window controller"_q);
+	const auto context = Window::SessionController::MessageContext{
+		.id = item->fullId(),
+		.topicRootId = item->topicRootId(),
+		.monoforumPeerId = item->sublistPeerId(),
+	};
+	if (photo) {
+		controller->openPhoto(photo, context);
+	} else {
+		controller->openDocument(document, true, context);
+	}
+	return Result::Ok(Compact(Json{ { "type", photo ? "photo" : "document" } }));
+}
+
 } // namespace
 
 const HandlerMap &messageBusinessHandlers() {
@@ -545,6 +571,7 @@ const HandlerMap &messageBusinessHandlers() {
 		{ u"peer.resolve"_q, &resolvePeer },
 		{ u"message.send-file"_q, &sendFile },
 		{ u"video.cover"_q, &openVideoCover },
+		{ u"media.open"_q, &openMedia },
 		{ u"mention.resolve"_q, &resolveMention },
 		{ u"mention.send"_q, &sendMention },
 	};
