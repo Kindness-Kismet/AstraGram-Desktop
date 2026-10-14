@@ -387,7 +387,7 @@ private:
 	void finishHideAnimation();
 	[[nodiscard]] ContentGeometry withShowAnimation(
 		ContentGeometry geometry) const;
-	[[nodiscard]] int hostCornerRadius() const;
+	[[nodiscard]] float64 hostCornerRadius() const;
 	[[nodiscard]] QRectF roundingRect() const;
 	bool moveToNext(int delta);
 	void preloadData(int delta);

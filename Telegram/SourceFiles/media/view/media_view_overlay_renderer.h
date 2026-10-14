@@ -49,7 +49,7 @@ public:
 	}
 	virtual void paintCaption(QRect outer, float64 opacity) = 0;
 	virtual void paintGroupThumbs(QRect outer, float64 opacity) = 0;
-	virtual void paintRoundedCorners(int radius) = 0;
+	virtual void paintRoundedCorners(float64 radius) = 0;
 	virtual void paintStoriesSiblingPart(
 		int index,
 		const QImage &image,

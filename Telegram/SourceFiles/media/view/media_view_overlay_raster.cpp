@@ -376,7 +376,7 @@ void OverlayWidget::RendererSW::paintGroupThumbs(
 	}
 }
 
-void OverlayWidget::RendererSW::paintRoundedCorners(int radius) {
+void OverlayWidget::RendererSW::paintRoundedCorners(float64 radius) {
 	if (!_owner->lightboxStyle()) {
 		// The RpWindow rounding overlay will do the job.
 		return;

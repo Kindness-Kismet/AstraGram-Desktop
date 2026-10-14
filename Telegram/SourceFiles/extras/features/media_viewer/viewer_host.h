@@ -29,8 +29,9 @@ public:
 
 	[[nodiscard]] QRect geometry() const;
 	[[nodiscard]] QScreen *screen() const;
-	// 宿主带系统圆角时返回圆角半径，否则为 0。
-	[[nodiscard]] int cornerRadius() const;
+	// 宿主带系统圆角时返回系统边框内沿的圆角半径，否则为 0。
+	[[nodiscard]] float64 cornerRadius() const;
+	// 系统边框内沿相对客户区的偏移，负值表示边框压在客户区上。
 	[[nodiscard]] QMarginsF cornerMargins() const;
 	[[nodiscard]] QImage grabBackdrop() const;
 	void setFullScreenBackdrop(bool enabled);
@@ -45,7 +46,7 @@ private:
 	const QPointer<QWidget> _host;
 	base::unique_qptr<QObject> _filter;
 	QMarginsF _cornerMargins;
-	int _cornerRadius = 0;
+	float64 _cornerRadius = 0.;
 	std::unique_ptr<WindowMaterial::Platform::Backend> _backdropBackend;
 	bool _nativeBackdrop = false;
 

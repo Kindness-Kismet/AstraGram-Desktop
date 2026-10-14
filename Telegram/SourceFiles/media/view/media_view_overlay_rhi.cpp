@@ -1731,7 +1731,8 @@ void OverlayWidget::RendererRhi::paintGroupThumbs(
 	}, true);
 }
 
-void OverlayWidget::RendererRhi::paintRoundedCorners(int radius) {
+void OverlayWidget::RendererRhi::paintRoundedCorners(float64 rounding) {
+	const auto radius = int(base::SafeRound(rounding));
 	if (!_roundedCornersPipeline || radius <= 0) {
 		return;
 	}

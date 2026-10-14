@@ -79,7 +79,7 @@ private:
 	void paintFooter(QRect outer, float64 opacity) override;
 	void paintCaption(QRect outer, float64 opacity) override;
 	void paintGroupThumbs(QRect outer, float64 opacity) override;
-	void paintRoundedCorners(int radius) override;
+	void paintRoundedCorners(float64 radius) override;
 	void paintStoriesSiblingPart(
 		int index,
 		const QImage &image,

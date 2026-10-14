@@ -98,7 +98,7 @@ QScreen *ViewerHost::screen() const {
 	return _host ? _host->screen() : nullptr;
 }
 
-int ViewerHost::cornerRadius() const {
+float64 ViewerHost::cornerRadius() const {
 	return _cornerRadius;
 }
 
@@ -107,7 +107,7 @@ QMarginsF ViewerHost::cornerMargins() const {
 }
 
 void ViewerHost::updateCorners() {
-	_cornerRadius = 0;
+	_cornerRadius = 0.;
 	_cornerMargins = QMarginsF();
 #ifdef Q_OS_WIN
 	const auto squared = Qt::WindowMaximized | Qt::WindowFullScreen;
@@ -118,25 +118,32 @@ void ViewerHost::updateCorners() {
 	}
 	const auto handle = reinterpret_cast<HWND>(_host->winId());
 	auto frame = RECT();
+	auto border = UINT();
 	auto client = RECT();
 	auto origin = POINT();
 	if (FAILED(DwmGetWindowAttribute(handle, DWMWA_EXTENDED_FRAME_BOUNDS,
 			&frame, sizeof(frame)))
+		|| FAILED(DwmGetWindowAttribute(
+			handle,
+			DWMWA_VISIBLE_FRAME_BORDER_THICKNESS,
+			&border,
+			sizeof(border)))
 		|| !GetClientRect(handle, &client)
 		|| !ClientToScreen(handle, &origin)) {
 		return;
 	}
-	// 系统圆角围绕可见外框，客户区已缩进边框；不能按应用界面缩放重新裁一遍。
+	// 系统圆角围绕可见外框，边框画在外框内侧；沿边框内沿裁切才不会盖住边框。
 	const auto ratio = _host->devicePixelRatioF();
 	static const auto dpiForWindow = reinterpret_cast<UINT (WINAPI *)(HWND)>(
 		GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForWindow"));
 	Expects(dpiForWindow != nullptr);
+	const auto inner = int(border);
 	_cornerMargins = QMarginsF(
-		(origin.x - frame.left) / ratio,
-		(origin.y - frame.top) / ratio,
-		(frame.right - origin.x - client.right) / ratio,
-		(frame.bottom - origin.y - client.bottom) / ratio);
-	_cornerRadius = qRound(8. * dpiForWindow(handle) / (96. * ratio));
+		(origin.x - frame.left - inner) / ratio,
+		(origin.y - frame.top - inner) / ratio,
+		(frame.right - origin.x - client.right - inner) / ratio,
+		(frame.bottom - origin.y - client.bottom - inner) / ratio);
+	_cornerRadius = (8. * dpiForWindow(handle) / 96. - inner) / ratio;
 #endif
 }
 

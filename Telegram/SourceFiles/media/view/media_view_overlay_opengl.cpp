@@ -1116,46 +1116,39 @@ void OverlayWidget::RendererGL::paintGroupThumbs(
 	}, kGroupThumbsOffset, true);
 }
 
-void OverlayWidget::RendererGL::paintRoundedCorners(int radius) {
-	const auto topLeft = transformRect(QRect(0, 0, radius, radius));
-	const auto topRight = transformRect(
-		QRect(_owner->width() - radius, 0, radius, radius));
-	const auto bottomRight = transformRect(QRect(
-		_owner->width() - radius,
-		_owner->height() - radius,
-		radius,
-		radius));
-	const auto bottomLeft = transformRect(
-		QRect(0, _owner->height() - radius, radius, radius));
-	const GLfloat coords[] = {
-		topLeft.left(), topLeft.top(),
-		topLeft.right(), topLeft.top(),
-		topLeft.right(), topLeft.bottom(),
-		topLeft.right(), topLeft.bottom(),
-		topLeft.left(), topLeft.bottom(),
-		topLeft.left(), topLeft.top(),
-
-		topRight.left(), topRight.top(),
-		topRight.right(), topRight.top(),
-		topRight.right(), topRight.bottom(),
-		topRight.right(), topRight.bottom(),
-		topRight.left(), topRight.bottom(),
-		topRight.left(), topRight.top(),
-
-		bottomRight.left(), bottomRight.top(),
-		bottomRight.right(), bottomRight.top(),
-		bottomRight.right(), bottomRight.bottom(),
-		bottomRight.right(), bottomRight.bottom(),
-		bottomRight.left(), bottomRight.bottom(),
-		bottomRight.left(), bottomRight.top(),
-
-		bottomLeft.left(), bottomLeft.top(),
-		bottomLeft.right(), bottomLeft.top(),
-		bottomLeft.right(), bottomLeft.bottom(),
-		bottomLeft.right(), bottomLeft.bottom(),
-		bottomLeft.left(), bottomLeft.bottom(),
-		bottomLeft.left(), bottomLeft.top(),
+void OverlayWidget::RendererGL::paintRoundedCorners(float64 radius) {
+	// 圆角矩形可能向内收（露出宿主边框），沿四边各擦一条带，宽度覆盖圆角与内收部分。
+	const auto w = _owner->width();
+	const auto h = _owner->height();
+	const auto rounding = _owner->roundingRect();
+	const auto inset = std::max({
+		0.,
+		rounding.left(),
+		rounding.top(),
+		w - rounding.right(),
+		h - rounding.bottom(),
+	});
+	const auto band = int(std::ceil(radius + inset));
+	const auto rects = {
+		transformRect(QRect(0, 0, w, band)),
+		transformRect(QRect(0, h - band, w, band)),
+		transformRect(QRect(0, band, band, h - 2 * band)),
+		transformRect(QRect(w - band, band, band, h - 2 * band)),
 	};
+	GLfloat coords[4 * 6 * 2];
+	auto out = coords;
+	for (const auto &rect : rects) {
+		for (const auto value : {
+			rect.left(), rect.top(),
+			rect.right(), rect.top(),
+			rect.right(), rect.bottom(),
+			rect.right(), rect.bottom(),
+			rect.left(), rect.bottom(),
+			rect.left(), rect.top(),
+		}) {
+			*out++ = value;
+		}
+	}
 	const auto offset = kControlsOffset
 		+ (kControlsCount * kControlValues) / 4;
 	const auto byteOffset = offset * 4 * sizeof(GLfloat);

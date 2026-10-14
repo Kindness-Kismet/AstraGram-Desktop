@@ -1545,12 +1545,11 @@ QColor OverlayWidget::backdropColor() const {
 		: st::mediaviewBg->c;
 }
 
-int OverlayWidget::hostCornerRadius() const {
+float64 OverlayWidget::hostCornerRadius() const {
 	if (!_viewerHost) {
-		return 0;
+		return 0.;
 	}
-	const auto radius = _viewerHost->cornerRadius();
-	return int(base::SafeRound(radius * (1. - fullScreenProgress())));
+	return _viewerHost->cornerRadius() * (1. - fullScreenProgress());
 }
 
 QRectF OverlayWidget::roundingRect() const {
@@ -7096,8 +7095,8 @@ void OverlayWidget::paint(not_null<Renderer*> renderer) {
 	checkGroupThumbsAnimation();
 	const auto radius = _viewerHost
 		? hostCornerRadius()
-		: _window->manualRoundingRadius();
-	if (radius) {
+		: float64(_window->manualRoundingRadius());
+	if (radius > 0.) {
 		renderer->paintRoundedCorners(radius);
 	}
 }
