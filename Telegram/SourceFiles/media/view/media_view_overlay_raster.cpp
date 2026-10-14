@@ -76,12 +76,21 @@ void OverlayWidget::RendererSW::paintFallback(
 }
 
 void OverlayWidget::RendererSW::paintBackground() {
-	const auto region = _owner->opaqueContentShown()
+	const auto shown = _owner->shownProgress();
+	const auto region = (shown >= 1. && _owner->opaqueContentShown())
 		? (*_clip - _owner->finalContentRect())
 		: *_clip;
 
 	const auto m = _p->compositionMode();
 	_p->setCompositionMode(QPainter::CompositionMode_Source);
+	if (shown < 1.) {
+		// 开合动画中背景随进度出现：先清成透明，再按进度叠加。
+		for (const auto &rect : region) {
+			_p->fillRect(rect, Qt::transparent);
+		}
+		_p->setCompositionMode(QPainter::CompositionMode_SourceOver);
+		_p->setOpacity(shown);
+	}
 	const auto &bg = _owner->_fullScreenVideo
 		? st::mediaviewVideoBg
 		: st::mediaviewBg;
@@ -94,14 +103,14 @@ void OverlayWidget::RendererSW::paintBackground() {
 	if (backdrop > 0.) {
 		if (backdrop < 1.) {
 			_p->setCompositionMode(QPainter::CompositionMode_SourceOver);
-			_p->setOpacity(backdrop);
+			_p->setOpacity(backdrop * shown);
 		}
 		_p->setClipRegion(region);
 		_p->drawImage(_owner->_widget->rect(), _owner->_backdrop);
 		_p->setClipping(false);
-		_p->setOpacity(1.);
 		_p->setCompositionMode(QPainter::CompositionMode_Source);
 	}
+	_p->setOpacity(1.);
 	if (const auto notch = _owner->topNotchSkip()) {
 		const auto top = QRect(0, 0, _owner->width(), notch);
 		if (const auto black = top.intersected(_clipOuter); !black.isEmpty()) {
@@ -146,8 +155,25 @@ void OverlayWidget::RendererSW::paintTransformedVideoFrame(
 	const auto sourceRect = _owner->_stories
 		? StoryCropRect(QSizeF(image.size()), geometry.rect.size())
 		: QRectF();
+	_p->save();
+	applyShowAnimation(geometry);
 	paintTransformedImage(image, rect, rotation, sourceRect);
 	paintControlsFade(rect, geometry);
+	_p->restore();
+}
+
+void OverlayWidget::RendererSW::applyShowAnimation(
+		const ContentGeometry &geometry) {
+	_p->setOpacity(geometry.opacity);
+	if (geometry.clip.isEmpty()) {
+		return;
+	}
+	auto path = QPainterPath();
+	path.addRoundedRect(
+		geometry.clip,
+		geometry.roundRadius,
+		geometry.roundRadius);
+	_p->setClipPath(path, Qt::IntersectClip);
 }
 
 void OverlayWidget::RendererSW::paintTransformedStaticContent(
@@ -162,6 +188,8 @@ void OverlayWidget::RendererSW::paintTransformedStaticContent(
 		return;
 	}
 
+	_p->save();
+	applyShowAnimation(geometry);
 	if (fillTransparentBackground) {
 		_p->fillRect(rect, _transparentBrush);
 	}
@@ -172,6 +200,7 @@ void OverlayWidget::RendererSW::paintTransformedStaticContent(
 		paintTransformedImage(image, rect, rotation, sourceRect);
 	}
 	paintControlsFade(rect, geometry);
+	_p->restore();
 }
 
 void OverlayWidget::RendererSW::paintControlsFade(

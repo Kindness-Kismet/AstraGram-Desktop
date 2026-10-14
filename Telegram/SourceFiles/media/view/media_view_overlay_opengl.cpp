@@ -211,7 +211,8 @@ void OverlayWidget::RendererGL::init(QOpenGLFunctions &f) {
 		FragmentShader({
 			FragmentSampleARGB32Texture(),
 			FragmentApplyControlsFade(),
-			FragmentRoundedCorners()
+			FragmentRoundedCorners(),
+			FragmentGlobalOpacity()
 		}));
 
 	_withTransparencyProgram.emplace();
@@ -221,7 +222,9 @@ void OverlayWidget::RendererGL::init(QOpenGLFunctions &f) {
 		FragmentShader({
 			FragmentSampleARGB32Texture(),
 			FragmentPlaceOnTransparentBackground(),
-			FragmentApplyControlsFade()
+			FragmentApplyControlsFade(),
+			FragmentRoundedCorners(),
+			FragmentGlobalOpacity()
 		}));
 
 	_yuv420Program.emplace();
@@ -231,7 +234,8 @@ void OverlayWidget::RendererGL::init(QOpenGLFunctions &f) {
 		FragmentShader({
 			FragmentSampleYUV420Texture(),
 			FragmentApplyControlsFade(),
-			FragmentRoundedCorners()
+			FragmentRoundedCorners(),
+			FragmentGlobalOpacity()
 		}));
 
 	_nv12Program.emplace();
@@ -241,7 +245,8 @@ void OverlayWidget::RendererGL::init(QOpenGLFunctions &f) {
 		FragmentShader({
 			FragmentSampleNV12Texture(),
 			FragmentApplyControlsFade(),
-			FragmentRoundedCorners()
+			FragmentRoundedCorners(),
+			FragmentGlobalOpacity()
 		}));
 
 	_fillProgram.emplace();
@@ -344,6 +349,17 @@ void OverlayWidget::RendererGL::paint(
 std::optional<QColor> OverlayWidget::RendererGL::clearColor() {
 	if (_owner->_hideWorkaround) {
 		return QColor(0, 0, 0, 0);
+	} else if (const auto shown = _owner->shownProgress(); shown < 1.) {
+		// 开合动画中背景随进度出现，毛玻璃之后再叠在清屏色上，颜色需预乘。
+		const auto &bg = st::mediaviewBg->c;
+		const auto alpha = shown
+			* (1. - _owner->backdropOpacity())
+			* bg.alphaF();
+		return QColor::fromRgbF(
+			bg.redF() * alpha,
+			bg.greenF() * alpha,
+			bg.blueF() * alpha,
+			alpha);
 	} else if (_owner->_fullScreenVideo) {
 		return st::mediaviewVideoBg->c;
 	} else {
@@ -358,7 +374,8 @@ bool OverlayWidget::RendererGL::handleHideWorkaround(QOpenGLFunctions &f) {
 }
 
 void OverlayWidget::RendererGL::paintBackground() {
-	if (const auto opacity = _owner->backdropOpacity(); opacity > 0.) {
+	const auto opacity = _owner->backdropOpacity() * _owner->shownProgress();
+	if (opacity > 0.) {
 		paintBackdrop(opacity);
 	}
 	_contentBuffer->bind();
@@ -560,7 +577,9 @@ void OverlayWidget::RendererGL::paintTransformedVideoFrame(
 	}
 	program->setUniformValue("f_texture", GLint(nv12 ? 2 : 3));
 
-	toggleBlending(geometry.roundRadius > 0.);
+	toggleBlending((geometry.roundRadius > 0.)
+		|| !geometry.clip.isEmpty()
+		|| (geometry.opacity < 1.));
 	const auto textureRect = _owner->_stories
 		? StoryCropTextureRect(QSizeF(yuv->size), geometry.rect.size())
 		: QRectF(0., 0., 1., 1.);
@@ -647,6 +666,8 @@ void OverlayWidget::RendererGL::paintTransformedStaticContent(
 	program->setUniformValue("f_texture", GLint(1));
 
 	toggleBlending((geometry.roundRadius > 0.)
+		|| !geometry.clip.isEmpty()
+		|| (geometry.opacity < 1.)
 		|| (semiTransparent && !fillTransparentBackground));
 	const auto textureRect = _owner->_stories
 		? StoryCropTextureRect(QSizeF(image.size()), geometry.rect.size())
@@ -740,18 +761,21 @@ void OverlayWidget::RendererGL::paintTransformedContent(
 		geometry.bottomShadowSkip * _factor,
 		geometry.controlsOpacity,
 		1.f - float(geometry.fade)));
-	if (!fillTransparentBackground) {
-		program->setUniformValue(
-			"roundRect",
-			geometry.roundRadius ? Uniform(rect) : QVector4D(
-				0,
-				0,
-				_uniformViewport.x(),
-				_uniformViewport.y()));
-		program->setUniformValue(
-			"roundRadius",
-			GLfloat(geometry.roundRadius * _factor));
-	}
+	program->setUniformValue("g_opacity", GLfloat(geometry.opacity));
+	// 有裁剪区域时按它裁剪并加圆角，透明图片平时不加圆角。
+	const auto clipped = !geometry.clip.isEmpty();
+	const auto rounded = clipped
+		|| (geometry.roundRadius && !fillTransparentBackground);
+	program->setUniformValue(
+		"roundRect",
+		clipped
+			? Uniform(transformRect(geometry.clip))
+			: rounded
+			? Uniform(rect)
+			: QVector4D(0, 0, _uniformViewport.x(), _uniformViewport.y()));
+	program->setUniformValue(
+		"roundRadius",
+		GLfloat(rounded ? (geometry.roundRadius * _factor) : 0.));
 	FillTexturedRectangle(*_f, &*program);
 }
 

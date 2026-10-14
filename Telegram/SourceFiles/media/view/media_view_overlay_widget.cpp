@@ -139,6 +139,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/extras_settings.h"
 #include "extras/extras_state.h"
 #include "extras/features/media_viewer/viewer_host.h"
+#include "extras/features/media_viewer/viewer_source.h"
 #include "extras/features/media_viewer/viewer_layout.h"
 #include "extras/features/streamer_mode/streamer_mode.h"
 #include "history/history_item_components.h"
@@ -280,6 +281,10 @@ constexpr auto kTopBarSeparatorOpacity = 0.2;
 
 // 窗口内顶栏放不下时收起部分按钮，保证名字和时间至少有这么宽。
 constexpr auto kTopBarMinTextWidth = 96;
+
+// 窗口内开合动画：找不到缩略图时从 92% 大小淡入，进度过四成后才显示控件。
+constexpr auto kShowScale = 0.92;
+constexpr auto kShowControlsFrom = 0.4;
 
 // 窗口内翻页按钮的底色强度：常驻约为白色 10%，悬停约为 22%。
 constexpr auto kLightboxNavIdleLevel = 0.36;
@@ -2961,7 +2966,7 @@ OverlayWidget::ContentGeometry OverlayWidget::contentGeometry() const {
 			toRectRotated.width())
 		: toRectRotated;
 	if (!_geometryAnimation.animating()) {
-		return { toRect, toRotation, controlsOpacity };
+		return withShowAnimation({ toRect, toRotation, controlsOpacity });
 	}
 	const auto fromRect = _oldGeometry.rect;
 	const auto fromRotation = _oldGeometry.rotation;
@@ -2984,7 +2989,59 @@ OverlayWidget::ContentGeometry OverlayWidget::contentGeometry() const {
 		fromRect.width() + (toRect.width() - fromRect.width()) * progress,
 		fromRect.height() + (toRect.height() - fromRect.height()) * progress
 	);
-	return { useRect, useRotation, controlsOpacity };
+	return withShowAnimation({ useRect, useRotation, controlsOpacity });
+}
+
+auto OverlayWidget::withShowAnimation(ContentGeometry geometry) const
+-> ContentGeometry {
+	if (!_showAnimation.animating()) {
+		return geometry;
+	}
+	const auto progress = shownProgress();
+	const auto rect = geometry.rect;
+	const auto center = rect.center();
+	const auto scaled = [&](float64 scale, QPointF at) {
+		const auto size = rect.size() * scale;
+		return QRectF(
+			at - QPointF(size.width(), size.height()) / 2.,
+			size);
+	};
+	// 旋转 90 度时，内容在屏幕上的外接矩形宽高互换。
+	const auto turned = (int(base::SafeRound(geometry.rotation)) % 180)
+		== 90;
+	const auto screen = turned
+		? QRectF(
+			center.x() - rect.height() / 2.,
+			center.y() - rect.width() / 2.,
+			rect.height(),
+			rect.width())
+		: rect;
+	geometry.controlsOpacity *= progress;
+	if (_showSource.isEmpty() || screen.isEmpty()) {
+		geometry.rect = scaled(
+			kShowScale + (1. - kShowScale) * progress,
+			center);
+		geometry.opacity = progress;
+		return geometry;
+	}
+	// 起点按铺满缩略图放置并裁成缩略图大小，再过渡到最终位置。
+	const auto from = QRectF(QRect(
+		_widget->mapFromGlobal(_showSource.topLeft()),
+		_showSource.size()));
+	const auto cover = std::max(
+		from.width() / screen.width(),
+		from.height() / screen.height());
+	geometry.rect = scaled(
+		cover + (1. - cover) * progress,
+		from.center() + (center - from.center()) * progress);
+	geometry.clip = QRectF(
+		from.x() + (screen.x() - from.x()) * progress,
+		from.y() + (screen.y() - from.y()) * progress,
+		from.width() + (screen.width() - from.width()) * progress,
+		from.height() + (screen.height() - from.height()) * progress);
+	geometry.roundRadius = int(base::SafeRound(
+		_showSourceRadius * (1. - progress)));
+	return geometry;
 }
 
 OverlayWidget::ContentGeometry OverlayWidget::storiesContentGeometry(
@@ -3435,6 +3492,96 @@ void OverlayWidget::showSaveMsgFile() {
 }
 
 void OverlayWidget::close() {
+	if (isHidden() || startHideAnimation()) {
+		return;
+	}
+	hide();
+	_helper->clearState();
+}
+
+float64 OverlayWidget::shownProgress() const {
+	return _showAnimation.value(_hidingAnimated ? 0. : 1.);
+}
+
+void OverlayWidget::refreshShowSource() {
+	_showSource = QRect();
+	_showSourceRadius = 0;
+	const auto host = _viewerHost ? _viewerHost->hostWidget() : nullptr;
+	if (!host || !_message) {
+		return;
+	}
+	using namespace ExtrasFeatures::MediaViewer;
+	if (const auto source = findMediaSource(host, _message)) {
+		_showSource = source->geometry;
+		_showSourceRadius = source->radius;
+	}
+}
+
+void OverlayWidget::startShowAnimation() {
+	_hidingAnimated = false;
+	_widget->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+	if (_streamed && _streamed->controls) {
+		_streamed->controls->hideInstantly();
+	}
+	refreshShowSource();
+	_showAnimation.start(
+		[=] { showAnimationCallback(); },
+		0.,
+		1.,
+		st::extrasViewerShowDuration,
+		anim::easeOutCubic);
+}
+
+bool OverlayWidget::startHideAnimation() {
+	if (_hidingAnimated) {
+		return true;
+	} else if (!_viewerHost
+		|| _stories
+		|| _fullscreen
+		|| _fullScreenAnimation.animating()) {
+		return false;
+	}
+	_hidingAnimated = true;
+	// 收起过程中不再响应点击，避免误触到正在消失的控件。
+	_widget->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+	if (_menu) {
+		_menu->hideMenu(true);
+	}
+	if (_streamed && _streamed->controls) {
+		_streamed->controls->hideInstantly();
+	}
+	refreshShowSource();
+	_showAnimation.start(
+		[=] { showAnimationCallback(); },
+		_showAnimation.value(1.),
+		0.,
+		st::extrasViewerHideDuration,
+		anim::easeOutCubic);
+	return true;
+}
+
+void OverlayWidget::showAnimationCallback() {
+	update();
+	if (!_hidingAnimated
+		&& shownProgress() >= kShowControlsFrom
+		&& _streamed
+		&& _streamed->controls) {
+		// 视频控制条和顶栏等控件一起，在展开后段才淡入。
+		_streamed->controls->showAnimated();
+	}
+	if (_showAnimation.animating()) {
+		return;
+	} else if (_hidingAnimated) {
+		finishHideAnimation();
+		return;
+	}
+	_showSource = QRect();
+}
+
+void OverlayWidget::finishHideAnimation() {
+	_hidingAnimated = false;
+	_showSource = QRect();
+	_widget->setAttribute(Qt::WA_TransparentForMouseEvents, false);
 	if (isHidden()) {
 		return;
 	}
@@ -3486,7 +3633,7 @@ void OverlayWidget::activateControls() {
 	if (!_menu && !_mousePressed && !_touchMove && !_stories) {
 		_controlsHideTimer.callOnce(st::mediaviewWaitHide);
 	}
-	if (controllerAutoHides()) {
+	if (controllerAutoHides() && !_showAnimation.animating()) {
 		if (_streamed && _streamed->controls) {
 			_streamed->controls->showAnimated();
 		}
@@ -4860,6 +5007,11 @@ void OverlayWidget::show(OpenRequest request) {
 	const auto contextTopicRootId = request.topicRootId();
 	const auto contextMonoforumPeerId = request.monoforumPeerId();
 	_drawButtonEnabled = request.showDrawButton();
+	if (_hidingAnimated) {
+		// 收起动画中又要打开，先立即完成收起。
+		_showAnimation.stop();
+		finishHideAnimation();
+	}
 	if (!request.continueStreaming() && !request.startTime() && !_reShow) {
 		if (_message && (_message == contextItem)) {
 			return close();
@@ -5306,6 +5458,9 @@ void OverlayWidget::showAndActivate() {
 	if (_viewerHost) {
 		_window->showFullScreen();
 		updateGeometryToHost();
+		if (!_stories) {
+			startShowAnimation();
+		}
 	} else if (_windowed || Platform::IsMac()) {
 		_window->showNormal();
 		_wasWindowedMode = true;
@@ -6908,7 +7063,14 @@ void OverlayWidget::paint(not_null<Renderer*> renderer) {
 		renderer->paintSpeedBoost(_speedBoostRect);
 	}
 
-	const auto opacity = _fullScreenVideo ? 0. : _controlsOpacity.current();
+	// 开合动画后段才显示控件，避免控件先于画面出现。
+	const auto shown = std::clamp(
+		(shownProgress() - kShowControlsFrom) / (1. - kShowControlsFrom),
+		0.,
+		1.);
+	const auto opacity = _fullScreenVideo
+		? 0.
+		: (_controlsOpacity.current() * shown);
 	if (opacity > 0) {
 		paintControls(renderer, opacity);
 		if (!_stories) {
@@ -9550,6 +9712,10 @@ void OverlayWidget::clearAfterHide() {
 	_backdrop = QImage();
 	_backdropRefreshTimer.cancel();
 	_fullScreenAnimation.stop();
+	_showAnimation.stop();
+	_hidingAnimated = false;
+	_showSource = QRect();
+	_widget->setAttribute(Qt::WA_TransparentForMouseEvents, false);
 	_recognitionResult = {};
 	_recognitionPendingSessionUniqueId = 0;
 	_recognitionPendingPhotoId = 0;

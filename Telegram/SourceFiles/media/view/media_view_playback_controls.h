@@ -74,6 +74,8 @@ public:
 
 	void showAnimated();
 	void hideAnimated();
+	// 立即隐藏，之后由 showAnimated() 淡入。
+	void hideInstantly();
 
 	void updatePlayback(const Player::TrackState &state);
 	void setLoadingProgress(int64 ready, int64 total);

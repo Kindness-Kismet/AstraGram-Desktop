@@ -109,6 +109,10 @@ bool ViewerHost::hosts(not_null<QWidget*> window) const {
 	return _host == window.get();
 }
 
+QWidget *ViewerHost::hostWidget() const {
+	return _host.data();
+}
+
 void ViewerHost::minimizeHost() const {
 	if (_host) {
 		_host->setWindowState(_host->windowState() | Qt::WindowMinimized);

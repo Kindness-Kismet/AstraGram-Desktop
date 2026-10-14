@@ -242,6 +242,10 @@ void PlaybackControls::hideAnimated() {
 	});
 }
 
+void PlaybackControls::hideInstantly() {
+	_fadeAnimation->hide();
+}
+
 void PlaybackControls::fadeFinished() {
 	fadeUpdated(_fadeAnimation->visible() ? 1. : 0.);
 }

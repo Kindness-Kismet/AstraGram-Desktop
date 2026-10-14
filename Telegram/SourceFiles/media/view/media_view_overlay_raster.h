@@ -36,6 +36,8 @@ private:
 		int rotation,
 		const QRectF &sourceRect = QRectF());
 	void paintControlsFade(QRect content, const ContentGeometry &geometry);
+	// 窗口内开合动画：按裁剪区域和不透明度绘制内容。
+	void applyShowAnimation(const ContentGeometry &geometry);
 	void paintRadialLoading(
 		QRect inner,
 		bool radial,

@@ -202,6 +202,9 @@ private:
 		QRectF rect;
 		qreal rotation = 0.;
 		qreal controlsOpacity = 0.;
+		// 窗口内开合动画：只显示裁剪区域内的部分，按不透明度淡入淡出。
+		QRectF clip;
+		qreal opacity = 1.;
 
 		// Stories.
 		qreal fade = 0.;
@@ -372,6 +375,16 @@ private:
 	// 窗口内为 0，全屏为 1，展开和收回时取中间值。
 	[[nodiscard]] float64 fullScreenProgress() const;
 	[[nodiscard]] float64 backdropOpacity() const;
+	// 窗口内开合动画的进度，打开时 0 到 1，收起时回到 0。
+	[[nodiscard]] float64 shownProgress() const;
+	void startShowAnimation();
+	// 窗口内收起时先动画回到缩略图，返回 false 表示需要立即关闭。
+	[[nodiscard]] bool startHideAnimation();
+	void showAnimationCallback();
+	void finishHideAnimation();
+	void refreshShowSource();
+	[[nodiscard]] ContentGeometry withShowAnimation(
+		ContentGeometry geometry) const;
 	[[nodiscard]] int hostCornerRadius() const;
 	bool moveToNext(int delta);
 	void preloadData(int delta);
@@ -691,6 +704,11 @@ private:
 	base::Timer _backdropRefreshTimer;
 	Ui::Animations::Simple _fullScreenAnimation;
 	bool _fullscreenForVideo = false;
+	Ui::Animations::Simple _showAnimation;
+	// 开合动画的起点或终点：聊天里缩略图的屏幕位置，为空时原地缩放淡入淡出。
+	QRect _showSource;
+	int _showSourceRadius = 0;
+	bool _hidingAnimated = false;
 
 	base::weak_ptr<Window::Controller> _openedFrom;
 	Main::Session *_session = nullptr;

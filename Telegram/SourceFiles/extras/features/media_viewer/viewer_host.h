@@ -24,6 +24,7 @@ public:
 	// 宿主画面缩小模糊后叠暗色，作为查看器的毛玻璃背景。
 	[[nodiscard]] QImage grabBackdrop() const;
 	[[nodiscard]] bool hosts(not_null<QWidget*> window) const;
+	[[nodiscard]] QWidget *hostWidget() const;
 	void minimizeHost() const;
 
 private:
