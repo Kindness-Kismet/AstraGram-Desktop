@@ -1573,6 +1573,7 @@ void MainWidget::showHistory(
 	});
 	auto animatedShow = [&] {
 		if (_showAnimation
+			|| params.inPlaceFade
 			|| (_mainSection && _mainSection->useFullWidth())
 			|| Core::App().passcodeLocked()
 			|| (params.animated == anim::type::instant)) {
@@ -1942,14 +1943,16 @@ Fn<void()> MainWidget::prepareFullWidthAnimation(
 				direction,
 				{ .shift = st::extrasSectionCrossFadeShift, .overlay = true });
 		} else {
-			// 离开全宽页面时旧画面向右揭开，底下保持实时绘制，
+			// 离开全宽页面时旧画面淡出，底下保持实时绘制，
 			// 对话页重新加载的贴纸与图片随之淡入，不会定格成占位色块。
 			Window::ShowFadeOutAnimation(
 				body,
 				body->rect(),
 				oldContentCache,
-				st::slideDuration,
-				st::extrasSectionCrossFadeShift
+				params.inPlaceFade
+					? st::extrasInPlaceFadeDuration
+					: st::slideDuration,
+				params.inPlaceFade ? 0 : st::extrasSectionCrossFadeShift
 			)->setObjectName(u"section-slide-overlay"_q);
 		}
 		// 页面圆角与媒体预览仍在过渡之上。
@@ -1965,7 +1968,7 @@ QPixmap MainWidget::grabFullWidthAnimationContent() {
 }
 
 Fn<void()> MainWidget::prepareChatSwitchFade(const SectionShow &params) {
-	if (isOneColumn()
+	if ((isOneColumn() && !params.inPlaceFade)
 		|| _showAnimation
 		|| Core::App().passcodeLocked()
 		|| (params.animated == anim::type::instant)
@@ -1974,6 +1977,8 @@ Fn<void()> MainWidget::prepareChatSwitchFade(const SectionShow &params) {
 	}
 	const auto source = _mainSection
 		? static_cast<QWidget*>(_mainSection.data())
+		: (params.inPlaceFade && isOneColumn() && _history->isHidden() && _dialogs)
+		? static_cast<QWidget*>(_dialogs.get())
 		: static_cast<QWidget*>(_history.get());
 	if (source->isHidden()) {
 		return nullptr;
@@ -2084,6 +2089,7 @@ void MainWidget::showNewSection(
 		if (_showAnimation
 			|| Core::App().passcodeLocked()
 			|| (params.animated == anim::type::instant)
+			|| params.inPlaceFade
 			|| memento->instant()) {
 			return false;
 		}
@@ -2158,6 +2164,9 @@ void MainWidget::showNewSection(
 		}
 	}
 
+	if (isOneColumn() && (animationParams || params.inPlaceFade)) {
+		_controller->removeLayerBlackout();
+	}
 	if (animationParams) {
 		auto back = (params.way == SectionShow::Way::Backward);
 		auto direction = fromBottom
@@ -2165,9 +2174,6 @@ void MainWidget::showNewSection(
 			: (back || settingSection->forceAnimateBack())
 			? Window::SlideDirection::FromLeft
 			: Window::SlideDirection::FromRight;
-		if (isOneColumn()) {
-			_controller->removeLayerBlackout();
-		}
 		settingSection->showAnimated(direction, animationParams);
 	} else {
 		settingSection->showFast();

@@ -218,6 +218,8 @@ struct SectionShow {
 	bool dropSameFromStack = false;
 	bool allowDuplicateInStack = false;
 	bool slideFromBottom = false;
+	// 原地淡化只改变过渡效果，保留前进和返回的导航语义。
+	bool inPlaceFade = false;
 	Origin origin;
 
 };

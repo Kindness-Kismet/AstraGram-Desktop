@@ -1417,14 +1417,16 @@ Window::SessionController *Manager::openNotificationMessage(
 		: history->session().tryResolveWindow();
 	if (window) {
 		window->widget()->showFromTray();
+		auto params = SectionShow(SectionShow::Way::Forward);
+		params.inPlaceFade = true;
 		if (topic) {
-			window->showTopic(topic, itemId, SectionShow::Way::Forward);
+			window->showTopic(topic, itemId, params);
 		} else if (sublist) {
-			window->showSublist(sublist, itemId, SectionShow::Way::Forward);
+			window->showSublist(sublist, itemId, params);
 		} else {
 			window->showPeerHistory(
 				history->peer->id,
-				SectionShow::Way::Forward,
+				params,
 				itemId);
 		}
 	}
