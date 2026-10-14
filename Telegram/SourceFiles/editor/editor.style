@@ -54,49 +54,50 @@ photoEditorRotateButton: IconButton(defaultIconButton) {
 	width: photoEditorButtonBarHeight;
 	height: photoEditorButtonBarHeight;
 
-	icon: icon {{ "photo_editor/rotate-flip_horizontal", photoEditorButtonIconFg }};
-	iconOver: icon {{ "photo_editor/rotate-flip_horizontal", photoEditorButtonIconFgOver }};
+	icon: icon {{ "photo_editor/rotate-flip_horizontal-26x26", photoEditorButtonIconFg }};
+	iconOver: icon {{ "photo_editor/rotate-flip_horizontal-26x26", photoEditorButtonIconFgOver }};
 
 	rippleAreaPosition: point(4px, 4px);
 	rippleAreaSize: 40px;
 	ripple: universalRippleAnimation;
 }
 photoEditorFlipButton: IconButton(photoEditorRotateButton) {
-	icon: icon {{ "photo_editor/flip", photoEditorButtonIconFg }};
-	iconOver: icon {{ "photo_editor/flip", photoEditorButtonIconFgOver }};
+	icon: icon {{ "photo_editor/flip-24x24", photoEditorButtonIconFg }};
+	iconOver: icon {{ "photo_editor/flip-24x24", photoEditorButtonIconFgOver }};
 }
-photoEditorFlipIconActive: icon {{ "photo_editor/flip", photoEditorButtonIconFgActive }};
+photoEditorFlipIconActive: icon {{ "photo_editor/flip-24x24", photoEditorButtonIconFgActive }};
 
 photoEditorPaintModeButton: IconButton(photoEditorRotateButton) {
-	icon: icon {{ "photo_editor/paint", photoEditorButtonIconFg }};
-	iconOver: icon {{ "photo_editor/paint", photoEditorButtonIconFgOver }};
+	icon: icon {{ "photo_editor/paint-26x26", photoEditorButtonIconFg }};
+	iconOver: icon {{ "photo_editor/paint-26x26", photoEditorButtonIconFgOver }};
 }
-photoEditorPaintIconActive: icon {{ "photo_editor/paint", photoEditorButtonIconFgActive }};
+photoEditorPaintIconActive: icon {{ "photo_editor/paint-26x26", photoEditorButtonIconFgActive }};
 
 photoEditorUndoButton: IconButton(photoEditorRotateButton) {
-	icon: icon {{ "menu/tabs_undo-24x24", photoEditorButtonIconFg }};
-	iconOver: icon {{ "menu/tabs_undo-24x24", photoEditorButtonIconFgOver }};
+	icon: icon {{ "menu/tabs_undo-25x25", photoEditorButtonIconFg }};
+	iconOver: icon {{ "menu/tabs_undo-25x25", photoEditorButtonIconFgOver }};
 }
 
 photoEditorRedoButton: IconButton(photoEditorRotateButton) {
-	icon: icon {{ "menu/tabs_redo-24x24", photoEditorButtonIconFg }};
-	iconOver: icon {{ "menu/tabs_redo-24x24", photoEditorButtonIconFgOver }};
+	icon: icon {{ "menu/tabs_redo-25x25", photoEditorButtonIconFg }};
+	iconOver: icon {{ "menu/tabs_redo-25x25", photoEditorButtonIconFgOver }};
 }
 
 photoEditorStickersButton: IconButton(photoEditorRotateButton) {
-	icon: icon {{ "settings/settings_stickers", photoEditorButtonIconFg }};
-	iconOver: icon {{ "settings/settings_stickers", photoEditorButtonIconFgOver }};
+	icon: icon {{ "settings/settings_stickers-24x24", photoEditorButtonIconFg }};
+	iconOver: icon {{ "settings/settings_stickers-24x24", photoEditorButtonIconFgOver }};
 }
-photoEditorStickersIconActive: icon {{ "settings/settings_stickers", photoEditorButtonIconFgActive }};
+photoEditorStickersIconActive: icon {{ "settings/settings_stickers-24x24", photoEditorButtonIconFgActive }};
 
 photoEditorTextButtonSize: size(42px, 42px);
+photoEditorTextButtonFont: font(24px semibold);
 photoEditorTextButtonGlyphSkip: 3px;
 
 photoEditorShapesButton: IconButton(photoEditorRotateButton) {
-	icon: icon {{ "photo_editor/shapes-28x28", photoEditorButtonIconFg }};
-	iconOver: icon {{ "photo_editor/shapes-28x28", photoEditorButtonIconFgOver }};
+	icon: icon {{ "photo_editor/shapes-25x25", photoEditorButtonIconFg }};
+	iconOver: icon {{ "photo_editor/shapes-25x25", photoEditorButtonIconFgOver }};
 }
-photoEditorShapesIconActive: icon {{ "photo_editor/shapes-28x28", photoEditorButtonIconFgActive }};
+photoEditorShapesIconActive: icon {{ "photo_editor/shapes-25x25", photoEditorButtonIconFgActive }};
 photoEditorShapeCircle: icon {{ "photo_editor/shape_circle-24x24", mediaviewMenuFg }};
 photoEditorShapeCircleFill: icon {{ "photo_editor/shape_circle_fill-24x24", mediaviewMenuFg }};
 photoEditorShapeRectangle: icon {{ "photo_editor/shape_rectangle-24x24", mediaviewMenuFg }};
@@ -108,16 +109,16 @@ photoEditorShapeBubbleFill: icon {{ "photo_editor/shape_bubble_fill-24x24", medi
 photoEditorShapeArrow: icon {{ "photo_editor/shape_arrow-24x24", mediaviewMenuFg }};
 
 photoEditorCropRatioButton: IconButton(photoEditorRotateButton) {
-	icon: icon {{ "photo_editor/ratio-23x23", photoEditorButtonIconFg, point(0px, 1px) }};
-	iconOver: icon {{ "photo_editor/ratio-23x23", photoEditorButtonIconFgOver, point(0px, 1px) }};
+	icon: icon {{ "photo_editor/ratio-25x25", photoEditorButtonIconFg, point(0px, 1px) }};
+	iconOver: icon {{ "photo_editor/ratio-25x25", photoEditorButtonIconFgOver, point(0px, 1px) }};
 }
-photoEditorCropRatioIconActive: icon {{ "photo_editor/ratio-23x23", photoEditorButtonIconFgActive, point(0px, 1px) }};
+photoEditorCropRatioIconActive: icon {{ "photo_editor/ratio-25x25", photoEditorButtonIconFgActive, point(0px, 1px) }};
 
 photoEditorCornersButton: IconButton(photoEditorRotateButton) {
-	icon: icon {{ "photo_editor/corners-23x23", photoEditorButtonIconFg, point(0px, 1px) }};
-	iconOver: icon {{ "photo_editor/corners-23x23", photoEditorButtonIconFgOver, point(0px, 1px) }};
+	icon: icon {{ "photo_editor/corners-25x25", photoEditorButtonIconFg, point(0px, 1px) }};
+	iconOver: icon {{ "photo_editor/corners-25x25", photoEditorButtonIconFgOver, point(0px, 1px) }};
 }
-photoEditorCornersIconActive: icon {{ "photo_editor/corners-23x23", photoEditorButtonIconFgActive, point(0px, 1px) }};
+photoEditorCornersIconActive: icon {{ "photo_editor/corners-25x25", photoEditorButtonIconFgActive, point(0px, 1px) }};
 
 photoEditorCornersMenuAboutLabel: FlatLabel(defaultFlatLabel) {
 	style: TextStyle(defaultTextStyle) {
@@ -160,8 +161,8 @@ photoEditorCropRatioMenu: PopupMenu(mediaviewPopupMenu) {
 	}
 }
 
-photoEditorUndoButtonInactive: icon {{ "menu/tabs_undo-24x24", photoEditorButtonIconFgInactive }};
-photoEditorRedoButtonInactive: icon {{ "menu/tabs_redo-24x24", photoEditorButtonIconFgInactive }};
+photoEditorUndoButtonInactive: icon {{ "menu/tabs_undo-25x25", photoEditorButtonIconFgInactive }};
+photoEditorRedoButtonInactive: icon {{ "menu/tabs_redo-25x25", photoEditorButtonIconFgInactive }};
 
 photoEditorColorButtonSize: 24px;
 photoEditorColorButtonBorder: 1px;
@@ -173,7 +174,7 @@ photoEditorColorPalettePlusLine: 2px;
 photoEditorColorPalettePlusFg: mediaviewCaptionFg;
 
 photoEditorToolButtonSize: 20px;
-photoEditorToolButtonIconSize: 20px;
+photoEditorToolButtonIconSize: 22px;
 photoEditorToolButtonGap: 18px;
 photoEditorToolButtonHoverDuration: 350;
 photoEditorToolButtonSelectDuration: 120;
@@ -210,8 +211,8 @@ photoEditorStickyTrigger: 12px;
 photoEditorStickyLineWidth: 2px;
 
 photoEditorKeysButton: IconButton(photoEditorRotateButton) {
-	icon: icon {{ "photo_editor/keyboard", photoEditorButtonIconFg }};
-	iconOver: icon {{ "photo_editor/keyboard", photoEditorButtonIconFgOver }};
+	icon: icon {{ "photo_editor/keyboard-22x22", photoEditorButtonIconFg }};
+	iconOver: icon {{ "photo_editor/keyboard-22x22", photoEditorButtonIconFgOver }};
 }
 photoEditorKeysButtonLeft: 16px;
 photoEditorKeysMenuSkip: 6px;
@@ -334,11 +335,11 @@ videoTimelineDurationField: InputField(defaultInputField) {
 }
 
 videoEditorGifButton: IconButton(photoEditorRotateButton) {
-	icon: icon {{ "photo_editor/gif", photoEditorButtonIconFg }};
-	iconOver: icon {{ "photo_editor/gif", photoEditorButtonIconFgOver }};
+	icon: icon {{ "photo_editor/gif-27x27", photoEditorButtonIconFg }};
+	iconOver: icon {{ "photo_editor/gif-27x27", photoEditorButtonIconFgOver }};
 }
 videoEditorGifIconActive: icon {
-	{ "photo_editor/gif", photoEditorButtonIconFgActive }
+	{ "photo_editor/gif-27x27", photoEditorButtonIconFgActive }
 };
 
 videoQualitySliderDotSize: 7px;

@@ -564,9 +564,7 @@ private:
 	void paintEvent(QPaintEvent *) override {
 		auto p = QPainter(this);
 		auto hq = PainterHighQualityEnabler(p);
-		auto font = st::semiboldFont->f;
-		font.setPixelSize(QWidget::rect().height() / 2);
-		p.setFont(font);
+		p.setFont(st::photoEditorTextButtonFont);
 		p.setPen(isOver()
 			? st::photoEditorButtonIconFgOver
 			: st::photoEditorButtonIconFg);
