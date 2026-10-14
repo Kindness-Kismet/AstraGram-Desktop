@@ -9112,6 +9112,11 @@ bool OverlayWidget::tooltipWindowActive() const {
 	return _window->isActiveWindow();
 }
 
+const style::Tooltip *OverlayWidget::tooltipSt() const {
+	// 与聊天顶栏的提示间距一致，避免提示贴着指针。
+	return &st::topBarTooltip;
+}
+
 void OverlayWidget::updateOver(QPoint pos) {
 	ClickHandlerPtr lnk;
 	ClickHandlerHost *lnkhost = nullptr;

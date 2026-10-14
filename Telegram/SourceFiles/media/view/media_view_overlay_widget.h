@@ -635,6 +635,7 @@ private:
 	QString tooltipText() const override;
 	QPoint tooltipPos() const override;
 	bool tooltipWindowActive() const override;
+	const style::Tooltip *tooltipSt() const override;
 	float64 overLevel(Over control) const;
 
 	void checkGroupThumbsAnimation();

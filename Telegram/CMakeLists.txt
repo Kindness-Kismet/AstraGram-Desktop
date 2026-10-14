@@ -180,6 +180,8 @@ set(extras_files
         extras/ui/extras_userpic.h
         extras/ui/utils/extras_profile_values.cpp
         extras/ui/utils/extras_profile_values.h
+        extras/ui/utils/extras_tooltip.cpp
+        extras/ui/utils/extras_tooltip.h
         extras/ui/utils/color_cut_quantizer.cpp
         extras/ui/utils/color_cut_quantizer.h
         extras/ui/utils/color_utils.cpp
