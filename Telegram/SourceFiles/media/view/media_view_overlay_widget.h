@@ -486,6 +486,9 @@ private:
 	void refreshClipControllerGeometry();
 	// 窗口内样式的视频控制条盖在视频底边内侧，不占用内容下方的空间。
 	[[nodiscard]] bool controllerOverContent() const;
+	// 控制条盖在画面上时随其它控件一起自动隐藏，指针停在控制条上时不隐藏。
+	[[nodiscard]] bool controllerAutoHides() const;
+	[[nodiscard]] bool pointerOverController() const;
 	void refreshCaptionGeometry();
 
 	bool initStreaming(

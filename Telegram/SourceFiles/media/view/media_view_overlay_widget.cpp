@@ -3481,7 +3481,7 @@ void OverlayWidget::activateControls() {
 	if (!_menu && !_mousePressed && !_touchMove && !_stories) {
 		_controlsHideTimer.callOnce(st::mediaviewWaitHide);
 	}
-	if (_fullScreenVideo) {
+	if (controllerAutoHides()) {
 		if (_streamed && _streamed->controls) {
 			_streamed->controls->showAnimated();
 		}
@@ -3509,11 +3509,12 @@ void OverlayWidget::hideControls(bool force) {
 				&& _streamed->controls->hasMenu())
 			|| _menu
 			|| _mousePressed
-			|| _touchMove) {
+			|| _touchMove
+			|| pointerOverController()) {
 			return;
 		}
 	}
-	if (_fullScreenVideo && _streamed && _streamed->controls) {
+	if (controllerAutoHides() && _streamed && _streamed->controls) {
 		_streamed->controls->hideAnimated();
 	}
 	if (_controlsState == ControlsHiding || _controlsState == ControlsHidden) return;
@@ -5552,6 +5553,10 @@ bool OverlayWidget::createStreamingObjects() {
 			_body,
 			static_cast<PlaybackControls::Delegate*>(this));
 		_streamed->controls->show();
+		if (controllerAutoHides()) {
+			// 新视频的控制条和其它控件一起出现，指针静止后再一起隐藏。
+			activateControls();
+		}
 		_streamed->sponsored = PlaybackSponsored::Has(_message)
 			? std::make_unique<PlaybackSponsored>(
 				_streamed->controls.get(),
@@ -5814,6 +5819,19 @@ void OverlayWidget::refreshClipControllerGeometry() {
 
 bool OverlayWidget::controllerOverContent() const {
 	return lightboxStyle() && !_fullScreenVideo;
+}
+
+bool OverlayWidget::controllerAutoHides() const {
+	return _fullScreenVideo || controllerOverContent();
+}
+
+bool OverlayWidget::pointerOverController() const {
+	if (!controllerAutoHides() || !_streamed || !_streamed->controls) {
+		return false;
+	}
+	const auto controls = _streamed->controls.get();
+	return controls->isVisible()
+		&& controls->rect().contains(controls->mapFromGlobal(QCursor::pos()));
 }
 
 void OverlayWidget::playbackControlsPlay() {
