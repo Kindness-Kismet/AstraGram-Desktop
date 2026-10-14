@@ -223,7 +223,6 @@ void OverlayWidget::RendererGL::init(QOpenGLFunctions &f) {
 			FragmentSampleARGB32Texture(),
 			FragmentPlaceOnTransparentBackground(),
 			FragmentApplyControlsFade(),
-			FragmentRoundedCorners(),
 			FragmentGlobalOpacity()
 		}));
 
@@ -580,7 +579,6 @@ void OverlayWidget::RendererGL::paintTransformedVideoFrame(
 	program->setUniformValue("f_texture", GLint(nv12 ? 2 : 3));
 
 	toggleBlending((geometry.roundRadius > 0.)
-		|| !geometry.clip.isEmpty()
 		|| (geometry.opacity < 1.));
 	const auto textureRect = _owner->_stories
 		? StoryCropTextureRect(QSizeF(yuv->size), geometry.rect.size())
@@ -668,7 +666,6 @@ void OverlayWidget::RendererGL::paintTransformedStaticContent(
 	program->setUniformValue("f_texture", GLint(1));
 
 	toggleBlending((geometry.roundRadius > 0.)
-		|| !geometry.clip.isEmpty()
 		|| (geometry.opacity < 1.)
 		|| (semiTransparent && !fillTransparentBackground));
 	const auto textureRect = _owner->_stories
@@ -764,20 +761,18 @@ void OverlayWidget::RendererGL::paintTransformedContent(
 		geometry.controlsOpacity,
 		1.f - float(geometry.fade)));
 	program->setUniformValue("g_opacity", GLfloat(geometry.opacity));
-	// 有裁剪区域时按它裁剪并加圆角，透明图片平时不加圆角。
-	const auto clipped = !geometry.clip.isEmpty();
-	const auto rounded = clipped
-		|| (geometry.roundRadius && !fillTransparentBackground);
-	program->setUniformValue(
-		"roundRect",
-		clipped
-			? Uniform(transformRect(geometry.clip))
-			: rounded
-			? Uniform(rect)
-			: QVector4D(0, 0, _uniformViewport.x(), _uniformViewport.y()));
-	program->setUniformValue(
-		"roundRadius",
-		GLfloat(rounded ? (geometry.roundRadius * _factor) : 0.));
+	if (!fillTransparentBackground) {
+		program->setUniformValue(
+			"roundRect",
+			geometry.roundRadius ? Uniform(rect) : QVector4D(
+				0,
+				0,
+				_uniformViewport.x(),
+				_uniformViewport.y()));
+		program->setUniformValue(
+			"roundRadius",
+			GLfloat(geometry.roundRadius * _factor));
+	}
 	FillTexturedRectangle(*_f, &*program);
 }
 

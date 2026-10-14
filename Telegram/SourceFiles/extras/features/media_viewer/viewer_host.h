@@ -36,7 +36,6 @@ public:
 	void setFullScreenBackdrop(bool enabled);
 	[[nodiscard]] bool nativeBackdrop() const;
 	[[nodiscard]] bool hosts(not_null<QWidget*> window) const;
-	[[nodiscard]] QWidget *hostWidget() const;
 	void minimizeHost() const;
 
 private:

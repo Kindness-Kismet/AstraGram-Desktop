@@ -409,6 +409,6 @@ extrasViewerPlayback: ExtrasViewerPlayback {
 		textFg: windowSubTextFg;
 	}
 }
-// 窗口内查看器从缩略图展开、收回缩略图的时长。
+// 窗口内查看器淡入、淡出的时长。
 extrasViewerShowDuration: 240;
 extrasViewerHideDuration: 200;

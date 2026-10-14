@@ -149,24 +149,10 @@ void OverlayWidget::RendererSW::paintTransformedVideoFrame(
 		? StoryCropRect(QSizeF(image.size()), geometry.rect.size())
 		: QRectF();
 	_p->save();
-	applyShowAnimation(geometry);
+	_p->setOpacity(geometry.opacity);
 	paintTransformedImage(image, rect, rotation, sourceRect);
 	paintControlsFade(rect, geometry);
 	_p->restore();
-}
-
-void OverlayWidget::RendererSW::applyShowAnimation(
-		const ContentGeometry &geometry) {
-	_p->setOpacity(geometry.opacity);
-	if (geometry.clip.isEmpty()) {
-		return;
-	}
-	auto path = QPainterPath();
-	path.addRoundedRect(
-		geometry.clip,
-		geometry.roundRadius,
-		geometry.roundRadius);
-	_p->setClipPath(path, Qt::IntersectClip);
 }
 
 void OverlayWidget::RendererSW::paintTransformedStaticContent(
@@ -182,7 +168,7 @@ void OverlayWidget::RendererSW::paintTransformedStaticContent(
 	}
 
 	_p->save();
-	applyShowAnimation(geometry);
+	_p->setOpacity(geometry.opacity);
 	if (fillTransparentBackground) {
 		_p->fillRect(rect, _transparentBrush);
 	}
