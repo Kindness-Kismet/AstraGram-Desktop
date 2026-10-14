@@ -15,6 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "dialogs/dialogs_community_rows_view.h"
 #include "dialogs/dialogs_inner_widget_accessibility.h"
 #include "dialogs/dialogs_key.h"
+#include "dialogs/dialogs_rows_shift.h"
 #include "lang/lang_keys.h"
 #include "ui/effects/animations.h"
 #include "ui/dragging_scroll_manager.h"
@@ -607,6 +608,10 @@ private:
 	bool updateReorderPinned(QPoint localPosition);
 	[[nodiscard]] bool skipChatsListFreeze() const;
 	void unfreezeShownList(bool updateIfWasFrozen);
+	void unfreezeShownListShifted();
+	[[nodiscard]] bool canShiftRows() const;
+	void shiftMovedRow(Key key, int from, int to, int wasVisibleTop);
+	[[nodiscard]] std::pair<Row*, int> shownRowAtY(int y) const;
 	void finishReorderPinned();
 	bool finishReorderOnRelease();
 	void stopReorderPinned();
@@ -832,6 +837,7 @@ private:
 	rpl::variable<ChildListShown> _childListShown;
 	base::Timer _freezeTimer;
 	float64 _narrowRatio = 0.;
+	RowsShift _rowsShift;
 	bool _geometryInited = false;
 
 	Data::SavedMessages *_savedSublists = nullptr;

@@ -379,7 +379,12 @@ InnerWidget::InnerWidget(
 	+ st::defaultDialogRow.photoSize
 	+ st::defaultDialogRow.padding.left())
 , _childListShown(std::move(childListShown))
-, _freezeTimer([=] { _shownList->unfreeze(); update(); }) {
+, _freezeTimer([=] { unfreezeShownListShifted(); update(); })
+, _rowsShift([=] { update(); }, [=](not_null<const Row*> row) {
+	auto result = std::make_unique<Row>(row->key(), 0, 0);
+	result->recountHeight(_narrowRatio, _filterId);
+	return result;
+}) {
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
 	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
@@ -670,6 +675,7 @@ InnerWidget::InnerWidget(
 			_activeFade.stop();
 			_activeFadeFrom = RowDescriptor();
 		}
+		_rowsShift.forget(update.entry);
 	}, lifetime());
 
 	_controller->window().widget()->globalForceClicks(
@@ -1359,7 +1365,8 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			context.quickActionContext = nullptr;
 		}
 	};
-	const auto paintRow = [&](
+	const auto paintRowOn = [&](
+			Painter &p,
 			not_null<Row*> row,
 			bool selected,
 			bool mayBeActive) {
@@ -1379,6 +1386,12 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			[&](Painter &q, bool state) {
 				paintRowState(q, row, selected, state);
 			});
+	};
+	const auto paintRow = [&](
+			not_null<Row*> row,
+			bool selected,
+			bool mayBeActive) {
+		paintRowOn(p, row, selected, mayBeActive);
 	};
 	if (_state == WidgetState::Default) {
 		if (communityModeShown()) {
@@ -1434,7 +1447,10 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 				}
 			};
 
-			auto i = list.findByY(dialogsClip.top() - skip);
+			const auto shifting = _rowsShift.animating() && !reorderingPinned;
+			auto i = shifting
+				? list.cend()
+				: list.findByY(dialogsClip.top() - skip);
 			if (_skipTopDialog && i != list.cend() && !(*i)->index()) {
 				++i;
 			}
@@ -1470,6 +1486,46 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 					paintDialog(reorderingRow);
 					p.translate(0, top - reorderingRow->top());
 				}
+			}
+			if (shifting) {
+				// 换位过渡中逐个绘制片段，画笔最后停在末尾，供底色填充下方。
+				const auto from = dialogsClip.top() - skip;
+				const auto till = from + dialogsClip.height();
+				auto origin = skippedTop;
+				auto bottom = skippedTop;
+				_rowsShift.enumerate(list, from, till, [&](
+						const RowsShift::Piece &piece) {
+					p.translate(0, piece.top - origin);
+					origin = piece.top;
+					bottom = piece.top + piece.height;
+					const auto row = piece.row;
+					if (!row) {
+						p.fillRect(0, 0, fullWidth, piece.height, currentBg());
+						return true;
+					}
+					if (!piece.ghost && _skipTopDialog && !row->index()) {
+						return true;
+					}
+					if (!piece.ghost
+						&& piece.shown >= 1.
+						&& piece.height == row->height()) {
+						paintDialog(row);
+						return true;
+					}
+					const auto rowSelected = !piece.ghost
+						&& (row->key() == selected);
+					PaintShiftedRow(
+						p,
+						QSize(fullWidth, row->height()),
+						piece.height,
+						piece.shown,
+						currentBg(),
+						[&](Painter &q) {
+							paintRowOn(q, row, rowSelected, true);
+						});
+					return true;
+				});
+				p.translate(0, bottom - origin);
 			}
 		} else {
 			p.fillRect(dialogsClip, currentBg());
@@ -2279,10 +2335,82 @@ bool InnerWidget::skipChatsListFreeze() const {
 void InnerWidget::unfreezeShownList(bool updateIfWasFrozen) {
 	const auto wasFrozen = _freezeTimer.isActive();
 	_freezeTimer.cancel();
-	_shownList->unfreeze();
+	unfreezeShownListShifted();
 	if (updateIfWasFrozen && wasFrozen) {
 		update();
 	}
+}
+
+// 冻结期间积压的换位在解冻时一次补上，离开原位的行走同一套过渡。
+void InnerWidget::unfreezeShownListShifted() {
+	if (!canShiftRows()) {
+		_shownList->unfreeze();
+		return;
+	}
+	const auto &list = _shownList->all();
+	const auto was = RowsShift::Snapshot(list);
+	_shownList->unfreeze();
+	const auto offset = dialogsOffset();
+	_rowsShift.reordered(
+		was,
+		list,
+		_visibleTop - offset,
+		_visibleBottom - offset);
+}
+
+// 置顶拖动和社群分区有各自的位移绘制，不叠加换位过渡。
+bool InnerWidget::canShiftRows() const {
+	return (_state == WidgetState::Default)
+		&& !communityModeShown()
+		&& !_dragging
+		&& _pinnedRows.empty()
+		&& !_pinnedShiftAnimation.animating()
+		&& !anim::Disabled()
+		&& isVisible();
+}
+
+// from 与 to 是列表坐标；wasVisibleTop 是滚动补偿之前的可见顶部。
+void InnerWidget::shiftMovedRow(
+		Key key,
+		int from,
+		int to,
+		int wasVisibleTop) {
+	const auto row = _shownList->getRow(key);
+	if (!row || row->top() != to || !canShiftRows()) {
+		return;
+	}
+	const auto &list = _shownList->all();
+	const auto height = row->height();
+
+	// 上移时原位之后的行不动；下移时原位由下一行接替。
+	const auto nextTop = (to < from) ? (from + height) : from;
+	const auto next = (nextTop < list.height())
+		? list.rowAtY(nextTop)
+		: nullptr;
+
+	// 发生滚动补偿时上方新位已不影响可见内容，新位不再展开。
+	const auto compensated = (_visibleTop != wasVisibleTop);
+	const auto top = wasVisibleTop - dialogsOffset();
+	const auto bottom = top + (_visibleBottom - _visibleTop);
+	const auto above = (from + height <= top) && (to + height <= top);
+	_rowsShift.leave(
+		row,
+		next ? next->key() : Key(),
+		!above && (from < bottom));
+	if (!above && !compensated && (to < bottom)) {
+		_rowsShift.arrive(key);
+	}
+}
+
+std::pair<Row*, int> InnerWidget::shownRowAtY(int y) const {
+	if (!_rowsShift.animating()) {
+		const auto row = _shownList->rowAtY(y);
+		return { row, row ? row->top() : 0 };
+	}
+	const auto piece = _rowsShift.pieceAt(_shownList->all(), y);
+	return piece.ghost
+		? std::pair<Row*, int>()
+		: std::pair<Row*, int>(piece.row, piece.top);
 }
 
 void InnerWidget::performDrag() {
@@ -2448,12 +2576,11 @@ void InnerWidget::selectByMouse(QPoint globalPosition) {
 			&& mouseY < _collapsedRows.size() * st::dialogsImportantBarHeight)
 			? (mouseY / st::dialogsImportantBarHeight)
 			: -1;
-		const auto selected = (collapsedSelected >= 0)
-			? nullptr
-			: (mouseY >= offset)
-			? _shownList->rowAtY(mouseY - offset)
-			: nullptr;
-		const auto mappedY = selected ? mouseY - offset - selected->top() : 0;
+		const auto hit = (collapsedSelected < 0 && mouseY >= offset)
+			? shownRowAtY(mouseY - offset)
+			: std::pair<Row*, int>();
+		const auto selected = hit.first;
+		const auto mappedY = selected ? mouseY - offset - hit.second : 0;
 		const auto selectedTopicJump = selected
 			&& selected->lookupIsInTopicJump(local.x(), mappedY);
 		const auto selectedRightButton = selected
@@ -2877,6 +3004,8 @@ void InnerWidget::checkReorderPinnedStart(QPoint localPosition) {
 
 void InnerWidget::startReorderPinned(QPoint localPosition) {
 	Expects(_dragging != nullptr);
+
+	_rowsShift.clear();
 
 	cancelChatPreview();
 	if (updateReorderIndexGetCount() < 2) {
@@ -3405,6 +3534,22 @@ void InnerWidget::moveSearchIn() {
 void InnerWidget::dialogRowReplaced(
 		Row *oldRow,
 		Row *newRow) {
+	if (oldRow
+		&& !newRow
+		&& (_shownList->getRow(oldRow->key()) == oldRow)
+		&& canShiftRows()) {
+		// 此时行还在列表里，序号和位置仍是删除前的。
+		const auto &list = _shownList->all();
+		const auto index = oldRow->index() + 1;
+		const auto next = (index < list.size())
+			? (list.cbegin() + index)->get()
+			: nullptr;
+		const auto bottom = _visibleBottom - dialogsOffset();
+		_rowsShift.leave(
+			oldRow,
+			next ? next->key() : Key(),
+			oldRow->top() < bottom);
+	}
 	if (oldRow) {
 		invalidateCachedRow(RowsCacheKey(oldRow->entry()));
 	}
@@ -3485,6 +3630,7 @@ void InnerWidget::handleChatListEntryRefreshes() {
 		const auto to = offset + event.moved.to;
 		const auto &key = event.key;
 		const auto entry = key.entry();
+		const auto wasVisibleTop = _visibleTop;
 
 		// Don't jump in chats list scroll position while dragging.
 		if (!_dragging
@@ -3537,6 +3683,11 @@ void InnerWidget::handleChatListEntryRefreshes() {
 			}
 			refresh();
 		} else if (_state == WidgetState::Default && from != to) {
+			shiftMovedRow(
+				key,
+				event.moved.from,
+				event.moved.to,
+				wasVisibleTop);
 			update(
 				0,
 				std::min(from, to),
@@ -3975,6 +4126,7 @@ void InnerWidget::refreshShownList() {
 		: session().data().chatsList(_openedFolder)->indexed();
 	if (_shownList != list) {
 		_shownList->unfreeze();
+		_rowsShift.clear();
 		_shownList = list;
 		_shownList->updateHeights(_narrowRatio);
 		_activeSubItemsRow = nullptr;
@@ -4541,7 +4693,8 @@ void InnerWidget::appendToFiltered(Key key) {
 }
 
 InnerWidget::~InnerWidget() {
-	unfreezeShownList(false);
+	_freezeTimer.cancel();
+	_shownList->unfreeze();
 	session().data().stories().decrementPreloadingMainSources();
 	clearSearchResults();
 }

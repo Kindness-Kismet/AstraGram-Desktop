@@ -1171,6 +1171,8 @@ PRIVATE
     dialogs/dialogs_quick_action.h
     dialogs/dialogs_row.cpp
     dialogs/dialogs_row.h
+    dialogs/dialogs_rows_shift.cpp
+    dialogs/dialogs_rows_shift.h
     dialogs/dialogs_search_from_controllers.cpp
     dialogs/dialogs_search_from_controllers.h
     dialogs/dialogs_search_tags.cpp
