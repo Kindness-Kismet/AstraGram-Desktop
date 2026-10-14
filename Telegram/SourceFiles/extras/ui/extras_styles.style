@@ -4,6 +4,7 @@ using "ui/widgets/widgets.style";
 using "info/info.style";
 using "settings/settings.style";
 using "media/player/media_player.style";
+using "media/view/media_view.style";
 
 extrasMusicPlaceholder: icon {{ "menu/rich/audio", windowSubTextFg }};
 extrasMediaVoice: icon {{ "extras/message_field/voice", windowSubTextFg }};
@@ -305,3 +306,108 @@ extrasViewerGroupOutlineSkip: 1px;
 extrasViewerGroupPlay: size(9px, 12px);
 extrasViewerGroupCounterFont: font(12px);
 extrasViewerGroupCounterSkip: 12px;
+
+// 视频控制条：经典查看器沿用官方的固定深色，窗口内查看器跟随主题配色。
+ExtrasViewerPlayback {
+	bg: color;
+	bgOpacity: double;
+	radius: pixels;
+	play: IconButton;
+	pauseIcon: icon;
+	pauseIconOver: icon;
+	volume: IconButton;
+	volumeIcon1: icon;
+	volumeIcon1Over: icon;
+	volumeIcon2: icon;
+	volumeIcon2Over: icon;
+	fullScreen: IconButton;
+	fullScreenOutIcon: icon;
+	fullScreenOutIconOver: icon;
+	pip: IconButton;
+	settings: MediaSpeedButton;
+	slider: MediaSlider;
+	progress: LabelSimple;
+	timestamp: LabelSimple;
+}
+extrasViewerPlaybackClassic: ExtrasViewerPlayback {
+	bg: mediaviewSaveMsgBg;
+	bgOpacity: 1.;
+	radius: mediaviewControllerRadius;
+	play: mediaviewPlayButton;
+	pauseIcon: mediaviewPauseIcon;
+	pauseIconOver: mediaviewPauseIconOver;
+	volume: mediaviewVolumeToggle;
+	volumeIcon1: mediaviewVolumeIcon1;
+	volumeIcon1Over: mediaviewVolumeIcon1Over;
+	volumeIcon2: mediaviewVolumeIcon2;
+	volumeIcon2Over: mediaviewVolumeIcon2Over;
+	fullScreen: mediaviewFullScreenButton;
+	fullScreenOutIcon: mediaviewFullScreenOutIcon;
+	fullScreenOutIconOver: mediaviewFullScreenOutIconOver;
+	pip: mediaviewPipButton;
+	settings: mediaviewSpeedButton;
+	slider: mediaviewPlayback;
+	progress: mediaviewPlayProgressLabel;
+	timestamp: mediaviewTimestampLabel;
+}
+extrasViewerPlaybackRipple: RippleAnimation(defaultRippleAnimation) {
+	color: windowBgOver;
+}
+// 配色参照音乐播放条：播放键与进度用强调色，其余图标用菜单图标色。
+extrasViewerPlayback: ExtrasViewerPlayback {
+	bg: windowBg;
+	bgOpacity: 0.94;
+	radius: 12px;
+	play: IconButton(mediaviewPlayButton) {
+		icon: icon {{ "player/player_play_big", mediaPlayerActiveFg }};
+		iconOver: icon {{ "player/player_play_big", mediaPlayerActiveFg }};
+		ripple: extrasViewerPlaybackRipple;
+	}
+	pauseIcon: icon {{ "player/player_pause_big", mediaPlayerActiveFg }};
+	pauseIconOver: icon {{ "player/player_pause_big", mediaPlayerActiveFg }};
+	volume: IconButton(mediaviewVolumeToggle) {
+		icon: icon {{ "player/player_volume_off", menuIconFg }};
+		iconOver: icon {{ "player/player_volume_off", menuIconFgOver }};
+		ripple: extrasViewerPlaybackRipple;
+	}
+	volumeIcon1: icon {{ "player/player_volume_small", menuIconFg }};
+	volumeIcon1Over: icon {{ "player/player_volume_small", menuIconFgOver }};
+	volumeIcon2: icon {{ "player/player_volume_on", menuIconFg }};
+	volumeIcon2Over: icon {{ "player/player_volume_on", menuIconFgOver }};
+	fullScreen: IconButton(mediaviewFullScreenButton) {
+		icon: icon {{ "player/player_fullscreen", menuIconFg }};
+		iconOver: icon {{ "player/player_fullscreen", menuIconFgOver }};
+		ripple: extrasViewerPlaybackRipple;
+	}
+	fullScreenOutIcon: icon {{ "player/player_minimize", menuIconFg }};
+	fullScreenOutIconOver: icon {{ "player/player_minimize", menuIconFgOver }};
+	pip: IconButton(mediaviewPipButton) {
+		icon: icon {{ "player/player_pip", menuIconFg }};
+		iconOver: icon {{ "player/player_pip", menuIconFgOver }};
+		ripple: extrasViewerPlaybackRipple;
+	}
+	settings: MediaSpeedButton(mediaviewSpeedButton) {
+		fg: menuIconFg;
+		overFg: menuIconFgOver;
+		activeFg: mediaPlayerActiveFg;
+		icon: icon {{ "player/player_settings", menuIconFg }};
+		ripple: extrasViewerPlaybackRipple;
+		rippleActiveColor: lightButtonBgOver;
+		menu: mediaPlayerSpeedMenu;
+	}
+	slider: MediaSlider(mediaviewPlayback) {
+		activeFg: mediaPlayerActiveFg;
+		inactiveFg: mediaPlayerInactiveFg;
+		activeFgOver: mediaPlayerActiveFg;
+		inactiveFgOver: mediaPlayerInactiveFg;
+		activeFgDisabled: mediaPlayerActiveFg;
+		inactiveFgDisabled: mediaPlayerInactiveFg;
+		receivedTillFg: mediaPlayerInactiveFg;
+	}
+	progress: LabelSimple(mediaviewPlayProgressLabel) {
+		textFg: windowSubTextFg;
+	}
+	timestamp: LabelSimple(mediaviewTimestampLabel) {
+		textFg: windowSubTextFg;
+	}
+}

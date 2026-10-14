@@ -5556,7 +5556,10 @@ bool OverlayWidget::createStreamingObjects() {
 	if (streamingRequiresControls()) {
 		_streamed->controls = std::make_unique<PlaybackControls>(
 			_body,
-			static_cast<PlaybackControls::Delegate*>(this));
+			static_cast<PlaybackControls::Delegate*>(this),
+			(lightboxStyle()
+				? st::extrasViewerPlayback
+				: st::extrasViewerPlaybackClassic));
 		_streamed->controls->show();
 		if (controllerAutoHides()) {
 			// 新视频的控制条和其它控件一起出现，指针静止后再一起隐藏。

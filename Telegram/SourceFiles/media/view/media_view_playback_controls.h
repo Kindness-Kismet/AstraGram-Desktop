@@ -11,6 +11,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/object_ptr.h"
 #include "media/media_common.h"
 
+namespace style {
+struct ExtrasViewerPlayback;
+} // namespace style
+
 namespace Ui {
 class CrossFadeLabel;
 class LabelSimple;
@@ -62,7 +66,10 @@ public:
 		QString label;
 	};
 
-	PlaybackControls(QWidget *parent, not_null<Delegate*> delegate);
+	PlaybackControls(
+		QWidget *parent,
+		not_null<Delegate*> delegate,
+		const style::ExtrasViewerPlayback &st);
 	~PlaybackControls();
 
 	void showAnimated();
@@ -113,6 +120,7 @@ private:
 	void updateTimestampLabel();
 
 	const not_null<Delegate*> _delegate;
+	const style::ExtrasViewerPlayback &_st;
 
 	bool _speedControllable = false;
 	std::vector<Media::VideoQuality> _qualitiesList;

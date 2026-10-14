@@ -18,9 +18,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/menu/menu_item_base.h"
 #include "ui/text/format_values.h"
-#include "ui/cached_round_corners.h"
+#include "ui/painter.h"
 #include "lang/lang_keys.h"
 #include "styles/style_media_view.h"
+#include "styles/style_extras_styles.h"
 
 namespace Media {
 namespace View {
@@ -32,23 +33,25 @@ constexpr auto kEps = 0.005;
 
 PlaybackControls::PlaybackControls(
 	QWidget *parent,
-	not_null<Delegate*> delegate)
+	not_null<Delegate*> delegate,
+	const style::ExtrasViewerPlayback &st)
 : RpWidget(parent)
 , _delegate(delegate)
+, _st(st)
 , _speedControllable(Media::Audio::SupportsSpeedControl())
 , _qualitiesList(_delegate->playbackControlsQualities())
-, _playPauseResume(this, st::mediaviewPlayButton)
-, _playbackSlider(this, st::mediaviewPlayback)
+, _playPauseResume(this, _st.play)
+, _playbackSlider(this, _st.slider)
 , _playbackProgress(std::make_unique<PlaybackProgress>())
-, _volumeToggle(this, st::mediaviewVolumeToggle)
-, _volumeController(this, st::mediaviewPlayback)
+, _volumeToggle(this, _st.volume)
+, _volumeController(this, _st.slider)
 , _speedToggle((_speedControllable || !_qualitiesList.empty())
-	? object_ptr<Player::SettingsButton>(this, st::mediaviewSpeedButton)
+	? object_ptr<Player::SettingsButton>(this, _st.settings)
 	: nullptr)
-, _fullScreenToggle(this, st::mediaviewFullScreenButton)
-, _pictureInPicture(this, st::mediaviewPipButton)
-, _playedAlready(this, st::mediaviewPlayProgressLabel)
-, _toPlayLeft(this, st::mediaviewPlayProgressLabel)
+, _fullScreenToggle(this, _st.fullScreen)
+, _pictureInPicture(this, _st.pip)
+, _playedAlready(this, _st.progress)
+, _toPlayLeft(this, _st.progress)
 , _speedController(_speedToggle
 	? std::make_unique<Player::SpeedController>(
 		_speedToggle.data(),
@@ -262,14 +265,14 @@ void PlaybackControls::updateVolumeToggleIcon() {
 		return (volume <= 0.)
 			? nullptr
 			: (volume < 1 / 2.)
-			? &st::mediaviewVolumeIcon1
-			: &st::mediaviewVolumeIcon2;
+			? &_st.volumeIcon1
+			: &_st.volumeIcon2;
 	}(), [&] {
 		return (volume <= 0.)
 			? nullptr
 			: (volume < 1 / 2.)
-			? &st::mediaviewVolumeIcon1Over
-			: &st::mediaviewVolumeIcon2Over;
+			? &_st.volumeIcon1Over
+			: &_st.volumeIcon2Over;
 	}());
 }
 
@@ -303,7 +306,7 @@ void PlaybackControls::setTimestamps(std::vector<TimestampData> timestamps) {
 	if (hasLabels && !_timestampLabel) {
 		_timestampLabel.create(
 			this,
-			st::mediaviewTimestampLabel);
+			_st.timestamp);
 		_timestampLabel->show();
 	} else if (!hasLabels) {
 		_timestampLabel.destroy();
@@ -358,8 +361,8 @@ void PlaybackControls::updateTimestampLabel() {
 	auto text = (index >= 0) ? _timestamps[index].label : QString();
 	const auto maxWidth = _playbackSlider->width();
 	if (maxWidth > 0
-		&& st::mediaviewTimestampLabel.font->width(text) > maxWidth) {
-		text = st::mediaviewTimestampLabel.font->elided(text, maxWidth);
+		&& _st.timestamp.font->width(text) > maxWidth) {
+		text = _st.timestamp.font->elided(text, maxWidth);
 	}
 	_timestampLabel->setText(text);
 	resizeEvent(nullptr);
@@ -374,7 +377,7 @@ void PlaybackControls::setLoadingProgress(int64 ready, int64 total) {
 	_loadingTotal = total;
 	if (_loadingReady != 0 && _loadingReady != _loadingTotal) {
 		if (!_downloadProgress) {
-			_downloadProgress.create(this, st::mediaviewPlayProgressLabel);
+			_downloadProgress.create(this, _st.progress);
 			_downloadProgress->setVisible(!_fadeAnimation->animating());
 			_loadingPercent = -1;
 		}
@@ -404,7 +407,9 @@ void PlaybackControls::updatePlayPauseResumeState(const Player::TrackState &stat
 	auto showPause = ShowPauseIcon(state.state) || (_seekPositionMs >= 0);
 	if (showPause != _showPause) {
 		_showPause = showPause;
-		_playPauseResume->setIconOverride(_showPause ? &st::mediaviewPauseIcon : nullptr, _showPause ? &st::mediaviewPauseIconOver : nullptr);
+		_playPauseResume->setIconOverride(
+			_showPause ? &_st.pauseIcon : nullptr,
+			_showPause ? &_st.pauseIconOver : nullptr);
 	}
 }
 
@@ -458,8 +463,8 @@ void PlaybackControls::setInFullScreen(bool inFullScreen) {
 	if (_inFullScreen != inFullScreen) {
 		_inFullScreen = inFullScreen;
 		_fullScreenToggle->setIconOverride(
-			_inFullScreen ? &st::mediaviewFullScreenOutIcon : nullptr,
-			_inFullScreen ? &st::mediaviewFullScreenOutIconOver : nullptr);
+			_inFullScreen ? &_st.fullScreenOutIcon : nullptr,
+			_inFullScreen ? &_st.fullScreenOutIconOver : nullptr);
 	}
 }
 
@@ -471,7 +476,7 @@ void PlaybackControls::resizeEvent(QResizeEvent *e) {
 	_toPlayLeft->moveToRight(textLeft + textSkip, textTop);
 	const auto remove = 2 * textLeft + 4 * textSkip + _playedAlready->width() + _toPlayLeft->width();
 	auto playbackWidth = width() - remove;
-	_playbackSlider->resize(playbackWidth, st::mediaviewPlayback.seekSize.height());
+	_playbackSlider->resize(playbackWidth, _st.slider.seekSize.height());
 	_playbackSlider->moveToLeft(textLeft + 2 * textSkip + _playedAlready->width(), st::mediaviewPlaybackTop);
 
 	if (_timestampLabel) {
@@ -503,7 +508,7 @@ void PlaybackControls::resizeEvent(QResizeEvent *e) {
 	left += _volumeToggle->width() + st::mediaviewVolumeSkip;
 	_volumeController->resize(
 		st::mediaviewVolumeWidth,
-		st::mediaviewPlayback.seekSize.height());
+		_st.slider.seekSize.height());
 	_volumeController->moveToLeft(left, st::mediaviewVolumeTop + (_volumeToggle->height() - _volumeController->height()) / 2);
 }
 
@@ -531,7 +536,11 @@ void PlaybackControls::paintEvent(QPaintEvent *e) {
 		_volumeController->setFadeOpacity(1.);
 		_childrenHidden = false;
 	}
-	Ui::FillRoundRect(p, rect(), st::mediaviewSaveMsgBg, Ui::MediaviewSaveCorners);
+	auto hq = PainterHighQualityEnabler(p);
+	p.setOpacity(_st.bgOpacity);
+	p.setPen(Qt::NoPen);
+	p.setBrush(_st.bg);
+	p.drawRoundedRect(rect(), _st.radius, _st.radius);
 }
 
 void PlaybackControls::mousePressEvent(QMouseEvent *e) {
