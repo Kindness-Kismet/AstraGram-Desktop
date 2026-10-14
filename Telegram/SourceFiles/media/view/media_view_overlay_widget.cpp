@@ -3515,7 +3515,8 @@ void OverlayWidget::hideControls(bool force) {
 			|| _menu
 			|| _mousePressed
 			|| _touchMove
-			|| pointerOverController()) {
+			|| pointerOverController()
+			|| !overTooltip(_over).isEmpty()) {
 			return;
 		}
 	}
@@ -8875,6 +8876,12 @@ void OverlayWidget::updateOverRect(Over state) {
 bool OverlayWidget::updateOverState(Over newState) {
 	bool result = true;
 	if (_over != newState) {
+		// 只收起自己的提示，不打断视频控制条等子控件的提示。
+		if (!overTooltip(newState).isEmpty()) {
+			Ui::Tooltip::Show(1000, this);
+		} else if (!overTooltip(_over).isEmpty()) {
+			Ui::Tooltip::Hide();
+		}
 		// 更多菜单只在点击时弹出，悬停不触发，避免误触。
 		updateOverRect(_over);
 		updateOverRect(newState);
@@ -8908,6 +8915,39 @@ bool OverlayWidget::updateOverState(Over newState) {
 		updateCursor();
 	}
 	return result;
+}
+
+QString OverlayWidget::overTooltip(Over state) const {
+	switch (state) {
+	case Over::Left:
+		return lightboxStyle() ? tr::extras_ViewerPrevious(tr::now) : QString();
+	case Over::Right:
+		return lightboxStyle() ? tr::extras_ViewerNext(tr::now) : QString();
+	case Over::Save: return tr::lng_media_download(tr::now);
+	case Over::Share: return tr::lng_mediaview_forward(tr::now);
+	case Over::Rotate: return tr::extras_ViewerRotate(tr::now);
+	case Over::More: return tr::extras_ViewerMore(tr::now);
+	case Over::Draw: return tr::extras_ViewerDraw(tr::now);
+	case Over::Recognize: return tr::extras_ViewerRecognizeText(tr::now);
+	case Over::FullScreen:
+		return _fullscreen
+			? tr::extras_ViewerExitFullScreen(tr::now)
+			: tr::extras_ViewerFullScreen(tr::now);
+	case Over::Close: return tr::lng_close(tr::now);
+	}
+	return QString();
+}
+
+QString OverlayWidget::tooltipText() const {
+	return overTooltip(_over);
+}
+
+QPoint OverlayWidget::tooltipPos() const {
+	return QCursor::pos();
+}
+
+bool OverlayWidget::tooltipWindowActive() const {
+	return _window->isActiveWindow();
 }
 
 void OverlayWidget::updateOver(QPoint pos) {
@@ -9461,6 +9501,7 @@ Window::SessionController *OverlayWidget::findWindow(bool switchTo) const {
 
 // #TODO unite and check
 void OverlayWidget::clearBeforeHide() {
+	Ui::Tooltip::Hide();
 	ExtrasState::disableGhostModeOnStoryClose(_storiesSession);
 	checkSingleViewMediaBurn();
 	_message = nullptr;

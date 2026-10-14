@@ -106,6 +106,7 @@ private:
 	[[nodiscard]] float64 countDownloadedTillPercent(
 		const Player::TrackState &state) const;
 
+	void setupTooltips();
 	void updateVolumeToggleIcon();
 	void updateDownloadProgressPosition();
 

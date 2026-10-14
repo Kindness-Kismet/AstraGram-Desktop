@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/fade_animation.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/menu/menu_item_base.h"
+#include "ui/widgets/tooltip.h"
 #include "ui/text/format_values.h"
 #include "ui/painter.h"
 #include "lang/lang_keys.h"
@@ -142,6 +143,35 @@ PlaybackControls::PlaybackControls(
 		_playbackProgress->setValue(value, false);
 		handleSeekFinished(value);
 	});
+
+	setupTooltips();
+}
+
+// 提示文字在显示时读取，跟随播放、静音和全屏状态。
+void PlaybackControls::setupTooltips() {
+	Ui::InstallTooltip(_playPauseResume.data(), [=] {
+		return _showPause
+			? tr::extras_ViewerPause(tr::now)
+			: tr::extras_ViewerPlay(tr::now);
+	});
+	Ui::InstallTooltip(_volumeToggle.data(), [=] {
+		return (_delegate->playbackControlsCurrentVolume() > 0.)
+			? tr::extras_ViewerMute(tr::now)
+			: tr::extras_ViewerUnmute(tr::now);
+	});
+	Ui::InstallTooltip(_fullScreenToggle.data(), [=] {
+		return _inFullScreen
+			? tr::extras_ViewerExitFullScreen(tr::now)
+			: tr::extras_ViewerFullScreen(tr::now);
+	});
+	Ui::InstallTooltip(_pictureInPicture.data(), [] {
+		return tr::extras_ViewerPictureInPicture(tr::now);
+	});
+	if (_speedToggle) {
+		Ui::InstallTooltip(_speedToggle.data(), [] {
+			return tr::extras_ViewerPlaybackSettings(tr::now);
+		});
+	}
 }
 
 void PlaybackControls::handleSeekProgress(float64 progress) {

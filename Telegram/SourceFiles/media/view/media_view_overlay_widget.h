@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/gl/gl_surface.h"
 #include "ui/effects/animations.h"
 #include "ui/effects/radial_animation.h"
+#include "ui/widgets/tooltip.h"
 #include "data/data_shared_media.h"
 #include "data/data_user_photos.h"
 #include "data/data_web_page.h"
@@ -102,7 +103,8 @@ class OverlayWidget final
 	: public ClickHandlerHost
 	, private PlaybackControls::Delegate
 	, private Stories::Delegate
-	, private Media::SystemMediaControlsVideoDelegate {
+	, private Media::SystemMediaControlsVideoDelegate
+	, private Ui::AbstractTooltipShower {
 public:
 	OverlayWidget();
 	~OverlayWidget();
@@ -615,6 +617,11 @@ private:
 
 	void updateOverRect(Over state);
 	bool updateOverState(Over newState);
+	// 悬停按钮的提示文字，没有提示的区域返回空。
+	[[nodiscard]] QString overTooltip(Over state) const;
+	QString tooltipText() const override;
+	QPoint tooltipPos() const override;
+	bool tooltipWindowActive() const override;
 	float64 overLevel(Over control) const;
 
 	void checkGroupThumbsAnimation();
