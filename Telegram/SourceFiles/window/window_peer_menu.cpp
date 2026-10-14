@@ -3197,15 +3197,18 @@ QPointer<Ui::BoxContent> ShowNewForwardMessagesBox(
 		});
 		return nullptr;
 	}
-	const auto item = navigation->session().data().message(msgIds[0]);
+	const auto session = &navigation->session();
+	const auto owner = &session->data();
+	const auto items = owner->idsToItems(msgIds);
+	if (items.empty()) {
+		return nullptr;
+	}
+	const auto item = items.front();
 	const auto history = item->history();
-	const auto owner = &history->owner();
-	const auto session = &history->session();
 	const auto isGame = item->getMessageBot()
 		&& item->media()
 		&& (item->media()->game() != nullptr);
 
-	const auto items = owner->idsToItems(msgIds);
 	const auto hasCaptions = ranges::any_of(items, [](auto item) {
 		return item->media()
 			&& !item->originalText().text.isEmpty()
@@ -3744,6 +3747,10 @@ base::weak_qptr<Ui::BoxContent> ShowForwardMessagesBox(
 	const auto weak = base::make_weak(state->box);
 	const auto field = comment->entity();
 	state->submit = [=](Api::SendOptions options) {
+		const auto items = history->owner().idsToItems(msgIds);
+		if (items.empty()) {
+			return;
+		}
 		const auto peers = state->box->collectSelectedRows();
 		auto comment = field->getTextWithAppliedMarkdown();
 		const auto checkPaid = [=] {
@@ -3802,8 +3809,10 @@ base::weak_qptr<Ui::BoxContent> ShowForwardMessagesBox(
 		};
 		auto forwardOptions = HistoryView::Controls::NormalizeForwardOptions(
 			session,
-			itemsList,
+			items,
 			state->box->forwardOptionsData());
+		const auto extrasForwarding = ExtrasForward::isExtrasForwardNeeded(items)
+			|| ExtrasForward::isFullExtrasForwardNeeded(items.front());
 		send(
 			ranges::views::all(
 				peers
@@ -3815,11 +3824,7 @@ base::weak_qptr<Ui::BoxContent> ShowForwardMessagesBox(
 			std::move(comment),
 			options,
 			forwardOptions);
-		const auto items = history->owner().idsToItems(msgIds);
-		const auto extrasForwarding = ExtrasForward::isExtrasForwardNeeded(items)
-			|| ExtrasForward::isFullExtrasForwardNeeded(items.front());
-
-		if ((!state->submit || extrasForwarding) && successCallback) {
+		if ((extrasForwarding || (weak && !state->submit)) && successCallback) {
 			successCallback();
 		}
 		// AyuGram-changed
