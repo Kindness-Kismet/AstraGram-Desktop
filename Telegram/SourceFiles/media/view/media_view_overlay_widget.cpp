@@ -4724,6 +4724,11 @@ void OverlayWidget::refreshCaption() {
 		? caption
 		: AddTimestampLinks(caption, duration, base);
 	refreshTimestampDividers(captionText, duration);
+	if (lightboxStyle()) {
+		// 窗口内查看器不显示说明文字，时间戳仍用于视频进度条分段。
+		_caption = Ui::Text::String();
+		return;
+	}
 	_caption.setMarkedText(
 		st::mediaviewCaptionStyle,
 		std::move(captionText),
