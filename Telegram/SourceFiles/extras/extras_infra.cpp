@@ -8,7 +8,6 @@
 #ifdef _DEBUG
 #include "extras/debug/debug_server.h"
 #endif
-#include "extras/ui/extras_logo.h"
 #include "extras/ui/components/floating_surface.h"
 #include "features/translator/extras_translator.h"
 #include "lang/lang_instance.h"
@@ -127,7 +126,6 @@ void initTranslator() {
 
 void initIcon() {
 #ifdef Q_OS_WIN
-	ExtrasAssets::loadAppIco();
 	reloadAppIconFromTaskBar();
 #endif
 }
