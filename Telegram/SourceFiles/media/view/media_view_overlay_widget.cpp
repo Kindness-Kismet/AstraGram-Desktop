@@ -1488,7 +1488,7 @@ float64 OverlayWidget::fullScreenProgress() const {
 
 float64 OverlayWidget::backdropOpacity() const {
 	return (_viewerHost && !_backdrop.isNull())
-		? (1. - fullScreenProgress())
+		? 1.
 		: 0.;
 }
 

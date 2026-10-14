@@ -409,7 +409,7 @@ void OverlayWidget::RendererGL::paintBackdrop(float64 opacity) {
 	_backdropImage.setImage(image);
 	_backdropImage.bind(*_f);
 
-	// 展开到全屏时毛玻璃逐渐淡出，露出纯色底。
+	// 毛玻璃只随查看器开合淡入淡出，全屏切换时保持显示。
 	toggleBlending(opacity < 1.);
 	paintTexturedQuad(
 		_backdropImage,
