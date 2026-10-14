@@ -7925,6 +7925,13 @@ void OverlayWidget::paintTopBarHeaderContent(
 				userpic.x(),
 				userpic.y(),
 				size);
+		} else if (hidden && hidden->customUserpic.empty()) {
+			hidden->emptyUserpic.paintCircle(
+				p,
+				userpic.x(),
+				userpic.y(),
+				outer.width(),
+				size);
 		} else if (hidden && !hidden->paintCustomUserpic(
 				p,
 				_fromUserpicView,
@@ -7932,12 +7939,9 @@ void OverlayWidget::paintTopBarHeaderContent(
 				userpic.y(),
 				outer.width(),
 				size)) {
-			hidden->emptyUserpic.paintCircle(
-				p,
-				userpic.x(),
-				userpic.y(),
-				outer.width(),
-				size);
+			hidden->customUserpic.load(
+				&_message->history()->session(),
+				_message->fullId());
 		}
 	}
 	p.setPen(st::mediaviewControlFg);
