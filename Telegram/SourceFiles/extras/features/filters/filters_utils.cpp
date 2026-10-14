@@ -7,6 +7,7 @@
 #include "extras/features/filters/filters_cache_controller.h"
 #include "extras/utils/telegram_helpers.h"
 #include "base/qthelp_url.h"
+#include "base/weak_ptr.h"
 #include "boxes/abstract_box.h"
 #include "core/local_url_handlers.h"
 #include "data/data_channel.h"
@@ -222,7 +223,12 @@ PeerData *LoadedPeerFromDialogId(not_null<Data::Session*> data, ID dialogId) {
 }
 
 void ResolveFilterBackupPeers(const std::vector<QString> &peerHints) {
-	auto session = currentSession();
+	const auto session = Core::App().domain().active().maybeSession();
+	if (!session) {
+		return;
+	}
+	const auto weakSession = base::make_weak(session);
+	const auto stopped = std::make_shared<std::atomic_bool>(false);
 	auto hintsCopy = peerHints;
 
 	crl::async([=]
@@ -245,6 +251,12 @@ void ResolveFilterBackupPeers(const std::vector<QString> &peerHints) {
 
 			crl::on_main([=]
 			{
+				const auto session = weakSession.get();
+				if (!session) {
+					stopped->store(true);
+					latch->countDown();
+					return;
+				}
 				if (hint->type == PeerResolveHintType::Username) {
 					session->api().request(MTPcontacts_ResolveUsername(
 						MTP_flags(0),
@@ -277,6 +289,9 @@ void ResolveFilterBackupPeers(const std::vector<QString> &peerHints) {
 				}
 			});
 			latch->await(std::chrono::seconds(20));
+			if (stopped->load()) {
+				return;
+			}
 			if (floodWait->load()) {
 				std::this_thread::sleep_for(std::chrono::seconds(20));
 			}
