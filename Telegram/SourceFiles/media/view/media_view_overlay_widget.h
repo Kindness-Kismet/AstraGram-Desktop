@@ -506,7 +506,7 @@ private:
 	[[nodiscard]] int lightboxSidePadding() const;
 	// 窗口内顶栏放不下时收起部分媒体操作按钮。
 	void collapseTopBarActions();
-	// 窗口内样式的视频控制条盖在视频底边内侧，不占用内容下方的空间。
+	// 窗口内样式的视频控制条浮在查看器底部，不占用内容下方的空间。
 	[[nodiscard]] bool controllerOverContent() const;
 	// 控制条盖在画面上时随其它控件一起自动隐藏，指针停在控制条上时不隐藏。
 	[[nodiscard]] bool controllerAutoHides() const;
@@ -794,8 +794,6 @@ private:
 	int _minUsedTop = 0; // Geometry without top notch on macOS.
 	int _maxUsedHeight = 0;
 	int _x = 0, _y = 0, _w = 0, _h = 0;
-	// 缩放复位时的内容位置，窗口内样式的视频控制条贴在它的底边。
-	QRect _fitContentRect;
 	bool _photoRedisplayQueued = false;
 	int _xStart = 0, _yStart = 0;
 	int _zoom = 0; // < 0 - out, 0 - none, > 0 - in

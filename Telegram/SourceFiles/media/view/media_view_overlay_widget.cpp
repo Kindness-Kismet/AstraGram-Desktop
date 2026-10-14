@@ -3219,10 +3219,6 @@ void OverlayWidget::resizeContentByScreenSize() {
 		? (_minUsedTop + (_maxUsedHeight - _h) / 2)
 		: (_skipTop + (useh - _h) / 2);
 	_geometryAnimation.stop();
-	_fitContentRect = finalContentRect();
-	if (controllerOverContent()) {
-		refreshClipControllerGeometry();
-	}
 }
 
 float64 OverlayWidget::radialProgress() const {
@@ -5978,32 +5974,17 @@ void OverlayWidget::refreshClipControllerGeometry() {
 			? st::mediaviewTimestampLabelHeight
 			: 0);
 	if (controllerOverContent()) {
-		// 宽度跟随视频，视频太窄或太矮时按最小宽度居中、不超出缩略图条。
-		const auto inner = st::extrasViewerControllerSkip;
-		const auto video = _fitContentRect;
-		const auto controllerWidth = std::clamp(
-			video.width() - 2 * inner,
-			std::min(st::extrasViewerControllerMinWidth, width() - 2 * skip),
-			st::mediaviewControllerSize.width());
-		const auto bottom = std::min(
-			std::max(
-				video.y() + video.height(),
-				video.y() + controllerHeight + 2 * inner),
-			controllerBottom);
-		const auto left = video.x() + (video.width() - controllerWidth) / 2;
-		auto top = bottom - inner - controllerHeight;
-		const auto navSize = st::extrasViewerNavSize;
-		const auto navTop = _minUsedTop + (_maxUsedHeight - navSize) / 2;
-		if (left < st::extrasViewerNavSkip + navSize
-			&& top < navTop + navSize
-			&& top + controllerHeight > navTop) {
-			// 窄窗口里控制条会压住翻页按钮，改贴内容区底部。
-			top = std::max(
-				top,
-				_skipTop + _availableHeight - inner - controllerHeight);
-		}
+		// 固定在查看器底部居中，不随视频尺寸和位置移动；有缩略图条时排在它上方。
+		const auto controllerWidth = std::min(
+			st::mediaviewControllerSize.width(),
+			width() - 2 * st::extrasViewerNavSkip);
+		const auto bottom = _groupThumbs
+			? (_groupThumbsTop - st::extrasViewerControllerSkip)
+			: (height() - st::extrasViewerGroupBottom);
 		_streamed->controls->resize(controllerWidth, controllerHeight);
-		_streamed->controls->move(left, top);
+		_streamed->controls->move(
+			(width() - controllerWidth) / 2,
+			bottom - controllerHeight);
 		Ui::SendPendingMoveResizeEvents(_streamed->controls.get());
 		return;
 	}
@@ -6627,6 +6608,10 @@ void OverlayWidget::playbackToggleFullScreen() {
 			_streamed->controls->showAnimated();
 		}
 		_streamed->controls->setInFullScreen(_fullScreenVideo);
+	}
+	if (!_fullScreenVideo) {
+		// 全屏期间其它控件可能已自动隐藏，退出时和控制条一起显示翻页按钮与缩略图条。
+		activateControls();
 	}
 	_touchbarFullscreenToggled.fire_copy(_fullScreenVideo);
 	updateControls();
