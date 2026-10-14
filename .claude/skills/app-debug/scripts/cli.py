@@ -45,6 +45,7 @@ GENERIC_COMMANDS = {
     'editor.video-state': '查询独立模拟配置中视频时间线的裁剪起止、封面与播放位置',
     'editor.state': '查询独立模拟配置中编辑器的图层数量、音轨裁剪与音量',
     'editor.add-file': '在独立模拟配置中沿编辑器粘贴链路添加本地媒体：<路径>',
+    'editor.open': '在独立模拟配置中对图片消息打开绘图编辑器：<peerId> <msgId>',
     'simulation.wallet': '在独立模拟配置中打开钱包及固定公开状态，不安装私钥或提交交易：[keep|missing|ready|collectibles|close]',
     'player.control': '直接控制当前播放器，不抢焦点：<play|pause|toggle|stop> [song|voice]',
     'downloads.list': '查询真实下载列表及分类与搜索交集：[all|archives|music|videos|other] [关键词]',

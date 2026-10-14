@@ -5,6 +5,12 @@
 #include "editor/editor_crop.h"
 #include "editor/photo_editor.h"
 #include "editor/video/video_timeline.h"
+#include "data/data_document.h"
+#include "data/data_media_types.h"
+#include "data/data_peer.h"
+#include "data/data_photo.h"
+#include "data/data_session.h"
+#include "history/history_item.h"
 #include "extras/debug/debug_login.h"
 #include "settings.h"
 
@@ -130,6 +136,36 @@ Result addEditorFile(const QStringList &args) {
 	return Result::Ok(Compact(Json{ { "state", "submitted" } }));
 }
 
+// 与查看器的绘图按钮发出同一个请求，在当前窗口打开图片编辑器。
+Result openEditor(const QStringList &args) {
+	if (args.size() != 2) {
+		return Result::Err(u"usage: editor.open <peerId> <messageId>"_q);
+	}
+	if (!isolatedSimulation()) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	const auto peer = findPeer(args[0]);
+	if (!peer) {
+		return Result::Err(u"peer not found"_q);
+	}
+	const auto item = peer->owner().message(peer->id, MsgId(args[1].toLongLong()));
+	const auto media = item ? item->media() : nullptr;
+	if (!media) {
+		return Result::Err(u"message with media not found"_q);
+	}
+	const auto photo = media->photo();
+	const auto document = media->document();
+	const auto photoId = photo ? photo->id : PhotoId();
+	const auto documentId = (document && document->isImage())
+		? document->id
+		: DocumentId();
+	if (!photoId && !documentId) {
+		return Result::Err(u"message media is not an image"_q);
+	}
+	peer->owner().requestDrawToReply({ item->fullId(), photoId, documentId });
+	return Result::Ok(Compact(Json{ { "state", "requested" } }));
+}
+
 } // namespace
 
 const HandlerMap &editorHandlers() {
@@ -137,6 +173,7 @@ const HandlerMap &editorHandlers() {
 		{ u"editor.state"_q, &editorState },
 		{ u"editor.video-state"_q, &videoEditorState },
 		{ u"editor.add-file"_q, &addEditorFile },
+		{ u"editor.open"_q, &openEditor },
 	};
 	return handlers;
 }
