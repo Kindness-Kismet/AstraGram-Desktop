@@ -55,33 +55,53 @@ public:
 
 		int size() const;
 	};
+	// 整个对话的媒体连成一条，不按相册分段。
+	struct ChatMediaSlice {
+		not_null<const SharedMediaWithLastSlice*> data;
+
+		int size() const;
+	};
 	using Key = std::variant<PhotoId, FullMsgId, CollageKey, InstantViewKey>;
 
+	// compact 为窗口内样式：固定大小的圆角缩略图，带底色和计数。
 	static void Refresh(
 		not_null<Main::Session*> session,
 		std::unique_ptr<GroupThumbs> &instance,
 		const SharedMediaWithLastSlice &slice,
 		int index,
-		int availableWidth);
+		int availableWidth,
+		bool compact = false);
 	static void Refresh(
 		not_null<Main::Session*> session,
 		std::unique_ptr<GroupThumbs> &instance,
 		const UserPhotosSlice &slice,
 		int index,
-		int availableWidth);
+		int availableWidth,
+		bool compact = false);
 	static void Refresh(
 		not_null<Main::Session*> session,
 		std::unique_ptr<GroupThumbs> &instance,
 		const CollageSlice &slice,
 		int index,
-		int availableWidth);
+		int availableWidth,
+		bool compact = false);
 	static void Refresh(
 		not_null<Main::Session*> session,
 		std::unique_ptr<GroupThumbs> &instance,
 		const InstantViewSlice &slice,
 		int index,
-		int availableWidth);
+		int availableWidth,
+		bool compact = false);
+	static void Refresh(
+		not_null<Main::Session*> session,
+		std::unique_ptr<GroupThumbs> &instance,
+		const ChatMediaSlice &slice,
+		int index,
+		int availableWidth,
+		bool compact = false);
 	void clear();
+	// 只在 compact 样式下显示在底色右侧。
+	void setCounter(const QString &text);
 
 	void resizeToWidth(int newWidth);
 	int height() const;
@@ -110,7 +130,10 @@ public:
 		MessageGroupId,
 		FullMsgId>;
 
-	GroupThumbs(not_null<Main::Session*> session, Context context);
+	GroupThumbs(
+		not_null<Main::Session*> session,
+		Context context,
+		bool compact = false);
 	~GroupThumbs();
 
 private:
@@ -122,7 +145,8 @@ private:
 		std::unique_ptr<GroupThumbs> &instance,
 		const Slice &slice,
 		int index,
-		int availableWidth);
+		int availableWidth,
+		bool compact);
 	template <typename Slice>
 	void fillItems(const Slice &slice, int from, int index, int till);
 	void updateContext(Context context);
@@ -150,6 +174,7 @@ private:
 
 	void update();
 	void countUpdatedRect();
+	void paintCompactBackground(QPainter &p, int x, int y, float64 progress);
 	void animateAliveItems(int current);
 	void fillDyingItems(const std::vector<not_null<Thumb*>> &old);
 	void markAsDying(not_null<Thumb*> thumb);
@@ -159,6 +184,8 @@ private:
 
 	const not_null<Main::Session*> _session;
 	Context _context;
+	const bool _compact = false;
+	QString _counter;
 	bool _waitingForAnimationStart = true;
 	bool _filling = false;
 	Ui::Animations::Simple _animation;

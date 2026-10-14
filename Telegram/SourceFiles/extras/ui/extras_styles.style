@@ -291,3 +291,17 @@ extrasViewerNavSkip: 20px;
 // 窗口内查看器的视频控制条贴在视频底边内侧，视频太窄时按最小宽度显示。
 extrasViewerControllerSkip: 10px;
 extrasViewerControllerMinWidth: 320px;
+// 窗口内查看器的底部缩略图条：小方块圆角缩略图，当前项更宽并带描边。
+extrasViewerGroupHeight: 40px;
+extrasViewerGroupWidth: 40px;
+extrasViewerGroupWidthMax: 54px;
+extrasViewerGroupSkip: 3px;
+extrasViewerGroupRadius: 8px;
+extrasViewerGroupPadding: margins(6px, 6px, 6px, 6px);
+extrasViewerGroupBottom: 16px;
+extrasViewerGroupBgRadius: 14px;
+extrasViewerGroupOutline: 2px;
+extrasViewerGroupOutlineSkip: 1px;
+extrasViewerGroupPlay: size(9px, 12px);
+extrasViewerGroupCounterFont: font(12px);
+extrasViewerGroupCounterSkip: 12px;

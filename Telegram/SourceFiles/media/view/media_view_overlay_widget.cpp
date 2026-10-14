@@ -3026,7 +3026,7 @@ void OverlayWidget::recountSkipTop() {
 		: height();
 	const auto skipHeightBottom = (height() - bottom);
 	if (lightboxStyle() && !_fullScreenVideo) {
-		// 四周固定留白，底部至少让出缩略图条。
+		// 四周固定留白，底部留白已容纳缩略图条。
 		const auto &padding = st::extrasViewerContentPadding;
 		_skipTop = _minUsedTop + padding.top();
 		_availableHeight = height()
@@ -4647,6 +4647,7 @@ void OverlayWidget::refreshTimestampDividers(
 
 void OverlayWidget::refreshGroupThumbs() {
 	const auto existed = (_groupThumbs != nullptr);
+	const auto compact = lightboxStyle();
 	if (_index && _instantViewMediaData) {
 		const auto messageId = _message ? _message->fullId() : FullMsgId();
 		View::GroupThumbs::Refresh(
@@ -4654,7 +4655,17 @@ void OverlayWidget::refreshGroupThumbs() {
 			_groupThumbs,
 			{ messageId, &*_instantViewMediaData },
 			*_index,
-			_groupThumbsAvailableWidth);
+			_groupThumbsAvailableWidth,
+			compact);
+	} else if (_index && _sharedMediaData && compact) {
+		// 窗口内样式的缩略图条连起整个对话的媒体，不只是当前相册。
+		View::GroupThumbs::Refresh(
+			_session,
+			_groupThumbs,
+			View::GroupThumbs::ChatMediaSlice{ &*_sharedMediaData },
+			*_index,
+			_groupThumbsAvailableWidth,
+			compact);
 	} else if (_index && _sharedMediaData) {
 		View::GroupThumbs::Refresh(
 			_session,
@@ -4668,7 +4679,8 @@ void OverlayWidget::refreshGroupThumbs() {
 			_groupThumbs,
 			*_userPhotosData,
 			*_index,
-			_groupThumbsAvailableWidth);
+			_groupThumbsAvailableWidth,
+			compact);
 	} else if (_index && _collageData) {
 		const auto messageId = _message ? _message->fullId() : FullMsgId();
 		View::GroupThumbs::Refresh(
@@ -4676,10 +4688,16 @@ void OverlayWidget::refreshGroupThumbs() {
 			_groupThumbs,
 			{ messageId, &*_collageData },
 			*_index,
-			_groupThumbsAvailableWidth);
+			_groupThumbsAvailableWidth,
+			compact);
 	} else if (_groupThumbs) {
 		_groupThumbs->clear();
 		_groupThumbs->resizeToWidth(_groupThumbsAvailableWidth);
+	}
+	if (_groupThumbs && compact) {
+		_groupThumbs->setCounter((_fullIndex && _fullCount)
+			? u"%1 / %2"_q.arg(*_fullIndex + 1).arg(*_fullCount)
+			: QString());
 	}
 	if (_groupThumbs && !existed) {
 		initGroupThumbs();

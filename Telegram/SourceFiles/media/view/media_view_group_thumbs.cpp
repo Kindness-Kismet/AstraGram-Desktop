@@ -22,9 +22,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history.h"
 #include "history/view/media/history_view_media.h"
 #include "ui/image/image.h"
+#include "ui/image/image_prepare.h"
+#include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "main/main_session.h"
 #include "core/crash_reports.h"
+#include "styles/style_extras_styles.h"
 #include "styles/style_media_view.h"
 
 namespace Media {
@@ -32,6 +35,11 @@ namespace View {
 namespace {
 
 constexpr auto kThumbDuration = crl::time(150);
+constexpr auto kAliveOpacity = 0.7;
+// 窗口内样式：其余缩略图半透明，底色为 30% 黑，计数略淡。
+constexpr auto kCompactAliveOpacity = 0.5;
+constexpr auto kCompactBgOpacity = 0.3;
+constexpr auto kCompactCounterOpacity = 0.75;
 
 int Round(float64 value) {
 	return int(base::SafeRound(value));
@@ -39,6 +47,49 @@ int Round(float64 value) {
 
 using Context = GroupThumbs::Context;
 using Key = GroupThumbs::Key;
+
+struct Metrics {
+	int height = 0;
+	int width = 0;
+	int widthMax = 0;
+	int skip = 0;
+	int skipCurrent = 0;
+	QMargins padding;
+};
+
+[[nodiscard]] Metrics ComputeMetrics(bool compact) {
+	if (compact) {
+		// 下边距含底色到窗口底边的距离。
+		return {
+			.height = st::extrasViewerGroupHeight,
+			.width = st::extrasViewerGroupWidth,
+			.widthMax = st::extrasViewerGroupWidthMax,
+			.skip = st::extrasViewerGroupSkip,
+			.skipCurrent = st::extrasViewerGroupSkip,
+			.padding = (st::extrasViewerGroupPadding
+				+ QMargins(0, 0, 0, st::extrasViewerGroupBottom)),
+		};
+	}
+	return {
+		.height = st::mediaviewGroupHeight,
+		.width = st::mediaviewGroupWidth,
+		.widthMax = st::mediaviewGroupWidthMax,
+		.skip = st::mediaviewGroupSkip,
+		.skipCurrent = st::mediaviewGroupSkipCurrent,
+		.padding = st::mediaviewGroupPadding,
+	};
+}
+
+[[nodiscard]] int CompactCounterWidth() {
+	return st::extrasViewerGroupCounterSkip
+		+ st::extrasViewerGroupCounterFont->width(u"0000 / 0000"_q);
+}
+
+[[nodiscard]] const std::array<QImage, 4> &CompactCorners() {
+	static const auto result = Images::CornersMask(
+		st::extrasViewerGroupRadius);
+	return result;
+}
 
 #if 0
 [[nodiscard]] QString DebugSerializeMsgId(FullMsgId itemId) {
@@ -133,6 +184,27 @@ Context ComputeContext(
 
 Context ComputeContext(
 		not_null<Main::Session*> session,
+		const GroupThumbs::ChatMediaSlice &slice,
+		int index) {
+	Expects(index >= 0 && index < slice.size());
+
+	const auto value = (*slice.data)[index];
+	if (const auto photo = std::get_if<not_null<PhotoData*>>(&value)) {
+		if (const auto peer = (*photo)->peer) {
+			return peer->id;
+		}
+		return v::null;
+	} else if (const auto msgId = std::get_if<FullMsgId>(&value)) {
+		if (const auto item = session->data().message(*msgId)) {
+			return item->history()->peer->id;
+		}
+		return v::null;
+	}
+	Unexpected("Variant in ComputeContext(ChatMediaSlice::Value)");
+}
+
+Context ComputeContext(
+		not_null<Main::Session*> session,
 		const UserPhotosSlice &slice,
 		int index) {
 	return peerFromUser(slice.key().userId);
@@ -164,6 +236,10 @@ Key ComputeKey(const SharedMediaWithLastSlice &slice, int index) {
 	Unexpected("Variant in ComputeKey(SharedMediaWithLastSlice::Value)");
 }
 
+Key ComputeKey(const GroupThumbs::ChatMediaSlice &slice, int index) {
+	return ComputeKey(*slice.data, index);
+}
+
 Key ComputeKey(const UserPhotosSlice &slice, int index) {
 	return slice[index];
 }
@@ -178,6 +254,11 @@ Key ComputeKey(const GroupThumbs::InstantViewSlice &slice, int index) {
 
 const GroupThumbs::InstantViewItems *ComputeInstantViewItems(
 		const SharedMediaWithLastSlice &) {
+	return nullptr;
+}
+
+const GroupThumbs::InstantViewItems *ComputeInstantViewItems(
+		const GroupThumbs::ChatMediaSlice &) {
 	return nullptr;
 }
 
@@ -217,11 +298,14 @@ std::optional<WebPageCollage::Item> PollAnswerMediaItemByIndex(
 	return std::nullopt;
 }
 
-int ComputeThumbsLimit(int availableWidth) {
-	const auto singleWidth = st::mediaviewGroupWidth
-		+ 2 * st::mediaviewGroupSkip;
-	const auto currentWidth = st::mediaviewGroupWidthMax
-		+ 2 * st::mediaviewGroupSkipCurrent;
+int ComputeThumbsLimit(int availableWidth, bool compact) {
+	const auto metrics = ComputeMetrics(compact);
+	if (compact) {
+		// 当前项居中，两侧都要留出底色内边距和计数的宽度。
+		availableWidth -= 2 * (metrics.padding.right() + CompactCounterWidth());
+	}
+	const auto singleWidth = metrics.width + 2 * metrics.skip;
+	const auto currentWidth = metrics.widthMax + 2 * metrics.skipCurrent;
 	const auto skipForAnimation = 2 * singleWidth;
 	const auto leftWidth = availableWidth
 		- currentWidth
@@ -240,20 +324,25 @@ public:
 		Dying,
 	};
 
-	Thumb(Key key, Fn<void()> handler);
+	Thumb(Key key, bool compact, Fn<void()> handler);
 	Thumb(
 		Key key,
+		bool compact,
 		not_null<PhotoData*> photo,
 		Data::FileOrigin origin,
 		Fn<void()> handler);
 	Thumb(
 		Key key,
+		bool compact,
 		not_null<DocumentData*> document,
 		Data::FileOrigin origin,
 		Fn<void()> handler);
 
 	[[nodiscard]] int leftToUpdate() const;
 	[[nodiscard]] int rightToUpdate() const;
+	[[nodiscard]] int currentLeft() const;
+	[[nodiscard]] int currentWidth() const;
+	void animate(float64 progress);
 
 	void animateToLeft(not_null<Thumb*> next);
 	void animateToRight(not_null<Thumb*> prev);
@@ -269,41 +358,50 @@ public:
 private:
 	QSize wantedPixSize() const;
 	void validateImage();
-	int currentLeft() const;
-	int currentWidth() const;
+	void validateCompactImage();
+	void paintCompact(QPainter &p, QRect to, float64 opacity);
 	int finalLeft() const;
 	int finalWidth() const;
 	void animateTo(int left, int width);
 
 	ClickHandlerPtr _link;
 	const Key _key;
+	const bool _compact = false;
+	const Metrics _metrics;
 	std::shared_ptr<Data::DocumentMedia> _documentMedia;
 	std::shared_ptr<Data::PhotoMedia> _photoMedia;
 	Image *_image = nullptr;
 	Data::FileOrigin _origin;
 	State _state = State::Alive;
 	QPixmap _full;
+	QImage _rounded;
 	int _fullWidth = 0;
 	bool _hiding = false;
 
 	anim::value _left = { 0. };
 	anim::value _width = { 0. };
-	anim::value _opacity = { 0., 1. };
+	// 新缩略图淡入；窗口内样式直接淡入到非当前项的半透明，避免误画描边。
+	anim::value _opacity = { 0., _compact ? kCompactAliveOpacity : 1. };
 
 };
 
-GroupThumbs::Thumb::Thumb(Key key, Fn<void()> handler)
-: _key(key) {
+GroupThumbs::Thumb::Thumb(Key key, bool compact, Fn<void()> handler)
+: _key(key)
+, _compact(compact)
+, _metrics(ComputeMetrics(compact)) {
 	_link = std::make_shared<LambdaClickHandler>(std::move(handler));
 	validateImage();
 }
 
 GroupThumbs::Thumb::Thumb(
 	Key key,
+	bool compact,
 	not_null<PhotoData*> photo,
 	Data::FileOrigin origin,
 	Fn<void()> handler)
 : _key(key)
+, _compact(compact)
+, _metrics(ComputeMetrics(compact))
 , _photoMedia(photo->createMediaView())
 , _origin(origin) {
 	_link = std::make_shared<LambdaClickHandler>(std::move(handler));
@@ -313,10 +411,13 @@ GroupThumbs::Thumb::Thumb(
 
 GroupThumbs::Thumb::Thumb(
 	Key key,
+	bool compact,
 	not_null<DocumentData*> document,
 	Data::FileOrigin origin,
 	Fn<void()> handler)
 : _key(key)
+, _compact(compact)
+, _metrics(ComputeMetrics(compact))
 , _documentMedia(document->createMediaView())
 , _origin(origin) {
 	_link = std::make_shared<LambdaClickHandler>(std::move(handler));
@@ -327,7 +428,7 @@ GroupThumbs::Thumb::Thumb(
 QSize GroupThumbs::Thumb::wantedPixSize() const {
 	const auto originalWidth = _image ? std::max(_image->width(), 1) : 1;
 	const auto originalHeight = _image ? std::max(_image->height(), 1) : 1;
-	const auto pixHeight = st::mediaviewGroupHeight;
+	const auto pixHeight = _metrics.height;
 	const auto pixWidth = originalWidth * pixHeight / originalHeight;
 	return { pixWidth, pixHeight };
 }
@@ -340,7 +441,10 @@ void GroupThumbs::Thumb::validateImage() {
 			_image = _documentMedia->thumbnail();
 		}
 	}
-	if (!_full.isNull() || !_image) {
+	if (_compact) {
+		validateCompactImage();
+		return;
+	} else if (!_full.isNull() || !_image) {
 		return;
 	}
 
@@ -368,6 +472,28 @@ void GroupThumbs::Thumb::validateImage() {
 	_fullWidth = std::min(
 		wantedPixSize().width(),
 		st::mediaviewGroupWidthMax);
+}
+
+void GroupThumbs::Thumb::validateCompactImage() {
+	// 宽度固定，图片铺满后居中裁剪；加载前也按固定宽度排版。
+	_fullWidth = _metrics.widthMax;
+	if (!_full.isNull() || !_image) {
+		return;
+	}
+	const auto ratio = style::DevicePixelRatio();
+	const auto size = QSize(_metrics.widthMax, _metrics.height) * ratio;
+	const auto scaled = _image->original().scaled(
+		size,
+		Qt::KeepAspectRatioByExpanding,
+		Qt::SmoothTransformation);
+	auto cropped = scaled.copy(
+		(scaled.width() - size.width()) / 2,
+		(scaled.height() - size.height()) / 2,
+		size.width(),
+		size.height());
+	cropped.setDevicePixelRatio(ratio);
+	_full = Ui::PixmapFromImage(std::move(cropped));
+	_rounded = QImage();
 }
 
 int GroupThumbs::Thumb::leftToUpdate() const {
@@ -410,7 +536,7 @@ void GroupThumbs::Thumb::setState(State state) {
 		_hiding = false;
 		animateTo(-_fullWidth / 2, _fullWidth);
 	} else if (_state == State::Alive) {
-		_opacity.start(0.7);
+		_opacity.start(_compact ? kCompactAliveOpacity : kAliveOpacity);
 		_hiding = false;
 	} else if (_state == State::Dying) {
 		_opacity.start(0.);
@@ -426,7 +552,7 @@ void GroupThumbs::Thumb::animateTo(int left, int width) {
 }
 
 void GroupThumbs::Thumb::animateToLeft(not_null<Thumb*> next) {
-	const auto width = st::mediaviewGroupWidth;
+	const auto width = _metrics.width;
 	if (_state == State::Alive) {
 		// New item animation, start exactly from the next, move only.
 		_left = anim::value(next->currentLeft() - width);
@@ -435,15 +561,15 @@ void GroupThumbs::Thumb::animateToLeft(not_null<Thumb*> next) {
 		// Existing item animation.
 		setState(State::Alive);
 	}
-	const auto skip1 = st::mediaviewGroupSkip;
+	const auto skip1 = _metrics.skip;
 	const auto skip2 = (next->state() == State::Current)
-		? st::mediaviewGroupSkipCurrent
-		: st::mediaviewGroupSkip;
+		? _metrics.skipCurrent
+		: _metrics.skip;
 	animateTo(next->finalLeft() - width - skip1 - skip2, width);
 }
 
 void GroupThumbs::Thumb::animateToRight(not_null<Thumb*> prev) {
-	const auto width = st::mediaviewGroupWidth;
+	const auto width = _metrics.width;
 	if (_state == State::Alive) {
 		// New item animation, start exactly from the next, move only.
 		_left = anim::value(prev->currentLeft() + prev->currentWidth());
@@ -452,10 +578,10 @@ void GroupThumbs::Thumb::animateToRight(not_null<Thumb*> prev) {
 		// Existing item animation.
 		setState(State::Alive);
 	}
-	const auto skip1 = st::mediaviewGroupSkip;
+	const auto skip1 = _metrics.skip;
 	const auto skip2 = (prev->state() == State::Current)
-		? st::mediaviewGroupSkipCurrent
-		: st::mediaviewGroupSkip;
+		? _metrics.skipCurrent
+		: _metrics.skip;
 	animateTo(prev->finalLeft() + prev->finalWidth() + skip1 + skip2, width);
 }
 
@@ -478,14 +604,15 @@ void GroupThumbs::Thumb::paint(
 		int outerWidth,
 		float64 progress) {
 	validateImage();
-
-	_opacity.update(progress, anim::linear);
-	_left.update(progress, anim::linear);
-	_width.update(progress, anim::linear);
+	animate(progress);
 
 	const auto left = x + currentLeft();
 	const auto width = currentWidth();
 	const auto opacity = p.opacity();
+	if (_compact) {
+		paintCompact(p, QRect(left, y, width, _metrics.height), opacity);
+		return;
+	}
 	p.setOpacity(_opacity.current() * opacity);
 	if (width == _fullWidth) {
 		p.drawPixmap(left, y, _full);
@@ -496,8 +623,75 @@ void GroupThumbs::Thumb::paint(
 			0,
 			takeWidth,
 			_full.height());
-		const auto to = QRect(left, y, width, st::mediaviewGroupHeight);
+		const auto to = QRect(left, y, width, _metrics.height);
 		p.drawPixmap(to, _full, from);
+	}
+	p.setOpacity(opacity);
+}
+
+void GroupThumbs::Thumb::animate(float64 progress) {
+	_opacity.update(progress, anim::linear);
+	_left.update(progress, anim::linear);
+	_width.update(progress, anim::linear);
+}
+
+void GroupThumbs::Thumb::paintCompact(
+		QPainter &p,
+		QRect to,
+		float64 opacity) {
+	if (to.width() <= 0) {
+		return;
+	}
+	const auto ratio = style::DevicePixelRatio();
+	if (!_full.isNull() && _rounded.width() != to.width() * ratio) {
+		auto frame = QImage(
+			to.size() * ratio,
+			QImage::Format_ARGB32_Premultiplied);
+		frame.setDevicePixelRatio(ratio);
+		frame.fill(Qt::transparent);
+		auto q = QPainter(&frame);
+		const auto take = to.width() * ratio;
+		q.drawPixmap(
+			QRect(QPoint(), to.size()),
+			_full,
+			QRect((_full.width() - take) / 2, 0, take, _full.height()));
+		q.end();
+		_rounded = Images::Round(std::move(frame), CompactCorners());
+	}
+	p.setOpacity(_opacity.current() * opacity);
+	if (!_rounded.isNull()) {
+		p.drawImage(to.topLeft(), _rounded);
+	}
+	auto hq = PainterHighQualityEnabler(p);
+	if (_documentMedia && _documentMedia->owner()->isVideoFile()) {
+		// 视频缩略图中间画播放三角，重心略偏左。
+		const auto size = st::extrasViewerGroupPlay;
+		const auto center = QRectF(to).center();
+		const auto left = center.x() - size.width() * 0.35;
+		const auto top = center.y() - size.height() / 2.;
+		auto path = QPainterPath();
+		path.moveTo(left, top);
+		path.lineTo(left + size.width(), center.y());
+		path.lineTo(left, top + size.height());
+		path.closeSubpath();
+		p.setPen(Qt::NoPen);
+		p.setBrush(st::mediaviewControlFg);
+		p.drawPath(path);
+	}
+	// 当前项带白色描边，切换时随不透明度一起淡入淡出。
+	const auto outline = (_opacity.current() - kCompactAliveOpacity)
+		/ (1. - kCompactAliveOpacity);
+	if (outline > 0.) {
+		const auto stroke = float64(st::extrasViewerGroupOutline);
+		const auto skip = st::extrasViewerGroupOutlineSkip + stroke / 2.;
+		const auto radius = st::extrasViewerGroupRadius + skip;
+		p.setOpacity(std::min(outline, 1.) * opacity);
+		p.setPen(QPen(st::mediaviewControlFg, stroke));
+		p.setBrush(Qt::NoBrush);
+		p.drawRoundedRect(
+			QRectF(to).marginsAdded({ skip, skip, skip, skip }),
+			radius,
+			radius);
 	}
 	p.setOpacity(opacity);
 }
@@ -508,7 +702,7 @@ ClickHandlerPtr GroupThumbs::Thumb::getState(QPoint point) const {
 	}
 	const auto left = finalLeft();
 	const auto width = finalWidth();
-	return QRect(left, 0, width, st::mediaviewGroupHeight).contains(point)
+	return QRect(left, 0, width, _metrics.height).contains(point)
 		? _link
 		: nullptr;
 }
@@ -521,9 +715,17 @@ int GroupThumbs::InstantViewSlice::size() const {
 	return data->size();
 }
 
-GroupThumbs::GroupThumbs(not_null<Main::Session*> session, Context context)
+int GroupThumbs::ChatMediaSlice::size() const {
+	return data->size();
+}
+
+GroupThumbs::GroupThumbs(
+	not_null<Main::Session*> session,
+	Context context,
+	bool compact)
 : _session(session)
-, _context(context) {
+, _context(context)
+, _compact(compact) {
 }
 
 void GroupThumbs::updateContext(Context context) {
@@ -539,7 +741,8 @@ void GroupThumbs::RefreshFromSlice(
 		std::unique_ptr<GroupThumbs> &instance,
 		const Slice &slice,
 		int index,
-		int availableWidth) {
+		int availableWidth,
+		bool compact) {
 	const auto context = ComputeContext(session, slice, index);
 	const auto instantViewItems = ComputeInstantViewItems(slice);
 	if (instance) {
@@ -552,7 +755,7 @@ void GroupThumbs::RefreshFromSlice(
 		}
 		return;
 	}
-	const auto limit = ComputeThumbsLimit(availableWidth);
+	const auto limit = ComputeThumbsLimit(availableWidth, compact);
 	const auto from = [&] {
 		const auto edge = std::max(index - limit, 0);
 		for (auto result = index; result != edge; --result) {
@@ -573,7 +776,10 @@ void GroupThumbs::RefreshFromSlice(
 	}();
 	if (from + 1 < till) {
 		if (!instance) {
-			instance = std::make_unique<GroupThumbs>(session, context);
+			instance = std::make_unique<GroupThumbs>(
+				session,
+				context,
+				compact);
 		}
 		instance->updateInstantViewItems(instantViewItems);
 		instance->fillItems(slice, from, index, till);
@@ -832,7 +1038,7 @@ auto GroupThumbs::createThumb(Key key, std::nullptr_t)
 -> std::unique_ptr<Thumb> {
 	const auto weak = base::make_weak(this);
 	const auto origin = ComputeFileOrigin(key, _context);
-	return std::make_unique<Thumb>(key, [=] {
+	return std::make_unique<Thumb>(key, _compact, [=] {
 		if (const auto strong = weak.get()) {
 			strong->_activateStream.fire_copy(key);
 		}
@@ -843,7 +1049,7 @@ auto GroupThumbs::createThumb(Key key, not_null<PhotoData*> photo)
 -> std::unique_ptr<Thumb> {
 	const auto weak = base::make_weak(this);
 	const auto origin = ComputeFileOrigin(key, _context);
-	return std::make_unique<Thumb>(key, photo, origin, [=] {
+	return std::make_unique<Thumb>(key, _compact, photo, origin, [=] {
 		if (const auto strong = weak.get()) {
 			strong->_activateStream.fire_copy(key);
 		}
@@ -854,7 +1060,7 @@ auto GroupThumbs::createThumb(Key key, not_null<DocumentData*> document)
 -> std::unique_ptr<Thumb> {
 	const auto weak = base::make_weak(this);
 	const auto origin = ComputeFileOrigin(key, _context);
-	return std::make_unique<Thumb>(key, document, origin, [=] {
+	return std::make_unique<Thumb>(key, _compact, document, origin, [=] {
 		if (const auto strong = weak.get()) {
 			strong->_activateStream.fire_copy(key);
 		}
@@ -881,8 +1087,9 @@ void GroupThumbs::Refresh(
 		std::unique_ptr<GroupThumbs> &instance,
 		const SharedMediaWithLastSlice &slice,
 		int index,
-		int availableWidth) {
-	RefreshFromSlice(session, instance, slice, index, availableWidth);
+		int availableWidth,
+		bool compact) {
+	RefreshFromSlice(session, instance, slice, index, availableWidth, compact);
 }
 
 void GroupThumbs::Refresh(
@@ -890,8 +1097,9 @@ void GroupThumbs::Refresh(
 		std::unique_ptr<GroupThumbs> &instance,
 		const UserPhotosSlice &slice,
 		int index,
-		int availableWidth) {
-	RefreshFromSlice(session, instance, slice, index, availableWidth);
+		int availableWidth,
+		bool compact) {
+	RefreshFromSlice(session, instance, slice, index, availableWidth, compact);
 }
 
 void GroupThumbs::Refresh(
@@ -899,8 +1107,9 @@ void GroupThumbs::Refresh(
 		std::unique_ptr<GroupThumbs> &instance,
 		const CollageSlice &slice,
 		int index,
-		int availableWidth) {
-	RefreshFromSlice(session, instance, slice, index, availableWidth);
+		int availableWidth,
+		bool compact) {
+	RefreshFromSlice(session, instance, slice, index, availableWidth, compact);
 }
 
 void GroupThumbs::Refresh(
@@ -908,8 +1117,23 @@ void GroupThumbs::Refresh(
 		std::unique_ptr<GroupThumbs> &instance,
 		const InstantViewSlice &slice,
 		int index,
-		int availableWidth) {
-	RefreshFromSlice(session, instance, slice, index, availableWidth);
+		int availableWidth,
+		bool compact) {
+	RefreshFromSlice(session, instance, slice, index, availableWidth, compact);
+}
+
+void GroupThumbs::Refresh(
+		not_null<Main::Session*> session,
+		std::unique_ptr<GroupThumbs> &instance,
+		const ChatMediaSlice &slice,
+		int index,
+		int availableWidth,
+		bool compact) {
+	RefreshFromSlice(session, instance, slice, index, availableWidth, compact);
+}
+
+void GroupThumbs::setCounter(const QString &text) {
+	_counter = text;
 }
 
 void GroupThumbs::clear() {
@@ -934,9 +1158,8 @@ void GroupThumbs::resizeToWidth(int newWidth) {
 }
 
 int GroupThumbs::height() const {
-	return st::mediaviewGroupPadding.top()
-		+ st::mediaviewGroupHeight
-		+ st::mediaviewGroupPadding.bottom();
+	const auto metrics = ComputeMetrics(_compact);
+	return metrics.padding.top() + metrics.height + metrics.padding.bottom();
 }
 
 bool GroupThumbs::hiding() const {
@@ -966,7 +1189,10 @@ void GroupThumbs::paint(QPainter &p, int x, int y, int outerWidth) {
 		? 0.
 		: _animation.value(1.);
 	x += (_width / 2);
-	y += st::mediaviewGroupPadding.top();
+	if (_compact) {
+		paintCompactBackground(p, x, y, progress);
+	}
+	y += ComputeMetrics(_compact).padding.top();
 	auto initedCurrentIndex = int(_items.size());
 	for (auto i = _cache.begin(); i != _cache.end();) {
 		const auto thumb = not_null{ i->second.get() };
@@ -991,7 +1217,7 @@ void GroupThumbs::paint(QPainter &p, int x, int y, int outerWidth) {
 }
 
 ClickHandlerPtr GroupThumbs::getState(QPoint point) const {
-	point -= QPoint((_width / 2), st::mediaviewGroupPadding.top());
+	point -= QPoint((_width / 2), ComputeMetrics(_compact).padding.top());
 	for (const auto &cacheItem : _cache) {
 		const auto &thumb = cacheItem.second;
 		if (auto link = thumb->getState(point)) {
@@ -1023,11 +1249,62 @@ void GroupThumbs::countUpdatedRect() {
 		_cache,
 		std::less<>(),
 		right)));
+	if (_compact) {
+		// 底色比缩略图宽出内边距，右侧还有计数。
+		const auto &padding = st::extrasViewerGroupPadding;
+		min -= padding.left();
+		max += padding.right() + CompactCounterWidth();
+		_updatedRect = QRect(min, 0, max - min, height());
+		return;
+	}
 	_updatedRect = QRect(
 		min,
 		st::mediaviewGroupPadding.top(),
 		max - min,
 		st::mediaviewGroupHeight);
+}
+
+void GroupThumbs::paintCompactBackground(
+		QPainter &p,
+		int x,
+		int y,
+		float64 progress) {
+	if (_items.empty()) {
+		return;
+	}
+	auto left = std::numeric_limits<int>::max();
+	auto right = std::numeric_limits<int>::min();
+	for (const auto &thumb : _items) {
+		thumb->animate(progress);
+		left = std::min(left, thumb->currentLeft());
+		right = std::max(right, thumb->currentLeft() + thumb->currentWidth());
+	}
+	const auto &padding = st::extrasViewerGroupPadding;
+	const auto rect = QRect(
+		x + left - padding.left(),
+		y,
+		right - left + padding.left() + padding.right(),
+		padding.top() + st::extrasViewerGroupHeight + padding.bottom());
+	const auto opacity = p.opacity();
+	{
+		auto hq = PainterHighQualityEnabler(p);
+		const auto radius = st::extrasViewerGroupBgRadius;
+		p.setOpacity(opacity * kCompactBgOpacity);
+		p.setPen(Qt::NoPen);
+		p.setBrush(QColor(0, 0, 0));
+		p.drawRoundedRect(rect, radius, radius);
+	}
+	if (!_counter.isEmpty()) {
+		const auto &font = st::extrasViewerGroupCounterFont;
+		p.setOpacity(opacity * kCompactCounterOpacity);
+		p.setFont(font);
+		p.setPen(st::mediaviewControlFg);
+		p.drawText(
+			rect.x() + rect.width() + st::extrasViewerGroupCounterSkip,
+			rect.y() + (rect.height() - font->height) / 2 + font->ascent,
+			_counter);
+	}
+	p.setOpacity(opacity);
 }
 
 GroupThumbs::~GroupThumbs() = default;
