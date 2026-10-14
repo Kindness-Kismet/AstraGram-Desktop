@@ -284,8 +284,6 @@ extrasViewerClose: icon {{ "extras/viewer_close", mediaviewControlFg }};
 
 // 窗口内查看器展开到全屏、收回窗口内的时长。
 extrasViewerFullScreenDuration: 260;
-// Win11 未最大化窗口的系统圆角半径，查看器盖在宿主上时按它裁角。
-extrasViewerHostRadius: 8px;
 // 窗口内查看器的翻页按钮：左右两侧垂直居中的圆形。
 extrasViewerNavSize: 48px;
 extrasViewerNavSkip: 20px;

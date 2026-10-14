@@ -365,6 +365,7 @@ private:
 	void prepareOpenMode(const OpenRequest &request);
 	void updateGeometryToHost();
 	void updateBodyGeometry();
+	void updateSurfaceGeometry();
 	void updateWindowMask();
 	// 宿主在查看器窗口里的位置，窗口坐标。
 	[[nodiscard]] QRect hostRect() const;
@@ -375,6 +376,9 @@ private:
 	// 窗口内为 0，全屏为 1，展开和收回时取中间值。
 	[[nodiscard]] float64 fullScreenProgress() const;
 	[[nodiscard]] float64 backdropOpacity() const;
+	[[nodiscard]] QRect backdropRect() const;
+	[[nodiscard]] bool nativeBackdrop() const;
+	[[nodiscard]] QColor backdropColor() const;
 	// 窗口内开合动画的进度，打开时 0 到 1，收起时回到 0。
 	[[nodiscard]] float64 shownProgress() const;
 	void startShowAnimation();
@@ -386,6 +390,7 @@ private:
 	[[nodiscard]] ContentGeometry withShowAnimation(
 		ContentGeometry geometry) const;
 	[[nodiscard]] int hostCornerRadius() const;
+	[[nodiscard]] QRectF roundingRect() const;
 	bool moveToNext(int delta);
 	void preloadData(int delta);
 

@@ -83,34 +83,27 @@ void OverlayWidget::RendererSW::paintBackground() {
 
 	const auto m = _p->compositionMode();
 	_p->setCompositionMode(QPainter::CompositionMode_Source);
-	if (shown < 1.) {
-		// 开合动画中背景随进度出现：先清成透明，再按进度叠加。
-		for (const auto &rect : region) {
-			_p->fillRect(rect, Qt::transparent);
-		}
-		_p->setCompositionMode(QPainter::CompositionMode_SourceOver);
-		_p->setOpacity(shown);
+	_p->setOpacity(1.);
+	for (const auto &rect : region) {
+		_p->fillRect(rect, Qt::transparent);
 	}
-	const auto &bg = _owner->_fullScreenVideo
-		? st::mediaviewVideoBg
-		: st::mediaviewBg;
+	const auto bg = _owner->backdropColor();
 	const auto backdrop = _owner->backdropOpacity();
+	_p->setCompositionMode(QPainter::CompositionMode_Plus);
+	_p->setOpacity(shown * (1. - backdrop));
 	if (backdrop < 1.) {
 		for (const auto &rect : region) {
 			_p->fillRect(rect, bg);
 		}
 	}
 	if (backdrop > 0.) {
-		if (backdrop < 1.) {
-			_p->setCompositionMode(QPainter::CompositionMode_SourceOver);
-			_p->setOpacity(backdrop * shown);
-		}
 		_p->setClipRegion(region);
-		_p->drawImage(_owner->_widget->rect(), _owner->_backdrop);
+		_p->setOpacity(shown * backdrop);
+		_p->drawImage(_owner->backdropRect(), _owner->_backdrop);
 		_p->setClipping(false);
-		_p->setCompositionMode(QPainter::CompositionMode_Source);
 	}
 	_p->setOpacity(1.);
+	_p->setCompositionMode(QPainter::CompositionMode_Source);
 	if (const auto notch = _owner->topNotchSkip()) {
 		const auto top = QRect(0, 0, _owner->width(), notch);
 		if (const auto black = top.intersected(_clipOuter); !black.isEmpty()) {
@@ -407,7 +400,7 @@ void OverlayWidget::RendererSW::paintRoundedCorners(int radius) {
 	auto corners = QPainterPath();
 	corners.addRect(rect);
 	auto rounded = QPainterPath();
-	rounded.addRoundedRect(rect, radius, radius);
+	rounded.addRoundedRect(_owner->roundingRect(), radius, radius);
 	auto hq = PainterHighQualityEnabler(*_p);
 	const auto mode = _p->compositionMode();
 	_p->setCompositionMode(QPainter::CompositionMode_DestinationOut);

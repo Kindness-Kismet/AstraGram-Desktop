@@ -861,8 +861,7 @@ OverlayWidget::OverlayWidget()
 	base::install_event_filter(_body, [=](not_null<QEvent*> e) {
 		const auto type = e->type();
 		if (type == QEvent::Resize) {
-			const auto size = static_cast<QResizeEvent*>(e.get())->size();
-			_widget->setGeometry({ QPoint(), size });
+			updateSurfaceGeometry();
 			updateControlsGeometry();
 		} else if (type == QEvent::MouseButtonDblClick
 			&& _viewerHost
@@ -1105,7 +1104,7 @@ void OverlayWidget::setupWindow() {
 		using Flag = Ui::WindowTitleHitTestFlag;
 		Ui::WindowTitleHitTestFlags result;
 		const auto widgetPoint = _widget->mapFrom(_wrap->widget(), bodyPoint);
-		if (!_widget->rect().contains(widgetPoint)
+		if (!_body->rect().contains(widgetPoint)
 			|| _helper->skipTitleHitTest(_widget->mapTo(_window, widgetPoint))) {
 			return result;
 		}
@@ -1118,7 +1117,7 @@ void OverlayWidget::setupWindow() {
 			|| (_streamed
 				&& _streamed->controls
 				&& _streamed->controls->dragging())) {
-		} else if ((_w > _widget->width() || _h > _maxUsedHeight)
+		} else if ((_w > width() || _h > _maxUsedHeight)
 				&& (widgetPoint.y() > st::mediaviewHeaderTop)
 				&& QRect(_x, _y, _w, _h).contains(widgetPoint)) {
 		} else if (_stories && _stories->ignoreWindowMove(widgetPoint)) {
@@ -1140,6 +1139,13 @@ void OverlayWidget::setupWindow() {
 
 	_window->setAttribute(Qt::WA_NoSystemBackground, true);
 	_window->setAttribute(Qt::WA_TranslucentBackground, true);
+	_window->paintRequest() | rpl::on_next([=](QRect clip) {
+		if (_viewerHost) {
+			QPainter painter(_window.get());
+			painter.setCompositionMode(QPainter::CompositionMode_Source);
+			painter.fillRect(clip, Qt::transparent);
+		}
+	}, lifetime());
 
 	_window->setMinimumSize(
 		{ st::mediaviewMinWidth, st::mediaviewMinHeight });
@@ -1440,9 +1446,37 @@ void OverlayWidget::updateBodyGeometry() {
 		lerp(host.y(), outer.y()),
 		lerp(host.width(), outer.width()),
 		lerp(host.height(), outer.height()));
+	updateSurfaceGeometry();
+	// 内容容器移动后清除原位置，避免原生合成保留上一帧的控件。
+	_window->update();
+	if (nativeBackdrop()) {
+		updateWindowMask();
+	}
+}
+
+void OverlayWidget::updateSurfaceGeometry() {
+	// 固定 OpenGL 画布，避免全屏过渡每帧重建帧缓冲；外层容器负责裁剪。
+	const auto size = (_viewerHost && _opengl)
+		? _wrap->widget()->size()
+		: _body->size();
+	_widget->setGeometry(QRect(QPoint(), size));
 }
 
 void OverlayWidget::updateWindowMask() {
+	if (nativeBackdrop()) {
+		if (_fullscreen && !_fullScreenAnimation.animating()) {
+			window()->setMask(QRegion());
+			return;
+		}
+		// 系统模糊也随内容区域展开，避免一开始就铺满整个屏幕。
+		const auto offset = _body->mapTo(_window, QPoint());
+		auto shape = QPainterPath();
+		const auto radius = hostCornerRadius();
+		shape.addRoundedRect(roundingRect().translated(offset), radius, radius);
+		window()->setMask(QRegion(shape.toFillPolygon().toPolygon())
+			& QRegion(QRect(offset, _body->size())));
+		return;
+	}
 	// 窗口内只露出宿主那块，区域外的点击落到下层窗口；展开和全屏时整窗可见。
 	if (!_viewerHost || _fullscreen || _fullScreenAnimation.animating()) {
 		window()->setMask(QRegion());
@@ -1455,9 +1489,13 @@ void OverlayWidget::updateWindowMask() {
 
 void OverlayWidget::startFullScreenAnimation(float64 from) {
 	const auto to = _fullscreen ? 1. : 0.;
+	_viewerHost->setFullScreenBackdrop(true);
 	_fullScreenAnimation.start([=] {
 		updateBodyGeometry();
 		if (!_fullScreenAnimation.animating()) {
+			if (!_fullscreen) {
+				_viewerHost->setFullScreenBackdrop(false);
+			}
 			updateWindowMask();
 		}
 	}, from, to, st::extrasViewerFullScreenDuration, anim::easeOutCubic);
@@ -1488,8 +1526,24 @@ float64 OverlayWidget::fullScreenProgress() const {
 
 float64 OverlayWidget::backdropOpacity() const {
 	return (_viewerHost && !_backdrop.isNull())
-		? 1.
+		? (1. - fullScreenProgress())
 		: 0.;
+}
+
+QRect OverlayWidget::backdropRect() const {
+	return hostRect().translated(-_body->mapTo(_window, QPoint()));
+}
+
+bool OverlayWidget::nativeBackdrop() const {
+	return _viewerHost && _viewerHost->nativeBackdrop();
+}
+
+QColor OverlayWidget::backdropColor() const {
+	return nativeBackdrop()
+		? ExtrasFeatures::MediaViewer::backdropTint()
+		: _fullScreenVideo
+		? st::mediaviewVideoBg->c
+		: st::mediaviewBg->c;
 }
 
 int OverlayWidget::hostCornerRadius() const {
@@ -1498,6 +1552,13 @@ int OverlayWidget::hostCornerRadius() const {
 	}
 	const auto radius = _viewerHost->cornerRadius();
 	return int(base::SafeRound(radius * (1. - fullScreenProgress())));
+}
+
+QRectF OverlayWidget::roundingRect() const {
+	const auto rect = QRectF(0., 0., width(), height());
+	return _viewerHost
+		? rect.marginsAdded(_viewerHost->cornerMargins() * (1. - fullScreenProgress()))
+		: rect;
 }
 
 void OverlayWidget::updateControlsGeometry() {
@@ -2947,7 +3008,7 @@ OverlayWidget::ContentGeometry OverlayWidget::contentGeometry() const {
 	if (_stories) {
 		auto result = storiesContentGeometry(_stories->contentLayout());
 		if (!_caption.isEmpty()) {
-			result.bottomShadowSkip = _widget->height()
+			result.bottomShadowSkip = height()
 				- _captionRect.y()
 				+ st::mediaviewCaptionStyle.font->height
 				- st::storiesShadowBottom.height();
@@ -4918,11 +4979,11 @@ not_null<QWindow*> OverlayWidget::window() const {
 }
 
 int OverlayWidget::width() const {
-	return _widget->width();
+	return _body->width();
 }
 
 int OverlayWidget::height() const {
-	return _widget->height();
+	return _body->height();
 }
 
 void OverlayWidget::update() {
@@ -9715,6 +9776,9 @@ void OverlayWidget::clearBeforeHide() {
 
 void OverlayWidget::clearAfterHide() {
 	_backdrop = QImage();
+	if (_viewerHost) {
+		_viewerHost->setFullScreenBackdrop(false);
+	}
 	_backdropRefreshTimer.cancel();
 	_fullScreenAnimation.stop();
 	_showAnimation.stop();

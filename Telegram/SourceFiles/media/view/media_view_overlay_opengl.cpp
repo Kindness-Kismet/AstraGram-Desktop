@@ -349,9 +349,10 @@ void OverlayWidget::RendererGL::paint(
 std::optional<QColor> OverlayWidget::RendererGL::clearColor() {
 	if (_owner->_hideWorkaround) {
 		return QColor(0, 0, 0, 0);
-	} else if (const auto shown = _owner->shownProgress(); shown < 1.) {
-		// 开合动画中背景随进度出现，毛玻璃之后再叠在清屏色上，颜色需预乘。
-		const auto &bg = st::mediaviewBg->c;
+	} else if (const auto shown = _owner->shownProgress();
+		shown < 1. || _owner->lightboxStyle()) {
+		// 开合动画中背景随进度出现，磨砂玻璃之后再叠在清屏色上，颜色需预乘。
+		const auto bg = _owner->backdropColor();
 		const auto alpha = shown
 			* (1. - _owner->backdropOpacity())
 			* bg.alphaF();
@@ -408,15 +409,16 @@ void OverlayWidget::RendererGL::paintBackdrop(float64 opacity) {
 	_f->glActiveTexture(GL_TEXTURE0);
 	_backdropImage.setImage(image);
 	_backdropImage.bind(*_f);
-
-	// 毛玻璃只随查看器开合淡入淡出，全屏切换时保持显示。
-	toggleBlending(opacity < 1.);
+	// 快照保持屏幕原位，只淡出到系统模糊，不随查看器放大。
+	toggleBlending(true);
+	_f->glBlendFunc(GL_ONE, GL_ONE);
 	paintTexturedQuad(
 		_backdropImage,
-		QRect(QPoint(), _viewport),
+		_owner->backdropRect(),
 		QRect(QPoint(), image.size()),
 		extrasBufferOffset(),
 		opacity);
+	_f->glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void OverlayWidget::RendererGL::paintTopBarSeparator(
@@ -435,7 +437,7 @@ void OverlayWidget::RendererGL::paintTopBarSeparator(
 }
 
 int OverlayWidget::RendererGL::extrasBufferOffset() const {
-	// 排在快拍邻图之后：毛玻璃背景，然后是顶栏分隔线。
+	// 排在快拍邻图之后：磨砂玻璃背景，然后是顶栏分隔线。
 	return kControlsOffset
 		+ (kControlsCount * kControlValues) / 4
 		+ (6 * 2 * 4) / 4 // rounding
@@ -747,7 +749,7 @@ void OverlayWidget::RendererGL::paintTransformedContent(
 	} else {
 		const auto &top = st::mediaviewShadowTop.size();
 		const auto point = QPoint(
-			_shadowTopFlip ? 0 : (_viewport.width() - top.width()),
+			_shadowTopFlip ? 0 : (_owner->width() - top.width()),
 			0);
 		program->setUniformValue(
 			"shadowTopRect",
@@ -1122,14 +1124,14 @@ void OverlayWidget::RendererGL::paintGroupThumbs(
 void OverlayWidget::RendererGL::paintRoundedCorners(int radius) {
 	const auto topLeft = transformRect(QRect(0, 0, radius, radius));
 	const auto topRight = transformRect(
-		QRect(_viewport.width() - radius, 0, radius, radius));
+		QRect(_owner->width() - radius, 0, radius, radius));
 	const auto bottomRight = transformRect(QRect(
-		_viewport.width() - radius,
-		_viewport.height() - radius,
+		_owner->width() - radius,
+		_owner->height() - radius,
 		radius,
 		radius));
 	const auto bottomLeft = transformRect(
-		QRect(0, _viewport.height() - radius, radius, radius));
+		QRect(0, _owner->height() - radius, radius, radius));
 	const GLfloat coords[] = {
 		topLeft.left(), topLeft.top(),
 		topLeft.right(), topLeft.top(),
@@ -1166,7 +1168,8 @@ void OverlayWidget::RendererGL::paintRoundedCorners(int radius) {
 	_contentBuffer->write(byteOffset, coords, sizeof(coords));
 	_roundedCornersProgram->bind();
 	_roundedCornersProgram->setUniformValue("viewport", _uniformViewport);
-	const auto roundRect = transformRect(QRect(QPoint(), _viewport));
+	const auto roundRect = transformRect(
+		_owner->roundingRect());
 	_roundedCornersProgram->setUniformValue("roundRect", Uniform(roundRect));
 	_roundedCornersProgram->setUniformValue(
 		"roundRadius",
