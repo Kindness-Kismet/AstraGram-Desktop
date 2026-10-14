@@ -915,35 +915,39 @@ void AddReadUntilAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 	if (ghost.sendReadMessages()) {
 		return;
 	}
+	const auto session = &readItem->history()->session();
+	const auto peer = readItem->history()->peer;
+	const auto itemId = readItem->fullId();
 
 	menu->addAction(
 		tr::extras_ReadUntilMenuText(tr::now),
 		[=]
 		{
-			readHistory(readItem);
-			const auto media = readItem->media();
+			const auto currentItem = session->data().message(itemId);
+			if (!currentItem) {
+				return;
+			}
+			readHistory(currentItem);
+			const auto media = currentItem->media();
 			if (media
 				&& media->ttlSeconds() <= 0
-				&& readItem->unsupportedTTL() <= 0
-				&& !readItem->out()) {
-				const auto ids = MTP_vector<MTPint>(1, MTP_int(readItem->id));
-				if (const auto channel = readItem->history()->peer->asChannel()) {
-					readItem->history()->session().api().request(
+				&& currentItem->unsupportedTTL() <= 0
+				&& !currentItem->out()) {
+				const auto ids = MTP_vector<MTPint>(1, MTP_int(currentItem->id));
+				if (const auto channel = peer->asChannel()) {
+					session->api().request(
 						MTPchannels_ReadMessageContents(
 						channel->inputChannel(),
 						ids)).send();
 				} else {
-					readItem->history()->session().api().request(
+					session->api().request(
 						MTPmessages_ReadMessageContents(ids)
 					).done([=](const MTPmessages_AffectedMessages &result)
 					{
-						readItem->history()->session().api()
-							.applyAffectedMessages(
-							readItem->history()->peer,
-							result);
+						session->api().applyAffectedMessages(peer, result);
 					}).send();
 				}
-				readItem->markContentsRead();
+				currentItem->markContentsRead();
 			}
 		},
 		&st::menuIconShowInChat);
@@ -954,21 +958,28 @@ void AddBurnAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 		!item->hasUnreadMediaFlag()) {
 		return;
 	}
+	const auto session = &item->history()->session();
+	const auto peer = item->history()->peer;
+	const auto itemId = item->fullId();
 
 	menu->addAction(
 		tr::extras_ExpireMediaContextMenuText(tr::now),
 		[=]
 		{
-			const auto ids = MTP_vector<MTPint>(1, MTP_int(item->id));
+			const auto currentItem = session->data().message(itemId);
+			if (!currentItem) {
+				return;
+			}
+			const auto ids = MTP_vector<MTPint>(1, MTP_int(currentItem->id));
 
-			item->history()->session().api().request(MTPmessages_ReadMessageContents(
+			session->api().request(MTPmessages_ReadMessageContents(
 					ids
 				)).done([=](const MTPmessages_AffectedMessages &result)
 				{
-					item->history()->session().api().applyAffectedMessages(
-						item->history()->peer,
-						result);
-					item->markContentsRead();
+					session->api().applyAffectedMessages(peer, result);
+					if (const auto currentItem = session->data().message(itemId)) {
+						currentItem->markContentsRead();
+					}
 				}).send();
 		},
 		&st::menuIconTTLAny);
