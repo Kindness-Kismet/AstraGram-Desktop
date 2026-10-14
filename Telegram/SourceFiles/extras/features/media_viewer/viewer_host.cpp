@@ -8,6 +8,8 @@
 #include "ui/ui_utility.h"
 #include "styles/style_basic.h"
 
+#include <QtCore/QAbstractNativeEventFilter>
+#include <QtCore/QCoreApplication>
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 
@@ -38,6 +40,47 @@ constexpr auto kBackdropBlurRadius = 3;
 	return result;
 }
 
+#ifdef Q_OS_WIN
+// 查看器是独立窗口，激活后宿主会改画未激活的边框和阴影；
+// 查看器激活期间宿主保持激活外观。
+class ActivationFilter final : public QAbstractNativeEventFilter {
+public:
+	ActivationFilter(not_null<QWidget*> viewer, not_null<QWidget*> host)
+	: _viewer(viewer)
+	, _host(host.get()) {
+	}
+
+	bool nativeEventFilter(
+			const QByteArray &eventType,
+			void *message,
+			native_event_filter_result *result) override {
+		const auto msg = static_cast<MSG*>(message);
+		if ((msg->message != WM_NCACTIVATE && msg->message != WM_ACTIVATE)
+			|| eventType != "windows_generic_MSG"
+			|| !_host
+			|| msg->hwnd != reinterpret_cast<HWND>(_viewer->winId())) {
+			return false;
+		}
+		const auto host = reinterpret_cast<HWND>(_host->winId());
+		if (msg->message == WM_NCACTIVATE) {
+			if (msg->wParam) {
+				SendMessage(host, WM_NCACTIVATE, TRUE, 0);
+			}
+		} else if (LOWORD(msg->wParam) == WA_INACTIVE
+			&& reinterpret_cast<HWND>(msg->lParam) != host) {
+			// 激活转给宿主时由系统重新激活宿主，转给其他窗口时宿主随查看器失活。
+			SendMessage(host, WM_NCACTIVATE, FALSE, 0);
+		}
+		return false;
+	}
+
+private:
+	const not_null<QWidget*> _viewer;
+	const QPointer<QWidget> _host;
+
+};
+#endif // Q_OS_WIN
+
 } // namespace
 
 QColor backdropTint() {
@@ -61,6 +104,11 @@ ViewerHost::ViewerHost(
 	// 只在显示时生效，所以必须在查看器显示前设置。
 	viewer->windowHandle()->setTransientParent(host->windowHandle());
 	updateCorners();
+#ifdef Q_OS_WIN
+	_activationFilter = std::make_unique<ActivationFilter>(viewer, host);
+	QCoreApplication::instance()->installNativeEventFilter(
+		_activationFilter.get());
+#endif // Q_OS_WIN
 
 	_filter.reset(base::install_event_filter(host, [=](not_null<QEvent*> e) {
 		switch (e->type()) {
