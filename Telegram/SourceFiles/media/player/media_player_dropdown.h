@@ -48,6 +48,8 @@ public:
 	void hideTemporarily();
 	void showBack();
 	void setOtherDropdownCheck(Fn<bool(QPoint globalPosition)> check);
+	// 关闭后菜单只在点击按钮时弹出，悬停不触发。
+	void setShowOnHover(bool enabled);
 
 protected:
 	void showMenu();
@@ -68,6 +70,7 @@ private:
 	rpl::variable<bool> _menuToggled;
 	bool _temporarilyHidden = false;
 	bool _overButton = false;
+	bool _showOnHover = true;
 
 };
 

@@ -343,7 +343,7 @@ WithDropdownController::WithDropdownController(
 			|| (e->type() == QEvent::Leave);
 	}) | rpl::on_next([=](not_null<QEvent*> e) {
 		_overButton = (e->type() == QEvent::Enter);
-		if (_overButton) {
+		if (_overButton && _showOnHover) {
 			InvokeQueued(button, [=] {
 				if (_overButton) {
 					showMenu();
@@ -417,6 +417,10 @@ void WithDropdownController::showBack() {
 void WithDropdownController::setOtherDropdownCheck(
 		Fn<bool(QPoint globalPosition)> check) {
 	_otherDropdownCheck = std::move(check);
+}
+
+void WithDropdownController::setShowOnHover(bool enabled) {
+	_showOnHover = enabled;
 }
 
 void WithDropdownController::showMenu() {

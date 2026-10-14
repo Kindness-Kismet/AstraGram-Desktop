@@ -82,6 +82,8 @@ PlaybackControls::PlaybackControls(
 	updateSpeedToggleQuality();
 
 	if (const auto controller = _speedController.get()) {
+		// 查看器里的设置菜单必须点击才弹出，避免划过时误触。
+		controller->setShowOnHover(false);
 		controller->menuToggledValue(
 		) | rpl::on_next([=](bool toggled) {
 			_speedToggle->setActive(toggled);

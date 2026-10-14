@@ -844,7 +844,6 @@ private:
 	Over _over = Over::None;
 	Over _down = Over::None;
 	QPoint _lastAction, _lastMouseMovePos;
-	bool _ignoringDropdown = false;
 
 	Ui::Animations::Basic _stateAnimation;
 
@@ -862,7 +861,6 @@ private:
 
 	base::unique_qptr<Ui::PopupMenu> _menu;
 	object_ptr<Ui::DropdownMenu> _dropdown;
-	base::Timer _dropdownShowTimer;
 
 	base::unique_qptr<SponsoredButton> _sponsoredButton;
 	object_ptr<Ui::RoundButton> _voteButton = { nullptr };

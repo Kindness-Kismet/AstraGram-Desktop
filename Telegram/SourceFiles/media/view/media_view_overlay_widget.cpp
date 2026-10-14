@@ -1043,7 +1043,6 @@ OverlayWidget::OverlayWidget()
 	_docCancel->addClickHandler([=] { saveCancel(); });
 
 	_dropdown->setHiddenCallback([this] { dropdownHidden(); });
-	_dropdownShowTimer.setCallback([=] { showDropdown(); });
 
 	orderWidgets();
 }
@@ -3533,10 +3532,8 @@ void OverlayWidget::dropdownHidden() {
 	if (_stories) {
 		_stories->menuShown(false);
 	}
-	_ignoringDropdown = true;
 	_lastMouseMovePos = _widget->mapFromGlobal(QCursor::pos());
 	updateOver(_lastMouseMovePos);
-	_ignoringDropdown = false;
 	if (!_controlsHideTimer.isActive()) {
 		hideControls(true);
 	}
@@ -8808,11 +8805,7 @@ void OverlayWidget::updateOverRect(Over state) {
 bool OverlayWidget::updateOverState(Over newState) {
 	bool result = true;
 	if (_over != newState) {
-		if (!_stories && newState == Over::More && !_ignoringDropdown) {
-			_dropdownShowTimer.callOnce(0);
-		} else {
-			_dropdownShowTimer.cancel();
-		}
+		// 更多菜单只在点击时弹出，悬停不触发，避免误触。
 		updateOverRect(_over);
 		updateOverRect(newState);
 		if (_over != Over::None) {
