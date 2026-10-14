@@ -262,22 +262,17 @@ python scripts/build.py               # Release，默认
 python scripts/build.py --dev         # Debug
 python scripts/build.py --dev --pdb   # Debug，并重新生成完整的 AstraGram.pdb
 python scripts/build.py --all         # 两个配置都构建
-python scripts/build.py --jobs 12     # 协作统一使用 12；脚本默认 32，上限 128
 python scripts/build.py --reconfigure # 丢弃 CMake 缓存重新配置
 python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 ```
 
+- 默认 12 并发，无需传 `--jobs`。用户指定后，本次会话后续构建沿用 `--jobs N`（1 至 128），直到用户更改或会话结束；不修改脚本默认值。
 - 产物在带版本号的目录：`build/AstraGram-v<版本>-win-x64-release|dev/`（版本号读取 `Telegram/build/version`）
 - 脚本自己完成配置和构建两步，**不要手动执行 cmake**
 - 收集产物前会自动停止占用目标可执行文件的进程（按绝对路径匹配，不按进程名）
 - 默认不生成调试信息和 pdb；`--pdb` 只作用于 Debug：调试信息嵌进 obj、关闭增量链接，每次重写 pdb，避免增量链接让 pdb 只增不减
 - 加上或去掉 `--pdb` 会改变全部编译参数，触发全量重编，只在需要符号时使用
 - 设置环境变量 `AYUGRAM_CCACHE=<ccache.exe 路径>` 后经 ccache 编译（云端 Windows 构建使用）；开启后每次都要重新编译全部文件（大多直接命中缓存），不适合本地增量构建
-
-### 编译并发
-
-- 构建脚本默认 32 并发，`--jobs` 接受 1 至 128，超过上限或非正数直接报错。
-- 助手编译统一显式传入 `--jobs 12`，例如 `python scripts/build.py --dev --jobs 12`；后续任务同样遵守，不使用脚本默认并发。
 
 ---
 

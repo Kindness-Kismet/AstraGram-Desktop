@@ -61,7 +61,7 @@ python .claude/skills/app-debug/scripts/cli.py anim.speed 1
 | 指令 | 参数 | 作用 |
 |---|---|---|
 | `app.start` | 空 | 检查 Debug 应用是否运行，未运行时启动并等待端口就绪（最多 60 秒）；已在运行则保持不动。 |
-| `app.restart` | 空 | 无论是否在运行都先停止再启动，等到端口就绪；改完 C++ 重新编译后用它启动新构建。 |
+| `app.restart` | 空 | 无论是否在运行都先停止再启动已有开发版产物，等到端口就绪。 |
 | `app.stop` | 空 | 校验端口 PID 的可执行文件路径必须匹配本仓库 `build/AstraGram-v*-win-x64-dev/AstraGram.exe`，再让应用自行退出；失败才回落到强制结束。端口未建立时只枚举路径匹配同一形态的进程。 |
 
 ```bash
@@ -81,7 +81,7 @@ python .claude/skills/app-debug/scripts/cli.py page.open extras   # 复现操作
 cat build/AstraGram-v*-win-x64-dev/crash.log                   # 读调用栈定位
 ```
 
-默认构建没有 pdb，本程序的帧只有模块内偏移；需要函数名与行号时用 `--pdb` 构建后复现。
+本程序缺少匹配的 PDB 时，调用栈仅显示模块内偏移，无法定位函数名与行号。
 
 ## 独立数据目录
 

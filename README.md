@@ -205,7 +205,7 @@ Worth knowing:
   `Telegram/build/version` change. Day-to-day edits just run `build.py`.
 - Builds use the public test API credentials by default. Pass
   `--api-id` / `--api-hash` to use your own.
-- The build defaults to 32 parallel jobs and accepts `--jobs 1` through
+- The build defaults to 12 parallel jobs and accepts `--jobs 1` through
   `--jobs 128`. Memory use depends on the files being compiled, other running
   applications and available commit memory; lower the job count when needed.
 - The `cmake` submodule is upstream `desktop-app/cmake_helpers`; local patches

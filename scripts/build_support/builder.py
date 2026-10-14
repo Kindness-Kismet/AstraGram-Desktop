@@ -37,7 +37,7 @@ _CONFIGURATIONS = {"dev": "Debug", "release": "Release"}
 # 和闭源 alpha 支持。该标记同时决定 AUTOUPDATE 的默认值。
 _SPECIAL_TARGET = TARGET_SPECIAL_TARGET
 
-DEFAULT_BUILD_JOBS = 32
+DEFAULT_BUILD_JOBS = 12
 MAX_BUILD_JOBS = 128
 
 
