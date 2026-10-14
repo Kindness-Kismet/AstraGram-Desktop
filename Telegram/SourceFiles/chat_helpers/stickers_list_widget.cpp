@@ -3141,9 +3141,11 @@ void StickersListWidget::mouseMoveEvent(QMouseEvent *e) {
 }
 
 void StickersListWidget::resizeEvent(QResizeEvent *e) {
+	// 顶部有照片等按钮时，链接放在按钮行下方的剩余区域里，避免贴在一起。
+	const auto top = searchShortcutsTop() + searchShortcutsHeight();
 	_settings->moveToLeft(
 		(width() - _settings->width()) / 2,
-		height() / 3);
+		top + (height() - top) / 3);
 	if (!_megagroupSetAbout.isEmpty()) {
 		refreshMegagroupSetGeometry();
 	}
