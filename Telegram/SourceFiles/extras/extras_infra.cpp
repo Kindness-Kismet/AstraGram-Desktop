@@ -10,7 +10,6 @@
 #endif
 #include "extras/ui/components/floating_surface.h"
 #include "features/translator/extras_translator.h"
-#include "lang/lang_instance.h"
 #include "ui/chat/chat_style_radius.h"
 #include "utils/rc_manager.h"
 
@@ -89,11 +88,6 @@ void initFontFallbacks() {
 }
 
 void initLang() {
-	QString id = Lang::GetInstance().id();
-	if (id.isEmpty()) {
-		LOG(("Language is not loaded"));
-		return;
-	}
 	ExtrasLanguage::init();
 }
 

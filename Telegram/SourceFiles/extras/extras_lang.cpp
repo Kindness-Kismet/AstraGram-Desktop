@@ -28,10 +28,15 @@ constexpr auto postfixes = {
 ExtrasLanguage *ExtrasLanguage::instance = nullptr;
 
 void ExtrasLanguage::init() {
-	if (!instance) {
-		instance = new ExtrasLanguage;
-	}
+	Expects(!instance);
+
+	instance = new ExtrasLanguage;
 	instance->loadBundledLanguage();
+	// 切换语言会还原全部文案，语言包下载完成后重新叠加内置文案。
+	Lang::GetInstance().updated(
+	) | rpl::on_next([] {
+		instance->loadBundledLanguage();
+	}, instance->_lifetime);
 }
 
 // 依次尝试当前语言与基础语言（自定义语言叠加官方基础包的组合），
