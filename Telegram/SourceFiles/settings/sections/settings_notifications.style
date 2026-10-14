@@ -13,5 +13,6 @@ notificationsSampleSkip: 5px;
 notificationsSampleTopSkip: 5px;
 notificationsSampleBottomSkip: 5px;
 notificationsSampleMargin: 2px;
+notificationsSamplePeek: 4px;
 notificationSampleOpacity: 0.5;
 notificationSampleSize: size(120px, 42px);

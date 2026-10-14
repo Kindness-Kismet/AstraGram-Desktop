@@ -45,23 +45,24 @@ chatFloatingBarGap: 4px;
 
 adaptiveChatWideWidth: 880px;
 
-notifyRadius: 16px;
+notifyRadius: 12px;
 notifyBorderWidth: 1px;
 notifySlowHide: 4000;
-notifyPhotoSize: 40px;
+notifyPhotoSize: 36px;
 notifyMacPhotoSize: 64px;
-notifyPhotoPos: point(13px, 17px);
-notifyTextLeft: 11px;
-notifyTextTop: 12px;
-notifyDotSize: 7px;
-notifyDotSkip: 6px;
-notifyRightSkip: 12px;
+notifyPhotoPos: point(8px, 8px);
+notifyTextLeft: 10px;
+notifyDotSize: 6px;
+notifyDotSkip: 5px;
+notifyRightSkip: 11px;
 notifyWaitLongHide: 3000;
 notifyFastAnim: 150;
 notifyWidth: 312px;
-notifyMinHeight: 74px;
+notifyMinHeight: 52px;
 notifyDeltaX: 10px;
 notifyDeltaY: 10px;
+// 卡片之间的间距；屏幕边缘的留白仍是 notifyDeltaX / notifyDeltaY。
+notifySkip: 6px;
 notifyActionsDuration: 150;
 
 notifyClose: IconButton {
@@ -77,16 +78,27 @@ notifyClose: IconButton {
 	rippleAreaSize: 20px;
 	ripple: defaultRippleAnimationBgOver;
 }
-notifyActionSize: 22px;
-notifyActionsPos: point(8px, 6px);
+notifyActionSize: 26px;
+notifyActionSkip: 4px;
+notifyActionsRight: 8px;
+notifyActionsFade: 28px;
 // 图标颜色由代码按主题指定，这里的颜色只是占位。
 notifyCloseIcon: icon {{ "simple_close", windowFg }};
-notifyReplyButtonPos: point(8px, 7px);
-notifyFadeRight: icon {{ "fade_horizontal", notificationBg }};
+notifyReplyIcon: icon {{ "menu/reply-16x16", windowFg }};
 
-notifyHideAllHeight: 30px;
+notifyHideAllHeight: 24px;
+notifyHideAllPadding: 10px;
+notifyHideAllSkip: 6px;
+notifyHideAllFont: font(12px);
 
-notifyReplyPadding: margins(10px, 0px, 8px, 9px);
+notifyStackPeek: 6px;
+notifyStackCountHeight: 18px;
+notifyStackCountMinWidth: 24px;
+notifyStackCountPadding: 6px;
+notifyStackCountRight: 11px;
+notifyStackCountFont: font(11px semibold);
+
+notifyReplyPadding: margins(8px, 0px, 8px, 8px);
 notifyReplySkip: 6px;
 notifyReplyArea: InputField(defaultInputField) {
 	style: defaultTextStyle;

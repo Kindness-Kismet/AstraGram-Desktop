@@ -61,21 +61,18 @@ private:
 	using ScreenCorner = Core::Settings::ScreenCorner;
 	void setOverCorner(ScreenCorner corner);
 	void clearOverCorner();
+	void showSamples(ScreenCorner corner);
 
 	class SampleWidget;
 	void removeSample(SampleWidget *widget);
 
 	QRect getScreenRect() const;
 	QRect getScreenRect(int width) const;
-	void prepareNotificationSampleSmall();
-	void prepareNotificationSampleLarge();
-	void prepareNotificationSampleUserpic();
+	void paintSmallSample(QPainter &p, QRect card) const;
+	void paintChosenSamples(QPainter &p, int left, int top, bool isTop) const;
 
 	const not_null<Window::SessionController*> _controller;
 
-	QPixmap _notificationSampleUserpic;
-	QPixmap _notificationSampleSmall;
-	QPixmap _notificationSampleLarge;
 	ScreenCorner _chosenCorner;
 	std::vector<Ui::Animations::Simple> _sampleOpacities;
 

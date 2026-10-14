@@ -52,7 +52,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/notifications_manager.h"
-#include "window/notifications_manager_default.h"
 #include "window/section_widget.h"
 #include "window/themes/window_theme.h"
 #include "window/window_session_controller.h"
@@ -71,6 +70,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QSvgRenderer>
 
 // AyuGram includes
+#include "extras/extras_settings.h"
+#include "extras/ui/components/notification_card.h"
 #include "extras/ui/extras_userpic.h"
 
 
@@ -89,6 +90,7 @@ class NotificationsCount::SampleWidget : public QWidget {
 public:
 	SampleWidget(NotificationsCount *owner, const QPixmap &cache);
 
+	void setCache(const QPixmap &cache);
 	void detach();
 	void showFast();
 	void hideFast();
@@ -97,13 +99,13 @@ protected:
 	void paintEvent(QPaintEvent *e) override;
 
 private:
-	void startAnimation();
+	void toggle(bool shown);
 	void animationCallback();
 
 	NotificationsCount *_owner;
 	QPixmap _cache;
 	Ui::Animations::Simple _opacity;
-	bool _hiding = false;
+	bool _hiding = true;
 
 };
 
@@ -301,8 +303,10 @@ NotificationsCount::NotificationsCount(
 
 	_sampleOpacities.resize(kMaxNotificationsCount);
 
-	prepareNotificationSampleSmall();
-	prepareNotificationSampleLarge();
+	ExtrasSettings::getInstance().notificationStyleChanges(
+	) | rpl::on_next([=] {
+		update();
+	}, lifetime());
 }
 
 void NotificationsCount::paintEvent(QPaintEvent *e) {
@@ -323,17 +327,10 @@ void NotificationsCount::paintEvent(QPaintEvent *e) {
 		auto sampleLeft = isLeft ? (screenRect.x() + st::notificationsSampleSkip) : (screenRect.x() + screenRect.width() - st::notificationsSampleSkip - st::notificationSampleSize.width());
 		auto sampleTop = isTop ? (screenRect.y() + st::notificationsSampleTopSkip) : (screenRect.y() + screenRect.height() - st::notificationsSampleBottomSkip - st::notificationSampleSize.height());
 		if (corner == static_cast<int>(_chosenCorner)) {
-			auto count = _oldCount;
-			for (int i = 0; i != kMaxNotificationsCount; ++i) {
-				auto opacity = _sampleOpacities[i].value((i < count) ? 1. : 0.);
-				p.setOpacity(opacity);
-				p.drawPixmapLeft(sampleLeft, sampleTop, width(), _notificationSampleSmall);
-				sampleTop += (isTop ? 1 : -1) * (st::notificationSampleSize.height() + st::notificationsSampleMargin);
-			}
-			p.setOpacity(1.);
+			paintChosenSamples(p, sampleLeft, sampleTop, isTop);
 		} else {
 			p.setOpacity(st::notificationSampleOpacity);
-			p.drawPixmapLeft(sampleLeft, sampleTop, width(), _notificationSampleSmall);
+			paintSmallSample(p, QRect(QPoint(sampleLeft, sampleTop), st::notificationSampleSize));
 			p.setOpacity(1.);
 		}
 	}
@@ -342,17 +339,10 @@ void NotificationsCount::paintEvent(QPaintEvent *e) {
 	auto sampleLeft = screenRect.x() + screenRect.width() / 2 - st::notificationSampleSize.width() / 2;
 	auto sampleTop = screenRect.y() + st::notificationsSampleTopSkip;
 	if (static_cast<int>(_chosenCorner) == 4) {
-		auto count = _oldCount;
-		for (int i = 0; i != kMaxNotificationsCount; ++i) {
-			auto opacity = _sampleOpacities[i].value((i < count) ? 1. : 0.);
-			p.setOpacity(opacity);
-			p.drawPixmapLeft(sampleLeft, sampleTop, width(), _notificationSampleSmall);
-			sampleTop += st::notificationSampleSize.height() + st::notificationsSampleMargin;
-		}
-		p.setOpacity(1.);
+		paintChosenSamples(p, sampleLeft, sampleTop, true);
 	} else {
 		p.setOpacity(st::notificationSampleOpacity);
-		p.drawPixmapLeft(sampleLeft, sampleTop, width(), _notificationSampleSmall);
+		paintSmallSample(p, QRect(QPoint(sampleLeft, sampleTop), st::notificationSampleSize));
 		p.setOpacity(1.);
 	}
 }
@@ -392,91 +382,71 @@ int NotificationsCount::resizeGetHeight(int newWidth) {
 		+ st::notificationsSampleBottomSkip;
 }
 
-void NotificationsCount::prepareNotificationSampleSmall() {
-	auto width = st::notificationSampleSize.width();
-	auto height = st::notificationSampleSize.height();
-	auto sampleImage = QImage(
-		QSize(width, height) * style::DevicePixelRatio(),
-		QImage::Format_ARGB32_Premultiplied);
-	sampleImage.setDevicePixelRatio(style::DevicePixelRatio());
-	sampleImage.fill(Qt::transparent);
-	{
-		Painter p(&sampleImage);
-		PainterHighQualityEnabler hq(p);
+// 迷你屏幕里的示意卡片：头像圆点与两条文字线。
+void NotificationsCount::paintSmallSample(QPainter &p, QRect card) const {
+	card = style::rtlrect(card, width());
+	ExtrasUi::NotificationCard::paintCard(p, card);
 
-		p.setPen(Qt::NoPen);
-		const auto card = QRect(0, 0, width, height);
-		Window::Notifications::Default::PaintCard(p, card);
+	PainterHighQualityEnabler hq(p);
+	p.setPen(Qt::NoPen);
+	const auto padding = 5;
+	const auto userpicSize = card.height() - 2 * padding;
+	p.setBrush(st::notificationSampleUserpicFg);
+	ExtrasUserpic::PaintShape(
+		p,
+		QRectF(card.x() + padding, card.y() + padding, userpicSize, userpicSize));
 
-		const auto padding = 5;
-		const auto userpicSize = card.height() - 2 * padding;
-		p.setBrush(st::notificationSampleUserpicFg);
-		ExtrasUserpic::PaintShape(
-			p,
-			QRectF(padding, padding, userpicSize, userpicSize));
+	const auto rowLeft = card.x() + userpicSize + padding * 2;
+	const auto rowHeight = 3;
+	const auto nameTop = card.y() + 8;
+	p.setBrush(st::notificationSampleNameFg);
+	p.drawRoundedRect(rowLeft, nameTop, 42, rowHeight, rowHeight / 2., rowHeight / 2.);
 
-		const auto rowLeft = userpicSize + padding * 2;
-		const auto rowHeight = 3;
-		const auto nameTop = 8;
-		p.setBrush(st::notificationSampleNameFg);
-		p.drawRoundedRect(rowLeft, nameTop, 42, rowHeight, rowHeight / 2., rowHeight / 2.);
-
-		const auto rowWidth = width - rowLeft - 10;
-		const auto rowTop = nameTop + 8;
-		p.setBrush(st::notificationSampleTextFg);
-		p.drawRoundedRect(rowLeft, rowTop, rowWidth, rowHeight, rowHeight / 2., rowHeight / 2.);
-		p.drawRoundedRect(rowLeft, rowTop + 7, rowWidth - 14, rowHeight, rowHeight / 2., rowHeight / 2.);
-	}
-	_notificationSampleSmall = Ui::PixmapFromImage(std::move(sampleImage));
-	_notificationSampleSmall.setDevicePixelRatio(style::DevicePixelRatio());
+	const auto rowWidth = card.x() + card.width() - rowLeft - 10;
+	const auto rowTop = nameTop + 8;
+	p.setBrush(st::notificationSampleTextFg);
+	p.drawRoundedRect(rowLeft, rowTop, rowWidth, rowHeight, rowHeight / 2., rowHeight / 2.);
+	p.drawRoundedRect(rowLeft, rowTop + 7, rowWidth - 14, rowHeight, rowHeight / 2., rowHeight / 2.);
 }
 
-void NotificationsCount::prepareNotificationSampleUserpic() {
-	if (_notificationSampleUserpic.isNull()) {
-		_notificationSampleUserpic = Ui::PixmapFromImage(
-			Window::LogoNoMargin().scaled(
-				st::notifyPhotoSize * style::DevicePixelRatio(),
-				st::notifyPhotoSize * style::DevicePixelRatio(),
-				Qt::IgnoreAspectRatio,
-				Qt::SmoothTransformation));
-		_notificationSampleUserpic.setDevicePixelRatio(
-			style::DevicePixelRatio());
+// 选中角落的示意按通知样式排布，叠放只露出后排的边。
+void NotificationsCount::paintChosenSamples(
+		QPainter &p,
+		int left,
+		int top,
+		bool isTop) const {
+	using ExtrasUi::NotificationCard::kStackDepth;
+	using ExtrasUi::NotificationCard::kStackShrink;
+	const auto size = st::notificationSampleSize;
+	const auto direction = isTop ? 1 : -1;
+	const auto opacity = [&](int index) {
+		return _sampleOpacities[index].value((index < _oldCount) ? 1. : 0.);
+	};
+	if (ExtrasSettings::getInstance().notificationStyle()
+			== NotificationStyle::Stack) {
+		for (auto i = kStackDepth; i != 0; --i) {
+			const auto inset = int(base::SafeRound(
+				size.width() * kStackShrink / 2. * i));
+			p.setOpacity(opacity(i));
+			paintSmallSample(p, QRect(
+				left + inset,
+				top + direction * i * st::notificationsSamplePeek,
+				size.width() - 2 * inset,
+				size.height()));
+		}
+		p.setOpacity(opacity(0));
+		paintSmallSample(p, QRect(QPoint(left, top), size));
+		p.setOpacity(1.);
+		return;
 	}
-}
-
-void NotificationsCount::prepareNotificationSampleLarge() {
-	using namespace Window::Notifications::Default;
-	const auto w = st::notifyWidth;
-	const auto h = st::notifyMinHeight;
-	auto sampleImage = QImage(
-		QSize(w, h) * style::DevicePixelRatio(),
-		QImage::Format_ARGB32_Premultiplied);
-	sampleImage.setDevicePixelRatio(style::DevicePixelRatio());
-	sampleImage.fill(Qt::transparent);
-	{
-		Painter p(&sampleImage);
-		PaintCard(p, QRect(0, 0, w, h));
-
-		prepareNotificationSampleUserpic();
-		p.drawPixmap(st::notifyPhotoPos.x(), st::notifyPhotoPos.y(), _notificationSampleUserpic);
-
-		const auto textLeft = st::notifyPhotoPos.x() + st::notifyPhotoSize + st::notifyTextLeft;
-		const auto itemWidth = w - textLeft - st::notifyRightSkip;
-		const auto rectForName = style::rtlrect(textLeft, st::notifyTextTop, itemWidth, st::semiboldFont->height, w);
-
-		auto notifyText = st::dialogsTextFont->elided(tr::lng_notification_sample(tr::now), itemWidth);
-		p.setFont(st::dialogsTextFont);
-		p.setPen(st::dialogsTextFgService);
-		p.drawText(textLeft, st::notifyTextTop + st::semiboldFont->height + st::dialogsTextFont->ascent, notifyText);
-
-		p.setPen(st::dialogsNameFg);
-		p.setFont(st::semiboldFont);
-
-		auto notifyTitle = st::semiboldFont->elided(u"AstraGram"_q, rectForName.width());
-		p.drawText(rectForName.left(), rectForName.top() + st::semiboldFont->ascent, notifyTitle);
+	for (auto i = 0; i != kMaxNotificationsCount; ++i) {
+		if (const auto value = opacity(i); value > 0.) {
+			p.setOpacity(value);
+			paintSmallSample(p, QRect(QPoint(left, top), size));
+		}
+		top += direction * (size.height() + st::notificationsSampleMargin);
 	}
-
-	_notificationSampleLarge = Ui::PixmapFromImage(std::move(sampleImage));
+	p.setOpacity(1.);
 }
 
 void NotificationsCount::removeSample(SampleWidget *widget) {
@@ -537,37 +507,38 @@ void NotificationsCount::setOverCorner(ScreenCorner corner) {
 			ChangeType::DemoIsShown);
 	}
 	_overCorner = corner;
+	showSamples(corner);
+}
 
-	auto &samples = _cornerSamples[static_cast<int>(_overCorner)];
-	auto samplesAlready = int(samples.size());
-	auto samplesNeeded = _oldCount;
-	auto samplesLeave = std::min(samplesAlready, samplesNeeded);
-	for (int i = 0; i != samplesLeave; ++i) {
-		samples[i]->showFast();
-	}
-	if (samplesNeeded > samplesLeave) {
-		const auto r = Window::Notifications::NotificationDisplayRect(
-			&_controller->window());
-		auto isLeft = Core::Settings::IsLeftCorner(_overCorner);
-		auto isTop = Core::Settings::IsTopCorner(_overCorner);
-		auto sampleLeft = (isLeft == rtl()) ? (r.x() + r.width() - st::notifyWidth - st::notifyDeltaX) : (r.x() + st::notifyDeltaX);
-		auto sampleTop = isTop ? (r.y() + st::notifyDeltaY) : (r.y() + r.height() - st::notifyDeltaY - st::notifyMinHeight);
+// 屏幕上的预览按当前样式和条数整体画成一张。
+void NotificationsCount::showSamples(ScreenCorner corner) {
+	auto image = ExtrasUi::NotificationCard::prepareSample(_oldCount, corner);
+	const auto ratio = image.devicePixelRatio();
+	const auto w = int(image.width() / ratio);
+	const auto h = int(image.height() / ratio);
+	const auto r = Window::Notifications::NotificationDisplayRect(
+		&_controller->window());
+	const auto isLeft = Core::Settings::IsLeftCorner(corner);
+	const auto isTop = Core::Settings::IsTopCorner(corner);
+	const auto left = Core::Settings::IsTopCenterCorner(corner)
+		? (r.x() + (r.width() - w) / 2)
+		: (isLeft == rtl())
+		? (r.x() + r.width() - w - st::notifyDeltaX)
+		: (r.x() + st::notifyDeltaX);
+	const auto top = isTop
+		? (r.y() + st::notifyDeltaY)
+		: (r.y() + r.height() - st::notifyDeltaY - h);
+	const auto cache = Ui::PixmapFromImage(std::move(image));
 
-		if (Core::Settings::IsTopCenterCorner(_overCorner)) {
-			sampleLeft = (r.x() + r.width() / 2 - st::notifyWidth / 2);
-		}
-
-		for (int i = samplesLeave; i != samplesNeeded; ++i) {
-			auto widget = std::make_unique<SampleWidget>(this, _notificationSampleLarge);
-			widget->move(sampleLeft, sampleTop + (isTop ? 1 : -1) * i * (st::notifyMinHeight + st::notifyDeltaY));
-			widget->showFast();
-			samples.push_back(widget.release());
-		}
+	auto &samples = _cornerSamples[static_cast<int>(corner)];
+	if (samples.empty()) {
+		samples.push_back(
+			std::make_unique<SampleWidget>(this, cache).release());
 	} else {
-		for (int i = samplesLeave; i != samplesAlready; ++i) {
-			samples[i]->hideFast();
-		}
+		samples.front()->setCache(cache);
 	}
+	samples.front()->move(left, top);
+	samples.front()->showFast();
 }
 
 void NotificationsCount::clearOverCorner() {
@@ -620,11 +591,8 @@ NotificationsCount::~NotificationsCount() {
 NotificationsCount::SampleWidget::SampleWidget(
 	NotificationsCount *owner,
 	const QPixmap &cache)
-: _owner(owner)
-, _cache(cache) {
-	setFixedSize(
-		cache.width() / cache.devicePixelRatio(),
-		cache.height() / cache.devicePixelRatio());
+: _owner(owner) {
+	setCache(cache);
 
 	setWindowFlags(Qt::WindowFlags(Qt::FramelessWindowHint)
 		| Qt::WindowStaysOnTopHint
@@ -639,19 +607,23 @@ NotificationsCount::SampleWidget::SampleWidget(
 	show();
 }
 
+void NotificationsCount::SampleWidget::setCache(const QPixmap &cache) {
+	_cache = cache;
+	setFixedSize(cache.size() / cache.devicePixelRatio());
+	update();
+}
+
 void NotificationsCount::SampleWidget::detach() {
 	_owner = nullptr;
 	hideFast();
 }
 
 void NotificationsCount::SampleWidget::showFast() {
-	_hiding = false;
-	startAnimation();
+	toggle(true);
 }
 
 void NotificationsCount::SampleWidget::hideFast() {
-	_hiding = true;
-	startAnimation();
+	toggle(false);
 }
 
 void NotificationsCount::SampleWidget::paintEvent(QPaintEvent *e) {
@@ -659,11 +631,17 @@ void NotificationsCount::SampleWidget::paintEvent(QPaintEvent *e) {
 	p.drawPixmap(0, 0, _cache);
 }
 
-void NotificationsCount::SampleWidget::startAnimation() {
+// 从当前透明度接着过渡，已经显示时再次显示不会闪一下。
+void NotificationsCount::SampleWidget::toggle(bool shown) {
+	if (_hiding != shown) {
+		return;
+	}
+	const auto from = _opacity.value(_hiding ? 0. : 1.);
+	_hiding = !shown;
 	_opacity.start(
 		[=] { animationCallback(); },
-		_hiding ? 1. : 0.,
-		_hiding ? 0. : 1.,
+		from,
+		shown ? 1. : 0.,
 		st::notifyFastAnim);
 }
 
@@ -1586,6 +1564,22 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 		) | rpl::on_next([=](int section) {
 			position->setCount(section + 1);
 		}, countSlider->lifetime());
+
+		AddCardTitle(advancedWrap, tr::extras_NotificationStyle());
+		const auto styleCard = AddCardGroup(advancedWrap);
+
+		const auto styleSlider = styleCard->add(
+			object_ptr<Ui::SettingsSlider>(styleCard, st::settingsSlider),
+			st::settingsBigScalePadding);
+		styleSlider->addSection(tr::extras_NotificationStyleCards(tr::now));
+		styleSlider->addSection(tr::extras_NotificationStyleStack(tr::now));
+		styleSlider->setActiveSectionFast(
+			int(ExtrasSettings::getInstance().notificationStyle()));
+		styleSlider->sectionActivated(
+		) | rpl::on_next([](int section) {
+			ExtrasSettings::getInstance().setNotificationStyle(
+				NotificationStyle(section));
+		}, styleSlider->lifetime());
 
 		if (Core::App().settings().nativeNotifications()) {
 			advancedSlide->hide(anim::type::instant);

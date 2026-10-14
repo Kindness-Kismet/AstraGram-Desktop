@@ -16,13 +16,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/timer.h"
 #include "base/binary_guard.h"
 #include "base/object_ptr.h"
+#include "extras/ui/components/notification_card.h"
 
 #include <QtCore/QTimer>
+
+enum class NotificationStyle;
 
 namespace Ui {
 class IconButton;
 class InputField;
-class RoundButton;
 } // namespace Ui
 
 namespace Window {
@@ -36,9 +38,6 @@ class HideAllButton;
 
 class Manager;
 std::unique_ptr<Manager> Create(System *system);
-
-// 绘制卡片的底色与描边，设置页的演示样图共用。
-void PaintCard(QPainter &p, const QRect &card, bool highlighted = false);
 
 class Manager final : public Notifications::Manager {
 public:
@@ -67,7 +66,14 @@ private:
 		rpl::lifetime lifetime;
 	};
 
-	[[nodiscard]] QPixmap hiddenUserpicPlaceholder() const;
+	[[nodiscard]] QPixmap hiddenUserpicPlaceholder(int size) const;
+	[[nodiscard]] NotificationStyle style() const {
+		return _style;
+	}
+	// 叠放卡组的展开进度，0 为收起。
+	[[nodiscard]] float64 stackExpanded() const;
+	void stackHovered(bool hovered);
+	void setStackExpanded(bool expanded);
 
 	void doUpdateAll() override;
 	void doShowNotification(NotificationFields &&fields) override;
@@ -108,8 +114,13 @@ private:
 
 	std::unique_ptr<HideAllButton> _hideAll;
 
+	NotificationStyle _style;
 	bool _positionsOutdated = false;
 	base::Timer _inputCheckTimer;
+
+	bool _stackExpanded = false;
+	Ui::Animations::Simple _stackExpandAnimation;
+	base::Timer _stackCollapseTimer;
 
 	struct QueuedNotification {
 		QueuedNotification(NotificationFields &&fields);
@@ -167,7 +178,7 @@ protected:
 	void hideFast();
 	void hideStop();
 	QPoint computePosition(int height) const;
-	void paintCard(QPainter &p, bool highlighted = false) const;
+	void setLeftSkip(int skip);
 
 	virtual void updateGeometry(int x, int y, int width, int height);
 
@@ -192,6 +203,7 @@ private:
 	Direction _direction;
 	anim::value _shift;
 	Ui::Animations::Basic _shiftAnimation;
+	int _leftSkip = 0;
 
 };
 
@@ -233,6 +245,8 @@ public:
 
 	void updateNotifyDisplay();
 	void updatePeerPhoto();
+	// 叠放卡组里的层数与最前一张显示的剩余条数。
+	void setStackPlace(int depth, int more);
 
 	bool isUnlinked() const {
 		return !_history;
@@ -264,7 +278,6 @@ protected:
 
 private:
 	void updateActionsGeometry();
-	void prepareReplyCache();
 	bool canReply() const;
 	void replyResized();
 	void replyCancel();
@@ -278,11 +291,15 @@ private:
 	void repaintText();
 	void paintTitle(Painter &p);
 	void paintText(Painter &p);
+	void paintActionsBackdrop(QPainter &p, float64 shown) const;
+	void paintStackCount(QPainter &p) const;
+	[[nodiscard]] float64 stackLevel() const;
 	void customEmojiCallback();
 
 	[[nodiscard]] Notifications::Manager::NotificationId myId() const;
 
 	const not_null<PeerData*> _peer;
+	const ExtrasUi::NotificationCard::RowLayout _layout;
 
 	QImage _cache;
 	Ui::Text::String _titleCache;
@@ -294,7 +311,9 @@ private:
 	bool _actionsVisible = false;
 	bool _textsRepaintScheduled = false;
 	Ui::Animations::Simple a_actionsOpacity;
-	QPixmap _replyCache;
+	int _stackDepth = 0;
+	int _stackMore = 0;
+	Ui::Animations::Simple _stackDepthAnimation;
 
 	crl::time _started;
 
@@ -310,7 +329,7 @@ private:
 	int _forwardedCount = 0;
 	bool _fromScheduled = false;
 	object_ptr<ActionButton> _close;
-	object_ptr<Ui::RoundButton> _reply;
+	object_ptr<ActionButton> _reply;
 	object_ptr<Ui::InputField> _replyArea = { nullptr };
 	object_ptr<Ui::IconButton> _replySend = { nullptr };
 	bool _waitingForInput = true;
@@ -332,6 +351,8 @@ public:
 	void startHiding();
 	void startHidingFast();
 	void stopHiding();
+	void setCount(int count);
+	void updateSize();
 
 protected:
 	void enterEventHook(QEnterEvent *e) override;
@@ -343,6 +364,7 @@ protected:
 private:
 	bool _mouseOver = false;
 	bool _mouseDown = false;
+	int _count = 0;
 
 };
 

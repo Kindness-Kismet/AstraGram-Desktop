@@ -170,6 +170,8 @@ set(extras_files
         extras/ui/components/empty_state_icon.cpp
         extras/ui/components/horizontal_tabs.h
         extras/ui/components/horizontal_tabs.cpp
+        extras/ui/components/notification_card.h
+        extras/ui/components/notification_card.cpp
         extras/ui/extras_logo.cpp
         extras/ui/voice_record_capsule.h
         extras/ui/voice_record_capsule.cpp

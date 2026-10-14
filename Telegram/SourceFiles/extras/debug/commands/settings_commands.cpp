@@ -159,6 +159,7 @@ Result setSetting(const QString &key, const QString &raw) {
 		{u"messageStickerScale"_q, {0.5, 1.6}},
 		{u"avatarCorners"_q, {0, 23}},
 		{u"horizontalTabStyle"_q, {0, 2}},
+		{u"notificationStyle"_q, {0, 1}},
 		{u"core.songVolume"_q, {0, 1}},
 		{u"core.videoVolume"_q, {0, 1}},
 		{u"core.callInputVolume"_q, {0, 100}},

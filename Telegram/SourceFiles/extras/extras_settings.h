@@ -27,6 +27,11 @@ enum class HorizontalTabStyle {
 	Solid = 2,
 };
 
+enum class NotificationStyle {
+	Cards = 0,
+	Stack = 1,
+};
+
 enum class PeerIdDisplay {
 	Hidden = 0,
 	TelegramApi = 1,
@@ -309,6 +314,7 @@ public:
 	[[nodiscard]] bool increaseWebviewWidth() const { return _increaseWebviewWidth.current(); }
 	[[nodiscard]] WindowMaterial windowMaterial() const { return _windowMaterial.current(); }
 	[[nodiscard]] HorizontalTabStyle horizontalTabStyle() const { return _horizontalTabStyle.current(); }
+	[[nodiscard]] NotificationStyle notificationStyle() const { return _notificationStyle.current(); }
 	[[nodiscard]] bool removeMessageTail() const { return _removeMessageTail.current(); }
 	[[nodiscard]] bool disableNotificationsDelay() const { return _disableNotificationsDelay.current(); }
 	[[nodiscard]] bool localPremium() const { return _localPremium.current(); }
@@ -421,6 +427,7 @@ public:
 	void setIncreaseWebviewWidth(bool val);
 	void setWindowMaterial(WindowMaterial val);
 	void setHorizontalTabStyle(HorizontalTabStyle val);
+	void setNotificationStyle(NotificationStyle val);
 	void setRemoveMessageTail(bool val);
 	void setDisableNotificationsDelay(bool val);
 	void setLocalPremium(bool val);
@@ -558,6 +565,7 @@ public:
 	[[nodiscard]] rpl::producer<WindowMaterial> windowMaterialChanges() const { return _windowMaterial.changes(); }
 	[[nodiscard]] rpl::producer<HorizontalTabStyle> horizontalTabStyleValue() const { return _horizontalTabStyle.value(); }
 	[[nodiscard]] rpl::producer<HorizontalTabStyle> horizontalTabStyleChanges() const { return _horizontalTabStyle.changes(); }
+	[[nodiscard]] rpl::producer<NotificationStyle> notificationStyleChanges() const { return _notificationStyle.changes(); }
 	[[nodiscard]] rpl::producer<bool> removeMessageTailValue() const { return _removeMessageTail.value(); }
 	[[nodiscard]] rpl::producer<bool> removeMessageTailChanges() const { return _removeMessageTail.changes(); }
 	[[nodiscard]] rpl::producer<bool> disableNotificationsDelayValue() const { return _disableNotificationsDelay.value(); }
@@ -738,6 +746,7 @@ private:
 	rpl::variable<bool> _increaseWebviewWidth = false;
 	rpl::variable<WindowMaterial> _windowMaterial = WindowMaterial::Off;
 	rpl::variable<HorizontalTabStyle> _horizontalTabStyle = HorizontalTabStyle::Default;
+	rpl::variable<NotificationStyle> _notificationStyle = NotificationStyle::Cards;
 	rpl::variable<bool> _removeMessageTail = false;
 	rpl::variable<bool> _disableNotificationsDelay = false;
 	rpl::variable<bool> _devFeaturesEnabled = false;

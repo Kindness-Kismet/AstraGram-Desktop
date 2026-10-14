@@ -772,6 +772,17 @@ void ExtrasSettings::setWindowMaterial(WindowMaterial val) {
 	save();
 }
 
+void ExtrasSettings::setNotificationStyle(NotificationStyle val) {
+	if (val < NotificationStyle::Cards || val > NotificationStyle::Stack) {
+		return;
+	}
+	if (_notificationStyle.current() == val) {
+		return;
+	}
+	_notificationStyle = val;
+	save();
+}
+
 void ExtrasSettings::setHorizontalTabStyle(HorizontalTabStyle val) {
 	if (val < HorizontalTabStyle::Default || val > HorizontalTabStyle::Solid) {
 		return;
@@ -1363,6 +1374,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"increaseWebviewWidth", s._increaseWebviewWidth.current()},
 		{"windowMaterial", static_cast<int>(s._windowMaterial.current())},
 		{"horizontalTabStyle", static_cast<int>(s._horizontalTabStyle.current())},
+		{"notificationStyle", static_cast<int>(s._notificationStyle.current())},
 		{"removeMessageTail", s._removeMessageTail.current()},
 		{"disableNotificationsDelay", s._disableNotificationsDelay.current()},
 		{"localPremium", s._localPremium.current()},
@@ -1500,6 +1512,13 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 		&& *tabStyle <= static_cast<int>(HorizontalTabStyle::Solid))
 		? static_cast<HorizontalTabStyle>(tabStyle->get<int>())
 		: HorizontalTabStyle::Default;
+	const auto notificationStyle = j.find("notificationStyle");
+	s._notificationStyle = (notificationStyle != j.end()
+		&& notificationStyle->is_number_integer()
+		&& *notificationStyle >= 0
+		&& *notificationStyle <= static_cast<int>(NotificationStyle::Stack))
+		? static_cast<NotificationStyle>(notificationStyle->get<int>())
+		: NotificationStyle::Cards;
 	s._windowMaterial = (material != j.end()
 		&& material->is_number_integer()
 		&& *material >= 0

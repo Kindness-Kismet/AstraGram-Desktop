@@ -217,6 +217,8 @@ Fields customFields() {
 		&S::windowMaterial, &S::setWindowMaterial, 0, 3);
 	addField(fields, "horizontalTabStyle", settings,
 		&S::horizontalTabStyle, &S::setHorizontalTabStyle, 0, 2);
+	addField(fields, "notificationStyle", settings,
+		&S::notificationStyle, &S::setNotificationStyle, 0, 1);
 	addField(fields, "removeMessageTail", settings,
 		&S::removeMessageTail, &S::setRemoveMessageTail);
 	addField(fields, "disableNotificationsDelay", settings,
