@@ -86,11 +86,12 @@ rpl::producer<bool> SetupSavedMusic(
 			if (const auto document = item->media()
 					? item->media()->document()
 					: nullptr) {
+				const auto buttonData = DocumentMusicButtonData(document, item);
 				auto musicButton = divider->entity()->add(object_ptr<Ui::SlideWrap<Profile::ExtrasMusicButton>>(
 					divider->entity(),
 					object_ptr<Profile::ExtrasMusicButton>(
 						divider->entity(),
-						DocumentMusicButtonData(document, item),
+						buttonData,
 						color,
 						[window = controller, peer]
 						{
@@ -109,7 +110,7 @@ rpl::producer<bool> SetupSavedMusic(
 											  const auto &settings = ExtrasSettings::getInstance();
 
 											  const auto contextMenu = new Ui::PopupMenu(
-												  nullptr,
+												  musicButton,
 												  st::popupMenuWithIcons);
 											  contextMenu->setAttribute(Qt::WA_DeleteOnClose);
 
@@ -117,21 +118,11 @@ rpl::producer<bool> SetupSavedMusic(
 												  settings.adaptiveCoverColor()
 													  ? tr::extras_DisableColorfulCover(tr::now)
 													  : tr::extras_EnableColorfulCover(tr::now),
-												  [=]
+												  crl::guard(musicButton, [=]
 												  {
 													  ExtrasSettings::getInstance().setAdaptiveCoverColor(!ExtrasSettings::getInstance().adaptiveCoverColor());
-
-													  const auto mediaRefreshed = item ? item->media() : nullptr;
-													  const auto documentRefreshed = mediaRefreshed
-														  ? mediaRefreshed->document()
-														  : nullptr;
-
-													  if (!documentRefreshed) {
-														  return;
-													  }
-													  musicButton->entity()->updateData(
-														  DocumentMusicButtonData(documentRefreshed, item));
-												  },
+													  musicButton->entity()->updateData(buttonData);
+												  }),
 												  &st::menuIconPalette);
 
 											  contextMenu->popup(QCursor::pos());
