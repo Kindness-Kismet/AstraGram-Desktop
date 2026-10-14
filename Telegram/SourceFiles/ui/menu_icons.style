@@ -120,7 +120,6 @@ menuIconStoriesSavedSection: icon {{ "menu/stories_saved_section", menuIconColor
 menuIconStoriesArchiveSection: icon {{ "menu/stories_archive_section", menuIconColor }};
 menuIconStoriesSave: icon {{ "menu/stories_save", menuIconColor }};
 menuIconStoriesArchive: icon {{ "menu/stories_archive", menuIconColor }};
-menuIconArchiveOpen: icon {{ "menu/archive_open", menuIconColor }};
 menuIconGroups: icon {{ "menu/groups", menuIconColor }};
 menuIconSavedMessages: icon {{ "menu/saved_messages", menuIconColor }};
 menuIconNightMode: icon {{ "menu/night_mode", menuIconColor }};

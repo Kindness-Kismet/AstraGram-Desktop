@@ -2107,7 +2107,7 @@ void Filler::fillArchiveActions() {
 		addNewWindow();
 
 		const auto hidden = controller->session().settings().archiveCollapsed();
-		const auto inmenu = controller->session().settings().archiveInMainMenu();
+		const auto inmenu = isArchiveInMainMenu(&controller->session());
 		if (!inmenu) {
 			const auto text = hidden
 				? tr::lng_context_archive_expand(tr::now)
@@ -2117,7 +2117,8 @@ void Filler::fillArchiveActions() {
 				controller->session().saveSettingsDelayed();
 			}, hidden ? &st::menuIconExpand : &st::menuIconCollapse);
 		}
-		{
+		// 主菜单没有归档入口时，不提供移到主菜单。
+		if (ExtrasSettings::getInstance().showArchiveInDrawer()) {
 			const auto text = inmenu
 				? tr::lng_context_archive_to_list(tr::now)
 				: tr::lng_context_archive_to_menu(tr::now);

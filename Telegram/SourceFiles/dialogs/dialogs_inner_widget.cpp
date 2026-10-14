@@ -106,6 +106,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <unordered_map>
 
 // AyuGram includes
+#include "extras/extras_settings.h"
 #include "extras/ui/extras_userpic.h"
 #include "extras/utils/telegram_helpers.h"
 #include "styles/style_extras_icons.h"
@@ -545,7 +546,10 @@ InnerWidget::InnerWidget(
 		}, _handleChatListEntryTagRefreshesLifetime);
 	}, lifetime());
 
-	session().settings().archiveInMainMenuChanges(
+	rpl::merge(
+		session().settings().archiveInMainMenuChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().showArchiveInDrawerValue(
+		) | rpl::skip(1) | rpl::to_empty
 	) | rpl::on_next([=] {
 		refresh();
 	}, lifetime());
@@ -752,7 +756,7 @@ void InnerWidget::refreshWithCollapsedRows(bool toTop) {
 	const auto archive = !_shownList->empty()
 		? _shownList->begin()->get()->folder()
 		: nullptr;
-	const auto inMainMenu = session().settings().archiveInMainMenu();
+	const auto inMainMenu = isArchiveInMainMenu(&session());
 	if (archive && (session().settings().archiveCollapsed() || inMainMenu)) {
 		if (_selected && _selected->folder() == archive) {
 			_selected = nullptr;
@@ -5040,7 +5044,7 @@ bool InnerWidget::needCollapsedRowsRefresh() const {
 	const auto archiveIsCollapsed = (archive != nullptr)
 		&& session().settings().archiveCollapsed();
 	const auto archiveIsInMainMenu = (archive != nullptr)
-		&& session().settings().archiveInMainMenu();
+		&& isArchiveInMainMenu(&session());
 	return archiveIsInMainMenu
 		? (collapsedHasArchive || !_skipTopDialog)
 		: archiveIsCollapsed

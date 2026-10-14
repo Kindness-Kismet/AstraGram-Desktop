@@ -54,6 +54,9 @@ ID getBareID(not_null<PeerData*> peer);
 
 bool isMessageHidden(not_null<HistoryItem*> item);
 
+// 主菜单项目关闭归档时，“移到主菜单”不生效，归档留在会话列表。
+[[nodiscard]] bool isArchiveInMainMenu(not_null<Main::Session*> session);
+
 void markReadAfterAction(not_null<History*> history);
 void readHistory(not_null<HistoryItem*> message);
 // 隐身模式只拦截被动已读；用户主动标为已读时由此发给服务器，重启后不会回到未读。

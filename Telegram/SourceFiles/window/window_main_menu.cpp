@@ -22,7 +22,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_folder.h"
 #include "data/data_group_call.h"
 #include "data/data_session.h"
-#include "data/data_stories.h"
 #include "data/data_user.h"
 #include "info/info_memento.h"
 #include "info/profile/info_profile_badge.h"
@@ -56,19 +55,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
 #include "ui/ui_utility.h"
-#include "ui/unread_badge_paint.h"
 #include "ui/vertical_list.h"
-#include "ui/widgets/menu/menu_add_action_callback_factory.h"
-#include "ui/widgets/popup_menu.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/wrap/slide_wrap.h"
 #include "wallet/wallet_panel.h"
 #include "window/themes/window_theme.h"
 #include "window/window_controller.h"
 #include "window/window_main_menu_helpers.h"
-#include "window/window_peer_menu.h"
 #include "window/window_session_controller.h"
-#include "styles/style_chat.h" // popupMenuExpandedSeparator
+#include "styles/style_chat.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
@@ -361,7 +356,6 @@ MainMenu::MainMenu(
 	setupAccountsToggle();
 	setupSetEmojiStatus();
 	setupAccounts();
-	setupArchive();
 	setupMenu();
 
 	_nightThemeSwitch.setCallback([this] {
@@ -518,107 +512,6 @@ void MainMenu::moveBadge() {
 			st::mainMenuCoverNameTop,
 			st::mainMenuCoverNameTop + st::semiboldFont->height);
 	}
-}
-
-void MainMenu::setupArchive() {
-	using namespace Settings;
-
-	const auto controller = _controller;
-	const auto folder = [=] {
-		return controller->session().data().folderLoaded(Data::Folder::kId);
-	};
-	const auto showArchive = [=](Qt::KeyboardModifiers modifiers) {
-		if (const auto f = folder()) {
-			if (modifiers & Qt::ControlModifier) {
-				controller->showInNewWindow(Window::SeparateId(
-					Window::SeparateType::Archive,
-					&controller->session()));
-			} else {
-				controller->openFolder(f);
-			}
-			controller->window().hideSettingsAndLayer();
-			controller->removeLayerBlackout();
-		}
-	};
-	const auto checkArchive = [=] {
-		const auto f = folder();
-		return f
-			&& (!f->chatsList()->empty() || f->storiesCount() > 0)
-			&& controller->session().settings().archiveInMainMenu();
-	};
-
-	const auto wrap = _menu->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			_menu,
-			object_ptr<Ui::VerticalLayout>(_menu)));
-	const auto inner = wrap->entity();
-	wrap->toggle(checkArchive(), anim::type::instant);
-
-	const auto button = AddButtonWithIcon(
-		inner,
-		tr::lng_archived_name(),
-		st::mainMenuButton,
-		{ .icon = &st::menuIconArchiveOpen, .color = &st::windowFg });
-	Ui::AddSkip(inner, st::mainMenuSectionSkip);
-	button->setAcceptBoth(true);
-	button->clicks(
-	) | rpl::on_next([=](Qt::MouseButton which) {
-		if (which == Qt::LeftButton) {
-			showArchive(button->clickModifiers());
-			return;
-		} else if (which != Qt::RightButton) {
-			return;
-		}
-		_contextMenu = base::make_unique_q<Ui::PopupMenu>(
-			this,
-			st::popupMenuExpandedSeparator);
-		Window::FillDialogsEntryMenu(
-			_controller,
-			Dialogs::EntryState{
-				.key = folder(),
-				.section = Dialogs::EntryState::Section::ContextMenu,
-			},
-			Ui::Menu::CreateAddActionCallback(_contextMenu));
-		_contextMenu->popup(QCursor::pos());
-	}, button->lifetime());
-
-	const auto now = folder();
-	auto folderValue = now
-		? (rpl::single(now) | rpl::type_erased)
-		: controller->session().data().chatsListChanges(
-		) | rpl::filter([](Data::Folder *folder) {
-			return folder && (folder->id() == Data::Folder::kId);
-		}) | rpl::take(1);
-
-	using namespace Settings;
-	Badge::AddUnread(button, rpl::single(rpl::empty) | rpl::then(std::move(
-		folderValue
-	) | rpl::map([=](not_null<Data::Folder*> folder) {
-		return folder->owner().chatsList(folder)->unreadStateChanges();
-	}) | rpl::flatten_latest() | rpl::to_empty) | rpl::map([=] {
-		const auto loaded = folder();
-		const auto state = loaded
-			? loaded->chatListBadgesState()
-			: Dialogs::BadgesState();
-		return Badge::UnreadBadge{ state.unreadCounter, true };
-	}));
-
-	rpl::merge(
-		controller->session().data().chatsListChanges(
-		) | rpl::filter([](Data::Folder *folder) {
-			return folder && (folder->id() == Data::Folder::kId);
-		}) | rpl::to_empty,
-		controller->session().data().stories().sourcesChanged(
-			Data::StorySourcesList::Hidden
-		)
-	) | rpl::on_next([=] {
-		const auto isArchiveVisible = checkArchive();
-		wrap->toggle(isArchiveVisible, anim::type::normal);
-		if (!isArchiveVisible) {
-			_contextMenu = nullptr;
-		}
-		update();
-	}, lifetime());
 }
 
 void MainMenu::setupUserpicButton() {
@@ -790,13 +683,13 @@ void MainMenu::setupMenu() {
 				tr::extras_ArchiveChatsInMenu(),
 				{ &st::menuIconArchive },
 				u"archiveChats"_q
-		)->setClickedCallback([=] {
-			if (const auto folder = controller->session().data().folderLoaded(
-					Data::Folder::kId)) {
-				controller->openFolder(folder);
-			}
-			controller->window().hideSettingsAndLayer();
-		});
+			)->setClickedCallback([=] {
+				if (const auto folder = controller->session().data().folderLoaded(
+						Data::Folder::kId)) {
+					controller->openFolder(folder);
+				}
+				controller->window().hideSettingsAndLayer();
+			});
 		}
 		const auto session = &controller->session();
 		const auto wallet = section->add(

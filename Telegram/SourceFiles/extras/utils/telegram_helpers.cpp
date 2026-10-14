@@ -34,6 +34,7 @@
 #include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
+#include "main/main_session_settings.h"
 #include "ui/emoji_config.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_entity.h"
@@ -101,6 +102,11 @@ ID getBareID(not_null<PeerData*> peer) {
 
 bool isMessageHidden(const not_null<HistoryItem*> item) {
 	return FiltersController::filtered(item);
+}
+
+bool isArchiveInMainMenu(not_null<Main::Session*> session) {
+	return ExtrasSettings::getInstance().showArchiveInDrawer()
+		&& session->settings().archiveInMainMenu();
 }
 
 void readMentions(base::weak_ptr<Data::Thread> weakThread) {
