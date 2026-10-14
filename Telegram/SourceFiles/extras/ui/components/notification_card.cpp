@@ -86,12 +86,9 @@ int chipLeftSkip(int full, int width, Core::Settings::ScreenCorner corner) {
 	return (Core::Settings::IsLeftCorner(corner) == rtl()) ? free : 0;
 }
 
-int hideAllChipWidth(int count) {
-	const auto &font = st::notifyHideAllFont;
+int hideAllChipWidth() {
 	return 2 * st::notifyHideAllPadding
-		+ font->width(tr::lng_notification_hide_all(tr::now))
-		+ st::notifyHideAllSkip
-		+ font->width(QString::number(count));
+		+ st::notifyHideAllFont->width(tr::lng_notification_hide_all(tr::now));
 }
 
 void paintCard(QPainter &p, const QRect &card, bool highlighted) {
@@ -135,7 +132,7 @@ void paintStackBadge(QPainter &p, int right, int titleTop, int more) {
 	p.drawText(badge, text, style::al_center);
 }
 
-void paintHideAllChip(QPainter &p, const QRect &chip, int count, bool over) {
+void paintHideAllChip(QPainter &p, const QRect &chip, bool over) {
 	const auto label = tr::lng_notification_hide_all(tr::now);
 	const auto &font = st::notifyHideAllFont;
 	const auto left = chip.x() + st::notifyHideAllPadding;
@@ -146,11 +143,6 @@ void paintHideAllChip(QPainter &p, const QRect &chip, int count, bool over) {
 	p.setFont(font);
 	p.setPen(over ? st::lightButtonFgOver : st::lightButtonFg);
 	p.drawText(left, top, label);
-	p.setPen(st::dialogsTextFg);
-	p.drawText(
-		left + font->width(label) + st::notifyHideAllSkip,
-		top,
-		QString::number(count));
 }
 
 QImage prepareSample(int count, Core::Settings::ScreenCorner corner) {
@@ -211,7 +203,7 @@ QImage prepareSample(int count, Core::Settings::ScreenCorner corner) {
 	}
 	if (withHideAll) {
 		const auto area = place(from, st::notifyHideAllHeight);
-		const auto chip = hideAllChipWidth(count);
+		const auto chip = hideAllChipWidth();
 		paintHideAllChip(
 			p,
 			QRect(
@@ -219,7 +211,6 @@ QImage prepareSample(int count, Core::Settings::ScreenCorner corner) {
 				area.y(),
 				chip,
 				area.height()),
-			count,
 			false);
 	}
 	p.end();

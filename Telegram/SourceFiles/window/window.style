@@ -88,7 +88,6 @@ notifyReplyIcon: icon {{ "menu/reply-16x16", windowFg }};
 
 notifyHideAllHeight: 24px;
 notifyHideAllPadding: 10px;
-notifyHideAllSkip: 6px;
 notifyHideAllFont: font(12px);
 
 notifyStackPeek: 6px;

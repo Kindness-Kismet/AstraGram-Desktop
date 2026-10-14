@@ -34,14 +34,14 @@ struct RowLayout {
 	int full,
 	int width,
 	Core::Settings::ScreenCorner corner);
-[[nodiscard]] int hideAllChipWidth(int count);
+[[nodiscard]] int hideAllChipWidth();
 
 // 底色取主题窗口色，描边是白色高光；圆角不超过高度的一半。
 void paintCard(QPainter &p, const QRect &card, bool highlighted = false);
 // 叠放收起时的剩余条数，画在标题行右端。
 void paintStackBadge(QPainter &p, int right, int titleTop, int more);
-// 胶囊里先写“全部隐藏”，后跟灰色的条数。
-void paintHideAllChip(QPainter &p, const QRect &chip, int count, bool over);
+// 胶囊里只写“全部隐藏”，不显示条数。
+void paintHideAllChip(QPainter &p, const QRect &chip, bool over);
 
 // 设置页悬停预览：按当前样式画出 count 条示例通知，最新一条靠近 corner。
 [[nodiscard]] QImage prepareSample(

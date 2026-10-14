@@ -387,7 +387,6 @@ void Manager::moveWidgets() {
 	if (!_hideAll) {
 		_hideAll = std::make_unique<HideAllButton>(this, notificationStartPosition(), lastShiftCurrent, notificationShiftDirection());
 	}
-	_hideAll->setCount(total);
 	_hideAll->changeShift(shift);
 	_hideAll->stopHiding();
 }
@@ -1533,18 +1532,10 @@ void HideAllButton::stopHiding() {
 	hideStop();
 }
 
-void HideAllButton::setCount(int count) {
-	if (_count == count) {
-		return;
-	}
-	_count = count;
-	updateSize();
-}
-
 // 靠边的胶囊，宽度随文字变化。
 void HideAllButton::updateSize() {
 	const auto height = st::notifyHideAllHeight;
-	const auto width = Card::hideAllChipWidth(_count);
+	const auto width = Card::hideAllChipWidth();
 	setLeftSkip(Card::chipLeftSkip(
 		notifyWidth(),
 		width,
@@ -1579,7 +1570,7 @@ void HideAllButton::mouseReleaseEvent(QMouseEvent *e) {
 void HideAllButton::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 	p.setClipRect(e->rect());
-	Card::paintHideAllChip(p, rect(), _count, _mouseOver);
+	Card::paintHideAllChip(p, rect(), _mouseOver);
 }
 
 } // namespace internal

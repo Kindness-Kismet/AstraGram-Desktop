@@ -351,7 +351,6 @@ public:
 	void startHiding();
 	void startHidingFast();
 	void stopHiding();
-	void setCount(int count);
 	void updateSize();
 
 protected:
@@ -364,7 +363,6 @@ protected:
 private:
 	bool _mouseOver = false;
 	bool _mouseDown = false;
-	int _count = 0;
 
 };
 
