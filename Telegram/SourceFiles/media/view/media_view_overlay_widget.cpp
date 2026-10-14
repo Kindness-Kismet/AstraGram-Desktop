@@ -770,6 +770,8 @@ OverlayWidget::OverlayWidget()
 		startSpeedBoost();
 	});
 
+	_closeByClickTimer.setCallback([=] { close(); });
+
 	_frameStepThrottle.setCallback([=] {
 		flushPendingFrameStep();
 	});
@@ -3378,6 +3380,28 @@ void OverlayWidget::zoomUpdate(
 		}
 	}
 	setZoomLevel(newZoom, false, anchor);
+}
+
+void OverlayWidget::toggleZoomAt(QPoint position) {
+	// 能完整放下的图默认按原始大小显示，放不下的缩小到适应窗口。
+	const auto fit = (_zoomToDefault >= 0.) ? 0 : kZoomToScreenLevel;
+	if (_zoom != fit) {
+		auto newZoom = fit;
+		zoomUpdate(newZoom);
+		return;
+	}
+	// 缩得较小的大图放到原始大小，其余放大到两倍。
+	auto newZoom = (fit == kZoomToScreenLevel && _zoomToDefault <= -0.5)
+		? 0
+		: 1;
+	zoomUpdate(newZoom, position);
+}
+
+bool OverlayWidget::zoomsByDoubleClickAt(QPoint position) const {
+	return !_stories
+		&& !_fullScreenVideo
+		&& contentShown()
+		&& finalContentRect().contains(position);
 }
 
 void OverlayWidget::clearSession() {
@@ -8762,6 +8786,7 @@ void OverlayWidget::handleMousePress(
 		QPoint position,
 		Qt::MouseButton button) {
 	updateOver(position);
+	_closeByClickTimer.cancel();
 	if (_menu || !_receiveMouse) {
 		return;
 	}
@@ -8837,6 +8862,13 @@ bool OverlayWidget::handleDoubleClick(
 		Qt::MouseButton button) {
 	updateOver(position);
 
+	if (button == Qt::LeftButton
+		&& _over == Over::None
+		&& zoomsByDoubleClickAt(position)) {
+		_closeByClickTimer.cancel();
+		toggleZoomAt(position);
+		return true;
+	}
 	if (_over != Over::Video || button != Qt::LeftButton) {
 		return false;
 	}
@@ -9459,7 +9491,10 @@ void OverlayWidget::handleMouseRelease(
 				|| documentContentShown()
 				|| !documentBubbleShown()
 				|| !_docRect.contains(position)) {
-				if (!_stories || _stories->closeByClickAt(position)) {
+				if (zoomsByDoubleClickAt(position)) {
+					_closeByClickTimer.callOnce(
+						QApplication::doubleClickInterval());
+				} else if (!_stories || _stories->closeByClickAt(position)) {
 					close();
 				}
 			}
@@ -9733,6 +9768,7 @@ Window::SessionController *OverlayWidget::findWindow(bool switchTo) const {
 // #TODO unite and check
 void OverlayWidget::clearBeforeHide() {
 	Ui::Tooltip::Hide();
+	_closeByClickTimer.cancel();
 	ExtrasState::disableGhostModeOnStoryClose(_storiesSession);
 	checkSingleViewMediaBurn();
 	_message = nullptr;

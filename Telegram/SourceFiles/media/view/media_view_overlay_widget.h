@@ -580,6 +580,10 @@ private:
 	void zoomUpdate(
 		int32 &newZoom,
 		std::optional<QPoint> anchor = std::nullopt);
+	// 双击在默认大小与放大之间切换，放大时以点击位置为中心。
+	void toggleZoomAt(QPoint position);
+	// 内容上的双击用来缩放，所以单击内容要等双击判定结束才关闭。
+	[[nodiscard]] bool zoomsByDoubleClickAt(QPoint position) const;
 	[[nodiscard]] QPoint zoomAnchor(QPointF globalPosition) const;
 
 	void paintRadialLoading(not_null<Renderer*> renderer);
@@ -919,6 +923,7 @@ private:
 	bool _touchRightButton = false;
 	base::Timer _touchTimer;
 	QPoint _touchStart;
+	base::Timer _closeByClickTimer;
 
 	QString _saveMsgFilename;
 	QRect _saveMsg;
