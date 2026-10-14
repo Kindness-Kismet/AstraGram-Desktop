@@ -13,6 +13,7 @@
 #include "data/data_compose_stash.h"
 #include "data/data_document.h"
 #include "data/data_drafts.h"
+#include "data/data_folder.h"
 #include "data/data_history_messages.h"
 #include "data/data_media_types.h"
 #include "data/data_photo.h"
@@ -601,6 +602,29 @@ Result removeSimulationMessage(const QStringList &args) {
 	return Result::Ok();
 }
 
+// 只在本地改归属，走正式的移入移出列表流程，不发归档请求。
+Result archiveSimulationChat(const QStringList &args) {
+	if (args.size() != 2 || (args[1] != u"on"_q && args[1] != u"off"_q)) {
+		return Result::Err(u"usage: simulation.archive <peerId> <on|off>"_q);
+	}
+	const auto peer = findPeer(args[0]);
+	if (!peer || !isSimulationSession(&peer->session())) {
+		return Result::Err(u"simulation mode is required"_q);
+	}
+	const auto history = peer->owner().historyLoaded(peer);
+	if (!history || !history->inChatList()) {
+		return Result::Err(u"chat is not in the chat list"_q);
+	}
+	if (args[1] == u"on"_q) {
+		history->setFolder(peer->owner().folder(Data::Folder::kId));
+	} else {
+		history->clearFolder();
+	}
+	return Result::Ok(Compact(Json{
+		{ "archived", history->folder() != nullptr },
+	}));
+}
+
 } // namespace
 
 const HandlerMap &messageBusinessHandlers() {
@@ -618,6 +642,7 @@ const HandlerMap &messageBusinessHandlers() {
 		{ u"media.open"_q, &openMedia },
 		{ u"message.shot"_q, &openMessageShot },
 		{ u"simulation.remove-message"_q, &removeSimulationMessage },
+		{ u"simulation.archive"_q, &archiveSimulationChat },
 		{ u"mention.resolve"_q, &resolveMention },
 		{ u"mention.send"_q, &sendMention },
 	};

@@ -99,6 +99,7 @@ GENERIC_COMMANDS = {
     "message.inspect": "查询消息正文与删除、过滤、视图状态：<会话编号> <消息编号>",
     "message.shot": "打开消息截图预览：<会话编号> <消息编号>...",
     "simulation.remove-message": "销毁本地模拟消息，验证消息消失后的界面：<会话编号> <消息编号>",
+    "simulation.archive": "在模拟模式本地移入或移出归档，验证列表增删：<会话编号> <on|off>",
     "message.translate": "调用消息业务逻辑在原气泡翻译：<会话编号> <消息编号>",
     "message.show-original": "恢复消息原文并取消待处理翻译：<会话编号> <消息编号>",
     "message.edit-local": "在模拟模式触发原生编辑流程：<会话编号> <消息编号> <文字>",
