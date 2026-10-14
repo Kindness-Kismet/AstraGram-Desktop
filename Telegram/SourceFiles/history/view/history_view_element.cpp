@@ -1510,9 +1510,9 @@ float64 Element::deletedOpacity() const {
 			const auto allDeleted = ranges::all_of(
 				group->items,
 				&HistoryItem::isDeleted);
-			return allDeleted ? 0.4 : 1.;
+			return allDeleted ? 0.6 : 1.;
 		}
-		const auto opacity = _deletedOpacityAnimation.value(0.4);
+		const auto opacity = _deletedOpacityAnimation.value(0.6);
 		if (!_deletedOpacityAnimation.animating()) {
 			_deletedOpacityAnimationTarget = nullptr;
 		}
@@ -1540,7 +1540,7 @@ void Element::startDeletedAnimation() {
 			return false;
 		},
 		1.,
-		0.4,
+		0.6,
 		500,
 		anim::easeOutCubic);
 }

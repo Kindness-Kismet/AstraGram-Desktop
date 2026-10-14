@@ -510,12 +510,12 @@ void GroupedMedia::draw(Painter &p, const PaintContext &context) const {
 						return true;
 					},
 					1.,
-					0.4,
+					0.6,
 					500,
 					anim::easeOutCubic);
 				part.item->markDeletedAnimated();
 			}
-			const auto itemOpacity = part.deletedAnimation.value(0.4);
+			const auto itemOpacity = part.deletedAnimation.value(0.6);
 			const auto adjustedOpacity = (elementDeletedOpacity > 0.)
 				? (itemOpacity / elementDeletedOpacity)
 				: 0.;
