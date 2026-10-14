@@ -144,8 +144,12 @@ QImage ViewerHost::grabBackdrop() const {
 	if (!_host) {
 		return {};
 	}
-	// 宿主可能用了透明材质，先垫窗口底色，背景才是不透明的。
-	const auto image = Ui::GrabWidgetToImage(_host, QRect(), st::windowBg->c);
+	// 宿主开启材质时绘制会把底色清成透明，只能渲染完再垫到下层。
+	auto image = Ui::GrabWidgetToImage(_host, QRect(), Qt::transparent);
+	auto p = QPainter(&image);
+	p.setCompositionMode(QPainter::CompositionMode_DestinationOver);
+	p.fillRect(image.rect(), st::windowBg);
+	p.end();
 	return prepareBackdrop(image, image.size());
 }
 
