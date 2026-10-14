@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/themes/window_theme_editor.h"
 #include "ui/boxes/confirm_box.h"
 #include "data/components/promo_suggestions.h"
+#include "data/data_session.h"
 #include "data/data_thread.h"
 #include "settings/settings_common.h"
 #include "wallet/wallet_panel.h"
@@ -645,19 +646,31 @@ void Controller::openInMediaView(Media::View::OpenRequest &&request) {
 		if (suggestGhostMode) {
 			const auto controller = request.controller();
 			const auto context = request.storiesContext();
+			const auto storyId = story->fullId();
+			const auto open = crl::guard(controller, [=](bool enableGhost) {
+				const auto session = &controller->session();
+				const auto story = session->data().stories().lookup(storyId);
+				if (!story) {
+					return;
+				}
+				if (enableGhost) {
+					ExtrasSettings::ghost(session).setGhostModeEnabled(true);
+					ExtrasState::setDisableGhostModeOnStoryClose(session);
+				}
+				_openInMediaViewRequests.fire(
+					Media::View::OpenRequest(controller, *story, context));
+			});
 			show(Ui::MakeConfirmBox({
 				.text = tr::extras_SuggestGhostModeStoryText(tr::now, tr::rich),
 				.confirmed = [=](Fn<void()> close) {
+					const auto onstack = open;
 					close();
-					ExtrasSettings::ghost(&story->session()).setGhostModeEnabled(true);
-					ExtrasState::setDisableGhostModeOnStoryClose(&story->session());
-					_openInMediaViewRequests.fire(
-						Media::View::OpenRequest(controller, story, context));
+					onstack(true);
 				},
 				.cancelled = [=](Fn<void()> close) {
+					const auto onstack = open;
 					close();
-					_openInMediaViewRequests.fire(
-						Media::View::OpenRequest(controller, story, context));
+					onstack(false);
 				},
 				.confirmText = tr::extras_SuggestGhostModeStoryActionTextYes(),
 				.cancelText = tr::extras_SuggestGhostModeStoryActionTextNo(),
