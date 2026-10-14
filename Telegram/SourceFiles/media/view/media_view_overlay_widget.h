@@ -484,6 +484,10 @@ private:
 	void flushPendingFrameStep();
 
 	void refreshClipControllerGeometry();
+	// 窗口内样式的左右留白随窗口宽度收窄，窄窗口下翻页按钮可以压在内容边缘。
+	[[nodiscard]] int lightboxSidePadding() const;
+	// 窗口内顶栏放不下时收起部分媒体操作按钮。
+	void collapseTopBarActions();
 	// 窗口内样式的视频控制条盖在视频底边内侧，不占用内容下方的空间。
 	[[nodiscard]] bool controllerOverContent() const;
 	// 控制条盖在画面上时随其它控件一起自动隐藏，指针停在控制条上时不隐藏。

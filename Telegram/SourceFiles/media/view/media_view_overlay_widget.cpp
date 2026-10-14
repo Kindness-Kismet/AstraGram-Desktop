@@ -278,6 +278,9 @@ constexpr auto kBackdropRefreshDelay = crl::time(100);
 constexpr auto kTopBarSecondaryOpacity = 0.62;
 constexpr auto kTopBarSeparatorOpacity = 0.2;
 
+// 窗口内顶栏放不下时收起部分按钮，保证名字和时间至少有这么宽。
+constexpr auto kTopBarMinTextWidth = 96;
+
 // 窗口内翻页按钮的底色强度：常驻约为白色 10%，悬停约为 22%。
 constexpr auto kLightboxNavIdleLevel = 0.36;
 constexpr auto kLightboxNavOverLevel = 0.8;
@@ -2009,6 +2012,9 @@ void OverlayWidget::updateControls() {
 		&& (_photo || (_document && _document->isImage()));
 	_recognizeVisible = _recognitionResult.success
 		&& !_recognitionResult.items.empty();
+	if (lightbox) {
+		collapseTopBarActions();
+	}
 	const auto navRect = [&](int i) {
 		if (lightbox) {
 			// 顶栏自右向左：关闭、更多、全屏，其余媒体操作排在全屏左侧。
@@ -2162,9 +2168,9 @@ void OverlayWidget::updateControls() {
 }
 
 void OverlayWidget::resizeCenteredControls() {
-	// 窗口内样式的名字和时间在顶栏，底部只需让出翻页按钮。
+	// 窗口内样式的名字和时间在顶栏，底部左右只留出翻页按钮的边距。
 	const auto bottomSkip = lightboxStyle()
-		? st::extrasViewerContentPadding.left()
+		? st::extrasViewerNavSkip
 		: (std::max(
 			_dateNav.left() + _dateNav.width(),
 			_headerNav.left() + _headerNav.width())
@@ -3070,9 +3076,8 @@ void OverlayWidget::resizeContentByScreenSize() {
 		return;
 	}
 	recountSkipTop();
-	const auto &padding = st::extrasViewerContentPadding;
 	const auto availableWidth = (lightboxStyle() && !_fullScreenVideo)
-		? (width() - padding.left() - padding.right())
+		? (width() - 2 * lightboxSidePadding())
 		: width();
 	const auto countZoomFor = [&](int outerw, int outerh) {
 		auto result = float64(outerw) / _width;
@@ -5798,10 +5803,20 @@ void OverlayWidget::refreshClipControllerGeometry() {
 				video.y() + video.height(),
 				video.y() + controllerHeight + 2 * inner),
 			controllerBottom);
+		const auto left = video.x() + (video.width() - controllerWidth) / 2;
+		auto top = bottom - inner - controllerHeight;
+		const auto navSize = st::extrasViewerNavSize;
+		const auto navTop = _minUsedTop + (_maxUsedHeight - navSize) / 2;
+		if (left < st::extrasViewerNavSkip + navSize
+			&& top < navTop + navSize
+			&& top + controllerHeight > navTop) {
+			// 窄窗口里控制条会压住翻页按钮，改贴内容区底部。
+			top = std::max(
+				top,
+				_skipTop + _availableHeight - inner - controllerHeight);
+		}
 		_streamed->controls->resize(controllerWidth, controllerHeight);
-		_streamed->controls->move(
-			video.x() + (video.width() - controllerWidth) / 2,
-			bottom - inner - controllerHeight);
+		_streamed->controls->move(left, top);
 		Ui::SendPendingMoveResizeEvents(_streamed->controls.get());
 		return;
 	}
@@ -5815,6 +5830,40 @@ void OverlayWidget::refreshClipControllerGeometry() {
 			- _streamed->controls->height()
 			- st::mediaviewCaptionPadding.bottom()));
 	Ui::SendPendingMoveResizeEvents(_streamed->controls.get());
+}
+
+int OverlayWidget::lightboxSidePadding() const {
+	return std::clamp(
+		width() / 9,
+		st::extrasViewerNavSkip,
+		st::extrasViewerContentPadding.left());
+}
+
+void OverlayWidget::collapseTopBarActions() {
+	using namespace ExtrasFeatures::MediaViewer;
+	const auto minRight = st::extrasViewerTopBarPadding.left()
+		+ st::extrasViewerUserpicSize
+		+ 2 * st::extrasViewerUserpicSkip
+		+ style::ConvertScale(kTopBarMinTextWidth);
+	const auto fits = [&] {
+		const auto actions = int(_rotateVisible)
+			+ int(_shareVisible)
+			+ int(_saveVisible)
+			+ int(_drawVisible)
+			+ int(_recognizeVisible);
+		const auto leftmost = topBarButtonRect(
+			width(),
+			_minUsedTop,
+			kTopBarGroupSize + actions);
+		return leftmost.x() >= minRight;
+	};
+	// 转发和保存在更多菜单里也有，先收起它们。
+	for (const auto visible : { &_shareVisible, &_saveVisible }) {
+		if (fits()) {
+			return;
+		}
+		*visible = false;
+	}
 }
 
 bool OverlayWidget::controllerOverContent() const {
