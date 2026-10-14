@@ -25,21 +25,6 @@ namespace {
 constexpr auto kBackdropDownscale = 8;
 constexpr auto kBackdropBlurRadius = 3;
 
-[[nodiscard]] QImage prepareBackdrop(const QImage &image, QSize size) {
-	auto downscaled = image.scaled(
-		size / kBackdropDownscale,
-		Qt::IgnoreAspectRatio,
-		Qt::SmoothTransformation);
-	downscaled = Images::BlurLargeImage(std::move(downscaled), kBackdropBlurRadius);
-	auto result = downscaled.scaled(
-		size,
-		Qt::IgnoreAspectRatio,
-		Qt::SmoothTransformation);
-	QPainter(&result).fillRect(result.rect(), backdropTint());
-	result.setDevicePixelRatio(image.devicePixelRatio());
-	return result;
-}
-
 #ifdef Q_OS_WIN
 // 查看器是独立窗口，激活后宿主会改画未激活的边框和阴影；
 // 查看器激活期间宿主保持激活外观。
@@ -85,6 +70,32 @@ private:
 
 QColor backdropTint() {
 	return QColor(10, 12, 16, 189);
+}
+
+QImage grabOpaque(not_null<QWidget*> widget, QRect rect) {
+	// 开启材质时绘制会把底色清成透明，只能渲染完再垫到下层。
+	auto image = Ui::GrabWidgetToImage(widget, rect, Qt::transparent);
+	auto p = QPainter(&image);
+	p.setCompositionMode(QPainter::CompositionMode_DestinationOver);
+	p.fillRect(image.rect(), st::windowBg);
+	p.end();
+	return image;
+}
+
+QImage prepareBackdrop(const QImage &image) {
+	const auto size = image.size();
+	auto downscaled = image.scaled(
+		size / kBackdropDownscale,
+		Qt::IgnoreAspectRatio,
+		Qt::SmoothTransformation);
+	downscaled = Images::BlurLargeImage(std::move(downscaled), kBackdropBlurRadius);
+	auto result = downscaled.scaled(
+		size,
+		Qt::IgnoreAspectRatio,
+		Qt::SmoothTransformation);
+	QPainter(&result).fillRect(result.rect(), backdropTint());
+	result.setDevicePixelRatio(image.devicePixelRatio());
+	return result;
 }
 
 bool inWindowEnabled() {
@@ -199,13 +210,7 @@ QImage ViewerHost::grabBackdrop() const {
 	if (!_host) {
 		return {};
 	}
-	// 宿主开启材质时绘制会把底色清成透明，只能渲染完再垫到下层。
-	auto image = Ui::GrabWidgetToImage(_host, QRect(), Qt::transparent);
-	auto p = QPainter(&image);
-	p.setCompositionMode(QPainter::CompositionMode_DestinationOver);
-	p.fillRect(image.rect(), st::windowBg);
-	p.end();
-	return prepareBackdrop(image, image.size());
+	return prepareBackdrop(grabOpaque(_host));
 }
 
 void ViewerHost::setFullScreenBackdrop(bool enabled) {

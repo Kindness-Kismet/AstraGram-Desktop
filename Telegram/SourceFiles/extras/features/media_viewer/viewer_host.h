@@ -15,6 +15,10 @@ class Backend;
 namespace ExtrasFeatures::MediaViewer {
 
 [[nodiscard]] QColor backdropTint();
+// 渲染 rect 区域并垫上窗口底色，开启材质时也不透明；只在主线程调用。
+[[nodiscard]] QImage grabOpaque(not_null<QWidget*> widget, QRect rect = QRect());
+// 模糊并叠加暗色，与查看器背景一致；不访问样式，可在工作线程调用。
+[[nodiscard]] QImage prepareBackdrop(const QImage &image);
 
 // 设置开启且平台支持时，查看器只铺满打开它的主窗口。
 [[nodiscard]] bool inWindowEnabled();

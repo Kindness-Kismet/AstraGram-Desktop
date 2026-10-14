@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "editor/editor_layer_widget.h"
 
+#include "extras/features/media_viewer/viewer_host.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 
@@ -22,29 +23,6 @@ constexpr auto kFadeBackgroundDuration = crl::time(200);
 // Thread: Main.
 [[nodiscard]] bool IsNightMode() {
 	return (st::windowBg->c.lightnessF() < 0.5);
-}
-
-[[nodiscard]] QColor BlurOverlayColor(bool night) {
-	return QColor(16, 16, 16, night ? 128 : 192);
-}
-
-[[nodiscard]] QImage ProcessBackground(QImage image, bool night) {
-	const auto size = image.size();
-	auto p = QPainter(&image);
-	p.fillRect(
-		QRect(QPoint(), image.size() / image.devicePixelRatio()),
-		BlurOverlayColor(night));
-	p.end();
-	return Images::DitherImage(
-		Images::BlurLargeImage(
-			std::move(image).scaled(
-				size / style::ConvertScale(4),
-				Qt::IgnoreAspectRatio,
-				Qt::SmoothTransformation),
-			24).scaled(
-				size,
-				Qt::IgnoreAspectRatio,
-				Qt::SmoothTransformation));
 }
 
 } // namespace
@@ -80,7 +58,8 @@ bool LayerWidget::eventHook(QEvent *e) {
 
 void LayerWidget::start() {
 	_backgroundNight = IsNightMode();
-	_background = ProcessBackground(renderBackground(), _backgroundNight);
+	_background = ExtrasFeatures::MediaViewer::prepareBackdrop(
+		renderBackground());
 
 	sizeValue(
 	) | rpl::on_next([=](const QSize &size) {
@@ -110,12 +89,6 @@ void LayerWidget::checkBackgroundStale() {
 QImage LayerWidget::renderBackground() {
 	const auto parent = parentWidget();
 	const auto target = parent->parentWidget();
-	Ui::SendPendingMoveResizeEvents(target);
-
-	const auto ratio = style::DevicePixelRatio();
-	auto image = QImage(size() * ratio, QImage::Format_ARGB32_Premultiplied);
-	image.setDevicePixelRatio(ratio);
-
 	const auto shown = !parent->isHidden();
 	const auto focused = shown && Ui::InFocusChain(parent);
 	if (shown) {
@@ -124,9 +97,7 @@ QImage LayerWidget::renderBackground() {
 		}
 		parent->hide();
 	}
-	auto p = QPainter(&image);
-	Ui::RenderWidget(p, target, QPoint(), geometry());
-	p.end();
+	auto image = ExtrasFeatures::MediaViewer::grabOpaque(target, geometry());
 
 	if (shown) {
 		parent->show();
@@ -159,8 +130,8 @@ void LayerWidget::cacheBackground() {
 	_backgroundCaching = true;
 	const auto weak = base::make_weak(this);
 	const auto night = IsNightMode();
-	crl::async([weak, night, image = renderBackground()]() mutable {
-		auto result = ProcessBackground(image, night);
+	crl::async([weak, night, image = renderBackground()] {
+		auto result = ExtrasFeatures::MediaViewer::prepareBackdrop(image);
 		crl::on_main([weak, night, result = std::move(result)]() mutable {
 			if (const auto strong = weak.get()) {
 				strong->backgroundReady(std::move(result), night);
