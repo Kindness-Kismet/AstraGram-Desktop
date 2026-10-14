@@ -1,21 +1,15 @@
-- Changed how photos and videos open on Windows; they now open inside the app window by default over a blurred backdrop, with sender information and actions at the top, round previous and next buttons, and a thumbnail strip with a position counter; you can turn off this behavior in settings
-- Added opening, closing and full-screen transitions to the in-window media viewer, so you can now follow media as it expands from its chat thumbnail and returns to it, or fades in place when the thumbnail is out of view; full screen keeps the app window in place, uses a dimmed system blur backdrop, and lets you return to the window with Esc
-- Improved the in-window media viewer controls, which now fit small windows, keep video controls clear of navigation buttons, move forward and save into the more menu when space is tight, and give video controls the light or dark app theme; button tooltips explain actions, controls hide when idle and stay visible under the pointer, and the more and video settings menus open on click
-- Added custom logos for the folder sidebar and the top of the chat list, so you can now choose an image fitted to the original logo size and optionally make it follow the theme color
-- Changed how video previews work; the context menu now offers View Video Cover to open the uploader's cover or Telegram-generated thumbnail as a large image, replacing the timestamped frame grid and its playback shortcuts
-- Fixed an issue with returning from settings to a chat that previously caused photos and stickers to remain frozen as placeholders during the transition and then appear abruptly
-- Fixed an issue with menus in bot mini apps that previously caused embedded web pages to cover popup menus
-- Fixed an issue with app startup on Windows that previously caused all desktop icons to refresh even when the app icon had not changed
-- Changed how retained deleted messages look; with semi-transparent display enabled, they now use 60% opacity instead of 40%, making text and album items easier to see
+- Changed how the in-window media viewer opens and closes; it now fades in place instead of expanding from the chat thumbnail and shrinking back into it
+- Changed how the in-window media viewer shows captions; it no longer repeats the message text above the thumbnail strip
+- Added elastic dragging for zoomed photos and videos, so you can now pull them past the edge to see parts under the viewer controls, and they spring back when you let go
+- Fixed an issue with the in-window media viewer backdrop that previously caused the chat to show through sharply instead of blurred when Window Background was set to Mica, Acrylic or Blur
+- Fixed an issue with the app window shadow on Windows that previously caused it to shrink when the in-window media viewer opened and pop back abruptly when it closed
+- Fixed an issue with the in-window media viewer corners on Windows 11 that previously caused them to cover the app window border at the corners and along the top edge
 
 ---
 
-- 调整了 Windows 上图片和视频的打开行为，现在默认在应用窗口内打开，背景模糊，顶部显示发送者和操作按钮，两侧提供圆形翻页按钮，底部提供带位置计数的缩略图条；可在设置中关闭窗口内查看
-- 新增了窗口内媒体查看器的开合与全屏动画，现在可以看到媒体从聊天缩略图展开并收回，缩略图不在可见区域时则原地淡入淡出；全屏时主窗口保持原位，背景使用暗化的系统模糊，按 Esc 可以返回窗口内
-- 对窗口内媒体查看器的控件进行了改善，这使得小窗口下的布局更紧凑，视频控制条不会遮挡翻页按钮，空间不足时转发和保存会移入更多菜单，视频控制条跟随浅色或深色主题；按钮支持悬停提示，闲置时控件自动隐藏，悬停时保持显示，更多菜单和视频设置菜单点击才会打开
-- 新增了文件夹栏和对话列表顶部的自定义标志，现在可以选择图片并自动适配原有标志大小，也可以让标志跟随主题颜色
-- 调整了视频预览的行为，现在右键菜单提供“查看视频封面”，可大图查看上传者设置的封面或 Telegram 生成的缩略图，替换原有带时间的预览帧网格及其播放入口
-- 修复了关于从设置返回对话的错误，该问题曾导致照片和贴纸在过渡期间停留在占位画面，随后突然出现
-- 修复了关于机器人小程序菜单的错误，该问题曾导致内嵌网页遮住弹出菜单
-- 修复了关于 Windows 应用启动的错误，该问题曾导致应用图标未变化时也刷新整个桌面的图标
-- 调整了留档撤回消息的显示行为，现在开启“半透明显示已删除消息”时，显示强度从 40% 提高到 60%，文字和相册内容更清楚
+- 调整了窗口内媒体查看器的开合行为，现在打开和关闭时原地淡入淡出，不再从聊天缩略图展开或收回
+- 调整了窗口内媒体查看器的说明文字显示，现在不再在缩略图条上方重复显示消息文字
+- 新增了放大图片和视频的弹性拖动，现在可以拖过边界查看被查看器控件遮住的部分，松手后自动回弹
+- 修复了关于窗口内媒体查看器背景的错误，该问题曾导致窗口背景设为云母、亚克力或磨砂玻璃时聊天内容清晰透出，没有被模糊
+- 修复了关于 Windows 主窗口阴影的错误，该问题曾导致打开窗口内媒体查看器时阴影变小，关闭时又突然恢复
+- 修复了关于 Windows 11 上窗口内媒体查看器圆角的错误，该问题曾导致四角和顶边盖住主窗口边框
