@@ -436,13 +436,15 @@ PointState UnwrappedMedia::pointState(QPoint point) const {
 		: _contentSize.height();
 	const auto inner = QRect(usex, usey, usew, useh);
 
-	if (infoHeight
-		&& point.x() < calculateFullRight(inner)
-		&& point.y() > datey) {
-		return PointState::Inside;
-	}
-
-	return inner.contains(point) ? PointState::Inside : PointState::Outside;
+	const auto infoWidth = bottomInfoWidth();
+	const auto info = QRect(
+		calculateFullRight(inner) - infoWidth,
+		datey,
+		infoWidth,
+		infoHeight);
+	return (inner.contains(point) || info.contains(point))
+		? PointState::Inside
+		: PointState::Outside;
 }
 
 TextState UnwrappedMedia::textState(QPoint point, StateRequest request) const {
