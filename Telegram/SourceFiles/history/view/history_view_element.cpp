@@ -532,6 +532,11 @@ std::unique_ptr<Ui::PathShiftGradient> MakePathShiftGradient(
 		st->paletteChanged());
 }
 
+bool ElementDelegate::elementContentUnderCursor(
+		not_null<const Element*> view) {
+	return elementUnderCursor(view);
+}
+
 bool DefaultElementDelegate::elementUnderCursor(
 		not_null<const Element*> view) {
 	return false;

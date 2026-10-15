@@ -735,7 +735,6 @@ bool UnwrappedMedia::needInfoDisplay() const {
 	const auto item = _parent->data();
 	if (item->isSending()
 		|| item->hasFailed()
-		|| _parent->isUnderCursor()
 		|| (_parent->delegate()->elementContext() == Context::ChatPreview)) {
 		return true;
 	}
@@ -744,10 +743,12 @@ bool UnwrappedMedia::needInfoDisplay() const {
 		const auto document = media ? media->document() : nullptr;
 		// 按消息附件识别贴纸，排除共用贴纸渲染的大表情和骰子。
 		if (document && document->sticker()) {
-			return ExtrasFeatures::MessageShot::isTakingShot();
+			return _parent->delegate()->elementContentUnderCursor(_parent)
+				|| ExtrasFeatures::MessageShot::isTakingShot();
 		}
 	}
-	return _parent->rightActionSize()
+	return _parent->isUnderCursor()
+		|| _parent->rightActionSize()
 		|| _parent->isLastAndSelfMessage()
 		|| (_parent->hasRightLayout()
 			&& _content->alwaysShowOutTimestamp());

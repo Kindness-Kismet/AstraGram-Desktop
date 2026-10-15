@@ -201,6 +201,12 @@ public:
 			not_null<const Element*> view) override {
 		return (Element::Moused() == view);
 	}
+	bool elementContentUnderCursor(
+			not_null<const Element*> view) override {
+		return _widget
+			&& _widget->underMouse()
+			&& (Element::Hovered() == view);
+	}
 	HistoryView::SelectionModeResult elementInSelectionMode(
 			const Element *view) override {
 		if (view && view->data()->isSponsored()) {

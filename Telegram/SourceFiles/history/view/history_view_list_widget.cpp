@@ -2515,6 +2515,13 @@ bool ListWidget::elementUnderCursor(
 	return (_overElement == view);
 }
 
+bool ListWidget::elementContentUnderCursor(
+		not_null<const HistoryView::Element*> view) {
+	return underMouse()
+		&& (_overElement == view)
+		&& (_overState.pointState != PointState::Outside);
+}
+
 SelectionModeResult ListWidget::elementInSelectionMode(
 		const HistoryView::Element *view) {
 	if (view && !_delegate->listIsItemGoodForSelection(view->data())) {
@@ -5217,6 +5224,7 @@ void ListWidget::mouseActionUpdate() {
 		: strictFindItemByY(point.y());
 	const auto item = view ? view->data().get() : nullptr;
 	const auto itemPoint = mapPointToItem(point, view);
+	const auto wasInside = (_overState.pointState != PointState::Outside);
 	_overState = MouseState(
 		item ? item->fullId() : FullMsgId(),
 		view ? view->height() : 0,
@@ -5227,6 +5235,9 @@ void ListWidget::mouseActionUpdate() {
 	if (viewChanged) {
 		repaintItem(_overElement);
 		_overElement = view;
+		repaintItem(_overElement);
+	} else if (wasInside
+			!= (_overState.pointState != PointState::Outside)) {
 		repaintItem(_overElement);
 	}
 	if (_reactionsManager) {

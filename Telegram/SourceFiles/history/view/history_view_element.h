@@ -110,6 +110,7 @@ class ElementDelegate {
 public:
 	virtual Context elementContext() = 0;
 	virtual bool elementUnderCursor(not_null<const Element*> view) = 0;
+	virtual bool elementContentUnderCursor(not_null<const Element*> view);
 	virtual SelectionModeResult elementInSelectionMode(
 		const Element *view) = 0;
 	virtual bool elementIntersectsRange(
