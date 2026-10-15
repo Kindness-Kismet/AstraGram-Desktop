@@ -604,7 +604,6 @@ void Content::setupContent() {
 	_card->raise();
 	_pinned->raise();
 	_cardButton->raise();
-	_tabsShadow->raise();
 	_headerShadow->raise();
 	_stripShadow->raise();
 	_strip->raise();

@@ -36,7 +36,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
-#include "ui/widgets/shadow.h"
 #include "ui/widgets/slider_natural_width.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/ui_utility.h"
@@ -464,18 +463,6 @@ void InnerWidget::fill() {
 				object_ptr<Ui::CustomWidthSlider>(
 					inner,
 					st::dialogsSearchTabs)));
-		if (!hasOneTab) {
-			const auto shadow = Ui::CreateChild<Ui::PlainShadow>(inner);
-			shadow->show();
-			slider->geometryValue(
-			) | rpl::on_next([=](const QRect &r) {
-				shadow->setGeometry(
-					inner->x(),
-					rect::bottom(r) - shadow->height(),
-					inner->width(),
-					shadow->height());
-			}, shadow->lifetime());
-		}
 		slider->toggle(!hasOneTab, anim::type::instant);
 
 		slider->entity()->addSection(boostsTabText);

@@ -41,6 +41,8 @@ not_null<Ui::AbstractButton*> CreateTab(
 	const auto text = Lang::FormatCountDecimal(count);
 	const auto font = st::semiboldFont;
 	const auto textWidth = font->width(text);
+	const auto contentWidth = stm->height + stm->padding.left()
+		+ textWidth - st::reactionsTabIconSkip;
 	const auto result = Ui::CreateChild<Ui::AbstractButton>(parent.get());
 	const auto width = stm->height
 		+ stm->padding.left()
@@ -69,10 +71,8 @@ not_null<Ui::AbstractButton*> CreateTab(
 		const auto height = stm->height;
 		const auto skip = st::reactionsTabIconSkip;
 		const auto icon = QRect(skip, 0, height, height);
-		const auto styled = ExtrasUi::HorizontalTabs::enabled();
-		const auto foreground = styled
-			? ExtrasUi::HorizontalTabs::foreground(stm->textFg->c, state->selected)
-			: (state->selected ? stm->textActiveFg : stm->textFg)->c;
+		const auto foreground = ExtrasUi::HorizontalTabs::foreground(
+			stm->textFg->c, state->selected);
 		if (state->cache.isNull()) {
 			state->cache = QImage(
 				result->size() * factor,
@@ -81,37 +81,15 @@ not_null<Ui::AbstractButton*> CreateTab(
 			state->cache.fill(Qt::transparent);
 			auto p = QPainter(&state->cache);
 
-			const auto height = stm->height;
-			const auto radius = height / 2;
-			p.setPen(Qt::NoPen);
-			p.setBrush(state->selected ? stm->textActiveBg : stm->textBg);
-			if (styled) {
-				ExtrasUi::HorizontalTabs::paint(p, result->rect(), state->selected);
-			} else {
-				PainterHighQualityEnabler hq(p);
-				p.drawRoundedRect(result->rect(), radius, radius);
-			}
-			const auto skip = st::reactionsTabIconSkip;
-			const auto icon = QRect(skip, 0, height, height);
 			if (!state->custom) {
 				using Type = Ui::WhoReadType;
 				const auto &tabIcon = (reaction.emoji().isEmpty()
-					? (state->selected
-						? st::reactionsTabAllSelected
-						: st::reactionsTabAll)
+					? st::reactionsTabAll
 					: (whoReadType == Type::Watched
 						|| whoReadType == Type::Listened)
-					? (state->selected
-						? st::reactionsTabPlayedSelected
-						: st::reactionsTabPlayed)
-					: (state->selected
-						? st::reactionsTabChecksSelected
-						: st::reactionsTabChecks));
-				if (styled) {
-					tabIcon.paintInCenter(p, icon, foreground);
-				} else {
-					tabIcon.paintInCenter(p, icon);
-				}
+					? st::reactionsTabPlayed
+					: st::reactionsTabChecks);
+				tabIcon.paintInCenter(p, icon, foreground);
 			}
 
 			const auto textLeft = height + stm->padding.left();
@@ -120,6 +98,8 @@ not_null<Ui::AbstractButton*> CreateTab(
 			p.drawText(textLeft, stm->padding.top() + font->ascent, text);
 		}
 		auto p = QPainter(result);
+		ExtrasUi::HorizontalTabs::paint(p, result->rect(),
+			state->selected, result->isOver(), true, contentWidth);
 		p.drawImage(0, 0, state->cache);
 		if (const auto custom = state->custom.get()) {
 			using namespace Ui::Text;

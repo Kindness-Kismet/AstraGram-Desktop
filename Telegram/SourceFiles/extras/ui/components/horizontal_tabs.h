@@ -11,15 +11,15 @@ namespace style { struct SettingsSlider; struct PillTabs; }
 
 namespace ExtrasUi::HorizontalTabs {
 
-[[nodiscard]] bool enabled();
-[[nodiscard]] bool enabled(const style::SettingsSlider &st);
-[[nodiscard]] bool solid();
+[[nodiscard]] bool appliesTo(const style::SettingsSlider &st);
+[[nodiscard]] bool underline();
+[[nodiscard]] bool softPill();
 void watch(not_null<Ui::RpWidget*> widget, Fn<void()> invalidate = nullptr);
 void apply(not_null<Ui::PillTabs*> tabs, const style::PillTabs &st);
 [[nodiscard]] QRect backgroundRect(QRect bounds, bool compact = true);
 [[nodiscard]] QImage rippleMask(QSize size, bool compact = true);
 [[nodiscard]] QColor foreground(QColor normal, float64 active);
 [[nodiscard]] QColor ripple(float64 active);
-void paint(QPainter &p, QRect bounds, float64 active, bool hovered = false, bool compact = true);
+void paint(QPainter &p, QRect bounds, float64 active, bool hovered = false, bool compact = true, int contentWidth = -1);
 
 } // namespace ExtrasUi::HorizontalTabs

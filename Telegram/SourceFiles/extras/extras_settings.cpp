@@ -784,7 +784,11 @@ void ExtrasSettings::setNotificationStyle(NotificationStyle val) {
 }
 
 void ExtrasSettings::setHorizontalTabStyle(HorizontalTabStyle val) {
-	if (val < HorizontalTabStyle::Default || val > HorizontalTabStyle::Solid) {
+	// 历史轻分段配置统一回到细下划线，柔色胶囊保留原值。
+	if (static_cast<int>(val) == 1) {
+		val = HorizontalTabStyle::Underline;
+	}
+	if (val != HorizontalTabStyle::Underline && val != HorizontalTabStyle::SoftPill) {
 		return;
 	}
 	if (_horizontalTabStyle.current() == val) {
@@ -1508,10 +1512,9 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	const auto tabStyle = j.find("horizontalTabStyle");
 	s._horizontalTabStyle = (tabStyle != j.end()
 		&& tabStyle->is_number_integer()
-		&& *tabStyle >= 0
-		&& *tabStyle <= static_cast<int>(HorizontalTabStyle::Solid))
-		? static_cast<HorizontalTabStyle>(tabStyle->get<int>())
-		: HorizontalTabStyle::Default;
+		&& *tabStyle == static_cast<int>(HorizontalTabStyle::SoftPill))
+		? HorizontalTabStyle::SoftPill
+		: HorizontalTabStyle::Underline;
 	const auto notificationStyle = j.find("notificationStyle");
 	s._notificationStyle = (notificationStyle != j.end()
 		&& notificationStyle->is_number_integer()

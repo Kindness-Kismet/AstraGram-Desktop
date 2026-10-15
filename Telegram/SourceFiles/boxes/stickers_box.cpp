@@ -80,6 +80,13 @@ class StickersBox::CounterWidget : public Ui::RpWidget {
 public:
 	CounterWidget(QWidget *parent, rpl::producer<int> count);
 
+	[[nodiscard]] rpl::producer<> counterChanges() const {
+		return _counterChanges.events();
+	}
+	[[nodiscard]] bool hasCounter() const {
+		return !_text.isEmpty();
+	}
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 
@@ -88,6 +95,7 @@ private:
 
 	QString _text;
 	Ui::UnreadBadgeStyle _st;
+	rpl::event_stream<> _counterChanges;
 
 };
 
@@ -364,20 +372,21 @@ StickersBox::CounterWidget::CounterWidget(
 }
 
 void StickersBox::CounterWidget::setCounter(int counter) {
-	_text = (counter > 0) ? QString::number(counter) : QString();
-	auto dummy = QImage(1, 1, QImage::Format_ARGB32_Premultiplied);
-	auto p = QPainter(&dummy);
-
-	const auto badge = Ui::PaintUnreadBadge(p, _text, 0, 0, _st);
-
-	resize(badge.width(), st::stickersFeaturedBadgeSize);
+	_text = (counter > 999)
+		? u"999+"_q
+		: (counter > 0) ? QString::number(counter) : QString();
+	const auto badgeWidth = _text.isEmpty()
+		? 0
+		: Ui::CountUnreadBadgeSize(_text, _st).width();
+	resize(badgeWidth, st::stickersFeaturedBadgeSize);
+	_counterChanges.fire({});
 }
 
 void StickersBox::CounterWidget::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
 
 	if (!_text.isEmpty()) {
-		const auto unreadRight = rtl() ? 0 : width();
+		const auto unreadRight = width();
 		const auto unreadTop = 0;
 		Ui::PaintUnreadBadge(p, _text, unreadRight, unreadTop, _st);
 	}
@@ -421,7 +430,7 @@ StickersBox::StickersBox(
 , _api(&_session->mtp())
 , _tabs(this, st::stickersTabs)
 , _unreadBadge(
-	this,
+	_tabs.data(),
 	_session->data().stickers().featuredSetsUnreadCountValue())
 , _section(section)
 , _isMasks(masks)
@@ -430,6 +439,8 @@ StickersBox::StickersBox(
 , _masks(_isMasks ? Tab(0, this, _show, Section::Masks) : Tab())
 , _featured(_isMasks ? Tab() : Tab(1, this, _show, Section::Featured))
 , _archived((_isMasks ? 1 : 2), this, _show, Section::Archived) {
+	_tabs->setObjectName(u"stickers.tabs"_q);
+	_unreadBadge->setObjectName(u"stickers.featuredCount"_q);
 	_tabs->setRippleTopRoundRadius(st::boxRadius);
 }
 
@@ -606,6 +617,14 @@ void StickersBox::prepare() {
 			switchTab();
 		}, lifetime());
 		refreshTabs();
+		_tabs->sectionsGeometryChanges(
+		) | rpl::on_next([=] {
+			updateUnreadBadgeGeometry();
+		}, lifetime());
+		_unreadBadge->counterChanges(
+		) | rpl::on_next([=] {
+			updateTabsGeometry();
+		}, lifetime());
 	}
 	if (_installed.widget() && _section != Section::Installed) {
 		_installed.widget()->hide();
@@ -825,27 +844,33 @@ void StickersBox::updateTabsGeometry() {
 		return;
 	}
 
-	const auto maxTabs = _isMasks ? 2 : 3;
-
-	_tabs->resizeToWidth(_tabIndices.size() * width() / maxTabs);
-	_unreadBadge->setVisible(_tabIndices.contains(Section::Featured));
-
-	setInnerTopSkip(topSkip());
-
-	const auto featuredLeft = width() / maxTabs;
-	const auto featuredRight = 2 * width() / maxTabs;
-	const auto featuredTextWidth = st::stickersTabs.labelStyle.font->width(
-		tr::lng_stickers_featured_tab(tr::now));
-	const auto featuredTextRight = featuredLeft
-		+ (featuredRight - featuredLeft - featuredTextWidth) / 2
-		+ featuredTextWidth;
-	const auto unreadBadgeLeft = std::min(
-		featuredTextRight - st::stickersFeaturedBadgeSkip,
-		featuredRight - _unreadBadge->width());
-	const auto unreadBadgeTop = st::stickersFeaturedBadgeTop;
-	_unreadBadge->moveToLeft(unreadBadgeLeft, unreadBadgeTop);
-
+	const auto featured = _tabIndices.indexOf(Section::Featured);
+	if (featured >= 0) {
+		const auto extra = _unreadBadge->hasCounter()
+			? _unreadBadge->width() + st::stickersFeaturedBadgeSkip
+			: 0;
+		_tabs->setAdditionalContentWidthToSection(featured, extra);
+	}
+	_tabs->resizeToWidth(width());
 	_tabs->moveToLeft(0, 0);
+	setInnerTopSkip(topSkip());
+	updateUnreadBadgeGeometry();
+}
+
+void StickersBox::updateUnreadBadgeGeometry() {
+	const auto featured = _tabIndices.indexOf(Section::Featured);
+	const auto visible = (featured >= 0) && _unreadBadge->hasCounter();
+	_unreadBadge->setVisible(visible);
+	if (!visible) {
+		return;
+	}
+	const auto content = _tabs->sectionContentRect(featured);
+	const auto left = rtl()
+		? content.x()
+		: content.x() + content.width() - _unreadBadge->width();
+	const auto top = content.y()
+		+ (content.height() - _unreadBadge->height()) / 2;
+	_unreadBadge->move(left, top);
 }
 
 int StickersBox::topSkip() const {

@@ -579,6 +579,14 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 		data["value"] = tabs->activeSection();
 		data["kind"] = "tabs";
 		data["count"] = tabs->sectionsCount();
+		if (const auto settingsTabs = dynamic_cast<Ui::SettingsSlider*>(tabs)) {
+			auto sections = json::array();
+			for (auto i = 0; i != settingsTabs->sectionsCount(); ++i) {
+				const auto rect = settingsTabs->sectionContentRect(i);
+				sections.push_back({rect.x(), rect.y(), rect.width(), rect.height()});
+			}
+			data["contentRects"] = std::move(sections);
+		}
 	} else if (const auto field = dynamic_cast<Ui::InputField*>(target)) {
 		data["value"] = field->getLastText().toStdString();
 		data["kind"] = "text";

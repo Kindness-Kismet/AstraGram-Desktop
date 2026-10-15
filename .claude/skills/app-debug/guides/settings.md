@@ -46,7 +46,7 @@ python .codex/skills/app-debug/scripts/cli.py settings.keys session.autoDownload
 
 下载入口设置键为 `showDownloadsButtonInHeader`，默认显示；旧配置文件中的 `showDownloadsButtonInSearch` 自动迁移。
 
-横向标签款式为 `horizontalTabStyle`：0 默认、1 细框标签、2 实色胶囊；即时生效并跟随强调色，不修改竖向导航或数值刻度。
+横向标签款式为 `horizontalTabStyle`：0 细下划线、2 柔色胶囊；历史值 1 自动转为 0。即时生效并跟随主题，不修改竖向导航或数值刻度。
 
 自绘通知样式为 `notificationStyle`：0 卡片、1 叠放；切换时清空正在显示的通知，之后的通知按新样式出现。
 

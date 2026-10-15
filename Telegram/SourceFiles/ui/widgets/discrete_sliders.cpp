@@ -93,10 +93,16 @@ void DiscreteSlider::selectSection(int index) {
 }
 
 void DiscreteSlider::setAdditionalContentWidthToSection(int index, int w) {
-	if (index >= 0 && index < _sections.size()) {
-		auto &section = _sections[index];
-		section.contentWidth = section.label.maxWidth() + w;
+	if (index < 0 || index >= _sections.size()) {
+		return;
 	}
+	auto &section = _sections[index];
+	const auto contentWidth = section.label.maxWidth() + w;
+	if (section.contentWidth == contentWidth) {
+		return;
+	}
+	section.contentWidth = contentWidth;
+	refresh();
 }
 
 int DiscreteSlider::sectionsCount() const {
@@ -274,8 +280,9 @@ void DiscreteSlider::setSelectedSection(int index) {
 
 int DiscreteSlider::getIndexFromPosition(QPoint pos) {
 	const auto count = _sections.size();
+	const auto x = style::RightToLeft() ? width() - pos.x() - 1 : pos.x();
 	for (auto i = 0; i != count; ++i) {
-		if (_sections[i].left + _sections[i].width > pos.x()) {
+		if (_sections[i].left + _sections[i].width > x) {
 			return i;
 		}
 	}
@@ -338,10 +345,20 @@ int SettingsSlider::centerOfSection(int section) const {
 	return result;
 }
 
+QRect SettingsSlider::sectionContentRect(int section) const {
+	Expects(section >= 0 && section < _sectionContentRects.size());
+
+	return _sectionContentRects[section];
+}
+
+rpl::producer<> SettingsSlider::sectionsGeometryChanges() const {
+	return _sectionsGeometryChanges.events();
+}
+
 void SettingsSlider::fitWidthToSections() {
 	_fitWidthToSections = true;
 	const auto widths = countSectionsWidths(0);
-	resizeToWidth(ranges::accumulate(widths, .0) + _st.padding * 2);
+	resizeToWidth(ranges::accumulate(widths, .0) + sectionsPadding() * 2);
 }
 
 void SettingsSlider::setRippleTopRoundRadius(int radius) {
@@ -356,6 +373,12 @@ int SettingsSlider::getAnimationDuration() const {
 	return _st.duration;
 }
 
+int SettingsSlider::sectionsPadding() const {
+	return ExtrasUi::HorizontalTabs::appliesTo(_st)
+		? std::max(_st.padding, style::ConvertScale(12))
+		: _st.padding;
+}
+
 void SettingsSlider::resizeSections(int newWidth) {
 	const auto count = getSectionsCount();
 	if (!count) {
@@ -365,23 +388,48 @@ void SettingsSlider::resizeSections(int newWidth) {
 	const auto sectionWidths = countSectionsWidths(newWidth);
 
 	auto skip = 0;
-	const auto custom = ExtrasUi::HorizontalTabs::enabled(_st);
+	const auto custom = ExtrasUi::HorizontalTabs::appliesTo(_st);
+	const auto padding = sectionsPadding();
 	const auto usedWidth = ranges::accumulate(sectionWidths, .0);
 	auto x = custom && !_fitWidthToSections
-		? std::max(double(_st.padding), (newWidth - usedWidth) / 2.)
-		: _st.padding * 1.;
+		? std::max(double(padding), (newWidth - usedWidth) / 2.)
+		: padding * 1.;
+	const auto labelHeight = _st.labelStyle.font->height;
+	const auto labelTop = custom
+		? (_st.height - labelHeight) / 2
+		: _st.labelTop;
+	auto contentRects = std::vector<QRect>();
+	contentRects.reserve(count);
+	auto changed = false;
 	auto sectionWidth = sectionWidths.begin();
 	enumerateSections([&](Section &section) {
 		Expects(sectionWidth != sectionWidths.end());
 
-		section.left = std::floor(x) + skip;
+		const auto left = int(std::floor(x)) + skip;
 		x += *sectionWidth;
-		section.width = int(base::SafeRound(x)) - (section.left - skip);
+		const auto width = int(base::SafeRound(x)) - (left - skip);
+		changed = changed || section.left != left || section.width != width;
+		if (section.width != width) {
+			section.ripple = nullptr;
+		}
+		section.left = left;
+		section.width = width;
+		const auto contentLeft = left + (width - section.contentWidth) / 2;
+		contentRects.push_back(style::rtlrect(
+			contentLeft,
+			labelTop,
+			section.contentWidth,
+			labelHeight,
+			newWidth));
 		skip += custom ? 0 : _st.barSkip;
 		++sectionWidth;
 		return true;
 	});
 	stopAnimation();
+	if (changed || _sectionContentRects != contentRects) {
+		_sectionContentRects = std::move(contentRects);
+		_sectionsGeometryChanges.fire({});
+	}
 }
 
 std::vector<float64> SettingsSlider::countSectionsWidths(int newWidth) const {
@@ -389,7 +437,7 @@ std::vector<float64> SettingsSlider::countSectionsWidths(int newWidth) const {
 	if (!count) {
 		return {};
 	}
-	if (ExtrasUi::HorizontalTabs::enabled(_st)) {
+	if (ExtrasUi::HorizontalTabs::appliesTo(_st)) {
 		auto result = std::vector<float64>();
 		result.reserve(count);
 		auto labelsWidth = 0;
@@ -397,10 +445,14 @@ std::vector<float64> SettingsSlider::countSectionsWidths(int newWidth) const {
 			labelsWidth += section.contentWidth;
 			return true;
 		});
-		const auto padding = (newWidth && !_fitWidthToSections)
-			? std::clamp((newWidth - 2 * _st.padding - labelsWidth) / double(count),
-				double(style::ConvertScale(12)), double(style::ConvertScale(36)))
-			: style::ConvertScale(36);
+		auto padding = double(style::ConvertScale(36));
+		if (newWidth && !_fitWidthToSections) {
+			const auto available = (newWidth - 2 * sectionsPadding() - labelsWidth)
+				/ double(count);
+			padding = std::clamp(available,
+				double(style::ConvertScale(12)),
+				double(style::ConvertScale(36)));
+		}
 		enumerateSections([&](const Section &section) {
 			result.push_back(section.contentWidth + padding);
 			return true;
@@ -459,7 +511,8 @@ void SettingsSlider::startRipple(int sectionIndex) {
 					[this] { update(); });
 			}
 			const auto point = mapFromGlobal(QCursor::pos());
-			section.ripple->add(point - QPoint(section.left, 0));
+			const auto bounds = myrtlrect(section.left, 0, section.width, height());
+			section.ripple->add(point - bounds.topLeft());
 			return false;
 		}
 		return true;
@@ -469,7 +522,7 @@ void SettingsSlider::startRipple(int sectionIndex) {
 QImage SettingsSlider::prepareRippleMask(
 		int sectionIndex,
 		const Section &section) {
-	if (ExtrasUi::HorizontalTabs::enabled(_st)) {
+	if (ExtrasUi::HorizontalTabs::appliesTo(_st)) {
 		return ExtrasUi::HorizontalTabs::rippleMask(QSize(section.width, height()));
 	}
 	const auto size = QSize(section.width, height() - _st.rippleBottomSkip);
@@ -500,7 +553,7 @@ QImage SettingsSlider::prepareRippleMask(
 }
 
 bool SettingsSlider::eventHook(QEvent *e) {
-	if (ExtrasUi::HorizontalTabs::enabled(_st)
+	if (ExtrasUi::HorizontalTabs::appliesTo(_st)
 		&& (e->type() == QEvent::Enter || e->type() == QEvent::Leave
 			|| e->type() == QEvent::MouseMove)) {
 		update();
@@ -513,11 +566,8 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 
 	const auto clip = e->rect();
 	const auto range = DiscreteSlider::getCurrentActiveRange();
-	const auto custom = ExtrasUi::HorizontalTabs::enabled(_st);
+	const auto custom = ExtrasUi::HorizontalTabs::appliesTo(_st);
 	const auto mouse = mapFromGlobal(QCursor::pos());
-	const auto labelTop = custom
-		? (height() - _st.labelStyle.font->height) / 2
-		: _st.labelTop;
 
 	const auto drawRect = [&](QRect rect, bool active = false) {
 		const auto &bar = active ? _barActive : _bar;
@@ -529,6 +579,7 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 	};
 	auto sectionIndex = 0;
 	enumerateSections([&](Section &section) {
+		const auto contentRect = sectionContentRect(sectionIndex);
 		const auto activeWidth = _st.barSnapToLabel
 			? section.contentWidth
 			: section.width;
@@ -546,7 +597,7 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 		if (custom) {
 			const auto bounds = myrtlrect(section.left, 0, section.width, height());
 			ExtrasUi::HorizontalTabs::paint(p, bounds, active,
-				underMouse() && bounds.contains(mouse));
+				underMouse() && bounds.contains(mouse), true, section.contentWidth);
 		}
 		if (section.ripple) {
 			const auto color = custom ? ExtrasUi::HorizontalTabs::ripple(active) : anim::color(
@@ -590,19 +641,15 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 				drawRect(myrtlrect(from, _st.barTop, tofill, _st.barStroke));
 			}
 		}
-		const auto labelLeft = section.left
-			+ (section.width - section.contentWidth) / 2;
-		const auto rect = myrtlrect(
-			labelLeft,
-			labelTop,
-			section.contentWidth,
-			_st.labelStyle.font->height);
-		if (rect.intersects(clip)) {
+		if (contentRect.intersects(clip)) {
+			const auto labelLeft = style::RightToLeft()
+				? width() - contentRect.x() - contentRect.width()
+				: contentRect.x();
 			p.setPen(custom
 				? ExtrasUi::HorizontalTabs::foreground(_st.labelFg->c, active)
 				: anim::color(_st.labelFg, _st.labelFgActive, active));
 			section.label.draw(p, {
-				.position = QPoint(labelLeft, labelTop),
+				.position = QPoint(labelLeft, contentRect.y()),
 				.outerWidth = width(),
 				.availableWidth = section.label.maxWidth(),
 				.paused = paused(),

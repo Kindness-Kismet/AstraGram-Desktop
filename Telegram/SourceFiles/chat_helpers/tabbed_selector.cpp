@@ -355,7 +355,6 @@ TabbedSelector::TabbedSelector(
 , _panelRounding(Ui::PrepareCornerPixmaps(st::emojiPanRadius, _st.bg))
 , _categoriesRounding(
 	Ui::PrepareCornerPixmaps(st::emojiPanRadius, _st.categoriesBg))
-, _topShadow(full() ? object_ptr<Ui::PlainShadow>(this) : nullptr)
 , _bottomShadow(this)
 , _scroll(this, st::emojiScroll)
 , _tabs([&] {
@@ -443,9 +442,6 @@ TabbedSelector::TabbedSelector(
 		handleScroll();
 	}, lifetime());
 
-	if (_topShadow) {
-		_topShadow->raise();
-	}
 	_bottomShadow->raise();
 	if (_tabsSlider) {
 		_tabsSlider->raise();
@@ -779,13 +775,6 @@ void TabbedSelector::updateTabsSliderGeometry() {
 
 void TabbedSelector::resizeEvent(QResizeEvent *e) {
 	updateTabsSliderGeometry();
-	if (_topShadow && _tabsSlider) {
-		_topShadow->setGeometry(
-			_tabsSlider->x(),
-			_tabsSlider->bottomNoMargins() - st::lineWidth,
-			_tabsSlider->width(),
-			st::lineWidth);
-	}
 	updateScrollGeometry(e->oldSize());
 	updateRestrictedLabelGeometry();
 	updateFooterGeometry();
@@ -1027,9 +1016,6 @@ QImage TabbedSelector::grabForAnimation() {
 	auto slideAnimation = base::take(_a_slide);
 
 	showAll();
-	if (_topShadow) {
-		_topShadow->hide();
-	}
 	if (_tabsSlider) {
 		_tabsSlider->hide();
 	}
@@ -1221,9 +1207,6 @@ void TabbedSelector::showAll() {
 		_scroll->show();
 		_bottomShadow->setVisible(_mode == Mode::EmojiStatus);
 	}
-	if (_topShadow) {
-		_topShadow->show();
-	}
 	if (_tabsSlider) {
 		_tabsSlider->show();
 	}
@@ -1231,9 +1214,6 @@ void TabbedSelector::showAll() {
 
 void TabbedSelector::hideForSliding() {
 	hideChildren();
-	if (_topShadow) {
-		_topShadow->show();
-	}
 	if (_tabsSlider) {
 		_tabsSlider->show();
 	}
@@ -1264,6 +1244,7 @@ void TabbedSelector::setAllowEmojiWithoutPremium(bool allow) {
 
 void TabbedSelector::createTabsSlider() {
 	_tabsSlider.create(this, _st.tabs);
+	_tabsSlider->setObjectName(u"compose.emoji.tabs"_q);
 
 	fillTabsSliderSections();
 
@@ -1437,10 +1418,6 @@ void TabbedSelector::setWidgetToScrollArea() {
 void TabbedSelector::scrollToY(int y) {
 	_scroll->scrollToY(y);
 
-	// Qt render glitch workaround, shadow sometimes disappears if we just scroll to y.
-	if (_topShadow) {
-		_topShadow->update();
-	}
 }
 
 void TabbedSelector::showMenuWithDetails(SendMenu::Details details) {

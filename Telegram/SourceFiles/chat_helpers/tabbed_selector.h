@@ -316,7 +316,6 @@ private:
 	Ui::Animations::Simple _a_slide;
 
 	object_ptr<Ui::SettingsSlider> _tabsSlider = { nullptr };
-	object_ptr<Ui::PlainShadow> _topShadow;
 	object_ptr<Ui::PlainShadow> _bottomShadow;
 	object_ptr<Ui::ScrollArea> _scroll;
 	object_ptr<Ui::FlatLabel> _restrictedLabel = { nullptr };

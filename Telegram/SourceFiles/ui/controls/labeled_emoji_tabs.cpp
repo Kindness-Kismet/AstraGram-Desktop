@@ -30,24 +30,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Ui {
 namespace {
 
-[[nodiscard]] QColor ColorWithAlpha(
-		const style::color &color,
-		float64 alpha) {
-	auto result = color->c;
-	result.setAlphaF(result.alphaF() * alpha);
-	return result;
-}
-
-[[nodiscard]] QColor ActiveBackgroundColor(const style::color &color) {
-	return ColorWithAlpha(color, st::aiComposeButtonBgActiveOpacity);
-}
-
-[[nodiscard]] QColor RippleColor(
-		const style::RippleAnimation &ripple,
-		float64 opacity) {
-	return ColorWithAlpha(ripple.color, opacity);
-}
-
 [[nodiscard]] qreal TabsRadius() {
 	return st::aiComposeStyleTabsRadius;
 }
@@ -151,25 +133,13 @@ void LabeledEmojiTabs::Button::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 	PainterHighQualityEnabler hq(p);
 
-	const auto radius = TabsRadius();
-	const auto custom = ExtrasUi::HorizontalTabs::enabled();
-	const auto foreground = custom
-		? ExtrasUi::HorizontalTabs::foreground(st::aiComposeStyleLabelFg->c, _selected)
-		: (_selected ? st::aiComposeStyleLabelFgActive : st::aiComposeStyleLabelFg)->c;
-	if (custom) {
-		ExtrasUi::HorizontalTabs::paint(p, rect(), _selected, isOver(), false);
-	} else if (_selected) {
-		p.setPen(Qt::NoPen);
-		p.setBrush(ActiveBackgroundColor(st::aiComposeStyleButtonBgActive));
-		p.drawRoundedRect(rect(), radius, radius);
-	}
-	const auto ripple = custom ? ExtrasUi::HorizontalTabs::ripple(_selected) : RippleColor(
-		_selected
-			? st::aiComposeButtonRippleActive
-			: st::aiComposeButtonRippleInactive,
-		_selected
-			? st::aiComposeButtonRippleActiveOpacity
-			: st::aiComposeButtonRippleInactiveOpacity);
+	const auto foreground = ExtrasUi::HorizontalTabs::foreground(
+		st::aiComposeStyleLabelFg->c, _selected);
+	const auto padding = st::aiComposeStyleButtonPadding;
+	const auto contentWidth = naturalWidth() - padding.left() - padding.right();
+	ExtrasUi::HorizontalTabs::paint(p, rect(), _selected,
+		isOver(), false, contentWidth);
+	const auto ripple = ExtrasUi::HorizontalTabs::ripple(_selected);
 	paintRipple(p, 0, 0, &ripple);
 
 	if (_custom) {
@@ -200,11 +170,7 @@ void LabeledEmojiTabs::Button::paintEvent(QPaintEvent *e) {
 			? *_descriptor.iconActive
 			: *_descriptor.icon;
 		const auto iconRect = QRect(0, 0, width(), st::aiComposeStyleLabelTop);
-		if (custom) {
-			icon.paintInCenter(p, iconRect, foreground);
-		} else {
-			icon.paintInCenter(p, iconRect);
-		}
+		icon.paintInCenter(p, iconRect, foreground);
 	}
 
 	p.setPen(foreground);
@@ -220,15 +186,7 @@ void LabeledEmojiTabs::Button::paintEvent(QPaintEvent *e) {
 }
 
 QImage LabeledEmojiTabs::Button::prepareRippleMask() const {
-	if (ExtrasUi::HorizontalTabs::enabled()) {
-		return ExtrasUi::HorizontalTabs::rippleMask(size(), false);
-	}
-	return RippleAnimation::MaskByDrawer(size(), false, [&](QPainter &p) {
-		p.setPen(Qt::NoPen);
-		p.setBrush(Qt::white);
-		const auto radius = TabsRadius();
-		p.drawRoundedRect(rect(), radius, radius);
-	});
+	return ExtrasUi::HorizontalTabs::rippleMask(size(), false);
 }
 
 void LabeledEmojiTabs::Button::setContextMenuCallback(

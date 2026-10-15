@@ -102,8 +102,6 @@ private:
 	int _lockedFrom = 0;
 	int _lockedFromX = 0;
 	bool _lockedPressed = false;
-	std::optional<Ui::RoundRect> _bar;
-	std::optional<Ui::RoundRect> _barActive;
 	std::optional<QImage> _lockCache;
 	Fn<bool()> _emojiPaused;
 

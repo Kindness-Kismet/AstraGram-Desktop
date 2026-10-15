@@ -149,6 +149,9 @@ public:
 	[[nodiscard]] const style::SettingsSlider &st() const;
 
 	[[nodiscard]] int centerOfSection(int section) const;
+	// 包含附加内容，坐标相对于控件并已处理阅读方向。
+	[[nodiscard]] QRect sectionContentRect(int section) const;
+	[[nodiscard]] rpl::producer<> sectionsGeometryChanges() const;
 	virtual void fitWidthToSections();
 
 	void setRippleTopRoundRadius(int radius);
@@ -168,11 +171,14 @@ private:
 	int getAnimationDuration() const override;
 	QImage prepareRippleMask(int sectionIndex, const Section &section);
 
+	[[nodiscard]] int sectionsPadding() const;
 	void resizeSections(int newWidth);
 
 	const style::SettingsSlider &_st;
 	std::optional<Ui::RoundRect> _bar;
 	std::optional<Ui::RoundRect> _barActive;
+	std::vector<QRect> _sectionContentRects;
+	rpl::event_stream<> _sectionsGeometryChanges;
 	int _rippleTopRoundRadius = 0;
 	bool _fitWidthToSections = false;
 

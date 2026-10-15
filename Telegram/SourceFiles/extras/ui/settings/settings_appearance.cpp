@@ -330,9 +330,8 @@ void BuildAvatarCorners(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 
 QString horizontalTabStyleLabel(HorizontalTabStyle style) {
 	switch (style) {
-	case HorizontalTabStyle::Default: return tr::extras_HorizontalTabsDefault(tr::now);
-	case HorizontalTabStyle::Outline: return tr::extras_HorizontalTabsOutline(tr::now);
-	case HorizontalTabStyle::Solid: return tr::extras_HorizontalTabsSolid(tr::now);
+	case HorizontalTabStyle::Underline: return tr::extras_HorizontalTabsUnderline(tr::now);
+	case HorizontalTabStyle::SoftPill: return tr::extras_HorizontalTabsSoftPill(tr::now);
 	}
 	Unexpected("Invalid horizontal tab style");
 }
@@ -350,13 +349,15 @@ void buildHorizontalTabStyle(SectionBuilder &builder) {
 				SingleChoiceBox(box, {
 					.title = tr::extras_HorizontalTabsStyle(),
 					.options = {
-						tr::extras_HorizontalTabsDefault(tr::now),
-						tr::extras_HorizontalTabsOutline(tr::now),
-						tr::extras_HorizontalTabsSolid(tr::now),
+						tr::extras_HorizontalTabsUnderline(tr::now),
+						tr::extras_HorizontalTabsSoftPill(tr::now),
 					},
-					.initialSelection = int(ExtrasSettings::getInstance().horizontalTabStyle()),
+					.initialSelection = (ExtrasSettings::getInstance().horizontalTabStyle()
+						== HorizontalTabStyle::SoftPill) ? 1 : 0,
 					.callback = [](int index) {
-						ExtrasSettings::getInstance().setHorizontalTabStyle(HorizontalTabStyle(index));
+						ExtrasSettings::getInstance().setHorizontalTabStyle(index
+							? HorizontalTabStyle::SoftPill
+							: HorizontalTabStyle::Underline);
 					},
 				});
 				box->addRow(object_ptr<Ui::FlatLabel>(box,

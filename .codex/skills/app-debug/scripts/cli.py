@@ -47,6 +47,7 @@ GENERIC_COMMANDS = {
     'editor.add-file': '在独立模拟配置中沿编辑器粘贴链路添加本地媒体：<路径>',
     'editor.open': '在独立模拟配置中对图片消息打开绘图编辑器：<peerId> <msgId>',
     'simulation.wallet': '在独立模拟配置中打开钱包及固定公开状态，不安装私钥或提交交易：[keep|missing|ready|collectibles|close]',
+    'simulation.stickers': '在独立模拟配置中设置热门贴纸徽标计数，首次创建三类本地贴纸包：<0..9999> [open]，open 打开管理弹窗',
     'player.control': '直接控制当前播放器，不抢焦点：<play|pause|toggle|stop> [song|voice]',
     'downloads.list': '查询真实下载列表及分类与搜索交集：[all|archives|music|videos|other] [关键词]',
     'downloads.start': '指定路径保存消息附件，返回异步任务：<会话编号> <消息编号> <新文件绝对路径>',

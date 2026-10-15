@@ -2359,16 +2359,8 @@ void Widget::toggleFiltersMenu(bool enabled) {
 			&& !searchInPeer());
 		raw->stackUnder(_scroll);
 		raw->resizeToWidth(width());
-		const auto shadow = Ui::CreateChild<Ui::PlainShadow>(raw);
-		ExtrasFeatures::WindowMaterial::watchSurface(shadow);
-		shadow->show();
 		inner->sizeValue() | rpl::on_next([=, this](const QSize &s) {
 			raw->resize(s);
-			shadow->setGeometry(
-				0,
-				s.height() - shadow->height(),
-				s.width(),
-				shadow->height());
 			updateControlsGeometry();
 		}, _chatFilters->lifetime());
 		updateControlsGeometry();

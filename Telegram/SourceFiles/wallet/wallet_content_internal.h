@@ -460,7 +460,6 @@ private:
 	Ui::RpWidget *_pinnedBalance = nullptr;
 	Ui::PlainShadow *_headerShadow = nullptr;
 	Ui::SlideWrap<Ui::SettingsSlider> *_tabsWrap = nullptr;
-	Ui::PlainShadow *_tabsShadow = nullptr;
 	Ui::PlainShadow *_stripShadow = nullptr;
 	Ui::RpWidget *_strip = nullptr;
 	Ui::RpWidget *_listsLoading = nullptr;

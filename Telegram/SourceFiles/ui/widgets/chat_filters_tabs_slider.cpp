@@ -14,7 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_dialogs.h"
 #include "styles/style_widgets.h"
 
-#include <QScrollBar>
+#include <QCursor>
 
 namespace Ui {
 
@@ -31,11 +31,8 @@ ChatsFiltersTabs::ChatsFiltersTabs(
 , _unreadMaxString(u"99+"_q)
 , _unreadSkip(st::lineWidth * 5)
 , _iconSkip(st::dialogsFiltersTabsIconSkip) {
+	setObjectName(u"chatFolders.tabs"_q);
 	Expects(_st.barSnapToLabel && _st.strictSkip);
-	if (_st.barRadius > 0) {
-		_bar.emplace(_st.barRadius, _st.barFg);
-		_barActive.emplace(_st.barRadius, _st.barFgActive);
-	}
 	{
 		const auto one = Ui::CountUnreadBadgeSize(u"9"_q, _unreadSt, 1);
 		_cachedBadgeWidths = {
@@ -243,37 +240,26 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 
 	const auto clip = e->rect();
-	const auto range = getCurrentActiveRange();
 	const auto activeIndex = activeSection();
 	const auto now = crl::now();
-	const auto custom = ExtrasUi::HorizontalTabs::enabled(_st);
-	const auto labelTop = custom
-		? (height() - _st.labelStyle.font->height) / 2
-		: _st.labelTop;
-
+	const auto mouse = mapFromGlobal(QCursor::pos());
+	const auto labelTop = (height() - _st.labelStyle.font->height) / 2;
 	auto index = 0;
 	auto raisedIndex = -1;
-	auto activeHorizontalShift = 0;
 	const auto drawSection = [&](Section &section) {
 		const auto horizontalShift = _sections[index].horizontalShift;
 		const auto shiftedLeft = section.left + horizontalShift;
 		if (_sections[index].raise) {
 			raisedIndex = index;
 		}
-		if (index == activeIndex) {
-			activeHorizontalShift = horizontalShift;
-		}
-
 		const auto active = (index == activeIndex) ? 1. : 0.;
-		if (custom) {
-			ExtrasUi::HorizontalTabs::paint(p,
-				myrtlrect(shiftedLeft, 0, section.width, height()), active);
-		}
+		const auto bounds = myrtlrect(
+			shiftedLeft, 0, section.width, height());
+		ExtrasUi::HorizontalTabs::paint(p, bounds, active,
+			!_reordering && underMouse() && bounds.contains(mouse),
+			true, section.contentWidth);
 		if (section.ripple) {
-			const auto color = custom ? ExtrasUi::HorizontalTabs::ripple(active) : anim::color(
-				_st.rippleBg,
-				_st.rippleBgActive,
-				active);
+			const auto color = ExtrasUi::HorizontalTabs::ripple(active);
 			section.ripple->paint(p, shiftedLeft, 0, width(), &color);
 			if (section.ripple->empty()) {
 				section.ripple.reset();
@@ -298,9 +284,8 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 				== ChatsFiltersTabsMode::IconsOnly)
 				? 0
 				: section.label.maxWidth();
-			const auto foreground = custom
-				? ExtrasUi::HorizontalTabs::foreground(_st.labelFg->c, active)
-				: anim::color(_st.labelFg, _st.labelFgActive, active);
+			const auto foreground = ExtrasUi::HorizontalTabs::foreground(
+				_st.labelFg->c, active);
 			p.setPen(foreground);
 			if (icon) {
 				icon->paint(
@@ -324,15 +309,7 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 				const auto it = _unreadCounts.find(index);
 				if (it != _unreadCounts.end()) {
 					const auto left = labelLeft + iconExtra + labelWidth + _unreadSkip;
-					if (custom && ExtrasUi::HorizontalTabs::solid() && active) {
-						auto badge = _unreadSt;
-						badge.active = true;
-						Ui::PaintUnreadBadge(p,
-							it->second.count > 999 ? _unreadMaxString : QString::number(it->second.count),
-							left, labelTop, badge, 0);
-					} else {
-						p.drawImage(left, labelTop, it->second.cache);
-					}
+					p.drawImage(left, labelTop, it->second.cache);
 				}
 			}
 			if (locked) {
@@ -355,28 +332,6 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 	if (raisedIndex >= 0) {
 		index = raisedIndex;
 		drawSection(*_sections[raisedIndex].section);
-	}
-	if (!custom && _st.barSnapToLabel) {
-		const auto drawRect = [&](QRect rect, bool active) {
-			const auto &bar = active ? _barActive : _bar;
-			if (bar) {
-				bar->paint(p, rect);
-			} else {
-				p.fillRect(rect, active ? _st.barFgActive : _st.barFg);
-			}
-		};
-		const auto add = _st.barStroke / 2;
-		const auto from = std::max(range.left - add, 0);
-		const auto till = std::min(range.left + range.width + add, width());
-		if (from < till) {
-			drawRect(
-				myrtlrect(
-					from,
-					_st.barTop,
-					till - from,
-					_st.barStroke).translated(activeHorizontalShift, 0),
-				true);
-		}
 	}
 }
 

@@ -144,12 +144,16 @@ bool SubTabs::isIndexPinned(int index) const {
 }
 
 void SubTabs::setSelected(int index) {
+	if (_selected == index) {
+		return;
+	}
 	const auto was = (_selected >= 0);
 	const auto now = (index >= 0);
 	_selected = index;
 	if (was != now) {
 		setCursor(now ? style::cur_pointer : style::cur_default);
 	}
+	update();
 }
 
 void SubTabs::setActive(int index) {
@@ -337,7 +341,6 @@ void SubTabs::paintEvent(QPaintEvent *e) {
 	const auto shift = -scroll();
 	const auto now = crl::now();
 	const auto hasShake = _shakeAnimation.animating();
-	const auto custom = ExtrasUi::HorizontalTabs::enabled();
 	for (auto i = 0; i < _buttons.size(); ++i) {
 		const auto &button = _buttons[i];
 		const auto geometry = button.geometry.translated(shift);
@@ -349,20 +352,10 @@ void SubTabs::paintEvent(QPaintEvent *e) {
 		const auto shiftedGeometry = geometry.translated(
 			base::SafeRound(button.shift),
 			0);
-		if (custom) {
-			ExtrasUi::HorizontalTabs::paint(p, shiftedGeometry,
-				button.active, i == _selected);
-			p.setPen(ExtrasUi::HorizontalTabs::foreground(
-				st::giftBoxTabFg->c, button.active));
-		} else if (button.active) {
-			p.setBrush(st::giftBoxTabBgActive);
-			p.setPen(Qt::NoPen);
-			const auto radius = shiftedGeometry.height() / 2.;
-			p.drawRoundedRect(shiftedGeometry, radius, radius);
-			p.setPen(st::giftBoxTabFgActive);
-		} else {
-			p.setPen(st::giftBoxTabFg);
-		}
+		ExtrasUi::HorizontalTabs::paint(p, shiftedGeometry,
+			button.active, i == _selected, true, button.text.maxWidth());
+		p.setPen(ExtrasUi::HorizontalTabs::foreground(
+			st::giftBoxTabFg->c, button.active));
 		button.text.draw(p, {
 			.position = shiftedGeometry.marginsRemoved(padding).topLeft(),
 			.availableWidth = button.text.maxWidth(),

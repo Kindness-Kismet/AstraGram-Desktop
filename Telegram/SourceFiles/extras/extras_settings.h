@@ -22,9 +22,8 @@ enum class WindowMaterial {
 };
 
 enum class HorizontalTabStyle {
-	Default = 0,
-	Outline = 1,
-	Solid = 2,
+	Underline = 0,
+	SoftPill = 2,
 };
 
 enum class NotificationStyle {
@@ -745,7 +744,7 @@ private:
 	rpl::variable<bool> _increaseWebviewHeight = false;
 	rpl::variable<bool> _increaseWebviewWidth = false;
 	rpl::variable<WindowMaterial> _windowMaterial = WindowMaterial::Off;
-	rpl::variable<HorizontalTabStyle> _horizontalTabStyle = HorizontalTabStyle::Default;
+	rpl::variable<HorizontalTabStyle> _horizontalTabStyle = HorizontalTabStyle::Underline;
 	rpl::variable<NotificationStyle> _notificationStyle = NotificationStyle::Cards;
 	rpl::variable<bool> _removeMessageTail = false;
 	rpl::variable<bool> _disableNotificationsDelay = false;

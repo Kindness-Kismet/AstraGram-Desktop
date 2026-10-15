@@ -60,7 +60,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/elastic_scroll.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/popup_menu.h"
-#include "ui/widgets/shadow.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/delayed_activation.h"
@@ -1408,6 +1407,7 @@ Suggestions::Suggestions(
 , _recentApps(setupRecentApps())
 , _popularApps(setupPopularApps())
 , _searchQueryTimer([=] { applySearchQuery(); }) {
+	_tabs->setObjectName(u"search.tabs"_q);
 	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	ExtrasFeatures::WindowMaterial::changes(this) | rpl::skip(1) | rpl::on_next([=] {
 		if (!_cache.isNull() || !_slideLeft.isNull()) {
@@ -1458,21 +1458,8 @@ void Suggestions::setupTabs() {
 		}
 	}, _tabs->lifetime());
 
-	const auto shadow = Ui::CreateChild<Ui::PlainShadow>(this);
-	ExtrasFeatures::WindowMaterial::watchSurface(shadow);
-	shadow->lower();
-
 	_tabsScroll->move(0, 0);
 	_tabs->move(0, 0);
-	rpl::combine(
-		widthValue(),
-		_tabs->heightValue()
-	) | rpl::on_next([=](int width, int height) {
-		const auto line = st::lineWidth;
-		shadow->setGeometry(0, height - line, width, line);
-	}, shadow->lifetime());
-
-	shadow->showOn(_tabsScroll->shownValue());
 
 	const auto labels = base::flat_map<Key, QString>{
 		{ Key{ Tab::Chats }, tr::lng_recent_chats(tr::now) },

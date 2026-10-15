@@ -313,7 +313,6 @@ void Content::setupTabs(rpl::producer<bool> collectiblesShown) {
 	});
 	tabs->fitWidthToSections();
 	tabs->setNaturalWidth(tabs->width());
-	_tabsShadow = Ui::CreateChild<Ui::PlainShadow>(this);
 
 	// Without collectibles the first tab stands alone, scrolling with the list.
 	const auto column = _column->entity();
@@ -361,7 +360,6 @@ void Content::setupTabs(rpl::producer<bool> collectiblesShown) {
 		}
 		_tabsShown = sections.first;
 		_tabsWrap->toggle(sections.first, anim::type::instant);
-		_tabsShadow->setVisible(sections.first);
 		if (!sections.second) {
 			title->toggle(false, anim::type::instant);
 		}
@@ -809,7 +807,6 @@ void Content::updatePinned() {
 	}
 	_cardButton->setVisible(shown);
 	_scroll->setVerticalBarTopSkip(height - min);
-	_tabsShadow->setGeometry(0, height, width(), st::lineWidth);
 	_headerShadow->setVisible(height == min);
 	_pinnedBalance->setGeometry(_pinned->rect());
 

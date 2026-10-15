@@ -319,23 +319,6 @@ void Credits::setupHistory(not_null<Ui::VerticalLayout*> container) {
 					st::creditsHistoryTabsSlider)),
 			st::creditsHistoryTabsSliderPadding);
 		slider->toggle(!hasOneTab, anim::type::instant);
-		if (!hasOneTab) {
-			const auto shadow = Ui::CreateChild<Ui::RpWidget>(inner);
-			shadow->paintRequest() | rpl::on_next([=] {
-				auto p = QPainter(shadow);
-				p.fillRect(shadow->rect(), st::shadowFg);
-			}, shadow->lifetime());
-			slider->geometryValue(
-			) | rpl::on_next([=](const QRect &r) {
-				shadow->setGeometry(
-					inner->x(),
-					rect::bottom(slider) - st::lineWidth,
-					inner->width(),
-					st::lineWidth);
-				shadow->show();
-				shadow->raise();
-			}, shadow->lifetime());
-		}
 
 		auto tabBySection = std::vector<int>{ 0 };
 		slider->entity()->addSection(fullTabText);

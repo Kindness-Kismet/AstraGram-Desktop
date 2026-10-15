@@ -10,7 +10,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/rp_widget.h"
 #include "ui/effects/animations.h"
 #include "ui/text/text.h"
-#include "ui/widgets/shadow.h"
+
+#include <QtGui/QImage>
 
 namespace style {
 struct ProfileTabsStrip;
@@ -73,13 +74,10 @@ private:
 	[[nodiscard]] QPoint contentOrigin() const;
 	[[nodiscard]] QRect islandRect() const;
 	[[nodiscard]] int islandInteriorWidth() const;
-	[[nodiscard]] QRect highlightRect(int index) const;
-	[[nodiscard]] QRectF currentHighlightRect() const;
 	[[nodiscard]] int scrollValue() const;
 
 	const style::ProfileTabsStrip &_st;
 	Ui::Text::MarkedContext _context;
-	Ui::BoxShadow _shadow;
 	QImage _content;
 	std::vector<Button> _buttons;
 	rpl::event_stream<QString> _activated;
@@ -94,8 +92,6 @@ private:
 	QPoint _lastCursorPosition;
 	Ui::Animations::Simple _scrollAnimation;
 	Ui::Animations::Simple _activeAnimation;
-	QRect _activeFrom;
-	QRect _activeTo;
 	int _scrollMax = 0;
 	int _fullWidth = 0;
 	int _selected = -1;

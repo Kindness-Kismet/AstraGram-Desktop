@@ -100,6 +100,7 @@ private:
 	void refreshTabs();
 	void rebuildList(Tab *tab = nullptr);
 	void updateTabsGeometry();
+	void updateUnreadBadgeGeometry();
 	void switchTab();
 	void installSet(uint64 setId);
 	[[nodiscard]] int topSkip() const;
