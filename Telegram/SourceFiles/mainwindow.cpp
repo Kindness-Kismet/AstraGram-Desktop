@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mainwindow.h"
 #include "extras/features/community_channel/community_channel.h"
 #include "extras/features/window_material/window_material.h"
+#include "extras/ui/components/window_appearance.h"
 
 #include "data/data_document.h"
 #include "data/data_session.h"
@@ -54,7 +55,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_shell_color.h"
 #include "styles/style_window.h"
 
-#include <QtGui/QPainterPath>
 #include <QtGui/QWindow>
 #include <QtWidgets/QAbstractButton>
 #include <QtWidgets/QApplication>
@@ -122,19 +122,9 @@ MainWindow::MainWindow(not_null<Window::Controller*> controller)
 			return;
 		}
 		// 登录与锁屏共用内容区圆角，覆盖子页面切换动画的直角背景。
-		const auto radius = st::windowCardRadius;
-		auto square = QPainterPath();
-		square.addRect(QRect(0, 0, radius, radius));
-		auto rounded = QPainterPath();
-		rounded.addEllipse(QRect(0, 0, 2 * radius, 2 * radius));
-		const auto corner = square.subtracted(rounded);
-		const auto fill = Window::ShellBackgroundColor(this)->c;
 		auto p = QPainter(_pageCorners.data());
-		p.setRenderHint(QPainter::Antialiasing);
-		p.fillPath(corner, fill);
-		p.translate(_pageCorners->width(), 0);
-		p.scale(-1., 1.);
-		p.fillPath(corner, fill);
+		ExtrasUi::WindowAppearance::paintTopCorners(
+			p, _pageCorners->rect(), Window::ShellBackgroundColor(this)->c);
 	}, _pageCorners->lifetime());
 	style::PaletteChanged() | rpl::on_next([=] {
 		_pageCorners->update();

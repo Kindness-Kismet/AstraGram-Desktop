@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "iv/editor/iv_editor_box.h"
+#include "extras/features/window_material/window_material.h"
+#include "extras/ui/components/window_appearance.h"
 
 #include <QtCore/QDir>
 
@@ -1691,28 +1693,32 @@ void WindowHost::Impl::setupWindow(ShowWindowDescriptor &&descriptor) {
 	window->setGeometry(DefaultWindowGeometry(descriptor.centerOver));
 
 	window->body()->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(window->body().get()).fillRect(clip, st::windowBg);
+		QPainter(window->body().get()).fillRect(clip,
+			ExtrasFeatures::WindowMaterial::surfaceColor(
+				window->body(), st::windowBg->c));
 	}, window->body()->lifetime());
 
 	_top = object_ptr<Ui::RpWidget>(window->body().get());
 	_top->setAttribute(Qt::WA_TransparentForMouseEvents);
+	ExtrasFeatures::WindowMaterial::watchSurface(_top.data());
 	_top->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(_top.data());
 		Dialogs::PaintTopFade(
 			p,
 			_top->width(),
 			_top->height(),
-			st::windowBg->c);
+			ExtrasFeatures::WindowMaterial::surfaceColor(_top, st::windowBg->c));
 	}, _top->lifetime());
 	_bottomFade = object_ptr<Ui::RpWidget>(window->body().get());
 	_bottomFade->setAttribute(Qt::WA_TransparentForMouseEvents);
+	ExtrasFeatures::WindowMaterial::watchSurface(_bottomFade.data());
 	_bottomFade->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(_bottomFade.data());
 		Dialogs::PaintBottomFade(
 			p,
 			_bottomFade->width(),
 			_bottomFade->height(),
-			st::windowBg->c);
+			ExtrasFeatures::WindowMaterial::surfaceColor(_bottomFade, st::windowBg->c));
 	}, _bottomFade->lifetime());
 	_bottom = object_ptr<Ui::RpWidget>(window->body().get());
 
@@ -1723,10 +1729,14 @@ void WindowHost::Impl::setupWindow(ShowWindowDescriptor &&descriptor) {
 	using OverscrollType = Ui::ElasticScroll::OverscrollType;
 	_scroll->setOverscrollTypes(OverscrollType::Real, OverscrollType::Real);
 	const auto scroll = _scroll.data();
-	scroll->setOverscrollBg(st::windowBg->c);
+	ExtrasFeatures::WindowMaterial::changes(scroll) | rpl::on_next([=] {
+		scroll->setOverscrollBg(
+			ExtrasFeatures::WindowMaterial::surfaceColor(scroll, st::windowBg->c));
+	}, scroll->lifetime());
 	style::PaletteChanged(
 	) | rpl::on_next([=] {
-		scroll->setOverscrollBg(st::windowBg->c);
+		scroll->setOverscrollBg(
+			ExtrasFeatures::WindowMaterial::surfaceColor(scroll, st::windowBg->c));
 	}, scroll->lifetime());
 	_editor = _scroll->setOwnedWidget(object_ptr<Widget>(
 		_scroll.data(),
@@ -2014,6 +2024,7 @@ void WindowHost::Impl::setupWindow(ShowWindowDescriptor &&descriptor) {
 	_toolbar->show();
 	_toolbar->raise();
 	_bottom->raise();
+	ExtrasUi::WindowAppearance::initialize(window);
 	window->show();
 	editor->activateInitialNodeAtEnd();
 	_initialPage = _state->richPage();

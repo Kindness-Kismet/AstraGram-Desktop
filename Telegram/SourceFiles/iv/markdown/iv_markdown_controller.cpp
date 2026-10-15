@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "iv/markdown/iv_markdown_controller.h"
 #include "base/event_filter.h"
+#include "extras/features/window_material/window_material.h"
+#include "extras/ui/components/window_appearance.h"
 #include "core/click_handler_types.h"
 #include "core/credits_amount.h"
 #include "core/file_utilities.h"
@@ -1167,10 +1169,12 @@ void Controller::toggleSearchBar() {
 }
 
 void Controller::createWindow() {
-	_window = std::make_unique<Ui::RpWindow>();
+	_window = std::make_unique<Ui::RpWindow>(ExtrasUi::WindowAppearance::surface());
 	const auto window = _window.get();
+	window->setObjectName(u"iv.preview"_q);
 	_titleShadow.create(window->body().get());
 	_subtitleWrap = std::make_unique<Ui::RpWidget>(window->body().get());
+	ExtrasFeatures::WindowMaterial::watchSurface(_subtitleWrap.get());
 	_subtitle = std::make_unique<Ui::FlatLabel>(
 		_subtitleWrap.get(),
 		subtitleText(),
@@ -1213,7 +1217,9 @@ void Controller::createWindow() {
 	_subtitleBackShift.stop();
 	_subtitleForwardShift.stop();
 	_subtitleWrap->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(_subtitleWrap.get()).fillRect(clip, st::windowBg);
+		QPainter(_subtitleWrap.get()).fillRect(clip,
+			ExtrasFeatures::WindowMaterial::surfaceColor(
+				_subtitleWrap.get(), st::windowBg->c));
 	}, _subtitleWrap->lifetime());
 	window->body()->widthValue() | rpl::on_next([=](int width) {
 		updateTitleGeometry(width);
@@ -1229,9 +1235,12 @@ void Controller::createWindow() {
 		_delegate->ivSaveGeometry(window);
 	}, window->lifetime());
 	window->body()->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(window->body().get()).fillRect(clip, st::windowBg);
+		QPainter(window->body().get()).fillRect(clip,
+			ExtrasFeatures::WindowMaterial::surfaceColor(
+				window->body(), st::windowBg->c));
 	}, window->body()->lifetime());
 	_container = Ui::CreateChild<Ui::RpWidget>(window->body().get());
+	ExtrasFeatures::WindowMaterial::watchSurface(_container);
 	rpl::combine(
 		window->body()->sizeValue(),
 		_subtitleWrap->heightValue(),
@@ -1241,7 +1250,9 @@ void Controller::createWindow() {
 			{ 0, titleHeight + barHeight, 0, 0 }));
 	}, _container->lifetime());
 	_container->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(_container).fillRect(clip, st::windowBg);
+		QPainter(_container).fillRect(clip,
+			ExtrasFeatures::WindowMaterial::surfaceColor(
+				_container, st::windowBg->c));
 	}, _container->lifetime());
 	updateTitleGeometry(window->body()->width());
 
@@ -1286,6 +1297,7 @@ void Controller::createWindow() {
 	});
 
 	_titleShadow->raise();
+	ExtrasUi::WindowAppearance::initialize(window);
 	window->show();
 }
 

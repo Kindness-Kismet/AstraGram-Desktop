@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "mainwidget.h"
+#include "extras/ui/components/window_appearance.h"
 
 #include "extras/features/community_channel/community_channel.h"
 
@@ -2610,33 +2611,19 @@ void MainWidget::paintCardOverlay(QRect clip) {
 		return;
 	}
 	auto p = QPainter(_cardOverlay.data());
-	p.setRenderHint(QPainter::Antialiasing);
 	p.setClipRect(clip);
 	const auto fill = Window::ShellBackgroundColor(this)->c;
-	const auto radius = st::windowCardRadius;
-	auto square = QPainterPath();
-	square.addRect(QRect(0, 0, radius, radius));
-	auto rounded = QPainterPath();
-	rounded.addEllipse(QRect(0, 0, 2 * radius, 2 * radius));
-	const auto corner = square.subtracted(rounded);
 
 	for (const auto &r : cardRects()) {
 		if (!r.intersects(clip)) {
 			continue;
 		}
-		if (r.left() == 0 && !_controller->filtersWidth()) {
-			p.save();
-			p.translate(r.topLeft());
-			p.fillPath(corner, fill);
-			p.restore();
-		}
-		if (r.right() + 1 == width()) {
-			p.save();
-			p.translate(r.right() + 1, r.top());
-			p.scale(-1., 1.);
-			p.fillPath(corner, fill);
-			p.restore();
-		}
+		ExtrasUi::WindowAppearance::paintTopCorners(
+			p,
+			r,
+			fill,
+			r.left() == 0 && !_controller->filtersWidth(),
+			r.right() + 1 == width());
 	}
 }
 

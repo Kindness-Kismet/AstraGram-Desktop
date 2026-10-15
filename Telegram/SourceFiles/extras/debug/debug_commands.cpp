@@ -79,6 +79,7 @@ namespace {
 			&Commands::transferHandlers(),
 			&Commands::animHandlers(),
 			&Commands::editorHandlers(),
+			&Commands::ivHandlers(),
 		}) {
 			all.insert(part->begin(), part->end());
 		}

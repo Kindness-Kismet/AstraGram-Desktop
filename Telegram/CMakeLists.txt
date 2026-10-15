@@ -264,6 +264,8 @@ set(extras_files
         extras/ui/components/field_height_animation.h
         extras/ui/components/floating_surface.cpp
         extras/ui/components/floating_surface.h
+        extras/ui/components/window_appearance.cpp
+        extras/ui/components/window_appearance.h
         extras/ui/components/floating_surface_host.cpp
         extras/ui/components/floating_surface_host.h
         extras/ui/components/icon_picker.cpp
@@ -409,6 +411,7 @@ set(extras_files
         extras/debug/commands/window_commands.cpp
         extras/debug/commands/anim_commands.cpp
         extras/debug/commands/editor_commands.cpp
+        extras/debug/commands/iv_commands.cpp
 
         info/profile/info_profile_music_button.cpp
         info/profile/info_profile_music_button.h

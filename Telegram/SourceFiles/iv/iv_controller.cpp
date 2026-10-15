@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "iv/iv_controller.h"
+#include "extras/features/window_material/window_material.h"
+#include "extras/ui/components/window_appearance.h"
 
 #include "base/event_filter.h"
 #include "base/platform/base_platform_info.h"
@@ -133,10 +135,6 @@ void Controller::updateTitleGeometry(int newWidth) const {
 		0,
 		newWidth,
 		st::ivSubtitleHeight);
-	_subtitleWrap->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(_subtitleWrap.get()).fillRect(clip, st::windowBg);
-	}, _subtitleWrap->lifetime());
-
 	const auto left = (_back ? _back->width() : 0)
 		+ (_forward ? _forward->width() : 0)
 		+ st::ivSubtitleSkip;
@@ -180,10 +178,17 @@ void Controller::showTonSite(
 }
 
 void Controller::createWindow() {
-	_window = std::make_unique<Ui::RpWindow>();
+	_window = std::make_unique<Ui::RpWindow>(ExtrasUi::WindowAppearance::surface());
 	const auto window = _window.get();
+	window->setObjectName(u"iv.browser"_q);
 
 	_subtitleWrap = std::make_unique<Ui::RpWidget>(_window->body().get());
+	ExtrasFeatures::WindowMaterial::watchSurface(_subtitleWrap.get());
+	_subtitleWrap->paintRequest() | rpl::on_next([=](QRect clip) {
+		QPainter(_subtitleWrap.get()).fillRect(clip,
+			ExtrasFeatures::WindowMaterial::surfaceColor(
+				_subtitleWrap.get(), st::windowBg->c));
+	}, _subtitleWrap->lifetime());
 	_subtitle = Ui::CreateChild<Ui::FlatLabel>(
 		_subtitleWrap.get(),
 		_subtitleText.value(),
@@ -276,6 +281,7 @@ void Controller::createWindow() {
 	}, window->lifetime());
 
 	_container = Ui::CreateChild<Ui::RpWidget>(window->body().get());
+	ExtrasFeatures::WindowMaterial::watchSurface(_container);
 	rpl::combine(
 		window->body()->sizeValue(),
 		_subtitleWrap->heightValue()
@@ -285,10 +291,12 @@ void Controller::createWindow() {
 	}, _container->lifetime());
 
 	_container->paintRequest() | rpl::on_next([=](QRect clip) {
-		QPainter(_container).fillRect(clip, st::windowBg);
+		QPainter(_container).fillRect(clip,
+			ExtrasFeatures::WindowMaterial::surfaceColor(_container, st::windowBg->c));
 	}, _container->lifetime());
 
 	_container->show();
+	ExtrasUi::WindowAppearance::initialize(window);
 	window->show();
 }
 

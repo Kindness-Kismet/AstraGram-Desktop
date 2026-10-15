@@ -54,6 +54,16 @@ python .claude/skills/app-debug/scripts/cli.py anim.speed 1
 
 `player.state [song|voice]` 查询指定类型或当前活动媒体的 `messageId`、播放状态 `playing`、位置 `position`、长度 `length`、时间单位 `frequency` 和循环模式 `repeat`（0 关闭、1 单曲、2 列表）。连续采样可验证自然结束后的重播，业务控制使用 `player.control`；键盘与焦点检查才使用界面。
 
+## 独立窗口
+
+`window.resize`、`window.maximize`、`window.activation` 和 `window.close` 操作 `control.window` 选定的窗口，缺省为主窗口。
+状态包含该窗口的 `windowMaterialActive`；`window.close` 保留原有关闭确认，不强制丢弃内容。
+
+- `iv.open-file <文件路径>`：通过正式入口打开本地文章预览，窗口标识为 `iv.preview`。
+- `iv.open-site <站点网址>`：通过正式入口打开 TON 站点，窗口标识为 `iv.browser`；返回成功只表示已打开窗口，不代表网页加载成功。
+- `iv.open-editor`：仅在独立模拟模式调用正式文章编辑入口，创建空白独立编辑窗口 `iv.editor`，不发送消息、不迁移聊天草稿。
+- `iv.toggle-search`：向当前选中的活动文章预览窗口发送搜索快捷键事件；需要时先用 `window.activation active` 设置应用内部焦点。
+
 ## CLI 本地指令
 
 不进服务端，由 CLI 自己完成。

@@ -1,8 +1,7 @@
 #ifdef _DEBUG
 #include "extras/debug/commands/commands_internal.h"
 
-#include "core/application.h"
-#include "window/window_controller.h"
+#include "extras/features/window_material/window_material.h"
 
 #include <QGuiApplication>
 #include <QWindow>
@@ -14,24 +13,20 @@ namespace {
 using json = nlohmann::json;
 
 // 尺寸取 Qt 逻辑像素，与 control.list 的几何在同一坐标系。
-[[nodiscard]] json WindowState(not_null<::MainWindow*> window) {
+[[nodiscard]] json WindowState(not_null<QWidget*> window) {
 	return json{
 		{ "width", window->width() },
 		{ "height", window->height() },
 		{ "maximized", window->isMaximized() },
 		{ "visible", window->isVisible() },
 		{ "active", window->isActiveWindow() },
+		{ "windowMaterialActive", ExtrasFeatures::WindowMaterial::isActive(window) },
 		{ "applicationActive",
 			QGuiApplication::applicationState() == Qt::ApplicationActive },
 	};
 }
 
-[[nodiscard]] ::MainWindow *ActiveWindow() {
-	const auto controller = Core::App().activeWindow();
-	return controller ? controller->widget().get() : nullptr;
-}
-
-void showWithoutActivating(not_null<::MainWindow*> window, bool maximized) {
+void showWithoutActivating(not_null<QWidget*> window, bool maximized) {
 	const auto previous = window->testAttribute(Qt::WA_ShowWithoutActivating);
 	window->setAttribute(Qt::WA_ShowWithoutActivating);
 	if (maximized) {
@@ -47,7 +42,7 @@ void showWithoutActivating(not_null<::MainWindow*> window, bool maximized) {
 	if (args.size() != 0 && args.size() != 2) {
 		return Result::Err(u"usage: window.resize [<width> <height>]"_q);
 	}
-	const auto window = ActiveWindow();
+	const auto window = controlWindow();
 	if (!window) {
 		return Result::Err(u"no active window"_q);
 	}
@@ -79,7 +74,7 @@ void showWithoutActivating(not_null<::MainWindow*> window, bool maximized) {
 	if (text != u"true"_q && text != u"false"_q) {
 		return Result::Err(u"expected true or false"_q);
 	}
-	const auto window = ActiveWindow();
+	const auto window = controlWindow();
 	if (!window) {
 		return Result::Err(u"no active window"_q);
 	}
@@ -94,7 +89,7 @@ void showWithoutActivating(not_null<::MainWindow*> window, bool maximized) {
 	if (text != u"active"_q && text != u"inactive"_q) {
 		return Result::Err(u"usage: window.activation <active|inactive>"_q);
 	}
-	const auto window = ActiveWindow();
+	const auto window = controlWindow();
 	if (!window) {
 		return Result::Err(u"no active window"_q);
 	}
@@ -104,6 +99,19 @@ void showWithoutActivating(not_null<::MainWindow*> window, bool maximized) {
 	return Result::Ok(Compact(WindowState(window)));
 }
 
+[[nodiscard]] Result closeWindow(const QStringList &args) {
+	if (!args.empty()) {
+		return Result::Err(u"usage: window.close"_q);
+	}
+	const auto window = controlWindow();
+	if (!window) {
+		return Result::Err(u"no selected window"_q);
+	}
+	return window->close()
+		? Result::Ok()
+		: Result::Err(u"window close was rejected"_q);
+}
+
 } // namespace
 
 const HandlerMap &WindowHandlers() {
@@ -111,6 +119,7 @@ const HandlerMap &WindowHandlers() {
 		{ u"window.resize"_q, &WindowSize },
 		{ u"window.maximize"_q, &WindowMaximize },
 		{ u"window.activation"_q, &windowActivation },
+		{ u"window.close"_q, &closeWindow },
 	};
 	return result;
 }

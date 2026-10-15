@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/main_window.h"
+#include "extras/ui/components/window_appearance.h"
 #include "extras/extras_settings.h"
 #include "extras/features/window_material/window_material.h"
 
@@ -390,9 +391,7 @@ QImage WithSmallCounter(QImage image, CounterLayerArgs &&args) {
 }
 
 MainWindow::MainWindow(not_null<Controller*> controller)
-: Ui::RpWindow(ExtrasFeatures::WindowMaterial::availableModes().size() > 1
-	? Ui::RpWindow::Surface::NativeMaterial
-	: Ui::RpWindow::Surface::Opaque)
+: Ui::RpWindow(ExtrasUi::WindowAppearance::surface())
 , _controller(controller)
 , _positionUpdatedTimer([=] { savePosition(); })
 , _outdated(Ui::CreateOutdatedBar(body(), cWorkingDir()))

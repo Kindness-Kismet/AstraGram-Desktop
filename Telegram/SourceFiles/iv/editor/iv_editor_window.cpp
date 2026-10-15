@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "iv/editor/iv_editor_window.h"
+#include "extras/ui/components/window_appearance.h"
 
 #include "ui/layers/layer_manager.h"
 
@@ -42,9 +43,10 @@ namespace {
 } // namespace
 
 Window::Window(QWidget *parent)
-: Ui::RpWindow(parent)
+: Ui::RpWindow(ExtrasUi::WindowAppearance::surface(), parent)
 , _layers(std::make_unique<Ui::LayerManager>(body())) {
 	_layers->setHideByBackgroundClick(true);
+	setObjectName(u"iv.editor"_q);
 	LiveWindows().push_back(this);
 }
 

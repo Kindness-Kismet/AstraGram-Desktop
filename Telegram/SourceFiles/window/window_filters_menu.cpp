@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "extras/features/custom_logo/custom_logo.h"
 #include "extras/features/window_material/window_material.h"
+#include "extras/ui/components/window_appearance.h"
 #include "menu/menu_mark_as_read.h"
 #include "mainwindow.h"
 #include "window/window_session_controller.h"
@@ -51,7 +52,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_menu_icons.h"
 
 #include <QtGui/QtEvents>
-#include <QtGui/QPainterPath>
 
 #include "extras/extras_settings.h"
 
@@ -161,14 +161,9 @@ void FiltersMenu::setup() {
 		if (ExtrasFeatures::WindowMaterial::isActive(&_outer)) {
 			return;
 		}
-		const auto radius = st::windowCardRadius;
-		auto square = QPainterPath();
-		square.addRect(QRect(0, 0, radius, radius));
-		auto rounded = QPainterPath();
-		rounded.addEllipse(QRect(0, 0, radius * 2, radius * 2));
 		auto p = QPainter(corner);
-		p.setRenderHint(QPainter::Antialiasing);
-		p.fillPath(square.subtracted(rounded), ShellBackgroundColor(&_outer)->c);
+		ExtrasUi::WindowAppearance::paintTopCorners(
+			p, corner->rect(), ShellBackgroundColor(&_outer)->c, true, false);
 	}, corner->lifetime());
 	corner->show();
 

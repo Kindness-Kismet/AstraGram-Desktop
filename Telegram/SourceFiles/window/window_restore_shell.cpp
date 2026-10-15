@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_restore_shell.h"
+#include "extras/features/window_material/window_material.h"
+#include "extras/ui/components/window_appearance.h"
 
 #include "base/event_filter.h"
 #include "lang/lang_keys.h"
@@ -27,7 +29,8 @@ namespace Window {
 RestoreShell::RestoreShell(
 	const QString &title,
 	Core::WindowPosition position)
-: _window(base::make_unique_q<Ui::RpWindow>()) {
+: _window(base::make_unique_q<Ui::RpWindow>(ExtrasUi::WindowAppearance::surface())) {
+	_window->setObjectName(u"window.restore"_q);
 	_window->setTitle(title.isEmpty() ? u"Telegram"_q : title);
 	_window->setMinimumSize(
 		QSize(st::windowShellMinWidth, st::windowShellMinHeight));
@@ -39,6 +42,7 @@ RestoreShell::RestoreShell(
 		}
 		return base::EventFilterResult::Continue;
 	});
+	ExtrasUi::WindowAppearance::initialize(_window.get());
 	_window->show();
 }
 
@@ -47,6 +51,7 @@ RestoreShell::~RestoreShell() = default;
 void RestoreShell::setupBody() {
 	const auto body = _window->body();
 	_content = Ui::CreateChild<Ui::RpWidget>(body.get());
+	ExtrasFeatures::WindowMaterial::watchSurface(_content);
 	body->sizeValue() | rpl::on_next([=](QSize size) {
 		_content->setGeometry(QRect(QPoint(), size));
 	}, _content->lifetime());
@@ -55,7 +60,8 @@ void RestoreShell::setupBody() {
 		st::windowShellLoading);
 	_content->paintRequest() | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(_content);
-		p.fillRect(clip, st::windowBg);
+		p.fillRect(clip,
+			ExtrasFeatures::WindowMaterial::surfaceColor(_content, st::windowBg->c));
 		if (_loading) {
 			const auto size = st::windowShellLoading.size;
 			const auto position = QPoint(

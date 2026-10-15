@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/ui/extras_userpic.h"
+#include "extras/features/window_material/window_material.h"
 
 
 namespace Ui {
@@ -558,6 +559,8 @@ MultiSelect::MultiSelect(
 	});
 
 	setAttribute(Qt::WA_OpaquePaintEvent, _st.bg->c.alpha() == 255);
+	ExtrasFeatures::WindowMaterial::watchSurface(this);
+	ExtrasFeatures::WindowMaterial::watchSurface(_inner);
 	auto defaultWidth = _st.item.maxWidth + _st.fieldMinWidth + _st.fieldCancelSkip;
 	resizeToWidth(_st.padding.left() + defaultWidth + _st.padding.right());
 }
@@ -851,7 +854,8 @@ void MultiSelect::Inner::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
 	auto paintRect = e->rect();
-	p.fillRect(paintRect, _st.bg);
+	p.fillRect(paintRect, ExtrasFeatures::WindowMaterial::surfaceColor(
+		this, _st.bg->c));
 
 	auto offset = QPoint(
 		style::RightToLeft() ? _st.padding.right() : _st.padding.left(),

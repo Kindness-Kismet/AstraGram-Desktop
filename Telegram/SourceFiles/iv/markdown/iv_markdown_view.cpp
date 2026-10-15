@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/click_handler_types.h"
 #include "core/credits_amount.h"
 #include "core/file_utilities.h"
+#include "extras/features/window_material/window_material.h"
 #include "iv/markdown/iv_markdown_article_text.h"
 #include "iv/markdown/iv_markdown_embed_overlay.h"
 #include "iv/markdown/iv_markdown_prepare_links.h"
@@ -295,13 +296,17 @@ void MarkdownPreviewRoot::setup() {
 	_scroll = Ui::CreateChild<Ui::ElasticScroll>(this, st::boxScroll);
 	using OverscrollType = Ui::ElasticScroll::OverscrollType;
 	_scroll->setOverscrollTypes(OverscrollType::Real, OverscrollType::Real);
-	_scroll->setOverscrollBg(st::windowBg->c);
+	ExtrasFeatures::WindowMaterial::changes(_scroll) | rpl::on_next([=] {
+		_scroll->setOverscrollBg(
+			ExtrasFeatures::WindowMaterial::surfaceColor(_scroll, st::windowBg->c));
+	}, _scroll->lifetime());
 	_scrollContent = _scroll->setOwnedWidget(object_ptr<Ui::RpWidget>(_scroll));
 	_body = Ui::CreateChild<MarkdownDocumentWidget>(_scrollContent);
 	Ui::SetupSelectingScroll(_body, [=](int pixels) {
 		_scroll->scrollToY(_scroll->scrollTop() + pixels);
 	});
 	_scrollToTop = Ui::CreateChild<Ui::JumpDownButton>(_scroll, st::dialogsToUp);
+	_scrollToTop->setObjectName(u"iv.scrollToTop"_q);
 	_scrollToTop->setClickedCallback([=] { scrollToTop(); });
 	_scrollToTop->setAccessibleName(tr::lng_sr_scroll_to_top(tr::now));
 	_scrollToTop->raise();
@@ -399,7 +404,8 @@ void MarkdownPreviewRoot::setup() {
 	}, lifetime());
 
 	style::PaletteChanged() | rpl::on_next([=] {
-		_scroll->setOverscrollBg(st::windowBg->c);
+		_scroll->setOverscrollBg(
+			ExtrasFeatures::WindowMaterial::surfaceColor(_scroll, st::windowBg->c));
 		if (_body && !_body->isHidden()) {
 			_body->refreshPalette();
 		}
@@ -1018,7 +1024,7 @@ void MarkdownPreviewRoot::startScrollToTopButtonAnimation(bool shown) {
 void MarkdownPreviewRoot::updateScrollToTopPosition() {
 	const auto top = anim::interpolate(
 		0,
-		_scrollToTop->height() + st::connectingMargin.top(),
+		_scrollToTop->height() + st::connectingMargin.top() + style::ConvertScale(4),
 		_scrollToTopShown.value(_scrollToTopIsShown ? 1. : 0.));
 	_scrollToTop->moveToRight(
 		st::historyToDownPosition.x(),

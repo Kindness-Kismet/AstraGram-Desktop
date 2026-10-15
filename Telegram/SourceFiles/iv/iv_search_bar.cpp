@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "iv/iv_search_bar.h"
 
 #include "dialogs/ui/dialogs_pill.h"
+#include "extras/features/window_material/window_material.h"
 #include "lang/lang_keys.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
@@ -46,6 +47,7 @@ SearchBar::SearchBar(
 
 void SearchBar::setup(rpl::producer<int> width) {
 	const auto inner = _wrap.entity();
+	ExtrasFeatures::WindowMaterial::watchSurface(inner);
 	const auto pill = (_mode == SearchBarMode::EditorPill);
 	inner->resize(inner->width(), pill
 		? (st::ivEditorToolbarPadding.top()
@@ -86,7 +88,8 @@ void SearchBar::setup(rpl::producer<int> width) {
 		if (_mode == SearchBarMode::EditorPill) {
 			paintPill(p);
 		} else {
-			p.fillRect(clip, st::windowBg);
+			p.fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(
+				inner, st::windowBg->c));
 		}
 	}, inner->lifetime());
 
