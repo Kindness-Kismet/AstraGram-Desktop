@@ -1417,8 +1417,7 @@ Window::SessionController *Manager::openNotificationMessage(
 		: history->session().tryResolveWindow();
 	if (window) {
 		window->widget()->showFromTray();
-		auto params = SectionShow(SectionShow::Way::Forward);
-		params.inPlaceFade = true;
+		const auto params = SectionShow(SectionShow::Way::Forward);
 		if (topic) {
 			window->showTopic(topic, itemId, params);
 		} else if (sublist) {

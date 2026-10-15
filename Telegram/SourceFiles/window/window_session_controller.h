@@ -189,7 +189,9 @@ struct SectionShow {
 	}
 
 	[[nodiscard]] SectionShow withWay(Way newWay) const {
-		return SectionShow(newWay, animated, activation);
+		auto copy = *this;
+		copy.way = newWay;
+		return copy;
 	}
 	[[nodiscard]] SectionShow withThirdColumn() const {
 		auto copy = *this;

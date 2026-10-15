@@ -1364,8 +1364,12 @@ bool MainWidget::showHistoryInDifferentWindow(
 
 void MainWidget::showHistory(
 		PeerId peerId,
-		const SectionShow &params,
+		const SectionShow &show,
 		MsgId showAtMsgId) {
+	auto params = show;
+	if (peerId) {
+		params.inPlaceFade = true;
+	}
 	if (peerId && _controller->window().locked()) {
 		if (params.activation != anim::activation::background) {
 			_controller->window().activate();
@@ -1942,7 +1946,11 @@ Fn<void()> MainWidget::prepareFullWidthAnimation(
 				oldContentCache,
 				grabFullWidthAnimationContent(),
 				direction,
-				{ .shift = st::extrasSectionCrossFadeShift, .overlay = true });
+				{
+					.shift = params.inPlaceFade ? 0 : st::extrasSectionCrossFadeShift,
+					.overlay = true,
+					.duration = params.inPlaceFade ? st::extrasInPlaceFadeDuration : 0,
+				});
 		} else {
 			// 离开全宽页面时旧画面淡出，底下保持实时绘制，
 			// 对话页重新加载的贴纸与图片随之淡入，不会定格成占位色块。
@@ -2012,8 +2020,12 @@ Window::SectionSlideParams MainWidget::prepareDialogsAnimation() {
 
 void MainWidget::showNewSection(
 		std::shared_ptr<Window::SectionMemento> memento,
-		const SectionShow &params) {
+		const SectionShow &show) {
 	using Column = Window::Column;
+	auto params = show;
+	if (dynamic_cast<HistoryView::ChatMemento*>(memento.get())) {
+		params.inPlaceFade = true;
+	}
 
 	if (_controller->window().locked()) {
 		return;

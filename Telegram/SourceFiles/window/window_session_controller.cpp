@@ -3199,7 +3199,9 @@ void SessionController::showPeerHistory(
 	if (const auto peer = session().data().peerLoaded(peerId)) {
 		if (const auto channel = peer->asChannel()) {
 			if (channel->isCommunity()) {
-				showPeerInfo(channel, SectionShow());
+				auto show = params;
+				show.inPlaceFade = true;
+				showPeerInfo(channel, show);
 				return;
 			}
 		}
