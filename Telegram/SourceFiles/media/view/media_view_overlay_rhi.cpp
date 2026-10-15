@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/platform_overlay_widget.h"
 #include "base/debug_log.h"
 #include "styles/style_media_view.h"
+#include "styles/style_extras_styles.h"
 
 #include <rhi/qrhi.h>
 
@@ -1558,6 +1559,10 @@ auto OverlayWidget::RendererRhi::controlMeta(Over control) const
 	case Over::More: return { 5, &st::mediaviewMore };
 	case Over::Draw: return { 6, &st::mediaviewDraw };
 	case Over::Recognize: return { 7, &st::mediaviewRecognize };
+	case Over::FullScreen: return _owner->_fullscreen
+		? Control{ 9, &st::extrasViewerFullScreenOut }
+		: Control{ 8, &st::extrasViewerFullScreen };
+	case Over::Close: return { 10, &st::extrasViewerClose };
 	}
 	Unexpected("Control value in OverlayWidget::RendererRhi::controlMeta.");
 }
@@ -1575,6 +1580,9 @@ void OverlayWidget::RendererRhi::validateControls() {
 		controlMeta(Over::More),
 		controlMeta(Over::Draw),
 		controlMeta(Over::Recognize),
+		Control{ 8, &st::extrasViewerFullScreen },
+		Control{ 9, &st::extrasViewerFullScreenOut },
+		Control{ 10, &st::extrasViewerClose },
 	};
 	auto maxWidth = 0;
 	auto fullHeight = 0;
