@@ -20,6 +20,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_peer_bot_command.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
+#include "extras/data/messages_storage.h"
+#include "extras/utils/telegram_helpers.h"
 #include "history/view/history_view_element.h"
 #include "history/history.h"
 #include "history/history_item.h"
@@ -317,13 +319,11 @@ void EphemeralMessages::apply(
 		if (_session->welcomeMessages().applyDelete(history->peer, id.v)) {
 			continue;
 		}
-		if (const auto item = lookupItem(history->peer, id.v)) {
-			if (anchored(item)) {
-				revertAnchored(item);
-			} else {
-				items.push_back(item);
-			}
+		const auto item = lookupItem(history->peer, id.v);
+		if (!item || preserveDeleted(item)) {
+			continue;
 		}
+		items.push_back(item);
 	}
 	_session->data().destroyMessagesWithCacheCleanup(items);
 }
@@ -1071,6 +1071,11 @@ void EphemeralMessages::request(
 }
 
 void EphemeralMessages::deleteMessage(not_null<HistoryItem*> item) {
+	if (item->isDeleted()) {
+		ExtrasMessages::removeDeletedMessage(item);
+		_session->data().destroyMessageWithCacheCleanup(item);
+		return;
+	}
 	const auto entry = findByItem(item);
 	if (entry && entry->receiverId) {
 		const auto receiver = _session->data().user(entry->receiverId);
@@ -1132,17 +1137,44 @@ void EphemeralMessages::itemRemoved(not_null<const HistoryItem*> item) {
 	unregisterEntry(item);
 }
 
+bool EphemeralMessages::preserveDeleted(not_null<HistoryItem*> item) {
+	if (anchored(item)) {
+		if (isMessageSavable(item)) {
+			ExtrasMessages::addDeletedMessage(item);
+		}
+		revertAnchored(item);
+		return true;
+	}
+	if (item->isDeleted()) {
+		return true;
+	}
+	if (!isMessageSavable(item)) {
+		return false;
+	}
+	processMessageDelete(item);
+	return true;
+}
+
 void EphemeralMessages::pruneOld() {
 	const auto till = base::unixtime::now() - kKeepDuration;
 	auto old = std::vector<not_null<HistoryItem*>>();
 	for (const auto &[history, list] : _data) {
 		for (const auto &entry : list) {
-			if (entry.item->date() <= till && !anchored(entry.item)) {
+			if (entry.item->date() <= till
+				&& !entry.item->isDeleted()
+				&& !anchored(entry.item)) {
 				old.push_back(entry.item);
 			}
 		}
 	}
-	_session->data().destroyMessagesWithCacheCleanup(old);
+	auto toDestroy = std::vector<not_null<HistoryItem*>>();
+	for (const auto item : old) {
+		if (preserveDeleted(item)) {
+			continue;
+		}
+		toDestroy.push_back(item);
+	}
+	_session->data().destroyMessagesWithCacheCleanup(toDestroy);
 }
 
 } // namespace Data

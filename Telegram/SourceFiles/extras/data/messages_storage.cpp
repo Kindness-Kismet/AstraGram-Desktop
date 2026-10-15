@@ -8,6 +8,7 @@
 #include "extras/utils/extras_mapper.h"
 #include "extras/utils/telegram_helpers.h"
 #include "base/unixtime.h"
+#include "data/components/ephemeral_messages.h"
 #include "data/data_forum_topic.h"
 #include "data/data_session.h"
 #include "history/history.h"
@@ -16,6 +17,18 @@
 #include "main/main_session.h"
 
 namespace ExtrasMessages {
+namespace {
+
+int archivedMessageId(not_null<HistoryItem*> item) {
+	const auto &ephemeral = item->history()->session().ephemeralMessages();
+	if (item->isEphemeral() || ephemeral.anchored(item)) {
+		// 临时消息使用独立编号，不能保存会在重启后重复的本地编号。
+		return -ephemeral.lookupId(item);
+	}
+	return item->id.bare;
+}
+
+} // namespace
 
 template<typename DerivedMessage>
 std::vector<ExtrasMessageBase> convertToBase(const std::vector<DerivedMessage> &messages) {
@@ -122,6 +135,7 @@ void addDeletedMessage(not_null<HistoryItem*> item) {
 #endif // _DEBUG
 	DeletedMessage message;
 	map(item, message);
+	message.messageId = archivedMessageId(item);
 
 	Database::addDeletedMessage(message);
 }
@@ -146,7 +160,7 @@ bool hasDeletedMessages(not_null<PeerData*> peer, ID topicId) {
 void removeDeletedMessage(not_null<HistoryItem*> item) {
 	const auto peer = item->history()->peer;
 	const ID userId = peer->session().userId().bare & PeerId::kChatTypeMask;
-	Database::removeDeletedMessage(userId, getDialogIdFromPeer(peer), item->id.bare);
+	Database::removeDeletedMessage(userId, getDialogIdFromPeer(peer), archivedMessageId(item));
 }
 
 void clearDeletedMessages(not_null<PeerData*> peer, ID topicId) {

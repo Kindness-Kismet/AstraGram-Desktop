@@ -150,6 +150,7 @@ private:
 	[[nodiscard]] UserData *botForSending(const Entry &entry) const;
 	void reportDroppedReply() const;
 	void itemRemoved(not_null<const HistoryItem*> item);
+	[[nodiscard]] bool preserveDeleted(not_null<HistoryItem*> item);
 	void pruneOld();
 
 	const not_null<Main::Session*> _session;

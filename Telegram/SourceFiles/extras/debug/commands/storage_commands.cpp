@@ -12,6 +12,7 @@
 #include "core/application.h"
 #include "base/unixtime.h"
 #include "data/data_session.h"
+#include "data/components/ephemeral_messages.h"
 #include "data/data_user.h"
 #include "history/history.h"
 #include "history/history_item.h"
@@ -137,6 +138,9 @@ Result inspectMessage(const QStringList &args) {
 		{"peerId", item->history()->peer->id.value}, {"messageId", item->id.bare},
 		{"text", item->originalText().text.toStdString()}, {"outgoing", item->out()},
 		{"deleted", item->isDeleted()},
+		{"ephemeral", item->isEphemeral()},
+		{"ephemeralId", item->history()->session().ephemeralMessages().lookupId(item)},
+		{"anchoredEphemeral", item->history()->session().ephemeralMessages().anchored(item)},
 		{"filtered", FiltersController::filtered(item)}, {"hasRevisions", ExtrasMessages::hasRevisions(item)},
 		{"hasView", item->mainView() != nullptr},
 		{"deletedOpacity", item->mainView() ? Json(item->mainView()->deletedOpacity()) : Json(nullptr)},
