@@ -89,7 +89,6 @@ public:
 	bool inlineItemVisible(const InlineBots::Layout::ItemBase *layout) override;
 	Data::FileOrigin inlineItemFileOrigin() override;
 
-	void afterShown() override;
 	void beforeHiding() override;
 
 	void setInlineQueryPeer(PeerData *peer) {

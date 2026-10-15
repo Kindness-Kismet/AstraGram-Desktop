@@ -4031,12 +4031,6 @@ void StickersListWidget::showMegagroupSet(ChannelData *megagroup) {
 	}
 }
 
-void StickersListWidget::afterShown() {
-	if (_search) {
-		_search->stealFocus();
-	}
-}
-
 void StickersListWidget::beforeHiding() {
 	if (_search) {
 		_search->returnFocus();

@@ -119,7 +119,6 @@ public:
 	void showStickerSet(uint64 setId);
 	void showMegagroupSet(ChannelData *megagroup);
 
-	void afterShown() override;
 	void beforeHiding() override;
 	[[nodiscard]] bool canConsumeHorizontalScroll(
 		QPoint position,

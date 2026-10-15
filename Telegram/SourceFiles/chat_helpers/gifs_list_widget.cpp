@@ -852,12 +852,6 @@ Data::FileOrigin GifsListWidget::inlineItemFileOrigin() {
 		: Data::FileOrigin();
 }
 
-void GifsListWidget::afterShown() {
-	if (_search) {
-		_search->stealFocus();
-	}
-}
-
 void GifsListWidget::beforeHiding() {
 	if (_search) {
 		_search->returnFocus();
