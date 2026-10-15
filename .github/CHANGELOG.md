@@ -1,15 +1,41 @@
-- Changed how the in-window media viewer opens and closes; it now fades in place instead of expanding from the chat thumbnail and shrinking back into it
-- Changed how the in-window media viewer shows captions; it no longer repeats the message text above the thumbnail strip
-- Added elastic dragging for zoomed photos and videos, so you can now pull them past the edge to see parts under the viewer controls, and they spring back when you let go
-- Fixed an issue with the in-window media viewer backdrop that previously caused the chat to show through sharply instead of blurred when Window Background was set to Mica, Acrylic or Blur
-- Fixed an issue with the app window shadow on Windows that previously caused it to shrink when the in-window media viewer opened and pop back abruptly when it closed
-- Fixed an issue with the in-window media viewer corners on Windows 11 that previously caused them to cover the app window border at the corners and along the top edge
+- Changed how custom notification popups look; they are now compact cards with a centered avatar, a themed background and close and reply buttons, and the notification settings offer a new Notification style choice between Cards and Stack
+- Changed how the chat list updates; chats now animate to their new position when a new message, draft or pin reorders the list, and removed chats animate away instead of vanishing instantly
+- Changed how login steps transition; each step now fades in place, keeping QR codes and status labels live instead of sliding from a frozen snapshot
+- Changed how jumping to a chat from a notification looks; the transition now fades in place without the horizontal shift
+- Changed how in-window video playback controls are placed; they now stay centered above the thumbnail strip or the bottom edge regardless of video size and zoom
+- Changed the archive entry in the main menu drawer; the custom archive item is removed and only the official archive button remains, which now follows the drawer archive setting, shows the archive unread counter, opens the archive on click, opens it in a separate window with Ctrl+click, shows the folder context menu on right click and hides when the archive is empty
+- Added double click zoom for photos in the in-window media viewer; double clicking the photo switches between the default size and a zoomed view anchored at the cursor, and another double click returns back
+- Fixed a crash in the in-window media viewer header when showing a forwarded message from a hidden sender, which users hit while flipping through media
+- Fixed a crash when the message was deleted while its message shot preview was open
+- Fixed a crash when media menu or burn-after-read actions ran after the message was removed
+- Fixed a crash when the source messages disappeared while the forwarding selector was open
+- Fixed an issue where a story could no longer be opened after the ghost mode prompt if it expired while the confirmation box was open
+- Fixed a crash when filter peer resolution continued after logging out
+- Fixed the saved music menus continuing to act on a stale button or message after the profile page refreshed
+- Fixed bundled Simplified Chinese strings reverting after a language switch or a cloud language update
+- Fixed an issue with the photo editor backdrop that previously let the sharp chat list show through when Window Background was set to Mica or Acrylic
+- Fixed inconsistent icon sizes across the photo editor buttons
+- Fixed missing Simplified Chinese translations for the photo editor strings added in Telegram 7.3, such as the shortcut legend, trim to shortest, audio removal, circle corners and custom link text
+- Fixed the Manage sticker sets link overlapping the media buttons on short sticker panels in the photo editor
 
 ---
 
-- 调整了窗口内媒体查看器的开合行为，现在打开和关闭时原地淡入淡出，不再从聊天缩略图展开或收回
-- 调整了窗口内媒体查看器的说明文字显示，现在不再在缩略图条上方重复显示消息文字
-- 新增了放大图片和视频的弹性拖动，现在可以拖过边界查看被查看器控件遮住的部分，松手后自动回弹
-- 修复了关于窗口内媒体查看器背景的错误，该问题曾导致窗口背景设为云母、亚克力或磨砂玻璃时聊天内容清晰透出，没有被模糊
-- 修复了关于 Windows 主窗口阴影的错误，该问题曾导致打开窗口内媒体查看器时阴影变小，关闭时又突然恢复
-- 修复了关于 Windows 11 上窗口内媒体查看器圆角的错误，该问题曾导致四角和顶边盖住主窗口边框
+- 调整了自定义通知弹窗的外观，现在采用居中头像、主题背景和关闭与回复按钮的紧凑卡片样式，通知设置中新增“通知样式”选项，可在卡片和叠放之间切换
+- 调整了对话列表的更新方式，新消息、草稿或置顶导致对话重新排序时，对话现在会以动画移动到新位置，被移除的对话也会平滑消失而不是瞬间不见
+- 调整了登录步骤的切换方式，现在每一步原地淡入淡出，二维码和状态文字保持实时更新，不再从冻结的快照横向滑动
+- 调整了从通知跳转到对话的过渡效果，现在原地淡入淡出，不再横向平移
+- 调整了窗口内视频播放控件的位置，现在无论视频尺寸和缩放如何，控件始终居中停留在缩略图条或底边上方
+- 调整了主菜单抽屉中的归档入口，移除了自定义的归档菜单项，仅保留官方归档按钮，现在由抽屉归档设置控制，显示归档未读计数，单击打开归档，Ctrl+单击在独立窗口打开，右键显示文件夹上下文菜单，归档为空时自动隐藏
+- 新增了窗口内媒体查看器中图片的双击缩放，双击图片可在默认大小和以光标为中心的放大视图之间切换，再次双击恢复
+- 修复了窗口内媒体查看器顶栏显示来自隐藏发送者的转发消息时的崩溃，快速翻阅媒体时容易触发
+- 修复了消息截图预览打开期间消息被删除所导致的崩溃
+- 修复了消息被删除后媒体菜单或阅后即焚操作仍继续运行所导致的崩溃
+- 修复了转发选择器打开期间源消息消失所导致的崩溃
+- 修复了故事在隐身查看确认框打开期间过期后无法再打开的问题
+- 修复了退出登录后过滤器对话解析仍在继续所导致的崩溃
+- 修复了资料页刷新后收藏音乐菜单仍作用于旧按钮或旧消息的问题
+- 修复了切换语言或云语言包更新后内置简体中文翻译丢失的问题
+- 修复了关于图片编辑器背景的错误，该问题曾导致窗口背景设为云母或亚克力时清晰的对话列表透出
+- 修复了图片编辑器按钮图标大小不一致的问题
+- 修复了 Telegram 7.3 新增图片编辑器文字缺少简体中文翻译的问题，涵盖快捷键说明、裁剪至最短、移除音频、圆形圆角和自定义链接文字
+- 修复了图片编辑器贴纸面板较矮时“管理贴纸包”链接与媒体按钮重叠的问题
