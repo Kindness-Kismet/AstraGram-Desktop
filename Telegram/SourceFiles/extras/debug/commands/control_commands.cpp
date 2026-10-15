@@ -3,6 +3,7 @@
 #include "extras/debug/debug_login.h"
 
 #include "core/application.h"
+#include "chat_helpers/stickers_list_footer.h"
 #include "ui/abstract_button.h"
 #include "ui/widgets/elastic_scroll.h"
 #include "ui/widgets/scroll_area.h"
@@ -570,7 +571,22 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 			: (shape == Qt::ArrowCursor) ? std::string("default")
 			: std::to_string(int(shape));
 	}
-	if (const auto slider = dynamic_cast<Ui::ContinuousSlider*>(target)) {
+	if (const auto footer = dynamic_cast<ChatHelpers::StickersListFooter*>(target)) {
+		data["kind"] = "emojiFooter";
+		auto items = json::array();
+		for (const auto &item : footer->debugItems()) {
+			const auto rect = item.rect;
+			const auto clip = item.visibleRect;
+			items.push_back({
+				{ "setId", std::to_string(item.setId) },
+				{ "rect", { rect.x(), rect.y(), rect.width(), rect.height() } },
+				{ "visibleRect", { clip.x(), clip.y(), clip.width(), clip.height() } },
+				{ "label", item.label.toStdString() },
+				{ "active", item.active },
+			});
+		}
+		data["items"] = std::move(items);
+	} else if (const auto slider = dynamic_cast<Ui::ContinuousSlider*>(target)) {
 		data["value"] = slider->value();
 		data["kind"] = "slider";
 		data["minimum"] = 0;

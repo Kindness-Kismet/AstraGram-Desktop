@@ -157,6 +157,16 @@ public:
 		RectPart origin);
 
 	[[nodiscard]] static int IconFrameSize();
+	#ifdef _DEBUG
+	struct DebugItem {
+		uint64 setId = 0;
+		QRect rect;
+		QRect visibleRect;
+		QString label;
+		bool active = false;
+	};
+	[[nodiscard]] std::vector<DebugItem> debugItems() const;
+	#endif
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
@@ -233,6 +243,8 @@ private:
 	void refreshIconsGeometry(
 		uint64 activeSetId,
 		ValidateIconAnimations animations);
+	bool refreshCategoryLabel(uint64 activeSetId);
+	void refreshCategoryGeometry();
 	void refreshSubiconsGeometry();
 	void refreshScrollableDimensions();
 	void updateSelected();
@@ -261,6 +273,13 @@ private:
 		const IconInfo &info,
 		crl::time now,
 		bool paused) const;
+	void paintEmojiCategory(
+		Painter &p,
+		int left,
+		int itemWidth,
+		int outerWidth,
+		Ui::Emoji::Section section,
+		bool active) const;
 	void paintSelectionBg(
 		QPainter &p,
 		const ExpandingContext &context) const;
@@ -299,6 +318,9 @@ private:
 	int _iconsTop = 0;
 	int _singleWidth = 0;
 	QPoint _areaPosition;
+	std::optional<Ui::Emoji::Section> _categorySection;
+	QString _categoryLabel;
+	int _categoryWidth = 0;
 
 	mutable QImage _fadeLeftCache;
 	mutable QColor _fadeLeftColor;

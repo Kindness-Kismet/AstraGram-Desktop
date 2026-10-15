@@ -126,6 +126,10 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 加 `open` 打开贴纸管理弹窗，控件标识为 `simulation.stickers`；省略时保留当前界面。后续调用只更新计数，不重建列表，适合依次检查 `0`、`9`、`107`、`9999` 的尺寸变化。
 贴纸包与计数只保存在内存中。样本不带未读标记，切页不会自动减少徽标计数；返回值包含实际计数、是否首次注入、是否打开弹窗及三类贴纸包数量。
 
+`simulation.emoji-packs <on|off>` 仅在独立模拟配置中加入或移除三个固定的本地自定义表情包，保留其他表情包。
+样本复用内存中的静态图片，文档使用自定义表情属性并沿原生表情包更新通知刷新；重复执行不会重复添加。
+打开 `compose.emoji`，用 `control.set compose.emoji.tabs 0` 切到表情页，再用 `control.list emoji.categories` 定位自绘底栏；通过 `control.mouse` 和 `control.pointer` 检查分类与表情包切换、悬停，状态随模拟会话销毁。
+
 `simulation.wallet [keep|missing|ready|collectibles|close]` 仅在独立模拟配置中打开或关闭钱包窗口。
 `missing` 显示未创建状态，`ready` 注入固定公开地址、余额和交易记录，`collectibles` 另加固定藏品以显示标签页。
 列表沿正式响应处理入口更新；不安装私钥或提交交易，状态随模拟会话销毁。

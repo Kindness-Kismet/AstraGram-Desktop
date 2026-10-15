@@ -6,6 +6,7 @@
 #include "extras/debug/simulation_scenarios.h"
 #include "base/unixtime.h"
 #include "boxes/stickers_box.h"
+#include "data/data_document.h"
 #include "data/data_session.h"
 #include "data/stickers/data_stickers.h"
 #include "dialogs/dialogs_widget.h"
@@ -23,6 +24,8 @@ namespace {
 
 constexpr auto kWalletBalance = int64(123456789000);
 constexpr auto kStickerSetId = uint64(9800000000);
+constexpr auto kEmojiSetId = uint64(9800000100);
+constexpr auto kEmojiSetCount = 3;
 
 bool seedStickerSets(not_null<Main::Session*> session) {
 	auto &stickers = session->data().stickers();
@@ -95,6 +98,68 @@ Result simulationStickers(const QStringList &args) {
 	}));
 }
 
+Result simulationEmojiPacks(const QStringList &args) {
+	if (args.size() != 1 || (args.front() != u"on"_q && args.front() != u"off"_q)) {
+		return Result::Err(u"usage: simulation.emoji-packs <on|off>"_q);
+	}
+	const auto session = ActiveSession();
+	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	const auto enabled = (args.front() == u"on"_q);
+	auto &stickers = session->data().stickers();
+	auto &sets = stickers.setsRef();
+	auto &order = stickers.emojiSetsOrderRef();
+	// 界面刷新前保留移除的样本，避免现有图标引用已销毁的表情包。
+	auto removed = std::vector<std::unique_ptr<Data::StickersSet>>();
+	auto changed = false;
+	for (auto index = 0; index != kEmojiSetCount; ++index) {
+		const auto id = kEmojiSetId + index;
+		auto it = sets.find(id);
+		if (!enabled) {
+			changed = (order.removeAll(id) > 0) || changed;
+			if (it != sets.end()) {
+				removed.push_back(std::move(it->second));
+				sets.erase(it);
+				changed = true;
+			}
+			continue;
+		}
+		if (it == sets.end()) {
+			const auto media = simulationMedia(
+				session, SimulationMedia::Sticker, 2800100 + index);
+			const auto document = session->data().processDocument(
+				*media.c_messageMediaDocument().vdocument());
+			document->setattributes({ MTP_documentAttributeCustomEmoji(
+				MTP_flags(MTPDdocumentAttributeCustomEmoji::Flag::f_free),
+				MTP_string(u"⭐"_q),
+				MTP_inputStickerSetID(MTP_long(id), MTP_long(0))) });
+			auto set = std::make_unique<Data::StickersSet>(
+				&session->data(), id, 0, 0,
+				u"模拟表情包 %1"_q.arg(index + 1),
+				u"simulation_emoji_%1"_q.arg(index + 1), 1,
+				Data::StickersSetFlag::Emoji | Data::StickersSetFlag::Installed,
+				base::unixtime::now());
+			set->stickers.push_back(document.get());
+			it = sets.emplace(id, std::move(set)).first;
+			changed = true;
+		}
+		it->second->flags |= Data::StickersSetFlag::Installed;
+		if (!order.contains(id)) {
+			order.push_back(id);
+			changed = true;
+		}
+	}
+	if (changed) {
+		stickers.notifyUpdated(Data::StickersType::Emoji);
+	}
+	return Result::Ok(Compact(json{
+		{ "enabled", enabled },
+		{ "changed", changed },
+		{ "emojiSets", order.size() },
+	}));
+}
+
 void applyWalletLists(Wallet::Session &wallet, bool withCollectibles) {
 	const auto address = u"0:"_q + QString(64, QChar('0'));
 	const auto peerAddress = u"0:"_q + QString(64, QChar('2'));
@@ -143,6 +208,7 @@ void applyWalletLists(Wallet::Session &wallet, bool withCollectibles) {
 const HandlerMap &simulationHandlers() {
 	static const auto result = HandlerMap{
 		{ u"simulation.stickers"_q, &simulationStickers },
+		{ u"simulation.emoji-packs"_q, &simulationEmojiPacks },
 		{ u"simulation.wallet"_q, [](const QStringList &args) {
 			const auto mode = args.isEmpty() ? u"keep"_q : args.front();
 			if (args.size() > 1 || (mode != u"keep"_q && mode != u"missing"_q

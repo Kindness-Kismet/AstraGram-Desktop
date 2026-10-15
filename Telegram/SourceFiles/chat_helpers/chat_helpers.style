@@ -496,6 +496,10 @@ emojiPanMargins: margins(10px, 10px, 10px, 10px);
 emojiTabs: defaultTabsSlider;
 
 emojiCategoryIconTop: 6px;
+emojiCategoryLabelFont: font(11px);
+emojiCategoryLabelGap: 6px;
+emojiCategoryLabelPadding: 8px;
+emojiCategoryLabelMaxWidth: 64px;
 emojiPanAnimation: PanelAnimation(defaultPanelAnimation) {
 	fadeBg: emojiPanBg;
 }

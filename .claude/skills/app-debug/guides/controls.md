@@ -14,6 +14,7 @@
 滑块值为 0 至 1；输入字符串保留原文。单选项通过选择另一个选项切换，不直接取消选中。
 横向标签返回 `kind: tabs`、当前下标 `value` 和标签数 `count`；`control.set` 接收从 0 开始的下标，执行原有切换回调。
 公共横向页签另返回 `contentRects`，各项为控件内的 `[x,y,width,height]`，包含文字和计数的实际布局范围。
+表情底栏 `emoji.categories` 返回 `kind: emojiFooter` 与 `items`，每项包含集合编号、实际矩形、裁剪后可见矩形、选中状态和当前展开名称。
 
 `control.action <target> <action>` 执行 `control.get` 返回的辅助功能动作。
 `control.mouse <target> <x> <y> [left|right|double|press|release]` 在控件内部指定位置投递点击、右键或双击，
