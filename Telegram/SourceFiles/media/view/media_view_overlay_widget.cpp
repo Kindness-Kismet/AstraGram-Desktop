@@ -9926,71 +9926,37 @@ void OverlayWidget::findCurrent() {
 }
 
 void OverlayWidget::updateHeader() {
-	auto index = _fullIndex ? *_fullIndex : -1;
-	auto count = _fullCount ? *_fullCount : -1;
-	if (index >= 0 && index < count && count > 1) {
-		if (_document) {
-			_headerText = tr::lng_mediaview_file_n_of_amount(
-				tr::now,
-				lt_file,
-				(_document->filename().isEmpty()
-					? tr::lng_mediaview_doc_image(tr::now)
-					: _document->filename()),
-				lt_n,
-				QString::number(index + 1),
-				lt_amount,
-				QString::number(count));
+	const auto channel = _peer ? _peer->asChannel() : nullptr;
+	const auto media = _message ? _message->media() : nullptr;
+	if (media && media->ttlSeconds()) {
+		_headerText = _document
+			? tr::lng_mediaview_disappearing_video(tr::now)
+			: tr::lng_mediaview_disappearing_photo(tr::now);
+	} else if (_document) {
+		_headerText = _document->filename().isEmpty()
+			? tr::lng_mediaview_doc_image(tr::now)
+			: _document->filename();
+	} else if (_message) {
+		_headerText = tr::lng_mediaview_single_photo(tr::now);
+	} else if (_user) {
+		if (_photo && SyncUserFallbackPhotoViewer(_user) == _photo->id) {
+			_headerText = tr::lng_mediaview_profile_public_photo(tr::now);
+		} else if (_user->hasPersonalPhoto()
+			&& _photo
+			&& (_photo->id == _user->userpicPhotoId())) {
+			_headerText = tr::lng_mediaview_profile_photo_by_you(tr::now);
 		} else {
-			if (_user
-				&& (index == count - 1)
-				&& _photo
-				&& SyncUserFallbackPhotoViewer(_user) == _photo->id) {
-				_headerText = tr::lng_mediaview_profile_public_photo(tr::now);
-			} else if (_user
-				&& _user->hasPersonalPhoto()
-				&& _photo
-				&& (_photo->id == _user->userpicPhotoId())) {
-				_headerText = tr::lng_mediaview_profile_photo_by_you(tr::now);
-			} else {
-				_headerText = tr::lng_mediaview_n_of_amount(
-					tr::now,
-					lt_n,
-					QString::number(index + 1),
-					lt_amount,
-					QString::number(count));
-			}
+			_headerText = tr::lng_mediaview_profile_photo(tr::now);
 		}
+	} else if (channel && channel->isCommunity()) {
+		_headerText = tr::lng_mediaview_community_photo(tr::now);
+	} else if ((_history && _history->peer->isBroadcast())
+		|| (channel && !channel->isMegagroup())) {
+		_headerText = tr::lng_mediaview_channel_photo(tr::now);
+	} else if (_peer) {
+		_headerText = tr::lng_mediaview_group_photo(tr::now);
 	} else {
-		const auto channel = _peer ? _peer->asChannel() : nullptr;
-		const auto media = _message ? _message->media() : nullptr;
-		if (media && media->ttlSeconds()) {
-			_headerText = _document
-				? tr::lng_mediaview_disappearing_video(tr::now)
-				: tr::lng_mediaview_disappearing_photo(tr::now);
-		} else if (_document) {
-			_headerText = _document->filename().isEmpty()
-				? tr::lng_mediaview_doc_image(tr::now)
-				: _document->filename();
-		} else if (_message) {
-			_headerText = tr::lng_mediaview_single_photo(tr::now);
-		} else if (_user) {
-			if (_user->hasPersonalPhoto()
-				&& _photo
-				&& (_photo->id == _user->userpicPhotoId())) {
-				_headerText = tr::lng_mediaview_profile_photo_by_you(tr::now);
-			} else {
-				_headerText = tr::lng_mediaview_profile_photo(tr::now);
-			}
-		} else if (channel && channel->isCommunity()) {
-			_headerText = tr::lng_mediaview_community_photo(tr::now);
-		} else if ((_history && _history->peer->isBroadcast())
-			|| (channel && !channel->isMegagroup())) {
-			_headerText = tr::lng_mediaview_channel_photo(tr::now);
-		} else if (_peer) {
-			_headerText = tr::lng_mediaview_group_photo(tr::now);
-		} else {
-			_headerText = tr::lng_mediaview_single_photo(tr::now);
-		}
+		_headerText = tr::lng_mediaview_single_photo(tr::now);
 	}
 	_headerHasLink = computeOverviewType() != std::nullopt;
 	auto hwidth = st::mediaviewThickFont->width(_headerText);
