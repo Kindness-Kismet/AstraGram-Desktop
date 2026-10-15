@@ -30,6 +30,7 @@ public:
 	// 无法确认留档为空时返回 true，避免误取消本地密码。
 	[[nodiscard]] bool hasMessages();
 	[[nodiscard]] bool add(const ExtrasMessageBase &message, bool edited);
+	// minId 与 maxId 使用留档记录编号，不使用消息协议编号。
 	[[nodiscard]] std::vector<ExtrasMessageBase> get(
 		bool edited,
 		ID userId,

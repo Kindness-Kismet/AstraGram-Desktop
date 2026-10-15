@@ -278,6 +278,12 @@ public:
 				"CREATE INDEX IF NOT EXISTS idx_archive_edited_page ON "
 				"EncryptedMessages(keyId,edited,userId,dialogId,messageId,fakeId DESC)")
 			&& execute(
+				"CREATE INDEX IF NOT EXISTS idx_archive_saved_page ON "
+				"EncryptedMessages(keyId,edited,userId,dialogId,fakeId DESC)")
+			&& execute(
+				"CREATE INDEX IF NOT EXISTS idx_archive_saved_topic_page ON "
+				"EncryptedMessages(keyId,edited,userId,dialogId,topicId,fakeId DESC)")
+			&& execute(
 				"CREATE INDEX IF NOT EXISTS idx_archive_sequence ON "
 				"EncryptedMessages(fakeId DESC)")
 			&& execute(
@@ -471,11 +477,17 @@ public:
 		if (!checkReady() || limit == 0) {
 			return {};
 		}
-		const auto pageColumn = edited ? "fakeId" : "messageId";
+		// 普通消息与临时消息编号互不相干，统一按留档顺序分页。
+		const auto pageColumn = "fakeId";
 		const auto sql = std::string("SELECT ") + kRecordColumns
-			+ " FROM EncryptedMessages WHERE keyId=?1 AND edited=?2"
+			+ " FROM EncryptedMessages AS records WHERE keyId=?1 AND edited=?2"
 			" AND userId=?3 AND dialogId=?4"
 			+ (edited ? " AND messageId=?5" : " AND (topicId=?5 OR ?5=0)")
+			+ (edited ? "" : " AND fakeId=(SELECT MAX(latest.fakeId)"
+				" FROM EncryptedMessages AS latest WHERE latest.keyId=records.keyId"
+				" AND latest.edited=0 AND latest.userId=records.userId"
+				" AND latest.dialogId=records.dialogId"
+				" AND latest.messageId=records.messageId)")
 			+ " AND (" + pageColumn + ">?6 OR ?6=0)"
 			+ " AND (" + pageColumn + "<?7 OR ?7=0)"
 			+ " ORDER BY " + pageColumn + " DESC";

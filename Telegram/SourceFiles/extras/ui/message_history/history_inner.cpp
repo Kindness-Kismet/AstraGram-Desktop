@@ -803,9 +803,7 @@ void InnerWidget::addMessages(Direction direction, const std::vector<ExtrasMessa
 	addToItems.reserve(oldItemsCount + messages.size() * 2);
 
 	for (const auto &message : messages) {
-		const auto id = _item
-							? message.fakeId // viewing edited history
-							: message.messageId; // viewing deleted messages
+		const auto id = message.fakeId;
 		if (_messageIds.find(id) != _messageIds.end()) {
 			continue;
 		}

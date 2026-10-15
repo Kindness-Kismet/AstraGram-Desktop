@@ -522,8 +522,8 @@ QString migrationChecks(const QString &path, bytes::const_span key) {
 
 QString corruptionChecks(const QString &path, bytes::const_span key) {
 	auto store = Store();
-	if (!store.unlock(path, key) || !store.add(sample(20), false)
-		|| !store.add(sample(10), false)) {
+	if (!store.unlock(path, key) || !store.add(sample(10), false)
+		|| !store.add(sample(20), false)) {
 		return u"could not initialize corruption samples"_q;
 	}
 	auto database = TestDatabase(path);
