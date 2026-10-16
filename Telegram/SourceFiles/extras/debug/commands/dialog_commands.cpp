@@ -9,6 +9,7 @@
 #include "boxes/connection_box.h"
 #include "boxes/create_poll_box.h"
 #include "boxes/delete_messages_box.h"
+#include "boxes/edit_todo_list_box.h"
 #include "boxes/download_path_box.h"
 #include "boxes/language_box.h"
 #include "boxes/passcode_box.h"
@@ -35,9 +36,11 @@
 #include "ui/boxes/collectible_info_box.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/boxes/country_select_box.h"
+#include "ui/boxes/single_choice_box.h"
 #include "ui/dynamic_thumbnails.h"
 #include "ui/layers/generic_box.h"
 #include "ui/widgets/checkbox.h"
+#include "ui/widgets/option_list.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/fields/input_field.h"
 #include "window/window_lock_widgets.h"
@@ -105,18 +108,57 @@ void formDemoBox(not_null<Ui::GenericBox*> box) {
 		rpl::single(u"文件夹名称"_q),
 		u"日常"_q));
 	box->setFocusCallback([=] { field->setFocusFast(); });
-	box->addRow(object_ptr<Ui::Checkbox>(
-		box,
+	const auto options = box->addRow(object_ptr<Ui::OptionList>(box));
+	options->setObjectName(u"dialog.options"_q);
+	const auto unread = options->addOption(object_ptr<Ui::Checkbox>(
+		options,
 		u"包括未读对话"_q,
 		true,
 		st::defaultBoxCheckbox));
-	box->addRow(object_ptr<Ui::Checkbox>(
-		box,
+	unread->setObjectName(u"dialog.options.unread"_q);
+	const auto archived = options->addOption(object_ptr<Ui::Checkbox>(
+		options,
 		u"包括已归档对话"_q,
 		false,
 		st::defaultBoxCheckbox));
+	archived->setObjectName(u"dialog.options.archived"_q);
 	box->addButton(rpl::single(u"创建文件夹"_q), [=] { box->closeBox(); });
 	box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
+}
+
+// 长文本与禁用项共用行布局，切换文案时验证后续行自动重排。
+void optionsDemoBox(not_null<Ui::GenericBox*> box) {
+	box->setTitle(rpl::single(u"选项列表"_q));
+	const auto expanded = box->lifetime().make_state<rpl::variable<bool>>(true);
+	const auto options = box->addRow(object_ptr<Ui::OptionList>(box));
+	options->setObjectName(u"dialog.options"_q);
+	const auto shortOption = options->addOption(object_ptr<Ui::Checkbox>(
+		options,
+		u"只显示未读对话"_q,
+		true,
+		st::defaultBoxCheckbox));
+	shortOption->setObjectName(u"dialog.options.short"_q);
+	const auto longOption = options->addOption(object_ptr<Ui::Checkbox>(
+		options,
+		expanded->value() | rpl::map([](bool expanded) {
+			return expanded
+				? u"包含所有已归档的对话，并保留尚未阅读的消息与提醒；较长的选项说明应自动换行，不能遮挡下一项。"_q
+				: u"包含已归档对话"_q;
+		}),
+		false,
+		st::defaultBoxCheckbox));
+	longOption->setObjectName(u"dialog.options.long"_q);
+	const auto disabled = options->addOption(object_ptr<Ui::Checkbox>(
+		options,
+		u"此选项暂不可用"_q,
+		false,
+		st::defaultBoxCheckbox));
+	disabled->setObjectName(u"dialog.options.disabled"_q);
+	disabled->setDisabled(true);
+	box->addLeftButton(rpl::single(u"切换长文案"_q), [=] {
+		*expanded = !expanded->current();
+	});
+	box->addButton(tr::lng_box_ok(), [=] { box->closeBox(); });
 }
 
 // 不可关闭的对话框，公共关闭按钮应隐藏。
@@ -158,6 +200,31 @@ void lockedDemoBox(not_null<Ui::GenericBox*> box) {
 		} },
 		{ "form", "form", [](Controller) -> object_ptr<Ui::BoxContent> {
 			return Box(formDemoBox);
+		} },
+		{ "options", "options", [](Controller) -> object_ptr<Ui::BoxContent> {
+			return Box(optionsDemoBox);
+		} },
+		{ "single-choice", "options", [](Controller) -> object_ptr<Ui::BoxContent> {
+			return Box([](not_null<Ui::GenericBox*> box) {
+				const auto options = std::vector<QString>{
+					u"全部对话"_q,
+					u"只保留尚未阅读的对话，同时包含已归档但仍有新消息的对话"_q,
+					u"仅置顶对话"_q,
+				};
+				SingleChoiceBox(box, {
+					.title = rpl::single(u"选择对话范围"_q),
+					.options = options,
+					.initialSelection = 0,
+					.callback = [](int) {},
+				});
+			});
+		} },
+		{ "todo-list", "form", [](Controller controller) -> object_ptr<Ui::BoxContent> {
+			return Box<EditTodoListBox>(
+				controller,
+				rpl::single(0),
+				Api::SendType::Normal,
+				SendMenu::Details());
 		} },
 		{ "reset", "form", [](Controller) -> object_ptr<Ui::BoxContent> {
 			return Box(resetDemoBox);

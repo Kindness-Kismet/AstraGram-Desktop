@@ -37,6 +37,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/boxes/confirm_box.h"
 #include "ui/text/format_values.h"
 #include "ui/widgets/checkbox.h"
+#include "ui/widgets/labels.h"
+#include "ui/widgets/option_list.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/wrap/vertical_layout.h"
@@ -123,9 +125,6 @@ void RingtonesBox(
 
 	const auto container = box->verticalLayout();
 
-	auto padding = st::boxPadding;
-	padding.setTop(padding.bottom());
-
 	struct State {
 		AudioCreator creator;
 		std::shared_ptr<Ui::RadiobuttonGroup> group;
@@ -147,21 +146,20 @@ void RingtonesBox(
 	};
 
 	const auto addToGroup = [=](
-			not_null<Ui::VerticalLayout*> verticalLayout,
+			not_null<Ui::OptionList*> options,
 			int value,
 			const QString &text,
 			bool chosen) {
 		if (chosen) {
 			state->group->setValue(value);
 		}
-		const auto button = verticalLayout->add(
+		const auto button = options->addOption(
 			object_ptr<Ui::Radiobutton>(
-				verticalLayout,
+				options,
 				state->group,
 				value,
 				text,
-				st::defaultCheckbox),
-			padding);
+				st::defaultBoxCheckbox));
 		if (chosen) {
 			state->chosenButton = button;
 		}
@@ -235,20 +233,24 @@ void RingtonesBox(
 		container,
 		tr::lng_ringtones_box_cloud_subtitle());
 
+	const auto defaults = container->add(
+		object_ptr<Ui::OptionList>(container),
+		st::boxRowPadding);
 	const auto noSound = selected.none;
 	addToGroup(
-		container,
+		defaults,
 		kDefaultValue,
 		tr::lng_ringtones_box_default(tr::now),
 		false);
 	addToGroup(
-		container,
+		defaults,
 		kNoSoundValue,
 		tr::lng_ringtones_box_no_sound(tr::now),
 		noSound);
 
 	const auto custom = container->add(
-		object_ptr<Ui::VerticalLayout>(container));
+		object_ptr<Ui::OptionList>(container),
+		st::boxRowPadding);
 
 	const auto rebuild = [=] {
 		const auto old = base::take(state->medias);
@@ -266,7 +268,7 @@ void RingtonesBox(
 			document->owner().notifySettings().cacheSound(document);
 		}
 
-		custom->resizeToWidth(container->width());
+		custom->resizeToWidth(custom->widthNoMargins());
 		if (!state->chosenButton) {
 			state->group->setValue(kDefaultValue);
 			state->defaultButton->finishAnimating();
@@ -362,8 +364,12 @@ void RingtonesBox(
 	}
 
 	box->addSkip(st::ringtonesBoxSkip);
-	Ui::AddDividerText(container, tr::lng_ringtones_box_about());
-
+	container->add(
+		object_ptr<Ui::FlatLabel>(
+			container,
+			tr::lng_ringtones_box_about(),
+			st::boxDividerLabel),
+		st::boxRowPadding);
 	box->addSkip(st::ringtonesBoxSkip);
 
 	box->setWidth(st::boxWideWidth);

@@ -12,7 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Ui {
 class RadiobuttonGroup;
-class Radiobutton;
+class OptionList;
 class FlatLabel;
 } // namespace Ui
 
@@ -47,6 +47,7 @@ private:
 	std::vector<int> _ttlValues;
 	object_ptr<Ui::FlatLabel> _description = { nullptr };
 	object_ptr<Ui::FlatLabel> _loading;
+	object_ptr<Ui::OptionList> _options = { nullptr };
 	std::shared_ptr<Ui::RadiobuttonGroup> _ttlGroup;
 
 };

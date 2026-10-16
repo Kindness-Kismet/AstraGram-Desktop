@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_premium.h"
 #include "settings/settings_privacy_controllers.h"
 #include "settings/sections/settings_privacy_security.h"
+#include "ui/boxes/dialog_layout.h"
 #include "ui/boxes/peer_qr_box.h"
 #include "ui/controls/invite_link_buttons.h"
 #include "ui/controls/invite_link_label.h"
@@ -35,6 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/continuous_sliders.h"
+#include "ui/widgets/option_list.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/wrap/slide_wrap.h"
 #include "window/window_session_controller.h"
@@ -701,22 +703,16 @@ bool EditPrivacyBox::showExceptionLink(Exception exception) const {
 }
 
 Ui::Radioenum<EditPrivacyBox::Option> *EditPrivacyBox::AddOption(
-		not_null<Ui::VerticalLayout*> container,
+		not_null<Ui::OptionList*> container,
 		not_null<EditPrivacyController*> controller,
 		const std::shared_ptr<Ui::RadioenumGroup<Option>> &group,
 		Option option) {
-	return container->add(
-		object_ptr<Ui::Radioenum<Option>>(
-			container,
-			group,
-			option,
-			controller->optionLabel(option),
-			st::settingsPrivacyOption),
-		(st::settingsSendTypePadding + style::margins(
-			-st::lineWidth,
-			st::settingsPrivacySkipTop,
-			0,
-			0)));
+	return container->addOption(object_ptr<Ui::Radioenum<Option>>(
+		container,
+		group,
+		option,
+		controller->optionLabel(option),
+		st::defaultBoxCheckbox));
 }
 
 Ui::FlatLabel *EditPrivacyBox::addLabel(
@@ -726,30 +722,21 @@ Ui::FlatLabel *EditPrivacyBox::addLabel(
 	if (!text) {
 		return nullptr;
 	}
-	auto label = object_ptr<Ui::FlatLabel>(
+	return Ui::AddDialogText(
 		container,
-		rpl::duplicate(text),
-		st::boxDividerLabel);
-	const auto result = label.data();
-	container->add(
-		object_ptr<Ui::DividerLabel>(
-			container,
-			std::move(label),
-			st::defaultBoxDividerLabelPadding),
-		{ 0, topSkip, 0, 0 });
-	return result;
+		std::move(text),
+		st::defaultBoxDividerLabelPadding + style::margins(
+			0, topSkip, 0, 0)).get();
 }
 
-Ui::FlatLabel *EditPrivacyBox::addLabelOrDivider(
+Ui::FlatLabel *EditPrivacyBox::addLabelOrSkip(
 		not_null<Ui::VerticalLayout*> container,
 		rpl::producer<TextWithEntities> text,
 		int topSkip) {
 	if (const auto result = addLabel(container, std::move(text), topSkip)) {
 		return result;
 	}
-	container->add(
-		object_ptr<Ui::BoxContentDivider>(container),
-		{ 0, topSkip, 0, 0 });
+	Ui::AddSkip(container, topSkip);
 	return nullptr;
 }
 
@@ -773,11 +760,6 @@ void EditPrivacyBox::setupContent() {
 	});
 	auto optionValue = toggle->events_starting_with_copy(_value.option);
 
-	const auto addOptionRow = [&](Option option) {
-		return (_controller->hasOption(option) || (_value.option == option))
-			? AddOption(content, _controller.get(), group, option)
-			: nullptr;
-	};
 	const auto addExceptionLink = [=](Exception exception) {
 		const auto update = Ui::CreateChild<rpl::event_stream<>>(content);
 		auto label = update->events_starting_with({}) | rpl::map([=] {
@@ -848,6 +830,14 @@ void EditPrivacyBox::setupContent() {
 		_controller->optionsTitleKey(),
 		{ 0, st::settingsPrivacySkipTop, 0, 0 });
 
+	const auto optionList = content->add(
+		object_ptr<Ui::OptionList>(content),
+		st::boxRowPadding);
+	const auto addOptionRow = [&](Option option) {
+		return (_controller->hasOption(option) || (_value.option == option))
+			? AddOption(optionList, _controller.get(), group, option)
+			: nullptr;
+	};
 	const auto options = {
 		Option::Everyone,
 		Option::Contacts,
@@ -865,12 +855,12 @@ void EditPrivacyBox::setupContent() {
 					&_window->session(),
 					premiumCallback,
 					[=] { group->setValue(Option::Everyone); },
-					st::messagePrivacyCheck);
+					st::defaultBoxCheckbox);
 			}
 		}
 	}
 
-	const auto warning = addLabelOrDivider(
+	const auto warning = addLabelOrSkip(
 		content,
 		_controller->warning(),
 		st::defaultVerticalListSkip + st::settingsPrivacySkipTop);
@@ -980,44 +970,37 @@ void EditMessagesPrivacyBox(
 			: privacy->newChargeStarsCurrent()
 			? kOptionCharge
 			: kOptionAll));
-	inner->add(
+	const auto options = inner->add(
+		object_ptr<Ui::OptionList>(inner),
+		st::boxRowPadding);
+	options->addOption(object_ptr<Ui::Radiobutton>(
+		options,
+		group,
+		kOptionAll,
+		tr::lng_messages_privacy_everyone(tr::now),
+		st::defaultBoxCheckbox));
+	const auto restricted = options->addOption(
 		object_ptr<Ui::Radiobutton>(
-			inner,
-			group,
-			kOptionAll,
-			tr::lng_messages_privacy_everyone(tr::now),
-			st::messagePrivacyCheck),
-		st::settingsSendTypePadding);
-	const auto restricted = inner->add(
-		object_ptr<Ui::Radiobutton>(
-			inner,
+			options,
 			group,
 			kOptionPremium,
 			tr::lng_messages_privacy_restricted(tr::now),
-			st::messagePrivacyCheck),
-		st::settingsSendTypePadding + style::margins(
-			0,
-			st::messagePrivacyRadioSkip,
-			0,
-			st::messagePrivacyBottomSkip));
+			st::messagePrivacyCheck));
 
-	Ui::AddDividerText(inner, tr::lng_messages_privacy_about());
+	Ui::AddDialogText(inner, tr::lng_messages_privacy_about());
 
 	const auto available = session->appConfig().paidMessagesAvailable();
 
-	const auto charged = available
-		? inner->add(
-			object_ptr<Ui::Radiobutton>(
-				inner,
-				group,
-				kOptionCharge,
-				tr::lng_messages_privacy_charge(tr::now),
-				st::messagePrivacyCheck),
-			st::settingsSendTypePadding + style::margins(
-				0,
-				st::messagePrivacyBottomSkip,
-				0,
-				st::messagePrivacyBottomSkip))
+	const auto chargeOptions = available
+		? inner->add(object_ptr<Ui::OptionList>(inner), st::boxRowPadding)
+		: nullptr;
+	const auto charged = chargeOptions
+		? chargeOptions->addOption(object_ptr<Ui::Radiobutton>(
+			chargeOptions,
+			group,
+			kOptionCharge,
+			tr::lng_messages_privacy_charge(tr::now),
+			st::messagePrivacyCheck))
 		: nullptr;
 	highlightCharged = charged;
 
@@ -1028,7 +1011,7 @@ void EditMessagesPrivacyBox(
 	const auto savedValue = privacy->newChargeStarsCurrent();
 
 	if (available) {
-		Ui::AddDividerText(inner, tr::lng_messages_privacy_charge_about());
+		Ui::AddDialogText(inner, tr::lng_messages_privacy_charge_about());
 
 		const auto chargeWrap = inner->add(
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
@@ -1082,7 +1065,7 @@ void EditMessagesPrivacyBox(
 			});
 		});
 		Ui::AddSkip(chargeInner);
-		Ui::AddDividerText(
+		Ui::AddDialogText(
 			chargeInner,
 			tr::lng_messages_privacy_remove_about());
 
@@ -1148,7 +1131,7 @@ void EditMessagesPrivacyBox(
 				u"noncontact_peers_require_premium"_q);
 		});
 		Ui::AddSkip(inner);
-		Ui::AddDividerText(inner, tr::lng_messages_privacy_premium_about());
+		Ui::AddDialogText(inner, tr::lng_messages_privacy_premium_about());
 		box->addButton(tr::lng_about_done(), [=] {
 			box->closeBox();
 		});
@@ -1254,7 +1237,6 @@ rpl::producer<int> SetupChargeSlider(
 			delete details->widgetAt(0);
 		}
 		if (!stars) {
-			Ui::AddDivider(details);
 			return;
 		}
 		const auto &appConfig = peer->session().appConfig();
@@ -1262,7 +1244,7 @@ rpl::producer<int> SetupChargeSlider(
 		const auto ratio = appConfig.starsWithdrawRate();
 		const auto dollars = int(base::SafeRound(stars * ratio));
 		const auto amount = Ui::FillAmountAndCurrency(dollars, u"USD"_q);
-		Ui::AddDividerText(
+		Ui::AddDialogText(
 			details,
 			(broadcast
 				? tr::lng_manage_monoforum_price_about
@@ -1296,19 +1278,21 @@ void EditDirectMessagesPriceBox(
 			tr::rich
 		),
 		.aboutMargins = st::settingsFilterDividerLabelPadding,
+		.showDivider = false,
 	});
 
-	Ui::AddSkip(container);
+	Ui::AddSkip(container, st::boxMediumSkip);
 
-	const auto toggle = container->add(object_ptr<Ui::SettingsButton>(
-		box,
+	const auto options = container->add(
+		object_ptr<Ui::OptionList>(container),
+		st::boxRowPadding);
+	const auto toggle = options->addOption(object_ptr<Ui::Checkbox>(
+		options,
 		tr::lng_manage_monoforum_allow(),
-		st::settingsButtonNoIcon));
-	toggle->toggleOn(rpl::single(savedValue.has_value()));
+		savedValue.has_value(),
+		st::defaultBoxCheckbox));
 
-	Ui::AddSkip(container);
-	Ui::AddDivider(container);
-	Ui::AddSkip(container);
+	Ui::AddSkip(container, st::boxMediumSkip);
 
 	const auto wrap = box->addRow(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
@@ -1316,13 +1300,12 @@ void EditDirectMessagesPriceBox(
 			object_ptr<Ui::VerticalLayout>(box)),
 		style::margins());
 	wrap->toggle(savedValue.has_value(), anim::type::instant);
-	wrap->toggleOn(toggle->toggledChanges());
+	wrap->toggleOn(toggle->checkedChanges());
 
 	const auto result = box->lifetime().make_state<int>(
 		savedValue.value_or(0));
 
 	const auto inner = wrap->entity();
-	Ui::AddSkip(inner);
 	SetupChargeSlider(
 		inner,
 		channel,
@@ -1383,15 +1366,12 @@ void EditDirectMessagesPriceBox(
 		Ui::AddSkip(inner);
 
 		AddCopyShareLinkButtons(inner, copyLink, shareLink);
-		Ui::AddSkip(inner);
-		Ui::AddSkip(inner);
-
-		Ui::AddDivider(inner);
+		Ui::AddSkip(inner, st::boxMediumSkip);
 	}
 
 	box->addButton(tr::lng_settings_save(), [=] {
 		const auto weak = base::make_weak(box);
-		callback(toggle->toggled() ? *result : std::optional<int>());
+		callback(toggle->checked() ? *result : std::optional<int>());
 		if (const auto strong = weak.get()) {
 			strong->closeBox();
 		}

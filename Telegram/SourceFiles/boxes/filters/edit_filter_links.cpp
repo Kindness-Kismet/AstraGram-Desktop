@@ -29,6 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/popup_menu.h"
+#include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/painter.h"
@@ -148,7 +149,7 @@ void ChatFilterLinkBox(
 			st::defaultSubsectionTitlePadding.right(),
 			st::defaultVerticalListSkip * 2));
 	labelField->setMaxLength(kMaxLinkTitleLength);
-	AddDivider(container);
+	Ui::AddSkip(container, st::boxMediumSkip);
 
 	box->setFocusCallback([=] {
 		labelField->setFocusFast();
@@ -518,8 +519,6 @@ LinkController::LinkController(
 void LinkController::addHeader(not_null<Ui::VerticalLayout*> container) {
 	using namespace Settings;
 
-	const auto divider = Ui::CreateChild<Ui::BoxContentDivider>(
-		container.get());
 	const auto verticalLayout = container->add(
 		object_ptr<Ui::VerticalLayout>(container.get()));
 
@@ -559,11 +558,6 @@ void LinkController::addHeader(not_null<Ui::VerticalLayout*> container) {
 			})),
 		st::filterLinkDividerLabelPadding,
 		style::al_top)->setTryMakeSimilarLines(true);
-
-	verticalLayout->geometryValue(
-	) | rpl::on_next([=](const QRect &r) {
-		divider->setGeometry(r);
-	}, divider->lifetime());
 }
 
 object_ptr<Ui::BoxContent> DeleteLinkBox(
@@ -654,11 +648,7 @@ void LinkController::addLinkBlock(not_null<Ui::VerticalLayout*> container) {
 
 	AddCopyShareLinkButtons(container, copyLink, shareLink);
 
-	Ui::AddSkip(container, st::inviteLinkJoinedRowPadding.bottom() * 2);
-
-	Ui::AddSkip(container);
-
-	Ui::AddDivider(container);
+	Ui::AddSkip(container, st::boxMediumSkip);
 }
 
 void LinkController::prepare() {
@@ -797,7 +787,7 @@ void LinkController::setupAboveWidget() {
 
 void LinkController::setupBelowWidget() {
 	delegate()->peerListSetBelowWidget(
-		object_ptr<Ui::DividerLabel>(
+		object_ptr<Ui::PaddingWrap<Ui::FlatLabel>>(
 			(QWidget*)nullptr,
 			object_ptr<Ui::FlatLabel>(
 				(QWidget*)nullptr,

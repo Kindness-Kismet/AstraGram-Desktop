@@ -38,6 +38,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_premium.h"
 #include "settings/sections/settings_privacy_security.h"
 #include "ui/boxes/confirm_box.h"
+#include "ui/boxes/dialog_layout.h"
 #include "ui/chat/chat_style.h"
 #include "ui/chat/chat_theme.h"
 #include "ui/painter.h"
@@ -46,6 +47,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/toast/toast.h"
 #include "ui/widgets/checkbox.h"
+#include "ui/widgets/labels.h"
+#include "ui/widgets/option_list.h"
+#include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/slide_wrap.h"
 #include "window/section_widget.h"
 #include "window/window_controller.h"
@@ -599,15 +603,17 @@ object_ptr<Ui::RpWidget> PhoneNumberPrivacyController::setupMiddleWidget(
 		group->setValue(value.option);
 	}, widget->lifetime());
 
+	const auto options = container->add(
+		object_ptr<Ui::OptionList>(container),
+		st::boxRowPadding);
 	const auto addOption = [&](Option option) {
-		return EditPrivacyBox::AddOption(container, this, group, option);
+		return EditPrivacyBox::AddOption(options, this, group, option);
 	};
 	addOption(Option::Everyone);
 	addOption(Option::Contacts);
 	Ui::AddSkip(
 		container,
 		st::defaultVerticalListSkip + st::settingsPrivacySkipTop);
-	Ui::AddDivider(container);
 
 	using namespace rpl::mappers;
 	widget->toggleOn(_phoneNumberOption.value(
@@ -710,7 +716,7 @@ object_ptr<Ui::RpWidget> LastSeenPrivacyController::setupBelowWidget(
 	}, content->lifetime());
 
 	Ui::AddSkip(content);
-	Ui::AddDividerText(
+	Ui::AddDialogText(
 		content,
 		tr::lng_edit_lastseen_hide_read_time_about());
 	if (!controller->session().premium()) {
@@ -723,7 +729,7 @@ object_ptr<Ui::RpWidget> LastSeenPrivacyController::setupBelowWidget(
 			Settings::ShowPremium(controller, u"lastseen"_q);
 		});
 		Ui::AddSkip(content);
-		Ui::AddDividerText(
+		Ui::AddDialogText(
 			content,
 			tr::lng_edit_lastseen_subscribe_about());
 	}
@@ -1228,7 +1234,7 @@ object_ptr<Ui::RpWidget> ProfilePhotoPrivacyController::setupMiddleWidget(
 				stRemoveButton)));
 	_removePublicButton = removeButton->entity();
 	Ui::AddSkip(container);
-	Ui::AddDividerText(
+	Ui::AddDialogText(
 		container,
 		tr::lng_edit_privacy_profile_photo_public_about());
 
@@ -1467,7 +1473,7 @@ object_ptr<Ui::RpWidget> VoicesPrivacyController::setupBelowWidget(
 			u"voice_restrictions_require_premium"_q);
 	});
 	Ui::AddSkip(content);
-	Ui::AddDividerText(content, tr::lng_messages_privacy_premium_about());
+	Ui::AddDialogText(content, tr::lng_messages_privacy_premium_about());
 
 	return result;
 }
@@ -1593,9 +1599,9 @@ object_ptr<Ui::RpWidget> BirthdayPrivacyController::setupAboveWidget(
 		not_null<QWidget*> outerContainer) {
 	const auto session = &controller->session();
 	const auto user = session->user();
-	auto result = object_ptr<Ui::SlideWrap<Ui::DividerLabel>>(
+	auto result = object_ptr<Ui::SlideWrap<Ui::PaddingWrap<Ui::FlatLabel>>>(
 		parent,
-		object_ptr<Ui::DividerLabel>(
+		object_ptr<Ui::PaddingWrap<Ui::FlatLabel>>(
 			parent,
 			object_ptr<Ui::FlatLabel>(
 				parent,
@@ -1742,7 +1748,7 @@ object_ptr<Ui::RpWidget> GiftsAutoSavePrivacyController::setupAboveWidget(
 		}
 	}, icon->lifetime());
 	Ui::AddSkip(content);
-	Ui::AddDividerText(
+	Ui::AddDialogText(
 		content,
 		tr::lng_edit_privacy_gifts_show_icon_about(
 			lt_emoji,
@@ -1801,7 +1807,7 @@ object_ptr<Ui::RpWidget> GiftsAutoSavePrivacyController::setupBelowWidget(
 		}, button->lifetime());
 	}
 	Ui::AddSkip(content);
-	Ui::AddDividerText(content, tr::lng_edit_privacy_gifts_types_about());
+	Ui::AddDialogText(content, tr::lng_edit_privacy_gifts_types_about());
 
 	return result;
 }

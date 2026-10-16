@@ -36,6 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
 #include "settings/settings_common.h"
+#include "ui/boxes/dialog_layout.h"
 #include "ui/chat/chats_filter_tag.h"
 #include "ui/controls/emoji_button_factory.h"
 #include "ui/controls/emoji_button.h"
@@ -743,9 +744,7 @@ void EditFilterBox(
 		name->setFocusFast();
 	});
 
-	Ui::AddSkip(content);
-	Ui::AddDivider(content);
-	Ui::AddSkip(content);
+	Ui::AddSkip(content, st::boxMediumSkip);
 	Ui::AddSubsectionTitle(content, tr::lng_filters_include());
 
 	const auto includeAdd = AddButtonWithIcon(
@@ -762,7 +761,7 @@ void EditFilterBox(
 		&Data::ChatFilter::always);
 
 	Ui::AddSkip(content);
-	Ui::AddDividerText(content, tr::lng_filters_include_about());
+	Ui::AddDialogText(content, tr::lng_filters_include_about());
 	Ui::AddSkip(content);
 
 	auto excludeWrap = content->add(
@@ -789,7 +788,7 @@ void EditFilterBox(
 		&Data::ChatFilter::never);
 
 	Ui::AddSkip(excludeInner);
-	Ui::AddDividerText(excludeInner, tr::lng_filters_exclude_about());
+	Ui::AddDialogText(excludeInner, tr::lng_filters_exclude_about());
 	Ui::AddSkip(excludeInner);
 
 	{
@@ -972,9 +971,8 @@ void EditFilterBox(
 			last->setBrush(st::historyPeerArchiveUserpicBg);
 		}
 
-		Ui::AddSkip(colors);
-		Ui::AddSkip(colors);
-		Ui::AddDividerText(colors, tr::lng_filters_tag_color_about());
+		Ui::AddSkip(colors, st::defaultVerticalListSkip * 2);
+		Ui::AddDialogText(colors, tr::lng_filters_tag_color_about());
 		Ui::AddSkip(colors);
 	}
 
@@ -1087,7 +1085,7 @@ void EditFilterBox(
 		}));
 	}, createLink->lifetime());
 	Ui::AddSkip(content);
-	Ui::AddDividerText(
+	Ui::AddDialogText(
 		content,
 		rpl::conditional(
 			state->hasLinks.value(),

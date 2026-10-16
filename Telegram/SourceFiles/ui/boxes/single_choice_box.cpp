@@ -8,11 +8,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/boxes/single_choice_box.h"
 
 #include "lang/lang_keys.h"
-#include "ui/widgets/checkbox.h"
-#include "ui/wrap/vertical_layout.h"
-#include "ui/wrap/padding_wrap.h"
+#include "ui/widgets/option_list.h"
 #include "styles/style_layers.h"
-#include "styles/style_passcode_box.h"
 
 void SingleChoiceBox(
 		not_null<Ui::GenericBox*> box,
@@ -24,25 +21,16 @@ void SingleChoiceBox(
 	const auto group = std::make_shared<Ui::RadiobuttonGroup>(
 		args.initialSelection);
 
-	const auto layout = box->verticalLayout();
-	layout->add(object_ptr<Ui::FixedHeightWidget>(
-		layout,
-		st::boxOptionListPadding.top() + st::autolockButton.margin.top()));
+	const auto list = box->addRow(object_ptr<Ui::OptionList>(box));
 	auto &&ints = ranges::views::ints(0, ranges::unreachable);
 	for (const auto &[i, text] : ranges::views::zip(ints, args.options)) {
-		layout->add(
-			object_ptr<Ui::Radiobutton>(
-				layout,
-				group,
-				i,
-				text,
-				args.st ? *args.st : st::defaultBoxCheckbox,
-				args.radioSt ? *args.radioSt : st::defaultRadio),
-			QMargins(
-				st::boxPadding.left() + st::boxOptionListPadding.left(),
-				0,
-				st::boxPadding.right(),
-				st::boxOptionListSkip));
+		list->addOption(object_ptr<Ui::Radiobutton>(
+			list,
+			group,
+			i,
+			text,
+			args.st ? *args.st : st::defaultBoxCheckbox,
+			args.radioSt ? *args.radioSt : st::defaultRadio));
 	}
 	const auto callback = args.callback.value();
 	group->setChangedCallback([=](int value) {

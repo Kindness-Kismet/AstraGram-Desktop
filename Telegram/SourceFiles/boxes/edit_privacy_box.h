@@ -16,6 +16,7 @@ class GenericBox;
 class VerticalLayout;
 class FlatLabel;
 class LinkButton;
+class OptionList;
 template <typename Enum>
 class RadioenumGroup;
 template <typename Enum>
@@ -140,7 +141,7 @@ public:
 		const Value &value);
 
 	static Ui::Radioenum<Option> *AddOption(
-		not_null<Ui::VerticalLayout*> container,
+		not_null<Ui::OptionList*> container,
 		not_null<EditPrivacyController*> controller,
 		const std::shared_ptr<Ui::RadioenumGroup<Option>> &group,
 		Option option);
@@ -157,7 +158,7 @@ private:
 		not_null<Ui::VerticalLayout*> container,
 		rpl::producer<TextWithEntities> text,
 		int topSkip);
-	Ui::FlatLabel *addLabelOrDivider(
+	Ui::FlatLabel *addLabelOrSkip(
 		not_null<Ui::VerticalLayout*> container,
 		rpl::producer<TextWithEntities> text,
 		int topSkip);

@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
 #include "settings/business/settings_recipients_helper.h"
+#include "ui/boxes/dialog_layout.h"
 #include "ui/layers/generic_box.h"
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/buttons.h"
@@ -274,8 +275,7 @@ void EditDayBox(
 			TimeId max) {
 		auto result = object_ptr<Ui::VerticalLayout>(rows);
 		const auto raw = result.data();
-		AddDivider(raw);
-		AddSkip(raw);
+		AddSkip(raw, st::boxMediumSkip);
 		AddButtonWithLabel(
 			raw,
 			tr::lng_hours_opening(),
@@ -333,8 +333,7 @@ void EditDayBox(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			container,
 			object_ptr<Ui::VerticalLayout>(container)));
-	AddDivider(addWrap->entity());
-	AddSkip(addWrap->entity());
+	AddSkip(addWrap->entity(), st::boxMediumSkip);
 	const auto add = addWrap->entity()->add(
 		object_ptr<Settings::RowButton>(
 			container,
@@ -377,7 +376,7 @@ void EditDayBox(
 	addWrap->finishAnimating();
 
 	AddSkip(container);
-	AddDividerText(container, tr::lng_hours_about_day());
+	Ui::AddDialogText(container, tr::lng_hours_about_day());
 
 	box->addButton(tr::lng_settings_save(), [=] {
 		const auto weak = base::make_weak(box);

@@ -20,6 +20,8 @@
 #include "styles/style_settings.h"
 #include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
+#include "ui/widgets/checkbox.h"
+#include "ui/widgets/option_list.h"
 #include "ui/wrap/vertical_layout.h"
 
 #include <memory>
@@ -178,9 +180,7 @@ void MessageShotBox::setupContent() {
 	const auto imageView = content->add(object_ptr<ImageView>(content), st::imageViewPadding);
 	imageView->setObjectName(u"messageShot.image"_q);
 
-	AddSkip(content);
-	AddDivider(content);
-	AddSkip(content);
+	AddSkip(content, st::boxMediumSkip);
 	AddSubsectionTitle(content, tr::extras_MessageShotPreferences());
 
 	auto hasReactions = false;
@@ -293,12 +293,15 @@ void MessageShotBox::setupContent() {
 
 			Ui::show(std::move(box), Ui::LayerOption::KeepOther);
 		});
-	AddButtonWithIcon(
-		content,
+	const auto options = content->add(
+		object_ptr<Ui::OptionList>(content),
+		st::boxRowPadding);
+	options->addOption(object_ptr<Ui::Checkbox>(
+		options,
 		tr::extras_MessageShotShowBackground(),
-		st::settingsButtonNoIcon
-	)->toggleOn(rpl::single(shotSettings.showBackground())
-	)->toggledValue(
+		shotSettings.showBackground(),
+		st::defaultBoxCheckbox
+	))->checkedValue(
 	) | rpl::skip(1) | on_next(
 		[=](bool enabled)
 		{
@@ -307,14 +310,14 @@ void MessageShotBox::setupContent() {
 		},
 		content->lifetime());
 
-	auto latestToggle = AddButtonWithIcon(
-		content,
+	auto latestToggle = options->addOption(object_ptr<Ui::Checkbox>(
+		options,
 		tr::extras_MessageShotShowDate(),
-		st::settingsButtonNoIcon
-	);
+		shotSettings.showDate(),
+		st::defaultBoxCheckbox
+	));
 	latestToggle->setObjectName(u"messageShot.showDate"_q);
-	latestToggle->toggleOn(rpl::single(shotSettings.showDate())
-	)->toggledValue(
+	latestToggle->checkedValue(
 	) | rpl::skip(1) | on_next(
 		[=](bool enabled)
 		{
@@ -324,13 +327,13 @@ void MessageShotBox::setupContent() {
 		content->lifetime());
 
 	if (hasReactions) {
-		latestToggle = AddButtonWithIcon(
-			content,
+		latestToggle = options->addOption(object_ptr<Ui::Checkbox>(
+			options,
 			tr::extras_MessageShotShowReactions(),
-			st::settingsButtonNoIcon
-		);
-		latestToggle->toggleOn(rpl::single(shotSettings.showReactions())
-		)->toggledValue(
+			shotSettings.showReactions(),
+			st::defaultBoxCheckbox
+		));
+		latestToggle->checkedValue(
 		) | rpl::skip(1) | on_next(
 			[=](bool enabled)
 			{
@@ -341,13 +344,13 @@ void MessageShotBox::setupContent() {
 	}
 
 	if (hasHeaderDecorations) {
-		latestToggle = AddButtonWithIcon(
-			content,
+		latestToggle = options->addOption(object_ptr<Ui::Checkbox>(
+			options,
 			tr::extras_MessageShotShowHeaderDecorations(),
-			st::settingsButtonNoIcon
-		);
-		latestToggle->toggleOn(rpl::single(shotSettings.showHeaderDecorations())
-		)->toggledValue(
+			shotSettings.showHeaderDecorations(),
+			st::defaultBoxCheckbox
+		));
+		latestToggle->checkedValue(
 		) | rpl::skip(1) | on_next(
 			[=](bool enabled)
 			{
@@ -358,13 +361,13 @@ void MessageShotBox::setupContent() {
 	}
 
 	if (hasReplies) {
-		latestToggle = AddButtonWithIcon(
-			content,
+		latestToggle = options->addOption(object_ptr<Ui::Checkbox>(
+			options,
 			tr::extras_MessageShotShowColorfulReplies(),
-			st::settingsButtonNoIcon
-		);
-		latestToggle->toggleOn(rpl::single(shotSettings.showColorfulReplies())
-		)->toggledValue(
+			shotSettings.showColorfulReplies(),
+			st::defaultBoxCheckbox
+		));
+		latestToggle->checkedValue(
 		) | rpl::skip(1) | on_next(
 			[=](bool enabled)
 			{
@@ -379,13 +382,13 @@ void MessageShotBox::setupContent() {
 	}
 
 	if (hasSpoilers) {
-		latestToggle = AddButtonWithIcon(
-			content,
+		latestToggle = options->addOption(object_ptr<Ui::Checkbox>(
+			options,
 			tr::extras_MessageShotRevealSpoilers(),
-			st::settingsButtonNoIcon
-		);
-		latestToggle->toggleOn(rpl::single(shotSettings.revealSpoilers())
-		)->toggledValue(
+			shotSettings.revealSpoilers(),
+			st::defaultBoxCheckbox
+		));
+		latestToggle->checkedValue(
 		) | rpl::skip(1) | on_next(
 			[=](bool enabled)
 			{

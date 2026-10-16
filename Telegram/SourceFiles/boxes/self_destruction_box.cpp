@@ -16,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "ui/rect.h"
 #include "ui/widgets/checkbox.h"
+#include "ui/widgets/option_list.h"
 #include "ui/widgets/labels.h"
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/menu/menu_add_action_callback.h"
@@ -154,16 +155,21 @@ void SelfDestructionBox::showContent() {
 		- rect::m::sum::h(st::boxPadding));
 	y += _description->height() + st::boxMediumSkip;
 
+	_options.create(this);
+	_options->setObjectName(u"dialog.options"_q);
 	for (const auto value : _ttlValues) {
-		const auto button = Ui::CreateChild<Ui::Radiobutton>(
-			this,
+		_options->addOption(object_ptr<Ui::Radiobutton>(
+			_options,
 			_ttlGroup,
 			value,
 			DaysLabel(value),
-			st::autolockButton);
-		button->moveToLeft(st::boxPadding.left(), y);
-		y += button->heightNoMargins() + st::boxOptionListSkip;
+			st::autolockButton));
 	}
+	_options->resizeToWidth(st::boxWidth - rect::m::sum::h(st::boxPadding));
+	_options->moveToLeft(st::boxPadding.left(), y);
+	_options->heightValue() | rpl::on_next([=](int height) {
+		setDimensions(st::boxWidth, y + height + st::boxPadding.bottom());
+	}, _options->lifetime());
 	showChildren();
 
 	clearButtons();
@@ -209,8 +215,9 @@ void SelfDestructionBox::prepare() {
 	const auto boxHeight = st::boxOptionListPadding.top()
 		+ fake->height() + st::boxMediumSkip
 		+ (_ttlValues.size()
-			* (st::defaultRadio.diameter + st::boxOptionListSkip))
-		- st::boxOptionListSkip
+			* (st::defaultRadio.diameter
+				+ st::defaultOptionListPadding.top()
+				+ st::defaultOptionListPadding.bottom()))
 		+ st::boxOptionListPadding.bottom() + st::boxPadding.bottom();
 	fake.destroy();
 

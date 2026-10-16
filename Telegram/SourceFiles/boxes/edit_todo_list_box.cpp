@@ -38,6 +38,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
+#include "ui/widgets/option_list.h"
 #include "ui/widgets/labels.h"
 #include "ui/wrap/fade_wrap.h"
 #include "ui/wrap/slide_wrap.h"
@@ -1014,20 +1015,23 @@ object_ptr<Ui::RpWidget> EditTodoListBox::setupContent() {
 	Ui::AddSkip(container);
 	Ui::AddSubsectionTitle(container, tr::lng_todo_create_settings());
 
-	const auto allowAdd = container->add(
-		object_ptr<Ui::Checkbox>(
-			container,
-			tr::lng_todo_create_allow_add(tr::now),
-			!todolist || todolist->othersCanAppend(),
-			st::defaultCheckbox),
-		st::createPollCheckboxMargin);
-	const auto allowMark = container->add(
-		object_ptr<Ui::Checkbox>(
-			container,
-			tr::lng_todo_create_allow_mark(tr::now),
-			!todolist || todolist->othersCanComplete(),
-			st::defaultCheckbox),
-		st::createPollCheckboxMargin);
+	const auto settings = container->add(
+		object_ptr<Ui::OptionList>(container),
+		QMargins(
+			st::createPollCheckboxMargin.left(),
+			0,
+			st::createPollCheckboxMargin.right(),
+			0));
+	const auto allowAdd = settings->addOption(object_ptr<Ui::Checkbox>(
+		settings,
+		tr::lng_todo_create_allow_add(tr::now),
+		!todolist || todolist->othersCanAppend(),
+		st::defaultCheckbox));
+	const auto allowMark = settings->addOption(object_ptr<Ui::Checkbox>(
+		settings,
+		tr::lng_todo_create_allow_mark(tr::now),
+		!todolist || todolist->othersCanComplete(),
+		st::defaultCheckbox));
 
 	tasks->tabbed(
 	) | rpl::on_next([=] {
