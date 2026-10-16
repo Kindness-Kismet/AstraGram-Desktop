@@ -71,6 +71,8 @@ private:
 
 	void setupHeightConsumers();
 	[[nodiscard]] int desiredWidth() const;
+	[[nodiscard]] int targetWidth() const;
+	void animateWidth();
 	void setContentHeight(int height);
 	void unregisterActiveLayerSection();
 	[[nodiscard]] QRect countGeometry(int newWidth);
@@ -83,6 +85,9 @@ private:
 	int _savedHeight = 0;
 	Ui::Animations::Simple _heightAnimation;
 	Ui::Animations::Simple _savedHeightAnimation;
+	int _savedWidth = 0;
+	Ui::Animations::Simple _widthAnimation;
+	Ui::Animations::Simple _savedWidthAnimation;
 	bool _heightAnimated = false;
 	bool _inResize = false;
 	bool _pendingResize = false;

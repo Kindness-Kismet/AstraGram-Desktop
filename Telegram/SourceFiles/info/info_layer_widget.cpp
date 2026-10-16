@@ -104,23 +104,29 @@ void LayerWidget::setupHeightConsumers() {
 		resizeToWidth(width());
 	}, lifetime());
 
-	// 共享媒体页更宽，换页后按新内容重新确定宽度。
+	// 共享媒体页更宽，换页时宽度与切页动画一起过渡。
 	_contentWrap->contentChanged(
 	) | rpl::filter([=] {
-		return parentWidget() && (width() != desiredWidth());
+		return parentWidget() != nullptr;
 	}) | rpl::on_next([=] {
-		parentResized();
+		animateWidth();
 	}, lifetime());
 
+	// 截取新页面时临时撑到目标尺寸，截完恢复过渡中的尺寸。
 	_contentWrap->grabbingForExpanding(
 	) | rpl::on_next([=](bool grabbing) {
 		if (grabbing) {
+			_savedWidth = width();
+			_savedWidthAnimation = base::take(_widthAnimation);
 			_savedHeight = _contentWrapHeight;
 			_savedHeightAnimation = base::take(_heightAnimation);
-			setContentHeight(_desiredHeight);
+			_contentWrapHeight = _desiredHeight;
+			resizeToWidth(targetWidth());
 		} else {
+			_widthAnimation = base::take(_savedWidthAnimation);
 			_heightAnimation = base::take(_savedHeightAnimation);
-			setContentHeight(_savedHeight);
+			_contentWrapHeight = _savedHeight;
+			resizeToWidth(_savedWidth);
 		}
 	}, lifetime());
 
@@ -217,10 +223,8 @@ void LayerWidget::parentResized() {
 	//} else if (_controller->canShowThirdSectionWithoutResize()) {
 	//	takeToThirdSection();
 	} else {
-		auto newWidth = std::min(
-			parentWidth - 2 * st::infoMinimalLayerMargin,
-			desiredWidth());
-		resizeToWidth(newWidth);
+		_widthAnimation.stop();
+		resizeToWidth(targetWidth());
 	}
 }
 
@@ -228,6 +232,31 @@ int LayerWidget::desiredWidth() const {
 	return Media::UsesGalleryLayout(_contentWrap->controller())
 		? st::infoMediaLayerWidth
 		: st::infoDesiredWidth;
+}
+
+int LayerWidget::targetWidth() const {
+	return std::min(
+		parentWidget()->width() - 2 * st::infoMinimalLayerMargin,
+		desiredWidth());
+}
+
+void LayerWidget::animateWidth() {
+	const auto from = width();
+	const auto to = targetWidth();
+	if (from == to) {
+		_widthAnimation.stop();
+		return;
+	}
+	if (!from || isHidden()) {
+		_widthAnimation.stop();
+		resizeToWidth(to);
+		return;
+	}
+	_widthAnimation.start([=] {
+		resizeToWidth(_widthAnimation.value(to));
+	}, from, to, st::slideDuration);
+	// 立即刷新展开标记，随后截取的新页面才会按目标宽度排版。
+	resizeToWidth(from);
 }
 
 bool LayerWidget::takeToThirdSection() {
@@ -327,8 +356,9 @@ QRect LayerWidget::countGeometry(int newWidth) {
 		_contentWrapHeight + st::boxRadius,
 		maxHeight);
 	const auto newTop = (windowHeight - panelHeight) / 2;
-	const auto expanding = (std::min(_desiredHeight + st::boxRadius, maxHeight)
-		> panelHeight);
+	const auto expanding = _widthAnimation.animating()
+		|| (std::min(_desiredHeight + st::boxRadius, maxHeight)
+			> panelHeight);
 	_contentWrap->updateGeometry(
 		{ 0, 0, newWidth, panelHeight - st::boxRadius },
 		expanding,

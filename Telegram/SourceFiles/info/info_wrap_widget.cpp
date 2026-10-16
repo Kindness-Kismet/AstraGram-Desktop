@@ -1094,14 +1094,8 @@ void WrapWidget::showNewContent(
 		const Window::SectionShow &params) {
 	const auto saveToStack = (_content != nullptr)
 		&& (params.way == Window::SectionShow::Way::Forward);
-	// 弹层宽度随画廊页变化时直接切换，滑动截图对不齐。
-	const auto widthChanges = (wrap() == Wrap::Layer)
-		&& (_content != nullptr)
-		&& (Media::UsesGalleryLayout(_controller.get())
-			!= Media::UsesGalleryLayout(memento));
 	const auto needAnimation = (_content != nullptr)
-		&& (params.animated != anim::type::instant)
-		&& !widthChanges;
+		&& (params.animated != anim::type::instant);
 	auto animationParams = SectionSlideParams();
 	auto newController = createController(
 		_controller->parentController(),
