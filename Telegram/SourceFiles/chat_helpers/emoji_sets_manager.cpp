@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/fade_wrap.h"
 #include "ui/widgets/buttons.h"
+#include "ui/widgets/checkbox.h"
 #include "ui/widgets/labels.h"
 #include "ui/effects/animations.h"
 #include "ui/effects/radial_animation.h"
@@ -295,11 +296,21 @@ void Row::paintRadio(QPainter &p) {
 	const auto top = (height() - _st->diameter - _st->thickness) / 2;
 	const auto outerWidth = width();
 
+	Ui::RadioView::PaintOuter(
+		p,
+		style::rtlrect(
+			QRectF(left, top, _st->diameter, _st->diameter),
+			outerWidth),
+		_st->untoggledFg->c,
+		_st->toggledFg->c,
+		active);
+
+	// 外圈只在下载时画进度弧。
 	auto pen = anim::pen(_st->untoggledFg, _st->toggledFg, active);
 	pen.setWidth(_st->thickness);
 	pen.setCapStyle(Qt::RoundCap);
 	p.setPen(pen);
-	p.setBrush(_st->bg);
+	p.setBrush(Qt::NoBrush);
 	const auto rect = style::rtlrect(QRectF(
 		left,
 		top,
@@ -320,8 +331,6 @@ void Row::paintRadio(QPainter &p) {
 			_st->bg);
 	} else if (loading.arcLength < arc::kFullLength) {
 		p.drawArc(rect, loading.arcFrom, loading.arcLength);
-	} else {
-		p.drawEllipse(rect);
 	}
 
 	if (toggled > 0 && (!_loading || !anim::Disabled())) {
