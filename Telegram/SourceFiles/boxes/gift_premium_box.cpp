@@ -914,16 +914,9 @@ void GiftCodeBox(
 		return false;
 	});
 
-	const auto close = Ui::CreateChild<Ui::IconButton>(
-		box.get(),
-		st::boxTitleClose);
-	close->setClickedCallback([=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
-	box->widthValue(
-	) | rpl::on_next([=](int width) {
-		close->moveToRight(0, 0);
-	}, box->lifetime());
 
 	box->addButton(rpl::conditional(
 		state->used.value(),
@@ -1044,15 +1037,8 @@ void GiftCodePendingBox(
 		st::giveawayGiftCodeFooterMargin,
 		style::al_top);
 
-	const auto close = Ui::CreateChild<Ui::IconButton>(
-		box.get(),
-		st::boxTitleClose);
 	const auto closeCallback = [=] { box->closeBox(); };
-	close->setClickedCallback(closeCallback);
-	box->widthValue(
-	) | rpl::on_next([=](int width) {
-		close->moveToRight(0, 0);
-	}, box->lifetime());
+	box->addCloseButton(st::boxTitleClose, closeCallback);
 
 	box->addButton(tr::lng_close(), closeCallback);
 }

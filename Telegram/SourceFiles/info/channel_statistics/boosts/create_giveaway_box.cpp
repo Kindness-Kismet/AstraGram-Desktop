@@ -180,18 +180,9 @@ void AddPremiumTopBarWithDefaultTitleBar(
 		}
 	}, closeTopBar->lifetime());
 
-	{
-		const auto close = Ui::CreateChild<Ui::IconButton>(
-			closeTopBar.get(),
-			st::startGiveawayBoxTitleClose);
-		close->setClickedCallback([=] { box->closeBox(); });
-		closeTopBar->widthValue(
-		) | rpl::on_next([=](int w) {
-			const auto &pos = st::giveawayGiftCodeCoverClosePosition;
-			close->moveToRight(pos.x(), pos.y());
-		}, box->lifetime());
-		close->show();
-	}
+	box->addCloseButton(st::startGiveawayBoxTitleClose, [=] {
+		box->closeBox();
+	});
 
 	const auto bar = Ui::CreateChild<Ui::Premium::TopBar>(
 		box.get(),

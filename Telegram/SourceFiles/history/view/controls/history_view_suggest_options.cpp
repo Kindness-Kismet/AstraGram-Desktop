@@ -759,19 +759,10 @@ void ChooseSuggestPriceBox(
 		button->resizeToWidth(buttonWidth);
 	}, button->lifetime());
 
-	if (admin) {
-		box->addTopButton(st::boxTitleClose, [=] {
-			box->closeBox();
-		});
-	} else {
-		const auto close = Ui::CreateChild<Ui::IconButton>(
-			container,
-			st::boxTitleClose);
-		close->setClickedCallback([=] { box->closeBox(); });
-		container->widthValue() | rpl::on_next([=](int) {
-			close->moveToRight(0, 0);
-		}, close->lifetime());
-
+	box->addCloseButton(st::boxTitleClose, [=] {
+		box->closeBox();
+	});
+	if (!admin) {
 		session->credits().load(true);
 		session->credits().tonLoad(true);
 		const auto balance = Settings::AddBalanceWidget(

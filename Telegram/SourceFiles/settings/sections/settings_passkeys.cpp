@@ -372,7 +372,7 @@ void PasskeysNoneBox(
 	box->setWidth(st::boxWideWidth);
 	box->setNoContentMargin(true);
 	box->setCloseByEscape(true);
-	box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+	box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 	const auto content = box->verticalLayout().get();
 

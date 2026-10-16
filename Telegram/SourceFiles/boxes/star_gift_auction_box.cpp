@@ -606,7 +606,7 @@ void EditCustomBid(
 
 	const auto container = box->verticalLayout();
 
-	box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+	box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 	const auto starsField = AddStarsInputField(container, {
 		.value = current,
@@ -817,7 +817,7 @@ void AuctionBidBox(not_null<GenericBox*> box, AuctionBidBoxArgs &&args) {
 		}, custom->lifetime());
 	}, sliderWrap->lifetime());
 
-	box->addTopButton(
+	box->addCloseButton(
 		st::boxTitleClose,
 		[=] { box->closeBox(); });
 	if (const auto now = state->value.current(); !now.finished()) {
@@ -1137,7 +1137,7 @@ void AuctionGotGiftsBox(
 	box->setWidth(st::boxWideWidth);
 	box->setMaxHeight(st::boxWideWidth * 2);
 	box->addButton(tr::lng_box_ok(), [=] { box->closeBox(); });
-	box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+	box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 	auto helper = Text::CustomEmojiHelper(Core::TextContext({
 		.session = &show->session(),
@@ -1736,7 +1736,7 @@ void AuctionAboutBox(
 	box->setStyle(st::confcallJoinBox);
 	box->setWidth(st::boxWideWidth);
 	box->setNoContentMargin(true);
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 	box->addRow(
@@ -2089,7 +2089,7 @@ Fn<void()> ActiveAuctionsCallback(
 				}, row->lifetime());
 			}
 
-			box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+			box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 			box->addButton(tr::lng_box_ok(), [=] { box->closeBox(); });
 		}));
 	};

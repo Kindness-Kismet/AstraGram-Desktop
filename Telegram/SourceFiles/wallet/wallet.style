@@ -628,7 +628,6 @@ walletCollectibleCommentField: InputField(walletCommentField) {
 }
 
 walletReceiveTitleHeight: boxTitleHeight;
-walletReceiveTitleButtonSkip: 6px;
 walletReceiveTitleLeft: 60px;
 walletReceiveCloseIconActive: icon {{ "box_button_close", activeButtonSecondaryFg }};
 walletReceiveCloseIconActiveOver: icon {{ "box_button_close", activeButtonSecondaryFgOver }};

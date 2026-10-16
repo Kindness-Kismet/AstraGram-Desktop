@@ -258,17 +258,9 @@ void CollectibleInfoBox(
 	box->addButton(std::move(owned));
 
 	box->setNoContentMargin(true);
-	const auto buttonsParent = box->verticalLayout().get();
-	const auto close = Ui::CreateChild<Ui::IconButton>(
-		buttonsParent,
-		st::boxTitleClose);
-	close->setClickedCallback([=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
-	box->widthValue(
-	) | rpl::on_next([=](int width) {
-		close->moveToRight(0, 0);
-	}, box->lifetime());
 
 	box->widthValue() | rpl::on_next([=](int width) {
 		more->setFullWidth(width

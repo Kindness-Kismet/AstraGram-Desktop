@@ -122,7 +122,6 @@ giveawayGiftCodeCover: PremiumCover(userPremiumCover) {
 		}
 	}
 }
-giveawayGiftCodeCoverClosePosition: point(5px, 0px);
 giveawayGiftCodeCoverDividerPadding: margins(0px, 11px, 0px, 5px);
 giveawayGiftCodeTypeDividerPadding: margins(0px, 7px, 0px, 5px);
 giveawayGiftCodeSliderPadding: margins(0px, 24px, 0px, 10px);
@@ -212,6 +211,7 @@ darkGiftCodeBox: Box(giveawayGiftCodeBox) {
 		textFg: groupCallMembersFg;
 	}
 	titleAdditionalFg: groupCallMemberNotJoinedStatus;
+	close: darkEditStarsClose;
 }
 darkGiftLink: icon {{ "menu/copy", groupCallMembersFg }};
 darkGiftShare: icon {{ "menu/share", groupCallMembersFg }};
@@ -264,6 +264,7 @@ darkGiftTableMessage: FlatLabel(giveawayGiftMessage) {
 darkGiftBoxClose: IconButton(boxTitleClose) {
 	icon: icon {{ "box_button_close", groupCallMemberInactiveIcon }};
 	iconOver: icon {{ "box_button_close", groupCallMemberInactiveIcon }};
+	bgOver: groupCallMembersBgOver;
 	ripple: RippleAnimation(defaultRippleAnimation) {
 		color: groupCallMembersBgOver;
 	}

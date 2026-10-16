@@ -320,6 +320,7 @@ uniqueGiftMessagePlaceholderOpacity: 0.7;
 uniqueCloseButton: IconButton(boxTitleClose) {
 	icon: icon {{ "box_button_close", videoPlayIconFg }};
 	iconOver: icon {{ "box_button_close", videoPlayIconFg }};
+	bgOver: shadowFg;
 	ripple: RippleAnimation(defaultRippleAnimation) {
 		color: shadowFg;
 	}
@@ -412,6 +413,7 @@ darkUpgradeGiftBox: Box(upgradeGiftBox) {
 	bg: groupCallMembersBg;
 	title: darkUpgradeGiftTitle;
 	titleAdditionalFg: groupCallMemberNotJoinedStatus;
+	close: darkEditStarsClose;
 }
 darkUpgradeGiftRadiant: icon{{ "menu/unique", groupCallMembersFg }};
 darkUpgradeGiftProfile: icon{{ "settings/premium/features/feature_profile_cover", groupCallMembersFg }};

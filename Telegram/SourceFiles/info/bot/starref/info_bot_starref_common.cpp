@@ -409,7 +409,7 @@ object_ptr<Ui::BoxContent> StarRefLinkBox(
 
 		box->setStyle(st::starrefFooterBox);
 		box->setNoContentMargin(true);
-		box->addTopButton(st::boxTitleClose, [=] {
+		box->addCloseButton(st::boxTitleClose, [=] {
 			box->closeBox();
 		});
 
@@ -518,7 +518,7 @@ object_ptr<Ui::BoxContent> JoinStarRefBox(
 
 		box->setStyle(st::starrefFooterBox);
 		box->setNoContentMargin(true);
-		box->addTopButton(st::boxTitleClose, [=] {
+		box->addCloseButton(st::boxTitleClose, [=] {
 			box->closeBox();
 		});
 

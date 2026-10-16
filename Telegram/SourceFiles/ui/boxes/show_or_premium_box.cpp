@@ -115,7 +115,7 @@ void ShowOrPremiumBox(
 
 	box->setStyle(st::showOrBox);
 	box->setWidth(st::boxWideWidth);
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 

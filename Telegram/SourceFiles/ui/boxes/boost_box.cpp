@@ -359,7 +359,7 @@ void BoostBox(
 		st::boxRowPadding);
 
 	box->setMaxHeight(st::boostBoxMaxHeight);
-	const auto close = box->addTopButton(
+	const auto close = box->addCloseButton(
 		st::boxTitleClose,
 		[=] { box->closeBox(); });
 
@@ -728,7 +728,7 @@ void AskBoostBox(
 		rpl::single(data.boost),
 		st::boxRowPadding);
 
-	box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+	box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 	auto title = v::match(data.reason.data, [](AskBoostChannelColor) {
 		return tr::lng_boost_channel_title_color();

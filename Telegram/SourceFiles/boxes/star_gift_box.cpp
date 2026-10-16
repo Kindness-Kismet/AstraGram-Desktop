@@ -3123,7 +3123,7 @@ void UniqueGiftSellBox(
 	box->setStyle(st.box ? *st.box : st::upgradeGiftBox);
 	box->setWidth(st::boxWideWidth);
 
-	box->addTopButton(st.close ? *st.close : st::boxTitleClose, [=] {
+	box->addCloseButton(st.close ? *st.close : st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 	const auto name = Data::UniqueGiftName(*unique);
@@ -5010,7 +5010,7 @@ void SendGiftBox(
 	box->setStyle((limited && !auction) ? st::giftLimitedBox : st::giftBox);
 	box->setWidth(st::boxWideWidth);
 	box->setTitle(tr::lng_gift_send_title());
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 

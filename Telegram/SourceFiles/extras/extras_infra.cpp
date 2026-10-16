@@ -10,6 +10,7 @@
 #endif
 #include "extras/ui/components/floating_surface.h"
 #include "features/translator/extras_translator.h"
+#include "lang/lang_keys.h"
 #include "ui/chat/chat_style_radius.h"
 #include "utils/rc_manager.h"
 
@@ -99,6 +100,9 @@ void initUiSettings() {
 	ExtrasUiSettings::setMaterialSwitches(true);
 	ExtrasUiSettings::setAvatarCorners(settings.avatarCorners());
 	ExtrasUiSettings::setHoverOverlay(ExtrasUi::chatSurfaceHover);
+	ExtrasUiSettings::setDialogTitle([] {
+		return tr::extras_DialogDetailsTitle(tr::now);
+	});
 	Ui::SetAppliedBubbleRadius(settings.messageBubbleRadius());
 }
 

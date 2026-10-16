@@ -300,16 +300,7 @@ void AboutCocoonBox(not_null<Ui::GenericBox*> box) {
 }
 
 void AddUniqueCloseButton(not_null<GenericBox*> box) {
-	const auto close = Ui::CreateChild<IconButton>(
-		box,
-		st::uniqueCloseButton);
-	close->show();
-	close->raise();
-	box->widthValue() | rpl::on_next([=](int width) {
-		close->moveToRight(0, 0, width);
-		close->raise();
-	}, close->lifetime());
-	close->setClickedCallback([=] {
+	box->addCloseButton(st::uniqueCloseButton, [=] {
 		box->closeBox();
 	});
 }

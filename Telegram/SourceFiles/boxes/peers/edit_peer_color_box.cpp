@@ -2414,7 +2414,7 @@ void EditPeerColorBox(
 		: tr::lng_edit_channel_color());
 	box->setWidth(st::boxWideWidth);
 	box->setStyle(st::giftBox);
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 	if (peer->isChannel()) {

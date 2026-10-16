@@ -1682,9 +1682,10 @@ void ProxyBox::prepare() {
 
 void ProxyBox::refreshButtons() {
 	clearButtons();
-	const auto close = addTopButton(st::boxTitleClose);
+	const auto close = addCloseButton(st::boxTitleClose, [=] {
+		closeBox();
+	});
 	close->setAccessibleName(tr::lng_close(tr::now));
-	close->setClickedCallback([=] { closeBox(); });
 	addButton(tr::lng_settings_save(), [=] { save(); });
 	addButton(tr::lng_cancel(), [=] { closeBox(); });
 
@@ -2082,7 +2083,7 @@ void ProxiesBoxController::ShowApplyConfirmation(
 	const auto box = [=](not_null<Ui::GenericBox*> box) {
 		box->setTitle(tr::lng_proxy_box_table_title());
 		box->setStyle(st::proxyApplyBox);
-		box->addTopButton(st::boxTitleClose, [=] {
+		box->addCloseButton(st::boxTitleClose, [=] {
 			box->closeBox();
 		});
 

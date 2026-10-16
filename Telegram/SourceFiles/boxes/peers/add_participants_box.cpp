@@ -244,7 +244,7 @@ void SimpleForbiddenBox(
 		const ForbiddenInvites &forbidden) {
 	box->setTitle(tr::lng_invite_upgrade_title());
 	box->setWidth(st::boxWideWidth);
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 

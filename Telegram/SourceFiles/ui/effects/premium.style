@@ -85,6 +85,14 @@ defaultPremiumLimits: PremiumLimits {
 }
 
 // Preview.
+premiumPreviewClose: IconButton(boxTitleClose) {
+	icon: icon {{ "box_button_close", premiumButtonFg }};
+	iconOver: icon {{ "box_button_close", premiumButtonFg }};
+	bgOver: shadowFg;
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: callMuteRipple;
+	}
+}
 premiumPreviewBox: Box(defaultBox) {
 	buttonPadding: margins(18px, 18px, 18px, 18px);
 	buttonHeight: 44px;
@@ -330,6 +338,7 @@ boostBox: Box(premiumPreviewDoubledLimitsBox) {
 darkEditStarsClose: IconButton(boxTitleClose) {
 	icon: icon {{ "box_button_close", groupCallMemberInactiveIcon }};
 	iconOver: icon {{ "box_button_close", groupCallMemberInactiveIcon }};
+	bgOver: groupCallMembersBgOver;
 	ripple: RippleAnimation(defaultRippleAnimation) {
 		color: groupCallMembersBgOver;
 	}
@@ -426,6 +435,7 @@ darkEditStarsBox: Box(paidReactBox) {
 		textFg: groupCallMembersFg;
 		align: align(top);
 	}
+	close: darkEditStarsClose;
 }
 paidReactBubbleIcon: icon{{ "settings/premium/star", premiumButtonFg }};
 paidReactBubbleTop: 5px;

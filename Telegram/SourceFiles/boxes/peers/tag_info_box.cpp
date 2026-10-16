@@ -418,7 +418,7 @@ void TagInfoBox(
 	box->setStyle(st::confcallJoinBox);
 	box->setWidth(st::boxWideWidth);
 	box->setNoContentMargin(true);
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 

@@ -1055,10 +1055,7 @@ void PreviewBox(
 	};
 
 	const auto buttonsParent = box->verticalLayout().get();
-	const auto close = Ui::CreateChild<Ui::IconButton>(
-		buttonsParent,
-		st::settingsPremiumTopBarClose);
-	close->setClickedCallback([=] { box->closeBox(); });
+	box->addCloseButton(st::premiumPreviewClose, [=] { box->closeBox(); });
 
 	const auto gifts = (state->selected.current() == PremiumFeature::Gifts);
 
@@ -1079,14 +1076,13 @@ void PreviewBox(
 	buttonsParent->widthValue(
 	) | rpl::on_next([=](int width) {
 		const auto outerHeight = st::premiumPreviewHeight;
-		close->moveToRight(0, 0, width);
 		if (left) {
 			left->moveToLeft(0, (outerHeight - left->height()) / 2, width);
 		}
 		if (right) {
 			right->moveToRight(0, (outerHeight - right->height()) / 2, width);
 		}
-	}, close->lifetime());
+	}, buttonsParent->lifetime());
 
 	state->preload = [=] {
 		if (!state->showFinished) {
@@ -1357,7 +1353,7 @@ void DecorateListPromoBox(
 		const Descriptor &descriptor) {
 	const auto session = &show->session();
 
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 

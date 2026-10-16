@@ -301,7 +301,7 @@ void InsufficientTonBox(
 		not_null<Main::Session*> session,
 		CreditsAmount required) {
 	box->setStyle(st::suggestPriceBox);
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 
@@ -567,13 +567,7 @@ void EmojiGameStakeBox(
 		).append(' ').append(text);
 	}));
 
-	const auto close = CreateChild<IconButton>(
-		container,
-		st::boxTitleClose);
-	close->setClickedCallback([=] { box->closeBox(); });
-	container->widthValue() | rpl::on_next([=](int) {
-		close->moveToRight(0, 0);
-	}, close->lifetime());
+	box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 	const auto session = args.session;
 	session->credits().tonLoad(true);

@@ -2433,13 +2433,7 @@ void GenericCreditsEntryBody(
 
 	const auto willBusy = toRejoin || (peer && toRenew);
 	if (willBusy) {
-		const auto close = Ui::CreateChild<Ui::IconButton>(
-			content,
-			st::boxTitleClose);
-		close->setClickedCallback([=] { box->closeBox(); });
-		content->widthValue() | rpl::on_next([=](int) {
-			close->moveToRight(0, 0);
-		}, content->lifetime());
+		box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 	}
 
 	const auto initButtons = [=] {
@@ -3757,17 +3751,15 @@ void AddUniqueCloseMoreButton(
 		Settings::CreditsEntryBoxStyleOverrides st,
 		Fn<void(not_null<Ui::PopupMenu*>)> fillMenu,
 		Fn<void()> launchCraft) {
-	const auto close = Ui::CreateChild<Ui::IconButton>(
-		box,
-		st::uniqueCloseButton);
+	box->addCloseButton(st::uniqueCloseButton, [=] {
+		box->closeBox();
+	});
 	const auto menu = fillMenu
 		? Ui::CreateChild<Ui::IconButton>(box, st::uniqueMenuButton)
 		: nullptr;
 	const auto craft = launchCraft
 		? Ui::CreateChild<Ui::IconButton>(box, st::uniqueCraftButton)
 		: nullptr;
-	close->show();
-	close->raise();
 	if (menu) {
 		menu->show();
 		menu->raise();
@@ -3777,23 +3769,22 @@ void AddUniqueCloseMoreButton(
 		craft->raise();
 	}
 	box->widthValue() | rpl::on_next([=](int width) {
-		auto right = 0;
-		close->moveToRight(right, 0, width);
-		close->raise();
-		right += close->width();
-		if (menu) {
-			menu->moveToRight(right, 0, width);
-			menu->raise();
-			right += menu->width();
+		// 排在公共关闭按钮左侧并垂直居中；清空底部按钮时仍保留。
+		auto right = st::boxTitleButtonsRight
+			+ st::boxTitleClose.width
+			+ st::boxTitleButtonsSkip;
+		for (const auto button : { menu, craft }) {
+			if (!button) {
+				continue;
+			}
+			button->moveToRight(
+				right,
+				(st::boxTitleHeight - button->height()) / 2,
+				width);
+			button->raise();
+			right += button->width();
 		}
-		if (craft) {
-			craft->moveToRight(right, 0, width);
-			craft->raise();
-		}
-	}, close->lifetime());
-	close->setClickedCallback([=] {
-		box->closeBox();
-	});
+	}, box->lifetime());
 	if (menu) {
 		const auto state = menu->lifetime().make_state<
 			base::unique_qptr<Ui::PopupMenu>

@@ -556,6 +556,9 @@ GroupInfoBox::GroupInfoBox(
 
 void GroupInfoBox::prepare() {
 	setMouseTracking(true);
+	setTitle((_type == Type::Channel)
+		? tr::lng_create_channel_title()
+		: tr::lng_create_group_title());
 
 	_photo.create(
 		this,

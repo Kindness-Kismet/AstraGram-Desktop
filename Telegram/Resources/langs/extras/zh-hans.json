@@ -1,4 +1,8 @@
 {
+  "DialogDetailsTitle": "详情",
+  "DialogInfoTitle": "提示",
+  "DialogConfirmTitle": "确认操作",
+  "DialogCalendarTitle": "选择日期",
   "CustomAppName": "应用名称",
   "CustomAppNameDescription": "自定义主界面左上角和窗口标题中的应用名称。留空恢复 AstraGram，保存后立即生效。",
   "CustomLogo": "左上角图标",

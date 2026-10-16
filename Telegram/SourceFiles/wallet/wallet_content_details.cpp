@@ -92,7 +92,7 @@ void AddDetailsTable(
 void AddBoxCloseButton(
 		not_null<Ui::GenericBox*> box,
 		Fn<void()> close) {
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		if (close) {
 			close();
 		} else {
@@ -237,9 +237,7 @@ void WalletBusyBox(
 		std::move(title),
 		st::boxTitle);
 	label->setAttribute(Qt::WA_TransparentForMouseEvents);
-	const auto close = Ui::CreateChild<Ui::IconButton>(
-		row,
-		st::boxTitleClose);
+	const auto close = box->addCloseButton(st::boxTitleClose);
 	Ui::ToggleChildrenVisibility(row, true);
 	row->sizeValue(
 	) | rpl::on_next([=](QSize size) {
@@ -247,9 +245,8 @@ void WalletBusyBox(
 			st::boxTitlePosition.x(),
 			st::boxTitlePosition.y(),
 			size.width());
-		close->moveToRight(st::walletReceiveTitleButtonSkip, 0, size.width());
 	}, row->lifetime());
-	return { label, close };
+	return { label, close.data() };
 }
 
 [[nodiscard]] bool IsValidOnrampUrl(const QString &url) {

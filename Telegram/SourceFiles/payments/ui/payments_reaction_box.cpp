@@ -531,7 +531,7 @@ void PaidReactionsBox(
 		changed,
 		videoStream ? activeFgOverride : Fn<QColor(int)>());
 
-	box->addTopButton(
+	box->addCloseButton(
 		dark ? st::darkEditStarsClose : st::boxTitleClose,
 		[=] { box->closeBox(); });
 

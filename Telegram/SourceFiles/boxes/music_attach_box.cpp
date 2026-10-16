@@ -2433,7 +2433,7 @@ void MusicAttachBox(
 		});
 	}, box->lifetime());
 
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 	box->setFocusCallback([=] {

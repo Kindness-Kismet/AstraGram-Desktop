@@ -21,6 +21,10 @@ void ConfirmBox(not_null<Ui::GenericBox*> box, ConfirmBoxArgs &&args) {
 	const auto withTitle = !v::is_null(args.title);
 	if (withTitle) {
 		box->setTitle(v::text::take_marked(std::move(args.title)));
+	} else {
+		box->setTitle(args.inform
+			? tr::extras_DialogInfoTitle()
+			: tr::extras_DialogConfirmTitle());
 	}
 
 	if (!v::is_null(args.text)) {

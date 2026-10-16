@@ -56,6 +56,7 @@ private:
 		TextWithEntities description;
 	};
 	void deleteAndClear();
+	[[nodiscard]] rpl::producer<QString> prepareTitle() const;
 	[[nodiscard]] PeerData *checkFromSinglePeer() const;
 	[[nodiscard]] bool hasScheduledMessages() const;
 	[[nodiscard]] bool hasWelcomeTemplateMessages() const;

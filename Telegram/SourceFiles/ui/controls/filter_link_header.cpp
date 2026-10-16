@@ -44,7 +44,6 @@ public:
 	void setTitlePosition(int x, int y);
 
 	[[nodiscard]] rpl::producer<not_null<QWheelEvent*>> wheelEvents() const;
-	[[nodiscard]] rpl::producer<> closeRequests() const;
 
 private:
 	void resizeEvent(QResizeEvent *e) override;
@@ -57,7 +56,6 @@ private:
 	void refreshTitleText();
 
 	const not_null<FlatLabel*> _about;
-	const not_null<IconButton*> _close;
 	QMargins _aboutPadding;
 
 	struct {
@@ -301,7 +299,6 @@ Widget::Widget(
 	st::filterLinkAbout,
 	st::defaultPopupMenu,
 	descriptor.aboutContext))
-, _close(CreateChild<IconButton>(this, st::boxTitleClose))
 , _aboutPadding(st::boxRowPadding)
 , _badge(std::move(descriptor.badge))
 , _titleText(descriptor.title)
@@ -333,10 +330,6 @@ void Widget::setTitlePosition(int x, int y) {
 
 rpl::producer<not_null<QWheelEvent*>> Widget::wheelEvents() const {
 	return _wheelEvents.events();
-}
-
-rpl::producer<> Widget::closeRequests() const {
-	return _close->clicks() | rpl::to_empty;
 }
 
 void Widget::resizeEvent(QResizeEvent *e) {
@@ -382,8 +375,6 @@ void Widget::resizeEvent(QResizeEvent *e) {
 		+ _titlePadding.bottom();
 	_about->moveToLeft(_aboutPadding.left(), aboutTop);
 	_about->setOpacity(_progress.body);
-
-	_close->moveToRight(0, 0);
 
 	update();
 }
@@ -483,7 +474,6 @@ void Widget::wheelEvent(QWheelEvent *e) {
 	return {
 		.widget = result,
 		.wheelEvents = result->wheelEvents(),
-		.closeRequests = result->closeRequests(),
 	};
 }
 

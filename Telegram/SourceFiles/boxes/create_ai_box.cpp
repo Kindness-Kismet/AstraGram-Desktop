@@ -567,7 +567,7 @@ void CreateAiBox(not_null<Ui::GenericBox*> box, CreateAiBoxArgs &&args) {
 
 	state->rebuildButtons = [=] {
 		box->clearButtons();
-		box->addTopButton(st::aiComposeBoxClose, [=] {
+		box->addCloseButton(st::aiComposeBoxClose, [=] {
 			box->closeBox();
 		})->setAccessibleName(tr::lng_close(tr::now));
 		box->addTopButton(st::aiComposeBoxInfoButton, [=] {

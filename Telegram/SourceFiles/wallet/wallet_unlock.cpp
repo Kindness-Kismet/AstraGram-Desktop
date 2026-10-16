@@ -659,7 +659,7 @@ void WalletPasscodeBox(
 	const auto weakSession = base::make_weak(&args.show->session());
 	box->setStyle(st::walletPillBox);
 	box->setNoContentMargin(true);
-	box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+	box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 	auto icon = Settings::CreateLottieIcon(
 		box->verticalLayout(),

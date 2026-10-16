@@ -1505,7 +1505,7 @@ void ShowDisableSharingBox(
 	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setStyle(st::showOrBox);
 		box->setWidth(st::boxWideWidth);
-		box->addTopButton(st::boxTitleClose, [=] {
+		box->addCloseButton(st::boxTitleClose, [=] {
 			box->closeBox();
 		});
 

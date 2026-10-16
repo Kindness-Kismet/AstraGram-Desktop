@@ -3,7 +3,6 @@
 #include "lang_auto.h"
 #include "qr/qr_generate.h"
 #include "styles/style_boxes.h"
-#include "styles/style_giveaway.h"
 #include "styles/style_intro.h"
 #include "styles/style_layers.h"
 #include "ui/painter.h"
@@ -67,7 +66,6 @@ void fillDonateQrBox(
 	not_null<Ui::GenericBox*> box,
 	const QString &address,
 	const QString &iconResourcePath) {
-	box->setStyle(st::giveawayGiftCodeBox);
 	box->setNoContentMargin(true);
 	box->setWidth(int(st::aboutWidth * 1.25));
 	box->setTitle(tr::lng_group_invite_context_qr());
@@ -126,19 +124,11 @@ void fillDonateQrBox(
 		Fn<base::unique_qptr<Ui::PopupMenu>()>());
 	box->verticalLayout()->add(label->take(), st::boxRowPadding);
 
-	const auto copyButton = box->addButton(tr::lng_chat_link_copy(), [=] {
+	box->addButton(tr::lng_chat_link_copy(), [=] {
 		QGuiApplication::clipboard()->setText(address);
 		Ui::Toast::Show(tr::lng_text_copied(tr::now));
 	});
-	const auto buttonWidth = box->width()
-	- rect::m::sum::h(st::giveawayGiftCodeBox.buttonPadding);
-	copyButton->widthValue() | rpl::filter([=] {
-		return (copyButton->widthNoMargins() != buttonWidth);
-	}) | rpl::on_next([=] {
-		copyButton->resizeToWidth(buttonWidth);
-	}, copyButton->lifetime());
-
-	box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+	box->addButton(tr::lng_close(), [=] { box->closeBox(); });
 }
 
 } // namespace Ui

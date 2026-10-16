@@ -1397,6 +1397,7 @@ void CalendarBox::jump(QPointer<IconButton> button) {
 }
 
 void CalendarBox::prepare() {
+	setTitle(tr::extras_DialogCalendarTitle());
 	_previous->setClickedCallback([=] { goPreviousMonth(); });
 	_next->setClickedCallback([=] { goNextMonth(); });
 

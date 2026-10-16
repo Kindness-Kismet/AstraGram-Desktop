@@ -1178,7 +1178,7 @@ void ShowBuyResaleGiftBox(
 		box->setWidth(st::boxWideWidth);
 		box->setNoContentMargin(true);
 		box->setTitle(tr::lng_gift_send_title());
-		box->addTopButton(st::boxTitleClose, [=] {
+		box->addCloseButton(st::boxTitleClose, [=] {
 			box->closeBox();
 		});
 

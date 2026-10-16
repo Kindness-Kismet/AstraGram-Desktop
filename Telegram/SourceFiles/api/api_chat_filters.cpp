@@ -292,12 +292,6 @@ void InitFilterLinkHeader(
 		box->sendScrollViewportEvent(e);
 	}, widget->lifetime());
 
-	std::move(
-		header.closeRequests
-	) | rpl::on_next([=] {
-		box->closeBox();
-	}, widget->lifetime());
-
 	struct State {
 		bool processing = false;
 		int addedTopHeight = 0;

@@ -1140,6 +1140,12 @@ groupCallBoxButton: RoundButton(defaultBoxButton) {
 
 	ripple: groupCallRipple;
 }
+groupCallBoxClose: IconButton(boxTitleClose) {
+	icon: icon {{ "box_button_close", groupCallMemberInactiveIcon }};
+	iconOver: icon {{ "box_button_close", groupCallMembersFg }};
+	bgOver: groupCallMembersBgOver;
+	ripple: groupCallRipple;
+}
 groupCallBox: Box(defaultBox) {
 	button: groupCallBoxButton;
 	margin: margins(0px, 56px, 0px, 10px);
@@ -1148,6 +1154,7 @@ groupCallBox: Box(defaultBox) {
 		textFg: groupCallMembersFg;
 	}
 	titleAdditionalFg: groupCallMemberNotJoinedStatus;
+	close: groupCallBoxClose;
 }
 groupCallLayerBox: Box(groupCallBox) {
 	buttonPadding: margins(8px, 8px, 8px, 8px);

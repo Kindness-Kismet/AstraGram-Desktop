@@ -415,7 +415,7 @@ void PreviewAiToneBox(
 	box->setStyle(st::aiComposeBox);
 	box->setNoContentMargin(true);
 	box->setWidth(st::boxWideWidth);
-	box->addTopButton(st::aiComposeBoxClose, [=] { box->closeBox(); });
+	box->addCloseButton(st::aiComposeBoxClose, [=] { box->closeBox(); });
 
 	const auto top = box->setPinnedToTopContent(
 		object_ptr<Ui::VerticalLayout>(box));

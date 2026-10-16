@@ -406,7 +406,7 @@ QPointer<Ui::RoundButton> SetupToneBox(
 	box->setStyle(st::aiComposeBox);
 	box->setNoContentMargin(true);
 	box->setWidth(st::boxWideWidth);
-	box->addTopButton(st::aiComposeBoxClose, [=] { box->closeBox(); });
+	box->addCloseButton(st::aiComposeBoxClose, [=] { box->closeBox(); });
 	box->setTitle(std::move(title));
 
 	const auto container = box->verticalLayout();

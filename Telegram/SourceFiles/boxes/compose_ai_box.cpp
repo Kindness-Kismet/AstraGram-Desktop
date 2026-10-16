@@ -2210,7 +2210,7 @@ void ComposeAiBox(not_null<Ui::GenericBox*> box, ComposeAiBoxArgs &&args) {
 	box->setNoContentMargin(true);
 	box->setWidth(st::boxWideWidth);
 	const auto session = args.session;
-	box->addTopButton(st::aiComposeBoxClose, [=] {
+	box->addCloseButton(st::aiComposeBoxClose, [=] {
 		box->closeBox();
 	})->setAccessibleName(tr::lng_close(tr::now));
 	box->addTopButton(st::aiComposeBoxInfoButton, [=] {
@@ -2465,7 +2465,7 @@ void ComposeAiBox(not_null<Ui::GenericBox*> box, ComposeAiBoxArgs &&args) {
 		}
 		*sendButton = nullptr;
 		box->clearButtons();
-		box->addTopButton(st::aiComposeBoxClose, [=] {
+		box->addCloseButton(st::aiComposeBoxClose, [=] {
 			box->closeBox();
 		})->setAccessibleName(tr::lng_close(tr::now));
 		box->addTopButton(st::aiComposeBoxInfoButton, [=] {

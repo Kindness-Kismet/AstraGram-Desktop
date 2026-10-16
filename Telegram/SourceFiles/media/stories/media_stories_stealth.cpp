@@ -319,7 +319,7 @@ struct State {
 			(st::boxRowPadding
 				+ QMargins(0, 0, 0, st::storiesStealthBoxBottom)));
 		box->setNoContentMargin(true);
-		box->addTopButton(st.boxClose, [=] {
+		box->addCloseButton(st.boxClose, [=] {
 			box->closeBox();
 		});
 		const auto button = box->addButton(

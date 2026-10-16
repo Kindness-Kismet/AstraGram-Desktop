@@ -1572,7 +1572,9 @@ void LanguageBox::setupTop(not_null<Ui::VerticalLayout*> container) {
 		return;
 	}
 	Settings::SetupLanguageTranslationControls(
-		container,
+		container->add(
+			object_ptr<Ui::VerticalLayout>(container),
+			st::settingsCardBoxPadding),
 		_controller,
 		_showFinished.events());
 }

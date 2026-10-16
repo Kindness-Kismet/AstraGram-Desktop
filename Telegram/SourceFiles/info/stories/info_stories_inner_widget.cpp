@@ -129,7 +129,7 @@ void EditAlbumBox::prepare() {
 		setDimensions(st::boxWideWidth, height);
 	}, _content->lifetime());
 
-	addTopButton(st::boxTitleClose, [=] {
+	addCloseButton(st::boxTitleClose, [=] {
 		closeBox();
 	});
 

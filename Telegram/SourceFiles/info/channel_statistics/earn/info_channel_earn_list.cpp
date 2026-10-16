@@ -1153,7 +1153,7 @@ void InnerWidget::fill() {
 
 				const auto detailsBox = [=, peer = _peer](
 						not_null<Ui::GenericBox*> box) {
-					box->addTopButton(
+					box->addCloseButton(
 						st::boxTitleClose,
 						[=] { box->closeBox(); });
 					Ui::AddSkip(box->verticalLayout());

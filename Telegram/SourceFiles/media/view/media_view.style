@@ -1129,6 +1129,17 @@ storiesShowMoreFont: semiboldFont;
 
 storiesStealthLogoAdd: 12px;
 storiesStealthLogoMargin: margins(0px, 28px, 0px, 7px);
+storiesStealthBoxClose: IconButton(defaultIconButton) {
+	width: boxTitleHeight;
+	height: boxTitleHeight;
+
+	icon: icon {{ "box_button_close", storiesComposeGrayIcon }};
+	iconOver: icon {{ "box_button_close", storiesComposeGrayIcon }};
+
+	rippleAreaPosition: point(4px, 4px);
+	rippleAreaSize: 40px;
+	ripple: storiesComposeRippleLight;
+}
 storiesStealthBox: Box(defaultBox) {
 	buttonPadding: margins(10px, 10px, 10px, 10px);
 	buttonHeight: 42px;
@@ -1153,19 +1164,9 @@ storiesStealthBox: Box(defaultBox) {
 		align: align(top);
 	}
 	titleAdditionalFg: groupCallMemberNotJoinedStatus;
+	close: storiesStealthBoxClose;
 }
 storiesStealthTitleMargin: margins(0px, 10px, 0px, 0px);
-storiesStealthBoxClose: IconButton(defaultIconButton) {
-	width: boxTitleHeight;
-	height: boxTitleHeight;
-
-	icon: icon {{ "box_button_close", storiesComposeGrayIcon }};
-	iconOver: icon {{ "box_button_close", storiesComposeGrayIcon }};
-
-	rippleAreaPosition: point(4px, 4px);
-	rippleAreaSize: 40px;
-	ripple: storiesComposeRippleLight;
-}
 storiesStealthAboutMargin: margins(0px, 5px, 0px, 15px);
 storiesStealthBoxBottom: 11px;
 storiesStealthToast: Toast(defaultMultilineToast) {

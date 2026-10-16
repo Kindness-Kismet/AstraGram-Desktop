@@ -2,10 +2,8 @@
 
 #include "lang_auto.h"
 #include "extras/features/filters/filters_utils.h"
-#include "styles/style_giveaway.h"
 #include "styles/style_layers.h"
 #include "styles/style_settings.h"
-#include "ui/rect.h"
 #include "ui/rp_widget.h"
 #include "ui/layers/generic_box.h"
 #include "ui/toast/toast.h"
@@ -20,7 +18,6 @@
 namespace Ui {
 
 void FillImportFiltersBox(not_null<Ui::GenericBox*> box, bool import) {
-	box->setStyle(st::giveawayGiftCodeBox);
 	box->setNoContentMargin(true);
 	box->setTitle(import ? tr::extras_FiltersMenuImport() : tr::extras_FiltersMenuExport());
 	box->verticalLayout()->resizeToWidth(box->width());
@@ -61,7 +58,7 @@ void FillImportFiltersBox(not_null<Ui::GenericBox*> box, bool import) {
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 				inner,
 				object_ptr<Ui::VerticalLayout>(inner),
-				st::giveawayGiftCodeBox.buttonPadding
+				st::boxRowPadding
 			)
 		);
 		importURLField = importURLWrap->entity()->add(
@@ -86,7 +83,7 @@ void FillImportFiltersBox(not_null<Ui::GenericBox*> box, bool import) {
 		}
 	});
 
-	const auto actionButton = box->addButton(
+	box->addButton(
 		import ? tr::extras_FiltersMenuImport() : tr::extras_FiltersMenuExport(),
 		[=]
 		{
@@ -112,18 +109,7 @@ void FillImportFiltersBox(not_null<Ui::GenericBox*> box, bool import) {
 			}
 			box->closeBox();
 		});
-	const auto buttonWidth = box->width()
-		- rect::m::sum::h(st::giveawayGiftCodeBox.buttonPadding);
-	actionButton->widthValue() | rpl::filter([=]
-	{
-		return (actionButton->widthNoMargins() != buttonWidth);
-	}) | rpl::on_next([=]
-							  {
-								  actionButton->resizeToWidth(buttonWidth);
-							  },
-							  actionButton->lifetime());
-
-	box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+	box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
 }
 
 } // namespace Ui

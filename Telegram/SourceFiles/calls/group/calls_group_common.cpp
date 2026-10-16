@@ -141,7 +141,7 @@ void ConferenceCallJoinConfirm(
 	box->setStyle(st::confcallJoinBox);
 	box->setWidth(st::boxWideWidth);
 	box->setNoContentMargin(true);
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 
@@ -301,7 +301,7 @@ void ShowConferenceCallLinkBox(
 			: st::confcallLinkBox);
 		box->setWidth(st::boxWideWidth);
 		box->setNoContentMargin(true);
-		const auto close = box->addTopButton(
+		const auto close = box->addCloseButton(
 			st.close ? *st.close : st::boxTitleClose,
 			[=] { box->closeBox(); });
 

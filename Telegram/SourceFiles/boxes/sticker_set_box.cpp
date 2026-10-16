@@ -859,7 +859,7 @@ void StickerSetBox::updateTitleAndButtons() {
 
 void StickerSetBox::updateButtons() {
 	clearButtons();
-	addTopButton(st::boxTitleClose, [=] { closeBox(); });
+	addCloseButton(st::boxTitleClose, [=] { closeBox(); });
 	if (_inner->reorderState()) {
 		addButton(tr::lng_box_done(), [=] {
 			_inner->setReorderState(false);

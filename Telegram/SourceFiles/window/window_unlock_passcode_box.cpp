@@ -89,7 +89,7 @@ void UnlockPasscodeBox(
 	box->setStyle(*st.box);
 	box->setWidth(st::boxWideWidth);
 	box->setNoContentMargin(true);
-	box->addTopButton(*st.close, [=] { box->closeBox(); });
+	box->addCloseButton(*st.close, [=] { box->closeBox(); });
 
 	const auto deferred = box->lifetime().make_state<Fn<void()>>(
 		std::move(unlocked));

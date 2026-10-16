@@ -1665,7 +1665,7 @@ void FrozenInfoBox(
 	box->setWidth(st::boxWideWidth);
 	box->setStyle(st::frozenInfoBox);
 	box->setNoContentMargin(true);
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 

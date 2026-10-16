@@ -547,7 +547,7 @@ TonConnectButtons SetTonConnectButtons(
 
 	box->clearButtons();
 	// clearButtons() drops the close button too.
-	box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+	box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 	const auto pair = (secondary && primary);
 	const auto edge = box->getDelegate()->style().buttonPadding.right();

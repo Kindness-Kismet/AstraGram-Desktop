@@ -69,6 +69,8 @@ settingsCardPageTop: 8px;
 settingsCardPageBottom: 24px;
 settingsCardGroupSkip: 18px;
 settingsCardRowInset: 14px;
+// 对话框内的卡片：行内文字与对话框标题对齐。
+settingsCardBoxPadding: margins(6px, 0px, 6px, 0px);
 settingsCardTitle: FlatLabel(defaultFlatLabel) {
 	textFg: windowSubTextFg;
 	style: TextStyle(defaultTextStyle) {

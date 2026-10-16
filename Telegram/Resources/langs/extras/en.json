@@ -1,4 +1,8 @@
 {
+  "DialogDetailsTitle": "Details",
+  "DialogInfoTitle": "Information",
+  "DialogConfirmTitle": "Confirm action",
+  "DialogCalendarTitle": "Select date",
   "CustomAppName": "App name",
   "CustomAppNameDescription": "Customize the name at the top left of the main window and in the window title. Leave empty to use AstraGram. Changes apply immediately after saving.",
   "CustomLogo": "Logo",

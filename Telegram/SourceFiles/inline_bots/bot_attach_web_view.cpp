@@ -556,7 +556,7 @@ void ConfirmEmojiStatusAccessBox(
 
 	const auto set = box->lifetime().make_state<bool>();
 
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 
@@ -621,7 +621,7 @@ void ConfirmEmojiStatusBox(
 
 	const auto set = box->lifetime().make_state<bool>();
 
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 

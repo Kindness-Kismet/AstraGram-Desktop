@@ -480,15 +480,7 @@ void SendCreditsBox(
 		st::creditsBoxButtonLabel,
 		&box->getDelegate()->style().button.textFg);
 
-	{
-		const auto close = Ui::CreateChild<Ui::IconButton>(
-			content,
-			st::boxTitleClose);
-		close->setClickedCallback([=] { box->closeBox(); });
-		content->widthValue() | rpl::on_next([=](int) {
-			close->moveToRight(0, 0);
-		}, close->lifetime());
-	}
+	box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 	{
 		session->credits().load(true);

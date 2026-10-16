@@ -115,7 +115,7 @@ void CreateManagedBotBox(
 	box->setStyle(st::defaultBox);
 	box->setWidth(st::boxWidth);
 	box->setNoContentMargin(true);
-	box->addTopButton(st::boxTitleClose, [=] {
+	box->addCloseButton(st::boxTitleClose, [=] {
 		box->closeBox();
 	});
 

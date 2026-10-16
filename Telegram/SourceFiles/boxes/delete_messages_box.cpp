@@ -81,7 +81,25 @@ crl::time DeleteMessagesBox::layerAnimationDuration() const {
 	return kDeleteMessagesBoxAnimationDuration;
 }
 
+// 清空、删除或退出对话按操作命名，删除消息沿用通用确认标题。
+rpl::producer<QString> DeleteMessagesBox::prepareTitle() const {
+	const auto peer = _wipeHistoryPeer;
+	if (!peer) {
+		return tr::extras_DialogConfirmTitle();
+	}
+	if (!_wipeHistoryFirstToDelete.isNull() || _wipeHistoryJustClear) {
+		return tr::lng_profile_clear_history();
+	}
+	if (peer->isUser()) {
+		return tr::lng_profile_delete_conversation();
+	}
+	return (peer->isChannel() && !peer->isMegagroup())
+		? tr::lng_profile_leave_channel()
+		: tr::lng_profile_leave_group();
+}
+
 void DeleteMessagesBox::prepare() {
+	setTitle(prepareTitle());
 	auto details = TextWithEntities();
 	const auto appendDetails = [&](TextWithEntities &&text) {
 		details.append(u"\n\n"_q).append(std::move(text));

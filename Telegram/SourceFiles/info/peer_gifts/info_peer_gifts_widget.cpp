@@ -1410,7 +1410,7 @@ void InnerWidget::editCollectionGifts(int id) {
 			box->scrollToY(0);
 		}, content->lifetime());
 
-		box->addTopButton(st::boxTitleClose, [=] {
+		box->addCloseButton(st::boxTitleClose, [=] {
 			box->closeBox();
 		});
 		box->addTopButton(st::collectionEditMenuToggle, [=] {

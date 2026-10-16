@@ -1012,7 +1012,7 @@ void FillPeerQrBox(
 		}, box->lifetime());
 	}
 
-	box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+	box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 }
 
 void DefaultShowFillPeerQrBoxCallback(

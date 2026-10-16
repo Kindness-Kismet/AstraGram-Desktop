@@ -375,7 +375,7 @@ void CollectiblePreviewBox(
 		artwork->update();
 	}, box->lifetime());
 
-	box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
+	box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 	box->addButton(tr::lng_box_ok(), [=] { box->closeBox(); });
 }
 
