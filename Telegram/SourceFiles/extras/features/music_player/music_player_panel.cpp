@@ -18,6 +18,7 @@
 #include "media/view/media_view_playback_progress.h"
 #include "styles/style_extras_styles.h"
 #include "styles/style_media_player.h"
+#include "ui/effects/ripple_animation.h"
 #include "ui/painter.h"
 #include "ui/text/format_values.h"
 #include "ui/toast/toast.h"
@@ -64,6 +65,11 @@ protected:
 			(width() - st::mediaPlayerPlayIcon.size.width()) / 2,
 			(height() - st::mediaPlayerPlayIcon.size.height()) / 2);
 		_layout.paint(p, st::windowFgActive);
+	}
+	// 按钮本身是实心圆，涟漪保持圆形，不用图标按钮的统一圆角。
+	QImage prepareRippleMask() const override {
+		const auto size = st::extrasMusicCompactPlay.rippleAreaSize;
+		return Ui::RippleAnimation::EllipseMask(QSize(size, size));
 	}
 
 private:
