@@ -769,8 +769,10 @@ void TabbedSelector::updateTabsSliderGeometry() {
 	const auto w = (mediaEditor() && hasMasksTab() && masks()->mySetsEmpty())
 		? width() / 2
 		: width();
-	_tabsSlider->resizeToWidth(w);
-	_tabsSlider->moveToLeft(0, 0);
+	// 分段页签左右与下方搜索框对齐。
+	const auto skip = st::emojiPanRadius + _st.searchMargin.left();
+	_tabsSlider->resizeToWidth(w - 2 * skip);
+	_tabsSlider->moveToLeft(skip, 0);
 }
 
 void TabbedSelector::resizeEvent(QResizeEvent *e) {
@@ -1244,6 +1246,7 @@ void TabbedSelector::setAllowEmojiWithoutPremium(bool allow) {
 
 void TabbedSelector::createTabsSlider() {
 	_tabsSlider.create(this, _st.tabs);
+	_tabsSlider->setSegmentedStyle(true);
 	_tabsSlider->setObjectName(u"compose.emoji.tabs"_q);
 
 	fillTabsSliderSections();

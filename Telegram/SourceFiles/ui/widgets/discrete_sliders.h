@@ -155,6 +155,7 @@ public:
 	virtual void fitWidthToSections();
 
 	void setRippleTopRoundRadius(int radius);
+	void setSegmentedStyle(bool enabled);
 
 protected:
 	bool eventHook(QEvent *e) override;
@@ -172,6 +173,8 @@ private:
 	QImage prepareRippleMask(int sectionIndex, const Section &section);
 
 	[[nodiscard]] int sectionsPadding() const;
+	[[nodiscard]] bool usesCustomTabs() const;
+	void paintSegmentedBackground(QPainter &p, Range range);
 	void resizeSections(int newWidth);
 
 	const style::SettingsSlider &_st;
@@ -181,6 +184,7 @@ private:
 	rpl::event_stream<> _sectionsGeometryChanges;
 	int _rippleTopRoundRadius = 0;
 	bool _fitWidthToSections = false;
+	bool _segmentedStyle = false;
 
 
 };
