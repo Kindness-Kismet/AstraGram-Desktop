@@ -103,8 +103,9 @@ QPoint SilentToggle::prepareRippleStartPosition() const {
 }
 
 QImage SilentToggle::prepareRippleMask() const {
-	return RippleAnimation::EllipseMask(
-		QSize(_st.rippleAreaSize, _st.rippleAreaSize));
+	return RippleAnimation::RoundRectMask(
+		QSize(_st.rippleAreaSize, _st.rippleAreaSize),
+		st::iconButtonRadius);
 }
 
 QAccessible::Role SilentToggle::accessibilityRole() {

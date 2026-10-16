@@ -119,7 +119,9 @@ QPoint EmojiButton::prepareRippleStartPosition() const {
 
 QImage EmojiButton::prepareRippleMask() const {
 	const auto size = _st.inner.rippleAreaSize;
-	return RippleAnimation::EllipseMask(QSize(size, size));
+	return RippleAnimation::RoundRectMask(
+		QSize(size, size),
+		st::iconButtonRadius);
 }
 
 } // namespace Ui

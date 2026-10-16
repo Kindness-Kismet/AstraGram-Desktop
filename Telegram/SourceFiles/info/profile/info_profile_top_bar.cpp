@@ -209,9 +209,12 @@ void BackdropIconButton::paintEvent(QPaintEvent *e) {
 		p.setOpacity(shown);
 		p.setPen(Qt::NoPen);
 		p.setBrush(_rippleColor.color());
-		p.drawEllipse(QRect(
-			st().rippleAreaPosition,
-			QSize(st().rippleAreaSize, st().rippleAreaSize)));
+		p.drawRoundedRect(
+			QRect(
+				st().rippleAreaPosition,
+				QSize(st().rippleAreaSize, st().rippleAreaSize)),
+			st::iconButtonRadius,
+			st::iconButtonRadius);
 	}
 	Ui::IconButton::paintEvent(e);
 }

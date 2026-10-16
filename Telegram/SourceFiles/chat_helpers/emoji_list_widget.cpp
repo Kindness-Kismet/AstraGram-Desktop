@@ -4185,9 +4185,9 @@ std::unique_ptr<Ui::RippleAnimation> EmojiListWidget::createButtonRipple(
 		? staticSt.ripple
 		: st::emojiPanButton.ripple;
 	auto mask = (colorAll || remove)
-		? Ui::RippleAnimation::EllipseMask(QSize(
-			staticSt.rippleAreaSize,
-			staticSt.rippleAreaSize))
+		? Ui::RippleAnimation::RoundRectMask(
+			QSize(staticSt.rippleAreaSize, staticSt.rippleAreaSize),
+			st::iconButtonRadius)
 		: rightButton(section).rippleMask;
 	return std::make_unique<Ui::RippleAnimation>(
 		st,

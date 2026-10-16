@@ -259,9 +259,9 @@ void ConfInviteRow::elementAddRipple(
 	auto &ripple = (element == 1) ? _videoRipple : _audioRipple;
 	const auto &st = buttonSt(element);
 	if (!ripple) {
-		auto mask = Ui::RippleAnimation::EllipseMask(QSize(
-				st.rippleAreaSize,
-				st.rippleAreaSize));
+		auto mask = Ui::RippleAnimation::RoundRectMask(
+			QSize(st.rippleAreaSize, st.rippleAreaSize),
+			st::iconButtonRadius);
 		ripple = std::make_unique<Ui::RippleAnimation>(
 			st.ripple,
 			std::move(mask),

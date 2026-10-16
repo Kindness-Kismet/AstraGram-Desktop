@@ -273,8 +273,9 @@ QPoint PlayButton::prepareRippleStartPosition() const {
 }
 
 QImage PlayButton::prepareRippleMask() const {
-	return Ui::RippleAnimation::EllipseMask(
-		QSize(_st.rippleAreaSize, _st.rippleAreaSize));
+	return Ui::RippleAnimation::RoundRectMask(
+		QSize(_st.rippleAreaSize, _st.rippleAreaSize),
+		st::iconButtonRadius);
 }
 
 SpeedButtonLayout::SpeedButtonLayout(

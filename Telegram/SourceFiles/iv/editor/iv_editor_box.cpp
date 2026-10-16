@@ -675,8 +675,9 @@ void ToolbarStarButton::onStateChanged(
 }
 
 QImage ToolbarStarButton::prepareRippleMask() const {
-	return Ui::RippleAnimation::EllipseMask(
-		QSize(_st.rippleAreaSize, _st.rippleAreaSize));
+	return Ui::RippleAnimation::RoundRectMask(
+		QSize(_st.rippleAreaSize, _st.rippleAreaSize),
+		st::iconButtonRadius);
 }
 
 QPoint ToolbarStarButton::prepareRippleStartPosition() const {

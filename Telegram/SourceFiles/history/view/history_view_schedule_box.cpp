@@ -272,7 +272,9 @@ void NotifyToggleButton::paintEvent(QPaintEvent *e) {
 }
 
 QImage NotifyToggleButton::prepareRippleMask() const {
-	return Ui::RippleAnimation::EllipseMask(Size(_st.rippleAreaSize));
+	return Ui::RippleAnimation::RoundRectMask(
+		Size(_st.rippleAreaSize),
+		st::iconButtonRadius);
 }
 
 QPoint NotifyToggleButton::prepareRippleStartPosition() const {

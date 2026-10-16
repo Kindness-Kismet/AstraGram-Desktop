@@ -272,7 +272,7 @@ extrasViewerTopBarHeight: 64px;
 extrasViewerTopBarPadding: margins(18px, 0px, 12px, 0px);
 extrasViewerTopBarButton: 38px;
 extrasViewerTopBarButtonSkip: 2px;
-extrasViewerTopBarButtonRadius: 10px;
+extrasViewerTopBarButtonRadius: iconButtonRadius;
 // 分隔线把全屏、更多、关闭与媒体操作分成两组。
 extrasViewerTopBarSeparator: size(1px, 18px);
 extrasViewerTopBarSeparatorSkip: 6px;

@@ -1847,8 +1847,9 @@ void StickersBox::Inner::setActionDown(int newActionDown) {
 						false);
 				} else {
 					const auto &st = st::stickersRemove;
-					auto rippleMask = Ui::RippleAnimation::EllipseMask(
-						Size(st.rippleAreaSize));
+					auto rippleMask = Ui::RippleAnimation::RoundRectMask(
+						Size(st.rippleAreaSize),
+						st::iconButtonRadius);
 					ensureRipple(
 						st.ripple,
 						std::move(rippleMask),

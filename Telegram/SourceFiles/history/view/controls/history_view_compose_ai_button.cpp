@@ -97,8 +97,9 @@ void ComposeAiButton::onStateChanged(State was, StateChangeSource source) {
 }
 
 QImage ComposeAiButton::prepareRippleMask() const {
-	return Ui::RippleAnimation::EllipseMask(
-		QSize(_st.rippleAreaSize, _st.rippleAreaSize));
+	return Ui::RippleAnimation::RoundRectMask(
+		QSize(_st.rippleAreaSize, _st.rippleAreaSize),
+		st::iconButtonRadius);
 }
 
 QPoint ComposeAiButton::prepareRippleStartPosition() const {
