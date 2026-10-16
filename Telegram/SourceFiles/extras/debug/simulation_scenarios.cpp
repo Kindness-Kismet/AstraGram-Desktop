@@ -642,6 +642,36 @@ void seedBusiness(not_null<Main::Session*> session) {
 	session->data().businessInfo().applyGreetingSettings({});
 }
 
+// 本地给出群主、带头衔与不带头衔的管理员、自己和普通成员，资料页无需服务器即可显示成员行。
+void seedGroupMembers(
+		not_null<Main::Session*> session,
+		not_null<ChannelData*> channel) {
+	const auto user = [&](const QString &key) {
+		return session->data().user(
+			peerToUser(scenarioPeerId(findScenario(key))));
+	};
+	const auto owner = user(u"private"_q);
+	const auto moderator = user(u"draft"_q);
+	const auto admin = user(u"contact"_q);
+	const auto rights = ChatAdminRightsInfo(
+		ChatAdminRight::DeleteMessages | ChatAdminRight::BanUsers);
+	const auto info = channel->mgInfo.get();
+	info->creator = owner;
+	info->lastAdmins.emplace(moderator, MegagroupInfo::Admin(rights));
+	info->lastAdmins.emplace(admin, MegagroupInfo::Admin(rights));
+	// 超长头衔用于检查名字先截断、头衔最多占一半宽度。
+	info->memberRanks[peerToUser(moderator->id)] = u"社区版主与活动策划负责人"_q;
+	info->lastParticipants = {
+		owner,
+		moderator,
+		admin,
+		session->user(),
+		user(u"blocked"_q),
+		user(u"business"_q),
+		user(u"paid"_q),
+	};
+}
+
 void seedScenario(not_null<Main::Session*> session, int index) {
 	const auto &spec = kScenarios[index];
 	const auto kind = spec.kind;
@@ -689,6 +719,7 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 			| (kind == Kind::Topic ? Flag::Forum : Flag())
 			| (kind == Kind::TopicTabs ? (Flag::Forum | Flag::ForumTabs) : Flag())
 			| (kind == Kind::Slow ? Flag::SlowmodeEnabled : Flag())
+			| (kind == Kind::Group ? Flag::CanViewParticipants : Flag())
 			| ((kind == Kind::ProtectedGroup || kind == Kind::ProtectedChannel) ? Flag::NoForwards : Flag()));
 		channel->setLoadedStatus(PeerData::LoadedStatus::Full);
 		channel->setBarSettings(PeerBarSettings());
@@ -698,6 +729,9 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 			: (kind == Kind::VoiceRestricted)
 			? (ChatRestriction::SendVoiceMessages | ChatRestriction::SendVideoMessages)
 			: ChatRestrictions());
+		if (kind == Kind::Group) {
+			seedGroupMembers(session, channel);
+		}
 		if (kind == Kind::Discussion) {
 			channel->setDiscussionLink(session->data().channel(peerToChannel(scenarioPeerId(findScenario(u"group"_q)))));
 		}
