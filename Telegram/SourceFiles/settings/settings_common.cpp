@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lottie/lottie_icon.h"
 #include "menu/menu_send_details.h"
 #include "settings/settings_key_navigation.h"
+#include "settings/settings_card_layout.h"
 #include "ui/effects/animations.h"
 #include "ui/painter.h"
 #include "ui/widgets/buttons.h"
@@ -31,26 +32,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QAction>
 
 namespace Settings {
-void RowButton::mousePressEvent(QMouseEvent *e) {
-	const auto toggle = maybeToggleRect();
-	if (!toggle.isEmpty() && !myrtlrect(toggle).contains(e->pos())) {
-		e->accept();
-		return;
-	}
-	Ui::SettingsButton::mousePressEvent(e);
-}
-
-void RowButton::mouseReleaseEvent(QMouseEvent *e) {
-	const auto toggle = maybeToggleRect();
-	if (!toggle.isEmpty() && !myrtlrect(toggle).contains(e->pos())) {
-		setOver(false);
-		Ui::SettingsButton::mouseReleaseEvent(e);
-		setOver(rect().contains(e->pos()));
-		return;
-	}
-	Ui::SettingsButton::mouseReleaseEvent(e);
-}
-
 namespace {
 
 [[nodiscard]] HighlightArgs MaybeFillFromRipple(
@@ -387,9 +368,13 @@ void AbstractSection::setNavigationAnchor(not_null<QWidget*> widget) {
 	_keyNavigation->anchorTo(widget);
 }
 
-Icon::Icon(IconDescriptor descriptor)
+Icon::Icon(IconDescriptor descriptor, bool card)
 : _icon(descriptor.icon)
-, _color(descriptor.color) {
+, _color(descriptor.color)
+, _card(card) {
+	if (_card) {
+		return;
+	}
 	const auto background = [&]() -> const style::color* {
 		if (descriptor.type == IconType::Simple) {
 			return nullptr;
@@ -414,6 +399,11 @@ void Icon::paint(QPainter &p, QPoint position) const {
 }
 
 void Icon::paint(QPainter &p, int x, int y) const {
+	if (_card) {
+		PaintCardIcon(p, *_icon, QRect(QPoint(x, y), size()),
+			_color ? *_color : st::settingsCardSubTextFg);
+		return;
+	}
 	if (_background) {
 		_background->paint(p, { { x, y }, _icon->size() });
 	} else if (_backgroundBrush) {
@@ -434,15 +424,35 @@ void Icon::paint(QPainter &p, int x, int y) const {
 }
 
 int Icon::width() const {
-	return _icon->width();
+	return _card ? st::settingsCardIconSize : _icon->width();
 }
 
 int Icon::height() const {
-	return _icon->height();
+	return _card ? st::settingsCardIconSize : _icon->height();
 }
 
 QSize Icon::size() const {
-	return _icon->size();
+	return QSize(width(), height());
+}
+
+void PaintCardIcon(
+		QPainter &p,
+		const style::icon &icon,
+		QRect area,
+		const style::color &color) {
+	p.save();
+	const auto hq = PainterHighQualityEnabler(p);
+	p.setPen(Qt::NoPen);
+	p.setBrush(st::settingsCardIconBg);
+	p.drawRoundedRect(area, st::settingsCardIconRadius, st::settingsCardIconRadius);
+	const auto source = icon.size();
+	const auto scale = st::settingsCardIconGlyphSize
+		/ double(std::max(source.width(), source.height()));
+	p.translate(area.x() + (area.width() - source.width() * scale) / 2.,
+		area.y() + (area.height() - source.height() * scale) / 2.);
+	p.scale(scale, scale);
+	icon.paint(p, 0, 0, source.width(), color->c);
+	p.restore();
 }
 
 void AddButtonIcon(
@@ -452,16 +462,17 @@ void AddButtonIcon(
 	Expects(descriptor.icon != nullptr);
 
 	struct IconWidget {
-		IconWidget(QWidget *parent, IconDescriptor &&descriptor)
+		IconWidget(QWidget *parent, IconDescriptor &&descriptor, bool card)
 		: widget(parent)
-		, icon(std::move(descriptor)) {
+		, icon(std::move(descriptor), card) {
 		}
 		Ui::RpWidget widget;
 		Icon icon;
 	};
 	const auto icon = button->lifetime().make_state<IconWidget>(
 		button,
-		std::move(descriptor));
+		std::move(descriptor),
+		IsInCardGroup(button));
 	icon->widget.setAttribute(Qt::WA_TransparentForMouseEvents);
 	icon->widget.resize(icon->icon.size());
 	icon->widget.show();
@@ -488,6 +499,13 @@ bool IsInCardGroup(not_null<QWidget*> widget) {
 	return false;
 }
 
+CheckboxLook CardCheckboxLook(not_null<QWidget*> parent) {
+	if (IsInCardGroup(parent)) {
+		return { st::settingsCardCheckbox, st::settingsCardSendTypePadding };
+	}
+	return { st::settingsSendType, st::settingsSendTypePadding };
+}
+
 object_ptr<Button> CreateButtonWithIcon(
 		not_null<QWidget*> parent,
 		rpl::producer<QString> text,
@@ -498,18 +516,30 @@ object_ptr<Button> CreateButtonWithIcon(
 		? std::make_shared<style::SettingsButton>(st)
 		: std::shared_ptr<style::SettingsButton>();
 	if (card) {
-		if (descriptor && !descriptor.color
-			&& !descriptor.background && !descriptor.backgroundBrush) {
+		if (descriptor && !descriptor.color) {
 			descriptor.color = (&st == &st::settingsAttentionButtonWithIcon)
 				? &st::attentionButtonFg
-				: &st::windowSubTextFg;
+				: &st::settingsCardSubTextFg;
 		}
-		rowStyle->padding.setLeft(descriptor ? st::settingsCardSectionButton.padding.left()
+		rowStyle->padding.setLeft(descriptor
+			? st::settingsCardSectionButton.padding.left()
 			: st::settingsCardRowInset);
+		rowStyle->padding.setRight(st::settingsCardRowInset);
 		rowStyle->iconLeft = st::settingsCardRowInset;
+		rowStyle->toggleSkip = st::settingsCardRowInset;
+		rowStyle->textBgOver = st::settingsCardBgOver;
+		rowStyle->rightLabel = st::settingsCardSectionButton.rightLabel;
+		if (st.textFg.get() == st::settingsButton.textFg.get()) {
+			rowStyle->textFg = rowStyle->textFgOver = st::settingsCardFg;
+		}
+		// 卡片内的行统一正文字号，保留原样式的粗细；较高的行只换字号不改行高。
+		rowStyle->style = st::settingsCardSectionButton.style;
+		if (st.style.font->flags() & style::FontFlag::Bold) {
+			rowStyle->style.font = rowStyle->style.font->bold();
+		}
 		if (st.height <= st::settingsButton.height) {
-			rowStyle->height = st.style.font->height;
-			const auto padding = style::ConvertScale(52) - rowStyle->height;
+			rowStyle->height = rowStyle->style.font->height;
+			const auto padding = st::settingsCardRowHeight - rowStyle->height;
 			rowStyle->padding.setTop(padding / 2);
 			rowStyle->padding.setBottom(padding - padding / 2);
 		}
@@ -518,6 +548,7 @@ object_ptr<Button> CreateButtonWithIcon(
 	const auto button = result.data();
 	if (rowStyle) {
 		button->lifetime().add([rowStyle] {});
+		button->setProperty("settingsCardTextLeft", rowStyle->padding.left());
 	}
 	button->setProperty("settingsCardRow", card);
 	if (descriptor) {
@@ -557,8 +588,27 @@ void CreateRightLabel(
 	name->show();
 	const auto computeRightSkip = [=] {
 		return std::max(
-			st::settingsButtonRightSkip,
+			centered ? st::settingsCardRowInset : st::settingsButtonRightSkip,
 			button->property("settingsRightLabelSkip").toInt());
+	};
+	const auto placeLabel = [=, &st](QSize size, const QString &title, int rightSkip) {
+		const auto available = centered
+			? std::min(st::settingsCardValueMaxWidth,
+				(size.width() - st.padding.left() - rightSkip) / 2)
+			: size.width() - st.padding.left() - st.padding.right()
+				- st.style.font->width(title) - rightSkip;
+		name->resizeToNaturalWidth(std::max(available, 1));
+		name->moveToRight(rightSkip, centered
+			? (size.height() - name->height()) / 2
+			: st.padding.top());
+		if (centered) {
+			auto padding = st.padding;
+			padding.setRight(rightSkip + name->width() + st::settingsCardTextGap);
+			padding.setBottom(std::max(padding.bottom(),
+				button->property("settingsContentBottomSkip").toInt()));
+			button->setProperty("settingsContentRightSkip", padding.right());
+			button->setPaddingOverride(padding);
+		}
 	};
 	// 箭头可能在右值之后添加，属性变化时同步重排，普通设置行保持原间距。
 	auto rightSkip = rpl::single(computeRightSkip()) | rpl::then(
@@ -570,47 +620,31 @@ void CreateRightLabel(
 	) | rpl::distinct_until_changed();
 	if (v::text::is_plain(label)) {
 		rpl::combine(
-			button->widthValue(),
+			button->sizeValue(),
 			std::move(buttonText),
 			v::text::take_plain(std::move(label)),
 			std::move(rightSkip)
-		) | rpl::on_next([=, &st](
-				int width,
-				const QString &button,
+		) | rpl::on_next([=](
+				QSize size,
+				const QString &title,
 				const QString &text,
 				int rightSkip) {
-			const auto available = width
-				- st.padding.left()
-				- st.padding.right()
-				- st.style.font->width(button)
-				- rightSkip;
 			name->setText(text);
-			name->resizeToNaturalWidth(available);
-			name->moveToRight(rightSkip, centered
-				? (name->parentWidget()->height() - name->height()) / 2
-				: st.padding.top());
+			placeLabel(size, title, rightSkip);
 		}, name->lifetime());
 	} else if (v::text::is_marked(label)) {
 		rpl::combine(
-			button->widthValue(),
+			button->sizeValue(),
 			std::move(buttonText),
 			v::text::take_marked(std::move(label)),
 			std::move(rightSkip)
-		) | rpl::on_next([=, &st](
-				int width,
-				const QString &button,
+		) | rpl::on_next([=](
+				QSize size,
+				const QString &title,
 				const TextWithEntities &text,
 				int rightSkip) {
-			const auto available = width
-				- st.padding.left()
-				- st.padding.right()
-				- st.style.font->width(button)
-				- rightSkip;
 			name->setMarkedText(text, context);
-			name->resizeToNaturalWidth(available);
-			name->moveToRight(rightSkip, centered
-				? (name->parentWidget()->height() - name->height()) / 2
-				: st.padding.top());
+			placeLabel(size, title, rightSkip);
 		}, name->lifetime());
 	}
 	name->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -658,6 +692,9 @@ not_null<Button*> AddButtonWithLabel(
 		rpl::duplicate(text),
 		st,
 		std::move(descriptor));
+	if (IsInCardGroup(button)) {
+		AddSectionRowDetails(button);
+	}
 	CreateRightLabel(button, std::move(label), st, std::move(text));
 	return button;
 }

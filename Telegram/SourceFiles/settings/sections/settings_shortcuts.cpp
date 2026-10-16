@@ -253,7 +253,9 @@ struct SetupShortcutsResult {
 				}
 				const auto keys = Ui::CreateChild<Ui::FlatLabel>(
 					widget,
-					st::settingsButtonNoIcon.rightLabel);
+					(IsInCardGroup(widget)
+						? st::settingsCardSectionButton
+						: st::settingsButtonNoIcon).rightLabel);
 				keys->show();
 				rpl::combine(
 					widget->widthValue(),

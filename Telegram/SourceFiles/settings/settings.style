@@ -62,48 +62,78 @@ settingsAboutVersion: FlatLabel(defaultFlatLabel) {
 }
 
 settingsCardRadius: 12px;
-settingsCardPagePadding: 20px;
+settingsCardPagePadding: 17px;
 settingsCardNarrowPadding: 12px;
 settingsCardNarrowWidth: 420px;
-settingsCardPageTop: 8px;
+settingsCardPageTop: 17px;
 settingsCardPageBottom: 24px;
 settingsCardGroupSkip: 18px;
-settingsCardRowInset: 14px;
+settingsCardRowInset: 12px;
+settingsCardRowHeight: 52px;
+settingsCardIconSize: 27px;
+settingsCardIconGlyphSize: 17px;
+settingsCardIconRadius: 7px;
+settingsCardTextGap: 11px;
+settingsCardValueMaxWidth: 130px;
+settingsCardArrowSize: 14px;
 // 对话框内的卡片：行内文字与对话框标题对齐。
 settingsCardBoxPadding: margins(6px, 0px, 6px, 0px);
+// 设置页字号分三档：正文 13、辅助 12、标题 12（无卡片模式加粗）。
 settingsCardTitle: FlatLabel(defaultFlatLabel) {
-	textFg: windowSubTextFg;
+	textFg: settingsCardSubTextFg;
 	style: TextStyle(defaultTextStyle) {
 		font: font(12px);
 	}
 }
-settingsCardTitlePadding: margins(14px, 4px, 14px, 8px);
+settingsCardTitlePadding: margins(12px, 0px, 12px, 7px);
+// 卡片内的小标题，如音量、头像圆角。
+settingsCardSubsectionTitle: FlatLabel(defaultSubsectionTitle) {
+	style: TextStyle(semiboldTextStyle) {
+		font: font(12px semibold);
+	}
+}
+settingsCardSubsectionTitlePadding: margins(12px, 10px, 12px, 4px);
 settingsCardHint: FlatLabel(defaultFlatLabel) {
 	// 非零下限启用换行，实际宽度由页面布局决定。
 	minWidth: 1px;
-	textFg: windowSubTextFg;
+	textFg: settingsCardSubTextFg;
 	style: TextStyle(defaultTextStyle) {
 		font: font(12px);
-		lineHeight: 18px;
+		lineHeight: 17px;
 	}
 }
-settingsCardHintPadding: margins(14px, 0px, 14px, 14px);
+settingsCardHintPadding: margins(12px, 0px, 12px, 18px);
 settingsCardSectionButton: SettingsButton(settingsButton) {
+	style: defaultTextStyle;
 	height: 20px;
-	padding: margins(54px, 16px, 38px, 16px);
-	iconLeft: 14px;
+	padding: margins(50px, 16px, 12px, 16px);
+	iconLeft: 12px;
+	toggleSkip: 12px;
+	textFg: settingsCardFg;
+	textFgOver: settingsCardFg;
+	textBgOver: settingsCardBgOver;
+	rightLabel: FlatLabel(defaultSettingsRightLabel) {
+		style: defaultTextStyle;
+	}
+}
+settingsCardButtonNoIcon: SettingsButton(settingsCardSectionButton) {
+	padding: margins(12px, 16px, 12px, 16px);
 }
 settingsCardDetailedButton: SettingsButton(settingsCardSectionButton) {
 	height: 36px;
-	padding: margins(54px, 10px, 38px, 12px);
+	padding: margins(50px, 10px, 37px, 12px);
 }
 settingsCardToggleButton: SettingsButton(settingsCardSectionButton) {
-	padding: margins(54px, 16px, 18px, 16px);
 }
 settingsCardRowDescription: FlatLabel(settingsCardHint) {
-	maxHeight: 18px;
+	maxHeight: 0px;
 }
-settingsCardDescriptionTop: 32px;
+// 卡片行内另行创建的标题，与卡片行同字号同色。
+settingsCardRowLabel: FlatLabel(defaultFlatLabel) {
+	textFg: settingsCardFg;
+	style: defaultTextStyle;
+}
+settingsCardDescriptionTop: 33px;
 settingsSearchHintPadding: margins(14px, 12px, 14px, 12px);
 settingsButtonRightLabelSpoiler: SettingsButton(settingsButton) {
 	rightLabel: FlatLabel(defaultSettingsRightLabel) {
@@ -241,6 +271,10 @@ settingsFolderShareIcon: icon {{ "settings/folder_links", lightButtonFg }};
 settingsCheckbox: Checkbox(defaultBoxCheckbox) {
 	textPosition: point(15px, 1px);
 }
+// 卡片内的勾选文字与卡片行同字号。
+settingsCardCheckbox: Checkbox(settingsCheckbox) {
+	style: defaultTextStyle;
+}
 settingsCheckboxPadding: margins(22px, 10px, 10px, 10px);
 settingsLink: boxLinkButton;
 settingsCheckboxesSkip: 12px;
@@ -250,6 +284,7 @@ settingsNavigationBandSkip: 4px;
 
 settingsSendType: settingsCheckbox;
 settingsSendTypePadding: margins(22px, 5px, 10px, 5px);
+settingsCardSendTypePadding: margins(12px, 5px, 12px, 5px);
 settingsSendTypeSkip: 5px;
 
 settingsBackgroundThumb: 76px;
@@ -602,6 +637,9 @@ settingsNotificationType: SettingsButton(settingsButton) {
 }
 settingsNotificationTypeDetails: FlatLabel(defaultFlatLabel) {
 	textFg: windowSubTextFg;
+	style: TextStyle(defaultTextStyle) {
+		font: font(12px);
+	}
 }
 
 powerSavingButton: SettingsButton(settingsButton) {

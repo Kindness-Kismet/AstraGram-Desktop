@@ -36,7 +36,6 @@ void ShowRestartPrompt(
 	QString additionalText = {});
 
 not_null<Ui::RpWidget*> AddInnerToggle(not_null<Ui::VerticalLayout*> container,
-									   const style::SettingsButton &st,
 									   std::vector<not_null<Ui::AbstractCheckView*>> innerCheckViews,
 									   not_null<Ui::SlideWrap<>*> wrap,
 									   rpl::producer<QString> buttonLabel,

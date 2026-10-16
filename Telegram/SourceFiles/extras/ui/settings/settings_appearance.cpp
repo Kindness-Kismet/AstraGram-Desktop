@@ -240,10 +240,11 @@ void BuildAvatarCorners(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 
 	builder.add([=](const WidgetContext &ctx) -> SectionBuilder::WidgetToAdd {
 		const auto container = ctx.container;
+		const auto card = IsInCardGroup(container);
 		auto title = object_ptr<Ui::FlatLabel>(
 			container,
 			tr::extras_AvatarCorners(),
-			st::defaultSubsectionTitle);
+			card ? st::settingsCardSubsectionTitle : st::defaultSubsectionTitle);
 		const auto titleRaw = title.data();
 
 		const auto badge = Ui::CreateChild<Ui::PaddingWrap<Ui::FlatLabel>>(
@@ -275,7 +276,9 @@ void BuildAvatarCorners(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 
 		return {
 			.widget = std::move(title),
-			.margin = st::defaultSubsectionTitlePadding,
+			.margin = (card
+				? st::settingsCardSubsectionTitlePadding
+				: st::defaultSubsectionTitlePadding),
 		};
 	}, [] {
 		return SearchEntry{

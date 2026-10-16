@@ -57,6 +57,7 @@ class SessionController;
 } // namespace Window
 
 namespace style {
+struct Checkbox;
 struct FlatLabel;
 struct SettingsButton;
 struct MediaSlider;
@@ -71,15 +72,7 @@ namespace Settings {
 class KeyNavigation;
 
 using Button = Ui::SettingsButton;
-
-class RowButton : public Ui::SettingsButton {
-public:
-	using Ui::SettingsButton::SettingsButton;
-
-protected:
-	void mousePressEvent(QMouseEvent *e) override;
-	void mouseReleaseEvent(QMouseEvent *e) override;
-};
+using RowButton = Button;
 
 enum class HighlightShape {
 	Rect,
@@ -251,7 +244,7 @@ struct IconDescriptor {
 
 class Icon final {
 public:
-	explicit Icon(IconDescriptor descriptor);
+	explicit Icon(IconDescriptor descriptor, bool card = false);
 
 	void paint(QPainter &p, QPoint position) const;
 	void paint(QPainter &p, int x, int y) const;
@@ -265,8 +258,15 @@ private:
 	const style::color *_color = nullptr;
 	std::optional<Ui::RoundRect> _background;
 	std::optional<std::pair<int, QBrush>> _backgroundBrush;
+	bool _card = false;
 
 };
+
+void PaintCardIcon(
+	QPainter &p,
+	const style::icon &icon,
+	QRect area,
+	const style::color &color);
 
 void AddButtonIcon(
 	not_null<Ui::AbstractButton*> button,
@@ -274,6 +274,12 @@ void AddButtonIcon(
 	IconDescriptor &&descriptor);
 // 控件位于设置卡片内时，行内容统一使用卡片缩进。
 [[nodiscard]] bool IsInCardGroup(not_null<QWidget*> widget);
+struct CheckboxLook {
+	const style::Checkbox &st;
+	const style::margins &padding;
+};
+// 卡片内的勾选与单选：文字与卡片行同字号，选择框对齐行文字左缘。
+[[nodiscard]] CheckboxLook CardCheckboxLook(not_null<QWidget*> parent);
 object_ptr<Button> CreateButtonWithIcon(
 	not_null<QWidget*> parent,
 	rpl::producer<QString> text,

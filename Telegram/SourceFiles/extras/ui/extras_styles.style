@@ -193,11 +193,12 @@ pluginChipSkip: 6px;
 
 ghostPickerArrow: icon{{ "info/edit/expand_arrow_small", windowActiveTextFg }};
 
+// 与组标题同字号，挂在标题右侧。
 ghostPickerButton: LinkButton(defaultLinkButton) {
 	color: windowActiveTextFg;
 	overColor: windowActiveTextFg;
-	font: font(boxFontSize);
-	overFont: font(boxFontSize);
+	font: font(12px);
+	overFont: font(12px);
 }
 
 extrasBetaBadgePadding: margins(4px, 1px, 4px, 1px);

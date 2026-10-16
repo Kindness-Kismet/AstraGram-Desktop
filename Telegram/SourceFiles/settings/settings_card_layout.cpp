@@ -4,10 +4,14 @@
 #include "boxes/peer_list_box.h"
 
 #include "ui/painter.h"
+#include "ui/boxes/dialog_layout.h"
+#include "ui/text/text_utilities.h"
+#include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/padding_wrap.h"
+#include "styles/style_layers.h"
 #include "styles/style_settings.h"
 
 #include <QPainterPath>
@@ -65,21 +69,28 @@ class CardGroup final : public Ui::RpWidget {
 public:
 	explicit CardGroup(QWidget *parent)
 	: RpWidget(parent)
+	, _dialog(Ui::IsDialogContent(this))
 	, _content(Ui::CreateChild<Ui::VerticalLayout>(this))
 	, _frame(Ui::CreateChild<Ui::RpWidget>(this)) {
 		setObjectName(u"settings.card"_q);
-		setGraphicsEffect(new CardClipEffect(this));
-		_content->setProperty("settingsCardGroup", true);
-		ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
-			_frame->update();
-		}, lifetime());
+		if (!_dialog) {
+			setGraphicsEffect(new CardClipEffect(this));
+			_content->setProperty("settingsCardGroup", true);
+			ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
+				_frame->update();
+			}, lifetime());
+		}
 		_frame->setAttribute(Qt::WA_TransparentForMouseEvents);
 		_frame->paintRequest() | rpl::on_next([=] {
 			paintFrame();
 		}, _frame->lifetime());
 		paintRequest() | rpl::on_next([=] {
+			// 无卡片列表直接透出页面底色，窗口材质下也不出现卡片块。
+			if (_dialog || Ui::SettingsCardsPlain()) {
+				return;
+			}
 			auto p = QPainter(this);
-			p.fillRect(rect(), ExtrasFeatures::WindowMaterial::cardColor(this, st::cardBg->c));
+			p.fillRect(rect(), ExtrasFeatures::WindowMaterial::cardColor(this, st::settingsCardBg->c));
 		}, lifetime());
 		_content->heightValue() | rpl::on_next([=] {
 			if (!_resizing) {
@@ -96,6 +107,14 @@ public:
 		return _content;
 	}
 
+	// 紧挨在上方的组标题，组间细线画在标题之上。
+	void setTitle(not_null<QWidget*> title) {
+		_title = title.get();
+	}
+	[[nodiscard]] QWidget *title() const {
+		return _title.data();
+	}
+
 protected:
 	int resizeGetHeight(int newWidth) override {
 		_resizing = true;
@@ -110,19 +129,38 @@ protected:
 
 private:
 	void paintFrame() {
+		if (_dialog) {
+			return;
+		}
 		auto p = QPainter(_frame);
 		auto hq = PainterHighQualityEnabler(p);
 		const auto radius = st::settingsCardRadius;
 		const auto area = QRectF(rect()).adjusted(.5, .5, -.5, -.5);
 		auto shape = QPainterPath();
 		shape.addRoundedRect(area, radius, radius);
-		p.setPen(st::controlBorder);
+		for (const auto row : _content->findChildren<QWidget*>()) {
+			if (!row->property("settingsCardRow").toBool()
+				|| !row->isVisibleTo(_content)) {
+				continue;
+			}
+			const auto position = row->mapTo(this, QPoint());
+			if (position.y() <= 0) {
+				continue;
+			}
+			const auto left = row->property("settingsCardTextLeft").toInt();
+			const auto line = style::rtlrect(left, 0,
+				row->width() - left - st::settingsCardRowInset, 1, row->width());
+			p.fillRect(line.translated(position), st::settingsCardDividerFg);
+		}
+		p.setPen(st::settingsCardBorderFg);
 		p.setBrush(Qt::NoBrush);
 		p.drawPath(shape);
 	}
 
+	const bool _dialog;
 	const not_null<Ui::VerticalLayout*> _content;
 	const not_null<Ui::RpWidget*> _frame;
+	QPointer<QWidget> _title;
 	bool _resizing = false;
 };
 
@@ -130,25 +168,64 @@ private:
 
 CardPage::CardPage(QWidget *parent)
 : RpWidget(parent)
+, _dialog(Ui::IsDialogContent(this))
 , _content(Ui::CreateChild<Ui::VerticalLayout>(this)) {
-	ExtrasFeatures::WindowMaterial::watchSurface(this);
-	for (auto ancestor = parent; ancestor; ancestor = ancestor->parentWidget()) {
-		const auto section = dynamic_cast<AbstractSection*>(ancestor);
-		if (!section) {
-			continue;
+	if (!_dialog) {
+		ExtrasFeatures::WindowMaterial::watchSurface(this);
+		for (auto ancestor = parent; ancestor; ancestor = ancestor->parentWidget()) {
+			const auto section = dynamic_cast<AbstractSection*>(ancestor);
+			if (!section) {
+				continue;
+			}
+			section->setProperty("settingsCardBackground", true);
+			break;
 		}
-		section->setProperty("settingsCardBackground", true);
-		break;
 	}
 	paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(this);
-		p.fillRect(rect(), ExtrasFeatures::WindowMaterial::surfaceColor(this, st::dialogsBg->c));
+		if (_dialog) {
+			p.fillRect(rect(), st::boxBg);
+			return;
+		}
+		p.fillRect(rect(), ExtrasFeatures::WindowMaterial::surfaceColor(this, st::settingsPageBg->c));
+		paintGroupDividers(p);
 	}, lifetime());
 	_content->heightValue() | rpl::on_next([=] {
 		if (!_resizing) {
 			resizeToWidth(width());
 		}
+		update();
 	}, lifetime());
+}
+
+// 无卡片列表在相邻分组之间画通栏细线，线位于组间留白正中。
+void CardPage::paintGroupDividers(QPainter &p) {
+	if (!Ui::SettingsCardsPlain()) {
+		return;
+	}
+	auto tops = std::vector<int>();
+	for (const auto child : _content->findChildren<QWidget*>()) {
+		if (child->objectName() != u"settings.card"_q
+			|| !child->isVisibleTo(this)) {
+			continue;
+		}
+		const auto group = static_cast<CardGroup*>(child);
+		const auto title = group->title();
+		const auto anchor = (title && title->isVisibleTo(this))
+			? title
+			: child;
+		tops.push_back(anchor->mapTo(this, QPoint()).y());
+	}
+	ranges::sort(tops);
+	const auto skip = st::settingsCardGroupSkip / 2;
+	for (auto i = 1; i < int(tops.size()); ++i) {
+		p.fillRect(
+			_content->x(),
+			tops[i] - skip,
+			_content->width(),
+			st::lineWidth,
+			st::settingsGroupDividerFg);
+	}
 }
 
 not_null<Ui::VerticalLayout*> CardPage::content() const {
@@ -156,6 +233,13 @@ not_null<Ui::VerticalLayout*> CardPage::content() const {
 }
 
 int CardPage::resizeGetHeight(int newWidth) {
+	if (_dialog) {
+		_resizing = true;
+		_content->resizeToWidth(newWidth);
+		_content->moveToLeft(0, st::boxPadding.top());
+		_resizing = false;
+		return st::boxPadding.top() + _content->height() + st::boxPadding.bottom();
+	}
 	const auto padding = (newWidth < st::settingsCardNarrowWidth)
 		? st::settingsCardNarrowPadding
 		: st::settingsCardPagePadding;
@@ -175,9 +259,17 @@ void CardPage::visibleTopBottomUpdated(int top, int bottom) {
 
 not_null<Ui::VerticalLayout*> AddCardGroup(
 		not_null<Ui::VerticalLayout*> container) {
-	return container->add(
+	const auto count = container->count();
+	const auto previous = count ? container->widgetAt(count - 1).get() : nullptr;
+	const auto group = container->add(
 		object_ptr<CardGroup>(container),
-		QMargins(0, 0, 0, st::settingsCardGroupSkip))->content();
+		QMargins(0, 0, 0, Ui::IsDialogContent(container)
+			? st::boxMediumSkip
+			: st::settingsCardGroupSkip));
+	if (previous && previous->objectName() == u"settings.cardTitle"_q) {
+		group->setTitle(previous);
+	}
+	return group->content();
 }
 
 not_null<PeerListContent*> AddCardList(
@@ -196,14 +288,54 @@ not_null<PeerListContent*> AddCardList(
 not_null<Ui::FlatLabel*> AddCardTitle(
 		not_null<Ui::VerticalLayout*> container,
 		rpl::producer<QString> title) {
-	return container->add(
-		object_ptr<Ui::FlatLabel>(container, std::move(title), st::settingsCardTitle),
+	if (Ui::IsDialogContent(container)) {
+		return Ui::AddSubsectionTitle(
+			container,
+			std::move(title),
+			QMargins(st::boxRowPadding.left()
+				- st::defaultSubsectionTitlePadding.left(), 0, 0, 0));
+	}
+	const auto label = container->add(
+		object_ptr<Ui::FlatLabel>(container, st::settingsCardTitle),
 		st::settingsCardTitlePadding);
+	label->setObjectName(u"settings.cardTitle"_q);
+	// 无卡片列表的组标题用强调色加粗，卡片列表保持原样；随主题切换。
+	rpl::combine(
+		std::move(title),
+		rpl::single(rpl::empty) | rpl::then(style::PaletteChanged())
+	) | rpl::on_next([=](const QString &text, rpl::empty_value) {
+		const auto plain = Ui::SettingsCardsPlain();
+		label->setMarkedText(plain
+			? Ui::Text::Bold(text)
+			: TextWithEntities{ text });
+		label->setTextColorOverride(plain
+			? std::make_optional(st::windowActiveTextFg->c)
+			: std::nullopt);
+	}, label->lifetime());
+	return label;
+}
+
+not_null<Ui::FlatLabel*> AddCardSubsectionTitle(
+		not_null<Ui::VerticalLayout*> container,
+		rpl::producer<QString> title) {
+	if (!IsInCardGroup(container)) {
+		return Ui::AddSubsectionTitle(container, std::move(title));
+	}
+	return container->add(
+		object_ptr<Ui::FlatLabel>(
+			container,
+			std::move(title),
+			st::settingsCardSubsectionTitle),
+		st::settingsCardSubsectionTitlePadding);
 }
 
 void AddCardDescription(
 	not_null<Ui::VerticalLayout*> container,
 	rpl::producer<QString> text) {
+	if (Ui::IsDialogContent(container)) {
+		Ui::AddDialogText(container, std::move(text));
+		return;
+	}
 	container->add(
 		object_ptr<Ui::FlatLabel>(container, std::move(text), st::settingsCardHint),
 		st::settingsCardHintPadding);
@@ -212,45 +344,79 @@ void AddCardDescription(
 void AddSectionRowDetails(
 		not_null<Ui::SettingsButton*> button,
 		rpl::producer<QString> description) {
-	const auto arrow = Ui::CreateChild<Ui::RpWidget>(button.get());
-	arrow->setAttribute(Qt::WA_TransparentForMouseEvents);
-	arrow->resize(style::ConvertScale(18), style::ConvertScale(18));
-	button->setProperty(
-		"settingsRightLabelSkip",
-		2 * st::settingsCardRowInset + arrow->width());
-	arrow->show();
-	arrow->paintRequest() | rpl::on_next([=] {
-		auto p = QPainter(arrow);
-		auto hq = PainterHighQualityEnabler(p);
-		p.setOpacity(.7);
-		p.setPen(QPen(st::windowSubTextFg->c, 1.2 * style::ConvertScale(1),
-			Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-		const auto w = arrow->width();
-		p.drawLine(QPointF(w * .4, w * .25), QPointF(w * .65, w * .5));
-		p.drawLine(QPointF(w * .65, w * .5), QPointF(w * .4, w * .75));
-	}, arrow->lifetime());
-	button->sizeValue() | rpl::on_next([=](QSize size) {
-		arrow->moveToRight(
-			st::settingsCardRowInset,
-			(size.height() - arrow->height()) / 2);
-	}, arrow->lifetime());
+	if (Ui::IsDialogContent(button) && !description) {
+		return;
+	}
+	if (!button->property("settingsRightLabelSkip").isValid()) {
+		const auto arrow = Ui::CreateChild<Ui::RpWidget>(button.get());
+		arrow->setObjectName(u"settings.row.arrow"_q);
+		arrow->setAttribute(Qt::WA_TransparentForMouseEvents);
+		arrow->resize(st::settingsCardArrowSize, st::settingsCardArrowSize);
+		const auto rightSkip = st::settingsCardRowInset
+			+ arrow->width() + st::settingsCardTextGap;
+		button->setProperty("settingsRightLabelSkip", rightSkip);
+		auto padding = button->st().padding;
+		padding.setRight(std::max(rightSkip,
+			button->property("settingsContentRightSkip").toInt()));
+		button->setPaddingOverride(padding);
+		arrow->show();
+		arrow->paintRequest() | rpl::on_next([=] {
+			auto p = QPainter(arrow);
+			auto hq = PainterHighQualityEnabler(p);
+			p.setPen(QPen(st::settingsCardSubTextFg->c,
+				style::ConvertScale(1), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+			const auto w = arrow->width();
+			const auto top = style::rtlpoint(QPointF(w * .4, w * .25), w);
+			const auto middle = style::rtlpoint(QPointF(w * .65, w * .5), w);
+			const auto bottom = style::rtlpoint(QPointF(w * .4, w * .75), w);
+			p.drawLine(top, middle);
+			p.drawLine(middle, bottom);
+		}, arrow->lifetime());
+		button->sizeValue() | rpl::on_next([=](QSize size) {
+			arrow->moveToRight(st::settingsCardRowInset,
+				(size.height() - arrow->height()) / 2);
+		}, arrow->lifetime());
+	}
 	if (!description) {
 		return;
 	}
-	const auto label = Ui::CreateChild<Ui::FlatLabel>(
-		button.get(),
-		std::move(description),
-		st::settingsCardRowDescription);
+	const auto label = Ui::CreateChild<Ui::FlatLabel>(button.get(),
+		std::move(description), st::settingsCardRowDescription);
+	label->setObjectName(u"settings.row.description"_q);
 	label->setAttribute(Qt::WA_TransparentForMouseEvents);
 	label->show();
-	button->widthValue() | rpl::on_next([=](int width) {
-		label->resizeToWidth(std::max(
-			width - st::settingsCardDetailedButton.padding.left()
-				- st::settingsCardDetailedButton.padding.right(),
-			1));
-		label->moveToLeft(
-			st::settingsCardDetailedButton.padding.left(),
-			st::settingsCardDescriptionTop);
+	const auto computeRightSkip = [=] {
+		return std::max({
+			button->st().padding.right(),
+			button->property("settingsRightLabelSkip").toInt(),
+			button->property("settingsContentRightSkip").toInt(),
+		});
+	};
+	auto rightSkip = rpl::single(computeRightSkip()) | rpl::then(
+		button->events() | rpl::filter([](not_null<QEvent*> event) {
+			return event->type() == QEvent::DynamicPropertyChange;
+		}) | rpl::map(computeRightSkip)
+	) | rpl::distinct_until_changed();
+	rpl::combine(
+		button->widthValue(),
+		rpl::duplicate(rightSkip)
+	) | rpl::on_next([=](int width, int right) {
+		const auto left = button->st().padding.left();
+		label->resizeToWidth(std::max(width - left - right, 1));
+		label->moveToLeft(left, st::settingsCardDescriptionTop);
+	}, label->lifetime());
+	rpl::combine(
+		label->heightValue(),
+		std::move(rightSkip)
+	) | rpl::on_next([=](int height, int right) {
+		const auto &st = button->st();
+		auto padding = st.padding;
+		padding.setRight(right);
+		padding.setBottom(std::max(padding.bottom(),
+			st::settingsCardDescriptionTop + height
+				+ st::settingsCardRowInset - padding.top() - st.height));
+		button->setProperty("settingsContentBottomSkip", padding.bottom());
+		button->setPaddingOverride(padding);
 	}, label->lifetime());
 }
 

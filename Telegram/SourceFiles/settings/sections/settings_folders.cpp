@@ -1077,11 +1077,10 @@ void BuildTagsSection(SectionBuilder &builder, not_null<FoldersState*> state) {
 		};
 
 		auto premium = Data::AmPremiumValue(session);
-		const auto tagsButton = content->add(
-			object_ptr<Settings::RowButton>(
-				content,
-				tr::lng_filters_enable_tags(),
-				st::settingsButtonNoIconLocked));
+		const auto tagsButton = content->add(CreateButtonWithIcon(
+			content,
+			tr::lng_filters_enable_tags(),
+			st::settingsButtonNoIconLocked));
 		if (ctx.highlights) {
 			ctx.highlights->push_back({ u"folders/show-tags"_q, { tagsButton } });
 		}
@@ -1182,7 +1181,7 @@ void BuildViewSection(SectionBuilder &builder) {
 		const auto content = wrap->entity();
 
 		Ui::AddSkip(content);
-		const auto title = Ui::AddSubsectionTitle(
+		const auto title = AddCardSubsectionTitle(
 			content,
 			tr::lng_filters_view_subtitle());
 		if (ctx.highlights) {
@@ -1194,6 +1193,7 @@ void BuildViewSection(SectionBuilder &builder) {
 
 		const auto group = std::make_shared<Ui::RadioenumGroup<bool>>(
 			Core::App().settings().chatFiltersHorizontal());
+		const auto look = CardCheckboxLook(content);
 		const auto addSend = [&](bool value, const QString &text) {
 			const auto button = content->add(
 				object_ptr<Ui::Radioenum<bool>>(
@@ -1201,8 +1201,8 @@ void BuildViewSection(SectionBuilder &builder) {
 					group,
 					value,
 					text,
-					st::settingsSendType),
-				st::settingsSendTypePadding);
+					look.st),
+				look.padding);
 			button->setObjectName(value
 				? u"chatFolders.layout.horizontal"_q
 				: u"chatFolders.layout.vertical"_q);
@@ -1228,13 +1228,14 @@ void BuildViewSection(SectionBuilder &builder) {
 		const auto content = ctx.container;
 
 		Ui::AddSkip(content);
-		Ui::AddSubsectionTitle(
+		AddCardSubsectionTitle(
 			content,
 			tr::lng_filters_tabs_subtitle());
 
 		using Mode = Ui::ChatsFiltersTabsMode;
 		const auto modeGroup = std::make_shared<Ui::RadioenumGroup<Mode>>(
 			Core::App().settings().chatFiltersTabsMode());
+		const auto look = CardCheckboxLook(content);
 		const auto addMode = [&](Mode value, const QString &text) {
 			const auto button = content->add(
 				object_ptr<Ui::Radioenum<Mode>>(
@@ -1242,8 +1243,8 @@ void BuildViewSection(SectionBuilder &builder) {
 					modeGroup,
 					value,
 					text,
-					st::settingsSendType),
-				st::settingsSendTypePadding);
+					look.st),
+				look.padding);
 			button->setObjectName(u"chatFolders.mode.%1"_q.arg(int(value)));
 		};
 		addMode(Mode::Default, tr::lng_filters_tabs_default(tr::now));

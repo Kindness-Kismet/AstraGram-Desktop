@@ -137,7 +137,6 @@ void SetupCopyLinkMenus(
 }
 
 not_null<Ui::RpWidget*> AddInnerToggle(not_null<Ui::VerticalLayout*> container,
-									   const style::SettingsButton &st,
 									   std::vector<not_null<Ui::AbstractCheckView*>> innerCheckViews,
 									   not_null<Ui::SlideWrap<>*> wrap,
 									   rpl::producer<QString> buttonLabel,
@@ -150,7 +149,8 @@ not_null<Ui::RpWidget*> AddInnerToggle(not_null<Ui::VerticalLayout*> container,
 		nullptr,
 		st::settingsButtonNoIcon));
 
-	const auto separated = AddSeparatedToggle(button, st, false);
+	// 开关按行的实际样式定位，卡片内与其他行右缘对齐。
+	const auto separated = AddSeparatedToggle(button, button->st(), false);
 	const auto toggleButton = separated.button;
 	const auto checkView = separated.checkView;
 	struct State final {
@@ -240,7 +240,7 @@ not_null<Ui::RpWidget*> AddInnerToggle(not_null<Ui::VerticalLayout*> container,
 				+ QString::number(totalInnerChecks));
 			return TextWithEntities::Simple(t).append(std::move(count));
 		}),
-		st::boxLabel);
+		IsInCardGroup(button) ? st::settingsCardRowLabel : st::boxLabel);
 	label->setAttribute(Qt::WA_TransparentForMouseEvents);
 	const auto arrow = Ui::CreateChild<Ui::RpWidget>(button);
 	{
@@ -348,6 +348,9 @@ CollapsibleToggleResult AddCollapsibleToggle(not_null<Ui::VerticalLayout*> conta
 	auto innerChecks = std::vector<not_null<Ui::AbstractCheckView*>>();
 	auto lockChecks = std::vector<Fn<bool()>>();
 
+	const auto &checkboxSt = IsInCardGroup(container)
+		? st::settingsCardCheckbox
+		: st::settingsCheckbox;
 	const auto hasAnyLock = ranges::any_of(cState->checkboxes, [](const NestedEntry &e) {
 		return e.lockGetter != nullptr;
 	});
@@ -382,7 +385,7 @@ CollapsibleToggleResult AddCollapsibleToggle(not_null<Ui::VerticalLayout*> conta
 				verticalLayout,
 				entry.checkboxLabel,
 				entry.getter(),
-				st::settingsCheckbox),
+				checkboxSt),
 			st::powerSavingButton.padding);
 		const auto button = Ui::CreateChild<Ui::RippleButton>(
 			verticalLayout,
@@ -444,7 +447,6 @@ CollapsibleToggleResult AddCollapsibleToggle(not_null<Ui::VerticalLayout*> conta
 	raw->hide(anim::type::instant);
 	const auto toggleWidget = AddInnerToggle(
 		container,
-		st::powerSavingButtonNoIcon,
 		innerChecks,
 		raw,
 		std::move(title),

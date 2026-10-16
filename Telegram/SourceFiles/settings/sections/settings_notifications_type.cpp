@@ -26,6 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/platform_notifications_manager.h"
 #include "settings/sections/settings_notifications.h"
 #include "settings/settings_builder.h"
+#include "settings/settings_card_layout.h"
 #include "settings/settings_common.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/widgets/buttons.h"
@@ -405,7 +406,7 @@ void SetupChecks(
 		not_null<Window::SessionController*> controller,
 		Notify type,
 		ChecksWidgets *widgets) {
-	Ui::AddSubsectionTitle(container, Title(type));
+	AddCardSubsectionTitle(container, Title(type));
 
 	const auto session = &controller->session();
 	const auto settings = &session->data().notifySettings();

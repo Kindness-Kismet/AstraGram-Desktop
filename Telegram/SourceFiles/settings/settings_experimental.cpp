@@ -554,7 +554,7 @@ void SetupExperimental(
 		object_ptr<Ui::FlatLabel>(
 			header,
 			tr::lng_settings_experimental_about(),
-			st::boxLabel),
+			st::settingsCardHint),
 		st::settingsCardHintPadding);
 
 	auto reset = (Button*)nullptr;

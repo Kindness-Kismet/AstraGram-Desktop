@@ -254,7 +254,7 @@ void RebuildButtons(
 	state->buttons->clear();
 	for (const auto &ttl : ttls) {
 		const auto ttlText = Ui::FormatTTLAfter(ttl);
-		const auto button = state->buttons->add(object_ptr<Ui::SettingsButton>(
+		const auto button = state->buttons->add(CreateButtonWithIcon(
 			state->buttons,
 			(!ttl)
 				? tr::lng_settings_ttl_after_off()
@@ -360,7 +360,7 @@ void BuildCustomButton(
 			}));
 		};
 
-		state->customButton = ctx.container->add(object_ptr<Ui::SettingsButton>(
+		state->customButton = ctx.container->add(CreateButtonWithIcon(
 			ctx.container,
 			tr::lng_settings_ttl_after_custom(),
 			st::settingsButtonNoIcon));

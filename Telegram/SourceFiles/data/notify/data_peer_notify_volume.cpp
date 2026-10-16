@@ -15,6 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/application.h"
 #include "window/notifications_manager.h"
 #include "settings/settings_common.h"
+#include "settings/settings_card_layout.h"
 #include "ui/vertical_list.h"
 #include "ui/widgets/continuous_sliders.h"
 #include "ui/widgets/labels.h"
@@ -84,7 +85,7 @@ void AddRingtonesVolumeSlider(
 		anim::type::normal);
 	volumeWrap->finishAnimating();
 
-	Ui::AddSubsectionTitle(volumeWrap->entity(), std::move(subtitle));
+	Settings::AddCardSubsectionTitle(volumeWrap->entity(), std::move(subtitle));
 	auto sliderWithLabel = Settings::MakeSliderWithLabel(
 		volumeWrap->entity(),
 		st::settingsScale,

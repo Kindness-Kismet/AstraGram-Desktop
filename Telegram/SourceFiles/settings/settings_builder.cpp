@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_main.h"
 #include "settings/sections/settings_premium.h"
 #include "settings/sections/settings_privacy_security.h"
+#include "ui/boxes/dialog_layout.h"
 #include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
@@ -26,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_session_controller.h"
 #include "styles/style_basic.h"
+#include "styles/style_layers.h"
 #include "styles/style_settings.h"
 
 // AyuGram includes
@@ -362,11 +364,15 @@ Ui::SettingsButton *SectionBuilder::addButton(ButtonArgs &&args) {
 	// id 先拷贝：ControlArgs 构造时会 move 走 args.id，而 factory 引用捕获 args
 	const auto id = args.id;
 	const auto factory = [&](not_null<Ui::VerticalLayout*> container) {
+		const auto dialog = Ui::IsDialogContent(container);
+		const auto &buttonStyle = dialog
+			? Ui::DialogButtonStyle(container, st)
+			: st;
 		auto button = CreateButtonWithIcon(
 			args.container ? args.container : container.get(),
 			rpl::duplicate(args.title),
-			st,
-			std::move(args.icon));
+			buttonStyle,
+			dialog ? IconDescriptor() : std::move(args.icon));
 		// id 挂到 objectName，调试指令可用 control.click <id> 寻址
 		if (button && !id.isEmpty()) {
 			button->setObjectName(id);
@@ -375,10 +381,13 @@ Ui::SettingsButton *SectionBuilder::addButton(ButtonArgs &&args) {
 			button->addClickHandler(std::move(args.onClick));
 		}
 		if (args.label) {
+			if (!args.toggled && IsInCardGroup(button.data())) {
+				AddSectionRowDetails(button.data());
+			}
 			CreateRightLabel(
 				button.data(),
 				std::move(args.label),
-				st,
+				buttonStyle,
 				rpl::duplicate(args.title));
 		}
 		if (args.toggled) {
@@ -429,6 +438,10 @@ void SectionBuilder::addDivider() {
 		return;
 	}
 	v::match(_context, [&](const WidgetContext &ctx) {
+		if (Ui::IsDialogContent(ctx.container)) {
+			Ui::AddSkip(ctx.container, st::boxMediumSkip);
+			return;
+		}
 		Ui::AddDivider(ctx.container);
 	}, [](const SearchContext &) {
 	});
@@ -456,6 +469,14 @@ void SectionBuilder::addDividerText(rpl::producer<QString> text) {
 		return;
 	}
 	v::match(_context, [&](const WidgetContext &ctx) {
+		if (Ui::IsDialogContent(ctx.container)) {
+			Ui::AddDialogText(ctx.container, std::move(text));
+			return;
+		}
+		if (_cardRoot) {
+			AddCardDescription(ctx.container, std::move(text));
+			return;
+		}
 		Ui::AddDividerText(ctx.container, std::move(text));
 	}, [](const SearchContext &) {
 	});
@@ -520,12 +541,18 @@ Ui::SettingsButton *SectionBuilder::addPrivacyButton(PrivacyButtonArgs &&args) {
 Ui::SettingsToggle *SectionBuilder::addToggle(ToggleArgs &&args) {
 	const auto id = args.id;
 	const auto factory = [&](not_null<Ui::VerticalLayout*> container) {
+		const auto card = IsInCardGroup(container);
+		const auto &buttonStyle = Ui::IsDialogContent(container)
+			? Ui::DialogButtonStyle(container, st::settingsButtonNoIcon)
+			: card ? st::settingsCardButtonNoIcon : st::settingsButtonNoIcon;
 		auto result = object_ptr<Ui::SettingsToggle>(
 			container,
 			ResolveTitle(rpl::duplicate(args.title)),
 			args.checked,
-			st::settingsButtonNoIcon);
+			buttonStyle);
 		result->setObjectName(id);
+		result->setProperty("settingsCardRow", card);
+		result->setProperty("settingsCardTextLeft", st::settingsCardRowInset);
 		return result;
 	};
 	return static_cast<Ui::SettingsToggle*>(addControl({
@@ -547,7 +574,7 @@ void SectionBuilder::addSubsectionTitle(SubsectionTitleArgs &&args) {
 	v::match(_context, [&](const WidgetContext &ctx) {
 		const auto title = (_cardPage && !_scopeDepth)
 			? AddCardTitle(ctx.container, rpl::duplicate(args.title))
-			: AddSubsectionTitle(ctx.container, rpl::duplicate(args.title));
+			: AddCardSubsectionTitle(ctx.container, rpl::duplicate(args.title));
 		if (!args.id.isEmpty() && ctx.highlights) {
 			ctx.highlights->push_back({
 				args.id,
@@ -573,7 +600,7 @@ void SectionBuilder::addSubsectionTitle(rpl::producer<QString> text) {
 		if (_cardPage && !_scopeDepth) {
 			AddCardTitle(ctx.container, std::move(text));
 		} else {
-			AddSubsectionTitle(ctx.container, std::move(text));
+			AddCardSubsectionTitle(ctx.container, std::move(text));
 		}
 	}, [](const SearchContext &) {
 	});

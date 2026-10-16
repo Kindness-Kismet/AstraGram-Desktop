@@ -48,7 +48,7 @@ const auto kPowerSavingPage = Builder::BuildHelper({
 	.title = &tr::lng_settings_power_title,
 	.icon = &st::menuIconPowerUsage,
 }, [](Builder::SectionBuilder &builder) {
-	builder.addDividerText(tr::lng_settings_power_subtitle());
+	builder.addSubsectionTitle(tr::lng_settings_power_subtitle());
 	builder.add([](const Builder::WidgetContext &ctx) {
 		const auto id = ctx.controller->highlightControlId();
 		const auto prefix = u"power/flags/"_q;

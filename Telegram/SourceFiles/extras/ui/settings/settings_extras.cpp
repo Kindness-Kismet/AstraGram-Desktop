@@ -296,6 +296,7 @@ void selectGhostProfile(GhostPickerState *state, uint64 userId) {
 void BuildGhostEssentials(SectionBuilder &builder) {
 	builder.addPageContent([](const WidgetContext &wctx) {
 		const auto root = wctx.container;
+		const auto title = AddCardTitle(root, tr::extras_GhostEssentialsHeader());
 		auto container = AddCardGroup(root);
 		const auto controller = wctx.controller;
 
@@ -335,15 +336,13 @@ void BuildGhostEssentials(SectionBuilder &builder) {
 		const auto state = container->lifetime().make_state<GhostPickerState>();
 		state->selectedUserId = initialUserId;
 
-		const auto title = AddSubsectionTitle(container, tr::extras_GhostEssentialsHeader());
-
 		const auto pickerButton = Ui::CreateChild<Ui::LinkButton>(
-			container.get(),
+			root.get(),
 			PickerLabel(initialUserId),
 			st::ghostPickerButton);
 		state->pickerButton = pickerButton;
 
-		const auto arrow = Ui::CreateChild<Ui::AbstractButton>(container.get());
+		const auto arrow = Ui::CreateChild<Ui::AbstractButton>(root.get());
 		{
 			const auto &icon = st::ghostPickerArrow;
 			arrow->resize(icon.size());
@@ -361,12 +360,12 @@ void BuildGhostEssentials(SectionBuilder &builder) {
 
 		rpl::combine(
 			title->geometryValue(),
-			container->widthValue(),
+			root->widthValue(),
 			pickerButton->naturalWidthValue()
 		) | rpl::on_next([=](QRect r, int width, int natural) {
 			pickerButton->resizeToNaturalWidth(width / 2);
 			pickerButton->moveToRight(
-				st::defaultSubsectionTitlePadding.right() + arrow->width() + st::normalFont->spacew / 2,
+				st::settingsCardTitlePadding.right() + arrow->width() + st::normalFont->spacew / 2,
 				r.y() + (r.height() - pickerButton->height()) / 2,
 				width);
 			arrow->moveToLeft(

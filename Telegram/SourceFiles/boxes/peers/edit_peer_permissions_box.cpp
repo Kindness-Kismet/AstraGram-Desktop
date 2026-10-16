@@ -626,7 +626,9 @@ template <typename Flags>
 						verticalLayout,
 						entry.label,
 						toggled,
-						st::settingsCheckbox),
+						(Settings::IsInCardGroup(verticalLayout)
+							? st::settingsCardCheckbox
+							: st::settingsCheckbox)),
 					st.padding);
 				const auto button = Ui::CreateChild<Ui::RippleButton>(
 					verticalLayout.get(),
@@ -669,10 +671,12 @@ template <typename Flags>
 					auto p = QPainter(toggle);
 					checkView->paint(p, 0, 0, toggle->width());
 				}, toggle->lifetime());
+				// 按行的实际样式定位，卡片内与其他行的开关右缘对齐。
+				const auto toggleSkip = button->st().toggleSkip;
 				button->sizeValue(
 				) | rpl::on_next([=](const QSize &s) {
 					toggle->moveToRight(
-						st.toggleSkip,
+						toggleSkip,
 						(s.height() - toggle->height()) / 2);
 				}, toggle->lifetime());
 				button->setClickedCallback([=] {

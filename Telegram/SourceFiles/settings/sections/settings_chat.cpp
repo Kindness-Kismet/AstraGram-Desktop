@@ -105,6 +105,14 @@ constexpr auto kCustomColorButtonParts = 7;
 	return Window::Theme::SystemAccentColor().has_value();
 }
 
+// 直接创建的开关行在卡片内与其他卡片行同字号、同缩进。
+[[nodiscard]] const style::SettingsButton &ToggleRowStyle(
+		not_null<QWidget*> parent) {
+	return IsInCardGroup(parent)
+		? st::settingsCardButtonNoIcon
+		: st::settingsButtonNoIcon;
+}
+
 class ColorsPalette final {
 public:
 	using Type = Window::Theme::EmbeddedType;
@@ -1435,7 +1443,7 @@ void SetupStickersEmoji(
 			container,
 			label,
 			checked,
-			st::settingsButtonNoIcon);
+			ToggleRowStyle(container));
 	};
 	const auto addWithReturn = [&](
 			const QString &label,
@@ -1615,14 +1623,15 @@ void SetupMessages(
 	const auto groupSend = std::make_shared<Ui::RadioenumGroup<SendByType>>(
 		Core::App().settings().sendSubmitWay());
 	const auto addSend = [&](SendByType value, const QString &text) {
+		const auto look = CardCheckboxLook(inner);
 		return inner->add(
 			object_ptr<Ui::Radioenum<SendByType>>(
 				inner,
 				groupSend,
 				value,
 				text,
-				st::settingsSendType),
-			st::settingsSendTypePadding);
+				look.st),
+			look.padding);
 	};
 	const auto sendEnter = addSend(
 		SendByType::Enter,
@@ -1649,14 +1658,15 @@ void SetupMessages(
 	const auto groupQuick = std::make_shared<Ui::RadioenumGroup<Quick>>(
 		Core::App().settings().chatQuickAction());
 	const auto addQuick = [&](Quick value, const QString &text) {
+		const auto look = CardCheckboxLook(inner);
 		return inner->add(
 			object_ptr<Ui::Radioenum<Quick>>(
 				inner,
 				groupQuick,
 				value,
 				text,
-				st::settingsSendType),
-			st::settingsSendTypePadding);
+				look.st),
+			look.padding);
 	};
 	addQuick(Quick::Reply, tr::lng_settings_chat_quick_action_reply(tr::now));
 	const auto react = addQuick(
@@ -1774,7 +1784,7 @@ void SetupMessages(
 			inner,
 			tr::lng_settings_chat_corner_reply(tr::now),
 			Core::App().settings().cornerReply(),
-			st::settingsButtonNoIcon));
+			ToggleRowStyle(inner)));
 	cornerReply->checkedChanges(
 	) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setCornerReply(checked);
@@ -1792,7 +1802,7 @@ void SetupMessages(
 			inner,
 			tr::lng_settings_chat_corner_reaction(tr::now),
 			Core::App().settings().cornerReaction(),
-			st::settingsButtonNoIcon));
+			ToggleRowStyle(inner)));
 	cornerReaction->checkedChanges(
 	) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setCornerReaction(checked);
@@ -1810,7 +1820,7 @@ void SetupMessages(
 			inner,
 			tr::lng_settings_pull_to_next_channel(tr::now),
 			Core::App().settings().pullToNextChannel(),
-			st::settingsButtonNoIcon));
+			ToggleRowStyle(inner)));
 	pullToNext->checkedChanges(
 	) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setPullToNextChannel(checked);
@@ -2138,7 +2148,7 @@ void SetupDefaultThemes(
 				container,
 				tr::lng_settings_theme_system_accent_color(tr::now),
 				Core::App().settings().systemAccentColorEnabled(),
-				st::settingsButtonNoIcon)));
+				ToggleRowStyle(container))));
 	systemAccentWrap->setDuration(0);
 
 	const auto updateMessageShotPalette = [=](const QString &path)

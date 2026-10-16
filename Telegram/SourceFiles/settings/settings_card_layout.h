@@ -25,6 +25,9 @@ protected:
 	void visibleTopBottomUpdated(int visibleTop, int visibleBottom) override;
 
 private:
+	void paintGroupDividers(QPainter &p);
+
+	const bool _dialog;
 	const not_null<Ui::VerticalLayout*> _content;
 	bool _resizing = false;
 
@@ -36,6 +39,10 @@ private:
 	not_null<Ui::VerticalLayout*> container,
 	not_null<PeerListController*> controller);
 not_null<Ui::FlatLabel*> AddCardTitle(
+	not_null<Ui::VerticalLayout*> container,
+	rpl::producer<QString> title);
+// 卡片内的小标题与组标题同级字号；不在卡片内时保持通用小标题样式。
+not_null<Ui::FlatLabel*> AddCardSubsectionTitle(
 	not_null<Ui::VerticalLayout*> container,
 	rpl::producer<QString> title);
 void AddCardDescription(
