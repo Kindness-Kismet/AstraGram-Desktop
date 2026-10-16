@@ -34,6 +34,7 @@ python .codex/skills/app-debug/scripts/cli.py settings.get streamerMode + screen
 - 滚动：用 `control.scroll` 查询位置、最大值和可见高度，再结合截图判断。
 - 控件交互：用 `control.click`、`control.key`、`control.pointer`，事件只投递到应用内部。
 - 悬停：`control.hover` 检查按钮绘制；`control.pointer` 检查自绘控件及菜单的内部事件。
+- 设置页字号：`control.fonts [filter]` 列出卡片页内标签、行按钮、勾选框的样式字号与左缩进。
 - 命中：`control.click --mouse` 从窗口内部查找目标。系统光标、原生窗口及焦点行为另行人工验证。
 - 修改输入文字只用于模拟模式或已获授权的测试对话，因为应用仍会保存草稿。
 - 真实发送、加入、通话等业务动作按用户明确指定的测试范围执行。

@@ -347,6 +347,8 @@ def register_commands(sub) -> None:
     command = sub.add_parser("control.list", help="列出活动窗口的控件树：标识、类名、几何、可见性")
     command.add_argument("filter", nargs="?", help="子串过滤，匹配 objectName/类名/accessibleName/文本")
     command.add_argument("--all", action="store_true", help="扫全部顶层窗口（含菜单、弹层）")
+    command = sub.add_parser("control.fonts", help="列出设置卡片页内文字控件的字号、粗细与左缩进（样式像素）")
+    command.add_argument("filter", nargs="?", help="按文字子串过滤")
     command = sub.add_parser("control.click", help="点击控件：按钮直接执行控件动作，其余控件投递鼠标事件；按 objectName/accessibleName 或 #序号 寻址")
     command.add_argument("target", help="objectName（如 mainMenuButton）、accessibleName 或 #序号")
     command.add_argument("--all", action="store_true", help="#序号 按 control.list --all 的全顶层序号寻址")
@@ -512,6 +514,8 @@ def build_server_command(args: argparse.Namespace) -> str:
         if args.all:
             parts.append("--all")
         return " ".join(parts)
+    if command == "control.fonts":
+        return f"control.fonts {quote_arg(args.filter)}" if args.filter else "control.fonts"
     if command == "control.click":
         parts = ["control.click", quote_arg(args.target)]
         if args.all:

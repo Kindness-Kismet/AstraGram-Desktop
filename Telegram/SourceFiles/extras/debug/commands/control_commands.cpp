@@ -32,9 +32,14 @@
 #include <cmath>
 #include <QLineEdit>
 #include <QComboBox>
+#include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/continuous_sliders.h"
 #include "ui/widgets/discrete_sliders.h"
+#include "ui/widgets/labels.h"
+#include "ui/wrap/vertical_layout.h"
+#include "settings/settings_card_layout.h"
+#include "settings/settings_common.h"
 
 namespace ExtrasDebug::Commands {
 namespace {
@@ -783,6 +788,66 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	return Result::Ok(Compact(json{ { "files", urls.size() } }));
 }
 
+// 设置卡片页内的文字控件：字号按样式像素换算，左缘相对页面内容区，用于核对字号与缩进。
+[[nodiscard]] Result controlFonts(const QStringList &args) {
+	if (args.size() > 1) {
+		return Result::Err(u"usage: control.fonts [filter]"_q);
+	}
+	const auto window = controlWindow();
+	if (!window) {
+		return Result::Err(u"no active window"_q);
+	}
+	const auto filter = args.isEmpty() ? QString() : args.front();
+	const auto scale = style::Scale() / 100.;
+	auto items = json::array();
+	for (const auto child : window->findChildren<QWidget*>()) {
+		const auto page = dynamic_cast<Settings::CardPage*>(child);
+		if (!page || !page->isVisible()) {
+			continue;
+		}
+		const auto content = page->content();
+		for (const auto widget : content->findChildren<QWidget*>()) {
+			if (!widget->isVisibleTo(page)) {
+				continue;
+			}
+			auto font = (const style::font*)nullptr;
+			auto textLeft = 0;
+			auto kind = "";
+			if (const auto label = dynamic_cast<Ui::FlatLabel*>(widget)) {
+				font = &label->st().style.font;
+				kind = "label";
+			} else if (const auto button = dynamic_cast<Ui::SettingsButton*>(widget)) {
+				font = &button->st().style.font;
+				textLeft = button->st().padding.left();
+				kind = "button";
+			} else if (const auto checkbox = dynamic_cast<Ui::Checkbox*>(widget)) {
+				font = &checkbox->st().style.font;
+				textLeft = checkbox->checkRect().x()
+					+ checkbox->checkRect().width()
+					+ checkbox->st().textPosition.x();
+				kind = "checkbox";
+			} else {
+				continue;
+			}
+			const auto text = WidgetText(widget).simplified();
+			if (text.isEmpty() || (!filter.isEmpty() && !text.contains(filter, Qt::CaseInsensitive))) {
+				continue;
+			}
+			const auto position = widget->mapTo(content, QPoint());
+			items.push_back(json{
+				{ "kind", kind },
+				{ "text", text.left(48).toStdString() },
+				{ "px", int(std::round((*font)->f.pixelSize() / scale)) },
+				{ "bold", bool((*font)->flags() & style::FontFlag::Bold) },
+				{ "left", int(std::round((position.x() + textLeft) / scale)) },
+				{ "top", int(std::round(position.y() / scale)) },
+				{ "card", Settings::IsInCardGroup(widget) },
+			});
+		}
+	}
+	return Result::Ok(Compact(json{ { "items", items } }));
+}
+
 } // namespace
 
 QWidget *controlWindow() {
@@ -797,6 +862,7 @@ QWidget *controlWindow() {
 const HandlerMap &ControlHandlers() {
 	static const auto result = HandlerMap{
 		{ u"control.list"_q, &ControlList },
+		{ u"control.fonts"_q, &controlFonts },
 		{ u"control.window"_q, &selectControlWindow },
 		{ u"control.click"_q, &ControlClick },
 		{ u"control.input"_q, &controlInput },
