@@ -61,18 +61,18 @@ settingsAboutVersion: FlatLabel(defaultFlatLabel) {
 	}
 }
 
-settingsCardRadius: 14px;
+settingsCardRadius: 12px;
 settingsCardPagePadding: 20px;
 settingsCardNarrowPadding: 12px;
 settingsCardNarrowWidth: 420px;
 settingsCardPageTop: 8px;
 settingsCardPageBottom: 24px;
-settingsCardGroupSkip: 14px;
+settingsCardGroupSkip: 18px;
 settingsCardRowInset: 14px;
 settingsCardTitle: FlatLabel(defaultFlatLabel) {
 	textFg: windowSubTextFg;
 	style: TextStyle(defaultTextStyle) {
-		font: font(12px semibold);
+		font: font(12px);
 	}
 }
 settingsCardTitlePadding: margins(14px, 4px, 14px, 8px);

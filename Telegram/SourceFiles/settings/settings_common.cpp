@@ -502,7 +502,7 @@ object_ptr<Button> CreateButtonWithIcon(
 			&& !descriptor.background && !descriptor.backgroundBrush) {
 			descriptor.color = (&st == &st::settingsAttentionButtonWithIcon)
 				? &st::attentionButtonFg
-				: &st::windowFg;
+				: &st::windowSubTextFg;
 		}
 		rowStyle->padding.setLeft(descriptor ? st::settingsCardSectionButton.padding.left()
 			: st::settingsCardRowInset);
@@ -549,7 +549,7 @@ void CreateRightLabel(
 	const auto centered = button->property("settingsCardRow").toBool();
 	const auto labelStyle = button->lifetime().make_state<style::FlatLabel>(st.rightLabel);
 	if (centered) {
-		labelStyle->textFg = st::windowSubTextFg;
+		labelStyle->textFg = st::windowActiveTextFg;
 	}
 	const auto name = Ui::CreateChild<Ui::FlatLabel>(
 		button.get(),

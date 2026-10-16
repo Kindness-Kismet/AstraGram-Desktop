@@ -116,7 +116,7 @@ private:
 		const auto area = QRectF(rect()).adjusted(.5, .5, -.5, -.5);
 		auto shape = QPainterPath();
 		shape.addRoundedRect(area, radius, radius);
-		p.setPen(st::strokeFg);
+		p.setPen(st::controlBorder);
 		p.setBrush(Qt::NoBrush);
 		p.drawPath(shape);
 	}
