@@ -2149,7 +2149,7 @@ void Filler::fillArchiveActions() {
 
 	Settings::PreloadArchiveSettings(&controller->session());
 	const auto openSettings = [=] {
-		Settings::ShowSettingsLayer(controller, Settings::ArchiveId());
+		Settings::ShowArchiveSettings(controller);
 	};
 	_addAction(
 		tr::lng_context_archive_settings(tr::now),

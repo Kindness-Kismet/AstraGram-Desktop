@@ -1,6 +1,7 @@
 #include "settings/sections/settings_update.h"
 
 #include "settings/settings_common.h"
+#include "ui/boxes/dialog_layout.h"
 #include "boxes/about_box.h"
 #include "core/application.h"
 #include "core/launcher.h"
@@ -14,8 +15,10 @@
 #include "ui/ui_utility.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
+#include "ui/widgets/option_list.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
+#include "styles/style_layers.h"
 #include "styles/style_settings.h"
 
 #include <ksandbox.h>
@@ -257,50 +260,55 @@ void SetupUpdate(not_null<Ui::VerticalLayout*> container) {
 		tr::now,
 		lt_version,
 		currentVersionText());
-	const auto toggle = container->add(object_ptr<Settings::RowButton>(
-		container,
+	const auto toggles = container->add(
+		object_ptr<Ui::OptionList>(container, st::boxOptionListPadding),
+		st::boxRowPadding);
+	const auto toggle = toggles->addOption(object_ptr<Ui::Checkbox>(
+		toggles,
 		tr::extras_AutoCheckUpdates(),
-		st::settingsUpdateToggle));
-	const auto label = Ui::CreateChild<Ui::FlatLabel>(
-		toggle,
-		texts->events(),
-		st::settingsUpdateState);
+		cAutoUpdate(),
+		st::defaultBoxCheckbox));
+	const auto label = container->add(
+		object_ptr<Ui::FlatLabel>(
+			container,
+			texts->events(),
+			st::settingsUpdateState),
+		QMargins(
+			st::boxRowPadding.left(),
+			0,
+			st::boxRowPadding.right(),
+			st::boxLittleSkip));
+	label->setAttribute(Qt::WA_TransparentForMouseEvents);
 
 	const auto options = container->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			container,
 			object_ptr<Ui::VerticalLayout>(container)));
 	const auto inner = options->entity();
+	const auto installOptions = inner->add(
+		object_ptr<Ui::OptionList>(inner, st::boxOptionListPadding),
+		st::boxRowPadding);
 	const auto install = (cAlphaVersion() || Core::BuildIsCanary || KSandbox::isInside())
 		? nullptr
-		: inner->add(object_ptr<Settings::RowButton>(
-			inner,
+		: installOptions->addOption(object_ptr<Ui::Checkbox>(
+			installOptions,
 			tr::lng_settings_install_beta(),
-			st::settingsButtonNoIcon));
+			cInstallBetaVersion(),
+			st::defaultBoxCheckbox));
 
 	const auto check = inner->add(object_ptr<Settings::RowButton>(
 		inner,
 		tr::lng_settings_check_now(),
-		st::settingsButtonNoIcon));
+		Ui::DialogButtonStyle(inner, st::settingsButtonNoIcon)));
 	const auto update = Ui::CreateChild<Settings::RowButton>(
 		check,
 		tr::lng_update_telegram(),
-		st::settingsUpdate);
+		Ui::DialogButtonStyle(inner, st::settingsUpdate, true));
 	update->hide();
 	check->widthValue() | rpl::on_next([=](int width) {
 		update->resizeToWidth(width);
 		update->moveToLeft(0, 0);
 	}, update->lifetime());
-
-	rpl::combine(
-		toggle->widthValue(),
-		label->widthValue()
-	) | rpl::on_next([=] {
-		label->moveToLeft(
-			st::settingsUpdateStatePosition.x(),
-			st::settingsUpdateStatePosition.y());
-	}, label->lifetime());
-	label->setAttribute(Qt::WA_TransparentForMouseEvents);
 
 	const auto showDownloadProgress = [=](
 			int64 ready,
@@ -350,8 +358,7 @@ void SetupUpdate(not_null<Ui::VerticalLayout*> container) {
 		}
 	};
 
-	toggle->toggleOn(rpl::single(cAutoUpdate()));
-	toggle->toggledValue(
+	toggle->checkedChanges(
 	) | rpl::filter([](bool toggled) {
 		return (toggled != cAutoUpdate());
 	}) | rpl::on_next([=](bool toggled) {
@@ -370,8 +377,7 @@ void SetupUpdate(not_null<Ui::VerticalLayout*> container) {
 	}, toggle->lifetime());
 
 	if (install) {
-		install->toggleOn(rpl::single(cInstallBetaVersion()));
-		install->toggledValue(
+		install->checkedChanges(
 		) | rpl::filter([](bool toggled) {
 			return (toggled != cInstallBetaVersion());
 		}) | rpl::on_next([=](bool toggled) {

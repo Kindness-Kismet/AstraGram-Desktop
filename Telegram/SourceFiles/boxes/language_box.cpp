@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/accessible/ui_accessible_item.h"
 #include "ui/boxes/choose_language_box.h"
 #include "ui/boxes/confirm_box.h"
+#include "ui/boxes/dialog_layout.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/text/text_entity.h"
 #include "ui/text/text_options.h"
@@ -1257,10 +1258,16 @@ void Content::setupContent(
 		return rows;
 	};
 	const auto main = add(recent, false);
+	auto separator = [&]() -> object_ptr<Ui::RpWidget> {
+		if (Ui::IsDialogContent(this)) {
+			return object_ptr<Ui::FixedHeightWidget>(content, st::boxMediumSkip);
+		}
+		return object_ptr<Ui::BoxContentDivider>(content);
+	}();
 	const auto divider = content->add(
-		object_ptr<Ui::SlideWrap<Ui::BoxContentDivider>>(
+		object_ptr<Ui::SlideWrap<Ui::RpWidget>>(
 			content,
-			object_ptr<Ui::BoxContentDivider>(content)));
+			std::move(separator)));
 	const auto other = add(official, true);
 	const auto empty = content->add(
 		object_ptr<Ui::SlideWrap<Ui::FixedHeightWidget>>(

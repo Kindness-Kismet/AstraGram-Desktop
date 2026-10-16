@@ -8,8 +8,12 @@
 #include "settings/sections/settings_chat.h"
 #include "settings/settings_builder.h"
 #include "settings/settings_common_session.h"
+#include "ui/layers/generic_box.h"
+#include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
 #include "ui/wrap/vertical_layout.h"
+#include "window/window_session_controller.h"
+#include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 
@@ -25,12 +29,7 @@ public:
 	}
 };
 
-const auto kMeta = Builder::BuildHelper({
-	.id = Archive::Id(),
-	.parentId = ChatId(),
-	.title = &tr::lng_settings_archive_title,
-	.icon = &st::menuIconArchive,
-}, [](Builder::SectionBuilder &builder) {
+void BuildArchiveContent(Builder::SectionBuilder &builder) {
 	using Unarchive = Api::UnarchiveOnNewMessage;
 	const auto session = builder.session();
 	const auto privacy = &session->api().globalPrivacy();
@@ -102,7 +101,14 @@ const auto kMeta = Builder::BuildHelper({
 		std::move(shown),
 		Data::AmPremiumValue(session),
 		rpl::mappers::_1 || rpl::mappers::_2));
-});
+}
+
+const auto kMeta = Builder::BuildHelper({
+	.id = Archive::Id(),
+	.parentId = ChatId(),
+	.title = &tr::lng_settings_archive_title,
+	.icon = &st::menuIconArchive,
+}, BuildArchiveContent);
 
 Archive::Archive(
 	QWidget *parent,
@@ -117,6 +123,23 @@ Archive::Archive(
 
 Type ArchiveId() {
 	return Archive::Id();
+}
+
+void ShowArchiveSettings(not_null<Window::SessionController*> controller) {
+	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+		box->setObjectName(u"settings.archive"_q);
+		box->setTitle(tr::lng_settings_archive_title());
+		box->setWidth(st::boxWideWidth);
+		const auto content = box->verticalLayout();
+		Ui::AddSkip(content, st::boxPadding.top());
+		auto builder = Builder::SectionBuilder(Builder::WidgetContext{
+			.container = content,
+			.controller = controller,
+			.cardLayout = false,
+		});
+		BuildArchiveContent(builder);
+		Ui::AddSkip(content, st::boxPadding.bottom());
+	}));
 }
 
 void PreloadArchiveSettings(not_null<::Main::Session*> session) {

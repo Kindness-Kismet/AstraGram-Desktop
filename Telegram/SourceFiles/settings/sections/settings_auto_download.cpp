@@ -16,6 +16,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_peer.h"
 #include "data/data_session.h"
 #include "data/data_auto_download.h"
+#include "ui/boxes/dialog_layout.h"
+#include "ui/layers/generic_box.h"
 #include "ui/vertical_list.h"
 #include "ui/widgets/continuous_sliders.h"
 #include "ui/widgets/buttons.h"
@@ -167,7 +169,9 @@ not_null<int64*> AddSizeLimitSlider(
 				lt_size,
 				QString::number(value / kMegabyte) + " MB");
 		}),
-		st::autoDownloadLimitButton
+		Ui::IsDialogContent(container)
+			? Ui::DialogButtonStyle(container, st::autoDownloadLimitButton)
+			: st::autoDownloadLimitButton
 	)->setAttribute(Qt::WA_TransparentForMouseEvents);
 	const auto slider = container->add(
 		object_ptr<Ui::MediaSlider>(container, st::autoDownloadLimitSlider),
@@ -184,70 +188,58 @@ not_null<int64*> AddSizeLimitSlider(
 		});
 	return result;
 }
-} // namespace
 
-class AutoDownloadSection final : public AbstractSection {
-public:
-	AutoDownloadSection(
-		QWidget *parent,
-		not_null<Window::SessionController*> controller,
-		Source source);
-
-	Type id() const override {
-		return AutoDownloadId(_source);
-	}
-	rpl::producer<QString> title() override;
-
-private:
-	void setupContent();
-
-	const not_null<::Main::Session*> _session;
-	const Source _source;
-};
-
-AutoDownloadSection::AutoDownloadSection(
-	QWidget *parent,
-	not_null<Window::SessionController*> controller,
-	Source source)
-: AbstractSection(parent, controller)
-, _session(&controller->session())
-, _source(source) {
-	setupContent();
-}
-
-rpl::producer<QString> AutoDownloadSection::title() {
-	switch (_source) {
+[[nodiscard]] rpl::producer<QString> AutoDownloadTitle(Source source) {
+	switch (source) {
 	case Source::User: return tr::lng_media_auto_in_private();
 	case Source::Group: return tr::lng_media_auto_in_groups();
 	case Source::Channel: return tr::lng_media_auto_in_channels();
 	}
-	Unexpected("Source in AutoDownloadSection::title.");
+	Unexpected("Source in AutoDownloadTitle.");
 }
 
-void AutoDownloadSection::setupContent() {
+void SetupAutoDownloadContent(
+		not_null<Ui::VerticalLayout*> root,
+		not_null<Window::SessionController*> controller,
+		Source source,
+		bool dialog) {
 	using namespace rpl::mappers;
 	using namespace Settings;
 	using namespace Data::AutoDownload;
 	using Type = Data::AutoDownload::Type;
 	using Pair = base::flat_map<Type, int64>::value_type;
 
-	const auto settings = &_session->settings().autoDownload();
-	const auto page = Ui::CreateChild<CardPage>(this);
-	const auto root = page->content();
-	AddCardTitle(root, tr::lng_media_auto_title());
-	auto content = AddCardGroup(root).get();
-	const auto changes = lifetime().make_state<rpl::event_stream<>>();
+	const auto session = &controller->session();
+	const auto settings = &session->settings().autoDownload();
+	const auto addGroup = [&](rpl::producer<QString> title) {
+		if (!dialog) {
+			AddCardTitle(root, std::move(title));
+			return AddCardGroup(root).get();
+		}
+		const auto top = root->count()
+			? st::boxMediumSkip
+			: st::boxPadding.top();
+		const auto group = root->add(
+			object_ptr<Ui::VerticalLayout>(root),
+			QMargins(0, top, 0, 0));
+		AddCardTitle(group, std::move(title));
+		return group;
+	};
+	auto content = addGroup(tr::lng_media_auto_title());
+	const auto changes = root->lifetime().make_state<rpl::event_stream<>>();
 	const auto changed = [=] { changes->fire({}); };
 
 	const auto add = [&](
 			not_null<base::flat_map<Type, int64>*> values,
 			Type type,
 			rpl::producer<QString> label) {
-		const auto value = settings->bytesLimit(_source, type);
+		const auto value = settings->bytesLimit(source, type);
 		content->add(object_ptr<Settings::RowButton>(
 			content,
 			std::move(label),
-			st::settingsButtonNoIcon
+			Ui::IsDialogContent(content)
+				? Ui::DialogButtonStyle(content, st::settingsButtonNoIcon)
+				: st::settingsButtonNoIcon
 		))->toggleOn(
 			rpl::single(value > 0)
 		)->toggledChanges(
@@ -269,8 +261,7 @@ void AutoDownloadSection::setupContent() {
 		kDefaultDownloadLimit,
 		changed);
 
-	AddCardTitle(root, tr::lng_media_auto_play());
-	content = AddCardGroup(root).get();
+	content = addGroup(tr::lng_media_auto_play());
 
 	const auto autoPlayValues = Ui::CreateChild<base::flat_map<Type, int64>>(
 		content);
@@ -293,13 +284,12 @@ void AutoDownloadSection::setupContent() {
 			: *downloadLimit;
 	};
 
-	const auto staged = content->lifetime().make_state<PeerBuckets>(
-		BucketsForSource(*settings, &_session->data(), _source));
+	const auto staged = root->lifetime().make_state<PeerBuckets>(
+		BucketsForSource(*settings, &session->data(), source));
 
-	AddCardTitle(root, tr::lng_media_auto_exceptions());
-	content = AddCardGroup(root).get();
+	content = addGroup(tr::lng_media_auto_exceptions());
 
-	const auto countText = [source = _source](int count) {
+	const auto countText = [source](int count) {
 		switch (source) {
 		case Source::User:
 			return tr::lng_media_auto_exceptions_users(
@@ -319,7 +309,7 @@ void AutoDownloadSection::setupContent() {
 		}
 		Unexpected("Source in countText.");
 	};
-	const auto addText = [source = _source] {
+	const auto addText = [source] {
 		switch (source) {
 		case Source::User:
 			return tr::lng_media_auto_exceptions_add_users(tr::now);
@@ -331,7 +321,7 @@ void AutoDownloadSection::setupContent() {
 		Unexpected("Source in addText.");
 	};
 
-	const auto updates = content->lifetime().make_state<rpl::event_stream<>>();
+	const auto updates = root->lifetime().make_state<rpl::event_stream<>>();
 	const auto addExceptionButton = [&](
 			Override kind,
 			rpl::producer<QString> text,
@@ -348,19 +338,21 @@ void AutoDownloadSection::setupContent() {
 			content,
 			std::move(text),
 			std::move(label),
-			st::settingsButtonNoIcon);
+			Ui::IsDialogContent(content)
+				? Ui::DialogButtonStyle(content, st::settingsButtonNoIcon)
+				: st::settingsButtonNoIcon);
 		button->setClickedCallback([=, title = std::move(title)]() mutable {
 			const auto &selected = (kind == Override::ForceAllow)
 				? staged->always
 				: staged->never;
-			auto controller = std::make_unique<ExceptionsBoxController>(
-				_session,
-				_source,
+			auto exceptionsController = std::make_unique<ExceptionsBoxController>(
+				session,
+				source,
 				selected);
-			auto initBox = [=, this, title = rpl::duplicate(title)](
+			auto initBox = [=, title = rpl::duplicate(title)](
 					not_null<PeerListBox*> box) mutable {
 				box->setTitle(std::move(title));
-				box->addButton(tr::lng_settings_save(), crl::guard(this, [=] {
+				box->addButton(tr::lng_settings_save(), crl::guard(root, [=] {
 					auto &dest = (kind == Override::ForceAllow)
 						? staged->always
 						: staged->never;
@@ -378,8 +370,8 @@ void AutoDownloadSection::setupContent() {
 				}));
 				box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
 			};
-			this->controller()->show(Box<PeerListBox>(
-				std::move(controller),
+			controller->show(Box<PeerListBox>(
+				std::move(exceptionsController),
 				std::move(initBox)));
 		});
 	};
@@ -399,7 +391,7 @@ void AutoDownloadSection::setupContent() {
 		auto allowMore = values | ranges::views::filter([&](Pair pair) {
 			const auto &[type, enabled] = pair;
 			const auto value = enabled ? limitByType(type) : 0;
-			const auto old = settings->bytesLimit(_source, type);
+			const auto old = settings->bytesLimit(source, type);
 			return (old < value);
 		}) | ranges::views::transform([](Pair pair) {
 			return pair.first;
@@ -407,7 +399,7 @@ void AutoDownloadSection::setupContent() {
 		const auto less = ranges::any_of(*autoPlayValues, [&](Pair pair) {
 			const auto &[type, enabled] = pair;
 			const auto value = enabled ? limitByType(type) : 0;
-			return value < settings->bytesLimit(_source, type);
+			return value < settings->bytesLimit(source, type);
 		});
 		const auto allowMoreTypes = base::flat_set<Type>(
 			allowMore.begin(),
@@ -416,19 +408,19 @@ void AutoDownloadSection::setupContent() {
 		const auto changed = ranges::any_of(values, [&](Pair pair) {
 			const auto &[type, enabled] = pair;
 			const auto value = enabled ? limitByType(type) : 0;
-			return value != settings->bytesLimit(_source, type);
+			return value != settings->bytesLimit(source, type);
 		});
 
 		const auto &kHidden = kStreamedTypes;
 		const auto hiddenChanged = ranges::any_of(kHidden, [&](Type type) {
-			const auto now = settings->bytesLimit(_source, type);
+			const auto now = settings->bytesLimit(source, type);
 			return (now > 0) && (now != limitByType(type));
 		});
 
 		const auto current = BucketsForSource(
 			*settings,
-			&_session->data(),
-			_source);
+			&session->data(),
+			source);
 		const auto exceptionsChanged = (current.always != staged->always)
 			|| (current.never != staged->never);
 		const auto exceptionsAllowMore = ranges::any_of(
@@ -447,15 +439,15 @@ void AutoDownloadSection::setupContent() {
 		if (changed) {
 			for (const auto &[type, enabled] : values) {
 				const auto value = enabled ? limitByType(type) : 0;
-				settings->setBytesLimit(_source, type, value);
+				settings->setBytesLimit(source, type, value);
 			}
 		}
 		if (hiddenChanged) {
 			for (const auto type : kHidden) {
-				const auto now = settings->bytesLimit(_source, type);
+				const auto now = settings->bytesLimit(source, type);
 				if (now > 0) {
 					settings->setBytesLimit(
-						_source,
+						source,
 						type,
 						limitByType(type));
 				}
@@ -480,20 +472,61 @@ void AutoDownloadSection::setupContent() {
 			}
 		}
 		if (changed || hiddenChanged || exceptionsChanged) {
-			_session->saveSettingsDelayed();
+			session->saveSettingsDelayed();
 		}
 		if (allowMoreTypes.contains(Type::Photo) || exceptionsAllowMore) {
-			_session->data().photoLoadSettingsChanged();
+			session->data().photoLoadSettingsChanged();
 		}
 		if (ranges::any_of(allowMoreTypes, _1 != Type::Photo)
 			|| exceptionsAllowMore) {
-			_session->data().documentLoadSettingsChanged();
+			session->data().documentLoadSettingsChanged();
 		}
 		if (less || exceptionsAllowLess) {
-			_session->data().checkPlayingAnimations();
+			session->data().checkPlayingAnimations();
 		}
-	}, lifetime());
+	}, root->lifetime());
 
+	if (dialog) {
+		Ui::AddSkip(root, st::boxPadding.bottom());
+	}
+}
+
+} // namespace
+
+class AutoDownloadSection final : public AbstractSection {
+public:
+	AutoDownloadSection(
+		QWidget *parent,
+		not_null<Window::SessionController*> controller,
+		Source source);
+
+	Type id() const override {
+		return AutoDownloadId(_source);
+	}
+	rpl::producer<QString> title() override;
+
+private:
+	void setupContent();
+
+	const Source _source;
+};
+
+AutoDownloadSection::AutoDownloadSection(
+	QWidget *parent,
+	not_null<Window::SessionController*> controller,
+	Source source)
+: AbstractSection(parent, controller)
+, _source(source) {
+	setupContent();
+}
+
+rpl::producer<QString> AutoDownloadSection::title() {
+	return AutoDownloadTitle(_source);
+}
+
+void AutoDownloadSection::setupContent() {
+	const auto page = Ui::CreateChild<CardPage>(this);
+	SetupAutoDownloadContent(page->content(), controller(), _source, false);
 	Ui::ResizeFitChild(this, page);
 }
 
@@ -534,7 +567,16 @@ void ShowAutoDownload(
 		not_null<Window::SessionController*> controller,
 		Source source,
 		Fn<void()> closed) {
-	ShowSettingsLayer(controller, AutoDownloadId(source), std::move(closed));
+	auto box = Box([=](not_null<Ui::GenericBox*> box) {
+		box->setObjectName(u"settings.autoDownload"_q);
+		box->setTitle(AutoDownloadTitle(source));
+		box->setWidth(st::boxWideWidth);
+		SetupAutoDownloadContent(box->verticalLayout(), controller, source, true);
+	});
+	if (closed) {
+		box->lifetime().add(std::move(closed));
+	}
+	controller->show(std::move(box));
 }
 
 namespace {

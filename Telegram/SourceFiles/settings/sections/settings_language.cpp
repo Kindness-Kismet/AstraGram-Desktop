@@ -12,17 +12,68 @@
 #include "settings/settings_common_session.h"
 #include "spellcheck/spellcheck_types.h"
 #include "ui/boxes/choose_language_box.h"
+#include "ui/boxes/dialog_layout.h"
+#include "ui/layers/box_content.h"
+#include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/ui_utility.h"
 #include "window/window_session_controller.h"
+#include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 
 namespace Settings {
 namespace {
+
+enum class LanguageLayout {
+	Page,
+	Dialog,
+};
+
+[[nodiscard]] not_null<Ui::VerticalLayout*> AddLanguageGroup(
+		not_null<Ui::VerticalLayout*> container,
+		LanguageLayout layout) {
+	if (layout == LanguageLayout::Page) {
+		return AddCardGroup(container);
+	}
+	return container->add(object_ptr<Ui::VerticalLayout>(container));
+}
+
+void SetupTranslationControls(
+	not_null<Ui::VerticalLayout*> container,
+	not_null<Window::SessionController*> controller,
+	rpl::producer<> showFinished,
+	LanguageLayout layout);
+
+class LanguageContent final : public Ui::RpWidget {
+public:
+	LanguageContent(
+		QWidget *parent,
+		not_null<Window::SessionController*> controller,
+		not_null<Ui::ScrollArea*> scroll,
+		LanguageLayout layout);
+
+	void showFinished();
+	[[nodiscard]] bool handleNavigation(int key);
+
+protected:
+	void visibleTopBottomUpdated(int top, int bottom) override;
+
+private:
+	void rebuildLanguages();
+	void scrollToRequest(Ui::ScrollToRequest request);
+
+	const not_null<Ui::ScrollArea*> _scroll;
+	Ui::RpWidget *_body = nullptr;
+	Ui::VerticalLayout *_languages = nullptr;
+	QPointer<Ui::RpWidget> _list;
+	LanguageListContent _listContent;
+	rpl::event_stream<> _showFinished;
+
+};
 
 class Language final : public AbstractSection {
 public:
@@ -33,20 +84,34 @@ public:
 
 	[[nodiscard]] Type id() const override;
 	[[nodiscard]] rpl::producer<QString> title() override;
+	void showFinished() override;
 
 protected:
 	void keyPressEvent(QKeyEvent *e) override;
+	void visibleTopBottomUpdated(int top, int bottom) override;
 
 private:
-	void rebuildLanguages();
-	void scrollToRequest(Ui::ScrollToRequest request);
-	[[nodiscard]] bool handleNavigation(int key);
+	const not_null<LanguageContent*> _content;
 
-	const not_null<Ui::ScrollArea*> _scroll;
-	const not_null<CardPage*> _page;
-	Ui::VerticalLayout *_languages = nullptr;
-	QPointer<Ui::RpWidget> _list;
-	LanguageListContent _listContent;
+};
+
+class LanguageSettingsBox final : public Ui::BoxContent {
+public:
+	LanguageSettingsBox(
+		QWidget*,
+		not_null<Window::SessionController*> controller);
+
+	void showFinished() override;
+	void setInnerFocus() override;
+
+protected:
+	void prepare() override;
+	void keyPressEvent(QKeyEvent *e) override;
+
+private:
+	const not_null<Window::SessionController*> _controller;
+	const object_ptr<Ui::ScrollArea> _scroll;
+	QPointer<LanguageContent> _content;
 
 };
 
@@ -61,20 +126,45 @@ public:
 	}
 };
 
-Language::Language(
+LanguageContent::LanguageContent(
 	QWidget *parent,
 	not_null<Window::SessionController*> controller,
-	not_null<Ui::ScrollArea*> scroll)
-: AbstractSection(parent, controller)
-, _scroll(scroll)
-, _page(Ui::CreateChild<CardPage>(this)) {
-	setObjectName(u"settings-language-page"_q);
-	const auto content = _page->content();
-	SetupLanguageTranslationControls(content, controller, showFinishes());
-	AddCardTitle(content, tr::lng_languages());
-	_languages = AddCardGroup(content).get();
+	not_null<Ui::ScrollArea*> scroll,
+	LanguageLayout layout)
+: RpWidget(parent)
+, _scroll(scroll) {
+	const auto content = [&]() -> not_null<Ui::VerticalLayout*> {
+		if (layout == LanguageLayout::Page) {
+			const auto page = Ui::CreateChild<CardPage>(this);
+			_body = page;
+			return page->content();
+		}
+		const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+		_body = content;
+		Ui::AddSkip(content, st::boxPadding.top());
+		return content;
+	}();
+	SetupTranslationControls(
+		content,
+		controller,
+		_showFinished.events(),
+		layout);
+	if (layout == LanguageLayout::Page) {
+		AddCardTitle(content, tr::lng_languages());
+	} else {
+		Ui::AddSkip(content, st::boxMediumSkip);
+		Ui::AddSubsectionTitle(
+			content,
+			tr::lng_languages(),
+			QMargins(st::boxRowPadding.left()
+				- st::defaultSubsectionTitlePadding.left(), 0, 0, 0));
+	}
+	_languages = AddLanguageGroup(content, layout).get();
 	rebuildLanguages();
-	Ui::ResizeFitChild(this, _page);
+	if (layout == LanguageLayout::Dialog) {
+		Ui::AddSkip(content, st::boxPadding.bottom());
+	}
+	Ui::ResizeFitChild(this, _body);
 
 	auto &manager = Lang::CurrentCloudManager();
 	manager.languageListChanged(
@@ -84,15 +174,15 @@ Language::Language(
 	manager.requestLanguageList();
 }
 
-Type Language::id() const {
-	return LanguageId();
+void LanguageContent::showFinished() {
+	_showFinished.fire({});
 }
 
-rpl::producer<QString> Language::title() {
-	return tr::lng_settings_language();
+void LanguageContent::visibleTopBottomUpdated(int top, int bottom) {
+	setChildVisibleTopBottom(_body, top, bottom);
 }
 
-void Language::rebuildLanguages() {
+void LanguageContent::rebuildLanguages() {
 	_languages->clear();
 	_listContent = CreateLanguageList(_languages, false);
 	_list = _languages->add(std::move(_listContent.widget));
@@ -103,7 +193,7 @@ void Language::rebuildLanguages() {
 	}, _list->lifetime());
 }
 
-bool Language::handleNavigation(int key) {
+bool LanguageContent::handleNavigation(int key) {
 	const auto rows = std::max(_scroll->height() / _listContent.rowHeight, 1);
 	auto skip = 0;
 	switch (key) {
@@ -119,7 +209,7 @@ bool Language::handleNavigation(int key) {
 	return true;
 }
 
-void Language::scrollToRequest(Ui::ScrollToRequest request) {
+void LanguageContent::scrollToRequest(Ui::ScrollToRequest request) {
 	if (request.ymin < 0 || request.ymax < 0) {
 		return;
 	}
@@ -127,12 +217,91 @@ void Language::scrollToRequest(Ui::ScrollToRequest request) {
 	_scroll->scrollToY(top + request.ymin, top + request.ymax);
 }
 
+Language::Language(
+	QWidget *parent,
+	not_null<Window::SessionController*> controller,
+	not_null<Ui::ScrollArea*> scroll)
+: AbstractSection(parent, controller)
+, _content(Ui::CreateChild<LanguageContent>(
+	this,
+	controller,
+	scroll,
+	LanguageLayout::Page)) {
+	setObjectName(u"settings-language-page"_q);
+	Ui::ResizeFitChild(this, _content);
+}
+
+Type Language::id() const {
+	return LanguageId();
+}
+
+rpl::producer<QString> Language::title() {
+	return tr::lng_settings_language();
+}
+
+void Language::showFinished() {
+	AbstractSection::showFinished();
+	_content->showFinished();
+}
+
+void Language::visibleTopBottomUpdated(int top, int bottom) {
+	setChildVisibleTopBottom(_content, top, bottom);
+}
+
 void Language::keyPressEvent(QKeyEvent *e) {
-	if (handleNavigation(e->key())) {
+	if (_content->handleNavigation(e->key())) {
 		e->accept();
 		return;
 	}
 	AbstractSection::keyPressEvent(e);
+}
+
+LanguageSettingsBox::LanguageSettingsBox(
+	QWidget*,
+	not_null<Window::SessionController*> controller)
+: _controller(controller)
+, _scroll(this, st::boxScroll) {
+}
+
+void LanguageSettingsBox::prepare() {
+	setObjectName(u"settings-language-dialog"_q);
+	setTitle(tr::lng_settings_language());
+	_content = _scroll->setOwnedWidget(object_ptr<LanguageContent>(
+		_scroll.data(),
+		_controller,
+		_scroll.data(),
+		LanguageLayout::Dialog));
+	_content->resizeToWidth(st::boxWideWidth);
+	_content->heightValue() | rpl::on_next([=](int height) {
+		setDimensions(st::boxWideWidth, std::min(height, st::boxMaxListHeight));
+	}, _content->lifetime());
+	sizeValue() | rpl::on_next([=](QSize size) {
+		_scroll->resize(size);
+		_content->resizeToWidth(size.width());
+	}, _content->lifetime());
+	rpl::combine(
+		_scroll->scrollTopValue(),
+		_scroll->heightValue()
+	) | rpl::on_next([=](int top, int height) {
+		_content->setVisibleTopBottom(top, top + height);
+	}, _content->lifetime());
+	_scroll->show();
+}
+
+void LanguageSettingsBox::showFinished() {
+	_content->showFinished();
+}
+
+void LanguageSettingsBox::setInnerFocus() {
+	setFocus();
+}
+
+void LanguageSettingsBox::keyPressEvent(QKeyEvent *e) {
+	if (_content->handleNavigation(e->key())) {
+		e->accept();
+		return;
+	}
+	Ui::BoxContent::keyPressEvent(e);
 }
 
 const auto kMeta = Builder::BuildHelper({
@@ -177,18 +346,25 @@ void ShowLanguageSettings(
 	if (!highlightId.isEmpty()) {
 		controller->setHighlightControlId(highlightId);
 	}
-	ShowSettingsLayer(controller, LanguageId());
+	controller->show(Box<LanguageSettingsBox>(controller));
 }
 
-void SetupLanguageTranslationControls(
+namespace {
+
+void SetupTranslationControls(
 		not_null<Ui::VerticalLayout*> container,
 		not_null<Window::SessionController*> controller,
-		rpl::producer<> showFinished) {
-	const auto group = AddCardGroup(container);
+		rpl::producer<> showFinished,
+		LanguageLayout layout) {
+	const auto dialog = (layout == LanguageLayout::Dialog);
+	const auto group = AddLanguageGroup(container, layout);
+	const auto &buttonStyle = dialog
+		? Ui::DialogButtonStyle(group, st::settingsButtonNoIcon)
+		: st::settingsButtonNoIcon;
 	const auto translateEnabled = AddButtonWithIcon(
 		group,
 		tr::lng_translate_settings_show(),
-		st::settingsButtonNoIcon)->toggleOn(
+		buttonStyle)->toggleOn(
 				rpl::single(Core::App().settings().translateButtonEnabled()));
 	translateEnabled->setObjectName(u"settings-language-show-button"_q);
 	translateEnabled->toggledValue(
@@ -202,7 +378,7 @@ void SetupLanguageTranslationControls(
 	const auto translateChat = AddButtonWithIcon(
 		group,
 		tr::lng_translate_settings_chat(),
-		st::settingsButtonNoIcon)->toggleOn(
+		buttonStyle)->toggleOn(
 				Core::App().settings().translateChatEnabledValue());
 	translateChat->setObjectName(u"settings-language-translate-chats"_q);
 	translateChat->toggledValue(
@@ -231,13 +407,19 @@ void SetupLanguageTranslationControls(
 				? tr::lng_languages_count(tr::now, lt_count, list.size())
 				: Ui::LanguageName(list.front());
 		}),
-		st::settingsButtonNoIcon);
+		buttonStyle);
 	translateSkip->setObjectName(u"settings-language-do-not-translate"_q);
-	AddSectionRowDetails(translateSkip);
+	if (!dialog) {
+		AddSectionRowDetails(translateSkip);
+	}
 	translateSkip->setClickedCallback([=] {
 		controller->show(Ui::EditSkipTranslationLanguages());
 	});
-	AddCardDescription(container, tr::lng_translate_settings_about());
+	if (dialog) {
+		Ui::AddDialogText(container, tr::lng_translate_settings_about());
+	} else {
+		AddCardDescription(container, tr::lng_translate_settings_about());
+	}
 	std::move(showFinished) | rpl::on_next([=] {
 		controller->checkHighlightControl(
 			u"language/show-button"_q,
@@ -249,6 +431,21 @@ void SetupLanguageTranslationControls(
 			u"language/do-not-translate"_q,
 			translateSkip.get());
 	}, container->lifetime());
+}
+
+} // namespace
+
+void SetupLanguageTranslationControls(
+		not_null<Ui::VerticalLayout*> container,
+		not_null<Window::SessionController*> controller,
+		rpl::producer<> showFinished) {
+	SetupTranslationControls(
+		container,
+		controller,
+		std::move(showFinished),
+		Ui::IsDialogContent(container)
+			? LanguageLayout::Dialog
+			: LanguageLayout::Page);
 }
 
 } // namespace Settings

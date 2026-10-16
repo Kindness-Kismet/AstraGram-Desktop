@@ -2308,9 +2308,7 @@ void UpdateApplication() {
 						::Settings::AdvancedId()),
 					Window::SectionShow());
 			} else {
-				window->widget()->showSpecialLayer(
-					Box<::Settings::LayerWidget>(window),
-					anim::type::normal);
+				window->show(Box<::Settings::IntroSettingsBox>(window));
 			}
 			window->widget()->showFromTray();
 		}

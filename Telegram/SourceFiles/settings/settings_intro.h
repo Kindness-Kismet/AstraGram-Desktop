@@ -7,14 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
-#include "ui/layers/layer_widget.h"
-
-namespace Ui {
-class VerticalLayout;
-class FlatLabel;
-template <typename Widget>
-class FadeWrap;
-} // namespace Ui
+#include "ui/layers/box_content.h"
 
 namespace Window {
 class Controller;
@@ -22,30 +15,16 @@ class Controller;
 
 namespace Settings {
 
-class IntroWidget;
-
-class LayerWidget : public Ui::LayerWidget {
+class IntroSettingsBox final : public Ui::BoxContent {
 public:
-	LayerWidget(QWidget*, not_null<Window::Controller*> window);
-
-	void showFinished() override;
-	void parentResized() override;
-
-	static int MinimalSupportedWidth();
+	IntroSettingsBox(QWidget*, not_null<Window::Controller*> window);
 
 protected:
-	int resizeGetHeight(int newWidth) override;
-	void doSetInnerFocus() override;
-
-	void paintEvent(QPaintEvent *e) override;
+	void prepare() override;
+	void keyPressEvent(QKeyEvent *e) override;
 
 private:
-	void setupHeightConsumers();
-
-	object_ptr<IntroWidget> _content;
-
-	int _desiredHeight = 0;
-	bool _inResize = false;
+	const not_null<Window::Controller*> _window;
 
 };
 

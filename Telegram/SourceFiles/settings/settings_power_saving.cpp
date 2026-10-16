@@ -12,8 +12,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "lang/lang_keys.h"
+#include "ui/boxes/dialog_layout.h"
 #include "ui/layers/generic_box.h"
 #include "ui/widgets/buttons.h"
+#include "ui/widgets/option_list.h"
 #include "ui/power_saving.h"
 #include "ui/vertical_list.h"
 #include "settings/settings_common.h"
@@ -121,11 +123,7 @@ Type PowerSavingId() {
 void ShowPowerSaving(
 		not_null<Window::SessionController*> controller,
 		PowerSaving::Flags highlightFlags) {
-	if (highlightFlags) {
-		controller->setHighlightControlId(
-			u"power/flags/"_q + QString::number(highlightFlags.value()));
-	}
-	ShowSettingsLayer(controller, PowerSavingId());
+	controller->show(Box(PowerSavingBox, highlightFlags));
 }
 
 void PowerSavingBox(
@@ -138,10 +136,6 @@ void PowerSavingBox(
 	const auto container = box->verticalLayout();
 	const auto ignore = Core::App().settings().ignoreBatterySaving();
 	const auto batterySaving = Core::App().batterySaving().enabled();
-
-	// Force top shadow visibility.
-	box->setPinnedToTopContent(
-		object_ptr<Ui::FixedHeightWidget>(box, st::lineWidth));
 
 	const auto subtitle = Ui::AddSubsectionTitle(
 		container,
@@ -166,21 +160,21 @@ void PowerSavingBox(
 	const auto highlightWidgetRaw = highlightWidget.data();
 	box->addRow(std::move(checkboxes), style::margins());
 
-	auto automatic = (Ui::SettingsButton*)nullptr;
+	auto automatic = (Ui::Checkbox*)nullptr;
 	if (batterySaving.has_value()) {
-		Ui::AddSkip(container);
-		Ui::AddDivider(container);
-		Ui::AddSkip(container);
-		automatic = container->add(object_ptr<Settings::RowButton>(
-			container,
+		Ui::AddSkip(container, st::boxMediumSkip);
+		const auto options = container->add(
+			object_ptr<Ui::OptionList>(container, st::boxOptionListPadding),
+			st::boxRowPadding);
+		automatic = options->addOption(object_ptr<Ui::Checkbox>(
+			options,
 			tr::lng_settings_power_auto(),
-			st::powerSavingButtonNoIcon
-		))->toggleOn(rpl::single(!ignore));
-		Ui::AddSkip(container);
-		Ui::AddDividerText(container, tr::lng_settings_power_auto_about());
+			!ignore,
+			st::defaultBoxCheckbox));
+		Ui::AddDialogText(container, tr::lng_settings_power_auto_about());
 
 		state->forceDisabledMessage = rpl::combine(
-			automatic->toggledValue(),
+			automatic->checkedValue(),
 			Core::App().batterySaving().value()
 		) | rpl::map([=](bool dontIgnore, bool saving) {
 			return (saving && dontIgnore)
@@ -215,7 +209,7 @@ void PowerSavingBox(
 
 	box->addButton(tr::lng_settings_save(), [=, collect = getResult] {
 		const auto ignore = automatic
-			? !automatic->toggled()
+			? !automatic->checked()
 			: Core::App().settings().ignoreBatterySaving();
 		const auto batterySaving = Core::App().batterySaving().enabled();
 		if (ignore || !batterySaving.value_or(false)) {

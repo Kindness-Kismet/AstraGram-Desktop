@@ -416,9 +416,7 @@ void MainWindow::showSettings() {
 		session->showSettings();
 	} else {
 		controller().hideLayer(anim::type::instant);
-		showSpecialLayer(
-			Box<Settings::LayerWidget>(&controller()),
-			anim::type::normal);
+		controller().show(Box<Settings::IntroSettingsBox>(&controller()));
 	}
 }
 

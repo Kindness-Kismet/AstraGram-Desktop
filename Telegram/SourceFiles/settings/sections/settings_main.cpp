@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_main.h"
 
 #include "settings/settings_common_session.h"
+#include "ui/boxes/dialog_layout.h"
 #include "settings/settings_card_layout.h"
 
 #include "api/api_cloud_password.h"
@@ -340,8 +341,7 @@ void SetupLanguageButton(
 		) | rpl::then(
 			Lang::GetInstance().idChanges()
 		) | rpl::map([] { return Lang::GetInstance().nativeName(); }),
-		st::settingsButton,
-		{ &st::menuIconLanguage });
+		Ui::DialogButtonStyle(container, st::settingsButtonNoIcon));
 	const auto guard = Ui::CreateChild<base::binary_guard>(button.get());
 	button->addClickHandler([=] {
 		const auto m = button->clickModifiers();

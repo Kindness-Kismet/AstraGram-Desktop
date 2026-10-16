@@ -329,7 +329,8 @@ HighlightArgs SubsectionTitleHighlight() {
 AbstractSection::AbstractSection(
 	QWidget *parent,
 	not_null<Window::SessionController*> controller)
-: _controller(controller) {
+: RpWidget(parent)
+, _controller(controller) {
 }
 
 AbstractSection::~AbstractSection() = default;

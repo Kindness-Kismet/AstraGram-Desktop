@@ -1180,7 +1180,7 @@ void BuildArchiveSection(SectionBuilder &builder) {
 		.icon = { &st::menuIconArchive },
 		.onClick = [=] {
 			if (controller) {
-				ShowSettingsLayer(controller, ArchiveId());
+				ShowArchiveSettings(controller);
 			}
 		},
 		.keywords = { u"archive"_q, u"settings"_q, u"folder"_q },

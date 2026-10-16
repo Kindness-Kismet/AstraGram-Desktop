@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_advanced.h"
 
 #include "settings/settings_common_session.h"
+#include "ui/boxes/dialog_layout.h"
 
 #include "api/api_global_privacy.h"
 #include "apiwrap.h"
@@ -59,6 +60,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/settings_toggle.h"
 #include "ui/widgets/labels.h"
+#include "ui/widgets/option_list.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_controller.h"
@@ -1088,8 +1090,7 @@ void SetupConnectionType(
 			Core::App().settings().proxy().connectionTypeChanges(),
 			tr::lng_connection_auto_connecting() | rpl::to_empty
 		) | rpl::map([=] { return connectionType(); }),
-		st::settingsButton,
-		{ &st::menuIconNetwork });
+		Ui::DialogButtonStyle(container, st::settingsButtonNoIcon));
 	button->addClickHandler([=] {
 		controller->show(ProxiesBoxController::CreateOwningBox(account));
 	});
@@ -1100,26 +1101,35 @@ void SetupSystemIntegrationContent(
 		not_null<Ui::VerticalLayout*> container) {
 	using WorkMode = Core::Settings::WorkMode;
 
-	const auto checkbox = [&](rpl::producer<QString> &&label, bool checked) {
-		return object_ptr<Ui::SettingsToggle>(
-			container,
+	struct SlidingCheckbox {
+		not_null<Ui::SlideWrap<Ui::OptionList>*> wrap;
+		not_null<Ui::Checkbox*> check;
+	};
+	const auto checkbox = [&](
+			not_null<Ui::OptionList*> options,
+			rpl::producer<QString> label,
+			bool checked) {
+		return options->addOption(object_ptr<Ui::Checkbox>(
+			options,
 			std::move(label),
 			checked,
-			st::settingsButtonNoIcon);
+			st::defaultBoxCheckbox));
 	};
-	const auto addCheckbox = [&](
-			rpl::producer<QString> &&label,
-			bool checked) {
-		return container->add(
-			checkbox(std::move(label), checked));
+	const auto addCheckbox = [&](rpl::producer<QString> label, bool checked) {
+		const auto options = container->add(
+			object_ptr<Ui::OptionList>(container, st::boxOptionListPadding),
+			st::boxRowPadding);
+		return checkbox(options, std::move(label), checked);
 	};
-	const auto addSlidingCheckbox = [&](
-			rpl::producer<QString> &&label,
-			bool checked) {
-		return container->add(
-			object_ptr<Ui::SlideWrap<Ui::SettingsToggle>>(
+	const auto addSlidingCheckbox = [&](rpl::producer<QString> label, bool checked) {
+		auto options = object_ptr<Ui::OptionList>(container, st::boxOptionListPadding);
+		const auto check = checkbox(options.data(), std::move(label), checked);
+		const auto wrap = container->add(
+			object_ptr<Ui::SlideWrap<Ui::OptionList>>(
 				container,
-				checkbox(std::move(label), checked)));
+				std::move(options)),
+			st::boxRowPadding);
+		return SlidingCheckbox{ wrap, check };
 	};
 
 	const auto settings = &Core::App().settings();
@@ -1133,20 +1143,20 @@ void SetupSystemIntegrationContent(
 			tr::lng_settings_workmode_tray(),
 			trayEnabled());
 		const auto monochrome = Platform::HasMonochromeSetting()
-			? addSlidingCheckbox(
+			? std::make_optional(addSlidingCheckbox(
 				tr::lng_settings_monochrome_icon(),
-				settings->trayIconMonochrome())
-			: nullptr;
+				settings->trayIconMonochrome()))
+			: std::nullopt;
 		if (monochrome) {
-			monochrome->toggle(tray->checked(), anim::type::instant);
+			monochrome->wrap->toggle(tray->checked(), anim::type::instant);
 
-			monochrome->entity()->checkedChanges(
+			monochrome->check->checkedChanges(
 			) | rpl::filter([=](bool value) {
 				return (value != settings->trayIconMonochrome());
 			}) | rpl::on_next([=](bool value) {
 				settings->setTrayIconMonochrome(value);
 				Core::App().saveSettingsDelayed();
-			}, monochrome->lifetime());
+			}, monochrome->wrap->lifetime());
 		}
 
 		const auto taskbarEnabled = [=] {
@@ -1185,7 +1195,7 @@ void SetupSystemIntegrationContent(
 				updateWorkmode();
 			}
 			if (monochrome) {
-				monochrome->toggle(checked, anim::type::normal);
+				monochrome->wrap->toggle(checked, anim::type::normal);
 			}
 		}, tray->lifetime());
 
@@ -1253,10 +1263,10 @@ void SetupSystemIntegrationContent(
 	settings->workModeValue(
 	) | rpl::on_next([=](WorkMode workMode) {
 		*closeToTaskbarShown = !Core::App().tray().has();
-	}, closeToTaskbar->lifetime());
+	}, closeToTaskbar.wrap->lifetime());
 
-	closeToTaskbar->toggleOn(closeToTaskbarShown->value());
-	closeToTaskbar->entity()->checkedChanges(
+	closeToTaskbar.wrap->toggleOn(closeToTaskbarShown->value());
+	closeToTaskbar.check->checkedChanges(
 	) | rpl::map([=](bool checked) {
 		return checked ? Behavior::CloseToTaskbar : Behavior::Quit;
 	}) | rpl::filter([=](Behavior value) {
@@ -1264,7 +1274,7 @@ void SetupSystemIntegrationContent(
 	}) | rpl::on_next([=](Behavior value) {
 		settings->setCloseBehavior(value);
 		Local::writeSettings();
-	}, closeToTaskbar->lifetime());
+	}, closeToTaskbar.wrap->lifetime());
 #endif // Q_OS_MAC || Q_OS_WIN
 
 	if (Platform::AutostartSupported() && controller) {
@@ -1296,10 +1306,10 @@ void SetupSystemIntegrationContent(
 				Ui::PostponeCall(autostart, [=] {
 					autostart->setChecked(enabled);
 				});
-				if (enabled || !minimized->entity()->checked()) {
+				if (enabled || !minimized.check->checked()) {
 					Local::writeSettings();
 				} else {
-					minimized->entity()->setChecked(false);
+					minimized.check->setChecked(false);
 				}
 			}));
 		}, autostart->lifetime());
@@ -1308,26 +1318,26 @@ void SetupSystemIntegrationContent(
 			controller,
 			[=](bool enabled) { autostart->setChecked(enabled); }));
 
-		minimized->toggleOn(autostart->checkedValue());
-		minimized->entity()->checkedChanges(
+		minimized.wrap->toggleOn(autostart->checkedValue());
+		minimized.check->checkedChanges(
 		) | rpl::filter([=](bool checked) {
 			return (checked != minimizedToggled());
 		}) | rpl::on_next([=](bool checked) {
 			// Keep the verified prompt refusal in this path too.
 			if (controller->session().domain().local().hasLocalPasscode()) {
-				minimized->entity()->setChecked(false);
+				minimized.check->setChecked(false);
 				controller->show(Ui::MakeInformBox(
 					tr::lng_error_start_minimized_passcoded()));
 			} else {
 				cSetStartMinimized(checked);
 				Local::writeSettings();
 			}
-		}, minimized->lifetime());
+		}, minimized.wrap->lifetime());
 
 		controller->session().domain().local().localPasscodeChanged(
 		) | rpl::on_next([=] {
-			minimized->entity()->setChecked(minimizedToggled());
-		}, minimized->lifetime());
+			minimized.check->setChecked(minimizedToggled());
+		}, minimized.wrap->lifetime());
 	}
 
 	if (Platform::IsWindows() && !Platform::IsWindowsStoreBuild()) {
@@ -1352,7 +1362,7 @@ void SetupAnimations(
 	container->add(object_ptr<Settings::RowButton>(
 		container,
 		tr::lng_settings_power_menu(),
-		st::settingsButtonNoIcon
+		Ui::DialogButtonStyle(container, st::settingsButtonNoIcon)
 	))->setClickedCallback([=] {
 		window->show(Box(PowerSavingBox, PowerSaving::Flags()));
 	});
