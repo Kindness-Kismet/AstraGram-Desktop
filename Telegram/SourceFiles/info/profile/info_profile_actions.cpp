@@ -2916,6 +2916,7 @@ void DetailsFiller::buildSections() {
 		addCommunityHiddenNote();
 		_stack->addPlainSeparator();
 	}
+	_stack->addTitle(tr::lng_settings_section_info());
 	_stack->add(makeInfo());
 	if (const auto user = _peer->asUser()) {
 		_stack->add(makeAddAsContact(user));

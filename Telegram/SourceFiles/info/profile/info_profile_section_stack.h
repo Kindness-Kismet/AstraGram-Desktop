@@ -27,6 +27,8 @@ public:
 	explicit SectionStack(not_null<Ui::VerticalLayout*> layout);
 
 	void add(Section section);
+	// 标题跟随紧接着的分区显示或隐藏。
+	void addTitle(rpl::producer<QString> text);
 	void addPlainSeparator();
 	void addTextSeparator(
 		rpl::producer<TextWithEntities> text,
@@ -41,12 +43,14 @@ private:
 		Block,
 		PlainSeparator,
 		TextSeparator,
+		Title,
 	};
 	struct Row {
 		RowType type = RowType::Block;
 		object_ptr<Ui::RpWidget> widget = { nullptr };
 		rpl::producer<bool> shown;
 		rpl::producer<TextWithEntities> text;
+		rpl::producer<QString> title;
 		Fn<void(not_null<Ui::FlatLabel*>)> textSetup;
 	};
 

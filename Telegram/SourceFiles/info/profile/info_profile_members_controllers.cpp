@@ -21,6 +21,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Info {
 namespace Profile {
+namespace {
+
+// 头衔最多占名字一行的这个比例，超出时名字先截断。
+constexpr auto kTagMaxShare = 0.46;
+
+} // namespace
 
 MemberListRow::MemberListRow(
 	not_null<PeerData*> peer,
@@ -57,7 +63,7 @@ void MemberListRow::setType(Type type) {
 	}
 	_tagTextWidth = _tagText.isEmpty()
 		? 0
-		: st::normalFont->width(_tagText);
+		: st::memberTagFont->width(_tagText);
 	if (_type.canRemove) {
 		_removeText = _type.removeText.isEmpty()
 			? tr::lng_profile_kick(tr::now)
@@ -89,25 +95,18 @@ QSize MemberListRow::tagSize() const {
 	if (_tagTextWidth == 0) {
 		return QSize();
 	}
-	const auto usePill = (_tagMode == TagMode::AdminPill)
-		|| (_tagMode == TagMode::AddTag)
-		|| ((_tagMode == TagMode::NormalText) && tagInteractive());
-	if (usePill) {
-		const auto &p = st::memberTagPillPadding;
-		const auto h = p.top() + st::normalFont->height + p.bottom();
-		const auto w = p.left() + _tagTextWidth + p.right();
-		return QSize(std::max(w, h), h);
-	}
-	return QSize(_tagTextWidth, st::normalFont->height);
+	const auto &pad = st::memberTagPadding;
+	return QSize(
+		pad.left() + _tagTextWidth + pad.right(),
+		pad.top() + st::memberTagFont->height + pad.bottom());
 }
 
 QSize MemberListRow::rightActionSize() const {
-	const auto tag = tagSize();
+	// 头衔跟在名字后面，右侧只给悬停出现的移除按钮留位置。
 	const auto remove = removeSize();
-	const auto w = std::max(tag.width(), remove.width());
-	return (w > 0)
-		? QSize(w, st::defaultPeerListItem.height)
-		: QSize();
+	return remove.isEmpty()
+		? QSize()
+		: QSize(remove.width(), st::defaultPeerListItem.height);
 }
 
 QMargins MemberListRow::rightActionMargins() const {
@@ -134,39 +133,23 @@ int MemberListRow::elementsCount() const {
 }
 
 QRect MemberListRow::elementGeometry(int element, int outerWidth) const {
-	const auto skip = st::contactsCheckPosition.x();
-	const auto &st = st::defaultPeerListItem;
-	const auto right = st.photoPosition.x() + skip;
-
 	if (element == kTagElement) {
-		const auto size = tagSize();
-		if (size.isEmpty()) {
-			return QRect();
-		}
-		const auto left = outerWidth - right - size.width();
-		if (!_type.canRemove) {
-			const auto top = (st.height - size.height()) / 2;
-			return QRect(QPoint(left, top), size);
-		}
-		const auto progress = _hoverAnimation.value(
-			_wasHovered ? 1. : 0.);
-		const auto centeredTop = (st.height - size.height()) / 2;
-		const auto statusAlignedTop = st.statusPosition.y()
-			+ (st::contactsStatusFont->height - size.height()) / 2;
-		const auto top = anim::interpolate(
-			centeredTop, statusAlignedTop, progress);
-		return QRect(QPoint(left, top), size);
-	} else if (element == kRemoveElement) {
-		const auto size = removeSize();
-		if (size.isEmpty()) {
-			return QRect();
-		}
-		const auto left = outerWidth - right - size.width();
-		const auto nameAlignedTop = st.namePosition.y()
-			+ (st.nameStyle.font->height - size.height()) / 2;
-		return QRect(QPoint(left, nameAlignedTop), size);
+		return _tagGeometry;
 	}
-	return QRect();
+	if (element != kRemoveElement) {
+		return QRect();
+	}
+	const auto size = removeSize();
+	if (size.isEmpty()) {
+		return QRect();
+	}
+	const auto right = st::defaultPeerListItem.photoPosition.x()
+		+ st::contactsCheckPosition.x();
+	return QRect(
+		QPoint(
+			outerWidth - right - size.width(),
+			_nameTop + (st::semiboldFont->height - size.height()) / 2),
+		size);
 }
 
 bool MemberListRow::elementDisabled(int element) const {
@@ -197,10 +180,9 @@ void MemberListRow::elementAddRipple(
 			return;
 		}
 		if (!_tagRipple) {
-			const auto size = tagSize();
-			const auto radius = size.height() / 2;
 			auto mask = Ui::RippleAnimation::RoundRectMask(
-				size, radius);
+				_tagGeometry.size(),
+				st::memberTagRadius);
 			_tagRipple = std::make_unique<Ui::RippleAnimation>(
 				st::defaultLightButton.ripple,
 				std::move(mask),
@@ -314,132 +296,68 @@ void MemberListRow::paintPill(
 		QRect(half * ratio, 0, otherHalf * ratio, h * ratio));
 }
 
-void MemberListRow::paintColoredPill(
-		Painter &p,
-		int x,
-		int y,
-		int w,
-		int textWidth,
-		const QString &text,
-		const QColor &color,
-		bool over,
-		std::unique_ptr<Ui::RippleAnimation> &ripple,
-		int outerWidth) {
-	const auto &pad = st::memberTagPillPadding;
-	auto bgColor = color;
-	bgColor.setAlphaF(over ? 0.16 : 0.12);
-	paintPill(p, x, y, w, bgColor);
-	if (ripple) {
-		auto rippleColor = color;
-		rippleColor.setAlphaF(0.12);
-		ripple->paint(p, x, y, outerWidth, &rippleColor);
-		if (ripple->empty()) {
-			ripple.reset();
-		}
-	}
-	p.setFont(st::normalFont);
-	p.setPen(color);
-	p.drawTextLeft(
-		x + (w - textWidth) / 2,
-		y + pad.top(),
-		outerWidth,
-		text,
-		textWidth);
-}
-
 void MemberListRow::paintTag(
 		Painter &p,
 		QRect geometry,
 		int outerWidth,
 		bool over) {
-	if (_tagTextWidth == 0) {
-		return;
-	}
-	const auto x = geometry.x();
-	const auto y = geometry.y();
-	const auto &pad = st::memberTagPillPadding;
+	const auto active = over && tagInteractive();
+	auto fg = QColor();
+	auto bg = QColor(0, 0, 0, 0);
 	switch (_tagMode) {
-	case TagMode::AdminPill: {
-		const auto nameColor = (_type.rights == Rights::Creator)
+	case TagMode::AdminPill:
+		fg = (_type.rights == Rights::Creator)
 			? st::rankOwnerFg->c
 			: st::rankAdminFg->c;
-		const auto h = pillHeight();
-		const auto cw = pad.left() + _tagTextWidth + pad.right();
-		const auto w = std::max(cw, h);
-		paintColoredPill(
-			p,
-			x,
-			y,
-			w,
-			_tagTextWidth,
-			_tagText,
-			nameColor,
-			over,
-			_tagRipple,
-			outerWidth);
-	} break;
-	case TagMode::NormalText: {
-		if (tagInteractive()) {
-			const auto h = pillHeight();
-			const auto cw = pad.left() + _tagTextWidth + pad.right();
-			const auto w = std::max(cw, h);
-			if (over) {
-				auto bgColor = st::rankUserFg->c;
-				bgColor.setAlphaF(0.12);
-				paintPill(p, x, y, w, bgColor);
-			}
-			if (_tagRipple) {
-				auto rippleColor = st::rankUserFg->c;
-				rippleColor.setAlphaF(0.12);
-				_tagRipple->paint(
-					p, x, y, outerWidth, &rippleColor);
-				if (_tagRipple->empty()) {
-					_tagRipple.reset();
-				}
-			}
-			p.setFont(st::normalFont);
-			p.setPen(st::rankUserFg);
-			p.drawTextLeft(
-				x + (w - _tagTextWidth) / 2,
-				y + pad.top(),
-				outerWidth,
-				_tagText,
-				_tagTextWidth);
-		} else {
-			p.setFont(st::normalFont);
-			p.setPen(st::rankUserFg);
-			p.drawTextLeft(
-				x, y, outerWidth, _tagText, _tagTextWidth);
-		}
-	} break;
-	case TagMode::AddTag: {
-		const auto h = pillHeight();
-		const auto cw = pad.left() + _tagTextWidth + pad.right();
-		const auto w = std::max(cw, h);
-		if (over) {
-			paintPill(p, x, y, w, st::lightButtonBgOver->c);
-		}
-		if (_tagRipple) {
-			const auto color = st::lightButtonBgRipple->c;
-			_tagRipple->paint(p, x, y, outerWidth, &color);
-			if (_tagRipple->empty()) {
-				_tagRipple.reset();
-			}
-		}
-		p.setFont(st::normalFont);
-		p.setPen(over
-			? st::lightButtonFgOver
-			: st::lightButtonFg);
-		p.drawTextLeft(
-			x + (w - _tagTextWidth) / 2,
-			y + pad.top(),
-			outerWidth,
-			_tagText,
-			_tagTextWidth);
-	} break;
-	case TagMode::None:
+		bg = fg;
+		bg.setAlphaF(active ? 0.16 : 0.12);
 		break;
+	case TagMode::NormalText:
+		fg = st::rankUserFg->c;
+		bg = active ? st::controlActiveBg->c : st::controlBg->c;
+		break;
+	case TagMode::AddTag:
+		fg = active ? st::lightButtonFgOver->c : st::lightButtonFg->c;
+		if (active) {
+			bg = st::lightButtonBgOver->c;
+		}
+		break;
+	case TagMode::None:
+		return;
 	}
+	const auto radius = st::memberTagRadius;
+	if (bg.alpha() > 0) {
+		auto hq = PainterHighQualityEnabler(p);
+		p.setPen(Qt::NoPen);
+		p.setBrush(bg);
+		p.drawRoundedRect(geometry, radius, radius);
+	}
+	if (_tagRipple) {
+		auto rippleColor = fg;
+		rippleColor.setAlphaF(0.12);
+		_tagRipple->paint(
+			p,
+			geometry.x(),
+			geometry.y(),
+			outerWidth,
+			&rippleColor);
+		if (_tagRipple->empty()) {
+			_tagRipple.reset();
+		}
+	}
+	const auto &pad = st::memberTagPadding;
+	const auto &font = st::memberTagFont;
+	const auto available = geometry.width() - pad.left() - pad.right();
+	const auto text = (_tagTextWidth > available)
+		? font->elided(_tagText, available)
+		: _tagText;
+	p.setFont(font);
+	p.setPen(fg);
+	p.drawTextLeft(
+		geometry.x() + pad.left(),
+		geometry.y() + pad.top(),
+		outerWidth,
+		text);
 }
 
 void MemberListRow::paintRemove(
@@ -485,6 +403,49 @@ void MemberListRow::paintRemove(
 		_removeTextWidth);
 
 	p.setOpacity(o);
+}
+
+int MemberListRow::paintNameIconGetWidth(
+		Painter &p,
+		Fn<void()> repaint,
+		crl::time now,
+		int nameLeft,
+		int nameTop,
+		int nameWidth,
+		int availableWidth,
+		int outerWidth,
+		bool selected) {
+	_nameTop = nameTop;
+	const auto tag = tagSize();
+	const auto reserve = tag.isEmpty()
+		? 0
+		: (st::memberTagSkip
+			+ std::min(tag.width(), int(availableWidth * kTagMaxShare)));
+	const auto badge = PeerListRow::paintNameIconGetWidth(
+		p,
+		std::move(repaint),
+		now,
+		nameLeft,
+		nameTop,
+		nameWidth,
+		availableWidth - reserve,
+		outerWidth,
+		selected);
+	if (tag.isEmpty()) {
+		_tagGeometry = QRect();
+		return badge;
+	}
+	// 头衔紧跟名字与徽章，名字放不下时由调用方截断。
+	const auto shown = std::clamp(
+		nameWidth,
+		0,
+		std::max(availableWidth - reserve - badge, 0));
+	_tagGeometry = QRect(
+		nameLeft + shown + badge + st::memberTagSkip,
+		nameTop + (st::semiboldFont->height - tag.height()) / 2,
+		reserve - st::memberTagSkip,
+		tag.height());
+	return badge + reserve;
 }
 
 int MemberListRow::paintNameIconGetLeadingWidth(

@@ -34,7 +34,7 @@ using Type = Storage::SharedMediaType;
 
 [[nodiscard]] tr::phrase<lngtag_count> MediaTextPhrase(Type type);
 
-[[nodiscard]] Fn<QString(int)> MediaText(Type type);
+[[nodiscard]] rpl::producer<QString> MediaName(Type type);
 
 [[nodiscard]] Window::SeparateId SeparateId(
 	not_null<PeerData*> peer,
@@ -57,7 +57,7 @@ using Type = Storage::SharedMediaType;
 [[nodiscard]] not_null<Ui::SlideWrap<Ui::SettingsButton>*> AddCountedButton(
 	Ui::VerticalLayout *parent,
 	rpl::producer<int> &&count,
-	Fn<QString(int)> &&textFromCount,
+	rpl::producer<QString> &&name,
 	Ui::MultiSlideTracker &tracker);
 
 [[nodiscard]] not_null<Ui::SettingsButton*> AddButton(

@@ -233,6 +233,7 @@ object_ptr<Ui::RpWidget> InnerWidget::setupContent(
 		const auto raw = sharedMediaWidget.data();
 		_sharedMediaWrap = raw;
 		stack.addPlainSeparator();
+		stack.addTitle(tr::lng_profile_shared_media());
 		stack.add(Section{
 			.widget = std::move(sharedMediaWidget),
 			.shown = raw->toggledValue(),

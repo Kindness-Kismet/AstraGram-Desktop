@@ -6,12 +6,9 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_members.h"
-#include "extras/features/window_material/window_material.h"
 
 #include <rpl/combine.h>
 #include "info/profile/info_profile_widget.h"
-#include "info/profile/info_profile_values.h"
-#include "info/profile/info_profile_icon.h"
 #include "info/profile/info_profile_values.h"
 #include "info/profile/info_profile_members_controllers.h"
 #include "info/members/info_members_widget.h"
@@ -25,6 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/padding_wrap.h"
 #include "ui/search_field_controller.h"
 #include "lang/lang_keys.h"
+#include "lang/lang_tag.h"
 #include "ui/boxes/confirm_box.h"
 #include "boxes/peers/add_participants_box.h"
 #include "window/window_session_controller.h"
@@ -144,24 +142,11 @@ void Members::setupHeader() {
 		st::infoMembersHeader);
 	auto parent = _header.data();
 
-	_openMembers = Ui::CreateChild<Ui::SettingsButton>(
-		parent,
-		rpl::single(QString()));
-	_openMembers->setObjectName(u"profile.members"_q);
-	ExtrasFeatures::WindowMaterial::watchSurface(_openMembers);
-
-	object_ptr<FloatingIcon>(
-		parent,
-		st::infoIconMembers,
-		QPoint(st::infoGroupMembersIconPosition.x(),
-			st::infoProfileSkip
-				+ (st::infoMembersButton.height - st::infoIconMembers.height()) / 2));
-
-	_titleWrap = Ui::CreateChild<Ui::RpWidget>(parent);
+	// 标题只展示人数，进入完整列表由右侧搜索按钮负责。
 	_title = setupTitle();
 	_addMember = Ui::CreateChild<Ui::IconButton>(
 		parent,
-		st::infoMembersAddMember);
+		st::infoMembersHeaderAdd);
 	_addMember->setObjectName(u"profile.members.add"_q);
 	_addMember->setAccessibleName(tr::lng_channel_add_members(tr::now));
 	//_searchField = _controller->searchFieldController()->createField(
@@ -193,20 +178,23 @@ object_ptr<Ui::FlatLabel> Members::setupTitle() {
 	auto visible = _peer->isMegagroup()
 		? CanViewParticipantsValue(_peer->asMegagroup())
 		: rpl::single(true);
+	auto members = rpl::combine(
+		tr::lng_profile_participants_section(),
+		MembersCountValue(_peer)
+	) | rpl::map([](const QString &title, int count) {
+		return (count > 0)
+			? (title + u" "_q + QChar(0x00B7) + u" "_q
+				+ Lang::FormatCountDecimal(count))
+			: title;
+	});
 	auto text = rpl::conditional(
 		std::move(visible),
-		tr::lng_chat_status_members(
-			lt_count_decimal,
-			MembersCountValue(_peer) | tr::to_count(),
-			tr::upper),
-		tr::lng_channel_admins(tr::upper));
-	rpl::duplicate(text) | rpl::on_next([=](const QString &v) {
-		_openMembers->setAccessibleName(v);
-	}, _openMembers->lifetime());
+		std::move(members),
+		tr::lng_channel_admins());
 	auto result = object_ptr<Ui::FlatLabel>(
-		_titleWrap,
+		_header.data(),
 		std::move(text),
-		st::infoBlockHeaderLabel);
+		st::infoProfileGroupTitle);
 	result->setAttribute(Qt::WA_TransparentForMouseEvents);
 	return result;
 }
@@ -214,19 +202,12 @@ object_ptr<Ui::FlatLabel> Members::setupTitle() {
 void Members::setupButtons() {
 	using namespace rpl::mappers;
 
-	_openMembers->addClickHandler([this] {
-		showMembersWithSearch(false);
-	});
-
 	//_searchField->hide();
 	//_cancelSearch->setVisible(false);
 
-	auto visible = _peer->isMegagroup()
+	auto visible = (_peer->isMegagroup()
 		? CanViewParticipantsValue(_peer->asMegagroup())
-		: rpl::single(true);
-	rpl::duplicate(visible) | rpl::on_next([=](bool visible) {
-		_openMembers->setVisible(visible);
-	}, lifetime());
+		: rpl::single(true)) | rpl::start_spawning(lifetime());
 
 	auto addMemberShown = rpl::combine(
 		CanAddMemberValue(_peer),
@@ -237,12 +218,10 @@ void Members::setupButtons() {
 		this->addMember();
 	});
 
-	auto searchShown = rpl::combine(
-		MembersCountValue(_peer),
-		rpl::duplicate(visible)
-	) | rpl::map((_1 >= kEnableSearchMembersAfterCount) && _2)
-		| rpl::distinct_until_changed()
-		| rpl::start_spawning(lifetime());
+	// 搜索按钮是进入完整成员列表的唯一入口，人数少时也保留。
+	auto searchShown = rpl::duplicate(
+		visible
+	) | rpl::distinct_until_changed() | rpl::start_spawning(lifetime());
 	_search->showOn(rpl::duplicate(searchShown));
 	_search->addClickHandler([this] { // TODO throttle(ripple duration)
 		this->showMembersWithSearch(true);
@@ -267,6 +246,9 @@ void Members::setupList() {
 	_list = object_ptr<ListWidget>(
 		this,
 		_listController.get());
+	_list->setRowBackgroundRounding(
+		st::infoMembersRowMargins,
+		st::infoMembersRowRadius);
 	_list->scrollToRequests(
 	) | rpl::on_next([this](Ui::ScrollToRequest request) {
 		auto addmin = (request.ymin < 0 || !_header)
@@ -308,9 +290,10 @@ int Members::resizeGetHeight(int newWidth) {
 //}
 
 void Members::updateHeaderControlsGeometry(int newWidth) {
-	const auto top = st::infoProfileSkip;
+	const auto height = st::infoMembersHeader;
 	auto availableWidth = newWidth - st::infoMembersButtonPosition.x();
 	const auto place = [&](not_null<Ui::IconButton*> button) {
+		const auto top = (height - button->height()) / 2;
 		button->moveToLeft(availableWidth - button->width(), top, newWidth);
 		if (!button->isHidden()) {
 			availableWidth -= button->width();
@@ -319,19 +302,9 @@ void Members::updateHeaderControlsGeometry(int newWidth) {
 	place(_addMember);
 	place(_search);
 
-	// 成员入口不覆盖右侧独立操作，三者共用同一条中心线。
-	_openMembers->setGeometry(0, top, availableWidth, st::infoMembersButton.height);
-	_titleWrap->resize(
-		std::max(0, availableWidth - st::infoBlockHeaderPosition.x()
-			- st::settingsRowMargin.right()),
-		_title->height());
-	_titleWrap->moveToLeft(
-		st::infoBlockHeaderPosition.x(),
-		top + (st::infoMembersButton.height - _title->height()) / 2,
-		newWidth);
-	_titleWrap->setAttribute(Qt::WA_TransparentForMouseEvents);
-	_title->resizeToWidth(_titleWrap->width());
-	_title->moveToLeft(0, 0);
+	const auto left = st::infoProfileGroupTitleLeft;
+	_title->resizeToWidth(std::max(0, availableWidth - left));
+	_title->moveToLeft(left, (height - _title->height()) / 2, newWidth);
 }
 
 void Members::addMember() {

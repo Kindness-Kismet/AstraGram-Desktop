@@ -31,7 +31,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/profile/info_profile_values.h"
 #include "info/saved/info_saved_music_widget.h"
 #include "info/stories/info_stories_widget.h"
+#include "lang/lang_tag.h"
 #include "main/main_session.h"
+#include "settings/settings_common.h"
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/popup_menu.h"
@@ -118,10 +120,19 @@ tr::phrase<lngtag_count> MediaTextPhrase(Type type) {
 	Unexpected("Type in MediaTextPhrase()");
 };
 
-Fn<QString(int)> MediaText(Type type) {
-	return [phrase = MediaTextPhrase(type)](int count) {
-		return phrase(tr::now, lt_count, count);
-	};
+rpl::producer<QString> MediaName(Type type) {
+	switch (type) {
+	case Type::Photo: return tr::lng_media_type_photos();
+	case Type::PhotoVideo: return tr::lng_media_type_media();
+	case Type::GIF: return tr::lng_media_type_gifs();
+	case Type::Video: return tr::lng_media_type_videos();
+	case Type::File: return tr::lng_media_type_files();
+	case Type::MusicFile: return tr::lng_media_type_songs();
+	case Type::Link: return tr::lng_media_type_links();
+	case Type::RoundVoiceFile: return tr::lng_media_type_audios();
+	case Type::Poll: return tr::lng_media_type_polls();
+	}
+	Unexpected("Type in MediaName()");
 }
 
 Window::SeparateId SeparateId(
@@ -185,29 +196,31 @@ Fn<void()> SeparateOpenCallback(
 not_null<Ui::SlideWrap<Ui::SettingsButton>*> AddCountedButton(
 		Ui::VerticalLayout *parent,
 		rpl::producer<int> &&count,
-		Fn<QString(int)> &&textFromCount,
+		rpl::producer<QString> &&name,
 		Ui::MultiSlideTracker &tracker) {
-	using namespace ::Settings;
 	auto forked = std::move(count)
-		| start_spawning(parent->lifetime());
-	auto text = rpl::duplicate(
-		forked
-	) | rpl::map([textFromCount](int count) {
-		return (count > 0)
-			? textFromCount(count)
-			: QString();
-	});
+		| rpl::start_spawning(parent->lifetime());
+	auto names = std::move(name)
+		| rpl::start_spawning(parent->lifetime());
 	auto button = parent->add(object_ptr<Ui::SlideWrap<Ui::SettingsButton>>(
 		parent,
 		object_ptr<Ui::SettingsButton>(
 			parent,
-			std::move(text),
-			st::infoSharedMediaButton))
+			rpl::duplicate(names),
+			st::infoSharedMediaCountedButton))
 	)->setDuration(
 		st::infoSlideDuration
 	)->toggleOn(
 		rpl::duplicate(forked) | rpl::map(rpl::mappers::_1 > 0)
 	);
+	// 名称在左、数量在右。
+	::Settings::CreateRightLabel(
+		button->entity(),
+		rpl::duplicate(forked) | rpl::map([](int count) {
+			return Lang::FormatCountDecimal(count);
+		}),
+		st::infoSharedMediaCountedButton,
+		std::move(names));
 	ExtrasFeatures::WindowMaterial::watchSurface(button->entity());
 	tracker.track(button);
 	return button;
@@ -230,7 +243,7 @@ not_null<Ui::SettingsButton*> AddButton(
 			sublist ? sublist->sublistPeer()->id : PeerId(),
 			migrated,
 			type),
-		MediaText(type),
+		MediaName(type),
 		tracker)->entity();
 	const auto weakSublist = base::make_weak(sublist);
 	const auto openInWindow = SeparateOpenCallback(

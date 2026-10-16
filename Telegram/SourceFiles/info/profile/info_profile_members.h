@@ -19,7 +19,6 @@ class IconButton;
 class FlatLabel;
 struct ScrollToRequest;
 class AbstractButton;
-class SettingsButton;
 } // namespace Ui
 
 namespace Window {
@@ -128,8 +127,6 @@ private:
 	object_ptr<Ui::RpWidget> _header = { nullptr };
 	object_ptr<ListWidget> _list = { nullptr };
 
-	Ui::SettingsButton *_openMembers = nullptr;
-	Ui::RpWidget *_titleWrap = nullptr;
 	Ui::FlatLabel *_title = nullptr;
 	Ui::IconButton *_addMember = nullptr;
 	//base::unique_qptr<Ui::InputField> _searchField;

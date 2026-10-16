@@ -27,7 +27,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/profile/info_profile_icon.h"
 #include "info/profile/info_profile_values.h"
 #include "info/stories/info_stories_widget.h"
+#include "lang/lang_tag.h"
 #include "main/main_session.h"
+#include "settings/settings_common.h"
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/buttons.h"
 #include "ui/wrap/slide_wrap.h"
@@ -50,9 +52,7 @@ namespace {
 	auto result = Media::AddCountedButton(
 		parent,
 		CommonGroupsCountValue(user),
-		[](int count) {
-			return tr::lng_profile_common_groups(tr::now, lt_count, count);
-		},
+		tr::lng_media_type_groups(),
 		tracker)->entity();
 	result->addClickHandler([=] {
 		navigation->showSection(
@@ -71,11 +71,7 @@ namespace {
 	auto result = Media::AddCountedButton(
 		parent,
 		SimilarPeersCountValue(peer),
-		[=](int count) {
-			return peer->isBroadcast()
-				? tr::lng_profile_similar_channels(tr::now, lt_count, count)
-				: tr::lng_profile_similar_bots(tr::now, lt_count, count);
-		},
+		tr::lng_media_type_similar(),
 		tracker)->entity();
 	result->addClickHandler([=] {
 		navigation->showSection(
@@ -99,15 +95,12 @@ namespace {
 	) | rpl::map([](const Data::StoriesIdsSlice &slice) {
 		return slice.fullCount().value_or(0);
 	}));
-	const auto phrase = peer->isChannel() ? (+[](int count) {
-		return tr::lng_profile_posts(tr::now, lt_count, count);
-	}) : (+[](int count) {
-		return tr::lng_profile_saved_stories(tr::now, lt_count, count);
-	});
 	auto result = Media::AddCountedButton(
 		parent,
 		std::move(count),
-		phrase,
+		(peer->isChannel()
+			? tr::lng_media_type_posts()
+			: tr::lng_media_type_stories()),
 		tracker)->entity();
 	result->addClickHandler([=] {
 		navigation->showSection(Info::Stories::Make(peer));
@@ -123,9 +116,7 @@ namespace {
 	auto result = Media::AddCountedButton(
 		parent,
 		SavedSublistCountValue(peer),
-		[](int count) {
-			return tr::lng_profile_saved_messages(tr::now, lt_count, count);
-		},
+		tr::lng_media_type_saved(),
 		tracker)->entity();
 	result->addClickHandler([=] {
 		using namespace HistoryView;
@@ -144,21 +135,8 @@ namespace {
 		not_null<Window::SessionNavigation*> navigation,
 		not_null<PeerData*> peer,
 		Ui::MultiSlideTracker &tracker) {
-	auto count = PeerGiftsCountValue(peer);
-	auto textFromCount = [](int count) {
-		return tr::lng_profile_peer_gifts(tr::now, lt_count, count);
-	};
-
-	using namespace ::Settings;
-	auto forked = std::move(count)
-		| start_spawning(parent->lifetime());
-	auto text = rpl::duplicate(
-		forked
-	) | rpl::map([textFromCount](int count) {
-		return (count > 0)
-			? textFromCount(count)
-			: QString();
-	});
+	auto forked = PeerGiftsCountValue(peer)
+		| rpl::start_spawning(parent->lifetime());
 
 	struct State final {
 		std::vector<std::unique_ptr<Ui::Text::CustomEmoji>> emojiList;
@@ -190,7 +168,7 @@ namespace {
 			object_ptr<Ui::SettingsButton>(
 				parent,
 				rpl::combine(
-					std::move(text),
+					tr::lng_media_type_gifts(),
 					std::move(customs)
 				) | rpl::map([=](QString text, TextWithEntities customs) {
 					return TextWithEntities()
@@ -198,7 +176,7 @@ namespace {
 						.append(QChar(' '))
 						.append(std::move(customs));
 				}),
-				st::infoSharedMediaButton,
+				st::infoSharedMediaCountedButton,
 				Core::TextContext({
 					.session = &navigation->session(),
 					.details = { .session = &navigation->session() },
@@ -235,6 +213,13 @@ namespace {
 	}, state->appearedLifetime);
 
 	state->button = wrap->entity();
+	::Settings::CreateRightLabel(
+		wrap->entity(),
+		rpl::duplicate(forked) | rpl::map([](int count) {
+			return Lang::FormatCountDecimal(count);
+		}),
+		st::infoSharedMediaCountedButton,
+		tr::lng_media_type_gifts());
 
 	wrap->entity()->addClickHandler([=] {
 		if (navigation->showFrozenError()) {

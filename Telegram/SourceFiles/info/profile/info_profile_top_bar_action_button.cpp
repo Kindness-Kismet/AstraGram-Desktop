@@ -121,23 +121,18 @@ void TopBarActionButton::paintEvent(QPaintEvent *e) {
 	p.setOpacity(progress);
 
 	const auto frame = rect();
+	const auto radius = st::infoProfileTopBarActionButtonRadius;
 	p.setPen(Qt::NoPen);
 	p.setBrush(_bgColor);
 	{
 		auto hq = PainterHighQualityEnabler(p);
-		if (!_fgColor) {
-			p.setPen(QPen(st::windowDividerFg->c, st::lineWidth));
-		}
-		const auto inset = st::lineWidth / 2.;
-		p.drawRoundedRect(QRectF(frame).adjusted(inset, inset, -inset, -inset),
-			st::boxRadius, st::boxRadius);
-		p.setPen(Qt::NoPen);
+		p.drawRoundedRect(frame, radius, radius);
 
 		const auto hovered = _overAnimation.value(isOver() ? 1. : 0.);
 		if (hovered > 0.) {
 			p.setOpacity(progress * hovered);
 			p.setBrush(_rippleColor.value_or(st::windowBgRipple->c));
-			p.drawRoundedRect(frame, st::boxRadius, st::boxRadius);
+			p.drawRoundedRect(frame, radius, radius);
 			p.setOpacity(progress);
 		}
 	}
@@ -160,14 +155,12 @@ void TopBarActionButton::paintEvent(QPaintEvent *e) {
 		p.scale(iconScale, iconScale);
 		p.translate(-iconCenter);
 		p.translate(iconLeft, iconTop);
+		// 没有封面色时图标统一用强调色。
+		const auto iconColor = _fgColor.value_or(st::windowActiveTextFg->c);
 		if (_lottie) {
-			_lottie->paint(p, 0, 0, _fgColor);
+			_lottie->paint(p, 0, 0, iconColor);
 		} else if (_icon) {
-			if (_fgColor) {
-				_icon->paint(p, 0, 0, width(), *_fgColor);
-			} else {
-				_icon->paint(p, 0, 0, width());
-			}
+			_icon->paint(p, 0, 0, width(), iconColor);
 		}
 		p.restore();
 		p.setOpacity(progress);
@@ -218,7 +211,7 @@ void TopBarActionButton::onStateChanged(
 QImage TopBarActionButton::prepareRippleMask() const {
 	return Ui::RippleAnimation::RoundRectMask(
 		size(),
-		st::boxRadius);
+		st::infoProfileTopBarActionButtonRadius);
 }
 
 QPoint TopBarActionButton::prepareRippleStartPosition() const {

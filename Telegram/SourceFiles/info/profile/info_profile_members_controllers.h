@@ -65,6 +65,16 @@ public:
 		QPoint point,
 		Fn<void()> updateCallback) override;
 	void elementsStopLastRipple() override;
+	int paintNameIconGetWidth(
+		Painter &p,
+		Fn<void()> repaint,
+		crl::time now,
+		int nameLeft,
+		int nameTop,
+		int nameWidth,
+		int availableWidth,
+		int outerWidth,
+		bool selected) override;
 	int paintNameIconGetLeadingWidth(
 		Painter &p,
 		Fn<void()> repaint,
@@ -100,17 +110,6 @@ private:
 		int y,
 		int width,
 		const QColor &bgColor) const;
-	void paintColoredPill(
-		Painter &p,
-		int x,
-		int y,
-		int w,
-		int textWidth,
-		const QString &text,
-		const QColor &color,
-		bool over,
-		std::unique_ptr<Ui::RippleAnimation> &ripple,
-		int outerWidth);
 	void paintTag(
 		Painter &p,
 		QRect geometry,
@@ -129,6 +128,8 @@ private:
 	TagMode _tagMode = TagMode::None;
 	QString _tagText;
 	int _tagTextWidth = 0;
+	QRect _tagGeometry;
+	int _nameTop = 0;
 	QString _removeText;
 	int _removeTextWidth = 0;
 	Ui::Animations::Simple _hoverAnimation;

@@ -383,7 +383,8 @@ infoProfileTopBarActionButtonLottieSize: infoProfileTopBarActionButtonIconSize -
 infoProfileTopBarActionButtonIconTop: 8px;
 infoProfileTopBarActionButtonTextTop: 36px;
 infoProfileTopBarActionButtonTextSkip: 4px;
-infoProfileTopBarActionButtonFont: font(11px);
+infoProfileTopBarActionButtonFont: font(12px);
+infoProfileTopBarActionButtonRadius: 12px;
 
 infoProfileTopBarActionButtonsPadding: margins(18px, 0px, 18px, 16px);
 infoProfileTopBarActionButtonsHeight: infoProfileTopBarActionButtonSize + infoProfileTopBarActionButtonsPadding.topBottom;
@@ -568,7 +569,6 @@ infoIconReport: icon {{ "info/info_report", attentionButtonFg }};
 infoIconBlock: icon {{ "info/info_block", attentionButtonFg }};
 infoIconMembers: icon {{ "info/info_members", infoIconFg }};
 infoSharedMediaButtonIconPosition: point(20px, -1px);
-infoGroupMembersIconPosition: point(20px, 10px);
 
 infoOpenApp: RoundButton(defaultActiveButton) {
 	textTop: 11px;
@@ -587,13 +587,16 @@ infoPersonalChannelUserpic: UserpicButton(defaultUserpicButton) {
 	photoSize: 42px;
 }
 
-infoBlockHeaderLabel: FlatLabel(infoProfileStatus) {
-	textFg: windowBoldFg;
+// 资料页分组标题：强调色小号粗体，左缘与行图标对齐。
+infoProfileGroupTitle: FlatLabel(defaultFlatLabel) {
+	textFg: windowActiveTextFg;
 	style: TextStyle(defaultTextStyle) {
-		font: semiboldFont;
+		font: font(12px semibold);
 	}
 }
-infoBlockHeaderPosition: point(79px, 17px);
+infoProfileGroupTitleHeight: 32px;
+infoProfileGroupTitleLeft: 22px;
+infoProfileGroupDivider: margins(16px, 8px, 16px, 8px);
 
 infoProfileToggle: Toggle(defaultToggle) {
 	untoggledFg: menuIconFg;
@@ -618,6 +621,12 @@ infoMainButton: SettingsButton(infoProfileButton) {
 	padding: margins(23px, 10px, 8px, 8px);
 }
 infoSharedMediaButton: infoProfileButton;
+// 共享内容行：名称在左，灰色数量在右。
+infoSharedMediaCountedButton: SettingsButton(infoSharedMediaButton) {
+	rightLabel: FlatLabel(defaultSettingsRightLabel) {
+		textFg: windowSubTextFg;
+	}
+}
 
 infoBlockButton: SettingsButton(infoProfileButton) {
 	textFg: attentionButtonFg;
@@ -633,16 +642,18 @@ infoUnlinkDiscussionLinkButton: SettingsButton(infoCreateDiscussionLinkButton) {
 	textFgOver: attentionButtonFgOver;
 }
 
-infoMembersHeader: 56px;
+infoMembersHeader: infoProfileGroupTitleHeight;
 infoMembersList: PeerList(defaultPeerList) {
 	item: PeerListItem(defaultPeerListItem) {
-		photoPosition: point(18px, 6px);
-		namePosition: point(79px, 11px);
-		statusPosition: point(79px, 31px);
+		height: 52px;
+		photoSize: 40px;
+		photoPosition: point(20px, 6px);
+		namePosition: point(72px, 8px);
+		statusPosition: point(72px, 27px);
 		checkbox: RoundImageCheckbox(defaultPeerListCheckbox) {
 			selectExtendTwice: 1px;
-			imageRadius: 21px;
-			imageSmallRadius: 19px;
+			imageRadius: 20px;
+			imageSmallRadius: 18px;
 			check: RoundCheckbox(defaultPeerListCheck) {
 				size: 0px;
 			}
@@ -663,9 +674,21 @@ infoMembersAddMember: IconButton(infoMembersButton) {
 	icon: icon {{ "info/info_add_member", windowBoldFg }};
 	iconOver: icon {{ "info/info_add_member", windowBoldFg }};
 }
-infoMembersSearch: IconButton(infoMembersButton) {
-	icon: icon {{ "info/info_search", windowBoldFg }};
-	iconOver: icon {{ "info/info_search", windowBoldFg }};
+// 成员行悬停高亮两侧留边并做圆角。
+infoMembersRowMargins: margins(6px, 0px, 6px, 0px);
+infoMembersRowRadius: 10px;
+infoMembersHeaderButton: IconButton(infoMembersButton) {
+	width: 32px;
+	height: 32px;
+	rippleAreaSize: 32px;
+}
+infoMembersHeaderAdd: IconButton(infoMembersHeaderButton) {
+	icon: icon {{ "info/info_add_member", windowSubTextFg }};
+	iconOver: icon {{ "info/info_add_member", windowSubTextFgOver }};
+}
+infoMembersSearch: IconButton(infoMembersHeaderButton) {
+	icon: icon {{ "info/info_search", windowSubTextFg }};
+	iconOver: icon {{ "info/info_search", windowSubTextFgOver }};
 }
 infoMembersSearchField: InputField(defaultMultiSelectSearchField) {
 }
@@ -1357,6 +1380,11 @@ infoMusicButtonBottom: 8px;
 infoMusicButtonLine: 2px;
 
 memberTagPillPadding: margins(5px, -1px, 5px, 0px);
+// 成员头衔标签：跟在名字后面，与名字垂直居中。
+memberTagFont: font(11px semibold);
+memberTagPadding: margins(6px, 2px, 6px, 2px);
+memberTagRadius: 6px;
+memberTagSkip: 6px;
 
 infoSecurityRiskIconSize: 16px;
 infoSecurityRiskIconMargin: margins(0px, 2px, 0px, 0px);

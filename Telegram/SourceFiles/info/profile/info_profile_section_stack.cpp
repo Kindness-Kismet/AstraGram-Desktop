@@ -20,12 +20,48 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Info::Profile {
 namespace {
 
-// 分组之间只留空白，不画分隔线。
+// 分组之间画一条两端留边的细线。
 [[nodiscard]] not_null<Ui::SlideWrap<>*> CreatePlainSeparator(
 		not_null<Ui::VerticalLayout*> layout) {
+	const auto &margins = st::infoProfileGroupDivider;
+	auto line = object_ptr<Ui::FixedHeightWidget>(
+		layout,
+		margins.top() + st::lineWidth + margins.bottom());
+	const auto raw = line.data();
+	raw->paintRequest() | rpl::on_next([=] {
+		auto p = QPainter(raw);
+		p.fillRect(
+			margins.left(),
+			margins.top(),
+			raw->width() - margins.left() - margins.right(),
+			st::lineWidth,
+			st::windowDividerFg);
+	}, raw->lifetime());
 	return layout->add(object_ptr<Ui::SlideWrap<>>(
 		layout,
-		object_ptr<Ui::FixedHeightWidget>(layout, 2 * st::infoProfileSkip)));
+		std::move(line)));
+}
+
+[[nodiscard]] not_null<Ui::SlideWrap<>*> CreateTitle(
+		not_null<Ui::VerticalLayout*> layout,
+		rpl::producer<QString> text) {
+	auto row = object_ptr<Ui::FixedHeightWidget>(
+		layout,
+		st::infoProfileGroupTitleHeight);
+	const auto raw = row.data();
+	const auto label = Ui::CreateChild<Ui::FlatLabel>(
+		raw,
+		std::move(text),
+		st::infoProfileGroupTitle);
+	label->setAttribute(Qt::WA_TransparentForMouseEvents);
+	raw->widthValue() | rpl::on_next([=](int width) {
+		const auto left = st::infoProfileGroupTitleLeft;
+		label->resizeToWidth(std::max(width - 2 * left, 0));
+		label->moveToLeft(left, (raw->height() - label->height()) / 2);
+	}, label->lifetime());
+	return layout->add(object_ptr<Ui::SlideWrap<>>(
+		layout,
+		std::move(row)));
 }
 
 [[nodiscard]] not_null<Ui::SlideWrap<>*> CreateTextSeparator(
@@ -78,6 +114,15 @@ void SectionStack::add(Section section) {
 	});
 }
 
+void SectionStack::addTitle(rpl::producer<QString> text) {
+	Expects(!_finalized);
+
+	_rows.push_back({
+		.type = RowType::Title,
+		.title = std::move(text),
+	});
+}
+
 void SectionStack::addPlainSeparator() {
 	Expects(!_finalized);
 
@@ -115,13 +160,18 @@ not_null<Ui::VerticalLayout*> SectionStack::layout() const {
 // a single gap, the lowest plain separator wins; scanning up it sees through
 // plain separators that turned out hidden. Visible text separators bound runs
 // on both sides, which keeps a plain separator from doubling a text divider.
+// A title follows the block right below it and is transparent for the scans.
 std::vector<bool> SectionStack::ComputeVisibility(
 		const std::vector<RowType> &kinds,
 		const std::vector<bool> &intrinsic) {
 	const auto count = int(kinds.size());
 	auto result = std::vector<bool>(count, false);
 	for (auto i = 0; i != count; ++i) {
-		if (kinds[i] != RowType::PlainSeparator) {
+		if (kinds[i] == RowType::Title) {
+			result[i] = (i + 1 != count)
+				&& (kinds[i + 1] == RowType::Block)
+				&& intrinsic[i + 1];
+		} else if (kinds[i] != RowType::PlainSeparator) {
 			result[i] = intrinsic[i];
 		}
 	}
@@ -143,6 +193,8 @@ std::vector<bool> SectionStack::ComputeVisibility(
 					return false;
 				}
 				break;
+			case RowType::Title:
+				break;
 			}
 		}
 		return false;
@@ -162,6 +214,8 @@ std::vector<bool> SectionStack::ComputeVisibility(
 				break;
 			case RowType::PlainSeparator:
 				return false;
+			case RowType::Title:
+				break;
 			}
 		}
 		return false;
@@ -210,6 +264,10 @@ void SectionStack::finalize() {
 				std::move(row.text),
 				std::move(row.textSetup));
 			intrinsic.push_back(shownOrTrue(std::move(row.shown)));
+			break;
+		case RowType::Title:
+			separators[i] = CreateTitle(_layout, std::move(row.title));
+			intrinsic.push_back(rpl::single(true));
 			break;
 		}
 	}

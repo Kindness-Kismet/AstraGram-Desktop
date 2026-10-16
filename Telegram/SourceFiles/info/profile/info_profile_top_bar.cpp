@@ -885,7 +885,11 @@ void TopBar::finalizeActions(
 			const auto buttonRect = button->geometry().translated(
 				extend.left(),
 				extend.top());
-			shadow->paint(p, buttonRect, st::boxRadius, opacity);
+			shadow->paint(
+				p,
+				buttonRect,
+				st::infoProfileTopBarActionButtonRadius,
+				opacity);
 		}
 	}, shadowRaw->lifetime());
 
@@ -950,7 +954,6 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 	const auto chat = peer->asChat();
 	const auto topic = _key.topic();
 	const auto sublist = _key.sublist();
-	const auto isSide = (_wrap.current() == Wrap::Side);
 
 	if (_source == Source::Community) {
 		_actions = base::make_unique_q<Ui::HorizontalFitContainer>(
@@ -995,9 +998,6 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 	};
 	const auto addMore = [&] {
 		if ([&]() -> bool {
-			if (isSide) {
-				return false;
-			}
 			const auto guard = gsl::finally([&] { _peerMenu = nullptr; });
 			showTopBarMenu(controller, true);
 			return _peerMenu;
@@ -1123,8 +1123,7 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 	if (chechMax()) {
 		return;
 	}
-	if (!isSide
-		&& user
+	if (user
 		&& !user->sharedMediaInfo()
 		&& !user->isInaccessible()
 		&& user->callsStatus() != UserData::CallsStatus::Disabled) {
@@ -4019,7 +4018,7 @@ TopBarActionButtonStyle TopBar::mapActionStyle(
 		};
 	} else {
 		return TopBarActionButtonStyle{
-			.bgColor = st::windowBgOver->c,
+			.bgColor = st::controlBg->c,
 			.fgColor = std::nullopt,
 			.shadowColor = std::nullopt,
 		};
