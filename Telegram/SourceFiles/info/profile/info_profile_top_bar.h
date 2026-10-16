@@ -359,6 +359,8 @@ private:
 	base::unique_qptr<Ui::PopupMenu> _peerMenu;
 
 	Ui::RpWidget *_actionMore = nullptr;
+	// 已经做成按钮的操作对应的菜单图标，“更多”菜单据此去重。
+	base::flat_set<const style::icon*> _actionMenuIcons;
 
 	base::unique_qptr<Ui::HorizontalFitContainer> _actions;
 	base::unique_qptr<Ui::RpWidget> _actionsShadow;

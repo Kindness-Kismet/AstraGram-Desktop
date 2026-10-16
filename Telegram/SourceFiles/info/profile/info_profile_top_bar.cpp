@@ -957,6 +957,7 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 	const auto chat = peer->asChat();
 	const auto topic = _key.topic();
 	const auto sublist = _key.sublist();
+	_actionMenuIcons.clear();
 
 	if (_source == Source::Community) {
 		_actions = base::make_unique_q<Ui::HorizontalFitContainer>(
@@ -1164,6 +1165,7 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 		discuss->setAccessibleName(tr::lng_profile_action_short_discuss(tr::now));
 		_actions->add(discuss);
 		buttons.push_back(discuss);
+		_actionMenuIcons.emplace(&st::menuIconDiscussion);
 	}
 	if (chechMax()) {
 		return;
@@ -1187,6 +1189,9 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 		manage->setAccessibleName(tr::lng_profile_action_short_manage(tr::now));
 		buttons.push_back(manage);
 		_actions->add(manage);
+		_actionMenuIcons.emplace(topic
+			? &st::menuIconEdit
+			: &st::menuIconManage);
 	}
 	if (chechMax()) {
 		return;
@@ -1222,6 +1227,7 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 		giftButton->setAccessibleName(tr::lng_profile_action_short_gift(tr::now));
 		_actions->add(giftButton);
 		buttons.push_back(giftButton);
+		_actionMenuIcons.emplace(&st::menuIconGiftPremium);
 	}
 	if (chechMax()) {
 		return;
@@ -1243,6 +1249,7 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 		reportButton->setAccessibleName(tr::lng_profile_action_short_report(tr::now));
 		_actions->add(reportButton);
 		buttons.push_back(reportButton);
+		_actionMenuIcons.emplace(&st::menuIconReport);
 	}
 	if (chechMax()) {
 		return;
@@ -1257,6 +1264,7 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 		leaveButton->setAccessibleName(tr::lng_profile_action_short_leave(tr::now));
 		_actions->add(leaveButton);
 		buttons.push_back(leaveButton);
+		_actionMenuIcons.emplace(&st::menuIconLeaveAttention);
 	}
 }
 
@@ -3225,6 +3233,14 @@ void TopBar::fillTopBarMenu(
 	if (!peer && !topic) {
 		return;
 	}
+	// 已经做成按钮的操作不在菜单里重复出现。
+	const auto filtered = Ui::Menu::MenuCallback([=](
+			Ui::Menu::MenuCallback::Args &&args) -> QAction* {
+		if (args.icon && _actionMenuIcons.contains(args.icon)) {
+			return nullptr;
+		}
+		return addAction(std::move(args));
+	});
 
 	Window::FillDialogsEntryMenu(
 		controller,
@@ -3236,7 +3252,7 @@ void TopBar::fillTopBarMenu(
 				: Dialogs::Key{ peer->owner().history(peer) }),
 			.section = Dialogs::EntryState::Section::Profile,
 		},
-		addAction);
+		filtered);
 }
 
 void TopBar::updateVideoUserpic() {
