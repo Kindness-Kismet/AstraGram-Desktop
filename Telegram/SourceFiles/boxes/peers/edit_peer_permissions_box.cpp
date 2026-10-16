@@ -15,7 +15,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_channel.h"
 #include "data/data_chat.h"
 #include "data/data_session.h"
+#include "ui/boxes/dialog_layout.h"
 #include "ui/effects/toggle_arrow.h"
+#include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/layers/generic_box.h"
@@ -25,7 +27,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/continuous_sliders.h"
-#include "ui/widgets/box_content_divider.h"
 #include "ui/text/text_utilities.h"
 #include "ui/toast/toast.h"
 #include "info/profile/info_profile_icon.h"
@@ -894,7 +895,7 @@ rpl::producer<int> AddSlowmodeSlider(
 	});
 
 	container->add(
-		object_ptr<Ui::DividerLabel>(
+		object_ptr<Ui::PaddingWrap<Ui::FlatLabel>>(
 			container,
 			object_ptr<Ui::FlatLabel>(
 				container,
@@ -998,7 +999,7 @@ rpl::producer<int> AddBoostsUnrestrictSlider(
 		});
 
 	inner->add(
-		object_ptr<Ui::DividerLabel>(
+		object_ptr<Ui::PaddingWrap<Ui::FlatLabel>>(
 			inner,
 			object_ptr<Ui::FlatLabel>(
 				inner,
@@ -1028,14 +1029,12 @@ rpl::producer<int> AddBoostsUnrestrictWrapped(
 
 	auto result = AddBoostsUnrestrictSlider(inner, peer);
 
-	const auto skip = st::defaultVerticalListSkip;
-	const auto divider = inner->add(
-		object_ptr<Ui::SlideWrap<Ui::BoxContentDivider>>(
+	const auto skip = inner->add(
+		object_ptr<Ui::SlideWrap<Ui::FixedHeightWidget>>(
 			inner,
-			object_ptr<Ui::BoxContentDivider>(inner),
-			QMargins{ 0, skip, 0, skip }));
-	divider->toggleOn(rpl::duplicate(result) | rpl::map(!rpl::mappers::_1));
-	divider->finishAnimating();
+			object_ptr<Ui::FixedHeightWidget>(inner, st::boxMediumSkip)));
+	skip->toggleOn(rpl::duplicate(result) | rpl::map(!rpl::mappers::_1));
+	skip->finishAnimating();
 
 	return result;
 }
@@ -1058,7 +1057,7 @@ void AddSuggestGigagroup(
 		{ &st::menuIconChatDiscuss }));
 
 	container->add(
-		object_ptr<Ui::DividerLabel>(
+		object_ptr<Ui::PaddingWrap<Ui::FlatLabel>>(
 			container,
 			object_ptr<Ui::FlatLabel>(
 				container,
@@ -1179,11 +1178,9 @@ void ShowEditPeerPermissionsBox(
 	const auto channel = peer->asChannel();
 	const auto available = channel && channel->paidMessagesAvailable();
 
-	Ui::AddSkip(inner);
-	Ui::AddDivider(inner);
+	Ui::AddSkip(inner, st::boxMediumSkip);
 	auto charging = (Ui::SettingsButton*)nullptr;
 	if (available) {
-		Ui::AddSkip(inner);
 		const auto starsPerMessage = peer->isChannel()
 			? peer->asChannel()->commonStarsPerMessage()
 			: 0;
@@ -1193,7 +1190,7 @@ void ShowEditPeerPermissionsBox(
 			st::settingsButtonNoIcon));
 		charging->toggleOn(rpl::single(starsPerMessage > 0));
 		Ui::AddSkip(inner);
-		Ui::AddDividerText(inner, tr::lng_rights_charge_stars_about());
+		Ui::AddDialogText(inner, tr::lng_rights_charge_stars_about());
 
 		const auto chargeWrap = inner->add(
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(

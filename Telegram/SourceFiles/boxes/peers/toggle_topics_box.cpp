@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "lottie/lottie_icon.h"
 #include "settings/settings_common.h"
+#include "ui/boxes/dialog_layout.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/layers/generic_box.h"
 #include "ui/text/text_utilities.h"
@@ -157,6 +158,7 @@ void ToggleTopicsBox(
 			tr::rich
 		),
 		.aboutMargins = st::settingsFilterDividerLabelPadding,
+		.showDivider = false,
 	});
 
 	Ui::AddSkip(container);
@@ -168,9 +170,7 @@ void ToggleTopicsBox(
 			st::settingsButtonNoIcon));
 	toggle->toggleOn(rpl::single(enabled));
 
-	Ui::AddSkip(container);
-	Ui::AddDivider(container);
-	Ui::AddSkip(container);
+	Ui::AddSkip(container, st::boxMediumSkip);
 
 	const auto group = std::make_shared<Ui::RadioenumGroup<LayoutType>>(tabs
 		? LayoutType::Tabs
@@ -203,7 +203,7 @@ void ToggleTopicsBox(
 		listButton->moveToRight(skip, 0, outer);
 	}, buttons->lifetime());
 
-	Ui::AddDividerText(
+	Ui::AddDialogText(
 		layout,
 		tr::lng_edit_topics_layout_about(tr::rich));
 

@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h" // tr::rich
 #include "boxes/peer_list_box.h"
 #include "ui/boxes/confirm_box.h"
+#include "ui/boxes/dialog_layout.h"
 #include "boxes/add_contact_box.h"
 #include "apiwrap.h"
 #include "main/main_session.h"
@@ -262,6 +263,7 @@ void Controller::choose(not_null<ChatData*> chat) {
 			.lottie = u"discussion"_q,
 			.showFinished = box->showFinishes(),
 			.about = About(channel, chat),
+			.showDivider = false,
 		});
 		if (!chat) {
 			Assert(channel->isBroadcast());
@@ -295,7 +297,7 @@ void Controller::choose(not_null<ChatData*> chat) {
 			)->addClickHandler([=] { callback(nullptr); });
 		}
 		Ui::AddSkip(below);
-		Ui::AddDividerText(
+		Ui::AddDialogText(
 			below,
 			(channel->isBroadcast()
 				? tr::lng_manage_discussion_group_posted

@@ -20,7 +20,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/labels.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/fields/input_field.h"
-#include "ui/widgets/box_content_divider.h"
 #include "ui/layers/generic_box.h"
 #include "ui/toast/toast.h"
 #include "ui/text/text_utilities.h"
@@ -30,6 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_privacy_security.h"
 #include "ui/boxes/choose_date_time.h"
 #include "ui/boxes/confirm_box.h"
+#include "ui/boxes/dialog_layout.h"
 #include "boxes/peers/channel_ownership_transfer.h"
 #include "boxes/peers/add_bot_to_chat_box.h"
 #include "boxes/peers/edit_peer_permissions_box.h"
@@ -475,9 +475,7 @@ void EditAdminBox::prepare() {
 		&& !_addingBot->existing
 		&& !peer()->isBroadcast()
 		&& _saveCallback) {
-		addControl(
-			object_ptr<Ui::BoxContentDivider>(this),
-			st::rightsDividerMargin / 2);
+		addControl(object_ptr<Ui::FixedHeightWidget>(this, st::boxMediumSkip));
 		_addAsAdmin = addControl(
 			object_ptr<Ui::Checkbox>(
 				this,
@@ -486,7 +484,7 @@ void EditAdminBox::prepare() {
 				std::make_unique<Ui::ToggleView>(
 					st::rightsToggle,
 					true)),
-			st::rightsToggleMargin + (st::rightsDividerMargin / 2));
+			st::rightsToggleMargin);
 		_addAsAdmin->checkedChanges(
 		) | rpl::on_next([=](bool checked) {
 			_adminControlsWrap->toggle(checked, anim::type::normal);
@@ -502,7 +500,7 @@ void EditAdminBox::prepare() {
 
 	if (_promotedSince) {
 		const auto parsed = base::unixtime::parse(_promotedSince);
-		const auto label = Ui::AddDividerText(
+		const auto label = Ui::AddDialogText(
 			inner,
 			tr::lng_rights_about_by(
 				lt_user,
@@ -517,8 +515,7 @@ void EditAdminBox::prepare() {
 		}
 		Ui::AddSkip(inner);
 	} else {
-		Ui::AddDivider(inner);
-		Ui::AddSkip(inner);
+		Ui::AddSkip(inner, st::boxMediumSkip);
 	}
 
 	const auto chat = peer()->asChat();
@@ -619,18 +616,17 @@ void EditAdminBox::prepare() {
 				object_ptr<Ui::VerticalLayout>(inner)));
 		aboutAddAdminsInner->toggle(false, anim::type::instant);
 		emptyAboutAddAdminsInner->toggle(false, anim::type::instant);
-		Ui::AddSkip(emptyAboutAddAdminsInner->entity());
-		if (hasRank) {
-			Ui::AddDivider(emptyAboutAddAdminsInner->entity());
-		}
+		Ui::AddSkip(
+			emptyAboutAddAdminsInner->entity(),
+			hasRank ? st::boxMediumSkip : st::defaultVerticalListSkip);
 		Ui::AddSkip(aboutAddAdminsInner->entity());
 		if (canProcessJoinRequests) {
 			aboutAddAdminsInner->toggle(true, anim::type::instant);
-			Ui::AddDividerText(
+			Ui::AddDialogText(
 				aboutAddAdminsInner->entity(),
 				tr::lng_rights_about_process_join_requests());
 		} else {
-			Ui::AddDividerText(
+			Ui::AddDialogText(
 				aboutAddAdminsInner->entity(),
 				rpl::duplicate(
 					selectedFlags
@@ -681,7 +677,7 @@ void EditAdminBox::prepare() {
 		}
 		if (_tagControl) {
 			Ui::AddSkip(inner);
-			Ui::AddDividerText(
+			Ui::AddDialogText(
 				inner,
 				user()->isSelf()
 					? tr::lng_rights_tag_about_self()
@@ -701,10 +697,7 @@ void EditAdminBox::prepare() {
 						object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 							inner,
 							object_ptr<Ui::VerticalLayout>(inner)));
-					Ui::AddSkip(wrap->entity());
-					wrap->entity()->add(
-						object_ptr<Ui::BoxContentDivider>(wrap->entity()),
-						{ 0, st::infoProfileSkip, 0, st::infoProfileSkip });
+					Ui::AddSkip(wrap->entity(), st::boxMediumSkip);
 					wrap->toggleOn(rpl::duplicate(
 						selectedFlags
 					) | rpl::map(
@@ -860,9 +853,7 @@ not_null<Ui::SlideWrap<Ui::RpWidget>*> EditAdminBox::setupTransferButton(
 
 	const auto inner = wrap->entity();
 
-	inner->add(
-		object_ptr<Ui::BoxContentDivider>(inner),
-		{ 0, st::infoProfileSkip, 0, st::infoProfileSkip });
+	Ui::AddSkip(inner, st::boxMediumSkip);
 	inner->add(EditPeerInfoBox::CreateButton(
 		inner,
 		(isGroup
@@ -914,8 +905,7 @@ void EditRestrictedBox::prepare() {
 
 	setTitle(tr::lng_rights_user_restrictions());
 
-	Ui::AddDivider(verticalLayout());
-	Ui::AddSkip(verticalLayout());
+	Ui::AddSkip(verticalLayout(), st::boxMediumSkip);
 
 	const auto chat = peer()->asChat();
 	const auto channel = peer()->asChannel();
@@ -961,8 +951,7 @@ void EditRestrictedBox::prepare() {
 	addControl(std::move(checkboxes), QMargins());
 
 	if (canSave() && peer()->canManageRanks()) {
-		Ui::AddSkip(verticalLayout());
-		Ui::AddDivider(verticalLayout());
+		Ui::AddSkip(verticalLayout(), st::boxMediumSkip);
 		_tagControl = addControl(
 			object_ptr<EditTagControl>(
 				this,
@@ -972,7 +961,7 @@ void EditRestrictedBox::prepare() {
 				HistoryView::BadgeRole::User),
 			style::margins());
 		Ui::AddSkip(verticalLayout());
-		Ui::AddDividerText(
+		Ui::AddDialogText(
 			verticalLayout(),
 			user()->isSelf()
 				? tr::lng_rights_tag_about_self()
@@ -983,9 +972,7 @@ void EditRestrictedBox::prepare() {
 
 	_until = prepareRights.until;
 	if (!_tagControl) {
-		addControl(
-			object_ptr<Ui::FixedHeightWidget>(this, st::defaultVerticalListSkip));
-		Ui::AddDivider(verticalLayout());
+		Ui::AddSkip(verticalLayout(), st::boxMediumSkip);
 	}
 	addControl(
 		object_ptr<Ui::FlatLabel>(
@@ -1007,7 +994,7 @@ void EditRestrictedBox::prepare() {
 		const auto isBanned = (_oldRights.flags
 			& ChatRestriction::ViewMessages);
 		Ui::AddSkip(inner);
-		const auto label = Ui::AddDividerText(
+		const auto label = Ui::AddDialogText(
 			inner,
 			(isBanned
 				? tr::lng_rights_chat_banned_by
@@ -1025,9 +1012,7 @@ void EditRestrictedBox::prepare() {
 	}
 
 	if (canSave()) {
-		Ui::AddSkip(verticalLayout());
-		Ui::AddDivider(verticalLayout());
-		Ui::AddSkip(verticalLayout());
+		Ui::AddSkip(verticalLayout(), st::boxMediumSkip);
 
 		const auto canAddAdmins = (chat && chat->canAddAdmins())
 			|| (channel && channel->canAddAdmins());

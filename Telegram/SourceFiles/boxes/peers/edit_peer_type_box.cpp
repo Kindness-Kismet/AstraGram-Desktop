@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "boxes/add_contact_box.h"
 #include "ui/boxes/confirm_box.h"
+#include "ui/boxes/dialog_layout.h"
 #include "boxes/premium_limits_box.h"
 #include "boxes/peer_list_controllers.h"
 #include "boxes/peers/edit_participants_box.h"
@@ -35,7 +36,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/labels.h"
-#include "ui/widgets/box_content_divider.h"
 #include "ui/text/text_utilities.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/slide_wrap.h"
@@ -369,11 +369,9 @@ void Controller::createContent() {
 			? _dataSavedValue->privacy
 			: std::optional<Privacy>()));
 
-	// Skip.
 	if (!_linkOnly) {
-		_wrap->add(object_ptr<Ui::BoxContentDivider>(_wrap));
+		Ui::AddSkip(_wrap.get(), st::boxMediumSkip);
 	}
-	//
 	_wrap->add(createInviteLinkBlock());
 	if (!_linkOnly) {
 		_wrap->add(createUsernameEdit());
@@ -439,7 +437,7 @@ void Controller::createContent() {
 			auto requestToJoin = _controls.requestToJoin->toggledValue();
 
 			Ui::AddSkip(wrap);
-			Ui::AddDividerText(
+			Ui::AddDialogText(
 				wrap,
 				rpl::combine(
 					std::move(joinToWrite),
@@ -471,7 +469,7 @@ void Controller::createContent() {
 			_dataSavedValue->noForwards = toggled;
 		}, _wrap->lifetime());
 		Ui::AddSkip(_wrap.get());
-		Ui::AddDividerText(
+		Ui::AddDialogText(
 			_wrap.get(),
 			(_isGroup
 				? tr::lng_manage_peer_no_forwards_about
@@ -640,7 +638,7 @@ object_ptr<Ui::RpWidget> Controller::createUsernameEdit() {
 
 	AddUsernameCheckLabel(container, _usernameCheckInfo.events());
 
-	Ui::AddDividerText(
+	Ui::AddDialogText(
 		container,
 		tr::lng_create_channel_link_about());
 
@@ -877,7 +875,7 @@ object_ptr<Ui::RpWidget> Controller::createInviteLinkBlock() {
 
 	Ui::AddSkip(container);
 
-	Ui::AddDividerText(
+	Ui::AddDialogText(
 		container,
 		((_peer->isMegagroup() || _peer->asChat())
 			? tr::lng_group_invite_about_permanent_group()
