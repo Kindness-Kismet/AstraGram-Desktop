@@ -364,8 +364,9 @@ void EmptyUserpic::paintSquare(
 		int y,
 		int outerWidth,
 		int size) const {
+	// 方形底图用于封面和视频画面，不跟随头像圆角设置。
 	paint(p, x, y, outerWidth, size, [&] {
-		ExtrasUserpic::PaintShape(p, x, y, size);
+		p.drawRect(x, y, size, size);
 	});
 }
 
