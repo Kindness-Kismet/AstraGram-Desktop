@@ -292,6 +292,7 @@ Debug 构建会在 `ExtrasInfra::init()` 里启动 `QTcpServer`，监听 `127.0.
 | `chat.list [filter]` | 列出会话的 peerId 与名称，供 message.send / chat.open 定位目标 |
 | `message.send <peerId> <text\|--file path>` | 真实发送文本到指定对话（`--file` 按 UTF-8 读文件原样发送），走官方发送链路，仅发往自己掌控的测试对话 |
 | `chat.open [peerId]` | 打开指定聊天，缺省为 Saved Messages |
+| `chat.media <peerId> <type> [--side]` | 直接打开共享媒体分类，默认弹层，`--side` 放进侧栏 |
 | `chat.history-stats <msgId>...` | 查询收藏夹中指定消息的存在、隐藏与视图状态 |
 | `theme.set <dark|light>` | 切换暗色或浅色主题 |
 | `theme.reset-background` | 重置聊天背景 |

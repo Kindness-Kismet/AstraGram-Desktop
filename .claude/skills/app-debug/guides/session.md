@@ -47,6 +47,11 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 打开指定对话并清空导航栈；参数取 `chat.list` 输出的 peerId，缺省 self（Saved Messages）。配合 `screenshot.take` 做 UI 观测，
 免去找列表项点击的不稳定。`msgId` 定位到指定消息，缺省为对话末尾；目标尚未加载时走首次加载流程。
 
+## `chat.media <peerId> <photo|video|file|music|link|gif|voice> [--side]`
+
+直接打开对话资料里的共享媒体分类，免去先开资料页再点入口。默认以弹层打开；`--side` 在窗口够宽时放进第三栏侧栏，
+窗口不够宽时仍为弹层。收藏夹（self）的共享媒体保持旧样式，验证画廊布局请用其他对话。
+
 ## `chat.open-archive`
 
 直接打开归档文件夹，不走抽屉入口。用于单独观测归档页本身（列表渲染、留档消息），

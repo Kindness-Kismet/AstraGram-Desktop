@@ -314,6 +314,10 @@ def register_commands(sub) -> None:
     command.add_argument("peerId", nargs="?")
     command.add_argument("msgId", nargs="?", help="定位到的消息编号，缺省为对话末尾")
     command = sub.add_parser("chat.open-archive", help="打开归档文件夹")
+    command = sub.add_parser("chat.media", help="打开对话的共享媒体分类，默认弹层；--side 在窗口够宽时放进侧栏")
+    command.add_argument("peerId")
+    command.add_argument("type", choices=["photo", "video", "file", "music", "link", "gif", "voice"])
+    command.add_argument("--side", action="store_true", help="放进第三栏侧栏")
     command = sub.add_parser("chat.list", help="列出已加载对话的 peerId 与名称，filter 为名称子串")
     command.add_argument("filter", nargs="?")
     command = sub.add_parser("message.send", help="真实发送文本消息到指定对话，需已登录，仅限本人测试群")
@@ -566,6 +570,11 @@ def build_server_command(args: argparse.Namespace) -> str:
         return f"chat.open {quote_arg(args.peerId)} {quote_arg(args.msgId)}"
     if command == "chat.open-archive":
         return "chat.open-archive"
+    if command == "chat.media":
+        parts = ["chat.media", quote_arg(args.peerId), args.type]
+        if args.side:
+            parts.append("--side")
+        return " ".join(parts)
     if command == "chat.list":
         return ("chat.list" if args.filter is None
                 else f"chat.list {quote_arg(args.filter)}")

@@ -25,11 +25,14 @@
 #include "history/history_item_text.h"
 #include "history/view/history_view_element.h"
 #include "history/view/media/history_view_media.h"
+#include "info/info_controller.h"
+#include "info/info_memento.h"
 #include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
 #include "media/clip/media_clip_reader.h"
 #include "platform/platform_notifications_manager.h"
+#include "storage/storage_shared_media.h"
 #include "ui/chat/attach/attach_prepare.h"
 #include "ui/text/text_entity.h"
 #include "window/window_session_controller.h"
@@ -630,6 +633,59 @@ using json = nlohmann::json;
 	}));
 }
 
+// 直接打开资料页里的共享媒体分类；默认弹层，--side 在窗口够宽时放进侧栏。
+[[nodiscard]] Result OpenMedia(const QStringList &args) {
+	const auto usage = u"usage: chat.media <peerId> "
+		"<photo|video|file|music|link|gif|voice> [--side]"_q;
+	if (args.size() < 2 || args.size() > 3) {
+		return Result::Err(usage);
+	}
+	const auto side = (args.size() == 3);
+	if (side && args[2] != u"--side"_q) {
+		return Result::Err(usage);
+	}
+	auto ok = false;
+	const auto idValue = args[0].toLongLong(&ok);
+	if (!ok) {
+		return Result::Err(u"expected an integer peerId"_q);
+	}
+	using Type = Storage::SharedMediaType;
+	static const auto types = base::flat_map<QString, Type>{
+		{ u"photo"_q, Type::Photo },
+		{ u"video"_q, Type::Video },
+		{ u"file"_q, Type::File },
+		{ u"music"_q, Type::MusicFile },
+		{ u"link"_q, Type::Link },
+		{ u"gif"_q, Type::GIF },
+		{ u"voice"_q, Type::RoundVoiceFile },
+	};
+	const auto type = types.find(args[1]);
+	if (type == types.end()) {
+		return Result::Err(usage);
+	}
+	const auto session = ActiveSession();
+	const auto controller = session ? session->tryResolveWindow() : nullptr;
+	if (!controller) {
+		return Result::Err(u"an active session is required"_q);
+	}
+	const auto peer = ResolvePeer(session, idValue);
+	if (!peer) {
+		return Result::Err(u"peer not found, run chat.list first"_q);
+	}
+	auto params = Window::SectionShow(
+		Window::SectionShow::Way::Forward,
+		anim::type::instant);
+	controller->showSection(
+		std::make_shared<Info::Memento>(peer, Info::Section(type->second)),
+		side ? params.withThirdColumn() : params);
+	return Result::Ok(Compact(json{
+		{ "peerId", peer->id.value },
+		{ "name", peer->name().toStdString() },
+		{ "type", args[1].toStdString() },
+		{ "side", side },
+	}));
+}
+
 // 直接打开归档文件夹，不走抽屉入口，用于单独验证归档页行为。
 [[nodiscard]] Result OpenArchive(const QStringList &args) {
 	if (!args.isEmpty()) {
@@ -795,6 +851,7 @@ const HandlerMap &MessageHandlers() {
 		{ u"chat.list"_q, &Chats },
 		{ u"message.send"_q, &SendTextMessage },
 		{ u"chat.open"_q, &OpenChat },
+		{ u"chat.media"_q, &OpenMedia },
 		{ u"chat.open-archive"_q, &OpenArchive },
 		{ u"chat.history-stats"_q, &HistoryStats },
 	};
