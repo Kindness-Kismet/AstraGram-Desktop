@@ -426,8 +426,6 @@ PRIVATE
     ui/boxes/edit_factcheck_box.h
     ui/boxes/edit_invite_link.cpp
     ui/boxes/edit_invite_link.h
-    ui/boxes/rate_call_box.cpp
-    ui/boxes/rate_call_box.h
     ui/boxes/report_box_graphics.cpp
     ui/boxes/report_box_graphics.h
     ui/boxes/show_or_premium_box.cpp

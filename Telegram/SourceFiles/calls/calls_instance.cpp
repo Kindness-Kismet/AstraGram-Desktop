@@ -99,9 +99,6 @@ DhConfig Instance::Delegate::getDhConfig() const {
 
 void Instance::Delegate::callFinished(not_null<Call*> call) {
 	crl::on_main(call, [=] {
-		if (call->ratingInPanel()) {
-			return;
-		}
 		_instance->destroyCall(call);
 	});
 }
@@ -447,10 +444,6 @@ void Instance::createCall(
 			destroyCall(raw);
 		}, raw->lifetime());
 
-		if (_currentCall && _currentCall->ratingInPanel()) {
-			_currentCall->finishRating();
-			destroyCall(_currentCall.get());
-		}
 		if (_currentCall) {
 			_currentCallPanel->replaceCall(raw);
 			std::swap(_currentCall, call);
@@ -840,7 +833,7 @@ void Instance::handleSignalingData(
 }
 
 bool Instance::inCall() const {
-	if (!_currentCall || _currentCall->ratingInPanel()) {
+	if (!_currentCall) {
 		return false;
 	}
 	const auto state = _currentCall->state();
@@ -1220,10 +1213,6 @@ void Instance::showConferenceInvite(
 			destroyCall(raw);
 		}, raw->lifetime());
 
-		if (_currentCall && _currentCall->ratingInPanel()) {
-			_currentCall->finishRating();
-			destroyCall(_currentCall.get());
-		}
 		if (_currentCall) {
 			_currentCallPanel->replaceCall(raw);
 			std::swap(_currentCall, call);
