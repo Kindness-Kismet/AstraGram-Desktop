@@ -278,7 +278,7 @@ void BuildAutoDownloadSection(SectionBuilder &builder) {
 		}
 		const auto [toggle, checkView] = AddSeparatedToggle(
 			row,
-			st::settingsButton,
+			row->st(),
 			shouldBeChecked(source));
 		state->changes.events() | rpl::on_next([=] {
 			checkView->setChecked(shouldBeChecked(source), anim::type::normal);
