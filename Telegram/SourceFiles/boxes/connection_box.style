@@ -6,14 +6,24 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 using "boxes/boxes.style";
+using "settings/settings.style";
 
+// 填充式输入框：与聊天列表搜索框同底色，聚焦时换成淡强调色。
+proxyFormBg: filterInputInactiveBg;
+proxyFormBgActive: lightButtonBgOver;
 proxyFormInput: InputField(defaultInputField) {
-	textMargins: margins(12px, 11px, 12px, 10px);
+	textBg: proxyFormBg;
+	textBgActive: proxyFormBgActive;
+	// 上边距决定文字位置：12px 时文字与占位文字在 42px 高度内上下居中。
+	textMargins: margins(12px, 12px, 12px, 10px);
 	placeholderFont: font(14px);
 	placeholderScale: 0.;
 	placeholderShift: 0px;
 	borderRadius: 10px;
-	borderFg: strokeFgStrong;
+	// 描边与底色同色，平时看不出；输入有误时变成红色描边。
+	borderFg: proxyFormBg;
+	borderFgActive: proxyFormBgActive;
+	border: 1px;
 	borderActive: 1px;
 	heightMin: 42px;
 	heightMax: 42px;
@@ -28,57 +38,66 @@ connectionUserInputField: InputField(proxyFormInput) {
 }
 connectionPasswordInputField: InputField(proxyFormInput) {
 }
-proxyUsePadding: margins(22px, 6px, 22px, 5px);
-proxyTryIPv6Padding: margins(22px, 8px, 22px, 5px);
+// 「使用代理」总开关：半粗标题，标题下方留出一行状态文字。
+proxyUseButton: SettingsButton(settingsButtonNoIcon) {
+	style: TextStyle(boxTextStyle) {
+		font: font(boxFontSize semibold);
+	}
+	padding: margins(20px, 12px, 20px, 34px);
+	toggleSkip: 20px;
+	textBg: transparent;
+}
+proxyUseStatus: FlatLabel(defaultFlatLabel) {
+	textFg: windowSubTextFg;
+	maxHeight: 20px;
+}
+proxyUseStatusSkip: 3px;
+// 列表里的操作行：图标与单选圈同列，文字与代理地址对齐。
+proxyListAction: SettingsButton(settingsButtonNoIcon) {
+	textFg: lightButtonFg;
+	textFgOver: lightButtonFgOver;
+	style: boxTextStyle;
+	padding: margins(54px, 10px, 20px, 10px);
+	iconLeft: 19px;
+	textBg: transparent;
+}
+proxyListAddIcon: icon {{ "menu/add", lightButtonFg }};
+proxyListPasteIcon: icon {{ "menu/import_theme", lightButtonFg }};
 
-// 代理模式与代理类型使用相同的圆角矩形分段形状。
-proxyModeSlider: SettingsSlider(defaultSettingsSlider) {
-	height: 32px;
-	barTop: 0px;
-	barSkip: 0px;
-	barStroke: 32px;
-	barRadius: 8px;
-	barFg: transparent;
-	barFgActive: windowBgActive;
-	barSnapToLabel: false;
-	labelTop: 7px;
-	labelStyle: semiboldTextStyle;
-	labelFg: windowSubTextFg;
-	labelFgActive: windowFgActive;
-	rippleBg: windowBgOver;
-	rippleBgActive: activeButtonBgRipple;
-	ripple: defaultRippleAnimation;
-	duration: 150;
+// 代理类型选择字段：与输入框同底色、同圆角，左侧类型图标，右侧下拉箭头。
+proxyTypeFieldPadding: margins(10px, 8px, 12px, 8px);
+proxyTypeFieldTextLeft: 46px;
+proxyTypeFieldNameFont: font(14px semibold);
+proxyTypeFieldAboutFont: font(12px);
+proxyTypeFieldArrow: icon {{ "info/edit/expand_arrow_small", windowSubTextFg }};
+proxyTypeFieldArrowOpened: icon {{ "info/edit/expand_arrow_small-flip_vertical", windowSubTextFg }};
+proxyTypeFieldBgOver: windowBgRipple;
+proxyTypeFieldRipple: RippleAnimation(defaultRippleAnimation) {
+	color: lightButtonBgRipple;
 }
-// 表单分段保留独立配色。
-proxyFormSlider: SettingsSlider(proxyModeSlider) {
-	height: 32px;
-	barStroke: 32px;
-	barRadius: 8px;
-	barFgActive: cardBg;
-	labelStyle: defaultTextStyle;
-	labelFgActive: windowActiveTextFg;
-	rippleBgActive: windowBgOver;
+// 类型菜单与字段同宽，与字段之间的竖向间距。
+proxyTypeMenuSkip: 4px;
+proxyTypeMenuItemSkip: 7px;
+// 赞助频道提示：与输入框同底色的圆角卡片，左侧信息图标。
+proxyEditWarningMargin: margins(20px, 12px, 20px, 0px);
+proxyEditWarningPadding: margins(42px, 10px, 12px, 10px);
+proxyEditWarningIcon: icon {{ "menu/info", windowSubTextFg }};
+// 24px 图标中心与首行文字中心（上边距 10px 加半个行高）同高。
+proxyEditWarningIconPosition: point(10px, 7px);
+proxyEditWarningLabel: FlatLabel(boxDividerLabel) {
+	minWidth: 100px;
 }
-proxyModeSliderBg: windowBgOver;
-proxyModeSliderRadius: 10px;
-proxyModeSliderInnerPadding: margins(2px, 2px, 2px, 2px);
-proxyModeSliderPadding: margins(22px, 4px, 22px, 10px);
-proxyModeAboutPadding: margins(22px, 0px, 22px, 10px);
-proxyRowPadding: margins(22px, 10px, 8px, 10px);
-// 图标方块占位：方块宽度加与文字的间距。
-proxyRowIconSkip: 46px;
+// 从剪贴板自动填写：图标与输入框左边缘对齐。
+proxyEditPasteButton: SettingsButton(proxyListAction) {
+	padding: margins(52px, 10px, 20px, 10px);
+	iconLeft: 18px;
+}
+proxyRowPadding: margins(20px, 10px, 8px, 10px);
+// 单选圈占位：圈的直径加与文字的间距。
+proxyRowCheckSkip: 34px;
 proxyRowSkip: 2px;
-// 代理行左侧的图标方块，选中时换成强调色底与白色图标。
-proxyRowIconTileSize: 34px;
-proxyRowIconTileRadius: 10px;
-proxyRowIconTileBg: windowBgOver;
-proxyRowIcon: icon {{ "menu/network", menuIconFg }};
-proxyRowIconActive: icon {{ "menu/network", windowFgActive }};
-// 状态行前的圆点，颜色随状态取 proxyRowStatusFg* 系列。
+// 状态行前的圆点，与检测动画同位，颜色随状态取 proxyRowStatusFg* 系列。
 proxyRowStatusDotSize: 6px;
-proxyRowStatusDotSkip: 7px;
-proxyRowStatusDotTop: 4px;
 proxyRowRipple: defaultRippleAnimationBgOver;
 proxyRowTitleFg: windowFg;
 proxyRowTitlePalette: TextPalette(defaultTextPalette) {
@@ -91,19 +110,6 @@ proxyRowStatusFg: windowSubTextFg;
 proxyRowStatusFgOnline: windowActiveTextFg;
 proxyRowStatusFgOffline: boxTextFgError;
 proxyRowStatusFgAvailable: boxTextFgGood;
-// 模式说明块：强调色图标方块 + 标题 + 说明文字。
-proxyHeroPadding: margins(22px, 6px, 22px, 10px);
-proxyHeroIconSize: 40px;
-proxyHeroIconRadius: 12px;
-proxyHeroIconBg: windowBgActive;
-proxyHeroIcon: icon {{ "menu/network", windowFgActive }};
-proxyHeroSkip: 14px;
-proxyHeroTextSkip: 3px;
-proxyHeroTitleFg: windowBoldFg;
-proxyHeroTitleStyle: TextStyle(defaultTextStyle) {
-	font: semiboldFont;
-}
-proxyHeroAboutFg: windowSubTextFg;
 proxyEditTitle: FlatLabel(defaultFlatLabel) {
 	style: TextStyle(defaultTextStyle) {
 		font: font(12px semibold);
@@ -115,11 +121,6 @@ proxyEditWidth: 480px;
 proxyEditTypePadding: margins(22px, 4px, 22px, 8px);
 proxyEditInputPadding: margins(20px, 0px, 20px, 0px);
 proxyEditSkip: 12px;
-proxyEmptyListLabel: FlatLabel(defaultFlatLabel) {
-	align: align(top);
-	textFg: windowSubTextFg;
-}
-proxyEmptyListPadding: margins(22px, 48px, 22px, 0px);
 proxyCheckingPosition: point(2px, 5px);
 proxyCheckingSkip: 6px;
 proxyCheckingAnimation: InfiniteRadialAnimation(defaultInfiniteRadialAnimation) {
@@ -127,7 +128,6 @@ proxyCheckingAnimation: InfiniteRadialAnimation(defaultInfiniteRadialAnimation) 
 	thickness: 1px;
 	size: size(8px, 8px);
 }
-proxyAboutSponsorPadding: margins(22px, 7px, 22px, 0px);
 proxyApplyBoxTable: Table(defaultTable) {
 	labelMinWidth: 91px;
 }

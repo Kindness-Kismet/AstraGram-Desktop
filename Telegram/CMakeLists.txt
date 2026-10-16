@@ -226,6 +226,8 @@ set(extras_files
         extras/ui/settings/filters/edit_filter.h
         extras/ui/controls/attach_menu.cpp
         extras/ui/controls/attach_menu.h
+        extras/ui/controls/proxy_type_field.cpp
+        extras/ui/controls/proxy_type_field.h
         extras/ui/context_menu/context_menu.cpp
         extras/ui/context_menu/context_menu.h
         extras/ui/context_menu/menu_item_subtext.cpp

@@ -15,6 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "core/local_url_handlers.h"
+#include "extras/ui/controls/proxy_type_field.h"
 #include "lang/lang_keys.h"
 #include "main/main_account.h"
 #include "main/main_session.h"
@@ -27,6 +28,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/localstorage.h"
 #include "ui/basic_click_handlers.h"
 #include "ui/boxes/confirm_box.h"
+#include "ui/boxes/dialog_layout.h"
 #include "ui/boxes/peer_qr_box.h"
 #include "ui/effects/animations.h"
 #include "ui/effects/radial_animation.h"
@@ -37,7 +39,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/dropdown_menu.h"
-#include "ui/widgets/discrete_sliders.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/fields/number_input.h"
 #include "ui/widgets/fields/password_input.h"
@@ -58,6 +59,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_info.h"
 #include "styles/style_intro.h"
 #include "styles/style_layers.h"
+#include "styles/style_media_player.h" // mediaPlayerMenuCheck
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 
@@ -80,47 +82,44 @@ struct TopButtonMenuState {
 	base::unique_qptr<Ui::PopupMenu> menu;
 };
 
-[[nodiscard]] int ClosestProxyRotationTimeoutSection(int value) {
-	auto result = 0;
-	auto bestDistance = 0;
-	for (auto i = 0; i != int(Core::SettingsProxy::kProxyRotationTimeouts.size()); ++i) {
-		const auto current = Core::SettingsProxy::kProxyRotationTimeouts[i];
-		const auto distance = (current > value) ? (current - value) : (value - current);
-		if ((i == 0) || (distance < bestDistance)) {
-			result = i;
-			bestDistance = distance;
-		}
-	}
-	return result;
+[[nodiscard]] int ClosestProxyRotationTimeout(int value) {
+	return *ranges::min_element(
+		Core::SettingsProxy::kProxyRotationTimeouts,
+		ranges::less(),
+		[&](int timeout) { return std::abs(timeout - value); });
 }
 
-// 顶部分段控件的段序：停用、系统代理、自定义。
-constexpr auto kProxyModeSections = std::array{
-	ProxyData::Settings::Disabled,
-	ProxyData::Settings::System,
-	ProxyData::Settings::Enabled,
-};
-
-[[nodiscard]] int ProxyModeSection(ProxyData::Settings value) {
-	for (auto i = 0; i != int(kProxyModeSections.size()); ++i) {
-		if (kProxyModeSections[i] == value) {
-			return i;
-		}
-	}
-	Unexpected("Proxy settings value in ProxyModeSection.");
+[[nodiscard]] QString ProxyRotationTimeoutText(int seconds) {
+	return tr::lng_proxy_auto_switch_timeout(tr::now, lt_count, seconds);
 }
 
-[[nodiscard]] rpl::producer<QString> ProxyModeAbout(
-		ProxyData::Settings value) {
-	switch (value) {
+// 总开关下方的状态：未开启、跟随系统，或当前使用的代理地址。
+[[nodiscard]] QString ProxyUseStatusText(
+		const Core::SettingsProxy &settings) {
+	switch (settings.settings()) {
 	case ProxyData::Settings::Disabled:
-		return tr::extras_ProxyModeOffAbout();
+		return tr::extras_ProxyUseOffAbout(tr::now);
 	case ProxyData::Settings::System:
-		return tr::extras_ProxyModeSystemAbout();
-	case ProxyData::Settings::Enabled:
-		return tr::extras_ProxyModeCustomAbout();
+		return tr::extras_ProxyUseSystemAbout(tr::now);
+	case ProxyData::Settings::Enabled: {
+		const auto proxy = settings.selected();
+		return tr::extras_ProxyUseCustomAbout(
+			tr::now,
+			lt_server,
+			(proxy.type == ProxyData::Type::Web)
+				? proxy.webAddress()
+				: proxy.host);
 	}
-	Unexpected("Proxy settings value in ProxyModeAbout.");
+	}
+	Unexpected("Proxy settings value in ProxyUseStatusText.");
+}
+
+[[nodiscard]] int ProxyRowHeight() {
+	return st::proxyRowPadding.top()
+		+ st::semiboldFont->height
+		+ st::proxyRowSkip
+		+ st::normalFont->height
+		+ st::proxyRowPadding.bottom();
 }
 
 [[nodiscard]] std::vector<QString> ExtractLinkCandidates(const QString &input) {
@@ -647,6 +646,9 @@ protected:
 	int resizeGetHeight(int newWidth) override;
 
 	void paintEvent(QPaintEvent *e) override;
+	void onStateChanged(
+		AbstractButton::State was,
+		StateChangeSource source) override;
 
 private:
 	void setupControls(View &&view);
@@ -678,6 +680,24 @@ private:
 
 };
 
+// 列表首行的「系统代理」：与代理行同高，单选圈同列。
+class SystemProxyRow final : public Ui::RippleButton {
+public:
+	SystemProxyRow(QWidget *parent, bool checked);
+
+	void setChecked(bool checked);
+
+protected:
+	int resizeGetHeight(int newWidth) override;
+
+	void paintEvent(QPaintEvent *e) override;
+	void onStateChanged(State was, StateChangeSource source) override;
+
+private:
+	Ui::RadioView _radio;
+
+};
+
 class ProxiesBox : public Ui::BoxContent {
 public:
 	using View = ProxiesBoxController::ItemView;
@@ -692,44 +712,45 @@ protected:
 	void prepare() override;
 	void showFinished() override;
 	void keyPressEvent(QKeyEvent *e) override;
-	void resizeEvent(QResizeEvent *e) override;
 
 private:
 	void setupContent();
 	void setupTopButton();
-	void setupModeBar();
-	void syncModeSlider();
-	void createNoRowsLabel();
+	void setupUseProxy(not_null<Ui::VerticalLayout*> container);
+	void setupRotation(not_null<Ui::VerticalLayout*> container);
+	void showRotationTimeoutMenu();
+	void enableProxy();
 	void addNewProxy();
 	void applyView(View &&view);
 	void setupButtons(int id, not_null<ProxyRow*> button);
-	int rowHeight() const;
 	void refreshProxyForCalls();
 	void refreshProxyRotation();
-	void refreshProxyList();
+	void refreshOptionsSkip();
+	void refreshPasteFromClipboard();
 
 	not_null<ProxiesBoxController*> _controller;
 	Core::SettingsProxy &_settings;
-	QPointer<Ui::RpWidget> _modeBar;
-	QPointer<Ui::SettingsSlider> _modeSlider;
+	rpl::variable<ProxyData::Settings> _mode;
+	// 打开总开关时恢复的模式，关闭总开关不会覆盖它。
+	ProxyData::Settings _lastUsedMode = ProxyData::Settings::System;
+	rpl::variable<bool> _listShareable;
+	rpl::variable<int> _rotationTimeout;
 	QPointer<Settings::Button> _tryIPv6;
-	std::shared_ptr<Ui::RadioenumGroup<ProxyData::Settings>> _proxySettings;
 	QPointer<Ui::SlideWrap<Settings::Button>> _proxyForCalls;
 	QPointer<Ui::SlideWrap<Settings::Button>> _proxyRotation;
 	QPointer<Ui::SlideWrap<Ui::VerticalLayout>> _proxyRotationOptions;
-	QPointer<Ui::SettingsSlider> _proxyRotationTimeout;
-	QPointer<Ui::FlatLabel> _about;
-	QPointer<Ui::SlideWrap<Ui::VerticalLayout>> _listWrap;
-	base::unique_qptr<Ui::RpWidget> _noRows;
+	QPointer<Ui::SlideWrap<Settings::Button>> _pasteFromClipboard;
+	QPointer<Ui::SlideWrap<Ui::FixedHeightWidget>> _optionsSkip;
 	object_ptr<Ui::VerticalLayout> _initialWrap;
 	QPointer<Ui::VerticalLayout> _wrap;
 	int _currentProxySupportsCallsId = 0;
-	bool _modeSliderSyncing = false;
 
 	base::flat_map<int, base::unique_qptr<ProxyRow>> _rows;
 
+	base::unique_qptr<Ui::PopupMenu> _rotationTimeoutMenu;
+	QPointer<Ui::RpWidget> _topButton;
+	QPointer<Ui::RpWidget> _useProxyButton;
 	QPointer<Ui::RpWidget> _addProxyButton;
-	QPointer<Ui::RpWidget> _shareListButton;
 	QString _highlightId;
 
 };
@@ -762,6 +783,7 @@ private:
 	ProxyData collectData();
 	void save();
 	void share();
+	void fillFromClipboard();
 	void setupControls(const ProxyData &data);
 	void setupTypes();
 	void setupSocketAddress(const ProxyData &data);
@@ -783,7 +805,6 @@ private:
 
 	std::shared_ptr<Ui::RadioenumGroup<Type>> _type;
 
-	QPointer<Ui::SlideWrap<>> _aboutSponsored;
 	QPointer<HostInput> _host;
 	QPointer<Ui::NumberInput> _port;
 	QPointer<Ui::InputField> _user;
@@ -849,15 +870,14 @@ void ProxyRow::updateFields(View &&view) {
 			st::defaultRadio.duration);
 	}
 	_view = std::move(view);
-	const auto endpoint = _view.web
-		? _view.host
-		: _view.host + ':' + QString::number(_view.port);
+	// 端口用链接色绘制，与主机名区分；类型移到状态行。
+	auto title = TextWithEntities().append(_view.host);
+	if (!_view.web) {
+		title.append(tr::link(u":"_q + QString::number(_view.port), QString()));
+	}
 	_title.setMarkedText(
 		st::proxyRowTitleStyle,
-		TextWithEntities()
-			.append(_view.type)
-			.append(' ')
-			.append(tr::link(endpoint, QString())),
+		title,
 		Ui::ItemTextDefaultOptions());
 
 	const auto state = _view.state;
@@ -903,11 +923,7 @@ void ProxyRow::radialAnimationCallback() {
 }
 
 int ProxyRow::resizeGetHeight(int newWidth) {
-	const auto result = st::proxyRowPadding.top()
-		+ st::semiboldFont->height
-		+ st::proxyRowSkip
-		+ st::normalFont->height
-		+ st::proxyRowPadding.bottom();
+	const auto result = ProxyRowHeight();
 	auto right = st::proxyRowPadding.right();
 	_menuToggle->moveToRight(
 		right,
@@ -916,14 +932,24 @@ int ProxyRow::resizeGetHeight(int newWidth) {
 	right += _menuToggle->width();
 	_skipRight = right;
 	_skipLeft = st::proxyRowPadding.left()
-		+ st::proxyRowIconSkip;
+		+ st::proxyRowCheckSkip;
 	return result;
+}
+
+void ProxyRow::onStateChanged(
+		AbstractButton::State was,
+		StateChangeSource source) {
+	RippleButton::onStateChanged(was, source);
+	update();
 }
 
 void ProxyRow::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
 	if (!_view.deleted) {
+		if (isOver()) {
+			p.fillRect(e->rect(), st::windowBgOver);
+		}
 		paintRipple(p, 0, 0);
 	}
 
@@ -957,7 +983,7 @@ void ProxyRow::paintEvent(QPaintEvent *e) {
 			return st::proxyRowStatusFg;
 		}
 	}();
-	const auto status = [&] {
+	const auto state = [&] {
 		switch (_view.state) {
 		case State::Available:
 			return tr::lng_proxy_available(
@@ -979,24 +1005,36 @@ void ProxyRow::paintEvent(QPaintEvent *e) {
 		}
 		Unexpected("State in ProxyRow::paintEvent.");
 	}();
-	p.setPen(_view.deleted ? st::proxyRowStatusFg : statusFg);
-	p.setFont(st::normalFont);
+	const auto status = QString(
+		_view.type + u" "_q + QChar(0x00B7) + u" "_q + state);
+	const auto &color = _view.deleted ? st::proxyRowStatusFg : statusFg;
 
-	auto statusLeft = left;
+	// 检测中画转圈，其余时候在同一位置画状态圆点，切换时文字不跳动。
+	const auto marker = QPoint(
+		left + st::proxyCheckingPosition.x(),
+		top + st::proxyCheckingPosition.y());
+	const auto markerSize = st::proxyCheckingAnimation.size;
 	if (_checking) {
-		_checking->draw(
-			p,
-			{
-				st::proxyCheckingPosition.x() + statusLeft,
-				st::proxyCheckingPosition.y() + top
-			},
-			width());
-		statusLeft += st::proxyCheckingPosition.x()
-			+ st::proxyCheckingAnimation.size.width()
-			+ st::proxyCheckingSkip;
+		_checking->draw(p, marker, width());
+	} else {
+		const auto dot = st::proxyRowStatusDotSize;
+		auto hq = PainterHighQualityEnabler(p);
+		p.setPen(Qt::NoPen);
+		p.setBrush(color->b);
+		p.drawEllipse(style::rtlrect(
+			QRectF(
+				marker.x() + (markerSize.width() - dot) / 2.,
+				marker.y() + (markerSize.height() - dot) / 2.,
+				dot,
+				dot),
+			width()));
 	}
+	const auto statusLeft = marker.x()
+		+ markerSize.width()
+		+ st::proxyCheckingSkip;
+	p.setPen(color);
+	p.setFont(st::normalFont);
 	p.drawTextLeft(statusLeft, top, width(), status);
-	top += st::normalFont->height + st::proxyRowPadding.bottom();
 }
 
 void ProxyRow::paintCheck(Painter &p) {
@@ -1005,40 +1043,45 @@ void ProxyRow::paintCheck(Painter &p) {
 		: Ui::RadialState{ 0., 0, arc::kFullLength };
 	const auto toggled = _toggled.value(_view.selected ? 1. : 0.)
 		* (1. - loading.shown);
-	const auto _st = &st::defaultRadio;
+	const auto &st = st::defaultRadio;
 	const auto set = _setAnimation.value(_set ? 1. : 0.);
 
 	PainterHighQualityEnabler hq(p);
 
-	const auto left = st::proxyRowPadding.left();
-	const auto top = (height() - _st->diameter - _st->thickness) / 2;
-	const auto outerWidth = width();
-
-	auto pen = anim::pen(_st->untoggledFg, _st->toggledFg, toggled * set);
-	pen.setWidth(_st->thickness);
-	pen.setCapStyle(Qt::RoundCap);
-	p.setPen(pen);
-	p.setBrush(_st->bg);
-	const auto rect = style::rtlrect(QRectF(left, top, _st->diameter, _st->diameter).marginsRemoved(QMarginsF(_st->thickness / 2., _st->thickness / 2., _st->thickness / 2., _st->thickness / 2.)), outerWidth);
-	if (_progress && loading.shown > 0 && anim::Disabled()) {
-		anim::DrawStaticLoading(
-			p,
-			rect,
-			_st->thickness,
-			pen.color(),
-			_st->bg);
-	} else if (loading.arcLength < arc::kFullLength) {
-		p.drawArc(rect, loading.arcFrom, loading.arcLength);
-	} else {
-		p.drawEllipse(rect);
+	const auto outer = style::rtlrect(
+		QRectF(
+			st::proxyRowPadding.left(),
+			(height() - st.diameter) / 2,
+			st.diameter,
+			st.diameter),
+		width());
+	// 与标准单选圈同形；连接中在外圈上叠加进度弧。
+	Ui::RadioView::PaintOuter(
+		p,
+		outer,
+		st.untoggledFg->c,
+		st.toggledFg->c,
+		toggled * set);
+	if (_progress && loading.shown > 0) {
+		const auto half = st.thickness / 2.;
+		const auto ring = outer.marginsRemoved({ half, half, half, half });
+		auto pen = st.toggledFg->p;
+		pen.setWidth(st.thickness);
+		pen.setCapStyle(Qt::RoundCap);
+		if (anim::Disabled()) {
+			anim::DrawStaticLoading(p, ring, st.thickness, pen);
+		} else {
+			p.setPen(pen);
+			p.setBrush(Qt::NoBrush);
+			p.drawArc(ring, loading.arcFrom, loading.arcLength);
+		}
 	}
-
 	if (toggled > 0 && (!_progress || !anim::Disabled())) {
+		const auto skip = (st.diameter / 2.) * (1. - toggled)
+			+ (st.skip / 10.) * toggled;
 		p.setPen(Qt::NoPen);
-		p.setBrush(anim::brush(_st->untoggledFg, _st->toggledFg, toggled * set));
-
-		auto skip0 = _st->diameter / 2., skip1 = _st->skip / 10., checkSkip = skip0 * (1. - toggled) + skip1 * toggled;
-		p.drawEllipse(style::rtlrect(QRectF(left, top, _st->diameter, _st->diameter).marginsRemoved(QMarginsF(checkSkip, checkSkip, checkSkip, checkSkip)), outerWidth));
+		p.setBrush(anim::brush(st.untoggledFg, st.toggledFg, toggled * set));
+		p.drawEllipse(outer.marginsRemoved({ skip, skip, skip, skip }));
 	}
 }
 
@@ -1129,6 +1172,62 @@ void ProxyRow::showMenu() {
 	}
 }
 
+SystemProxyRow::SystemProxyRow(QWidget *parent, bool checked)
+: RippleButton(parent, st::proxyRowRipple)
+, _radio(st::defaultRadio, checked, [=] { update(); }) {
+}
+
+void SystemProxyRow::setChecked(bool checked) {
+	_radio.setChecked(checked, anim::type::normal);
+}
+
+int SystemProxyRow::resizeGetHeight(int newWidth) {
+	return ProxyRowHeight();
+}
+
+void SystemProxyRow::onStateChanged(State was, StateChangeSource source) {
+	RippleButton::onStateChanged(was, source);
+	update();
+}
+
+void SystemProxyRow::paintEvent(QPaintEvent *e) {
+	auto p = Painter(this);
+
+	if (isOver()) {
+		p.fillRect(e->rect(), st::windowBgOver);
+	}
+	paintRipple(p, 0, 0);
+
+	const auto &padding = st::proxyRowPadding;
+	_radio.paint(
+		p,
+		padding.left(),
+		(height() - _radio.getSize().height()) / 2,
+		width());
+
+	const auto left = padding.left() + st::proxyRowCheckSkip;
+	const auto available = width() - left - padding.right();
+	auto top = padding.top();
+	p.setPen(st::proxyRowTitleFg);
+	p.setFont(st::semiboldFont);
+	p.drawTextLeft(
+		left,
+		top,
+		width(),
+		st::semiboldFont->elided(tr::extras_ProxySystem(tr::now), available));
+	top += st::semiboldFont->height + st::proxyRowSkip;
+
+	p.setPen(st::proxyRowStatusFg);
+	p.setFont(st::normalFont);
+	p.drawTextLeft(
+		left,
+		top,
+		width(),
+		st::normalFont->elided(
+			tr::extras_ProxySystemAbout(tr::now),
+			available));
+}
+
 ProxiesBox::ProxiesBox(
 	QWidget*,
 	not_null<ProxiesBoxController*> controller,
@@ -1136,8 +1235,25 @@ ProxiesBox::ProxiesBox(
 	const QString &highlightId)
 : _controller(controller)
 , _settings(settings)
+, _mode(_controller->proxySettingsValue())
+, _listShareable(_controller->listShareableChanges())
+, _rotationTimeout(
+	ClosestProxyRotationTimeout(settings.proxyRotationTimeout()))
 , _initialWrap(this)
 , _highlightId(highlightId) {
+	const auto current = _mode.current();
+	_lastUsedMode = (current != ProxyData::Settings::Disabled)
+		? current
+		: _settings.selected()
+		? ProxyData::Settings::Enabled
+		: ProxyData::Settings::System;
+	_mode.changes(
+	) | rpl::filter([](ProxyData::Settings mode) {
+		return (mode != ProxyData::Settings::Disabled);
+	}) | rpl::on_next([=](ProxyData::Settings mode) {
+		_lastUsedMode = mode;
+	}, lifetime());
+
 	_controller->views(
 	) | rpl::on_next([=](View &&view) {
 		applyView(std::move(view));
@@ -1156,19 +1272,9 @@ void ProxiesBox::keyPressEvent(QKeyEvent *e) {
 	}
 }
 
-void ProxiesBox::resizeEvent(QResizeEvent *e) {
-	BoxContent::resizeEvent(e);
-
-	if (_modeBar) {
-		_modeBar->resizeToWidth(width());
-		_modeBar->moveToLeft(0, 0);
-	}
-}
-
 void ProxiesBox::prepare() {
 	setTitle(tr::lng_proxy_settings());
 
-	_addProxyButton = addButton(tr::lng_proxy_add(), [=] { addNewProxy(); });
 	addButton(tr::lng_close(), [=] { closeBox(); });
 
 	setupTopButton();
@@ -1177,22 +1283,25 @@ void ProxiesBox::prepare() {
 
 void ProxiesBox::showFinished() {
 	if (_highlightId == u"proxy/add-proxy"_q) {
-		if (_addProxyButton) {
+		// 总开关关闭时添加行不可见，改为提示打开总开关。
+		const auto target = (_mode.current() == ProxyData::Settings::Disabled)
+			? _useProxyButton
+			: _addProxyButton;
+		if (target) {
 			_highlightId = QString();
-			Settings::HighlightWidget(
-				_addProxyButton,
-				{ .rippleShape = true });
+			Settings::HighlightWidget(target);
 		}
 	} else if (_highlightId == u"proxy/share-list"_q) {
-		if (_shareListButton) {
+		if (_topButton) {
 			_highlightId = QString();
-			Settings::HighlightWidget(_shareListButton);
+			Settings::HighlightWidget(_topButton, { .rippleShape = true });
 		}
 	}
 }
 
 void ProxiesBox::setupTopButton() {
 	const auto top = addTopButton(st::infoTopBarMenu);
+	_topButton = top;
 	const auto state = top->lifetime().make_state<TopButtonMenuState>();
 
 	top->setClickedCallback([=] {
@@ -1206,7 +1315,15 @@ void ProxiesBox::setupTopButton() {
 			.handler = [=] { AddProxyFromClipboard(_controller, uiShow()); },
 			.icon = &st::menuIconImportTheme,
 		});
+		if (_listShareable.current()) {
+			addAction({
+				.text = tr::lng_proxy_edit_share_list_button(tr::now),
+				.handler = [=] { _controller->shareItems(); },
+				.icon = &st::menuIconShare,
+			});
+		}
 		if (!_rows.empty()) {
+			addAction({ .isSeparator = true });
 			addAction({
 				.text = tr::lng_group_invite_context_delete_all(tr::now),
 				.handler = [=] { _controller->deleteItems(); },
@@ -1228,93 +1345,144 @@ void ProxiesBox::setupTopButton() {
 	});
 }
 
-void ProxiesBox::setupModeBar() {
-	_proxySettings
-		= std::make_shared<Ui::RadioenumGroup<ProxyData::Settings>>(
-			_settings.settings());
-
-	const auto bar = Ui::CreateChild<Ui::RpWidget>(this);
-	_modeBar = bar;
-
-	const auto slider = Ui::CreateChild<Ui::SettingsSlider>(
-		bar,
-		st::proxyModeSlider);
-	_modeSlider = slider;
-	slider->setCrossFadeEnabled(true);
-	slider->setObjectName(u"proxy-mode"_q);
-	slider->setSections({
-		tr::extras_ProxyModeOff(tr::now),
-		tr::extras_ProxyModeSystem(tr::now),
-		tr::extras_ProxyModeCustom(tr::now),
-	});
-	slider->setActiveSectionFast(ProxyModeSection(_settings.settings()));
-
-	// 分段控件的衬底：未选中段落在这层底色上，激活段由控件自己绘制。
-	const auto radius = st::proxyModeSliderRadius;
-	bar->paintRequest() | rpl::on_next([=] {
-		auto p = QPainter(bar);
-		auto hq = PainterHighQualityEnabler(p);
-		p.setPen(Qt::NoPen);
-		p.setBrush(st::proxyModeSliderBg);
-		const auto &padding = st::proxyModeSliderPadding;
-		p.drawRoundedRect(
-			QRect(
-				padding.left(),
-				padding.top(),
-				bar->width() - padding.left() - padding.right(),
-				bar->height() - padding.top() - padding.bottom()),
-			radius,
-			radius);
-	}, bar->lifetime());
-
-	bar->widthValue() | rpl::on_next([=](int width) {
-		const auto &padding = st::proxyModeSliderPadding;
-		const auto &inner = st::proxyModeSliderInnerPadding;
-		const auto left = padding.left() + inner.left();
-		const auto top = padding.top() + inner.top();
-		slider->resizeToWidth(width
-			- left
-			- padding.right()
-			- inner.right());
-		slider->moveToLeft(left, top);
-		bar->resize(width, top + slider->height()
-			+ inner.bottom()
-			+ padding.bottom());
-	}, bar->lifetime());
-	bar->resizeToWidth(st::boxWideWidth);
-
-	slider->sectionActivated() | rpl::on_next([=](int section) {
-		if (_modeSliderSyncing) {
+void ProxiesBox::setupUseProxy(not_null<Ui::VerticalLayout*> container) {
+	const auto &st = st::proxyUseButton;
+	const auto button = Settings::AddButtonWithIcon(
+		container,
+		tr::extras_ProxyUse(),
+		st);
+	_useProxyButton = button;
+	button->toggleOn(_mode.value() | rpl::map([](ProxyData::Settings mode) {
+		return (mode != ProxyData::Settings::Disabled);
+	}));
+	button->toggledChanges(
+	) | rpl::on_next([=](bool enabled) {
+		if (enabled == (_mode.current() != ProxyData::Settings::Disabled)) {
 			return;
 		}
-		_proxySettings->setValue(kProxyModeSections[section]);
-	}, slider->lifetime());
+		if (enabled) {
+			enableProxy();
+		} else {
+			_controller->setProxySettings(ProxyData::Settings::Disabled);
+		}
+	}, button->lifetime());
+
+	const auto status = Ui::CreateChild<Ui::FlatLabel>(
+		button.get(),
+		rpl::single(rpl::empty) | rpl::then(
+			_settings.connectionTypeChanges()
+		) | rpl::map([=] {
+			return ProxyUseStatusText(_settings);
+		}),
+		st::proxyUseStatus);
+	status->setAttribute(Qt::WA_TransparentForMouseEvents);
+	const auto toggleWidth = Ui::ToggleView(st.toggle, false).getSize().width();
+	button->widthValue(
+	) | rpl::on_next([=](int width) {
+		status->resizeToWidth(width
+			- st.padding.left()
+			- st.padding.right()
+			- st.toggleSkip
+			- toggleWidth);
+		status->moveToLeft(
+			st.padding.left(),
+			st.padding.top() + st.height + st::proxyUseStatusSkip);
+	}, status->lifetime());
+}
+
+void ProxiesBox::enableProxy() {
+	// 上次用的是自定义代理但列表已空时，退回系统代理。
+	const auto mode = (_lastUsedMode == ProxyData::Settings::Enabled
+		&& _settings.list().empty())
+		? ProxyData::Settings::System
+		: _lastUsedMode;
+	_controller->setProxySettings(mode);
+}
+
+void ProxiesBox::setupRotation(not_null<Ui::VerticalLayout*> container) {
+	const auto interval = Settings::AddButtonWithLabel(
+		container,
+		tr::extras_ProxyAutoSwitchInterval(),
+		_rotationTimeout.value() | rpl::map(ProxyRotationTimeoutText),
+		Ui::DialogButtonStyle(container, st::settingsButtonNoIcon));
+	interval->setClickedCallback([=] { showRotationTimeoutMenu(); });
+	Ui::AddDialogText(container, tr::lng_proxy_auto_switch_about());
+}
+
+void ProxiesBox::showRotationTimeoutMenu() {
+	_rotationTimeoutMenu = base::make_unique_q<Ui::PopupMenu>(
+		this,
+		st::popupMenuWithIcons);
+	const auto current = _rotationTimeout.current();
+	for (const auto seconds : Core::SettingsProxy::kProxyRotationTimeouts) {
+		const auto check = (seconds == current)
+			? &st::mediaPlayerMenuCheck
+			: nullptr;
+		_rotationTimeoutMenu->addAction(
+			ProxyRotationTimeoutText(seconds),
+			[=] {
+				_rotationTimeout = seconds;
+				_controller->setProxyRotationTimeout(seconds);
+			},
+			check,
+			check);
+	}
+	_rotationTimeoutMenu->popup(QCursor::pos());
 }
 
 void ProxiesBox::setupContent() {
-	setupModeBar();
-
 	const auto inner = setInnerWidget(
 		object_ptr<Ui::VerticalLayout>(this),
-		st::boxScroll,
-		_modeBar->height());
+		st::boxScroll);
 
-	// 模式说明：跟随分段切换，替代原先三个单选项各自的标题。
-	_about = inner->add(
-		object_ptr<Ui::FlatLabel>(
-			inner,
-			_proxySettings->value() | rpl::map(ProxyModeAbout) | rpl::flatten_latest(),
-			st::boxDividerLabel),
-		st::proxyModeAboutPadding);
+	setupUseProxy(inner);
 
-	// 自定义模式的内容：代理列表、通话代理、轮换设置。
-	_listWrap = inner->add(
+	// 打开总开关后的线路列表：系统代理与自定义代理同列单选。
+	const auto listWrap = inner->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			inner,
 			object_ptr<Ui::VerticalLayout>(inner)));
-	const auto list = _listWrap->entity();
+	const auto list = listWrap->entity();
+	Ui::AddSubsectionTitle(list, tr::extras_ProxyServers());
+
+	const auto system = list->add(object_ptr<SystemProxyRow>(
+		list,
+		(_mode.current() == ProxyData::Settings::System)));
+	system->setClickedCallback([=] {
+		_controller->setProxySettings(ProxyData::Settings::System);
+	});
+	_mode.changes(
+	) | rpl::on_next([=](ProxyData::Settings mode) {
+		system->setChecked(mode == ProxyData::Settings::System);
+	}, system->lifetime());
 
 	_wrap = list->add(std::move(_initialWrap));
+
+	const auto add = Settings::AddButtonWithIcon(
+		list,
+		tr::lng_proxy_add(),
+		st::proxyListAction,
+		{ &st::proxyListAddIcon, Settings::IconType::Simple });
+	add->setClickedCallback([=] { addNewProxy(); });
+	_addProxyButton = add;
+
+	_pasteFromClipboard = list->add(
+		object_ptr<Ui::SlideWrap<Settings::Button>>(
+			list,
+			Settings::CreateButtonWithIcon(
+				list,
+				tr::extras_ProxyPasteLink(),
+				st::proxyListAction,
+				{ &st::proxyListPasteIcon, Settings::IconType::Simple })));
+	_pasteFromClipboard->entity()->setClickedCallback([=] {
+		AddProxyFromClipboard(_controller, uiShow());
+	});
+
+	// 通话与轮换至少显示一项时，才与上方列表隔开。
+	_optionsSkip = list->add(
+		object_ptr<Ui::SlideWrap<Ui::FixedHeightWidget>>(
+			list,
+			object_ptr<Ui::FixedHeightWidget>(list, st::boxMediumSkip)));
 
 	_proxyForCalls = list->add(
 		object_ptr<Ui::SlideWrap<Settings::Button>>(
@@ -1322,8 +1490,7 @@ void ProxiesBox::setupContent() {
 			Settings::CreateButtonWithIcon(
 				list,
 				tr::lng_proxy_use_for_calls(),
-				st::settingsButton,
-				{ &st::menuIconCallsReceive })));
+				Ui::DialogButtonStyle(list, st::settingsButtonNoIcon))));
 	_proxyForCalls->entity()->toggleOn(
 		rpl::single(_settings.useProxyForCalls()));
 
@@ -1333,8 +1500,7 @@ void ProxiesBox::setupContent() {
 			Settings::CreateButtonWithIcon(
 				list,
 				tr::lng_proxy_auto_switch(),
-				st::settingsButton,
-				{ &st::menuIconRestore })));
+				Ui::DialogButtonStyle(list, st::settingsButtonNoIcon))));
 	_proxyRotation->entity()->toggleOn(
 		rpl::single(_settings.proxyRotationEnabled()));
 
@@ -1342,79 +1508,25 @@ void ProxiesBox::setupContent() {
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			list,
 			object_ptr<Ui::VerticalLayout>(list)));
-	_proxyRotationTimeout = _proxyRotationOptions->entity()->add(
-		object_ptr<Ui::SettingsSlider>(
-			_proxyRotationOptions->entity(),
-			st::settingsSlider),
-		st::settingsBigScalePadding);
-	for (const auto seconds : Core::SettingsProxy::kProxyRotationTimeouts) {
-		_proxyRotationTimeout->addSection(
-			tr::lng_proxy_auto_switch_timeout(
-				tr::now,
-				lt_count,
-				seconds));
-	}
-	_proxyRotationTimeout->setActiveSectionFast(
-		ClosestProxyRotationTimeoutSection(_settings.proxyRotationTimeout()));
-	_proxyRotationOptions->entity()->add(
-		object_ptr<Ui::FlatLabel>(
-			_proxyRotationOptions->entity(),
-			tr::lng_proxy_auto_switch_about(tr::now),
-			st::boxDividerLabel),
-		st::proxyAboutPadding);
+	setupRotation(_proxyRotationOptions->entity());
 
-	{
-		const auto wrap = list->add(
-			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-				list,
-				object_ptr<Ui::VerticalLayout>(list)));
-		const auto shareList = Settings::AddButtonWithIcon(
-			wrap->entity(),
-			tr::lng_proxy_edit_share_list_button(),
-			st::settingsButton,
-			{ &st::menuIconCopy });
-		_shareListButton = shareList;
-		shareList->setClickedCallback([=] {
-			_controller->shareItems();
-		});
-		wrap->toggleOn(_controller->listShareableChanges());
-		wrap->finishAnimating();
-	}
+	listWrap->toggleOn(_mode.value() | rpl::map([](ProxyData::Settings mode) {
+		return (mode != ProxyData::Settings::Disabled);
+	}));
 
-	// IPv6 对直连同样有效，所以不随模式隐藏。
-	Ui::AddSkip(inner);
-	Ui::AddDivider(inner);
-	Ui::AddSkip(inner);
+	// IPv6 对直连同样有效，所以不随总开关隐藏。
+	Ui::AddSkip(inner, st::boxMediumSkip);
 	_tryIPv6 = Settings::AddButtonWithIcon(
 		inner,
 		tr::lng_connection_try_ipv6(),
-		st::settingsButton,
-		{ &st::menuIconNetwork });
+		Ui::DialogButtonStyle(inner, st::settingsButtonNoIcon));
 	_tryIPv6->toggleOn(rpl::single(_settings.tryIPv6()));
-	Ui::AddDividerText(inner, tr::lng_proxy_about());
+	Ui::AddDialogText(inner, tr::lng_proxy_about());
 
-	_proxySettings->setChangedCallback([=](ProxyData::Settings value) {
-		// 空代理列表仍可浏览自定义模式，添加代理由用户主动触发。
-		_controller->setProxySettings(value);
-		syncModeSlider();
-		refreshProxyList();
-		refreshProxyForCalls();
-		refreshProxyRotation();
-	});
 	_tryIPv6->toggledChanges(
 	) | rpl::on_next([=](bool checked) {
 		_controller->setTryIPv6(checked);
 	}, _tryIPv6->lifetime());
-
-	_controller->proxySettingsValue(
-	) | rpl::on_next([=](ProxyData::Settings value) {
-		_proxySettings->setValue(value);
-		syncModeSlider();
-		refreshProxyList();
-		refreshProxyForCalls();
-		refreshProxyRotation();
-	}, inner->lifetime());
-
 	_proxyForCalls->entity()->toggledChanges(
 	) | rpl::on_next([=](bool checked) {
 		_controller->setProxyForCalls(checked);
@@ -1424,56 +1536,31 @@ void ProxiesBox::setupContent() {
 		_controller->setProxyRotationEnabled(checked);
 		refreshProxyRotation();
 	}, _proxyRotation->lifetime());
-	_proxyRotationTimeout->sectionActivated(
-	) | rpl::on_next([=](int section) {
-		_controller->setProxyRotationTimeout(
-			Core::SettingsProxy::kProxyRotationTimeouts[section]);
-	}, _proxyRotationTimeout->lifetime());
+	_mode.changes(
+	) | rpl::on_next([=] {
+		refreshProxyForCalls();
+		refreshProxyRotation();
+	}, inner->lifetime());
 
-	if (_rows.empty()) {
-		createNoRowsLabel();
-	}
-	refreshProxyList();
 	refreshProxyForCalls();
 	refreshProxyRotation();
-	_listWrap->finishAnimating();
+	refreshPasteFromClipboard();
+	listWrap->finishAnimating();
+	_pasteFromClipboard->finishAnimating();
+	_optionsSkip->finishAnimating();
 	_proxyForCalls->finishAnimating();
 	_proxyRotation->finishAnimating();
 	_proxyRotationOptions->finishAnimating();
 
 	inner->resizeToWidth(st::boxWideWidth);
 
-	// 高度下限取「说明 + 三行列表」，避免切换模式时弹窗高度大幅跳动。
 	inner->heightValue(
 	) | rpl::map([=](int height) {
-		const auto minimal = _modeBar->height()
-			+ _about->height()
-			+ st::proxyModeAboutPadding.top()
-			+ st::proxyModeAboutPadding.bottom()
-			+ 3 * rowHeight();
-		return std::min(
-			std::max(height + _modeBar->height(), minimal),
-			st::boxMaxListHeight);
+		return std::min(height, st::boxMaxListHeight);
 	}) | rpl::distinct_until_changed(
 	) | rpl::on_next([=](int height) {
 		setDimensions(st::boxWideWidth, height, true);
 	}, inner->lifetime());
-}
-
-void ProxiesBox::syncModeSlider() {
-	const auto section = ProxyModeSection(_proxySettings->current());
-	if (_modeSlider->activeSection() == section) {
-		return;
-	}
-	_modeSliderSyncing = true;
-	_modeSlider->setActiveSection(section);
-	_modeSliderSyncing = false;
-}
-
-void ProxiesBox::refreshProxyList() {
-	_listWrap->toggle(
-		_proxySettings->current() == ProxyData::Settings::Enabled,
-		anim::type::normal);
 }
 
 void ProxiesBox::refreshProxyForCalls() {
@@ -1481,31 +1568,40 @@ void ProxiesBox::refreshProxyForCalls() {
 		return;
 	}
 	_proxyForCalls->toggle(
-		(_proxySettings->current() == ProxyData::Settings::Enabled
+		(_mode.current() == ProxyData::Settings::Enabled
 			&& _currentProxySupportsCallsId != 0),
 		anim::type::normal);
+	refreshOptionsSkip();
 }
 
 void ProxiesBox::refreshProxyRotation() {
 	if (!_proxyRotation || !_proxyRotationOptions) {
 		return;
 	}
-	const auto visible = (_proxySettings->current()
-			== ProxyData::Settings::Enabled)
+	const auto visible = (_mode.current() == ProxyData::Settings::Enabled)
 		&& _settings.selected()
 		&& (_settings.list().size() > 1);
 	_proxyRotation->toggle(visible, anim::type::normal);
 	_proxyRotationOptions->toggle(
 		visible && _proxyRotation->entity()->toggled(),
 		anim::type::normal);
+	refreshOptionsSkip();
 }
 
-int ProxiesBox::rowHeight() const {
-	return st::proxyRowPadding.top()
-		+ st::semiboldFont->height
-		+ st::proxyRowSkip
-		+ st::normalFont->height
-		+ st::proxyRowPadding.bottom();
+void ProxiesBox::refreshOptionsSkip() {
+	if (!_optionsSkip || !_proxyForCalls || !_proxyRotation) {
+		return;
+	}
+	_optionsSkip->toggle(
+		_proxyForCalls->toggled() || _proxyRotation->toggled(),
+		anim::type::normal);
+}
+
+void ProxiesBox::refreshPasteFromClipboard() {
+	if (!_pasteFromClipboard) {
+		return;
+	}
+	_pasteFromClipboard->toggle(_rows.empty(), anim::type::normal);
 }
 
 void ProxiesBox::addNewProxy() {
@@ -1533,9 +1629,6 @@ void ProxiesBox::applyView(View &&view) {
 				wrap,
 				std::move(view))));
 		setupButtons(id, i->second.get());
-		if (_noRows) {
-			_noRows.reset();
-		}
 		wrap->resizeToWidth(width());
 	} else if (view.host.isEmpty()) {
 		_rows.erase(i);
@@ -1543,28 +1636,7 @@ void ProxiesBox::applyView(View &&view) {
 		i->second->updateFields(std::move(view));
 	}
 	refreshProxyRotation();
-}
-
-void ProxiesBox::createNoRowsLabel() {
-	_noRows.reset(_wrap->add(
-		object_ptr<Ui::FixedHeightWidget>(
-			_wrap,
-			rowHeight()),
-		st::proxyEmptyListPadding));
-	_noRows->resize(
-		(st::boxWideWidth
-			- st::proxyEmptyListPadding.left()
-			- st::proxyEmptyListPadding.right()),
-		_noRows->height());
-	const auto label = Ui::CreateChild<Ui::FlatLabel>(
-		_noRows.get(),
-		tr::lng_proxy_description(tr::now),
-		st::proxyEmptyListLabel);
-	_noRows->widthValue(
-	) | rpl::on_next([=](int width) {
-		label->resizeToWidth(width);
-		label->moveToLeft(0, 0);
-	}, label->lifetime());
+	refreshPasteFromClipboard();
 }
 
 void ProxiesBox::setupButtons(int id, not_null<ProxyRow*> button) {
@@ -1755,50 +1827,37 @@ ProxyData ProxyBox::collectData() {
 	return ProxyData();
 }
 
+void ProxyBox::fillFromClipboard() {
+	const auto data = ProxyDataFromClipboard();
+	if (!data) {
+		uiShow()->showToast(
+			tr::lng_proxy_add_from_clipboard_failed_toast(tr::now));
+		return;
+	}
+	_type->setValue(data.type);
+	if (data.type == Type::Web) {
+		_webHost->setText(data.webAddress());
+	} else {
+		_host->setText(data.host);
+		_port->setText(QString::number(data.port));
+	}
+	if (data.type == Type::Mtproto || data.type == Type::Web) {
+		_secret->setText(data.password);
+	} else {
+		_user->setText(data.user);
+		_password->setText(data.password);
+	}
+}
+
 void ProxyBox::setupTypes() {
-	const auto types = std::vector<Type>{
-		Type::Socks5, Type::Http, Type::Mtproto, Type::Web,
-	};
-	const auto bar = _content->add(object_ptr<Ui::FixedHeightWidget>(
-		_content, style::ConvertScale(38)),
-		QMargins(style::ConvertScale(20), style::ConvertScale(8),
-			style::ConvertScale(20), style::ConvertScale(6)));
-	bar->paintRequest() | rpl::on_next([=] {
-		auto p = QPainter(bar);
-		auto hq = PainterHighQualityEnabler(p);
-		p.setPen(st::strokeFg);
-		p.setBrush(st::cardBgSunken);
-		const auto radius = style::ConvertScale(10);
-		p.drawRoundedRect(QRectF(bar->rect()).adjusted(.5, .5, -.5, -.5), radius, radius);
-	}, bar->lifetime());
-	const auto slider = Ui::CreateChild<Ui::SettingsSlider>(bar, st::proxyFormSlider);
-	slider->setCrossFadeEnabled(true);
-	slider->setObjectName(u"proxy-type"_q);
-	slider->setSections({ u"SOCKS5"_q, u"HTTP"_q, u"MTProto"_q, u"Web"_q });
-	slider->setActiveSectionFast(int(ranges::find(types, _type->current()) - types.begin()));
-	bar->widthValue() | rpl::on_next([=](int width) {
-		const auto inset = style::ConvertScale(3);
-		slider->resizeToWidth(width - 2 * inset);
-		slider->moveToLeft(inset, inset);
-	}, slider->lifetime());
-	slider->sectionActivated() | rpl::on_next([=](int index) {
-		_type->setValue(types[index]);
-	}, slider->lifetime());
-	auto warning = _type->value(
-	) | rpl::map([](Type type) {
-		return (type == Type::Web)
-			? tr::lng_proxy_web_warning(tr::now)
-			: tr::lng_proxy_sponsor_warning(tr::now);
-	});
-	_aboutSponsored = _content->add(object_ptr<Ui::SlideWrap<>>(
-		_content,
-		object_ptr<Ui::PaddingWrap<>>(
+	addLabel(_content, tr::extras_ProxyType(tr::now));
+	const auto field = _content->add(
+		object_ptr<ExtrasUi::ProxyTypeField>(
 			_content,
-			object_ptr<Ui::FlatLabel>(
-				_content,
-				std::move(warning),
-				st::boxDividerLabel),
-			st::proxyAboutSponsorPadding)));
+			_type->value(),
+			[=](Type type) { _type->setValue(type); }),
+		st::proxyEditInputPadding);
+	field->setObjectName(u"proxy-type"_q);
 }
 
 void ProxyBox::setupSocketAddress(const ProxyData &data) {
@@ -1928,6 +1987,38 @@ void ProxyBox::setupMtprotoCredentials(const ProxyData &data) {
 		_secret->resize(width, _secret->height());
 	}, _secret->lifetime());
 	mtproto->add(std::move(secretWrap), st::proxyEditInputPadding);
+
+	// 赞助频道提示只对需要密钥的 MTProto 与 Web 代理出现，随密钥区一起显示。
+	auto warningText = _type->value(
+	) | rpl::map([](Type type) {
+		return (type == Type::Web)
+			? tr::lng_proxy_web_warning(tr::now)
+			: tr::lng_proxy_sponsor_warning(tr::now);
+	});
+	const auto warning = mtproto->add(
+		object_ptr<Ui::PaddingWrap<Ui::FlatLabel>>(
+			mtproto,
+			object_ptr<Ui::FlatLabel>(
+				mtproto,
+				std::move(warningText),
+				st::proxyEditWarningLabel),
+			st::proxyEditWarningPadding),
+		st::proxyEditWarningMargin);
+	warning->paintRequest(
+	) | rpl::on_next([=] {
+		auto p = QPainter(warning);
+		{
+			auto hq = PainterHighQualityEnabler(p);
+			const auto radius = st::proxyFormInput.borderRadius;
+			p.setPen(Qt::NoPen);
+			p.setBrush(st::proxyFormBg);
+			p.drawRoundedRect(warning->rect(), radius, radius);
+		}
+		st::proxyEditWarningIcon.paint(
+			p,
+			st::proxyEditWarningIconPosition,
+			warning->width());
+	}, warning->lifetime());
 }
 
 void ProxyBox::setupControls(const ProxyData &data) {
@@ -1951,6 +2042,16 @@ void ProxyBox::setupControls(const ProxyData &data) {
 	_secret->setObjectName(u"proxy-secret"_q);
 	_webHost->setObjectName(u"proxy-web-host"_q);
 	Ui::AddSkip(_content, style::ConvertScale(12));
+	// 只在添加时提供自动填写，编辑已有代理不覆盖原有内容。
+	if (!_allowShare) {
+		const auto paste = Settings::AddButtonWithIcon(
+			_content,
+			tr::extras_ProxyPasteAutofill(),
+			st::proxyEditPasteButton,
+			{ &st::proxyListPasteIcon, Settings::IconType::Simple });
+		paste->setObjectName(u"proxy-paste"_q);
+		paste->setClickedCallback([=] { fillFromClipboard(); });
+	}
 
 	const auto handleType = [=](Type type) {
 		_changingType = true;
@@ -1962,7 +2063,6 @@ void ProxyBox::setupControls(const ProxyData &data) {
 		_webAddress->toggle(web, anim::type::instant);
 		_credentials->toggle(credentialsShown, anim::type::instant);
 		_mtprotoCredentials->toggle(mtprotoShown, anim::type::instant);
-		_aboutSponsored->toggle(mtprotoShown, anim::type::instant);
 		const auto credentialsPolicy = credentialsShown
 			? Qt::StrongFocus
 			: Qt::NoFocus;
@@ -2717,8 +2817,8 @@ void ProxiesBoxController::updateView(const Item &item) {
 		switch (item.data.type) {
 		case Type::Http: return u"HTTP"_q;
 		case Type::Socks5: return u"SOCKS5"_q;
-		case Type::Mtproto: return u"MTPROTO"_q;
-		case Type::Web: return u"WEB"_q;
+		case Type::Mtproto: return u"MTProto"_q;
+		case Type::Web: return u"Web"_q;
 		}
 		Unexpected("Proxy type in ProxiesBoxController::updateView.");
 	}();
@@ -2754,7 +2854,7 @@ void ProxiesBoxController::updateView(const Item &item) {
 			: item.data.host),
 		item.data.port,
 		item.ping,
-		!deleted && selected,
+		!deleted && selected && _settings.isEnabled(),
 		deleted,
 		!deleted && supportsShare,
 		supportsCalls,

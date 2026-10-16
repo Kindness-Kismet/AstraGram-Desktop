@@ -9752,12 +9752,21 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DonationMessage" = "If you like my work, please consider supporting me. Your donation will help with everyday software development and new features.";
 "extras_DonationOpenAfdian" = "Open Afdian";
 
-"extras_ProxyModeOff" = "Off";
-"extras_ProxyModeSystem" = "System";
-"extras_ProxyModeCustom" = "Custom";
-"extras_ProxyModeOffAbout" = "Connecting to Telegram servers directly, without a proxy.";
-"extras_ProxyModeSystemAbout" = "Using the network configuration of your operating system. Changes there take effect immediately.";
-"extras_ProxyModeCustomAbout" = "Pick a server from the list below. Click a server to connect through it.";
+"extras_ProxyUse" = "Use proxy";
+"extras_ProxyUseOffAbout" = "Off, connecting to Telegram directly";
+"extras_ProxyUseSystemAbout" = "Following the system proxy settings";
+"extras_ProxyUseCustomAbout" = "Connected through {server}";
+"extras_ProxyServers" = "Proxy servers";
+"extras_ProxySystem" = "System proxy";
+"extras_ProxySystemAbout" = "Follows your operating system's network settings";
+"extras_ProxyPasteLink" = "Paste link from clipboard";
+"extras_ProxyAutoSwitchInterval" = "Switch interval";
+"extras_ProxyType" = "Type";
+"extras_ProxyTypeSocks5About" = "Universal proxy, supports username and password";
+"extras_ProxyTypeHttpAbout" = "HTTP proxy, supports username and password";
+"extras_ProxyTypeMtprotoAbout" = "Telegram's own proxy, requires a secret";
+"extras_ProxyTypeWebAbout" = "Web proxy, the provider runs a web page in the background";
+"extras_ProxyPasteAutofill" = "Paste a link from the clipboard to fill in";
 
 "extras_AboutChangelog" = "Release notes";
 "extras_AboutServices" = "Telegram services";
