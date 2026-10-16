@@ -144,6 +144,7 @@ bool InnerWidget::showInternal(not_null<Memento*> memento) {
 
 object_ptr<ListWidget> InnerWidget::setupList() {
 	auto result = object_ptr<ListWidget>(this, _controller);
+	result->setGalleryLayout(UsesGalleryLayout(_controller));
 	result->heightValue(
 	) | rpl::on_next(
 		[this] { refreshHeight(); },
@@ -261,6 +262,25 @@ bool InnerWidget::canZoomIn() const {
 
 bool InnerWidget::canZoomOut() const {
 	return _list->canZoomOut();
+}
+
+rpl::producer<> InnerWidget::zoomStateChanges() const {
+	// 列数变化总会带来高度变化，宽度变化决定还能否继续缩放。
+	return rpl::merge(
+		_list->widthValue() | rpl::to_empty,
+		_list->heightValue() | rpl::to_empty);
+}
+
+rpl::producer<std::optional<int>> InnerWidget::fullCountValue() const {
+	return _list->fullCountValue();
+}
+
+void InnerWidget::toggleSelectMode() {
+	_list->toggleSelectMode();
+}
+
+rpl::producer<bool> InnerWidget::selectModeValue() const {
+	return _list->selectModeValue();
 }
 
 void InnerWidget::jumpToMessage(MsgId msgId) {

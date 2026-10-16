@@ -106,6 +106,10 @@ public:
 	void setDownloadsTypeFilter(Downloads::TypeFilter filter);
 	void setSelectOnClick(bool enabled);
 	void setSelectedLimit(int limit);
+	// 共享媒体页专用：画廊排版，以及点击即选的选择模式。
+	void setGalleryLayout(bool enabled);
+	void toggleSelectMode();
+	[[nodiscard]] rpl::producer<bool> selectModeValue() const;
 
 	struct ReorderDescriptor {
 		Fn<void(int old, int pos, Fn<void()> done, Fn<void()> fail)> save;
@@ -268,6 +272,7 @@ private:
 	[[nodiscard]] MessageIdsList collectSelectedIds(
 		const SelectedItems &items) const;
 	void pushSelectedItems();
+	void setSelectMode(bool enabled);
 	[[nodiscard]] bool hasSelected() const;
 	[[nodiscard]] bool isSelectedItem(
 		const SelectedMap::const_iterator &i) const;
@@ -432,6 +437,9 @@ private:
 	DragSelectAction _dragSelectAction = DragSelectAction::None;
 	bool _wasSelectedText = false; // was some text selected in current drag action
 	bool _selectOnClick = false;
+	bool _gallery = false;
+	rpl::variable<bool> _selectMode = false;
+	bool _selectModeHadItems = false;
 
 	const std::unique_ptr<DateBadge> _dateBadge;
 	int _topOverlayHeight = 0;

@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/info_controller.h"
 #include "info/info_top_bar.h"
 #include "info/info_memento.h"
+#include "info/media/info_media_widget.h"
 #include "ui/rp_widget.h"
 #include "ui/focus_persister.h"
 #include "ui/widgets/buttons.h"
@@ -101,6 +102,14 @@ void LayerWidget::setupHeightConsumers() {
 		return false;
 	}) | rpl::on_next([this] {
 		resizeToWidth(width());
+	}, lifetime());
+
+	// 共享媒体页更宽，换页后按新内容重新确定宽度。
+	_contentWrap->contentChanged(
+	) | rpl::filter([=] {
+		return parentWidget() && (width() != desiredWidth());
+	}) | rpl::on_next([=] {
+		parentResized();
 	}, lifetime());
 
 	_contentWrap->grabbingForExpanding(
@@ -210,9 +219,15 @@ void LayerWidget::parentResized() {
 	} else {
 		auto newWidth = std::min(
 			parentWidth - 2 * st::infoMinimalLayerMargin,
-			st::infoDesiredWidth);
+			desiredWidth());
 		resizeToWidth(newWidth);
 	}
+}
+
+int LayerWidget::desiredWidth() const {
+	return Media::UsesGalleryLayout(_contentWrap->controller())
+		? st::infoMediaLayerWidth
+		: st::infoDesiredWidth;
 }
 
 bool LayerWidget::takeToThirdSection() {

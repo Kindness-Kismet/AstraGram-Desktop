@@ -485,6 +485,37 @@ void ListWidget::setSelectOnClick(bool enabled) {
 	_selectOnClick = enabled;
 }
 
+void ListWidget::setGalleryLayout(bool enabled) {
+	if (_gallery == enabled) {
+		return;
+	}
+	_gallery = enabled;
+	if (width() > 0) {
+		resizeToWidth(width());
+	}
+}
+
+void ListWidget::setSelectMode(bool enabled) {
+	if (_selectMode.current() == enabled) {
+		return;
+	}
+	_selectOnClick = enabled;
+	_selectModeHadItems = false;
+	_selectMode = enabled;
+	if (!enabled) {
+		clearSelected();
+	}
+	update();
+}
+
+void ListWidget::toggleSelectMode() {
+	setSelectMode(!_selectMode.current());
+}
+
+rpl::producer<bool> ListWidget::selectModeValue() const {
+	return _selectMode.value();
+}
+
 void ListWidget::setDownloadsTypeFilter(Downloads::TypeFilter filter) {
 	Expects(_controller->isDownloads());
 	clearSelected();
@@ -696,6 +727,15 @@ MessageIdsList ListWidget::collectSelectedIds(
 
 void ListWidget::pushSelectedItems() {
 	_selectedListStream.fire(collectSelectedItems());
+	if (!_selectMode.current()) {
+		return;
+	}
+	// 选择模式里选过内容后又清空，视为结束选择。
+	if (!_selected.empty()) {
+		_selectModeHadItems = true;
+	} else if (_selectModeHadItems) {
+		setSelectMode(false);
+	}
 }
 
 bool ListWidget::hasSelected() const {
@@ -1011,6 +1051,7 @@ int ListWidget::resizeGetHeight(int newWidth) {
 		for (auto &section : _sections) {
 			section.setCanReorder(canReorder());
 			section.setMinGridSize(gridSize);
+			section.setGallery(_gallery);
 			section.resizeToWidth(newWidth);
 		}
 	}
@@ -1283,7 +1324,7 @@ PeerId ListWidget::monoforumPeerId() const {
 }
 
 QMargins ListWidget::padding() const {
-	return st::infoMediaMargin;
+	return _gallery ? st::infoMediaGalleryMargin : st::infoMediaMargin;
 }
 
 bool ListWidget::eventHook(QEvent *e) {
@@ -1313,7 +1354,9 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 	const auto window = _controller->parentController();
 	const auto paused = window->isGifPausedAtLeastFor(
 		Window::GifPauseReason::Layer);
-	const auto selecting = hasSelectedItems() || _storiesAddToAlbumId;
+	const auto selecting = hasSelectedItems()
+		|| _storiesAddToAlbumId
+		|| _selectMode.current();
 	const auto paintContext = Overview::Layout::PaintContext(ms, selecting, paused);
 	auto context = ListContext{
 		paintContext,

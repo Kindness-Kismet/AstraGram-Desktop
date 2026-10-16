@@ -368,6 +368,36 @@ infoLayerTopBar: InfoTopBar(infoTopBar) {
 
 infoLayerTopBarMenuPosition: point(48px, 37px);
 
+// 共享媒体页顶栏：标题降为次要的“会话名 · 共享媒体”，类型名交给页头。
+infoMediaTopBarTitle: FlatLabel(infoTopBarTitle) {
+	textFg: windowSubTextFg;
+}
+infoMediaTopBar: InfoTopBar(infoTopBar) {
+	title: infoMediaTopBarTitle;
+	titlePosition: point(20px, 17px);
+}
+infoLayerMediaTopBar: InfoTopBar(infoLayerTopBar) {
+	title: infoMediaTopBarTitle;
+	titlePosition: point(20px, 18px);
+}
+infoTopBarSelect: IconButton(infoTopBarQr) {
+	icon: icon {{ "menu/select", boxTitleCloseFg }};
+	iconOver: icon {{ "menu/select", boxTitleCloseFgOver }};
+}
+infoTopBarCalendar: IconButton(infoTopBarQr) {
+	icon: icon {{ "menu/calendar", boxTitleCloseFg }};
+	iconOver: icon {{ "menu/calendar", boxTitleCloseFgOver }};
+}
+infoLayerTopBarSelect: IconButton(infoLayerTopBarQr) {
+	icon: icon {{ "menu/select", boxTitleCloseFg }};
+	iconOver: icon {{ "menu/select", boxTitleCloseFgOver }};
+}
+infoLayerTopBarCalendar: IconButton(infoLayerTopBarQr) {
+	icon: icon {{ "menu/calendar", boxTitleCloseFg }};
+	iconOver: icon {{ "menu/calendar", boxTitleCloseFgOver }};
+}
+infoTopBarSelectActive: icon {{ "menu/select", windowActiveTextFg }};
+
 
 infoProfileTopBarHeightMax: 180px + infoLayerTopBarHeight;
 
@@ -727,6 +757,80 @@ infoMediaSkeletonSoundSize: 42px;
 infoMediaTabsRightSkip: 13px;
 infoMediaGridSizeStep: 16px;
 infoMediaTabsMinBodyWidth: infoMediaMinGridSize + infoMediaSkip + infoMediaSkip + infoMediaTabsRightSkip;
+
+// 共享媒体画廊：内容左缘与对话框标题对齐，格子留缝并做圆角。
+infoMediaLayerWidth: 600px;
+infoMediaGalleryPadding: 20px;
+infoMediaGallerySkip: 4px;
+infoMediaGalleryRadius: 8px;
+infoMediaGalleryMinGridSize: 110px;
+infoMediaGalleryMargin: margins(0px, 0px, 0px, 12px);
+infoMediaGalleryHeaderStyle: TextStyle(defaultTextStyle) {
+	font: font(13px semibold);
+}
+infoMediaGalleryHeaderFg: windowSubTextFg;
+infoMediaGalleryHeaderHeight: 34px;
+infoMediaGalleryHeaderTop: 9px;
+
+// 画廊页头：类型名和总数在左，搜索或缩放在右。
+infoMediaGalleryHeroHeight: 58px;
+infoMediaGalleryHeroTop: 6px;
+infoMediaGalleryTitle: FlatLabel(defaultFlatLabel) {
+	textFg: windowBoldFg;
+	maxHeight: 32px;
+	style: TextStyle(defaultTextStyle) {
+		font: font(22px semibold);
+	}
+}
+infoMediaGalleryCount: FlatLabel(defaultFlatLabel) {
+	textFg: windowSubTextFg;
+	maxHeight: 22px;
+	style: TextStyle(defaultTextStyle) {
+		font: font(15px);
+	}
+}
+infoMediaGalleryCountSkip: 8px;
+infoMediaGalleryTitleGap: 16px;
+infoMediaGallerySearch: InputField(defaultSearchField) {
+	textMargins: margins(34px, 8px, 30px, 6px);
+	borderRadius: 17px;
+	heightMin: 34px;
+}
+infoMediaGallerySearchWidth: 200px;
+infoMediaGallerySearchMinWidth: 120px;
+infoMediaGallerySearchIcon: defaultSearchFieldIcon;
+infoMediaGallerySearchIconSkip: 7px;
+infoMediaGallerySearchCancel: CrossButton(defaultMultiSelectSearchCancel) {
+	width: 34px;
+	height: 34px;
+	cross: CrossAnimation {
+		size: 34px;
+		skip: 12px;
+		stroke: 1.5;
+		minScale: 0.3;
+	}
+	crossFg: dialogsMenuIconFg;
+	crossFgOver: dialogsMenuIconFgOver;
+	crossPosition: point(0px, 0px);
+	ripple: emptyRippleAnimation;
+}
+infoMediaGalleryZoomOut: IconButton(defaultIconButton) {
+	width: 36px;
+	height: 36px;
+	icon: icon {{ "menu/zoom_out", boxTitleCloseFg }};
+	iconOver: icon {{ "menu/zoom_out", boxTitleCloseFgOver }};
+	iconPosition: point(-1px, -1px);
+	rippleAreaPosition: point(0px, 0px);
+	rippleAreaSize: 36px;
+	ripple: defaultRippleAnimationBgOver;
+}
+infoMediaGalleryZoomIn: IconButton(infoMediaGalleryZoomOut) {
+	icon: icon {{ "menu/zoom_in", boxTitleCloseFg }};
+	iconOver: icon {{ "menu/zoom_in", boxTitleCloseFgOver }};
+}
+infoMediaGalleryZoomOutDisabled: icon {{ "menu/zoom_out", menuFgDisabled }};
+infoMediaGalleryZoomInDisabled: icon {{ "menu/zoom_in", menuFgDisabled }};
+infoMediaGalleryZoomSkip: 4px;
 
 infoProfileTabsStrip: ProfileTabsStrip {
 	height: 48px;

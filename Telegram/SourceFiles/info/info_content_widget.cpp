@@ -101,7 +101,8 @@ ContentWidget::ContentWidget(
 			: st::profileBg;
 		update();
 	}, lifetime());
-	if (_controller->section().type() != Section::Type::Profile) {
+	if (_controller->section().type() != Section::Type::Profile
+		&& !Media::UsesGalleryLayout(_controller)) {
 		rpl::combine(
 			_controller->wrapValue(),
 			_controller->searchEnabledByContent(),
@@ -288,6 +289,10 @@ void ContentWidget::setScrollTopSkip(int scrollTopSkip) {
 
 void ContentWidget::setScrollBottomSkip(int scrollBottomSkip) {
 	_scrollBottomSkip = scrollBottomSkip;
+}
+
+void ContentWidget::setCustomSearchField(not_null<Ui::InputField*> field) {
+	_searchField = field.get();
 }
 
 rpl::producer<int> ContentWidget::scrollHeightValue() const {

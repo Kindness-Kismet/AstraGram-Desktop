@@ -28,6 +28,8 @@ public:
 	[[nodiscard]] int top() const;
 	void setCanReorder(bool);
 	void setMinGridSize(int value);
+	// 画廊样式：两侧留白、格子留缝并裁圆角，分组标题改为次要小字。
+	void setGallery(bool gallery);
 	void resizeToWidth(int newWidth);
 	[[nodiscard]] int height() const;
 
@@ -56,6 +58,16 @@ public:
 
 private:
 	[[nodiscard]] int headerHeight() const;
+	[[nodiscard]] QPoint headerPosition() const;
+	[[nodiscard]] int gridSkip() const;
+	void refreshMosaicPadding();
+	void paintItem(
+		Painter &p,
+		not_null<BaseLayout*> item,
+		QRect rect,
+		QRect clip,
+		TextSelection selection,
+		const Overview::Layout::PaintContext *context) const;
 	void appendItem(not_null<BaseLayout*> item);
 	void setHeader(not_null<BaseLayout*> item);
 	[[nodiscard]] bool belongsHere(not_null<BaseLayout*> item) const;
@@ -96,8 +108,11 @@ private:
 	int _height = 0;
 	int _minGridSize = 0;
 	bool _canReorder = false;
+	bool _gallery = false;
 
 	Mosaic::Layout::MosaicLayout<BaseLayout> _mosaic;
+	mutable std::array<QImage, 4> _galleryCorners;
+	mutable QImage _galleryTile;
 
 };
 

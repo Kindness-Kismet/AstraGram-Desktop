@@ -9,11 +9,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "storage/storage_shared_media.h"
 #include "layout/layout_selection.h"
+#include "ui/image/image_prepare.h"
 #include "ui/rect.h"
 #include "ui/painter.h"
 #include "ui/rows_scroll_cache.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_info.h"
+#include "styles/style_overview.h"
 
 namespace Info::Media {
 namespace {
@@ -55,6 +57,50 @@ void ListSection::setMinGridSize(int value) {
 	_minGridSize = value;
 }
 
+void ListSection::setGallery(bool gallery) {
+	if (_gallery == gallery) {
+		return;
+	}
+	_gallery = gallery;
+	if (!_header.isEmpty()) {
+		_header.setText(
+			_gallery ? st::infoMediaGalleryHeaderStyle : st::infoMediaHeaderStyle,
+			_header.toString());
+	}
+	refreshMosaicPadding();
+	if (!_mosaic.empty()) {
+		// 行宽按加入时的间距累计，间距变了要重新分行。
+		_mosaic.clearRows(false);
+		_mosaic.addItems(_items);
+	}
+}
+
+int ListSection::gridSkip() const {
+	return _gallery ? st::infoMediaGallerySkip : st::infoMediaSkip;
+}
+
+QPoint ListSection::headerPosition() const {
+	return _gallery
+		? QPoint(st::infoMediaGalleryPadding, st::infoMediaGalleryHeaderTop)
+		: st::infoMediaHeaderPosition;
+}
+
+void ListSection::refreshMosaicPadding() {
+	if (_type != Type::GIF) {
+		return;
+	}
+	const auto side = _gallery
+		? st::infoMediaGalleryPadding
+		: st::infoMediaSkip;
+	_mosaic.setPadding({
+		side,
+		headerHeight(),
+		side,
+		st::stickerPanPadding,
+	});
+	_mosaic.setRightSkip(gridSkip());
+}
+
 int ListSection::height() const {
 	return _height;
 }
@@ -80,19 +126,15 @@ bool ListSection::addItem(not_null<BaseLayout*> item) {
 
 void ListSection::finishSection() {
 	if (_type == Type::GIF) {
-		_mosaic.setPadding({
-			st::infoMediaSkip,
-			headerHeight(),
-			st::infoMediaSkip,
-			st::stickerPanPadding,
-		});
-		_mosaic.setRightSkip(st::infoMediaSkip);
+		refreshMosaicPadding();
 		_mosaic.addItems(_items);
 	}
 }
 
 void ListSection::setHeader(not_null<BaseLayout*> item) {
-	_header.setText(st::infoMediaHeaderStyle, _delegate->sectionTitle(item));
+	_header.setText(
+		_gallery ? st::infoMediaGalleryHeaderStyle : st::infoMediaHeaderStyle,
+		_delegate->sectionTitle(item));
 }
 
 bool ListSection::belongsHere(
@@ -149,7 +191,7 @@ QRect ListSection::findItemRect(
 	const auto top = position / _itemsInRow;
 	const auto indexInRow = position % _itemsInRow;
 	const auto left = _itemsLeft
-		+ indexInRow * (_itemWidth + st::infoMediaSkip);
+		+ indexInRow * (_itemWidth + gridSkip());
 	return QRect(left, top, _itemWidth, item->height());
 }
 
@@ -177,7 +219,7 @@ ListFoundItem ListSection::findItemByPoint(QPoint point) const {
 	auto rect = findItemRect(item);
 	if (point.y() >= rect.top()) {
 		auto shift = std::clamp(
-			point.x() / (_itemWidth + st::infoMediaSkip),
+			(point.x() - _itemsLeft) / (_itemWidth + gridSkip()),
 			0,
 			_itemsInRow);
 		while (shift-- && itemIt != _items.end()) {
@@ -260,26 +302,32 @@ void ListSection::paint(
 		int outerWidth) const {
 	const auto header = headerHeight();
 	if (QRect(0, 0, outerWidth, header).intersects(clip)) {
-		p.setPen(st::infoMediaHeaderFg);
+		const auto position = headerPosition();
+		p.setPen(_gallery ? st::infoMediaGalleryHeaderFg : st::infoMediaHeaderFg);
 		_header.drawLeftElided(
 			p,
-			st::infoMediaHeaderPosition.x(),
-			st::infoMediaHeaderPosition.y(),
-			outerWidth - 2 * st::infoMediaHeaderPosition.x(),
+			position.x(),
+			position.y(),
+			outerWidth - 2 * position.x(),
 			outerWidth);
 	}
 	auto localContext = context.layoutContext;
 	if (!_mosaic.empty()) {
-		const auto paintItem = [&](not_null<BaseLayout*> item, QPoint point) {
-			p.translate(point.x(), point.y());
-			item->paint(
+		const auto paintMosaicItem = [&](
+				not_null<BaseLayout*> item,
+				QPoint point) {
+			const auto rect = QRect(
+				point,
+				QSize(item->width(), item->height()));
+			paintItem(
 				p,
-				clip.translated(-point),
+				item,
+				rect,
+				clip,
 				itemSelection(item, context),
 				&localContext);
-			p.translate(-point.x(), -point.y());
 		};
-		_mosaic.paint(std::move(paintItem), clip);
+		_mosaic.paint(std::move(paintMosaicItem), clip);
 		return;
 	}
 
@@ -308,9 +356,9 @@ void ListSection::paint(
 				&& !localContext.skipBorder
 				&& (item != context.hoveredItem)
 				&& !item->elementsAnimating();
-			p.translate(rect.topLeft());
 			if (cached) {
 				const auto ratio = style::DevicePixelRatio();
+				p.translate(rect.topLeft());
 				cache->paintRow(
 					p,
 					GetLayoutCacheKey(item),
@@ -325,14 +373,10 @@ void ListSection::paint(
 							selection,
 							&localContext);
 					});
+				p.translate(-rect.topLeft());
 			} else {
-				item->paint(
-					p,
-					clip.translated(-rect.topLeft()),
-					selection,
-					&localContext);
+				paintItem(p, item, rect, clip, selection, &localContext);
 			}
-			p.translate(-rect.topLeft());
 
 			if (_canReorder && isOneColumn()) {
 				st::stickersReorderIcon.paint(
@@ -346,6 +390,44 @@ void ListSection::paint(
 	}
 }
 
+void ListSection::paintItem(
+		Painter &p,
+		not_null<BaseLayout*> item,
+		QRect rect,
+		QRect clip,
+		TextSelection selection,
+		const Overview::Layout::PaintContext *context) const {
+	const auto tile = (_type == Type::Photo)
+		|| (_type == Type::Video)
+		|| (_type == Type::PhotoVideo)
+		|| (_type == Type::RoundFile)
+		|| (_type == Type::GIF);
+	if (!_gallery || !tile) {
+		p.translate(rect.topLeft());
+		item->paint(p, clip.translated(-rect.topLeft()), selection, context);
+		p.translate(-rect.topLeft());
+		return;
+	}
+	// 先画进离屏图再裁圆角，透明材质背景下边缘也干净。
+	const auto ratio = style::DevicePixelRatio();
+	if (_galleryCorners[0].isNull()) {
+		_galleryCorners = Images::CornersMask(st::infoMediaGalleryRadius);
+	}
+	if (_galleryTile.size() != rect.size() * ratio) {
+		_galleryTile = QImage(
+			rect.size() * ratio,
+			QImage::Format_ARGB32_Premultiplied);
+		_galleryTile.setDevicePixelRatio(ratio);
+	}
+	_galleryTile.fill(Qt::transparent);
+	{
+		auto q = Painter(&_galleryTile);
+		item->paint(q, QRect(QPoint(), rect.size()), selection, context);
+	}
+	_galleryTile = Images::Round(std::move(_galleryTile), _galleryCorners);
+	p.drawImage(rect.topLeft(), _galleryTile);
+}
+
 void ListSection::paintFloatingHeader(
 		Painter &p,
 		int visibleTop,
@@ -353,12 +435,13 @@ void ListSection::paintFloatingHeader(
 	if (!_hasFloatingHeader) {
 		return;
 	}
-	const auto headerTop = st::infoMediaHeaderPosition.y() / 2;
+	const auto position = headerPosition();
+	const auto headerTop = position.y() / 2;
 	if (visibleTop <= (_top + headerTop)) {
 		return;
 	}
 	const auto header = headerHeight();
-	const auto headerLeft = st::infoMediaHeaderPosition.x();
+	const auto headerLeft = position.x();
 	const auto floatingTop = std::min(
 		visibleTop,
 		bottom() - header + headerTop);
@@ -367,7 +450,7 @@ void ListSection::paintFloatingHeader(
 	p.setOpacity(kFloatingHeaderAlpha);
 	p.fillRect(QRect(0, floatingTop, outerWidth, header), st::boxBg);
 	p.setOpacity(1.0);
-	p.setPen(st::infoMediaHeaderFg);
+	p.setPen(_gallery ? st::infoMediaGalleryHeaderFg : st::infoMediaHeaderFg);
 	_header.drawLeftElided(
 		p,
 		headerLeft,
@@ -397,7 +480,11 @@ TextSelection ListSection::itemSelection(
 }
 
 int ListSection::headerHeight() const {
-	return _header.isEmpty() ? 0 : st::infoMediaHeaderHeight;
+	return _header.isEmpty()
+		? 0
+		: _gallery
+		? st::infoMediaGalleryHeaderHeight
+		: st::infoMediaHeaderHeight;
 }
 
 int ListSection::oneColumnRightPadding() const {
@@ -432,13 +519,15 @@ void ListSection::resizeToWidth(int newWidth) {
 	case Type::Video:
 	case Type::PhotoVideo:
 	case Type::RoundFile: {
-		const auto skip = st::infoMediaSkip;
-		_itemsLeft = st::infoMediaLeft;
-		_itemsTop = st::infoMediaSkip;
+		const auto skip = gridSkip();
+		_itemsLeft = _gallery
+			? st::infoMediaGalleryPadding
+			: st::infoMediaLeft;
+		_itemsTop = _gallery ? 0 : st::infoMediaSkip;
 		_itemsInRow = (newWidth - _itemsLeft * 2 + skip)
 			/ (gridSize + skip);
 		_itemWidth = ((newWidth - _itemsLeft * 2 + skip) / _itemsInRow)
-			- st::infoMediaSkip;
+			- skip;
 		_itemsLeft = (newWidth - (_itemWidth + skip) * _itemsInRow + skip)
 			/ 2;
 		for (auto &item : _items) {
@@ -447,16 +536,27 @@ void ListSection::resizeToWidth(int newWidth) {
 	} break;
 
 	case Type::GIF: {
-		_mosaic.setFullWidth(newWidth - st::infoMediaSkip);
+		_mosaic.setFullWidth(_gallery
+			? newWidth
+			: (newWidth - st::infoMediaSkip));
 	} break;
 
 	case Type::RoundVoiceFile:
-	case Type::MusicFile:
-		resizeOneColumn(0, newWidth);
-		break;
+	case Type::MusicFile: {
+		// 歌曲行自带左内边距，画廊模式只补足到与页头对齐。
+		const auto itemsLeft = _gallery
+			? std::max(
+				st::infoMediaGalleryPadding
+					- st::overviewFileLayout.songPadding.left(),
+				0)
+			: 0;
+		resizeOneColumn(itemsLeft, newWidth - 2 * itemsLeft);
+	} break;
 	case Type::File:
 	case Type::Link: {
-		const auto itemsLeft = st::infoMediaHeaderPosition.x();
+		const auto itemsLeft = _gallery
+			? st::infoMediaGalleryPadding
+			: st::infoMediaHeaderPosition.x();
 		const auto itemWidth = newWidth - 2 * itemsLeft;
 		resizeOneColumn(itemsLeft, itemWidth);
 	} break;
@@ -473,7 +573,7 @@ int ListSection::recountHeight() {
 	case Type::Video:
 	case Type::PhotoVideo:
 	case Type::RoundFile: {
-		const auto itemHeight = _itemHeight + st::infoMediaSkip;
+		const auto itemHeight = _itemHeight + gridSkip();
 		auto index = 0;
 		result += _itemsTop;
 		for (auto &item : _items) {

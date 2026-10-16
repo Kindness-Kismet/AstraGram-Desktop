@@ -53,8 +53,9 @@ int ListZoom::minVideoGridSize() const {
 }
 
 int ListZoom::minGridSizeForStep(int step) const {
-	const auto base = st::infoMediaMinGridSize
-		+ step * st::infoMediaGridSizeStep;
+	const auto base = (_list->_gallery
+		? st::infoMediaGalleryMinGridSize
+		: st::infoMediaMinGridSize) + step * st::infoMediaGridSizeStep;
 	switch (_list->_provider->type()) {
 	case Type::Video:
 	case Type::PhotoVideo:
@@ -74,8 +75,12 @@ int ListZoom::columnsForGridSize(int gridSize) const {
 	if (outer <= 0) {
 		return 1;
 	}
-	const auto skip = st::infoMediaSkip;
-	const auto left = st::infoMediaLeft;
+	const auto skip = _list->_gallery
+		? st::infoMediaGallerySkip
+		: st::infoMediaSkip;
+	const auto left = _list->_gallery
+		? st::infoMediaGalleryPadding
+		: st::infoMediaLeft;
 	return std::max(1, (outer - left * 2 + skip) / (gridSize + skip));
 }
 

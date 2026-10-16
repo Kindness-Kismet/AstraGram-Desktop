@@ -56,6 +56,11 @@ public:
 	void zoomOut();
 	[[nodiscard]] bool canZoomIn() const;
 	[[nodiscard]] bool canZoomOut() const;
+	[[nodiscard]] rpl::producer<> zoomStateChanges() const;
+
+	[[nodiscard]] rpl::producer<std::optional<int>> fullCountValue() const;
+	void toggleSelectMode();
+	[[nodiscard]] rpl::producer<bool> selectModeValue() const;
 
 	~InnerWidget();
 

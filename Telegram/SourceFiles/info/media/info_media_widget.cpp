@@ -8,11 +8,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/media/info_media_widget.h"
 
 #include "history/history.h"
+#include "info/media/info_media_gallery_header.h"
 #include "info/media/info_media_inner_widget.h"
+#include "info/profile/info_profile_values.h"
 #include "info/info_controller.h"
 #include "data/data_session.h"
 #include "main/main_session.h"
 #include "ui/widgets/menu/menu_add_action_callback.h"
+#include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/search_field_controller.h"
 #include "ui/ui_utility.h"
@@ -23,9 +26,23 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_saved_sublist.h"
 #include "lang/lang_keys.h"
 #include "window/window_session_controller.h"
+#include "styles/style_info.h"
 #include "styles/style_menu_icons.h"
 
 namespace Info::Media {
+namespace {
+
+[[nodiscard]] bool UsesGalleryLayout(
+		Section section,
+		PeerData *peer,
+		Data::SavedSublist *sublist) {
+	return (section.type() == Section::Type::Media)
+		&& peer
+		&& !peer->sharedMediaInfo()
+		&& !sublist;
+}
+
+} // namespace
 
 std::optional<int> TypeToTabIndex(Type type) {
 	switch (type) {
@@ -69,6 +86,18 @@ tr::phrase<> SharedMediaTitle(Type type) {
 		return tr::lng_media_type_polls;
 	}
 	Unexpected("Bad media type in Info::TitleValue()");
+}
+
+bool UsesGalleryLayout(not_null<AbstractController*> controller) {
+	const auto &key = controller->key();
+	return UsesGalleryLayout(controller->section(), key.peer(), key.sublist());
+}
+
+bool UsesGalleryLayout(not_null<ContentMemento*> memento) {
+	return UsesGalleryLayout(
+		memento->section(),
+		memento->peer(),
+		memento->sublist());
 }
 
 Memento::Memento(not_null<Controller*> controller)
@@ -154,6 +183,27 @@ Widget::Widget(QWidget *parent, not_null<Controller*> controller)
 		return (e->modifiers() & Qt::ControlModifier)
 			&& _inner->processZoomWheel(e);
 	});
+	if (UsesGalleryLayout(controller)) {
+		setupGallery();
+	}
+}
+
+void Widget::setupGallery() {
+	_header = Ui::CreateChild<GalleryHeader>(
+		this,
+		controller()->section().mediaType(),
+		_inner,
+		controller()->searchFieldController());
+	widthValue(
+	) | rpl::on_next([=](int width) {
+		_header->resizeToWidth(width);
+		_header->moveToLeft(0, 0);
+	}, _header->lifetime());
+	_header->show();
+	setScrollTopSkip(st::infoMediaGalleryHeroHeight);
+	if (const auto field = _header->searchField()) {
+		setCustomSearchField(field);
+	}
 }
 
 rpl::producer<SelectedItems> Widget::selectedListValue() const {
@@ -165,10 +215,8 @@ void Widget::selectionAction(SelectionAction action) {
 }
 
 void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
-	const auto type = controller()->section().mediaType();
-	if (type != Type::Photo
-		&& type != Type::Video
-		&& type != Type::PhotoVideo) {
+	// 画廊页的缩放在页头，日历在顶栏。
+	if (_header || !calendarAvailable()) {
 		return;
 	}
 	if (_inner->canZoomIn()) {
@@ -182,19 +230,49 @@ void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 		}, &st::menuIconZoomOut);
 	}
 	addAction(tr::lng_calendar(tr::now), [=] {
-		controller()->parentController()->showCalendar({
-			.chat = Dialogs::Key(
-				controller()->session().data().history(
-					controller()->key().peer())),
-			.date = QDate::currentDate(),
-			.mediaPhoto = (type != Type::Video),
-			.mediaVideo = (type != Type::Photo),
-			.customJump = [=](FullMsgId id, Fn<void()> close) {
-				_inner->jumpToMessage(id.msg);
-				close();
-			},
-		});
+		showCalendar();
 	}, &st::menuIconSchedule);
+}
+
+bool Widget::calendarAvailable() const {
+	const auto type = controller()->section().mediaType();
+	return (type == Type::Photo)
+		|| (type == Type::Video)
+		|| (type == Type::PhotoVideo);
+}
+
+void Widget::showCalendar() {
+	const auto type = controller()->section().mediaType();
+	controller()->parentController()->showCalendar({
+		.chat = Dialogs::Key(
+			controller()->session().data().history(
+				controller()->key().peer())),
+		.date = QDate::currentDate(),
+		.mediaPhoto = (type != Type::Video),
+		.mediaVideo = (type != Type::Photo),
+		.customJump = [=](FullMsgId id, Fn<void()> close) {
+			_inner->jumpToMessage(id.msg);
+			close();
+		},
+	});
+}
+
+void Widget::toggleSelectMode() {
+	_inner->toggleSelectMode();
+}
+
+rpl::producer<bool> Widget::selectModeValue() const {
+	return _inner->selectModeValue();
+}
+
+bool Widget::searchAvailable() const {
+	return _header && _header->searchField();
+}
+
+void Widget::showSearch() {
+	if (const auto field = _header ? _header->searchField() : nullptr) {
+		field->setFocusFast();
+	}
 }
 
 bool Widget::processZoomKey(not_null<QKeyEvent*> e) {
@@ -213,6 +291,18 @@ bool Widget::processZoomKey(not_null<QKeyEvent*> e) {
 }
 
 rpl::producer<QString> Widget::title() {
+	if (_header) {
+		const auto topic = controller()->key().topic();
+		auto name = topic
+			? Profile::TitleValue(topic)
+			: Profile::NameValue(controller()->key().peer());
+		return rpl::combine(
+			std::move(name),
+			tr::lng_profile_shared_media()
+		) | rpl::map([](const QString &name, const QString &section) {
+			return name + u" "_q + QChar(0x00B7) + u" "_q + section;
+		});
+	}
 	if (controller()->key().peer()->sharedMediaInfo() && isStackBottom()) {
 		return tr::lng_profile_shared_media();
 	}

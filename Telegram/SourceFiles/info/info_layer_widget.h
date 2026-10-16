@@ -70,6 +70,7 @@ private:
 		not_null<const HistoryItem*> item) override;
 
 	void setupHeightConsumers();
+	[[nodiscard]] int desiredWidth() const;
 	void setContentHeight(int height);
 	void unregisterActiveLayerSection();
 	[[nodiscard]] QRect countGeometry(int newWidth);

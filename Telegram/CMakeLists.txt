@@ -1620,6 +1620,8 @@ PRIVATE
     info/media/info_media_common.h
     info/media/info_media_empty_widget.cpp
     info/media/info_media_empty_widget.h
+    info/media/info_media_gallery_header.cpp
+    info/media/info_media_gallery_header.h
     info/media/info_media_grid_zoom.cpp
     info/media/info_media_grid_zoom.h
     info/media/info_media_inner_widget.cpp

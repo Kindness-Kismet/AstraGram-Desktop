@@ -377,6 +377,10 @@ void WrapWidget::createTopBar() {
 		(_controller->section().type() == Section::Type::Settings
 			&& wrapValue == Wrap::Narrow)
 			? st::settingsPageTopBar
+			: Media::UsesGalleryLayout(_controller.get())
+			? ((wrapValue == Wrap::Layer)
+				? st::infoLayerMediaTopBar
+				: st::infoMediaTopBar)
 			: TopBarStyle(wrapValue),
 		std::move(selectedItems));
 	_topBar->selectionActionRequests(
@@ -527,7 +531,11 @@ void WrapWidget::setupTopBarMenuToggle() {
 			_controller->showSettings(::Settings::InformationId());
 		});
 	} else if (section.type() == Section::Type::Media) {
-		addTopBarMenuButton();
+		if (Media::UsesGalleryLayout(_controller.get())) {
+			addMediaTopBarButtons();
+		} else {
+			addTopBarMenuButton();
+		}
 	} else if (section.type() == Section::Type::Downloads) {
 		auto &manager = Core::App().downloadManager();
 		rpl::merge(
@@ -621,6 +629,37 @@ void WrapWidget::addTopBarMenuButton() {
 	}, _topBarMenuToggle->lifetime());
 }
 
+void WrapWidget::addMediaTopBarButtons() {
+	Expects(_topBar != nullptr);
+
+	const auto media = static_cast<Media::Widget*>(_content.data());
+	const auto layer = (wrap() == Wrap::Layer);
+	if (media->calendarAvailable()) {
+		const auto calendar = _topBar->addButton(
+			base::make_unique_q<Ui::IconButton>(
+				_topBar,
+				layer ? st::infoLayerTopBarCalendar : st::infoTopBarCalendar));
+		calendar->setAccessibleName(tr::lng_calendar(tr::now));
+		calendar->addClickHandler([=] {
+			media->showCalendar();
+		});
+	}
+	const auto select = _topBar->addButton(
+		base::make_unique_q<Ui::IconButton>(
+			_topBar,
+			layer ? st::infoLayerTopBarSelect : st::infoTopBarSelect));
+	select->setAccessibleName(tr::lng_context_select_msg(tr::now));
+	select->addClickHandler([=] {
+		media->toggleSelectMode();
+	});
+	media->selectModeValue(
+	) | rpl::on_next([=](bool active) {
+		const auto icon = active ? &st::infoTopBarSelectActive : nullptr;
+		select->setIconOverride(icon, icon);
+	}, select->lifetime());
+	setupShortcuts();
+}
+
 bool WrapWidget::closeByOutsideClick() const {
 	return _content->closeByOutsideClick();
 }
@@ -699,7 +738,8 @@ bool WrapWidget::requireTopBarSearch() const {
 		|| !_controller->searchFieldController()
 		|| (_controller->wrap() == Wrap::Layer)
 		|| (_controller->section().type() == Section::Type::Profile)
-		|| key().isDownloads()) {
+		|| key().isDownloads()
+		|| Media::UsesGalleryLayout(_controller.get())) {
 		return false;
 	} else if (hasStackHistory()
 		|| _controller->section().type() == Section::Type::RequestsList) {
@@ -1054,8 +1094,14 @@ void WrapWidget::showNewContent(
 		const Window::SectionShow &params) {
 	const auto saveToStack = (_content != nullptr)
 		&& (params.way == Window::SectionShow::Way::Forward);
+	// 弹层宽度随画廊页变化时直接切换，滑动截图对不齐。
+	const auto widthChanges = (wrap() == Wrap::Layer)
+		&& (_content != nullptr)
+		&& (Media::UsesGalleryLayout(_controller.get())
+			!= Media::UsesGalleryLayout(memento));
 	const auto needAnimation = (_content != nullptr)
-		&& (params.animated != anim::type::instant);
+		&& (params.animated != anim::type::instant)
+		&& !widthChanges;
 	auto animationParams = SectionSlideParams();
 	auto newController = createController(
 		_controller->parentController(),

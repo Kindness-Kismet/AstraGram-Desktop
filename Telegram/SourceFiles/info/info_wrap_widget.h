@@ -220,6 +220,7 @@ private:
 	bool requireTopBarSearch() const;
 
 	void addTopBarMenuButton();
+	void addMediaTopBarButtons();
 	[[nodiscard]] bool topBarMenuHasActions() const;
 	void addProfileCallsButton();
 	void showTopBarMenu();

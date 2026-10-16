@@ -208,6 +208,8 @@ protected:
 
 	void setScrollTopSkip(int scrollTopSkip);
 	void setScrollBottomSkip(int scrollBottomSkip);
+	// 页面自带的搜索框，沿用默认的焦点与 Esc 清空逻辑。
+	void setCustomSearchField(not_null<Ui::InputField*> field);
 	void setInnerTopReserve(int reserve);
 	void setupFlexibleRegularScroll(
 		not_null<Ui::RpWidget*> inner,

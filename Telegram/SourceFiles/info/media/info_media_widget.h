@@ -20,6 +20,10 @@ namespace Data {
 class ForumTopic;
 } // namespace Data
 
+namespace Info {
+class AbstractController;
+} // namespace Info
+
 namespace Info::Media {
 
 using Type = Storage::SharedMediaType;
@@ -28,7 +32,13 @@ using Type = Storage::SharedMediaType;
 [[nodiscard]] Type TabIndexToType(int index);
 [[nodiscard]] tr::phrase<> SharedMediaTitle(Type type);
 
+// 资料页打开的共享媒体走画廊布局，“我的收藏”与子会话保持原样。
+[[nodiscard]] bool UsesGalleryLayout(
+	not_null<AbstractController*> controller);
+[[nodiscard]] bool UsesGalleryLayout(not_null<ContentMemento*> memento);
+
 class InnerWidget;
+class GalleryHeader;
 
 class Memento final : public ContentMemento {
 public:
@@ -127,16 +137,26 @@ public:
 
 	void fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) override;
 	bool processZoomKey(not_null<QKeyEvent*> e) override;
+	bool searchAvailable() const override;
+	void showSearch() override;
 
 	rpl::producer<QString> title() override;
 
+	// 画廊页顶栏按钮：日历跳转与选择模式。
+	[[nodiscard]] bool calendarAvailable() const;
+	void showCalendar();
+	void toggleSelectMode();
+	[[nodiscard]] rpl::producer<bool> selectModeValue() const;
+
 private:
+	void setupGallery();
 	void saveState(not_null<Memento*> memento);
 	void restoreState(not_null<Memento*> memento);
 
 	std::shared_ptr<ContentMemento> doCreateMemento() override;
 
 	InnerWidget *_inner = nullptr;
+	GalleryHeader *_header = nullptr;
 
 };
 
