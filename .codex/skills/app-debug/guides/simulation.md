@@ -135,6 +135,10 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 列表沿正式响应处理入口更新；不安装私钥或提交交易，状态随模拟会话销毁。
 打开后用 `control.window simulation.wallet` 选择该窗口，检查结束用 `simulation.wallet close` 关闭并恢复主窗口目标。
 
+`dialog.list` 列出对话框样本的键名与布局类别；`dialog.open <key>` 仅在独立模拟配置中关闭现有图层后无动画打开样本，`dialog.close` 关闭全部图层。
+样本覆盖确认、表单、选项、列表、选择器、深色、不可关闭和自绘顶部等布局。公共外壳的控件标识为 `dialog.shell`、`dialog.title` 和 `dialog.close`，
+配合 `control.list dialog.` 与截图检查标题、关闭按钮和底部按钮。保存类按钮仍走原有业务路径，模拟模式下联网请求不会成功，不作为业务结果的证据。
+
 先用 `simulation.list`、`message.list/inspect`、`chat.draft` 核对状态，再截图观察布局。
 `message.inspect` 返回实际删除、置顶、引用、话题、评论和 `ttlDestroyAt`；短倒计时到期后再次查询存在状态。
 模拟删除和编辑不得新增 `storage.deleted/edits` 记录。留档数据库独立验证使用 `storage.verify-archive`。

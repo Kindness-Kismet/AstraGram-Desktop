@@ -412,6 +412,7 @@ set(extras_files
         extras/debug/commands/anim_commands.cpp
         extras/debug/commands/editor_commands.cpp
         extras/debug/commands/iv_commands.cpp
+        extras/debug/commands/dialog_commands.cpp
 
         info/profile/info_profile_music_button.cpp
         info/profile/info_profile_music_button.h

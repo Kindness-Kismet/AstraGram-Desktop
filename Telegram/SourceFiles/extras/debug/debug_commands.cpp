@@ -80,6 +80,7 @@ namespace {
 			&Commands::animHandlers(),
 			&Commands::editorHandlers(),
 			&Commands::ivHandlers(),
+			&Commands::dialogHandlers(),
 		}) {
 			all.insert(part->begin(), part->end());
 		}
