@@ -54,7 +54,7 @@ GiveawayTypeRow::GiveawayTypeRow(
 	rpl::producer<QString> title,
 	rpl::producer<QString> subtitle,
 	QImage badge)
-: RippleButton(parent, st::defaultRippleAnimation)
+: AbstractButton(parent)
 , _type(type)
 , _st((_type == Type::SpecificUsers
 		|| _type == Type::Random
@@ -103,10 +103,6 @@ void GiveawayTypeRow::paintEvent(QPaintEvent *e) {
 		|| isPrepaid
 		|| (!_customUserpic.isNull());
 
-	if (paintOver) {
-		p.fillRect(e->rect(), _st.button.textBgOver);
-	}
-	Ui::RippleButton::paintRipple(p, 0, 0);
 	if (hasUserpic) {
 		_userpic.paintCircle(
 			p,
@@ -159,7 +155,10 @@ void GiveawayTypeRow::paintEvent(QPaintEvent *e) {
 			? (statusIcon->width() + st::boostsListMiniIconSkip)
 			: 0);
 	p.setFont(st::contactsStatusFont);
-	p.setPen((isRandom || !hasUserpic) ? st::lightButtonFg : _st.statusFg);
+	// 不画行高亮，悬停加深状态文字和单选圈。
+	p.setPen((isRandom || !hasUserpic)
+		? (paintOver ? st::lightButtonFgOver : st::lightButtonFg)
+		: (paintOver ? _st.statusFgOver : _st.statusFg));
 	_status.drawLeftElided(p, statusx, statusy, statusw, outerWidth);
 	if (statusIcon) {
 		statusIcon->paint(
@@ -189,6 +188,15 @@ void GiveawayTypeRow::addRadio(
 	radio->moveToLeft(pos.x(), pos.y());
 	radio->setAttribute(Qt::WA_TransparentForMouseEvents);
 	radio->show();
+	_radio = radio;
+}
+
+void GiveawayTypeRow::onStateChanged(State was, StateChangeSource source) {
+	// 单选按钮不接收鼠标事件，由整行转交悬停状态。
+	if (_radio) {
+		_radio->checkView()->setOver(isOver() && !isDisabled());
+	}
+	update();
 }
 
 } // namespace Giveaway

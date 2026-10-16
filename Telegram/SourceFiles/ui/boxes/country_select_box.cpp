@@ -12,14 +12,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "countries/countries_instance.h"
 #include "lang/lang_keys.h"
 #include "ui/accessible/ui_accessible_item.h"
-#include "ui/effects/ripple_animation.h"
 #include "ui/widgets/multi_select.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/painter.h"
 #include "ui/screen_reader_mode.h"
 #include "ui/ui_utility.h"
 #include "styles/style_country_select_box.h"
-#include "styles/style_intro.h"
 #include "styles/style_layers.h"
 
 #include <QtCore/QRegularExpression>
@@ -109,8 +107,6 @@ private:
 	int _pressed = -1;
 	QString _filter;
 	bool _mouseSelection = false;
-
-	std::vector<std::unique_ptr<RippleAnimation>> _ripples;
 
 	std::vector<Entry> _list;
 	std::vector<Entry> _filtered;
@@ -376,13 +372,8 @@ void CountrySelectBox::Inner::paintEvent(QPaintEvent *e) {
 		const auto y = rowTop(i);
 		const auto row = QRect(0, y, width(), _rowHeight);
 
-		p.fillRect(row, selected ? st::countryRowBgOver : st::countryRowBg);
-		if (i < int(_ripples.size()) && _ripples[i]) {
-			_ripples[i]->paint(p, 0, y, width());
-			if (_ripples[i]->empty()) {
-				_ripples[i].reset();
-			}
-		}
+		// 对话框里不画行高亮，悬停只加深区号文字。
+		p.fillRect(row, st::countryRowBg);
 
 		const auto code = u"+"_q + list[i].code;
 		const auto codeWidth = codeFont->width(code);
@@ -459,21 +450,6 @@ void CountrySelectBox::Inner::mousePressEvent(QMouseEvent *e) {
 	updateSelected(e->pos());
 
 	setPressed(_selected);
-	const auto index = _pressed;
-	if (index < 0 || index >= int(current().size())) {
-		return;
-	}
-	if (index >= int(_ripples.size())) {
-		_ripples.resize(index + 1);
-	}
-	auto &ripple = _ripples[index];
-	if (!ripple) {
-		ripple = std::make_unique<RippleAnimation>(
-			st::countryRipple,
-			RippleAnimation::RectMask(QSize(width(), _rowHeight)),
-			[=] { updateRow(index); });
-		ripple->add(e->pos() - QPoint(0, rowTop(index)));
-	}
 }
 
 void CountrySelectBox::Inner::mouseReleaseEvent(QMouseEvent *e) {
@@ -604,11 +580,6 @@ void CountrySelectBox::Inner::scrollToRow(int index) {
 }
 
 void CountrySelectBox::Inner::setPressed(int pressed) {
-	if (_pressed >= 0
-		&& _pressed < int(_ripples.size())
-		&& _ripples[_pressed]) {
-		_ripples[_pressed]->lastStop();
-	}
 	_pressed = pressed;
 }
 

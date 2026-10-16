@@ -11,13 +11,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 
 namespace Ui {
+class Checkbox;
 template <typename Enum>
 class RadioenumGroup;
 } // namespace Ui
 
 namespace Giveaway {
 
-class GiveawayTypeRow final : public Ui::RippleButton {
+class GiveawayTypeRow final : public Ui::AbstractButton {
 public:
 	enum class Type {
 		Random,
@@ -50,12 +51,14 @@ public:
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
+	void onStateChanged(State was, StateChangeSource source) override;
 
 	int resizeGetHeight(int) override;
 
 private:
 	const Type _type;
 	const style::PeerListItem _st;
+	Ui::Checkbox *_radio = nullptr;
 
 	Ui::EmptyUserpic _userpic;
 	Ui::Text::String _status;

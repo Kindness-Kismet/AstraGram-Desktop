@@ -30,6 +30,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "menu/menu_send.h"
 #include "ui/controls/swipe_handler.h"
+#include "ui/widgets/buttons.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/wrap/padding_wrap.h"
@@ -86,6 +87,10 @@ ContentWidget::ContentWidget(
 
 	setAttribute(Qt::WA_OpaquePaintEvent, _controller->wrap() != Wrap::Layer);
 	ExtrasFeatures::WindowMaterial::watchSurface(this);
+	// 资料等区块既能弹层也能放侧栏，按对话框标准绘制行；设置页没有弹层形态。
+	if (_controller->section().type() != Section::Type::Settings) {
+		Ui::MarkFlatRowHover(this);
+	}
 	_controller->wrapValue(
 	) | rpl::on_next([this](Wrap value) {
 		if (value != Wrap::Layer) {

@@ -125,7 +125,6 @@ private:
 		Ui::Text::String description = { st::boxWideWidth / 2 };
 		int top = 0;
 		int height = 0;
-		mutable std::unique_ptr<Ui::RippleAnimation> ripple;
 		mutable std::unique_ptr<Ui::RippleAnimation> menuToggleRipple;
 		bool menuToggleForceRippled = false;
 		int titleHeight = 0;
@@ -151,6 +150,7 @@ private:
 	using Selection = std::variant<v::null_t, RowSelection, MenuSelection>;
 
 	void updateSelected(Selection selected);
+	void setRowOver(Selection selected, bool over);
 	void updatePressed(Selection pressed);
 	Rows::Row &rowByIndex(int index);
 	const Rows::Row &rowByIndex(int index) const;
@@ -450,7 +450,8 @@ void Rows::mouseMoveEvent(QMouseEvent *e) {
 
 void Rows::mousePressEvent(QMouseEvent *e) {
 	updatePressed(_selected);
-	if (!v::is_null(_pressed)
+	// 整行不画水波纹，只有右侧菜单按钮有。
+	if (v::is<MenuSelection>(_pressed)
 		&& !rowBySelection(_pressed).menuToggleForceRippled) {
 		addRipple(_pressed, e->pos());
 	}
@@ -471,16 +472,13 @@ QRect Rows::menuToggleArea(not_null<const Row*> row) const {
 }
 
 void Rows::addRipple(Selection selected, QPoint position) {
-	Expects(!v::is_null(selected));
+	Expects(v::is<MenuSelection>(selected));
 
 	ensureRippleBySelection(selected);
 
-	const auto menu = v::is<MenuSelection>(selected);
 	const auto &row = rowBySelection(selected);
-	const auto menuArea = menuToggleArea(&row);
 	const auto &ripple = rippleBySelection(&row, selected);
-	const auto topleft = menu ? menuArea.topLeft() : QPoint(0, row.top);
-	ripple->add(position - topleft);
+	ripple->add(position - menuToggleArea(&row).topLeft());
 }
 
 void Rows::ensureRippleBySelection(Selection selected) {
@@ -492,14 +490,9 @@ void Rows::ensureRippleBySelection(not_null<Row*> row, Selection selected) {
 	if (ripple) {
 		return;
 	}
-	const auto menu = v::is<MenuSelection>(selected);
-	const auto menuArea = menuToggleArea(row);
-	auto mask = menu
-		? Ui::RippleAnimation::EllipseMask(menuArea.size())
-		: Ui::RippleAnimation::RectMask({ width(), row->height });
 	ripple = std::make_unique<Ui::RippleAnimation>(
 		st::defaultRippleAnimation,
-		std::move(mask),
+		Ui::RippleAnimation::EllipseMask(menuToggleArea(row).size()),
 		[=] { repaintChecked(row); });
 }
 
@@ -715,8 +708,6 @@ void Rows::filter(const QString &query) {
 		for (auto &row : _rows) {
 			if (!skip(row.keywords, _query)) {
 				_filtered.push_back(&row);
-			} else {
-				row.ripple = nullptr;
 			}
 		}
 	}
@@ -859,20 +850,30 @@ void Rows::repaintChecked(not_null<const Row*> row) {
 
 void Rows::updateSelected(Selection selected) {
 	const auto changed = (v::is_null(_selected) != v::is_null(selected));
+	setRowOver(_selected, false);
 	repaint(_selected);
 	_selected = selected;
+	setRowOver(_selected, true);
 	repaint(_selected);
 	if (changed) {
 		_hasSelection.fire(!v::is_null(_selected));
 	}
 }
 
+// 悬停行只加深自己的单选圈；指向菜单按钮时由按钮自己反馈。
+void Rows::setRowOver(Selection selected, bool over) {
+	v::match(selected, [&](RowSelection data) {
+		const auto &row = rowByIndex(data.index);
+		row.check->setOver(over && !row.removed);
+	}, [](const auto &) {
+	});
+}
+
 void Rows::updatePressed(Selection pressed) {
-	if (!v::is_null(_pressed)) {
-		if (!rowBySelection(_pressed).menuToggleForceRippled) {
-			if (const auto ripple = rippleBySelection(_pressed).get()) {
-				ripple->lastStop();
-			}
+	if (v::is<MenuSelection>(_pressed)
+		&& !rowBySelection(_pressed).menuToggleForceRippled) {
+		if (const auto ripple = rippleBySelection(_pressed).get()) {
+			ripple->lastStop();
 		}
 	}
 	_pressed = pressed;
@@ -911,9 +912,9 @@ const std::unique_ptr<Ui::RippleAnimation> &Rows::rippleBySelection(
 std::unique_ptr<Ui::RippleAnimation> &Rows::rippleBySelection(
 		not_null<Row*> row,
 		Selection selected) {
-	return v::is<MenuSelection>(selected)
-		? row->menuToggleRipple
-		: row->ripple;
+	Expects(v::is<MenuSelection>(selected));
+
+	return row->menuToggleRipple;
 }
 
 const std::unique_ptr<Ui::RippleAnimation> &Rows::rippleBySelection(
@@ -999,17 +1000,6 @@ void Rows::paintEvent(QPaintEvent *e) {
 		const auto guard = gsl::finally([&] { p.translate(0, -row.top); });
 
 		const auto selected = (selectedIndex == i);
-		if (selected && !row.removed) {
-			p.fillRect(0, 0, width(), row.height, st::windowBgOver);
-		}
-
-		if (row.ripple) {
-			row.ripple->paint(p, 0, 0, width());
-			if (row.ripple->empty()) {
-				row.ripple.reset();
-			}
-		}
-
 		const auto checkTop = (row.height - st::defaultRadio.diameter) / 2;
 		row.check->paint(p, checkLeft, checkTop, width());
 

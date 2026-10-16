@@ -674,9 +674,6 @@ infoMembersAddMember: IconButton(infoMembersButton) {
 	icon: icon {{ "info/info_add_member", windowBoldFg }};
 	iconOver: icon {{ "info/info_add_member", windowBoldFg }};
 }
-// 成员行悬停高亮两侧留边并做圆角。
-infoMembersRowMargins: margins(6px, 0px, 6px, 0px);
-infoMembersRowRadius: 10px;
 infoMembersHeaderButton: IconButton(infoMembersButton) {
 	width: 32px;
 	height: 32px;

@@ -39,6 +39,7 @@ protected:
 	void mousePressEvent(QMouseEvent *e) override;
 	void mouseReleaseEvent(QMouseEvent *e) override;
 	void onStateChanged(State was, StateChangeSource source) override;
+	QPoint prepareRippleStartPosition() const override;
 	void paintEvent(QPaintEvent *e) override;
 	int resizeGetHeight(int newWidth) override;
 

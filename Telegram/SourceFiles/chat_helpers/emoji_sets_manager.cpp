@@ -82,7 +82,7 @@ private:
 
 };
 
-class Row : public Ui::RippleButton {
+class Row : public Ui::AbstractButton {
 public:
 	Row(QWidget *widget, not_null<Main::Session*> session, const Set &set);
 
@@ -114,6 +114,7 @@ private:
 	std::array<QPixmap, 4> _preview;
 	Ui::Animations::Simple _toggled;
 	Ui::Animations::Simple _active;
+	Ui::Animations::Simple _overAnimation;
 	std::unique_ptr<Ui::RadialAnimation> _loading;
 
 };
@@ -238,7 +239,7 @@ void Inner::setupContent() {
 }
 
 Row::Row(QWidget *widget, not_null<Main::Session*> session, const Set &set)
-: RippleButton(widget, st::defaultRippleAnimation)
+: AbstractButton(widget)
 , _session(session)
 , _id(set.id)
 , _state(Available{ set.size }) {
@@ -250,11 +251,7 @@ Row::Row(QWidget *widget, not_null<Main::Session*> session, const Set &set)
 void Row::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 
-	const auto over = showOver();
-	const auto bg = over ? st::windowBgOver : st::windowBg;
-	p.fillRect(rect(), bg);
-
-	paintRipple(p, 0, 0);
+	p.fillRect(rect(), st::windowBg);
 	paintPreview(p);
 	paintRadio(p);
 }
@@ -295,15 +292,22 @@ void Row::paintRadio(QPainter &p) {
 		- _st->thickness;
 	const auto top = (height() - _st->diameter - _st->thickness) / 2;
 	const auto outerWidth = width();
+	const auto outer = style::rtlrect(
+		QRectF(left, top, _st->diameter, _st->diameter),
+		outerWidth);
 
 	Ui::RadioView::PaintOuter(
 		p,
-		style::rtlrect(
-			QRectF(left, top, _st->diameter, _st->diameter),
-			outerWidth),
+		outer,
 		_st->untoggledFg->c,
 		_st->toggledFg->c,
 		active);
+	// 不画行高亮，悬停只加深单选圈本身。
+	const auto over = _overAnimation.value(showOver() ? 1. : 0.);
+	if (over > 0.) {
+		p.setBrush(Ui::AbstractCheckView::OverColor(over));
+		p.drawEllipse(outer);
+	}
 
 	// 外圈只在下载时画进度弧。
 	auto pen = anim::pen(_st->untoggledFg, _st->toggledFg, active);
@@ -364,10 +368,16 @@ bool Row::showOver() const {
 }
 
 void Row::onStateChanged(State was, StateChangeSource source) {
-	RippleButton::onStateChanged(was, source);
-	if (showOver() != showOver(was)) {
-		updateStatusColorOverride();
+	const auto over = showOver();
+	if (over == showOver(was)) {
+		return;
 	}
+	updateStatusColorOverride();
+	_overAnimation.start(
+		[=] { update(); },
+		over ? 0. : 1.,
+		over ? 1. : 0.,
+		st::universalDuration);
 }
 
 void Row::updateStatusColorOverride() {

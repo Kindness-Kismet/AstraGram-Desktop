@@ -14,7 +14,6 @@
 #include "styles/style_layers.h"
 #include "styles/style_passport.h"
 #include "ui/boxes/confirm_box.h"
-#include "ui/effects/ripple_animation.h"
 #include "ui/painter.h"
 #include "ui/text/text_entity.h"
 #include "ui/text/text_options.h"
@@ -77,9 +76,6 @@ private:
 		Ui::Text::String description = {st::boxWideWidth / 2};
 		int top = 0;
 		int height = 0;
-		mutable std::unique_ptr<Ui::RippleAnimation> ripple;
-		mutable std::unique_ptr<Ui::RippleAnimation> menuToggleRipple;
-		bool menuToggleForceRippled = false;
 		int titleHeight = 0;
 		int descriptionHeight = 0;
 		QStringList keywords;
@@ -100,6 +96,8 @@ private:
 
 	void updateSelected(Selection selected);
 
+	void setRowOver(Selection selected, bool over);
+
 	void updatePressed(Selection pressed);
 
 	Rows::Row &rowByIndex(int index);
@@ -109,26 +107,6 @@ private:
 	Rows::Row &rowBySelection(Selection selected);
 
 	const Rows::Row &rowBySelection(Selection selected) const;
-
-	std::unique_ptr<Ui::RippleAnimation> &rippleBySelection(
-		Selection selected);
-
-	[[maybe_unused]] const std::unique_ptr<Ui::RippleAnimation> &rippleBySelection(
-		Selection selected) const;
-
-	std::unique_ptr<Ui::RippleAnimation> &rippleBySelection(
-		not_null<Row*> row,
-		Selection selected);
-
-	[[maybe_unused]] const std::unique_ptr<Ui::RippleAnimation> &rippleBySelection(
-		not_null<const Row*> row,
-		Selection selected) const;
-
-	void addRipple(Selection selected, QPoint position);
-
-	void ensureRippleBySelection(Selection selected);
-
-	void ensureRippleBySelection(not_null<Row*> row, Selection selected);
 
 	int indexFromSelection(Selection selected) const;
 
@@ -142,11 +120,7 @@ private:
 
 	void repaint(const Row &row);
 
-	void repaintChecked(not_null<const Row*> row);
-
 	void activateByIndex(int index);
-
-	void setForceRippled(not_null<Row*> row, bool rippled);
 
 	void restore(not_null<Row*> row);
 
@@ -279,40 +253,6 @@ void Rows::mouseMoveEvent(QMouseEvent *e) {
 
 void Rows::mousePressEvent(QMouseEvent *e) {
 	updatePressed(_selected);
-	if (!v::is_null(_pressed)
-		&& !rowBySelection(_pressed).menuToggleForceRippled) {
-		addRipple(_pressed, e->pos());
-	}
-}
-
-void Rows::addRipple(Selection selected, QPoint position) {
-	Expects(!v::is_null(selected));
-
-	ensureRippleBySelection(selected);
-
-	const auto &row = rowBySelection(selected);
-	auto &ripple = rippleBySelection(&row, selected);
-	const auto topleft = QPoint(0, row.top);
-	ripple->add(position - topleft);
-}
-
-void Rows::ensureRippleBySelection(Selection selected) {
-	ensureRippleBySelection(&rowBySelection(selected), selected);
-}
-
-void Rows::ensureRippleBySelection(not_null<Row*> row, Selection selected) {
-	auto &ripple = rippleBySelection(row, selected);
-	if (ripple) {
-		return;
-	}
-	auto mask = Ui::RippleAnimation::RectMask({width(), row->height});
-	ripple = std::make_unique<Ui::RippleAnimation>(
-		st::defaultRippleAnimation,
-		std::move(mask),
-		[=]
-		{
-			repaintChecked(row);
-		});
 }
 
 void Rows::mouseReleaseEvent(QMouseEvent *e) {
@@ -329,10 +269,6 @@ void Rows::mouseReleaseEvent(QMouseEvent *e) {
 
 void Rows::restore(not_null<Row*> row) {
 	row->removed = false;
-}
-
-void Rows::setForceRippled(not_null<Row*> row, bool rippled) {
-	repaint(*row);
 }
 
 void Rows::activateByIndex(int index) {
@@ -378,8 +314,6 @@ void Rows::filter(const QString &query) {
 		for (auto &row : _rows) {
 			if (!skip(row.keywords, _query)) {
 				_filtered.push_back(&row);
-			} else {
-				row.ripple = nullptr;
 			}
 		}
 	}
@@ -468,31 +402,28 @@ void Rows::repaint(const Row &row) {
 	update(0, row.top, width(), row.height);
 }
 
-void Rows::repaintChecked(not_null<const Row*> row) {
-	const auto found = (ranges::find(_filtered, row) != end(_filtered));
-	if (_query.isEmpty() || found) {
-		repaint(*row);
-	}
-}
-
 void Rows::updateSelected(Selection selected) {
 	const auto changed = (v::is_null(_selected) != v::is_null(selected));
+	setRowOver(_selected, false);
 	repaint(_selected);
 	_selected = selected;
+	setRowOver(_selected, true);
 	repaint(_selected);
 	if (changed) {
 		_hasSelection.fire(!v::is_null(_selected));
 	}
 }
 
+// 悬停行只加深自己的单选圈，不画整行底色。
+void Rows::setRowOver(Selection selected, bool over) {
+	v::match(selected, [&](RowSelection data) {
+		const auto &row = rowByIndex(data.index);
+		row.check->setOver(over && !row.removed);
+	}, [](v::null_t) {
+	});
+}
+
 void Rows::updatePressed(Selection pressed) {
-	if (!v::is_null(_pressed)) {
-		if (!rowBySelection(_pressed).menuToggleForceRippled) {
-			if (const auto ripple = rippleBySelection(_pressed).get()) {
-				ripple->lastStop();
-			}
-		}
-	}
 	_pressed = pressed;
 }
 
@@ -514,30 +445,6 @@ Rows::Row &Rows::rowBySelection(Selection selected) {
 
 const Rows::Row &Rows::rowBySelection(Selection selected) const {
 	return rowByIndex(indexFromSelection(selected));
-}
-
-std::unique_ptr<Ui::RippleAnimation> &Rows::rippleBySelection(
-	Selection selected) {
-	return rippleBySelection(&rowBySelection(selected), selected);
-}
-
-const std::unique_ptr<Ui::RippleAnimation> &Rows::rippleBySelection(
-	Selection selected) const {
-	return rippleBySelection(&rowBySelection(selected), selected);
-}
-
-std::unique_ptr<Ui::RippleAnimation> &Rows::rippleBySelection(
-	not_null<Row*> row,
-	Selection selected) {
-	return row->ripple;
-}
-
-const std::unique_ptr<Ui::RippleAnimation> &Rows::rippleBySelection(
-	not_null<const Row*> row,
-	Selection selected) const {
-	return const_cast<Rows*>(this)->rippleBySelection(
-		const_cast<Row*>(row.get()),
-		selected);
 }
 
 Ui::ScrollToRequest Rows::rowScrollRequest(int index) const {
@@ -612,17 +519,6 @@ void Rows::paintEvent(QPaintEvent *e) {
 		});
 
 		const auto selected = (selectedIndex == i);
-		if (selected && !row.removed) {
-			p.fillRect(0, 0, width(), row.height, st::windowBgOver);
-		}
-
-		if (row.ripple) {
-			row.ripple->paint(p, 0, 0, width());
-			if (row.ripple->empty()) {
-				row.ripple.reset();
-			}
-		}
-
 		const auto checkTop = (row.height - st::defaultRadio.diameter) / 2;
 		row.check->paint(p, checkLeft, checkTop, width());
 

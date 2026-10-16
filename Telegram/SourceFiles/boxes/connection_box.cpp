@@ -626,7 +626,7 @@ void Base64UrlInput::correctValue(
 	setCorrectedText(now, nowCursor, newText, newPos);
 }
 
-class ProxyRow : public Ui::RippleButton {
+class ProxyRow : public Ui::AbstractButton {
 public:
 	using View = ProxiesBoxController::ItemView;
 	using State = ProxiesBoxController::ItemState;
@@ -670,8 +670,10 @@ private:
 	base::unique_qptr<Ui::DropdownMenu> _menu;
 
 	bool _set = false;
+	bool _over = false;
 	Ui::Animations::Simple _toggled;
 	Ui::Animations::Simple _setAnimation;
+	Ui::Animations::Simple _overAnimation;
 	std::unique_ptr<Ui::InfiniteRadialAnimation> _progress;
 	std::unique_ptr<Ui::InfiniteRadialAnimation> _checking;
 
@@ -681,7 +683,7 @@ private:
 };
 
 // 列表首行的「系统代理」：与代理行同高，单选圈同列。
-class SystemProxyRow final : public Ui::RippleButton {
+class SystemProxyRow final : public Ui::AbstractButton {
 public:
 	SystemProxyRow(QWidget *parent, bool checked);
 
@@ -820,7 +822,7 @@ private:
 };
 
 ProxyRow::ProxyRow(QWidget *parent, View &&view)
-: RippleButton(parent, st::proxyRowRipple)
+: AbstractButton(parent)
 , _menuToggle(this, st::topBarMenuToggle) {
 	setupControls(std::move(view));
 }
@@ -939,19 +941,20 @@ int ProxyRow::resizeGetHeight(int newWidth) {
 void ProxyRow::onStateChanged(
 		AbstractButton::State was,
 		StateChangeSource source) {
-	RippleButton::onStateChanged(was, source);
+	const auto over = isOver();
+	if (_over != over) {
+		_over = over;
+		_overAnimation.start(
+			[=] { update(); },
+			over ? 0. : 1.,
+			over ? 1. : 0.,
+			st::universalDuration);
+	}
 	update();
 }
 
 void ProxyRow::paintEvent(QPaintEvent *e) {
 	Painter p(this);
-
-	if (!_view.deleted) {
-		if (isOver()) {
-			p.fillRect(e->rect(), st::windowBgOver);
-		}
-		paintRipple(p, 0, 0);
-	}
 
 	const auto left = _skipLeft;
 	const auto availableWidth = countAvailableWidth();
@@ -1062,6 +1065,14 @@ void ProxyRow::paintCheck(Painter &p) {
 		st.untoggledFg->c,
 		st.toggledFg->c,
 		toggled * set);
+	// 悬停只加深单选圈本身；已删除的行不响应悬停。
+	const auto over = _view.deleted
+		? 0.
+		: _overAnimation.value(_over ? 1. : 0.);
+	if (over > 0.) {
+		p.setBrush(Ui::AbstractCheckView::OverColor(over));
+		p.drawEllipse(outer);
+	}
 	if (_progress && loading.shown > 0) {
 		const auto half = st.thickness / 2.;
 		const auto ring = outer.marginsRemoved({ half, half, half, half });
@@ -1173,7 +1184,7 @@ void ProxyRow::showMenu() {
 }
 
 SystemProxyRow::SystemProxyRow(QWidget *parent, bool checked)
-: RippleButton(parent, st::proxyRowRipple)
+: AbstractButton(parent)
 , _radio(st::defaultRadio, checked, [=] { update(); }) {
 }
 
@@ -1186,17 +1197,11 @@ int SystemProxyRow::resizeGetHeight(int newWidth) {
 }
 
 void SystemProxyRow::onStateChanged(State was, StateChangeSource source) {
-	RippleButton::onStateChanged(was, source);
-	update();
+	_radio.setOver(isOver());
 }
 
 void SystemProxyRow::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
-
-	if (isOver()) {
-		p.fillRect(e->rect(), st::windowBgOver);
-	}
-	paintRipple(p, 0, 0);
 
 	const auto &padding = st::proxyRowPadding;
 	_radio.paint(

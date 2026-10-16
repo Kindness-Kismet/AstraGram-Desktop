@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/outline_segments.h"
 #include "ui/effects/round_checkbox.h"
 #include "ui/effects/ripple_animation.h"
+#include "ui/widgets/buttons.h"
 #include "ui/widgets/multi_select.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/scroll_area.h"
@@ -1933,7 +1934,7 @@ void PeerListContent::mousePressEvent(QMouseEvent *e) {
 					row,
 					point,
 					std::move(updateCallback));
-			} else {
+			} else if (!Ui::UsesFlatRowHover(this)) {
 				const auto maskGenerator = [&] {
 					return Ui::RippleAnimation::RectMask(
 						QSize(width(), _rowHeight));
@@ -2134,7 +2135,9 @@ void PeerListContent::paintRowContent(
 	const auto peer = row->special() ? nullptr : row->peer().get();
 
 	const auto opacity = row->opacity();
-	const auto &bg = selected
+	// 对话框及其面板形态不画行高亮，悬停只体现在文字颜色上。
+	const auto highlighted = selected && !Ui::UsesFlatRowHover(this);
+	const auto &bg = highlighted
 		? st.button.textBgOver
 		: st.button.textBg;
 	if (opacity < 1.) {
@@ -2146,7 +2149,7 @@ void PeerListContent::paintRowContent(
 		}
 	});
 
-	const auto background = selected
+	const auto background = highlighted
 		? bg->c
 		: ExtrasFeatures::WindowMaterial::surfaceColor(this, bg->c);
 	const auto rowRect = QRect(0, 0, outerWidth, _rowHeight);
@@ -2158,7 +2161,7 @@ void PeerListContent::paintRowContent(
 		const auto radius = _rowBackgroundRadius;
 		auto hq = PainterHighQualityEnabler(p);
 		p.save();
-		if (selected || bg->c != base) {
+		if (highlighted || bg->c != base) {
 			p.setPen(Qt::NoPen);
 			p.setBrush(background);
 			p.drawRoundedRect(highlight, radius, radius);

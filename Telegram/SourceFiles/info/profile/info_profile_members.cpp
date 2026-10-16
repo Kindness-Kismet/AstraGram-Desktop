@@ -246,9 +246,6 @@ void Members::setupList() {
 	_list = object_ptr<ListWidget>(
 		this,
 		_listController.get());
-	_list->setRowBackgroundRounding(
-		st::infoMembersRowMargins,
-		st::infoMembersRowRadius);
 	_list->scrollToRequests(
 	) | rpl::on_next([this](Ui::ScrollToRequest request) {
 		auto addmin = (request.ymin < 0 || !_header)

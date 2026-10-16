@@ -98,7 +98,6 @@ proxyRowCheckSkip: 34px;
 proxyRowSkip: 2px;
 // 状态行前的圆点，与检测动画同位，颜色随状态取 proxyRowStatusFg* 系列。
 proxyRowStatusDotSize: 6px;
-proxyRowRipple: defaultRippleAnimationBgOver;
 proxyRowTitleFg: windowFg;
 proxyRowTitlePalette: TextPalette(defaultTextPalette) {
 	linkFg: windowSubTextFg;

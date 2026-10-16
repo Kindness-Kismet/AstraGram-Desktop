@@ -8,8 +8,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 using "ui/basic.style";
 using "ui/widgets/widgets.style";
 
-countryRipple: defaultRippleAnimation;
-
 introCoverHeight: 208px;
 introCoverMaxWidth: 880px;
 introCoverIconsMinSkip: 120px;

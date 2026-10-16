@@ -128,18 +128,28 @@ void DetailedSettingsButton::onStateChanged(
 		isOver()
 			? _style.button.toggleOver
 			: _style.button.toggle);
+	_toggle->setOver(
+		isOver() && !nowDisabled && Ui::UsesFlatRowHover(this));
 	if (nowDisabled != wasDisabled) {
 		setPointerCursor(!nowDisabled);
 	}
 	update();
 }
 
+QPoint DetailedSettingsButton::prepareRippleStartPosition() const {
+	return Ui::UsesFlatRowHover(this)
+		? DisabledRippleStartPosition()
+		: RippleButton::prepareRippleStartPosition();
+}
+
 void DetailedSettingsButton::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
 	const auto over = isOver() || isDown();
+	// 对话框里不画行高亮，悬停只加深开关和文字。
+	const auto highlight = over && !Ui::UsesFlatRowHover(this);
 	p.fillRect(
 		e->rect(),
-		over ? _style.button.textBgOver : _style.button.textBg);
+		highlight ? _style.button.textBgOver : _style.button.textBg);
 	paintRipple(p, 0, 0);
 
 	paintIcon(p);

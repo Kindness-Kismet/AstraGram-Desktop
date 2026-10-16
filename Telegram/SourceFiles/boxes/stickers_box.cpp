@@ -1461,14 +1461,10 @@ void StickersBox::Inner::paintRow(
 		p.translate(0, yShift);
 	}
 
-	if (_megagroupSet) {
-		if (index >= 0 && index == IndexOf(_selected)) {
-			p.fillRect(0, 0, width(), _rowHeight, _st.button.textBgOver);
-			if (row->ripple) {
-				row->ripple->paint(p, 0, 0, width());
-			}
-		}
-	}
+	// 群组选择贴纸集时不画行高亮，悬停只加深状态文字。
+	const auto selected = _megagroupSet
+		&& (index >= 0)
+		&& (index == IndexOf(_selected));
 
 	if (_isInstalledTab) {
 		if (index >= 0 && index == _above) {
@@ -1557,7 +1553,7 @@ void StickersBox::Inner::paintRow(
 		: tr::lng_stickers_count(tr::now, lt_count, row->count);
 
 	p.setFont(st::contactsStatusFont);
-	p.setPen(_st.statusFg);
+	p.setPen(selected ? _st.statusFgOver : _st.statusFg);
 	p.drawTextLeft(statusLeft, statusTop, width(), statusText);
 
 	p.setOpacity(1);
@@ -1903,33 +1899,7 @@ void StickersBox::Inner::setSelected(SelectedRow selected) {
 }
 
 void StickersBox::Inner::setPressed(SelectedRow pressed) {
-	if (_pressed == pressed) {
-		return;
-	}
-	auto pressedIndex = IndexOf(_pressed);
-	if (_megagroupSet && pressedIndex >= 0 && pressedIndex < _rows.size()) {
-		repaintRow(pressedIndex);
-		const auto row = _rows[pressedIndex].get();
-		if (row->ripple) {
-			row->ripple->lastStop();
-		}
-	}
 	_pressed = pressed;
-	pressedIndex = IndexOf(_pressed);
-	if (_megagroupSet && pressedIndex >= 0 && pressedIndex < _rows.size()) {
-		repaintRow(pressedIndex);
-		const auto row = _rows[pressedIndex].get();
-		if (!row->ripple) {
-			auto rippleMask = Ui::RippleAnimation::RectMask(
-				QSize(width(), _rowHeight));
-			row->ripple = std::make_unique<Ui::RippleAnimation>(
-				st::defaultRippleAnimation,
-				std::move(rippleMask),
-				[=] { repaintRow(pressedIndex); });
-		}
-		const auto top = _itemsTop + pressedIndex * _rowHeight;
-		row->ripple->add(mapFromGlobal(QCursor::pos()) - QPoint(0, top));
-	}
 }
 
 void StickersBox::Inner::ensureRipple(

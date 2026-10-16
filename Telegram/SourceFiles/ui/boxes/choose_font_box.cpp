@@ -11,7 +11,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/chat/chat_style.h"
-#include "ui/effects/ripple_animation.h"
 #include "ui/layers/generic_box.h"
 #include "ui/style/style_core_font.h"
 #include "ui/widgets/checkbox.h"
@@ -116,7 +115,6 @@ private:
 		QStringList keywords;
 		QImage cache;
 		std::unique_ptr<Ui::RadioView> check;
-		std::unique_ptr<Ui::RippleAnimation> ripple;
 		int paletteVersion = 0;
 	};
 	[[nodiscard]] static std::vector<Entry> FullList(const QString &now);
@@ -137,7 +135,7 @@ private:
 	void updatePressed(int pressed);
 	void updateRow(int index);
 	void updateRow(not_null<Entry*> row, int hint);
-	void addRipple(int index, QPoint position);
+	void setRowOver(int index, bool over);
 	void validateCache(Entry &row);
 	void choose(Entry &row);
 
@@ -235,8 +233,6 @@ void Selector::applyFilter(const QString &query) {
 		for (auto &row : _rows) {
 			if (!skip(row.keywords, _queryWords)) {
 				_filtered.push_back(&row);
-			} else {
-				row.ripple = nullptr;
 			}
 		}
 	}
@@ -251,8 +247,10 @@ void Selector::updateSelected(int selected) {
 		return;
 	}
 	const auto was = (_selected >= 0);
+	setRowOver(_selected, false);
 	updateRow(_selected);
 	_selected = selected;
+	setRowOver(_selected, true);
 	updateRow(_selected);
 	const auto now = (_selected >= 0);
 	if (was != now) {
@@ -274,10 +272,6 @@ void Selector::updateSelected(int selected) {
 void Selector::updatePressed(int pressed) {
 	if (_pressed == pressed) {
 		return;
-	} else if (_pressed >= 0) {
-		if (auto &ripple = shownRowAt(_pressed).ripple) {
-			ripple->lastStop();
-		}
 	}
 	updateRow(_pressed);
 	_pressed = pressed;
@@ -287,6 +281,16 @@ void Selector::updatePressed(int pressed) {
 void Selector::updateRow(int index) {
 	if (index >= 0) {
 		update(0, _rowsSkip + index * _rowHeight, width(), _rowHeight);
+	}
+}
+
+// 悬停行只加深自己的单选圈；单选圈首次绘制时才创建，届时补设状态。
+void Selector::setRowOver(int index, bool over) {
+	if (index < 0) {
+		return;
+	}
+	if (const auto &check = shownRowAt(index).check) {
+		check->setOver(over);
 	}
 }
 
@@ -425,20 +429,10 @@ void Selector::paintEvent(QPaintEvent *e) {
 	const auto till = std::min(
 		(clip.y() + clip.height() - _rowsSkip + _rowHeight - 1) / _rowHeight,
 		rows);
-	const auto active = (_pressed >= 0) ? _pressed : _selected;
 	for (auto i = from; i != till; ++i) {
 		auto &row = shownRowAt(i);
 		const auto y = _rowsSkip + i * _rowHeight;
-		const auto bg = (i == active) ? st::windowBgOver : st::windowBg;
-		const auto rect = QRect(0, y, width(), _rowHeight);
-		p.fillRect(rect, bg);
-
-		if (row.ripple) {
-			row.ripple->paint(p, 0, y, width());
-			if (row.ripple->empty()) {
-				row.ripple = nullptr;
-			}
-		}
+		p.fillRect(QRect(0, y, width(), _rowHeight), st::windowBg);
 
 		validateCache(row);
 		p.drawImage(0, y, row.cache);
@@ -448,6 +442,7 @@ void Selector::paintEvent(QPaintEvent *e) {
 				st::langsRadio,
 				(row.id == _chosen),
 				[=, row = &row] { updateRow(row, i); });
+			row.check->setOver(i == _selected, anim::type::instant);
 		}
 		row.check->paint(
 			p,
@@ -483,9 +478,6 @@ void Selector::mouseMoveEvent(QMouseEvent *e) {
 
 void Selector::mousePressEvent(QMouseEvent *e) {
 	updatePressed(_selected);
-	if (_pressed >= 0) {
-		addRipple(_pressed, e->pos());
-	}
 }
 
 void Selector::mouseReleaseEvent(QMouseEvent *e) {
@@ -514,19 +506,6 @@ void Selector::choose(Entry &row) {
 		: anim::type::normal;
 	_callback(id);
 	initScroll(animated);
-}
-
-void Selector::addRipple(int index, QPoint position) {
-	Expects(index >= 0 && index < shownRowsCount());
-
-	const auto row = &shownRowAt(index);
-	if (!row->ripple) {
-		row->ripple = std::make_unique<Ui::RippleAnimation>(
-			st::defaultRippleAnimation,
-			Ui::RippleAnimation::RectMask({ width(), _rowHeight }),
-			[=] { updateRow(row, index); });
-	}
-	row->ripple->add(position - QPoint(0, _rowsSkip + index * _rowHeight));
 }
 
 std::vector<Selector::Entry> Selector::FullList(const QString &now) {

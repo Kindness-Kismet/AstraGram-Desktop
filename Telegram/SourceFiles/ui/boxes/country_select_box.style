@@ -13,7 +13,6 @@ countryRowNameFg: boxTextFg;
 countryRowPadding: margins(22px, 9px, 8px, 0px);
 countryRowCodeFont: font(fsize);
 countryRowBg: windowBg;
-countryRowBgOver: windowBgOver;
 countryRowCodeFg: windowSubTextFg;
 countryRowCodeFgOver: windowSubTextFgOver;
 countriesSkip: 12px;
