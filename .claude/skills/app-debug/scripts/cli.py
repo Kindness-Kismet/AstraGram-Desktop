@@ -41,6 +41,7 @@ PROFILE_OVERRIDE = None
 BACKGROUND_START = False
 
 GENERIC_COMMANDS = {
+    'simulation.language': '在独立模拟配置中切换内置翻译，不下载云端语言包：<en|zh-hans>，返回表情页签译文',
     'control.window': '选择控件与截图的目标窗口，不改变系统焦点：[main|窗口标识|#序号]',
     'editor.video-state': '查询独立模拟配置中视频时间线的裁剪起止、封面与播放位置',
     'editor.state': '查询独立模拟配置中编辑器的图层数量、音轨裁剪与音量',
@@ -48,6 +49,7 @@ GENERIC_COMMANDS = {
     'editor.open': '在独立模拟配置中对图片消息打开绘图编辑器：<peerId> <msgId>',
     'simulation.wallet': '在独立模拟配置中打开钱包及固定公开状态，不安装私钥或提交交易：[keep|missing|ready|collectibles|close]',
     'simulation.stickers': '在独立模拟配置中设置热门贴纸徽标计数，首次创建三类本地贴纸包：<0..9999> [open]，open 打开管理弹窗',
+    'simulation.search': '为搜索分类注入本地联系人、频道、应用和六类媒体样本：<fixture-directory>',
     'simulation.emoji-packs': '在独立模拟配置中加入或移除三个本地自定义表情包：<on|off>，保留其他表情包',
     'dialog.list': '列出可直接打开的对话框样本及布局类别',
     'dialog.open': '在独立模拟配置中关闭现有图层并无动画打开对话框样本：<键名>',

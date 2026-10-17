@@ -3,6 +3,7 @@
 #include "extras/debug/debug_login.h"
 #include "extras/debug/dialogs_preview.h"
 #include "extras/debug/simulation_media.h"
+#include "extras/debug/simulation_search.h"
 #include "extras/debug/simulation_scenarios.h"
 #include "base/unixtime.h"
 #include "boxes/stickers_box.h"
@@ -11,6 +12,7 @@
 #include "data/stickers/data_stickers.h"
 #include "dialogs/dialogs_widget.h"
 #include "lang/lang_keys.h"
+#include "lang/lang_instance.h"
 #include "main/main_session.h"
 #include "settings.h"
 #include "wallet/wallet_panel.h"
@@ -27,25 +29,60 @@ constexpr auto kStickerSetId = uint64(9800000000);
 constexpr auto kEmojiSetId = uint64(9800000100);
 constexpr auto kEmojiSetCount = 3;
 
+Result simulationLanguage(const QStringList &args) {
+	if (args.size() != 1 || (args.front() != u"en"_q && args.front() != u"zh-hans"_q)) {
+		return Result::Err(u"usage: simulation.language <en|zh-hans>"_q);
+	}
+	const auto session = ActiveSession();
+	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	auto &instance = Lang::GetInstance();
+	instance.switchToId({ .id = args.front() });
+	// 通过正式语言更新通知加载内置翻译，不请求云端语言包。
+	const auto difference = MTP_langPackDifference(
+		MTP_string(args.front()),
+		MTP_int(0),
+		MTP_int(0),
+		MTP_vector<MTPLangPackString>(QVector<MTPLangPackString>()));
+	instance.applyDifference(Lang::Pack::Current, difference.data());
+	return Result::Ok(Compact(json{
+		{ "language", instance.id().toStdString() },
+		{ "emoji", tr::extras_SelectorTabEmoji(tr::now).toStdString() },
+		{ "stickers", tr::extras_SelectorTabStickers(tr::now).toStdString() },
+		{ "gifs", tr::extras_SelectorTabGifs(tr::now).toStdString() },
+	}));
+}
+
 bool seedStickerSets(not_null<Main::Session*> session) {
 	auto &stickers = session->data().stickers();
-	if (stickers.sets().contains(kStickerSetId)) {
-		return false;
-	}
+	auto changed = false;
 	const auto add = [&](int index, const QString &title,
 			Data::StickersSetFlags flags, Data::StickersSetsOrder &order) {
 		const auto id = kStickerSetId + index;
-		const auto media = simulationMedia(
-			session, SimulationMedia::Sticker, 2800000 + index);
-		const auto document = session->data().processDocument(
-			*media.c_messageMediaDocument().vdocument());
-		auto set = std::make_unique<Data::StickersSet>(
-			&session->data(), id, 0, 0, title,
-			u"simulation_stickers_%1"_q.arg(index), 1, flags,
-			(flags & Data::StickersSetFlag::Installed) ? base::unixtime::now() : 0);
-		set->stickers.push_back(document.get());
-		stickers.setsRef().emplace(id, std::move(set));
-		order.push_back(id);
+		auto &sets = stickers.setsRef();
+		auto it = sets.find(id);
+		if (it == sets.end()) {
+			const auto media = simulationMedia(
+				session, SimulationMedia::Sticker, 2800000 + index, id);
+			const auto document = session->data().processDocument(
+				*media.c_messageMediaDocument().vdocument());
+			auto set = std::make_unique<Data::StickersSet>(
+				&session->data(), id, 0, 0, title,
+				u"simulation_stickers_%1"_q.arg(index), 1, flags,
+				(flags & Data::StickersSetFlag::Installed) ? base::unixtime::now() : 0);
+			set->stickers.push_back(document.get());
+			it = sets.emplace(id, std::move(set)).first;
+			changed = true;
+		}
+		if ((it->second->flags & flags) != flags) {
+			it->second->flags |= flags;
+			changed = true;
+		}
+		if (!order.contains(id)) {
+			order.push_back(id);
+			changed = true;
+		}
 	};
 	// 样本不带未读标记，切页不触发自动已读，徽标计数由指令单独控制。
 	add(0, u"模拟已安装贴纸"_q, Data::StickersSetFlag::Installed,
@@ -54,7 +91,10 @@ bool seedStickerSets(not_null<Main::Session*> session) {
 		stickers.featuredSetsOrderRef());
 	add(2, u"模拟归档贴纸"_q, Data::StickersSetFlag::Archived,
 		stickers.archivedSetsOrderRef());
-	return true;
+	// 本地样本已完整加载，打开面板时不再请求服务端空列表覆盖它们。
+	stickers.setLastUpdate(crl::now());
+	stickers.setLastFeaturedUpdate(crl::now());
+	return changed;
 }
 
 Result simulationStickers(const QStringList &args) {
@@ -127,13 +167,9 @@ Result simulationEmojiPacks(const QStringList &args) {
 		}
 		if (it == sets.end()) {
 			const auto media = simulationMedia(
-				session, SimulationMedia::Sticker, 2800100 + index);
+				session, SimulationMedia::Emoji, 2800100 + index, id);
 			const auto document = session->data().processDocument(
 				*media.c_messageMediaDocument().vdocument());
-			document->setattributes({ MTP_documentAttributeCustomEmoji(
-				MTP_flags(MTPDdocumentAttributeCustomEmoji::Flag::f_free),
-				MTP_string(u"⭐"_q),
-				MTP_inputStickerSetID(MTP_long(id), MTP_long(0))) });
 			auto set = std::make_unique<Data::StickersSet>(
 				&session->data(), id, 0, 0,
 				u"模拟表情包 %1"_q.arg(index + 1),
@@ -150,6 +186,7 @@ Result simulationEmojiPacks(const QStringList &args) {
 			changed = true;
 		}
 	}
+	stickers.setLastEmojiUpdate(crl::now());
 	if (changed) {
 		stickers.notifyUpdated(Data::StickersType::Emoji);
 	}
@@ -207,6 +244,8 @@ void applyWalletLists(Wallet::Session &wallet, bool withCollectibles) {
 
 const HandlerMap &simulationHandlers() {
 	static const auto result = HandlerMap{
+		{ u"simulation.language"_q, &simulationLanguage },
+		{ u"simulation.search"_q, &seedSearchPreview },
 		{ u"simulation.stickers"_q, &simulationStickers },
 		{ u"simulation.emoji-packs"_q, &simulationEmojiPacks },
 		{ u"simulation.wallet"_q, [](const QStringList &args) {

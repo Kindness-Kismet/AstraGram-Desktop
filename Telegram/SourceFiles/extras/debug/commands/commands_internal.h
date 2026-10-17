@@ -57,6 +57,8 @@ void seedSimulationScenarios(not_null<Main::Session*> session);
 	not_null<Main::Session*> session, const QString &key);
 [[nodiscard]] MTPMessage simulationTextMessage(not_null<PeerData*> peer, PeerId sender,
 	int id, const QString &text, bool edited = false);
+[[nodiscard]] MTPMessage simulationMediaMessage(not_null<PeerData*> peer,
+	PeerId sender, int id, const QString &text, MTPMessageMedia media);
 
 // json 序列化为单行字符串，所有 payload 的统一出口。
 [[nodiscard]] inline QString Compact(const nlohmann::json &value) {

@@ -28,6 +28,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "layout/layout_selection.h"
 #include "styles/style_overview.h"
 
+#ifdef _DEBUG
+#include "extras/debug/simulation_search.h"
+#endif
+
 namespace Info::GlobalMedia {
 namespace {
 
@@ -393,6 +397,12 @@ void Provider::requestMore(
 			callback();
 		}
 	};
+	#ifdef _DEBUG
+	if (const auto result = ExtrasDebug::Commands::searchPreviewMedia(_session, _type, query)) {
+		done(*result);
+		return;
+	}
+	#endif
 	list->requestId = _controller->session().api().requestGlobalMedia(
 		_type,
 		query,

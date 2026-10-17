@@ -437,6 +437,9 @@ public:
 	[[nodiscard]] auto popularAppBots() const
 		-> const std::vector<not_null<UserData*>> &;
 	[[nodiscard]] rpl::producer<> popularAppBotsLoaded() const;
+	#ifdef _DEBUG
+	void setPopularAppBotsForDebug(std::vector<not_null<UserData*>> bots);
+	#endif
 
 private:
 	void destroyDeferred(

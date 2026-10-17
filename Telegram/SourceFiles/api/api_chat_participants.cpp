@@ -941,6 +941,13 @@ const ChatParticipants::Peers &ChatParticipants::recommendations() const {
 	return _recommendations.peers;
 }
 
+#ifdef _DEBUG
+void ChatParticipants::setRecommendationsForDebug(std::vector<not_null<PeerData*>> peers) {
+	_recommendations.peers = { std::move(peers), 0 };
+	_recommendationsLoaded = true;
+}
+#endif
+
 rpl::producer<> ChatParticipants::recommendationsLoaded() const {
 	return _recommendationsLoaded.changes() | rpl::to_empty;
 }

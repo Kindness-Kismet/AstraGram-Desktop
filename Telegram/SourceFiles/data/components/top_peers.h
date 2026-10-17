@@ -35,6 +35,9 @@ public:
 
 	[[nodiscard]] QByteArray serialize() const;
 	void applyLocal(QByteArray serialized);
+	#ifdef _DEBUG
+	void setForDebug(const std::vector<not_null<PeerData*>> &peers);
+	#endif
 
 private:
 	struct TopPeer {

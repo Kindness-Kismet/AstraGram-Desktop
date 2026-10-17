@@ -183,6 +183,18 @@ void TopPeers::increment(not_null<PeerData*> peer, TimeId date) {
 	}
 }
 
+#ifdef _DEBUG
+void TopPeers::setForDebug(const std::vector<not_null<PeerData*>> &peers) {
+	_list.clear();
+	for (const auto peer : peers) {
+		_list.push_back({ .peer = peer, .rating = double(peers.size() - _list.size()) });
+	}
+	_disabled = false;
+	_lastReceived = crl::now();
+	_updates.fire({});
+}
+#endif
+
 void TopPeers::reload() {
 	if (_requestId
 		|| (_lastReceived

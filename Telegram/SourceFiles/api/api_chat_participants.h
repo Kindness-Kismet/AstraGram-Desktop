@@ -159,6 +159,9 @@ public:
 	void loadRecommendations();
 	[[nodiscard]] const Peers &recommendations() const;
 	[[nodiscard]] rpl::producer<> recommendationsLoaded() const;
+	#ifdef _DEBUG
+	void setRecommendationsForDebug(std::vector<not_null<PeerData*>> peers);
+	#endif
 
 private:
 	struct SimilarPeers {

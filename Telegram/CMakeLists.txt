@@ -391,6 +391,8 @@ set(extras_files
         extras/debug/simulation_scenarios.h
         extras/debug/simulation_media.cpp
         extras/debug/simulation_media.h
+        extras/debug/simulation_search.cpp
+        extras/debug/simulation_search.h
         extras/debug/commands/settings_commands.cpp
         extras/debug/commands/settings_registry.h
         extras/debug/commands/settings_extras.cpp

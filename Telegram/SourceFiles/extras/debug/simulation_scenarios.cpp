@@ -1098,6 +1098,12 @@ PeerData *simulationPeer(not_null<Main::Session*> session, const QString &key) {
 	const auto index = findScenario(key);
 	return (index >= 0) ? session->data().peer(scenarioPeerId(index)).get() : nullptr;
 }
+
+MTPMessage simulationMediaMessage(not_null<PeerData*> peer,
+		PeerId sender, int id, const QString &text, MTPMessageMedia media) {
+	return makeMessage(peer, sender, id, text,
+		false, false, 0, false, false, false, 0, 0, {}, false, media);
+}
 Result triggerSimulationCountdown(const QStringList &args) {
 	if (!args.empty()) {
 		return Result::Err(u"usage: simulation.trigger delete-countdown"_q);

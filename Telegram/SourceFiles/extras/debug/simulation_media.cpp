@@ -17,7 +17,7 @@
 namespace ExtrasDebug::Commands {
 
 MTPMessageMedia simulationMedia(
-		not_null<Main::Session*> session, SimulationMedia kind, int id) {
+		not_null<Main::Session*> session, SimulationMedia kind, int id, uint64 setId) {
 	if (kind == SimulationMedia::Contact) {
 		return MTP_messageMediaContact(MTP_string("+9996600001"),
 			MTP_string("模拟联系人"), MTPstring(), MTPstring(), MTP_long(810000001));
@@ -48,17 +48,35 @@ MTPMessageMedia simulationMedia(
 	auto bytes = QByteArray("Local simulation document.\nNo remote download is required.\n");
 	auto image = QImage();
 	if (kind != SimulationMedia::File) {
-		const auto sticker = kind == SimulationMedia::Sticker;
-		image = QImage(sticker ? QSize(256, 256) : QSize(480, 300), QImage::Format_ARGB32_Premultiplied);
-		image.fill(sticker ? Qt::transparent : QColor(214, 232, 248));
+		const auto emoji = kind == SimulationMedia::Emoji;
+		const auto square = emoji || kind == SimulationMedia::Sticker;
+		image = QImage(square ? QSize(256, 256) : QSize(480, 300), QImage::Format_ARGB32_Premultiplied);
+		image.fill(square ? Qt::transparent : QColor(214, 232, 248));
 		{
 			auto painter = QPainter(&image);
 			painter.setRenderHint(QPainter::Antialiasing);
 			painter.setPen(Qt::NoPen);
-			painter.setBrush(QColor(76, 146, 204));
-			painter.drawRoundedRect(image.rect().adjusted(24, 24, -24, -24), 36, 36);
-			painter.setBrush(QColor(255, 211, 91));
-			painter.drawEllipse(QPoint(image.width() / 2, image.height() / 2), 60, 60);
+			if (emoji) {
+				painter.setBrush(QColor(255, 211, 91));
+				painter.drawEllipse(QRect(16, 16, 224, 224));
+				painter.setBrush(QColor(71, 50, 35));
+				painter.drawEllipse(QRect(70, 78, 24, 34));
+				painter.drawEllipse(QRect(162, 78, 24, 34));
+				painter.setBrush(Qt::NoBrush);
+				painter.setPen(QPen(QColor(71, 50, 35), 12, Qt::SolidLine, Qt::RoundCap));
+				painter.drawArc(QRect(72, 98, 112, 86), 210 * 16, 120 * 16);
+				if (id % 3) {
+					painter.setPen(Qt::NoPen);
+					painter.setBrush(QColor(238, 132, 113));
+					painter.drawEllipse(QRect(42, 124, 38, 20));
+					painter.drawEllipse(QRect(176, 124, 38, 20));
+				}
+			} else {
+				painter.setBrush(QColor(76, 146, 204));
+				painter.drawRoundedRect(image.rect().adjusted(24, 24, -24, -24), 36, 36);
+				painter.setBrush(QColor(255, 211, 91));
+				painter.drawEllipse(QPoint(image.width() / 2, image.height() / 2), 60, 60);
+			}
 		}
 		bytes.clear();
 		auto buffer = QBuffer(&bytes);
@@ -82,12 +100,20 @@ MTPMessageMedia simulationMedia(
 	}
 	auto attributes = QVector<MTPDocumentAttribute>{
 		MTP_documentAttributeFilename(MTP_string(kind == SimulationMedia::File
-			? "example.txt" : "sticker.png")),
+			? "example.txt" : kind == SimulationMedia::Emoji ? "emoji.png" : "sticker.png")),
 	};
-	if (kind == SimulationMedia::Sticker) {
+	if (kind == SimulationMedia::Sticker || kind == SimulationMedia::Emoji) {
 		attributes.push_back(MTP_documentAttributeImageSize(MTP_int(256), MTP_int(256)));
+	}
+	if (kind == SimulationMedia::Emoji) {
+		attributes.push_back(MTP_documentAttributeCustomEmoji(
+			MTP_flags(MTPDdocumentAttributeCustomEmoji::Flag::f_free),
+			MTP_string(u"🙂"_q),
+			MTP_inputStickerSetID(MTP_long(setId), MTP_long(0))));
+	} else if (kind == SimulationMedia::Sticker) {
 		attributes.push_back(MTP_documentAttributeSticker(MTP_flags(0), MTP_string(""),
-			MTP_inputStickerSetEmpty(), MTPMaskCoords()));
+			setId ? MTP_inputStickerSetID(MTP_long(setId), MTP_long(0))
+				: MTP_inputStickerSetEmpty(), MTPMaskCoords()));
 	}
 	const auto document = MTP_document(MTP_flags(0), MTP_long(9300000000LL + id),
 		MTPlong(), MTP_bytes(), MTP_int(base::unixtime::now()),

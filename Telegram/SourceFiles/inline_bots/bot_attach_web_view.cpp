@@ -2666,6 +2666,13 @@ rpl::producer<> AttachWebView::popularAppBotsLoaded() const {
 	return _popularAppBotsLoaded.changes() | rpl::to_empty;
 }
 
+#ifdef _DEBUG
+void AttachWebView::setPopularAppBotsForDebug(std::vector<not_null<UserData*>> bots) {
+	_popularAppBots = std::move(bots);
+	_popularAppBotsLoaded = true;
+}
+#endif
+
 void AttachWebView::cancel() {
 	_session->api().request(base::take(_requestId)).cancel();
 	_botUsername = QString();
