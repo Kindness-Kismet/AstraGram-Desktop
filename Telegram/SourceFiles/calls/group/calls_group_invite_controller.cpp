@@ -36,7 +36,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 #include "styles/style_boxes.h" // membersMarginTop
 #include "styles/style_calls.h"
-#include "styles/style_dialogs.h" // searchedBarHeight
 #include "styles/style_layers.h" // boxWideWidth
 
 namespace Calls::Group {
@@ -47,7 +46,7 @@ namespace {
 		rpl::producer<QString> text) {
 	auto result = object_ptr<Ui::FixedHeightWidget>(
 		parent,
-		st::searchedBarHeight);
+		style::ConvertScale(28));
 
 	const auto raw = result.data();
 	raw->paintRequest(

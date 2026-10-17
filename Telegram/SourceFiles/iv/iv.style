@@ -160,7 +160,7 @@ ivEditorToolbarButton: IconButton(defaultIconButton) {
 }
 ivEditorSearchMultiSelect: MultiSelect(searchInChatMultiSelect) {
 	bg: transparent;
-	padding: margins(8px, 4px, 8px, 4px);
+	padding: margins(21px, 4px, 21px, 4px);
 }
 ivEditorSearchPrevious: IconButton(ivEditorToolbarButton) {
 	icon: icon {{ "calendar_down-flip_vertical", boxTitleFg }};

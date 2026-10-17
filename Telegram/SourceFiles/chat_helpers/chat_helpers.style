@@ -24,7 +24,6 @@ GroupCallUserpics {
 
 TabbedSearch {
 	field: InputField;
-	search: IconButton;
 	back: IconButton;
 	cancel: CrossButton;
 	height: pixels;
@@ -536,17 +535,6 @@ defaultTabbedSearchCancel: CrossButton {
 	ripple: emptyRippleAnimation;
 }
 defaultTabbedSearchField: InputField(defaultSearchField) {
-	textMargins: margins(38px, 8px, 33px, 6px);
-	borderRadius: 9px;
-	heightMin: 36px;
-}
-defaultTabbedSearchButton: IconButton(defaultIconButton) {
-	width: 36px;
-	height: 36px;
-	icon: defaultSearchFieldIcon;
-	iconOver: defaultSearchFieldIcon;
-	iconPosition: point(-1px, -1px);
-	ripple: emptyRippleAnimation;
 }
 defaultTabbedSearchBack: IconButton(defaultIconButton) {
 	width: 33px;
@@ -558,7 +546,6 @@ defaultTabbedSearchBack: IconButton(defaultIconButton) {
 }
 defaultTabbedSearch: TabbedSearch {
 	field: defaultTabbedSearchField;
-	search: defaultTabbedSearchButton;
 	back: defaultTabbedSearchBack;
 	cancel: defaultTabbedSearchCancel;
 	height: 36px;

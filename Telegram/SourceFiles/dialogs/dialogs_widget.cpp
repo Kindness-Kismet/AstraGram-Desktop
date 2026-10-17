@@ -764,20 +764,6 @@ Widget::Widget(
 	}, lifetime());
 
 	_search->setObjectName(u"searchField"_q);
-	const auto searchIcon = new Ui::RpWidget(_search);
-	searchIcon->setAttribute(Qt::WA_TransparentForMouseEvents);
-	searchIcon->resize(st::dialogsFilterSearch.size());
-	_search->sizeValue(
-	) | rpl::on_next([=](QSize size) {
-		searchIcon->moveToLeft(st::dialogsFilterSearchSkip,
-			(size.height() - searchIcon->height()) / 2);
-	}, searchIcon->lifetime());
-	searchIcon->paintRequest(
-	) | rpl::on_next([=] {
-		auto p = QPainter(searchIcon);
-		st::dialogsFilterSearch.paint(p, 0, 0, searchIcon->width());
-	}, searchIcon->lifetime());
-	searchIcon->show();
 
 	_search->changes(
 	) | rpl::on_next([=] {

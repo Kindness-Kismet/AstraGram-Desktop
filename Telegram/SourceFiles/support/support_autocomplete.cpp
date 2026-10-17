@@ -377,8 +377,8 @@ void Autocomplete::setupContent() {
 		this,
 		object_ptr<Ui::InputField>(
 			this,
-			st::defaultMultiSelectSearchField,
-			rpl::single(u"Search for templates"_q)), // #TODO hard_lang
+			st::defaultSearchField,
+			tr::extras_SearchTemplates()),
 		st::autocompleteSearchPadding);
 	const auto input = inputWrap->entity();
 	const auto scroll = Ui::CreateChild<Ui::ScrollArea>(this);

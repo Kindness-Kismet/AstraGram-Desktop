@@ -16,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "lang/lang_keys.h"
+#include "styles/style_widgets.h"
 
 #include <set>
 
@@ -457,6 +458,7 @@ protected:
 	int resizeGetHeight(int newWidth) override;
 
 	void paintEvent(QPaintEvent *e) override;
+	void enterEventHook(QEnterEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;
 	void mousePressEvent(QMouseEvent *e) override;
@@ -505,6 +507,7 @@ private:
 	int _fieldLeft = 0;
 	int _fieldTop = 0;
 	int _fieldWidth = 0;
+	const style::InputField _fieldStyle;
 	object_ptr<Ui::InputField> _field;
 	object_ptr<Ui::CrossButton> _cancel;
 	bool _cancelShown = true;
@@ -679,8 +682,17 @@ MultiSelect::Inner::Inner(
 : RpWidget(parent)
 , _st(st)
 , _scrollCallback(std::move(callback))
-, _field(this, _st.field, std::move(placeholder), query)
+, _fieldStyle([&] {
+	auto result = st.field;
+	// 容器统一绘制搜索背景，输入控件只负责文字与光标。
+	result.search = false;
+	result.textBg = result.textBgActive = st::transparent;
+	result.border = result.borderActive = result.borderRadius = 0;
+	return result;
+}())
+, _field(this, _fieldStyle, std::move(placeholder), query)
 , _cancel(this, _st.fieldCancel) {
+	_field->setObjectName(u"multiSearchField"_q);
 	_field->customUpDown(true);
 	_field->focusedChanges(
 	) | rpl::filter(rpl::mappers::_1) | rpl::on_next([=] {
@@ -688,6 +700,7 @@ MultiSelect::Inner::Inner(
 	}, _field->lifetime());
 	_field->focusedChanges(
 	) | rpl::on_next([=](bool focused) {
+		update();
 		if (_focusedChangedCallback) {
 			_focusedChangedCallback(focused);
 		}
@@ -790,7 +803,11 @@ void MultiSelect::Inner::updateHasAnyItems(bool hasAnyItems) {
 	_field->setPlaceholderHidden(hasAnyItems);
 	updateCursor();
 	_iconOpacity.start([this] {
-		rtlupdate(_st.padding.left(), _st.padding.top(), _st.fieldIcon.width(), _st.fieldIcon.height());
+		rtlupdate(
+			_st.padding.left(),
+			_st.padding.top() + (_st.field.heightMin - _st.fieldIcon.height()) / 2,
+			_st.fieldIcon.width(),
+			_st.fieldIcon.height());
 	}, hasAnyItems ? 1. : 0., hasAnyItems ? 0. : 1., _st.item.duration);
 }
 
@@ -844,7 +861,7 @@ int MultiSelect::Inner::resizeGetHeight(int newWidth) {
 	updateFieldGeometry();
 
 	auto cancelLeft = _fieldLeft + _fieldWidth + _st.padding.right() - _cancel->width();
-	auto cancelTop = _fieldTop - _st.padding.top();
+	auto cancelTop = _fieldTop + (_field->height() - _cancel->height()) / 2;
 	_cancel->moveToLeft(_st.padding.left() + cancelLeft, _st.padding.top() + cancelTop);
 
 	return _field->y() + _field->height() + _st.padding.bottom();
@@ -856,6 +873,13 @@ void MultiSelect::Inner::paintEvent(QPaintEvent *e) {
 	auto paintRect = e->rect();
 	p.fillRect(paintRect, ExtrasFeatures::WindowMaterial::surfaceColor(
 		this, _st.bg->c));
+	const auto focused = _field->hasFocus();
+	const auto capsule = rect().marginsRemoved(QMargins(
+		std::max(0, _st.padding.left() - st::searchFieldPadding),
+		_st.padding.top(),
+		std::max(0, _st.padding.right() - st::searchFieldPadding),
+		_st.padding.bottom()));
+	InputField::paintSearchBackground(p, capsule, _st.field, focused, underMouse());
 
 	auto offset = QPoint(
 		style::RightToLeft() ? _st.padding.right() : _st.padding.left(),
@@ -867,7 +891,11 @@ void MultiSelect::Inner::paintEvent(QPaintEvent *e) {
 	auto iconOpacity = _iconOpacity.value(_items.empty() ? 1. : 0.);
 	if (iconOpacity > 0.) {
 		p.setOpacity(iconOpacity);
-		_st.fieldIcon.paint(p, 0, 0, outerWidth);
+		_st.fieldIcon.paint(p,
+			0,
+			(_st.field.heightMin - _st.fieldIcon.height()) / 2,
+			outerWidth,
+			focused ? _st.field.textFg->c : _st.field.placeholderFg->c);
 		p.setOpacity(1.);
 	}
 
@@ -907,7 +935,13 @@ QMargins MultiSelect::Inner::itemPaintMargins() const {
 	};
 }
 
+void MultiSelect::Inner::enterEventHook(QEnterEvent *e) {
+	RpWidget::enterEventHook(e);
+	update();
+}
+
 void MultiSelect::Inner::leaveEventHook(QEvent *e) {
+	update();
 	clearSelection();
 }
 

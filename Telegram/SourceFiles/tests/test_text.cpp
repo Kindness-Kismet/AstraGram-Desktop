@@ -550,7 +550,7 @@ void test(not_null<Ui::RpWindow*>, not_null<Ui::RpWidget*> body) {
 		Expects(controlLine.baseline < controlLine.bottom);
 	}
 	{
-		auto fieldStyle = st::defaultMultiSelectSearchField;
+		auto fieldStyle = st::defaultInlineField;
 		fieldStyle.textMargins = QMargins(0, 0, 0, 0);
 		fieldStyle.placeholderMargins = QMargins(0, 0, 0, 0);
 		const auto placeholderText = u"bot query"_q;

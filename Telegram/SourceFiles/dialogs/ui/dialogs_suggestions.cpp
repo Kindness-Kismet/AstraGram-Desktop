@@ -87,11 +87,6 @@ constexpr auto kCollapsedAppsCount = 5;
 constexpr auto kProbablyMaxApps = 100;
 constexpr auto kSearchQueryDelay = crl::time(900);
 
-void PaintSuggestionDivider(not_null<QWidget*> widget) {
-	auto p = QPainter(widget.get());
-	PaintSearchedBarBg(p, widget, widget->rect());
-}
-
 class RecentRow final : public PeerListRow {
 public:
 	explicit RecentRow(not_null<PeerData*> peer);
@@ -753,10 +748,6 @@ void Suggestions::ObjectListController::setupPlainDivider(
 		label->resizeToWidth(size.width() - x * 2);
 		label->moveToLeft(x, y, size.width());
 	}, raw->lifetime());
-	raw->paintRequest() | rpl::on_next([=] {
-		PaintSuggestionDivider(raw);
-	}, raw->lifetime());
-
 	delegate()->peerListSetAboveWidget(std::move(result));
 }
 
@@ -818,10 +809,6 @@ void Suggestions::ObjectListController::setupExpandDivider(
 		const auto y = st::searchedBarPosition.y();
 		label->resizeToWidth(size.width() - x * 2);
 		label->moveToLeft(x, y, size.width());
-	}, raw->lifetime());
-
-	raw->paintRequest() | rpl::on_next([=] {
-		PaintSuggestionDivider(raw);
 	}, raw->lifetime());
 
 	delegate()->peerListSetAboveWidget(std::move(result));
@@ -941,10 +928,6 @@ void RecentsController::setupDivider() {
 		label->resizeToWidth(size.width() - x - width);
 		label->moveToLeft(x, y, size.width());
 	}, raw->lifetime());
-	raw->paintRequest() | rpl::on_next([=] {
-		PaintSuggestionDivider(raw);
-	}, raw->lifetime());
-
 	delegate()->peerListSetAboveWidget(std::move(result));
 }
 

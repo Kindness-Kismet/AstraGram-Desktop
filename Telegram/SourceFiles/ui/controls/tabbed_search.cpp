@@ -36,12 +36,9 @@ TabbedSearchField::TabbedSearchField(
 : RpWidget(parent)
 , _st(st)
 , _field(CreateChild<InputField>(this, _st.field, tr::lng_dlg_filter()))
-, _search(CreateChild<IconButton>(this, _st.search))
 , _cancel(CreateChild<CrossButton>(this, _st.cancel))
 , _debounceTimer([=] { _debouncedQuery = _query.current(); }) {
 	_field->setObjectName(u"panelSearchField"_q);
-	_search->setObjectName(u"panelSearchIcon"_q);
-	_search->setAccessibleName(tr::lng_dlg_filter(tr::now));
 	_cancel->setObjectName(u"panelSearchClear"_q);
 	_cancel->setAccessibleName(tr::lng_sr_cancel_search(tr::now));
 	_cancel->toggle(false, anim::type::instant);
@@ -59,9 +56,6 @@ TabbedSearchField::TabbedSearchField(
 		}
 	}, _field->lifetime());
 
-	_search->setClickedCallback([=] {
-		_field->setFocus();
-	});
 	_cancel->setClickedCallback([=] {
 		const auto focused = _field->hasFocus();
 		cancel();
@@ -152,7 +146,6 @@ void TabbedSearchField::returnFocus() {
 int TabbedSearchField::resizeGetHeight(int newWidth) {
 	_field->resizeToWidth(newWidth);
 	_field->moveToLeft(0, 0, newWidth);
-	_search->moveToLeft(0, 0, newWidth);
 	_cancel->moveToRight(0, 0, newWidth);
 	return _st.height;
 }

@@ -621,16 +621,9 @@ storiesEmojiSearchField: InputField(defaultTabbedSearchField) {
 	placeholderFg: storiesComposeGrayText;
 	placeholderFgActive: storiesComposeGrayText;
 	placeholderFgError: storiesComposeGrayText;
-	borderFg: storiesComposeBgRipple;
-	borderFgActive: storiesComposeBlue;
 }
 storiesEmojiTabbedSearch: TabbedSearch(defaultTabbedSearch) {
 	field: storiesEmojiSearchField;
-	search: IconButton(defaultTabbedSearchButton) {
-		icon: icon {{ "menu/search", storiesComposeGrayIcon }};
-		iconOver: icon {{ "menu/search", storiesComposeGrayIcon }};
-		ripple: storiesComposeRipple;
-	}
 	back: IconButton(defaultTabbedSearchBack) {
 		icon: icon {{ "emoji/emoji_back", storiesComposeGrayIcon }};
 		iconOver: icon {{ "emoji/emoji_back", storiesComposeGrayIcon }};
@@ -990,7 +983,6 @@ mediaviewEmojiPan: EmojiPan(storiesEmojiPan) {
 		field: InputField(storiesEmojiSearchField) {
 			textBg: groupCallMenuBgOver;
 			textBgActive: groupCallMenuBgOver;
-			borderFg: groupCallMenuBgRipple;
 		}
 	}
 }

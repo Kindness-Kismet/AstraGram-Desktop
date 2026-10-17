@@ -104,14 +104,6 @@ WorkspaceSearch::WorkspaceSearch(
 	_field->setAccessibleName(tr::extras_SettingsSearchPlaceholder(tr::now));
 	_field->customUpDown(true);
 	_field->show();
-	const auto icon = Ui::CreateChild<Ui::RpWidget>(_field);
-	icon->resize(st::dialogsFilterSearch.size());
-	icon->setAttribute(Qt::WA_TransparentForMouseEvents);
-	icon->paintRequest() | rpl::on_next([=] {
-		auto p = QPainter(icon);
-		st::dialogsFilterSearch.paint(p, 0, 0, icon->width());
-	}, icon->lifetime());
-	icon->show();
 	_clear = Ui::CreateChild<Ui::CrossButton>(_field, st::dialogsCancelSearch);
 	_clear->setObjectName(u"settings-search-clear"_q);
 	_clear->setAccessibleName(tr::lng_sr_clear_search(tr::now));
@@ -120,7 +112,6 @@ WorkspaceSearch::WorkspaceSearch(
 		_field->setFocusFast();
 	});
 	_field->sizeValue() | rpl::on_next([=](QSize size) {
-		icon->moveToLeft(style::ConvertScale(12), (size.height() - icon->height()) / 2);
 		_clear->moveToRight(0, (size.height() - _clear->height()) / 2);
 	}, lifetime());
 	_scroll = Ui::CreateChild<Ui::ScrollArea>(this);

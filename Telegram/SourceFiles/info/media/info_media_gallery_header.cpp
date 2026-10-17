@@ -61,22 +61,6 @@ void GalleryHeader::setupSearch(
 	_field->customUpDown(true);
 	_field->show();
 
-	const auto icon = Ui::CreateChild<Ui::RpWidget>(_field);
-	icon->setAttribute(Qt::WA_TransparentForMouseEvents);
-	icon->resize(st::infoMediaGallerySearchIcon.size());
-	icon->paintRequest(
-	) | rpl::on_next([=] {
-		auto p = QPainter(icon);
-		st::infoMediaGallerySearchIcon.paint(p, 0, 0, icon->width());
-	}, icon->lifetime());
-	_field->sizeValue(
-	) | rpl::on_next([=](QSize size) {
-		icon->moveToLeft(
-			st::infoMediaGallerySearchIconSkip,
-			(size.height() - icon->height()) / 2);
-	}, icon->lifetime());
-	icon->show();
-
 	_cancel = Ui::CreateChild<Ui::CrossButton>(
 		this,
 		st::infoMediaGallerySearchCancel);

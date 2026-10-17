@@ -314,8 +314,6 @@ dialogsSearchType: IconButton(dialogsCalendar) {
 	iconOver: icon {{ "menu/tag_filter", dialogsMenuIconFgOver }};
 }
 
-dialogsFilterSearch: defaultSearchFieldIcon;
-dialogsFilterSearchSkip: 9px;
 dialogsFilter: InputField(defaultSearchField) {
 }
 dialogsCancelSearchInPeer: IconButton(dialogsMenuToggle) {
@@ -327,7 +325,7 @@ dialogsCancelSearchInPeer: IconButton(dialogsMenuToggle) {
 }
 dialogsCancelSearch: CrossButton {
 	width: 35px;
-	height: 40px;
+	height: 36px;
 
 	cross: CrossAnimation {
 		size: 35px;
@@ -337,7 +335,7 @@ dialogsCancelSearch: CrossButton {
 	}
 	crossFg: dialogsMenuIconFg;
 	crossFgOver: dialogsMenuIconFgOver;
-	crossPosition: point(0px, 2px);
+	crossPosition: point(0px, 0px);
 
 	duration: 150;
 	loadingPeriod: 1000;
@@ -782,17 +780,22 @@ dialogsStoriesTooltip: ImportantTooltip(defaultImportantTooltip) {
 }
 dialogsStoriesTooltipLabel: defaultImportantTooltipLabel;
 dialogsStoriesTooltipMaxWidth: 200px;
-searchedBarHeight: 28px;
-searchedBarFont: normalFont;
-searchedBarPosition: point(14px, 5px);
+communityBarHeight: 28px;
+communityBarPosition: point(14px, 5px);
+searchedBarHeight: 52px;
+searchedBarFont: font(13px semibold);
+searchedBarPosition: point(18px, 27px);
 searchedBarLabel: FlatLabel(defaultFlatLabel) {
-	textFg: searchedBarFg;
-	margin: margins(14px, 5px, 14px, 5px);
+	textFg: windowSubTextFg;
+	style: TextStyle(defaultTextStyle) {
+		font: searchedBarFont;
+	}
+	margin: margins(0px, 0px, 0px, 0px);
 }
 searchedBarLink: LinkButton(defaultLinkButton) {
-	color: searchedBarFg;
-	overColor: searchedBarFg;
-	padding: margins(14px, 5px, 14px, 5px);
+	color: windowActiveTextFg;
+	overColor: windowActiveTextFg;
+	padding: margins(18px, 27px, 18px, 8px);
 }
 
 dialogsSearchTagSkip: point(8px, 4px);

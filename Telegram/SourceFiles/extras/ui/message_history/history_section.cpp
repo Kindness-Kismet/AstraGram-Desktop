@@ -102,7 +102,7 @@ FixedBar::FixedBar(
 	bool searchEnabled) : Ui::RpWidget(parent)
 , _controller(controller)
 , _peer(peer)
-, _field(this, st::defaultMultiSelectSearchField, tr::lng_dlg_filter())
+, _field(this, st::defaultSearchField, tr::lng_dlg_filter())
 , _backButton(this)
 , _search(this, st::topBarSearch)
 , _cancel(this, st::historyAdminLogCancelSearch)
@@ -160,6 +160,7 @@ void FixedBar::toggleSearch() {
 		_searchShown ? 1. : 0.,
 		st::historyAdminLogSearchSlideDuration);
 	_search->setDisabled(_searchShown);
+	_search->show();
 	if (_searchShown) {
 		_field->show();
 		_field->setFocus();
@@ -171,6 +172,7 @@ void FixedBar::toggleSearch() {
 void FixedBar::searchAnimationCallback() {
 	if (!_searchShownAnimation.animating()) {
 		_field->setVisible(_searchShown);
+		_search->setVisible(!_searchShown);
 		_search->setIconOverride(
 			_searchShown ? &st::topBarSearch.icon : nullptr,
 			_searchShown ? &st::topBarSearch.icon : nullptr);
@@ -239,10 +241,10 @@ int FixedBar::resizeGetHeight(int newWidth) {
 	_cancel->moveToLeft(cancelLeft, 0);
 
 	const auto newHeight = _backButton->height();
-	const auto fieldLeft = searchShownLeft + _search->width();
+	const auto fieldLeft = searchShownLeft;
 	_field->setGeometryToLeft(
 		fieldLeft,
-		st::historyAdminLogSearchTop,
+		(newHeight - _field->height()) / 2,
 		cancelLeft - fieldLeft,
 		_field->height());
 

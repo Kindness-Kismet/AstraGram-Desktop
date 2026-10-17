@@ -9927,6 +9927,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_HorizontalTabsStyle" = "Horizontal tab style";
 "extras_HorizontalTabsUnderline" = "Thin underline";
 "extras_HorizontalTabsSoftPill" = "Soft pills";
+"extras_SearchTemplates" = "Search templates";
 "extras_EmojiCategoryRecent" = "Recent";
 "extras_EmojiCategoryPeople" = "Emoji";
 "extras_EmojiCategoryNature" = "Nature";

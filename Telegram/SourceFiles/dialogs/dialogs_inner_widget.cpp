@@ -805,7 +805,7 @@ int InnerWidget::dialogsOffset() const {
 		+ (_collapsedRows.size() * st::dialogsImportantBarHeight)
 		- skipTopHeight()
 		+ ((communityModeShown() && !_shownList->empty())
-			? st::searchedBarHeight
+			? st::communityBarHeight
 			: 0);
 }
 
@@ -906,7 +906,7 @@ int InnerWidget::communityViewableTop() const {
 int InnerWidget::communityRequestableTop() const {
 	auto result = communityViewableTop();
 	if (!_communityViewable.empty()) {
-		result += st::searchedBarHeight + _communityViewable.height();
+		result += st::communityBarHeight + _communityViewable.height();
 	}
 	return result;
 }
@@ -914,7 +914,7 @@ int InnerWidget::communityRequestableTop() const {
 int InnerWidget::communitySectionsBottom() const {
 	auto result = communityRequestableTop();
 	if (_communityRequestableList && (_communityRequestableCount > 0)) {
-		result += st::searchedBarHeight + _communityRequestableList->height();
+		result += st::communityBarHeight + _communityRequestableList->height();
 	}
 	return result;
 }
@@ -932,7 +932,7 @@ Row *InnerWidget::communityRowAt(int index) const {
 
 int InnerWidget::communityRowAbsoluteTop(int index) const {
 	return communityViewableTop()
-		+ st::searchedBarHeight
+		+ st::communityBarHeight
 		+ _communityViewable.rowTop(index);
 }
 
@@ -1402,7 +1402,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		paintCollapsedRows(p, r.translated(0, -collapsedSkip));
 
 		if (communityModeShown() && !_shownList->empty()) {
-			p.translate(0, st::searchedBarHeight);
+			p.translate(0, st::communityBarHeight);
 		}
 
 		const auto &list = _shownList->all();
@@ -1537,18 +1537,18 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 					0,
 					0,
 					fullWidth,
-					st::searchedBarHeight,
+					st::communityBarHeight,
 					currentBg());
 				const auto &font = st::defaultSubsectionTitle.style.font;
 				p.setFont(font);
 				p.setPen(st::windowActiveTextFg);
 				p.drawTextLeft(
-					st::searchedBarPosition.x(),
-					st::searchedBarPosition.y(),
+					st::communityBarPosition.x(),
+					st::communityBarPosition.y(),
 					fullWidth,
 					font->elided(
 						text,
-						fullWidth - 2 * st::searchedBarPosition.x()));
+						fullWidth - 2 * st::communityBarPosition.x()));
 			};
 			const auto paintSection = [&](
 					int sectionTop,
@@ -1561,7 +1561,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 				p.save();
 				p.translate(0, sectionTop);
 				paintBar(text);
-				const auto rowsTop = st::searchedBarHeight;
+				const auto rowsTop = st::communityBarHeight;
 				p.translate(0, rowsTop);
 				const auto localClip = r.translated(
 					0,
@@ -1581,7 +1581,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			};
 			if (!_shownList->empty()) {
 				p.save();
-				p.translate(0, dialogsOffset() - st::searchedBarHeight);
+				p.translate(0, dialogsOffset() - st::communityBarHeight);
 				paintBar(tr::lng_community_chats_joined(tr::now));
 				p.restore();
 			}
@@ -1600,17 +1600,19 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			p.translate(0, communitySectionsBottom());
 		}
 	} else if (_state == WidgetState::Filtered) {
-		const auto paintSearchedBar = [&](const QString &text) {
+		const auto paintSearchedBar = [&](const QString &text, int actionWidth = 0, bool loading = false) {
 			const auto bar = QRect(0, 0, fullWidth, st::searchedBarHeight);
 			p.fillRect(bar, context.currentBg);
-			PaintSearchedBarBg(p, this, bar);
-			p.setFont(st::searchedBarFont);
-			p.setPen(st::searchedBarFg);
+			const auto font = loading ? st::normalFont : st::searchedBarFont;
+			p.setFont(font);
+			p.setPen(st::windowSubTextFg);
 			p.drawTextLeft(
 				st::searchedBarPosition.x(),
 				st::searchedBarPosition.y(),
 				width(),
-				text);
+				font->elided(text, std::max(0,
+					fullWidth - 2 * st::searchedBarPosition.x()
+						- actionWidth - (actionWidth ? st::searchedBarPosition.x() : 0))));
 		};
 		if (_searchTags) {
 			paintSearchTags(p, {
@@ -1806,23 +1808,23 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		const auto showUnreadInSearchResults = uniqueSearchResults();
 		if (_idSearchResults.empty() && _previewResults.empty() && _searchResults.empty()) {
 			if (_loadingAnimation) {
-				paintSearchedBar(tr::lng_contacts_loading(tr::now));
+				paintSearchedBar(tr::lng_contacts_loading(tr::now), 0, true);
 				p.translate(0, st::searchedBarHeight);
 			}
 			return;
 		}
 		if (!_previewResults.empty()) {
-			const auto text = tr::lng_search_tab_public_posts(tr::now);
-			paintSearchedBar(text);
 			const auto moreFont = (_selectedMorePosts || _pressedMorePosts)
-				? st::searchedBarFont->underline()
-				: st::searchedBarFont;
+				? st::searchedBarLink.font->underline()
+				: st::searchedBarLink.font;
 			{
 				const auto text = tr::lng_channels_your_more(tr::now);
 				if (!_morePostsWidth) {
 					_morePostsWidth = moreFont->width(text);
 				}
+				paintSearchedBar(tr::lng_search_tab_public_posts(tr::now), _morePostsWidth);
 				p.setFont(moreFont);
+				p.setPen(st::windowActiveTextFg);
 				p.drawTextLeft(
 					width() - st::searchedBarPosition.x() - _morePostsWidth,
 					st::searchedBarPosition.y(),
@@ -1890,28 +1892,31 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			const auto searchLowerText = (_searchHashOrCashtag == HashOrCashtag::None)
 				? _searchState.query.toLower()
 				: QString();
-			paintSearchedBar(text);
 			const auto filterOver = _selectedChatTypeFilter
 				|| _pressedChatTypeFilter;
 			const auto filterFont = filterOver
-				? st::searchedBarFont->underline()
-				: st::searchedBarFont;
+				? st::searchedBarLink.font->underline()
+				: st::searchedBarLink.font;
 			if (hasChatTypeFilter()) {
-				const auto text = (_searchState.filter == ChatTypeFilter::All
+				const auto filterText = (_searchState.filter == ChatTypeFilter::All
 					&& !_searchState.fromArchive)
 					? tr::lng_search_filter_non_archived(tr::now)
 					: ChatTypeFilterLabel(_searchState.filter);
 				if (!_chatTypeFilterWidth) {
-					_chatTypeFilterWidth = filterFont->width(text);
+					_chatTypeFilterWidth = filterFont->width(filterText);
 				}
+				paintSearchedBar(text, _chatTypeFilterWidth);
 				p.setFont(filterFont);
+				p.setPen(st::windowActiveTextFg);
 				p.drawTextLeft(
 					(width()
 						- st::searchedBarPosition.x()
 						- _chatTypeFilterWidth),
 					st::searchedBarPosition.y(),
 					width(),
-					text);
+					filterText);
+			} else {
+				paintSearchedBar(text);
 			}
 			p.translate(0, st::searchedBarHeight);
 
@@ -2595,7 +2600,7 @@ void InnerWidget::selectByMouse(QPoint globalPosition) {
 					return;
 				}
 				const auto localY = mouseY
-					- (sectionTop + st::searchedBarHeight);
+					- (sectionTop + st::communityBarHeight);
 				const auto index = view.indexByY(localY);
 				if (index >= 0) {
 					communitySelected = flatBase + index;
@@ -5468,7 +5473,7 @@ void InnerWidget::updateCommunityRequestableGeometry() {
 		_communityRequestableList->resizeToWidth(width());
 		_communityRequestableList->moveToLeft(
 			0,
-			communityRequestableTop() + st::searchedBarHeight);
+			communityRequestableTop() + st::communityBarHeight);
 	}
 }
 

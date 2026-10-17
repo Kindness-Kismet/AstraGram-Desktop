@@ -710,12 +710,12 @@ peerAppearanceCoverLabelMargin: margins(22px, 0px, 22px, 17px);
 peerAppearanceIconPadding: margins(0px, 15px, 0px, 5px);
 peerAppearanceDividerTextMargin: margins(22px, 8px, 22px, 11px);
 
-settingsChatbotsUsername: InputField(defaultMultiSelectSearchField) {
+settingsChatbotsUsername: InputField(defaultInlineField) {
 }
 settingsChatbotsAccess: Checkbox(defaultCheckbox) {
 	textPosition: point(18px, 2px);
 }
-settingsLocationAddress: InputField(defaultMultiSelectSearchField) {
+settingsLocationAddress: InputField(defaultInlineField) {
 }
 settingsChatbotsUsernameMargins: margins(20px, 0px, 20px, 8px);
 settingsChatbotsAccessMargins: margins(22px, 5px, 22px, 9px);
@@ -764,7 +764,7 @@ settingsChatbotsAddButton: RoundButton(defaultActiveButton) {
 }
 settingsChatbotsAddMargin: 14px;
 
-settingsChatIntroField: InputField(defaultMultiSelectSearchField) {
+settingsChatIntroField: InputField(defaultInlineField) {
 	textMargins: margins(2px, 0px, 32px, 0px);
 }
 settingsChatIntroFieldMargins: margins(20px, 15px, 20px, 8px);

@@ -46,7 +46,6 @@ private:
 
 	const style::TabbedSearch &_st;
 	not_null<InputField*> _field;
-	not_null<IconButton*> _search;
 	not_null<CrossButton*> _cancel;
 	QPointer<QWidget> _focusTakenFrom;
 

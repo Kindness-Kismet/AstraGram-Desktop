@@ -86,24 +86,12 @@ infoMediaHeaderFg: windowFg;
 infoMediaSearch: SearchFieldRow {
 	height: 44px;
 	padding: margins(8px, 6px, 8px, 6px);
-	field: defaultMultiSelectSearchField;
-	fieldIcon: icon {{
-		"box_search-flip_horizontal",
-		menuIconFg,
-		point(6px, 8px)
-	}};
-	fieldIconSkip: 36px;
+	field: defaultSearchField;
 	fieldCancel: defaultMultiSelectSearchCancel;
 	fieldCancelSkip: 40px;
 }
 infoLayerMediaSearch: SearchFieldRow(infoMediaSearch) {
 	height: 46px;
-	fieldIcon: icon {{
-		"box_search-flip_horizontal",
-		menuIconFg,
-		point(9px, 9px)
-	}};
-	fieldIconSkip: 34px;
 	fieldCancel: CrossButton(defaultMultiSelectSearchCancel) {
 		width: 50px;
 		cross: CrossAnimation {
@@ -792,14 +780,9 @@ infoMediaGalleryCount: FlatLabel(defaultFlatLabel) {
 infoMediaGalleryCountSkip: 8px;
 infoMediaGalleryTitleGap: 16px;
 infoMediaGallerySearch: InputField(defaultSearchField) {
-	textMargins: margins(34px, 8px, 30px, 6px);
-	borderRadius: 17px;
-	heightMin: 34px;
 }
 infoMediaGallerySearchWidth: 200px;
 infoMediaGallerySearchMinWidth: 120px;
-infoMediaGallerySearchIcon: defaultSearchFieldIcon;
-infoMediaGallerySearchIconSkip: 7px;
 infoMediaGallerySearchCancel: CrossButton(defaultMultiSelectSearchCancel) {
 	width: 34px;
 	height: 34px;

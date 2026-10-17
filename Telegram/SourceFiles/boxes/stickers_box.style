@@ -13,7 +13,7 @@ contactsNameStyle: TextStyle(defaultTextStyle) {
 groupStickersRemove: defaultMultiSelectSearchCancel;
 groupStickersRemovePosition: point(6px, 6px);
 groupStickersFieldPadding: margins(8px, 6px, 8px, 6px);
-groupStickersField: InputField(defaultMultiSelectSearchField) {
+groupStickersField: InputField(defaultInlineField) {
 	placeholderFont: boxTextFont;
 	style: boxTextStyle;
 	placeholderMargins: margins(0px, 0px, 0px, 0px);

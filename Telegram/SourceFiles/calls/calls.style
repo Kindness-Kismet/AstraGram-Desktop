@@ -777,13 +777,15 @@ groupCallMultiSelect: MultiSelect(defaultMultiSelect) {
 		deleteFg: groupCallMembersFg;
 	}
 	field: InputField(defaultMultiSelectSearchField) {
+		textBg: groupCallMembersBgRipple;
+		textBgActive: groupCallMembersBgOver;
 		textFg: groupCallMembersFg;
 		placeholderFg: groupCallMemberNotJoinedStatus;
 		placeholderFgActive: groupCallMemberNotJoinedStatus;
 		placeholderFgError: groupCallMemberNotJoinedStatus;
 		menu: groupCallPopupMenu;
 	}
-	fieldIcon: icon {{ "box_search", groupCallMemberNotJoinedStatus, point(10px, 9px) }};
+	fieldIcon: defaultSearchFieldIcon;
 	fieldCancel: CrossButton(defaultMultiSelectSearchCancel) {
 		crossFg: groupCallMemberNotJoinedStatus;
 		crossFgOver: groupCallMemberNotJoinedStatus;

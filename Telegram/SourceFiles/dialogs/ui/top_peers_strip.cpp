@@ -7,7 +7,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/ui/top_peers_strip.h"
 
-#include "dialogs/ui/dialogs_pill.h"
 #include "base/event_filter.h"
 #include "lang/lang_keys.h"
 #include "ui/effects/ripple_animation.h"
@@ -140,10 +139,6 @@ void TopPeersStrip::setupHeader() {
 		label->moveToLeft(x, y, size.width());
 	}, _header.lifetime());
 
-	_header.paintRequest() | rpl::on_next([=] {
-		auto p = QPainter(&_header);
-		PaintSearchedBarBg(p, &_header, _header.rect());
-	}, _header.lifetime());
 }
 
 void TopPeersStrip::setExpanded(bool expanded) {

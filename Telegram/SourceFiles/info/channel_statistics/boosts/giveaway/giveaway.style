@@ -128,7 +128,7 @@ giveawayGiftCodeSliderPadding: margins(0px, 24px, 0px, 10px);
 giveawayGiftCodeSliderFloatSkip: 6px;
 giveawayGiftCodeChannelsSubsectionPadding: margins(0px, -1px, 0px, -4px);
 giveawayGiftCodeAdditionalPaddingMin: margins(50px, 4px, 22px, 0px);
-giveawayGiftCodeAdditionalField: InputField(defaultMultiSelectSearchField) {
+giveawayGiftCodeAdditionalField: InputField(defaultInlineField) {
 }
 giveawayGiftCodeAdditionalLabel: FlatLabel(defaultFlatLabel) {
 	style: semiboldTextStyle;

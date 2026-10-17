@@ -107,7 +107,7 @@ ContentWidget::ContentWidget(
 			_controller->wrapValue(),
 			_controller->searchEnabledByContent(),
 			[=](Wrap wrap, bool enabled) {
-				return _controller->isDownloads()
+				return (_controller->isDownloads() && wrap != Wrap::Search)
 					|| (wrap == Wrap::Layer && enabled);
 			}
 		) | rpl::distinct_until_changed(

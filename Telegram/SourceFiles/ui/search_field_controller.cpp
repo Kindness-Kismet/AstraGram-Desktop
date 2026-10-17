@@ -47,24 +47,15 @@ auto SearchFieldController::createRowView(
 
 	wrap->widthValue(
 	) | rpl::on_next([=, &st](int newWidth) {
-		auto availableWidth = newWidth
-			- st.fieldIconSkip
-			- st.fieldCancelSkip;
+		const auto availableWidth = newWidth
+			- st.padding.left()
+			- st.padding.right();
 		field->setGeometryToLeft(
-			st.padding.left() + st.fieldIconSkip,
-			st.padding.top(),
+			st.padding.left(),
+			(st.height - field->height()) / 2,
 			availableWidth,
 			field->height());
-		cancel->moveToRight(0, 0);
-	}, wrap->lifetime());
-	wrap->paintRequest(
-	) | rpl::on_next([=, &st] {
-		auto p = QPainter(wrap);
-		st.fieldIcon.paint(
-			p,
-			st.padding.left(),
-			st.padding.top(),
-			wrap->width());
+		cancel->moveToRight(st.padding.right(), (st.height - cancel->height()) / 2);
 	}, wrap->lifetime());
 
 	_view.release();

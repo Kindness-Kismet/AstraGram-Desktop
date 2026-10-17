@@ -232,6 +232,13 @@ createPollCheckboxMargin: margins(22px, 10px, 22px, 10px);
 createPollFieldTitlePadding: margins(22px, 7px, 10px, 6px);
 
 createPollLinkUrlField: InputField(dialogsFilter) {
+	search: false;
+	textBg: filterInputInactiveBg;
+	border: 1px;
+	borderActive: 1px;
+	borderRadius: 10px;
+	borderFg: windowDividerFg;
+	borderFgActive: filterInputBorderFg;
 	textBgActive: filterInputInactiveBg;
 	textMargins: margins(14px, 8px, 14px, 5px);
 	placeholderMargins: margins(0px, 0px, 2px, 0px);
