@@ -1,4 +1,5 @@
 #include "settings/settings_navigation.h"
+#include "ui/widgets/rp_window.h"
 #include "extras/features/window_material/window_material.h"
 
 #include "core/application.h"
@@ -290,7 +291,7 @@ void Navigation::paintEvent(QPaintEvent *e) {
 		this, st::dialogsBg->c));
 	if (!property("narrow").toBool()
 		&& !ExtrasFeatures::WindowMaterial::isActive(this)) {
-		p.fillRect(width() - st::lineWidth, 0, st::lineWidth, height(), st::windowDividerFg);
+		p.fillRect(width() - st::lineWidth, 0, st::lineWidth, height(), Ui::WindowShellBackground());
 	}
 }
 

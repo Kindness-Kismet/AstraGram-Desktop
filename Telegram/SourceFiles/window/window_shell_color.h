@@ -9,18 +9,19 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "styles/palette.h"
 #include "styles/style_widgets.h"
+#include "ui/widgets/rp_window.h"
 
 #include <QtWidgets/QWidget>
 
 namespace Window {
 
-[[nodiscard]] inline style::color ShellBackgroundColor(
+[[nodiscard]] inline QColor ShellBackgroundColor(
 		[[maybe_unused]] const QWidget *widget) {
 #ifdef Q_OS_MAC
 	const auto &title = st::defaultWindowTitle;
-	return widget->window()->isActiveWindow() ? title.bgActive : title.bg;
+	return (widget->window()->isActiveWindow() ? title.bgActive : title.bg)->c;
 #else
-	return st::windowShellBg;
+	return Ui::WindowShellBackground();
 #endif
 }
 

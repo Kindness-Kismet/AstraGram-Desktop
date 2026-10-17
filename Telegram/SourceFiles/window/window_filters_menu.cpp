@@ -147,7 +147,7 @@ void FiltersMenu::setup() {
 	_outer.paintRequest() | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(&_outer);
 		p.fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(
-			&_outer, ShellBackgroundColor(&_outer)->c));
+			&_outer, ShellBackgroundColor(&_outer)));
 		p.fillRect(QRect(0, gap, _outer.width(),
 			_outer.height() - gap), ExtrasFeatures::WindowMaterial::surfaceColor(
 				&_outer, st::windowBg->c));
@@ -163,7 +163,7 @@ void FiltersMenu::setup() {
 		}
 		auto p = QPainter(corner);
 		ExtrasUi::WindowAppearance::paintTopCorners(
-			p, corner->rect(), ShellBackgroundColor(&_outer)->c, true, false);
+			p, corner->rect(), ShellBackgroundColor(&_outer), true, false);
 	}, corner->lifetime());
 	corner->show();
 
@@ -180,7 +180,7 @@ void FiltersMenu::setup() {
 		auto p = QPainter(overlay);
 		const auto top = gap;
 		p.fillRect(_outer.width() - st::lineWidth, top, st::lineWidth,
-			_outer.height() - top, st::windowDividerFg);
+			_outer.height() - top, ShellBackgroundColor(&_outer));
 	}, overlay->lifetime());
 	overlay->show();
 

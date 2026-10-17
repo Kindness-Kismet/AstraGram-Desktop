@@ -1,4 +1,5 @@
 #include "settings/settings_card_layout.h"
+#include "ui/widgets/rp_window.h"
 #include "extras/features/window_material/window_material.h"
 #include "settings/settings_common.h"
 #include "boxes/peer_list_box.h"
@@ -224,7 +225,7 @@ void CardPage::paintGroupDividers(QPainter &p) {
 			tops[i] - skip,
 			_content->width(),
 			st::lineWidth,
-			st::settingsGroupDividerFg);
+			Ui::WindowDividerColor());
 	}
 }
 

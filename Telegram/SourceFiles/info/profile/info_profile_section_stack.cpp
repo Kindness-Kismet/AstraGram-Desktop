@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/features/window_material/window_material.h"
 #include "ui/widgets/box_content_divider.h"
 #include "ui/widgets/labels.h"
+#include "ui/widgets/rp_window.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/vertical_list.h"
@@ -35,7 +36,7 @@ namespace {
 			margins.top(),
 			raw->width() - margins.left() - margins.right(),
 			st::lineWidth,
-			st::windowDividerFg);
+			Ui::WindowDividerColor());
 	}, raw->lifetime());
 	return layout->add(object_ptr<Ui::SlideWrap<>>(
 		layout,

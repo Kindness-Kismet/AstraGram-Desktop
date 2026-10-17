@@ -2596,7 +2596,7 @@ void MainWidget::paintEvent(QPaintEvent *e) {
 	}
 	auto p = QPainter(this);
 	p.fillRect(e->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(
-		this, Window::ShellBackgroundColor(this)->c));
+		this, Window::ShellBackgroundColor(this)));
 	if (_showAnimation) {
 		_showAnimation->paintContents(p);
 	}
@@ -2624,7 +2624,7 @@ void MainWidget::paintCardOverlay(QRect clip) {
 	}
 	auto p = QPainter(_cardOverlay.data());
 	p.setClipRect(clip);
-	const auto fill = Window::ShellBackgroundColor(this)->c;
+	const auto fill = Window::ShellBackgroundColor(this);
 
 	for (const auto &r : cardRects()) {
 		if (!r.intersects(clip)) {

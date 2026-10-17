@@ -124,7 +124,7 @@ MainWindow::MainWindow(not_null<Window::Controller*> controller)
 		// 登录与锁屏共用内容区圆角，覆盖子页面切换动画的直角背景。
 		auto p = QPainter(_pageCorners.data());
 		ExtrasUi::WindowAppearance::paintTopCorners(
-			p, _pageCorners->rect(), Window::ShellBackgroundColor(this)->c);
+			p, _pageCorners->rect(), Window::ShellBackgroundColor(this));
 	}, _pageCorners->lifetime());
 	style::PaletteChanged() | rpl::on_next([=] {
 		_pageCorners->update();

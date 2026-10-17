@@ -57,7 +57,7 @@ void initialize(not_null<Ui::RpWindow*> window) {
 			return;
 		}
 		auto p = QPainter(corners);
-		paintTopCorners(p, corners->rect(), Window::ShellBackgroundColor(window)->c);
+		paintTopCorners(p, corners->rect(), Window::ShellBackgroundColor(window));
 	}, corners->lifetime());
 	ExtrasFeatures::WindowMaterial::changes(corners) | rpl::on_next([=] {
 		corners->update();
