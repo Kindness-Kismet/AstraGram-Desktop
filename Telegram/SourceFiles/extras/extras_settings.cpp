@@ -783,21 +783,6 @@ void ExtrasSettings::setNotificationStyle(NotificationStyle val) {
 	save();
 }
 
-void ExtrasSettings::setHorizontalTabStyle(HorizontalTabStyle val) {
-	// 历史轻分段配置统一回到细下划线，柔色胶囊保留原值。
-	if (static_cast<int>(val) == 1) {
-		val = HorizontalTabStyle::Underline;
-	}
-	if (val != HorizontalTabStyle::Underline && val != HorizontalTabStyle::SoftPill) {
-		return;
-	}
-	if (_horizontalTabStyle.current() == val) {
-		return;
-	}
-	_horizontalTabStyle = val;
-	save();
-}
-
 void ExtrasSettings::setRemoveMessageTail(bool val) {
 	if (_removeMessageTail.current() == val) return;
 	_removeMessageTail = val;
@@ -1377,7 +1362,6 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"increaseWebviewHeight", s._increaseWebviewHeight.current()},
 		{"increaseWebviewWidth", s._increaseWebviewWidth.current()},
 		{"windowMaterial", static_cast<int>(s._windowMaterial.current())},
-		{"horizontalTabStyle", static_cast<int>(s._horizontalTabStyle.current())},
 		{"notificationStyle", static_cast<int>(s._notificationStyle.current())},
 		{"removeMessageTail", s._removeMessageTail.current()},
 		{"disableNotificationsDelay", s._disableNotificationsDelay.current()},
@@ -1509,12 +1493,6 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._increaseWebviewHeight = j.value("increaseWebviewHeight", defaults._increaseWebviewHeight.current());
 	s._increaseWebviewWidth = j.value("increaseWebviewWidth", defaults._increaseWebviewWidth.current());
 	const auto material = j.find("windowMaterial");
-	const auto tabStyle = j.find("horizontalTabStyle");
-	s._horizontalTabStyle = (tabStyle != j.end()
-		&& tabStyle->is_number_integer()
-		&& *tabStyle == static_cast<int>(HorizontalTabStyle::SoftPill))
-		? HorizontalTabStyle::SoftPill
-		: HorizontalTabStyle::Underline;
 	const auto notificationStyle = j.find("notificationStyle");
 	s._notificationStyle = (notificationStyle != j.end()
 		&& notificationStyle->is_number_integer()

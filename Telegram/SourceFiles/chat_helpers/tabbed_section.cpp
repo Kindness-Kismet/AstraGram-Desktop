@@ -39,6 +39,10 @@ TabbedSection::TabbedSection(
 	_selector->show();
 	_selector->setAfterShownCallback(nullptr);
 	_selector->setBeforeHidingCallback(nullptr);
+	_selector->closeRequests(
+	) | rpl::on_next([=] {
+		controller->closeThirdSection();
+	}, lifetime());
 
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
 	ExtrasFeatures::WindowMaterial::watchSurface(this);

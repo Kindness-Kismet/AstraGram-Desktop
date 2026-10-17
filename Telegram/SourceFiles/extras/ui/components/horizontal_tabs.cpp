@@ -1,6 +1,5 @@
 #include "extras/ui/components/horizontal_tabs.h"
 
-#include "extras/extras_settings.h"
 #include "ui/effects/animation_value.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/painter.h"
@@ -9,27 +8,9 @@
 #include "styles/style_widgets.h"
 
 namespace ExtrasUi::HorizontalTabs {
-namespace {
-
-bool darkBackground() {
-	return st::windowBg->c.lightnessF() < .5;
-}
-
-} // namespace
-
 bool appliesTo(const style::SettingsSlider &st) {
 	// 底部指示线和整段背景是标签，顶部刻度用于数值选择。
 	return st.barSnapToLabel || st.barStroke == st.height;
-}
-
-bool underline() {
-	return ExtrasSettings::getInstance().horizontalTabStyle()
-		== HorizontalTabStyle::Underline;
-}
-
-bool softPill() {
-	return ExtrasSettings::getInstance().horizontalTabStyle()
-		== HorizontalTabStyle::SoftPill;
 }
 
 void watch(not_null<Ui::RpWidget*> widget, Fn<void()> invalidate) {
@@ -39,8 +20,6 @@ void watch(not_null<Ui::RpWidget*> widget, Fn<void()> invalidate) {
 		}
 		widget->update();
 	};
-	ExtrasSettings::getInstance().horizontalTabStyleChanges(
-	) | rpl::on_next(refresh, widget->lifetime());
 	style::PaletteChanged() | rpl::on_next(refresh, widget->lifetime());
 }
 
@@ -76,7 +55,7 @@ void apply(not_null<Ui::PillTabs*> tabs, const style::PillTabs &st) {
 QImage rippleMask(QSize size, bool compact) {
 	return Ui::RippleAnimation::MaskByDrawer(size, false, [&](QPainter &p) {
 		const auto rect = backgroundRect(QRect(QPoint(), size), compact);
-		const auto radius = softPill() ? rect.height() / 2 : style::ConvertScale(7);
+		const auto radius = style::ConvertScale(7);
 		p.setPen(Qt::NoPen);
 		p.setBrush(Qt::white);
 		p.drawRoundedRect(rect, radius, radius);
@@ -110,36 +89,24 @@ void paint(
 	p.save();
 	const auto hq = PainterHighQualityEnabler(p);
 	p.setPen(Qt::NoPen);
-	if (underline()) {
-		if (hovered) {
-			auto hover = st::windowActiveTextFg->c;
-			hover.setAlphaF(.045);
-			p.setBrush(hover);
-			p.drawRoundedRect(rect, style::ConvertScale(7), style::ConvertScale(7));
-		}
-		const auto lineWidth = (contentWidth < 0)
-			? rect.width()
-			: std::min(float64(contentWidth), rect.width());
-		const auto thickness = style::ConvertScale(2);
-		auto line = st::windowActiveTextFg->c;
-		line.setAlphaF(active);
-		p.setBrush(line);
-		p.drawRoundedRect(QRectF(
-			bounds.x() + (bounds.width() - lineWidth) / 2.,
-			bounds.y() + bounds.height() - thickness,
-			lineWidth,
-			thickness), thickness / 2., thickness / 2.);
-		p.restore();
-		return;
-	}
-	const auto radius = rect.height() / 2.;
-	auto fill = st::windowActiveTextFg->c;
-	fill.setAlphaF(active * (darkBackground() ? .16 : .10));
 	if (hovered) {
-		fill.setAlphaF(std::max(float64(fill.alphaF()), .055));
+		auto hover = st::windowFg->c;
+		hover.setAlphaF(.045);
+		p.setBrush(hover);
+		p.drawRoundedRect(rect, style::ConvertScale(7), style::ConvertScale(7));
 	}
-	p.setBrush(fill);
-	p.drawRoundedRect(rect, radius, radius);
+	const auto lineWidth = (contentWidth < 0)
+		? rect.width()
+		: std::min(float64(contentWidth), rect.width());
+	const auto thickness = style::ConvertScale(2);
+	auto line = st::windowActiveTextFg->c;
+	line.setAlphaF(active);
+	p.setBrush(line);
+	p.drawRoundedRect(QRectF(
+		bounds.x() + (bounds.width() - lineWidth) / 2.,
+		bounds.y() + bounds.height() - thickness,
+		lineWidth,
+		thickness), thickness / 2., thickness / 2.);
 	p.restore();
 }
 

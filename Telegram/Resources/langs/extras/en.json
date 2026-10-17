@@ -1,4 +1,7 @@
 {
+  "SelectorTabEmoji": "Emoji",
+  "SelectorTabStickers": "Stickers",
+  "SelectorTabGifs": "GIFs",
   "SearchTemplates": "Search templates",
   "DialogDetailsTitle": "Details",
   "DialogInfoTitle": "Information",
@@ -15,10 +18,6 @@
   "CustomLogoTooLarge": "The image must be 10 MB or smaller",
   "CustomLogoUnreadable": "Couldn't read this image",
   "CustomLogoWriteFailed": "Couldn't save the image",
-  "HorizontalTabsStyle": "Horizontal tab style",
-  "HorizontalTabsUnderline": "Thin underline",
-  "HorizontalTabsSoftPill": "Soft pills",
-  "HorizontalTabsDescription": "Use one style for horizontal tabs with the current accent color. Changes apply immediately. Default preserves each page's original appearance.",
   "EmojiCategoryRecent": "Recent",
   "EmojiCategoryPeople": "Emoji",
   "EmojiCategoryNature": "Nature",

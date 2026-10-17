@@ -14,15 +14,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_widgets.h"
 
 namespace Ui {
-namespace {
-
-// 分段底板上下留白，滑块与底板的间隙；圆角按间隙同心。
-constexpr auto kSegmentedTrackSkip = 6;
-constexpr auto kSegmentedPillInset = 3;
-constexpr auto kSegmentedTrackRadius = 9;
-
-} // namespace
-
 DiscreteSlider::DiscreteSlider(QWidget *parent, bool snapToLabel)
 : RpWidget(parent)
 , _snapToLabel(snapToLabel) {
@@ -325,10 +316,6 @@ SettingsSlider::SettingsSlider(
 	}
 	setSelectOnPress(_st.ripple.showDuration == 0);
 	ExtrasUi::HorizontalTabs::watch(this, [=] {
-		if (_segmentedStyle) {
-			update();
-			return;
-		}
 		enumerateSections([](Section &section) {
 			section.ripple = nullptr;
 			return true;
@@ -341,21 +328,8 @@ SettingsSlider::SettingsSlider(
 	});
 }
 
-void SettingsSlider::setSegmentedStyle(bool enabled) {
-	if (_segmentedStyle == enabled) {
-		return;
-	}
-	_segmentedStyle = enabled;
-	enumerateSections([](Section &section) {
-		section.ripple = nullptr;
-		return true;
-	});
-	resizeSections(width());
-	update();
-}
-
 bool SettingsSlider::usesCustomTabs() const {
-	return !_segmentedStyle && ExtrasUi::HorizontalTabs::appliesTo(_st);
+	return ExtrasUi::HorizontalTabs::appliesTo(_st);
 }
 
 const style::SettingsSlider &SettingsSlider::st() const {
@@ -400,16 +374,10 @@ const style::TextStyle &SettingsSlider::getLabelStyle() const {
 }
 
 int SettingsSlider::getAnimationDuration() const {
-	if (_segmentedStyle) {
-		return 180;
-	}
 	return _st.duration;
 }
 
 int SettingsSlider::sectionsPadding() const {
-	if (_segmentedStyle) {
-		return style::ConvertScale(3);
-	}
 	return usesCustomTabs()
 		? std::max(_st.padding, style::ConvertScale(12))
 		: _st.padding;
@@ -431,7 +399,7 @@ void SettingsSlider::resizeSections(int newWidth) {
 		? std::max(double(padding), (newWidth - usedWidth) / 2.)
 		: padding * 1.;
 	const auto labelHeight = _st.labelStyle.font->height;
-	const auto labelTop = (custom || _segmentedStyle)
+	const auto labelTop = custom
 		? (_st.height - labelHeight) / 2
 		: _st.labelTop;
 	auto contentRects = std::vector<QRect>();
@@ -472,10 +440,6 @@ std::vector<float64> SettingsSlider::countSectionsWidths(int newWidth) const {
 	const auto count = getSectionsCount();
 	if (!count) {
 		return {};
-	}
-	if (_segmentedStyle) {
-		return std::vector<float64>(count,
-			std::max(0, newWidth - 2 * sectionsPadding()) / double(count));
 	}
 	if (usesCustomTabs()) {
 		auto result = std::vector<float64>();
@@ -562,13 +526,6 @@ void SettingsSlider::startRipple(int sectionIndex) {
 QImage SettingsSlider::prepareRippleMask(
 		int sectionIndex,
 		const Section &section) {
-	if (_segmentedStyle) {
-		const auto skip = style::ConvertScale(kSegmentedTrackSkip);
-		const auto radius = style::ConvertScale(
-			kSegmentedTrackRadius - kSegmentedPillInset);
-		return RippleAnimation::RoundRectMask(
-			QSize(section.width, height() - 2 * skip), radius);
-	}
 	if (usesCustomTabs()) {
 		return ExtrasUi::HorizontalTabs::rippleMask(QSize(section.width, height()));
 	}
@@ -608,43 +565,10 @@ bool SettingsSlider::eventHook(QEvent *e) {
 	return DiscreteSlider::eventHook(e);
 }
 
-// 分段底板加一块等宽滑块，滑块中心跟随选中区间的动画位置。
-void SettingsSlider::paintSegmentedBackground(QPainter &p, Range range) {
-	const auto hq = PainterHighQualityEnabler(p);
-	p.setPen(Qt::NoPen);
-	p.setBrush(st::controlBg);
-	const auto skip = style::ConvertScale(kSegmentedTrackSkip);
-	const auto track = rect().marginsRemoved({ 0, skip, 0, skip });
-	const auto outer = style::ConvertScale(kSegmentedTrackRadius);
-	p.drawRoundedRect(track, outer, outer);
-
-	const auto count = sectionsCount();
-	if (!count) {
-		return;
-	}
-	const auto padding = sectionsPadding();
-	const auto pill = std::max(0, width() - 2 * padding) / double(count);
-	const auto center = range.left + range.width / 2.;
-	const auto inset = style::ConvertScale(kSegmentedPillInset);
-	const auto bounds = QRectF(
-		center - pill / 2.,
-		track.y() + inset,
-		pill,
-		track.height() - 2 * inset);
-	auto fill = st::windowActiveTextFg->c;
-	fill.setAlphaF(st::windowBg->c.lightnessF() < .5 ? .26 : .16);
-	p.setBrush(fill);
-	const auto inner = outer - inset;
-	p.drawRoundedRect(style::rtlrect(bounds, width()), inner, inner);
-}
-
 void SettingsSlider::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 	const auto clip = e->rect();
 	const auto range = DiscreteSlider::getCurrentActiveRange();
-	if (_segmentedStyle) {
-		paintSegmentedBackground(p, range);
-	}
 	const auto custom = usesCustomTabs();
 	const auto mouse = mapFromGlobal(QCursor::pos());
 
@@ -683,22 +607,19 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 				_st.rippleBg,
 				_st.rippleBgActive,
 				active);
-			const auto top = _segmentedStyle
-				? style::ConvertScale(kSegmentedTrackSkip)
-				: 0;
-			section.ripple->paint(p, section.left, top, width(), &color);
+			section.ripple->paint(p, section.left, 0, width(), &color);
 			if (section.ripple->empty()) {
 				section.ripple.reset();
 			}
 		}
-		if (!custom && !_segmentedStyle && crossFadeEnabled()) {
+		if (!custom && crossFadeEnabled()) {
 			const auto rect = myrtlrect(
 				activeLeft, _st.barTop, activeWidth, _st.barStroke);
 			drawRect(rect);
 			p.setOpacity(active);
 			drawRect(rect, true);
 			p.setOpacity(1.);
-		} else if (!custom && !_segmentedStyle && !_st.barSnapToLabel) {
+		} else if (!custom && !_st.barSnapToLabel) {
 			auto from = activeLeft;
 			auto tofill = activeWidth;
 			if (range.left > from) {
@@ -727,7 +648,7 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 			const auto labelLeft = style::RightToLeft()
 				? width() - contentRect.x() - contentRect.width()
 				: contentRect.x();
-			p.setPen((custom || _segmentedStyle)
+			p.setPen(custom
 				? ExtrasUi::HorizontalTabs::foreground(_st.labelFg->c, active)
 				: anim::color(_st.labelFg, _st.labelFgActive, active));
 			section.label.draw(p, {
@@ -739,7 +660,7 @@ void SettingsSlider::paintEvent(QPaintEvent *e) {
 		}
 		return true;
 	});
-	if (!custom && !_segmentedStyle && _st.barSnapToLabel) {
+	if (!custom && _st.barSnapToLabel) {
 		const auto add = _st.barStroke / 2;
 		const auto from = std::max(range.left - add, 0);
 		const auto till = std::min(range.left + range.width + add, width());

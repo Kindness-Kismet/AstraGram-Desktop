@@ -858,6 +858,8 @@ PRIVATE
     chat_helpers/tabbed_section.h
     chat_helpers/tabbed_selector.cpp
     chat_helpers/tabbed_selector.h
+    chat_helpers/tabbed_selector_tabs.cpp
+    chat_helpers/tabbed_selector_tabs.h
     chat_helpers/ttl_media_layer_widget.cpp
     chat_helpers/ttl_media_layer_widget.h
     core/application.cpp

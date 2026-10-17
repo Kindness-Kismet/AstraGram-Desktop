@@ -12,8 +12,6 @@ namespace style { struct SettingsSlider; struct PillTabs; }
 namespace ExtrasUi::HorizontalTabs {
 
 [[nodiscard]] bool appliesTo(const style::SettingsSlider &st);
-[[nodiscard]] bool underline();
-[[nodiscard]] bool softPill();
 void watch(not_null<Ui::RpWidget*> widget, Fn<void()> invalidate = nullptr);
 void apply(not_null<Ui::PillTabs*> tabs, const style::PillTabs &st);
 [[nodiscard]] QRect backgroundRect(QRect bounds, bool compact = true);

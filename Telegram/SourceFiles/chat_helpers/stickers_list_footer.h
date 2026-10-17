@@ -243,7 +243,10 @@ private:
 	void refreshIconsGeometry(
 		uint64 activeSetId,
 		ValidateIconAnimations animations);
-	bool refreshCategoryLabel(uint64 activeSetId);
+	bool refreshCategoryLabel(uint64 activeSetId, ValidateIconAnimations animations);
+	[[nodiscard]] int categoryItemWidth(Ui::Emoji::Section section) const;
+	[[nodiscard]] float64 categoryActiveWeight(Ui::Emoji::Section section) const;
+	void updateCategoryAnimation();
 	void refreshCategoryGeometry();
 	void refreshSubiconsGeometry();
 	void refreshScrollableDimensions();
@@ -278,8 +281,7 @@ private:
 		int left,
 		int itemWidth,
 		int outerWidth,
-		Ui::Emoji::Section section,
-		bool active) const;
+		Ui::Emoji::Section section) const;
 	void paintSelectionBg(
 		QPainter &p,
 		const ExpandingContext &context) const;
@@ -321,6 +323,10 @@ private:
 	std::optional<Ui::Emoji::Section> _categorySection;
 	QString _categoryLabel;
 	int _categoryWidth = 0;
+	std::array<QString, kVisibleIconsCount> _categoryLabels;
+	std::array<float64, kVisibleIconsCount> _categoryWidthsFrom = {};
+	std::array<float64, kVisibleIconsCount> _categoryWeightsFrom = {};
+	Ui::Animations::Simple _categoryAnimation;
 
 	mutable QImage _fadeLeftCache;
 	mutable QColor _fadeLeftColor;
@@ -332,7 +338,6 @@ private:
 	ScrollState _iconState;
 	ScrollState _subiconState;
 
-	Ui::RoundRect _selectionBg, _subselectionBg;
 	Ui::Animations::Simple _subiconsWidthAnimation;
 	int _subiconsWidth = 0;
 	bool _subiconsExpanded = false;

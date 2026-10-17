@@ -21,11 +21,6 @@ enum class WindowMaterial {
 	Blur = 3,
 };
 
-enum class HorizontalTabStyle {
-	Underline = 0,
-	SoftPill = 2,
-};
-
 enum class NotificationStyle {
 	Cards = 0,
 	Stack = 1,
@@ -312,7 +307,6 @@ public:
 	[[nodiscard]] bool increaseWebviewHeight() const { return _increaseWebviewHeight.current(); }
 	[[nodiscard]] bool increaseWebviewWidth() const { return _increaseWebviewWidth.current(); }
 	[[nodiscard]] WindowMaterial windowMaterial() const { return _windowMaterial.current(); }
-	[[nodiscard]] HorizontalTabStyle horizontalTabStyle() const { return _horizontalTabStyle.current(); }
 	[[nodiscard]] NotificationStyle notificationStyle() const { return _notificationStyle.current(); }
 	[[nodiscard]] bool removeMessageTail() const { return _removeMessageTail.current(); }
 	[[nodiscard]] bool disableNotificationsDelay() const { return _disableNotificationsDelay.current(); }
@@ -425,7 +419,6 @@ public:
 	void setIncreaseWebviewHeight(bool val);
 	void setIncreaseWebviewWidth(bool val);
 	void setWindowMaterial(WindowMaterial val);
-	void setHorizontalTabStyle(HorizontalTabStyle val);
 	void setNotificationStyle(NotificationStyle val);
 	void setRemoveMessageTail(bool val);
 	void setDisableNotificationsDelay(bool val);
@@ -562,8 +555,6 @@ public:
 	[[nodiscard]] rpl::producer<bool> increaseWebviewWidthChanges() const { return _increaseWebviewWidth.changes(); }
 	[[nodiscard]] rpl::producer<WindowMaterial> windowMaterialValue() const { return _windowMaterial.value(); }
 	[[nodiscard]] rpl::producer<WindowMaterial> windowMaterialChanges() const { return _windowMaterial.changes(); }
-	[[nodiscard]] rpl::producer<HorizontalTabStyle> horizontalTabStyleValue() const { return _horizontalTabStyle.value(); }
-	[[nodiscard]] rpl::producer<HorizontalTabStyle> horizontalTabStyleChanges() const { return _horizontalTabStyle.changes(); }
 	[[nodiscard]] rpl::producer<NotificationStyle> notificationStyleChanges() const { return _notificationStyle.changes(); }
 	[[nodiscard]] rpl::producer<bool> removeMessageTailValue() const { return _removeMessageTail.value(); }
 	[[nodiscard]] rpl::producer<bool> removeMessageTailChanges() const { return _removeMessageTail.changes(); }
@@ -744,7 +735,6 @@ private:
 	rpl::variable<bool> _increaseWebviewHeight = false;
 	rpl::variable<bool> _increaseWebviewWidth = false;
 	rpl::variable<WindowMaterial> _windowMaterial = WindowMaterial::Off;
-	rpl::variable<HorizontalTabStyle> _horizontalTabStyle = HorizontalTabStyle::Underline;
 	rpl::variable<NotificationStyle> _notificationStyle = NotificationStyle::Cards;
 	rpl::variable<bool> _removeMessageTail = false;
 	rpl::variable<bool> _disableNotificationsDelay = false;

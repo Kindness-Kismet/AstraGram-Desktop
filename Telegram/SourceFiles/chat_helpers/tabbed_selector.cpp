@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/tabbed_selector.h"
+#include "chat_helpers/tabbed_selector_tabs.h"
 #include "extras/features/window_material/window_material.h"
 
 #include "chat_helpers/emoji_list_widget.h"
@@ -36,6 +37,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/stickers/data_stickers.h"
 #include "data/stickers/data_custom_emoji.h" // AllowEmojiWithoutPremium.
 #include "boxes/premium_preview_box.h"
+#include "boxes/stickers_box.h"
 #include "lang/lang_keys.h"
 #include "mainwindow.h"
 #include "apiwrap.h"
@@ -636,6 +638,11 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 		case SelectorTab::Stickers: {
 			using StickersMode = StickersListWidget::Mode;
 			using Descriptor = StickersListDescriptor;
+			auto features = _features;
+			// 顶部已有管理入口时，底栏只保留分类与表情包。
+			if (full() || _mode == Mode::StickersAndGifs) {
+				features.stickersSettings = false;
+			}
 			return object_ptr<StickersListWidget>(this, Descriptor{
 				.show = _show,
 				.mode = (_mode == Mode::ChatIntro
@@ -644,7 +651,7 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 				.requireConfirmation = _mode != Mode::MediaEditor,
 				.paused = paused,
 				.st = &_st,
-				.features = _features,
+				.features = features,
 				.excludeSetId = _excludeStickerSetId,
 			});
 		}
@@ -747,7 +754,8 @@ auto TabbedSelector::choosingStickerUpdated() const
 }
 
 rpl::producer<> TabbedSelector::cancelled() const {
-	return hasGifsTab() ? gifs()->cancelRequests() : nullptr;
+	return rpl::merge(_closeRequests.events(),
+		hasGifsTab() ? gifs()->cancelRequests() : rpl::never<>());
 }
 
 rpl::producer<> TabbedSelector::checkForHide() const {
@@ -766,12 +774,9 @@ void TabbedSelector::updateTabsSliderGeometry() {
 	if (!_tabsSlider) {
 		return;
 	}
-	const auto w = (mediaEditor() && hasMasksTab() && masks()->mySetsEmpty())
-		? width() / 2
-		: width();
-	// 分段页签左右与下方搜索框对齐。
+	// 页签与搜索框共用左边距，操作按钮由页签内部预留宽度。
 	const auto skip = st::emojiPanRadius + _st.searchMargin.left();
-	_tabsSlider->resizeToWidth(w - 2 * skip);
+	_tabsSlider->resizeToWidth(width() - 2 * skip);
 	_tabsSlider->moveToLeft(skip, 0);
 }
 
@@ -1230,9 +1235,6 @@ void TabbedSelector::handleScroll() {
 
 void TabbedSelector::setRoundRadius(int radius) {
 	_roundRadius = radius;
-	if (_tabsSlider) {
-		_tabsSlider->setRippleTopRoundRadius(_roundRadius);
-	}
 }
 
 void TabbedSelector::setAllowEmojiWithoutPremium(bool allow) {
@@ -1246,10 +1248,25 @@ void TabbedSelector::setAllowEmojiWithoutPremium(bool allow) {
 
 void TabbedSelector::createTabsSlider() {
 	_tabsSlider.create(this, _st.tabs);
-	_tabsSlider->setSegmentedStyle(true);
 	_tabsSlider->setObjectName(u"compose.emoji.tabs"_q);
+	auto settings = Fn<void()>();
+	if (_features.stickersSettings && !mediaEditor()) {
+		settings = [=] {
+			_show->showBox(Box<StickersBox>(_show, StickersBox::Section::Installed));
+		};
+	}
+	_tabsSlider->setActions(std::move(settings), [=] { _closeRequests.fire({}); });
+	_tabsSlider->setSettingsVisible(_currentTabType == SelectorTab::Stickers);
 
-	fillTabsSliderSections();
+	rpl::combine(
+		tr::extras_SelectorTabEmoji(),
+		tr::extras_SelectorTabStickers(),
+		tr::extras_SelectorTabGifs(),
+		tr::lng_switch_masks()
+	) | rpl::on_next([=] {
+		fillTabsSliderSections();
+		updateTabsSliderGeometry();
+	}, _tabsSlider->lifetime());
 
 	_tabsSlider->setActiveSectionFast(indexByType(_currentTabType));
 	_tabsSlider->sectionActivated(
@@ -1273,11 +1290,11 @@ void TabbedSelector::fillTabsSliderSections() {
 		return [&] {
 			switch (tab.type()) {
 			case SelectorTab::Emoji:
-				return tr::lng_switch_emoji;
+				return tr::extras_SelectorTabEmoji;
 			case SelectorTab::Stickers:
-				return tr::lng_switch_stickers;
+				return tr::extras_SelectorTabStickers;
 			case SelectorTab::Gifs:
-				return tr::lng_switch_gifs;
+				return tr::extras_SelectorTabGifs;
 			case SelectorTab::Masks:
 				return tr::lng_switch_masks;
 			}
@@ -1285,6 +1302,18 @@ void TabbedSelector::fillTabsSliderSections() {
 		}()(tr::now);
 	}) | ranges::to_vector;
 	_tabsSlider->setSections(sections);
+	auto icons = std::vector<const style::icon*>();
+	for (const auto &tab : _tabs) {
+		if (tab.type() == SelectorTab::Masks && masks()->mySetsEmpty()) {
+			continue;
+		}
+		icons.push_back(tab.type() == SelectorTab::Emoji
+			? &st::emojiTabSmile
+			: tab.type() == SelectorTab::Gifs
+			? &st::emojiTabGif
+			: &st::emojiTabSticker);
+	}
+	_tabsSlider->setIcons(std::move(icons));
 }
 
 bool TabbedSelector::hasSectionIcons() const {
@@ -1319,6 +1348,7 @@ void TabbedSelector::switchTab() {
 	currentTab()->returnWidget(std::move(widget));
 
 	_currentTabType = newTabType;
+	_tabsSlider->setSettingsVisible(newTabType == SelectorTab::Stickers);
 	_restrictedLabel.destroy();
 	checkRestrictedPeer();
 

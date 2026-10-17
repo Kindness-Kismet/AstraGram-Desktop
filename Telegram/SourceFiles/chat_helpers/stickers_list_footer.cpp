@@ -43,6 +43,12 @@ constexpr auto kEmojiSearchLimit = 32;
 
 using EmojiSection = Ui::Emoji::Section;
 
+QColor CategorySelectionColor(const style::EmojiPan &st) {
+	const auto color = st.categoriesBgOver->c;
+	const auto gray = qGray(color.rgb());
+	return QColor(gray, gray, gray, color.alpha());
+}
+
 QString CategoryLabel(EmojiSection section) {
 	switch (section) {
 	case EmojiSection::Recent: return tr::extras_EmojiCategoryRecent(tr::now);
@@ -327,8 +333,6 @@ StickersListFooter::StickersListFooter(Descriptor &&descriptor)
 , _features(descriptor.features)
 , _iconState([=] { update(); })
 , _subiconState([=] { update(); })
-, _selectionBg(st::emojiPanRadius, st().categoriesBgOver)
-, _subselectionBg(st().iconArea / 2, st().categoriesBgOver)
 , _forceFirstFrame(descriptor.forceFirstFrame) {
 	setMouseTracking(true);
 	setObjectName(u"emoji.categories"_q);
@@ -400,9 +404,10 @@ std::vector<StickersListFooter::DebugItem> StickersListFooter::debugItems() cons
 	const auto add = [&](uint64 id, int left, int itemWidth,
 			QRect clip, bool active) {
 		const auto rect = physical(QRect(left, _iconsTop, itemWidth, st().footer));
+		const auto section = SetIdEmojiSection(id);
 		result.push_back({ id, rect, rect.intersected(clip),
-			(active && SetIdEmojiSection(id) == _categorySection)
-				? _categoryLabel : QString(), active });
+			(section && categoryActiveWeight(*section) > 0.)
+				? _categoryLabels[int(*section)] : QString(), active });
 	};
 	enumerateIcons([&](const IconInfo &info) {
 		const auto id = _icons[info.index].setId;
@@ -448,13 +453,13 @@ void StickersListFooter::enumerateIcons(
 	const auto right = width();
 	for (auto i = 0, count = int(_icons.size()); i != count; ++i) {
 		const auto &icon = _icons[i];
+		const auto section = SetIdEmojiSection(icon.setId);
 		const auto width = int(base::SafeRound((icon.setId == emojiId)
 			? _subiconsWidthAnimation.value(_subiconsExpanded
 				? _subiconsWidth
 				: _singleWidth)
-			: (_categorySection
-				&& SetIdEmojiSection(icon.setId) == _categorySection)
-			? std::max(_singleWidth, _categoryWidth)
+			: section
+			? categoryItemWidth(*section)
 			: _singleWidth));
 		const auto shifted = shift + left;
 		const auto visible = (shifted + width > 0 && shifted < right);
@@ -480,9 +485,7 @@ void StickersListFooter::enumerateSubicons(
 	const auto right = _subiconsWidth;
 	using Section = Ui::Emoji::Section;
 	for (auto i = int(Section::People); i <= int(Section::Symbols); ++i) {
-		const auto itemWidth = (_categorySection == Section(i))
-			? std::max(_singleWidth, _categoryWidth)
-			: _singleWidth;
+		const auto itemWidth = categoryItemWidth(Section(i));
 		const auto shifted = shift + left;
 		const auto visible = (shifted + itemWidth > 0 && shifted < right);
 		const auto result = callback({
@@ -551,9 +554,7 @@ void StickersListFooter::validateSelectedIcon(
 		uint64 setId,
 		ValidateIconAnimations animations) {
 	_activeByScrollId = setId;
-	if (refreshCategoryLabel(setId)) {
-		refreshCategoryGeometry();
-	}
+	refreshCategoryLabel(setId, animations);
 
 	using EmojiSection = Ui::Emoji::Section;
 	auto favedIconIndex = -1;
@@ -688,6 +689,8 @@ void StickersListFooter::setSelectedSubicon(
 }
 
 void StickersListFooter::processHideFinished() {
+	_categoryAnimation.stop();
+	refreshCategoryGeometry();
 	_selected = _pressed = SpecialOver::None;
 	_iconState.animation.stop();
 	_iconState.animationStart = 0;
@@ -788,22 +791,10 @@ void StickersListFooter::paintSelectionBg(
 			{ sub, sub, sub, sub }
 		).translated(0, shift);
 	}
-	if (rect.width() == rect.height() || _subiconsWidth <= _singleWidth) {
-		_selectionBg.paint(p, rect);
-	} else if (selw == _subiconsWidth) {
-		_subselectionBg.paint(p, rect);
-	} else {
-		PainterHighQualityEnabler hq(p);
-		const auto progress = (selw - _singleWidth)
-			/ float64(_subiconsWidth - _singleWidth);
-		const auto radius = anim::interpolate(
-			st::roundRadiusLarge,
-			area / 2,
-			progress);
-		p.setPen(Qt::NoPen);
-		p.setBrush(st().categoriesBgOver);
-		p.drawRoundedRect(rect, radius, radius);
-	}
+	const auto hq = PainterHighQualityEnabler(p);
+	p.setPen(Qt::NoPen);
+	p.setBrush(CategorySelectionColor(st()));
+	p.drawRoundedRect(rect, rect.height() / 2., rect.height() / 2.);
 }
 
 void StickersListFooter::paintLeftRightFading(
@@ -1237,14 +1228,18 @@ void StickersListFooter::refreshIconsGeometry(
 	_iconState.animationStart = 0;
 	_iconState.animation.stop();
 	_subiconsWidthAnimation.stop();
-	refreshCategoryLabel(activeSetId);
-	refreshCategoryGeometry();
+	_categoryAnimation.stop();
+	if (!refreshCategoryLabel(activeSetId, ValidateIconAnimations::None)) {
+		refreshCategoryGeometry();
+	}
 	_iconState.selected = _subiconState.selected = -2;
 	validateSelectedIcon(activeSetId, animations);
 	update();
 }
 
-bool StickersListFooter::refreshCategoryLabel(uint64 activeSetId) {
+bool StickersListFooter::refreshCategoryLabel(
+		uint64 activeSetId,
+		ValidateIconAnimations animations) {
 	const auto section = SetIdEmojiSection(activeSetId);
 	const auto label = section
 		? st::emojiCategoryLabelFont->elided(
@@ -1252,6 +1247,12 @@ bool StickersListFooter::refreshCategoryLabel(uint64 activeSetId) {
 		: QString();
 	if (_categorySection == section && _categoryLabel == label) {
 		return false;
+	}
+	for (auto i = 0; i != kVisibleIconsCount; ++i) {
+		_categoryWidthsFrom[i] = categoryItemWidth(EmojiSection(i));
+		_categoryWeightsFrom[i] = categoryActiveWeight(EmojiSection(i));
+		_categoryLabels[i] = st::emojiCategoryLabelFont->elided(
+			CategoryLabel(EmojiSection(i)), st::emojiCategoryLabelMaxWidth);
 	}
 	_categorySection = section;
 	_categoryLabel = label;
@@ -1261,7 +1262,47 @@ bool StickersListFooter::refreshCategoryLabel(uint64 activeSetId) {
 			+ st::emojiCategoryLabelFont->width(label)
 			+ 2 * st::emojiCategoryLabelPadding
 		: 0;
+	_categoryAnimation.stop();
+	refreshCategoryGeometry();
+	if (animations != ValidateIconAnimations::None && isVisible()) {
+		// 连续切换从当前宽度与透明度接续，不重置到上一项的终点。
+		_categoryAnimation.start([=] { updateCategoryAnimation(); },
+			0., 1., 200, anim::easeOutCirc);
+	}
 	return true;
+}
+
+int StickersListFooter::categoryItemWidth(EmojiSection section) const {
+	const auto target = (_categorySection == section)
+		? std::max(_singleWidth, _categoryWidth)
+		: _singleWidth;
+	const auto from = _categoryWidthsFrom[int(section)];
+	return int(base::SafeRound(from + (target - from) * _categoryAnimation.value(1.)));
+}
+
+float64 StickersListFooter::categoryActiveWeight(EmojiSection section) const {
+	const auto from = _categoryWeightsFrom[int(section)];
+	const auto target = (_categorySection == section) ? 1. : 0.;
+	return from + (target - from) * _categoryAnimation.value(1.);
+}
+
+void StickersListFooter::updateCategoryAnimation() {
+	auto contentWidth = 0;
+	for (auto i = int(EmojiSection::People); i <= int(EmojiSection::Symbols); ++i) {
+		contentWidth += categoryItemWidth(EmojiSection(i));
+	}
+	_subiconState.max = std::max(0, contentWidth - _subiconsWidth);
+	if (_subiconsExpanded && !_subiconState.dragging) {
+		const auto info = subiconInfo(_subiconState.selected);
+		const auto target = std::clamp(
+			info.left + (info.width - _subiconsWidth) / 2, 0, _subiconState.max);
+		if (_subiconState.animation.animating()) {
+			UpdateAnimated(_subiconState.x, target);
+		} else {
+			_subiconState.x = anim::value(target, target);
+		}
+	}
+	updateEmojiWidthCallback();
 }
 
 void StickersListFooter::refreshCategoryGeometry() {
@@ -1593,16 +1634,13 @@ void StickersListFooter::paintSetIconToCache(
 						subinfo.adjustedLeft,
 						subinfo.width,
 						info.width,
-						Section(int(Section::People) + subinfo.index),
-						_subiconsExpanded
-							&& _subiconState.selected == subinfo.index);
+						Section(int(Section::People) + subinfo.index));
 				}
 				return true;
 			});
 			p.restore();
 		} else if (const auto section = SetIdEmojiSection(icon.setId)) {
-			paintEmojiCategory(p, 0, info.width, info.width,
-				*section, info.index == _iconState.selected);
+			paintEmojiCategory(p, 0, info.width, info.width, *section);
 		} else {
 			paintOne(0, [&] {
 				const auto selected = (info.index == _iconState.selected);
@@ -1622,8 +1660,7 @@ void StickersListFooter::paintEmojiCategory(
 		int left,
 		int itemWidth,
 		int outerWidth,
-		EmojiSection section,
-		bool active) const {
+		EmojiSection section) const {
 	const auto icons = std::array{
 		&st().icons.recent, &st().icons.people,
 		&st().icons.nature, &st().icons.food,
@@ -1631,42 +1668,47 @@ void StickersListFooter::paintEmojiCategory(
 		&st().icons.objects, &st().icons.symbols,
 	};
 	const auto icon = icons[int(section)];
-	const auto labelled = active && (_categorySection == section);
-	const auto labelWidth = labelled
-		? st::emojiCategoryLabelFont->width(_categoryLabel)
-		: 0;
-	const auto contentWidth = icon->width()
-		+ (labelled ? st::emojiCategoryLabelGap + labelWidth : 0);
+	const auto active = categoryActiveWeight(section);
+	const auto &label = _categoryLabels[int(section)];
+	const auto labelWidth = st::emojiCategoryLabelFont->width(label);
+	const auto extra = std::min(
+		int(base::SafeRound((st::emojiCategoryLabelGap + labelWidth) * active)),
+		std::max(0, itemWidth - icon->width() - 2 * st::emojiCategoryLabelPadding));
+	const auto contentWidth = icon->width() + extra;
 	const auto contentLeft = left + (itemWidth - contentWidth) / 2;
 	const auto color = _customTextColor
 		? _customTextColor()
 		: st::windowActiveTextFg->c;
 	p.save();
-	if (labelled) {
+	if (active > 0.) {
 		const auto inset = style::ConvertScale(2);
 		const auto rect = QRect(
 			(rtl() ? outerWidth - left - itemWidth : left) + inset,
 			(st().footer - st().iconArea) / 2,
 			itemWidth - 2 * inset,
 			st().iconArea);
-		auto fill = color;
-		fill.setAlphaF(st().categoriesBg->c.lightnessF() < .5 ? .16 : .10);
+		auto fill = CategorySelectionColor(st());
+		fill.setAlphaF(fill.alphaF() * active);
 		const auto hq = PainterHighQualityEnabler(p);
 		p.setPen(Qt::NoPen);
 		p.setBrush(fill);
-		p.drawRoundedRect(rect, st::emojiPanRadius, st::emojiPanRadius);
+		p.drawRoundedRect(rect, rect.height() / 2., rect.height() / 2.);
+		p.save();
+		const auto labelLeft = contentLeft + icon->width() + st::emojiCategoryLabelGap;
+		const auto visibleWidth = std::max(0, extra - st::emojiCategoryLabelGap);
+		p.setClipRect(style::rtlrect(labelLeft, 0, visibleWidth, st().footer, outerWidth),
+			Qt::IntersectClip);
+		p.setOpacity(p.opacity() * active);
 		p.setFont(st::emojiCategoryLabelFont);
 		p.setPen(color);
-		p.drawTextLeft(contentLeft + icon->width() + st::emojiCategoryLabelGap,
+		p.drawTextLeft(labelLeft,
 			(st().footer - st::emojiCategoryLabelFont->height) / 2,
-			outerWidth, _categoryLabel, labelWidth);
+			outerWidth, label, labelWidth);
+		p.restore();
 	}
 	const auto top = (st().footer - icon->height()) / 2;
-	if (active || _customTextColor) {
-		icon->paint(p, contentLeft, top, outerWidth, color);
-	} else {
-		icon->paint(p, contentLeft, top, outerWidth);
-	}
+	icon->paint(p, contentLeft, top, outerWidth, _customTextColor
+		? color : anim::color(st::emojiIconFg->c, color, active));
 	p.restore();
 }
 

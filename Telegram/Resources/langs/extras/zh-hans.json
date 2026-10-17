@@ -1,4 +1,7 @@
 {
+  "SelectorTabEmoji": "表情",
+  "SelectorTabStickers": "贴纸",
+  "SelectorTabGifs": "动图",
   "SearchTemplates": "搜索模板",
   "DialogDetailsTitle": "详情",
   "DialogInfoTitle": "提示",
@@ -15,10 +18,6 @@
   "CustomLogoTooLarge": "图片不能超过 10 MB",
   "CustomLogoUnreadable": "无法读取这张图片",
   "CustomLogoWriteFailed": "无法保存图片",
-  "HorizontalTabsStyle": "横向标签栏款式",
-  "HorizontalTabsUnderline": "细下划线",
-  "HorizontalTabsSoftPill": "柔色胶囊",
-  "HorizontalTabsDescription": "统一横向标签栏的外观，跟随当前强调色。切换后立即生效，默认保留各页面的原有样式。",
   "EmojiCategoryRecent": "最近",
   "EmojiCategoryPeople": "表情",
   "EmojiCategoryNature": "自然",

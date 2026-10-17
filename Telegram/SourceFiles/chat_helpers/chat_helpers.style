@@ -408,7 +408,11 @@ stickersRemoveSkip: 4px;
 stickersReorderIcon: icon {{ "stickers_reorder", menuIconFg }};
 stickersReorderSkip: 18px;
 
-stickersTabs: defaultTabsSlider;
+stickersTabs: SettingsSlider(defaultTabsSlider) {
+	height: 48px;
+	labelFg: windowSubTextFg;
+	labelFgActive: windowActiveTextFg;
+}
 
 stickersRowItem: PeerListItem(defaultPeerListItem) {
 	height: 52px;
@@ -492,7 +496,20 @@ filtersRemove: IconButton(stickersRemove) {
 
 emojiPanMargins: margins(10px, 10px, 10px, 10px);
 
-emojiTabs: defaultTabsSlider;
+emojiTabs: SettingsSlider(defaultTabsSlider) {
+	height: 48px;
+	labelFg: windowSubTextFg;
+	labelFgActive: windowActiveTextFg;
+}
+emojiTabSmile: icon {{ "emoji/tab_smile", windowSubTextFg }};
+emojiTabSticker: icon {{ "emoji/tab_sticker", windowSubTextFg }};
+emojiTabGif: icon {{ "emoji/tab_gif", windowSubTextFg }};
+emojiPanelClose: IconButton(boxTitleClose) {
+}
+emojiPanelSettings: IconButton(boxTitleClose) {
+	icon: icon {{ "emoji/emoji_settings", boxTitleCloseFg }};
+	iconOver: icon {{ "emoji/emoji_settings", boxTitleCloseFgOver }};
+}
 
 emojiCategoryIconTop: 6px;
 emojiCategoryLabelFont: font(11px);
@@ -511,7 +528,7 @@ emojiPanDuration: 200;
 emojiPanHover: windowBgOver;
 emojiPanSlideDuration: 200;
 emojiPanArea: size(34px, 32px);
-emojiPanRadius: 8px;
+emojiPanRadius: boxRadius;
 emojiPanReactionsPreviewPadding: margins(10px, 20px, 10px, 20px);
 emojiPanEmojiPreviewMinHeight: 160px;
 emojiPanEmojiPreviewRadius: 8px + 8px + 4px;
@@ -790,7 +807,7 @@ defaultEmojiPan: EmojiPan {
 	}
 	tabs: emojiTabs;
 	search: defaultTabbedSearch;
-	searchMargin: margins(1px, 11px, 2px, 5px);
+	searchMargin: margins(4px, 5px, 4px, 8px);
 	searchPacksTop: 0px;
 	searchPackWidth: 70px;
 	searchPackHeight: 78px;

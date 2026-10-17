@@ -30,7 +30,6 @@ namespace Ui {
 class PlainShadow;
 class PopupMenu;
 class ScrollArea;
-class SettingsSlider;
 class FlatLabel;
 class BoxContent;
 class TabbedSearch;
@@ -50,6 +49,7 @@ class Show;
 class EmojiListWidget;
 class StickersListWidget;
 class GifsListWidget;
+class TabbedSelectorTabs;
 enum class PauseReason;
 
 enum class SelectorTab {
@@ -146,6 +146,7 @@ public:
 	[[nodiscard]] rpl::producer<> linkRequests() const;
 
 	[[nodiscard]] rpl::producer<> cancelled() const;
+	[[nodiscard]] rpl::producer<> closeRequests() const { return _closeRequests.events(); }
 	[[nodiscard]] rpl::producer<> checkForHide() const;
 	[[nodiscard]] rpl::producer<> slideFinished() const;
 	[[nodiscard]] rpl::producer<> contextMenuRequested() const;
@@ -315,7 +316,8 @@ private:
 	std::unique_ptr<SlideAnimation> _slideAnimation;
 	Ui::Animations::Simple _a_slide;
 
-	object_ptr<Ui::SettingsSlider> _tabsSlider = { nullptr };
+	object_ptr<TabbedSelectorTabs> _tabsSlider = { nullptr };
+	rpl::event_stream<> _closeRequests;
 	object_ptr<Ui::PlainShadow> _bottomShadow;
 	object_ptr<Ui::ScrollArea> _scroll;
 	object_ptr<Ui::FlatLabel> _restrictedLabel = { nullptr };

@@ -331,52 +331,12 @@ void BuildAvatarCorners(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	builder.addSkip();
 }
 
-QString horizontalTabStyleLabel(HorizontalTabStyle style) {
-	switch (style) {
-	case HorizontalTabStyle::Underline: return tr::extras_HorizontalTabsUnderline(tr::now);
-	case HorizontalTabStyle::SoftPill: return tr::extras_HorizontalTabsSoftPill(tr::now);
-	}
-	Unexpected("Invalid horizontal tab style");
-}
-
-void buildHorizontalTabStyle(SectionBuilder &builder) {
-	const auto controller = builder.controller();
-	builder.addButton({
-		.id = u"extras/horizontalTabStyle"_q,
-		.title = tr::extras_HorizontalTabsStyle(),
-		.st = &st::settingsButtonNoIcon,
-		.label = ExtrasSettings::getInstance().horizontalTabStyleValue()
-			| rpl::map(horizontalTabStyleLabel),
-		.onClick = [=] {
-			controller->show(Box([=](not_null<Ui::GenericBox*> box) {
-				SingleChoiceBox(box, {
-					.title = tr::extras_HorizontalTabsStyle(),
-					.options = {
-						tr::extras_HorizontalTabsUnderline(tr::now),
-						tr::extras_HorizontalTabsSoftPill(tr::now),
-					},
-					.initialSelection = (ExtrasSettings::getInstance().horizontalTabStyle()
-						== HorizontalTabStyle::SoftPill) ? 1 : 0,
-					.callback = [](int index) {
-						ExtrasSettings::getInstance().setHorizontalTabStyle(index
-							? HorizontalTabStyle::SoftPill
-							: HorizontalTabStyle::Underline);
-					},
-				});
-				box->addRow(object_ptr<Ui::FlatLabel>(box,
-					tr::extras_HorizontalTabsDescription(), st::boxLabel));
-			}));
-		},
-	});
-}
-
 void BuildAppearance(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	auto *settings = &ExtrasSettings::getInstance();
 
 	builder.addSubsectionTitle(tr::extras_CategoryAppearance());
 	buildAppName(builder);
 	buildCustomLogo(builder);
-	buildHorizontalTabStyle(builder);
 
 	extras.addSettingToggle({
 		.id = u"extras/hidePremiumStatuses"_q,
