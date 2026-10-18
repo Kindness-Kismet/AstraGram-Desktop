@@ -20,13 +20,14 @@ namespace Ui {
 class CrossButton;
 class FlatLabel;
 class IconButton;
+class InputField;
 class MultiSelect;
 } // namespace Ui
 
 namespace Iv {
 
 enum class SearchBarMode : uchar {
-	WindowStrip,
+	WindowBottom,
 	EditorPill,
 };
 
@@ -35,7 +36,7 @@ public:
 	SearchBar(
 		not_null<QWidget*> parent,
 		rpl::producer<int> width,
-		SearchBarMode mode = SearchBarMode::WindowStrip);
+		SearchBarMode mode = SearchBarMode::WindowBottom);
 
 	void toggle(bool shown, anim::type animated);
 	void show(anim::type animated);
@@ -64,14 +65,16 @@ private:
 
 	const SearchBarMode _mode;
 	Ui::SlideWrap<Ui::RpWidget> _wrap;
-	std::unique_ptr<Ui::PlainShadow> _shadow;
+	Ui::RpWidget *_surface = nullptr;
 	std::optional<Ui::BoxShadow> _pillShadow;
 	QMargins _pillShadowMargins;
 	Ui::MultiSelect *_select = nullptr;
+	Ui::InputField *_field = nullptr;
 	Ui::FlatLabel *_counter = nullptr;
 	Ui::IconButton *_up = nullptr;
 	Ui::IconButton *_down = nullptr;
 	Ui::CrossButton *_close = nullptr;
+	Ui::IconButton *_windowClose = nullptr;
 	rpl::event_stream<QString> _queryChanges;
 	rpl::event_stream<int> _navigates;
 	rpl::event_stream<> _closeRequests;

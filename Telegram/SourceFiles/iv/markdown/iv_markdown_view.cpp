@@ -201,6 +201,7 @@ public:
 		int current);
 	bool expandDetails(const QString &anchorId);
 	void scrollToSegment(int segmentIndex, int topMargin);
+	void setBottomOverlay(int height);
 
 private:
 	struct PendingEmbedState {
@@ -253,6 +254,7 @@ private:
 	std::shared_ptr<MarkdownArticle> _article;
 	QString _pendingFragment;
 	int _devicePixelRatio = 0;
+	int _bottomOverlayHeight = 0;
 	PendingEmbedState _pendingEmbed;
 	Ui::Animations::Simple _scrollToAnimation;
 	Ui::Animations::Simple _scrollToTopShown;
@@ -861,7 +863,7 @@ void MarkdownPreviewRoot::scrollToSegment(
 		return;
 	}
 	const auto current = _scroll->scrollTop();
-	const auto height = _scroll->height();
+	const auto height = _scroll->height() - _bottomOverlayHeight;
 	const auto from = rect.y() - topMargin;
 	const auto till = rect.y() + rect.height();
 	auto target = current;
@@ -871,6 +873,20 @@ void MarkdownPreviewRoot::scrollToSegment(
 		target = std::min(till - height, from);
 	}
 	scrollToYAnimated(target);
+}
+
+void MarkdownPreviewRoot::setBottomOverlay(int height) {
+	if (_bottomOverlayHeight == height) {
+		return;
+	}
+	_bottomOverlayHeight = height;
+	updateChildrenGeometry(size());
+}
+
+void SetMarkdownPreviewBottomOverlay(Ui::RpWidget *preview, int height) {
+	if (const auto root = dynamic_cast<MarkdownPreviewRoot*>(preview)) {
+		root->setBottomOverlay(height);
+	}
 }
 
 bool ScrollMarkdownPreviewToAnchor(
@@ -1028,7 +1044,7 @@ void MarkdownPreviewRoot::updateScrollToTopPosition() {
 		_scrollToTopShown.value(_scrollToTopIsShown ? 1. : 0.));
 	_scrollToTop->moveToRight(
 		st::historyToDownPosition.x(),
-		_scroll->height() - top);
+		_scroll->height() - _bottomOverlayHeight - top);
 	const auto shouldBeHidden
 		= !_scrollToTopIsShown && !_scrollToTopShown.animating();
 	if (shouldBeHidden != _scrollToTop->isHidden()) {
@@ -1057,7 +1073,8 @@ void MarkdownPreviewRoot::updateChildrenGeometry(QSize size) {
 			: 0;
 		_scrollContent->resize(
 			contentWidth,
-			std::max(_scroll->height(), bodyHeight + footerHeight));
+			std::max(_scroll->height(),
+				bodyHeight + footerHeight + _bottomOverlayHeight));
 	}
 	updateWrongLayoutGeometry();
 	if (_embedOverlay) {
@@ -1076,9 +1093,9 @@ void MarkdownPreviewRoot::updateWrongLayoutGeometry() {
 	const auto contentWidth = _scrollContent
 		? std::max(_scrollContent->width(), 1)
 		: std::max(width(), 1);
-	const auto contentHeight = _scrollContent
+	const auto contentHeight = (_scrollContent
 		? _scrollContent->height()
-		: height();
+		: height()) - _bottomOverlayHeight;
 	_wrongLayoutBar->setGeometry(
 		0,
 		std::max(contentHeight - footerHeight, 0),

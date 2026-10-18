@@ -62,6 +62,7 @@ void ScrollMarkdownPreviewToSegment(
 	Ui::RpWidget *preview,
 	int segmentIndex,
 	int topMargin);
+void SetMarkdownPreviewBottomOverlay(Ui::RpWidget *preview, int height);
 void SetMarkdownPreviewSearchMatches(
 	Ui::RpWidget *preview,
 	std::vector<MarkdownArticleSearchMatch> matches,

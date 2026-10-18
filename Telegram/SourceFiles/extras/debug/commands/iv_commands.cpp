@@ -67,11 +67,12 @@ Result toggleSearch(const QStringList &args) {
 		return Result::Err(u"usage: iv.toggle-search"_q);
 	}
 	const auto window = controlWindow();
-	if (!window || window->objectName() != u"iv.preview"_q
+	if (!window || (window->objectName() != u"iv.preview"_q
+		&& window->objectName() != u"iv.editor"_q)
 		|| !window->isActiveWindow()) {
-		return Result::Err(u"select and activate an article preview window"_q);
+		return Result::Err(u"select and activate an article preview or editor window"_q);
 	}
-	// 文章预览在快捷键覆盖事件中处理搜索，沿原有入口切换。
+	// 文章窗口在快捷键覆盖事件中处理搜索，沿原有入口切换。
 	auto event = QKeyEvent(QEvent::ShortcutOverride, Qt::Key_F, Qt::ControlModifier);
 	event.ignore();
 	QApplication::sendEvent(window, &event);

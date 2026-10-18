@@ -82,7 +82,7 @@ GENERIC_COMMANDS = {
     "crash.log": "读取当前调试配置的崩溃日志",
     "iv.open-file": "打开本地文章预览：<文件路径>",
     "iv.open-editor": "在独立模拟模式打开空白文章编辑窗口，不发送消息",
-    "iv.toggle-search": "切换当前活动文章预览窗口的搜索栏",
+    "iv.toggle-search": "切换当前活动文章预览或编辑器窗口的搜索栏",
     "iv.open-site": "打开内置网页浏览窗口：<TON 站点网址>",
     "window.close": "请求关闭当前选定窗口，保留正常关闭确认流程",
     "session.list": "列出本地账号与当前激活账号",

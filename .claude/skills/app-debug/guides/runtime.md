@@ -62,7 +62,7 @@ python .claude/skills/app-debug/scripts/cli.py anim.speed 1
 - `iv.open-file <文件路径>`：通过正式入口打开本地文章预览，窗口标识为 `iv.preview`。
 - `iv.open-site <站点网址>`：通过正式入口打开 TON 站点，窗口标识为 `iv.browser`；返回成功只表示已打开窗口，不代表网页加载成功。
 - `iv.open-editor`：仅在独立模拟模式调用正式文章编辑入口，创建空白独立编辑窗口 `iv.editor`，不发送消息、不迁移聊天草稿。
-- `iv.toggle-search`：向当前选中的活动文章预览窗口发送搜索快捷键事件；需要时先用 `window.activation active` 设置应用内部焦点。
+- `iv.toggle-search`：向当前选中的活动文章预览或编辑器窗口发送搜索快捷键事件；需要时先用 `window.activation active` 设置应用内部焦点。
 
 ## CLI 本地指令
 

@@ -1150,7 +1150,15 @@ void Controller::createSearchController() {
 		_window->body()->widthValue(),
 		std::move(host));
 	_searchBarHeight = _search->barHeightValue();
-	_search->moveBar(0, st::ivSubtitleHeight);
+	_searchBarHeight.value() | rpl::on_next([=](int height) {
+		SetMarkdownPreviewBottomOverlay(_preview.get(), height);
+	}, _window->lifetime());
+	rpl::combine(
+		_window->body()->heightValue(),
+		_searchBarHeight.value()
+	) | rpl::on_next([=](int height, int barHeight) {
+		_search->moveBar(0, height - barHeight);
+	}, _window->lifetime());
 	_search->raiseBar();
 	_titleShadow->raise();
 }
@@ -1243,11 +1251,10 @@ void Controller::createWindow() {
 	ExtrasFeatures::WindowMaterial::watchSurface(_container);
 	rpl::combine(
 		window->body()->sizeValue(),
-		_subtitleWrap->heightValue(),
-		_searchBarHeight.value()
-	) | rpl::on_next([=](QSize size, int titleHeight, int barHeight) {
+		_subtitleWrap->heightValue()
+	) | rpl::on_next([=](QSize size, int titleHeight) {
 		_container->setGeometry(QRect(QPoint(), size).marginsRemoved(
-			{ 0, titleHeight + barHeight, 0, 0 }));
+			{ 0, titleHeight, 0, 0 }));
 	}, _container->lifetime());
 	_container->paintRequest() | rpl::on_next([=](QRect clip) {
 		QPainter(_container).fillRect(clip,

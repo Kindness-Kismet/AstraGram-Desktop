@@ -74,10 +74,12 @@ ivSubtitleHeight: 48px;
 ivSubtitleTop: 12px;
 ivSubtitleLeft: 22px;
 ivSubtitleSkip: 0px;
-ivSearchBarHeight: ivSubtitleHeight;
 ivSearchBarCounterSkip: 10px;
 ivSearchCounterLabel: FlatLabel(defaultSettingsRightLabel) {
-	textFg: windowFg;
+	textFg: windowSubTextFg;
+	style: TextStyle(defaultTextStyle) {
+		font: historyComposeSearchCounterFont;
+	}
 }
 ivWrongLayoutBarHeight: 32px;
 ivWrongLayoutLink: LinkButton(defaultLinkButton) {

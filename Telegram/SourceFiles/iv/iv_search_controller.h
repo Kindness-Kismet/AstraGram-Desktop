@@ -45,7 +45,7 @@ public:
 		not_null<QWidget*> barParent,
 		rpl::producer<int> barWidth,
 		SearchHost host,
-		SearchBarMode barMode = SearchBarMode::WindowStrip);
+		SearchBarMode barMode = SearchBarMode::WindowBottom);
 	~SearchController();
 
 	void toggle();
