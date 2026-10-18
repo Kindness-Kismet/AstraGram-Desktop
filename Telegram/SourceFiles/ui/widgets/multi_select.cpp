@@ -895,7 +895,7 @@ void MultiSelect::Inner::paintEvent(QPaintEvent *e) {
 			0,
 			(_st.field.heightMin - _st.fieldIcon.height()) / 2,
 			outerWidth,
-			focused ? _st.field.textFg->c : _st.field.placeholderFg->c);
+			focused ? st::windowActiveTextFg->c : _st.field.placeholderFg->c);
 		p.setOpacity(1.);
 	}
 

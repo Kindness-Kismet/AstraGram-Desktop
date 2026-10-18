@@ -666,21 +666,16 @@ void Generator::paintDialogs() {
 	auto filterTop = _dialogs.y() + (filterAreaHeight - st::dialogsFilter.heightMin) / 2;
 	auto filter = QRect(filterLeft, filterTop, filterWidth, st::dialogsFilter.heightMin);
 
-	auto pen = st::dialogsFilter.borderFg[_palette]->p;
-	pen.setWidth(st::dialogsFilter.border);
-	_p->setPen(pen);
+	// 与搜索框自然态一致：底色加文字色 8% 的细边。
+	auto line = st::dialogsFilter.textFg[_palette]->c;
+	line.setAlphaF(.08);
+	_p->setPen(QPen(line, 1.));
 	_p->setBrush(st::dialogsFilter.textBg[_palette]);
 	{
 		PainterHighQualityEnabler hq(*_p);
-		const auto radius = st::dialogsFilter.borderRadius
-			- (st::dialogsFilter.border / 2.);
+		const auto radius = st::dialogsFilter.borderRadius - .5;
 		_p->drawRoundedRect(
-			QRectF(filter).marginsRemoved(
-				QMarginsF(
-					st::dialogsFilter.border / 2.,
-					st::dialogsFilter.border / 2.,
-					st::dialogsFilter.border / 2.,
-					st::dialogsFilter.border / 2.)),
+			QRectF(filter).marginsRemoved({ .5, .5, .5, .5 }),
 			radius,
 			radius);
 	}
