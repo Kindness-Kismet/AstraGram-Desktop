@@ -1346,7 +1346,14 @@ ComposeControls::ComposeControls(
 		_attachToggle->setObjectName(u"attachButton"_q);
 	}
 	if (ComposeOuterMargin(_st)) {
-		ApplyComposeSurface(_wrap.get(), MessageFieldCapsuleRadius());
+		// 磨砂底放在最下层子控件：Qt 以反色绘制光标，画进图形效果后不可见。
+		_surface = Ui::CreateChild<Ui::RpWidget>(_wrap.get());
+		_surface->setAttribute(Qt::WA_TransparentForMouseEvents);
+		ApplyComposeSurface(_surface, MessageFieldCapsuleRadius());
+		_surface->lower();
+		_wrap->sizeValue() | rpl::on_next([=](QSize size) {
+			_surface->setGeometry(QRect(QPoint(), size));
+		}, _surface->lifetime());
 	}
 	rpl::combine(
 		replyingToMessageValue(),
@@ -2927,7 +2934,7 @@ void ComposeControls::init() {
 
 	_wrap->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
-		if (HasChatBackdrop(_wrap.get())) {
+		if (_surface && HasChatBackdrop(_surface)) {
 			return;
 		}
 		auto p = QPainter(_wrap.get());

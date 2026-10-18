@@ -561,6 +561,7 @@ private:
 	Mode _mode = Mode::Normal;
 
 	const std::unique_ptr<Ui::RpWidget> _wrap;
+	Ui::RpWidget *_surface = nullptr;
 	std::unique_ptr<Ui::RpWidget> _writeRestricted;
 	rpl::event_stream<FullReplyTo> _jumpToItemRequests;
 
