@@ -11,10 +11,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/downloads/info_downloads_common.h"
 #include "ui/widgets/scroll_area.h"
 
-namespace Ui {
-class SettingsSlider;
-} // namespace Ui
-
 namespace Info {
 
 class Controller;
@@ -46,6 +42,17 @@ public:
 	rpl::producer<Ui::ScrollToRequest> scrollToRequests() const;
 	rpl::producer<SelectedItems> selectedListValue() const;
 	void selectionAction(SelectionAction action);
+	[[nodiscard]] rpl::producer<std::optional<int>> fullCountValue() const;
+	// 列表加载完成前为空。
+	[[nodiscard]] auto typeCountsValue() const
+	-> rpl::producer<std::optional<TypeCounts>>;
+	[[nodiscard]] TypeFilter typeFilter() const {
+		return _typeFilter.current();
+	}
+	[[nodiscard]] rpl::producer<TypeFilter> typeFilterValue() const {
+		return _typeFilter.value();
+	}
+	void setTypeFilter(TypeFilter filter);
 
 	~InnerWidget();
 
@@ -58,9 +65,6 @@ protected:
 private:
 	int recountHeight();
 	void refreshHeight();
-	void setupTypeTabs();
-	void scrollToTypeFilter();
-	void setTypeFilter(TypeFilter filter);
 	void refreshEmptyText();
 
 	object_ptr<Media::ListWidget> setupList();
@@ -69,8 +73,6 @@ private:
 
 	object_ptr<Media::ListWidget> _list = { nullptr };
 	object_ptr<EmptyWidget> _empty;
-	object_ptr<Ui::ScrollArea> _typeTabsScroll;
-	Ui::SettingsSlider *_typeTabs = nullptr;
 	rpl::variable<TypeFilter> _typeFilter = TypeFilter::All;
 	QString _searchQuery;
 

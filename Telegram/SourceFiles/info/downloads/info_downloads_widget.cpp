@@ -8,12 +8,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/downloads/info_downloads_widget.h"
 
 #include "info/downloads/info_downloads_inner_widget.h"
+#include "info/downloads/info_downloads_type_tiles.h"
+#include "info/media/info_media_gallery_header.h"
 #include "info/info_controller.h"
 #include "info/info_memento.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/search_field_controller.h"
 #include "ui/widgets/menu/menu_add_action_callback.h"
 #include "ui/widgets/scroll_area.h"
+#include "ui/widgets/fields/input_field.h"
 #include "ui/ui_utility.h"
 #include "data/data_download_manager.h"
 #include "data/data_user.h"
@@ -21,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
+#include "styles/style_info.h"
 
 namespace Info::Downloads {
 
@@ -61,6 +65,66 @@ Widget::Widget(
 	) | rpl::on_next([this](Ui::ScrollToRequest request) {
 		scrollTo(request);
 	}, _inner->lifetime());
+	setupHeader();
+}
+
+void Widget::setupHeader() {
+	if (controller()->wrap() != Wrap::Search) {
+		_header = Ui::CreateChild<Media::GalleryHeader>(
+			this,
+			rpl::merge(
+				_inner->typeFilterValue() | rpl::to_empty,
+				Lang::Updated()
+			) | rpl::map([=] {
+				const auto filter = _inner->typeFilter();
+				return (filter == TypeFilter::All)
+					? tr::lng_media_type_files(tr::now)
+					: TypeFilterLabel(filter);
+			}),
+			_inner->fullCountValue(),
+			controller()->searchFieldController());
+		_header->setObjectName(u"downloads/header"_q);
+		if (const auto field = _header->searchField()) {
+			field->setObjectName(u"downloads/search"_q);
+			setCustomSearchField(field);
+		}
+		_header->show();
+	}
+	_typeTiles = Ui::CreateChild<TypeTiles>(
+		this,
+		_inner->typeFilterValue(),
+		_inner->typeCountsValue());
+	_typeTiles->activations(
+	) | rpl::on_next([=](TypeFilter filter) {
+		if (_inner->typeFilter() == filter) {
+			return;
+		}
+		_inner->setTypeFilter(filter);
+		scrollTo({ 0, -1 });
+	}, _typeTiles->lifetime());
+	_typeTiles->show();
+	widthValue() | rpl::on_next([=](int width) {
+		auto top = 0;
+		if (_header) {
+			_header->resizeToWidth(width);
+			_header->moveToLeft(0, 0);
+			top = _header->height();
+		}
+		const auto margin = _header
+			? QMargins(
+				st::infoMediaGalleryPadding,
+				0,
+				st::infoMediaGalleryPadding,
+				st::infoDownloadsTypeTilesSkip)
+			: st::infoDownloadsTypeTilesSearchMargin;
+		_typeTiles->resizeToWidth(
+			std::max(width - margin.left() - margin.right(), 0));
+		_typeTiles->moveToLeft(margin.left(), top + margin.top(), width);
+		setScrollTopSkip(top
+			+ margin.top()
+			+ _typeTiles->height()
+			+ margin.bottom());
+	}, lifetime());
 }
 
 bool Widget::showInternal(not_null<ContentMemento*> memento) {

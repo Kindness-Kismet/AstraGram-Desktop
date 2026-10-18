@@ -36,6 +36,9 @@ namespace {
 		Section section,
 		PeerData *peer,
 		Data::SavedSublist *sublist) {
+	if (section.type() == Section::Type::Downloads) {
+		return true;
+	}
 	return (section.type() == Section::Type::Media)
 		&& peer
 		&& !peer->sharedMediaInfo()

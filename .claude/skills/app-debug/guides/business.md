@@ -15,8 +15,11 @@
 `resolved: false` 表示旧下载记录尚未解析完成，此时空列表不是最终结果。只返回当前账号的记录。
 `state` 为 `downloading` 或 `completed`；真实下载进度来自下载管理器，不用文件是否出现来推断完成。
 
-下载页常驻搜索框为 `downloads/search`，分类标签为 `downloads/typeTabs`，用 `control.get/set` 查询和修改。
-标签下标 0 至 4 依次为全部、压缩包、音乐、视频、其他文件；切换分类保留关键词并清除多选。`downloads.list` 仍独立查询业务数据。
+下载页常驻搜索框为 `downloads/search`，用 `control.get/set` 查询和修改。
+弹层与侧栏共用共享媒体的画廊页头，`downloads/header` 包含分类标题、数量与搜索框；分类色块 `downloads/typeTiles` 固定在文件列表上方。
+色块为 `downloads/type/<all|archives|music|videos|other>`，用 `control.click` 切换，`control.get` 的 `selected` 表示当前分类。
+色块右上角数量已应用关键词，过窄时隐藏；标签放不下时整行缩小字号和间距，搜索栏的“下载”标签页可用于验证。
+切换分类保留关键词并清除多选。`downloads.list` 仍独立查询业务数据。
 
 下载任务通过 `job.status` 查看最终成功、失败或取消。已有本地内容在后台复制，成功后仍登记下载记录。
 同一消息另存后列表按最新记录显示，不增加重复行。禁止借此绕过媒体禁止保存的限制。

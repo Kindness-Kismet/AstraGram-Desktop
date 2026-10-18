@@ -54,6 +54,7 @@
   "DownloadsTypeMusic": "Music",
   "DownloadsTypeVideo": "Videos",
   "DownloadsTypeOther": "Other files",
+  "DownloadsTypeOtherShort": "Other",
   "DownloadsEmptyFilter": "No files match the current filters",
   "SettingsTransferTitle": "Transfer settings",
   "SettingsTransferExport": "Export settings",

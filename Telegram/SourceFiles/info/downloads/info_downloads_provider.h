@@ -54,6 +54,7 @@ public:
 
 	void setSearchQuery(QString query) override;
 	void setTypeFilter(TypeFilter filter);
+	[[nodiscard]] TypeCounts typeCounts() const;
 	void jumpToMessage(MsgId messageId, Fn<void(FullMsgId)> callback) override;
 
 	std::vector<Media::ListSection> fillSections(
@@ -101,6 +102,7 @@ private:
 
 		QStringList words;
 		base::flat_set<QChar> letters;
+		TypeFilter type = TypeFilter::Other;
 		bool found = false;
 	};
 
@@ -111,6 +113,7 @@ private:
 		not_null<const Media::BaseLayout*> previous) override;
 
 	void fillSearchIndex(Element &element);
+	[[nodiscard]] bool matchesQuery(const Element &element) const;
 	[[nodiscard]] bool computeIsFound(const Element &element) const;
 	void refreshFoundElements();
 

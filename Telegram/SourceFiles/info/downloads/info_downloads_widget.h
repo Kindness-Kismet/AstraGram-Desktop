@@ -11,13 +11,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/downloads/info_downloads_common.h"
 #include "info/media/info_media_widget.h"
 
-namespace Ui {
-class SearchFieldController;
-} // namespace Ui
-
 namespace Info::Downloads {
 
 class InnerWidget;
+class TypeTiles;
 
 class Memento final : public ContentMemento {
 public:
@@ -72,10 +69,13 @@ public:
 private:
 	void saveState(not_null<Memento*> memento);
 	void restoreState(not_null<Memento*> memento);
+	void setupHeader();
 
 	std::shared_ptr<ContentMemento> doCreateMemento() override;
 
 	InnerWidget *_inner = nullptr;
+	Media::GalleryHeader *_header = nullptr;
+	TypeTiles *_typeTiles = nullptr;
 
 };
 

@@ -32,7 +32,7 @@ using Type = Storage::SharedMediaType;
 [[nodiscard]] Type TabIndexToType(int index);
 [[nodiscard]] tr::phrase<> SharedMediaTitle(Type type);
 
-// 资料页打开的共享媒体走画廊布局，“我的收藏”与子会话保持原样。
+// 共享媒体与下载管理共用画廊布局，“我的收藏”与子会话保持原样。
 [[nodiscard]] bool UsesGalleryLayout(
 	not_null<AbstractController*> controller);
 [[nodiscard]] bool UsesGalleryLayout(not_null<ContentMemento*> memento);

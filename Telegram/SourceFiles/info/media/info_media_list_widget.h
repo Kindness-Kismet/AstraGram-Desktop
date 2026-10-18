@@ -52,6 +52,7 @@ class AbstractController;
 
 namespace Downloads {
 enum class TypeFilter;
+struct TypeCounts;
 } // namespace Downloads
 
 namespace Media {
@@ -104,6 +105,7 @@ public:
 	[[nodiscard]] bool hasRows() const;
 	void selectionAction(SelectionAction action);
 	void setDownloadsTypeFilter(Downloads::TypeFilter filter);
+	[[nodiscard]] Downloads::TypeCounts downloadsTypeCounts() const;
 	void setSelectOnClick(bool enabled);
 	void setSelectedLimit(int limit);
 	// 共享媒体页专用：画廊排版，以及点击即选的选择模式。

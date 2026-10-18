@@ -1610,6 +1610,8 @@ PRIVATE
     info/downloads/info_downloads_inner_widget.h
     info/downloads/info_downloads_provider.cpp
     info/downloads/info_downloads_provider.h
+    info/downloads/info_downloads_type_tiles.cpp
+    info/downloads/info_downloads_type_tiles.h
     info/downloads/info_downloads_widget.cpp
     info/downloads/info_downloads_widget.h
     info/global_media/info_global_media_widget.cpp

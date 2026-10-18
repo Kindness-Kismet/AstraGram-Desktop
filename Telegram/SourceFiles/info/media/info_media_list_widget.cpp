@@ -523,6 +523,12 @@ void ListWidget::setDownloadsTypeFilter(Downloads::TypeFilter filter) {
 	static_cast<Downloads::Provider*>(_provider.get())->setTypeFilter(filter);
 }
 
+Downloads::TypeCounts ListWidget::downloadsTypeCounts() const {
+	Expects(_controller->isDownloads());
+
+	return static_cast<Downloads::Provider*>(_provider.get())->typeCounts();
+}
+
 void ListWidget::setSelectedLimit(int limit) {
 	_selectedLimit = std::max(limit, 0);
 }

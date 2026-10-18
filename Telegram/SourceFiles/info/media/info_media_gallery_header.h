@@ -30,6 +30,11 @@ public:
 		Type type,
 		not_null<InnerWidget*> inner,
 		Ui::SearchFieldController *search);
+	GalleryHeader(
+		QWidget *parent,
+		rpl::producer<QString> title,
+		rpl::producer<std::optional<int>> count,
+		Ui::SearchFieldController *search);
 
 	[[nodiscard]] Ui::InputField *searchField() const;
 
@@ -38,11 +43,10 @@ protected:
 
 private:
 	void setupSearch(not_null<Ui::SearchFieldController*> search);
-	void setupZoom();
-	void refreshZoom();
+	void setupZoom(not_null<InnerWidget*> inner);
+	void refreshZoom(not_null<InnerWidget*> inner);
 	void layoutTitle(int right);
 
-	const not_null<InnerWidget*> _inner;
 	const not_null<Ui::FlatLabel*> _title;
 	const not_null<Ui::FlatLabel*> _count;
 	Ui::InputField *_field = nullptr;

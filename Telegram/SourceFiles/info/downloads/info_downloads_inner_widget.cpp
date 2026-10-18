@@ -11,37 +11,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/media/info_media_list_widget.h"
 #include "info/info_controller.h"
 #include "ui/widgets/labels.h"
-#include "ui/widgets/discrete_sliders.h"
 #include "lang/lang_keys.h"
 #include "styles/style_info.h"
-#include "styles/style_dialogs.h"
-
-#include <QtGui/QWheelEvent>
-#include <array>
 
 namespace Info::Downloads {
-namespace {
-
-constexpr auto kTypeFilters = std::array{
-	TypeFilter::All,
-	TypeFilter::Archive,
-	TypeFilter::Music,
-	TypeFilter::Video,
-	TypeFilter::Other,
-};
-
-[[nodiscard]] QString TypeFilterLabel(TypeFilter filter) {
-	switch (filter) {
-	case TypeFilter::All: return tr::extras_DownloadsTypeAll(tr::now);
-	case TypeFilter::Archive: return tr::extras_DownloadsTypeArchive(tr::now);
-	case TypeFilter::Music: return tr::extras_DownloadsTypeMusic(tr::now);
-	case TypeFilter::Video: return tr::extras_DownloadsTypeVideo(tr::now);
-	case TypeFilter::Other: return tr::extras_DownloadsTypeOther(tr::now);
-	}
-	Unexpected("Invalid download type filter.");
-}
-
-} // namespace
 
 class EmptyWidget : public Ui::RpWidget {
 public:
@@ -113,9 +86,7 @@ InnerWidget::InnerWidget(
 	not_null<Controller*> controller)
 : RpWidget(parent)
 , _controller(controller)
-, _empty(this)
-, _typeTabsScroll(this, st::dialogsTabsScroll, true) {
-	setupTypeTabs();
+, _empty(this) {
 	_empty->heightValue(
 	) | rpl::on_next(
 		[this] { refreshHeight(); },
@@ -139,6 +110,7 @@ bool InnerWidget::showInternal(not_null<Memento*> memento) {
 
 object_ptr<Media::ListWidget> InnerWidget::setupList() {
 	auto result = object_ptr<Media::ListWidget>(this, _controller);
+	result->setGalleryLayout(_controller->wrap() != Wrap::Search);
 	result->heightValue(
 	) | rpl::on_next(
 		[this] { refreshHeight(); },
@@ -173,62 +145,28 @@ void InnerWidget::restoreState(not_null<Memento*> memento) {
 	_list->restoreState(&memento->media());
 }
 
-void InnerWidget::setupTypeTabs() {
-	_typeTabs = _typeTabsScroll->setOwnedWidget(
-		object_ptr<Ui::SettingsSlider>(this, st::chatsFiltersTabs));
-	_typeTabs->setObjectName(u"downloads/typeTabs"_q);
-	_typeTabsScroll->setObjectName(u"downloads/typeTabsScroll"_q);
-	rpl::single(rpl::empty) | rpl::then(
-		Lang::Updated()
-	) | rpl::on_next([=] {
-		auto labels = std::vector<QString>();
-		for (const auto filter : kTypeFilters) {
-			labels.push_back(TypeFilterLabel(filter));
-		}
-		_typeTabs->setSections(labels);
-		_typeTabs->fitWidthToSections();
-		scrollToTypeFilter();
-	}, _typeTabs->lifetime());
-	_typeTabsScroll->resize(width(), _typeTabs->height());
-	_typeTabs->sectionActivated() | rpl::on_next([=](int index) {
-		const auto filter = kTypeFilters[index];
-		if (_typeFilter.current() == filter) {
-			return;
-		}
-		setTypeFilter(filter);
-		_scrollToRequests.fire({ 0, -1 });
-	}, _typeTabs->lifetime());
-	_typeTabsScroll->setCustomWheelProcess([=](not_null<QWheelEvent*> e) {
-		const auto pixels = e->pixelDelta();
-		const auto angle = e->angleDelta();
-		if (pixels.x() || angle.x()) {
-			return false;
-		}
-		const auto delta = pixels.y() ? pixels.y() : angle.y();
-		_typeTabsScroll->scrollToX(_typeTabsScroll->scrollLeft() - delta);
-		return true;
-	});
-}
-
-void InnerWidget::scrollToTypeFilter() {
-	const auto index = _typeTabs->activeSection();
-	_typeTabsScroll->scrollToX(index
-		? _typeTabs->centerOfSection(index) - _typeTabsScroll->width() / 2
-		: 0);
-}
-
 void InnerWidget::setTypeFilter(TypeFilter filter) {
 	if (_typeFilter.current() == filter) {
 		return;
 	}
 	_typeFilter = filter;
-	const auto index = int(ranges::find(kTypeFilters, filter) - begin(kTypeFilters));
-	if (_typeTabs->activeSection() != index) {
-		_typeTabs->setActiveSectionFast(index);
-	}
-	scrollToTypeFilter();
 	refreshEmptyText();
 	_list->setDownloadsTypeFilter(filter);
+}
+
+rpl::producer<std::optional<int>> InnerWidget::fullCountValue() const {
+	return _list->fullCountValue();
+}
+
+auto InnerWidget::typeCountsValue() const
+-> rpl::producer<std::optional<TypeCounts>> {
+	const auto list = _list.data();
+	return list->fullCountValue(
+	) | rpl::map([=](std::optional<int> count) {
+		return count
+			? std::make_optional(list->downloadsTypeCounts())
+			: std::nullopt;
+	}) | rpl::distinct_until_changed();
 }
 
 void InnerWidget::refreshEmptyText() {
@@ -253,8 +191,6 @@ int InnerWidget::resizeGetHeight(int newWidth) {
 
 	_list->resizeToWidth(newWidth);
 	_empty->resizeToWidth(newWidth);
-	_typeTabsScroll->resize(newWidth, _typeTabs->height());
-	scrollToTypeFilter();
 	return recountHeight();
 }
 
@@ -267,8 +203,6 @@ void InnerWidget::refreshHeight() {
 
 int InnerWidget::recountHeight() {
 	auto top = 0;
-	_typeTabsScroll->moveToLeft(0, top);
-	top += _typeTabsScroll->height();
 	auto listHeight = 0;
 	if (_list) {
 		_list->moveToLeft(0, top);

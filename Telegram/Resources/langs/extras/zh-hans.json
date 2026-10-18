@@ -173,6 +173,7 @@
   "DownloadsTypeMusic": "音乐",
   "DownloadsTypeVideo": "视频",
   "DownloadsTypeOther": "其他文件",
+  "DownloadsTypeOtherShort": "其他",
   "DownloadsEmptyFilter": "没有符合当前筛选条件的文件",
   "SettingsTransferTitle": "设置迁移",
   "SettingsTransferExport": "导出设置",

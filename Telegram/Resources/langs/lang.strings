@@ -9925,6 +9925,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DownloadsTypeMusic" = "Music";
 "extras_DownloadsTypeVideo" = "Videos";
 "extras_DownloadsTypeOther" = "Other files";
+"extras_DownloadsTypeOtherShort" = "Other";
 "extras_DownloadsEmptyFilter" = "No files match the current filters";
 "extras_SelectorTabEmoji" = "Emoji";
 "extras_SelectorTabStickers" = "Stickers";

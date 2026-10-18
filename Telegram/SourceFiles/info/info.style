@@ -815,6 +815,33 @@ infoMediaGalleryZoomOutDisabled: icon {{ "menu/zoom_out", menuFgDisabled }};
 infoMediaGalleryZoomInDisabled: icon {{ "menu/zoom_in", menuFgDisabled }};
 infoMediaGalleryZoomSkip: 4px;
 
+// 下载分类色块：一行五等分，左右与画廊页头对齐。
+infoDownloadsTypeTilesSkip: 16px;
+infoDownloadsTypeTilesSearchMargin: margins(12px, 8px, 12px, 12px);
+infoDownloadsTypeTileSkip: 8px;
+infoDownloadsTypeTileHeight: 68px;
+infoDownloadsTypeTileRadius: 12px;
+infoDownloadsTypeTileIconSize: 30px;
+infoDownloadsTypeTileIconRadius: 9px;
+infoDownloadsTypeTileIconTop: 10px;
+infoDownloadsTypeTileLabelTop: 46px;
+infoDownloadsTypeTileLabelSkip: 3px;
+infoDownloadsTypeTileLabelFont: font(12px);
+// 标签放不下时的紧凑排版，用于搜索栏等窄区域。
+infoDownloadsTypeTileSkipCompact: 5px;
+infoDownloadsTypeTileLabelFontCompact: font(10px);
+infoDownloadsTypeTileCountFont: font(11px);
+infoDownloadsTypeTileCountPosition: point(8px, 5px);
+infoDownloadsTypeTileRipple: RippleAnimation(defaultRippleAnimation) {
+	color: windowBgRipple;
+}
+// 各图标画布留白不同，统一按 24 格折算为 18px 绘制，笔画粗细一致。
+infoDownloadsTypeIconAll: icon {{ "menu/all_media-22x22", windowFgActive }};
+infoDownloadsTypeIconArchive: icon {{ "menu/archive-18x18", windowFgActive }};
+infoDownloadsTypeIconMusic: icon {{ "folders/folders_note-24x24", windowFgActive }};
+infoDownloadsTypeIconVideo: icon {{ "info/info_media_video-28x28", windowFgActive }};
+infoDownloadsTypeIconOther: icon {{ "menu/file-18x18", windowFgActive }};
+
 infoProfileTabsStrip: ProfileTabsStrip {
 	height: 48px;
 	margin: margins(8px, 6px, 8px, 6px);

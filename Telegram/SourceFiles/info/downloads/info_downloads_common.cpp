@@ -4,6 +4,7 @@
 #include "data/data_document.h"
 #include "data/data_media_types.h"
 #include "history/history_item.h"
+#include "lang/lang_keys.h"
 
 namespace Info::Downloads {
 
@@ -50,5 +51,15 @@ namespace Info::Downloads {
 		: TypeFilter::Other;
 }
 
+QString TypeFilterLabel(TypeFilter filter) {
+	switch (filter) {
+	case TypeFilter::All: return tr::extras_DownloadsTypeAll(tr::now);
+	case TypeFilter::Archive: return tr::extras_DownloadsTypeArchive(tr::now);
+	case TypeFilter::Music: return tr::extras_DownloadsTypeMusic(tr::now);
+	case TypeFilter::Video: return tr::extras_DownloadsTypeVideo(tr::now);
+	case TypeFilter::Other: return tr::extras_DownloadsTypeOther(tr::now);
+	}
+	Unexpected("Invalid download type filter.");
+}
 
 } // namespace Info::Downloads

@@ -124,6 +124,17 @@ void Provider::setTypeFilter(TypeFilter filter) {
 	refreshFoundElements();
 }
 
+TypeCounts Provider::typeCounts() const {
+	auto result = TypeCounts();
+	for (const auto &element : _elements) {
+		if (matchesQuery(element)) {
+			++result.values[int(TypeFilter::All)];
+			++result.values[int(element.type)];
+		}
+	}
+	return result;
+}
+
 void Provider::refreshFoundElements() {
 	_foundCount = 0;
 	for (auto &element : _elements) {
@@ -461,14 +472,15 @@ void Provider::fillSearchIndex(Element &element) {
 	for (const auto &word : element.words) {
 		element.letters.emplace(word.front());
 	}
+	element.type = ClassifyFile(element.item, element.path);
 }
 
 bool Provider::computeIsFound(const Element &element) const {
-	if (_typeFilter != TypeFilter::All
-		&& _typeFilter != ClassifyFile(element.item, element.path)) {
-		return false;
-	}
+	return (_typeFilter == TypeFilter::All || _typeFilter == element.type)
+		&& matchesQuery(element);
+}
 
+bool Provider::matchesQuery(const Element &element) const {
 	const auto has = [&](const QString &queryWord) {
 		if (!element.letters.contains(queryWord.front())) {
 			return false;

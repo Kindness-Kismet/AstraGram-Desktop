@@ -23,18 +23,33 @@ GalleryHeader::GalleryHeader(
 	Type type,
 	not_null<InnerWidget*> inner,
 	Ui::SearchFieldController *search)
+: GalleryHeader(
+	parent,
+	SharedMediaTitle(type)(),
+	inner->fullCountValue(),
+	search) {
+	if (!search && (type == Type::Photo
+		|| type == Type::Video
+		|| type == Type::PhotoVideo
+		|| type == Type::RoundFile)) {
+		setupZoom(inner);
+	}
+}
+
+GalleryHeader::GalleryHeader(
+	QWidget *parent,
+	rpl::producer<QString> title,
+	rpl::producer<std::optional<int>> count,
+	Ui::SearchFieldController *search)
 : RpWidget(parent)
-, _inner(inner)
 , _title(Ui::CreateChild<Ui::FlatLabel>(this, st::infoMediaGalleryTitle))
 , _count(Ui::CreateChild<Ui::FlatLabel>(this, st::infoMediaGalleryCount)) {
-	SharedMediaTitle(type)(
-	) | rpl::on_next([=](const QString &title) {
+	std::move(title) | rpl::on_next([=](const QString &title) {
 		_title->setText(title);
 		resizeToWidth(width());
 	}, lifetime());
 
-	_inner->fullCountValue(
-	) | rpl::on_next([=](std::optional<int> count) {
+	std::move(count) | rpl::on_next([=](std::optional<int> count) {
 		_count->setText((count && *count > 0)
 			? Lang::FormatCountDecimal(*count)
 			: QString());
@@ -43,11 +58,6 @@ GalleryHeader::GalleryHeader(
 
 	if (search) {
 		setupSearch(search);
-	} else if (type == Type::Photo
-		|| type == Type::Video
-		|| type == Type::PhotoVideo
-		|| type == Type::RoundFile) {
-		setupZoom();
 	}
 }
 
@@ -77,29 +87,29 @@ void GalleryHeader::setupSearch(
 	_cancel->finishAnimating();
 }
 
-void GalleryHeader::setupZoom() {
+void GalleryHeader::setupZoom(not_null<InnerWidget*> inner) {
 	_zoomOut = Ui::CreateChild<Ui::IconButton>(
 		this,
 		st::infoMediaGalleryZoomOut);
 	_zoomOut->setAccessibleName(tr::lng_media_zoom_out(tr::now));
 	_zoomOut->setClickedCallback([=] {
-		_inner->zoomOut();
+		inner->zoomOut();
 	});
 	_zoomIn = Ui::CreateChild<Ui::IconButton>(
 		this,
 		st::infoMediaGalleryZoomIn);
 	_zoomIn->setAccessibleName(tr::lng_media_zoom_in(tr::now));
 	_zoomIn->setClickedCallback([=] {
-		_inner->zoomIn();
+		inner->zoomIn();
 	});
-	_inner->zoomStateChanges(
+	inner->zoomStateChanges(
 	) | rpl::on_next([=] {
-		refreshZoom();
+		refreshZoom(inner);
 	}, lifetime());
-	refreshZoom();
+	refreshZoom(inner);
 }
 
-void GalleryHeader::refreshZoom() {
+void GalleryHeader::refreshZoom(not_null<InnerWidget*> inner) {
 	const auto refresh = [](
 			not_null<Ui::IconButton*> button,
 			bool enabled,
@@ -112,11 +122,11 @@ void GalleryHeader::refreshZoom() {
 	};
 	refresh(
 		_zoomOut,
-		_inner->canZoomOut(),
+		inner->canZoomOut(),
 		st::infoMediaGalleryZoomOutDisabled);
 	refresh(
 		_zoomIn,
-		_inner->canZoomIn(),
+		inner->canZoomIn(),
 		st::infoMediaGalleryZoomInDisabled);
 }
 
