@@ -21,6 +21,8 @@
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/widgets/shadow.h"
+#include "ui/search_field_controller.h"
+#include "styles/style_td_common.h"
 #include "window/window_adaptive.h"
 #include "window/window_session_controller.h"
 #include "window/themes/window_theme.h"
@@ -63,7 +65,6 @@ private:
 	void cancelSearch();
 	void searchUpdated();
 	void applySearch();
-	void searchAnimationCallback();
 
 	not_null<Window::SessionController*> _controller;
 	not_null<PeerData*> _peer;
@@ -72,7 +73,6 @@ private:
 	object_ptr<Ui::IconButton> _search;
 	object_ptr<Ui::CrossButton> _cancel;
 
-	Ui::Animations::Simple _searchShownAnimation;
 	bool _searchShown = false;
 	bool _searchEnabled = true;
 	bool _animatingMode = false;
@@ -102,11 +102,15 @@ FixedBar::FixedBar(
 	bool searchEnabled) : Ui::RpWidget(parent)
 , _controller(controller)
 , _peer(peer)
-, _field(this, st::defaultSearchField, tr::lng_dlg_filter())
+, _field(this, st::contentSearchField, tr::lng_dlg_filter())
 , _backButton(this)
 , _search(this, st::topBarSearch)
-, _cancel(this, st::historyAdminLogCancelSearch)
+, _cancel(this, st::contentSearchClose)
 , _searchEnabled(searchEnabled) {
+	Ui::setupContentSearchField(_field.data());
+	_search->setObjectName(u"contentSearch.open"_q);
+	_field->setObjectName(u"contentSearch.field"_q);
+	_cancel->setObjectName(u"contentSearch.close"_q);
 	// 与聊天顶栏一致：窗口材质生效时透出材质，图标改用正文色。
 	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	ExtrasFeatures::WindowMaterial::watchIconButton(
@@ -153,36 +157,15 @@ void FixedBar::showSearch() {
 
 void FixedBar::toggleSearch() {
 	_searchShown = !_searchShown;
-	_cancel->toggle(_searchShown, anim::type::normal);
-	_searchShownAnimation.start(
-		[=] { searchAnimationCallback(); },
-		_searchShown ? 0. : 1.,
-		_searchShown ? 1. : 0.,
-		st::historyAdminLogSearchSlideDuration);
-	_search->setDisabled(_searchShown);
-	_search->show();
+	_cancel->toggle(_searchShown, anim::type::instant);
+	_field->setVisible(_searchShown);
+	_search->setVisible(!_searchShown);
+	resizeToWidth(width());
 	if (_searchShown) {
-		_field->show();
 		_field->setFocus();
 	} else {
 		_searchCancelRequests.fire({});
 	}
-}
-
-void FixedBar::searchAnimationCallback() {
-	if (!_searchShownAnimation.animating()) {
-		_field->setVisible(_searchShown);
-		_search->setVisible(!_searchShown);
-		_search->setIconOverride(
-			_searchShown ? &st::topBarSearch.icon : nullptr,
-			_searchShown ? &st::topBarSearch.icon : nullptr);
-		_search->setRippleColorOverride(
-			_searchShown ? &st::topBarBg : nullptr);
-		_search->setCursor(
-			_searchShown ? style::cur_default : style::cur_pointer);
-		_backButton->setOpacity(1.);
-	}
-	resizeToWidth(width());
 }
 
 void FixedBar::cancelSearch() {
@@ -218,37 +201,21 @@ rpl::producer<QString> FixedBar::searchRequests() const {
 }
 
 int FixedBar::resizeGetHeight(int newWidth) {
-	const auto offset = st::historySendRight + st::lineWidth;
-	const auto searchShownLeft = st::topBarArrowPadding.left();
-	const auto searchHiddenLeft = _searchEnabled
-		? newWidth - _search->width() - offset
-		: newWidth;
-	const auto searchShown = _searchShownAnimation.value(_searchShown
-		? 1.
-		: 0.);
-	const auto searchCurrentLeft = anim::interpolate(
-		searchHiddenLeft,
-		searchShownLeft,
-		searchShown);
+	const auto padding = st::contentSearchPadding;
 	if (_searchEnabled) {
-		_search->moveToLeft(searchCurrentLeft, 0);
+		_search->moveToRight(0, 0, newWidth);
 	}
-	_backButton->setOpacity(1. - searchShown);
-	_backButton->resizeToWidth(searchCurrentLeft);
+	_backButton->setOpacity(1.);
+	_backButton->resizeToWidth(newWidth - (_searchEnabled ? _search->width() : 0));
 	_backButton->moveToLeft(0, 0);
-
-	const auto cancelLeft = newWidth - _cancel->width() - offset;
-	_cancel->moveToLeft(cancelLeft, 0);
-
 	const auto newHeight = _backButton->height();
-	const auto fieldLeft = searchShownLeft;
+	_cancel->moveToRight(padding, newHeight + style::ConvertScale(4), newWidth);
 	_field->setGeometryToLeft(
-		fieldLeft,
-		(newHeight - _field->height()) / 2,
-		cancelLeft - fieldLeft,
+		padding,
+		newHeight + style::ConvertScale(4),
+		newWidth - 2 * padding,
 		_field->height());
-
-	return newHeight;
+	return newHeight + (_searchShown ? st::contentSearchHeight : 0);
 }
 
 void FixedBar::setAnimatingMode(bool enabled) {
@@ -341,6 +308,10 @@ Widget::Widget(
 							 lifetime());
 
 	setupShortcuts();
+	_fixedBar->heightValue() | rpl::skip(1) | rpl::on_next([=] {
+		resizeEvent(nullptr);
+	}, lifetime());
+
 }
 
 void Widget::updateAdaptiveLayout() {
@@ -437,6 +408,7 @@ void Widget::resizeEvent(QResizeEvent *e) {
 	const auto delta = takeTopDelta();
 	auto newScrollTop = _scroll->scrollTop() + delta;
 	_fixedBar->resizeToWidth(contentWidth);
+	_scroll->move(0, _fixedBar->height());
 	_fixedBarShadow->resize(contentWidth, st::lineWidth);
 
 	auto bottom = height();
