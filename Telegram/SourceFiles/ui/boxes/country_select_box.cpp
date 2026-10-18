@@ -177,6 +177,9 @@ void CountrySelectBox::prepare() {
 		std::move(_ownedInner),
 		st::countriesScroll,
 		_select->height());
+	_select->heightValue() | rpl::on_next([=](int height) {
+		setInnerTopSkip(height);
+	}, lifetime());
 
 	addButton(tr::lng_close(), [=] { closeBox(); });
 

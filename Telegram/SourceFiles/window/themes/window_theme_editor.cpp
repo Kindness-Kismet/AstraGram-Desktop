@@ -716,6 +716,9 @@ Editor::Editor(
 	_select->resizeToWidth(st::windowMinWidth);
 	_select->setQueryChangedCallback([this](const QString &query) { _inner->filterRows(query); _scroll->scrollToY(0); });
 	_select->setSubmittedCallback([this](Qt::KeyboardModifiers) { _inner->chooseRow(); });
+	_select->heightValue() | rpl::skip(1) | rpl::on_next([=] {
+		updateControlsGeometry();
+	}, lifetime());
 
 	_inner->prepare();
 	resizeToWidth(st::windowMinWidth);

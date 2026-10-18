@@ -16,6 +16,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "lang/lang_keys.h"
+#include "ui/search_field_controller.h"
+#include "base/invoke_queued.h"
+#include "ui/layers/box_content.h"
+#include "styles/style_td_common.h"
 #include "styles/style_widgets.h"
 
 #include <set>
@@ -29,6 +33,24 @@ namespace Ui {
 namespace {
 
 constexpr int kWideScale = 3;
+
+style::MultiSelect contentStyle(const style::MultiSelect &st, bool content) {
+	auto result = st;
+	if (!content) {
+		return result;
+	}
+	result.field = st::contentSearchField;
+	result.field.textFg = st.field.textFg;
+	result.field.placeholderFg = st.field.placeholderFg;
+	result.padding = QMargins(style::ConvertScale(20), 0,
+		style::ConvertScale(20), style::ConvertScale(8));
+	result.fieldCancel = st::contentSearchClose;
+	result.fieldCancelSkip = st::contentSearchClose.width;
+	result.item.height = style::ConvertScale(28);
+	result.maxHeight = 2 * result.item.height + result.itemSkip
+		+ result.padding.bottom();
+	return result;
+}
 
 class Item {
 public:
@@ -426,7 +448,11 @@ public:
 		const style::MultiSelect &st,
 		rpl::producer<QString> placeholder,
 		const QString &query,
-		ScrollCallback callback);
+		ScrollCallback callback,
+		bool content);
+	InputField *field() const { return _field; }
+	CrossButton *cancelButton() const { return _cancel; }
+	void processKeyPress(QKeyEvent *e) { keyPressEvent(e); }
 
 	[[nodiscard]] QString getQuery() const;
 	void setQuery(const QString &query);
@@ -492,6 +518,7 @@ private:
 	QMargins itemPaintMargins() const;
 
 	const style::MultiSelect &_st;
+	const bool _content;
 	Ui::Animations::Simple _iconOpacity;
 
 	ScrollCallback _scrollCallback;
@@ -528,19 +555,67 @@ MultiSelect::MultiSelect(
 	QWidget *parent,
 	const style::MultiSelect &st,
 	rpl::producer<QString> placeholder,
-	const QString &query)
+	const QString &query,
+	Layout layout)
 : RpWidget(parent)
-, _st(st)
+, _st(contentStyle(st, layout == Layout::Content))
+, _layout(layout)
 , _scroll(this, _st.scroll) {
 	const auto scrollCallback = [=](int activeTop, int activeBottom) {
 		scrollTo(activeTop, activeBottom);
 	};
 	_inner = _scroll->setOwnedWidget(object_ptr<Inner>(
 		this,
-		st,
+		_st,
 		std::move(placeholder),
 		query,
-		scrollCallback));
+		scrollCallback,
+		layout == Layout::Content));
+	if (_layout == Layout::Content) {
+		_field = _inner->field();
+		_cancel = _inner->cancelButton();
+		_field->setParent(this);
+		_cancel->setParent(this);
+		_cancel->show(anim::type::instant);
+		_field->setObjectName(u"contentSearch.field"_q);
+		_cancel->setObjectName(u"contentSearch.close"_q);
+		setupContentSearchField(_field);
+		_searchExpanded = !query.isEmpty();
+		_openSearch = CreateChild<IconButton>(this, st::contentSearchOpen);
+		_openSearch->setObjectName(u"contentSearch.open"_q);
+		_openSearch->setClickedCallback([=] { expandSearch(); });
+		_cancel->setClickedCallback([=] {
+			if (!_field->empty()) {
+				clearQuery();
+				_field->setFocusFast();
+			} else {
+				collapseSearch();
+			}
+		});
+		_field->cancelled() | rpl::on_next([=] {
+			if (_field->empty()) {
+				collapseSearch();
+			} else {
+				clearQuery();
+			}
+		}, lifetime());
+		InvokeQueued(this, [=] {
+			for (auto parent = parentWidget(); parent; parent = parent->parentWidget()) {
+				const auto box = dynamic_cast<BoxContent*>(parent);
+				if (!box || !box->hasDelegate()) {
+					continue;
+				}
+				_openSearch->deleteLater();
+				_openSearch = box->addTopButton(st::contentSearchOpen,
+					[=] { expandSearch(); });
+				_openSearch->setObjectName(u"contentSearch.open"_q);
+				_titleSearch = true;
+				resizeToWidth(width());
+				box->updateButtonsGeometry();
+				break;
+			}
+		});
+	}
 	_scroll->installEventFilter(this);
 	_inner->setResizedCallback([this](int innerHeightDelta) {
 		auto newHeight = resizeGetHeight(width());
@@ -555,7 +630,13 @@ MultiSelect::MultiSelect(
 		}
 	});
 	_inner->setQueryChangedCallback([this](const QString &query) {
-		_scroll->scrollToY(_scroll->scrollTopMax());
+		if (_layout == Layout::Inline) {
+			_scroll->scrollToY(_scroll->scrollTopMax());
+		} else {
+			_cancel->setAccessibleName(query.isEmpty()
+				? tr::lng_sr_cancel_search(tr::now)
+				: tr::lng_sr_clear_search(tr::now));
+		}
 		if (_queryChangedCallback) {
 			_queryChangedCallback(query);
 		}
@@ -568,12 +649,35 @@ MultiSelect::MultiSelect(
 	resizeToWidth(_st.padding.left() + defaultWidth + _st.padding.right());
 }
 
+MultiSelect::~MultiSelect() {
+	// 输入控件先于其样式和回调所属的标签区销毁。
+	if (_layout == Layout::Content) {
+		delete _openSearch.data();
+		delete _field;
+		delete _cancel;
+	}
+	_scroll.destroy();
+}
+
 bool MultiSelect::eventFilter(QObject *o, QEvent *e) {
 	if (o == _scroll && e->type() == QEvent::KeyPress) {
 		e->ignore();
 		return true;
 	}
 	return false;
+}
+
+void MultiSelect::paintEvent(QPaintEvent *e) {
+	auto p = QPainter(this);
+	p.fillRect(e->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(this, _st.bg->c));
+}
+
+void MultiSelect::keyPressEvent(QKeyEvent *e) {
+	if (_layout == Layout::Content && _field->hasFocus()) {
+		_inner->processKeyPress(e);
+		return;
+	}
+	RpWidget::keyPressEvent(e);
 }
 
 void MultiSelect::scrollTo(int activeTop, int activeBottom) {
@@ -612,6 +716,14 @@ void MultiSelect::setCancelButtonShown(bool shown) {
 }
 
 void MultiSelect::setInnerFocus() {
+	if (_layout == Layout::Content) {
+		if (_searchExpanded) {
+			_field->setFocusFast();
+		} else {
+			setFocus();
+		}
+		return;
+	}
 	if (_inner->setInnerFocus()) {
 		_scroll->scrollToY(_scroll->scrollTopMax());
 	}
@@ -626,7 +738,45 @@ QString MultiSelect::getQuery() const {
 }
 
 void MultiSelect::setQuery(const QString &query) {
+	if (_layout == Layout::Content && !query.isEmpty()) {
+		expandSearch();
+	}
 	_inner->setQuery(query);
+}
+
+void MultiSelect::expandSearch() {
+	const auto oldHeight = height();
+	_searchExpanded = true;
+	resizeToWidth(width());
+	if (height() != oldHeight && _resizedCallback) {
+		_resizedCallback();
+	}
+	_field->setFocusFast();
+}
+
+void MultiSelect::collapseSearch() {
+	const auto oldHeight = height();
+	_searchExpanded = false;
+	setFocus();
+	resizeToWidth(width());
+	if (height() != oldHeight && _resizedCallback) {
+		_resizedCallback();
+	}
+}
+
+void MultiSelect::updateSearchGeometry(int newWidth) {
+	const auto padding = _st.padding.left();
+	_field->setGeometryToLeft(padding, style::ConvertScale(4),
+		newWidth - padding - _st.padding.right(), _field->height(), newWidth);
+	_field->setVisible(_searchExpanded);
+	_cancel->moveToRight(_st.padding.right(), style::ConvertScale(4), newWidth);
+	_cancel->toggle(_searchExpanded, anim::type::instant);
+	if (_openSearch) {
+		_openSearch->setVisible(!_searchExpanded);
+		if (!_titleSearch) {
+			_openSearch->moveToRight(_st.padding.right(), 0, newWidth);
+		}
+	}
 }
 
 void MultiSelect::addItem(uint64 itemId, const QString &text, style::color color, PaintRoundImage paintRoundImage, AddItemWay way) {
@@ -669,8 +819,15 @@ int MultiSelect::resizeGetHeight(int newWidth) {
 		_inner->resizeToWidth(newWidth);
 	}
 	auto newHeight = std::min(_inner->height(), _st.maxHeight);
-	_scroll->setGeometryToLeft(0, 0, newWidth, newHeight);
-	return newHeight;
+	const auto top = _layout == Layout::Content
+		? (_searchExpanded ? st::contentSearchHeight
+			: (_titleSearch ? 0 : st::contentSearchOpen.height))
+		: 0;
+	_scroll->setGeometryToLeft(0, top, newWidth, newHeight);
+	if (_layout == Layout::Content) {
+		updateSearchGeometry(newWidth);
+	}
+	return top + newHeight;
 }
 
 MultiSelect::Inner::Inner(
@@ -678,16 +835,20 @@ MultiSelect::Inner::Inner(
 	const style::MultiSelect &st,
 	rpl::producer<QString> placeholder,
 	const QString &query,
-	ScrollCallback callback)
+	ScrollCallback callback,
+	bool content)
 : RpWidget(parent)
 , _st(st)
+, _content(content)
 , _scrollCallback(std::move(callback))
 , _fieldStyle([&] {
 	auto result = st.field;
 	// 容器统一绘制搜索背景，输入控件只负责文字与光标。
 	result.search = false;
 	result.textBg = result.textBgActive = st::transparent;
-	result.border = result.borderActive = result.borderRadius = 0;
+	if (!content) {
+		result.border = result.borderActive = result.borderRadius = 0;
+	}
 	return result;
 }())
 , _field(this, _fieldStyle, std::move(placeholder), query)
@@ -728,7 +889,9 @@ MultiSelect::Inner::Inner(
 
 void MultiSelect::Inner::queryChanged() {
 	auto query = getQuery();
-	_cancel->toggle(_cancelShown && !query.isEmpty(), anim::type::normal);
+	if (!_content) {
+		_cancel->toggle(_cancelShown && !query.isEmpty(), anim::type::normal);
+	}
 	updateFieldGeometry();
 	if (_queryChangedCallback) {
 		_queryChangedCallback(query);
@@ -747,7 +910,7 @@ void MultiSelect::Inner::setQuery(const QString &query) {
 }
 
 bool MultiSelect::Inner::setInnerFocus() {
-	if (_active >= 0) {
+	if (_active >= 0 || (_content && !_field->isVisible())) {
 		setFocus();
 	} else if (!_field->hasFocus()) {
 		_field->setFocusFast();
@@ -791,6 +954,9 @@ void MultiSelect::Inner::setCancelButtonShown(bool shown) {
 }
 
 void MultiSelect::Inner::updateFieldGeometry() {
+	if (_content) {
+		return;
+	}
 	auto fieldFinalWidth = _fieldWidth;
 	if (_cancel->toggled()) {
 		fieldFinalWidth -= _st.fieldCancelSkip;
@@ -800,7 +966,7 @@ void MultiSelect::Inner::updateFieldGeometry() {
 }
 
 void MultiSelect::Inner::updateHasAnyItems(bool hasAnyItems) {
-	_field->setPlaceholderHidden(hasAnyItems);
+	_field->setPlaceholderHidden(!_content && hasAnyItems);
 	updateCursor();
 	_iconOpacity.start([this] {
 		rtlupdate(
@@ -830,7 +996,7 @@ void MultiSelect::Inner::setActiveItem(int active, ChangeActiveWay skipSetFocus)
 	if (skipSetFocus != ChangeActiveWay::SkipSetFocus) {
 		setInnerFocus();
 	}
-	if (_scrollCallback) {
+	if (_scrollCallback && (!_content || _active >= 0)) {
 		auto rect = (_active >= 0) ? _items[_active]->rect() : _field->geometry().translated(-_st.padding.left(), -_st.padding.top());
 		_scrollCallback(rect.y(), rect.y() + rect.height() + _st.padding.top() + _st.padding.bottom());
 	}
@@ -858,6 +1024,10 @@ int MultiSelect::Inner::resizeGetHeight(int newWidth) {
 		return height();
 	}
 	computeItemsGeometry(newWidth);
+	if (_content) {
+		return _items.empty() ? 0
+			: _items.back()->rect().bottom() + 1 + _st.padding.bottom();
+	}
 	updateFieldGeometry();
 
 	auto cancelLeft = _fieldLeft + _fieldWidth + _st.padding.right() - _cancel->width();
@@ -879,7 +1049,9 @@ void MultiSelect::Inner::paintEvent(QPaintEvent *e) {
 		_st.padding.top(),
 		std::max(0, _st.padding.right() - st::searchFieldPadding),
 		_st.padding.bottom()));
-	InputField::paintSearchBackground(p, capsule, _st.field, focused, underMouse());
+	if (!_content) {
+		InputField::paintSearchBackground(p, capsule, _st.field, focused, underMouse());
+	}
 
 	auto offset = QPoint(
 		style::RightToLeft() ? _st.padding.right() : _st.padding.left(),
@@ -889,7 +1061,7 @@ void MultiSelect::Inner::paintEvent(QPaintEvent *e) {
 
 	auto outerWidth = width() - _st.padding.left() - _st.padding.right();
 	auto iconOpacity = _iconOpacity.value(_items.empty() ? 1. : 0.);
-	if (iconOpacity > 0.) {
+	if (!_content && iconOpacity > 0.) {
 		p.setOpacity(iconOpacity);
 		_st.fieldIcon.paint(p,
 			0,
@@ -973,7 +1145,7 @@ void MultiSelect::Inner::keyPressEvent(QKeyEvent *e) {
 }
 
 void MultiSelect::Inner::cancelled() {
-	if (_cancelledCallback) {
+	if (!_content && _cancelledCallback) {
 		_cancelledCallback();
 	}
 }
@@ -983,7 +1155,7 @@ void MultiSelect::Inner::fieldFocused() {
 }
 
 void MultiSelect::Inner::updateSelection(QPoint mousePosition) {
-	auto point = myrtlpoint(mousePosition) - QPoint(_st.padding.left(), _st.padding.right());
+	auto point = myrtlpoint(mousePosition) - QPoint(_st.padding.left(), _st.padding.top());
 	auto selected = -1;
 	for (auto i = 0, count = int(_items.size()); i != count; ++i) {
 		auto itemRect = _items[i]->rect();
@@ -1075,6 +1247,9 @@ void MultiSelect::Inner::computeItemsGeometry(int newWidth) {
 		item->setPosition(itemLeft, itemTop, newWidth, maxVisiblePadding);
 		itemLeft += itemWidth + _st.itemSkip;
 		widthLeft -= itemWidth + _st.itemSkip;
+	}
+	if (_content) {
+		return;
 	}
 
 	auto fieldMinWidth = _st.fieldMinWidth + _st.fieldCancelSkip;

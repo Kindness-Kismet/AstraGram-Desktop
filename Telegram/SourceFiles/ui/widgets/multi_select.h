@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/object_ptr.h"
 #include "ui/rp_widget.h"
+#include "styles/style_widgets.h"
 
 namespace style {
 struct MultiSelect;
@@ -17,14 +18,20 @@ struct MultiSelect;
 namespace Ui {
 
 class ScrollArea;
+class InputField;
+class CrossButton;
+class IconButton;
 
 class MultiSelect : public RpWidget {
 public:
+	enum class Layout { Content, Inline };
 	MultiSelect(
 		QWidget *parent,
 		const style::MultiSelect &st,
 		rpl::producer<QString> placeholder = nullptr,
-		const QString &query = QString());
+		const QString &query = QString(),
+		Layout layout = Layout::Content);
+	~MultiSelect();
 
 	[[nodiscard]] QString getQuery() const;
 	void setQuery(const QString &query);
@@ -37,6 +44,7 @@ public:
 	void setFocusedChangedCallback(Fn<void(bool focused)> callback);
 	void setResizedCallback(Fn<void()> callback);
 	void setCancelButtonShown(bool shown);
+	void expandSearch();
 
 	enum class AddItemWay {
 		Default,
@@ -56,13 +64,24 @@ public:
 	bool hasItem(uint64 itemId) const;
 
 protected:
+	void paintEvent(QPaintEvent *e) override;
+	void keyPressEvent(QKeyEvent *e) override;
 	int resizeGetHeight(int newWidth) override;
 	bool eventFilter(QObject *o, QEvent *e) override;
 
 private:
 	void scrollTo(int activeTop, int activeBottom);
 
-	const style::MultiSelect &_st;
+	void updateSearchGeometry(int width);
+	void collapseSearch();
+
+	const style::MultiSelect _st;
+	const Layout _layout;
+	InputField *_field = nullptr;
+	CrossButton *_cancel = nullptr;
+	QPointer<IconButton> _openSearch;
+	bool _searchExpanded = false;
+	bool _titleSearch = false;
 
 	object_ptr<Ui::ScrollArea> _scroll;
 
