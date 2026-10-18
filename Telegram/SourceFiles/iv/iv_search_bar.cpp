@@ -7,13 +7,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "iv/iv_search_bar.h"
 
-#include "dialogs/ui/dialogs_pill.h"
 #include "chat_helpers/message_field.h"
 #include "extras/features/window_material/window_material.h"
 #include "lang/lang_keys.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
-#include "ui/widgets/multi_select.h"
+#include "ui/search_field_controller.h"
+#include "styles/style_td_common.h"
 #include "ui/widgets/fields/input_field.h"
 #include "extras/ui/components/floating_surface.h"
 #include "ui/painter.h"
@@ -35,10 +35,6 @@ SearchBar::SearchBar(
 , _wrap(parent, object_ptr<Ui::RpWidget>(parent.get())) {
 	_wrap.setObjectName(u"iv.search"_q);
 	_wrap.setDirectionUp(true);
-	if (_mode == SearchBarMode::EditorPill) {
-		_pillShadow.emplace(st::ivEditorPillShadow);
-		_pillShadowMargins = _pillShadow->extend();
-	}
 	setup(std::move(width));
 	_wrap.hide(anim::type::instant);
 }
@@ -46,20 +42,12 @@ SearchBar::SearchBar(
 void SearchBar::setup(rpl::producer<int> width) {
 	const auto inner = _wrap.entity();
 	ExtrasFeatures::WindowMaterial::watchSurface(inner);
-	const auto pill = (_mode == SearchBarMode::EditorPill);
-	inner->resize(inner->width(), pill
-		? (st::ivEditorToolbarPadding.top()
-			+ _pillShadowMargins.top()
-			+ pillHeight()
-			+ _pillShadowMargins.bottom())
+	const auto content = (_mode == SearchBarMode::EditorContent);
+	inner->resize(inner->width(), content
+		? st::contentSearchHeight
 		: (st::historyComposeSearchButton.height
 			+ 2 * st::historyComposeCapsuleMargin));
-
-	if (pill) {
-		_select = Ui::CreateChild<Ui::MultiSelect>(
-			inner, st::ivEditorSearchMultiSelect, tr::lng_dlg_filter());
-		_select->setCancelButtonShown(false);
-	} else {
+	if (!content) {
 		_surface = Ui::CreateChild<Ui::RpWidget>(inner);
 		_surface->setObjectName(u"iv.search.surface"_q);
 		_surface->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -75,11 +63,15 @@ void SearchBar::setup(rpl::producer<int> width) {
 			icon.paint(p, st::historyComposeSearchIconLeft,
 				(_surface->height() - icon.height()) / 2, _surface->width());
 		}, _surface->lifetime());
-		_field = Ui::CreateChild<Ui::InputField>(
-			inner, st::historyComposeSearchField, tr::lng_dlg_filter());
-		_field->setObjectName(u"iv.search.field"_q);
-		_field->setFocusPolicy(Qt::StrongFocus);
-		_field->customUpDown(true);
+	}
+	_field = Ui::CreateChild<Ui::InputField>(inner,
+		content ? st::contentSearchField : st::historyComposeSearchField,
+		tr::lng_dlg_filter());
+	_field->setObjectName(u"iv.search.field"_q);
+	_field->setFocusPolicy(Qt::StrongFocus);
+	_field->customUpDown(true);
+	if (content) {
+		Ui::setupContentSearchField(_field);
 	}
 	_counter = Ui::CreateChild<Ui::FlatLabel>(
 		inner,
@@ -87,16 +79,16 @@ void SearchBar::setup(rpl::producer<int> width) {
 		st::ivSearchCounterLabel);
 	_counter->setAttribute(Qt::WA_TransparentForMouseEvents);
 	_counter->hide();
-	const auto &upSt = pill
+	const auto &upSt = content
 		? st::ivEditorSearchPrevious
 		: st::historyComposeSearchOlder;
-	const auto &downSt = pill
+	const auto &downSt = content
 		? st::ivEditorSearchNext
 		: st::historyComposeSearchNewer;
 	_up = Ui::CreateChild<Ui::IconButton>(inner, upSt);
 	_down = Ui::CreateChild<Ui::IconButton>(inner, downSt);
-	if (pill) {
-		_close = Ui::CreateChild<Ui::CrossButton>(inner, st::ivEditorSearchCancel);
+	if (content) {
+		_close = Ui::CreateChild<Ui::CrossButton>(inner, st::contentSearchClose);
 		_close->setObjectName(u"iv.search.close"_q);
 		_close->show(anim::type::instant);
 	} else {
@@ -107,14 +99,6 @@ void SearchBar::setup(rpl::producer<int> width) {
 	_up->setObjectName(u"iv.search.previous"_q);
 	_down->setObjectName(u"iv.search.next"_q);
 
-	inner->paintRequest(
-	) | rpl::on_next([=](QRect clip) {
-		auto p = QPainter(inner);
-		if (_mode == SearchBarMode::EditorPill) {
-			paintPill(p);
-		}
-	}, inner->lifetime());
-
 	std::move(width) | rpl::on_next([=](int width) {
 		_wrap.resizeToWidth(width);
 	}, _wrap.lifetime());
@@ -124,74 +108,32 @@ void SearchBar::setup(rpl::producer<int> width) {
 		updateControlsGeometry();
 	}, inner->lifetime());
 
-	if (_field) {
-		_field->changes() | rpl::on_next([=] {
-			_queryChanges.fire_copy(_field->getLastText());
-		}, _field->lifetime());
-		_field->submits() | rpl::on_next([=](Qt::KeyboardModifiers modifiers) {
-			_navigates.fire((modifiers & Qt::ShiftModifier) ? -1 : 1);
-		}, _field->lifetime());
-		_field->cancelled() | rpl::on_next([=] {
-			_closeRequests.fire({});
-		}, _field->lifetime());
-		_field->focusedChanges() | rpl::on_next([=](bool focused) {
-			_focusChanges.fire_copy(focused);
-		}, _field->lifetime());
-	} else {
-		_select->setQueryChangedCallback([=](const QString &query) {
-			_queryChanges.fire_copy(query);
-		});
-		_select->setSubmittedCallback([=](Qt::KeyboardModifiers modifiers) {
-			_navigates.fire((modifiers & Qt::ShiftModifier) ? -1 : 1);
-		});
-		_select->setCancelledCallback([=] {
-			_closeRequests.fire({});
-		});
-		_select->setFocusedChangedCallback([=](bool focused) {
-			_focusChanges.fire_copy(focused);
-		});
-	}
+	_field->changes() | rpl::on_next([=] {
+		_queryChanges.fire_copy(_field->getLastText());
+	}, _field->lifetime());
+	_field->submits() | rpl::on_next([=](Qt::KeyboardModifiers modifiers) {
+		_navigates.fire((modifiers & Qt::ShiftModifier) ? -1 : 1);
+	}, _field->lifetime());
+	_field->cancelled() | rpl::on_next([=] {
+		_closeRequests.fire({});
+	}, _field->lifetime());
+	_field->focusedChanges() | rpl::on_next([=](bool focused) {
+		_focusChanges.fire_copy(focused);
+	}, _field->lifetime());
 
 	setResults(0, 0);
-}
-
-int SearchBar::pillHeight() const {
-	return st::ivEditorToolbarButtonSize + 2 * st::ivEditorPillPadding;
-}
-
-QRect SearchBar::pillRect() const {
-	const auto inner = _wrap.entity();
-	return QRect(
-		_pillShadowMargins.left(),
-		st::ivEditorToolbarPadding.top() + _pillShadowMargins.top(),
-		(inner->width()
-			- _pillShadowMargins.left()
-			- _pillShadowMargins.right()),
-		pillHeight());
-}
-
-void SearchBar::paintPill(QPainter &p) const {
-	auto hq = PainterHighQualityEnabler(p);
-	const auto pill = pillRect();
-	const auto radius = pill.height() / 2;
-	Dialogs::PaintPillBackground(p, *_pillShadow, pill, radius);
 }
 
 void SearchBar::updateControlsGeometry() {
 	const auto inner = _wrap.entity();
 	const auto width = inner->width();
-	if (_mode == SearchBarMode::EditorPill) {
-		const auto pill = pillRect();
-		const auto pad = st::ivEditorPillPadding;
-		const auto skip = st::ivEditorPillButtonSkip;
-		const auto centered = [&](int controlHeight) {
-			return pill.y() + (pill.height() - controlHeight) / 2;
-		};
-		auto right = _pillShadowMargins.right() + pad;
+	if (_mode == SearchBarMode::EditorContent) {
+		const auto centered = [&](int h) { return (inner->height() - h) / 2; };
+		auto right = st::contentSearchPadding;
 		_close->moveToRight(right, centered(_close->height()));
-		right += _close->width() + skip;
+		right += _close->width();
 		_down->moveToRight(right, centered(_down->height()));
-		right += _down->width() + skip;
+		right += _down->width();
 		_up->moveToRight(right, centered(_up->height()));
 		right += _up->width();
 		if (!_counter->isHidden()) {
@@ -199,9 +141,8 @@ void SearchBar::updateControlsGeometry() {
 			_counter->moveToRight(right, centered(_counter->height()));
 			right += _counter->width() + st::ivSearchBarCounterSkip;
 		}
-		const auto left = _pillShadowMargins.left() + pad;
-		_select->resizeToWidth(width - left - right);
-		_select->moveToLeft(left, centered(_select->height()));
+		_field->resizeToWidth(std::max(0, width - st::contentSearchPadding - right));
+		_field->moveToLeft(st::contentSearchPadding, centered(_field->height()));
 		return;
 	}
 	const auto margin = st::historyComposeCapsuleMargin;
@@ -238,13 +179,13 @@ void SearchBar::setResults(int current, int total) {
 		_counter->hide();
 	}
 	const auto disabled = (total <= 0);
-	const auto pill = (_mode == SearchBarMode::EditorPill);
+	const auto content = (_mode == SearchBarMode::EditorContent);
 	const auto upIcon = disabled
-		? (pill ? &st::ivEditorSearchPrevious.icon
+		? (content ? &st::ivEditorSearchPrevious.icon
 			: &st::historyComposeSearchOlderDisabled)
 		: nullptr;
 	const auto downIcon = disabled
-		? (pill ? &st::ivEditorSearchNext.icon
+		? (content ? &st::ivEditorSearchNext.icon
 			: &st::historyComposeSearchNewerDisabled)
 		: nullptr;
 	_up->setIconOverride(upIcon, upIcon);
@@ -271,11 +212,7 @@ bool SearchBar::shown() const {
 }
 
 void SearchBar::setInnerFocus() {
-	if (_field) {
-		_field->setFocusFast();
-	} else {
-		_select->setInnerFocus();
-	}
+	_field->setFocusFast();
 }
 
 void SearchBar::raise() {
@@ -309,17 +246,7 @@ rpl::producer<bool> SearchBar::focusChanges() const {
 }
 
 rpl::producer<int> SearchBar::heightValue() const {
-	if (_mode != SearchBarMode::EditorPill) {
-		return _wrap.heightValue();
-	}
-	return _wrap.heightValue() | rpl::map([=](int height) {
-		const auto slide = st::ivEditorToolbarPadding.top()
-			+ pillHeight();
-		const auto full = slide
-			+ _pillShadowMargins.top()
-			+ _pillShadowMargins.bottom();
-		return (height * slide) / full;
-	});
+	return _wrap.heightValue();
 }
 
 rpl::lifetime &SearchBar::lifetime() {

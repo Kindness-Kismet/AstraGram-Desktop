@@ -454,7 +454,7 @@ void Widget::createSearchController() {
 			return searchBarColumn(outerWidth).width;
 		}),
 		std::move(host),
-		SearchBarMode::EditorPill);
+		SearchBarMode::EditorContent);
 	_searchSlideHeight = _search->barHeightValue();
 	_searchSlideHeight.changes() | rpl::on_next([=] {
 		resizeToWidth(width());

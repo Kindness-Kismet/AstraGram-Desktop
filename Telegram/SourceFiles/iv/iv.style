@@ -160,21 +160,13 @@ ivEditorToolbarButton: IconButton(defaultIconButton) {
 	rippleAreaSize: ivEditorToolbarButtonSize;
 	ripple: defaultRippleAnimationBgOver;
 }
-ivEditorSearchMultiSelect: MultiSelect(searchInChatMultiSelect) {
-	bg: transparent;
-	padding: margins(21px, 4px, 21px, 4px);
-}
 ivEditorSearchPrevious: IconButton(ivEditorToolbarButton) {
 	icon: icon {{ "calendar_down-flip_vertical", boxTitleFg }};
 }
 ivEditorSearchNext: IconButton(ivEditorSearchPrevious) {
 	icon: icon {{ "calendar_down", boxTitleFg }};
 }
-ivEditorSearchCancel: CrossButton(defaultMultiSelectSearchCancel) {
-	width: ivEditorToolbarButtonSize;
-	height: ivEditorToolbarButtonSize;
-	crossPosition: point(0px, 0px);
-}
+
 ivEditorBottomDiscardButton: IconButton(ivEditorToolbarButton) {
 	icon: ivEditorBottomDiscardIcon;
 	iconOver: ivEditorBottomDiscardIcon;
