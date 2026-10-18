@@ -59,7 +59,7 @@ bool LayerWidget::eventHook(QEvent *e) {
 void LayerWidget::start() {
 	_backgroundNight = IsNightMode();
 	_background = ExtrasFeatures::MediaViewer::prepareBackdrop(
-		renderBackground());
+		ExtrasFeatures::MediaViewer::grabUnderLayer(this));
 
 	sizeValue(
 	) | rpl::on_next([=](const QSize &size) {
@@ -86,33 +86,6 @@ void LayerWidget::checkBackgroundStale() {
 	}
 }
 
-QImage LayerWidget::renderBackground() {
-	const auto parent = parentWidget();
-	const auto target = parent->parentWidget();
-	const auto shown = !parent->isHidden();
-	const auto focused = shown && Ui::InFocusChain(parent);
-	if (shown) {
-		if (focused) {
-			target->setFocus();
-		}
-		parent->hide();
-	}
-	auto image = ExtrasFeatures::MediaViewer::grabOpaque(target, geometry());
-
-	if (shown) {
-		parent->show();
-		if (focused) {
-			if (isHidden()) {
-				parent->setFocus();
-			} else {
-				setInnerFocus();
-			}
-		}
-	}
-
-	return image;
-}
-
 void LayerWidget::checkCacheBackground() {
 	if (_backgroundCaching || _backgroundTimer.isActive()) {
 		return;
@@ -130,7 +103,8 @@ void LayerWidget::cacheBackground() {
 	_backgroundCaching = true;
 	const auto weak = base::make_weak(this);
 	const auto night = IsNightMode();
-	crl::async([weak, night, image = renderBackground()] {
+	auto image = ExtrasFeatures::MediaViewer::grabUnderLayer(this);
+	crl::async([weak, night, image = std::move(image)] {
 		auto result = ExtrasFeatures::MediaViewer::prepareBackdrop(image);
 		crl::on_main([weak, night, result = std::move(result)]() mutable {
 			if (const auto strong = weak.get()) {

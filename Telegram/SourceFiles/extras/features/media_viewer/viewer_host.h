@@ -8,6 +8,10 @@
 
 class QAbstractNativeEventFilter;
 
+namespace Ui {
+class LayerWidget;
+} // namespace Ui
+
 namespace ExtrasFeatures::WindowMaterial::Platform {
 class Backend;
 } // namespace ExtrasFeatures::WindowMaterial::Platform
@@ -17,6 +21,8 @@ namespace ExtrasFeatures::MediaViewer {
 [[nodiscard]] QColor backdropTint();
 // 渲染 rect 区域并垫上窗口底色，开启材质时也不透明；只在主线程调用。
 [[nodiscard]] QImage grabOpaque(not_null<QWidget*> widget, QRect rect = QRect());
+// 暂时隐藏图层栈，渲染图层所在区域的底层界面并恢复焦点；只在主线程调用。
+[[nodiscard]] QImage grabUnderLayer(not_null<Ui::LayerWidget*> layer);
 // 模糊并叠加暗色，与查看器背景一致；不访问样式，可在工作线程调用。
 [[nodiscard]] QImage prepareBackdrop(const QImage &image);
 

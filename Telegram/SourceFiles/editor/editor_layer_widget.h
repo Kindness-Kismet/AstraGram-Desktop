@@ -42,7 +42,6 @@ private:
 	void cacheBackground();
 	void checkBackgroundStale();
 	void checkCacheBackground();
-	[[nodiscard]] QImage renderBackground();
 	void backgroundReady(QImage background, bool night);
 	void startBackgroundFade();
 

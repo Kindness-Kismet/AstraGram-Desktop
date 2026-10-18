@@ -3,11 +3,13 @@
 #include "base/event_filter.h"
 #include "base/flat_map.h"
 #include "base/flat_set.h"
+#include "extras/features/media_viewer/viewer_host.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
 #include "settings/settings_common.h"
 #include "ui/painter.h"
 #include "ui/search_field_controller.h"
+#include "ui/ui_utility.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/labels.h"
@@ -27,6 +29,8 @@ namespace {
 // 结果区最多显示的行数，超出后滚动。
 constexpr auto kMaxVisibleRows = 6.5;
 constexpr auto kMaxRecent = 5;
+// 窗口缩放或换主题后等界面稳定再重新模糊底层。
+constexpr auto kBackdropRefreshDelay = crl::time(200);
 
 QString searchTerms(const QString &text) {
 	return text.normalized(QString::NormalizationForm_KC).toCaseFolded().simplified();
@@ -95,7 +99,8 @@ WorkspaceSearch::WorkspaceSearch(
 : _session(session)
 , _recent(std::move(recent))
 , _activate(std::move(activate))
-, _search(std::make_unique<Ui::SearchFieldController>(QString())) {
+, _search(std::make_unique<Ui::SearchFieldController>(QString()))
+, _backdropTimer([=] { refreshBackdrop(); }) {
 	setObjectName(u"settings-search"_q);
 	_field = _search->createField(this, st::dialogsFilter).release();
 	_field->setObjectName(u"settings-search-input"_q);
@@ -131,6 +136,9 @@ WorkspaceSearch::WorkspaceSearch(
 		rebuildIndex();
 		refreshResults();
 	}, lifetime());
+	style::PaletteChanged() | rpl::on_next([=] {
+		_backdropTimer.callOnce(kBackdropRefreshDelay);
+	}, lifetime());
 	rebuildIndex();
 	refreshResults();
 }
@@ -138,46 +146,76 @@ WorkspaceSearch::WorkspaceSearch(
 WorkspaceSearch::~WorkspaceSearch() = default;
 
 void WorkspaceSearch::parentResized() {
-	const auto parent = parentWidget()->size();
-	const auto available = parent.width() - 2 * st::settingsCardPagePadding;
-	resizeToWidth(std::max(1, std::min(st::settingsSearchLayerWidth, available)));
-	moveToLeft((parent.width() - width()) / 2, st::settingsSearchLayerTop);
+	resizeToWidth(parentWidget()->width());
+	moveToLeft(0, 0);
+	if (_backdrop.isNull()) {
+		refreshBackdrop();
+	} else if (_backdrop.size() != size() * style::DevicePixelRatio()) {
+		_backdropTimer.callOnce(kBackdropRefreshDelay);
+	}
+}
+
+void WorkspaceSearch::refreshBackdrop() {
+	using namespace ExtrasFeatures::MediaViewer;
+	_backdrop = prepareBackdrop(grabUnderLayer(this));
+	update();
 }
 
 int WorkspaceSearch::resizeGetHeight(int newWidth) {
-	const auto &padding = st::settingsSearchLayerPadding;
-	const auto inner = std::max(1, newWidth - padding.left() - padding.right());
-	_field->resizeToWidth(inner);
-	_field->moveToLeft(padding.left(), padding.top(), newWidth);
-	const auto fieldBlock = padding.top() + _field->height() + padding.bottom();
-	_list->resizeToWidth(inner);
+	const auto parent = parentWidget();
+	if (!parent) {
+		return height();
+	}
+	const auto available = newWidth - 2 * st::settingsCardPagePadding;
+	const auto column = std::max(1, std::min(st::settingsSearchLayerWidth, available));
+	const auto left = (newWidth - column) / 2;
+	_field->resizeToWidth(column);
+	_field->moveToLeft(left, st::settingsSearchLayerTop, newWidth);
+	const auto &padding = st::settingsSearchResultsPadding;
+	_list->resizeToWidth(std::max(1, column - padding.left() - padding.right()));
+	update();
 	if (!_list->height()) {
 		_scroll->hide();
-		return fieldBlock;
+		_card = QRect();
+		return parent->height();
 	}
-	// 浮层上下各留出与顶部相同的距离，结果区在剩余高度内滚动。
-	const auto parent = parentWidget();
-	const auto available = parent
-		? (parent->height() - 2 * st::settingsSearchLayerTop
-			- fieldBlock - padding.bottom())
-		: _list->height();
+	// 结果卡片下方留出与顶部相同的距离，超出部分在卡片内滚动。
+	const auto top = _field->y() + _field->height() + st::settingsSearchResultsSkip;
+	const auto room = parent->height() - top - st::settingsSearchLayerTop
+		- padding.top() - padding.bottom();
 	const auto scrollHeight = std::max(resultRowHeight(), std::min({
 		_list->height(),
 		int(kMaxVisibleRows * resultRowHeight()),
-		available,
+		room,
 	}));
-	_scroll->setGeometry(padding.left(), fieldBlock, inner, scrollHeight);
+	_card = QRect(
+		left,
+		top,
+		column,
+		padding.top() + scrollHeight + padding.bottom());
+	_scroll->setGeometry(_card.marginsRemoved(padding));
 	_scroll->show();
-	return fieldBlock + scrollHeight + padding.bottom();
+	return parent->height();
 }
 
 void WorkspaceSearch::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
+	p.drawImage(rect(), _backdrop);
+	if (_card.isEmpty()) {
+		return;
+	}
 	auto hq = PainterHighQualityEnabler(p);
-	const auto radius = cornerRadius();
 	p.setPen(Qt::NoPen);
 	p.setBrush(st::boxBg);
-	p.drawRoundedRect(rect(), radius, radius);
+	p.drawRoundedRect(_card, st::boxRadius, st::boxRadius);
+}
+
+void WorkspaceSearch::mousePressEvent(QMouseEvent *e) {
+	// 点到输入框与结果卡片之外的模糊背景即关闭，关闭可能立即销毁自身。
+	if (_card.contains(e->pos())) {
+		return;
+	}
+	Ui::PostponeCall(this, [=] { closeLayer(); });
 }
 
 void WorkspaceSearch::doSetInnerFocus() {

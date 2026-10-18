@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/timer.h"
 #include "settings/settings_builder.h"
 #include "ui/layers/layer_widget.h"
 
@@ -14,7 +15,7 @@ class VerticalLayout;
 
 namespace Settings {
 
-// 设置搜索浮层：固定在页面上方居中，结果列表向下展开。
+// 设置搜索浮层：铺满窗口并模糊底层界面，输入框浮在上方居中，结果卡片向下展开。
 class WorkspaceSearch final : public Ui::LayerWidget {
 public:
 	WorkspaceSearch(
@@ -28,6 +29,7 @@ public:
 protected:
 	int resizeGetHeight(int newWidth) override;
 	void paintEvent(QPaintEvent *e) override;
+	void mousePressEvent(QMouseEvent *e) override;
 	void doSetInnerFocus() override;
 
 private:
@@ -38,6 +40,7 @@ private:
 		QString keywordTerms;
 		QString pathTerms;
 	};
+	void refreshBackdrop();
 	void rebuildIndex();
 	void refreshResults();
 	void activateResult(int index);
@@ -55,6 +58,9 @@ private:
 	std::vector<IndexedEntry> _entries;
 	std::vector<int> _results;
 	std::vector<Ui::AbstractButton*> _buttons;
+	QImage _backdrop;
+	base::Timer _backdropTimer;
+	QRect _card;
 	int _selected = -1;
 };
 

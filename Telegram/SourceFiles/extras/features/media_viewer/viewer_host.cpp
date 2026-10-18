@@ -5,6 +5,7 @@
 #include "extras/extras_settings.h"
 #include "extras/features/window_material/platform/window_material_platform.h"
 #include "ui/image/image_prepare.h"
+#include "ui/layers/layer_widget.h"
 #include "ui/ui_utility.h"
 #include "styles/style_basic.h"
 
@@ -79,6 +80,32 @@ QImage grabOpaque(not_null<QWidget*> widget, QRect rect) {
 	p.setCompositionMode(QPainter::CompositionMode_DestinationOver);
 	p.fillRect(image.rect(), st::windowBg);
 	p.end();
+	return image;
+}
+
+QImage grabUnderLayer(not_null<Ui::LayerWidget*> layer) {
+	const auto parent = layer->parentWidget();
+	const auto target = parent->parentWidget();
+	const auto shown = !parent->isHidden();
+	const auto focused = shown && Ui::InFocusChain(parent);
+	if (shown) {
+		if (focused) {
+			target->setFocus();
+		}
+		parent->hide();
+	}
+	auto image = grabOpaque(target, layer->geometry());
+
+	if (shown) {
+		parent->show();
+		if (focused) {
+			if (layer->isHidden()) {
+				parent->setFocus();
+			} else {
+				layer->setInnerFocus();
+			}
+		}
+	}
 	return image;
 }
 
