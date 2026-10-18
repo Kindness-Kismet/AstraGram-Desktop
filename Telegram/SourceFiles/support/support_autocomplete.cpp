@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "support/support_autocomplete.h"
+#include "ui/search_field_controller.h"
+#include "styles/style_td_common.h"
 
 #include "ui/chat/chat_theme.h"
 #include "ui/chat/chat_style.h"
@@ -373,14 +375,15 @@ void Autocomplete::keyPressEvent(QKeyEvent *e) {
 }
 
 void Autocomplete::setupContent() {
-	const auto inputWrap = Ui::CreateChild<Ui::PaddingWrap<Ui::InputField>>(
-		this,
-		object_ptr<Ui::InputField>(
-			this,
-			st::defaultSearchField,
-			tr::extras_SearchTemplates()),
-		st::autocompleteSearchPadding);
-	const auto input = inputWrap->entity();
+	const auto search = Ui::CreateChild<Ui::ContentSearchRow>(
+		this, tr::extras_SearchTemplates());
+	const auto input = search->field();
+	const auto open = Ui::CreateChild<Ui::IconButton>(this, st::contentSearchOpen);
+	open->setObjectName(u"contentSearch.open"_q);
+	open->setClickedCallback([=] { search->setExpanded(true); });
+	search->expandedValue() | rpl::on_next([=](bool expanded) {
+		open->setVisible(!expanded);
+	}, lifetime());
 	const auto scroll = Ui::CreateChild<Ui::ScrollArea>(this);
 
 	const auto inner = scroll->setOwnedWidget(object_ptr<Inner>(scroll));
@@ -401,14 +404,10 @@ void Autocomplete::setupContent() {
 	input->focusedChanges(
 	) | rpl::filter(!rpl::mappers::_1) | rpl::on_next([=] {
 		base::call_delayed(10, this, [=] {
-			if (!input->hasFocus()) {
+			if (!Ui::InFocusChain(this)) {
 				deactivate();
 			}
 		});
-	}, input->lifetime());
-	input->cancelled(
-	) | rpl::on_next([=] {
-		deactivate();
 	}, input->lifetime());
 	input->changes() | rpl::on_next(refresh, input->lifetime());
 	input->submits() | rpl::on_next(submit, input->lifetime());
@@ -416,8 +415,10 @@ void Autocomplete::setupContent() {
 
 	_activate = [=] {
 		input->setText(QString());
+		search->setExpanded(false);
+		refresh();
 		show();
-		input->setFocus();
+		setFocus();
 	};
 	_deactivate = [=] {
 		hide();
@@ -440,15 +441,14 @@ void Autocomplete::setupContent() {
 			st::shadowFg);
 	}, lifetime());
 
-	sizeValue(
-	) | rpl::on_next([=](QSize size) {
-		inputWrap->resizeToWidth(size.width());
-		inputWrap->moveToLeft(0, st::lineWidth, size.width());
-		scroll->setGeometry(
-			0,
-			inputWrap->height(),
-			size.width(),
-			size.height() - inputWrap->height() - st::lineWidth);
+	rpl::combine(sizeValue(), search->expandedValue()
+	) | rpl::on_next([=](QSize size, bool expanded) {
+		search->resizeToWidth(size.width());
+		search->moveToLeft(0, st::lineWidth, size.width());
+		open->moveToRight(st::contentSearchPadding, 0, size.width());
+		const auto top = st::lineWidth + (expanded
+			? search->height() : open->height());
+		scroll->setGeometry(0, top, size.width(), size.height() - top);
 		inner->resizeToWidth(size.width());
 	}, lifetime());
 }
