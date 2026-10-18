@@ -25,6 +25,7 @@ class CrossButton;
 class TabbedSearchField final : public RpWidget {
 public:
 	TabbedSearchField(QWidget *parent, const style::TabbedSearch &st);
+	[[nodiscard]] QMargins getMargins() const override;
 
 	[[nodiscard]] rpl::producer<> escapes() const;
 	[[nodiscard]] rpl::producer<std::vector<QString>> queryValue() const;
@@ -62,6 +63,7 @@ public:
 		const style::EmojiPan &st);
 
 	[[nodiscard]] int height() const;
+	[[nodiscard]] QPoint position() const;
 	[[nodiscard]] QImage grab();
 
 	[[nodiscard]] rpl::producer<> escapes() const;

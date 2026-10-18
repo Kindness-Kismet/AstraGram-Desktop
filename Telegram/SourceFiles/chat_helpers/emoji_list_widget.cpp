@@ -1581,8 +1581,7 @@ void EmojiListWidget::paintExpanding(
 	if (!_searchExpandCache.isNull()) {
 		p.setClipRect(clip);
 		p.drawImage(
-			clip.x() + st().searchMargin.left(),
-			clip.y() + st().searchMargin.top() + searchShift,
+			clip.topLeft() + _search->position() + QPoint(0, searchShift),
 			_searchExpandCache);
 	}
 	p.translate(shift);

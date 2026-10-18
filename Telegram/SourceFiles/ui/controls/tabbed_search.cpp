@@ -10,9 +10,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/buttons.h"
+#include "ui/widgets/shadow.h"
 #include "ui/rect.h"
 #include "ui/ui_utility.h"
 #include "styles/style_chat_helpers.h"
+#include "styles/style_widgets.h"
 
 #include <QtWidgets/QApplication>
 
@@ -144,10 +146,24 @@ void TabbedSearchField::returnFocus() {
 }
 
 int TabbedSearchField::resizeGetHeight(int newWidth) {
+	const auto margins = getMargins();
+	const auto outerWidth = newWidth + margins.left() + margins.right();
 	_field->resizeToWidth(newWidth);
-	_field->moveToLeft(0, 0, newWidth);
-	_cancel->moveToRight(0, 0, newWidth);
+	_field->moveToLeft(margins.left(), margins.top(), outerWidth);
+	_cancel->moveToRight(margins.right(), margins.top(), outerWidth);
 	return _st.height;
+}
+
+QMargins TabbedSearchField::getMargins() const {
+	// 外层控件覆盖完整阴影，内容尺寸仍按输入框本身计算。
+	const auto tight = BoxShadow::ExtendFor(st::searchFieldShadowTight);
+	const auto wide = BoxShadow::ExtendFor(st::searchFieldShadowWide);
+	return {
+		std::max(tight.left(), wide.left()),
+		std::max(tight.top(), wide.top()),
+		std::max(tight.right(), wide.right()),
+		std::max(tight.bottom(), wide.bottom()),
+	};
 }
 
 TabbedSearch::TabbedSearch(
@@ -155,8 +171,6 @@ TabbedSearch::TabbedSearch(
 	const style::EmojiPan &st)
 : _st(st)
 , _search(parent, st.search) {
-	_search.move(_st.searchMargin.left(), _st.searchMargin.top());
-
 	parent->widthValue(
 	) | rpl::on_next([=](int width) {
 		_outerWidth = width;
@@ -169,10 +183,15 @@ void TabbedSearch::updateSearchGeometry() {
 		- rect::m::sum::h(_st.searchMargin)
 		- _rightReserved;
 	_search.resizeToWidth(std::max(inner, 0));
+	_search.moveToLeft(_st.searchMargin.left(), _st.searchMargin.top());
 }
 
 int TabbedSearch::height() const {
-	return _search.height() + rect::m::sum::v(_st.searchMargin);
+	return _search.heightNoMargins() + rect::m::sum::v(_st.searchMargin);
+}
+
+QPoint TabbedSearch::position() const {
+	return _search.pos();
 }
 
 QImage TabbedSearch::grab() {
