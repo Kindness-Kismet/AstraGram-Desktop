@@ -8,7 +8,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_slide_animation.h"
 #include "ui/rp_widget.h"
 #include "ui/ui_utility.h"
+#include "ui/painter.h"
 #include "styles/style_basic.h"
+#include "styles/style_layers.h"
+
+#include <QtGui/QPainterPath>
 
 
 namespace Window {
@@ -230,12 +234,14 @@ void SlideAnimation::paintCrossFade(QPainter &p) const {
 	const auto shown = progress();
 	const auto shift = slideLeft ? args.shift : -args.shift;
 	const auto ratio = style::DevicePixelRatio();
-	if (_crossFadeFrame.size() != was.size()) {
+	const auto frameSize = was.size().expandedTo(now.size());
+	if (_crossFadeFrame.size() != frameSize) {
 		_crossFadeFrame = QImage(
-			was.size(),
+			frameSize,
 			QImage::Format_ARGB32_Premultiplied);
 		_crossFadeFrame.setDevicePixelRatio(ratio);
 	}
+	_crossFadeFrame.fill(Qt::transparent);
 	auto q = QPainter(&_crossFadeFrame);
 	// Source 模式带不透明度 o 时结果为 o * 本层 + (1 - o) * 底，透明像素同样成立。
 	q.setCompositionMode(QPainter::CompositionMode_Source);
@@ -298,6 +304,21 @@ void SlideAnimation::paintCrossFade(QPainter &p) const {
 }
 
 void SlideAnimation::paintCrossFadeFrame(QPainter &p) const {
+	if (_withFade) {
+		// 弹层缓存按当前外框裁剪，透明区域保留父层圆角底色。
+		p.save();
+		const auto radius = st::boxRadius;
+		auto path = QPainterPath();
+		path.addRoundedRect(QRectF(
+			0, 0, p.viewport().width(), p.viewport().height() + radius),
+			radius, radius);
+		p.setClipPath(path, Qt::IntersectClip);
+		const auto hq = PainterHighQualityEnabler(p);
+		p.setCompositionMode(QPainter::CompositionMode_SourceOver);
+		p.drawImage(0, 0, _crossFadeFrame);
+		p.restore();
+		return;
+	}
 	// 整帧替换下层：材质下画布并不遮挡，底下已是切换后的内容。
 	p.setCompositionMode(QPainter::CompositionMode_Source);
 	p.drawImage(0, 0, _crossFadeFrame);

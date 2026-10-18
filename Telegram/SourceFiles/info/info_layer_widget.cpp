@@ -104,12 +104,13 @@ void LayerWidget::setupHeightConsumers() {
 		resizeToWidth(width());
 	}, lifetime());
 
-	// 共享媒体页更宽，换页时宽度与切页动画一起过渡。
+	// 宽高共用一次过渡，避免同一帧重复排版。
 	_contentWrap->contentChanged(
 	) | rpl::filter([=] {
 		return parentWidget() != nullptr;
 	}) | rpl::on_next([=] {
-		animateWidth();
+		_changingContent = false;
+		animateGeometry();
 	}, lifetime());
 
 	// 截取新页面时临时撑到目标尺寸，截完恢复过渡中的尺寸。
@@ -117,43 +118,49 @@ void LayerWidget::setupHeightConsumers() {
 	) | rpl::on_next([=](bool grabbing) {
 		if (grabbing) {
 			_savedWidth = width();
-			_savedWidthAnimation = base::take(_widthAnimation);
 			_savedHeight = _contentWrapHeight;
-			_savedHeightAnimation = base::take(_heightAnimation);
-			_contentWrapHeight = _desiredHeight;
+			_savedGeometryAnimation = base::take(_geometryAnimation);
+			_preparingGeometry = true;
+			_contentWrapHeight = std::min(_desiredHeight, maxContentHeight());
 			resizeToWidth(targetWidth());
 		} else {
-			_widthAnimation = base::take(_savedWidthAnimation);
-			_heightAnimation = base::take(_savedHeightAnimation);
+			_restoringGeometry = true;
 			_contentWrapHeight = _savedHeight;
 			resizeToWidth(_savedWidth);
+			_restoringGeometry = false;
+			_preparingGeometry = false;
+			_geometryAnimation = base::take(_savedGeometryAnimation);
 		}
 	}, lifetime());
 
 	_contentWrap->desiredHeightValue(
 	) | rpl::on_next([this](int height) {
 		if (!height) {
-			// New content arrived.
-			_heightAnimated = _heightAnimation.animating();
+			_changingContent = true;
 			return;
 		}
-		std::swap(_desiredHeight, height);
-		if (!height
-			|| (_heightAnimated && !_heightAnimation.animating())) {
-			_heightAnimated = true;
-			setContentHeight(_desiredHeight);
-		} else {
-			_heightAnimated = true;
-			_heightAnimation.start([=] {
-				setContentHeight(_heightAnimation.value(_desiredHeight));
-			}, _contentWrapHeight, _desiredHeight, st::slideDuration);
-			if (_inResize) {
-				_pendingResize = true;
-			} else {
-				resizeToWidth(width());
-			}
+		if (_restoringGeometry
+			|| (_inResize && _geometryAnimation.animating())) {
+			return;
 		}
+		if (_desiredHeight == height) {
+			return;
+		}
+		_desiredHeight = height;
+		if (_preparingGeometry || _inResize) {
+			setContentHeight(std::min(height, maxContentHeight()));
+			return;
+		}
+		if (_changingContent) {
+			return;
+		}
+		if (!parentWidget()) {
+			setContentHeight(height);
+			return;
+		}
+		animateGeometry();
 	}, lifetime());
+	_changingContent = false;
 }
 
 void LayerWidget::setContentHeight(int height) {
@@ -223,7 +230,8 @@ void LayerWidget::parentResized() {
 	//} else if (_controller->canShowThirdSectionWithoutResize()) {
 	//	takeToThirdSection();
 	} else {
-		_widthAnimation.stop();
+		_geometryAnimation.stop();
+		_contentWrapHeight = std::min(_desiredHeight, maxContentHeight());
 		resizeToWidth(targetWidth());
 	}
 }
@@ -240,23 +248,49 @@ int LayerWidget::targetWidth() const {
 		desiredWidth());
 }
 
-void LayerWidget::animateWidth() {
-	const auto from = width();
-	const auto to = targetWidth();
-	if (from == to) {
-		_widthAnimation.stop();
+int LayerWidget::maxContentHeight() const {
+	const auto height = parentWidget()->height();
+	return height - 2 * ((height + 5) / 10) - st::boxRadius;
+}
+
+void LayerWidget::animateGeometry() {
+	if (_preparingGeometry || _restoringGeometry) {
 		return;
 	}
-	if (!from || isHidden()) {
-		_widthAnimation.stop();
-		resizeToWidth(to);
+	const auto toWidth = targetWidth();
+	const auto toHeight = std::min(_desiredHeight, maxContentHeight());
+	if (_geometryAnimation.animating()
+		&& _geometryTo == QSize(toWidth, toHeight)) {
 		return;
 	}
-	_widthAnimation.start([=] {
-		resizeToWidth(_widthAnimation.value(to));
-	}, from, to, st::slideDuration);
-	// 立即刷新展开标记，随后截取的新页面才会按目标宽度排版。
-	resizeToWidth(from);
+	const auto from = QSize(width(), std::min(
+		_contentWrapHeight,
+		maxContentHeight()));
+	_geometryAnimation.stop();
+	_preparingGeometry = true;
+	_contentWrapHeight = toHeight;
+	resizeToWidth(toWidth);
+	const auto to = QSize(toWidth, std::min(
+		_desiredHeight,
+		maxContentHeight()));
+	if (!from.width() || isHidden() || from == to) {
+		_preparingGeometry = false;
+		return;
+	}
+	_restoringGeometry = true;
+	_contentWrapHeight = from.height();
+	resizeToWidth(from.width());
+	_restoringGeometry = false;
+	_preparingGeometry = false;
+	_geometryFrom = from;
+	_geometryTo = to;
+	_geometryAnimation.start([=](float64 progress) {
+		_contentWrapHeight = anim::interpolate(
+			_geometryFrom.height(), _geometryTo.height(), progress);
+		resizeToWidth(anim::interpolate(
+			_geometryFrom.width(), _geometryTo.width(), progress));
+	}, 0., 1., st::infoLayerMorphDuration, anim::easeOutCubic);
+	resizeToWidth(from.width());
 }
 
 bool LayerWidget::takeToThirdSection() {
@@ -356,7 +390,7 @@ QRect LayerWidget::countGeometry(int newWidth) {
 		_contentWrapHeight + st::boxRadius,
 		maxHeight);
 	const auto newTop = (windowHeight - panelHeight) / 2;
-	const auto expanding = _widthAnimation.animating()
+	const auto expanding = _geometryAnimation.animating()
 		|| (std::min(_desiredHeight + st::boxRadius, maxHeight)
 			> panelHeight);
 	_contentWrap->updateGeometry(

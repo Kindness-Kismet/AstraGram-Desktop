@@ -336,7 +336,9 @@ void SectionWidget::showAnimated(
 	if (params.crossFade) {
 		_showAnimation->setCrossFade({
 			.overlay = true,
-			.duration = st::extrasInPlaceFadeDuration,
+			.duration = params.crossFadeDuration
+				? params.crossFadeDuration
+				: st::extrasInPlaceFadeDuration,
 		});
 	}
 	_showAnimation->start();

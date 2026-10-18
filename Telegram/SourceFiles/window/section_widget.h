@@ -101,6 +101,7 @@ struct SectionSlideParams {
 	bool fromBottom = false;
 	// 新旧画面原地叠加淡化，不平移。
 	bool crossFade = false;
+	int crossFadeDuration = 0;
 
 	explicit operator bool() const {
 		return !oldContentCache.isNull();
