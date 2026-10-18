@@ -6,6 +6,9 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/controls/location_picker.h"
+#include "ui/search_field_controller.h"
+#include "ui/widgets/fields/input_field.h"
+#include "styles/style_td_common.h"
 
 #include "apiwrap.h"
 #include "base/platform/base_platform_info.h"
@@ -808,6 +811,20 @@ void LocationPicker::setupWindow(const Descriptor &descriptor) {
 		? descriptor.parent->window()->geometry()
 		: QGuiApplication::primaryScreen()->availableGeometry();
 	window->setTitle(tr::lng_maps_point());
+	_search = CreateChild<ContentSearchRow>(_body, tr::lng_dlg_filter());
+	_searchOpen = CreateChild<IconButton>(_body, st::contentSearchOpen);
+	_searchOpen->setObjectName(u"contentSearch.open"_q);
+	_searchOpen->setDisabled(true);
+	_searchOpen->setClickedCallback([=] { _search->setExpanded(true); });
+	_search->field()->changes() | rpl::on_next([=] {
+		venuesSearchChanged(_search->field()->getLastText());
+	}, _lifetime);
+	_search->expandedValue() | rpl::on_next([=](bool expanded) {
+		_searchOpen->setVisible(!expanded);
+		if (!expanded) {
+			venuesSearchChanged(std::nullopt);
+		}
+	}, _lifetime);
 	window->move(
 		parent.x() + (parent.width() - window->width()) / 2,
 		parent.y() + (parent.height() - window->height()) / 2);
@@ -847,19 +864,23 @@ void LocationPicker::setupWindow(const Descriptor &descriptor) {
 	rpl::combine(
 		_body->sizeValue(),
 		_scroll->scrollTopValue(),
-		_venuesSearchShown.value()
-	) | rpl::on_next([=](QSize size, int scrollTop, bool search) {
+		_venuesSearchShown.value(),
+		_search->expandedValue()
+	) | rpl::on_next([=](QSize size, int scrollTop, bool search, bool expanded) {
 		const auto width = size.width();
-		const auto height = size.height();
+		const auto top = expanded ? st::contentSearchHeight : st::contentSearchOpen.height;
+		_search->resizeToWidth(width);
+		_search->move(0, 0);
+		_searchOpen->moveToRight(st::contentSearchPadding, 0, width);
 		const auto sub = std::min(
 			(st::pickLocationMapHeight - st::pickLocationCollapsedHeight),
 			scrollTop);
 		const auto mapHeight = st::pickLocationMapHeight
 			- sub
 			+ (_mapPlaceholder ? _mapPlaceholderAdded : 0);
-		_container->setGeometry(0, 0, width, mapHeight);
-		const auto scrollWidgetTop = search ? 0 : mapHeight;
-		const auto scrollHeight = height - scrollWidgetTop;
+		_container->setGeometry(0, top, width, mapHeight);
+		const auto scrollWidgetTop = top + (search ? 0 : mapHeight);
+		const auto scrollHeight = size.height() - scrollWidgetTop;
 		_scroll->setGeometry(0, scrollWidgetTop, width, scrollHeight);
 		controls->resizeToWidth(width);
 		toppad->resize(width, sub);
@@ -1253,19 +1274,16 @@ void LocationPicker::venuesApplyResults(PickerVenueList venues) {
 }
 
 void LocationPicker::venuesSearchEnableAt(Core::GeoLocation location) {
-	if (!_venuesSearchLocation) {
-		_window->setSearchAllowed(
-			tr::lng_dlg_filter(),
-			[=](std::optional<QString> query) {
-				venuesSearchChanged(query);
-			});
-	}
 	_venuesSearchLocation = location;
+	_searchOpen->setDisabled(false);
 }
 
 void LocationPicker::venuesSearchChanged(
 		const std::optional<QString> &query) {
 	_venuesSearchQuery = query;
+	if (!_venuesSearchLocation) {
+		return;
+	}
 
 	const auto shown = query && !query->trimmed().isEmpty();
 	_venuesSearchShown = shown;
@@ -1324,7 +1342,9 @@ void LocationPicker::processKey(
 		const QString &modifier) {
 	const auto ctrl = ::Platform::IsMac() ? u"cmd"_q : u"ctrl"_q;
 	if (key == u"escape"_q) {
-		if (!_window->closeSearch()) {
+		if (_search->expanded()) {
+			_search->cancel();
+		} else {
 			close();
 		}
 	} else if (key == u"w"_q && modifier == ctrl) {

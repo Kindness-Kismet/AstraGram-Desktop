@@ -34,6 +34,8 @@ class SeparatePanel;
 class RpWidget;
 class ScrollArea;
 class VerticalLayout;
+class ContentSearchRow;
+class IconButton;
 template <typename Widget>
 class SlideWrap;
 
@@ -132,6 +134,8 @@ private:
 	std::unique_ptr<SeparatePanel> _window;
 	not_null<RpWidget*> _body;
 	RpWidget *_container = nullptr;
+	ContentSearchRow *_search = nullptr;
+	IconButton *_searchOpen = nullptr;
 	RpWidget *_mapPlaceholder = nullptr;
 	RpWidget *_mapLoading = nullptr;
 	AbstractButton *_mapButton = nullptr;
