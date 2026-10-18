@@ -529,7 +529,7 @@ Panel::Panel(not_null<QWidget*> parent, PanelDescriptor &&descriptor)
 , _roundRect(st::emojiPanRadius, st::emojiPanBg)
 , _search(Ui::CreateChild<Ui::TabbedSearchField>(
 	this,
-	st::defaultEmojiPan.search))
+	st::defaultEmojiPan.search, true))
 , _scroll(Ui::CreateChild<Ui::ScrollArea>(this, st::defaultScrollArea))
 , _list(_scroll->setOwnedWidget(
 	object_ptr<List>(_scroll, descriptor)).data()) {

@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/controls/tabbed_search.h"
+#include "ui/search_field_controller.h"
+#include "styles/style_td_common.h"
 
 #include "lang/lang_keys.h"
 #include "ui/widgets/fields/input_field.h"
@@ -34,23 +36,41 @@ constexpr auto kDebounceTimeout = crl::time(400);
 
 TabbedSearchField::TabbedSearchField(
 	QWidget *parent,
-	const style::TabbedSearch &st)
+	const style::TabbedSearch &st,
+	bool content)
 : RpWidget(parent)
 , _st(st)
+, _content(content)
 , _fieldStyle([&] {
-	auto result = _st.field;
+	auto result = content ? st::contentSearchField : _st.field;
 	result.search = false;
-	result.textBg = result.textBgActive = st::transparent;
-	result.border = result.borderActive = result.borderRadius = 0;
+	if (!content) {
+		result.textBg = result.textBgActive = st::transparent;
+		result.border = result.borderActive = result.borderRadius = 0;
+	}
 	return result;
 }())
 , _field(CreateChild<InputField>(this, _fieldStyle, tr::lng_dlg_filter()))
-, _cancel(CreateChild<CrossButton>(this, _st.cancel))
+, _cancel(CreateChild<CrossButton>(this,
+	content ? st::contentSearchClose : _st.cancel))
 , _debounceTimer([=] { _debouncedQuery = _query.current(); }) {
 	_field->setObjectName(u"panelSearchField"_q);
 	_cancel->setObjectName(u"panelSearchClear"_q);
 	_cancel->setAccessibleName(tr::lng_sr_cancel_search(tr::now));
 	_cancel->toggle(false, anim::type::instant);
+	if (_content) {
+		setupContentSearchField(_field);
+		_field->hide();
+		_open = CreateChild<IconButton>(this, st::contentSearchOpen);
+		_open->setObjectName(u"contentSearch.open"_q);
+		_open->setClickedCallback([=] {
+			_expanded = true;
+			_field->show();
+			_open->hide();
+			_field->setFocusFast();
+			updateCancelShown();
+		});
+	}
 
 	_field->changes(
 	) | rpl::on_next([=] {
@@ -64,8 +84,17 @@ TabbedSearchField::TabbedSearchField(
 			_debounceTimer.callOnce(kDebounceTimeout);
 		}
 	}, _field->lifetime());
+	_field->focusedChanges() | rpl::on_next([=] { update(); }, lifetime());
 
 	_cancel->setClickedCallback([=] {
+		if (_content && _query.current().empty()) {
+			_expanded = false;
+			_field->hide();
+			_open->show();
+			_cancel->hide(anim::type::instant);
+			dropFocus();
+			return;
+		}
 		const auto focused = _field->hasFocus();
 		cancel();
 		if (focused) {
@@ -75,7 +104,6 @@ TabbedSearchField::TabbedSearchField(
 
 	_field->focusedChanges(
 	) | rpl::on_next([=] {
-		update();
 		updateCancelShown();
 	}, _field->lifetime());
 
@@ -99,7 +127,8 @@ TabbedSearchField::TabbedSearchField(
 // 与对话列表搜索框一致：聚焦或有内容时显示 X，点击即可退出输入框。
 void TabbedSearchField::updateCancelShown() {
 	const auto empty = _query.current().empty();
-	_cancel->toggle(!empty || _field->hasFocus(), anim::type::normal);
+	_cancel->toggle(_content ? _expanded : (!empty || _field->hasFocus()),
+		anim::type::normal);
 	_cancel->setAccessibleName(empty
 		? tr::lng_sr_cancel_search(tr::now)
 		: tr::lng_sr_clear_search(tr::now));
@@ -137,6 +166,10 @@ void TabbedSearchField::setLoading(bool loading) {
 }
 
 void TabbedSearchField::stealFocus() {
+	if (_content && !_expanded) {
+		setFocus();
+		return;
+	}
 	if (!_focusTakenFrom) {
 		_focusTakenFrom = QApplication::focusWidget();
 	}
@@ -154,6 +187,9 @@ void TabbedSearchField::returnFocus() {
 }
 
 void TabbedSearchField::paintEvent(QPaintEvent *e) {
+	if (_content) {
+		return;
+	}
 	auto p = QPainter(this);
 	// 底色和输入内容共用切页缓存坐标，避免图形特效分离两者。
 	InputField::paintSearchBackground(p, _field->geometry(), _st.field,
@@ -170,10 +206,16 @@ int TabbedSearchField::resizeGetHeight(int newWidth) {
 	_field->resizeToWidth(newWidth);
 	_field->moveToLeft(margins.left(), margins.top(), outerWidth);
 	_cancel->moveToRight(margins.right(), margins.top(), outerWidth);
+	if (_open) {
+		_open->moveToRight(0, 0, outerWidth);
+	}
 	return _st.height;
 }
 
 QMargins TabbedSearchField::getMargins() const {
+	if (_content) {
+		return {};
+	}
 	// 外层控件覆盖完整阴影，内容尺寸仍按输入框本身计算。
 	const auto tight = BoxShadow::ExtendFor(st::searchFieldShadowTight);
 	const auto wide = BoxShadow::ExtendFor(st::searchFieldShadowWide);

@@ -498,7 +498,7 @@ EmojiPickerOverlay::selectedValue() const {
 void EmojiPickerOverlay::setupSearch() {
 	_search = Ui::CreateChild<Ui::TabbedSearchField>(
 		this,
-		st::defaultTabbedSearch);
+		st::defaultTabbedSearch, true);
 	_search->hide();
 
 	_notFound = Ui::CreateChild<Ui::FlatLabel>(

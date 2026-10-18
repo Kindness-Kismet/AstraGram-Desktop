@@ -25,7 +25,8 @@ class CrossButton;
 
 class TabbedSearchField final : public RpWidget {
 public:
-	TabbedSearchField(QWidget *parent, const style::TabbedSearch &st);
+	TabbedSearchField(QWidget *parent, const style::TabbedSearch &st,
+		bool content = false);
 	[[nodiscard]] QMargins getMargins() const override;
 
 	[[nodiscard]] rpl::producer<> escapes() const;
@@ -48,7 +49,10 @@ private:
 	void dropFocus();
 
 	const style::TabbedSearch &_st;
+	const bool _content;
 	const style::InputField _fieldStyle;
+	IconButton *_open = nullptr;
+	bool _expanded = false;
 	not_null<InputField*> _field;
 	not_null<CrossButton*> _cancel;
 	QPointer<QWidget> _focusTakenFrom;
