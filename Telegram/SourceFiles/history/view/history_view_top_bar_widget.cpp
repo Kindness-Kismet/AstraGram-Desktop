@@ -30,6 +30,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/fade_wrap.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/fields/input_field.h"
+#include "ui/search_field_controller.h"
+#include "styles/style_td_common.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/shadow.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
@@ -544,7 +546,7 @@ bool TopBarWidget::eventFilter(QObject *obj, QEvent *e) {
 }
 
 int TopBarWidget::resizeGetHeight(int newWidth) {
-	return st::topBarHeight;
+	return st::topBarHeight + (_searchMode ? st::contentSearchHeight : 0);
 }
 
 void TopBarWidget::paintEvent(QPaintEvent *e) {
@@ -556,10 +558,7 @@ void TopBarWidget::paintEvent(QPaintEvent *e) {
 
 	const auto selectedButtonsTop = countSelectedButtonsTop(
 		_selectedShown.value(showSelectedActions() ? 1. : 0.));
-	const auto searchFieldTop = _searchField
-		? countSelectedButtonsTop(_searchShown.value(_searchMode ? 1. : 0.))
-		: -st::topBarHeight;
-	const auto slidingTop = std::max(selectedButtonsTop, searchFieldTop);
+	const auto slidingTop = selectedButtonsTop;
 
 	p.fillRect(rect(), ExtrasFeatures::WindowMaterial::surfaceColor(this, st::topBarBg->c));
 	if (slidingTop < 0) {
@@ -1188,11 +1187,7 @@ void TopBarWidget::updateControlsGeometry() {
 		_jumpToDate.destroy();
 		_chooseFromUser.destroy();
 	}
-	auto searchFieldTop = _searchField
-		? countSelectedButtonsTop(_searchShown.value(_searchMode ? 1. : 0.))
-		: -st::topBarHeight;
-	const auto otherButtonsTop = std::max(selectedButtonsTop, searchFieldTop)
-		+ st::topBarHeight;
+	const auto otherButtonsTop = selectedButtonsTop + st::topBarHeight;
 	const auto backButtonTop = selectedButtonsTop + st::topBarHeight;
 	updateSelectionGeometry(selectedButtonsTop);
 
@@ -1227,13 +1222,9 @@ void TopBarWidget::updateControlsGeometry() {
 	}
 
 	if (_searchField) {
-		const auto fieldLeft = _back->isHidden()
-			? st::topBarArrowPadding.right()
-			: _leftTaken;
-		const auto fieldTop = searchFieldTop
-			+ (height() - _searchField->height()) / 2;
-		const auto fieldRight = st::dialogsFilterSkip
-			+ st::dialogsFilterPadding.x();
+		const auto fieldLeft = st::contentSearchPadding;
+		const auto fieldTop = st::topBarHeight + style::ConvertScale(4);
+		const auto fieldRight = st::contentSearchPadding;
 		const auto fieldWidth = width() - fieldLeft - fieldRight;
 		_searchField->setGeometryToLeft(
 			fieldLeft,
@@ -1518,7 +1509,9 @@ bool TopBarWidget::toggleSearch(bool shown, anim::type animated) {
 	}
 	_searchMode = shown;
 	if (shown && !_searchField) {
-		_searchField.create(this, st::dialogsFilter, tr::lng_dlg_filter());
+		_searchField.create(this, st::contentSearchField, tr::lng_dlg_filter());
+		Ui::setupContentSearchField(_searchField.data());
+		_searchField->setObjectName(u"contentSearch.field"_q);
 		_searchField->setFocusPolicy(Qt::StrongFocus);
 		_searchField->customUpDown(true);
 		_searchField->show();
@@ -1550,6 +1543,7 @@ bool TopBarWidget::toggleSearch(bool shown, anim::type animated) {
 		Assert(_searchField != nullptr);
 	}
 	_searchModeChanges.fire_copy(shown);
+	resizeToWidth(width());
 	_searchQuery = shown ? _searchField->getLastText() : QString();
 	if (animated == anim::type::normal) {
 		_searchShown.start(

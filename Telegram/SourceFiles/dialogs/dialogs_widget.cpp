@@ -108,6 +108,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_dialogs_widget.h"
 #include "styles/style_extras_styles.h"
 #include "styles/style_info.h"
+#include "styles/style_td_common.h"
 #include "styles/style_window.h"
 #include "base/qt/qt_common_adapters.h"
 
@@ -2703,6 +2704,7 @@ void Widget::refreshTopBars() {
 			_subsectionTopBar->searchModeChanges(
 			) | rpl::on_next([=](bool) {
 				updateStoriesVisibility();
+				updateControlsGeometry();
 			}, _subsectionTopBar->lifetime());
 			_subsectionTopBar->jumpToDateRequest(
 			) | rpl::on_next([=] {
@@ -5025,11 +5027,13 @@ void Widget::updateControlsGeometry() {
 	const auto filterWidth = std::max(ratiow, smallw)
 		- filterLeft
 		- filterRight;
-	const auto filterAreaHeight = st::topBarHeight;
+	const auto filterAreaHeight = st::topBarHeight
+		+ ((_subsectionTopBar && _subsectionTopBar->searchMode())
+			? st::contentSearchHeight : 0);
 	_searchControls->setGeometry(0, filterAreaTop, ratiow, filterAreaHeight);
 	if (_subsectionTopBar) {
 		_subsectionTopBar->setGeometryWithNarrowRatio(
-			QRect(0, 0, ratiow, st::topBarHeight),
+			QRect(0, 0, ratiow, filterAreaHeight),
 			_narrowWidth,
 			narrowRatio);
 	}
