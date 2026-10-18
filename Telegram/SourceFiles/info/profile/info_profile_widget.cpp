@@ -257,6 +257,7 @@ void Widget::setupTabsStripFloat() {
 
 	rpl::combine(
 		widthValue(),
+		_pinnedToTop->heightValue(),
 		host->stripWidget()->heightValue(),
 		host->stripWidget()->naturalWidthValue()
 	) | rpl::on_next([=] {

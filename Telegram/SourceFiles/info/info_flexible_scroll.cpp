@@ -63,12 +63,20 @@ void SetupFlexibleRegularScroll(
 	}, pinnedToTop->lifetime());
 
 	const auto applyTop = [=](int top) {
-		const auto height = std::clamp(max - top, min, max);
+		const auto currentMin = pinnedToTop->minimumHeight();
+		const auto currentMax = pinnedToTop->maximumHeight();
+		const auto height = std::clamp(currentMax - top, currentMin, currentMax);
 		if (pinnedToTop->height() != height) {
 			pinnedToTop->resize(pinnedToTop->width(), height);
 		}
-		scroll->setVerticalBarTopSkip(height - min);
+		scroll->setVerticalBarTopSkip(height - currentMin);
 	};
+	pinnedToTop->heightValue() | rpl::on_next([=] {
+		const auto currentMin = pinnedToTop->minimumHeight();
+		setScrollTopSkip(currentMin);
+		setInnerTopReserve(pinnedToTop->maximumHeight() - currentMin);
+		setPaintPadding({ 0, currentMin, 0, 0 });
+	}, pinnedToTop->lifetime());
 	scroll->scrollTopValue(
 	) | rpl::on_next(applyTop, pinnedToTop->lifetime());
 	applyTop(scroll->scrollTop());

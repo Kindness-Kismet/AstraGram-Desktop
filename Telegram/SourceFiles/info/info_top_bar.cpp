@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/fade_wrap.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/search_field_controller.h"
+#include "styles/style_td_common.h"
 #include "data/data_session.h"
 #include "data/data_channel.h"
 #include "data/data_user.h"
@@ -106,7 +107,7 @@ void TopBar::setTitle(TitleDescriptor descriptor) {
 			!selectionMode() && !storiesTitle(),
 			anim::type::instant);
 		registerToggleControlCallback(_subtitle.data(), [=] {
-			return !selectionMode() && !storiesTitle() && !searchMode();
+			return !selectionMode() && !storiesTitle();
 		});
 	}
 	_title = Ui::CreateChild<Ui::FadeWrap<Ui::FlatLabel>>(
@@ -121,7 +122,7 @@ void TopBar::setTitle(TitleDescriptor descriptor) {
 		!selectionMode() && !storiesTitle(),
 		anim::type::instant);
 	registerToggleControlCallback(_title.data(), [=] {
-		return !selectionMode() && !storiesTitle() && !searchMode();
+		return !selectionMode() && !storiesTitle();
 	});
 	if (descriptor.badge) {
 		_badge = Ui::CreateChild<Ui::FadeWrap<Ui::FlatLabel>>(
@@ -136,7 +137,7 @@ void TopBar::setTitle(TitleDescriptor descriptor) {
 			!selectionMode() && !storiesTitle(),
 			anim::type::instant);
 		registerToggleControlCallback(_badge.data(), [=] {
-			return !selectionMode() && !storiesTitle() && !searchMode();
+			return !selectionMode() && !storiesTitle();
 		});
 		_badge->setAttribute(Qt::WA_TransparentForMouseEvents);
 		_badge->widthValue(
@@ -189,7 +190,7 @@ void TopBar::createSearchView(
 		rpl::producer<bool> &&shown,
 		bool startsFocused) {
 	setSearchField(
-		controller->createField(this, _st.searchRow.field),
+		controller->createField(this, st::contentSearchField),
 		std::move(shown),
 		startsFocused);
 }
@@ -264,13 +265,15 @@ void TopBar::createSearchView(
 		bool startsFocused) {
 	_searchView = base::make_unique_q<Ui::FixedHeightWidget>(
 		this,
-		_st.searchRow.height);
+		st::contentSearchHeight);
 	auto wrap = _searchView.get();
 	registerUpdateControlCallback(wrap, [=](anim::type) {
-		wrap->setVisible(!selectionMode() && _searchModeAvailable);
+		wrap->setVisible(!selectionMode() && searchMode());
 	});
 
 	_searchField = field;
+	field->setObjectName(u"contentSearch.field"_q);
+	Ui::setupContentSearchField(field);
 	field->customUpDown(true);
 	auto fieldWrap = Ui::CreateChild<Ui::FadeWrap<Ui::InputField>>(
 		wrap,
@@ -297,6 +300,7 @@ void TopBar::createSearchView(
 
 	auto button = base::make_unique_q<Ui::IconButton>(this, _st.search);
 	auto search = button.get();
+	search->setObjectName(u"contentSearch.open"_q);
 	search->setAccessibleName(tr::lng_dlg_filter(tr::now));
 	search->addClickHandler([=] { showSearch(); });
 	auto searchWrap = pushButton(std::move(button));
@@ -308,7 +312,8 @@ void TopBar::createSearchView(
 
 	auto cancel = Ui::CreateChild<Ui::CrossButton>(
 		wrap,
-		_st.searchRow.fieldCancel);
+		st::contentSearchClose);
+	cancel->setObjectName(u"contentSearch.close"_q);
 	cancel->setAccessibleName(tr::lng_sr_cancel_search(tr::now));
 	registerToggleControlCallback(cancel, [=] {
 		return !selectionMode() && searchMode();
@@ -335,24 +340,19 @@ void TopBar::createSearchView(
 
 	wrap->widthValue(
 	) | rpl::on_next([=](int newWidth) {
-		auto availableWidth = newWidth
-			- _st.searchRow.fieldCancelSkip;
+		auto availableWidth = newWidth - 2 * st::contentSearchPadding;
 		fieldWrap->resizeToWidth(availableWidth);
 		fieldWrap->moveToLeft(
-			_st.searchRow.padding.left(),
-			_st.searchRow.padding.top());
-		cancel->moveToRight(0, 0);
+			st::contentSearchPadding, style::ConvertScale(4));
+		cancel->moveToRight(st::contentSearchPadding, style::ConvertScale(4));
 	}, wrap->lifetime());
 
 	widthValue(
 	) | rpl::on_next([=](int newWidth) {
-		auto left = _back
-			? _st.back.width
-			: _st.titlePosition.x();
 		wrap->setGeometryToLeft(
-			left,
 			0,
-			newWidth - left,
+			_st.height,
+			newWidth,
 			wrap->height(),
 			newWidth);
 	}, wrap->lifetime());
@@ -389,7 +389,8 @@ void TopBar::removeButton(not_null<Ui::RpWidget*> button) {
 
 int TopBar::resizeGetHeight(int newWidth) {
 	updateControlsGeometry(newWidth);
-	return _st.height;
+	return _st.height + (searchMode() && !selectionMode()
+		? st::contentSearchHeight : 0);
 }
 
 void TopBar::updateControlsGeometry(int newWidth) {
@@ -557,6 +558,7 @@ void TopBar::updateControlsVisibility(anim::type animated) {
 			++i;
 		}
 	}
+	resizeToWidth(width());
 }
 
 void TopBar::setStories(rpl::producer<Dialogs::Stories::Content> content) {

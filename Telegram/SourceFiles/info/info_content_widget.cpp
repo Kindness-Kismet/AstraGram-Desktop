@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "menu/menu_send.h"
 #include "ui/controls/swipe_handler.h"
 #include "ui/widgets/buttons.h"
+#include "styles/style_td_common.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/wrap/padding_wrap.h"
@@ -361,7 +362,7 @@ rpl::producer<int> ContentWidget::desiredHeightValue() const {
 }
 
 void ContentWidget::setInnerFocus() {
-	if (_searchField) {
+	if (_searchField && (!_contentSearch || _contentSearch->expanded())) {
 		_searchField->setFocus();
 	} else {
 		_innerWrap->entity()->setFocus();
@@ -431,6 +432,8 @@ void ContentWidget::checkBeforeCloseByEscape(Fn<void()> close) {
 	if (_searchField) {
 		if (!_searchField->empty()) {
 			_searchField->setText({});
+		} else if (_contentSearch && _contentSearch->expanded()) {
+			_contentSearch->cancel();
 		} else {
 			close();
 		}
@@ -493,27 +496,43 @@ bool ContentWidget::processScrollKey(not_null<QKeyEvent*> e) {
 void ContentWidget::refreshSearchField(bool shown) {
 	auto search = _controller->searchFieldController();
 	if (search && shown) {
-		auto rowView = search->createRowView(
-			this,
-			st::infoLayerMediaSearch);
-		_searchWrap = std::move(rowView.wrap);
-		_searchField = rowView.field;
+		if (_searchWrap) {
+			return;
+		}
+		auto row = base::make_unique_q<Ui::ContentSearchRow>(
+			this, tr::lng_dlg_filter(), search->query());
+		_contentSearch = row.get();
+		_searchField = row->field();
+		_searchWrap = std::move(row);
 		_searchField->customUpDown(true);
+		_searchField->changes() | rpl::on_next([=] {
+			search->setQuery(_searchField->getLastText());
+		}, _searchField->lifetime());
+		const auto open = Ui::CreateChild<Ui::IconButton>(
+			this, st::contentSearchOpen);
+		_searchWrap->lifetime().add([=] { delete open; });
+		open->setObjectName(u"contentSearch.open"_q);
+		open->setClickedCallback([=] { _contentSearch->setExpanded(true); });
+		_contentSearch->expandedValue() | rpl::on_next([=](bool expanded) {
+			open->setVisible(!expanded);
+			setScrollTopSkip(expanded
+				? st::contentSearchHeight : st::contentSearchOpen.height);
+		}, open->lifetime());
 
 		const auto view = _searchWrap.get();
 		widthValue(
 		) | rpl::on_next([=](int newWidth) {
 			view->resizeToWidth(newWidth);
 			view->moveToLeft(0, 0);
+			open->moveToRight(st::contentSearchPadding, 0);
 		}, view->lifetime());
 		view->show();
-		_searchField->setFocus();
-		setScrollTopSkip(view->heightNoMargins() - st::lineWidth);
 	} else if (_searchWrap) {
 		if (Ui::InFocusChain(this)) {
 			setFocus();
 		}
 		_searchWrap = nullptr;
+		_contentSearch = nullptr;
 		setScrollTopSkip(0);
 	}
 }

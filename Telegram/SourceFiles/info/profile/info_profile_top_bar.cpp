@@ -85,6 +85,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/numbers_animation.h"
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/fields/input_field.h"
+#include "ui/search_field_controller.h"
+#include "styles/style_td_common.h"
 #include "ui/top_background_gradient.h"
 #include "ui/ui_utility.h"
 #include "ui/widgets/buttons.h"
@@ -1943,7 +1945,7 @@ void TopBar::updateLabelsPosition() {
 	}
 	_progress = [&] {
 		const auto max = QWidget::maximumHeight();
-		const auto min = _minForProgress;
+		const auto min = _minForProgress + (_tabSearchShown ? st::contentSearchHeight : 0);
 		const auto p = _savedMessages
 			? 0.
 			: (max > min)
@@ -2493,30 +2495,13 @@ void TopBar::showTabSearch() {
 		bar->toggle(false, anim::type::instant);
 
 		const auto inner = bar->entity();
-		inner->paintRequest(
-		) | rpl::on_next([=] {
-			auto p = QPainter(inner);
-			auto hq = PainterHighQualityEnabler(p);
-			const auto radius = _roundEdges ? st::boxRadius : 0;
-			p.setPen(Qt::NoPen);
-			p.setBrush(_st.bg);
-			p.drawRoundedRect(
-				inner->rect() + QMargins(0, 0, 0, radius),
-				radius,
-				radius);
-			const auto line = st::lineWidth;
-			p.fillRect(
-				0,
-				inner->height() - line,
-				inner->width(),
-				line,
-				st::shadowFg);
-		}, inner->lifetime());
 
 		_tabSearchField = Ui::CreateChild<Ui::InputField>(
 			inner,
-			_st.searchRow.field,
+			st::contentSearchField,
 			tr::lng_dlg_filter());
+		_tabSearchField->setObjectName(u"contentSearch.field"_q);
+		Ui::setupContentSearchField(_tabSearchField);
 		_tabSearchField->changes(
 		) | rpl::on_next([=] {
 			if (const auto onstack = _tabApplySearch) {
@@ -2524,20 +2509,27 @@ void TopBar::showTabSearch() {
 			}
 		}, _tabSearchField->lifetime());
 
-		const auto cancel = Ui::CreateChild<Ui::IconButton>(
+		const auto cancel = Ui::CreateChild<Ui::CrossButton>(
 			inner,
-			st::infoTopBarBlackClose);
+			st::contentSearchClose);
+		cancel->setObjectName(u"contentSearch.close"_q);
 		cancel->setAccessibleName(tr::lng_sr_cancel_search(tr::now));
-		cancel->show();
+		cancel->show(anim::type::instant);
 		cancel->addClickHandler([=] {
 			cancelTabSearch();
 		});
 		inner->widthValue(
 		) | rpl::on_next([=](int newWidth) {
-			cancel->moveToRight(0, 0, newWidth);
+			cancel->moveToRight(st::contentSearchPadding, style::ConvertScale(4), newWidth);
 		}, cancel->lifetime());
 
 		_tabSearchField->show();
+	}
+	if (!_tabSearchShown) {
+		_tabSearchShown = true;
+		QWidget::setMinimumHeight(minimumHeight() + st::contentSearchHeight);
+		QWidget::setMaximumHeight(maximumHeight() + st::contentSearchHeight);
+		resize(width(), minimumHeight());
 	}
 	_tabSearchShown = true;
 	updateTabSwapVisibility();
@@ -2553,6 +2545,9 @@ void TopBar::hideTabSearch() {
 		return;
 	}
 	_tabSearchShown = false;
+	QWidget::setMinimumHeight(minimumHeight() - st::contentSearchHeight);
+	QWidget::setMaximumHeight(maximumHeight() - st::contentSearchHeight);
+	resize(width(), height() - st::contentSearchHeight);
 	if (_back) {
 		Backdrop(_back->entity())->setBackdropColor(buttonsColorOverride());
 	}
@@ -2598,25 +2593,21 @@ void TopBar::raiseTabSearchOverlay() {
 		return;
 	}
 	_tabSearchBar->raise();
-	if (_back) {
-		_back->raise();
-		Backdrop(_back->entity())->setBackdropColor(std::nullopt);
-	}
 }
 
 void TopBar::updateTabSearchGeometry() {
 	if (!_tabSearchBar || width() <= 0) {
 		return;
 	}
-	const auto barHeight = QWidget::minimumHeight();
+	const auto barHeight = st::contentSearchHeight;
 	const auto inner = _tabSearchBar->entity();
 	inner->resize(width(), barHeight);
-	_tabSearchBar->move(0, 0);
+	_tabSearchBar->move(0, minimumHeight() - barHeight);
 
-	const auto fieldLeft = titleMostLeft();
+	const auto fieldLeft = st::contentSearchPadding;
 	const auto fieldWidth = width()
 		- fieldLeft
-		- _st.searchRow.fieldCancelSkip;
+		- st::contentSearchPadding;
 	if (fieldWidth > 0) {
 		_tabSearchField->resize(fieldWidth, _tabSearchField->height());
 		_tabSearchField->moveToLeft(

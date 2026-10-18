@@ -36,6 +36,7 @@ struct SwipeHandlerArgs;
 class RoundRect;
 class ScrollArea;
 class InputField;
+class ContentSearchRow;
 struct ScrollToRequest;
 template <typename Widget>
 class PaddingWrap;
@@ -251,6 +252,7 @@ private:
 	object_ptr<Ui::ScrollArea> _scroll;
 	Ui::PaddingWrap<Ui::RpWidget> *_innerWrap = nullptr;
 	base::unique_qptr<Ui::RpWidget> _searchWrap = nullptr;
+	Ui::ContentSearchRow *_contentSearch = nullptr;
 	QPointer<Ui::InputField> _searchField;
 	int _innerDesiredHeight = 0;
 	int _innerTopReserve = 0;
