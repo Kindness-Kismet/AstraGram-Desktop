@@ -83,6 +83,7 @@ void Widget::setupHeader() {
 			}),
 			_inner->fullCountValue(),
 			controller()->searchFieldController());
+		_header->setContentSearch(controller()->wrap() != Wrap::Layer);
 		_header->setObjectName(u"downloads/header"_q);
 		if (const auto field = _header->searchField()) {
 			field->setObjectName(u"downloads/search"_q);
@@ -103,7 +104,9 @@ void Widget::setupHeader() {
 		scrollTo({ 0, -1 });
 	}, _typeTiles->lifetime());
 	_typeTiles->show();
-	widthValue() | rpl::on_next([=](int width) {
+	rpl::combine(widthValue(), _header
+		? _header->heightValue() : rpl::single(0)
+	) | rpl::on_next([=](int width, int) {
 		auto top = 0;
 		if (_header) {
 			_header->resizeToWidth(width);

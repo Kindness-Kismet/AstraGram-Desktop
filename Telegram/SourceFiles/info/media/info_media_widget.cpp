@@ -153,13 +153,17 @@ void Widget::setupGallery() {
 		controller()->section().mediaType(),
 		_inner,
 		controller()->searchFieldController());
+	_header->setContentSearch(controller()->wrap() != Wrap::Layer);
+	_header->heightValue() | rpl::on_next([=](int height) {
+		setScrollTopSkip(height);
+	}, lifetime());
 	widthValue(
 	) | rpl::on_next([=](int width) {
 		_header->resizeToWidth(width);
 		_header->moveToLeft(0, 0);
 	}, _header->lifetime());
 	_header->show();
-	setScrollTopSkip(st::infoMediaGalleryHeroHeight);
+	setScrollTopSkip(_header->height());
 	if (const auto field = _header->searchField()) {
 		setCustomSearchField(field);
 	}
@@ -209,9 +213,7 @@ bool Widget::searchAvailable() const {
 }
 
 void Widget::showSearch() {
-	if (const auto field = _header->searchField()) {
-		field->setFocusFast();
-	}
+	_header->showSearch();
 }
 
 bool Widget::processZoomKey(not_null<QKeyEvent*> e) {

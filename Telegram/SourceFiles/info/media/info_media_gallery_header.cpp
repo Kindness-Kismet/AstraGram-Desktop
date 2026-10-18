@@ -15,6 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/labels.h"
 #include "styles/style_info.h"
+#include "styles/style_td_common.h"
 
 namespace Info::Media {
 
@@ -67,6 +68,7 @@ Ui::InputField *GalleryHeader::searchField() const {
 
 void GalleryHeader::setupSearch(
 		not_null<Ui::SearchFieldController*> search) {
+	_search = search;
 	_field = search->createField(this, st::infoMediaGallerySearch).release();
 	_field->customUpDown(true);
 	_field->show();
@@ -85,6 +87,36 @@ void GalleryHeader::setupSearch(
 		_cancel->toggle(shown, anim::type::normal);
 	}, _cancel->lifetime());
 	_cancel->finishAnimating();
+}
+
+void GalleryHeader::setContentSearch(bool enabled) {
+	if (!enabled || !_field || _searchRow) {
+		return;
+	}
+	delete _cancel;
+	_cancel = nullptr;
+	delete _field;
+	_searchRow = Ui::CreateChild<Ui::ContentSearchRow>(
+		this, tr::lng_dlg_filter(), _search->query());
+	_field = _searchRow->field();
+	_field->changes() | rpl::on_next([=] {
+		_search->setQuery(_field->getLastText());
+	}, lifetime());
+	_searchOpen = Ui::CreateChild<Ui::IconButton>(this, st::contentSearchOpen);
+	_searchOpen->setObjectName(u"contentSearch.open"_q);
+	_searchOpen->setClickedCallback([=] { _searchRow->setExpanded(true); });
+	_searchRow->expandedValue() | rpl::on_next([=](bool expanded) {
+		_searchOpen->setVisible(!expanded);
+		resizeToWidth(width());
+	}, lifetime());
+}
+
+void GalleryHeader::showSearch() {
+	if (_searchRow) {
+		_searchRow->setExpanded(true);
+	} else if (_field) {
+		_field->setFocusFast();
+	}
 }
 
 void GalleryHeader::setupZoom(not_null<InnerWidget*> inner) {
@@ -136,7 +168,13 @@ int GalleryHeader::resizeGetHeight(int newWidth) {
 		+ st::infoMediaGalleryTitle.style.font->height / 2;
 	const auto gap = st::infoMediaGalleryTitleGap;
 	auto right = newWidth - padding;
-	if (_field) {
+	if (_searchRow) {
+		_searchOpen->moveToRight(padding,
+			titleCenter - _searchOpen->height() / 2, newWidth);
+		_searchRow->resizeToWidth(newWidth);
+		_searchRow->moveToLeft(0, st::infoMediaGalleryHeroHeight);
+		right -= _searchOpen->width() + gap;
+	} else if (_field) {
 		const auto titleWidth = _title->textMaxWidth()
 			+ st::infoMediaGalleryCountSkip
 			+ _count->textMaxWidth();
@@ -170,7 +208,8 @@ int GalleryHeader::resizeGetHeight(int newWidth) {
 		right = _zoomOut->x() + inset - gap;
 	}
 	layoutTitle(right);
-	return st::infoMediaGalleryHeroHeight;
+	return st::infoMediaGalleryHeroHeight
+		+ (_searchRow ? _searchRow->height() : 0);
 }
 
 void GalleryHeader::layoutTitle(int right) {

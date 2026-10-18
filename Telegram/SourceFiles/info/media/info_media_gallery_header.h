@@ -16,6 +16,7 @@ class InputField;
 class CrossButton;
 class IconButton;
 class SearchFieldController;
+class ContentSearchRow;
 } // namespace Ui
 
 namespace Info::Media {
@@ -37,6 +38,8 @@ public:
 		Ui::SearchFieldController *search);
 
 	[[nodiscard]] Ui::InputField *searchField() const;
+	void setContentSearch(bool enabled);
+	void showSearch();
 
 protected:
 	int resizeGetHeight(int newWidth) override;
@@ -53,6 +56,9 @@ private:
 	Ui::CrossButton *_cancel = nullptr;
 	Ui::IconButton *_zoomOut = nullptr;
 	Ui::IconButton *_zoomIn = nullptr;
+	Ui::IconButton *_searchOpen = nullptr;
+	Ui::ContentSearchRow *_searchRow = nullptr;
+	Ui::SearchFieldController *_search = nullptr;
 
 };
 
