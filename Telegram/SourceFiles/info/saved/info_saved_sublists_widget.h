@@ -21,6 +21,10 @@ namespace Ui {
 class VerticalLayout;
 } // namespace Ui
 
+namespace Info::Profile {
+struct Section;
+} // namespace Info::Profile
+
 namespace Info::Saved {
 
 class SublistsMemento final : public ContentMemento {
@@ -62,7 +66,7 @@ private:
 
 	std::shared_ptr<ContentMemento> doCreateMemento() override;
 
-	void setupOtherTypes();
+	Profile::Section setupOtherTypes();
 
 	const not_null<Ui::VerticalLayout*> _layout;
 	Dialogs::InnerWidget *_list = nullptr;

@@ -28,14 +28,11 @@ namespace Info::Media {
 
 using Type = Storage::SharedMediaType;
 
-[[nodiscard]] std::optional<int> TypeToTabIndex(Type type);
-[[nodiscard]] Type TabIndexToType(int index);
 [[nodiscard]] tr::phrase<> SharedMediaTitle(Type type);
 
-// 共享媒体与下载管理共用画廊布局，“我的收藏”与子会话保持原样。
+// 媒体画廊与下载管理共用布局；投票使用独立的消息列表。
 [[nodiscard]] bool UsesGalleryLayout(
 	not_null<AbstractController*> controller);
-[[nodiscard]] bool UsesGalleryLayout(not_null<ContentMemento*> memento);
 
 class InnerWidget;
 class GalleryHeader;
@@ -135,7 +132,6 @@ public:
 	rpl::producer<SelectedItems> selectedListValue() const override;
 	void selectionAction(SelectionAction action) override;
 
-	void fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) override;
 	bool processZoomKey(not_null<QKeyEvent*> e) override;
 	bool searchAvailable() const override;
 	void showSearch() override;

@@ -21,26 +21,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Info::Profile {
 namespace {
 
-// 分组之间画一条两端留边的细线。
 [[nodiscard]] not_null<Ui::SlideWrap<>*> CreatePlainSeparator(
 		not_null<Ui::VerticalLayout*> layout) {
-	const auto &margins = st::infoProfileGroupDivider;
-	auto line = object_ptr<Ui::FixedHeightWidget>(
-		layout,
-		margins.top() + st::lineWidth + margins.bottom());
-	const auto raw = line.data();
-	raw->paintRequest() | rpl::on_next([=] {
-		auto p = QPainter(raw);
-		p.fillRect(
-			margins.left(),
-			margins.top(),
-			raw->width() - margins.left() - margins.right(),
-			st::lineWidth,
-			Ui::WindowDividerColor());
-	}, raw->lifetime());
 	return layout->add(object_ptr<Ui::SlideWrap<>>(
 		layout,
-		std::move(line)));
+		CreateGroupDivider(layout)));
 }
 
 [[nodiscard]] not_null<Ui::SlideWrap<>*> CreateTitle(
@@ -99,6 +84,26 @@ namespace {
 }
 
 } // namespace
+
+// 资料、收藏与媒体入口共用两端留边的分组细线。
+object_ptr<Ui::RpWidget> CreateGroupDivider(
+		not_null<Ui::RpWidget*> parent) {
+	const auto &margins = st::infoProfileGroupDivider;
+	auto line = object_ptr<Ui::FixedHeightWidget>(
+		parent,
+		margins.top() + st::lineWidth + margins.bottom());
+	const auto raw = line.data();
+	raw->paintRequest() | rpl::on_next([=] {
+		auto p = QPainter(raw);
+		p.fillRect(
+			margins.left(),
+			margins.top(),
+			raw->width() - margins.left() - margins.right(),
+			st::lineWidth,
+			Ui::WindowDividerColor());
+	}, raw->lifetime());
+	return line;
+}
 
 SectionStack::SectionStack(not_null<Ui::VerticalLayout*> layout)
 : _layout(layout) {

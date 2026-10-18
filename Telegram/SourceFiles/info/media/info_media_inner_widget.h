@@ -73,11 +73,10 @@ protected:
 private:
 	int recountHeight();
 	void refreshHeight();
-	// Allows showing additional shared media links and tabs.
-	// Used for shared media in Saved Messages.
+	// 没有独立资料页时提供媒体分类导航。
 	void setupOtherTypes();
 	void createOtherTypes();
-	void createTypeButtons();
+	rpl::producer<bool> createTypeButtons();
 
 	Type type() const;
 

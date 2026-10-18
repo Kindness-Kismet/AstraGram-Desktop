@@ -22,6 +22,9 @@ struct Section {
 	rpl::producer<bool> shown;
 };
 
+[[nodiscard]] object_ptr<Ui::RpWidget> CreateGroupDivider(
+	not_null<Ui::RpWidget*> parent);
+
 class SectionStack final {
 public:
 	explicit SectionStack(not_null<Ui::VerticalLayout*> layout);

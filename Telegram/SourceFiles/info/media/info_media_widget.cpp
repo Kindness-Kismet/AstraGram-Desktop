@@ -14,56 +14,19 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/info_controller.h"
 #include "data/data_session.h"
 #include "main/main_session.h"
-#include "ui/widgets/menu/menu_add_action_callback.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/search_field_controller.h"
 #include "ui/ui_utility.h"
 #include "data/data_peer.h"
 #include "data/data_user.h"
-#include "data/data_channel.h"
 #include "data/data_forum_topic.h"
 #include "data/data_saved_sublist.h"
 #include "lang/lang_keys.h"
 #include "window/window_session_controller.h"
 #include "styles/style_info.h"
-#include "styles/style_menu_icons.h"
 
 namespace Info::Media {
-namespace {
-
-[[nodiscard]] bool UsesGalleryLayout(
-		Section section,
-		PeerData *peer,
-		Data::SavedSublist *sublist) {
-	if (section.type() == Section::Type::Downloads) {
-		return true;
-	}
-	return (section.type() == Section::Type::Media)
-		&& peer
-		&& !peer->sharedMediaInfo()
-		&& !sublist;
-}
-
-} // namespace
-
-std::optional<int> TypeToTabIndex(Type type) {
-	switch (type) {
-	case Type::Photo: return 0;
-	case Type::Video: return 1;
-	case Type::File: return 2;
-	}
-	return std::nullopt;
-}
-
-Type TabIndexToType(int index) {
-	switch (index) {
-	case 0: return Type::Photo;
-	case 1: return Type::Video;
-	case 2: return Type::File;
-	}
-	Unexpected("Index in Info::Media::TabIndexToType()");
-}
 
 tr::phrase<> SharedMediaTitle(Type type) {
 	switch (type) {
@@ -92,15 +55,10 @@ tr::phrase<> SharedMediaTitle(Type type) {
 }
 
 bool UsesGalleryLayout(not_null<AbstractController*> controller) {
-	const auto &key = controller->key();
-	return UsesGalleryLayout(controller->section(), key.peer(), key.sublist());
-}
-
-bool UsesGalleryLayout(not_null<ContentMemento*> memento) {
-	return UsesGalleryLayout(
-		memento->section(),
-		memento->peer(),
-		memento->sublist());
+	const auto section = controller->section();
+	return ((section.type() == Section::Type::Media)
+		&& (section.mediaType() != Type::Poll))
+		|| (section.type() == Section::Type::Downloads);
 }
 
 Memento::Memento(not_null<Controller*> controller)
@@ -186,9 +144,7 @@ Widget::Widget(QWidget *parent, not_null<Controller*> controller)
 		return (e->modifiers() & Qt::ControlModifier)
 			&& _inner->processZoomWheel(e);
 	});
-	if (UsesGalleryLayout(controller)) {
-		setupGallery();
-	}
+	setupGallery();
 }
 
 void Widget::setupGallery() {
@@ -215,26 +171,6 @@ rpl::producer<SelectedItems> Widget::selectedListValue() const {
 
 void Widget::selectionAction(SelectionAction action) {
 	_inner->selectionAction(action);
-}
-
-void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
-	// 画廊页的缩放在页头，日历在顶栏。
-	if (_header || !calendarAvailable()) {
-		return;
-	}
-	if (_inner->canZoomIn()) {
-		addAction(tr::lng_media_zoom_in(tr::now), [=] {
-			_inner->zoomIn();
-		}, &st::menuIconZoomIn);
-	}
-	if (_inner->canZoomOut()) {
-		addAction(tr::lng_media_zoom_out(tr::now), [=] {
-			_inner->zoomOut();
-		}, &st::menuIconZoomOut);
-	}
-	addAction(tr::lng_calendar(tr::now), [=] {
-		showCalendar();
-	}, &st::menuIconSchedule);
 }
 
 bool Widget::calendarAvailable() const {
@@ -269,11 +205,11 @@ rpl::producer<bool> Widget::selectModeValue() const {
 }
 
 bool Widget::searchAvailable() const {
-	return _header && _header->searchField();
+	return _header->searchField() != nullptr;
 }
 
 void Widget::showSearch() {
-	if (const auto field = _header ? _header->searchField() : nullptr) {
+	if (const auto field = _header->searchField()) {
 		field->setFocusFast();
 	}
 }
@@ -294,22 +230,27 @@ bool Widget::processZoomKey(not_null<QKeyEvent*> e) {
 }
 
 rpl::producer<QString> Widget::title() {
-	if (_header) {
-		const auto topic = controller()->key().topic();
-		auto name = topic
-			? Profile::TitleValue(topic)
-			: Profile::NameValue(controller()->key().peer());
-		return rpl::combine(
-			std::move(name),
-			tr::lng_profile_shared_media()
-		) | rpl::map([](const QString &name, const QString &section) {
-			return name + u" "_q + QChar(0x00B7) + u" "_q + section;
-		});
-	}
-	if (controller()->key().peer()->sharedMediaInfo() && isStackBottom()) {
-		return tr::lng_profile_shared_media();
-	}
-	return SharedMediaTitle(controller()->section().mediaType())();
+	const auto &key = controller()->key();
+	auto name = [&]() -> rpl::producer<QString> {
+		if (const auto topic = key.topic()) {
+			return Profile::TitleValue(topic);
+		}
+		if (const auto sublist = key.sublist()) {
+			const auto source = sublist->sublistPeer();
+			return source->isSelf()
+				? tr::lng_my_notes()
+				: Profile::NameValue(source);
+		}
+		return key.peer()->isSelf()
+			? tr::lng_saved_messages()
+			: Profile::NameValue(key.peer());
+	}();
+	return rpl::combine(
+		std::move(name),
+		tr::lng_profile_shared_media()
+	) | rpl::map([](const QString &name, const QString &section) {
+		return name + u" "_q + QChar(0x00B7) + u" "_q + section;
+	});
 }
 
 void Widget::setIsStackBottom(bool isStackBottom) {

@@ -8,19 +8,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/media/info_media_inner_widget.h"
 
 #include <rpl/flatten_latest.h>
-#include "boxes/abstract_box.h"
 #include "info/media/info_media_list_widget.h"
 #include "info/media/info_media_buttons.h"
 #include "info/media/info_media_empty_widget.h"
 #include "info/profile/info_profile_icon.h"
+#include "info/profile/info_profile_section_stack.h"
 #include "info/info_controller.h"
 #include "data/data_forum_topic.h"
 #include "data/data_peer.h"
-#include "extras/features/window_material/window_material.h"
-#include "ui/widgets/discrete_sliders.h"
-#include "ui/widgets/shadow.h"
 #include "ui/widgets/buttons.h"
-#include "ui/widgets/box_content_divider.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/search_field_controller.h"
@@ -43,10 +39,13 @@ InnerWidget::InnerWidget(
 	_list = setupList();
 }
 
-// Allows showing additional shared media links and tabs.
-// Used for shared media in Saved Messages.
+// 没有独立资料页的会话保留分类入口，收藏及来源从资料页导航。
 void InnerWidget::setupOtherTypes() {
-	if (_controller->key().peer()->sharedMediaInfo() && _isStackBottom) {
+	const auto &key = _controller->key();
+	if (_isStackBottom
+		&& key.peer()->sharedMediaInfo()
+		&& !key.peer()->savedSublistsInfo()
+		&& !key.sublist()) {
 		createOtherTypes();
 	} else {
 		_otherTypes.destroy();
@@ -58,9 +57,12 @@ void InnerWidget::createOtherTypes() {
 	_otherTypes.create(this);
 	_otherTypes->show();
 
-	createTypeButtons();
-	ExtrasFeatures::WindowMaterial::watchSurface(
-		_otherTypes->add(object_ptr<Ui::BoxContentDivider>(_otherTypes)));
+	auto shown = createTypeButtons();
+	const auto divider = _otherTypes->add(object_ptr<Ui::SlideWrap<>>(
+		_otherTypes,
+		Profile::CreateGroupDivider(_otherTypes)));
+	divider->setDuration(st::infoSlideDuration)->toggleOn(std::move(shown));
+	divider->finishAnimating();
 
 	_otherTypes->resizeToWidth(width());
 	_otherTypes->heightValue(
@@ -69,7 +71,7 @@ void InnerWidget::createOtherTypes() {
 		_otherTypes->lifetime());
 }
 
-void InnerWidget::createTypeButtons() {
+rpl::producer<bool> InnerWidget::createTypeButtons() {
 	auto wrap = _otherTypes->add(object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 		_otherTypes,
 		object_ptr<Ui::VerticalLayout>(_otherTypes)));
@@ -113,11 +115,9 @@ void InnerWidget::createTypeButtons() {
 	addMediaButton(Type::RoundVoiceFile, st::infoIconMediaVoice);
 	addMediaButton(Type::GIF, st::infoIconMediaGif);
 
-	content->add(object_ptr<Ui::FixedHeightWidget>(
-		content,
-		st::infoProfileSkip));
 	wrap->toggleOn(tracker.atLeastOneShownValue());
 	wrap->finishAnimating();
+	return wrap->toggledValue();
 }
 
 Type InnerWidget::type() const {
@@ -144,7 +144,7 @@ bool InnerWidget::showInternal(not_null<Memento*> memento) {
 
 object_ptr<ListWidget> InnerWidget::setupList() {
 	auto result = object_ptr<ListWidget>(this, _controller);
-	result->setGalleryLayout(UsesGalleryLayout(_controller));
+	result->setGalleryLayout(true);
 	result->heightValue(
 	) | rpl::on_next(
 		[this] { refreshHeight(); },
@@ -212,7 +212,7 @@ int InnerWidget::recountHeight() {
 	auto top = 0;
 	if (_otherTypes) {
 		_otherTypes->moveToLeft(0, top);
-		top += _otherTypes->heightNoMargins() - st::lineWidth;
+		top += _otherTypes->heightNoMargins();
 	}
 	auto listHeight = 0;
 	if (_list) {

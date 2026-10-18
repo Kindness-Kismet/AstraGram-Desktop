@@ -530,12 +530,9 @@ void WrapWidget::setupTopBarMenuToggle() {
 		button->addClickHandler([=] {
 			_controller->showSettings(::Settings::InformationId());
 		});
-	} else if (section.type() == Section::Type::Media) {
-		if (Media::UsesGalleryLayout(_controller.get())) {
-			addMediaTopBarButtons();
-		} else {
-			addTopBarMenuButton();
-		}
+	} else if (section.type() == Section::Type::Media
+		&& Media::UsesGalleryLayout(_controller.get())) {
+		addMediaTopBarButtons();
 	} else if (section.type() == Section::Type::Downloads) {
 		auto &manager = Core::App().downloadManager();
 		rpl::merge(

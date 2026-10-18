@@ -12,15 +12,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_session.h"
 #include "data/data_user.h"
 #include "dialogs/dialogs_inner_widget.h"
-#include "extras/features/window_material/window_material.h"
 #include "history/view/history_view_chat_section.h"
 #include "info/media/info_media_buttons.h"
 #include "info/profile/info_profile_icon.h"
+#include "info/profile/info_profile_section_stack.h"
 #include "info/info_controller.h"
 #include "info/info_memento.h"
 #include "main/main_session.h"
 #include "lang/lang_keys.h"
-#include "ui/widgets/box_content_divider.h"
 #include "ui/widgets/buttons.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
@@ -53,14 +52,23 @@ SublistsWidget::SublistsWidget(
 	not_null<Controller*> controller)
 : ContentWidget(parent, controller)
 , _layout(setInnerWidget(object_ptr<Ui::VerticalLayout>(this))) {
-	setupOtherTypes();
+	auto stack = Profile::SectionStack(_layout);
+	stack.addTitle(tr::lng_profile_shared_media());
+	stack.add(setupOtherTypes());
+	stack.addPlainSeparator();
 
-	_list = _layout->add(object_ptr<Dialogs::InnerWidget>(
-		this,
+	auto list = object_ptr<Dialogs::InnerWidget>(
+		_layout,
 		controller->parentController(),
-		rpl::single(Dialogs::InnerWidget::ChildListShown())));
+		rpl::single(Dialogs::InnerWidget::ChildListShown()));
+	_list = list.data();
 	_list->showSavedSublists();
 	_list->setNarrowRatio(0.);
+	stack.add({
+		.widget = std::move(list),
+		.shown = _list->heightValue() | rpl::map(rpl::mappers::_1 > 0),
+	});
+	stack.finalize();
 
 	_list->chosenRow() | rpl::on_next([=](Dialogs::ChosenRow row) {
 		if (const auto sublist = row.key.sublist()) {
@@ -93,15 +101,11 @@ SublistsWidget::SublistsWidget(
 	});
 }
 
-void SublistsWidget::setupOtherTypes() {
-	auto wrap = _layout->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			_layout,
-			object_ptr<Ui::VerticalLayout>(_layout)));
+Profile::Section SublistsWidget::setupOtherTypes() {
+	auto wrap = object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+		_layout,
+		object_ptr<Ui::VerticalLayout>(_layout));
 	auto content = wrap->entity();
-	content->add(object_ptr<Ui::FixedHeightWidget>(
-		content,
-		st::infoProfileSkip));
 
 	using Type = Media::Type;
 	auto tracker = Ui::MultiSlideTracker();
@@ -133,17 +137,13 @@ void SublistsWidget::setupOtherTypes() {
 	addMediaButton(Type::RoundVoiceFile, st::infoIconMediaVoice);
 	addMediaButton(Type::GIF, st::infoIconMediaGif);
 
-	content->add(object_ptr<Ui::FixedHeightWidget>(
-		content,
-		st::infoProfileSkip));
 	wrap->toggleOn(tracker.atLeastOneShownValue());
 	wrap->finishAnimating();
-
-	ExtrasFeatures::WindowMaterial::watchSurface(
-		_layout->add(object_ptr<Ui::BoxContentDivider>(_layout)));
-	_layout->add(object_ptr<Ui::FixedHeightWidget>(
-		content,
-		st::infoProfileSkip));
+	auto shown = wrap->toggledValue();
+	return {
+		.widget = std::move(wrap),
+		.shown = std::move(shown),
+	};
 }
 
 rpl::producer<QString> SublistsWidget::title() {
