@@ -460,7 +460,7 @@ void GiftButton::toggleSelected(
 	} else if (!_check) {
 		_check = std::make_unique<Overview::Layout::Checkbox>(
 			[=] { update(); },
-			st::overviewSmallCheck);
+			st::overviewCheck);
 	}
 	if (_selected == selected) {
 		if (animated == anim::type::instant) {

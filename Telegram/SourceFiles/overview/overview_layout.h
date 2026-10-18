@@ -17,7 +17,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 class Image;
 
 namespace style {
-struct RoundCheckbox;
 struct OverviewFileLayout;
 } // namespace style
 
@@ -100,7 +99,6 @@ protected:
 		QPoint position,
 		bool selected,
 		const PaintContext *context);
-	[[nodiscard]] virtual const style::RoundCheckbox &checkboxStyle() const;
 
 private:
 	void ensureCheckboxCreated();
@@ -410,7 +408,6 @@ protected:
 	bool dataFinished() const override;
 	bool dataLoaded() const override;
 	bool iconAnimated() const override;
-	const style::RoundCheckbox &checkboxStyle() const override;
 
 private:
 	void ensureDataMediaCreated() const;
@@ -474,7 +471,6 @@ protected:
 	bool dataFinished() const override;
 	bool dataLoaded() const override;
 	bool iconAnimated() const override;
-	const style::RoundCheckbox &checkboxStyle() const override;
 
 private:
 	[[nodiscard]] bool downloadInCorner() const;
@@ -530,9 +526,6 @@ public:
 		StateRequest request) const override;
 
 	void clearHeavyPart() override;
-
-protected:
-	const style::RoundCheckbox &checkboxStyle() const override;
 
 private:
 	void ensurePhotoMediaCreated();

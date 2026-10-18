@@ -44,18 +44,10 @@ OverviewFileLayout {
 }
 
 overviewCheckPressedSize: 0.8;
-overviewCheck: RoundCheckbox(defaultRoundCheckbox) {
-	bgInactive: overviewCheckBg;
-	bgActive: overviewCheckBgActive;
-	border: overviewCheckBorder;
-	size: 29px;
-	sizeSmall: 0.3;
-	check: icon {{ "overview_photo_check", overviewCheckFgActive, point(4px, 8px) }};
-}
-overviewSmallCheck: RoundCheckbox(defaultPeerListCheck) {
+overviewCheck: RoundCheckbox(defaultPeerListCheck) {
 	border: overviewCheckBorder;
 }
-overviewCheckSkip: 5px;
+overviewCheckSkip: 4px;
 
 overviewPhotoBg: windowBgOver;
 overviewPhotoMinSize: 90px;

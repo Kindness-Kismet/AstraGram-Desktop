@@ -269,10 +269,6 @@ void ItemBase::paintCheckbox(
 	}
 }
 
-const style::RoundCheckbox &ItemBase::checkboxStyle() const {
-	return st::overviewCheck;
-}
-
 void ItemBase::ensureCheckboxCreated() {
 	if (_check) {
 		return;
@@ -280,7 +276,7 @@ void ItemBase::ensureCheckboxCreated() {
 	const auto repaint = [=] {
 		_parent->history()->session().data().requestItemRepaint(_parent);
 	};
-	_check = std::make_unique<Checkbox>(repaint, checkboxStyle());
+	_check = std::make_unique<Checkbox>(repaint, st::overviewCheck);
 }
 
 void RadialProgressItem::setDocumentLinks(
@@ -1189,7 +1185,7 @@ void Voice::paint(Painter &p, const QRect &clip, TextSelection selection, const 
 
 	const auto checkDelta = _st.songThumbSize
 		+ st::overviewCheckSkip
-		- st::overviewSmallCheck.size;
+		- st::overviewCheck.size;
 	const auto checkLeft = _st.songPadding.left() + checkDelta;
 	const auto checkTop = _st.songPadding.top() + checkDelta;
 	paintCheckbox(p, { checkLeft, checkTop }, selected, context);
@@ -1289,10 +1285,6 @@ bool Voice::dataLoaded() const {
 
 bool Voice::iconAnimated() const {
 	return true;
-}
-
-const style::RoundCheckbox &Voice::checkboxStyle() const {
-	return st::overviewSmallCheck;
 }
 
 void Voice::updateName() {
@@ -1632,7 +1624,7 @@ void Document::paint(Painter &p, const QRect &clip, TextSelection selection, con
 
 	const auto checkDelta = (isSong ? _st.songThumbSize : _st.fileThumbSize)
 		+ (isSong ? st::overviewCheckSkip : -st::overviewCheckSkip)
-		- st::overviewSmallCheck.size;
+		- st::overviewCheck.size;
 	const auto checkLeft = (isSong
 		? _st.songPadding.left()
 		: 0) + checkDelta;
@@ -1738,7 +1730,7 @@ void Document::drawCornerDownload(QPainter &p, bool selected, const PaintContext
 		|| !downloadInCorner()) {
 		return;
 	}
-	const auto size = st::overviewSmallCheck.size;
+	const auto size = st::overviewCheck.size;
 	const auto shift = _st.songThumbSize + st::overviewCheckSkip - size;
 	const auto inner = style::rtlrect(_st.songPadding.left() + shift, _st.songPadding.top() + shift, size, size, _width);
 	auto pen = st::windowBg->p;
@@ -1778,7 +1770,7 @@ TextState Document::cornerDownloadTextState(
 		|| _data->loadedInMediaCache()) {
 		return result;
 	}
-	const auto size = st::overviewSmallCheck.size;
+	const auto size = st::overviewCheck.size;
 	const auto shift = _st.songThumbSize + st::overviewCheckSkip - size;
 	const auto inner = style::rtlrect(_st.songPadding.left() + shift, _st.songPadding.top() + shift, size, size, _width);
 	if (inner.contains(point)) {
@@ -1905,10 +1897,6 @@ bool Document::selectionConsumesClick(QPoint point) const {
 		_st.songThumbSize,
 		_width);
 	return !inner.contains(point);
-}
-
-const style::RoundCheckbox &Document::checkboxStyle() const {
-	return st::overviewSmallCheck;
 }
 
 bool Document::songLayout() const {
@@ -2352,7 +2340,7 @@ void Link::paint(Painter &p, const QRect &clip, TextSelection selection, const P
 	}
 
 	const auto checkDelta = st::linksPhotoSize + st::overviewCheckSkip
-		- st::overviewSmallCheck.size;
+		- st::overviewCheck.size;
 	const auto checkLeft = pixLeft + checkDelta;
 	const auto checkTop = pixTop + checkDelta;
 	paintCheckbox(p, { checkLeft, checkTop }, selected, context);
@@ -2515,10 +2503,6 @@ TextState Link::getState(
 		top += st::normalFont->height;
 	}
 	return {};
-}
-
-const style::RoundCheckbox &Link::checkboxStyle() const {
-	return st::overviewSmallCheck;
 }
 
 Link::LinkEntry::LinkEntry(const QString &url, const QString &display)
