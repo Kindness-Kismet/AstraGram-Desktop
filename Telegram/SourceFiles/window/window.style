@@ -37,8 +37,6 @@ columnMinimalWidthMain: 380px;
 columnMinimalWidthThird: 292px;
 columnMaximalWidthThird: 392px;
 
-// 窗口仅保留顶部间距，内容栏之间只留细缝。
-windowCardGap: 2px;
 windowColumnGap: 1px;
 windowCardRadius: 12px;
 windowCardFloatOpenShift: 14px;

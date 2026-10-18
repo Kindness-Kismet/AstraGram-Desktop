@@ -134,23 +134,19 @@ void FiltersMenu::setup() {
 	// 菜单、文件夹、收藏与设置的焦点顺序跟随视觉排列。
 	_outer.setVisualTabOrder(true);
 	_container->setVisualTabOrder(true);
-	const auto gap = st::windowCardGap;
 	_parent->heightValue() | rpl::on_next([=](int height) {
 		const auto width = st::windowFiltersWidth;
 		_outer.setGeometry(0, 0, width, height);
 		_menu.resizeToWidth(width);
-		_menu.move(0, gap);
-		_scroll.setGeometry(0, gap + _menu.height(), width,
-			std::max(0, height - gap - _menu.height()));
+		_menu.move(0, 0);
+		_scroll.setGeometry(0, _menu.height(), width,
+			std::max(0, height - _menu.height()));
 		_container->resizeToWidth(width);
 	}, _outer.lifetime());
 	_outer.paintRequest() | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(&_outer);
 		p.fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(
-			&_outer, ShellBackgroundColor(&_outer)));
-		p.fillRect(QRect(0, gap, _outer.width(),
-			_outer.height() - gap), ExtrasFeatures::WindowMaterial::surfaceColor(
-				&_outer, st::windowBg->c));
+			&_outer, st::windowBg->c));
 	}, _outer.lifetime());
 
 	// 菜单悬停会重绘不透明按钮，圆角遮罩必须跟随按钮一起绘制。
@@ -178,9 +174,8 @@ void FiltersMenu::setup() {
 			return;
 		}
 		auto p = QPainter(overlay);
-		const auto top = gap;
-		p.fillRect(_outer.width() - st::lineWidth, top, st::lineWidth,
-			_outer.height() - top, ShellBackgroundColor(&_outer));
+		p.fillRect(_outer.width() - st::lineWidth, 0, st::lineWidth,
+			_outer.height(), ShellBackgroundColor(&_outer));
 	}, overlay->lifetime());
 	overlay->show();
 

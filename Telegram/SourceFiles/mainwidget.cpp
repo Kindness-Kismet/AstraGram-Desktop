@@ -2827,21 +2827,20 @@ void MainWidget::updateControlsGeometry() {
 		? width()
 		: 0;
 	if (isOneColumn()) {
-		const auto gap = st::windowCardGap;
 		const auto contentWidth = width();
 		if (_callTopBar) {
 			_callTopBar->resizeToWidth(contentWidth);
-			_callTopBar->moveToLeft(0, gap);
+			_callTopBar->moveToLeft(0, 0);
 		}
 		if (_exportTopBar) {
 			_exportTopBar->resizeToWidth(contentWidth);
-			_exportTopBar->moveToLeft(0, gap + _callTopBarHeight);
+			_exportTopBar->moveToLeft(0, _callTopBarHeight);
 		}
 		const auto mainSectionGeometry = QRect(
 			0,
-			mainSectionTop + gap,
+			mainSectionTop,
 			contentWidth,
-			height() - mainSectionTop - gap);
+			height() - mainSectionTop);
 		if (_dialogs) {
 			_dialogs->setGeometryWithTopMoved(
 				mainSectionGeometry,
@@ -2851,10 +2850,9 @@ void MainWidget::updateControlsGeometry() {
 			mainSectionGeometry,
 			_contentScrollAddToY);
 		if (_hider) {
-			_hider->setGeometry(0, gap, contentWidth, height() - gap);
+			_hider->setGeometry(rect());
 		}
 	} else {
-		const auto gap = st::windowCardGap;
 		const auto columnGap = st::windowColumnGap;
 		auto thirdSectionWidth = _thirdSection ? _thirdColumnWidth : 0;
 		if (_dialogs) {
@@ -2874,16 +2872,16 @@ void MainWidget::updateControlsGeometry() {
 		if (_thirdSection) {
 			_thirdSection->setGeometry(
 				width() - thirdSectionWidth,
-				thirdTop + gap,
+				thirdTop,
 				thirdSectionWidth,
-				height() - thirdTop - gap);
+				height() - thirdTop);
 		}
 		if (_dialogs) {
 			_dialogs->setGeometryToLeft(
 				0,
-				gap,
+				0,
 				dialogsWidth,
-				height() - gap);
+				height());
 		}
 		// 卡片间隙已经区分各栏,两条 1px 竖直分隔线设零宽隐藏
 		if (_sideShadow) {
@@ -2899,30 +2897,29 @@ void MainWidget::updateControlsGeometry() {
 		const auto mainSectionWidth = historyWidth;
 		if (_callTopBar) {
 			_callTopBar->resizeToWidth(mainSectionWidth);
-			_callTopBar->moveToLeft(historyLeft, gap);
+			_callTopBar->moveToLeft(historyLeft, 0);
 		}
 		if (_exportTopBar) {
 			_exportTopBar->resizeToWidth(mainSectionWidth);
-			_exportTopBar->moveToLeft(historyLeft, gap + _callTopBarHeight);
+			_exportTopBar->moveToLeft(historyLeft, _callTopBarHeight);
 		}
 		_history->setGeometryWithTopMoved(QRect(
 			historyLeft,
-			mainSectionTop + gap,
+			mainSectionTop,
 			mainSectionWidth,
-			height() - mainSectionTop - gap
+			height() - mainSectionTop
 		), _contentScrollAddToY);
 		if (_hider) {
 			_hider->setGeometryToLeft(
 				historyLeft,
-				gap,
+				0,
 				mainSectionWidth,
-				height() - gap);
+				height());
 		}
 	}
 	if (_mainSection) {
 		const auto geometry = _mainSection->useFullWidth()
-			? QRect(0, mainSectionTop + st::windowCardGap, width(),
-				height() - mainSectionTop - st::windowCardGap)
+			? QRect(0, mainSectionTop, width(), height() - mainSectionTop)
 			: _history->geometry();
 		_mainSection->setGeometryWithTopMoved(
 			geometry,
