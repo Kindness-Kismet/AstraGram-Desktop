@@ -43,9 +43,32 @@ TabbedSelectorTabs::TabbedSelectorTabs(
 
 void TabbedSelectorTabs::setActions(Fn<void()> settings, Fn<void()> close) {
 	_settingsAvailable = bool(settings);
+	_closeEnabled = bool(close);
+	_close->setVisible(_closeEnabled);
 	_settings->setClickedCallback(std::move(settings));
 	_close->setClickedCallback(std::move(close));
 	setSettingsVisible(_settingsAvailable);
+}
+
+void TabbedSelectorTabs::setRightReserved(int width) {
+	_rightReserved = width;
+	resizeToWidth(this->width());
+}
+
+void TabbedSelectorTabs::setAdditionalContentWidthToSection(int index, int width) {
+	Expects(index >= 0 && index < sectionsCount());
+	_additionalWidths.resize(sectionsCount());
+	_additionalWidths[index] = width;
+	resizeToWidth(this->width());
+}
+
+QRect TabbedSelectorTabs::sectionContentRect(int index) const {
+	Expects(index >= 0 && index < _contentRects.size());
+	return _contentRects[index];
+}
+
+rpl::producer<> TabbedSelectorTabs::sectionsGeometryChanges() const {
+	return _geometryChanges.events();
 }
 
 void TabbedSelectorTabs::setSettingsVisible(bool visible) {
@@ -71,19 +94,22 @@ int TabbedSelectorTabs::resizeGetHeight(int newWidth) {
 	const auto buttonTop = (_st.height - _close->height()) / 2;
 	_close->moveToRight(0, buttonTop, newWidth);
 	_settings->moveToRight(_close->width(), buttonTop, newWidth);
-	const auto reserved = _close->width()
+	const auto reserved = (_closeEnabled ? _close->width() : 0)
 		+ (_settingsEnabled ? _settings->width() : 0)
+		+ _rightReserved
 		+ style::ConvertScale(4);
 	const auto available = std::max(0, newWidth - reserved);
 	const auto gap = style::ConvertScale(4);
 	const auto count = sectionsCount();
 	auto labelsWidth = 0;
+	_additionalWidths.resize(count);
+	auto index = 0;
 	for (const auto &section : sectionsRef()) {
-		labelsWidth += section.label.maxWidth();
+		labelsWidth += section.label.maxWidth() + _additionalWidths[index++];
 	}
 	const auto minPadding = style::ConvertScale(4);
 	// 窄侧栏优先显示完整译文，空间不足时收起装饰图标。
-	_showIcons = labelsWidth
+	_showIcons = !_icons.empty() && labelsWidth
 		+ count * (st::emojiTabSmile.width() + gap + minPadding) <= available;
 	const auto iconSkip = _showIcons ? (st::emojiTabSmile.width() + gap) : 0;
 	const auto content = labelsWidth + count * iconSkip;
@@ -94,14 +120,26 @@ int TabbedSelectorTabs::resizeGetHeight(int newWidth) {
 	const auto desired = content + count * padding;
 	const auto factor = desired ? std::min(1., available / double(desired)) : 1.;
 	auto x = 0.;
+	index = 0;
+	auto rects = std::vector<QRect>();
 	for (auto &section : sectionsRef()) {
 		section.left = int(base::SafeRound(x));
-		const auto natural = iconSkip + section.label.maxWidth();
+		const auto natural = iconSkip + section.label.maxWidth() + _additionalWidths[index++];
 		x += (natural + padding) * factor;
 		section.width = int(base::SafeRound(x)) - section.left;
 		section.contentWidth = std::min(natural, std::max(0, section.width - padding));
+		rects.push_back(style::rtlrect(
+			section.left + (section.width - section.contentWidth) / 2,
+			(_st.height - _st.labelStyle.font->height) / 2,
+			section.contentWidth,
+			_st.labelStyle.font->height,
+			newWidth));
 	}
 	stopAnimation();
+	if (_contentRects != rects) {
+		_contentRects = std::move(rects);
+		_geometryChanges.fire({});
+	}
 	return _st.height;
 }
 
@@ -121,7 +159,8 @@ void TabbedSelectorTabs::paintEvent(QPaintEvent *e) {
 			_icons[index]->paint(p, left, (height() - _icons[index]->height()) / 2, width(), color);
 		}
 		const auto iconSkip = _showIcons ? (st::emojiTabSmile.width() + gap) : 0;
-		const auto labelWidth = std::max(0, section.contentWidth - iconSkip);
+		const auto labelWidth = std::max(0,
+			section.contentWidth - iconSkip - _additionalWidths[index]);
 		p.setPen(color);
 		section.label.draw(p, {
 			.position = QPoint(left + iconSkip, (height() - _st.labelStyle.font->height) / 2),

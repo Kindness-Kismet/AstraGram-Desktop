@@ -408,12 +408,6 @@ stickersRemoveSkip: 4px;
 stickersReorderIcon: icon {{ "stickers_reorder", menuIconFg }};
 stickersReorderSkip: 18px;
 
-stickersTabs: SettingsSlider(defaultTabsSlider) {
-	height: 48px;
-	labelFg: windowSubTextFg;
-	labelFgActive: windowActiveTextFg;
-}
-
 stickersRowItem: PeerListItem(defaultPeerListItem) {
 	height: 52px;
 	photoSize: 32px;

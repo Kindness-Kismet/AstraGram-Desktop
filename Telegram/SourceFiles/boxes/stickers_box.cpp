@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/stickers_box.h"
+#include "chat_helpers/tabbed_selector_tabs.h"
 
 #include "apiwrap.h"
 #include "base/timer.h"
@@ -428,7 +429,7 @@ StickersBox::StickersBox(
 : _show(std::move(show))
 , _session(&_show->session())
 , _api(&_session->mtp())
-, _tabs(this, st::stickersTabs)
+, _tabs(this, st::defaultEmojiPan.tabs)
 , _unreadBadge(
 	_tabs.data(),
 	_session->data().stickers().featuredSetsUnreadCountValue())
@@ -441,7 +442,8 @@ StickersBox::StickersBox(
 , _archived((_isMasks ? 1 : 2), this, _show, Section::Archived) {
 	_tabs->setObjectName(u"stickers.tabs"_q);
 	_unreadBadge->setObjectName(u"stickers.featuredCount"_q);
-	_tabs->setRippleTopRoundRadius(st::boxRadius);
+	_tabs->setActions({}, {});
+	_tabs->setRightReserved(st::emojiPanelClose.width);
 }
 
 StickersBox::StickersBox(
@@ -851,8 +853,9 @@ void StickersBox::updateTabsGeometry() {
 			: 0;
 		_tabs->setAdditionalContentWidthToSection(featured, extra);
 	}
-	_tabs->resizeToWidth(width());
-	_tabs->moveToLeft(0, 0);
+	const auto padding = style::ConvertScale(12);
+	_tabs->resizeToWidth(std::max(0, width() - 2 * padding));
+	_tabs->moveToLeft(padding, style::ConvertScale(4));
 	setInnerTopSkip(topSkip());
 	updateUnreadBadgeGeometry();
 }
@@ -874,7 +877,7 @@ void StickersBox::updateUnreadBadgeGeometry() {
 }
 
 int StickersBox::topSkip() const {
-	return _tabs ? (_tabs->height() - st::lineWidth) : 0;
+	return _tabs ? (_tabs->height() + style::ConvertScale(8)) : 0;
 }
 
 void StickersBox::switchTab() {

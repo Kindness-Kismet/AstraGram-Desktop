@@ -12,12 +12,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/layers/box_content.h"
 
 namespace Ui {
-class SettingsSlider;
 class SlideAnimation;
 } // namespace Ui
 
 namespace ChatHelpers {
 class Show;
+class TabbedSelectorTabs;
 } // namespace ChatHelpers
 
 namespace Main {
@@ -128,7 +128,7 @@ private:
 	const not_null<Main::Session*> _session;
 	MTP::Sender _api;
 
-	object_ptr<Ui::SettingsSlider> _tabs = { nullptr };
+	object_ptr<ChatHelpers::TabbedSelectorTabs> _tabs = { nullptr };
 	QList<Section> _tabIndices;
 	bool _ignoreTabActivation = false;
 
