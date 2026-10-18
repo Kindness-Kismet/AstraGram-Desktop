@@ -37,7 +37,14 @@ TabbedSearchField::TabbedSearchField(
 	const style::TabbedSearch &st)
 : RpWidget(parent)
 , _st(st)
-, _field(CreateChild<InputField>(this, _st.field, tr::lng_dlg_filter()))
+, _fieldStyle([&] {
+	auto result = _st.field;
+	result.search = false;
+	result.textBg = result.textBgActive = st::transparent;
+	result.border = result.borderActive = result.borderRadius = 0;
+	return result;
+}())
+, _field(CreateChild<InputField>(this, _fieldStyle, tr::lng_dlg_filter()))
 , _cancel(CreateChild<CrossButton>(this, _st.cancel))
 , _debounceTimer([=] { _debouncedQuery = _query.current(); }) {
 	_field->setObjectName(u"panelSearchField"_q);
@@ -68,6 +75,7 @@ TabbedSearchField::TabbedSearchField(
 
 	_field->focusedChanges(
 	) | rpl::on_next([=] {
+		update();
 		updateCancelShown();
 	}, _field->lifetime());
 
@@ -143,6 +151,17 @@ void TabbedSearchField::returnFocus() {
 		_focusTakenFrom->setFocus();
 	}
 	_focusTakenFrom = nullptr;
+}
+
+void TabbedSearchField::paintEvent(QPaintEvent *e) {
+	auto p = QPainter(this);
+	// 底色和输入内容共用切页缓存坐标，避免图形特效分离两者。
+	InputField::paintSearchBackground(p, _field->geometry(), _st.field,
+		_field->hasFocus() ? 1. : 0., underMouse());
+	st::defaultSearchFieldIcon.paint(p,
+		_field->x() + st::searchFieldPadding,
+		_field->y() + (_field->height() - st::defaultSearchFieldIcon.height()) / 2,
+		width());
 }
 
 int TabbedSearchField::resizeGetHeight(int newWidth) {

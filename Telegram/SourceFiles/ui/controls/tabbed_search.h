@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/timer.h"
 #include "ui/rp_widget.h"
+#include "styles/style_widgets.h"
 #include <rpl/variable.h>
 
 namespace style {
@@ -41,11 +42,13 @@ public:
 	void returnFocus();
 
 private:
+	void paintEvent(QPaintEvent *e) override;
 	int resizeGetHeight(int newWidth) override;
 	void updateCancelShown();
 	void dropFocus();
 
 	const style::TabbedSearch &_st;
+	const style::InputField _fieldStyle;
 	not_null<InputField*> _field;
 	not_null<CrossButton*> _cancel;
 	QPointer<QWidget> _focusTakenFrom;
