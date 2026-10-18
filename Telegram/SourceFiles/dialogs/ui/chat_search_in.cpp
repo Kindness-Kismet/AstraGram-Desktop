@@ -127,52 +127,62 @@ void FillSearchTypeMenu(
 		not_null<Ui::PopupMenu*> menu,
 		Api::SearchFilter current,
 		Fn<void(Api::SearchFilter)> callback) {
-	const auto addAction = [&](Api::SearchFilter filter,
-			const style::icon &icon,
-			const QString &text) {
+	using Filter = Api::SearchFilter;
+	for (const auto filter : {
+			Filter::NoFilter,
+			Filter::Text,
+			Filter::Photo,
+			Filter::Video,
+			Filter::Voice,
+			Filter::Round,
+			Filter::File,
+			Filter::Music,
+			Filter::Gif }) {
 		Menu::AddCheckedAction(
 			menu,
-			text,
+			SearchFilterName(filter),
 			[=] { callback(filter); },
-			&icon,
+			&SearchFilterIcon(filter),
 			(current == filter));
-	};
-	addAction(
-		Api::SearchFilter::NoFilter,
-		st::menuIconTagFilter,
-		tr::extras_SearchFilterAll(tr::now));
-	addAction(
-		Api::SearchFilter::Text,
-		st::menuIconChatBubble,
-		tr::extras_SearchFilterText(tr::now));
-	addAction(
-		Api::SearchFilter::Photo,
-		st::menuIconPhoto,
-		tr::extras_SearchFilterPhoto(tr::now));
-	addAction(
-		Api::SearchFilter::Video,
-		st::menuIconVideoChat,
-		tr::extras_SearchFilterVideo(tr::now));
-	addAction(
-		Api::SearchFilter::Voice,
-		st::menuIconSoundOn,
-		tr::extras_SearchFilterVoice(tr::now));
-	addAction(
-		Api::SearchFilter::Round,
-		st::menuIconVideoChat,
-		tr::extras_SearchFilterRound(tr::now));
-	addAction(
-		Api::SearchFilter::File,
-		st::menuIconFile,
-		tr::extras_SearchFilterFile(tr::now));
-	addAction(
-		Api::SearchFilter::Music,
-		st::menuIconSoundSelect,
-		tr::extras_SearchFilterMusic(tr::now));
-	addAction(
-		Api::SearchFilter::Gif,
-		st::menuIconGif,
-		tr::extras_SearchFilterGif(tr::now));
+	}
+}
+
+const style::icon &SearchFilterIcon(Api::SearchFilter filter) {
+	switch (filter) {
+	case Api::SearchFilter::NoFilter: return st::menuIconTagFilter;
+	case Api::SearchFilter::Pinned: return st::menuIconPin;
+	case Api::SearchFilter::Text: return st::menuIconChatBubble;
+	case Api::SearchFilter::Photo: return st::menuIconPhoto;
+	case Api::SearchFilter::Video: return st::menuIconVideoChat;
+	case Api::SearchFilter::Voice: return st::menuIconSoundOn;
+	case Api::SearchFilter::Round: return st::menuIconVideoChat;
+	case Api::SearchFilter::File: return st::menuIconFile;
+	case Api::SearchFilter::Music: return st::menuIconSoundSelect;
+	case Api::SearchFilter::Gif: return st::menuIconGif;
+	}
+	Unexpected("Unknown search filter.");
+}
+
+QString SearchFilterName(Api::SearchFilter filter) {
+	switch (filter) {
+	case Api::SearchFilter::NoFilter:
+		return tr::extras_SearchFilterAll(tr::now);
+	case Api::SearchFilter::Pinned: Unexpected("Pinned in type filter.");
+	case Api::SearchFilter::Text: return tr::extras_SearchFilterText(tr::now);
+	case Api::SearchFilter::Photo:
+		return tr::extras_SearchFilterPhoto(tr::now);
+	case Api::SearchFilter::Video:
+		return tr::extras_SearchFilterVideo(tr::now);
+	case Api::SearchFilter::Voice:
+		return tr::extras_SearchFilterVoice(tr::now);
+	case Api::SearchFilter::Round:
+		return tr::extras_SearchFilterRound(tr::now);
+	case Api::SearchFilter::File: return tr::extras_SearchFilterFile(tr::now);
+	case Api::SearchFilter::Music:
+		return tr::extras_SearchFilterMusic(tr::now);
+	case Api::SearchFilter::Gif: return tr::extras_SearchFilterGif(tr::now);
+	}
+	Unexpected("Unknown search filter.");
 }
 
 ChatSearchIn::~ChatSearchIn() = default;

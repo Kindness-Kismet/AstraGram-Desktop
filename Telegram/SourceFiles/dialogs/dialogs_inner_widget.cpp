@@ -124,34 +124,6 @@ constexpr auto kStartDragToFilterThresholdY = 75;
 constexpr auto kQueryPreviewLimit = 32;
 constexpr auto kPreviewPostsLimit = 3;
 
-const style::icon &SearchFilterIcon(Api::SearchFilter filter) {
-	switch (filter) {
-	case Api::SearchFilter::NoFilter:
-		return st::menuIconTagFilter;
-	case Api::SearchFilter::Pinned:
-		return st::menuIconPin;
-	case Api::SearchFilter::Text:
-		return st::menuIconChatBubble;
-	case Api::SearchFilter::Photo:
-		return st::menuIconPhoto;
-	case Api::SearchFilter::Video:
-		return st::menuIconVideoChat;
-	case Api::SearchFilter::Voice:
-		return st::menuIconSoundOn;
-	case Api::SearchFilter::Round:
-		return st::menuIconVideoChat;
-	case Api::SearchFilter::File:
-		return st::menuIconFile;
-	case Api::SearchFilter::Music:
-		return st::menuIconSoundSelect;
-	case Api::SearchFilter::Gif:
-		return st::menuIconGif;
-	}
-
-	Unexpected("Unknown search filter.");
-	return st::menuIconTagFilter;
-}
-
 [[nodiscard]] uint64 RowsCacheKey(Entry *entry) {
 	return uint64(reinterpret_cast<quintptr>(entry));
 }
@@ -5631,39 +5603,10 @@ void InnerWidget::updateSearchIn() {
 
 	const auto typeIcon = Ui::MakeIconThumbnail(
 		SearchFilterIcon(_searchState.typeFilter));
-	auto typeName = tr::extras_SearchFilterAll(tr::now);
-	switch (_searchState.typeFilter) {
-	case Api::SearchFilter::NoFilter: break;
-	case Api::SearchFilter::Pinned: Unexpected("Pinned in type filter.");
-	case Api::SearchFilter::Text:
-		typeName = tr::extras_SearchFilterText(tr::now);
-		break;
-	case Api::SearchFilter::Photo:
-		typeName = tr::extras_SearchFilterPhoto(tr::now);
-		break;
-	case Api::SearchFilter::Video:
-		typeName = tr::extras_SearchFilterVideo(tr::now);
-		break;
-	case Api::SearchFilter::Voice:
-		typeName = tr::extras_SearchFilterVoice(tr::now);
-		break;
-	case Api::SearchFilter::Round:
-		typeName = tr::extras_SearchFilterRound(tr::now);
-		break;
-	case Api::SearchFilter::File:
-		typeName = tr::extras_SearchFilterFile(tr::now);
-		break;
-	case Api::SearchFilter::Music:
-		typeName = tr::extras_SearchFilterMusic(tr::now);
-		break;
-	case Api::SearchFilter::Gif:
-		typeName = tr::extras_SearchFilterGif(tr::now);
-		break;
-	}
 	_searchIn->updateType(
 		_searchState.typeFilter,
 		typeIcon,
-		std::move(typeName));
+		SearchFilterName(_searchState.typeFilter));
 }
 
 void InnerWidget::repaintSearchResult(int index) {

@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_search_filter.h"
 #include "base/unique_qptr.h"
 #include "ui/rp_widget.h"
+#include "ui/style/style_core_types.h"
 
 namespace Ui {
 class PlainShadow;
@@ -39,6 +40,10 @@ void FillSearchTypeMenu(
 	not_null<Ui::PopupMenu*> menu,
 	Api::SearchFilter current,
 	Fn<void(Api::SearchFilter)> callback);
+
+// 类型筛选的菜单图标与名称；置顶类型由置顶消息页固定，没有名称。
+[[nodiscard]] const style::icon &SearchFilterIcon(Api::SearchFilter filter);
+[[nodiscard]] QString SearchFilterName(Api::SearchFilter filter);
 
 class ChatSearchIn final : public Ui::RpWidget {
 public:
