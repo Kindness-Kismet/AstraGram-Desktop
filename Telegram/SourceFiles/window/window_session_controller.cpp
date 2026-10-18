@@ -2789,6 +2789,9 @@ void SessionController::resizeForThirdSection() {
 		= settings.tabbedSelectorSectionEnabled();
 	auto thirdSectionInfoEnabled
 		= settings.thirdSectionInfoEnabled();
+	if (thirdSectionInfoEnabled) {
+		content()->prepareThirdSectionOpen();
+	}
 	settings.setTabbedSelectorSectionEnabled(false);
 	settings.setThirdSectionInfoEnabled(false);
 
@@ -2831,6 +2834,14 @@ void SessionController::resizeForThirdSection() {
 }
 
 void SessionController::closeThirdSection() {
+	if (!content()->animateThirdSectionClose([=] {
+		finishCloseThirdSection();
+	})) {
+		finishCloseThirdSection();
+	}
+}
+
+void SessionController::finishCloseThirdSection() {
 	auto &settings = Core::App().settings();
 	auto newWindowSize = widget()->size();
 	auto layout = computeColumnLayout();

@@ -141,6 +141,9 @@ public:
 		std::shared_ptr<Window::SectionMemento> memento,
 		const SectionShow &params);
 	void updateColumnLayout();
+	void prepareThirdSectionOpen();
+	bool animateThirdSectionClose(Fn<void()> finished);
+	bool reopenThirdSection();
 	bool stackIsEmpty() const;
 	[[nodiscard]] std::vector<Window::SavedChat> chatStackForSave() const;
 	bool showBackFromStack(const SectionShow &params);
@@ -285,6 +288,9 @@ private:
 		std::shared_ptr<Window::SectionMemento> memento,
 		const SectionShow &params);
 	void destroyThirdSection();
+	void startThirdSectionAnimation(bool opening);
+	void finishThirdSectionAnimation();
+	void paintThirdSectionAnimation();
 
 	Window::SectionSlideParams prepareThirdSectionAnimation(Window::SectionWidget *section);
 
@@ -367,6 +373,15 @@ private:
 	// 卡片圆角与描边遮罩层:透明鼠标、置顶,一次画所有卡的圆角和边框
 	object_ptr<Ui::RpWidget> _cardOverlay = { nullptr };
 	base::unique_qptr<Ui::RpWidget> _chatSwitchFade;
+	base::unique_qptr<Ui::RpWidget> _thirdSectionOverlay;
+	Ui::Animations::Simple _thirdSectionAnimation;
+	QPixmap _thirdSectionCache;
+	QRect _thirdSectionAnimationGeometry;
+	std::optional<float64> _thirdSectionChatWidth;
+	Fn<void()> _thirdSectionCloseFinished;
+	float64 _thirdSectionScale = 1.;
+	float64 _thirdSectionOpacity = 1.;
+	float64 _thirdSectionShift = 0.;
 	object_ptr<Ui::ResizeArea> _firstColumnResizeArea = { nullptr };
 	object_ptr<Ui::ResizeArea> _thirdColumnResizeArea = { nullptr };
 

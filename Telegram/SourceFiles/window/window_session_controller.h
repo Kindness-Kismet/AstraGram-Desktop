@@ -766,6 +766,7 @@ private:
 	void setupShortcuts();
 	void setupScreenshotProtection();
 	void checkOpenedFilter();
+	void finishCloseThirdSection();
 	void suggestArchiveAndMute();
 	void activateFirstChatsFilter();
 

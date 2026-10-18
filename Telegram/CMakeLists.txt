@@ -2756,6 +2756,7 @@ PRIVATE
     logs.h
     main.cpp
     mainwidget.cpp
+    mainwidget_third_section.cpp
     mainwidget.h
     mainwindow.cpp
     mainwindow.h

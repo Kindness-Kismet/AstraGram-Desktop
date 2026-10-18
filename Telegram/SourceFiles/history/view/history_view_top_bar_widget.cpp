@@ -489,6 +489,9 @@ void TopBarWidget::showCallMenu() {
 }
 
 void TopBarWidget::toggleInfoSection() {
+	if (_controller->content()->reopenThirdSection()) {
+		return;
+	}
 	const auto isThreeColumn = _controller->adaptive().isThreeColumn();
 	if (isThreeColumn
 		&& (Core::App().settings().thirdSectionInfoEnabled()

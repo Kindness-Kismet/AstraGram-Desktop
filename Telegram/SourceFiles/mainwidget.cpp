@@ -2036,6 +2036,10 @@ Window::SectionSlideParams MainWidget::prepareDialogsAnimation() {
 void MainWidget::showNewSection(
 		std::shared_ptr<Window::SectionMemento> memento,
 		const SectionShow &show) {
+	if (_thirdSectionOverlay) {
+		finishThirdSectionAnimation();
+		updateControlsGeometry();
+	}
 	using Column = Window::Column;
 	auto params = show;
 	if (dynamic_cast<HistoryView::ChatMemento*>(memento.get())) {
@@ -2211,6 +2215,9 @@ void MainWidget::showNewSection(
 	orderWidgets();
 	if (finishChatSwitchFade) {
 		finishChatSwitchFade();
+	}
+	if (_thirdSectionChatWidth && !_thirdSectionOverlay) {
+		startThirdSectionAnimation(true);
 	}
 }
 
@@ -2761,6 +2768,11 @@ void MainWidget::updateControlsGeometry() {
 	if (!width()) {
 		return;
 	}
+	if (_thirdSectionOverlay
+		&& (_thirdSectionOverlay->size() != size()
+			|| (_mainSection && _mainSection->useFullWidth()))) {
+		finishThirdSectionAnimation();
+	}
 	updateWindowAdaptiveLayout();
 	if (_dialogs) {
 		const auto nochat = !_controller->mainSectionShown();
@@ -2856,7 +2868,9 @@ void MainWidget::updateControlsGeometry() {
 		const auto historyRight = _thirdSection
 			? (width() - thirdSectionWidth - columnGap)
 			: width();
-		const auto historyWidth = historyRight - historyLeft;
+		const auto historyWidth = _thirdSectionChatWidth
+			? int(base::SafeRound(*_thirdSectionChatWidth))
+			: historyRight - historyLeft;
 		if (_thirdSection) {
 			_thirdSection->setGeometry(
 				width() - thirdSectionWidth,
@@ -2920,7 +2934,7 @@ void MainWidget::updateControlsGeometry() {
 		_dialogs->setVisible(!fullWidth && (!isOneColumn() || !isMainSectionShown()));
 	}
 	if (_thirdSection && !_showAnimation) {
-		_thirdSection->setVisible(!fullWidth);
+		_thirdSection->setVisible(!fullWidth && !_thirdSectionOverlay);
 	}
 	if (fullWidth) {
 		if (_sideShadow) {
@@ -2943,6 +2957,10 @@ void MainWidget::updateControlsGeometry() {
 }
 
 void MainWidget::destroyThirdSection() {
+	if (_thirdSectionOverlay) {
+		_thirdSectionCloseFinished = nullptr;
+		finishThirdSectionAnimation();
+	}
 	if (const auto strong = _thirdSection.data()) {
 		if (Ui::InFocusChain(strong)) {
 			setFocus();
@@ -2964,7 +2982,8 @@ void MainWidget::refreshResizeAreas() {
 		_firstColumnResizeArea.destroy();
 	}
 
-	if (!fullWidth && isThreeColumn() && _thirdSection) {
+	if (!fullWidth && isThreeColumn() && _thirdSection
+		&& !_thirdSectionOverlay) {
 		ensureThirdColumnResizeAreaCreated();
 		_thirdColumnResizeArea->setGeometryToLeft(
 			_thirdSection->x(),
