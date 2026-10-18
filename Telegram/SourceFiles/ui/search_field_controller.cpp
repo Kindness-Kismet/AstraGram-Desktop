@@ -8,12 +8,90 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/search_field_controller.h"
 
 #include "styles/style_widgets.h"
+#include "styles/style_td_common.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/buttons.h"
 #include "lang/lang_keys.h"
 
 namespace Ui {
+
+void setupContentSearchField(not_null<InputField*> field) {
+	const auto icon = CreateChild<IconButton>(field, st::contentSearchOpen);
+	icon->setObjectName(u"contentSearch.icon"_q);
+	icon->setAccessibleName(tr::lng_dlg_filter(tr::now));
+	icon->setClickedCallback([=] { field->setFocusFast(); });
+	field->heightValue() | rpl::on_next([=](int height) {
+		icon->moveToLeft(0, (height - icon->height()) / 2);
+		icon->raise();
+	}, icon->lifetime());
+}
+
+ContentSearchRow::ContentSearchRow(
+	QWidget *parent,
+	rpl::producer<QString> placeholder,
+	const QString &query)
+: RpWidget(parent)
+, _field(CreateChild<InputField>(this, st::contentSearchField,
+	std::move(placeholder), query))
+, _cancel(CreateChild<CrossButton>(this, st::contentSearchClose)) {
+	setObjectName(u"contentSearch.row"_q);
+	_field->setObjectName(u"contentSearch.field"_q);
+	_field->customUpDown(true);
+	setupContentSearchField(_field);
+	_cancel->setObjectName(u"contentSearch.close"_q);
+	_cancel->show(anim::type::instant);
+	_cancel->setClickedCallback([=] { cancel(); });
+	_field->cancelled() | rpl::on_next([=] { cancel(); }, lifetime());
+	_field->changes() | rpl::on_next([=] {
+		_cancel->setAccessibleName(_field->empty()
+			? tr::lng_sr_cancel_search(tr::now)
+			: tr::lng_sr_clear_search(tr::now));
+	}, lifetime());
+	_cancel->setAccessibleName(tr::lng_sr_cancel_search(tr::now));
+	setExpanded(!query.isEmpty(), false);
+	resizeToWidth(width());
+}
+
+InputField *ContentSearchRow::field() const {
+	return _field;
+}
+
+bool ContentSearchRow::expanded() const {
+	return _expanded.current();
+}
+
+rpl::producer<bool> ContentSearchRow::expandedValue() const {
+	return _expanded.value();
+}
+
+void ContentSearchRow::setExpanded(bool expanded, bool focus) {
+	_expanded = expanded;
+	_field->setVisible(expanded);
+	_cancel->setVisible(expanded);
+	resizeToWidth(width());
+	if (expanded && focus) {
+		_field->setFocusFast();
+	}
+}
+
+void ContentSearchRow::cancel() {
+	if (!_field->empty()) {
+		_field->clear();
+		_field->setFocusFast();
+		return;
+	}
+	setExpanded(false);
+	parentWidget()->setFocus();
+}
+
+int ContentSearchRow::resizeGetHeight(int newWidth) {
+	const auto padding = st::contentSearchPadding;
+	_field->resizeToWidth(std::max(newWidth - 2 * padding, 0));
+	_field->moveToLeft(padding, style::ConvertScale(4));
+	_cancel->moveToRight(padding, style::ConvertScale(4), newWidth);
+	return expanded() ? st::contentSearchHeight : 0;
+}
 
 SearchFieldController::SearchFieldController(const QString &query)
 : _query(query) {

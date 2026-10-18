@@ -20,6 +20,31 @@ namespace Ui {
 
 class CrossButton;
 class InputField;
+class IconButton;
+
+// 轻量查询固定在内容首行，入口按钮由所属标题或工具栏提供。
+class ContentSearchRow final : public RpWidget {
+public:
+	ContentSearchRow(
+		QWidget *parent,
+		rpl::producer<QString> placeholder,
+		const QString &query = QString());
+	[[nodiscard]] InputField *field() const;
+	void setExpanded(bool expanded, bool focus = true);
+	[[nodiscard]] bool expanded() const;
+	[[nodiscard]] rpl::producer<bool> expandedValue() const;
+	void cancel();
+
+protected:
+	int resizeGetHeight(int newWidth) override;
+
+private:
+	InputField *_field = nullptr;
+	CrossButton *_cancel = nullptr;
+	rpl::variable<bool> _expanded = false;
+};
+
+void setupContentSearchField(not_null<InputField*> field);
 
 class SearchFieldController {
 public:

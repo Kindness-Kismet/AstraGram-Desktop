@@ -7,3 +7,39 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 using "ui/colors.palette";
 using "ui/widgets/widgets.style";
+
+contentSearchHeight: 44px;
+contentSearchPadding: 16px;
+contentSearchIcon: icon {{ "top_bar_search-24x24", windowSubTextFg }};
+contentSearchOpen: IconButton(defaultIconButton) {
+	width: 36px;
+	height: 36px;
+	icon: contentSearchIcon;
+	iconOver: icon {{ "top_bar_search-24x24", windowActiveTextFg }};
+	rippleAreaPosition: point(2px, 2px);
+	rippleAreaSize: 32px;
+}
+contentSearchClose: CrossButton(defaultMultiSelectSearchCancel) {
+	width: 32px;
+	height: 36px;
+	cross: CrossAnimation {
+		size: 28px;
+		skip: 9px;
+		stroke: 1.5;
+		minScale: 0.3;
+	}
+	crossPosition: point(2px, 4px);
+}
+contentSearchField: InputField(defaultSearchField) {
+	search: false;
+	textBg: transparent;
+	textBgActive: transparent;
+	textMargins: margins(30px, 8px, 32px, 6px);
+	border: 1px;
+	borderActive: 1px;
+	borderRadius: 0px;
+	borderFg: windowDividerFg;
+	borderFgActive: windowActiveTextFg;
+	heightMin: 36px;
+	heightMax: 36px;
+}
