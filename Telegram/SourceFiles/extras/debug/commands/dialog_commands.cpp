@@ -11,6 +11,14 @@
 #include "boxes/delete_messages_box.h"
 #include "boxes/edit_todo_list_box.h"
 #include "boxes/download_path_box.h"
+#include "boxes/dictionaries_manager.h"
+#include "boxes/peer_lists_box.h"
+#include "boxes/share_box.h"
+#include "countries/countries_instance.h"
+#include "info/channel_statistics/boosts/giveaway/select_countries_box.h"
+#include "ui/boxes/choose_font_box.h"
+#include "ui/boxes/choose_language_box.h"
+#include "spellcheck/spellcheck_types.h"
 #include "boxes/language_box.h"
 #include "boxes/passcode_box.h"
 #include "boxes/peer_list_controllers.h"
@@ -282,6 +290,41 @@ void lockedDemoBox(not_null<Ui::GenericBox*> box) {
 		} },
 		{ "country", "list", [](Controller) -> object_ptr<Ui::BoxContent> {
 			return Box<Ui::CountrySelectBox>();
+		} },
+		{ "giveaway-countries", "list", [](Controller) -> object_ptr<Ui::BoxContent> {
+			return Box(Ui::SelectCountriesBox,
+				std::vector<QString>(), [](std::vector<QString>) {},
+				[](int) { return false; }, Countries::Naming::Default);
+		} },
+		{ "translate-language", "list", [](Controller) -> object_ptr<Ui::BoxContent> {
+			return Box(Ui::ChooseLanguageBox, tr::lng_dlg_filter(),
+				[](std::vector<LanguageId>) {}, std::vector<LanguageId>(),
+				true, [](LanguageId) { return true; });
+		} },
+		{ "official-font", "list", [](Controller) -> object_ptr<Ui::BoxContent> {
+			return Box(Ui::ChooseFontBox, [] {
+				auto image = QImage(240, 120, QImage::Format_ARGB32_Premultiplied);
+				image.fill(st::boxBg->c);
+				return image;
+			}, QString(), [](QString) {});
+		} },
+#ifndef TDESKTOP_DISABLE_SPELLCHECK
+		{ "dictionary", "list", [](Controller controller) -> object_ptr<Ui::BoxContent> {
+			return Box<Ui::ManageDictionariesBox>(&controller->session());
+		} },
+#endif
+		{ "peer-lists", "list", [](Controller controller) -> object_ptr<Ui::BoxContent> {
+			auto lists = std::vector<std::unique_ptr<PeerListController>>();
+			lists.push_back(std::make_unique<ContactsBoxController>(&controller->session()));
+			lists.push_back(std::make_unique<ContactsBoxController>(&controller->session()));
+			return Box<PeerListsBox>(std::move(lists), [](not_null<PeerListsBox*>) {});
+		} },
+		{ "share", "list", [](Controller controller) -> object_ptr<Ui::BoxContent> {
+			return Box<ShareBox>(ShareBox::Descriptor{
+				.session = &controller->session(),
+				.submitCallback = [](auto &&, auto, auto &&, auto, auto) {},
+				.filterCallback = [](not_null<Data::Thread*>) { return true; },
+			});
 		} },
 		{ "terms", "info", [](Controller) -> object_ptr<Ui::BoxContent> {
 			return Box<Window::TermsBox>(
