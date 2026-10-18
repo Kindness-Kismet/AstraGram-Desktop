@@ -96,7 +96,6 @@ namespace Core {
 class Changelogs;
 } // namespace Core
 
-extern const char kForceComposeSearchOneColumn[];
 extern const char kOptionUseNewChatView[];
 
 class MainWidget final
@@ -247,6 +246,10 @@ private:
 		const Window::SectionShow &params);
 	void handleAdaptiveLayoutUpdate();
 	void updateWindowAdaptiveLayout();
+	bool searchInChatEmbedded(
+		const QString &query,
+		Dialogs::Key inChat,
+		PeerData *searchFrom);
 	void handleAudioUpdate(const Media::Player::TrackState &state);
 	void updateControlsGeometry();
 	// 按各栏当前位置与可见性收集卡片矩形，隐藏的栏不参与。

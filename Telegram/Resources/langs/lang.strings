@@ -9720,6 +9720,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SearchFilterFile" = "Files";
 "extras_SearchFilterMusic" = "Music";
 "extras_SearchFilterGif" = "GIFs";
+"extras_SearchInChatCounter" = "{n} / {amount}";
+"extras_SearchInChatFailed" = "Search failed";
+"extras_SearchInChatLoading" = "Searching…";
+"extras_SearchInChatList" = "Results list";
 
 "extras_MusicExpand" = "Expand player";
 "extras_MusicCollapse" = "Collapse";
@@ -9820,8 +9824,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_ExperimentalMacCmdReplyImmediatelyDescription" = "Reply to the previous or next message right away on Cmd + Up/Down, instead of first moving the text cursor to the start or end of the input field. Hold Shift to move the cursor as before.";
 "extras_ExperimentalHideAiButton" = "Hide AI button";
 "extras_ExperimentalHideAiButtonDescription" = "Hide the AI Tools button in message compose fields.";
-"extras_ExperimentalForceComposeSearchOneColumn" = "Force embedded search in chats";
-"extras_ExperimentalForceComposeSearchOneColumnDescription" = "Force in one-column mode the embedded search in chats.";
 "extras_ExperimentalViewProfileInChatsListContextMenu" = "Add \"View Profile\"";
 "extras_ExperimentalViewProfileInChatsListContextMenuDescription" = "Add \"View Profile\" to context menu in chat list";
 "extras_ExperimentalShowPeerIdBelowAbout" = "Show Peer IDs in Profile";

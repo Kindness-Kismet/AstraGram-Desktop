@@ -364,7 +364,8 @@ private:
 	void setupComposeStash();
 
 	void searchRequested();
-	void searchInTopic();
+	void showComposeSearch(const QString &query, PeerData *from);
+	[[nodiscard]] int composeHeightCurrent() const;
 	void updatePinnedVisibility();
 
 	void confirmDeleteSelected();

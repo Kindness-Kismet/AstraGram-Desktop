@@ -1192,6 +1192,9 @@ void ChatWidget::orderWidgets() {
 		_kbScroll->raise();
 	}
 	_bottom->raise();
+	if (_composeSearch) {
+		_composeSearch->raise();
+	}
 	_composeControls->raisePanels();
 	if (_membersDropdown) {
 		_membersDropdown->raise();
@@ -1245,7 +1248,7 @@ int ChatWidget::countMembersDropdownHeightMax() const {
 	auto result = height() - rect::m::sum::v(st::membersInnerDropdown.padding);
 	result -= (_bottom->contentHeight() > 0)
 		? _bottom->contentHeight()
-		: _composeControls->heightCurrent();
+		: composeHeightCurrent();
 	accumulate_min(result, st::membersInnerHeightMax);
 	return result;
 }
@@ -4455,7 +4458,7 @@ void ChatWidget::updateControlsGeometry() {
 			floatingCompose = !bottomHeight;
 		}
 		if (!bottomHeight) {
-			bottom -= _composeControls->heightCurrent();
+			bottom -= composeHeightCurrent();
 		}
 	}
 	const auto composeTop = bottom;
@@ -4473,7 +4476,7 @@ void ChatWidget::updateControlsGeometry() {
 	const auto composeHeight = (floatingCompose
 		&& !_suggestOptions
 		&& readableHeight > 0)
-		? _composeControls->heightCurrent()
+		? composeHeightCurrent()
 		: 0;
 	const auto composeOverlap = composeHeight
 		? (composeHeight - st::historyComposeCapsuleMargin / 2)
@@ -6215,155 +6218,99 @@ void ChatWidget::setupComposeStash() {
 void ChatWidget::searchRequested() {
 	if (_composeSearch) {
 		_composeSearch->setInnerFocus();
-	} else if (_sublist) {
-		controller()->searchInChat(_sublist);
-	} else if (mode() == Mode::History) {
-		controller()->searchInChat(_history);
-	} else if (!preventsClose(crl::guard(this, [=] { searchInTopic(); }))) {
-		searchInTopic();
+		return;
+	}
+	const auto search = crl::guard(this, [=] {
+		showComposeSearch(QString(), nullptr);
+	});
+	if (!preventsClose(search)) {
+		search();
 	}
 }
 
-void ChatWidget::searchInTopic() {
-	if (_topic) {
-		controller()->searchInChat(_topic);
-	} else {
-		const auto update = [=] {
-			if (_composeSearch) {
-				_composeControls->hide();
-			} else {
-				_composeControls->show();
-			}
-			updateBotKeyboard();
-			updateControlsGeometry();
-		};
-		const auto from = (PeerData*)(nullptr);
-		_composeSearch = std::make_unique<HistoryView::ComposeSearch>(
-			this,
-			controller(),
-			_history,
-			from);
+int ChatWidget::composeHeightCurrent() const {
+	return _composeSearch
+		? (_composeSearch->height() + 2 * st::historyComposeCapsuleMargin)
+		: _composeControls->heightCurrent();
+}
+
+// 普通聊天、话题、评论区与收藏来源共用同一查找栏，搜索期间停用输入区。
+void ChatWidget::showComposeSearch(const QString &query, PeerData *from) {
+	const auto update = [=] {
+		if (_composeSearch) {
+			_composeControls->hide();
+		} else {
+			_composeControls->show();
+		}
+		updateBotKeyboard();
+		updateControlsGeometry();
+	};
+	_composeSearch = std::make_unique<ComposeSearch>(
+		this,
+		controller(),
+		_history,
+		_sublist ? _sublist->sublistPeer().get() : from,
+		query);
+	if (_repliesRootId) {
 		_composeSearch->setTopMsgId(_repliesRootId);
+	}
+	_composeSearch->setCalendarChat(_topic
+		? Dialogs::Key(_topic)
+		: _sublist
+		? Dialogs::Key(_sublist)
+		: Dialogs::Key(_history));
+
+	update();
+	doSetInnerFocus();
+
+	_composeSearch->heightChanges(
+	) | rpl::on_next([=] {
+		updateControlsGeometry();
+	}, _composeSearch->lifetime());
+
+	_composeSearch->activations(
+	) | rpl::on_next([=](ComposeSearch::Activation activation) {
+		auto params = Window::SectionShow(
+			Window::SectionShow::Way::Forward,
+			anim::type::instant);
+		params.highlight = Window::SearchHighlightId(activation.query);
+		showAtPosition(activation.item->position(), {}, params);
+	}, _composeSearch->lifetime());
+
+	_composeSearch->destroyRequests(
+	) | rpl::take(1) | rpl::on_next([=] {
+		_composeSearch = nullptr;
 
 		update();
 		doSetInnerFocus();
-
-		using Activation = HistoryView::ComposeSearch::Activation;
-		_composeSearch->activations(
-		) | rpl::on_next([=](Activation activation) {
-			auto params = Window::SectionShow();
-			params.highlight = Window::SearchHighlightId(activation.query);
-			showAtPosition(activation.item->position(), {}, params);
-		}, _composeSearch->lifetime());
-
-		_composeSearch->destroyRequests(
-		) | rpl::take(1) | rpl::on_next([=] {
-			_composeSearch = nullptr;
-
-			update();
-			doSetInnerFocus();
-		}, _composeSearch->lifetime());
-	}
+	}, _composeSearch->lifetime());
 }
 
 bool ChatWidget::searchInChatEmbedded(
 		QString query,
 		Dialogs::Key chat,
 		PeerData *searchFrom) {
-	const auto sublist = chat.sublist();
-	if (!sublist) {
-		if ((mode() != Mode::History) || (chat.history() != _history)) {
-			return false;
-		} else if (_composeSearch) {
-			_composeSearch->setQuery(query);
-			_composeSearch->setInnerFocus();
-			return true;
-		}
-		const auto search = crl::guard(this, [=] {
-			const auto update = [=] {
-				if (_composeSearch) {
-					_composeControls->hide();
-				} else {
-					_composeControls->show();
-				}
-				updateBotKeyboard();
-				updateControlsGeometry();
-			};
-			_composeSearch = std::make_unique<ComposeSearch>(
-				this,
-				controller(),
-				_history,
-				searchFrom,
-				query);
-			_composeSearch->setCalendarChat(Dialogs::Key(_history));
-
-			update();
-			doSetInnerFocus();
-
-			using Activation = ComposeSearch::Activation;
-			_composeSearch->activations(
-			) | rpl::on_next([=](Activation activation) {
-				auto params = Window::SectionShow(
-					Window::SectionShow::Way::Forward,
-					anim::type::instant);
-				params.highlight = Window::SearchHighlightId(
-					activation.query);
-				showAtPosition(activation.item->position(), {}, params);
-			}, _composeSearch->lifetime());
-
-			_composeSearch->destroyRequests(
-			) | rpl::take(1) | rpl::on_next([=] {
-				_composeSearch = nullptr;
-
-				update();
-				doSetInnerFocus();
-			}, _composeSearch->lifetime());
-		});
-		if (!preventsClose(search)) {
-			search();
-		}
-		return true;
-	}
-	if (sublist != _sublist) {
+	const auto matches = chat.sublist()
+		? (chat.sublist() == _sublist)
+		: chat.topic()
+		? (chat.topic() == _topic)
+		: ((mode() == Mode::History) && (chat.history() == _history));
+	if (!matches) {
 		return false;
 	} else if (_composeSearch) {
+		if (searchFrom) {
+			_composeSearch->setFrom(searchFrom);
+		}
 		_composeSearch->setQuery(query);
 		_composeSearch->setInnerFocus();
 		return true;
 	}
-	_composeSearch = std::make_unique<ComposeSearch>(
-		this,
-		controller(),
-		_history,
-		sublist->sublistPeer(),
-		query);
-	_composeSearch->setCalendarChat(Dialogs::Key(sublist));
-
-	updateControlsGeometry();
-	setInnerFocus();
-
-	_composeSearch->activations(
-	) | rpl::on_next([=](ComposeSearch::Activation activation) {
-		const auto item = activation.item;
-		auto params = ::Window::SectionShow(
-			::Window::SectionShow::Way::ClearStack);
-		params.highlight = Window::SearchHighlightId(activation.query);
-		controller()->showPeerHistory(
-			item->history()->peer->id,
-			params,
-			item->fullId().msg);
-	}, _composeSearch->lifetime());
-
-	_composeSearch->destroyRequests(
-	) | rpl::take(
-		1
-	) | rpl::on_next([=] {
-		_composeSearch = nullptr;
-
-		updateControlsGeometry();
-		setInnerFocus();
-	}, _composeSearch->lifetime());
-
+	const auto search = crl::guard(this, [=] {
+		showComposeSearch(query, searchFrom);
+	});
+	if (!preventsClose(search)) {
+		search();
+	}
 	return true;
 }
 

@@ -1325,6 +1325,79 @@ historyAttach: IconButton(defaultIconButton) {
 	ripple: defaultRippleAnimationBgOver;
 }
 
+// 对话内查找栏占用输入区胶囊，高度与图标色同输入区，按钮略窄以容纳筛选入口。
+historyComposeSearchButton: IconButton(historyAttach) {
+	width: 34px;
+	rippleAreaPosition: point(1px, 7px);
+	rippleAreaSize: 32px;
+}
+historyComposeSearchOlder: IconButton(historyComposeSearchButton) {
+	width: 28px;
+	icon: icon {{ "player/player_collapse-flip_vertical-20x20", historyComposeIconFg }};
+	iconOver: icon {{ "player/player_collapse-flip_vertical-20x20", historyComposeIconFgOver }};
+	rippleAreaPosition: point(0px, 9px);
+	rippleAreaSize: 28px;
+}
+historyComposeSearchOlderDisabled: icon {{ "player/player_collapse-flip_vertical-20x20", menuFgDisabled }};
+historyComposeSearchNewer: IconButton(historyComposeSearchOlder) {
+	icon: icon {{ "player/player_collapse-20x20", historyComposeIconFg }};
+	iconOver: icon {{ "player/player_collapse-20x20", historyComposeIconFgOver }};
+}
+historyComposeSearchNewerDisabled: icon {{ "player/player_collapse-20x20", menuFgDisabled }};
+historyComposeSearchList: IconButton(historyComposeSearchButton) {
+	icon: icon {{ "premium/list-20x20", historyComposeIconFg }};
+	iconOver: icon {{ "premium/list-20x20", historyComposeIconFgOver }};
+}
+historyComposeSearchListActive: icon {{ "premium/list-20x20", windowActiveTextFg }};
+historyComposeSearchListDisabled: icon {{ "premium/list-20x20", menuFgDisabled }};
+historyComposeSearchType: IconButton(historyComposeSearchButton) {
+	icon: icon {{ "menu/tag_filter", historyComposeIconFg }};
+	iconOver: icon {{ "menu/tag_filter", historyComposeIconFgOver }};
+}
+historyComposeSearchTypeActive: icon {{ "menu/tag_filter", windowActiveTextFg }};
+historyComposeSearchFrom: IconButton(historyComposeSearchButton) {
+	icon: icon {{ "dialogs/dialogs_search_from", historyComposeIconFg }};
+	iconOver: icon {{ "dialogs/dialogs_search_from", historyComposeIconFgOver }};
+}
+historyComposeSearchCalendar: IconButton(historyComposeSearchButton) {
+	icon: icon {{ "dialogs/dialogs_calendar", historyComposeIconFg }};
+	iconOver: icon {{ "dialogs/dialogs_calendar", historyComposeIconFgOver }};
+}
+historyComposeSearchClose: IconButton(historyComposeSearchButton) {
+	icon: icon {{ "info/info_close-24x24", historyComposeIconFg }};
+	iconOver: icon {{ "info/info_close-24x24", historyComposeIconFgOver }};
+}
+historyComposeSearchMore: IconButton(historyComposeSearchButton) {
+	icon: icon {{ "title_menu_dots", historyComposeIconFg }};
+	iconOver: icon {{ "title_menu_dots", historyComposeIconFgOver }};
+}
+historyComposeSearchMenuList: icon {{ "premium/list-20x20", menuIconColor, point(2px, 2px) }};
+historyComposeSearchMenuFrom: icon {{ "dialogs/dialogs_search_from", menuIconColor }};
+historyComposeSearchIcon: icon {{ "top_bar_search-24x24", historyComposeIconFg }};
+historyComposeSearchIconLeft: 10px;
+historyComposeSearchField: InputField(historyComposeField) {
+	style: defaultTextStyle;
+	textMargins: margins(0px, 9px, 0px, 7px);
+	heightMin: 36px;
+	heightMax: 36px;
+}
+historyComposeSearchFieldLeft: 16px;
+historyComposeSearchFieldMinWidth: 56px;
+historyComposeSearchCounterFont: font(12px);
+historyComposeSearchCounterSkip: 6px;
+historyComposeSearchDividerSkip: 5px;
+historyComposeSearchDividerHeight: 20px;
+// 筛选标签：发送者头像或类型图标、名称与移除标记，点击即移除。
+historyComposeSearchChipHeight: 28px;
+historyComposeSearchChipPadding: margins(4px, 0px, 6px, 0px);
+historyComposeSearchChipImage: 20px;
+historyComposeSearchChipSkip: 6px;
+historyComposeSearchChipMaxWidth: 150px;
+historyComposeSearchChipFont: font(12px semibold);
+historyComposeSearchChipRemove: icon {{ "dialogs/dialogs_cancel_search-14x14", lightButtonFg }};
+historyComposeSearchTagsPadding: margins(10px, 8px, 10px, 0px);
+historyComposeSearchListSkip: 6px;
+
 historyMessagesTTL: IconButtonWithText {
 	iconButton: IconButton(historyAttach) {
 		icon: icon {{ "chat/input_autodelete", historyComposeIconFg }};

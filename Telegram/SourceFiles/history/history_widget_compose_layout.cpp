@@ -323,7 +323,7 @@ bool HistoryWidget::searchInChatEmbedded(
 		QString query,
 		Dialogs::Key chat,
 		PeerData *searchFrom) {
-	const auto peer = chat.peer(); // windows todo
+	const auto peer = chat.history() ? chat.peer() : nullptr;
 	const auto archiveWindow = (controller()->windowId().type
 		== Window::SeparateType::Archive);
 	if (!peer
@@ -341,15 +341,18 @@ bool HistoryWidget::searchInChatEmbedded(
 	if (_peer != peer) {
 		return false;
 	} else if (_composeSearch) {
+		if (searchFrom) {
+			_composeSearch->setFrom(searchFrom);
+		}
 		_composeSearch->setQuery(query);
 		_composeSearch->setInnerFocus();
 		return true;
 	}
-	switchToSearch(query);
+	switchToSearch(query, searchFrom);
 	return true;
 }
 
-void HistoryWidget::switchToSearch(QString query) {
+void HistoryWidget::switchToSearch(QString query, PeerData *from) {
 	const auto search = crl::guard(_list, [=] {
 		if (!_peer) {
 			return;
@@ -361,7 +364,6 @@ void HistoryWidget::switchToSearch(QString query) {
 
 			updateControlsGeometry();
 		};
-		const auto from = (PeerData*)nullptr;
 		_composeSearch = std::make_unique<HistoryView::ComposeSearch>(
 			this,
 			controller(),
@@ -371,6 +373,11 @@ void HistoryWidget::switchToSearch(QString query) {
 
 		update();
 		setInnerFocus();
+
+		_composeSearch->heightChanges(
+		) | rpl::on_next([=] {
+			updateControlsGeometry();
+		}, _composeSearch->lifetime());
 
 		using Activation = HistoryView::ComposeSearch::Activation;
 		_composeSearch->activations(

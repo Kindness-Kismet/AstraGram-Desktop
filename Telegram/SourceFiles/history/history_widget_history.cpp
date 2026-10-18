@@ -1458,9 +1458,10 @@ void HistoryWidget::updateHistoryGeometry(
 	auto composeHeight = 0;
 	if (isChoosingTheme()) {
 		newScrollHeight -= _chooseTheme->height();
+	} else if (!editingMessage() && isSearching()) {
+		composeHeight = _composeSearch->height() + 2 * margin;
 	} else if (!editingMessage()
-		&& (isSearching()
-			|| isBlocked()
+		&& (isBlocked()
 			|| isBotStart()
 			|| isJoinChannel()
 			|| isMuteUnmute()

@@ -412,8 +412,6 @@ std::vector<Category> experimentalCategories() {
 					&tr::extras_ExperimentalMacCmdReplyImmediatelyDescription },
 				{ Ui::kOptionHideAiButton, tr::extras_ExperimentalHideAiButton,
 					&tr::extras_ExperimentalHideAiButtonDescription },
-				{ kForceComposeSearchOneColumn, tr::extras_ExperimentalForceComposeSearchOneColumn,
-					&tr::extras_ExperimentalForceComposeSearchOneColumnDescription },
 			}
 		},
 		{

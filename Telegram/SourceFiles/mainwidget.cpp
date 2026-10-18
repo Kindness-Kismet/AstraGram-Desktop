@@ -118,12 +118,6 @@ void ClearBotStartToken(PeerData *peer) {
 	}
 }
 
-base::options::toggle ForceComposeSearchOneColumn({
-	.id = kForceComposeSearchOneColumn,
-	.name = "Force embedded search in chats",
-	.description = "Force in one-column mode the embedded search in chats.",
-});
-
 base::options::toggle OptionUseNewChatView({
 	.id = kOptionUseNewChatView,
 	.name = "New chat view",
@@ -132,7 +126,6 @@ base::options::toggle OptionUseNewChatView({
 
 } // namespace
 
-const char kForceComposeSearchOneColumn[] = "force-compose-search-one-column";
 const char kOptionUseNewChatView[] = "use-new-chat-view";
 
 enum StackItemType {
@@ -857,19 +850,17 @@ void MainWidget::searchMessages(
 		return;
 	}
 	auto tags = Data::SearchTagsFromQuery(query);
+	if (!tags.empty() && !inChat.sublist()) {
+		inChat = session().data().history(session().user());
+	}
+	if (searchInChatEmbedded(query, inChat, searchFrom)) {
+		return;
+	}
 	const auto archiveWindow = (_controller->windowId().type
 		== Window::SeparateType::Archive);
-	if (_dialogs
-		&& (!archiveWindow || inChat.folder())
-		&& (!ForceComposeSearchOneColumn.value()
-			|| !isOneColumn()
-			|| (inChat.peer()
-				&& inChat.peer()->isChannel()
-				&& inChat.peer()->asChannel()->isCommunity()))) {
+	if (_dialogs && (!archiveWindow || inChat.folder())) {
 		auto state = Dialogs::SearchState{
-			.inChat = ((tags.empty() || inChat.sublist())
-				? inChat
-				: session().data().history(session().user())),
+			.inChat = inChat,
 			.fromPeer = inChat ? searchFrom : nullptr,
 			.tags = tags,
 			.query = tags.empty() ? query : QString(),
@@ -881,35 +872,59 @@ void MainWidget::searchMessages(
 		} else {
 			_dialogs->setInnerFocus();
 		}
-	} else {
-		if (const auto sublist = inChat.sublist()) {
-			using namespace HistoryView;
-			controller()->showSection(
-				std::make_shared<ChatMemento>(ChatViewId{
-					.history = sublist->owningHistory(),
-					.sublist = sublist,
-				}));
-		} else if (!tags.empty()) {
-			inChat = controller()->session().data().history(
-				controller()->session().user());
-		}
-		if ((!_mainSection
-			|| !_mainSection->searchInChatEmbedded(query, inChat, searchFrom))
-			&& !_history->searchInChatEmbedded(query, inChat, searchFrom)) {
-			const auto account = not_null(&session().account());
-			if (const auto window = Core::App().windowFor(account)) {
-				if (const auto controller = window->sessionController()) {
-					if (controller->content().get() != this) {
-						controller->widget()->activate();
-						controller->content()->searchMessages(
-							query,
-							inChat,
-							searchFrom);
-					}
-				}
+		return;
+	}
+	const auto account = not_null(&session().account());
+	if (const auto window = Core::App().windowFor(account)) {
+		if (const auto controller = window->sessionController()) {
+			if (controller->content().get() != this) {
+				controller->widget()->activate();
+				controller->content()->searchMessages(
+					query,
+					inChat,
+					searchFrom);
 			}
 		}
 	}
+}
+
+// 指定会话的搜索都在聊天内完成；全局、文件夹、社区与整个论坛仍用左侧搜索。
+bool MainWidget::searchInChatEmbedded(
+		const QString &query,
+		Dialogs::Key inChat,
+		PeerData *searchFrom) {
+	const auto peer = inChat.peer();
+	if (!peer
+		|| (peer->isChannel() && peer->asChannel()->isCommunity())) {
+		return false;
+	} else if (peer->isForum()
+		&& inChat.history()
+		&& (_mainSection || _history->peer() != peer)) {
+		return false;
+	}
+	// 资料页等其它段落盖在聊天上时，先切回目标聊天再嵌入查找栏。
+	const auto embed = [&] {
+		return _mainSection
+			? _mainSection->searchInChatEmbedded(query, inChat, searchFrom)
+			: _history->searchInChatEmbedded(query, inChat, searchFrom);
+	};
+	if (embed()) {
+		return true;
+	} else if (const auto topic = inChat.topic()) {
+		_controller->showTopic(topic);
+	} else if (const auto sublist = inChat.sublist()) {
+		using namespace HistoryView;
+		_controller->showSection(
+			std::make_shared<ChatMemento>(ChatViewId{
+				.history = sublist->owningHistory(),
+				.sublist = sublist,
+			}));
+	} else if (const auto history = inChat.history(); history && _mainSection) {
+		_controller->showPeerHistory(history);
+	} else {
+		return false;
+	}
+	return embed();
 }
 
 void MainWidget::handleAudioUpdate(const Media::Player::TrackState &state) {

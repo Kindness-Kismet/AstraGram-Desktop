@@ -946,6 +946,9 @@ void HistoryWidget::orderWidgets() {
 		_chooseTheme->raise();
 	}
 	_topShadow->raise();
+	if (_composeSearch) {
+		_composeSearch->raise();
+	}
 	if (_autocomplete) {
 		_autocomplete->raise();
 	}

@@ -764,7 +764,10 @@ searchInChatPeerListItem: PeerListItem(defaultPeerListItem) {
 searchInChatPeerList: PeerList(defaultPeerList) {
 	item: searchInChatPeerListItem;
 }
-searchInChatTagsPadding: margins(6px, 0px, 6px, 0px);
+// 查找结果卡片上下留白，行高亮沿用会话列表的内缩圆角。
+searchInChatCardList: PeerList(searchInChatPeerList) {
+	padding: margins(0px, 6px, 0px, 6px);
+}
 
 msgServiceGiftPreview: 172px;
 msgServiceGiftBoxSize: size(236px, 231px); // Plus msgServiceGiftBoxTopSkip.

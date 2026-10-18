@@ -27,6 +27,7 @@ class History;
 
 namespace HistoryView {
 
+// 查找栏占用输入区胶囊的位置，宿主需按 height() 预留底部空间。
 class ComposeSearch final {
 public:
 	ComposeSearch(
@@ -40,11 +41,16 @@ public:
 	void hideAnimated();
 	void setInnerFocus();
 	void setQuery(const QString &query);
+	void setFrom(PeerData *from);
+	void raise();
 
 	void setTopMsgId(MsgId topMsgId);
 	void setSearchFilter(Api::SearchFilter filter);
 	void setCalendarChat(const Dialogs::Key &chat);
 	void setCalendarJumpHandler(Fn<void(FullMsgId, Fn<void()>)> jump);
+
+	[[nodiscard]] int height() const;
+	[[nodiscard]] rpl::producer<int> heightChanges() const;
 
 	struct Activation {
 		not_null<HistoryItem*> item;

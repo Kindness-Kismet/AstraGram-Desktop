@@ -334,6 +334,10 @@ void HistoryWidget::updateControlsVisibility() {
 			_chooseTheme->show();
 			setInnerFocus();
 			toggle(nullptr);
+		} else if (isSearching()) {
+			// 查找栏接替输入区胶囊，频道静音等底部按钮一并隐藏。
+			toggle(nullptr);
+			_discuss->hide();
 		} else if (isReportMessages()) {
 			toggle(_reportMessages);
 		} else if (isBlocked()) {
