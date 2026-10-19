@@ -656,6 +656,7 @@ powerSavingSubtitlePadding: margins(0px, 4px, 0px, -2px);
 filterInviteBox: Box(defaultBox) {
 	buttonPadding: margins(10px, 9px, 10px, 9px);
 	buttonHeight: 42px;
+	buttonWide: true;
 	button: RoundButton(defaultActiveButton) {
 		height: 42px;
 		textTop: 12px;

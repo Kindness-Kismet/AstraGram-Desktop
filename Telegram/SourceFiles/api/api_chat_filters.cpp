@@ -788,15 +788,6 @@ void ProcessFilterInvite(
 			std::move(badge));
 
 		const auto button = owned.data();
-		box->widthValue(
-		) | rpl::on_next([=](int width) {
-			const auto &padding = st::filterInviteBox.buttonPadding;
-			button->resizeToWidth(width
-				- padding.left()
-				- padding.right());
-			button->moveToLeft(padding.left(), padding.top());
-		}, button->lifetime());
-
 		box->addButton(std::move(owned));
 
 		HandleEnterInBox(box);
@@ -1017,15 +1008,6 @@ void ProcessFilterRemove(
 			std::move(badge));
 
 		const auto button = owned.data();
-		box->widthValue(
-		) | rpl::on_next([=](int width) {
-			const auto &padding = st::filterInviteBox.buttonPadding;
-			button->resizeToWidth(width
-				- padding.left()
-				- padding.right());
-			button->moveToLeft(padding.left(), padding.top());
-		}, button->lifetime());
-
 		box->addButton(std::move(owned));
 
 		HandleEnterInBox(box);

@@ -476,15 +476,6 @@ void ShowAgeVerification(
 				},
 			});
 		});
-		box->widthValue(
-		) | rpl::on_next([=](int width) {
-			const auto &padding = st::settingsAgeVerifyBox.buttonPadding;
-			button->resizeToWidth(width
-				- padding.left()
-				- padding.right());
-			button->moveToLeft(padding.left(), padding.top());
-		}, button->lifetime());
-
 		box->addCloseButton(st::boxTitleClose, [=] {
 			box->closeBox();
 		});
