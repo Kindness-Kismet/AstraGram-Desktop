@@ -382,6 +382,10 @@ void ShareBox::prepare() {
 			nullptr,
 			false,
 			true);
+		chatsFilters->setObjectName(u"share.chatFilters"_q);
+		chatsFilters->paintRequest() | rpl::on_next([=](QRect clip) {
+			QPainter(chatsFilters).fillRect(clip, getDelegate()->style().bg);
+		}, chatsFilters->lifetime());
 		chatsFilters->lower();
 		chatsFilters->heightValue() | rpl::on_next([this](int h) {
 			updateScrollSkips();
