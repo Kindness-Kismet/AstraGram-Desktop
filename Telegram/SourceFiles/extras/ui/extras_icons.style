@@ -18,6 +18,8 @@ extrasRepeatMenuIcon: icon {{ "extras/repeat", menuIconColor }};
 extrasContactsMutualIcon: icon {{ "extras/contacts_mutual", contactsStatusFg }};
 extrasContactsMutualIconOver: icon {{ "extras/contacts_mutual", contactsStatusFgOver }};
 extrasWalletBotIcon: icon {{ "extras/wallet_bot", menuIconColor }};
+extrasSettingsExportIcon: icon {{ "extras/settings_export", menuIconColor }};
+extrasSettingsImportIcon: icon {{ "extras/settings_import", menuIconColor }};
 
 // 设置页的输入框控件图标与输入框按钮同一图形和尺寸，画布统一为 24px。
 messageFieldAttachIcon: icon {{ "chat/input_attach", menuIconColor }};

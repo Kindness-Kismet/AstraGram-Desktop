@@ -11,6 +11,7 @@
 #include "mainwindow.h"
 #include "settings/settings_builder.h"
 #include "styles/style_boxes.h"
+#include "styles/style_extras_icons.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
@@ -226,7 +227,7 @@ void addSettingsTransferButtons(Builder::SectionBuilder &builder) {
 	builder.addButton({
 		.id = u"extras/settingsExport"_q,
 		.title = tr::extras_SettingsTransferExport(),
-		.icon = { &st::menuIconDownload },
+		.icon = { &st::extrasSettingsExportIcon },
 		.onClick = [=] {
 			controller->show(Box(transferBox, controller, Json()));
 		},
@@ -234,7 +235,7 @@ void addSettingsTransferButtons(Builder::SectionBuilder &builder) {
 	builder.addButton({
 		.id = u"extras/settingsImport"_q,
 		.title = tr::extras_SettingsTransferImport(),
-		.icon = { &st::menuIconShowInFolder },
+		.icon = { &st::extrasSettingsImportIcon },
 		.onClick = [=] {
 			FileDialog::GetOpenPath(controller->widget().get(),
 				tr::extras_SettingsTransferImport(tr::now),
