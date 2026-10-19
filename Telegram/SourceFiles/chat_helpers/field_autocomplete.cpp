@@ -10,12 +10,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_chat_participants.h"
 #include "api/api_common.h"
 #include "apiwrap.h"
-#include "base/qt/qt_key_modifiers.h"
 #include "base/random.h"
 #include "base/unixtime.h"
 #include "boxes/sticker_set_box.h"
 #include "chat_helpers/compose/compose_show.h"
-#include "chat_helpers/message_field.h" // PrepareMentionTag.
 #include "chat_helpers/stickers_lottie.h"
 #include "chat_helpers/tabbed_selector.h" // ChatHelpers::FileChosen.
 #include "core/application.h"
@@ -45,14 +43,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/image/image.h"
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
-#include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/widgets/tooltip.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
-#include "ui/round_rect.h"
 #include "ui/ui_utility.h"
 #include "styles/style_chat.h"
 #include "styles/style_chat_helpers.h"
@@ -181,7 +177,6 @@ private:
 	const not_null<HashtagRows*> _hrows;
 	const not_null<BotCommandRows*> _brows;
 	const not_null<StickerRows*> _srows;
-	Ui::RoundRect _overBg;
 	rpl::lifetime _stickersLifetime;
 	std::weak_ptr<Lottie::FrameRenderer> _lottieRenderer;
 	base::unique_qptr<Ui::PopupMenu> _menu;
@@ -923,7 +918,7 @@ void FieldAutocomplete::recount(bool resetScroll) {
 			(_boundings.width() - 2 * st::stickerPanPadding)
 				/ st::stickerPanSize.width());
 		const auto rows = rowscount(_srows.size(), stickersPerRow);
-		height = st::stickerPanPadding + rows * st::stickerPanSize.height();
+		height = 2 * st::stickerPanPadding + rows * st::stickerPanSize.height();
 	} else if (!_mrows.empty()) {
 		height = _mrows.size() * st::mentionHeight;
 	} else if (!_hrows.empty()) {
@@ -1110,7 +1105,6 @@ FieldAutocomplete::Inner::Inner(
 , _hrows(hrows)
 , _brows(brows)
 , _srows(srows)
-, _overBg(st::roundRadiusSmall, _st.overBg)
 , _pathGradient(std::make_unique<Ui::PathShiftGradient>(
 	_st.pathBg,
 	_st.pathFg,
@@ -1187,10 +1181,6 @@ void FieldAutocomplete::Inner::paintStickers(Painter &p, QRect clip) {
 			const auto position = QPoint(
 				padding + column * single.width(),
 				padding + row * single.height());
-			if (_sel == index) {
-				_overBg.paint(p, myrtlrect(QRect(position, single)));
-			}
-
 			media->checkStickerSmall();
 			const auto size = ComputeStickerSize(
 				document,
@@ -1199,33 +1189,34 @@ void FieldAutocomplete::Inner::paintStickers(Painter &p, QRect clip) {
 				(single.width() - size.width()) / 2,
 				(single.height() - size.height()) / 2);
 			auto lottieFrame = QImage();
+			auto frame = QImage();
 			if (sticker.lottie && sticker.lottie->ready()) {
 				lottieFrame = sticker.lottie->frame();
-				p.drawImage(
-					QRect(
-						innerPos,
-						lottieFrame.size() / style::DevicePixelRatio()),
-					lottieFrame);
+				frame = lottieFrame;
 				if (!paused) {
 					sticker.lottie->markFrameShown();
 				}
 			} else if (sticker.webm && sticker.webm->started()) {
-				p.drawImage(
-					innerPos,
-					sticker.webm->current(
-						{
-							.frame = size,
-							.keepAlpha = true,
-						},
-						paused ? 0 : now));
+				frame = sticker.webm->current(
+					{ .frame = size, .keepAlpha = true },
+					paused ? 0 : now);
 			} else if (const auto image = media->getStickerSmall()) {
-				p.drawPixmapLeft(innerPos, width(), image->pix(size));
+				frame = image->pix(size).toImage();
 			} else {
 				PaintStickerThumbnailPath(
 					p,
 					media.get(),
 					QRect(innerPos, size),
 					_pathGradient.get());
+			}
+
+			if (!frame.isNull()) {
+				if (_sel == index) {
+					frame = Images::Colored(std::move(frame), QColor(0, 0, 0, 36));
+				}
+				p.drawImage(myrtlrect(QRect(
+					innerPos,
+					frame.size() / style::DevicePixelRatio())), frame);
 			}
 
 			if (document->isPremiumSticker()) {
@@ -1791,6 +1782,7 @@ void FieldAutocomplete::Inner::setSel(int sel, bool scroll) {
 				(row ? padding : 0) + row * st::stickerPanSize.height(),
 				(padding
 					+ (row + 1) * st::stickerPanSize.height()
+					+ padding
 					+ _st.autocompleteBottomSkip) });
 		}
 	}
@@ -1913,7 +1905,7 @@ void FieldAutocomplete::Inner::selectByMouse(QPoint globalPosition) {
 		const auto column = (mouse.x() >= padding)
 			? (mouse.x() - padding) / st::stickerPanSize.width()
 			: -1;
-		if (row >= 0 && column >= 0) {
+		if (row >= 0 && column >= 0 && column < _stickersPerRow) {
 			sel = row * _stickersPerRow + column;
 		}
 		maxSel = _srows->size();
@@ -1987,178 +1979,6 @@ auto FieldAutocomplete::Inner::scrollToRequested() const
 
 rpl::producer<QRect> FieldAutocomplete::Inner::ephemeralIconHovered() const {
 	return _ephemeralIconHovered.events();
-}
-
-void InitFieldAutocomplete(
-		std::unique_ptr<FieldAutocomplete> &autocomplete,
-		FieldAutocompleteDescriptor &&descriptor) {
-	Expects(!autocomplete);
-
-	autocomplete = std::make_unique<FieldAutocomplete>(
-		descriptor.parent,
-		descriptor.show,
-		descriptor.stOverride);
-	const auto raw = autocomplete.get();
-	const auto field = descriptor.field;
-
-	field->rawTextEdit()->installEventFilter(raw);
-
-	raw->mentionChosen(
-	) | rpl::on_next([=](FieldAutocomplete::MentionChosen data) {
-		const auto user = data.user;
-		const auto ctrlClick = base::IsCtrlPressed()
-			&& data.method == FieldAutocomplete::ChooseMethod::ByClick;
-		if (data.mention.isEmpty() || ctrlClick) {
-			field->insertTag(
-				user->firstName.isEmpty() ? user->name() : user->firstName,
-				PrepareMentionTag(user));
-		} else {
-			field->insertTag('@' + data.mention);
-		}
-	}, raw->lifetime());
-
-	const auto sendCommand = descriptor.sendBotCommand;
-	const auto setText = descriptor.setText;
-
-	raw->hashtagChosen(
-	) | rpl::on_next([=](FieldAutocomplete::HashtagChosen data) {
-		field->insertTag(data.hashtag);
-	}, raw->lifetime());
-
-	const auto peer = descriptor.peer;
-	const auto features = descriptor.features;
-	const auto processShortcut = descriptor.processShortcut;
-	const auto shortcutMessages = (processShortcut != nullptr)
-		? &peer->owner().shortcutMessages()
-		: nullptr;
-	raw->botCommandChosen(
-	) | rpl::on_next([=](FieldAutocomplete::BotCommandChosen data) {
-		if (!features().autocompleteCommands) {
-			return;
-		}
-		using Method = FieldAutocompleteChooseMethod;
-		const auto byTab = (data.method == Method::ByTab);
-		const auto shortcut = data.user->isSelf();
-
-		// Send bot command at once, if it was not inserted by pressing Tab.
-		if (byTab && data.command.size() > 1) {
-			field->insertTag(data.command);
-		} else if (!shortcut) {
-			sendCommand(data.command);
-			setText(
-				field->getTextWithTagsPart(field->textCursor().position()));
-		} else if (processShortcut) {
-			processShortcut(data.command.mid(1));
-		}
-	}, raw->lifetime());
-
-	raw->setModerateKeyActivateCallback(
-		std::move(descriptor.moderateKeyActivateCallback));
-
-	if (const auto stickerChoosing = descriptor.stickerChoosing) {
-		raw->choosingProcesses(
-		) | rpl::on_next([=](FieldAutocomplete::Type type) {
-			if (type == FieldAutocomplete::Type::Stickers) {
-				stickerChoosing();
-			}
-		}, raw->lifetime());
-	}
-	if (const auto chosen = descriptor.stickerChosen) {
-		raw->stickerChosen(
-		) | rpl::on_next(chosen, raw->lifetime());
-	}
-
-	field->tabbed(
-	) | rpl::on_next([=](not_null<Ui::InputField::TabbedRequest*> request) {
-		if (!raw->isHidden()) {
-			raw->chooseSelected(FieldAutocomplete::ChooseMethod::ByTab);
-			request->handled = true;
-		}
-	}, raw->lifetime());
-
-	const auto check = [=] {
-		auto parsed = ParseMentionHashtagBotCommandQuery(field, features());
-		if (parsed.query.isEmpty()) {
-		} else if (parsed.query[0] == '#'
-			&& cRecentWriteHashtags().isEmpty()
-			&& cRecentSearchHashtags().isEmpty()) {
-			peer->session().local().readRecentHashtagsAndBots();
-		} else if (parsed.query[0] == '@'
-			&& peer->session().recentInlineBots().list().empty()) {
-			peer->session().local().readRecentHashtagsAndBots();
-		} else if (parsed.query[0] == '/'
-			&& peer->isUser()
-			&& !peer->asUser()->isBot()
-			&& (!shortcutMessages
-				|| shortcutMessages->shortcuts().list.empty()
-				|| peer->starsPerMessageChecked() != 0)) {
-			parsed = {};
-		}
-		if (!parsed.query.isEmpty() && parsed.query[0] == '@') {
-			peer->session().topGuestChatBots().reload();
-		}
-		raw->showFiltered(peer, parsed.query, parsed.fromStart);
-	};
-
-	const auto updateStickersByEmoji = [=] {
-		const auto errorForStickers = Data::RestrictionError(
-			peer,
-			ChatRestriction::SendStickers);
-		if (features().suggestStickersByEmoji && !errorForStickers) {
-			const auto &text = field->getTextWithTags().text;
-			auto length = 0;
-			if (const auto emoji = Ui::Emoji::Find(text, &length)) {
-				if (text.size() <= length) {
-					raw->showStickers(emoji);
-					return;
-				}
-			}
-		}
-		raw->showStickers(nullptr);
-	};
-
-	raw->refreshRequests(
-	) | rpl::on_next(check, raw->lifetime());
-
-	raw->stickersUpdateRequests(
-	) | rpl::on_next(updateStickersByEmoji, raw->lifetime());
-
-	peer->owner().botCommandsChanges(
-	) | rpl::filter([=](not_null<PeerData*> changed) {
-		return (peer == changed);
-	}) | rpl::on_next([=] {
-		if (raw->clearFilteredBotCommands()) {
-			check();
-		}
-	}, raw->lifetime());
-
-	peer->owner().stickers().updated(
-		Data::StickersType::Stickers
-	) | rpl::on_next(updateStickersByEmoji, raw->lifetime());
-
-	QObject::connect(
-		field->rawTextEdit(),
-		&QTextEdit::cursorPositionChanged,
-		raw,
-		check,
-		Qt::QueuedConnection);
-
-	field->changes(
-	) | rpl::on_next(updateStickersByEmoji, raw->lifetime());
-
-	peer->session().changes().peerUpdates(
-		Data::PeerUpdate::Flag::Rights
-	) | rpl::filter([=](const Data::PeerUpdate &update) {
-		return (update.peer == peer);
-	}) | rpl::on_next(updateStickersByEmoji, raw->lifetime());
-
-	if (shortcutMessages) {
-		shortcutMessages->shortcutsChanged(
-		) | rpl::on_next(check, raw->lifetime());
-	}
-
-	raw->setSendMenuDetails(std::move(descriptor.sendMenuDetails));
-	raw->hideFast();
 }
 
 } // namespace ChatHelpers

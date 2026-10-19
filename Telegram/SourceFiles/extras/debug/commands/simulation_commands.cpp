@@ -17,6 +17,7 @@
 #include "settings.h"
 #include "wallet/wallet_panel.h"
 #include "wallet/wallet_session.h"
+#include "ui/emoji_config.h"
 #include "ui/widgets/separate_panel.h"
 #include "window/window_session_controller.h"
 
@@ -72,6 +73,7 @@ bool seedStickerSets(not_null<Main::Session*> session) {
 				u"simulation_stickers_%1"_q.arg(index), 1, flags,
 				(flags & Data::StickersSetFlag::Installed) ? base::unixtime::now() : 0);
 			set->stickers.push_back(document.get());
+			set->emoji[Ui::Emoji::Find(u"🙂"_q)] = set->stickers;
 			it = sets.emplace(id, std::move(set)).first;
 			changed = true;
 		}
