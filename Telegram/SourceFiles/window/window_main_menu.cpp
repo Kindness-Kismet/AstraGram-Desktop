@@ -757,7 +757,7 @@ void MainMenu::setupMenu() {
 		if (settings.showContactsInDrawer())
 		addAction(
 			tr::lng_menu_contacts(),
-			{ &st::menuIconUserShow },
+			{ &st::menuIconContactsLine },
 			u"contacts"_q
 		)->setClickedCallback([=] {
 			controller->show(PrepareContactsBox(controller));

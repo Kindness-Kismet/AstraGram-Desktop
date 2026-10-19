@@ -472,7 +472,7 @@ void BuildDrawerElements(SectionBuilder &builder, ExtrasSectionBuilder &extras) 
 			.title = tr::lng_menu_contacts(),
 			.getter = &ExtrasSettings::showContactsInDrawer,
 			.setter = &ExtrasSettings::setShowContactsInDrawer,
-			.icon = { &st::menuIconUserShow },
+			.icon = { &st::menuIconContactsLine },
 		});
 		addToggle(u"calls"_q, {
 			.id = u"extras/showCallsInDrawer"_q,
