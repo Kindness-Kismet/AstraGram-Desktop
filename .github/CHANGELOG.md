@@ -1,41 +1,59 @@
-- Changed how custom notification popups look; they are now compact cards with a centered avatar, a themed background and close and reply buttons, and the notification settings offer a new Notification style choice between Cards and Stack
-- Changed how the chat list updates; chats now animate to their new position when a new message, draft or pin reorders the list, and removed chats animate away instead of vanishing instantly
-- Changed how login steps transition; each step now fades in place, keeping QR codes and status labels live instead of sliding from a frozen snapshot
-- Changed how jumping to a chat from a notification looks; the transition now fades in place without the horizontal shift
-- Changed how in-window video playback controls are placed; they now stay centered above the thumbnail strip or the bottom edge regardless of video size and zoom
-- Changed the archive entry in the main menu drawer; the custom archive item is removed and only the official archive button remains, which now follows the drawer archive setting, shows the archive unread counter, opens the archive on click, opens it in a separate window with Ctrl+click, shows the folder context menu on right click and hides when the archive is empty
-- Added double click zoom for photos in the in-window media viewer; double clicking the photo switches between the default size and a zoomed view anchored at the cursor, and another double click returns back
-- Fixed a crash in the in-window media viewer header when showing a forwarded message from a hidden sender, which users hit while flipping through media
-- Fixed a crash when the message was deleted while its message shot preview was open
-- Fixed a crash when media menu or burn-after-read actions ran after the message was removed
-- Fixed a crash when the source messages disappeared while the forwarding selector was open
-- Fixed an issue where a story could no longer be opened after the ghost mode prompt if it expired while the confirmation box was open
-- Fixed a crash when filter peer resolution continued after logging out
-- Fixed the saved music menus continuing to act on a stale button or message after the profile page refreshed
-- Fixed bundled Simplified Chinese strings reverting after a language switch or a cloud language update
-- Fixed an issue with the photo editor backdrop that previously let the sharp chat list show through when Window Background was set to Mica or Acrylic
-- Fixed inconsistent icon sizes across the photo editor buttons
-- Fixed missing Simplified Chinese translations for the photo editor strings added in Telegram 7.3, such as the shortcut legend, trim to shortest, audio removal, circle corners and custom link text
-- Fixed the Manage sticker sets link overlapping the media buttons on short sticker panels in the photo editor
+- Changed how settings pages look; they are now a borderless list with accent group titles, thin lines between groups, consistent row insets and icons, and three unified font sizes, in both light and dark themes and with any accent color
+- Changed how settings search looks; the search field now floats over a blurred window backdrop, results appear in a separate rounded card, and clicking outside closes it
+- Changed how dialogs look; every dialog now has a title and a single close button at the top right, option lists share one style, section dividers are replaced with spacing, and rows no longer highlight on hover while their controls or text darken instead
+- Changed how automatic downloads, language, file confirmation, archive, login and power saving settings open; they now appear as native dialogs instead of embedded settings pages
+- Changed how the proxy dialogs work; the list now has a Use proxy switch with a status line and one list for the system proxy, saved servers, adding a proxy and pasting a link, and the editor uses a type dropdown, borderless filled inputs, a warning card and can fill the form from a copied link
+- Changed how profile info looks; sections have accent titles and thin dividers, the members header shows the count with search and add buttons, member ranks appear as colored chips, action buttons are borderless with accent icons, the side panel offers More and Call, and actions shown as buttons no longer repeat in the More menu
+- Changed how the info sidebar opens and closes; it now enters as a floating card and shrinks away on close without the chat area jumping
+- Changed how shared media from a chat profile looks; it now opens as a wider gallery with select and calendar buttons in the top bar, a header with the media type and count, zoom buttons or inline search, rounded tiles and compact selection checkboxes, and Saved Messages uses the same layout
+- Changed how downloads are filtered; a row of type tiles with colored icons and counts under a gallery header replaces the category tabs
+- Changed how searching inside a chat works; it now opens a find bar in place of the message field with a result counter, older and newer arrows, a results list, type and sender filters and jump to date, and secondary tools collapse into a menu on narrow windows
+- Changed how search fields look; they are now borderless and float with a thin outline and a soft shadow, the search icon turns to the accent color on focus, and searches in profiles, media panels, admin logs, message archives, pickers, location, templates and editors open from an icon in their own row while titles and navigation stay visible
+- Changed how article windows look; they now follow the window background and rounded corners of the main window, and article search is a floating capsule at the bottom
+- Changed how the emoji and sticker panel looks; tabs are compact icon and text tabs, the active emoji category shows its name next to redrawn category icons, recent emoji use a clock icon, emoji set lists use borderless radios, sticker management uses the same tabs, and sticker and GIF search no longer takes focus from the message field
+- Changed how horizontal tabs look; they now use thin underlines without separators, trending counters are aligned with the tab text, zero counts are hidden and large counts show as 999+
+- Changed how icon-only buttons respond; hover and click effects now use rounded squares instead of circles
+- Changed how interface colors look; scroll bars, window frames, corners and separators now use neutral colors that no longer follow the accent color, and the divider under the chat and archive top bars and the gap below the title bar are removed
+- Changed how chat navigation looks; opening chats from links, topics, saved lists and back navigation now fades in place without shifting sideways
+- Changed how the in-window media viewer header works; the position and total now show only in the thumbnail strip
+- Changed the reorder handle icon in sticker, username and shared media lists; it now shows a clearer list icon
+- Removed the horizontal tab style setting; tabs always use the new underline style
+- Removed the option to force embedded search in one column mode; the in-chat find bar is now always used
+- Fixed an issue with deleted message archives that previously caused records to load in the wrong order
+- Fixed an issue with deleted temporary bot messages that previously caused them not to be saved
+- Fixed an issue with sticker timestamps that previously caused them to stay visible or appear without hovering the sticker
+- Fixed an issue with profile cards without a photo that previously caused a large circle to overflow the card
+- Fixed an issue with topic and reply composers that previously caused the caret to disappear
+- Fixed an issue with switching to Simple Black that previously caused an outdated palette after an update
+- Fixed a crash when the in-window media viewer toolbar appeared in Qt 6 builds
 
 ---
 
-- 调整了自定义通知弹窗的外观，现在采用居中头像、主题背景和关闭与回复按钮的紧凑卡片样式，通知设置中新增“通知样式”选项，可在卡片和叠放之间切换
-- 调整了对话列表的更新方式，新消息、草稿或置顶导致对话重新排序时，对话现在会以动画移动到新位置，被移除的对话也会平滑消失而不是瞬间不见
-- 调整了登录步骤的切换方式，现在每一步原地淡入淡出，二维码和状态文字保持实时更新，不再从冻结的快照横向滑动
-- 调整了从通知跳转到对话的过渡效果，现在原地淡入淡出，不再横向平移
-- 调整了窗口内视频播放控件的位置，现在无论视频尺寸和缩放如何，控件始终居中停留在缩略图条或底边上方
-- 调整了主菜单抽屉中的归档入口，移除了自定义的归档菜单项，仅保留官方归档按钮，现在由抽屉归档设置控制，显示归档未读计数，单击打开归档，Ctrl+单击在独立窗口打开，右键显示文件夹上下文菜单，归档为空时自动隐藏
-- 新增了窗口内媒体查看器中图片的双击缩放，双击图片可在默认大小和以光标为中心的放大视图之间切换，再次双击恢复
-- 修复了窗口内媒体查看器顶栏显示来自隐藏发送者的转发消息时的崩溃，快速翻阅媒体时容易触发
-- 修复了消息截图预览打开期间消息被删除所导致的崩溃
-- 修复了消息被删除后媒体菜单或阅后即焚操作仍继续运行所导致的崩溃
-- 修复了转发选择器打开期间源消息消失所导致的崩溃
-- 修复了故事在隐身查看确认框打开期间过期后无法再打开的问题
-- 修复了退出登录后过滤器对话解析仍在继续所导致的崩溃
-- 修复了资料页刷新后收藏音乐菜单仍作用于旧按钮或旧消息的问题
-- 修复了切换语言或云语言包更新后内置简体中文翻译丢失的问题
-- 修复了关于图片编辑器背景的错误，该问题曾导致窗口背景设为云母或亚克力时清晰的对话列表透出
-- 修复了图片编辑器按钮图标大小不一致的问题
-- 修复了 Telegram 7.3 新增图片编辑器文字缺少简体中文翻译的问题，涵盖快捷键说明、裁剪至最短、移除音频、圆形圆角和自定义链接文字
-- 修复了图片编辑器贴纸面板较矮时“管理贴纸包”链接与媒体按钮重叠的问题
+- 调整了设置页的外观，现在采用无边框列表，分组标题使用强调色，分组之间用细线隔开，行距和图标统一，字号统一为三档，浅色、深色主题及任意强调色下都保持一致
+- 调整了设置搜索的外观，搜索框现在悬浮在模糊的窗口背景上，结果显示在独立的圆角卡片中，点击外部即可关闭
+- 调整了对话框的外观，所有对话框现在都有标题，右上角只有一个关闭按钮，选项列表样式统一，分区之间用留白代替分隔条，行在悬停时不再整行高亮，改为加深控件或文字
+- 调整了自动下载、语言、文件确认、归档、登录和省电设置的打开方式，现在以原生对话框显示，不再嵌入设置页
+- 调整了代理对话框的行为，列表改为“使用代理”开关加状态说明，系统代理、已保存的服务器、添加代理和粘贴链接合并为一个列表，编辑器改用类型下拉框、无边框填充输入框和提示卡片，并可从复制的链接自动填写
+- 调整了资料页的外观，分区使用强调色标题和细分隔线，成员标题显示人数并带搜索和添加按钮，成员头衔显示为彩色标签，操作按钮改为无边框并使用强调色图标，侧栏新增“更多”和“通话”，已作为按钮显示的操作不再在“更多”菜单中重复
+- 调整了信息侧栏的打开和关闭方式，现在以浮动卡片形式进入，关闭时收缩淡出，聊天区域不再跳动
+- 调整了从资料页打开的共享媒体的外观，现在以更宽的画廊打开，顶栏提供选择和日历按钮，标题区显示媒体类型和数量，并提供缩放按钮或内嵌搜索，缩略图改为圆角，选择框改为紧凑尺寸，收藏夹也使用相同布局
+- 调整了下载列表的筛选方式，在画廊标题下方用一排带彩色图标和数量的类型方块代替分类标签
+- 调整了聊天内搜索的行为，现在在输入框位置打开查找栏，提供结果计数、上一条和下一条箭头、结果列表、类型和发送者筛选及跳转日期，窗口较窄时次要工具收进菜单
+- 调整了搜索框的外观，现在无边框并以细描边和柔和阴影悬浮，获得焦点时搜索图标变为强调色，资料页、媒体面板、管理日志、消息留档、选择器、位置、模板和编辑器中的搜索改为点击图标后在单独一行展开，标题和导航保持可见
+- 调整了文章窗口的外观，现在跟随主窗口的窗口背景和圆角，文章搜索改为底部悬浮的胶囊
+- 调整了表情与贴纸面板的外观，标签改为紧凑的图标加文字样式，当前表情分类在重新绘制的分类图标旁显示名称，最近使用改为时钟图标，表情包列表改用无边框单选，贴纸管理使用相同的标签，贴纸和 GIF 搜索不再抢走输入框焦点
+- 调整了横向标签的外观，现在使用细下划线且不再显示分隔线，热门计数与标签文字对齐，数量为零时隐藏，数量较大时显示为 999+
+- 调整了纯图标按钮的反馈效果，悬停和点击效果现在使用圆角方形而不是圆形
+- 调整了界面配色，滚动条、窗口边框、圆角和分隔线现在使用中性色，不再跟随强调色，聊天和归档顶栏下方的分隔线以及标题栏下方的空隙已移除
+- 调整了切换对话的过渡效果，从链接、话题、收藏列表打开对话以及返回时，现在原地淡入淡出，不再横向平移
+- 调整了窗口内媒体查看器顶栏的行为，位置和总数现在只显示在缩略图条中
+- 调整了贴纸、用户名和共享媒体列表中的排序手柄图标，现在显示更清晰的列表图标
+- 移除了横向标签样式设置，标签始终使用新的下划线样式
+- 移除了单栏模式下强制使用内嵌搜索的选项，现在始终使用聊天内查找栏
+- 修复了关于已删除消息留档的错误，该问题曾导致记录按错误顺序加载
+- 修复了关于机器人临时消息被删除的错误，该问题曾导致这些消息没有被保存
+- 修复了关于贴纸时间戳的错误，该问题曾导致未悬停在贴纸上时时间戳仍然显示或出现
+- 修复了关于没有照片的资料卡片的错误，该问题曾导致一个大圆形超出卡片
+- 修复了关于话题和回复输入框的错误，该问题曾导致光标不可见
+- 修复了关于切换到简约黑的错误，该问题曾导致更新后仍使用旧配色
+- 修复了 Qt 6 构建中窗口内媒体查看器工具栏出现时的崩溃
