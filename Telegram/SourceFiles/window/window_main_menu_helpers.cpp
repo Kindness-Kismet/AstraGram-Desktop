@@ -40,6 +40,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_info.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_window.h"
+#include "styles/style_window_main_menu.h"
 
 namespace Window {
 
@@ -100,47 +101,42 @@ not_null<Ui::SettingsButton*> AddMyChannelsBox(
 		}).send();
 	};
 	const auto addIcon = [=](not_null<Ui::GenericBox*> box) {
+		const auto size = QSize(st::mainMenuEmptySize, st::mainMenuEmptySize);
 		const auto widget = box->addRow(object_ptr<Ui::RpWidget>(box));
+		const auto icon = widget->lifetime().make_state<std::unique_ptr<Lottie::Icon>>();
 		widget->paintRequest(
 		) | rpl::on_next([=] {
 			auto p = QPainter(widget);
+			if (*icon) {
+				(*icon)->paint(p, (widget->width() - (*icon)->width()) / 2, 0);
+				return;
+			}
 			p.setFont(st::boxTextFont);
 			p.setPen(st::windowSubTextFg);
-			p.drawText(
-				widget->rect(),
-				tr::lng_contacts_loading(tr::now),
-				style::al_center);
+			p.drawText(widget->rect(),
+				tr::lng_contacts_loading(tr::now), style::al_center);
 		}, widget->lifetime());
-		widget->resize(Size(st::maxStickerSize));
+		widget->resize(size);
 		widget->show();
 		box->verticalLayout()->resizeToWidth(box->width());
 		requestIcon(box, [=](not_null<DocumentData*> document) {
 			const auto view = document->createMediaView();
 			const auto origin = document->stickerSetOrigin();
-			controller->session().downloaderTaskFinished(
+			rpl::single(rpl::empty)
+			| rpl::then(controller->session().downloaderTaskFinished()
 			) | rpl::take_while([=] {
 				if (view->bytes().isEmpty()) {
 					return true;
 				}
-				auto owned = Lottie::MakeIcon({
+				*icon = Lottie::MakeIcon({
 					.json = Images::UnpackGzip(view->bytes()),
-					.sizeOverride = Size(st::maxStickerSize),
+					.sizeOverride = size,
 				});
-				const auto icon = owned.get();
-				widget->lifetime().add([kept = std::move(owned)]{});
-				widget->paintRequest(
-				) | rpl::on_next([=] {
-					auto p = QPainter(widget);
-					icon->paint(p, (widget->width() - icon->width()) / 2, 0);
-				}, widget->lifetime());
-				icon->animate(
-					[=] { widget->update(); },
-					0,
-					icon->framesCount());
+				(*icon)->animate(
+					[=] { widget->update(); }, 0, (*icon)->framesCount());
 				return false;
 			}) | rpl::start(widget->lifetime());
 			view->automaticLoad(origin, nullptr);
-			view->videoThumbnailWanted(origin);
 		});
 	};
 
