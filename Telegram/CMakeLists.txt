@@ -194,6 +194,8 @@ set(extras_files
         extras/ui/utils/itunes_search.h
         extras/ui/settings/extras_builder.cpp
         extras/ui/settings/extras_builder.h
+        extras/ui/components/drawer_menu.cpp
+        extras/ui/components/drawer_menu.h
         extras/ui/settings/settings_appearance.cpp
         extras/ui/settings/settings_appearance.h
         extras/ui/settings/settings_theme_grid.cpp

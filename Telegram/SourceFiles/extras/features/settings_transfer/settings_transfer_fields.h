@@ -49,6 +49,10 @@ void addField(
 				return value.is_boolean();
 			} else if constexpr (std::is_same_v<Type, QString>) {
 				return value.is_string();
+			} else if constexpr (std::is_same_v<Type, std::vector<QString>>) {
+				return value.is_array() && ranges::all_of(value, [](const Json &item) {
+					return item.is_string();
+				});
 			} else {
 				const auto numeric = std::is_floating_point_v<Type>
 					? value.is_number()

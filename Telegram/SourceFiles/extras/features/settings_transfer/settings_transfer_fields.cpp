@@ -285,6 +285,8 @@ Fields customFields() {
 		&S::showAttachPopup, &S::setShowAttachPopup);
 	addField(fields, "showEmojiPopup", settings,
 		&S::showEmojiPopup, &S::setShowEmojiPopup);
+	addField(fields, "drawerOrder", settings,
+		&S::drawerOrder, &S::setDrawerOrder);
 	addField(fields, "showMyProfileInDrawer", settings,
 		&S::showMyProfileInDrawer, &S::setShowMyProfileInDrawer);
 	addField(fields, "showBotsInDrawer", settings,

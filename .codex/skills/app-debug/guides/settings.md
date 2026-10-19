@@ -60,3 +60,6 @@ python .codex/skills/app-debug/scripts/cli.py settings.keys session.autoDownload
 
 频道邀请开关为 `showCommunityChannelInvite`，默认开启；确认或“不再显示”会关闭，取消只跳过本次启动。
 邀请在登录并进入主界面后显示，每次启动最多一次；恢复开关后重启即可再次验证，弹窗标识为 `communityChannel/invite`。
+
+侧边栏顺序为 `drawerOrder`，接受选项标识数组；查询可核对菜单和外观设置页的共同顺序，空数组恢复默认。
+两处均长按后拖动排序；使用 `control.mouse` 的 `press`、`move`、`release` 分别投递，间隔超过系统拖动等待时间。

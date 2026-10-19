@@ -146,6 +146,7 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"showAiEditorButtonInMessageField"_q, [&] { return settings.showAiEditorButtonInMessageField(); }, settings, &ExtrasSettings::setShowAiEditorButtonInMessageField);
 	addSetting(entries, u"showAttachPopup"_q, [&] { return settings.showAttachPopup(); }, settings, &ExtrasSettings::setShowAttachPopup);
 	addSetting(entries, u"showEmojiPopup"_q, [&] { return settings.showEmojiPopup(); }, settings, &ExtrasSettings::setShowEmojiPopup);
+	addSetting(entries, u"drawerOrder"_q, [&] { return settings.drawerOrder(); }, settings, &ExtrasSettings::setDrawerOrder);
 	addSetting(entries, u"showMyProfileInDrawer"_q, [&] { return settings.showMyProfileInDrawer(); }, settings, &ExtrasSettings::setShowMyProfileInDrawer);
 	addSetting(entries, u"showBotsInDrawer"_q, [&] { return settings.showBotsInDrawer(); }, settings, &ExtrasSettings::setShowBotsInDrawer);
 	addSetting(entries, u"showNewGroupInDrawer"_q, [&] { return settings.showNewGroupInDrawer(); }, settings, &ExtrasSettings::setShowNewGroupInDrawer);

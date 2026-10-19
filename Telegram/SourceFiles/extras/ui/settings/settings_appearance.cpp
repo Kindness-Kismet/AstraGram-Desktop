@@ -2,11 +2,13 @@
 
 #include "lang_auto.h"
 #include "core/file_utilities.h"
+#include "main/main_app_config.h"
 #include "extras/extras_settings.h"
 #include "extras/extras_ui_settings.h"
 #include "extras/features/custom_logo/custom_logo.h"
 #include "extras/ui/boxes/font_selector.h"
 #include "extras/ui/components/avatar_corners_preview.h"
+#include "extras/ui/components/drawer_menu.h"
 #include "extras/ui/components/icon_picker.h"
 #include "extras/ui/settings/extras_builder.h"
 #include "extras/ui/settings/settings_extras_utils.h"
@@ -22,6 +24,7 @@
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
 #include "styles/style_widgets.h"
+#include "styles/style_wallet.h"
 #include "styles/style_window.h"
 #include "ui/painter.h"
 #include "ui/boxes/single_choice_box.h"
@@ -424,99 +427,127 @@ void BuildTrayElements(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 void BuildDrawerElements(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	builder.addSubsectionTitle(tr::extras_DrawerElementsHeader());
 
-	extras.addSettingToggle({
-		.id = u"extras/showMyProfileInDrawer"_q,
-		.title = tr::lng_menu_my_profile(),
-		.getter = &ExtrasSettings::showMyProfileInDrawer,
-		.setter = &ExtrasSettings::setShowMyProfileInDrawer,
-		.icon = { &st::menuIconProfile },
-	});
-
-	const auto controller = builder.controller();
-	if (controller && HasDrawerBots(controller)) {
-		extras.addSettingToggle({
-			.id = u"extras/showBotsInDrawer"_q,
-			.title = tr::lng_filters_type_bots(),
-			.getter = &ExtrasSettings::showBotsInDrawer,
-			.setter = &ExtrasSettings::setShowBotsInDrawer,
-			.icon = { &st::menuIconBot },
+	const auto addToggle = [&](QString id, ExtrasSectionBuilder::SettingToggleArgs args) {
+		const auto button = extras.addSettingToggle(std::move(args));
+		if (button) {
+			button->setProperty("drawerItem", id);
+		}
+	};
+	const auto rows = builder.scope([&] {
+		addToggle(u"myProfile"_q, {
+			.id = u"extras/showMyProfileInDrawer"_q,
+			.title = tr::lng_menu_my_profile(),
+			.getter = &ExtrasSettings::showMyProfileInDrawer,
+			.setter = &ExtrasSettings::setShowMyProfileInDrawer,
+			.icon = { &st::menuIconProfile },
 		});
-	}
 
-	extras.addSettingToggle({
-		.id = u"extras/showNewGroupInDrawer"_q,
-		.title = tr::lng_create_group_title(),
-		.getter = &ExtrasSettings::showNewGroupInDrawer,
-		.setter = &ExtrasSettings::setShowNewGroupInDrawer,
-		.icon = { &st::menuIconGroups },
-	});
-	extras.addSettingToggle({
-		.id = u"extras/showNewChannelInDrawer"_q,
-		.title = tr::lng_create_channel_title(),
-		.getter = &ExtrasSettings::showNewChannelInDrawer,
-		.setter = &ExtrasSettings::setShowNewChannelInDrawer,
-		.icon = { &st::menuIconChannel },
-	});
-	extras.addSettingToggle({
-		.id = u"extras/showContactsInDrawer"_q,
-		.title = tr::lng_menu_contacts(),
-		.getter = &ExtrasSettings::showContactsInDrawer,
-		.setter = &ExtrasSettings::setShowContactsInDrawer,
-		.icon = { &st::menuIconUserShow },
-	});
-	extras.addSettingToggle({
-		.id = u"extras/showCallsInDrawer"_q,
-		.title = tr::lng_menu_calls(),
-		.getter = &ExtrasSettings::showCallsInDrawer,
-		.setter = &ExtrasSettings::setShowCallsInDrawer,
-		.icon = { &st::menuIconPhone },
-	});
-	extras.addSettingToggle({
-		.id = u"extras/showSavedMessagesInDrawer"_q,
-		.title = tr::lng_saved_messages(),
-		.getter = &ExtrasSettings::showSavedMessagesInDrawer,
-		.setter = &ExtrasSettings::setShowSavedMessagesInDrawer,
-		.icon = { &st::menuIconSavedMessages },
-	});
-	extras.addSettingToggle({
-		.id = u"extras/showArchiveInDrawer"_q,
-		.title = tr::extras_ArchiveChatsInMenu(),
-		.getter = &ExtrasSettings::showArchiveInDrawer,
-		.setter = &ExtrasSettings::setShowArchiveInDrawer,
-		.icon = { &st::menuIconArchive },
-	});
-	extras.addSettingToggle({
-		.id = u"extras/showDonationDetailsInDrawer"_q,
-		.title = tr::extras_DonationDetails(),
-		.getter = &ExtrasSettings::showDonationDetailsInDrawer,
-		.setter = &ExtrasSettings::setShowDonationDetailsInDrawer,
-		.icon = { &st::menuIconGiftPremium },
-	});
-	extras.addSettingToggle({
-		.id = u"extras/showNightModeToggleInDrawer"_q,
-		.title = tr::lng_menu_night_mode(),
-		.getter = &ExtrasSettings::showNightModeToggleInDrawer,
-		.setter = &ExtrasSettings::setShowNightModeToggleInDrawer,
-		.icon = { &st::menuIconNightMode },
-	});
-	extras.addSettingToggle({
-		.id = u"extras/showGhostToggleInDrawer"_q,
-		.title = tr::extras_GhostModeToggle(),
-		.getter = &ExtrasSettings::showGhostToggleInDrawer,
-		.setter = &ExtrasSettings::setShowGhostToggleInDrawer,
-		.icon = { &st::extrasGhostIcon },
-	});
+		const auto controller = builder.controller();
+		if (controller && HasDrawerBots(controller)) {
+			addToggle(u"bots"_q, {
+				.id = u"extras/showBotsInDrawer"_q,
+				.title = tr::lng_filters_type_bots(),
+				.getter = &ExtrasSettings::showBotsInDrawer,
+				.setter = &ExtrasSettings::setShowBotsInDrawer,
+				.icon = { &st::menuIconBot },
+			});
+		}
+
+		addToggle(u"newGroup"_q, {
+			.id = u"extras/showNewGroupInDrawer"_q,
+			.title = tr::lng_create_group_title(),
+			.getter = &ExtrasSettings::showNewGroupInDrawer,
+			.setter = &ExtrasSettings::setShowNewGroupInDrawer,
+			.icon = { &st::menuIconGroups },
+		});
+		addToggle(u"newChannel"_q, {
+			.id = u"extras/showNewChannelInDrawer"_q,
+			.title = tr::lng_create_channel_title(),
+			.getter = &ExtrasSettings::showNewChannelInDrawer,
+			.setter = &ExtrasSettings::setShowNewChannelInDrawer,
+			.icon = { &st::menuIconChannel },
+		});
+		addToggle(u"contacts"_q, {
+			.id = u"extras/showContactsInDrawer"_q,
+			.title = tr::lng_menu_contacts(),
+			.getter = &ExtrasSettings::showContactsInDrawer,
+			.setter = &ExtrasSettings::setShowContactsInDrawer,
+			.icon = { &st::menuIconUserShow },
+		});
+		addToggle(u"calls"_q, {
+			.id = u"extras/showCallsInDrawer"_q,
+			.title = tr::lng_menu_calls(),
+			.getter = &ExtrasSettings::showCallsInDrawer,
+			.setter = &ExtrasSettings::setShowCallsInDrawer,
+			.icon = { &st::menuIconPhone },
+		});
+		addToggle(u"savedMessages"_q, {
+			.id = u"extras/showSavedMessagesInDrawer"_q,
+			.title = tr::lng_saved_messages(),
+			.getter = &ExtrasSettings::showSavedMessagesInDrawer,
+			.setter = &ExtrasSettings::setShowSavedMessagesInDrawer,
+			.icon = { &st::menuIconSavedMessages },
+		});
+		addToggle(u"archiveChats"_q, {
+			.id = u"extras/showArchiveInDrawer"_q,
+			.title = tr::extras_ArchiveChatsInMenu(),
+			.getter = &ExtrasSettings::showArchiveInDrawer,
+			.setter = &ExtrasSettings::setShowArchiveInDrawer,
+			.icon = { &st::menuIconArchive },
+		});
+		addToggle(u"donation"_q, {
+			.id = u"extras/showDonationDetailsInDrawer"_q,
+			.title = tr::extras_DonationDetails(),
+			.getter = &ExtrasSettings::showDonationDetailsInDrawer,
+			.setter = &ExtrasSettings::setShowDonationDetailsInDrawer,
+			.icon = { &st::menuIconGiftPremium },
+		});
+		addToggle(u"nightTheme"_q, {
+			.id = u"extras/showNightModeToggleInDrawer"_q,
+			.title = tr::lng_menu_night_mode(),
+			.getter = &ExtrasSettings::showNightModeToggleInDrawer,
+			.setter = &ExtrasSettings::setShowNightModeToggleInDrawer,
+			.icon = { &st::menuIconNightMode },
+		});
+		addToggle(u"ghostMode"_q, {
+			.id = u"extras/showGhostToggleInDrawer"_q,
+			.title = tr::extras_GhostModeToggle(),
+			.getter = &ExtrasSettings::showGhostToggleInDrawer,
+			.setter = &ExtrasSettings::setShowGhostToggleInDrawer,
+			.icon = { &st::extrasGhostIcon },
+		});
 
 #if defined Q_OS_WIN || defined Q_OS_MAC
-	extras.addSettingToggle({
-		.id = u"extras/showStreamerToggleInDrawer"_q,
-		.title = tr::extras_StreamerModeToggle(),
-		.getter = &ExtrasSettings::showStreamerToggleInDrawer,
-		.setter = &ExtrasSettings::setShowStreamerToggleInDrawer,
-		.icon = { &st::extrasStreamerModeMenuIcon },
-	});
+		addToggle(u"streamerMode"_q, {
+			.id = u"extras/showStreamerToggleInDrawer"_q,
+			.title = tr::extras_StreamerModeToggle(),
+			.getter = &ExtrasSettings::showStreamerToggleInDrawer,
+			.setter = &ExtrasSettings::setShowStreamerToggleInDrawer,
+			.icon = { &st::extrasStreamerModeMenuIcon },
+		});
 #endif
 
+		const auto addFixed = [&](QString id, rpl::producer<QString> title,
+				const style::icon *icon) {
+			const auto button = builder.addButton({
+				.id = u"extras/drawer/"_q + id,
+				.title = std::move(title),
+				.icon = { icon },
+			});
+			if (button) {
+				button->setProperty("drawerItem", id);
+			}
+		};
+		if (controller && controller->session().appConfig().walletAvailable()) {
+			addFixed(u"wallet"_q, tr::lng_wallet_menu(), &st::walletMenuIcon);
+		}
+		addFixed(u"proxy"_q, tr::lng_proxy_settings(), &st::menuIconNetwork);
+		addFixed(u"settings"_q, tr::lng_menu_settings(), &st::menuIconSettings);
+
+	});
+	if (rows) {
+		ExtrasUi::setupDrawerReorder(rows);
+	}
 	builder.addSkip();
 }
 

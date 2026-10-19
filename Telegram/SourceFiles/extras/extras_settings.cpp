@@ -29,6 +29,27 @@ namespace {
 bool batchUpdating = false;
 bool batchDirty = false;
 
+std::vector<QString> normalizeDrawerOrder(std::vector<QString> order) {
+	const auto defaults = std::vector<QString>{
+		u"archiveChats"_q, u"myProfile"_q, u"bots"_q,
+		u"newGroup"_q, u"newChannel"_q, u"contacts"_q, u"calls"_q,
+		u"savedMessages"_q, u"wallet"_q, u"proxy"_q, u"settings"_q,
+		u"donation"_q, u"nightTheme"_q, u"ghostMode"_q, u"streamerMode"_q,
+	};
+	auto result = std::vector<QString>();
+	for (const auto &id : order) {
+		if (ranges::contains(defaults, id) && !ranges::contains(result, id)) {
+			result.push_back(id);
+		}
+	}
+	for (const auto &id : defaults) {
+		if (!ranges::contains(result, id)) {
+			result.push_back(id);
+		}
+	}
+	return result;
+}
+
 QString getSettingsPath() {
 	return cWorkingDir() + u"tdata/extras_settings.json"_q;
 }
@@ -366,7 +387,8 @@ void from_json(const nlohmann::json &j, MessageShotSettings &s) {
 ExtrasSettings::ExtrasSettings()
 : _messageBubbleRadius(Ui::kBubbleRadiusSliderMax)
 , _appIcon(ExtrasAssets::DEFAULT_ICON)
-, _editedMark(Core::IsAppLaunched() ? tr::lng_edited(tr::now) : QString("edited")) {
+, _editedMark(Core::IsAppLaunched() ? tr::lng_edited(tr::now) : QString("edited"))
+, _drawerOrder(normalizeDrawerOrder({})) {
 }
 
 ExtrasSettings &ExtrasSettings::getInstance() {
@@ -1059,6 +1081,15 @@ void ExtrasSettings::setShowMyProfileInDrawer(bool val) {
 	save();
 }
 
+void ExtrasSettings::setDrawerOrder(std::vector<QString> order) {
+	order = normalizeDrawerOrder(std::move(order));
+	if (_drawerOrder.current() == order) {
+		return;
+	}
+	_drawerOrder = std::move(order);
+	save();
+}
+
 void ExtrasSettings::setShowBotsInDrawer(bool val) {
 	if (_showBotsInDrawer.current() == val) return;
 	_showBotsInDrawer = val;
@@ -1404,6 +1435,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"showAttachPopup", s._showAttachPopup.current()},
 		{"showEmojiPopup", s._showEmojiPopup.current()},
 		{"showMyProfileInDrawer", s._showMyProfileInDrawer.current()},
+		{"drawerOrder", s._drawerOrder.current()},
 		{"showBotsInDrawer", s._showBotsInDrawer.current()},
 		{"showNewGroupInDrawer", s._showNewGroupInDrawer.current()},
 		{"showNewChannelInDrawer", s._showNewChannelInDrawer.current()},
@@ -1556,6 +1588,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._showAttachPopup = j.value("showAttachPopup", defaults._showAttachPopup.current());
 	s._showEmojiPopup = j.value("showEmojiPopup", defaults._showEmojiPopup.current());
 	s._showMyProfileInDrawer = j.value("showMyProfileInDrawer", defaults._showMyProfileInDrawer.current());
+	s._drawerOrder = normalizeDrawerOrder(j.value("drawerOrder", std::vector<QString>()));
 	s._showBotsInDrawer = j.value("showBotsInDrawer", defaults._showBotsInDrawer.current());
 	s._showNewGroupInDrawer = j.value("showNewGroupInDrawer", defaults._showNewGroupInDrawer.current());
 	s._showNewChannelInDrawer = j.value("showNewChannelInDrawer", defaults._showNewChannelInDrawer.current());

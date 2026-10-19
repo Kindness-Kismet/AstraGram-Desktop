@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_session.h"
 #include "data/data_user.h"
 #include "extras/features/window_material/window_material.h"
+#include "extras/ui/components/drawer_menu.h"
 #include "inline_bots/bot_attach_web_view.h"
 #include "lang/lang_keys.h"
 #include "lottie/lottie_icon.h"
@@ -296,6 +297,7 @@ void SetupMenuBots(
 		const style::color &iconFg) {
 	const auto wrap = container->add(
 		object_ptr<Ui::VerticalLayout>(container));
+	wrap->setProperty("drawerItem", u"bots"_q);
 	const auto bots = &controller->session().attachWebView();
 	// 图标保存颜色地址，需指向调用方持有的颜色而非闭包副本。
 	const auto iconColor = &iconFg;
@@ -345,6 +347,7 @@ void SetupMenuBots(
 					button,
 					bot.media);
 			icon->setColor(*iconColor);
+			ExtrasUi::fitDrawerIcon(icon);
 			button->heightValue(
 			) | rpl::on_next([=](int height) {
 				icon->move(

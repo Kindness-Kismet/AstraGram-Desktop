@@ -8,6 +8,7 @@
 
 #include <map>
 #include <unordered_set>
+#include <vector>
 
 
 namespace Main {
@@ -349,6 +350,9 @@ public:
 	[[nodiscard]] bool showAttachPopup() const { return _showAttachPopup.current(); }
 	[[nodiscard]] bool showEmojiPopup() const { return _showEmojiPopup.current(); }
 	[[nodiscard]] bool showMyProfileInDrawer() const { return _showMyProfileInDrawer.current(); }
+	[[nodiscard]] const std::vector<QString> &drawerOrder() const { return _drawerOrder.current(); }
+	[[nodiscard]] rpl::producer<std::vector<QString>> drawerOrderValue() const { return _drawerOrder.value(); }
+	void setDrawerOrder(std::vector<QString> order);
 	[[nodiscard]] bool showBotsInDrawer() const { return _showBotsInDrawer.current(); }
 	[[nodiscard]] bool showNewGroupInDrawer() const { return _showNewGroupInDrawer.current(); }
 	[[nodiscard]] bool showNewChannelInDrawer() const { return _showNewChannelInDrawer.current(); }
@@ -778,6 +782,7 @@ private:
 	rpl::variable<bool> _showAttachPopup = true;
 	rpl::variable<bool> _showEmojiPopup = true;
 	rpl::variable<bool> _showMyProfileInDrawer = true;
+	rpl::variable<std::vector<QString>> _drawerOrder;
 	rpl::variable<bool> _showBotsInDrawer = true;
 	rpl::variable<bool> _showNewGroupInDrawer = true;
 	rpl::variable<bool> _showNewChannelInDrawer = true;

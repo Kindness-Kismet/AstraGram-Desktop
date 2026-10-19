@@ -66,6 +66,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/themes/window_theme.h"
 #include "window/window_controller.h"
 #include "window/window_main_menu_helpers.h"
+#include "extras/ui/components/drawer_menu.h"
 #include "window/window_peer_menu.h"
 #include "window/window_session_controller.h"
 #include "styles/style_chat.h"
@@ -336,13 +337,13 @@ MainMenu::MainMenu(
 	object_ptr<Ui::VerticalLayout>(_inner.get()))))
 , _menu(_inner->add(
 	object_ptr<Ui::VerticalLayout>(_inner.get()),
-	{ st::mainMenuContentMargin, st::mainMenuSkip,
+	{ st::mainMenuContentMargin, 0,
 		st::mainMenuContentMargin, 0 }))
 , _footer(_inner->add(
 	object_ptr<Ui::FixedHeightWidget>(
 		_inner.get(),
 		st::mainMenuFooterHeight),
-	{ 0, st::mainMenuSkip, 0, 0 }))
+	{ 0, 0, 0, 0 }))
 , _versionSt(FooterLabelStyle(st::mainMenuVersionLabel, _footerFg.color()))
 , _version(AddVersionButton(_footer, *_versionSt)) {
 	setObjectName(u"mainMenu"_q);
@@ -363,6 +364,9 @@ MainMenu::MainMenu(
 	setupAccounts();
 	setupArchive();
 	setupMenu();
+	if (!_controller->session().supportMode()) {
+		ExtrasUi::setupDrawerReorder(_menu);
+	}
 
 	_nightThemeSwitch.setCallback([this] {
 		Expects(_nightThemeToggle != nullptr);
@@ -553,6 +557,7 @@ void MainMenu::setupArchive() {
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			_menu,
 			object_ptr<Ui::VerticalLayout>(_menu)));
+	wrap->setProperty("drawerItem", u"archiveChats"_q);
 	const auto inner = wrap->entity();
 	wrap->toggle(checkArchive(), anim::type::instant);
 
@@ -560,10 +565,10 @@ void MainMenu::setupArchive() {
 		inner,
 		tr::lng_archived_name(),
 		st::mainMenuButton,
-		{ .icon = &st::menuIconArchive, .color = &st::windowFg });
+		{});
+	ExtrasUi::addDrawerIcon(button, &st::menuIconArchive);
 	ExtrasFeatures::WindowMaterial::watchSurface(button);
 	button->setObjectName(u"menu.archiveChats"_q);
-	Ui::AddSkip(inner, st::mainMenuSectionSkip);
 	button->setAcceptBoth(true);
 	button->clicks(
 	) | rpl::on_next([=](Qt::MouseButton which) {
@@ -693,35 +698,21 @@ void MainMenu::setupMenu() {
 	const auto &settings = ExtrasSettings::getInstance();
 
 	const auto controller = _controller;
-	auto section = _menu->add(object_ptr<Ui::VerticalLayout>(_menu));
-	const auto nextSection = [&] {
-		const auto gap = _menu->add(
-			object_ptr<Ui::SlideWrap<>>(
-				_menu,
-				object_ptr<Ui::FixedHeightWidget>(
-					_menu,
-					st::mainMenuSectionSkip)));
-		// 分组间距随分组布局立即显隐，让菜单入场截图包含最终状态。
-		gap->setDuration(0)->toggleOn(
-			section->heightValue() | rpl::map([](int height) {
-				return height > 0;
-			}));
-		section = _menu->add(object_ptr<Ui::VerticalLayout>(_menu));
-	};
 	const auto addAction = [&](
 			rpl::producer<QString> text,
 			IconDescriptor &&descriptor,
 			QString name = {}) {
-		descriptor.color = &st::windowFg;
 		const auto button = AddButtonWithIcon(
-			section,
+			_menu,
 			std::move(text),
 			st::mainMenuButton,
-			std::move(descriptor));
+			{});
+		ExtrasUi::addDrawerIcon(button, descriptor.icon);
 		ExtrasFeatures::WindowMaterial::watchSurface(button);
 		// name 是调试服务端的语义寻址标识（control.click menu.xxx），空则不打。
 		if (!name.isEmpty()) {
-			button->setObjectName(u"menu."_q + std::move(name));
+			button->setProperty("drawerItem", name);
+			button->setObjectName(u"menu."_q + name);
 		}
 		return button;
 	};
@@ -738,9 +729,8 @@ void MainMenu::setupMenu() {
 		}
 
 		if (settings.showBotsInDrawer()) {
-			SetupMenuBots(section, controller, st::windowFg);
+			SetupMenuBots(_menu, controller, st::windowFg);
 		}
-		nextSection();
 
 		if (settings.showNewGroupInDrawer())
 		AddMyChannelsBox(addAction(
@@ -790,14 +780,16 @@ void MainMenu::setupMenu() {
 		});
 
 		const auto session = &controller->session();
-		const auto wallet = section->add(
+		const auto wallet = _menu->add(
 			object_ptr<Ui::SlideWrap<Ui::SettingsButton>>(
-				section,
+				_menu,
 				CreateButtonWithIcon(
-					section,
+					_menu,
 					tr::lng_wallet_menu(),
 					st::mainMenuButton,
-					{ .icon = &st::walletMenuIcon, .color = &st::windowFg })));
+					{})));
+		wallet->setProperty("drawerItem", u"wallet"_q);
+		ExtrasUi::addDrawerIcon(wallet->entity(), &st::walletMenuIcon);
 		ExtrasFeatures::WindowMaterial::watchSurface(wallet->entity());
 		wallet->entity()->setObjectName(u"menu.wallet"_q);
 		Ui::NewBadge::AddAfterButtonText(
@@ -837,7 +829,6 @@ void MainMenu::setupMenu() {
 			_controller->session().supportTemplates().reload();
 		});
 	}
-	nextSection();
 	addAction(
 		tr::lng_proxy_settings(),
 		{ &st::menuIconNetwork },
