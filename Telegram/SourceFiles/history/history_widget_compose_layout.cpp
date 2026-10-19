@@ -379,6 +379,11 @@ void HistoryWidget::switchToSearch(QString query, PeerData *from) {
 			updateControlsGeometry();
 		}, _composeSearch->lifetime());
 
+		_composeSearch->listShownValue(
+		) | rpl::skip(1) | rpl::on_next([=] {
+			updateControlsVisibility();
+		}, _composeSearch->lifetime());
+
 		using Activation = HistoryView::ComposeSearch::Activation;
 		_composeSearch->activations(
 		) | rpl::on_next([=](Activation activation) {

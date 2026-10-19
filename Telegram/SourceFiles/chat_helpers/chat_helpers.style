@@ -1340,11 +1340,11 @@ historyComposeSearchNewer: IconButton(historyComposeSearchOlder) {
 }
 historyComposeSearchNewerDisabled: icon {{ "player/player_collapse-20x20", menuFgDisabled }};
 historyComposeSearchList: IconButton(historyComposeSearchButton) {
-	icon: icon {{ "premium/list-20x20", historyComposeIconFg }};
-	iconOver: icon {{ "premium/list-20x20", historyComposeIconFgOver }};
+	icon: icon {{ "menu/rich/bullet_list-20x20", historyComposeIconFg }};
+	iconOver: icon {{ "menu/rich/bullet_list-20x20", historyComposeIconFgOver }};
 }
-historyComposeSearchListActive: icon {{ "premium/list-20x20", windowActiveTextFg }};
-historyComposeSearchListDisabled: icon {{ "premium/list-20x20", menuFgDisabled }};
+historyComposeSearchListActive: icon {{ "menu/rich/bullet_list-20x20", windowActiveTextFg }};
+historyComposeSearchListDisabled: icon {{ "menu/rich/bullet_list-20x20", menuFgDisabled }};
 historyComposeSearchType: IconButton(historyComposeSearchButton) {
 	icon: icon {{ "menu/tag_filter", historyComposeIconFg }};
 	iconOver: icon {{ "menu/tag_filter", historyComposeIconFgOver }};

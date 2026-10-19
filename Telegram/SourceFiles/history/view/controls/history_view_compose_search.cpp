@@ -246,6 +246,8 @@ List CreateList(
 	container->hide();
 	Ui::ApplyChatControlSurface(container, st::windowCardRadius);
 	const auto scroll = Ui::CreateChild<Ui::ScrollArea>(container);
+	scroll->setVerticalBarTopSkip(st::windowCardRadius);
+	scroll->setVerticalBarBottomSkip(st::windowCardRadius);
 
 	using Delegate = PeerListContentDelegateSimple;
 	const auto delegate = scroll->lifetime().make_state<Delegate>();
@@ -1253,6 +1255,8 @@ public:
 
 	[[nodiscard]] int height() const;
 	[[nodiscard]] rpl::producer<int> heightChanges() const;
+	[[nodiscard]] bool listShown() const;
+	[[nodiscard]] rpl::producer<bool> listShownValue() const;
 	[[nodiscard]] rpl::producer<Activation> activations() const;
 	[[nodiscard]] rpl::producer<> destroyRequests() const;
 	[[nodiscard]] rpl::lifetime &lifetime();
@@ -1272,6 +1276,7 @@ private:
 	Api::MessagesSearchMerged _apiSearch;
 	bool _searching = false;
 	bool _autoJump = false;
+	rpl::variable<bool> _listShown = false;
 
 	struct {
 		struct {
@@ -1312,17 +1317,21 @@ ComposeSearch::Inner::Inner(
 	_findBar->show();
 	_findBar->raiseWithSurface();
 
-	// 查找栏贴在宿主底部，与输入区胶囊同样四周留边。
+	// 先按宽度重排收藏标签，再用最终高度贴底，避免重排期间沿用旧高度。
+	_parent->widthValue() | rpl::on_next([=](int width) {
+		_findBar->resize(
+			std::max(width - 2 * st::historyComposeCapsuleMargin, 0),
+			_findBar->height());
+	}, _findBar->lifetime());
+
 	rpl::combine(
-		_parent->sizeValue(),
+		_parent->heightValue(),
 		_findBar->heightValue()
-	) | rpl::on_next([=](QSize size, int height) {
+	) | rpl::on_next([=](int outerHeight, int height) {
 		const auto margin = st::historyComposeCapsuleMargin;
-		_findBar->setGeometry(
+		_findBar->moveToLeft(
 			margin,
-			size.height() - margin - height,
-			std::max(size.width() - 2 * margin, 0),
-			height);
+			outerHeight - margin - height);
 	}, _findBar->lifetime());
 
 	rpl::combine(
@@ -1523,6 +1532,7 @@ void ComposeSearch::Inner::showList() {
 	_list.container->show();
 	_list.container->raise();
 	_findBar->setListShown(true);
+	_listShown = true;
 }
 
 void ComposeSearch::Inner::hideList() {
@@ -1531,6 +1541,7 @@ void ComposeSearch::Inner::hideList() {
 	}
 	_list.container->hide();
 	_findBar->setListShown(false);
+	_listShown = false;
 }
 
 void ComposeSearch::Inner::setInnerFocus() {
@@ -1578,6 +1589,14 @@ int ComposeSearch::Inner::height() const {
 
 rpl::producer<int> ComposeSearch::Inner::heightChanges() const {
 	return _findBar->heightValue() | rpl::skip(1);
+}
+
+bool ComposeSearch::Inner::listShown() const {
+	return _listShown.current();
+}
+
+rpl::producer<bool> ComposeSearch::Inner::listShownValue() const {
+	return _listShown.value();
 }
 
 void ComposeSearch::Inner::hideAnimated() {
@@ -1656,6 +1675,14 @@ int ComposeSearch::height() const {
 
 rpl::producer<int> ComposeSearch::heightChanges() const {
 	return _inner->heightChanges();
+}
+
+bool ComposeSearch::listShown() const {
+	return _inner->listShown();
+}
+
+rpl::producer<bool> ComposeSearch::listShownValue() const {
+	return _inner->listShownValue();
 }
 
 rpl::producer<ComposeSearch::Activation> ComposeSearch::activations() const {

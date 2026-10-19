@@ -51,6 +51,8 @@ public:
 
 	[[nodiscard]] int height() const;
 	[[nodiscard]] rpl::producer<int> heightChanges() const;
+	[[nodiscard]] bool listShown() const;
+	[[nodiscard]] rpl::producer<bool> listShownValue() const;
 
 	struct Activation {
 		not_null<HistoryItem*> item;

@@ -353,6 +353,15 @@ void PinnedWidget::searchInPinned() {
 	updateControlsGeometry();
 	doSetInnerFocus();
 
+	_composeSearch->listShownValue(
+	) | rpl::skip(1) | rpl::on_next([=](bool shown) {
+		if (shown) {
+			_translateBar->hide();
+		} else {
+			_translateBar->show();
+		}
+	}, _composeSearch->lifetime());
+
 	_composeSearch->activations(
 	) | rpl::on_next([=](ComposeSearch::Activation activation) {
 		showAtPosition(activation.item->position());
@@ -621,7 +630,9 @@ void PinnedWidget::showAnimatedHook(
 void PinnedWidget::showFinishedHook() {
 	_topBar->setAnimatingMode(false);
 	_inner->showFinished();
-	_translateBar->show();
+	if (!_composeSearch || !_composeSearch->listShown()) {
+		_translateBar->show();
+	}
 }
 
 bool PinnedWidget::floatPlayerHandleWheelEvent(QEvent *e) {

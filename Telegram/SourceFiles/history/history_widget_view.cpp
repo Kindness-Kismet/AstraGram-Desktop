@@ -294,7 +294,7 @@ void HistoryWidget::updateControlsVisibility() {
 	if (_scroll->isHidden()) {
 		_scroll->show();
 	}
-	_topBars->show();
+	_topBars->setVisible(!_composeSearch || !_composeSearch->listShown());
 	if (_sponsoredMessageBar && checkSponsoredMessageBarVisibility()) {
 		_sponsoredMessageBar->toggle(true, anim::type::normal);
 	}

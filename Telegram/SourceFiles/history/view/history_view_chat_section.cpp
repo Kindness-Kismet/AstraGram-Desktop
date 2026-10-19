@@ -4679,7 +4679,11 @@ void ChatWidget::showFinishedHook() {
 		_composeControls->showFinished();
 	}
 	_inner->showFinished();
-	_topControls->show();
+	if (_composeSearch && _composeSearch->listShown()) {
+		_topControls->hide();
+	} else {
+		_topControls->show();
+	}
 	_topControls->finishAnimating();
 
 	// We should setup the drag area only after
@@ -6266,6 +6270,15 @@ void ChatWidget::showComposeSearch(const QString &query, PeerData *from) {
 	_composeSearch->heightChanges(
 	) | rpl::on_next([=] {
 		updateControlsGeometry();
+	}, _composeSearch->lifetime());
+
+	_composeSearch->listShownValue(
+	) | rpl::skip(1) | rpl::on_next([=](bool shown) {
+		if (shown) {
+			_topControls->hide();
+		} else {
+			_topControls->show();
+		}
 	}, _composeSearch->lifetime());
 
 	_composeSearch->activations(
