@@ -170,13 +170,18 @@ private:
 			if (!button) {
 				return false;
 			}
+			// 弹出菜单创建后会改挂到主窗口，其中的按钮不属于任何一行。
 			auto widget = static_cast<QWidget*>(button);
-			while (widget->parentWidget() != _layout.get()) {
+			while (widget && widget->parentWidget() != _layout.get()) {
 				widget = widget->parentWidget();
+			}
+			const auto proxy = _proxies.find(static_cast<Ui::RpWidget*>(widget));
+			if (proxy == end(_proxies)) {
+				return false;
 			}
 			_pressed = button;
 			_cursor = button->cursor();
-			_proxy = _proxies.at(static_cast<Ui::RpWidget*>(widget));
+			_proxy = proxy->second;
 			_start = mouse->globalPos();
 			_timer.start(QApplication::startDragTime());
 			return false;
