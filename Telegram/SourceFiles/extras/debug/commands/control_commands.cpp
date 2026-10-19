@@ -711,25 +711,30 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 
 
 [[nodiscard]] Result controlMouse(const QStringList &args) {
-	if (args.size() < 3 || args.size() > 4) return Result::Err(u"usage: control.mouse <target> <x> <y> [left|right|double|press|release]"_q);
+	if (args.size() < 3 || args.size() > 4) return Result::Err(u"usage: control.mouse <target> <x> <y> [left|right|double|press|move|release]"_q);
 	const auto target = QPointer<QWidget>(findControl(args[0]));
 	if (!target || !target->isVisible() || !target->isEnabled()) return Result::Err(u"visible enabled control not found"_q);
 	auto xOk = false;
 	auto yOk = false;
 	const auto point = QPoint(args[1].toInt(&xOk), args[2].toInt(&yOk));
 	const auto mode = args.size() == 4 ? args[3] : u"left"_q;
-	if (!xOk || !yOk || !target->rect().contains(point)) return Result::Err(u"expected coordinates inside the control"_q);
-	const auto modes = QStringList{ u"left"_q, u"right"_q, u"double"_q, u"press"_q, u"release"_q };
+	if (!xOk || !yOk || (mode != u"move"_q && !target->rect().contains(point))) return Result::Err(u"expected coordinates inside the control"_q);
+	const auto modes = QStringList{ u"left"_q, u"right"_q, u"double"_q, u"press"_q, u"move"_q, u"release"_q };
 	if (!modes.contains(mode)) return Result::Err(u"unknown mouse action"_q);
 	const auto global = target->mapToGlobal(point);
 	const auto root = target->window();
 	auto receiver = QPointer<QWidget>(root->childAt(root->mapFromGlobal(global)));
 	if (!receiver) receiver = root;
-	// 松开与真实鼠标一致，投递给按下的控件，不做遮挡检查。
-	if (mode == u"release"_q) receiver = target;
+	// 拖动与松开投递给原控件，拖动坐标允许越过边界，沿用真实鼠标捕获语义。
+	if (mode == u"release"_q || mode == u"move"_q) receiver = target;
 	if (receiver != target && !target->isAncestorOf(receiver)) return Result::Err(u"control is covered at the requested point"_q);
 	const auto local = receiver->mapFromGlobal(global);
 	const auto button = mode == u"right"_q ? Qt::RightButton : Qt::LeftButton;
+	if (mode == u"move"_q) {
+		sendIfAlive(receiver, QMouseEvent(QEvent::MouseMove,
+			local, global, Qt::NoButton, Qt::LeftButton, Qt::NoModifier));
+		return Result::Ok();
+	}
 	// press 与 release 分开投递，用于验证长按；两次调用之间保持按下状态。
 	if (mode != u"release"_q) {
 		sendIfAlive(receiver, QMouseEvent(QEvent::MouseButtonPress, local, global, button, button, Qt::NoModifier));

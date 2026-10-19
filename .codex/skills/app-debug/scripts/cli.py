@@ -78,7 +78,7 @@ GENERIC_COMMANDS = {
     'settings.import': '应用设置文件并报告保存结果：<路径> <all|official|custom|account>',
 
     "session.thread-settings": "查询或修改话题与子会话配置：<会话编号> <话题编号> <子会话编号> [键 值]",
-    "control.mouse": "在应用控件内部点击、打开菜单或分开按下松开：<目标> <横坐标> <纵坐标> [left|right|double|press|release]",
+    "control.mouse": "在应用控件内部点击、打开菜单或分开按下松开：<目标> <横坐标> <纵坐标> [left|right|double|press|move|release]",
     "crash.log": "读取当前调试配置的崩溃日志",
     "iv.open-file": "打开本地文章预览：<文件路径>",
     "iv.open-editor": "在独立模拟模式打开空白文章编辑窗口，不发送消息",

@@ -17,9 +17,10 @@
 表情底栏 `emoji.categories` 返回 `kind: emojiFooter` 与 `items`，每项包含集合编号、实际矩形、裁剪后可见矩形、选中状态和当前展开名称。
 
 `control.action <target> <action>` 执行 `control.get` 返回的辅助功能动作。
-`control.mouse <target> <x> <y> [left|right|double|press|release]` 在控件内部指定位置投递点击、右键或双击，
+`control.mouse <target> <x> <y> [left|right|double|press|move|release]` 在控件内部指定位置投递点击、右键或双击，
 适用于消息气泡等自绘区域。所有事件都在本应用内，不移动系统光标。
-`press` 只按下、`release` 只松开，用于长按录音等需要保持按下的操作；松开直接投递给目标控件。
+`press` 只按下、`release` 只松开；`move` 按左键持续按下的状态移动，坐标可越过控件边界。
+拖动和松开直接投递给按下时的目标控件，不移动系统鼠标。
 
 目标可使用控件标识、可见文字或 `control.list` 的全树序号。文字重复时使用标识或序号。
 
