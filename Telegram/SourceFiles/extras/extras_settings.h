@@ -294,6 +294,7 @@ public:
 	[[nodiscard]] bool semiTransparentDeletedMessages() const { return _semiTransparentDeletedMessages.current(); }
 	[[nodiscard]] bool disableAds() const { return _disableAds.current(); }
 	[[nodiscard]] bool disableStories() const { return _disableStories.current(); }
+	[[nodiscard]] bool hideGroupCalls() const { return _hideGroupCalls.current(); }
 	[[nodiscard]] bool disableChatBackground() const { return _disableChatBackground.current(); }
 	[[nodiscard]] bool showBubbleOutline() const { return _showBubbleOutline.current(); }
 	[[nodiscard]] bool disableBubbleShadow() const { return _disableBubbleShadow.current(); }
@@ -416,6 +417,7 @@ public:
 	void setSemiTransparentDeletedMessages(bool val);
 	void setDisableAds(bool val);
 	void setDisableStories(bool val);
+	void setHideGroupCalls(bool val);
 	void setDisableChatBackground(bool val);
 	void setShowBubbleOutline(bool val);
 	void setDisableBubbleShadow(bool val);
@@ -546,6 +548,8 @@ public:
 	[[nodiscard]] rpl::producer<bool> disableAdsChanges() const { return _disableAds.changes(); }
 	[[nodiscard]] rpl::producer<bool> disableStoriesValue() const { return _disableStories.value(); }
 	[[nodiscard]] rpl::producer<bool> disableStoriesChanges() const { return _disableStories.changes(); }
+	[[nodiscard]] rpl::producer<bool> hideGroupCallsValue() const { return _hideGroupCalls.value(); }
+	[[nodiscard]] rpl::producer<bool> hideGroupCallsChanges() const { return _hideGroupCalls.changes(); }
 	[[nodiscard]] rpl::producer<bool> disableChatBackgroundValue() const { return _disableChatBackground.value(); }
 	[[nodiscard]] rpl::producer<bool> showBubbleOutlineValue() const { return _showBubbleOutline.value(); }
 	[[nodiscard]] rpl::producer<bool> disableBubbleShadowValue() const { return _disableBubbleShadow.value(); }
@@ -750,6 +754,7 @@ private:
 	rpl::variable<bool> _semiTransparentDeletedMessages = false;
 	rpl::variable<bool> _disableAds = true;
 	rpl::variable<bool> _disableStories = false;
+	rpl::variable<bool> _hideGroupCalls = false;
 	rpl::variable<bool> _disableChatBackground = false;
 	rpl::variable<bool> _showBubbleOutline = false;
 	rpl::variable<bool> _disableBubbleShadow = false;

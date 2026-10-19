@@ -88,6 +88,7 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"semiTransparentDeletedMessages"_q, [&] { return settings.semiTransparentDeletedMessages(); }, settings, &ExtrasSettings::setSemiTransparentDeletedMessages);
 	addSetting(entries, u"disableAds"_q, [&] { return settings.disableAds(); }, settings, &ExtrasSettings::setDisableAds);
 	addSetting(entries, u"disableStories"_q, [&] { return settings.disableStories(); }, settings, &ExtrasSettings::setDisableStories);
+	addSetting(entries, u"hideGroupCalls"_q, [&] { return settings.hideGroupCalls(); }, settings, &ExtrasSettings::setHideGroupCalls);
 	addSetting(entries, u"disableChatBackground"_q, [&] { return settings.disableChatBackground(); }, settings, &ExtrasSettings::setDisableChatBackground);
 	addSetting(entries, u"showBubbleOutline"_q, [&] { return settings.showBubbleOutline(); }, settings, &ExtrasSettings::setShowBubbleOutline);
 	addSetting(entries, u"disableBubbleShadow"_q, [&] { return settings.disableBubbleShadow(); }, settings, &ExtrasSettings::setDisableBubbleShadow);

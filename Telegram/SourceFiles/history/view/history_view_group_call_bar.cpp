@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_group_call_bar.h"
 
+#include "extras/extras_settings.h"
+
 #include "data/data_channel.h"
 #include "data/data_user.h"
 #include "data/data_changes.h"
@@ -433,11 +435,14 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallBarContentByPeer(
 		Core::App().calls().currentGroupCallValue(),
 		((showInForum || !channel)
 			? (rpl::single(false) | rpl::type_erased)
-			: Data::PeerFlagValue(channel, ChannelData::Flag::Forum))
-	) | rpl::map([=](auto, Calls::GroupCall *current, bool hiddenByForum) {
+			: Data::PeerFlagValue(channel, ChannelData::Flag::Forum)),
+		ExtrasSettings::getInstance().hideGroupCallsValue()
+	) | rpl::map([=](auto, Calls::GroupCall *current,
+			bool hiddenByForum, bool hiddenBySettings) {
 		const auto call = peer->groupCall();
 		return (call
 			&& !hiddenByForum
+			&& !hiddenBySettings
 			&& (!current || current->peer() != peer))
 			? call
 			: nullptr;

@@ -213,6 +213,11 @@ TopBarWidget::TopBarWidget(
 	) | rpl::on_next([=](bool) {
 		updateControlsVisibility();
 	}, lifetime());
+	ExtrasSettings::getInstance().hideGroupCallsChanges(
+	) | rpl::on_next([=] {
+		closeMenu();
+		updateControlsVisibility();
+	}, lifetime());
 
 	_back->setAcceptBoth();
 	_back->addClickHandler([=](Qt::MouseButton) {
@@ -1346,6 +1351,7 @@ void TopBarWidget::updateControlsVisibility() {
 	}();
 	_groupCall->setVisible(historyMode
 		&& groupCallsEnabled
+		&& !ExtrasSettings::getInstance().hideGroupCalls()
 		&& !_chooseForReportReason);
 
 	if (_membersShowArea) {

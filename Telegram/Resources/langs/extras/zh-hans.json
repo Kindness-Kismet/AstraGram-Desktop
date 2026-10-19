@@ -403,6 +403,7 @@
   "KeepAliveServiceNote": "我们建议您迁移到 **FCM** 版本。",
   "DisableAds": "禁用广告",
   "DisableStories": "禁用动态",
+  "HideGroupCalls": "隐藏直播和群通话入口",
   "DisableOpenLinkWarning": "关闭链接跳转确认",
   "HidePremiumStatuses": "隐藏 Premium 状态",
   "HideProxySettingsIcon": "隐藏代理设置图标",

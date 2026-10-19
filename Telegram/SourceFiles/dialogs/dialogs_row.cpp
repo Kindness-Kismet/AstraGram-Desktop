@@ -51,6 +51,11 @@ constexpr auto kBottomLayer = 1;
 constexpr auto kNoneLayer = 0;
 constexpr auto kBlurRadius = 24;
 
+[[nodiscard]] bool ShowGroupCallBadge(not_null<ChannelData*> channel) {
+	return !ExtrasSettings::getInstance().hideGroupCalls()
+		&& Data::ChannelHasActiveCall(channel);
+}
+
 [[nodiscard]] int SubscriptionCutSkip() {
 	const auto width = st::dialogsSubscriptionBadgeOutlineTwice / 2.;
 	return int(std::ceil(width)) + 1;
@@ -438,7 +443,7 @@ void Row::updateCornerBadgeShown(
 				|| (!insideCommunity && user->linkedCommunityId()))) {
 			return kTopLayer;
 		} else if (channel
-			&& (Data::ChannelHasActiveCall(channel)
+			&& (ShowGroupCallBadge(channel)
 				|| Data::ChannelHasSubscriptionUntilDate(channel)
 				|| (!insideCommunity && channel->linkedCommunityId()))) {
 			return kTopLayer;
@@ -779,7 +784,7 @@ void Row::paintUserpic(
 		badgeChannel);
 	const auto communityMember = peer
 		&& Data::PeerLinkedCommunityId(peer)
-		&& !(badgeChannel && Data::ChannelHasActiveCall(badgeChannel))
+		&& !(badgeChannel && ShowGroupCallBadge(badgeChannel))
 		&& !(badgeUser && Data::IsUserOnline(badgeUser))
 		&& !subscribed
 		&& !insideCommunity;
@@ -827,7 +832,7 @@ void Row::paintUserpic(
 		|| subscribed
 		|| communityMember
 		|| (hidden
-			&& !(badgeChannel && Data::ChannelHasActiveCall(badgeChannel)))) {
+			&& !(badgeChannel && ShowGroupCallBadge(badgeChannel)))) {
 		return;
 	}
 	const auto actionPainter = history->sendActionPainter();

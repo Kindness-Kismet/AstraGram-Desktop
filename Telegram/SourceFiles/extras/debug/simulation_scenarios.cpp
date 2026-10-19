@@ -16,6 +16,7 @@
 #include "data/data_forum.h"
 #include "data/data_folder.h"
 #include "data/data_forum_topic.h"
+#include "data/data_group_call.h"
 #include "data/data_peer_bot_command.h"
 #include "data/data_replies_list.h"
 #include "data/data_session.h"
@@ -91,12 +92,12 @@ constexpr auto kScenarios = std::array{
 	Scenario{ "deleted-account", u"私聊 · 已注销", Kind::DeletedAccount, Category::Private, "deleted-account" },
 	Scenario{ "business", u"私聊 · 商业联系人", Kind::Business, Category::Private, "business" },
 	Scenario{ "paid", u"私聊 · 付费消息", Kind::Paid, Category::Private, "paid" },
-	Scenario{ "group", u"群组 · 讨论与置顶", Kind::Group, Category::Groups, "pinned,reply,edited,deleted,ttl,photo,album,file,contact,poll,sticker" },
+	Scenario{ "group", u"群组 · 讨论与置顶", Kind::Group, Category::Groups, "pinned,reply,edited,deleted,ttl,photo,album,file,contact,poll,sticker,active-call" },
 	Scenario{ "restricted", u"群组 · 发送限制", Kind::Restricted, Category::Groups, "restricted" },
-	Scenario{ "requests", u"群组 · 管理与申请", Kind::Requests, Category::Groups, "requests,pinned" },
+	Scenario{ "requests", u"群组 · 管理与申请", Kind::Requests, Category::Groups, "requests,pinned,video-chat" },
 	Scenario{ "slow", u"群组 · 慢速模式", Kind::Slow, Category::Groups, "slowmode" },
 	Scenario{ "protected-group", u"群组 · 内容保护", Kind::ProtectedGroup, Category::Groups, "protected,pinned" },
-	Scenario{ "channel", u"频道 · 公告与置顶", Kind::Broadcast, Category::Channels, "pinned,views,sending" },
+	Scenario{ "channel", u"频道 · 公告与置顶", Kind::Broadcast, Category::Channels, "pinned,views,sending,live-stream" },
 	Scenario{ "discussion", u"频道 · 评论讨论", Kind::Discussion, Category::Channels, "discussion,pinned" },
 	Scenario{ "join", u"频道 · 尚未加入", Kind::Join, Category::Channels, "join,pinned-dialog" },
 	Scenario{ "translate", u"频道 · 翻译内容", Kind::Translate, Category::Channels, "translation,pinned" },
@@ -732,11 +733,26 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 		if (kind == Kind::Group) {
 			seedGroupMembers(session, channel);
 		}
+		if (kind == Kind::Group || kind == Kind::Broadcast || kind == Kind::TopicTabs) {
+			using CallFlag = MTPDgroupCall::Flag;
+			const auto id = MTP_long(7800000 + index);
+			channel->setGroupCall(MTP_inputGroupCall(id, MTP_long(0)));
+			channel->groupCall()->processFullCall(MTP_phone_groupCall(
+				MTP_groupCall(
+					MTP_flags(CallFlag::f_title | (broadcast ? CallFlag::f_rtmp_stream : CallFlag())),
+					id, MTP_long(0), MTP_int(3),
+					MTP_string(broadcast ? "模拟频道直播" : "模拟群通话"),
+					MTPint(), MTPint(), MTPint(), MTPint(), MTP_int(30), MTP_int(1),
+					MTPstring(), MTPlong(), MTPPeer()),
+				MTP_vector<MTPGroupCallParticipant>(), MTP_string(""),
+				MTP_vector<MTPChat>(), MTP_vector<MTPUser>()));
+		}
 		if (kind == Kind::Discussion) {
 			channel->setDiscussionLink(session->data().channel(peerToChannel(scenarioPeerId(findScenario(u"group"_q)))));
 		}
 		if (kind == Kind::Requests || kind == Kind::TopicTabs) {
 			channel->setAdminRights(ChatAdminRight::InviteByLinkOrAdd | ChatAdminRight::ProcessJoinRequests
+				| (kind == Kind::Requests ? ChatAdminRight::ManageCall : ChatAdminRight())
 				| (kind == Kind::TopicTabs ? (ChatAdminRight::ManageTopics | ChatAdminRight::PinMessages) : ChatAdminRight()));
 			channel->setPendingRequestsCount(1, { UserId(kFirstPeerId + 1) });
 		}
@@ -1012,6 +1028,9 @@ Result listSimulationScenes(const QStringList &args) {
 			const auto history = session->data().history(peer);
 			const auto &sendAs = session->sendAsPeers();
 			entry["state"] = {
+				{ "hasGroupCall", peer->groupCall() != nullptr },
+				{ "canManageGroupCall", peer->canManageGroupCall() },
+				{ "groupCallParticipants", peer->groupCall() ? peer->groupCall()->fullCount() : 0 },
 				{ "sendAsCount", sendAs.list({ peer }).size() },
 				{ "sendAsPeerId", sendAs.resolveChosen(peer)->id.value },
 				{ "unread", history->unreadCount() }, { "unreadMark", history->unreadMark() },

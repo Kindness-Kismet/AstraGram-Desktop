@@ -4528,7 +4528,8 @@ bool FillVideoChatMenu(
 		Dialogs::EntryState request,
 		const PeerMenuCallback &addAction) {
 	const auto peer = request.key.peer();
-	if (!peer || peer->isUser()) {
+	if (!peer || peer->isUser()
+		|| ExtrasSettings::getInstance().hideGroupCalls()) {
 		return false;
 	}
 

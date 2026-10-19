@@ -35,7 +35,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 | 私聊 | `sending` | 停在发送中的文字和图片，气泡、图片角标与对话列表显示时钟 |
 | 群组 | `group` | 讨论、置顶和消息状态，图片、相册、文件、联系人、投票、静态贴纸 |
 | 群组 | `restricted` | 发送限制 |
-| 群组 | `requests` | 管理权限、加入申请和置顶 |
+| 群组 | `requests` | 管理权限、加入申请、置顶和视频聊天管理菜单 |
 | 群组 | `slow` | 慢速模式；每次打开刷新倒计时 |
 | 群组 | `protected-group` | 内容保护和置顶 |
 | 群组 | `send-as` | 本人与频道两种发送身份，默认选中频道，可通过输入框按钮在本地切换 |
@@ -134,6 +134,9 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 包信息可能随原生缓存保存在独立配置中。样本不带未读标记，切页不会自动减少徽标计数；返回值包含实际计数、是否补充样本、是否打开弹窗及三类贴纸包数量。
 新建的模拟贴纸包关联 `🙂`，在模拟聊天输入该表情即可验证贴纸联想，不点击贴纸发送。
 模拟验证前保存 `core.suggestStickersByEmoji`，临时设为 `false`，只查询已安装贴纸，避免等待无法完成的联网推荐；完成后恢复。
+
+`group`、`channel` 和 `topic-tabs` 含本地正在进行的群通话或频道直播；`simulation.list` 返回 `hasGroupCall`、`canManageGroupCall` 和 `groupCallParticipants`。
+配合 `hideGroupCalls` 验证入口即时隐藏和恢复，不点击加入或发起通话。
 
 `simulation.emoji-packs <on|off>` 仅在独立模拟配置中加入或移除三个固定的本地自定义表情包，保留其他表情包。
 样本使用独立笑脸素材及自定义表情属性，只加入表情列表；贴纸使用各自的包编号，不与表情或动图共用列表。

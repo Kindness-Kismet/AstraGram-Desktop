@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_top_bar.h"
 
+#include "extras/extras_settings.h"
 #include "extras/features/window_material/window_material.h"
 #include "api/api_peer_colors.h"
 #include "api/api_peer_photo.h"
@@ -547,10 +548,12 @@ TopBar::TopBar(
 	setupSwipeBack(controller);
 	setupUserpicButton(controller);
 	if (_hasActions) {
-		_peer->session().changes().peerFlagsValue(
-			_peer,
-			Data::PeerUpdate::Flag::FullInfo
-				| Data::PeerUpdate::Flag::ChannelAmIn
+		rpl::merge(
+			_peer->session().changes().peerFlagsValue(
+				_peer,
+				Data::PeerUpdate::Flag::FullInfo
+					| Data::PeerUpdate::Flag::ChannelAmIn) | rpl::to_empty,
+			ExtrasSettings::getInstance().hideGroupCallsChanges() | rpl::to_empty
 		) | rpl::on_next([=] {
 			setupActions(controller);
 		}, lifetime());
@@ -1198,8 +1201,9 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 	if (chechMax()) {
 		return;
 	}
-	if (peer->groupCall()
-		|| (!peer->isUser() && peer->canManageGroupCall())) {
+	if (!ExtrasSettings::getInstance().hideGroupCalls()
+		&& (peer->groupCall()
+			|| (!peer->isUser() && peer->canManageGroupCall()))) {
 		const auto broadcast = peer->isBroadcast();
 		const auto text = broadcast
 			? tr::lng_profile_action_short_live_stream(tr::now)
@@ -1212,6 +1216,7 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 			controller->startOrJoinGroupCall(peer);
 		});
 		liveStream->setAccessibleName(text);
+		liveStream->setObjectName(u"profile.groupCall"_q);
 		buttons.push_back(liveStream);
 		_actions->add(liveStream);
 	}

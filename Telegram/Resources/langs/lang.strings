@@ -9265,6 +9265,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_HideReactionsInGroups" = "Groups";
 "extras_HideReactionsInPrivateChats" = "Private Chats";
 "extras_QuickAdminShortcuts" = "Quick Admin Shortcuts";
+"extras_HideGroupCalls" = "Hide Live Stream and Group Call Controls";
 "extras_DisableGreetingSticker" = "Disable Greeting Sticker";
 "extras_UseQuickForwardMenu" = "Use quick forward menu";
 "extras_SendForwardFirst" = "Send comment after forwarding";

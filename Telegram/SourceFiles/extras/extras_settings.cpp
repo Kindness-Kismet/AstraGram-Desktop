@@ -680,6 +680,12 @@ void ExtrasSettings::setDisableStories(bool val) {
 	save();
 }
 
+void ExtrasSettings::setHideGroupCalls(bool val) {
+	if (_hideGroupCalls.current() == val) return;
+	_hideGroupCalls = val;
+	save();
+}
+
 void ExtrasSettings::setDisableChatBackground(bool val) {
 	if (_disableChatBackground.current() == val) return;
 	_disableChatBackground = val;
@@ -1427,6 +1433,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"semiTransparentDeletedMessages", s._semiTransparentDeletedMessages.current()},
 		{"disableAds", s._disableAds.current()},
 		{"disableStories", s._disableStories.current()},
+		{"hideGroupCalls", s._hideGroupCalls.current()},
 		{"disableChatBackground", s._disableChatBackground.current()},
 		{"showBubbleOutline", s._showBubbleOutline.current()},
 		{"disableBubbleShadow", s._disableBubbleShadow.current()},
@@ -1564,6 +1571,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._semiTransparentDeletedMessages = j.value("semiTransparentDeletedMessages", defaults._semiTransparentDeletedMessages.current());
 	s._disableAds = j.value("disableAds", defaults._disableAds.current());
 	s._disableStories = j.value("disableStories", defaults._disableStories.current());
+	s._hideGroupCalls = j.value("hideGroupCalls", defaults._hideGroupCalls.current());
 	s._disableChatBackground = j.value("disableChatBackground", defaults._disableChatBackground.current());
 	s._showBubbleOutline = j.value("showBubbleOutline", defaults._showBubbleOutline.current());
 	s._disableBubbleShadow = j.value("disableBubbleShadow", defaults._disableBubbleShadow.current());

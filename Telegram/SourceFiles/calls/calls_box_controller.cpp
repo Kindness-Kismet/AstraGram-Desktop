@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "calls/calls_box_controller.h"
 
+#include "extras/extras_settings.h"
 #include "lang/lang_keys.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/layers/generic_box.h"
@@ -243,8 +244,12 @@ void ListController::prepare() {
 }
 
 rpl::producer<bool> ListController::shownValue() const {
-	return _fullCount.value(
-	) | rpl::map(rpl::mappers::_1 > 0) | rpl::distinct_until_changed();
+	return rpl::combine(
+		_fullCount.value(),
+		ExtrasSettings::getInstance().hideGroupCallsValue()
+	) | rpl::map([](int count, bool hidden) {
+		return (count > 0) && !hidden;
+	}) | rpl::distinct_until_changed();
 }
 
 void ListController::rowClicked(not_null<PeerListRow*> row) {
@@ -853,6 +858,7 @@ void ShowCallsBox(
 				object_ptr<Ui::VerticalLayout>(box)),
 			style::margins());
 		groupCalls->hide(anim::type::instant);
+		groupCalls->setObjectName(u"calls.activeGroupCalls"_q);
 		groupCalls->toggleOn(state->groupCallsController.shownValue());
 
 		Ui::AddSubsectionTitle(

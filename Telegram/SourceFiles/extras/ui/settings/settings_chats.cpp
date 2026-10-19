@@ -165,6 +165,12 @@ void BuildGroupsAndChannels(SectionBuilder &builder, ExtrasSectionBuilder &extra
 		.setter = &ExtrasSettings::setQuickAdminShortcuts,
 	});
 	extras.addSettingToggle({
+		.id = u"extras/hideGroupCalls"_q,
+		.title = tr::extras_HideGroupCalls(),
+		.getter = &ExtrasSettings::hideGroupCalls,
+		.setter = &ExtrasSettings::setHideGroupCalls,
+	});
+	extras.addSettingToggle({
 		.id = u"extras/disableGreetingSticker"_q,
 		.title = tr::extras_DisableGreetingSticker(),
 		.getter = &ExtrasSettings::disableGreetingSticker,

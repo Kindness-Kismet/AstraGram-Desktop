@@ -283,6 +283,7 @@
   "KeepAliveServiceNote": "We recommend migrating to **FCM** version.",
   "DisableAds": "Disable Ads",
   "DisableStories": "Disable Stories",
+  "HideGroupCalls": "Hide Live Stream and Group Call Controls",
   "DisableOpenLinkWarning": "Disable Open Link Warning",
   "HidePremiumStatuses": "Hide Premium Statuses",
   "HideProxySettingsIcon": "Hide Proxy Settings Icon",

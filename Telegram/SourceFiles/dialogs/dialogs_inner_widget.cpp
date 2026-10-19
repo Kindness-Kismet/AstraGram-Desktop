@@ -525,6 +525,7 @@ InnerWidget::InnerWidget(
 
 	rpl::merge(
 		session().settings().archiveInMainMenuChanges() | rpl::to_empty,
+		ExtrasSettings::getInstance().hideGroupCallsChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showArchiveInDrawerValue(
 		) | rpl::skip(1) | rpl::to_empty
 	) | rpl::on_next([=] {
