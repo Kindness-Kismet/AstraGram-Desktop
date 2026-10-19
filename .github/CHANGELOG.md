@@ -1,59 +1,37 @@
-- Changed how settings pages look; they are now a borderless list with accent group titles, thin lines between groups, consistent row insets and icons, and three unified font sizes, in both light and dark themes and with any accent color
-- Changed how settings search looks; the search field now floats over a blurred window backdrop, results appear in a separate rounded card, and clicking outside closes it
-- Changed how dialogs look; every dialog now has a title and a single close button at the top right, option lists share one style, section dividers are replaced with spacing, and rows no longer highlight on hover while their controls or text darken instead
-- Changed how automatic downloads, language, file confirmation, archive, login and power saving settings open; they now appear as native dialogs instead of embedded settings pages
-- Changed how the proxy dialogs work; the list now has a Use proxy switch with a status line and one list for the system proxy, saved servers, adding a proxy and pasting a link, and the editor uses a type dropdown, borderless filled inputs, a warning card and can fill the form from a copied link
-- Changed how profile info looks; sections have accent titles and thin dividers, the members header shows the count with search and add buttons, member ranks appear as colored chips, action buttons are borderless with accent icons, the side panel offers More and Call, and actions shown as buttons no longer repeat in the More menu
-- Changed how the info sidebar opens and closes; it now enters as a floating card and shrinks away on close without the chat area jumping
-- Changed how shared media from a chat profile looks; it now opens as a wider gallery with select and calendar buttons in the top bar, a header with the media type and count, zoom buttons or inline search, rounded tiles and compact selection checkboxes, and Saved Messages uses the same layout
-- Changed how downloads are filtered; a row of type tiles with colored icons and counts under a gallery header replaces the category tabs
-- Changed how searching inside a chat works; it now opens a find bar in place of the message field with a result counter, older and newer arrows, a results list, type and sender filters and jump to date, and secondary tools collapse into a menu on narrow windows
-- Changed how search fields look; they are now borderless and float with a thin outline and a soft shadow, the search icon turns to the accent color on focus, and searches in profiles, media panels, admin logs, message archives, pickers, location, templates and editors open from an icon in their own row while titles and navigation stay visible
-- Changed how article windows look; they now follow the window background and rounded corners of the main window, and article search is a floating capsule at the bottom
-- Changed how the emoji and sticker panel looks; tabs are compact icon and text tabs, the active emoji category shows its name next to redrawn category icons, recent emoji use a clock icon, emoji set lists use borderless radios, sticker management uses the same tabs, and sticker and GIF search no longer takes focus from the message field
-- Changed how horizontal tabs look; they now use thin underlines without separators, trending counters are aligned with the tab text, zero counts are hidden and large counts show as 999+
-- Changed how icon-only buttons respond; hover and click effects now use rounded squares instead of circles
-- Changed how interface colors look; scroll bars, window frames, corners and separators now use neutral colors that no longer follow the accent color, and the divider under the chat and archive top bars and the gap below the title bar are removed
-- Changed how chat navigation looks; opening chats from links, topics, saved lists and back navigation now fades in place without shifting sideways
-- Changed how the in-window media viewer header works; the position and total now show only in the thumbnail strip
-- Changed the reorder handle icon in sticker, username and shared media lists; it now shows a clearer list icon
-- Removed the horizontal tab style setting; tabs always use the new underline style
-- Removed the option to force embedded search in one column mode; the in-chat find bar is now always used
-- Fixed an issue with deleted message archives that previously caused records to load in the wrong order
-- Fixed an issue with deleted temporary bot messages that previously caused them not to be saved
-- Fixed an issue with sticker timestamps that previously caused them to stay visible or appear without hovering the sticker
-- Fixed an issue with profile cards without a photo that previously caused a large circle to overflow the card
-- Fixed an issue with topic and reply composers that previously caused the caret to disappear
-- Fixed an issue with switching to Simple Black that previously caused an outdated palette after an update
-- Fixed a crash when the in-window media viewer toolbar appeared in Qt 6 builds
+- Added customizable message location indicators, so you can now choose outline corners or a bouncing marker and adjust the color, duration and size with a live preview
+- Added drawer item reordering, so you can now long-press and drag items in the main menu or reorder them in appearance settings
+- Added a switch to hide live stream and group call controls, so you can now hide their buttons, menu entries and status indicators
+- Improved calendar navigation, which now offers year and month menus, date shortcuts and rounded day cells while keeping navigation visible during range selection
+- Improved emoji, sticker and GIF panel spacing, which now uses balanced side margins and centered sticker columns
+- Improved sticker suggestions, which now leave space at the bottom and darken the hovered sticker itself while preserving its transparent edges
+- Improved popup menu scrollbars, which now leave space at the top and bottom without changing menu item positions
+- Improved interface icons, which now distinguish settings import and export actions and use a clearer contacts icon in the main menu
+- Fixed an issue with group call buttons that previously caused the wrong video icon to appear and left menu buttons highlighted after dismissal
+- Fixed an issue with dark Windows title bars that previously caused solid backgrounds to cover active Mica and Acrylic materials
+- Fixed an issue with forwarding dialog folder tabs that previously caused the chat background to show through instead of matching the dialog
+- Fixed an issue with in-chat search results that previously caused top controls to overlap the list and Saved Messages tags to misalign the search bar
+- Fixed an issue with text carets that previously caused them to disappear on light search fields and translucent backgrounds
+- Fixed an issue with full-width dialog action buttons that previously caused folder invitation counts and labels to compete for space
+- Fixed an issue with the channel picker that previously caused oversized animations and loading labels that remained visible after loading
+- Fixed an issue with profile appearance settings that previously caused icon rows and custom emoji spacing to misalign
+- Fixed an issue with the tray menu that previously caused the desktop notification toggle to disappear while the app was locked
 
 ---
 
-- 调整了设置页的外观，现在采用无边框列表，分组标题使用强调色，分组之间用细线隔开，行距和图标统一，字号统一为三档，浅色、深色主题及任意强调色下都保持一致
-- 调整了设置搜索的外观，搜索框现在悬浮在模糊的窗口背景上，结果显示在独立的圆角卡片中，点击外部即可关闭
-- 调整了对话框的外观，所有对话框现在都有标题，右上角只有一个关闭按钮，选项列表样式统一，分区之间用留白代替分隔条，行在悬停时不再整行高亮，改为加深控件或文字
-- 调整了自动下载、语言、文件确认、归档、登录和省电设置的打开方式，现在以原生对话框显示，不再嵌入设置页
-- 调整了代理对话框的行为，列表改为“使用代理”开关加状态说明，系统代理、已保存的服务器、添加代理和粘贴链接合并为一个列表，编辑器改用类型下拉框、无边框填充输入框和提示卡片，并可从复制的链接自动填写
-- 调整了资料页的外观，分区使用强调色标题和细分隔线，成员标题显示人数并带搜索和添加按钮，成员头衔显示为彩色标签，操作按钮改为无边框并使用强调色图标，侧栏新增“更多”和“通话”，已作为按钮显示的操作不再在“更多”菜单中重复
-- 调整了信息侧栏的打开和关闭方式，现在以浮动卡片形式进入，关闭时收缩淡出，聊天区域不再跳动
-- 调整了从资料页打开的共享媒体的外观，现在以更宽的画廊打开，顶栏提供选择和日历按钮，标题区显示媒体类型和数量，并提供缩放按钮或内嵌搜索，缩略图改为圆角，选择框改为紧凑尺寸，收藏夹也使用相同布局
-- 调整了下载列表的筛选方式，在画廊标题下方用一排带彩色图标和数量的类型方块代替分类标签
-- 调整了聊天内搜索的行为，现在在输入框位置打开查找栏，提供结果计数、上一条和下一条箭头、结果列表、类型和发送者筛选及跳转日期，窗口较窄时次要工具收进菜单
-- 调整了搜索框的外观，现在无边框并以细描边和柔和阴影悬浮，获得焦点时搜索图标变为强调色，资料页、媒体面板、管理日志、消息留档、选择器、位置、模板和编辑器中的搜索改为点击图标后在单独一行展开，标题和导航保持可见
-- 调整了文章窗口的外观，现在跟随主窗口的窗口背景和圆角，文章搜索改为底部悬浮的胶囊
-- 调整了表情与贴纸面板的外观，标签改为紧凑的图标加文字样式，当前表情分类在重新绘制的分类图标旁显示名称，最近使用改为时钟图标，表情包列表改用无边框单选，贴纸管理使用相同的标签，贴纸和 GIF 搜索不再抢走输入框焦点
-- 调整了横向标签的外观，现在使用细下划线且不再显示分隔线，热门计数与标签文字对齐，数量为零时隐藏，数量较大时显示为 999+
-- 调整了纯图标按钮的反馈效果，悬停和点击效果现在使用圆角方形而不是圆形
-- 调整了界面配色，滚动条、窗口边框、圆角和分隔线现在使用中性色，不再跟随强调色，聊天和归档顶栏下方的分隔线以及标题栏下方的空隙已移除
-- 调整了切换对话的过渡效果，从链接、话题、收藏列表打开对话以及返回时，现在原地淡入淡出，不再横向平移
-- 调整了窗口内媒体查看器顶栏的行为，位置和总数现在只显示在缩略图条中
-- 调整了贴纸、用户名和共享媒体列表中的排序手柄图标，现在显示更清晰的列表图标
-- 移除了横向标签样式设置，标签始终使用新的下划线样式
-- 移除了单栏模式下强制使用内嵌搜索的选项，现在始终使用聊天内查找栏
-- 修复了关于已删除消息留档的错误，该问题曾导致记录按错误顺序加载
-- 修复了关于机器人临时消息被删除的错误，该问题曾导致这些消息没有被保存
-- 修复了关于贴纸时间戳的错误，该问题曾导致未悬停在贴纸上时时间戳仍然显示或出现
-- 修复了关于没有照片的资料卡片的错误，该问题曾导致一个大圆形超出卡片
-- 修复了关于话题和回复输入框的错误，该问题曾导致光标不可见
-- 修复了关于切换到简约黑的错误，该问题曾导致更新后仍使用旧配色
-- 修复了 Qt 6 构建中窗口内媒体查看器工具栏出现时的崩溃
+- 新增了消息定位标记自定义功能，现在可以选择轮廓角标或跳动标记，调整颜色、时长和大小，并实时预览效果
+- 新增了主菜单排序功能，现在可以长按拖动菜单项，也可以在外观设置中调整顺序
+- 新增了隐藏直播和群通话入口的开关，现在可以隐藏相关按钮、菜单项和状态标记
+- 对日历导航进行了改善，这使得年份和月份可以通过菜单选择，并提供快捷日期和圆角日期格，选择日期范围时也能保持导航可见
+- 对表情、贴纸和 GIF 面板的间距进行了改善，这使得左右留白更均衡，贴纸列保持居中
+- 对表情包联想进行了改善，这使得面板底部保留适当间距，悬停时只加深目标贴纸并保留透明边缘
+- 对弹出菜单的滚动条进行了改善，这使得滚动条上下留出间距，同时保持菜单项的位置不变
+- 对界面图标进行了改善，这使得设置导入和导出操作更容易区分，主菜单的联系人图标也更清晰
+- 修复了关于群通话按钮的错误，该问题曾导致视频图标不正确，关闭菜单后按钮仍保持高亮
+- 修复了关于深色主题下 Windows 标题栏的错误，该问题曾导致纯色背景遮住已启用的云母和亚克力材质
+- 修复了关于转发弹窗文件夹标签栏的错误，该问题曾导致聊天背景透出，与弹窗本身的背景不一致
+- 修复了关于聊天内搜索结果的错误，该问题曾导致顶部控件遮挡结果列表，以及收藏夹标签使搜索栏位置错乱
+- 修复了关于输入光标的错误，该问题曾导致浅色搜索框和半透明背景上的光标不可见
+- 修复了关于对话框全宽操作按钮的错误，该问题曾导致文件夹邀请中的数量标记和按钮文字互相挤占空间
+- 修复了关于频道选择器的错误，该问题曾导致动画过大，以及加载完成后提示仍不消失
+- 修复了关于资料外观设置的错误，该问题曾导致图标行和自定义表情的间距错位
+- 修复了关于托盘菜单的错误，该问题曾导致应用锁定后桌面通知开关消失
