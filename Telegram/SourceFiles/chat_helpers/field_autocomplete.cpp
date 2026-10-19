@@ -1214,9 +1214,9 @@ void FieldAutocomplete::Inner::paintStickers(Painter &p, QRect clip) {
 				if (_sel == index) {
 					frame = Images::Colored(std::move(frame), QColor(0, 0, 0, 36));
 				}
-				p.drawImage(myrtlrect(QRect(
+				p.drawImage(QRect(
 					innerPos,
-					frame.size() / style::DevicePixelRatio())), frame);
+					frame.size() / style::DevicePixelRatio()), frame);
 			}
 
 			if (document->isPremiumSticker()) {
