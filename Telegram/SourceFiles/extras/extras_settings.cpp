@@ -595,6 +595,17 @@ void ExtrasSettings::validate() {
 		Ui::kBubbleRadiusSliderMax,
 		defaults._messageBubbleRadius);
 	validateRange(_wideMultiplier, 0.5, 4.0, defaults._wideMultiplier);
+	validateEnum(_messageLocateStyle, defaults._messageLocateStyle, 1);
+	validateRange(_messageLocateDuration, 800, 4000, defaults._messageLocateDuration);
+	validateRange(_messageLocateStroke, 1, 4, defaults._messageLocateStroke);
+	validateRange(_messageLocateCorner, 12, 36, defaults._messageLocateCorner);
+	validateRange(_messageLocatePinSize, 12, 32, defaults._messageLocatePinSize);
+	validateRange(_messageLocateBounce, 0, 12, defaults._messageLocateBounce);
+	if (!_messageLocateColor.current().isEmpty()
+		&& !QColor(_messageLocateColor.current()).isValid()) {
+		_messageLocateColor = QString();
+		modified = true;
+	}
 	validateRange(_messageStickerScale, 0.5, 1.6, defaults._messageStickerScale);
 	validateRange(_avatarCorners, 0, ExtrasUiSettings::kMaxAvatarCorners, defaults._avatarCorners);
 
@@ -735,6 +746,48 @@ void ExtrasSettings::setHideSimilarChannels(bool val) {
 void ExtrasSettings::setMessageBubbleRadius(int val) {
 	if (_messageBubbleRadius.current() == val) return;
 	_messageBubbleRadius = val;
+	save();
+}
+
+void ExtrasSettings::setMessageLocateStyle(MessageLocateStyle val) {
+	if (_messageLocateStyle.current() == val) return;
+	_messageLocateStyle = val;
+	save();
+}
+
+void ExtrasSettings::setMessageLocateColor(QString val) {
+	if (_messageLocateColor.current() == val) return;
+	_messageLocateColor = val;
+	save();
+}
+
+void ExtrasSettings::setMessageLocateDuration(int val) {
+	if (_messageLocateDuration.current() == val) return;
+	_messageLocateDuration = val;
+	save();
+}
+
+void ExtrasSettings::setMessageLocateStroke(int val) {
+	if (_messageLocateStroke.current() == val) return;
+	_messageLocateStroke = val;
+	save();
+}
+
+void ExtrasSettings::setMessageLocateCorner(int val) {
+	if (_messageLocateCorner.current() == val) return;
+	_messageLocateCorner = val;
+	save();
+}
+
+void ExtrasSettings::setMessageLocatePinSize(int val) {
+	if (_messageLocatePinSize.current() == val) return;
+	_messageLocatePinSize = val;
+	save();
+}
+
+void ExtrasSettings::setMessageLocateBounce(int val) {
+	if (_messageLocateBounce.current() == val) return;
+	_messageLocateBounce = val;
 	save();
 }
 
@@ -1385,6 +1438,13 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"collapseSimilarChannels", s._collapseSimilarChannels.current()},
 		{"hideSimilarChannels", s._hideSimilarChannels.current()},
 		{"messageBubbleRadius", s._messageBubbleRadius.current()},
+		{"messageLocateStyle", static_cast<int>(s._messageLocateStyle.current())},
+		{"messageLocateColor", s._messageLocateColor.current()},
+		{"messageLocateDuration", s._messageLocateDuration.current()},
+		{"messageLocateStroke", s._messageLocateStroke.current()},
+		{"messageLocateCorner", s._messageLocateCorner.current()},
+		{"messageLocatePinSize", s._messageLocatePinSize.current()},
+		{"messageLocateBounce", s._messageLocateBounce.current()},
 		{"disableOpenLinkWarning", s._disableOpenLinkWarning.current()},
 		{"wideMultiplier", s._wideMultiplier.current()},
 		{"messageStickerScale", s._messageStickerScale.current()},
@@ -1517,6 +1577,13 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._collapseSimilarChannels = j.value("collapseSimilarChannels", defaults._collapseSimilarChannels.current());
 	s._hideSimilarChannels = j.value("hideSimilarChannels", defaults._hideSimilarChannels.current());
 	s._messageBubbleRadius = j.value("messageBubbleRadius", defaults._messageBubbleRadius.current());
+	s._messageLocateStyle = static_cast<MessageLocateStyle>(j.value("messageLocateStyle", 0));
+	s._messageLocateColor = j.value("messageLocateColor", defaults._messageLocateColor.current());
+	s._messageLocateDuration = j.value("messageLocateDuration", defaults._messageLocateDuration.current());
+	s._messageLocateStroke = j.value("messageLocateStroke", defaults._messageLocateStroke.current());
+	s._messageLocateCorner = j.value("messageLocateCorner", defaults._messageLocateCorner.current());
+	s._messageLocatePinSize = j.value("messageLocatePinSize", defaults._messageLocatePinSize.current());
+	s._messageLocateBounce = j.value("messageLocateBounce", defaults._messageLocateBounce.current());
 	s._disableOpenLinkWarning = j.value("disableOpenLinkWarning", defaults._disableOpenLinkWarning.current());
 	s._wideMultiplier = j.value("wideMultiplier", defaults._wideMultiplier.current());
 	s._messageStickerScale = j.value("messageStickerScale", defaults._messageStickerScale.current());

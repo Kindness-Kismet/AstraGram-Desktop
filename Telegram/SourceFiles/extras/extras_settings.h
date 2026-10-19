@@ -22,6 +22,11 @@ enum class WindowMaterial {
 	Blur = 3,
 };
 
+enum class MessageLocateStyle {
+	Contour = 0,
+	Pin = 1,
+};
+
 enum class NotificationStyle {
 	Cards = 0,
 	Stack = 1,
@@ -300,6 +305,13 @@ public:
 	[[nodiscard]] bool collapseSimilarChannels() const { return _collapseSimilarChannels.current(); }
 	[[nodiscard]] bool hideSimilarChannels() const { return _hideSimilarChannels.current(); }
 	[[nodiscard]] int messageBubbleRadius() const { return _messageBubbleRadius.current(); }
+	[[nodiscard]] MessageLocateStyle messageLocateStyle() const { return _messageLocateStyle.current(); }
+	[[nodiscard]] QString messageLocateColor() const { return _messageLocateColor.current(); }
+	[[nodiscard]] int messageLocateDuration() const { return _messageLocateDuration.current(); }
+	[[nodiscard]] int messageLocateStroke() const { return _messageLocateStroke.current(); }
+	[[nodiscard]] int messageLocateCorner() const { return _messageLocateCorner.current(); }
+	[[nodiscard]] int messageLocatePinSize() const { return _messageLocatePinSize.current(); }
+	[[nodiscard]] int messageLocateBounce() const { return _messageLocateBounce.current(); }
 	[[nodiscard]] bool disableOpenLinkWarning() const { return _disableOpenLinkWarning.current(); }
 	[[nodiscard]] double wideMultiplier() const { return _wideMultiplier.current(); }
 	[[nodiscard]] double messageStickerScale() const { return _messageStickerScale.current(); }
@@ -415,6 +427,13 @@ public:
 	void setCollapseSimilarChannels(bool val);
 	void setHideSimilarChannels(bool val);
 	void setMessageBubbleRadius(int val);
+	void setMessageLocateStyle(MessageLocateStyle val);
+	void setMessageLocateColor(QString val);
+	void setMessageLocateDuration(int val);
+	void setMessageLocateStroke(int val);
+	void setMessageLocateCorner(int val);
+	void setMessageLocatePinSize(int val);
+	void setMessageLocateBounce(int val);
 	void setDisableOpenLinkWarning(bool val);
 	void setWideMultiplier(double val);
 	void setMessageStickerScale(double val);
@@ -542,6 +561,13 @@ public:
 	[[nodiscard]] rpl::producer<bool> hideSimilarChannelsValue() const { return _hideSimilarChannels.value(); }
 	[[nodiscard]] rpl::producer<bool> hideSimilarChannelsChanges() const { return _hideSimilarChannels.changes(); }
 	[[nodiscard]] rpl::producer<int> messageBubbleRadiusValue() const { return _messageBubbleRadius.value(); }
+	[[nodiscard]] rpl::producer<MessageLocateStyle> messageLocateStyleValue() const { return _messageLocateStyle.value(); }
+	[[nodiscard]] rpl::producer<QString> messageLocateColorValue() const { return _messageLocateColor.value(); }
+	[[nodiscard]] rpl::producer<int> messageLocateDurationValue() const { return _messageLocateDuration.value(); }
+	[[nodiscard]] rpl::producer<int> messageLocateStrokeValue() const { return _messageLocateStroke.value(); }
+	[[nodiscard]] rpl::producer<int> messageLocateCornerValue() const { return _messageLocateCorner.value(); }
+	[[nodiscard]] rpl::producer<int> messageLocatePinSizeValue() const { return _messageLocatePinSize.value(); }
+	[[nodiscard]] rpl::producer<int> messageLocateBounceValue() const { return _messageLocateBounce.value(); }
 	[[nodiscard]] rpl::producer<int> messageBubbleRadiusChanges() const { return _messageBubbleRadius.changes(); }
 	[[nodiscard]] rpl::producer<bool> disableOpenLinkWarningValue() const { return _disableOpenLinkWarning.value(); }
 	[[nodiscard]] rpl::producer<bool> disableOpenLinkWarningChanges() const { return _disableOpenLinkWarning.changes(); }
@@ -731,6 +757,13 @@ private:
 	rpl::variable<bool> _collapseSimilarChannels = true;
 	rpl::variable<bool> _hideSimilarChannels = false;
 	rpl::variable<int> _messageBubbleRadius;
+	rpl::variable<MessageLocateStyle> _messageLocateStyle = MessageLocateStyle::Contour;
+	rpl::variable<QString> _messageLocateColor = QString();
+	rpl::variable<int> _messageLocateDuration = 1900;
+	rpl::variable<int> _messageLocateStroke = 2;
+	rpl::variable<int> _messageLocateCorner = 24;
+	rpl::variable<int> _messageLocatePinSize = 20;
+	rpl::variable<int> _messageLocateBounce = 6;
 	rpl::variable<bool> _disableOpenLinkWarning = false;
 	rpl::variable<double> _wideMultiplier = 1.0;
 	rpl::variable<double> _messageStickerScale = 1.0;

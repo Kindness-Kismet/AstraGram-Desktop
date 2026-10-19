@@ -1833,7 +1833,6 @@ void Document::drawGrouped(
 		const QRect &geometry,
 		RectParts sides,
 		Ui::BubbleRounding rounding,
-		float64 highlightOpacity,
 		not_null<uint64*> cacheKey,
 		not_null<QPixmap*> cache) const {
 	const auto maybeMediaHighlight = context.highlightPathCache

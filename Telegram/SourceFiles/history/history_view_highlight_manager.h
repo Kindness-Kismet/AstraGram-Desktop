@@ -56,9 +56,6 @@ private:
 		Ui::Animations::Simple _simple;
 		std::optional<base::Timer> _timer;
 		bool _withTextPart = false;
-		bool _collapsing = false;
-		bool _collapsed = false;
-		bool _fadingOut = false;
 
 	};
 

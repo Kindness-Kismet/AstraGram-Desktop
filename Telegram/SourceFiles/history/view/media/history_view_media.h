@@ -139,7 +139,9 @@ public:
 	virtual void drawHighlight(
 		Painter &p,
 		const PaintContext &context,
-		int top) const {
+		const Ui::SimpleBubble &bubble,
+		QPoint mediaPosition,
+		QRect action) const {
 	}
 	[[nodiscard]] virtual QRect groupItemRect(int index) const {
 		return {};
@@ -243,7 +245,6 @@ public:
 			const QRect &geometry,
 			RectParts sides,
 			Ui::BubbleRounding rounding,
-			float64 highlightOpacity,
 			not_null<uint64*> cacheKey,
 			not_null<QPixmap*> cache) const {
 		Unexpected("Grouping method call.");

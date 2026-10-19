@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_service_message.h"
 
+#include "extras/features/message_locate/message_locate.h"
+
 #include "history/view/media/history_view_media.h"
 #include "history/view/reactions/history_view_reactions.h"
 #include "history/view/history_view_cursor_state.h"
@@ -744,8 +746,6 @@ void Service::draw(Painter &p, const PaintContext &context) const {
 		return;
 	}
 
-	paintHighlight(p, context, g.height());
-
 	const auto gestureShift = context.gestureHorizontal.visualTranslationFor(
 		data()->id.bare);
 	const auto block = g;
@@ -893,6 +893,17 @@ void Service::draw(Painter &p, const PaintContext &context) const {
 			p.restore();
 		}
 	}
+	const auto locateWidth = std::max(
+		onlyMedia ? 0 : std::min(maxWidth(), g.width()),
+		mediaDisplayed ? media->width() : 0);
+	const auto corner = Ui::BubbleCornerRounding::Large;
+	ExtrasFeatures::MessageLocate::paint(
+		p,
+		context,
+		QRect(g.x() + (g.width() - locateWidth) / 2, g.y(), locateWidth, g.height()),
+		{ corner, corner, corner, corner },
+		width(),
+		false);
 	if (gestureShift) {
 		p.translate(-gestureShift, 0);
 		if (context.reactionInfo && context.reactionInfo->effectPaint) {

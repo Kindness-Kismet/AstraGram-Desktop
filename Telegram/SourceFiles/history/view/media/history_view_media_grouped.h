@@ -41,7 +41,9 @@ public:
 	void drawHighlight(
 		Painter &p,
 		const PaintContext &context,
-		int top) const override;
+		const Ui::SimpleBubble &bubble,
+		QPoint mediaPosition,
+		QRect action) const override;
 	void draw(Painter &p, const PaintContext &context) const override;
 	PointState pointState(QPoint point) const override;
 	TextState textState(

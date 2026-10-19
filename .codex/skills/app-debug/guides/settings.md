@@ -1,5 +1,11 @@
 # 设置读写
 
+消息定位入口在“外观 → 主题设置 → 消息定位”，页面索引为 `chat/message-locate`。
+`messageLocateStyle` 为 0 随形断线、1 跳动定位；`messageLocateColor` 留空跟随主题，或使用 `#RRGGBB`。
+`messageLocateDuration` 为 800 至 4000 毫秒；`messageLocateStroke` 为 1 至 4，`messageLocateCorner` 为 12 至 36，
+`messageLocatePinSize` 为 12 至 32，`messageLocateBounce` 为 0 至 12，尺寸均为界面缩放前的像素。
+通过 `chat.open <peerId> <msgId>` 触发正式定位；设置弹窗的 `messageLocate/preview` 共用正式消息与动画实现。
+
 `settings.keys [prefix]` 列出已注册的完整键名；`settings.schema [prefix]` 返回当前值、类型与可写状态。
 `settings.dump [group]` 导出全部或指定分组；`settings.get <key>` 读取值，也可读取整个分组。
 

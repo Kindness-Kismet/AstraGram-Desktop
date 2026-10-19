@@ -29,6 +29,8 @@ using Corner = BubbleCornerRounding;
 
 constexpr auto kBubbleShadowPadding = 6;
 
+} // namespace
+
 // 拖尾与气泡共用外轮廓，连接处不能闭合描边。
 [[nodiscard]] QPainterPath BubbleOutlinePath(
 		const QRectF &rect,
@@ -104,6 +106,8 @@ constexpr auto kBubbleShadowPadding = 6;
 	path.closeSubpath();
 	return path;
 }
+
+namespace {
 
 // 半径按 Skia 的规则换算成高斯标准差，核截断在三个标准差处。
 [[nodiscard]] QImage BlurBubbleShadow(const QImage &mask) {

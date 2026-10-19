@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "settings/settings_common_session.h"
 #include "extras/ui/settings/settings_window_material.h"
+#include "extras/ui/settings/settings_message_locate.h"
 #include "extras/ui/settings/settings_theme_grid.h"
 
 #include "base/timer_rpl.h"
@@ -877,6 +878,7 @@ void BuildThemeSettingsSection(SectionBuilder &builder) {
 		};
 	});
 	buildWindowMaterial(builder);
+	buildMessageLocate(builder);
 	builder.addSkip(st::settingsCheckboxesSkip);
 }
 

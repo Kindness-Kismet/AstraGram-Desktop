@@ -106,6 +106,11 @@ void FinishBubblePatternOnMain(not_null<BubblePattern*> pattern);
 
 [[nodiscard]] int BubbleShadowPadding();
 
+[[nodiscard]] QPainterPath BubbleOutlinePath(
+	const QRectF &rect,
+	const BubbleRounding &rounding,
+	QSize tailSize);
+
 struct SimpleBubble {
 	not_null<const ChatStyle*> st;
 	QRect geometry;

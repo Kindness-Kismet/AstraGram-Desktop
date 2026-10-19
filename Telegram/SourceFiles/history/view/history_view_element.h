@@ -693,12 +693,6 @@ public:
 	virtual void unloadHeavyPart();
 	void checkHeavyPart();
 
-	void paintCustomHighlight(
-		Painter &p,
-		const PaintContext &context,
-		int y,
-		int height,
-		not_null<const HistoryItem*> item) const;
 
 	// Legacy blocks structure.
 	[[nodiscard]] HistoryBlock *block();
@@ -787,10 +781,6 @@ public:
 	static void ClearGlobal();
 
 protected:
-	void paintHighlight(
-		Painter &p,
-		const PaintContext &context,
-		int geometryHeight) const;
 	void paintSwipeReplyIcon(
 		Painter &p,
 		const PaintContext &context,

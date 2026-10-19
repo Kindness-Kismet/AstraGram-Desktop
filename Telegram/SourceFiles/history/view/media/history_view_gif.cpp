@@ -1807,7 +1807,6 @@ void Gif::drawGrouped(
 		const QRect &geometry,
 		RectParts sides,
 		Ui::BubbleRounding rounding,
-		float64 highlightOpacity,
 		not_null<uint64*> cacheKey,
 		not_null<QPixmap*> cache) const {
 	ensureDataMediaCreated();
@@ -1919,16 +1918,8 @@ void Gif::drawGrouped(
 		p.setOpacity(1.);
 	}
 
-	const auto overlayOpacity = context.selected()
-		? (1. - highlightOpacity)
-		: highlightOpacity;
-	if (overlayOpacity > 0.) {
-		p.setOpacity(overlayOpacity);
+	if (context.selected()) {
 		fillImageOverlay(p, geometry, rounding, context);
-		if (!context.selected()) {
-			fillImageOverlay(p, geometry, rounding, context);
-		}
-		p.setOpacity(1.);
 	}
 
 	const auto paintInCenter = !_sensitiveSpoiler

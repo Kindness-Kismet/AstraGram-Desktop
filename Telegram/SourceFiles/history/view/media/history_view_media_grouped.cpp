@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/media/history_view_media_grouped.h"
 
+#include "extras/features/message_locate/message_locate.h"
+
 #include "history/history_item_components.h"
 #include "history/history_item.h"
 #include "history/history.h"
@@ -388,46 +390,50 @@ QImage GroupedMedia::generateSpoilerTagBackground(QRect full) const {
 void GroupedMedia::drawHighlight(
 		Painter &p,
 		const PaintContext &context,
-		int top) const {
-	if (context.highlight.opacity == 0.) {
+		const Ui::SimpleBubble &bubble,
+		QPoint mediaPosition,
+		QRect action) const {
+	if (context.highlight.opacity <= 0.) {
 		return;
 	}
 	auto selection = context.highlight.range;
-	if (_mode != Mode::Column) {
-		if (!selection.empty() && !IsSubGroupSelection(selection)) {
-			_parent->paintCustomHighlight(
-				p,
-				context,
-				top,
-				height(),
-				_parent->data().get());
-		}
-		return;
-	}
 	const auto empty = selection.empty();
 	const auto subpart = IsSubGroupSelection(selection);
-	const auto skip = top + groupedPadding().top();
+	const auto parentGeometry = bubble.geometry;
+	const auto shift = mediaPosition + QPoint(0, groupedPadding().top());
+	if (_mode == Mode::Grid && !empty && !subpart) {
+		ExtrasFeatures::MessageLocate::paint(
+			p, context, parentGeometry, bubble.rounding, _parent->width(),
+			_parent->hasRightLayout(), _parent->hasFromPhoto() ? parentGeometry.x() : 0, action);
+		return;
+	}
+	const auto rounding = adjustedBubbleRounding();
 	for (auto i = 0, count = int(_parts.size()); i != count; ++i) {
 		const auto &part = _parts[i];
-		const auto rect = part.geometry.translated(0, skip);
-		const auto full = (!i && empty)
+		const auto highlighted = (!i && empty)
 			|| (subpart && IsGroupItemSelection(selection, i))
-			|| (!subpart
-				&& !selection.empty()
-				&& (selection.from < part.content->fullSelectionLength()));
+			|| (!subpart && !selection.empty()
+				&& selection.from < part.content->fullSelectionLength());
 		if (!subpart) {
 			selection = part.content->skipSelection(selection);
 		}
-		if (full) {
-			auto copy = context;
-			copy.highlight.range = {};
-			_parent->paintCustomHighlight(
-				p,
-				copy,
-				rect.y(),
-				rect.height(),
-				part.item);
+		if (!highlighted) {
+			continue;
 		}
+		auto geometry = part.geometry.translated(shift);
+		if (ExtrasSettings::getInstance().messageLocateStyle() == MessageLocateStyle::Pin) {
+			geometry.setLeft(parentGeometry.x());
+			geometry.setWidth(parentGeometry.width());
+		}
+		ExtrasFeatures::MessageLocate::paint(
+			p,
+			context,
+			geometry,
+			applyRoundingSides(rounding, part.sides),
+			_parent->width(),
+			_parent->hasRightLayout(),
+			_parent->hasFromPhoto() ? parentGeometry.x() : 0,
+			action);
 	}
 }
 
@@ -483,9 +489,6 @@ void GroupedMedia::draw(Painter &p, const PaintContext &context) const {
 			: TextSelection());
 		const auto highlighted = (highlight.empty() && !i)
 			|| IsGroupItemSelection(highlight, i);
-		const auto highlightOpacity = highlighted
-			? context.highlight.opacity
-			: 0.;
 		partContext.highlight.range = highlighted
 			? TextSelection()
 			: highlight;
@@ -527,7 +530,6 @@ void GroupedMedia::draw(Painter &p, const PaintContext &context) const {
 				part.geometry.translated(0, groupPadding.top()),
 				part.sides,
 				applyRoundingSides(rounding, part.sides),
-				highlightOpacity,
 				&part.cacheKey,
 				&part.cache);
 			p.setOpacity(savedOp);
@@ -538,7 +540,6 @@ void GroupedMedia::draw(Painter &p, const PaintContext &context) const {
 				part.geometry.translated(0, groupPadding.top()),
 				part.sides,
 				applyRoundingSides(rounding, part.sides),
-				highlightOpacity,
 				&part.cacheKey,
 				&part.cache);
 		}

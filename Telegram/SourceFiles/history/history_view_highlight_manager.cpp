@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_view_highlight_manager.h"
 
 #include "data/data_session.h"
+#include "extras/extras_settings.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/view/history_view_element.h"
@@ -181,30 +182,18 @@ ElementHighlighter::AnimationManager::AnimationManager(
 }
 
 bool ElementHighlighter::AnimationManager::animating() const {
-	if (_timer && _timer->isActive()) {
-		return true;
-	} else if (!anim::Disabled()) {
-		return _simple.animating();
-	}
-	return false;
+	return (_timer && _timer->isActive()) || _simple.animating();
 }
 
 Ui::ChatPaintHighlight ElementHighlighter::AnimationManager::state() const {
-	if (anim::Disabled()) {
-		return {
-			.opacity = !_timer ? 0. : 1.,
-			.collapsion = !_timer ? 0. : _fadingOut ? 1. : 0.,
-		};
-	}
+	const auto progress = _timer ? .5 : _simple.value(1.);
 	return {
-		.opacity = ((!_fadingOut && _collapsing)
-			? 1.
-			: _simple.value(_fadingOut ? 0. : 1.)),
-		.collapsion = ((!_withTextPart || !_collapsing)
-			? 0.
-			: _fadingOut
-			? 1.
-			: _simple.value(1.)),
+		.opacity = _timer ? 1. : std::clamp(
+			std::min(progress / .12, (1. - progress) / .3), 0., 1.),
+		.collapsion = _withTextPart
+			? std::clamp((progress - .18) / .22, 0., 1.)
+			: 0.,
+		.progress = progress,
 	};
 }
 
@@ -215,83 +204,34 @@ MsgId ElementHighlighter::latestSingleHighlightedMsgId() const {
 }
 
 void ElementHighlighter::AnimationManager::start(bool withTextPart) {
+	cancel();
 	_withTextPart = withTextPart;
 	const auto finish = [=] {
+		_parent.updateMessage();
 		cancel();
 		_parent._lastHighlightedMessageId = base::take(
 			_parent._highlighted.itemId);
 		_parent.checkNextHighlight();
 	};
-	cancel();
+	const auto duration = ExtrasSettings::getInstance().messageLocateDuration();
 	if (anim::Disabled()) {
-		_timer.emplace([=] {
-			_parent.updateMessage();
-			if (_withTextPart && !_fadingOut) {
-				_fadingOut = true;
-				_timer->callOnce(st::activeFadeOutDuration);
-			} else {
-				finish();
-			}
-		});
-		_timer->callOnce(_withTextPart
-			? st::activeFadeInDuration
-			: st::activeFadeOutDuration);
+		_timer.emplace(finish);
+		_timer->callOnce(duration);
 		_parent.updateMessage();
-	} else {
-		_simple.start(
-			[=](float64 value) {
-				_parent.updateMessage();
-				if (value == 1.) {
-					if (_withTextPart) {
-						_timer.emplace([=] {
-							_parent.updateMessage();
-							if (_collapsing) {
-								_fadingOut = true;
-							} else {
-								_collapsing = true;
-							}
-							_simple.start([=](float64 value) {
-								_parent.updateMessage();
-								if (_fadingOut && value == 0.) {
-									finish();
-								} else if (!_fadingOut && value == 1.) {
-									_timer->callOnce(
-										st::activeFadeOutDuration);
-								}
-							},
-							_fadingOut ? 1. : 0.,
-							_fadingOut ? 0. : 1.,
-							(_fadingOut
-								? st::activeFadeInDuration
-								: st::fadeWrapDuration));
-						});
-						_timer->callOnce(st::activeFadeInDuration);
-					} else {
-						_fadingOut = true;
-						_simple.start([=](float64 value) {
-							_parent.updateMessage();
-							if (value == 0.) {
-								finish();
-							}
-						},
-						1.,
-						0.,
-						st::activeFadeOutDuration);
-					}
-				}
-			},
-			0.,
-			1.,
-			st::activeFadeInDuration);
+		return;
 	}
+	_simple.start([=](float64 progress) {
+		if (progress == 1.) {
+			finish();
+			return;
+		}
+		_parent.updateMessage();
+	}, 0., 1., duration);
 }
 
 void ElementHighlighter::AnimationManager::cancel() {
 	_simple.stop();
 	_timer.reset();
-	_fadingOut = false;
-	_collapsed = false;
-	_collapsing = false;
 }
 
 } // namespace HistoryView

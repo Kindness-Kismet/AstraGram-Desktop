@@ -157,6 +157,12 @@ Result setSetting(const QString &key, const QString &raw) {
 		{u"messageBubbleRadius"_q, {0, Ui::kBubbleRadiusSliderMax}},
 		{u"wideMultiplier"_q, {0.5, 4.0}},
 		{u"messageStickerScale"_q, {0.5, 1.6}},
+		{u"messageLocateStyle"_q, {0, 1}},
+		{u"messageLocateDuration"_q, {800, 4000}},
+		{u"messageLocateStroke"_q, {1, 4}},
+		{u"messageLocateCorner"_q, {12, 36}},
+		{u"messageLocatePinSize"_q, {12, 32}},
+		{u"messageLocateBounce"_q, {0, 12}},
 		{u"avatarCorners"_q, {0, 23}},
 		{u"notificationStyle"_q, {0, 1}},
 		{u"core.songVolume"_q, {0, 1}},
@@ -180,6 +186,10 @@ Result setSetting(const QString &key, const QString &raw) {
 		if (!readSetting(value, parsed).isEmpty() || parsed < 0 || parsed > 3) {
 			return Result::Err(u"window material must be between 0 and 3"_q);
 		}
+	}
+	if (key == u"messageLocateColor"_q && !raw.isEmpty()
+		&& (raw.size() != 7 || !raw.startsWith('#') || !QColor(raw).isValid())) {
+		return Result::Err(u"expected #RRGGBB or an empty string"_q);
 	}
 	const auto applied = i->second.set(value);
 	if (!applied.ok) return applied;

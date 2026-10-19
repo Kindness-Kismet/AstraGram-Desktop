@@ -197,6 +197,7 @@ struct BackgroundEmojiData {
 struct ChatPaintHighlight {
 	float64 opacity = 0.;
 	float64 collapsion = 0.;
+	float64 progress = 0.;
 	TextSelection range;
 	int todoItemId = 0;
 	QByteArray pollOption;

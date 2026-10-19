@@ -9325,6 +9325,25 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SettingsShowMessageShotDescription" = "Allows taking a screenshot of the selected messages.";
 "extras_SettingsUnlimitedRecentStickers" = "Unlimited Recent Stickers";
 "extras_SettingsCustomizationHint" = "You must restart the application after making changes in the \"Customization\" section.";
+"extras_MessageLocate" = "Message location";
+"extras_MessageLocateStyle" = "Location style";
+"extras_MessageLocateContour" = "Contour corners";
+"extras_MessageLocatePin" = "Bouncing marker";
+"extras_MessageLocateColor" = "Highlight color";
+"extras_MessageLocateThemeColor" = "Follow theme";
+"extras_MessageLocateDuration" = "Duration";
+"extras_MessageLocateStroke" = "Stroke width";
+"extras_MessageLocateCorner" = "Corner length";
+"extras_MessageLocatePinSize" = "Marker size";
+"extras_MessageLocateBounce" = "Bounce height";
+"extras_MessageLocateSeconds" = "{value} seconds";
+"extras_MessageLocatePixels" = "{value} pixels";
+"extras_MessageLocateReplay" = "Replay";
+"extras_MessageLocatePreviewName" = "A friendly explorer";
+"extras_MessageLocatePreviewText" = "When will the preview be ready?\nFound it, this is the message.";
+"extras_MessageLocatePinDescription" = "The marker stays 5 pixels beside the bubble. In narrow layouts it switches sides or shrinks to keep the message clear.";
+"extras_MessageLocateKeywords" = "locate highlight focus border bounce marker color";
+
 "extras_WindowMaterial" = "Window Background";
 "extras_WindowMaterialSearchKeywords" = "window material mica acrylic blur";
 "extras_AutoCheckUpdates" = "Check for updates automatically";

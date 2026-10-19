@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_message.h"
 
+#include "extras/features/message_locate/message_locate.h"
+
 #include "ui/chat/message_bubble.h"
 
 #include "api/api_suggest_post.h"
@@ -1945,20 +1947,7 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 		}
 	}
 
-	{
-		if (selectionTranslation) {
-			p.translate(-selectionTranslation, 0);
-		}
-		if (customHighlight) {
-			media->drawHighlight(p, context, localMediaTop);
-		} else {
-			paintHighlight(p, context, g.height());
-		}
-		if (selectionTranslation) {
-			p.translate(selectionTranslation, 0);
-		}
-	}
-
+	auto locateAction = QRect();
 	const auto deletedFade = deletedOpacity();
 	const auto savedOpacityForDeleted = p.opacity();
 	if (deletedFade < 1.) {
@@ -2284,6 +2273,7 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 				? fastShareSkip
 				: g.height() - fastShareSkip - (size ? size->height() : 0));
 			if (size) {
+				locateAction = QRect(fastShareLeft, fastShareTop, size->width(), size->height());
 				const auto o = p.opacity();
 				if (selectionModeResult.progress > 0) {
 					p.setOpacity(1. - selectionModeResult.progress);
@@ -2326,6 +2316,23 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 			}
 		}
 		p.translate(-g.topLeft());
+	}
+
+	const auto corner = Ui::BubbleCornerRounding::Large;
+	const auto locateRounding = bubble ? countBubbleRounding(messageRounding)
+		: Ui::BubbleRounding{ corner, corner, corner, corner };
+	if (customHighlight) {
+		media->drawHighlight(p, context, Ui::SimpleBubble{
+			.st = context.st,
+			.geometry = g,
+			.outerWidth = width(),
+			.outbg = context.outbg,
+			.rounding = locateRounding,
+		}, QPoint(g.x(), localMediaTop), locateAction);
+	} else {
+		ExtrasFeatures::MessageLocate::paint(
+			p, context, g, locateRounding, width(), hasRightLayout(),
+			hasFromPhoto() ? g.x() : 0, locateAction);
 	}
 
 	p.restoreTextPalette();

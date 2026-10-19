@@ -1554,22 +1554,6 @@ Ui::Animations::Simple Element::takeDeletedAnimation() {
 	return std::move(_deletedOpacityAnimation);
 }
 
-void Element::paintHighlight(
-		Painter &p,
-		const PaintContext &context,
-		int geometryHeight) const {
-	if (context.highlight.opacity == 0.) {
-		return;
-	}
-	const auto top = marginTop();
-	const auto bottom = marginBottom();
-	const auto fill = std::min(top, bottom);
-	const auto skiptop = top - fill;
-	const auto fillheight = fill + geometryHeight + fill;
-
-	paintCustomHighlight(p, context, skiptop, fillheight, data());
-}
-
 void Element::paintSwipeReplyIcon(
 		Painter &p,
 		const PaintContext &context,
@@ -1647,18 +1631,6 @@ void Element::paintSwipeReplyIcon(
 		}
 	}
 	p.restore();
-}
-
-void Element::paintCustomHighlight(
-		Painter &p,
-		const PaintContext &context,
-		int y,
-		int height,
-		not_null<const HistoryItem*> item) const {
-	const auto o = p.opacity();
-	p.setOpacity(o * context.highlight.opacity);
-	p.fillRect(0, y, width(), height, context.st->msgSelectOverlay());
-	p.setOpacity(o);
 }
 
 bool Element::isUnderCursor() const {

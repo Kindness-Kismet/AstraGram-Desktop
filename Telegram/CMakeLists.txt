@@ -220,6 +220,12 @@ set(extras_files
         extras/ui/settings/settings_other.h
         extras/ui/settings/settings_window_material.cpp
         extras/ui/settings/settings_window_material.h
+        extras/ui/settings/settings_message_locate.cpp
+        extras/ui/settings/settings_message_locate.h
+        extras/ui/components/message_locate_preview.cpp
+        extras/ui/components/message_locate_preview.h
+        extras/features/message_locate/message_locate.cpp
+        extras/features/message_locate/message_locate.h
         extras/ui/settings/filters/settings_filters_list.cpp
         extras/ui/settings/filters/settings_filters_list.h
         extras/ui/settings/filters/per_dialog_filter.cpp

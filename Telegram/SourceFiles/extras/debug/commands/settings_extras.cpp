@@ -99,6 +99,13 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"collapseSimilarChannels"_q, [&] { return settings.collapseSimilarChannels(); }, settings, &ExtrasSettings::setCollapseSimilarChannels);
 	addSetting(entries, u"hideSimilarChannels"_q, [&] { return settings.hideSimilarChannels(); }, settings, &ExtrasSettings::setHideSimilarChannels);
 	addSetting(entries, u"messageBubbleRadius"_q, [&] { return settings.messageBubbleRadius(); }, settings, &ExtrasSettings::setMessageBubbleRadius);
+	addSetting(entries, u"messageLocateStyle"_q, [&] { return settings.messageLocateStyle(); }, settings, &ExtrasSettings::setMessageLocateStyle);
+	addSetting(entries, u"messageLocateColor"_q, [&] { return settings.messageLocateColor(); }, settings, &ExtrasSettings::setMessageLocateColor);
+	addSetting(entries, u"messageLocateDuration"_q, [&] { return settings.messageLocateDuration(); }, settings, &ExtrasSettings::setMessageLocateDuration);
+	addSetting(entries, u"messageLocateStroke"_q, [&] { return settings.messageLocateStroke(); }, settings, &ExtrasSettings::setMessageLocateStroke);
+	addSetting(entries, u"messageLocateCorner"_q, [&] { return settings.messageLocateCorner(); }, settings, &ExtrasSettings::setMessageLocateCorner);
+	addSetting(entries, u"messageLocatePinSize"_q, [&] { return settings.messageLocatePinSize(); }, settings, &ExtrasSettings::setMessageLocatePinSize);
+	addSetting(entries, u"messageLocateBounce"_q, [&] { return settings.messageLocateBounce(); }, settings, &ExtrasSettings::setMessageLocateBounce);
 	addSetting(entries, u"disableOpenLinkWarning"_q, [&] { return settings.disableOpenLinkWarning(); }, settings, &ExtrasSettings::setDisableOpenLinkWarning);
 	addSetting(entries, u"wideMultiplier"_q, [&] { return settings.wideMultiplier(); }, settings, &ExtrasSettings::setWideMultiplier);
 	addSetting(entries, u"messageStickerScale"_q, [&] { return settings.messageStickerScale(); }, settings, &ExtrasSettings::setMessageStickerScale);
