@@ -523,6 +523,7 @@ emojiPanHover: windowBgOver;
 emojiPanSlideDuration: 200;
 emojiPanArea: size(34px, 32px);
 emojiPanRadius: boxRadius;
+emojiPanContentMargin: 8px;
 emojiPanReactionsPreviewPadding: margins(10px, 20px, 10px, 20px);
 emojiPanEmojiPreviewMinHeight: 160px;
 emojiPanEmojiPreviewRadius: 8px + 8px + 4px;
@@ -768,7 +769,7 @@ defaultEmojiPanAbout: FlatLabel(defaultFlatLabel) {
 }
 defaultEmojiPan: EmojiPan {
 	margin: margins(7px, 0px, 7px, 0px);
-	padding: margins(7px, 0px, 4px, 7px);
+	padding: margins(7px, 0px, 7px, 7px);
 	showAnimation: emojiPanAnimation;
 	desiredSize: 37px;
 	verticalSizeSub: 1px;
@@ -847,7 +848,7 @@ inlineBotsScroll: ScrollArea(defaultSolidScroll) {
 	deltab: stickerPanPadding;
 }
 
-gifsPadding: margins(9px, 5px, 3px, 9px);
+gifsPadding: margins(0px, 5px, 0px, 9px);
 
 emojiSuggestionsDropdown: InnerDropdown(defaultInnerDropdown) {
 	scrollMargin: margins(0px, emojiColorsPadding, 0px, emojiColorsPadding);

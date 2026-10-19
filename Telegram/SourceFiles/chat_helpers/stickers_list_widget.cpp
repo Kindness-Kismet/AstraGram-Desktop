@@ -595,17 +595,9 @@ int StickersListWidget::countDesiredHeight(int newWidth) {
 	if (newWidth < 2 * minSize) {
 		return 0;
 	}
-	auto availableWidth = newWidth
-		- (st::stickerPanPadding - st().margin.left());
-	auto columnCount = availableWidth / minSize;
-	auto singleWidth = availableWidth / columnCount;
-	auto fullWidth = (st().margin.left() + newWidth + st::emojiScroll.width);
-	auto rowsRight = (fullWidth - columnCount * singleWidth) / 2;
-	accumulate_max(rowsRight, st::emojiScroll.width);
-	_rowsLeft = fullWidth
-		- columnCount * singleWidth
-		- rowsRight
-		- st().margin.left();
+	const auto columnCount = newWidth / minSize;
+	const auto singleWidth = newWidth / columnCount;
+	_rowsLeft = (newWidth - columnCount * singleWidth) / 2;
 	_singleSize = QSize(singleWidth, singleWidth);
 	setColumnCount(columnCount);
 	refreshSearchShortcutsScroll(newWidth);

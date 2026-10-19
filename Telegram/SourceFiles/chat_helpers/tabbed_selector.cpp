@@ -775,7 +775,7 @@ void TabbedSelector::updateTabsSliderGeometry() {
 		return;
 	}
 	// 页签与搜索框共用左边距，操作按钮由页签内部预留宽度。
-	const auto skip = st::emojiPanRadius + _st.searchMargin.left();
+	const auto skip = st::emojiPanContentMargin + _st.searchMargin.left();
 	_tabsSlider->resizeToWidth(width() - 2 * skip);
 	_tabsSlider->moveToLeft(skip, 0);
 }
@@ -793,13 +793,13 @@ void TabbedSelector::contextMenuEvent(QContextMenuEvent *e) {
 }
 
 void TabbedSelector::updateScrollGeometry(QSize oldSize) {
-	auto scrollWidth = width() - st::emojiPanRadius;
+	auto scrollWidth = width() - st::emojiPanContentMargin;
 	auto scrollHeight = height() - scrollTop() - scrollBottom();
 	auto inner = currentTab()->widget();
-	auto innerWidth = scrollWidth - st::emojiScroll.width;
+	auto innerWidth = scrollWidth - st::emojiPanContentMargin;
 	auto setScrollGeometry = [&] {
 		_scroll->setGeometryToLeft(
-			st::emojiPanRadius,
+			st::emojiPanContentMargin,
 			scrollTop(),
 			scrollWidth,
 			scrollHeight);
@@ -946,13 +946,13 @@ void TabbedSelector::paintContent(QPainter &p) {
 	} else {
 		p.fillRect(
 			myrtlrect(
-				width() - st::emojiScroll.width,
+				width() - st::emojiPanContentMargin,
 				sidesTop,
-				st::emojiScroll.width,
+				st::emojiPanContentMargin,
 				sidesHeight),
 			_st.bg);
 		p.fillRect(
-			myrtlrect(0, sidesTop, st::emojiPanRadius, sidesHeight),
+			myrtlrect(0, sidesTop, st::emojiPanContentMargin, sidesHeight),
 			_st.bg);
 	}
 }
@@ -1433,7 +1433,7 @@ not_null<StickersListWidget*> TabbedSelector::masks() const {
 
 void TabbedSelector::setWidgetToScrollArea() {
 	auto inner = _scroll->setOwnedWidget(currentTab()->takeWidget());
-	auto innerWidth = _scroll->width() - st::emojiScroll.width;
+	auto innerWidth = _scroll->width() - st::emojiPanContentMargin;
 	auto scrollHeight = _scroll->height();
 	inner->setMinimalHeight(innerWidth, scrollHeight);
 	inner->moveToLeft(0, 0);

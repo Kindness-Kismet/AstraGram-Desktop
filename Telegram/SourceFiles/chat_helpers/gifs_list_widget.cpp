@@ -159,7 +159,7 @@ GifsListWidget::GifsListWidget(
 	}, lifetime());
 
 	_mosaic.setPadding(st::gifsPadding
-		+ QMargins(-st::emojiPanRadius, _search->height(), 0, 0));
+		+ QMargins(0, _search->height(), 0, 0));
 	_mosaic.setRightSkip(st::inlineResultsSkip);
 }
 
