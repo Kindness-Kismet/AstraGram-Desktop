@@ -707,6 +707,13 @@ peerAppearanceButton: SettingsButton(settingsButtonLight) {
 	padding: margins(60px, 8px, 22px, 8px);
 	iconLeft: 20px;
 }
+peerAppearanceIconButton: SettingsButton(peerAppearanceButton) {
+	style: TextStyle(boxTextStyle) {
+		font: font(14px);
+	}
+	height: 48px;
+	padding: margins(52px, 0px, 20px, 0px);
+}
 peerAppearanceCoverLabelMargin: margins(22px, 0px, 22px, 17px);
 peerAppearanceIconPadding: margins(0px, 15px, 0px, 5px);
 peerAppearanceDividerTextMargin: margins(22px, 8px, 22px, 11px);

@@ -720,9 +720,19 @@ void Apply(
 		rpl::producer<DocumentId> emojiIdValue,
 		Fn<void(DocumentId)> emojiIdChosen,
 		bool profileIndices) {
-	const auto button = ButtonStyleWithRightEmoji(
-		parent,
+	const auto &font = st::peerAppearanceIconButton.style.font;
+	const auto emojiWidth = st::menuBlueIconColorNames.width();
+	const auto noneWidth = font->width(
 		tr::lng_settings_color_emoji_off(tr::now));
+	const auto added = font->spacew;
+	const auto buttonSt = ButtonStyleWithAddedPadding(
+		parent,
+		st::peerAppearanceIconButton,
+		QMargins(0, 0, added + std::max(noneWidth, emojiWidth), 0));
+	const auto verticalPadding = buttonSt->height - font->height;
+	buttonSt->height = font->height;
+	buttonSt->padding.setTop(verticalPadding / 2);
+	buttonSt->padding.setBottom(verticalPadding - verticalPadding / 2);
 	auto result = Settings::CreateButtonWithIcon(
 		parent,
 		!profileIndices
@@ -730,7 +740,7 @@ void Apply(
 			: peer->isChannel()
 			? tr::lng_settings_color_profile_emoji_channel()
 			: tr::lng_settings_color_profile_emoji(),
-		*button.st,
+		*buttonSt,
 		{ &st::menuBlueIconColorNames });
 	const auto raw = result.data();
 
@@ -758,16 +768,17 @@ void Apply(
 	}, right->lifetime());
 
 	const auto session = &show->session();
-	const auto added = st::lineWidth * 2;
 	std::move(emojiIdValue) | rpl::on_next([=](DocumentId emojiId) {
 		state->emojiId = emojiId;
 		state->emoji = emojiId
 			? session->data().customEmojiManager().create(
 				emojiId,
-				[=] { right->update(); })
+				[=] { right->update(); },
+				Data::CustomEmojiSizeTag::Normal,
+				emojiWidth)
 			: nullptr;
 		right->resize(
-			(emojiId ? button.emojiWidth : button.noneWidth) + button.added,
+			std::max(emojiWidth, noneWidth) + added,
 			right->height());
 		right->update();
 	}, right->lifetime());
@@ -777,8 +788,10 @@ void Apply(
 		right->widthValue()
 	) | rpl::on_next([=](QSize outer, int width) {
 		right->resize(width, outer.height());
-		const auto skip = st::settingsButton.padding.right();
-		right->moveToRight(skip - button.added, 0, outer.width());
+		right->moveToRight(
+			st::peerAppearanceIconButton.padding.right(),
+			0,
+			outer.width());
 	}, right->lifetime());
 
 	right->paintRequest(
@@ -801,17 +814,20 @@ void Apply(
 				: style->coloredValues(false, state->index).name;
 			state->emoji->paint(p, {
 				.textColor = textColor,
-				.position = QPoint(added, (height - button.emojiWidth) / 2),
+				.position = QPoint(
+					right->width() - emojiWidth,
+					(height - emojiWidth) / 2),
 				.internal = {
 					.forceFirstFrame = true,
 				},
 			});
 		} else {
-			const auto &font = st::normalFont;
 			p.setFont(font);
 			p.setPen(style->windowActiveTextFg());
 			p.drawText(
-				QPoint(added, (height - font->height) / 2 + font->ascent),
+				QPoint(
+					right->width() - noneWidth,
+					(height - font->height) / 2 + font->ascent),
 				tr::lng_settings_color_emoji_off(tr::now));
 		}
 	}, right->lifetime());
@@ -854,7 +870,7 @@ void Apply(
 			raw,
 			right,
 			channel,
-			button.st->padding,
+			buttonSt->padding,
 			tr::lng_settings_color_emoji());
 	}
 

@@ -229,7 +229,7 @@ menuIconMuteForAnyTextFont: font(8px semibold);
 
 menuBlueIconPhotoSet: icon {{ "menu/photo_set", lightButtonFg }};
 menuBlueIconPremium: icon{{ "menu/premium", lightButtonFg }};
-menuBlueIconColorNames: icon{{ "settings/premium/features/feature_color_names", lightButtonFg }};
+menuBlueIconColorNames: icon{{ "settings/premium/features/feature_color_names-20x20", lightButtonFg }};
 menuBlueIconWallpaper: icon{{ "settings/premium/features/feature_wallpaper", lightButtonFg }};
 menuBlueIconEmojiStatus: icon{{ "settings/premium/features/feature_status", lightButtonFg }};
 menuBlueIconEmojiPack: icon{{ "settings/premium/features/feature_emoji_pack", lightButtonFg }};
