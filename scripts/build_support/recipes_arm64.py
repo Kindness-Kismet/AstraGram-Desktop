@@ -5,6 +5,7 @@
 
 from build_support.recipe import Stage
 from build_support.qt_native_backdrop_patch import PATCH_SCRIPT, patch_command
+from build_support import qt_text_caret_patch
 
 # arm64 上 Qt 换 6.11.2：Qt 5.15 没有 Windows arm64 支持，上游同样这么选
 QT_VERSION = "6.11.2"
@@ -128,7 +129,11 @@ move ossl_static.pdb out
 QT_STAGE = Stage(
 	name=f"qt_{QT_VERSION}",
 	location="Libraries",
-	dependencies=[f"patches/qtbase_{QT_VERSION}/*.patch", str(PATCH_SCRIPT)],
+	dependencies=[
+		f"patches/qtbase_{QT_VERSION}/*.patch",
+		str(PATCH_SCRIPT),
+		str(qt_text_caret_patch.PATCH_SCRIPT),
+	],
 	commands=r"""git clone -b v$QT https://github.com/qt/qt5.git qt_$QT
 cd qt_$QT
 git submodule update --init --recursive --progress qtbase qtimageformats qtshadertools qtsvg
@@ -142,6 +147,7 @@ exit /b 1
 )
 )
 __QT_NATIVE_BACKDROP_PATCH__
+__QT_TEXT_CARET_PATCH__
 cd ..
 SET CONFIGURATIONS=-debug
 SET ASSERTS=
@@ -197,5 +203,6 @@ cmake --build . --config Debug
 cmake --install . --config Debug
 cmake --build .
 cmake --install .
-""".replace("__QT_NATIVE_BACKDROP_PATCH__", patch_command()),
+""".replace("__QT_NATIVE_BACKDROP_PATCH__", patch_command()).replace(
+	"__QT_TEXT_CARET_PATCH__", qt_text_caret_patch.patch_command()),
 )
