@@ -3,7 +3,7 @@
 ## 进入和操作
 
 仅开发版提供。登录页点击“模拟模式”或执行 `simulation.enter [userId]`，默认用户编号 `999999999`，带会员身份。
-进入时自动构造 29 个会话、15 个话题和 3 个收藏来源，无需下载素材。
+进入时自动构造 30 个会话、15 个话题和 3 个收藏来源，无需下载素材。
 固定场景按原生会话标签分类；使用 `simulation.open` 定位，使用 `simulation.trigger` 触发临时提示。
 
 ```bash
@@ -45,6 +45,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 | 频道 | `join` | 未加入频道的加入按钮；对话置顶使其常驻固定列表 |
 | 频道 | `translate` | 外语消息、翻译与置顶组合 |
 | 频道 | `protected-channel` | 内容保护 |
+| 频道 | `community-channel` | 关联社区与活动直播，验证通话角标和社区角标切换 |
 | 机器人 | `bot` | 启动按钮；每次打开恢复启动参数 |
 | 机器人 | `keyboard` | 回复键盘和 `/help` 命令补全 |
 | 机器人 | `inline-bot` | 消息内联按钮 |

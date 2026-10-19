@@ -788,11 +788,11 @@ void Row::paintUserpic(
 		&& !(badgeUser && Data::IsUserOnline(badgeUser))
 		&& !subscribed
 		&& !insideCommunity;
-	_cornerBadgeUserpic->communityMember = communityMember ? 1 : 0;
 	// Only stories outline and online badge differ for active row.
 	const auto activeMatters = storiesCount
 		|| !(subscribed || communityMember);
 	if (keyChanged
+		|| _cornerBadgeUserpic->communityMember != (communityMember ? 1 : 0)
 		|| !_cornerBadgeUserpic->layersManager.isFinished()
 		|| (activeMatters && _cornerBadgeUserpic->active != active)
 		|| _cornerBadgeUserpic->hidden != (hidden ? 1 : 0)
@@ -804,6 +804,7 @@ void Row::paintUserpic(
 		_cornerBadgeUserpic->key = key;
 		_cornerBadgeUserpic->paletteVersion = paletteVersion;
 		_cornerBadgeUserpic->active = active;
+		_cornerBadgeUserpic->communityMember = communityMember ? 1 : 0;
 		_cornerBadgeUserpic->hidden = hidden ? 1 : 0;
 		_cornerBadgeUserpic->storiesCount = storiesCount;
 		_cornerBadgeUserpic->storiesUnreadCount = storiesUnreadCount;

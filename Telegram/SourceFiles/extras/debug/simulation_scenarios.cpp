@@ -76,6 +76,7 @@ enum class Kind {
 	VoiceRestricted,
 	TopicTabs,
 	Sending,
+	CommunityChannel,
 };
 struct Scenario {
 	const char *key;
@@ -115,6 +116,7 @@ constexpr auto kScenarios = std::array{
 	Scenario{ "voice-restricted", u"群组 · 禁止语音视频", Kind::VoiceRestricted, Category::Groups, "restricted-voice,restricted-round" },
 	Scenario{ "topic-tabs", u"话题 · 标签布局", Kind::TopicTabs, Category::Topics, "tabs,general,colors,long-title,pinned,unread,closed,translate,requests" },
 	Scenario{ "sending", u"私聊 · 发送中", Kind::Sending, Category::Private, "sending,sending-photo" },
+	Scenario{ "community-channel", u"频道 · 社区与直播", Kind::CommunityChannel, Category::Channels, "community,live-stream" },
 };
 constexpr auto kFirstPeerId = uint64(810000001);
 constexpr auto kFirstMessageId = 2000001;
@@ -733,7 +735,8 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 		if (kind == Kind::Group) {
 			seedGroupMembers(session, channel);
 		}
-		if (kind == Kind::Group || kind == Kind::Broadcast || kind == Kind::TopicTabs) {
+		if (kind == Kind::Group || kind == Kind::Broadcast
+			|| kind == Kind::TopicTabs || kind == Kind::CommunityChannel) {
 			using CallFlag = MTPDgroupCall::Flag;
 			const auto id = MTP_long(7800000 + index);
 			channel->setGroupCall(MTP_inputGroupCall(id, MTP_long(0)));
@@ -746,6 +749,13 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 					MTPstring(), MTPlong(), MTPPeer()),
 				MTP_vector<MTPGroupCallParticipant>(), MTP_string(""),
 				MTP_vector<MTPChat>(), MTP_vector<MTPUser>()));
+		}
+		if (kind == Kind::CommunityChannel) {
+			const auto community = session->data().channel(ChannelId(890000001));
+			community->setName(u"模拟关联社区"_q, {});
+			community->setFlags(Flag::Community | Flag::Megagroup);
+			community->setLoadedStatus(PeerData::LoadedStatus::Full);
+			channel->setLinkedCommunityId(peerToChannel(community->id));
 		}
 		if (kind == Kind::Discussion) {
 			channel->setDiscussionLink(session->data().channel(peerToChannel(scenarioPeerId(findScenario(u"group"_q)))));
