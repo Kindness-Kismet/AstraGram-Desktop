@@ -552,7 +552,6 @@ Ui::SettingsToggle *SectionBuilder::addToggle(ToggleArgs &&args) {
 			buttonStyle);
 		result->setObjectName(id);
 		result->setProperty("settingsCardRow", card);
-		result->setProperty("settingsCardTextLeft", st::settingsCardRowInset);
 		return result;
 	};
 	return static_cast<Ui::SettingsToggle*>(addControl({

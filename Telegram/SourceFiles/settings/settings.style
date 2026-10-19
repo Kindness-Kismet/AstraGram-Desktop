@@ -74,7 +74,6 @@ settingsCardRowInset: 12px;
 settingsCardRowHeight: 52px;
 settingsCardIconSize: 27px;
 settingsCardIconGlyphSize: 17px;
-settingsCardIconRadius: 7px;
 settingsCardTextGap: 11px;
 settingsCardValueMaxWidth: 130px;
 settingsCardArrowSize: 14px;

@@ -15,7 +15,6 @@
 #include "styles/style_layers.h"
 #include "styles/style_settings.h"
 
-#include <QPainterPath>
 #include <QtWidgets/QGraphicsEffect>
 
 namespace Settings {
@@ -71,36 +70,16 @@ public:
 	explicit CardGroup(QWidget *parent)
 	: RpWidget(parent)
 	, _dialog(Ui::IsDialogContent(this))
-	, _content(Ui::CreateChild<Ui::VerticalLayout>(this))
-	, _frame(Ui::CreateChild<Ui::RpWidget>(this)) {
+	, _content(Ui::CreateChild<Ui::VerticalLayout>(this)) {
 		setObjectName(u"settings.card"_q);
 		if (!_dialog) {
 			setGraphicsEffect(new CardClipEffect(this));
 			_content->setProperty("settingsCardGroup", true);
-			ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
-				_frame->update();
-			}, lifetime());
 		}
-		_frame->setAttribute(Qt::WA_TransparentForMouseEvents);
-		_frame->paintRequest() | rpl::on_next([=] {
-			paintFrame();
-		}, _frame->lifetime());
-		paintRequest() | rpl::on_next([=] {
-			// 无卡片列表直接透出页面底色，窗口材质下也不出现卡片块。
-			if (_dialog || Ui::SettingsCardsPlain()) {
-				return;
-			}
-			auto p = QPainter(this);
-			p.fillRect(rect(), ExtrasFeatures::WindowMaterial::cardColor(this, st::settingsCardBg->c));
-		}, lifetime());
 		_content->heightValue() | rpl::on_next([=] {
 			if (!_resizing) {
 				resize(width(), _content->height());
 			}
-		}, lifetime());
-		sizeValue() | rpl::on_next([=](QSize size) {
-			_frame->resize(size);
-			_frame->raise();
 		}, lifetime());
 	}
 
@@ -129,38 +108,8 @@ protected:
 	}
 
 private:
-	void paintFrame() {
-		if (_dialog) {
-			return;
-		}
-		auto p = QPainter(_frame);
-		auto hq = PainterHighQualityEnabler(p);
-		const auto radius = st::settingsCardRadius;
-		const auto area = QRectF(rect()).adjusted(.5, .5, -.5, -.5);
-		auto shape = QPainterPath();
-		shape.addRoundedRect(area, radius, radius);
-		for (const auto row : _content->findChildren<QWidget*>()) {
-			if (!row->property("settingsCardRow").toBool()
-				|| !row->isVisibleTo(_content)) {
-				continue;
-			}
-			const auto position = row->mapTo(this, QPoint());
-			if (position.y() <= 0) {
-				continue;
-			}
-			const auto left = row->property("settingsCardTextLeft").toInt();
-			const auto line = style::rtlrect(left, 0,
-				row->width() - left - st::settingsCardRowInset, 1, row->width());
-			p.fillRect(line.translated(position), st::settingsCardDividerFg);
-		}
-		p.setPen(st::settingsCardBorderFg);
-		p.setBrush(Qt::NoBrush);
-		p.drawPath(shape);
-	}
-
 	const bool _dialog;
 	const not_null<Ui::VerticalLayout*> _content;
-	const not_null<Ui::RpWidget*> _frame;
 	QPointer<QWidget> _title;
 	bool _resizing = false;
 };
@@ -199,11 +148,8 @@ CardPage::CardPage(QWidget *parent)
 	}, lifetime());
 }
 
-// 无卡片列表在相邻分组之间画通栏细线，线位于组间留白正中。
+// 相邻分组之间画通栏细线，线位于组间留白正中。
 void CardPage::paintGroupDividers(QPainter &p) {
-	if (!Ui::SettingsCardsPlain()) {
-		return;
-	}
 	auto tops = std::vector<int>();
 	for (const auto child : _content->findChildren<QWidget*>()) {
 		if (child->objectName() != u"settings.card"_q
@@ -300,18 +246,13 @@ not_null<Ui::FlatLabel*> AddCardTitle(
 		object_ptr<Ui::FlatLabel>(container, st::settingsCardTitle),
 		st::settingsCardTitlePadding);
 	label->setObjectName(u"settings.cardTitle"_q);
-	// 无卡片列表的组标题用强调色加粗，卡片列表保持原样；随主题切换。
+	// 组标题用强调色加粗，随主题切换。
 	rpl::combine(
 		std::move(title),
 		rpl::single(rpl::empty) | rpl::then(style::PaletteChanged())
 	) | rpl::on_next([=](const QString &text, rpl::empty_value) {
-		const auto plain = Ui::SettingsCardsPlain();
-		label->setMarkedText(plain
-			? Ui::Text::Bold(text)
-			: TextWithEntities{ text });
-		label->setTextColorOverride(plain
-			? std::make_optional(st::windowActiveTextFg->c)
-			: std::nullopt);
+		label->setMarkedText(Ui::Text::Bold(text));
+		label->setTextColorOverride(st::windowActiveTextFg->c);
 	}, label->lifetime());
 	return label;
 }

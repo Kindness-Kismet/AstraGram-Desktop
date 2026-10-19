@@ -443,9 +443,6 @@ void PaintCardIcon(
 		const style::color &color) {
 	p.save();
 	const auto hq = PainterHighQualityEnabler(p);
-	p.setPen(Qt::NoPen);
-	p.setBrush(st::settingsCardIconBg);
-	p.drawRoundedRect(area, st::settingsCardIconRadius, st::settingsCardIconRadius);
 	const auto source = icon.size();
 	const auto scale = st::settingsCardIconGlyphSize
 		/ double(std::max(source.width(), source.height()));
@@ -549,7 +546,6 @@ object_ptr<Button> CreateButtonWithIcon(
 	const auto button = result.data();
 	if (rowStyle) {
 		button->lifetime().add([rowStyle] {});
-		button->setProperty("settingsCardTextLeft", rowStyle->padding.left());
 	}
 	button->setProperty("settingsCardRow", card);
 	if (descriptor) {
