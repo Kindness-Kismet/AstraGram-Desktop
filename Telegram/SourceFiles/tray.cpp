@@ -104,7 +104,7 @@ void Tray::rebuildMenu() {
 			[=] { _minimizeMenuItemClicks.fire({}); });
 	}
 
-	if (!Core::App().passcodeLocked()) {
+	{
 		auto notificationsText = _textUpdates.events(
 		) | rpl::map([=] {
 			return Core::App().settings().desktopNotify()
