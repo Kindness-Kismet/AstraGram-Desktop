@@ -348,11 +348,15 @@ void PeerListBox::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 
 	const auto &bg = _controller->computeListSt().bg;
+	// 不透明内容区要铺满透明分类栏的底色；无边距页头仍由外层绘制圆角。
+	const auto top = testAttribute(Qt::WA_OpaquePaintEvent)
+		? 0
+		: _addedTopScrollSkip;
 	const auto fill = QRect(
 		0,
-		_addedTopScrollSkip,
+		top,
 		width(),
-		height() - _addedTopScrollSkip);
+		height() - top);
 	for (const auto &rect : e->region()) {
 		if (const auto part = rect.intersected(fill); !part.isEmpty()) {
 			p.fillRect(part, bg);
