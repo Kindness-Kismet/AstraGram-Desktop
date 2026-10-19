@@ -16,8 +16,6 @@ defaultCalendarColors: CalendarColors {
 	iconButtonPrevious: calendarPrevious;
 	iconButtonPreviousDisabled: calendarPreviousDisabled;
 
-	iconButtonRippleColorDisabled: boxBg;
-
 	rippleColor: windowBgOver;
 	rippleColorHighlighted: dialogsRippleBgActive;
 	rippleGrayedOutColor: windowBgRipple;

@@ -7,10 +7,28 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 using "boxes/boxes.style";
 
-calendarTitleFont: boxTitleFont;
-calendarDaysFont: normalFont;
-calendarDaysFontOver: semiboldFont;
-calendarDaysFg: boxTitleAdditionalFg;
+calendarDaysFont: font(14px);
+calendarDaysFontOver: font(14px semibold);
+calendarWeekdaysFont: font(12px);
+calendarDayRadius: 10px;
+calendarHeaderLeft: 20px;
+calendarHeaderRight: 12px;
+calendarChipHeight: 28px;
+calendarChipPadding: 12px;
+calendarChipSkip: 6px;
+calendarChipsBottom: 10px;
+calendarChipFont: font(13px);
+calendarNavHeight: 48px;
+calendarNavSkip: 4px;
+calendarSelectHeight: 32px;
+calendarSelectRadius: 8px;
+calendarSelectPadding: margins(10px, 0px, 8px, 0px);
+calendarSelectFont: font(15px semibold);
+calendarSelectArrow: icon {{ "calendar_expand", windowSubTextFg }};
+calendarSelectArrowSkip: 4px;
+calendarSelectMenu: PopupMenu(defaultPopupMenu) {
+	maxHeight: 320px;
+}
 calendarScroll: ScrollArea(defaultSolidScroll) {
 	deltat: 3px;
 	deltab: 3px;

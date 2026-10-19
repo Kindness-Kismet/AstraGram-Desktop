@@ -309,8 +309,8 @@ std::vector<DayThumbnail> SearchCalendarController::thumbnails(
 	result.reserve(data.cache.size());
 	for (const auto &day : data.cache) {
 		auto image = day.photo
-			? Ui::MakePhotoThumbnail(day.photo, day.origin, true)
-			: Ui::MakeDocumentThumbnail(day.document, day.origin, true);
+			? Ui::MakePhotoThumbnailCenterCrop(day.photo, day.origin)
+			: Ui::MakeDocumentThumbnail(day.document, day.origin);
 		result.push_back({
 			.date = day.date,
 			.image = std::move(image),

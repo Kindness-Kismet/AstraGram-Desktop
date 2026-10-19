@@ -194,21 +194,22 @@ editMediaHintLabel: FlatLabel(defaultFlatLabel) {
 	minWidth: sendMediaPreviewSize;
 }
 
-calendarTitleHeight: boxTitleHeight;
 calendarPrevious: IconButton {
-	width: calendarTitleHeight;
-	height: calendarTitleHeight;
+	width: 36px;
+	height: 36px;
+	bgOver: windowBgOver;
+	fillOnHover: true;
 
-	icon: icon {{ "calendar_down-flip_vertical", boxTitleFg }};
+	icon: icon {{ "calendar_right-flip_horizontal", menuIconFg }};
 	iconPosition: point(-1px, -1px);
 
-	rippleAreaPosition: point(2px, 2px);
-	rippleAreaSize: 44px;
-	ripple: defaultRippleAnimationBgOver;
+	rippleAreaPosition: point(0px, 0px);
+	rippleAreaSize: 36px;
+	ripple: defaultRippleAnimation;
 }
-calendarPreviousDisabled: icon {{ "calendar_down-flip_vertical", menuIconFg }};
+calendarPreviousDisabled: icon {{ "calendar_right-flip_horizontal", menuFgDisabled }};
 calendarNext: IconButton(calendarPrevious) {
-	icon: icon {{ "calendar_down", boxTitleFg }};
+	icon: icon {{ "calendar_right", menuIconFg }};
 }
 CalendarSizes {
 	width: pixels;
@@ -217,13 +218,13 @@ CalendarSizes {
 	cellInner: pixels;
 	padding: margins;
 }
-calendarNextDisabled: icon {{ "calendar_down", menuIconFg }};
+calendarNextDisabled: icon {{ "calendar_right", menuFgDisabled }};
 defaultCalendarSizes: CalendarSizes {
 	width: boxWideWidth;
-	daysHeight: 40px;
-	cellSize: size(48px, 40px);
-	cellInner: 34px;
-	padding: margins(14px, 0px, 14px, 0px);
+	daysHeight: 28px;
+	cellSize: size(48px, 44px);
+	cellInner: 36px;
+	padding: margins(14px, 0px, 14px, 4px);
 }
 CalendarColors {
 	dayTextColor: color;
@@ -233,8 +234,6 @@ CalendarColors {
 	iconButtonNextDisabled: icon;
 	iconButtonPrevious: IconButton;
 	iconButtonPreviousDisabled: icon;
-
-	iconButtonRippleColorDisabled: color;
 
 	rippleColor: color;
 	rippleColorHighlighted: color;

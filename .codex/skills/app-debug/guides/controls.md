@@ -123,3 +123,6 @@ python .claude/skills/app-debug/scripts/cli.py control.click "#42"
 - Windows 自绘标题栏（最小化/最大化/关闭）不是 QWidget，无法寻址；退出用 `app.quit`。
 
 多个页面具有相同控件名时，交互指令选择当前可见控件。序号仍按完整控件树定位；切页后重新查询。
+
+日历控件：`calendar` 是内容区，`calendar.year` / `calendar.month` 打开年月菜单，
+`calendar.previous` / `calendar.next` 翻页，`calendar.days` 是自绘日期区；多选时年月菜单仍可用。

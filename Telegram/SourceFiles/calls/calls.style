@@ -1568,16 +1568,17 @@ groupCallVolumeSettingsSlider: MediaSlider(groupCallMenuVolumeSlider) {
 }
 
 //
-groupCallCalendarPreviousDisabled: icon {{ "calendar_down-flip_vertical", groupCallMemberNotJoinedStatus }};
-groupCallCalendarNextDisabled: icon {{ "calendar_down", groupCallMemberNotJoinedStatus }};
+groupCallCalendarPreviousDisabled: icon {{ "calendar_right-flip_horizontal", groupCallMemberNotJoinedStatus }};
+groupCallCalendarNextDisabled: icon {{ "calendar_right", groupCallMemberNotJoinedStatus }};
 groupCallCalendarPrevious: IconButton(calendarPrevious) {
-	icon: icon {{ "calendar_down-flip_vertical", groupCallMembersFg }};
+	bgOver: groupCallMembersBgOver;
+	icon: icon {{ "calendar_right-flip_horizontal", groupCallMembersFg }};
 	ripple: RippleAnimation(defaultRippleAnimation) {
 		color: groupCallMembersBgRipple;
 	}
 }
 groupCallCalendarNext: IconButton(groupCallCalendarPrevious) {
-	icon: icon {{ "calendar_down", groupCallMembersFg }};
+	icon: icon {{ "calendar_right", groupCallMembersFg }};
 }
 groupCallCalendarColors: CalendarColors {
 	dayTextColor: groupCallMembersFg;
@@ -1587,8 +1588,6 @@ groupCallCalendarColors: CalendarColors {
 	iconButtonNextDisabled: groupCallCalendarNextDisabled;
 	iconButtonPrevious: groupCallCalendarPrevious;
 	iconButtonPreviousDisabled: groupCallCalendarPreviousDisabled;
-
-	iconButtonRippleColorDisabled: groupCallMembersBgRipple;
 
 	rippleColor: groupCallMembersBgRipple;
 	rippleColorHighlighted: groupCallMembersBgRipple;

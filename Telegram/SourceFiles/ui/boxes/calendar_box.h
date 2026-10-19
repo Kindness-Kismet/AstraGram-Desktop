@@ -80,6 +80,8 @@ private:
 
 	void goPreviousMonth();
 	void goNextMonth();
+	void showMonth(QDate month);
+	void chooseDate(QDate date);
 	void setExactScroll();
 	void processScroll();
 	void createButtons();
@@ -102,9 +104,6 @@ private:
 
 	class Inner;
 	not_null<Inner*> _inner;
-
-	class FloatingDate;
-	std::unique_ptr<FloatingDate> _floatingDate;
 
 	class Title;
 	object_ptr<Title> _title;
