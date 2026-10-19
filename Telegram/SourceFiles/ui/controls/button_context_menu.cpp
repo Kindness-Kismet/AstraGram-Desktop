@@ -7,11 +7,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/controls/button_context_menu.h"
 
-#include "base/event_filter.h"
 #include "base/unique_qptr.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/popup_menu.h"
-#include "ui/ui_utility.h"
 
 namespace Ui {
 namespace {
@@ -26,16 +24,6 @@ struct State {
 };
 
 } // namespace
-
-void KeepHoveredWhileShown(
-		not_null<RippleButton*> button,
-		not_null<PopupMenu*> menu) {
-	base::install_event_filter(button, [](not_null<QEvent*> e) {
-		return (e->type() == QEvent::Leave)
-			? base::EventFilterResult::Cancel
-			: base::EventFilterResult::Continue;
-	}, menu->lifetime());
-}
 
 void SetupButtonContextMenu(
 		not_null<RippleButton*> button,
@@ -58,14 +46,9 @@ void SetupButtonContextMenu(
 			return;
 		}
 		button->setForceRippled(true);
-		KeepHoveredWhileShown(button, state->menu.get());
 		state->menu->setDestroyedCallback([=] {
 			if (!state->closing) {
 				button->setForceRippled(false);
-				SendSynteticMouseEvent(
-					button,
-					QEvent::MouseMove,
-					Qt::NoButton);
 			}
 		});
 		state->menu->popup(QCursor::pos());

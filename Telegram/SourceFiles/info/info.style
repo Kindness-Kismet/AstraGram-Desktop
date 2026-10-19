@@ -1092,11 +1092,6 @@ topBarVideoCall: IconButton(topBarSearch) {
 	iconOver: icon {{ "top_bar_video_call", menuIconFgOver }};
 	iconPosition: point(-1px, -1px);
 }
-topBarGroupCall: IconButton(topBarSearch) {
-	icon: icon {{ "top_bar_group_call", menuIconFg }};
-	iconOver: icon {{ "top_bar_group_call", menuIconFgOver }};
-	iconPosition: point(4px, 12px);
-}
 topBarInfo: IconButton(topBarSearch) {
 	icon: icon {{ "top_bar_profile", menuIconFg }};
 	iconOver: icon {{ "top_bar_profile", menuIconFgOver }};

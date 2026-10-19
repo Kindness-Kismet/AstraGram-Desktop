@@ -1,10 +1,16 @@
 #include "history/view/history_view_top_bar_widget.h"
 
+#include "base/call_delayed.h"
+#include "calls/calls_instance.h"
 #include "extras/extras_settings.h"
 #include "extras/ui/utils/extras_tooltip.h"
 #include "lang/lang_keys.h"
 #include "ui/widgets/buttons.h"
+#include "ui/widgets/menu/menu_add_action_callback_factory.h"
+#include "ui/widgets/popup_menu.h"
+#include "ui/widgets/shadow.h"
 #include "ui/ui_utility.h"
+#include "window/window_peer_menu.h"
 #include "window/window_session_controller.h"
 #include "styles/style_extras_styles.h"
 #include "styles/style_chat.h"
@@ -38,6 +44,112 @@ void TopBarWidget::setupTooltips() {
 	installTooltip(_menuToggle.data(), tr::lng_chat_menu);
 	installTooltip(_recentActions.data(), tr::lng_manage_peer_recent_actions);
 	installTooltip(_admins.data(), tr::lng_channel_admins);
+}
+
+bool TopBarWidget::createMenu(
+		not_null<Ui::IconButton*> button,
+		bool withIcons) {
+	if (!_activeChat.key || _menu) {
+		return false;
+	}
+	_menu = base::make_unique_q<Ui::PopupMenu>(
+		this,
+		withIcons
+			? st::popupMenuExpandedSeparator
+			: st::defaultPopupMenu);
+	_menu->setDestroyedCallback([
+			weak = base::make_weak(this),
+			menu = _menu.get()] {
+		if (weak && weak->_menu == menu) {
+			weak->unrippleMenuButton();
+		}
+	});
+	_menuButton = button;
+	button->setForceRippled(true);
+	return true;
+}
+
+void TopBarWidget::unrippleMenuButton() {
+	if (const auto button = _menuButton.get()) {
+		button->setForceRippled(false);
+	}
+}
+
+void TopBarWidget::closeMenu() {
+	if (_menu) {
+		_menu = nullptr;
+		unrippleMenuButton();
+	}
+}
+
+void TopBarWidget::showPeerMenu() {
+	const auto created = createMenu(_menuToggle);
+	if (!created) {
+		return;
+	}
+	const auto addAction = Ui::Menu::CreateAddActionCallback(_menu);
+	Window::FillDialogsEntryMenu(_controller, _activeChat, addAction);
+	if (_menu->empty()) {
+		closeMenu();
+	} else if (_narrowRatio > 0.) {
+		_menu->setForcedOrigin(Ui::PanelAnimation::Origin::TopLeft);
+		_menu->popup(Ui::PopupMenu::ConstrainToParentScreen(
+			_menu,
+			mapToGlobal(
+				QPoint(
+					-st::topBarMenuPosition.x()
+						- Ui::BoxShadow::ExtendFor(
+							_menu->st().shadow).left(),
+					st::topBarMenuPosition.y()))));
+	} else {
+		_menu->setForcedOrigin(Ui::PanelAnimation::Origin::TopRight);
+		_menu->popup(Ui::PopupMenu::ConstrainToParentScreen(
+			_menu,
+			mapToGlobal(
+				QPoint(
+					width()
+						+ st::topBarMenuPosition.x()
+						+ Ui::BoxShadow::ExtendFor(
+							_menu->st().shadow).right(),
+					st::topBarMenuPosition.y()))));
+	}
+}
+
+void TopBarWidget::showGroupCallMenu(not_null<PeerData*> peer) {
+	const auto created = createMenu(_groupCall);
+	if (!created) {
+		return;
+	}
+	const auto addAction = Ui::Menu::CreateAddActionCallback(_menu);
+	Window::FillVideoChatMenu(_controller, _activeChat, addAction);
+	_menu->setForcedOrigin(Ui::PanelAnimation::Origin::TopRight);
+	_menu->popup(mapToGlobal(QPoint(
+		_groupCall->x() + _groupCall->width() + st::topBarMenuGroupCallSkip,
+		st::topBarMenuPosition.y())));
+}
+
+void TopBarWidget::showCallMenu() {
+	const auto created = createMenu(_call, false);
+	if (!created) {
+		return;
+	}
+	const auto perform = [&](bool video) {
+		return [=] {
+			base::call_delayed(st::defaultPopupMenu.showDuration, this, [=] {
+				call({ .video = video, .isConfirmed = true });
+			});
+		};
+	};
+	_menu->addAction(
+		tr::lng_profile_action_short_call(tr::now),
+		perform(false));
+	_menu->addAction(
+		tr::lng_call_start_video(tr::now),
+		perform(true));
+	_menu->setForcedOrigin(Ui::PanelAnimation::Origin::TopRight);
+	_menu->popup(mapToGlobal(QPoint(
+		_call->x() + _call->width() + st::topBarMenuGroupCallSkip,
+		st::topBarMenuPosition.y())));
 }
 
 void TopBarWidget::setupSelection() {

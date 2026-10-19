@@ -8,6 +8,7 @@
 ## 值与动作
 
 `control.get <target>` 查询当前值、类型、文字、启用状态及辅助功能动作。
+按钮还返回 `hovered`、`pressed`；波纹按钮另返回 `forceRippled`，可分别核对鼠标悬停、按下和菜单高亮。
 可选列表项还会返回 `selected`，可用于核对当前选中的会话分组。
 控件自己设置过光标时返回 `cursor`（`pointer`、`text`、`default` 或 Qt 光标编号），配合 `control.pointer` 核对悬停光标。
 `control.set <target> <value>` 修改输入框、开关、单选项、选择框或滑块，并调用原有业务回调。
@@ -99,6 +100,8 @@ python .claude/skills/app-debug/scripts/cli.py control.list --all
 `messageInput`（消息输入框）、`menu.*`（主菜单项）、`extras/*`（AstraGram 设置按钮，
 id 即 objectName，如 `extras/quick/autoSpaceSending`、`extras/cat/ghost`）。没有 objectName 的控件用 `control.list`
 查类名/accessibleName 定位，或用 `#序号` 寻址。
+
+聊天顶栏的通话按钮为 `chat.call`、`chat.videoCall`、`chat.groupCall`，分别对应语音、视频和群视频聊天。
 
 ## `control.click <objectName | #序号> [--all]`
 

@@ -568,6 +568,13 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 [[nodiscard]] Result describeControlValue(QWidget *target) {
 	auto data = json{{"name", target->objectName().toStdString()}, {"text", WidgetText(target).toStdString()},
 		{"enabled", target->isEnabled()}};
+	if (const auto button = dynamic_cast<Ui::AbstractButton*>(target)) {
+		data["hovered"] = button->isOver();
+		data["pressed"] = button->isDown();
+	}
+	if (const auto button = dynamic_cast<Ui::RippleButton*>(target)) {
+		data["forceRippled"] = button->forceRippled();
+	}
 	// 只报告控件自己设置的光标，未设置时沿用父控件。
 	if (target->testAttribute(Qt::WA_SetCursor)) {
 		const auto shape = target->cursor().shape();

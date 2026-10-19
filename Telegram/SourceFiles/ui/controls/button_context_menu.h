@@ -16,10 +16,6 @@ namespace Ui {
 class PopupMenu;
 class RippleButton;
 
-void KeepHoveredWhileShown(
-	not_null<RippleButton*> button,
-	not_null<PopupMenu*> menu);
-
 void SetupButtonContextMenu(
 	not_null<RippleButton*> button,
 	not_null<const style::PopupMenu*> st,
