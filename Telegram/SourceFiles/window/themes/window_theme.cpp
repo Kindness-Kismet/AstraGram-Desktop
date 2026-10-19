@@ -110,6 +110,13 @@ QByteArray readThemeContent(const QString &path) {
 	return file.readAll();
 }
 
+// 内置主题随应用更新，tdata 里保存的旧内容一律按程序资源重新读取。
+void refreshEmbeddedContent(Object &object) {
+	if (object.pathAbsolute.startsWith(u":/gui/"_q)) {
+		object.content = readThemeContent(object.pathAbsolute);
+	}
+}
+
 inline uchar readHexUchar(char code, bool &error) {
 	if (code >= '0' && code <= '9') {
 		return ((code - '0') & 0xFF);
@@ -467,10 +474,8 @@ bool InitializeFromSaved(Saved &&saved) {
 	}
 
 	const auto editing = ReadEditingPalette();
-	if (!editing
-		&& saved.object.pathAbsolute.startsWith(u":/gui/"_q)) {
-		// 内置主题随应用更新，旧缓存不能保留已替换的配色资源。
-		saved.object.content = readThemeContent(saved.object.pathAbsolute);
+	if (!editing) {
+		refreshEmbeddedContent(saved.object);
 	}
 	GlobalBackground.createIfNull();
 	if (!editing && InitializeFromCache(saved.object.content, saved.cache)) {
@@ -1348,6 +1353,7 @@ void ChatBackground::reapplyWithNightMode(
 	const auto oldNightMode = _nightMode;
 	_nightMode = newNightMode;
 	auto read = settingExactTheme ? Saved() : Local::readThemeAfterSwitch();
+	refreshEmbeddedContent(read.object);
 	auto path = read.object.pathAbsolute;
 
 	_nightMode = oldNightMode;
