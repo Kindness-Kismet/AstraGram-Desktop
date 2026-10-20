@@ -41,6 +41,7 @@ PROFILE_OVERRIDE = None
 BACKGROUND_START = False
 
 GENERIC_COMMANDS = {
+    'simulation.chat-folders': '在独立模拟配置中加载首个自定义分组或清空分组：<single|none>，返回实际选中分组，重启恢复样本',
     'simulation.language': '在独立模拟配置中切换内置翻译，不下载云端语言包：<en|zh-hans>，返回表情页签译文',
     'control.window': '选择控件与截图的目标窗口，不改变系统焦点：[main|窗口标识|#序号]',
     'editor.video-state': '查询独立模拟配置中视频时间线的裁剪起止、封面与播放位置',

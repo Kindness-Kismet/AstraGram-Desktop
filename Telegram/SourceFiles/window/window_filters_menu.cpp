@@ -419,11 +419,6 @@ void FiltersMenu::refresh() {
 	// 刷新会重置滚动位置，需要恢复。
 	_scroll.scrollToY(oldTop);
 
-	if (settings.hideAllChatsFolder()
-		&& _session->widget()->sessionContent()) {
-		_session->setActiveChatsFilter(filters->lookupId(0));
-	}
-
 	if (refocus) {
 		refocus->setFocus();
 		scrollToButton(refocus);

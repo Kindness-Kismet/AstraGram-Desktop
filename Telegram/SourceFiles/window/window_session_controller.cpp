@@ -2046,15 +2046,14 @@ void SessionController::setFiltersMenuSuppressed(bool suppressed) {
 
 void SessionController::checkOpenedFilter() {
 	activateFirstChatsFilter();
-	if (const auto filterId = activeChatsFilterCurrent()) {
-		const auto &list = session().data().chatsFilters().list();
-		const auto i = ranges::find(list, filterId, &Data::ChatFilter::id);
-		if (i == end(list)) {
-			setActiveChatsFilter(
-				0,
-				{ anim::type::normal, anim::activation::background });
-		}
+	const auto &filters = session().data().chatsFilters();
+	const auto current = activeChatsFilterCurrent();
+	if (ranges::contains(filters.list(), current, &Data::ChatFilter::id)) {
+		return;
 	}
+	setActiveChatsFilter(
+		filters.defaultId(),
+		{ anim::type::normal, anim::activation::background });
 }
 
 void SessionController::activateFirstChatsFilter() {
@@ -2065,10 +2064,8 @@ void SessionController::activateFirstChatsFilter() {
 	}
 	_filtersActivated = true;
 
-	const auto &settings = ExtrasSettings::getInstance();
-	if (!settings.hideAllChatsFolder()) {
-		setActiveChatsFilter(session().data().chatsFilters().defaultId());
-	}
+	// 分组加载后统一选择默认项，不依赖标签栏是否显示。
+	setActiveChatsFilter(session().data().chatsFilters().defaultId());
 }
 
 bool SessionController::uniqueChatsInSearchResults(

@@ -7,6 +7,7 @@
 #include "extras/debug/simulation_scenarios.h"
 #include "base/unixtime.h"
 #include "boxes/stickers_box.h"
+#include "data/data_chat_filters.h"
 #include "data/data_document.h"
 #include "data/data_session.h"
 #include "data/stickers/data_stickers.h"
@@ -29,6 +30,42 @@ constexpr auto kWalletBalance = int64(123456789000);
 constexpr auto kStickerSetId = uint64(9800000000);
 constexpr auto kEmojiSetId = uint64(9800000100);
 constexpr auto kEmojiSetCount = 3;
+
+Result simulationChatFolders(const QStringList &args) {
+	if (args.size() != 1
+		|| (args.front() != u"single"_q && args.front() != u"none"_q)) {
+		return Result::Err(u"usage: simulation.chat-folders <single|none>"_q);
+	}
+	const auto session = ActiveSession();
+	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	const auto controller = session->tryResolveWindow();
+	if (!controller) {
+		return Result::Err(u"no session window"_q);
+	}
+	auto &filters = session->data().chatsFilters();
+	auto result = QVector<MTPDialogFilter>{ MTP_dialogFilterDefault() };
+	if (args.front() == u"single"_q) {
+		const auto &list = filters.list();
+		const auto first = ranges::find_if(list, [](const Data::ChatFilter &filter) {
+			return filter.id() != 0;
+		});
+		if (first == end(list)) {
+			return Result::Err(u"restart simulation to restore chat folders"_q);
+		}
+		result.push_back(first->tl());
+	}
+	// 从全部对话开始加载分组，覆盖没有标签栏参与初始化的情况。
+	controller->setActiveChatsFilter(0);
+	filters.setPreloaded(result, filters.tagsEnabled());
+	return Result::Ok(Compact(json{
+		{ "loaded", filters.loaded() },
+		{ "count", filters.list().size() },
+		{ "activeId", controller->activeChatsFilterCurrent() },
+		{ "defaultId", filters.defaultId() },
+	}));
+}
 
 Result simulationLanguage(const QStringList &args) {
 	if (args.size() != 1 || (args.front() != u"en"_q && args.front() != u"zh-hans"_q)) {
@@ -246,6 +283,7 @@ void applyWalletLists(Wallet::Session &wallet, bool withCollectibles) {
 
 const HandlerMap &simulationHandlers() {
 	static const auto result = HandlerMap{
+		{ u"simulation.chat-folders"_q, &simulationChatFolders },
 		{ u"simulation.language"_q, &simulationLanguage },
 		{ u"simulation.search"_q, &seedSearchPreview },
 		{ u"simulation.stickers"_q, &simulationStickers },
