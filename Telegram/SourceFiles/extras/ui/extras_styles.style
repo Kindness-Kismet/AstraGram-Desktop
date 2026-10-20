@@ -102,6 +102,7 @@ iconPickerSelectedPadding: 2px;
 iconPickerSelectedRounding: 12px;
 iconPickerImagePadding: 4px;
 iconPickerIconSize: 64px;
+iconPickerCellPadding: 12px;
 
 recentStickersLimitPadding: margins(22px, 4px, 22px, 8px);
 imageViewPadding: margins(22px, 10px, 22px, 10px);

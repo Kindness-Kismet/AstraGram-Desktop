@@ -15,12 +15,6 @@
 
 namespace {
 
-// 预设常量定义在其他编译单元，不能在静态初始化阶段读取列表。
-[[nodiscard]] int rowsCount() {
-	const auto count = int(ExtrasAssets::appIcons().size());
-	return (count + IconPicker::kColumns - 1) / IconPicker::kColumns;
-}
-
 void applyIcon() {
 #ifdef Q_OS_WIN
 	reloadAppIconFromTaskBar();
@@ -36,100 +30,93 @@ void applyIcon() {
 
 IconPicker::IconPicker(QWidget *parent)
 	: RpWidget(parent) {
+	setObjectName(u"extras/appIconPicker"_q);
 	widthValue() | rpl::on_next([=](int w) {
-		const auto cell = w / kColumns;
-		const auto iconSize = st::iconPickerIconSize;
-		const auto contentSize = iconSize + st::iconPickerImagePadding * 2;
-		const auto h = rowsCount() * cell - (cell - contentSize);
-		resize(w, h);
+		resize(w, rowsCount() * cellSize());
 	}, lifetime());
 }
 
-void IconPicker::drawIcon(QPainter &p, const QImage &icon, int x, int y, float strokeOpacity) {
+void IconPicker::drawIcon(
+		QPainter &p,
+		const QImage &icon,
+		const QRect &rect,
+		float strokeOpacity) {
+	PainterHighQualityEnabler hq(p);
 	{
-		PainterHighQualityEnabler hq(p);
+		const auto padding = st::iconPickerSelectedPadding;
 		p.save();
 		p.setPen(QPen(st::boxDividerBg, 0));
 		p.setBrush(QBrush(st::boxDividerBg));
 		p.setOpacity(strokeOpacity);
 		p.drawRoundedRect(
-			x + st::iconPickerSelectedPadding,
-			y + st::iconPickerSelectedPadding,
-			st::iconPickerIconSize + st::iconPickerSelectedPadding * 2,
-			st::iconPickerIconSize + st::iconPickerSelectedPadding * 2,
+			rect.adjusted(-padding, -padding, padding, padding),
 			st::iconPickerSelectedRounding,
 			st::iconPickerSelectedRounding
 		);
 		p.restore();
 	}
 
-	const auto rect = QRect(
-		x + st::iconPickerImagePadding,
-		y + st::iconPickerImagePadding,
-		st::iconPickerIconSize,
-		st::iconPickerIconSize
-	);
 	p.drawImage(rect, icon);
 }
 
-int IconPicker::cellWidth() const {
-	return width() / kColumns;
+int IconPicker::cellSize() const {
+	return st::iconPickerIconSize + st::iconPickerCellPadding * 2;
+}
+
+int IconPicker::columnsCount() const {
+	return std::clamp(width() / cellSize(), 1, kColumns);
+}
+
+int IconPicker::rowsCount() const {
+	const auto count = int(ExtrasAssets::appIcons().size());
+	const auto columns = columnsCount();
+	return (count + columns - 1) / columns;
+}
+
+QRect IconPicker::iconRect(int index) const {
+	const auto columns = columnsCount();
+	const auto cell = cellSize();
+	const auto padding = st::iconPickerCellPadding;
+	return QRect(
+		(index % columns) * cell + padding,
+		(index / columns) * cell + padding,
+		st::iconPickerIconSize,
+		st::iconPickerIconSize);
 }
 
 void IconPicker::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
-	const auto cell = cellWidth();
-	const auto iconSize = st::iconPickerIconSize;
 	const auto &icons = ExtrasAssets::appIcons();
-	const auto rows = rowsCount();
-
-	for (int row = 0; row < rows; row++) {
-		const auto columns = std::min(kColumns, static_cast<int>(icons.size()) - row * kColumns);
-		for (int i = 0; i < columns; i++) {
-			auto const idx = i + row * kColumns;
-
-			const auto &iconName = icons[idx];
-			if (iconName.isEmpty()) {
-				continue;
-			}
-			QImage icon;
-			if (const auto cached = _cachedIcons.find(iconName); cached != _cachedIcons.end()) {
-				icon = cached->second;
-			} else {
-				icon = _cachedIcons[iconName] = ExtrasAssets::loadPreview(iconName);
-			}
-			auto opacity = 0.0f;
-			if (iconName == _wasSelected) {
-				opacity = 1.0f - _animation.value(1.0f);
-			} else if (iconName == ExtrasAssets::currentAppLogoName()) {
-				opacity = _wasSelected.isEmpty() ? 1.0f : _animation.value(1.0f);
-			}
-
-			const auto x = i * cell + (cell - iconSize) / 2;
-			const auto y = row * cell;
-
-			drawIcon(p, icon, x, y, opacity);
+	for (auto index = 0; index < int(icons.size()); ++index) {
+		const auto &iconName = icons[index];
+		if (iconName.isEmpty()) {
+			continue;
 		}
+		QImage icon;
+		if (const auto cached = _cachedIcons.find(iconName); cached != _cachedIcons.end()) {
+			icon = cached->second;
+		} else {
+			icon = _cachedIcons[iconName] = ExtrasAssets::loadPreview(iconName);
+		}
+		auto opacity = 0.0f;
+		if (iconName == _wasSelected) {
+			opacity = 1.0f - _animation.value(1.0f);
+		} else if (iconName == ExtrasAssets::currentAppLogoName()) {
+			opacity = _wasSelected.isEmpty() ? 1.0f : _animation.value(1.0f);
+		}
+
+		drawIcon(p, icon, iconRect(index), opacity);
 	}
 }
 
 void IconPicker::mousePressEvent(QMouseEvent *e) {
-	const auto cell = cellWidth();
-	const auto iconSize = st::iconPickerIconSize;
 	const auto pos = e->pos();
 	const auto &icons = ExtrasAssets::appIcons();
-	const auto rows = rowsCount();
 	const auto iconName = [&] {
-		for (int row = 0; row < rows; row++) {
-			const auto columns = std::min(kColumns, static_cast<int>(icons.size()) - row * kColumns);
-			for (int i = 0; i < columns; i++) {
-				const auto x = i * cell + (cell - iconSize) / 2;
-				const auto y = row * cell;
-				if (pos.x() >= x && pos.x() <= x + iconSize
-					&& pos.y() >= y && pos.y() <= y + iconSize) {
-					return icons[i + row * kColumns];
-				}
+		for (auto index = 0; index < int(icons.size()); ++index) {
+			if (iconRect(index).contains(pos)) {
+				return icons[index];
 			}
 		}
 		return QString();

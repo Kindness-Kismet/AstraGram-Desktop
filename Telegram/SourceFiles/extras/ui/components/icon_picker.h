@@ -9,15 +9,22 @@ public:
 	IconPicker(QWidget *parent);
 	~IconPicker() = default;
 
-	static constexpr int kColumns = 4;
-
 protected:
 	void paintEvent(QPaintEvent *e) override;
 	void mousePressEvent(QMouseEvent *e) override;
 
 private:
-	void drawIcon(QPainter &p, const QImage &icon, int x, int y, float strokeOpacity);
-	[[nodiscard]] int cellWidth() const;
+	static constexpr int kColumns = 4;
+
+	void drawIcon(
+		QPainter &p,
+		const QImage &icon,
+		const QRect &rect,
+		float strokeOpacity);
+	[[nodiscard]] int cellSize() const;
+	[[nodiscard]] int columnsCount() const;
+	[[nodiscard]] int rowsCount() const;
+	[[nodiscard]] QRect iconRect(int index) const;
 
 	Ui::Animations::Simple _animation;
 	QString _wasSelected;
