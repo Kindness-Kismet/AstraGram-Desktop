@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "iv/editor/iv_editor_box.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 #include "extras/features/window_material/window_material.h"
 #include "extras/ui/components/window_appearance.h"
 
@@ -36,6 +37,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "iv/editor/iv_editor_widget.h"
 #include "iv/editor/iv_editor_window.h"
 #include "lang/lang_keys.h"
+#include "main/main_session.h"
 #include "menu/menu_checked_action.h"
 #include "menu/menu_send_details.h"
 #include "styles/style_settings.h"
@@ -1682,6 +1684,8 @@ void WindowHost::Impl::setupWindow(ShowWindowDescriptor &&descriptor) {
 
 	_window = std::make_unique<Window>();
 	const auto window = _window.get();
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		window, descriptor.session->userId().bare, window->lifetime());
 	window->setCloseRequestHandler([=] {
 		return handleCloseRequest();
 	});

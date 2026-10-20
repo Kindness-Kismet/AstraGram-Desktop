@@ -347,6 +347,11 @@ def register_commands(sub) -> None:
     command = sub.add_parser("anim.speed", help="查询或临时调整过渡动画速度：0.1 放慢十倍，2 加快一倍，1 恢复；不保存")
     command.add_argument("speed", nargs="?", type=float, help="0.01 至 10，省略则只报告当前速度")
 
+    command = sub.add_parser("settings.account", help="按账号编号查询或保存隐身、主播模式设置")
+    command.add_argument("user", type=int, help="稳定账号编号")
+    command.add_argument("key", nargs="?", choices=["ghost.enabled", "streamer.enabled"])
+    command.add_argument("value", nargs="?", choices=["true", "false"])
+
     sub.add_parser("ghost.status", help="查询当前账号独立保存的隐身模式状态")
 
     sub.add_parser("storage.stats", help="读保存开关与数据库文件大小")
@@ -616,6 +621,13 @@ def build_server_command(args: argparse.Namespace) -> str:
     if command == "anim.speed":
         return ("anim.speed" if args.speed is None
                 else f"anim.speed {args.speed}")
+    if command == "settings.account":
+        if (args.key is None) != (args.value is None):
+            raise ValueError("Provide both the setting key and value")
+        parts = [command, str(args.user)]
+        if args.key is not None:
+            parts.extend([args.key, args.value])
+        return " ".join(parts)
     # 其余都是无参指令，名字与服务端一一对应。
     return command
 

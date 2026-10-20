@@ -40,7 +40,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <ada.h>
 
 // AyuGram includes
-#include "extras/extras_settings.h"
 #include "extras/features/streamer_mode/streamer_mode.h"
 
 
@@ -112,8 +111,9 @@ constexpr auto kZoomStep = int(10);
 
 } // namespace
 
-Controller::Controller(not_null<Delegate*> delegate)
-: _delegate(delegate) {
+Controller::Controller(not_null<Delegate*> delegate, uint64 userId)
+: _delegate(delegate)
+, _userId(userId) {
 	createWindow();
 }
 
@@ -156,7 +156,10 @@ bool Controller::IsGoodTonSiteUrl(const QString &uri) {
 
 void Controller::showTonSite(
 		const Webview::StorageId &storageId,
-		QString uri) {
+		QString uri,
+		uint64 userId) {
+	_userId = userId;
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(_window.get(), userId, _lifetime);
 	const auto url = TonsiteToHttps(uri);
 	Assert(!url.isEmpty());
 
@@ -297,6 +300,7 @@ void Controller::createWindow() {
 
 	_container->show();
 	ExtrasUi::WindowAppearance::initialize(window);
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(window, _userId, _lifetime);
 	window->show();
 }
 
@@ -304,10 +308,6 @@ void Controller::createWebview(const Webview::StorageId &storageId) {
 	Expects(!_webview);
 
 	const auto window = _window.get();
-
-	if (ExtrasSettings::getInstance().streamerMode()) {
-		ExtrasFeatures::StreamerMode::hideWidgetWindow(window);
-	}
 
 	_webview = std::make_unique<Webview::Window>(
 		_container,

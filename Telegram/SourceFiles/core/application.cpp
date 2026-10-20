@@ -601,10 +601,6 @@ void Application::processCreatedWindow(
 	}
 	window->openInMediaViewRequests(
 	) | rpl::start_to_stream(_openInMediaViewRequests, window->lifetime());
-
-	if (ExtrasSettings::getInstance().streamerMode()) {
-		ExtrasFeatures::StreamerMode::hideWidgetWindow(window->widget());
-	}
 }
 
 void Application::startMediaView() {
@@ -727,6 +723,12 @@ bool Application::hideMediaView() {
 
 bool Application::eventFilter(QObject *object, QEvent *e) {
 	switch (e->type()) {
+	case QEvent::Show:
+	case QEvent::WinIdChange: {
+		if (const auto widget = qobject_cast<QWidget*>(object)) {
+			ExtrasFeatures::StreamerMode::inheritWidgetWindow(widget);
+		}
+	} break;
 	case QEvent::KeyPress: {
 		updateNonIdle();
 		_inAppKeyPressed.fire({});

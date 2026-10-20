@@ -37,7 +37,7 @@ class StandaloneLayerStack final
 	: public LayerStackDelegate
 	, public base::has_weak_ptr {
 public:
-	StandaloneLayerStack();
+	explicit StandaloneLayerStack(uint64 userId);
 	~StandaloneLayerStack();
 
 	void showBox(
@@ -77,6 +77,7 @@ private:
 	void hidePanel(base::unique_qptr<SeparatePanel> panel);
 
 	std::vector<Entry> _entries;
+	const uint64 _userId;
 	std::optional<QSize> _anchorOuterSize;
 	Platform::ForeignParent _transientParent;
 	rpl::event_stream<> _boxAdded;

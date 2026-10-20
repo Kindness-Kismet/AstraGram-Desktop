@@ -1521,6 +1521,7 @@ void WebViewInstance::show(ShowArgs &&args) {
 	_panelUrl = args.result.url;
 	_panel = Ui::BotWebView::Show({
 		.url = args.result.url,
+		.userId = _session->userId().bare,
 		.storageId = _session->local().resolveStorageIdBots(),
 		.title = std::move(title),
 		.titleBadge = std::move(titleBadge),
@@ -1553,6 +1554,7 @@ void WebViewInstance::showGame() {
 	_panelUrl = QString::fromUtf8(_button.url);
 	_panel = Ui::BotWebView::Show({
 		.url = _panelUrl,
+		.userId = _session->userId().bare,
 		.storageId = _session->local().resolveStorageIdBots(),
 		.title = rpl::single(game.title),
 		.bottom = rpl::single('@' + _bot->username()),

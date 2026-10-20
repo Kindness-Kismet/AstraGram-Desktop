@@ -28,7 +28,7 @@ namespace Iv {
 
 class Controller final {
 public:
-	explicit Controller(not_null<Delegate*> delegate);
+	Controller(not_null<Delegate*> delegate, uint64 userId);
 	~Controller();
 
 	struct Event {
@@ -50,7 +50,7 @@ public:
 	};
 
 	[[nodiscard]] static bool IsGoodTonSiteUrl(const QString &uri);
-	void showTonSite(const Webview::StorageId &storageId, QString uri);
+	void showTonSite(const Webview::StorageId &storageId, QString uri, uint64 userId);
 
 	[[nodiscard]] bool active() const;
 	void minimize();
@@ -77,6 +77,7 @@ private:
 	void showWebviewError(TextWithEntities text);
 
 	const not_null<Delegate*> _delegate;
+	uint64 _userId = 0;
 
 	std::unique_ptr<Ui::RpWindow> _window;
 	std::unique_ptr<Ui::RpWidget> _subtitleWrap;

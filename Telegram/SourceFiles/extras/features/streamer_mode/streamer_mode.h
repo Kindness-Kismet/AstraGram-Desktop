@@ -4,8 +4,12 @@ class QWidget;
 
 namespace ExtrasFeatures::StreamerMode {
 
-void apply(bool enabled);
-void hideWidgetWindow(QWidget *widget);
-void showWidgetWindow(QWidget *widget);
+void bindWidgetWindow(
+	not_null<QWidget*> widget,
+	uint64 userId,
+	rpl::lifetime &lifetime);
+void inheritWidgetWindow(not_null<QWidget*> widget);
+void inheritWidgetWindow(not_null<QWidget*> widget, not_null<QWidget*> owner);
+void refreshWidgetWindow(not_null<QWidget*> widget);
 
 } // namespace ExtrasFeatures::StreamerMode

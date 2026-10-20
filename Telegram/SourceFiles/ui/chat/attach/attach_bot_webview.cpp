@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/chat/attach/attach_bot_webview.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 
 #include "ui/chat/attach/attach_bot_downloads.h"
 #include "ui/chat/attach/attach_bot_webview_linux_shell.h"
@@ -1235,6 +1236,7 @@ Panel::Progress::Progress(QWidget *parent, Fn<QRect()> rect)
 
 Panel::Panel(Args &&args)
 : _storageId(args.storageId)
+, _userId(args.userId)
 , _delegate(args.delegate)
 , _externalShell(UseExternalBotWebApps())
 , _menuButtons(args.menuButtons)
@@ -1244,11 +1246,13 @@ Panel::Panel(Args &&args)
 			.menuSt = &st::botWebViewMenu,
 		}))
 , _externalLayer(_externalShell
-	? std::make_unique<StandaloneLayerStack>()
+	? std::make_unique<StandaloneLayerStack>(_userId)
 	: nullptr)
 , _fullscreen(args.fullscreen)
 , _allowClipboardRead(args.allowClipboardRead)
 , _sameOrigin(args.sameOrigin) {
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		_widget.get(), _userId, _widget->lifetime());
 	if (_externalShell) {
 		_widget->setAttribute(Qt::WA_DontShowOnScreen);
 		_externalLayer->boxAdded(

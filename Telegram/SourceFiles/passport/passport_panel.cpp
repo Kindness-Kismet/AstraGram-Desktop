@@ -6,6 +6,9 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "passport/passport_panel.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
+#include "data/data_user.h"
+#include "main/main_session.h"
 
 #include "passport/passport_panel_controller.h"
 #include "passport/passport_panel_form.h"
@@ -23,6 +26,8 @@ Panel::Panel(not_null<PanelController*> controller)
 , _widget(std::make_unique<Ui::SeparatePanel>(Ui::SeparatePanelArgs{
 	.onAllSpaces = true,
 })) {
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		_widget.get(), controller->bot()->session().userId().bare, _widget->lifetime());
 	_widget->setTitle(tr::lng_passport_title());
 	_widget->setInnerSize(st::passportPanelSize);
 

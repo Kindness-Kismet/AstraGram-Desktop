@@ -369,8 +369,6 @@ Fields customFields() {
 		&S::avatarCorners, &S::setAvatarCorners, 0, 23, true);
 	addField(fields, "singleCornerRadius", settings,
 		&S::singleCornerRadius, &S::setSingleCornerRadius);
-	addField(fields, "streamerMode", settings,
-		&S::streamerMode, &S::setStreamerMode);
 	return fields;
 }
 
@@ -380,6 +378,9 @@ Fields accountFields(not_null<Main::Session*> session) {
 	auto &settings = session->settings();
 	auto fields = Fields();
 	auto &ghost = ExtrasSettings::ghost(session);
+	auto &streamer = ExtrasSettings::streamer(session);
+	addField(fields, "streamerMode", streamer,
+		&StreamerModeAccountSettings::enabled, &StreamerModeAccountSettings::setEnabled);
 	using G = GhostModeAccountSettings;
 	addField(fields, "ghost.sendReadMessages", ghost,
 		&G::sendReadMessages, &G::setSendReadMessages);

@@ -45,6 +45,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "extras/extras_settings.h"
 #include "extras/extras_state.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 #include "data/data_story.h"
 
 
@@ -185,9 +186,16 @@ void Controller::showAccount(
 		_sessionController = session
 			? std::make_unique<SessionController>(session, this)
 			: nullptr;
+		ExtrasFeatures::StreamerMode::bindWidgetWindow(
+			widget(),
+			session ? session->userId().bare : 0,
+			_sessionController ? _sessionController->lifetime() : _accountLifetime);
 		_sessionControllerValue = _sessionController.get();
 
-		auto oldContentCache = _widget.grabForSlideAnimation();
+		// 跨账号切换不展示旧账号截图，避免沿用新账号的捕获权限。
+		auto oldContentCache = (prevAccount == account)
+			? _widget.grabForSlideAnimation()
+			: QPixmap();
 		_widget.updateWindowIcon();
 		if (session) {
 			setupSideBar();

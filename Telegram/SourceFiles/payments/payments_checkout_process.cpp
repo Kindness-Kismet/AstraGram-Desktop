@@ -329,7 +329,7 @@ CheckoutProcess::CheckoutProcess(
 	PrivateTag)
 : _session(SessionFromId(id))
 , _form(std::make_unique<Form>(id, (mode == Mode::Receipt)))
-, _panel(std::make_unique<Ui::Panel>(panelDelegate()))
+, _panel(std::make_unique<Ui::Panel>(panelDelegate(), _session->userId().bare))
 , _reactivate(std::move(reactivate))
 , _nonPanelPaymentFormProcess(std::move(nonPanelPaymentFormProcess)) {
 	_form->updates(

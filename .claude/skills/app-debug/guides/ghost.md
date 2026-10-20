@@ -21,3 +21,9 @@ python .claude/skills/app-debug/scripts/cli.py ghost.status
 
 改隐身模式开关用 `settings.set`（见 `settings.md`），`ghost.*` 作用于当前账号，
 `ghostModeSettings.<账号编号>.*` 指定账号；不再提供全局开关。
+
+主播模式同样按账号保存，当前账号用 `streamer.enabled`，指定账号用
+`streamerModeSettings.<账号编号>.enabled`；设置导入导出的账号范围只作用于目标账号。
+
+`settings.account <账号编号> [ghost.enabled|streamer.enabled true|false]` 可显式查询或保存指定账号；
+保存结果通过 `job.status` 查询，未登录账号没有协议或窗口副作用，适合在独立离线配置检查持久化。

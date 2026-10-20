@@ -144,6 +144,7 @@ public:
 
 struct Args {
 	QString url;
+	uint64 userId = 0;
 	Webview::StorageId storageId;
 	rpl::producer<QString> title;
 	Ui::TitleBadgeDescriptor titleBadge;
@@ -323,6 +324,7 @@ private:
 	void layoutButtons();
 
 	Webview::StorageId _storageId;
+	const uint64 _userId;
 	const not_null<Delegate*> _delegate;
 	QString _externalUrl;
 	QString _externalTitle;

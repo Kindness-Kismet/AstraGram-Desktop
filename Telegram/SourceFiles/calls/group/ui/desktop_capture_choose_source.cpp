@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "calls/group/ui/desktop_capture_choose_source.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 
 #include "ui/widgets/rp_window.h"
 #include "ui/widgets/scroll_area.h"
@@ -272,6 +273,9 @@ ChooseSourceProcess::ChooseSourceProcess(
 		tr::lng_group_call_screen_share_audio(tr::now),
 		false,
 		st::desktopCaptureWithAudio)) {
+	if (const auto parent = _delegate->chooseSourceParent()) {
+		ExtrasFeatures::StreamerMode::inheritWidgetWindow(_window.get(), parent);
+	}
 	_submit->setTextTransform(RoundButtonTextTransform::ToUpper);
 	_finish->setTextTransform(RoundButtonTextTransform::ToUpper);
 	setupPanel();

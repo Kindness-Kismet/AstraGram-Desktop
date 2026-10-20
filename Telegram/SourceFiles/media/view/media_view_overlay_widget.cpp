@@ -3409,6 +3409,7 @@ void OverlayWidget::clearSession() {
 		hide();
 	}
 	_sessionLifetime.destroy();
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(_window, 0, lifetime());
 	if (!_animations.empty()) {
 		_animations.clear();
 		_stateAnimation.stop();
@@ -5038,11 +5039,7 @@ void OverlayWidget::activate() {
 	QApplication::setActiveWindow(_window);
 	setFocus();
 
-	if (ExtrasSettings::getInstance().streamerMode()) {
-		ExtrasFeatures::StreamerMode::hideWidgetWindow(_window);
-	} else {
-		ExtrasFeatures::StreamerMode::showWidgetWindow(_window);
-	}
+	ExtrasFeatures::StreamerMode::refreshWidgetWindow(_window);
 }
 
 void OverlayWidget::show(OpenRequest request) {
@@ -6712,6 +6709,7 @@ bool OverlayWidget::contentNeedsScreenshotProtection() const {
 
 void OverlayWidget::refreshScreenshotProtection() {
 	_screenshotProtected = contentNeedsScreenshotProtection();
+	_window->setProperty("ExtrasContentScreenshotProtected", _screenshotProtected);
 	Platform::SetWindowScreenshotProtection(
 		_window,
 		(_screenshotProtected
@@ -8649,6 +8647,8 @@ void OverlayWidget::setSession(not_null<Main::Session*> session) {
 	clearSession();
 	_session = session;
 	_window->setWindowIcon(Window::CreateIcon(session));
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		_window, session->userId().bare, _sessionLifetime);
 
 	session->downloaderTaskFinished(
 	) | rpl::on_next([=] {

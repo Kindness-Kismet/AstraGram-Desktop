@@ -846,11 +846,9 @@ Notification::Notification(
 		update();
 	}, lifetime());
 
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		this, history->session().userId().bare, lifetime());
 	show();
-
-	if (ExtrasSettings::getInstance().streamerMode()) {
-		ExtrasFeatures::StreamerMode::hideWidgetWindow(this);
-	}
 }
 
 // 悬停按钮在第一行右侧垂直居中，回复在关闭左边。
@@ -1515,9 +1513,6 @@ HideAllButton::HideAllButton(
 
 	show();
 
-	if (ExtrasSettings::getInstance().streamerMode()) {
-		ExtrasFeatures::StreamerMode::hideWidgetWindow(this);
-	}
 }
 
 void HideAllButton::startHiding() {

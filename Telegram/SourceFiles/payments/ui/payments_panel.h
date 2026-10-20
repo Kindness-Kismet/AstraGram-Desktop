@@ -47,7 +47,7 @@ enum class WebviewMode {
 
 class Panel final : public base::has_weak_ptr {
 public:
-	explicit Panel(not_null<PanelDelegate*> delegate);
+	Panel(not_null<PanelDelegate*> delegate, uint64 userId);
 	~Panel();
 
 	void requestActivate();

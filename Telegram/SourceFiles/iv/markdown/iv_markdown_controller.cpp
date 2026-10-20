@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "iv/markdown/iv_markdown_controller.h"
 #include "base/event_filter.h"
 #include "extras/features/window_material/window_material.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 #include "extras/ui/components/window_appearance.h"
 #include "core/click_handler_types.h"
 #include "core/credits_amount.h"
@@ -374,6 +375,8 @@ void Controller::setContent(
 		_delegate,
 		title,
 		zoomActivatedCallback());
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		_window.get(), refreshed.userId, _lifetime);
 	if (preserveScroll && historyEnabled(refreshed)) {
 		auto activeIndex = -1;
 		if (_shownHistoryIndex >= 0
@@ -538,6 +541,8 @@ void Controller::updateOptions(OpenOptions options) {
 		_delegate,
 		_title,
 		zoomActivatedCallback());
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		_window.get(), refreshed.userId, _lifetime);
 	if (refreshed.sourceName.isEmpty()) {
 		refreshed.sourceName = _options.sourceName;
 	}
@@ -1305,6 +1310,7 @@ void Controller::createWindow() {
 
 	_titleShadow->raise();
 	ExtrasUi::WindowAppearance::initialize(window);
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(window, _options.userId, _lifetime);
 	window->show();
 }
 

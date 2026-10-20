@@ -287,6 +287,10 @@ void JoinRichMessageChannel(
 	};
 	const auto messageContext = ExtractMarkdownMessageContext(
 		options.clickHandlerContext);
+	const auto session = messageContext
+		? ResolveMarkdownSession(*messageContext)
+		: nullptr;
+	options.userId = session ? session->userId().bare : 0;
 	const auto item = messageContext
 		? ResolveMarkdownItem(*messageContext)
 		: nullptr;
@@ -383,11 +387,12 @@ private:
 
 class TonSite final : public base::has_weak_ptr {
 public:
-	TonSite(not_null<Delegate*> delegate, QString uri);
+	TonSite(not_null<Delegate*> delegate, QString uri, uint64 userId);
 
 	[[nodiscard]] bool active() const;
 
-	void moveTo(QString uri);
+	void moveTo(QString uri, uint64 userId);
+	[[nodiscard]] uint64 userId() const { return _userId; }
 
 	void minimize();
 
@@ -406,6 +411,7 @@ private:
 
 	const not_null<Delegate*> _delegate;
 	QString _uri;
+	uint64 _userId = 0;
 	std::unique_ptr<Controller> _controller;
 
 	rpl::event_stream<Controller::Event> _events;
@@ -460,6 +466,7 @@ Markdown::OpenOptions Shown::markdownOpenOptions(
 		.sourceUrl = page->url,
 		.initialFragment = std::move(initialFragment),
 		.currentPageId = page->id,
+		.userId = _session->userId().bare,
 		.viewerKind = Markdown::ViewerKind::InstantView,
 		.clickHandlerContextRef = clickHandlerContext,
 		.ivWebviewStorageId = _session->local().resolveStorageIdOther(),
@@ -671,16 +678,17 @@ void Shown::minimize() {
 	}
 }
 
-TonSite::TonSite(not_null<Delegate*> delegate, QString uri)
+TonSite::TonSite(not_null<Delegate*> delegate, QString uri, uint64 userId)
 : _delegate(delegate)
-, _uri(uri) {
+, _uri(uri)
+, _userId(userId) {
 	showWindowed();
 }
 
 void TonSite::createController() {
 	Expects(!_controller);
 
-	_controller = std::make_unique<Controller>(_delegate);
+	_controller = std::make_unique<Controller>(_delegate, _userId);
 
 	_controller->events(
 	) | rpl::start_to_stream(_events, _controller->lifetime());
@@ -691,15 +699,16 @@ void TonSite::showWindowed() {
 		createController();
 	}
 
-	_controller->showTonSite(Storage::TonSiteStorageId(), _uri);
+	_controller->showTonSite(Storage::TonSiteStorageId(), _uri, _userId);
 }
 
 bool TonSite::active() const {
 	return _controller && _controller->active();
 }
 
-void TonSite::moveTo(QString uri) {
-	_controller->showTonSite({}, uri);
+void TonSite::moveTo(QString uri, uint64 userId) {
+	_userId = userId;
+	_controller->showTonSite({}, uri, userId);
 }
 
 void TonSite::minimize() {
@@ -794,7 +803,7 @@ void Instance::showOpenedPage(
 				File::OpenUrl(event.url);
 				closeLegacyWindows();
 			} else if (tonsite) {
-				showTonSite(event.url);
+				showTonSiteForAccount(event.url, _shownSession->userId().bare);
 			}
 			break;
 		case Type::OpenMedia:
@@ -837,7 +846,7 @@ void Instance::showOpenedPage(
 		case Type::OpenPage:
 		case Type::OpenLink: {
 			if (tonsite) {
-				showTonSite(event.url);
+				showTonSiteForAccount(event.url, _shownSession->userId().bare);
 				break;
 			} else if (!urlChecked) {
 				break;
@@ -1032,6 +1041,9 @@ void Instance::closeMarkdownsForSession(not_null<Main::Session*> session) {
 
 void Instance::closeSessionDataViews(not_null<Main::Session*> session) {
 	closeMarkdownsForSession(session);
+	if (_tonSite && _tonSite->userId() == session->userId().bare) {
+		destroyLater(base::take(_tonSite));
+	}
 	for (auto i = _htmlExports.begin(); i != _htmlExports.end();) {
 		if ((*i)->session() == session) {
 			i = _htmlExports.erase(i);
@@ -1172,6 +1184,15 @@ void Instance::openWithIvPreferred(
 void Instance::showTonSite(
 		const QString &uri,
 		QVariant context) {
+	const auto click = context.value<ClickHandlerContext>();
+	const auto controller = click.sessionWindow.get();
+	if (controller) {
+		trackSession(&controller->session());
+	}
+	showTonSiteForAccount(uri, controller ? controller->session().userId().bare : 0);
+}
+
+void Instance::showTonSiteForAccount(const QString &uri, uint64 userId) {
 	if (!Controller::IsGoodTonSiteUrl(uri)) {
 		Ui::Toast::Show(tr::lng_iv_not_supported(tr::now));
 		return;
@@ -1180,10 +1201,10 @@ void Instance::showTonSite(
 		Core::App().hideMediaView();
 	}
 	if (_tonSite) {
-		_tonSite->moveTo(uri);
+		_tonSite->moveTo(uri, userId);
 		return;
 	}
-	_tonSite = std::make_unique<TonSite>(_delegate, uri);
+	_tonSite = std::make_unique<TonSite>(_delegate, uri, userId);
 	_tonSite->events() | rpl::on_next([=](Controller::Event event) {
 		using Type = Controller::Event::Type;
 		const auto lower = event.url.toLower();
@@ -1202,7 +1223,7 @@ void Instance::showTonSite(
 				File::OpenUrl(event.url);
 				closeLegacyWindows();
 			} else if (tonsite) {
-				showTonSite(event.url);
+				showTonSiteForAccount(event.url, _tonSite->userId());
 			}
 			break;
 		case Type::OpenPage:
@@ -1210,7 +1231,7 @@ void Instance::showTonSite(
 			if (urlChecked) {
 				UrlClickHandler::Open(event.url);
 			} else if (tonsite) {
-				showTonSite(event.url);
+				showTonSiteForAccount(event.url, _tonSite->userId());
 			}
 			break;
 		}
@@ -1460,6 +1481,7 @@ void Instance::showRichMessage(
 	auto options = Markdown::OpenOptions{
 		.sourceName = title,
 		.currentPageId = RichMessagePageId(itemId),
+		.userId = session->userId().bare,
 		.viewerKind = Markdown::ViewerKind::InstantView,
 		.clickHandlerContext = context,
 		.activateMedia = [=](

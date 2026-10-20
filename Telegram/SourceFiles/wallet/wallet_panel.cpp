@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "wallet/wallet_panel.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 
 #include "base/qthelp_regex.h"
 #include "core/application.h"
@@ -75,6 +76,8 @@ not_null<Ui::SeparatePanel*> ShowWallet(not_null<Main::Session*> session) {
 	}
 	auto owned = std::make_unique<Ui::SeparatePanel>();
 	const auto panel = owned.get();
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		panel, session->userId().bare, panel->lifetime());
 	// 通用控件沿用应用主题，钱包卡片单独保留品牌渐变。
 	const auto show = Main::MakeSessionShow(panel->uiShow(), session);
 	panel->setWindowFlag(Qt::WindowStaysOnTopHint, false);

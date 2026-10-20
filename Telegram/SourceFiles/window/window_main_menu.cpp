@@ -921,13 +921,13 @@ void MainMenu::setupMenu() {
 			tr::extras_StreamerModeToggle(),
 			{&st::extrasStreamerModeMenuIcon},
 			u"streamerMode"_q
-		)->toggleOn(ExtrasSettings::getInstance().streamerModeValue());
+		)->toggleOn(ExtrasSettings::streamer(&_controller->session()).enabledValue());
 
 		streamerModeToggle->toggledChanges(
 		) | rpl::on_next(
 			[=](bool enabled)
 			{
-				ExtrasSettings::getInstance().setStreamerMode(enabled);
+				ExtrasSettings::streamer(&_controller->session()).setEnabled(enabled);
 			},
 			streamerModeToggle->lifetime());
 	}

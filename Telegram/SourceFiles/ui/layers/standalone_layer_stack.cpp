@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/layers/standalone_layer_stack.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 
 #include "base/event_filter.h"
 #include "ui/layers/box_content.h"
@@ -85,7 +86,8 @@ StandaloneShow::operator bool() const {
 
 } // namespace
 
-StandaloneLayerStack::StandaloneLayerStack() = default;
+StandaloneLayerStack::StandaloneLayerStack(uint64 userId) : _userId(userId) {
+}
 
 StandaloneLayerStack::~StandaloneLayerStack() {
 	for (auto &entry : base::take(_entries)) {
@@ -107,6 +109,8 @@ void StandaloneLayerStack::showBox(
 	auto panel = base::make_unique_q<SeparatePanel>(SeparatePanelArgs{
 		.transientParent = _transientParent,
 	});
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		panel.get(), _userId, panel->lifetime());
 	panel->setWindowFlag(Qt::WindowStaysOnTopHint, false);
 	panel->setAttribute(Qt::WA_DeleteOnClose, false);
 	panel->setAttribute(Qt::WA_ShowModal);

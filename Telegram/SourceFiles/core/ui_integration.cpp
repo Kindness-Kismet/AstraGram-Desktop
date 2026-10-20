@@ -489,9 +489,7 @@ rpl::producer<> UiIntegration::forcePopupMenuHideRequests() {
 }
 
 void UiIntegration::preparePopupMenu(not_null<QWidget*> widget) {
-	if (ExtrasSettings::getInstance().streamerMode()) {
-		ExtrasFeatures::StreamerMode::hideWidgetWindow(widget);
-	}
+	ExtrasFeatures::StreamerMode::inheritWidgetWindow(widget);
 }
 
 const Ui::Emoji::One *UiIntegration::defaultEmojiVariant(

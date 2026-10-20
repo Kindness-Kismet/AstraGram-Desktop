@@ -97,6 +97,7 @@ public:
 	[[nodiscard]] rpl::lifetime &lifetime();
 
 private:
+	void showTonSiteForAccount(const QString &uri, uint64 userId);
 	struct FullResult {
 		crl::time lastRequestedAt = 0;
 		WebPageData *page = nullptr;

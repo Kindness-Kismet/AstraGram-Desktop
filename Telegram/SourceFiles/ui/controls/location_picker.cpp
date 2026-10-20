@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/controls/location_picker.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 #include "ui/search_field_controller.h"
 #include "ui/widgets/fields/input_field.h"
 #include "styles/style_td_common.h"
@@ -754,6 +755,8 @@ LocationPicker::LocationPicker(Descriptor &&descriptor)
 })
 , _api(&_session->mtp())
 , _venueRecipient(descriptor.recipient) {
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		_window.get(), _session->userId().bare, _window->lifetime());
 	std::move(
 		descriptor.closeRequests
 	) | rpl::on_next([=] {

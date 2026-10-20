@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "calls/calls_panel.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 
 #include "boxes/peers/replace_boost_box.h" // CreateUserpicsWithMoreBadge
 #include "calls/calls_panel_background.h"
@@ -666,6 +667,8 @@ void Panel::reinitWithCall(Call *call) {
 	}
 
 	_user = _call->user();
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		window(), _user->session().userId().bare, _callLifetime);
 
 	_background = std::make_unique<PanelBackground>(
 		_user,

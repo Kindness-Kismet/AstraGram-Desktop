@@ -286,7 +286,8 @@ Result featureStatus(const QStringList &args) {
 	auto modes = Json::array();
 	for (const auto mode : ExtrasFeatures::WindowMaterial::availableModes()) modes.push_back(int(mode));
 	return Result::Ok(Compact(Json{
-		{"streamerMode", ExtrasSettings::getInstance().streamerMode()},
+		{"streamerMode", ActiveSession()
+			&& ExtrasSettings::streamer(ActiveSession()).enabled()},
 		{"windowMaterialActive", window && ExtrasFeatures::WindowMaterial::isActive(window->widget())},
 		{"windowMaterialModes", modes}, {"emojiSet", Ui::Emoji::CurrentSetId()},
 		{"translationProvider", ExtrasSettings::getInstance().translationProvider()},

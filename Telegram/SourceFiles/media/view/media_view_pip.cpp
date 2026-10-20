@@ -987,13 +987,9 @@ void Pip::setupPanel() {
 	}();
 	_panel.setAspectRatio(FlipSizeByRotation(size, _rotation));
 	_panel.setPosition(Deserialize(_delegate->pipLoadGeometry()));
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		_panel.widget(), _data->session().userId().bare, _panel.rp()->lifetime());
 	_panel.widget()->show();
-
-	if (ExtrasSettings::getInstance().streamerMode()) {
-		ExtrasFeatures::StreamerMode::hideWidgetWindow(_panel.widget());
-	} else {
-		ExtrasFeatures::StreamerMode::showWidgetWindow(_panel.widget());
-	}
 
 	_panel.saveGeometryRequests(
 	) | rpl::on_next([=] {

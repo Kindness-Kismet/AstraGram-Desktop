@@ -11,9 +11,11 @@
 
 | 键名范围 | 内容 |
 |---|---|
-| 无前缀，如 `streamerMode` | 本项目定制设置 |
+| 无前缀，如 `windowMaterial` | 本项目定制设置 |
 | `ghost.*` | 当前账号实际使用的隐身模式设置 |
-| `ghostModeSettings.<userId>.*` | 指定账号的隐身模式配置，0 为全局 |
+| `ghostModeSettings.<userId>.*` | 指定账号的隐身模式配置 |
+| `streamer.enabled` | 当前账号的主播模式设置 |
+| `streamerModeSettings.<userId>.enabled` | 指定账号的主播模式设置 |
 | `messageShotSettings.*` | 消息截图与截图主题 |
 | `core.*` | 官方应用设置：通知、音视频、输入、翻译、窗口等 |
 | `session.*` | 当前账号设置 |

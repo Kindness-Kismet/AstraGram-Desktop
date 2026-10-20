@@ -152,20 +152,31 @@ void Tray::rebuildMenu() {
 	}
 
 	if (settings.showStreamerToggleInTray()) {
-		auto turnStreamerModeText = rpl::combine(
-			_textUpdates.events_starting_with({}),
-			ExtrasSettings::getInstance().streamerModeValue()
-		) | rpl::map([=](auto, bool enabled) {
-			return enabled
-					   ? tr::extras_DisableStreamerModeTray(tr::now)
-					   : tr::extras_EnableStreamerModeTray(tr::now);
-		});
+		const auto target = std::make_shared<Main::Session*>(nullptr);
+		auto turnStreamerModeText = Core::App().domain().activeSessionValue(
+		) | rpl::map([=](Main::Session *session) -> rpl::producer<QString> {
+			*target = session;
+			if (!session) {
+				return tr::extras_EnableStreamerModeTray();
+			}
+			return rpl::combine(
+				_textUpdates.events_starting_with({}),
+				ExtrasSettings::streamer(session).enabledValue()
+			) | rpl::map([=](auto, bool enabled) {
+				const auto text = enabled
+					? tr::extras_DisableStreamerModeTray(tr::now)
+					: tr::extras_EnableStreamerModeTray(tr::now);
+				return text + u" · "_q + session->user()->name();
+			});
+		}) | rpl::flatten_latest();
 		_tray.addAction(
 			std::move(turnStreamerModeText),
-			[]
+			[=]
 			{
-				auto &extrasSettings = ExtrasSettings::getInstance();
-				extrasSettings.setStreamerMode(!extrasSettings.streamerMode());
+				if (const auto session = *target) {
+					auto &streamer = ExtrasSettings::streamer(session);
+					streamer.setEnabled(!streamer.enabled());
+				}
 			});
 	}
 

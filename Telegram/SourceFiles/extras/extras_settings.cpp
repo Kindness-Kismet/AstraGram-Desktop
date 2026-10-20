@@ -5,7 +5,6 @@
 #include "extras/extras_worker.h"
 #include "extras/utils/telegram_helpers.h"
 #include "extras/features/custom_logo/custom_logo.h"
-#include "extras/features/streamer_mode/streamer_mode.h"
 #include "core/application.h"
 #include "features/filters/filters_cache_controller.h"
 #include "features/translator/extras_translator.h"
@@ -467,11 +466,16 @@ void ExtrasSettings::endBatchUpdate(Fn<void(bool)> done) {
 void ExtrasSettings::reset() {
 	auto &settings = getInstance();
 	auto accounts = std::move(settings._ghostAccounts);
+	auto streamers = std::move(settings._streamerAccounts);
 	settings = ExtrasSettings();
 	for (const auto &[id, account] : accounts) {
 		from_json(json(GhostModeAccountSettings(id)), *account);
 	}
 	settings._ghostAccounts = std::move(accounts);
+	for (const auto &[id, account] : streamers) {
+		from_json(json::object(), *account);
+	}
+	settings._streamerAccounts = std::move(streamers);
 	save();
 }
 
@@ -505,6 +509,37 @@ void ExtrasSettings::finishGhostAccountInitialization() {
 		}
 	}
 	settings._initialGhostSettings.reset();
+	save();
+}
+
+StreamerModeAccountSettings &ExtrasSettings::streamer(not_null<Main::Session*> session) {
+	return streamer(session->userId().bare);
+}
+
+StreamerModeAccountSettings &ExtrasSettings::streamer(uint64 userId) {
+	Expects(userId != 0);
+	auto &settings = getInstance();
+	auto &account = settings._streamerAccounts[userId];
+	if (!account) {
+		account = std::make_unique<StreamerModeAccountSettings>();
+		if (settings._initialStreamerEnabled) {
+			from_json(json{ { "enabled", *settings._initialStreamerEnabled } }, *account);
+		}
+	}
+	return *account;
+}
+
+void ExtrasSettings::finishStreamerAccountInitialization() {
+	auto &settings = getInstance();
+	if (!settings._initialStreamerEnabled) {
+		return;
+	}
+	for (const auto &account : Core::App().domain().orderedAccounts()) {
+		if (const auto session = account->maybeSession()) {
+			(void)streamer(session);
+		}
+	}
+	settings._initialStreamerEnabled.reset();
 	save();
 }
 
@@ -1377,11 +1412,20 @@ void ExtrasSettings::setSingleCornerRadius(bool val) {
 	save();
 }
 
-void ExtrasSettings::setStreamerMode(bool val) {
-	if (_streamerMode.current() == val) return;
-	_streamerMode = val;
-	ExtrasFeatures::StreamerMode::apply(val);
-	save();
+void StreamerModeAccountSettings::setEnabled(bool enabled) {
+	if (_enabled.current() == enabled) {
+		return;
+	}
+	_enabled = enabled;
+	ExtrasSettings::save();
+}
+
+void to_json(nlohmann::json &j, const StreamerModeAccountSettings &s) {
+	j = json{ { "enabled", s._enabled.current() } };
+}
+
+void from_json(const nlohmann::json &j, StreamerModeAccountSettings &s) {
+	s._enabled = j.value("enabled", false);
 }
 
 void to_json(nlohmann::json &j, const ExtrasSettings &s) {
@@ -1391,6 +1435,10 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 	}
 	if (s._initialGhostSettings) {
 		ghostAccounts["0"] = *s._initialGhostSettings;
+	}
+	auto streamerAccounts = json::object();
+	for (const auto &[id, account] : s._streamerAccounts) {
+		streamerAccounts[std::to_string(id)] = *account;
 	}
 
 	j = nlohmann::json{
@@ -1515,11 +1563,14 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"improveLinkPreviews", s._improveLinkPreviews.current()},
 		{"avatarCorners", s._avatarCorners.current()},
 		{"singleCornerRadius", s._singleCornerRadius.current()},
-		{"streamerMode", s._streamerMode.current()},
+		{"streamerModeSettings", streamerAccounts},
 		{"messageShotSettings", s._messageShotSettings}
 	};
 	if (s._initialGhostSettings) {
 		j["useGlobalGhostMode"] = true;
+	}
+	if (s._initialStreamerEnabled) {
+		j["streamerMode"] = *s._initialStreamerEnabled;
 	}
 }
 
@@ -1691,7 +1742,26 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._improveLinkPreviews = j.value("improveLinkPreviews", defaults._improveLinkPreviews.current());
 	s._avatarCorners = j.value("avatarCorners", defaults._avatarCorners.current());
 	s._singleCornerRadius = j.value("singleCornerRadius", defaults._singleCornerRadius.current());
-	s._streamerMode = j.value("streamerMode", defaults._streamerMode.current());
+	if (const auto accounts = j.find("streamerModeSettings");
+		accounts != j.end() && accounts->is_object()) {
+		for (const auto &[key, value] : accounts->items()) {
+			const auto id = QString::fromStdString(key).toULongLong();
+			if (!id) {
+				continue;
+			}
+			auto &account = s._streamerAccounts[id];
+			if (!account) {
+				account = std::make_unique<StreamerModeAccountSettings>();
+			}
+			value.get_to(*account);
+		}
+	}
+	if (j.contains("streamerMode")) {
+		s._initialStreamerEnabled = j.at("streamerMode").get<bool>();
+		for (const auto &[id, account] : s._streamerAccounts) {
+			from_json(json{ { "enabled", *s._initialStreamerEnabled } }, *account);
+		}
+	}
 
 	if (j.contains("messageShotSettings") && j["messageShotSettings"].is_object()) {
 		j["messageShotSettings"].get_to(s._messageShotSettings);

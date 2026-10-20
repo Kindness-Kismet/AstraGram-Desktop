@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "calls/group/calls_group_panel.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 
 #include "calls/group/calls_group_common.h"
 #include "calls/group/calls_group_invite_controller.h"
@@ -245,6 +246,8 @@ Panel::Panel(not_null<GroupCall*> call, ConferencePanelMigration info)
 	return result;
 })
 , _hideControlsTimer([=] { toggleWideControls(false); }) {
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		window(), _peer->session().userId().bare, lifetime());
 	_viewport->widget()->hide();
 	if (!_viewport->requireARGB32()) {
 		_call->setNotRequireARGB32();

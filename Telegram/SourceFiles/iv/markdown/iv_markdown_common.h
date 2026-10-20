@@ -262,6 +262,7 @@ struct OpenOptions {
 	QString sourceUrl;
 	QString initialFragment;
 	uint64 currentPageId = 0;
+	uint64 userId = 0;
 	ViewerKind viewerKind = ViewerKind::Auto;
 	Iv::Delegate *delegate = nullptr;
 	QVariant clickHandlerContext;

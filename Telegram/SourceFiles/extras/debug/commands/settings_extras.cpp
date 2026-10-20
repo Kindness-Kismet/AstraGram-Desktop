@@ -195,7 +195,6 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"improveLinkPreviews"_q, [&] { return settings.improveLinkPreviews(); }, settings, &ExtrasSettings::setImproveLinkPreviews);
 	addSetting(entries, u"avatarCorners"_q, [&] { return settings.avatarCorners(); }, settings, &ExtrasSettings::setAvatarCorners);
 	addSetting(entries, u"singleCornerRadius"_q, [&] { return settings.singleCornerRadius(); }, settings, &ExtrasSettings::setSingleCornerRadius);
-	addSetting(entries, u"streamerMode"_q, [&] { return settings.streamerMode(); }, settings, &ExtrasSettings::setStreamerMode);
 	entries.emplace(u"shadowBanIds"_q, SettingEntry{
 		[&] { return Json(settings.shadowBanIds()); },
 		[&](const Json &value) {
@@ -225,6 +224,14 @@ void addExtrasSettings(SettingsMap &entries) {
 		const auto id = session->userId().bare;
 		addGhost(entries, u"ghost."_q, ExtrasSettings::ghost(session));
 		addGhost(entries, u"ghostModeSettings.%1."_q.arg(id), ExtrasSettings::ghost(session));
+		auto &streamer = ExtrasSettings::streamer(session);
+		addSetting(entries, u"streamer.enabled"_q, [&] { return streamer.enabled(); },
+			streamer, &StreamerModeAccountSettings::setEnabled);
+	}
+	for (const auto &[key, value] : all.at("streamerModeSettings").items()) {
+		auto &streamer = ExtrasSettings::streamer(QString::fromStdString(key).toULongLong());
+		addSetting(entries, u"streamerModeSettings."_q + QString::fromStdString(key) + u".enabled"_q,
+			[&] { return streamer.enabled(); }, streamer, &StreamerModeAccountSettings::setEnabled);
 	}
 }
 

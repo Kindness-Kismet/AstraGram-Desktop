@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "payments/ui/payments_panel.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 
 #include "payments/ui/payments_form_summary.h"
 #include "payments/ui/payments_edit_information.h"
@@ -68,9 +69,11 @@ Panel::Progress::Progress(QWidget *parent, Fn<QRect()> rect)
 	st::paymentsLoading) {
 }
 
-Panel::Panel(not_null<PanelDelegate*> delegate)
+Panel::Panel(not_null<PanelDelegate*> delegate, uint64 userId)
 : _delegate(delegate)
 , _widget(std::make_unique<SeparatePanel>()) {
+	ExtrasFeatures::StreamerMode::bindWidgetWindow(
+		_widget.get(), userId, _widget->lifetime());
 	_widget->setWindowFlag(Qt::WindowStaysOnTopHint, false);
 	_widget->setInnerSize(st::paymentsPanelSize);
 

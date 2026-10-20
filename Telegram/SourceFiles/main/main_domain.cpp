@@ -43,6 +43,7 @@ Domain::Domain(const QString &dataName)
 		// In case we had a legacy passcoded app we start settings here.
 		Core::App().startSettingsAndBackground();
 		ExtrasSettings::finishGhostAccountInitialization();
+		ExtrasSettings::finishStreamerAccountInitialization();
 		if (cGhost()) {
 			if (const auto session = account ? account->maybeSession() : nullptr) {
 				ExtrasSettings::ghost(session).setGhostModeEnabled(true);

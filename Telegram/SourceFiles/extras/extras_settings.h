@@ -195,6 +195,19 @@ private:
 void to_json(nlohmann::json &j, const GhostModeAccountSettings &s);
 void from_json(const nlohmann::json &j, GhostModeAccountSettings &s);
 
+class StreamerModeAccountSettings {
+public:
+	[[nodiscard]] bool enabled() const { return _enabled.current(); }
+	void setEnabled(bool enabled);
+	[[nodiscard]] rpl::producer<bool> enabledValue() const { return _enabled.value(); }
+
+	friend void to_json(nlohmann::json &j, const StreamerModeAccountSettings &s);
+	friend void from_json(const nlohmann::json &j, StreamerModeAccountSettings &s);
+
+private:
+	rpl::variable<bool> _enabled = false;
+};
+
 class MessageShotSettings {
 public:
 	[[nodiscard]] bool showBackground() const { return _showBackground.current(); }
@@ -270,6 +283,9 @@ public:
 	[[nodiscard]] static GhostModeAccountSettings &ghost(not_null<Main::Session*> session);
 	[[nodiscard]] static GhostModeAccountSettings &ghost(uint64 userId);
 	static void finishGhostAccountInitialization();
+	[[nodiscard]] static StreamerModeAccountSettings &streamer(not_null<Main::Session*> session);
+	[[nodiscard]] static StreamerModeAccountSettings &streamer(uint64 userId);
+	static void finishStreamerAccountInitialization();
 
 	[[nodiscard]] MessageShotSettings &messageShotSettings() { return _messageShotSettings; }
 	[[nodiscard]] const MessageShotSettings &messageShotSettings() const { return _messageShotSettings; }
@@ -402,7 +418,6 @@ public:
 	[[nodiscard]] bool improveLinkPreviews() const { return _improveLinkPreviews.current(); }
 	[[nodiscard]] int avatarCorners() const { return _avatarCorners.current(); }
 	[[nodiscard]] bool singleCornerRadius() const { return _singleCornerRadius.current(); }
-	[[nodiscard]] bool streamerMode() const { return _streamerMode.current(); }
 
 	void setSaveDeletedMessages(bool val);
 	void setSaveMessagesHistory(bool val);
@@ -522,7 +537,6 @@ public:
 	void setImproveLinkPreviews(bool val);
 	void setAvatarCorners(int val);
 	void setSingleCornerRadius(bool val);
-	void setStreamerMode(bool val);
 
 	[[nodiscard]] rpl::producer<bool> saveDeletedMessagesValue() const { return _saveDeletedMessages.value(); }
 	[[nodiscard]] rpl::producer<bool> saveDeletedMessagesChanges() const { return _saveDeletedMessages.changes(); }
@@ -727,8 +741,6 @@ public:
 	[[nodiscard]] rpl::producer<int> avatarCornersChanges() const { return _avatarCorners.changes(); }
 	[[nodiscard]] rpl::producer<bool> singleCornerRadiusValue() const { return _singleCornerRadius.value(); }
 	[[nodiscard]] rpl::producer<bool> singleCornerRadiusChanges() const { return _singleCornerRadius.changes(); }
-	[[nodiscard]] rpl::producer<bool> streamerModeValue() const { return _streamerMode.value(); }
-	[[nodiscard]] rpl::producer<bool> streamerModeChanges() const { return _streamerMode.changes(); }
 
 	friend void to_json(nlohmann::json &j, const ExtrasSettings &s);
 	friend void from_json(const nlohmann::json &j, ExtrasSettings &s);
@@ -859,7 +871,8 @@ private:
 	rpl::variable<bool> _improveLinkPreviews = false;
 	rpl::variable<int> _avatarCorners = 23;
 	rpl::variable<bool> _singleCornerRadius = false;
-	rpl::variable<bool> _streamerMode = false;
+	std::optional<bool> _initialStreamerEnabled;
+	std::map<uint64, std::unique_ptr<StreamerModeAccountSettings>> _streamerAccounts;
 
 	std::optional<nlohmann::json> _initialGhostSettings;
 	std::map<uint64, std::unique_ptr<GhostModeAccountSettings>> _ghostAccounts;
