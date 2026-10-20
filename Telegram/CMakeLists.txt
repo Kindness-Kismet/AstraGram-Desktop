@@ -1339,6 +1339,7 @@ PRIVATE
     history/view/media/history_view_dice.h
     history/view/media/history_view_document.cpp
     history/view/media/history_view_document.h
+    history/view/media/history_view_document_layout.cpp
     history/view/media/history_view_ephemeral_plate.cpp
     history/view/media/history_view_ephemeral_plate.h
     history/view/media/history_view_file.cpp
