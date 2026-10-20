@@ -2317,13 +2317,6 @@ void StickersListWidget::paintSticker(
 	const auto pos = QPoint(
 		stickersLeft() + col * _singleSize.width(),
 		y + row * _singleSize.height());
-	if (selected) {
-		auto tl = pos;
-		if (rtl()) {
-			tl.setX(width() - tl.x() - _singleSize.width());
-		}
-		_overBg.paint(p, QRect(tl, _singleSize));
-	}
 
 	media->checkStickerSmall();
 
@@ -2333,6 +2326,12 @@ void StickersListWidget::paintSticker(
 		(_singleSize.height() - size.height()) / 2);
 
 	auto lottieFrame = QImage();
+	// 悬停只压暗图案，原始帧继续用于缓存和会员角标。
+	const auto frameForPaint = [selected](QImage frame) {
+		return selected
+			? Images::Colored(std::move(frame), QColor(0, 0, 0, 36))
+			: frame;
+	};
 
 	QPainterPath path;
 	path.addRoundedRect(QRectF(ppos, size), st::stickerRoundingSize, st::stickerRoundingSize);
@@ -2349,7 +2348,7 @@ void StickersListWidget::paintSticker(
 		lottieFrame = sticker.lottie->frame(request);
 		p.drawImage(
 			QRect(ppos, lottieFrame.size() / style::DevicePixelRatio()),
-			lottieFrame);
+			frameForPaint(lottieFrame));
 		if (sticker.savedFrame.isNull()) {
 			sticker.savedFrame = lottieFrame;
 			sticker.savedFrame.setDevicePixelRatio(style::DevicePixelRatio());
@@ -2365,19 +2364,21 @@ void StickersListWidget::paintSticker(
 			sticker.savedFrame.setDevicePixelRatio(style::DevicePixelRatio());
 			sticker.savedFrameFor = _singleSize;
 		}
-		p.drawImage(ppos, frame);
+		p.drawImage(ppos, frameForPaint(frame));
 	} else {
 		const auto image = media->getStickerSmall();
 		const auto useSavedFrame = !sticker.savedFrame.isNull()
 			&& (sticker.savedFrameFor == _singleSize);
 		if (useSavedFrame) {
-			p.drawImage(ppos, sticker.savedFrame);
+			p.drawImage(ppos, frameForPaint(sticker.savedFrame));
 			if (premium) {
 				lottieFrame = sticker.savedFrame;
 			}
 		} else if (image) {
 			const auto pixmap = image->pixSingle(size, { .outer = size });
-			p.drawPixmapLeft(ppos, width(), pixmap);
+			p.drawPixmapLeft(ppos, width(), selected
+				? QPixmap::fromImage(frameForPaint(pixmap.toImage()))
+				: pixmap);
 			if (sticker.savedFrame.isNull()) {
 				sticker.savedFrame = pixmap.toImage().convertToFormat(
 					QImage::Format_ARGB32_Premultiplied);
