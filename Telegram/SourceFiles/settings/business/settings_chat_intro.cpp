@@ -39,7 +39,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/painter.h"
 #include "ui/vertical_list.h"
 #include "window/themes/window_theme.h"
-#include "window/section_widget.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
 #include "styles/style_chat.h"
@@ -349,6 +348,7 @@ PreviewWrap::PreviewWrap(
 	_style.get(),
 	[=] { update(); }))
 , _position(0, st::msgMargin.bottom()) {
+	setObjectName(u"business/chatIntroPreview"_q);
 	_style->apply(_theme.get());
 
 	session->data().viewRepaintRequest(
@@ -403,15 +403,7 @@ void PreviewWrap::resizeTo(int width) {
 void PreviewWrap::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
 
-	const auto clip = e->rect();
-	if (!clip.isEmpty()) {
-		p.setClipRect(clip);
-		Window::SectionWidget::PaintBackground(
-			p,
-			_theme.get(),
-			QSize(width(), window()->height()),
-			clip);
-	}
+	p.setClipRect(e->rect());
 
 	auto context = _theme->preparePaintContext(
 		_style.get(),

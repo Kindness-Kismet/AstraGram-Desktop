@@ -39,8 +39,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_notifications_reactions.h"
 #include "settings/sections/settings_notifications_type.h"
 #include "ui/boxes/confirm_box.h"
-#include "ui/chat/chat_theme.h"
-#include "ui/controls/chat_service_checkbox.h"
 #include "ui/effects/animations.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
@@ -52,10 +50,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/notifications_manager.h"
-#include "window/section_widget.h"
-#include "window/themes/window_theme.h"
 #include "window/window_session_controller.h"
-#include "styles/style_background_preview_box.h"
 #include "styles/style_chat.h"
 #include "styles/style_dialogs.h"
 #include "styles/style_edit_peer_members.h"
@@ -779,14 +774,14 @@ NotifyViewCheckboxes SetupNotifyViewOptions(
 		container,
 		object_ptr<Ui::RpWidget>(container)));
 	const auto widget = wrap->entity();
+	widget->setObjectName(u"notifications/preview"_q);
 
+	const auto &checkboxStyle = IsInCardGroup(container)
+		? st::settingsCardCheckbox
+		: st::settingsCheckbox;
 	const auto makeCheckbox = [&](const QString &text, bool checked) {
-		return Ui::MakeChatServiceCheckbox(
-			widget,
-			text,
-			st::backgroundCheckbox,
-			st::backgroundCheck,
-			checked).release();
+		return Ui::CreateChild<Ui::Checkbox>(
+			widget, text, checked, checkboxStyle);
 	};
 	const auto name = makeCheckbox(
 		tr::lng_notification_show_name(tr::now),
@@ -798,9 +793,6 @@ NotifyViewCheckboxes SetupNotifyViewOptions(
 	const auto view = widget->lifetime().make_state<NotifyPreview>(
 		nameShown,
 		previewShown);
-	using ThemePtr = std::unique_ptr<Ui::ChatTheme>;
-	const auto theme = widget->lifetime().make_state<ThemePtr>(
-		Window::Theme::DefaultChatThemeOn(widget->lifetime()));
 	widget->widthValue(
 	) | rpl::filter(
 		_1 >= (st::historyMinimalWidth / 2)
@@ -808,28 +800,19 @@ NotifyViewCheckboxes SetupNotifyViewOptions(
 		const auto margins = st::notifyPreviewMargins;
 		const auto bubblew = width - margins.left() - margins.right();
 		const auto bubbleh = view->resizeGetHeight(bubblew);
-		const auto height = bubbleh + margins.top() + margins.bottom();
-		widget->resize(width, height);
-
-		const auto skip = st::notifyPreviewChecksSkip;
-		const auto checksWidth = name->width() + skip + preview->width();
-		const auto checksLeft = (width - checksWidth) / 2;
-		const auto checksTop = height
-			- (margins.bottom() + name->height()) / 2;
-		name->move(checksLeft, checksTop);
-		preview->move(checksLeft + name->width() + skip, checksTop);
+		const auto checksTop = margins.top() + bubbleh + st::notifyPreviewChecksSkip;
+		name->move((width - name->width()) / 2, checksTop);
+		preview->move(
+			(width - preview->width()) / 2,
+			checksTop + name->height());
+		widget->resize(width,
+			checksTop + name->height() + preview->height() + st::notifyPreviewBottomSkip);
 	}, widget->lifetime());
 
 	widget->paintRequest(
 	) | rpl::on_next([=](QRect rect) {
 		Painter p(widget);
 		p.setClipRect(rect);
-		Window::SectionWidget::PaintBackground(
-			p,
-			theme->get(),
-			QSize(widget->width(), widget->window()->height()),
-			rect);
-
 		view->paint(
 			p,
 			st::notifyPreviewMargins.left(),

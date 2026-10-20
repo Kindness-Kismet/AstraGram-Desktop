@@ -2,10 +2,7 @@
 
 #include "extras/extras_settings.h"
 #include "history/view/media/history_view_sticker.h"
-#include "ui/chat/chat_theme.h"
 #include "ui/painter.h"
-#include "window/section_widget.h"
-#include "window/themes/window_theme.h"
 
 #include "styles/style_settings.h"
 
@@ -28,8 +25,7 @@ namespace {
 StickerPreview::StickerPreview(QWidget *parent)
 : RpWidget(parent)
 , _sticker(std::make_unique<QSvgRenderer>(
-	u":/gui/icons/extras/sticker_preview.svg"_q))
-, _theme(Window::Theme::DefaultChatThemeOn(lifetime())) {
+	u":/gui/icons/extras/sticker_preview.svg"_q)) {
 	setObjectName(u"extras/messageStickerPreview"_q);
 	rpl::combine(
 		widthValue(),
@@ -57,11 +53,6 @@ StickerPreview::~StickerPreview() = default;
 void StickerPreview::paintEvent(QPaintEvent *event) {
 	auto p = Painter(this);
 	p.setClipRect(event->rect());
-	Window::SectionWidget::PaintBackground(
-		p,
-		_theme.get(),
-		QSize(width(), window()->height()),
-		event->rect());
 	if (_frame.isNull()) {
 		return;
 	}

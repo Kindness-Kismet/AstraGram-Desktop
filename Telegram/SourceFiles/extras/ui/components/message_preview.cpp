@@ -16,8 +16,6 @@
 #include "ui/chat/chat_theme.h"
 #include "ui/effects/animations.h"
 #include "ui/painter.h"
-#include "window/themes/window_theme.h"
-#include "window/section_widget.h"
 #include "window/window_session_controller.h"
 
 #include "styles/style_chat.h"
@@ -39,7 +37,6 @@ struct MessagePreview::State {
 	std::unique_ptr<PreviewDelegate> delegate;
 	std::unique_ptr<Ui::ChatStyle> style;
 	Ui::Animations::Simple heightAnimation;
-	std::unique_ptr<Ui::ChatTheme> theme;
 	int currentHeight = 0;
 	int bubbleRadius = Ui::kBubbleRadiusSliderMax;
 };
@@ -50,6 +47,7 @@ MessagePreview::MessagePreview(
 : RpWidget(parent)
 , _controller(controller)
 , _state(lifetime().make_state<State>()) {
+	setObjectName(u"extras/messagePreview"_q);
 	_state->bubbleRadius = ExtrasSettings::getInstance().messageBubbleRadius();
 	_state->delegate = std::make_unique<PreviewDelegate>(
 		controller,
@@ -105,8 +103,6 @@ MessagePreview::MessagePreview(
 	messageItem->applyEdition(std::move(edition));
 	_state->item.refreshView(_state->delegate.get());
 
-	_state->theme = Window::Theme::DefaultChatThemeOn(lifetime());
-
 	widthValue(
 	) | rpl::filter(
 		rpl::mappers::_1 >= (st::historyMinimalWidth / 2)
@@ -147,11 +143,6 @@ void MessagePreview::paintEvent(QPaintEvent *e) {
 
 	auto p = Painter(this);
 	p.setClipRect(e->rect());
-	Window::SectionWidget::PaintBackground(
-		p,
-		_state->theme.get(),
-		QSize(width(), window()->height()),
-		e->rect());
 
 	auto hq = PainterHighQualityEnabler(p);
 	const auto theme = _controller->defaultChatTheme().get();

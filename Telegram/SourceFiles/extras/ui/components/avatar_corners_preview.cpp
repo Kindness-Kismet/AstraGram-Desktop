@@ -25,6 +25,7 @@ AvatarCornersPreview::AvatarCornersPreview(
 		Data::DecideColorIndex(
 			peerFromChannel(ChannelId(2331068091)))),
 	u"AstraGram Releases"_q) {
+	setObjectName(u"extras/avatarCornersPreview"_q);
 	const auto &row = st::defaultDialogRow;
 	setFixedHeight(row.height);
 	setCursor(Qt::PointingHandCursor);
@@ -40,8 +41,6 @@ void AvatarCornersPreview::paintEvent(QPaintEvent *e) {
 		- row.padding.left();
 	const auto userpicX = row.padding.left() + xShift;
 	const auto userpicY = (height() - photoSize) / 2;
-
-	p.fillRect(rect(), st::windowBg);
 
 	if (_ripple) {
 		_ripple->paint(p, 0, 0, width());

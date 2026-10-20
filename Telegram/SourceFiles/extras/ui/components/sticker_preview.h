@@ -6,10 +6,6 @@
 
 class QSvgRenderer;
 
-namespace Ui {
-class ChatTheme;
-} // namespace Ui
-
 class StickerPreview final : public Ui::RpWidget {
 public:
 	explicit StickerPreview(QWidget *parent);
@@ -20,6 +16,5 @@ protected:
 
 private:
 	const std::unique_ptr<QSvgRenderer> _sticker;
-	const std::unique_ptr<Ui::ChatTheme> _theme;
 	QImage _frame;
 };
