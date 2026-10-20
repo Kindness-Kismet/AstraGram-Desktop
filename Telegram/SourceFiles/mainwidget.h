@@ -247,6 +247,12 @@ private:
 	// 宽屏原地切换对话前截取对话区，返回的回调在新内容就位后让旧画面淡出。
 	[[nodiscard]] Fn<void()> prepareChatSwitchFade(
 		const Window::SectionShow &params);
+	// 第三栏面板被替换前截取旧面板，与对话区切换同样淡出。
+	[[nodiscard]] Fn<void()> prepareThirdSectionFade();
+	[[nodiscard]] Fn<void()> prepareSectionFade(
+		QRect geometry,
+		base::unique_qptr<Ui::RpWidget> &fade,
+		const QString &name);
 	void handleAdaptiveLayoutUpdate();
 	void updateWindowAdaptiveLayout();
 	bool searchInChatEmbedded(
@@ -291,8 +297,6 @@ private:
 	void startThirdSectionAnimation(bool opening);
 	void finishThirdSectionAnimation();
 	void paintThirdSectionAnimation();
-
-	Window::SectionSlideParams prepareThirdSectionAnimation(Window::SectionWidget *section);
 
 	// All this methods use the prepareShowAnimation().
 	Window::SectionSlideParams prepareMainSectionAnimation(
@@ -373,6 +377,7 @@ private:
 	// 卡片圆角与描边遮罩层:透明鼠标、置顶,一次画所有卡的圆角和边框
 	object_ptr<Ui::RpWidget> _cardOverlay = { nullptr };
 	base::unique_qptr<Ui::RpWidget> _chatSwitchFade;
+	base::unique_qptr<Ui::RpWidget> _thirdSectionFade;
 	base::unique_qptr<Ui::RpWidget> _thirdSectionOverlay;
 	Ui::Animations::Simple _thirdSectionAnimation;
 	QPixmap _thirdSectionCache;

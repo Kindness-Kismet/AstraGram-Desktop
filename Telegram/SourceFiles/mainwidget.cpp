@@ -1875,20 +1875,6 @@ void MainWidget::updateColumnLayout() {
 	updateWindowAdaptiveLayout();
 }
 
-Window::SectionSlideParams MainWidget::prepareThirdSectionAnimation(Window::SectionWidget *section) {
-	Expects(_thirdSection != nullptr);
-
-	Window::SectionSlideParams result;
-	result.withTopBarShadow = section->hasTopBarShadow();
-	if (!_thirdSection->hasTopBarShadow()) {
-		result.withTopBarShadow = false;
-	}
-	floatPlayerHideAll();
-	result.oldContentCache = _thirdSection->grabForShowAnimation(result);
-	floatPlayerShowVisible();
-	return result;
-}
-
 Window::SectionSlideParams MainWidget::prepareShowAnimation(
 		bool willHaveTopBarShadow,
 		bool fromBottom) {
@@ -2007,19 +1993,42 @@ Fn<void()> MainWidget::prepareChatSwitchFade(const SectionShow &params) {
 	if (source->isHidden()) {
 		return nullptr;
 	}
-	const auto geometry = source->geometry();
+	return prepareSectionFade(
+		source->geometry(),
+		_chatSwitchFade,
+		u"chat-switch-fade"_q);
+}
+
+Fn<void()> MainWidget::prepareThirdSectionFade() {
+	if (!_thirdSection
+		|| _thirdSection->isHidden()
+		|| _thirdSectionOverlay
+		|| _showAnimation
+		|| Core::App().passcodeLocked()) {
+		return nullptr;
+	}
+	return prepareSectionFade(
+		_thirdSection->geometry(),
+		_thirdSectionFade,
+		u"third-section-fade"_q);
+}
+
+Fn<void()> MainWidget::prepareSectionFade(
+		QRect geometry,
+		base::unique_qptr<Ui::RpWidget> &fade,
+		const QString &name) {
 	floatPlayerHideAll();
 	// 截取整块区域，连续切换时正在淡出的上一张旧画面也包含在内。
 	auto cache = Ui::GrabWidget(this, geometry);
 	floatPlayerShowVisible();
-	return [=, cache = std::move(cache)] {
-		// 旧画面盖在切换后的实时内容上淡出，过渡中到达的消息同样随之淡入。
-		_chatSwitchFade.reset(Window::ShowFadeOutAnimation(
+	return [=, &fade, cache = std::move(cache)] {
+		// 旧画面盖在切换后的实时内容上淡出，过渡中到达的内容同样随之淡入。
+		fade.reset(Window::ShowFadeOutAnimation(
 			this,
 			geometry,
 			cache,
 			st::extrasInPlaceFadeDuration).get());
-		_chatSwitchFade->setObjectName(u"chat-switch-fade"_q);
+		fade->setObjectName(name);
 		// 顶栏、浮动播放器与卡片圆角仍在过渡之上。
 		orderWidgets();
 	};
@@ -2128,25 +2137,23 @@ void MainWidget::showNewSection(
 		if (fromBottom) {
 			return true;
 		}
-		if (!isOneColumn() && params.way == SectionShow::Way::ClearStack) {
+		if (newThirdSection
+			|| (!isOneColumn() && params.way == SectionShow::Way::ClearStack)) {
 			return false;
-		} else if (isOneColumn()
-			|| (newThirdSection && _thirdSection)
-			|| (newMainSection && isMainSectionShown())) {
-			return true;
 		}
-		return false;
+		return isOneColumn() || (newMainSection && isMainSectionShown());
 	}();
 	auto animationParams = animatedShow
-		? (newThirdSection
-			? prepareThirdSectionAnimation(newThirdSection)
-			: prepareMainSectionAnimation(newMainSection, fromBottom))
+		? prepareMainSectionAnimation(newMainSection, fromBottom)
 		: Window::SectionSlideParams();
 	const auto finishChatSwitchFade = (!animationParams
 		&& !newThirdSection
 		&& !useFullWidth
 		&& !memento->instant())
 		? prepareChatSwitchFade(params)
+		: nullptr;
+	const auto finishThirdSectionFade = newThirdSection
+		? prepareThirdSectionFade()
 		: nullptr;
 
 	setFocus(); // otherwise dialogs widget could be focused.
@@ -2215,6 +2222,9 @@ void MainWidget::showNewSection(
 	orderWidgets();
 	if (finishChatSwitchFade) {
 		finishChatSwitchFade();
+	}
+	if (finishThirdSectionFade) {
+		finishThirdSectionFade();
 	}
 	if (_thirdSectionChatWidth && !_thirdSectionOverlay) {
 		startThirdSectionAnimation(true);
