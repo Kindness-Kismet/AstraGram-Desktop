@@ -2553,7 +2553,12 @@ void Widget::changeOpenedSubsection(
 			std::move(oldContentCache),
 			std::move(newContentCache),
 			showDirection,
-			true);
+			Window::CrossFadeArgs{
+				.shift = st::extrasSectionCrossFadeShift,
+				.bg = ExtrasFeatures::WindowMaterial::surfaceColor(
+					this,
+					st::dialogsBg->c),
+			});
 	}
 }
 
@@ -3322,14 +3327,16 @@ void Widget::showAnimated(
 		std::move(oldContentCache),
 		std::move(newContentCache),
 		direction,
-		false);
+		params.crossFade
+			? std::make_optional(Window::InPlaceCrossFade())
+			: std::nullopt);
 }
 
 void Widget::startSlideAnimation(
 		QPixmap oldContentCache,
 		QPixmap newContentCache,
 		Window::SlideDirection direction,
-		bool crossFade) {
+		std::optional<Window::CrossFadeArgs> crossFade) {
 	_scroll->hide();
 	if (_stories) {
 		_stories->setToggledHidden(true, false);
@@ -3365,12 +3372,7 @@ void Widget::startSlideAnimation(
 	_showAnimation = std::make_unique<Window::SlideAnimation>();
 	_showAnimation->setDirection(direction);
 	if (crossFade) {
-		_showAnimation->setCrossFade({
-			.shift = st::extrasSectionCrossFadeShift,
-			.bg = ExtrasFeatures::WindowMaterial::surfaceColor(
-				this,
-				st::dialogsBg->c),
-		});
+		_showAnimation->setCrossFade(*crossFade);
 	}
 	_showAnimation->setRepaintCallback([=] {
 		if (_shownProgressValue.current() < 1.) {

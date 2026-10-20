@@ -76,6 +76,7 @@ class SessionController;
 class ConnectionState;
 struct SectionShow;
 struct SeparateId;
+struct CrossFadeArgs;
 } // namespace Window
 
 namespace Dialogs::Stories {
@@ -300,7 +301,7 @@ private:
 		QPixmap oldContentCache,
 		QPixmap newContentCache,
 		Window::SlideDirection direction,
-		bool crossFade);
+		std::optional<Window::CrossFadeArgs> crossFade);
 
 	void openChildList(
 		not_null<Data::Forum*> forum,

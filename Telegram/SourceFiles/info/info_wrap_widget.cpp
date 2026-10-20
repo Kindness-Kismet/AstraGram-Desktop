@@ -21,7 +21,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_information.h"
 #include "settings/sections/settings_main.h"
 #include "settings/sections/settings_premium.h"
-#include "ui/effects/ripple_animation.h" // MaskByDrawer.
 #include "ui/widgets/menu/menu_add_action_callback.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/widgets/menu/menu_item_base.h"
@@ -1115,27 +1114,11 @@ void WrapWidget::showNewContent(
 			animationParams);
 		const auto layer = (wrap() == Wrap::Layer);
 		animationParams.withFade = layer;
-		animationParams.topSkip = layer ? st::boxRadius : 0;
-		// 弹层内容淡化与外框形变同步，设置页面沿用原地淡化。
-		animationParams.crossFade = layer
-			|| (memento->section().type() == Section::Type::Settings);
+		animationParams.crossFade = true;
+		// 弹层内容淡化与外框形变同步。
 		animationParams.crossFadeDuration = layer
 			? st::infoLayerMorphDuration
 			: 0;
-
-		if (!animationParams.crossFade
-			&& (HasCustomTopBar(_controller.get())
-				|| HasCustomTopBar(newController.get()))) {
-			const auto s = QSize(
-				newContent->width(),
-				animationParams.topSkip);
-			auto image = Ui::RippleAnimation::MaskByDrawer(s, false, [&](
-					QPainter &p) {
-				const auto r = QRect(0, 0, s.width(), s.height() * 2);
-				p.drawRoundedRect(r, st::boxRadius, st::boxRadius);
-			});
-			animationParams.topMask = Ui::PixmapFromImage(std::move(image));
-		}
 	}
 	if (saveToStack) {
 		auto item = StackItem();

@@ -88,6 +88,7 @@ void LockWidget::showAnimated(QPixmap oldContentCache) {
 	hideChildren();
 
 	_showAnimation = std::make_unique<Window::SlideAnimation>();
+	_showAnimation->setCrossFade(Window::InPlaceCrossFade());
 	_showAnimation->setRepaintCallback([=] { update(); });
 	_showAnimation->setFinishedCallback([=] { showFinished(); });
 	_showAnimation->setPixmaps(oldContentCache, newContentCache);

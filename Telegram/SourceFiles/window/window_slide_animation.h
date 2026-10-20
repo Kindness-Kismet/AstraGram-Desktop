@@ -32,6 +32,9 @@ struct CrossFadeArgs {
 	int duration = 0;
 };
 
+// 与对话区切换一致的原地淡化，duration 为 0 时沿用 st::extrasInPlaceFadeDuration。
+[[nodiscard]] CrossFadeArgs InPlaceCrossFade(int duration = 0);
+
 // 在 parent 的 geometry 区域把旧画面原地交叉淡化到新画面。
 void ShowCrossFadeAnimation(
 	not_null<QWidget*> parent,
@@ -61,8 +64,6 @@ public:
 		const QPixmap &oldContentCache,
 		const QPixmap &newContentCache);
 	void setTopBarShadow(bool enabled);
-	void setTopSkip(int skip);
-	void setTopBarMask(const QPixmap &mask);
 	void setWithFade(bool withFade);
 	void setCrossFade(CrossFadeArgs args);
 
@@ -84,7 +85,6 @@ private:
 	void paintCrossFadeFrame(QPainter &p) const;
 
 	SlideDirection _direction = SlideDirection::FromRight;
-	int _topSkip = 0;
 	bool _topBarShadowEnabled = false;
 	bool _withFade = false;
 	std::optional<CrossFadeArgs> _crossFade;
@@ -92,7 +92,6 @@ private:
 
 	mutable Ui::Animations::Simple _animation;
 	QPixmap _cacheUnder, _cacheOver;
-	QPixmap _mask;
 
 	RepaintCallback _repaintCallback;
 	FinishedCallback _finishedCallback;

@@ -1664,6 +1664,7 @@ void MainWidget::showHistory(
 		if (!_showAnimation) {
 			if (animationParams) {
 				auto direction = back ? Window::SlideDirection::FromLeft : Window::SlideDirection::FromRight;
+				animationParams.crossFade = true;
 				_dialogs->showAnimated(direction, animationParams);
 			} else {
 				_dialogs->showFast();
@@ -2606,6 +2607,7 @@ void MainWidget::showAnimated(QPixmap oldContentCache, bool back) {
 	_showAnimation->setDirection(back
 		? Window::SlideDirection::FromLeft
 		: Window::SlideDirection::FromRight);
+	_showAnimation->setCrossFade(Window::InPlaceCrossFade());
 	_showAnimation->setRepaintCallback([=] { update(); });
 	_showAnimation->setFinishedCallback([=] { showFinished(); });
 	_showAnimation->setPixmaps(oldContentCache, newContentCache);

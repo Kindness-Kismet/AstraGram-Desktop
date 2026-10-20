@@ -362,6 +362,7 @@ void SetupEmailLockWidget::showEmailInput() {
 
 	_backAnimation = std::make_unique<SlideAnimation>();
 	_backAnimation->setDirection(SlideDirection::FromLeft);
+	_backAnimation->setCrossFade(InPlaceCrossFade());
 	_backAnimation->setRepaintCallback([=] { update(); });
 	_backAnimation->setFinishedCallback([=] {
 		_layout->show();
@@ -541,6 +542,7 @@ void SetupEmailConfirmWidget::showAnimated(QPixmap oldContentCache) {
 
 	_showAnimation = std::make_unique<SlideAnimation>();
 	_showAnimation->setDirection(SlideDirection::FromRight);
+	_showAnimation->setCrossFade(InPlaceCrossFade());
 	_showAnimation->setRepaintCallback([=] { update(); });
 	_showAnimation->setFinishedCallback([=] {
 		showChildren();

@@ -93,8 +93,6 @@ class SectionMemento;
 
 struct SectionSlideParams {
 	QPixmap oldContentCache;
-	int topSkip = 0;
-	QPixmap topMask;
 	bool withTopBarShadow = false;
 	bool withTabs = false;
 	bool withFade = false;

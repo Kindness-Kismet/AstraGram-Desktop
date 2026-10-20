@@ -805,6 +805,7 @@ void Widget::showAnimated(QPixmap oldContentCache, bool back) {
 	_showAnimation->setDirection(back
 		? Window::SlideDirection::FromLeft
 		: Window::SlideDirection::FromRight);
+	_showAnimation->setCrossFade(Window::InPlaceCrossFade());
 	_showAnimation->setRepaintCallback([=] { update(); });
 	_showAnimation->setFinishedCallback([=] { showFinished(); });
 	_showAnimation->setPixmaps(oldContentCache, newContentCache);

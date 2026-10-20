@@ -37,7 +37,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/themes/window_theme.h"
 
 #include "styles/style_polls.h"
-#include "styles/style_extras_styles.h"
 
 #include <rpl/range.h>
 
@@ -331,15 +330,9 @@ void SectionWidget::showAnimated(
 		myContentCache);
 	_showAnimation->setTopBarShadow(params.withTopBarShadow);
 	_showAnimation->setWithFade(params.withFade);
-	_showAnimation->setTopSkip(params.topSkip);
-	_showAnimation->setTopBarMask(params.topMask);
 	if (params.crossFade) {
-		_showAnimation->setCrossFade({
-			.overlay = true,
-			.duration = params.crossFadeDuration
-				? params.crossFadeDuration
-				: st::extrasInPlaceFadeDuration,
-		});
+		_showAnimation->setCrossFade(
+			InPlaceCrossFade(params.crossFadeDuration));
 	}
 	_showAnimation->start();
 
