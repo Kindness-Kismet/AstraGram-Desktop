@@ -17,7 +17,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/ui_utility.h"
 #include "lang/lang_keys.h"
 #include "ui/search_field_controller.h"
-#include "base/invoke_queued.h"
 #include "ui/layers/box_content.h"
 #include "styles/style_td_common.h"
 #include "styles/style_widgets.h"
@@ -438,6 +437,15 @@ void Item::setOver(bool over) {
 	}
 }
 
+[[nodiscard]] BoxContent *ParentBox(not_null<QWidget*> widget) {
+	for (auto parent = widget->parentWidget(); parent; parent = parent->parentWidget()) {
+		if (const auto box = dynamic_cast<BoxContent*>(parent)) {
+			return box;
+		}
+	}
+	return nullptr;
+}
+
 } // namespace
 
 class MultiSelect::Inner : public RpWidget {
@@ -581,9 +589,21 @@ MultiSelect::MultiSelect(
 		_cancel->setObjectName(u"contentSearch.close"_q);
 		setupContentSearchField(_field);
 		_searchExpanded = !query.isEmpty();
-		_openSearch = CreateChild<IconButton>(this, st::contentSearchOpen);
-		_openSearch->setObjectName(u"contentSearch.open"_q);
-		_openSearch->setClickedCallback([=] { expandSearch(); });
+		// 对话框内的搜索入口放在标题栏，须在弹出前就位，弹出动画的首帧才是最终布局。
+		if (const auto box = ParentBox(this)) {
+			_titleSearch = true;
+			if (box->hasDelegate()) {
+				addTitleSearch(box);
+			} else {
+				box->delegateSet() | rpl::take(1) | rpl::on_next([=] {
+					addTitleSearch(box);
+				}, lifetime());
+			}
+		} else {
+			_openSearch = CreateChild<IconButton>(this, st::contentSearchOpen);
+			_openSearch->setObjectName(u"contentSearch.open"_q);
+			_openSearch->setClickedCallback([=] { expandSearch(); });
+		}
 		_cancel->setClickedCallback([=] {
 			if (!_field->empty()) {
 				clearQuery();
@@ -599,22 +619,6 @@ MultiSelect::MultiSelect(
 				clearQuery();
 			}
 		}, lifetime());
-		InvokeQueued(this, [=] {
-			for (auto parent = parentWidget(); parent; parent = parent->parentWidget()) {
-				const auto box = dynamic_cast<BoxContent*>(parent);
-				if (!box || !box->hasDelegate()) {
-					continue;
-				}
-				_openSearch->deleteLater();
-				_openSearch = box->addTopButton(st::contentSearchOpen,
-					[=] { expandSearch(); });
-				_openSearch->setObjectName(u"contentSearch.open"_q);
-				_titleSearch = true;
-				resizeToWidth(width());
-				box->updateButtonsGeometry();
-				break;
-			}
-		});
 	}
 	_scroll->installEventFilter(this);
 	_inner->setResizedCallback([this](int innerHeightDelta) {
@@ -742,6 +746,13 @@ void MultiSelect::setQuery(const QString &query) {
 		expandSearch();
 	}
 	_inner->setQuery(query);
+}
+
+void MultiSelect::addTitleSearch(not_null<BoxContent*> box) {
+	_openSearch = box->addPinnedTopButton(st::contentSearchOpen,
+		[=] { expandSearch(); });
+	_openSearch->setObjectName(u"contentSearch.open"_q);
+	_openSearch->setVisible(!_searchExpanded);
 }
 
 void MultiSelect::expandSearch() {

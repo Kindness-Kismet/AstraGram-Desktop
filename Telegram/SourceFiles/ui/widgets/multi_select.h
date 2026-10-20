@@ -21,6 +21,7 @@ class ScrollArea;
 class InputField;
 class CrossButton;
 class IconButton;
+class BoxContent;
 
 class MultiSelect : public RpWidget {
 public:
@@ -73,6 +74,7 @@ private:
 	void scrollTo(int activeTop, int activeBottom);
 
 	void updateSearchGeometry(int width);
+	void addTitleSearch(not_null<BoxContent*> box);
 	void collapseSearch();
 
 	const style::MultiSelect _st;
