@@ -467,6 +467,10 @@ void Document::createComponents() {
 }
 
 void Document::fillNamedFromData(not_null<HistoryDocumentNamed*> named) {
+	if (!_data->song()) {
+		// 允许无空格的长文件名按完整字符换行。
+		named->name = Ui::Text::String(1);
+	}
 	named->name.setText(
 		st::semiboldTextStyle,
 		CleanTagSymbols(Ui::Text::FormatSongNameFor(_data).string()));
@@ -515,9 +519,14 @@ void Document::draw(
 	const auto nameleft = st.padding.left() + st.thumbSize + st.thumbSkip;
 	const auto nametop = st.nameTop - topMinus;
 	const auto nameright = st.padding.right();
-	const auto statustop = st.statusTop - topMinus;
-	const auto linktop = st.linkTop - topMinus;
-	const auto bottom = st.padding.top() + st.thumbSize + st.padding.bottom() - topMinus;
+	const auto nameExtra = nameWrapExtraHeight(width, st);
+	const auto statustop = st.statusTop + nameExtra - topMinus;
+	const auto linktop = st.linkTop + nameExtra - topMinus;
+	const auto bottom = st.padding.top()
+		+ st.thumbSize
+		+ st.padding.bottom()
+		+ nameExtra
+		- topMinus;
 	const auto rthumb = style::rtlrect(st.padding.left(), st.padding.top() - topMinus, st.thumbSize, st.thumbSize, width);
 	const auto innerSize = st::msgFileLayout.thumbSize;
 	const auto inner = QRect(rthumb.x() + (rthumb.width() - innerSize) / 2, rthumb.y() + (rthumb.height() - innerSize) / 2, innerSize, innerSize);
@@ -822,10 +831,11 @@ void Document::draw(
 			.position = QPoint(nameleft, nametop),
 			.outerWidth = width,
 			.availableWidth = namewidth,
-			.elisionLines = 1,
-			.elisionMiddle = true,
+			.elisionLines = _data->song() ? 1 : 0,
+			.elisionMiddle = (_data->song() != nullptr),
 		});
-		_tooltipFilename.setElided(namewidth < named->name.maxWidth());
+		_tooltipFilename.setElided(
+			_data->song() && namewidth < named->name.maxWidth());
 	}
 
 	auto statusText = voiceStatusOverride.isEmpty() ? _statusText : voiceStatusOverride;
@@ -1103,13 +1113,23 @@ TextState Document::textState(
 	const auto nametop = st.nameTop - topMinus;
 	const auto nameright = st.padding.right();
 	auto namewidth = width - nameleft - nameright;
-	const auto linktop = st.linkTop - topMinus;
-	auto bottom = st.padding.top() + st.thumbSize + st.padding.bottom() - topMinus;
+	const auto nameExtra = nameWrapExtraHeight(width, st);
+	const auto linktop = st.linkTop + nameExtra - topMinus;
+	auto bottom = st.padding.top()
+		+ st.thumbSize
+		+ st.padding.bottom()
+		+ nameExtra
+		- topMinus;
 	const auto rthumb = style::rtlrect(st.padding.left(), st.padding.top() - topMinus, st.thumbSize, st.thumbSize, width);
 	const auto innerSize = st::msgFileLayout.thumbSize;
 	const auto inner = QRect(rthumb.x() + (rthumb.width() - innerSize) / 2, rthumb.y() + (rthumb.height() - innerSize) / 2, innerSize, innerSize);
 
-	const auto filenameMoused = QRect(nameleft, nametop, namewidth, st::semiboldFont->height).contains(point);
+	const auto filenameMoused = style::rtlrect(
+		nameleft,
+		nametop,
+		namewidth,
+		st::semiboldFont->height + nameExtra,
+		width).contains(point);
 	_tooltipFilename.setMoused(filenameMoused);
 	if (const auto thumbed = Get<HistoryDocumentThumbed>()) {
 		if ((_data->loading() || _data->uploading()) && rthumb.contains(point)) {

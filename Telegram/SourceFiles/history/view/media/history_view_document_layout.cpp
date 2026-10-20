@@ -59,6 +59,21 @@ namespace {
 
 } // namespace
 
+int Document::nameWrapExtraHeight(
+		int width,
+		const style::HistoryFileLayout &st) const {
+	const auto named = Get<HistoryDocumentNamed>();
+	if (!named || _data->song()) {
+		return 0;
+	}
+	const auto available = std::max(
+		width - rect::m::sum::h(st.padding) - st.thumbSize - st.thumbSkip,
+		1);
+	return std::max(
+		named->name.countHeight(available) - st::semiboldFont->height,
+		0);
+}
+
 QSize Document::countOptimalSize() {
 	auto hasTranscribe = false;
 	const auto voice = Get<HistoryDocumentVoice>();
@@ -211,7 +226,7 @@ QSize Document::countOptimalSize() {
 			minHeight += st::msgPadding.bottom();
 		}
 	}
-	return { maxWidth, minHeight };
+	return { maxWidth, minHeight + nameWrapExtraHeight(maxWidth, st) };
 }
 
 QSize Document::countCurrentSize(int newWidth) {
@@ -226,6 +241,10 @@ QSize Document::countCurrentSize(int newWidth) {
 		if (hostedInstantView) {
 			result.setWidth(std::max(newWidth, result.width()));
 		}
+		// 最小高度已包含最佳宽度下的换行，只补实际宽度带来的差值。
+		result.setHeight(result.height()
+			+ nameWrapExtraHeight(result.width(), st)
+			- nameWrapExtraHeight(maxWidth(), st));
 		if (isBubbleBottom()) {
 			const auto thumbedWidth = thumbedLinkMaxWidth();
 			const auto statusWidth = thumbedWidth
@@ -257,7 +276,10 @@ QSize Document::countCurrentSize(int newWidth) {
 	if (!hostedInstantView) {
 		accumulate_min(newWidth, maxWidth());
 	}
-	auto newHeight = st.padding.top() + st.thumbSize + st.padding.bottom();
+	auto newHeight = st.padding.top()
+		+ st.thumbSize
+		+ st.padding.bottom()
+		+ nameWrapExtraHeight(newWidth, st);
 	if (!isBubbleTop()) {
 		newHeight -= st::msgFileTopMinus;
 	}
@@ -283,7 +305,10 @@ QSize Document::countCurrentSize(int newWidth) {
 QSize Document::sizeForGroupingOptimal(int maxWidth, bool last) const {
 	const auto thumbed = Get<HistoryDocumentThumbed>();
 	const auto &st = (thumbed ? st::msgFileThumbLayoutGrouped : st::msgFileLayoutGrouped);
-	auto height = st.padding.top() + st.thumbSize + st.padding.bottom();
+	auto height = st.padding.top()
+		+ st.thumbSize
+		+ st.padding.bottom()
+		+ nameWrapExtraHeight(maxWidth, st);
 	if (const auto captioned = Get<HistoryDocumentCaptioned>()) {
 		auto captionw = maxWidth
 			- st::msgPadding.left()
@@ -296,7 +321,10 @@ QSize Document::sizeForGroupingOptimal(int maxWidth, bool last) const {
 QSize Document::sizeForGrouping(int width) const {
 	const auto thumbed = Get<HistoryDocumentThumbed>();
 	const auto &st = (thumbed ? st::msgFileThumbLayoutGrouped : st::msgFileLayoutGrouped);
-	auto height = st.padding.top() + st.thumbSize + st.padding.bottom();
+	auto height = st.padding.top()
+		+ st.thumbSize
+		+ st.padding.bottom()
+		+ nameWrapExtraHeight(width, st);
 	if (const auto captioned = Get<HistoryDocumentCaptioned>()) {
 		auto captionw = width
 			- st::msgPadding.left()
