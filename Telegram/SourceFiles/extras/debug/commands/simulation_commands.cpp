@@ -33,8 +33,10 @@ constexpr auto kEmojiSetCount = 3;
 
 Result simulationChatFolders(const QStringList &args) {
 	if (args.size() != 1
-		|| (args.front() != u"single"_q && args.front() != u"none"_q)) {
-		return Result::Err(u"usage: simulation.chat-folders <single|none>"_q);
+		|| (args.front() != u"single"_q
+			&& args.front() != u"none"_q
+			&& args.front() != u"pending"_q)) {
+		return Result::Err(u"usage: simulation.chat-folders <single|none|pending>"_q);
 	}
 	const auto session = ActiveSession();
 	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
@@ -45,6 +47,11 @@ Result simulationChatFolders(const QStringList &args) {
 		return Result::Err(u"no session window"_q);
 	}
 	auto &filters = session->data().chatsFilters();
+	if (args.front() == u"pending"_q) {
+		filters.beginLoadForDebug();
+		controller->setActiveChatsFilter(0);
+		return Result::Ok(u"waiting for chat folders"_q);
+	}
 	auto result = QVector<MTPDialogFilter>{ MTP_dialogFilterDefault() };
 	if (args.front() == u"single"_q) {
 		const auto &list = filters.list();

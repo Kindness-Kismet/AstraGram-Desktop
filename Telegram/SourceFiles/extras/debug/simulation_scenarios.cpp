@@ -1096,6 +1096,7 @@ void seedSimulationScenarios(not_null<Main::Session*> session) {
 	}
 	seedBusiness(session);
 	auto &filters = session->data().chatsFilters();
+	auto list = QVector<MTPDialogFilter>{ MTP_dialogFilterDefault() };
 	for (auto category = 0; category != 7; ++category) {
 		auto histories = base::flat_set<not_null<History*>>();
 		for (auto i = 0; i != kScenarios.size(); ++i) {
@@ -1103,13 +1104,11 @@ void seedSimulationScenarios(not_null<Main::Session*> session) {
 				histories.emplace(session->data().history(scenarioPeerId(i)));
 			}
 		}
-		filters.set(Data::ChatFilter(category + 2,
+		list.push_back(Data::ChatFilter(category + 2,
 			{ .text = { simulationCategoryName(Category(category)) } }, {}, {},
-			Data::ChatFilter::Flags(), std::move(histories), {}, {}));
+			Data::ChatFilter::Flags(), std::move(histories), {}, {}).tl());
 	}
-	if (ExtrasSettings::getInstance().hideAllChatsFolder()) {
-		filters.remove(FilterId());
-	}
+	filters.setPreloaded(list, filters.tagsEnabled());
 	// 未加入频道仍需保留在固定列表，使用原生置顶对话状态。
 	session->data().setChatPinned(
 		session->data().history(scenarioPeerId(findScenario(u"join"_q))), FilterId(), true);

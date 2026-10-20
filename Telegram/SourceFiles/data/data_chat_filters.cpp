@@ -460,6 +460,13 @@ void ChatFilters::load() {
 	load(false);
 }
 
+#ifdef _DEBUG
+void ChatFilters::beginLoadForDebug() {
+	_loaded = false;
+	_listChanged.fire({});
+}
+#endif
+
 void ChatFilters::reload() {
 	_reloading = true;
 	load();

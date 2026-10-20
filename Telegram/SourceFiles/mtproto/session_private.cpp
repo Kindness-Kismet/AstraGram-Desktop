@@ -1013,6 +1013,11 @@ void SessionPrivate::restartNow() {
 }
 
 void SessionPrivate::connectToServer(bool afterConfig) {
+#ifdef _DEBUG
+	if (cDebugOffline()) {
+		return;
+	}
+#endif
 	if (afterConfig && (!_testConnections.empty() || _connection)) {
 		return;
 	}

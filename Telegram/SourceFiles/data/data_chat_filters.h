@@ -166,6 +166,9 @@ public:
 	[[nodiscard]] rpl::producer<FilterId> isChatlistChanged() const;
 	[[nodiscard]] rpl::producer<TagColorChanged> tagColorChanged() const;
 	[[nodiscard]] bool loaded() const;
+#ifdef _DEBUG
+	void beginLoadForDebug();
+#endif
 	[[nodiscard]] bool has() const;
 
 	[[nodiscard]] FilterId defaultId() const;

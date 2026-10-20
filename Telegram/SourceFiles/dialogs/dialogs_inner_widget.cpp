@@ -342,7 +342,8 @@ InnerWidget::InnerWidget(
 	rpl::producer<ChildListShown> childListShown)
 : RpWidget(parent)
 , _controller(controller)
-, _shownList(controller->session().data().chatsList()->indexed())
+, _pendingChatsList(std::make_unique<IndexedList>(SortMode::Date))
+, _shownList(_pendingChatsList.get())
 , _st(&st::defaultDialogRow)
 , _pinnedShiftAnimation([=](crl::time now) {
 	return pinnedShiftAnimationCallback(now);
@@ -660,6 +661,15 @@ InnerWidget::InnerWidget(
 
 	handleChatListEntryRefreshes();
 
+	rpl::merge(
+		session().data().chatsFilters().changed(),
+		ExtrasSettings::getInstance().hideAllChatsFolderChanges() | rpl::to_empty
+	) | rpl::on_next([=] {
+		refreshShownList();
+		refreshWithCollapsedRows(true);
+		refreshEmpty();
+	}, lifetime());
+	refreshShownList();
 	refreshWithCollapsedRows(true);
 
 	setupShortcuts();
@@ -4092,8 +4102,20 @@ void InnerWidget::updateSelectedRow(Key key) {
 	}
 }
 
+bool InnerWidget::waitingForChatsFilter() const {
+	return _controller->isPrimary()
+		&& !_savedSublists
+		&& !_openedFolder
+		&& !_openedForum
+		&& !_openedCommunity
+		&& ExtrasSettings::getInstance().hideAllChatsFolder()
+		&& !session().data().chatsFilters().loaded();
+}
+
 void InnerWidget::refreshShownList() {
-	const auto list = _savedSublists
+	const auto list = waitingForChatsFilter()
+		? not_null<IndexedList*>(_pendingChatsList.get())
+		: _savedSublists
 		? _savedSublists->chatsList()->indexed()
 		: _openedForum
 		? _openedForum->topicsList()->indexed()
@@ -5282,6 +5304,8 @@ void InnerWidget::refreshEmpty() {
 	const auto data = &session().data();
 	const auto state = !_shownList->empty()
 		? EmptyState::None
+		: waitingForChatsFilter()
+		? EmptyState::Loading
 		: _savedSublists
 		? (_savedSublists->chatsList()->loaded()
 			? EmptyState::EmptySavedSublists

@@ -39,9 +39,10 @@ VERSION_FILE = ROOT / "Telegram" / "build" / "version"
 PROFILE_FILE = ROOT / "build" / "app-debug-profile.json"
 PROFILE_OVERRIDE = None
 BACKGROUND_START = False
+OFFLINE_START = None
 
 GENERIC_COMMANDS = {
-    'simulation.chat-folders': '在独立模拟配置中加载首个自定义分组或清空分组：<single|none>，返回实际选中分组，重启恢复样本',
+    'simulation.chat-folders': '在独立模拟配置中加载首个分组、清空分组或等待分组：<single|none|pending>，重启恢复样本',
     'simulation.language': '在独立模拟配置中切换内置翻译，不下载云端语言包：<en|zh-hans>，返回表情页签译文',
     'control.window': '选择控件与截图的目标窗口，不改变系统焦点：[main|窗口标识|#序号]',
     'editor.video-state': '查询独立模拟配置中视频时间线的裁剪起止、封面与播放位置',
@@ -252,12 +253,15 @@ def register_commands(sub) -> None:
     command = sub.add_parser("app.start", help="启动 Debug 应用：未运行时拉起并等到端口就绪，已在运行则保持不变")
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
     command.add_argument("--background", action="store_true", help="启动时进入托盘，不主动显示窗口")
+    command.add_argument("--offline", action="store_true", default=None, help="从启动起禁止连接 Telegram，重启恢复联网")
     command = sub.add_parser("app.ensure", help="app.start 的等价写法")
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
     command.add_argument("--background", action="store_true", help="启动时进入托盘，不主动显示窗口")
+    command.add_argument("--offline", action="store_true", default=None, help="从启动起禁止连接 Telegram，重启恢复联网")
     command = sub.add_parser("app.restart", help="先停止再启动 Debug 应用，重新编译后用它启动新产物")
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
     command.add_argument("--background", action="store_true", help="启动时进入托盘，不主动显示窗口")
+    command.add_argument("--offline", action="store_true", default=None, help="从启动起禁止连接 Telegram，重启恢复联网")
     sub.add_parser("app.stop", help="停止 Debug 应用，只认端口 PID 或本仓库 dev 产物路径")
     sub.add_parser("app.ping", help="探活，返回 pong")
     sub.add_parser("app.info", help="查询版本、配置目录、会话和窗口状态")
@@ -423,10 +427,12 @@ def split_command_segments(argv: list[str]) -> list[list[str]]:
 
 
 def execute_command(args: argparse.Namespace) -> None:
-    global PROFILE_OVERRIDE, BACKGROUND_START
+    global PROFILE_OVERRIDE, BACKGROUND_START, OFFLINE_START
     command = args.command
     if hasattr(args, "background"):
         BACKGROUND_START = args.background
+    if hasattr(args, "offline"):
+        OFFLINE_START = args.offline
     profile = getattr(args, "profile", None)
     if profile is not None:
         PROFILE_OVERRIDE = "" if profile == "default" else profile
@@ -620,6 +626,8 @@ def ensure_debug_app() -> None:
         if not is_expected_process(pid):
             raise RuntimeError(f"Port {PORT} belongs to another application with PID {pid}")
         info = json.loads(send_command("app.info"))
+        if OFFLINE_START and not info.get("offline"):
+            raise RuntimeError("The application is already online. Use app.restart --offline to test an offline startup.")
         actual = Path(info["workingDir"]).resolve()
         if actual != working_dir().resolve():
             raise RuntimeError(f"Current data directory is {actual}; expected {working_dir()}. Stop the current debug application with app.stop first.")
@@ -642,6 +650,8 @@ def launch_app() -> None:
     command = [str(app_exe()), "-workdir", str(directory)]
     if BACKGROUND_START:
         command.append("-startintray")
+    if OFFLINE_START:
+        command.append("-debugoffline")
     if directory.resolve() != debug_dir().resolve():
         command.append("-debugprofile")
     if sys.platform == "win32":

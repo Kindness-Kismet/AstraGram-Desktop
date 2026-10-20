@@ -476,6 +476,7 @@ private:
 	void fillSupportSearchMenu(not_null<Ui::PopupMenu*> menu);
 
 	void refreshShownList();
+	[[nodiscard]] bool waitingForChatsFilter() const;
 	void rebuildCommunitySections();
 	void updateCommunityRequestableGeometry();
 	void setCommunityPressed(int pressed);
@@ -654,6 +655,7 @@ private:
 
 	const not_null<Window::SessionController*> _controller;
 
+	const std::unique_ptr<IndexedList> _pendingChatsList;
 	not_null<IndexedList*> _shownList;
 	FilterId _filterId = 0;
 	bool _mouseSelection = false;

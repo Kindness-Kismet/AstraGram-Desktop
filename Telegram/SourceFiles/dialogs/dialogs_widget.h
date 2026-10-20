@@ -500,6 +500,7 @@ private:
 	bool _childListPostponed = false;
 	std::unique_ptr<Ui::RpWidget> _hideChildListCanvas;
 	std::unique_ptr<Ui::RpWidget> _chatsFilterSlideCanvas;
+	bool _chatsFilterInitialized = false;
 
 };
 

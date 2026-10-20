@@ -123,7 +123,8 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 
 ## 验证入口
 
-`simulation.chat-folders <single|none>` 仅在独立模拟配置中，从全部对话开始，沿正式加载通知保留首个自定义分组或清空自定义分组。
+`simulation.chat-folders <single|none|pending>` 仅在独立模拟配置中，从全部对话开始，沿正式加载通知保留首个自定义分组或清空自定义分组。
+`pending` 保留已有会话数据并模拟分组尚未返回，用于检查隐藏全部对话后的启动等待状态；再用 `single` 或 `none` 完成加载。
 返回加载状态、可见分组数量、当前与默认分组编号；配合 `hideAllChatsFolder` 检查没有标签栏时的启动选择。只改内存，重启模拟模式恢复完整分组。
 
 `simulation.search <fixture-directory>` 在独立模拟配置中注入 6 个联系人、4 条最近搜索、3 个推荐频道及常用、热门应用各 3 个；六类媒体标签各放 3 条本地消息。

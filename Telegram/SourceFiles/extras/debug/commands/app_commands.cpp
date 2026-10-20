@@ -32,6 +32,7 @@ using json = nlohmann::json;
 		{ "simulationMode", session && isSimulationSession(session) },
 		{ "isolatedDebug", cDebugProfile() || cTestAgent() },
 		{ "testAgent", cTestAgent() },
+		{ "offline", cDebugOffline() },
 		{ "hasWindow", window != nullptr },
 		{ "windowMaterialActive", window
 			&& ExtrasFeatures::WindowMaterial::isActive(window->widget().get()) },

@@ -83,6 +83,7 @@ DeclareSetting(bool, DebugMode);
 DeclareSetting(bool, TestAgent);
 #ifdef _DEBUG
 DeclareSetting(bool, DebugProfile);
+DeclareReadSetting(bool, DebugOffline);
 #endif
 DeclareSetting(bool, Quit);
 DeclareSetting(bool, Ghost);

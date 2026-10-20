@@ -17,6 +17,9 @@
 
 `app.quit` 一般不直接调，`app.stop` 内部先发它。
 
+`app.start`、`app.ensure`、`app.restart` 支持 `--offline`，从启动起禁止 Telegram 连接和连接配置下载，用于验证离线恢复。
+`app.info` 的 `offline` 表示该开关是否生效。开关只在开发版有效、不保存到设置；不带该参数重启即可恢复联网，不影响系统网络。
+
 `app.info` 返回字段：`version` / `versionCode` / `configuration` / `workingDir` / `debugLogs` / `hasSession` / `hasWindow` / `simulationMode` / `userId`（已登录时）。
 口令状态另含 `passcodeLocked`、`hasPasscode` 和 `appLockEnabled`，分别表示当前已锁定、设置了口令和启用了应用锁。
 `windowMaterialActive` 表示主窗口的材质实际生效状态，可与 `windowMaterial` 设置对照；截图不包含系统合成的桌面背景。

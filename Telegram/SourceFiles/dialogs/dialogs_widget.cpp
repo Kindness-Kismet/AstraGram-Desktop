@@ -2866,10 +2866,17 @@ void Widget::switchToChatsFilter(FilterId id) {
 		}
 	}
 	const auto was = _inner->filterId();
-	const auto animated = (was != id)
+	const auto initialized = _chatsFilterInitialized;
+	const auto &filters = session().data().chatsFilters();
+	_chatsFilterInitialized = filters.loaded()
+		&& (initialized || id == filters.defaultId());
+	const auto animated = initialized
+		&& _chatsFilterInitialized
+		&& (was != id)
 		&& !isHidden()
 		&& !_showAnimation;
 	if (!animated) {
+		_chatsFilterSlideCanvas = nullptr;
 		_inner->switchToFilter(id);
 		return;
 	}
@@ -2923,6 +2930,9 @@ void Widget::startChatsFilterSlide(
 		crl::time duration) {
 	_chatsFilterSlideCanvas = std::make_unique<Ui::RpWidget>(this);
 	const auto canvas = _chatsFilterSlideCanvas.get();
+#ifdef _DEBUG
+	canvas->setObjectName(u"dialogs.filter-transition"_q);
+#endif
 	canvas->setAttribute(Qt::WA_TransparentForMouseEvents);
 	canvas->setAttribute(Qt::WA_OpaquePaintEvent);
 	ExtrasFeatures::WindowMaterial::watchSurface(canvas);
@@ -2951,6 +2961,9 @@ void Widget::startChatsFilterSlide(
 void Widget::startChatsFilterCrossFade(QPixmap wasCache, QPixmap nowCache) {
 	_chatsFilterSlideCanvas = std::make_unique<Ui::RpWidget>(this);
 	const auto canvas = _chatsFilterSlideCanvas.get();
+#ifdef _DEBUG
+	canvas->setObjectName(u"dialogs.filter-transition"_q);
+#endif
 	canvas->setAttribute(Qt::WA_TransparentForMouseEvents);
 	canvas->setAttribute(Qt::WA_OpaquePaintEvent);
 	ExtrasFeatures::WindowMaterial::watchSurface(canvas);

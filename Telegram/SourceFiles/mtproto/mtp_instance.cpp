@@ -518,6 +518,11 @@ rpl::producer<DcId> Instance::Private::mainDcIdValue() const {
 }
 
 void Instance::Private::requestConfig() {
+#ifdef _DEBUG
+	if (cDebugOffline()) {
+		return;
+	}
+#endif
 	if (_configLoader || isKeysDestroyer()) {
 		return;
 	}
