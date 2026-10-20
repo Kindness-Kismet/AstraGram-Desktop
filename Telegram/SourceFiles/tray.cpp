@@ -19,6 +19,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "main/main_domain.h"
+#include "main/main_session.h"
+#include "data/data_user.h"
 #include "window/window_controller.h"
 #include "lang_auto.h"
 
@@ -120,26 +123,31 @@ void Tray::rebuildMenu() {
 	const auto &settings = ExtrasSettings::getInstance();
 
 	if (settings.showGhostToggleInTray()) {
-		auto ghostActiveChanges = ExtrasSettings::getInstance().useGlobalGhostModeValue()
-			| rpl::map([](bool) {
-				return ExtrasSettings::ghost().ghostModeActiveValue();
-			})
-			| rpl::flatten_latest();
-
-		auto turnGhostModeText = rpl::combine(
-			_textUpdates.events_starting_with({}),
-			std::move(ghostActiveChanges)
-		) | rpl::map([=](auto, bool active) {
-			return active
-				? tr::extras_DisableGhostModeTray(tr::now)
-				: tr::extras_EnableGhostModeTray(tr::now);
-		});
+		const auto target = std::make_shared<Main::Session*>(nullptr);
+		auto turnGhostModeText = Core::App().domain().activeSessionValue(
+		) | rpl::map([=](Main::Session *session) -> rpl::producer<QString> {
+			*target = session;
+			if (!session) {
+				return tr::extras_EnableGhostModeTray();
+			}
+			return rpl::combine(
+				_textUpdates.events_starting_with({}),
+				ExtrasSettings::ghost(session).ghostModeActiveValue()
+			) | rpl::map([=](auto, bool active) {
+				const auto text = active
+					? tr::extras_DisableGhostModeTray(tr::now)
+					: tr::extras_EnableGhostModeTray(tr::now);
+				return text + u" · "_q + session->user()->name();
+			});
+		}) | rpl::flatten_latest();
 		_tray.addAction(
 			std::move(turnGhostModeText),
 			[=]
 			{
-				auto &ghost = ExtrasSettings::ghost();
-				ghost.setGhostModeEnabled(!ghost.isGhostModeActive());
+				if (const auto session = *target) {
+					auto &ghost = ExtrasSettings::ghost(session);
+					ghost.setGhostModeEnabled(!ghost.isGhostModeActive());
+				}
 			});
 	}
 

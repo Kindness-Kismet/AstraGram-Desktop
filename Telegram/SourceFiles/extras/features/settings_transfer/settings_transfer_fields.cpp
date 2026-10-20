@@ -379,6 +379,36 @@ Fields accountFields(not_null<Main::Session*> session) {
 	using namespace Data::AutoDownload;
 	auto &settings = session->settings();
 	auto fields = Fields();
+	auto &ghost = ExtrasSettings::ghost(session);
+	using G = GhostModeAccountSettings;
+	addField(fields, "ghost.sendReadMessages", ghost,
+		&G::sendReadMessages, &G::setSendReadMessages);
+	addField(fields, "ghost.sendReadStories", ghost,
+		&G::sendReadStories, &G::setSendReadStories);
+	addField(fields, "ghost.sendOnlinePackets", ghost,
+		&G::sendOnlinePackets, &G::setSendOnlinePackets);
+	addField(fields, "ghost.sendUploadProgress", ghost,
+		&G::sendUploadProgress, &G::setSendUploadProgress);
+	addField(fields, "ghost.sendOfflinePacketAfterOnline", ghost,
+		&G::sendOfflinePacketAfterOnline, &G::setSendOfflinePacketAfterOnline);
+	addField(fields, "ghost.markReadAfterAction", ghost,
+		&G::markReadAfterAction, &G::setMarkReadAfterAction);
+	addField(fields, "ghost.useScheduledMessages", ghost,
+		&G::useScheduledMessages, &G::setUseScheduledMessages);
+	addField(fields, "ghost.sendWithoutSound", ghost,
+		&G::sendWithoutSound, &G::setSendWithoutSound, 0, 2);
+	addField(fields, "ghost.suggestGhostModeBeforeViewingStory", ghost,
+		&G::suggestGhostModeBeforeViewingStory, &G::setSuggestGhostModeBeforeViewingStory);
+	addField(fields, "ghost.sendReadMessagesLocked", ghost,
+		&G::sendReadMessagesLocked, &G::setSendReadMessagesLocked);
+	addField(fields, "ghost.sendReadStoriesLocked", ghost,
+		&G::sendReadStoriesLocked, &G::setSendReadStoriesLocked);
+	addField(fields, "ghost.sendOnlinePacketsLocked", ghost,
+		&G::sendOnlinePacketsLocked, &G::setSendOnlinePacketsLocked);
+	addField(fields, "ghost.sendUploadProgressLocked", ghost,
+		&G::sendUploadProgressLocked, &G::setSendUploadProgressLocked);
+	addField(fields, "ghost.sendOfflinePacketAfterOnlineLocked", ghost,
+		&G::sendOfflinePacketAfterOnlineLocked, &G::setSendOfflinePacketAfterOnlineLocked);
 	addField(fields, "archiveCollapsed", settings,
 		&S::archiveCollapsed, &S::setArchiveCollapsed);
 	addField(fields, "archiveInMainMenu", settings,

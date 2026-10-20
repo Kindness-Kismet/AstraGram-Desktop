@@ -39,10 +39,8 @@ void buildCategories(SectionBuilder &builder) {
 			.targetSection = ExtrasGhost::Id(),
 			.icon = { &st::menuIconStealth },
 			.description = tr::extras_SettingsGhostDescription(),
-			.label = ExtrasSettings::getInstance().useGlobalGhostModeValue(
-			) | rpl::map([session = builder.session()](bool) {
-				return ExtrasSettings::ghost(session).ghostModeActiveValue();
-			}) | rpl::flatten_latest() | rpl::map([](bool enabled) {
+			.label = ExtrasSettings::ghost(builder.session()).ghostModeActiveValue(
+			) | rpl::map([](bool enabled) {
 				return enabled ? tr::extras_SettingsStateOn(tr::now)
 					: tr::extras_SettingsStateOff(tr::now);
 			}),

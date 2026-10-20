@@ -749,10 +749,8 @@ FillMenuResult FillSendMenu(
 		: st::defaultComposeIcons;
 
 	if (sending && type != Type::Reminder) {
-		const auto &ghost = maybeShow
-			? ExtrasSettings::ghost(&maybeShow->session())
-			: ExtrasSettings::ghost();
-		const auto sendWithoutSound = ghost.shouldSendWithoutSound();
+		const auto sendWithoutSound = maybeShow
+			&& ExtrasSettings::ghost(&maybeShow->session()).shouldSendWithoutSound();
 		menu->addAction(
 			sendWithoutSound ? tr::extras_SendWithSound(tr::now) : tr::lng_send_silent_message(tr::now),
 			[=] { action({ Api::SendOptions{ .silent = true } }, details); },

@@ -96,7 +96,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SendWithoutSoundOption, {
 
 class GhostModeAccountSettings {
 public:
-	GhostModeAccountSettings();
+	explicit GhostModeAccountSettings(uint64 userId);
 
 	[[nodiscard]] bool sendReadMessages() const { return _sendReadMessages.current(); }
 	[[nodiscard]] bool sendReadStories() const { return _sendReadStories.current(); }
@@ -171,6 +171,7 @@ public:
 
 private:
 	friend class ExtrasSettings;
+	const uint64 _userId;
 
 	rpl::variable<bool> _sendReadMessages = true;
 	rpl::variable<bool> _sendReadStories = true;
@@ -188,6 +189,7 @@ private:
 	rpl::variable<bool> _sendOnlinePacketsLocked = false;
 	rpl::variable<bool> _sendUploadProgressLocked = false;
 	rpl::variable<bool> _sendOfflinePacketAfterOnlineLocked = false;
+	rpl::lifetime _lifetime;
 };
 
 void to_json(nlohmann::json &j, const GhostModeAccountSettings &s);
@@ -267,13 +269,7 @@ public:
 
 	[[nodiscard]] static GhostModeAccountSettings &ghost(not_null<Main::Session*> session);
 	[[nodiscard]] static GhostModeAccountSettings &ghost(uint64 userId);
-	[[nodiscard]] static GhostModeAccountSettings &ghost();
-#ifdef _DEBUG
-	[[nodiscard]] static GhostModeAccountSettings &ghostForDebug(uint64 userId);
-#endif
-
-	[[nodiscard]] bool useGlobalGhostMode() const { return _useGlobalGhostMode.current(); }
-	void setUseGlobalGhostMode(bool val);
+	static void finishGhostAccountInitialization();
 
 	[[nodiscard]] MessageShotSettings &messageShotSettings() { return _messageShotSettings; }
 	[[nodiscard]] const MessageShotSettings &messageShotSettings() const { return _messageShotSettings; }
@@ -528,8 +524,6 @@ public:
 	void setSingleCornerRadius(bool val);
 	void setStreamerMode(bool val);
 
-	[[nodiscard]] rpl::producer<bool> useGlobalGhostModeValue() const { return _useGlobalGhostMode.value(); }
-	[[nodiscard]] rpl::producer<bool> useGlobalGhostModeChanges() const { return _useGlobalGhostMode.changes(); }
 	[[nodiscard]] rpl::producer<bool> saveDeletedMessagesValue() const { return _saveDeletedMessages.value(); }
 	[[nodiscard]] rpl::producer<bool> saveDeletedMessagesChanges() const { return _saveDeletedMessages.changes(); }
 	[[nodiscard]] rpl::producer<bool> saveMessagesHistoryValue() const { return _saveMessagesHistory.value(); }
@@ -742,7 +736,6 @@ public:
 private:
 	ExtrasSettings();
 
-	[[nodiscard]] uint64 getOverriddenGhostUserId(uint64 userId) const { return _useGlobalGhostMode.current() ? 0 : userId; }
 
 	rpl::variable<bool> _saveDeletedMessages = true;
 	rpl::variable<bool> _saveMessagesHistory = true;
@@ -868,7 +861,7 @@ private:
 	rpl::variable<bool> _singleCornerRadius = false;
 	rpl::variable<bool> _streamerMode = false;
 
-	rpl::variable<bool> _useGlobalGhostMode = true;
+	std::optional<nlohmann::json> _initialGhostSettings;
 	std::map<uint64, std::unique_ptr<GhostModeAccountSettings>> _ghostAccounts;
 
 	MessageShotSettings _messageShotSettings;

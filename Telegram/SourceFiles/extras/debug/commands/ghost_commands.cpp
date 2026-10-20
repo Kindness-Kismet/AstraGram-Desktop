@@ -2,6 +2,7 @@
 #include "extras/debug/commands/commands_internal.h"
 
 #include "extras/extras_settings.h"
+#include "main/main_session.h"
 
 namespace ExtrasDebug::Commands {
 namespace {
@@ -13,10 +14,9 @@ using json = nlohmann::json;
 	if (!session) {
 		return Result::Err(u"no active session"_q);
 	}
-	const auto &settings = ExtrasSettings::getInstance();
 	const auto &account = ExtrasSettings::ghost(session);
 	return Result::Ok(Compact(json{
-		{ "useGlobalGhostMode", settings.useGlobalGhostMode() },
+		{ "userId", session->userId().bare },
 		{ "enabled", account.isGhostModeActive() },
 		{ "sendWithoutSound", account.shouldSendWithoutSound() },
 		{ "scheduledMessages", account.isUseScheduledMessages() },

@@ -347,7 +347,7 @@ def register_commands(sub) -> None:
     command = sub.add_parser("anim.speed", help="查询或临时调整过渡动画速度：0.1 放慢十倍，2 加快一倍，1 恢复；不保存")
     command.add_argument("speed", nargs="?", type=float, help="0.01 至 10，省略则只报告当前速度")
 
-    sub.add_parser("ghost.status", help="读全局与当前账号的隐身模式状态")
+    sub.add_parser("ghost.status", help="查询当前账号独立保存的隐身模式状态")
 
     sub.add_parser("storage.stats", help="读保存开关与数据库文件大小")
 

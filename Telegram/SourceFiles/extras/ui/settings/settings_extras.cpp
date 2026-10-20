@@ -170,90 +170,6 @@ private:
 	const int _height;
 };
 
-class GlobalAction final : public Ui::Menu::ItemBase {
-public:
-	GlobalAction(
-		not_null<Ui::Menu::Menu*> parent,
-		const style::Menu &st,
-		const QString &text,
-		bool active,
-		Fn<void()> callback)
-	: ItemBase(parent, st)
-	, _dummyAction(Ui::CreateChild<QAction>(parent.get()))
-	, _active(active)
-	, _st(st)
-	, _height(st::defaultWhoRead.photoSkip * 2 + st::defaultWhoRead.photoSize) {
-		setAcceptBoth(true);
-		fitToMenuWidth();
-
-		_text.setText(_st.itemStyle, text);
-		const auto goodWidth = st::defaultWhoRead.nameLeft
-			+ _text.maxWidth()
-			+ _st.itemPadding.right();
-		setMinWidth(std::clamp(goodWidth, _st.widthMin, _st.widthMax));
-
-		setActionTriggered(std::move(callback));
-
-		paintRequest(
-		) | rpl::on_next([=] {
-			paint(Painter(this));
-		}, lifetime());
-
-		enableMouseSelecting();
-	}
-
-	not_null<QAction*> action() const override { return _dummyAction; }
-	bool isEnabled() const override { return true; }
-
-protected:
-	int contentHeight() const override { return _height; }
-
-private:
-	void paint(Painter &&p) {
-		const auto selected = isSelected();
-		Ui::Menu::PaintItemBackground(
-			p,
-			_st,
-			QRect(0, 0, width(), _height),
-			selected);
-		if (isEnabled()) {
-			paintRipple(p, 0, 0);
-		}
-
-		const auto userpic = AccountUserpic(_height);
-		{
-			auto hq = PainterHighQualityEnabler(p);
-			auto rect = QRectF(userpic.inner);
-			p.setPen(Qt::NoPen);
-			p.setBrush(st::historyPeer5UserpicBg);
-			ExtrasUserpic::PaintShape(p, rect);
-		}
-		{
-			auto hq = PainterHighQualityEnabler(p);
-			p.drawImage(
-				userpic.inner,
-				st::extrasGhostModeGlobalIcon.instance(st::historyPeerUserpicFg->c));
-		}
-		if (_active) {
-			PaintAccountOutline(p, userpic.outer);
-		}
-
-		p.setPen(selected ? _st.itemFgOver : _st.itemFg);
-		_text.drawLeftElided(
-			p,
-			st::defaultWhoRead.nameLeft,
-			(_height - _st.itemStyle.font->height) / 2,
-			width() - st::defaultWhoRead.nameLeft - _st.itemPadding.right(),
-			width());
-	}
-
-	const not_null<QAction*> _dummyAction;
-	const bool _active = false;
-	const style::Menu &_st;
-	Ui::Text::String _text;
-	const int _height;
-};
-
 QString GetAccountName(uint64 userId) {
 	for (const auto &account : Core::App().domain().orderedAccounts()) {
 		if (account->sessionExists()
@@ -261,36 +177,16 @@ QString GetAccountName(uint64 userId) {
 			return account->session().user()->name();
 		}
 	}
-	return QString("Unknown");
-}
-
-QString PickerLabel(uint64 userId) {
-	return (userId == 0)
-		? tr::extras_GhostModeGlobalSettings(tr::now)
-		: GetAccountName(userId);
+	return QString();
 }
 
 void selectGhostProfile(GhostPickerState *state, uint64 userId) {
 	if (state->selectedUserId.current() == userId) {
 		return;
 	}
-
-	auto wasGlobal = (state->selectedUserId.current() == 0);
-	auto nowGlobal = (userId == 0);
-
-	ExtrasSettings::getInstance().setUseGlobalGhostMode(nowGlobal);
-
 	state->selectedUserId = userId;
-
-	state->pickerButton->setText(PickerLabel(userId));
-
+	state->pickerButton->setText(GetAccountName(userId));
 	state->refreshCheckboxes();
-
-	if (wasGlobal != nowGlobal) {
-		Ui::Toast::Show(nowGlobal
-			? tr::extras_GhostModeSwitchedToGlobalSettings(tr::now)
-			: tr::extras_GhostModeSwitchedToIndividualSettings(tr::now));
-	}
 }
 
 void BuildGhostEssentials(SectionBuilder &builder) {
@@ -307,38 +203,14 @@ void BuildGhostEssentials(SectionBuilder &builder) {
 			}
 		}
 
-		if (activeCount <= 1 && !ExtrasSettings::getInstance().useGlobalGhostMode()) {
-			auto userId = controller->session().userId().bare;
-			auto &src = ExtrasSettings::ghost(userId);
-			auto &dst = ExtrasSettings::ghost(0);
-			dst.setSendReadMessages(src.sendReadMessages());
-			dst.setSendReadStories(src.sendReadStories());
-			dst.setSendOnlinePackets(src.sendOnlinePackets());
-			dst.setSendUploadProgress(src.sendUploadProgress());
-			dst.setSendOfflinePacketAfterOnline(src.sendOfflinePacketAfterOnline());
-			dst.setMarkReadAfterAction(src.markReadAfterAction());
-			dst.setUseScheduledMessages(src.useScheduledMessages());
-			dst.setSendWithoutSound(src.sendWithoutSound());
-			dst.setSuggestGhostModeBeforeViewingStory(src.suggestGhostModeBeforeViewingStory());
-			dst.setSendReadMessagesLocked(src.sendReadMessagesLocked());
-			dst.setSendReadStoriesLocked(src.sendReadStoriesLocked());
-			dst.setSendOnlinePacketsLocked(src.sendOnlinePacketsLocked());
-			dst.setSendUploadProgressLocked(src.sendUploadProgressLocked());
-			dst.setSendOfflinePacketAfterOnlineLocked(src.sendOfflinePacketAfterOnlineLocked());
-			ExtrasSettings::getInstance().setUseGlobalGhostMode(true);
-		}
-
-		const auto isGlobal = ExtrasSettings::getInstance().useGlobalGhostMode();
-		auto initialUserId = isGlobal
-			? uint64(0)
-			: controller->session().userId().bare;
+		const auto initialUserId = controller->session().userId().bare;
 
 		const auto state = container->lifetime().make_state<GhostPickerState>();
 		state->selectedUserId = initialUserId;
 
 		const auto pickerButton = Ui::CreateChild<Ui::LinkButton>(
 			root.get(),
-			PickerLabel(initialUserId),
+			GetAccountName(initialUserId),
 			st::ghostPickerButton);
 		state->pickerButton = pickerButton;
 
@@ -355,7 +227,7 @@ void BuildGhostEssentials(SectionBuilder &builder) {
 		arrow->setCursor(style::cur_pointer);
 
 		const auto showPicker = activeCount > 1;
-		pickerButton->setVisible(showPicker);
+		pickerButton->setVisible(true);
 		arrow->setVisible(showPicker);
 
 		rpl::combine(
@@ -562,13 +434,6 @@ void BuildGhostEssentials(SectionBuilder &builder) {
 				pickerButton,
 				st::defaultPopupMenu);
 
-			state->menu->addAction(
-				base::make_unique_q<GlobalAction>(
-					state->menu->menu(),
-					st::defaultPopupMenu.menu,
-					tr::extras_GhostModeGlobalSettings(tr::now),
-					state->selectedUserId.current() == 0,
-					[=] { selectGhostProfile(state, 0); }));
 
 			for (const auto &account : Core::App().domain().orderedAccounts()) {
 				if (!account->sessionExists()) {

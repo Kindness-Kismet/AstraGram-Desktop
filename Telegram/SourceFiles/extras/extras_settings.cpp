@@ -3,11 +3,13 @@
 #include "extras/ui/extras_logo.h"
 #include "extras/extras_ui_settings.h"
 #include "extras/extras_worker.h"
+#include "extras/utils/telegram_helpers.h"
 #include "extras/features/custom_logo/custom_logo.h"
 #include "extras/features/streamer_mode/streamer_mode.h"
 #include "core/application.h"
 #include "features/filters/filters_cache_controller.h"
 #include "features/translator/extras_translator.h"
+#include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
 #include "platform/platform_translate_provider.h"
@@ -68,11 +70,11 @@ void repaintApp() {
 	}
 }
 
-rpl::lifetime lifetime; // idk reactivity dies when placed in `GhostModeAccountSettings` as field
-
 } // namespace
 
-GhostModeAccountSettings::GhostModeAccountSettings() {
+GhostModeAccountSettings::GhostModeAccountSettings(uint64 userId)
+: _userId(userId) {
+	Expects(userId != 0);
 	rpl::combine(
 		_sendReadMessages.value(),
 		_sendReadMessagesLocked.value(),
@@ -95,7 +97,7 @@ GhostModeAccountSettings::GhostModeAccountSettings() {
 			&& (onlineLocked || !online)
 			&& (uploadLocked || !upload)
 			&& (offlineLocked || offline);
-	}, lifetime);
+	}, _lifetime);
 }
 
 void GhostModeAccountSettings::setSendReadMessages(bool val) {
@@ -176,8 +178,7 @@ void GhostModeAccountSettings::setGhostModeEnabled(bool val) {
 	if (!val) {
 		return;
 	}
-	const auto window = Core::App().activeWindow();
-	if (const auto session = window ? window->maybeSession() : nullptr) {
+	if (const auto session = getSession(_userId)) {
 		ExtrasWorker::markAsOnline(session);
 	}
 }
@@ -415,24 +416,6 @@ void ExtrasSettings::load() {
 		file.close();
 		hasBubbleRadius = p.contains("messageBubbleRadius");
 
-		if (!p.contains("ghostModeSettings")) {
-			p["ghostModeSettings"] = nlohmann::json::object({
-				{"0", {
-					{"sendReadMessages", p.value("sendReadMessages", true)},
-					{"sendReadStories", p.value("sendReadStories", true)},
-					{"sendOnlinePackets", p.value("sendOnlinePackets", true)},
-					{"sendUploadProgress", p.value("sendUploadProgress", true)},
-					{"sendOfflinePacketAfterOnline", p.value("sendOfflinePacketAfterOnline", false)},
-					{"markReadAfterAction", p.value("markReadAfterAction", true)},
-					{"useScheduledMessages", p.value("useScheduledMessages", false)},
-					{"sendWithoutSound", p.value("sendWithoutSound", false)}
-				}}
-			});
-			p["useGlobalGhostMode"] = true;
-
-			LOG(("ExtrasSettings: migrated ghost mode settings to per-account format"));
-		}
-
 		try {
 			from_json(p, settings);
 		} catch (...) {
@@ -447,15 +430,6 @@ void ExtrasSettings::load() {
 		&& legacySmallBubbleRadius;
 	if (migrateBubbleRadius) {
 		settings._messageBubbleRadius = Ui::kBubbleRadiusSliderMidpoint;
-	}
-
-	if (cGhost()) {
-		auto &ghost = ExtrasSettings::ghost();
-		ghost._sendReadMessages = false;
-		ghost._sendReadStories = false;
-		ghost._sendOnlinePackets = false;
-		ghost._sendUploadProgress = false;
-		ghost._sendOfflinePacketAfterOnline = true;
 	}
 
 	settings.validate();
@@ -491,7 +465,13 @@ void ExtrasSettings::endBatchUpdate(Fn<void(bool)> done) {
 }
 
 void ExtrasSettings::reset() {
-	getInstance() = ExtrasSettings();
+	auto &settings = getInstance();
+	auto accounts = std::move(settings._ghostAccounts);
+	settings = ExtrasSettings();
+	for (const auto &[id, account] : accounts) {
+		from_json(json(GhostModeAccountSettings(id)), *account);
+	}
+	settings._ghostAccounts = std::move(accounts);
 	save();
 }
 
@@ -500,41 +480,31 @@ GhostModeAccountSettings &ExtrasSettings::ghost(not_null<Main::Session*> session
 }
 
 GhostModeAccountSettings &ExtrasSettings::ghost(uint64 userId) {
+	Expects(userId != 0);
 	auto &settings = getInstance();
-	auto overriddenId = settings.getOverriddenGhostUserId(userId);
-
-	auto it = settings._ghostAccounts.find(overriddenId);
+	auto it = settings._ghostAccounts.find(userId);
 	if (it == settings._ghostAccounts.end()) {
-		auto account = std::make_unique<GhostModeAccountSettings>();
-		it = settings._ghostAccounts.emplace(overriddenId, std::move(account)).first;
+		auto account = std::make_unique<GhostModeAccountSettings>(userId);
+		if (settings._initialGhostSettings) {
+			settings._initialGhostSettings->get_to(*account);
+		}
+		it = settings._ghostAccounts.emplace(userId, std::move(account)).first;
 	}
 
 	return *it->second;
 }
 
-GhostModeAccountSettings &ExtrasSettings::ghost() {
-	if (const auto window = Core::App().activeWindow()) {
-		if (const auto session = window->maybeSession()) {
-			return ghost(session);
+void ExtrasSettings::finishGhostAccountInitialization() {
+	auto &settings = getInstance();
+	if (!settings._initialGhostSettings) {
+		return;
+	}
+	for (const auto &account : Core::App().domain().orderedAccounts()) {
+		if (const auto session = account->maybeSession()) {
+			(void)ghost(session);
 		}
 	}
-	return ghost(0);
-}
-
-#ifdef _DEBUG
-GhostModeAccountSettings &ExtrasSettings::ghostForDebug(uint64 userId) {
-	auto &accounts = getInstance()._ghostAccounts;
-	auto &account = accounts[userId];
-	if (!account) {
-		account = std::make_unique<GhostModeAccountSettings>();
-	}
-	return *account;
-}
-#endif
-
-void ExtrasSettings::setUseGlobalGhostMode(bool val) {
-	if (_useGlobalGhostMode.current() == val) return;
-	_useGlobalGhostMode = val;
+	settings._initialGhostSettings.reset();
 	save();
 }
 
@@ -1419,10 +1389,12 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 	for (const auto &[key, value] : s._ghostAccounts) {
 		ghostAccounts[std::to_string(key)] = *value;
 	}
+	if (s._initialGhostSettings) {
+		ghostAccounts["0"] = *s._initialGhostSettings;
+	}
 
 	j = nlohmann::json{
 		{"ghostModeSettings", ghostAccounts},
-		{"useGlobalGhostMode", s._useGlobalGhostMode.current()},
 		{"saveDeletedMessages", s._saveDeletedMessages.current()},
 		{"saveMessagesHistory", s._saveMessagesHistory.current()},
 		{"saveForBots", s._saveForBots.current()},
@@ -1546,21 +1518,36 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"streamerMode", s._streamerMode.current()},
 		{"messageShotSettings", s._messageShotSettings}
 	};
+	if (s._initialGhostSettings) {
+		j["useGlobalGhostMode"] = true;
+	}
 }
 
 void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	ExtrasSettings defaults;
 
-	if (j.contains("ghostModeSettings") && j["ghostModeSettings"].is_object()) {
-		s._ghostAccounts.clear();
-		for (auto &[key, value] : j["ghostModeSettings"].items()) {
-			auto account = std::make_unique<GhostModeAccountSettings>();
+	if (const auto accounts = j.find("ghostModeSettings");
+		accounts != j.end() && accounts->is_object()) {
+		const auto global = accounts->find("0");
+		if (j.value("useGlobalGhostMode", true) && global != accounts->end()) {
+			// 启动恢复完已有账号后保存一次，后续新账号使用自己的默认值。
+			s._initialGhostSettings = *global;
+			for (const auto &[id, account] : s._ghostAccounts) {
+				global->get_to(*account);
+			}
+		}
+		for (const auto &[key, value] : accounts->items()) {
+			const auto id = QString::fromStdString(key).toULongLong();
+			if (!id || s._initialGhostSettings) {
+				continue;
+			}
+			auto &account = s._ghostAccounts[id];
+			if (!account) {
+				account = std::make_unique<GhostModeAccountSettings>(id);
+			}
 			value.get_to(*account);
-			s._ghostAccounts[std::stoull(key)] = std::move(account);
 		}
 	}
-
-	s._useGlobalGhostMode = j.value("useGlobalGhostMode", defaults._useGlobalGhostMode.current());
 	s._saveDeletedMessages = j.value("saveDeletedMessages", defaults._saveDeletedMessages.current());
 	s._saveMessagesHistory = j.value("saveMessagesHistory", defaults._saveMessagesHistory.current());
 	s._saveForBots = j.value("saveForBots", defaults._saveForBots.current());

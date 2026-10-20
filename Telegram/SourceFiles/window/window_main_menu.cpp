@@ -897,11 +897,8 @@ void MainMenu::setupMenu() {
 	}
 
 	if (settings.showGhostToggleInDrawer()) {
-		auto ghostActiveChanges = ExtrasSettings::getInstance().useGlobalGhostModeValue()
-			| rpl::map([controller = _controller](bool) {
-				return ExtrasSettings::ghost(&controller->session()).ghostModeActiveValue();
-			})
-			| rpl::flatten_latest();
+		auto ghostActiveChanges = ExtrasSettings::ghost(
+			&_controller->session()).ghostModeActiveValue();
 
 		const auto ghostModeToggle = addAction(
 			tr::extras_GhostModeToggle(),

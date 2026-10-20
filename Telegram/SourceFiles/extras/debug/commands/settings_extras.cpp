@@ -78,7 +78,6 @@ void addShot(SettingsMap &entries, MessageShotSettings &settings) {
 
 void addExtrasSettings(SettingsMap &entries) {
 	auto &settings = ExtrasSettings::getInstance();
-	addSetting(entries, u"useGlobalGhostMode"_q, [&] { return settings.useGlobalGhostMode(); }, settings, &ExtrasSettings::setUseGlobalGhostMode);
 	addSetting(entries, u"saveDeletedMessages"_q, [&] { return settings.saveDeletedMessages(); }, settings, &ExtrasSettings::setSaveDeletedMessages);
 	addSetting(entries, u"saveMessagesHistory"_q, [&] { return settings.saveMessagesHistory(); }, settings, &ExtrasSettings::setSaveMessagesHistory);
 	addSetting(entries, u"saveForBots"_q, [&] { return settings.saveForBots(); }, settings, &ExtrasSettings::setSaveForBots);
@@ -214,15 +213,18 @@ void addExtrasSettings(SettingsMap &entries) {
 		},
 	});
 	addShot(entries, settings.messageShotSettings());
-	addGhost(entries, u"ghost."_q, ExtrasSettings::ghost());
 	const auto all = Json(settings);
 	for (const auto &[key, value] : all.at("ghostModeSettings").items()) {
+		if (key == "0") {
+			continue;
+		}
 		addGhost(entries, u"ghostModeSettings."_q + QString::fromStdString(key) + u"."_q,
-			ExtrasSettings::ghostForDebug(QString::fromStdString(key).toULongLong()));
+			ExtrasSettings::ghost(QString::fromStdString(key).toULongLong()));
 	}
 	if (const auto session = ActiveSession()) {
 		const auto id = session->userId().bare;
-		addGhost(entries, u"ghostModeSettings.%1."_q.arg(id), ExtrasSettings::ghostForDebug(id));
+		addGhost(entries, u"ghost."_q, ExtrasSettings::ghost(session));
+		addGhost(entries, u"ghostModeSettings.%1."_q.arg(id), ExtrasSettings::ghost(session));
 	}
 }
 

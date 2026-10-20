@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/shortcuts.h"
 #include "core/crash_reports.h"
 #include "extras/data/extras_database.h"
+#include "extras/extras_settings.h"
 #include "boxes/abstract_box.h"
 #include "lang/lang_keys.h"
 #include "ui/boxes/confirm_box.h"
@@ -38,9 +39,15 @@ Domain::Domain(const QString &dataName)
 : _dataName(dataName)
 , _local(std::make_unique<Storage::Domain>(this, dataName)) {
 	_active.changes(
-	) | rpl::take(1) | rpl::on_next([=] {
+	) | rpl::take(1) | rpl::on_next([=](Main::Account *account) {
 		// In case we had a legacy passcoded app we start settings here.
 		Core::App().startSettingsAndBackground();
+		ExtrasSettings::finishGhostAccountInitialization();
+		if (cGhost()) {
+			if (const auto session = account ? account->maybeSession() : nullptr) {
+				ExtrasSettings::ghost(session).setGhostModeEnabled(true);
+			}
+		}
 
 		crl::on_main(this, [=] {
 			Core::App().notifications().createManager();

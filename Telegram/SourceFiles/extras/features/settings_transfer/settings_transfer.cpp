@@ -281,6 +281,7 @@ void applyChecked(
 	}
 	if (account) {
 		applySection(data["account"]["settings"], accountFields(session));
+		ExtrasSettings::save();
 		session->data().photoLoadSettingsChanged();
 		session->data().documentLoadSettingsChanged();
 		session->data().checkPlayingAnimations();

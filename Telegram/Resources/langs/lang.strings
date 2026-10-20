@@ -9515,10 +9515,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DisableGhostModeTray" = "Disable Ghost Mode";
 "extras_GhostModeEnabled" = "Ghost Mode turned on";
 "extras_GhostModeDisabled" = "Ghost Mode turned off";
-"extras_GhostModeGlobalSettings" = "Global Settings";
-"extras_GhostModeGlobalSettingsDescription" = "Same for all accounts";
-"extras_GhostModeSwitchedToGlobalSettings" = "Switched to same settings for all accounts.";
-"extras_GhostModeSwitchedToIndividualSettings" = "Switched to individual settings for each account.";
 "extras_StreamerModeToggle" = "Streamer Mode";
 "extras_EnableStreamerModeTray" = "Enable Streamer Mode";
 "extras_DisableStreamerModeTray" = "Disable Streamer Mode";
@@ -9971,7 +9967,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SettingsTransferOfficial" = "Official global preferences: appearance, notifications, chat, downloads and playback";
 "extras_SettingsTransferCustom" = "AstraGram preferences: interface and features";
 "extras_SettingsTransferAccount" = "Account preferences and auto-download: {user}";
-"extras_SettingsTransferExcluded" = "This is a local preference export, not a complete backup. It excludes sign-in data, messages, archives, caches, proxy credentials, cloud settings, theme and sound files, custom shortcuts, filter rules, shadow bans and per-account ghost settings. Transfer those resources separately.";
+"extras_SettingsTransferExcluded" = "This is a local preference export, not a complete backup. It excludes sign-in data, messages, archives, caches, proxy credentials, cloud settings, theme and sound files, custom shortcuts, filter rules, shadow bans. Transfer those resources separately.";
 "extras_SettingsTransferSource" = "Source account ID: {user}. Imported account preferences will be applied to the account selected above.";
 "extras_SettingsTransferChoose" = "Select at least one settings group.";
 "extras_SettingsTransferFileFilter" = "Settings files (*.json)";
