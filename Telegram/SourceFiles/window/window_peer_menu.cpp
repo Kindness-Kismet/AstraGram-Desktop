@@ -3631,6 +3631,10 @@ base::weak_qptr<Ui::BoxContent> ShowForwardMessagesBox(
 		auto init = [=](not_null<ListBox*> box) {
 			controllerRaw->setSearchNoResultsText(
 				tr::lng_bot_chats_not_found(tr::now));
+			// 按钮行须在弹出前计入高度，否则居中后再变高只会下移。
+			box->addButton(tr::lng_cancel(), [=] {
+				box->closeBox();
+			});
 			const auto lastFilterId = box->lifetime().make_state<FilterId>(0);
 			const auto chatsFilters = Ui::AddChatFiltersTabsStrip(
 				box,
