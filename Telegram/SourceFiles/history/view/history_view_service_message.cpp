@@ -901,7 +901,7 @@ void Service::draw(Painter &p, const PaintContext &context) const {
 		p,
 		context,
 		QRect(g.x() + (g.width() - locateWidth) / 2, g.y(), locateWidth, g.height()),
-		{ corner, corner, corner, corner },
+		Ui::BubbleRounding{ corner, corner, corner, corner },
 		width(),
 		false);
 	if (gestureShift) {
