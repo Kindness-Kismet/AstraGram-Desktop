@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_document.h"
+#include "extras/data/media_cache_manager.h"
 
 #include "data/data_document_resolver.h"
 #include "data/data_session.h"
@@ -869,6 +870,7 @@ bool DocumentData::thumbnailFailed() const {
 }
 
 void DocumentData::loadThumbnail(Data::FileOrigin origin) {
+	session().mediaCache().trackDocument(this, origin);
 	const auto autoLoading = false;
 	const auto finalCheck = [=] {
 		if (const auto active = activeMediaView()) {
@@ -914,6 +916,7 @@ bool DocumentData::videoThumbnailFailed() const {
 }
 
 void DocumentData::loadVideoThumbnail(Data::FileOrigin origin) {
+	session().mediaCache().trackDocument(this, origin);
 	const auto autoLoading = false;
 	const auto finalCheck = [=] {
 		if (const auto active = activeMediaView()) {
@@ -1229,6 +1232,7 @@ void DocumentData::save(
 		const QString &toFile,
 		LoadFromCloudSetting fromCloud,
 		bool autoLoading) {
+	session().mediaCache().trackDocument(this, origin);
 	Test::NotifyDocumentSave(this, toFile, autoLoading);
 	if (const auto media = activeMediaView(); media && media->loaded(true)) {
 		const auto &l = location(true);

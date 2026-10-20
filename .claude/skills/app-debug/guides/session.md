@@ -86,3 +86,13 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 ## 默认背景验证
 
 `theme.reset-background` 重置当前主题的默认背景，返回 `themePath`、`isPattern`、`intensity`、`imageWidth` 和 `imageHeight`，用于核对截图中的背景是否加载正确。
+
+
+## 媒体缓存管理
+
+- `cache.media-stats`：异步查询当前账号分类容量、未归属容量与各聊天大小；结果通过 `job.status` 查询。
+- `cache.media-clear <all|类别[,类别...]> [peerId]`：异步清理本机缓存；类别为 `images`、`stickers`、`documents`、`avatars`、`other`、`messages`，`all` 只包含媒体。
+- `cache.media-retention <private|groups|channels|stories> [days]`：查询或保存分类型保留天数，可选 0、1、2、7、30；0 表示永久。
+
+媒体与消息分别选择。清理不删除云端消息、消息留档或手动保存文件；其它聊天仍引用的共享媒体保留。
+清理期间不能重复提交，实际完成与释放容量以异步结果为准。

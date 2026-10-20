@@ -852,9 +852,11 @@ Reader::SerializedSlice Reader::Slices::unloadToCache() {
 
 Reader::Reader(
 	std::unique_ptr<Loader> loader,
-	Storage::Cache::Database *cache)
+	Storage::Cache::Database *cache,
+	Fn<void(Storage::Cache::Key)> cacheUsed)
 : _loader(std::move(loader))
 , _cache(cache)
+, _cacheUsed(std::move(cacheUsed))
 , _cacheHelper(cache ? InitCacheHelper(_loader->baseCacheKey()) : nullptr)
 , _slices(_loader->size(), _cacheHelper != nullptr) {
 	_loader->parts(
@@ -1137,6 +1139,10 @@ bool Reader::isRemoteLoader() const {
 	return _loader->baseCacheKey().valid();
 }
 
+Storage::Cache::Key Reader::baseCacheKey() const {
+	return _loader->baseCacheKey();
+}
+
 std::shared_ptr<Reader::CacheHelper> Reader::InitCacheHelper(
 		Storage::Cache::Key baseKey) {
 	if (!baseKey) {
@@ -1158,9 +1164,13 @@ void Reader::readFromCache(int sliceNumber) {
 	const auto key = _cacheHelper->key(sliceNumber);
 	const auto cache = std::weak_ptr<CacheHelper>(_cacheHelper);
 	const auto weak = base::make_weak(this);
+	const auto cacheUsed = _cacheUsed;
 	const auto ready = [=](
 			QByteArray &&result,
 			std::vector<int> &&sizes = {}) {
+		if (!result.isEmpty() && cacheUsed) {
+			cacheUsed(key);
+		}
 		crl::async([
 			=,
 			result = std::move(result),
@@ -1212,7 +1222,13 @@ void Reader::putToCache(SerializedSlice &&slice) {
 	Expects(_cacheHelper != nullptr);
 	Expects(slice.number >= 0);
 
-	_cache->put(_cacheHelper->key(slice.number), std::move(slice.data));
+	const auto key = _cacheHelper->key(slice.number);
+	const auto used = _cacheUsed;
+	_cache->put(key, std::move(slice.data), [=](Storage::Cache::Error error) {
+		if (error.type == Storage::Cache::Error::Type::None && used) {
+			used(key);
+		}
+	});
 }
 
 int64 Reader::size() const {

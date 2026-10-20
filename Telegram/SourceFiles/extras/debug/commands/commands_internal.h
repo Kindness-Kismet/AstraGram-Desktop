@@ -24,6 +24,7 @@ using HandlerMap = std::map<QString, Handler>;
 // 每个域一个注册表，实现文件在 commands/ 下与域同名。
 [[nodiscard]] const HandlerMap &AppHandlers();
 [[nodiscard]] const HandlerMap &SessionHandlers();
+[[nodiscard]] const HandlerMap &cacheHandlers();
 [[nodiscard]] const HandlerMap &simulationHandlers();
 [[nodiscard]] const HandlerMap &SettingsHandlers();
 [[nodiscard]] const HandlerMap &GhostHandlers();

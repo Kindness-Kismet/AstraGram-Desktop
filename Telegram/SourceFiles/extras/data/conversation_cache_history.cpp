@@ -101,18 +101,25 @@ bool ConversationCache::cacheable(const MTPMessage &message) const {
 
 void ConversationCache::loadHistory(
 		HistoryCacheKey key,
-		Fn<void(HistoryEntry&)> done) {
+		Fn<void(HistoryEntry&)> done,
+		Fn<void()> cancelled) {
 	auto &entry = _histories[key];
 	if (entry.loaded) {
 		done(entry);
 		return;
 	}
-	entry.pending.push_back(std::move(done));
+	entry.pending.push_back({ std::move(done), std::move(cancelled) });
 	if (entry.pending.size() > 1) {
 		return;
 	}
+	entry.generation = ++_historyGeneration;
+	const auto generation = entry.generation;
 	_database->get(storageKey(key), onMain<QByteArray>(_session, [=](QByteArray bytes) {
-		auto &entry = _histories.at(key);
+		const auto found = _histories.find(key);
+		if (found == _histories.end() || found->second.generation != generation) {
+			return;
+		}
+		auto &entry = found->second;
 		QDataStream stream(bytes);
 		if (!bytes.isEmpty() && readHeader(stream, _session->userId())) {
 			auto peers = QByteArray();
@@ -144,7 +151,7 @@ void ConversationCache::loadHistory(
 		entry.loaded = true;
 		restoreHistoryMetadata(key, entry);
 		for (auto &callback : base::take(entry.pending)) {
-			callback(entry);
+			callback.done(entry);
 		}
 	}));
 }
@@ -188,7 +195,7 @@ void ConversationCache::getHistory(
 		Fn<void(std::optional<CachedHistorySlice>)> done) {
 	// 即使数据已在内存中，也等调用方保存请求编号后再回调。
 	crl::on_main(_session, [=] {
-		if (!_enabled) {
+		if (!_enabled || _storageClearing) {
 			done(std::nullopt);
 			return;
 		}
@@ -197,14 +204,14 @@ void ConversationCache::getHistory(
 				auto result = slice(query, entry);
 				result ? ++_hits : ++_misses;
 				done(std::move(result));
-			});
+			}, [=] { done(std::nullopt); });
 		});
 	});
 }
 
 void ConversationCache::restoreMessage(PeerId peer, MsgId id, Fn<void(bool)> done) {
 	crl::on_main(_session, [=] {
-		if (!_enabled) {
+		if (!_enabled || _storageClearing) {
 			done(false);
 			return;
 		}
@@ -252,7 +259,7 @@ void ConversationCache::restoreMessageFromHistories(
 			return;
 		}
 		restoreMessageFromHistories(std::move(keys), id, std::move(done));
-	});
+	}, [=] { done(false); });
 }
 
 std::optional<CachedHistorySlice> ConversationCache::slice(
@@ -338,7 +345,8 @@ void ConversationCache::putHistory(
 		const HistoryCacheQuery &query,
 		const MTPmessages_Messages &messages,
 		bool refreshVisible) {
-	if (!_enabled || messages.type() == mtpc_messages_messagesNotModified) {
+	if (!_enabled || _storageClearing
+		|| messages.type() == mtpc_messages_messagesNotModified) {
 		return;
 	}
 	loadHistory(query.key, [=](HistoryEntry &entry) {

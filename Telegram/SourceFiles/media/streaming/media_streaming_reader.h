@@ -43,13 +43,15 @@ public:
 	// Main thread.
 	explicit Reader(
 		std::unique_ptr<Loader> loader,
-		Storage::Cache::Database *cache = nullptr);
+		Storage::Cache::Database *cache = nullptr,
+		Fn<void(Storage::Cache::Key)> cacheUsed = nullptr);
 
 	void setLoaderPriority(int priority);
 
 	// Any thread.
 	[[nodiscard]] int64 size() const;
 	[[nodiscard]] bool isRemoteLoader() const;
+	[[nodiscard]] Storage::Cache::Key baseCacheKey() const;
 
 	// Single thread.
 	[[nodiscard]] FillState fill(
@@ -241,6 +243,7 @@ private:
 
 	const std::unique_ptr<Loader> _loader;
 	Storage::Cache::Database * const _cache = nullptr;
+	const Fn<void(Storage::Cache::Key)> _cacheUsed;
 
 	// shared_ptr is used to be able to have weak_ptr.
 	const std::shared_ptr<CacheHelper> _cacheHelper;

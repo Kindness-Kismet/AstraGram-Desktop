@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_document.h"
 #include "data/data_session.h"
 #include "data/data_file_origin.h"
+#include "extras/data/media_cache_manager.h"
 #include "mainwidget.h"
 #include "mainwindow.h"
 #include "core/application.h"
@@ -276,6 +277,9 @@ bool FileLoader::checkForOpen() {
 
 void FileLoader::loadLocal(const Storage::Cache::Key &key) {
 	const auto readImage = (_locationType != AudioFileLocation);
+	const auto record = crl::guard(_session, [=, session = _session, origin = fileOrigin(), tag = _cacheTag] {
+		session->mediaCache().track(key, false, origin, tag);
+	});
 	auto done = [=, guard = _localLoading.make_guard()](
 			QByteArray &&value,
 			QImage &&image,
@@ -294,6 +298,9 @@ void FileLoader::loadLocal(const Storage::Cache::Key &key) {
 	};
 	_session->data().cache().get(key, [=, callback = std::move(done)](
 			QByteArray &&value) mutable {
+		if (!value.isEmpty()) {
+			crl::on_main(record);
+		}
 		if (readImage && !value.startsWith("partial:")) {
 			crl::async([
 				value = std::move(value),
@@ -477,6 +484,7 @@ bool FileLoader::finalizeResult() {
 						? _data
 						: ("partial:" + _data)),
 					_cacheTag));
+			_session->mediaCache().track(key, false, fileOrigin(), _cacheTag);
 		}
 	}
 	const auto session = _session;

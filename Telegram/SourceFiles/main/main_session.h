@@ -15,6 +15,7 @@ class ApiWrap;
 
 namespace Extras {
 class ConversationCache;
+class MediaCacheManager;
 } // namespace Extras
 
 namespace Extras::Translator {
@@ -127,6 +128,9 @@ public:
 	[[nodiscard]] Account &account() const;
 	[[nodiscard]] Extras::ConversationCache &conversationCache() const {
 		return *_conversationCache;
+	}
+	[[nodiscard]] Extras::MediaCacheManager &mediaCache() const {
+		return *_mediaCache;
 	}
 	[[nodiscard]] Extras::Translator::MessageTranslationManager &messageTranslations();
 	[[nodiscard]] Storage::Account &local() const;
@@ -329,6 +333,7 @@ private:
 	const std::unique_ptr<Storage::Uploader> _uploader;
 	const std::unique_ptr<Storage::Facade> _storage;
 	const std::unique_ptr<Extras::ConversationCache> _conversationCache;
+	const std::unique_ptr<Extras::MediaCacheManager> _mediaCache;
 
 	// _data depends on _downloader / _uploader.
 	const std::unique_ptr<Data::Session> _data;

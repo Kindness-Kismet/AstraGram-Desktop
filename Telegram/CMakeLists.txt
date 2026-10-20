@@ -376,6 +376,11 @@ set(extras_files
         extras/data/conversation_cache.h
         extras/data/conversation_cache_history.cpp
         extras/data/conversation_cache_serialization.h
+        extras/data/media_cache_index.cpp
+        extras/data/media_cache_index.h
+        extras/data/media_cache_manager.cpp
+        extras/data/media_cache_manager.h
+        extras/debug/commands/cache_commands.cpp
         extras/data/messages_storage.cpp
         extras/data/messages_storage.h
         extras/data/entities.h
@@ -2283,6 +2288,8 @@ PRIVATE
     settings/settings_intro.h
     settings/sections/settings_local_passcode.cpp
     settings/sections/settings_local_passcode.h
+    settings/sections/settings_cache_widgets.cpp
+    settings/sections/settings_cache_widgets.h
     settings/sections/settings_local_storage.cpp
     settings/sections/settings_local_storage.h
     settings/sections/settings_main.cpp

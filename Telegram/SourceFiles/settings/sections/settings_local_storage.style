@@ -35,7 +35,6 @@ localStorageParticleDocuments: icon{{ "local_storage/documents-72x72", windowFg 
 localStorageParticleMusic: icon{{ "local_storage/music-72x72", windowFg }};
 localStorageParticleStickers: icon{{ "local_storage/stickers-72x72", windowFg }};
 localStorageIslandPadding: 6px;
-localStorageBottomSkip: 12px;
 localStorageCategoryHeight: 44px;
 localStorageCategoryPadding: margins(22px, 0px, 20px, 0px);
 localStorageCategoryCheckSkip: 14px;
@@ -85,5 +84,3 @@ localStorageUsageSubtitle: FlatLabel(defaultFlatLabel) {
 		font: font(13px);
 	}
 }
-localStorageClearingSpinnerPadding: margins(0px, 20px, 0px, 14px);
-localStorageClearingLottieSize: size(150px, 150px);

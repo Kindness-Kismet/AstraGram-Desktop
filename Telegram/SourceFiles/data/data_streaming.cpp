@@ -11,6 +11,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_document.h"
 #include "data/data_session.h"
 #include "data/data_file_origin.h"
+#include "extras/data/media_cache_manager.h"
+#include "main/main_session.h"
 #include "media/streaming/media_streaming_loader.h"
 #include "media/streaming/media_streaming_reader.h"
 #include "media/streaming/media_streaming_document.h"
@@ -93,10 +95,19 @@ template <typename Data>
 		not_null<Data*> data,
 		FileOrigin origin,
 		bool forceRemoteLoader) {
+	const auto category = [&] {
+		if constexpr (std::is_same_v<Data, DocumentData>) {
+			_owner->session().mediaCache().trackDocument(data, origin);
+			return Extras::MediaCacheManager::documentCategory(data);
+		}
+		return Extras::MediaCacheCategory::Other;
+	}();
 	const auto i = readers.find(data);
 	if (i != end(readers)) {
 		if (auto result = i->second.lock()) {
 			if (!forceRemoteLoader || result->isRemoteLoader()) {
+				_owner->session().mediaCache().trackStreaming(
+					result->baseCacheKey(), result->size(), origin, category);
 				return result;
 			}
 		}
@@ -105,9 +116,12 @@ template <typename Data>
 	if (!loader) {
 		return nullptr;
 	}
+	_owner->session().mediaCache().trackStreaming(
+		loader->baseCacheKey(), loader->size(), origin, category);
 	auto result = std::make_shared<Reader>(
 		std::move(loader),
-		&_owner->cacheBigFile());
+		&_owner->cacheBigFile(),
+		_owner->session().mediaCache().streamingCallback(origin, category));
 	if (!PruneDestroyedAndSet(readers, data, result)) {
 		readers.emplace_or_assign(data, result);
 	}

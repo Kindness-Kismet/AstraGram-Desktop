@@ -217,6 +217,7 @@ COMMAND_CATEGORY_LABELS = {
     "page": "页面导航",
     "settings": "设置读写",
     "ghost": "隐身模式",
+    "cache": "会话与媒体缓存",
     "storage": "已删除消息与编辑历史",
     "screenshot": "截图",
     "control": "控件树与合成交互",
@@ -346,6 +347,14 @@ def register_commands(sub) -> None:
     command.add_argument("state", choices=["active", "inactive"])
     command = sub.add_parser("anim.speed", help="查询或临时调整过渡动画速度：0.1 放慢十倍，2 加快一倍，1 恢复；不保存")
     command.add_argument("speed", nargs="?", type=float, help="0.01 至 10，省略则只报告当前速度")
+
+    sub.add_parser("cache.media-stats", help="查询媒体和消息分类、聊天归属及缓存大小")
+    command = sub.add_parser("cache.media-clear", help="清理选定本机缓存；all 只包含媒体，消息需显式选 messages")
+    command.add_argument("categories", help="all 或 images,stickers,documents,avatars,other,messages")
+    command.add_argument("peer", nargs="?", help="指定聊天编号，否则作用于当前账号全部缓存")
+    command = sub.add_parser("cache.media-retention", help="查询或保存某类聊天媒体的保留天数；0 表示永久")
+    command.add_argument("type", choices=["private", "groups", "channels", "stories"])
+    command.add_argument("days", nargs="?", type=int, choices=[0, 1, 2, 7, 30])
 
     command = sub.add_parser("settings.account", help="按账号编号查询或保存隐身、主播模式设置")
     command.add_argument("user", type=int, help="稳定账号编号")
@@ -628,6 +637,13 @@ def build_server_command(args: argparse.Namespace) -> str:
         if args.key is not None:
             parts.extend([args.key, args.value])
         return " ".join(parts)
+    if command == "cache.media-clear":
+        parts = [command, quote_arg(args.categories)]
+        if args.peer is not None:
+            parts.append(quote_arg(args.peer))
+        return " ".join(parts)
+    if command == "cache.media-retention":
+        return " ".join([command, args.type] + ([str(args.days)] if args.days is not None else []))
     # 其余都是无参指令，名字与服务端一一对应。
     return command
 

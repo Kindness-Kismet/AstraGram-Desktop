@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "data/data_file_origin.h"
 #include "data/data_session.h"
+#include "extras/data/media_cache_manager.h"
 #include "storage/cache/storage_cache_database.h"
 #include "storage/file_download.h"
 #include "ui/image/image.h"
@@ -97,6 +98,8 @@ bool CloudImage::loadedOnce() const {
 }
 
 void CloudImage::load(not_null<Main::Session*> session, FileOrigin origin) {
+	session->mediaCache().track(
+		_file.location.file().cacheKey(), false, origin, kImageCacheTag);
 	const auto autoLoading = false;
 	const auto finalCheck = [=] {
 		if (const auto active = activeView()) {
@@ -242,6 +245,8 @@ void LoadCloudFile(
 		Fn<void(bool)> fail,
 		Fn<void()> progress,
 		int downloadFrontPartSize = 0) {
+	session->mediaCache().track(
+		file.location.file().cacheKey(), false, origin, cacheTag);
 	const auto loadSize = downloadFrontPartSize
 		? std::min(downloadFrontPartSize, file.byteSize)
 		: file.byteSize;

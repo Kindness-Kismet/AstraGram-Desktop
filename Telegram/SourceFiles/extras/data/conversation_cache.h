@@ -81,6 +81,14 @@ public:
 		bool available = false;
 	};
 	[[nodiscard]] Stats stats() const;
+	struct StorageStats {
+		int64 bytes = 0;
+		int count = 0;
+		std::map<PeerId, std::pair<int64, int>> chats;
+		Storage::Cache::Error error;
+	};
+	void storageStats(Fn<void(StorageStats)> done);
+	void clearStorage(PeerId peer, Fn<void(Storage::Cache::Error)> done);
 
 private:
 	struct Range {
@@ -88,11 +96,16 @@ private:
 		MsgId till = 0;
 	};
 	struct HistoryEntry {
+		struct Pending {
+			Fn<void(HistoryEntry&)> done;
+			Fn<void()> cancelled;
+		};
 		base::flat_map<MsgId, MTPMessage> messages;
 		base::flat_set<PeerId> peers;
 		QVector<MTPForumTopic> topics;
 		std::vector<Range> ranges;
-		std::vector<Fn<void(HistoryEntry&)>> pending;
+		std::vector<Pending> pending;
+		uint64 generation = 0;
 		int count = 0;
 		bool loaded = false;
 		bool dirty = false;
@@ -101,10 +114,14 @@ private:
 
 	void scheduleSave();
 	void saveDialogs();
+	void restoreListMetadata();
 	void saveIndex();
 	void saveHistories();
 	void restoreHistoryMetadata(HistoryCacheKey key, const HistoryEntry &entry);
-	void loadHistory(HistoryCacheKey key, Fn<void(HistoryEntry&)> done);
+	void loadHistory(
+		HistoryCacheKey key,
+		Fn<void(HistoryEntry&)> done,
+		Fn<void()> cancelled = nullptr);
 	void withIndex(Fn<void()> done);
 	void applyMessage(const MTPMessage &message, bool isNew);
 	void deleteMessages(HistoryCacheKey key, const QVector<MTPint> &ids);
@@ -142,6 +159,8 @@ private:
 	bool _hasDialogsSnapshot = false;
 	bool _indexReady = false;
 	bool _indexDirty = false;
+	bool _storageClearing = false;
+	uint64 _historyGeneration = 0;
 	rpl::lifetime _lifetime;
 };
 

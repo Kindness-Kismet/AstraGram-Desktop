@@ -1930,7 +1930,8 @@ Cache::Database::Settings Account::cacheSettings() const {
 	auto result = Cache::Database::Settings();
 	result.clearOnWrongKey = true;
 	result.totalSizeLimit = _cacheTotalSizeLimit;
-	result.totalTimeLimit = _cacheTotalTimeLimit;
+	// 媒体保留时间由各聊天类型分别管理。
+	result.totalTimeLimit = 0;
 	result.maxDataSize = kMaxFileInMemory;
 	return result;
 }
@@ -1966,7 +1967,7 @@ Cache::Database::Settings Account::cacheBigFileSettings() const {
 	auto result = Cache::Database::Settings();
 	result.clearOnWrongKey = true;
 	result.totalSizeLimit = _cacheBigFileTotalSizeLimit;
-	result.totalTimeLimit = _cacheBigFileTotalTimeLimit;
+	result.totalTimeLimit = 0;
 	result.maxDataSize = kMaxFileInMemory;
 	return result;
 }

@@ -260,6 +260,8 @@ public:
 	[[nodiscard]] HistoryItem *lastServerMessage() const;
 	[[nodiscard]] bool lastMessageKnown() const;
 	[[nodiscard]] bool lastServerMessageKnown() const;
+	// 仅恢复离线列表排序，消息历史保持未加载，预览保持为空。
+	void restoreCachedChatListMetadata(TimeId date);
 	void unknownMessageDeleted(MsgId messageId);
 	[[nodiscard]] bool isUnknownMessageDeleted(MsgId messageId) const;
 	void applyDialogTopMessage(MsgId topMessageId);

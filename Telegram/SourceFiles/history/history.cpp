@@ -3451,6 +3451,16 @@ bool History::lastServerMessageKnown() const {
 	return _lastServerMessage.has_value();
 }
 
+void History::restoreCachedChatListMetadata(TimeId date) {
+	_lastMessage = std::nullopt;
+	_lastServerMessage = std::nullopt;
+	_loadedAtTop = false;
+	_loadedAtBottom = false;
+	setChatListMessage(nullptr);
+	setChatListTimeId(date);
+	updateChatListExistence();
+}
+
 void History::updateChatListExistence() {
 	Entry::updateChatListExistence();
 }

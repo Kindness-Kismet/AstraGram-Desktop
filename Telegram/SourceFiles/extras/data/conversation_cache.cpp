@@ -22,6 +22,8 @@ namespace {
 
 using namespace CacheSerialization;
 
+constexpr auto kListMetadataPref = "conversation-list-metadata";
+
 [[nodiscard]] Storage::Cache::Database::Settings cacheSettings() {
 	auto result = Storage::Cache::Database::Settings();
 	result.totalSizeLimit = kMaxCacheBytes;
@@ -119,6 +121,7 @@ void ConversationCache::restore() {
 					messages.push_back(message);
 				}
 				_session->data().applyDialogs(nullptr, messages, data.vdialogs().v);
+				restoreListMetadata();
 				_restoredCount = _restoredDialogs.size();
 				_hasDialogsSnapshot = true;
 			}
@@ -168,6 +171,29 @@ void ConversationCache::restore() {
 	}));
 }
 
+void ConversationCache::restoreListMetadata() {
+	auto stream = QDataStream(_session->local().readPref<QByteArray>(kListMetadataPref));
+	if (!readHeader(stream, _session->userId())) {
+		return;
+	}
+	while (!stream.atEnd()) {
+		auto peer = quint64();
+		auto date = qint32();
+		stream >> peer >> date;
+		if (stream.status() != QDataStream::Ok) {
+			return;
+		}
+		const auto id = DeserializePeerId(peer);
+		if (!_dialogs.contains(id)) {
+			continue;
+		}
+		const auto history = _session->data().history(id);
+		if (!history->lastServerMessage()) {
+			history->restoreCachedChatListMetadata(date);
+		}
+	}
+}
+
 void ConversationCache::scheduleSave() {
 	if (_enabled && _ready && !_restoring && !_saveTimer.isActive()) {
 		_saveTimer.callOnce(1000);
@@ -176,7 +202,7 @@ void ConversationCache::scheduleSave() {
 
 void ConversationCache::flush() {
 	_saveTimer.cancel();
-	if (!_enabled || !_ready || _restoring) {
+	if (!_enabled || !_ready || _restoring || _storageClearing) {
 		return;
 	}
 	saveDialogs();
@@ -192,6 +218,9 @@ void ConversationCache::saveDialogs() {
 	auto peers = base::flat_set<PeerId>();
 	auto dialogs = QVector<MTPDialog>();
 	auto messages = QVector<MTPMessage>();
+	auto metadata = QByteArray();
+	auto metadataStream = QDataStream(&metadata, QIODevice::WriteOnly);
+	writeHeader(metadataStream, _session->userId());
 	const auto collect = [&](not_null<Dialogs::MainList*> list) {
 		for (const auto &row : list->indexed()->all()) {
 			const auto history = row->history();
@@ -203,6 +232,8 @@ void ConversationCache::saveDialogs() {
 				continue;
 			}
 			dialogs.push_back(makeDialog(history, i->second.c_dialog()));
+			metadataStream << SerializePeerId(history->peer->id)
+				<< qint32(history->chatListTimeId());
 			peers.emplace(history->peer->id);
 			const auto item = history->lastServerMessage();
 			if (!item) {
@@ -257,6 +288,7 @@ void ConversationCache::saveDialogs() {
 			MTP_flags(filters.tagsEnabled() ? Flag::f_tags_enabled : Flag()),
 			MTP_vector<MTPDialogFilter>(filterList))));
 	_session->local().writePref<QByteArray>(kSnapshotPref, std::move(bytes));
+	_session->local().writePref<QByteArray>(kListMetadataPref, std::move(metadata));
 }
 
 void ConversationCache::dialogReceived(const MTPDdialog &dialog) {
@@ -343,9 +375,129 @@ void ConversationCache::saveIndex() {
 }
 
 void ConversationCache::clear() {
-	_session->local().clearPref(kSnapshotPref);
-	_database->clear();
 	disable();
+	_session->local().clearPref(kSnapshotPref);
+	_session->local().clearPref(kListMetadataPref);
+	_database->clear();
+}
+
+void ConversationCache::storageStats(Fn<void(StorageStats)> done) {
+	withIndex([=] {
+		flush();
+		const auto keys = std::vector<HistoryCacheKey>(
+			_historyKeys.begin(), _historyKeys.end());
+		auto storageKeys = std::vector<Storage::Cache::Key>();
+		storageKeys.push_back({ 1, 0 });
+		for (const auto key : keys) {
+			storageKeys.push_back(storageKey(key));
+		}
+		_database->putIfEmpty({ 0, 1 }, QByteArray(1, '\0'));
+		const auto ready = crl::guard(_session, [=](std::vector<int> sizes) {
+			if (sizes.size() != keys.size() + 1) {
+				done({ .error = { Storage::Cache::Error::Type::IO, {} } });
+				return;
+			}
+			auto result = StorageStats();
+			result.bytes = _session->local().readPref<QByteArray>(kSnapshotPref).size();
+			result.bytes += _session->local().readPref<QByteArray>(kListMetadataPref).size();
+			for (const auto size : sizes) {
+				result.bytes += size;
+			}
+			for (auto i = 0; i != int(keys.size()); ++i) {
+				if (!sizes[i + 1]) {
+					continue;
+				}
+				auto &usage = result.chats[keys[i].peer];
+				usage.first += sizes[i + 1];
+				++usage.second;
+				++result.count;
+			}
+			done(std::move(result));
+		});
+		_database->getWithSizes({ 0, 1 }, std::move(storageKeys), [=](
+				QByteArray &&, std::vector<int> &&sizes) {
+			crl::on_main([ready, sizes = std::move(sizes)]() mutable {
+				ready(std::move(sizes));
+			});
+		});
+	});
+}
+
+void ConversationCache::clearStorage(
+		PeerId peer,
+		Fn<void(Storage::Cache::Error)> done) {
+	withIndex([=] {
+		_storageClearing = true;
+		_saveTimer.cancel();
+		auto keys = std::vector<HistoryCacheKey>();
+		auto cancelled = std::vector<HistoryEntry::Pending>();
+		for (auto i = _histories.begin(); i != _histories.end();) {
+			if (peer && i->first.peer != peer) {
+				++i;
+				continue;
+			}
+			for (auto &pending : i->second.pending) {
+				cancelled.push_back(std::move(pending));
+			}
+			i = _histories.erase(i);
+		}
+		for (auto i = _historyKeys.begin(); i != _historyKeys.end();) {
+			if (peer && i->peer != peer) {
+				++i;
+				continue;
+			}
+			keys.push_back(*i);
+			i = _historyKeys.erase(i);
+		}
+		for (auto i = _nonChannelPeers.begin(); i != _nonChannelPeers.end();) {
+			i = !peer || i->second == peer ? _nonChannelPeers.erase(i) : std::next(i);
+		}
+		if (peer) {
+			_lastMessages.remove(peer);
+		} else {
+			_lastMessages.clear();
+		}
+		// 旧读取先失效，再完成请求，避免已清理正文写回新缓存。
+		for (auto &pending : cancelled) {
+			if (pending.cancelled) {
+				pending.cancelled();
+			}
+		}
+		if (_enabled) {
+			_session->local().clearPref(kSnapshotPref);
+			saveDialogs();
+		}
+		const auto finish = [=](Storage::Cache::Error error) {
+			_storageClearing = false;
+			_indexDirty = true;
+			if (_enabled) {
+				saveIndex();
+			}
+			done(error);
+		};
+		if (!_enabled) {
+			_database->clear(onMain<Storage::Cache::Error>(_session, finish));
+			return;
+		}
+		if (keys.empty()) {
+			finish({});
+			return;
+		}
+		const auto remaining = std::make_shared<int>(keys.size());
+		const auto result = std::make_shared<Storage::Cache::Error>();
+		for (const auto key : keys) {
+			_database->remove(storageKey(key), onMain<Storage::Cache::Error>(
+				_session, [=](Storage::Cache::Error error) {
+				if (error.type != Storage::Cache::Error::Type::None) {
+					*result = error;
+					_historyKeys.emplace(key);
+				}
+				if (--*remaining == 0) {
+					finish(*result);
+				}
+			}));
+		}
+	});
 }
 
 void ConversationCache::disable() {
