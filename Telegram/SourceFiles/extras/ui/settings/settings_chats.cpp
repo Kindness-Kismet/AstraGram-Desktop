@@ -102,6 +102,12 @@ void buildMessageStickers(SectionBuilder &builder, ExtrasSectionBuilder &extras)
 		return static_cast<int>(std::round((value - min) / step));
 	};
 
+	builder.add([](const WidgetContext &ctx) -> SectionBuilder::WidgetToAdd {
+		return {
+			.widget = object_ptr<StickerPreview>(ctx.container),
+		};
+	});
+
 	extras.addSlider({
 		.id = u"extras/messageStickerScale"_q,
 		.title = tr::extras_StickerSizeScale(),
@@ -125,12 +131,6 @@ void buildMessageStickers(SectionBuilder &builder, ExtrasSectionBuilder &extras)
 				'f',
 				1) + 'x';
 		},
-	});
-
-	builder.add([](const WidgetContext &ctx) -> SectionBuilder::WidgetToAdd {
-		return {
-			.widget = object_ptr<StickerPreview>(ctx.container),
-		};
 	});
 
 	extras.addSectionDivider();
