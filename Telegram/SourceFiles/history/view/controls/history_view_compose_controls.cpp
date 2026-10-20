@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/ui/components/floating_surface.h"
 #include "extras/ui/controls/attach_menu.h"
 #include "history/view/controls/history_view_bot_menu_button.h"
+#include "mainwidget.h"
 
 #include "base/call_delayed.h"
 #include "base/event_filter.h"
@@ -5895,10 +5896,15 @@ bool ComposeControls::pushTabbedSelectorToThirdSection(
 		&st::historyAttachEmojiActive,
 		&st::historyRecordVoiceFgActive,
 		&st::historyRecordVoiceRippleBgActive);
-	_regularWindow->resizeForThirdSection();
-	_regularWindow->showSection(
-		std::make_shared<ChatHelpers::TabbedMemento>(),
-		params.withThirdColumn());
+	if (_regularWindow->adaptive().isThreeColumn()) {
+		_regularWindow->showSection(
+			std::make_shared<ChatHelpers::TabbedMemento>(),
+			params.withThirdColumn());
+	} else {
+		// 加宽后由布局放入第三栏，重复显示会打断入场动画。
+		_regularWindow->resizeForThirdSection();
+		_regularWindow->updateColumnLayout();
+	}
 	return true;
 }
 
@@ -5958,7 +5964,7 @@ void ComposeControls::toggleTabbedSelectorMode() {
 		} else {
 			_tabbedPanel->toggleAnimated();
 		}
-	} else {
+	} else if (!_regularWindow->content()->reopenThirdSection()) {
 		_regularWindow->closeThirdSection();
 	}
 }

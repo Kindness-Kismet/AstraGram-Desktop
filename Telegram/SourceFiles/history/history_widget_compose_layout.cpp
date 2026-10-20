@@ -36,6 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/mime_type.h"
 #include "history/view/history_view_draw_to_reply.h"
 #include "history/view/controls/history_view_rich_draft_preview.h"
+#include "mainwidget.h"
 #include "ui/emoji_config.h"
 #include "ui/chat/attach/attach_prepare.h"
 #include "ui/chat/choose_theme_controller.h"
@@ -571,10 +572,15 @@ bool HistoryWidget::pushTabbedSelectorToThirdSection(
 		return false;
 	}
 	Core::App().settings().setTabbedReplacedWithInfo(false);
-	controller()->resizeForThirdSection();
-	controller()->showSection(
-		std::make_shared<ChatHelpers::TabbedMemento>(),
-		params.withThirdColumn());
+	if (controller()->adaptive().isThreeColumn()) {
+		controller()->showSection(
+			std::make_shared<ChatHelpers::TabbedMemento>(),
+			params.withThirdColumn());
+	} else {
+		// 加宽后由布局放入第三栏，重复显示会打断入场动画。
+		controller()->resizeForThirdSection();
+		controller()->updateColumnLayout();
+	}
 	return true;
 }
 
@@ -631,7 +637,7 @@ void HistoryWidget::toggleTabbedSelectorMode() {
 		} else {
 			_tabbedPanel->toggleAnimated();
 		}
-	} else {
+	} else if (!controller()->content()->reopenThirdSection()) {
 		controller()->closeThirdSection();
 	}
 }

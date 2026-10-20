@@ -5,7 +5,6 @@
 #include "core/core_settings.h"
 #include "extras/features/window_material/window_material.h"
 #include "history/history_widget.h"
-#include "info/info_section_widget.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "window/window_session_controller.h"
@@ -50,7 +49,7 @@ bool MainWidget::animateThirdSectionClose(Fn<void()> finished) {
 	if (_thirdSectionCloseFinished) {
 		return true;
 	}
-	if (!dynamic_cast<Info::SectionWidget*>(_thirdSection.data())
+	if (!_thirdSection
 		|| anim::Disabled()
 		|| isHidden()
 		|| _showAnimation
@@ -73,8 +72,7 @@ bool MainWidget::reopenThirdSection() {
 }
 
 void MainWidget::startThirdSectionAnimation(bool opening) {
-	if (!dynamic_cast<Info::SectionWidget*>(_thirdSection.data())
-		|| anim::Disabled()) {
+	if (!_thirdSection || anim::Disabled()) {
 		finishThirdSectionAnimation();
 		updateControlsGeometry();
 		return;
@@ -83,7 +81,7 @@ void MainWidget::startThirdSectionAnimation(bool opening) {
 		_thirdSectionAnimationGeometry = _thirdSection->geometry();
 		_thirdSectionCache = Ui::GrabWidget(_thirdSection);
 		_thirdSectionOverlay = base::make_unique_q<Ui::RpWidget>(this);
-		_thirdSectionOverlay->setObjectName(u"info-panel-animation"_q);
+		_thirdSectionOverlay->setObjectName(u"third-section-animation"_q);
 		_thirdSectionOverlay->setAttribute(Qt::WA_TransparentForMouseEvents);
 		_thirdSectionOverlay->setGeometry(rect());
 		_thirdSectionOverlay->paintRequest() | rpl::on_next([=] {
@@ -163,7 +161,7 @@ void MainWidget::paintThirdSectionAnimation() {
 	p.scale(_thirdSectionScale, _thirdSectionScale);
 	p.translate(-center);
 	if (!ExtrasFeatures::WindowMaterial::isActive(this)) {
-		// 与真实信息栏一致，只保留窗口外侧的右上圆角。
+		// 与真实第三栏一致，只保留窗口外侧的右上圆角。
 		const auto radius = st::windowCardRadius;
 		auto clip = QPainterPath();
 		clip.addRoundedRect(geometry, radius, radius);

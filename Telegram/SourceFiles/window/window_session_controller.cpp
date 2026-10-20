@@ -2789,7 +2789,7 @@ void SessionController::resizeForThirdSection() {
 		= settings.tabbedSelectorSectionEnabled();
 	auto thirdSectionInfoEnabled
 		= settings.thirdSectionInfoEnabled();
-	if (thirdSectionInfoEnabled) {
+	if (thirdSectionInfoEnabled || tabbedSelectorSectionEnabled) {
 		content()->prepareThirdSectionOpen();
 	}
 	settings.setTabbedSelectorSectionEnabled(false);
