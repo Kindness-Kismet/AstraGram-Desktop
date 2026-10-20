@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_session.h"
 
+#include "extras/data/conversation_cache.h"
+
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
 #include "main/main_app_config.h"
@@ -1714,6 +1716,7 @@ History *Session::historyLoaded(const PeerData *peer) {
 }
 
 void Session::deleteConversationLocally(not_null<PeerData*> peer) {
+	_session->conversationCache().historyCleared(peer->id);
 	const auto markLeft = [&] {
 		if (const auto channel = peer->asMegagroup()) {
 			channel->addFlags(ChannelDataFlag::Left);
@@ -1755,6 +1758,7 @@ void Session::chatsListChanged(Data::Folder *folder) {
 }
 
 void Session::chatsListDone(Data::Folder *folder) {
+	_session->conversationCache().dialogsDone(folder);
 	if (folder) {
 		folder->chatsList()->setLoaded();
 	} else {
@@ -2545,6 +2549,7 @@ rpl::producer<not_null<const History*>> Session::historyUnloaded() const {
 }
 
 void Session::notifyHistoryCleared(not_null<const History*> history) {
+	_session->conversationCache().historyCleared(history->peer->id);
 	_historyCleared.fire_copy(history);
 }
 
@@ -2553,6 +2558,7 @@ rpl::producer<not_null<const History*>> Session::historyCleared() const {
 }
 
 void Session::notifyHistoryAccessLost(not_null<History*> history) {
+	_session->conversationCache().historyCleared(history->peer->id);
 	_historyAccessLost.fire_copy(history);
 }
 
@@ -2866,6 +2872,7 @@ void Session::applyDialog(
 	const auto history = this->history(peerId);
 	history->applyDialog(requestFolder, data);
 	setPinnedFromEntryList(history, data.is_pinned());
+	_session->conversationCache().dialogReceived(data);
 
 	if (const auto from = history->peer->migrateFrom()) {
 		if (const auto historyFrom = historyLoaded(from)) {
@@ -3084,6 +3091,7 @@ bool Session::updateExistingMessage(const MTPDmessage &data) {
 }
 
 void Session::updateEditedMessage(const MTPMessage &data) {
+	_session->conversationCache().messageEdited(data);
 	const auto existing = data.match([](const MTPDmessageEmpty &)
 			-> HistoryItem* {
 		return nullptr;
@@ -3141,6 +3149,7 @@ void Session::processMessages(
 			// new message, index my forwarded messages to links overview
 			if ((type == NewMessageType::Unread)
 				&& updateExistingMessage(data)) {
+				_session->conversationCache().messageReceived(message, type);
 				continue;
 			}
 		}
@@ -3401,6 +3410,7 @@ void Session::checkFormattedDateUpdates() {
 void Session::processMessagesDeleted(
 		PeerId peerId,
 		const QVector<MTPint> &data) {
+	_session->conversationCache().messagesDeleted(peerId, data);
 	const auto list = messagesList(peerId);
 	const auto affected = historyLoaded(peerId);
 	if (!list && !affected) {
@@ -3438,6 +3448,7 @@ void Session::processMessagesDeleted(
 }
 
 void Session::processNonChannelMessagesDeleted(const QVector<MTPint> &data) {
+	_session->conversationCache().messagesDeleted(PeerId(), data);
 	auto toDestroy = std::vector<not_null<HistoryItem*>>();
 	auto historiesToCheck = base::flat_set<not_null<History*>>();
 	for (const auto &messageId : data) {
@@ -3663,6 +3674,7 @@ HistoryItem *Session::addNewMessage(
 	if (!peerId || data.type() == mtpc_messageEmpty) {
 		return nullptr;
 	}
+	_session->conversationCache().messageReceived(data, type);
 
 	if (type == NewMessageType::Unread
 		&& data.type() == mtpc_message) {

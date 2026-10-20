@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
 
+#include "extras/data/conversation_cache.h"
+
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
 #include "api/api_bot.h"
@@ -861,7 +863,8 @@ void HistoryWidget::messagesFailed(const MTP::Error &error, int requestId) {
 void HistoryWidget::messagesReceived(
 		not_null<PeerData*> peer,
 		const MTPmessages_Messages &messages,
-		int requestId) {
+		int requestId,
+		const Extras::CachedHistorySlice *cached) {
 	// Expects(_history != nullptr);
 	if (!_history || !_peer) {
 		return; // AyuGram: fix crash when using `saveDeletedMessages`
@@ -920,6 +923,23 @@ void HistoryWidget::messagesReceived(
 	} break;
 	}
 
+	const auto applyCachedEdges = [&] {
+		if (!cached) {
+			return;
+		}
+		const auto history = session().data().history(peer);
+		if (cached->atTop) {
+			history->markLoadedAtTop();
+		} else {
+			_firstLoadFromTheStart = false;
+		}
+		if (cached->atBottom) {
+			history->addNewerSlice({});
+		} else if (requestId == _firstLoadRequest || requestId == _delayedShowAtRequest) {
+			history->setNotLoadedAtBottom();
+		}
+	};
+
 	// 首次加载尚未排版，或已有消息填不满一屏时，带回的消息原地淡入。
 	if (!histList->isEmpty()
 		&& ((requestId == _firstLoadRequest)
@@ -930,10 +950,12 @@ void HistoryWidget::messagesReceived(
 	}
 	if (_preloadRequest == requestId) {
 		addMessagesToFront(peer, *histList);
+		applyCachedEdges();
 		_preloadRequest = 0;
 		preloadHistoryIfNeeded();
 	} else if (_preloadDownRequest == requestId) {
 		addMessagesToBack(peer, *histList);
+		applyCachedEdges();
 		_preloadDownRequest = 0;
 		preloadHistoryIfNeeded();
 		if (_history->loadedAtBottom()) {
@@ -946,6 +968,7 @@ void HistoryWidget::messagesReceived(
 			_migrated->clear(History::ClearType::Unload);
 		}
 		addMessagesToFront(peer, *histList);
+		applyCachedEdges();
 		_firstLoadRequest = 0;
 		if (_firstLoadFromTheStart && !toMigrated) {
 			_history->markLoadedAtTop();
@@ -977,6 +1000,7 @@ void HistoryWidget::messagesReceived(
 		_history->getReadyFor(_delayedShowAtMsgId);
 		if (_history->isEmpty()) {
 			addMessagesToFront(peer, *histList);
+			applyCachedEdges();
 			if (_firstLoadFromTheStart && !toMigrated) {
 				_history->markLoadedAtTop();
 			}

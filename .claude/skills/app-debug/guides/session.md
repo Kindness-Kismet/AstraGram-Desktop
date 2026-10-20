@@ -1,5 +1,15 @@
 # 会话与消息
 
+## 离线缓存
+
+- `cache.state [peerId]`：查询恢复的会话数、缓存命中次数、当前分组、连接状态；指定会话时附带已显示消息范围。
+- `messageDataHits` 表示引用原文等单条消息从缓存恢复的次数；`rendered` 记录会话列表首次与最近一次实际绘制的标签和行数。
+- `cache.read <peerId> [offsetId] [addOffset] [limit]`：只查询缓存，返回任务编号；用 `job.status` 获取消息编号和内容摘要，不导出消息正文。
+- `cache.flush`：安排保存缓存，返回不代表磁盘写入已完成；正常退出会等待存储完成。
+
+验证离线重启时，先联网浏览需要测试的会话，再运行 `app.restart --offline --background`。
+核对 `app.info.offline`、`cache.state` 和截图；用不带 `--offline` 的重启恢复联网。
+
 本地模拟身份、固定场景和消息注入统一见[模拟模式](simulation.md)。
 
 ## `notification.test [text] [--peer <userId>]`

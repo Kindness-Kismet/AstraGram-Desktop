@@ -460,6 +460,13 @@ void ChatFilters::load() {
 	load(false);
 }
 
+void ChatFilters::restoreCached(
+		const QVector<MTPDialogFilter> &result,
+		bool tagsEnabled) {
+	_tagsEnabled = tagsEnabled;
+	received(result);
+}
+
 #ifdef _DEBUG
 void ChatFilters::beginLoadForDebug() {
 	_loaded = false;

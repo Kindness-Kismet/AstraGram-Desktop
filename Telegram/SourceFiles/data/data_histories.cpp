@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_histories.h"
 
+#include "extras/data/conversation_cache.h"
+
 #include "api/api_text_entities.h"
 #include "data/business/data_shortcut_messages.h"
 #include "data/components/ephemeral_messages.h"
@@ -1121,6 +1123,72 @@ int Histories::sendRequest(
 	return id;
 }
 
+int Histories::requestHistory(
+		const Extras::HistoryCacheQuery &query,
+		Fn<void(const MTPmessages_Messages&, const Extras::CachedHistorySlice*)> done,
+		Fn<void(const MTP::Error&)> fail) {
+	const auto id = ++_requestAutoincrement;
+	_cachedHistoryRequests.emplace(id, 0);
+	session().conversationCache().getHistory(query, [=](
+			std::optional<Extras::CachedHistorySlice> cached) {
+		if (!_cachedHistoryRequests.contains(id)) {
+			return;
+		}
+		const auto fromCache = cached.has_value();
+		if (fromCache) {
+			_cachedHistoryRequests.remove(id);
+			done(cached->messages, &*cached);
+		}
+		const auto history = owner().history(query.key.peer);
+		const auto requestId = sendRequest(history, RequestType::History, [=](
+				Fn<void()> finish) {
+			const auto received = [=](const MTPmessages_Messages &result) {
+				finish();
+				session().conversationCache().putHistory(query, result, fromCache);
+				if (!fromCache) {
+					_cachedHistoryRequests.remove(id);
+					done(result, nullptr);
+				}
+			};
+			const auto failed = [=](const MTP::Error &error) {
+				finish();
+				if (!fromCache) {
+					_cachedHistoryRequests.remove(id);
+					fail(error);
+				}
+			};
+			auto &api = session().api();
+			if (query.key.topicRootId) {
+				return api.request(MTPmessages_GetReplies(
+					history->peer->input(), MTP_int(query.key.topicRootId),
+					MTP_int(query.offsetId), MTP_int(0), MTP_int(query.addOffset),
+					MTP_int(query.limit), MTP_int(0), MTP_int(0), MTP_long(0)
+				)).done(received).fail(failed).send();
+			}
+			if (query.key.sublistPeer) {
+				using Flag = MTPmessages_GetSavedHistory::Flag;
+				const auto parent = history->peer->isSelf() ? nullptr : history->peer.get();
+				return api.request(MTPmessages_GetSavedHistory(
+					MTP_flags(parent ? Flag::f_parent_peer : Flag()),
+					parent ? parent->input() : MTPInputPeer(),
+					owner().peer(query.key.sublistPeer)->input(),
+					MTP_int(query.offsetId), MTP_int(0), MTP_int(query.addOffset),
+					MTP_int(query.limit), MTP_int(0), MTP_int(0), MTP_long(0)
+				)).done(received).fail(failed).send();
+			}
+			return api.request(MTPmessages_GetHistory(
+				history->peer->input(), MTP_int(query.offsetId), MTP_int(0),
+				MTP_int(query.addOffset), MTP_int(query.limit),
+				MTP_int(0), MTP_int(0), MTP_long(0)
+			)).done(received).fail(failed).send();
+		});
+		if (!fromCache) {
+			_cachedHistoryRequests[id] = requestId;
+		}
+	});
+	return id;
+}
+
 void Histories::sendCreateTopicRequest(
 		not_null<History*> history,
 		MsgId rootId) {
@@ -1288,7 +1356,12 @@ void Histories::checkPostponed(not_null<History*> history, int id) {
 void Histories::cancelRequest(int id) {
 	if (!id) {
 		return;
-	} else if (_creatingTopicRequests.contains(id)) {
+	}
+	if (const auto request = _cachedHistoryRequests.take(id)) {
+		cancelRequest(*request);
+		return;
+	}
+	if (_creatingTopicRequests.contains(id)) {
 		cancelDelayedByTopicRequest(id);
 		return;
 	}

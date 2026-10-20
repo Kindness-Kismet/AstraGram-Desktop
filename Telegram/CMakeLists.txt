@@ -372,6 +372,10 @@ set(extras_files
         extras/features/filters/filters_cache_controller.h
         extras/features/filters/filters_utils.cpp
         extras/features/filters/filters_utils.h
+        extras/data/conversation_cache.cpp
+        extras/data/conversation_cache.h
+        extras/data/conversation_cache_history.cpp
+        extras/data/conversation_cache_serialization.h
         extras/data/messages_storage.cpp
         extras/data/messages_storage.h
         extras/data/entities.h

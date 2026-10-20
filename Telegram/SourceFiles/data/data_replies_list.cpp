@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_replies_list.h"
 
+#include "extras/data/conversation_cache.h"
+
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/history_item_helpers.h"
@@ -557,21 +559,16 @@ void RepliesList::loadAround(MsgId id) {
 	histories().cancelRequest(base::take(_beforeId));
 	histories().cancelRequest(base::take(_afterId));
 
-	const auto send = [=](Fn<void()> finish) {
-		return _history->session().api().request(MTPmessages_GetReplies(
-			_history->peer->input(),
-			MTP_int(_rootId),
-			MTP_int(id), // offset_id
-			MTP_int(0), // offset_date
-			MTP_int(id ? (-kMessagesPerPage / 2) : 0), // add_offset
-			MTP_int(kMessagesPerPage), // limit
-			MTP_int(0), // max_id
-			MTP_int(0), // min_id
-			MTP_long(0) // hash
-		)).done([=](const MTPmessages_Messages &result) {
+	const auto send = [=] {
+		return histories().requestHistory({
+			.key = { _history->peer->id, _rootId },
+			.offsetId = id,
+			.addOffset = id ? (-kMessagesPerPage / 2) : 0,
+			.limit = kMessagesPerPage,
+			.allowNearest = !id,
+		}, [=](const MTPmessages_Messages &result, const Extras::CachedHistorySlice *cached) {
 			_beforeId = 0;
 			_loadingAround = std::nullopt;
-			finish();
 
 			if (!id) {
 				_skippedAfter = 0;
@@ -579,10 +576,14 @@ void RepliesList::loadAround(MsgId id) {
 				_skippedAfter = std::nullopt;
 			}
 			_skippedBefore = std::nullopt;
+			if (cached) {
+				_skippedBefore = cached->atTop ? std::optional(0) : std::nullopt;
+				_skippedAfter = cached->atBottom ? std::optional(0) : std::nullopt;
+			}
 			_list.clear();
-			if (processMessagesIsEmpty(result)) {
+			if (processMessagesIsEmpty(result, cached)) {
 				_fullCount = _skippedBefore = _skippedAfter = 0;
-			} else if (id) {
+			} else if (id && !cached) {
 				Assert(!_list.empty());
 				if (_list.front() <= id) {
 					_skippedAfter = 0;
@@ -591,17 +592,13 @@ void RepliesList::loadAround(MsgId id) {
 				}
 			}
 			checkReadTillEnd();
-		}).fail([=] {
+		}, [=](const MTP::Error &) {
 			_beforeId = 0;
 			_loadingAround = std::nullopt;
-			finish();
-		}).send();
+		});
 	};
 	_loadingAround = id;
-	_beforeId = histories().sendRequest(
-		_history,
-		Histories::RequestType::History,
-		send);
+	_beforeId = send();
 }
 
 void RepliesList::loadBefore() {
@@ -614,40 +611,30 @@ void RepliesList::loadBefore() {
 	}
 
 	const auto last = _list.back();
-	const auto send = [=](Fn<void()> finish) {
-		return _history->session().api().request(MTPmessages_GetReplies(
-			_history->peer->input(),
-			MTP_int(_rootId),
-			MTP_int(last), // offset_id
-			MTP_int(0), // offset_date
-			MTP_int(0), // add_offset
-			MTP_int(kMessagesPerPage), // limit
-			MTP_int(0), // min_id
-			MTP_int(0), // max_id
-			MTP_long(0) // hash
-		)).done([=](const MTPmessages_Messages &result) {
+	const auto send = [=] {
+		return histories().requestHistory({
+			.key = { _history->peer->id, _rootId },
+			.offsetId = last,
+			.addOffset = 0,
+			.limit = kMessagesPerPage,
+		}, [=](const MTPmessages_Messages &result, const Extras::CachedHistorySlice *cached) {
 			_beforeId = 0;
-			finish();
 
 			if (_list.empty()) {
 				return;
 			} else if (_list.back() != last) {
 				loadBefore();
-			} else if (processMessagesIsEmpty(result)) {
+			} else if (processMessagesIsEmpty(result, cached)) {
 				_skippedBefore = 0;
 				if (_skippedAfter == 0) {
 					_fullCount = _list.size();
 				}
 			}
-		}).fail([=] {
+		}, [=](const MTP::Error &) {
 			_beforeId = 0;
-			finish();
-		}).send();
+		});
 	};
-	_beforeId = histories().sendRequest(
-		_history,
-		Histories::RequestType::History,
-		send);
+	_beforeId = send();
 }
 
 void RepliesList::loadAfter() {
@@ -658,44 +645,36 @@ void RepliesList::loadAfter() {
 	}
 
 	const auto first = _list.front();
-	const auto send = [=](Fn<void()> finish) {
-		return _history->session().api().request(MTPmessages_GetReplies(
-			_history->peer->input(),
-			MTP_int(_rootId),
-			MTP_int(first + 1), // offset_id
-			MTP_int(0), // offset_date
-			MTP_int(-kMessagesPerPage), // add_offset
-			MTP_int(kMessagesPerPage), // limit
-			MTP_int(0), // min_id
-			MTP_int(0), // max_id
-			MTP_long(0) // hash
-		)).done([=](const MTPmessages_Messages &result) {
+	const auto send = [=] {
+		return histories().requestHistory({
+			.key = { _history->peer->id, _rootId },
+			.offsetId = first + 1,
+			.addOffset = -kMessagesPerPage,
+			.limit = kMessagesPerPage,
+		}, [=](const MTPmessages_Messages &result, const Extras::CachedHistorySlice *cached) {
 			_afterId = 0;
-			finish();
 
 			if (_list.empty()) {
 				return;
 			} else if (_list.front() != first) {
 				loadAfter();
-			} else if (processMessagesIsEmpty(result)) {
+			} else if (processMessagesIsEmpty(result, cached)) {
 				_skippedAfter = 0;
 				if (_skippedBefore == 0) {
 					_fullCount = _list.size();
 				}
 				checkReadTillEnd();
 			}
-		}).fail([=] {
+		}, [=](const MTP::Error &) {
 			_afterId = 0;
-			finish();
-		}).send();
+		});
 	};
-	_afterId = histories().sendRequest(
-		_history,
-		Histories::RequestType::History,
-		send);
+	_afterId = send();
 }
 
-bool RepliesList::processMessagesIsEmpty(const MTPmessages_Messages &result) {
+bool RepliesList::processMessagesIsEmpty(
+		const MTPmessages_Messages &result,
+		const Extras::CachedHistorySlice *cached) {
 	const auto guard = gsl::finally([&] { _listChanges.fire({}); });
 
 	auto &owner = _history->owner();
@@ -790,6 +769,17 @@ bool RepliesList::processMessagesIsEmpty(const MTPmessages_Messages &result) {
 		_skippedBefore = checkedCount - *_skippedAfter - nowSize;
 	}
 	_fullCount = checkedCount;
+	if (cached) {
+		if (cached->atTop) {
+			_skippedBefore = 0;
+		}
+		if (cached->atBottom) {
+			_skippedAfter = 0;
+		}
+		if (_skippedBefore == 0 && _skippedAfter == 0) {
+			_fullCount = int(_list.size());
+		}
+	}
 
 	checkReadTillEnd();
 

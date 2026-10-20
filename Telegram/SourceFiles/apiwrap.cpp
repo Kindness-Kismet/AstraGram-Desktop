@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "apiwrap.h"
 
+#include "extras/data/conversation_cache.h"
+
 #ifdef _DEBUG
 #include "extras/debug/debug_login.h"
 #endif
@@ -660,6 +662,19 @@ void ApiWrap::sendMessageFail(
 }
 
 void ApiWrap::requestMessageData(
+		PeerData *peer,
+		MsgId msgId,
+		Fn<void()> done) {
+	_session->conversationCache().restoreMessage(
+		peer ? peer->id : PeerId(), msgId, [=](bool cached) {
+			if (cached && done) {
+				done();
+			}
+			requestMessageDataFromServer(peer, msgId, cached ? nullptr : done);
+		});
+}
+
+void ApiWrap::requestMessageDataFromServer(
 		PeerData *peer,
 		MsgId msgId,
 		Fn<void()> done) {

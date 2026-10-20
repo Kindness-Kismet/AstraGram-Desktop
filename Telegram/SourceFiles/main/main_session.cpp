@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "main/main_session.h"
 
+#include "extras/data/conversation_cache.h"
+
 #include "extras/utils/badge_helpers.h"
 
 #include "apiwrap.h"
@@ -155,6 +157,7 @@ Session::Session(
 , _downloader(std::make_unique<Storage::DownloadManagerMtproto>(_api.get()))
 , _uploader(std::make_unique<Storage::Uploader>(_api.get()))
 , _storage(std::make_unique<Storage::Facade>())
+, _conversationCache(std::make_unique<Extras::ConversationCache>(this))
 , _data(std::make_unique<Data::Session>(this))
 , _user(_data->processUser(user))
 , _emojiStickersPack(std::make_unique<Stickers::EmojiPack>(this))
@@ -359,12 +362,15 @@ QByteArray Session::validTmpPassword() const {
 // Can be called only right before ~Session.
 void Session::finishLogout() {
 	unlockTerms();
+	_conversationCache->clear();
 	data().clear();
 	data().clearLocalStorage();
 }
 
 Session::~Session() {
 	unlockTerms();
+	_conversationCache->flush();
+	_conversationCache->disable();
 	_messageTranslations = nullptr;
 	data().clear();
 	ClickHandler::clearActive();

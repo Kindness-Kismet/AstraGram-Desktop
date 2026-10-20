@@ -154,6 +154,9 @@ public:
 	void setPreloaded(
 		const QVector<MTPDialogFilter> &result,
 		bool tagsEnabled);
+	void restoreCached(
+		const QVector<MTPDialogFilter> &result,
+		bool tagsEnabled);
 
 	void load();
 	void reload();

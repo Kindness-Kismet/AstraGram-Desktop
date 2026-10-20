@@ -542,6 +542,7 @@ private:
 		Fn<void(const MTP::Error &)> fail = nullptr);
 
 	void resolveMessageDatas();
+	void requestMessageDataFromServer(PeerData *peer, MsgId msgId, Fn<void()> done);
 	void finalizeMessageDataRequest(
 		ChannelData *channel,
 		mtpRequestId requestId);

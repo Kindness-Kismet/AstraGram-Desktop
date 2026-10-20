@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_inner_widget.h"
 
+#include "extras/data/conversation_cache.h"
+
 #include "extras/features/window_material/window_material.h"
 #include "dialogs/dialogs_three_state_icon.h"
 #include "dialogs/ui/chat_search_empty.h"
@@ -359,6 +361,9 @@ InnerWidget::InnerWidget(
 	return result;
 }) {
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
+#ifdef _DEBUG
+	setObjectName(u"dialogsList"_q);
+#endif
 	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	ExtrasFeatures::WindowMaterial::changes(this) | rpl::on_next([=] {
 		_rowsScrollCache.clear();
@@ -1122,6 +1127,23 @@ void InnerWidget::showSavedSublists() {
 }
 
 void InnerWidget::paintEvent(QPaintEvent *e) {
+#ifdef _DEBUG
+	if (isVisible() && _controller->isPrimary()
+		&& !_savedSublists && !_openedFolder && !_openedForum && !_openedCommunity) {
+		if (!property("firstPaintFilter").isValid()) {
+			setProperty("firstPaintFilter", qlonglong(_filterId));
+			setProperty("firstPaintRows", _shownList->size());
+			setProperty("firstPaintWaiting", waitingForChatsFilter());
+		}
+		setProperty("paintedFilter", qlonglong(_filterId));
+		setProperty("paintedRows", _shownList->size());
+		if (!_filterId && !_shownList->empty()
+			&& ExtrasSettings::getInstance().hideAllChatsFolder()
+			&& session().data().chatsFilters().defaultId() != 0) {
+			setProperty("hiddenAllPaints", property("hiddenAllPaints").toInt() + 1);
+		}
+	}
+#endif
 	Painter p(this);
 
 	p.setInactive(
@@ -5302,6 +5324,8 @@ void InnerWidget::refreshEmpty() {
 	}
 
 	const auto data = &session().data();
+	const auto cachedDialogs = !_openedFolder
+		&& session().conversationCache().hasDialogsSnapshot();
 	const auto state = !_shownList->empty()
 		? EmptyState::None
 		: waitingForChatsFilter()
@@ -5318,9 +5342,9 @@ void InnerWidget::refreshEmpty() {
 		? ((_communityViewable.empty() && !_communityRequestableCount)
 			? EmptyState::Loading
 			: EmptyState::None)
-		: (!_filterId && data->contactsLoaded().current())
+		: (!_filterId && (data->contactsLoaded().current() || cachedDialogs))
 		? EmptyState::NoContacts
-		: (_filterId > 0) && data->chatsList()->loaded()
+		: (_filterId > 0) && (data->chatsList()->loaded() || cachedDialogs)
 		? EmptyState::EmptyFolder
 		: EmptyState::Loading;
 	if (state == EmptyState::None) {

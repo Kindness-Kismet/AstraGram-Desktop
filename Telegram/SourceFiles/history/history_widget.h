@@ -29,6 +29,10 @@ class MessageLinksParser;
 struct InlineBotQuery;
 class SendFilesBox;
 
+namespace Extras {
+struct CachedHistorySlice;
+} // namespace Extras
+
 namespace ExtrasUi {
 class FieldHeightAnimation;
 class FloatingSurfaceHost;
@@ -698,7 +702,11 @@ private:
 	void editDraftOptions();
 	void jumpToReply(FullReplyTo to);
 
-	void messagesReceived(not_null<PeerData*> peer, const MTPmessages_Messages &messages, int requestId);
+	void messagesReceived(
+		not_null<PeerData*> peer,
+		const MTPmessages_Messages &messages,
+		int requestId,
+		const Extras::CachedHistorySlice *cached = nullptr);
 	// 首屏消息就位前用当前画面盖住消息区，随后原地淡出。
 	void startFirstLoadFade();
 	void messagesFailed(const MTP::Error &error, int requestId);

@@ -1,5 +1,6 @@
 #ifdef _DEBUG
 #include "extras/debug/debug_login.h"
+#include "extras/data/conversation_cache.h"
 #include "extras/extras_settings.h"
 #include "extras/debug/commands/commands_internal.h"
 
@@ -68,6 +69,7 @@ QString enterSimulation(int64 userId) {
 		MTPlong(), // send_paid_messages_stars
 		MTPlong()), std::move(settings));
 	SimulationSession = base::make_weak(&account.session());
+	account.session().conversationCache().disable();
 	ExtrasSettings::getInstance().setDevFeaturesEnabled(true);
 	Commands::seedSimulationScenarios(&account.session());
 

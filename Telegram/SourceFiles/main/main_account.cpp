@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "main/main_account.h"
 
+#include "extras/data/conversation_cache.h"
+
 #include "base/platform/base_platform_info.h"
 #include "core/application.h"
 #include "storage/storage_account.h"
@@ -200,6 +202,7 @@ void Account::createSession(
 	if (!serialized.isEmpty()) {
 		local().readSelf(_session.get(), serialized, streamVersion);
 	}
+	_session->conversationCache().restore();
 	_sessionValue = _session.get();
 
 	Ensures(_session != nullptr);

@@ -42,6 +42,9 @@ BACKGROUND_START = False
 OFFLINE_START = None
 
 GENERIC_COMMANDS = {
+    'cache.state': '查询会话缓存、当前分组及连接状态，可附带内存历史范围： [会话编号]',
+    'cache.read': '只查询持久历史缓存，不请求服务器；返回异步任务与消息编号、摘要：[会话编号] [起始消息编号] [偏移量] [数量]',
+    'cache.flush': '安排保存会话列表与已浏览历史缓存，不修改远端数据',
     'simulation.chat-folders': '在独立模拟配置中加载首个分组、清空分组或等待分组：<single|none|pending>，重启恢复样本',
     'simulation.language': '在独立模拟配置中切换内置翻译，不下载云端语言包：<en|zh-hans>，返回表情页签译文',
     'control.window': '选择控件与截图的目标窗口，不改变系统焦点：[main|窗口标识|#序号]',

@@ -12,6 +12,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 class History;
 
+namespace Extras {
+struct CachedHistorySlice;
+}
+
 namespace Data {
 
 class ForumTopic;
@@ -101,7 +105,9 @@ private:
 	void injectRootDivider(
 		not_null<HistoryItem*> root,
 		not_null<MessagesSlice*> slice);
-	bool processMessagesIsEmpty(const MTPmessages_Messages &result);
+	bool processMessagesIsEmpty(
+		const MTPmessages_Messages &result,
+		const Extras::CachedHistorySlice *cached);
 	void loadAround(MsgId id);
 	void loadBefore();
 	void loadAfter();

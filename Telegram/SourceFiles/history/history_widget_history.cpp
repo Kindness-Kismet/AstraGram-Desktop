@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
 
+#include "extras/data/conversation_cache.h"
+
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
 #include "api/api_bot.h"
@@ -532,32 +534,19 @@ void HistoryWidget::firstLoadMessages() {
 		}
 	}
 
-	const auto offsetDate = 0;
-	const auto maxId = 0;
-	const auto minId = 0;
-	const auto historyHash = uint64(0);
-
 	const auto history = from;
-	const auto type = Data::Histories::RequestType::History;
 	auto &histories = history->owner().histories();
-	_firstLoadRequest = histories.sendRequest(history, type, [=](
-			Fn<void()> finish) {
-		return history->session().api().request(MTPmessages_GetHistory(
-			history->peer->input(),
-			MTP_int(offsetId),
-			MTP_int(offsetDate),
-			MTP_int(offset),
-			MTP_int(loadCount),
-			MTP_int(maxId),
-			MTP_int(minId),
-			MTP_long(historyHash)
-		)).done([=](const MTPmessages_Messages &result) {
-			messagesReceived(history->peer, result, _firstLoadRequest);
-			finish();
-		}).fail([=](const MTP::Error &error) {
-			messagesFailed(error, _firstLoadRequest);
-			finish();
-		}).send();
+	_firstLoadRequest = histories.requestHistory({
+		.key = { history->peer->id },
+		.offsetId = offsetId,
+		.addOffset = offset,
+		.limit = loadCount,
+		.allowNearest = _showAtMsgId == ShowAtUnreadMsgId
+			|| _showAtMsgId == ShowAtTheEndMsgId,
+	}, [=](const MTPmessages_Messages &result, const Extras::CachedHistorySlice *cached) {
+		messagesReceived(history->peer, result, _firstLoadRequest, cached);
+	}, [=](const MTP::Error &error) {
+		messagesFailed(error, _firstLoadRequest);
 	});
 }
 
@@ -584,11 +573,6 @@ void HistoryWidget::loadMessages() {
 	const auto loadCount = offsetId
 		? kMessagesPerPage
 		: kMessagesPerPageFirst;
-	const auto offsetDate = 0;
-	const auto maxId = 0;
-	const auto minId = 0;
-	const auto historyHash = uint64(0);
-
 	DEBUG_LOG(("JumpToEnd(%1, %2, %3): Loading up before %4."
 		).arg(_history->peer->name()
 		).arg(_history->inboxReadTillId().bare
@@ -596,26 +580,16 @@ void HistoryWidget::loadMessages() {
 		).arg(offsetId.bare));
 
 	const auto history = from;
-	const auto type = Data::Histories::RequestType::History;
 	auto &histories = history->owner().histories();
-	_preloadRequest = histories.sendRequest(history, type, [=](
-			Fn<void()> finish) {
-		return history->session().api().request(MTPmessages_GetHistory(
-			history->peer->input(),
-			MTP_int(offsetId),
-			MTP_int(offsetDate),
-			MTP_int(addOffset),
-			MTP_int(loadCount),
-			MTP_int(maxId),
-			MTP_int(minId),
-			MTP_long(historyHash)
-		)).done([=](const MTPmessages_Messages &result) {
-			messagesReceived(history->peer, result, _preloadRequest);
-			finish();
-		}).fail([=](const MTP::Error &error) {
-			messagesFailed(error, _preloadRequest);
-			finish();
-		}).send();
+	_preloadRequest = histories.requestHistory({
+		.key = { history->peer->id },
+		.offsetId = offsetId,
+		.addOffset = addOffset,
+		.limit = loadCount,
+	}, [=](const MTPmessages_Messages &result, const Extras::CachedHistorySlice *cached) {
+		messagesReceived(history->peer, result, _preloadRequest, cached);
+	}, [=](const MTP::Error &error) {
+		messagesFailed(error, _preloadRequest);
 	});
 }
 
@@ -684,11 +658,6 @@ void HistoryWidget::loadMessagesDown() {
 		++offsetId;
 		++addOffset;
 	}
-	const auto offsetDate = 0;
-	const auto maxId = 0;
-	const auto minId = 0;
-	const auto historyHash = uint64(0);
-
 	DEBUG_LOG(("JumpToEnd(%1, %2, %3): Loading down after %4."
 		).arg(_history->peer->name()
 		).arg(_history->inboxReadTillId().bare
@@ -696,26 +665,16 @@ void HistoryWidget::loadMessagesDown() {
 		).arg(offsetId.bare));
 
 	const auto history = from;
-	const auto type = Data::Histories::RequestType::History;
 	auto &histories = history->owner().histories();
-	_preloadDownRequest = histories.sendRequest(history, type, [=](
-			Fn<void()> finish) {
-		return history->session().api().request(MTPmessages_GetHistory(
-			history->peer->input(),
-			MTP_int(offsetId + 1),
-			MTP_int(offsetDate),
-			MTP_int(addOffset),
-			MTP_int(loadCount),
-			MTP_int(maxId),
-			MTP_int(minId),
-			MTP_long(historyHash)
-		)).done([=](const MTPmessages_Messages &result) {
-			messagesReceived(history->peer, result, _preloadDownRequest);
-			finish();
-		}).fail([=](const MTP::Error &error) {
-			messagesFailed(error, _preloadDownRequest);
-			finish();
-		}).send();
+	_preloadDownRequest = histories.requestHistory({
+		.key = { history->peer->id },
+		.offsetId = offsetId + 1,
+		.addOffset = addOffset,
+		.limit = loadCount,
+	}, [=](const MTPmessages_Messages &result, const Extras::CachedHistorySlice *cached) {
+		messagesReceived(history->peer, result, _preloadDownRequest, cached);
+	}, [=](const MTP::Error &error) {
+		messagesFailed(error, _preloadDownRequest);
 	});
 }
 
@@ -770,32 +729,17 @@ void HistoryWidget::delayedShowAt(
 			offsetId = -_delayedShowAtMsgId;
 		}
 	}
-	const auto offsetDate = 0;
-	const auto maxId = 0;
-	const auto minId = 0;
-	const auto historyHash = uint64(0);
-
 	const auto history = from;
-	const auto type = Data::Histories::RequestType::History;
 	auto &histories = history->owner().histories();
-	_delayedShowAtRequest = histories.sendRequest(history, type, [=](
-			Fn<void()> finish) {
-		return history->session().api().request(MTPmessages_GetHistory(
-			history->peer->input(),
-			MTP_int(offsetId),
-			MTP_int(offsetDate),
-			MTP_int(offset),
-			MTP_int(loadCount),
-			MTP_int(maxId),
-			MTP_int(minId),
-			MTP_long(historyHash)
-		)).done([=](const MTPmessages_Messages &result) {
-			messagesReceived(history->peer, result, _delayedShowAtRequest);
-			finish();
-		}).fail([=](const MTP::Error &error) {
-			messagesFailed(error, _delayedShowAtRequest);
-			finish();
-		}).send();
+	_delayedShowAtRequest = histories.requestHistory({
+		.key = { history->peer->id },
+		.offsetId = offsetId,
+		.addOffset = offset,
+		.limit = loadCount,
+	}, [=](const MTPmessages_Messages &result, const Extras::CachedHistorySlice *cached) {
+		messagesReceived(history->peer, result, _delayedShowAtRequest, cached);
+	}, [=](const MTP::Error &error) {
+		messagesFailed(error, _delayedShowAtRequest);
 	});
 }
 

@@ -21,6 +21,11 @@ class Error;
 struct Response;
 } // namespace MTP
 
+namespace Extras {
+struct HistoryCacheQuery;
+struct CachedHistorySlice;
+} // namespace Extras
+
 namespace Data {
 
 class Session;
@@ -113,6 +118,10 @@ public:
 		not_null<History*> history,
 		RequestType type,
 		Fn<mtpRequestId(Fn<void()> finish)> generator);
+	int requestHistory(
+		const Extras::HistoryCacheQuery &query,
+		Fn<void(const MTPmessages_Messages&, const Extras::CachedHistorySlice*)> done,
+		Fn<void(const MTP::Error&)> fail);
 	void cancelRequest(int id);
 
 	using PreparedMessage = std::variant<
@@ -232,6 +241,7 @@ private:
 	std::unordered_map<PeerId, std::unique_ptr<History>> _map;
 	base::flat_map<not_null<History*>, State> _states;
 	base::flat_map<int, not_null<History*>> _historyByRequest;
+	base::flat_map<int, int> _cachedHistoryRequests;
 	int _requestAutoincrement = 0;
 	base::Timer _readRequestsTimer;
 

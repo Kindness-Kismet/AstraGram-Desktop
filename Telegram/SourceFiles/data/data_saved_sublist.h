@@ -14,6 +14,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 class PeerData;
 class History;
 
+namespace Extras {
+struct CachedHistorySlice;
+}
+
 namespace Data {
 
 class Session;
@@ -161,7 +165,9 @@ private:
 	void appendClientSideMessages(MessagesSlice &slice);
 	[[nodiscard]] std::optional<int> computeUnreadCountLocally(
 		MsgId afterId) const;
-	bool processMessagesIsEmpty(const MTPmessages_Messages &result);
+	bool processMessagesIsEmpty(
+		const MTPmessages_Messages &result,
+		const Extras::CachedHistorySlice *cached);
 	void loadAround(MsgId id);
 	void loadBefore();
 	void loadAfter();

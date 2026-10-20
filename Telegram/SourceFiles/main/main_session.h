@@ -13,6 +13,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 class ApiWrap;
 
+namespace Extras {
+class ConversationCache;
+} // namespace Extras
+
 namespace Extras::Translator {
 class MessageTranslationManager;
 } // namespace Extras::Translator
@@ -121,6 +125,9 @@ public:
 	Session &operator=(const Session &other) = delete;
 
 	[[nodiscard]] Account &account() const;
+	[[nodiscard]] Extras::ConversationCache &conversationCache() const {
+		return *_conversationCache;
+	}
 	[[nodiscard]] Extras::Translator::MessageTranslationManager &messageTranslations();
 	[[nodiscard]] Storage::Account &local() const;
 	[[nodiscard]] Domain &domain() const;
@@ -321,6 +328,7 @@ private:
 	const std::unique_ptr<Storage::DownloadManagerMtproto> _downloader;
 	const std::unique_ptr<Storage::Uploader> _uploader;
 	const std::unique_ptr<Storage::Facade> _storage;
+	const std::unique_ptr<Extras::ConversationCache> _conversationCache;
 
 	// _data depends on _downloader / _uploader.
 	const std::unique_ptr<Data::Session> _data;
