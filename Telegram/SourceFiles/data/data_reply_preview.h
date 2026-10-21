@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+#include "rpl/lifetime.h"
+
 class Image;
 class DocumentData;
 class PhotoData;
@@ -30,10 +32,12 @@ public:
 	[[nodiscard]] bool loaded(bool spoiler) const;
 
 private:
-	void prepare(
+	bool prepare(
 		not_null<Image*> image,
 		Images::Options options,
 		bool spoiler = false);
+	[[nodiscard]] bool preparePhoto(bool spoiler);
+	void refreshPhoto();
 
 	std::unique_ptr<Image> _regular;
 	std::unique_ptr<Image> _spoilered;
@@ -44,6 +48,9 @@ private:
 	bool _good = false;
 	bool _checkedRegular = false;
 	bool _checkedSpoilered = false;
+	bool _requestedRegular = false;
+	bool _requestedSpoilered = false;
+	rpl::lifetime _photoLifetime;
 
 };
 
