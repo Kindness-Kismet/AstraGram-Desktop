@@ -467,7 +467,7 @@ stickerSetBoxMenu: IconButton(boxTitleClose) {
 	icon: icon {{ "title_menu_dots", boxTitleCloseFg }};
 	iconOver: icon {{ "title_menu_dots", boxTitleCloseFgOver }};
 
-	rippleAreaPosition: point(0px, 4px);
+	rippleAreaPosition: point(5px, 0px);
 }
 stickerSetBoxBadgeSkip: 6px;
 stickersRowDisabledOpacity: 0.4;
