@@ -7821,7 +7821,7 @@ void OverlayWidget::paintFooterContent(
 	p.setFont(st::mediaviewThickFont);
 
 	// header
-	const auto shift = outer.topLeft() - _headerNav.topLeft();
+	const auto shift = outer.topLeft() - footerGeometry().topLeft();
 	const auto header = _headerNav.translated(shift);
 	const auto name = _nameNav.translated(shift);
 	const auto date = _dateNav.translated(shift);
@@ -9937,7 +9937,7 @@ void OverlayWidget::updateHeader() {
 			? tr::lng_mediaview_doc_image(tr::now)
 			: _document->filename();
 	} else if (_message) {
-		_headerText = tr::lng_mediaview_single_photo(tr::now);
+		_headerText.clear();
 	} else if (_user) {
 		if (_photo && SyncUserFallbackPhotoViewer(_user) == _photo->id) {
 			_headerText = tr::lng_mediaview_profile_public_photo(tr::now);
@@ -9956,9 +9956,14 @@ void OverlayWidget::updateHeader() {
 	} else if (_peer) {
 		_headerText = tr::lng_mediaview_group_photo(tr::now);
 	} else {
-		_headerText = tr::lng_mediaview_single_photo(tr::now);
+		_headerText.clear();
 	}
-	_headerHasLink = computeOverviewType() != std::nullopt;
+	_headerHasLink = !_headerText.isEmpty()
+		&& computeOverviewType() != std::nullopt;
+	if (_headerText.isEmpty()) {
+		_headerNav = QRect();
+		return;
+	}
 	auto hwidth = st::mediaviewThickFont->width(_headerText);
 	if (hwidth > width() / 3) {
 		hwidth = width() / 3;

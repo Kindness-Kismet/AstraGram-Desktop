@@ -6180,7 +6180,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_mediaview_archive_story" = "Archive Story";
 "lng_mediaview_photos_all" = "View all photos";
 "lng_mediaview_files_all" = "View all files";
-"lng_mediaview_single_photo" = "Single Photo";
 "lng_mediaview_group_photo" = "Group Photo";
 "lng_mediaview_channel_photo" = "Channel Photo";
 "lng_mediaview_community_photo" = "Community Photo";
