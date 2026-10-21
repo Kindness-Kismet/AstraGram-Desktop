@@ -2052,7 +2052,10 @@ void MainWidget::showNewSection(
 	}
 	using Column = Window::Column;
 	auto params = show;
-	if (dynamic_cast<HistoryView::ChatMemento*>(memento.get())) {
+	if (dynamic_cast<HistoryView::ChatMemento*>(memento.get())
+		|| dynamic_cast<AdminLog::SectionMemento*>(memento.get())
+		|| (_mainSection
+			&& dynamic_cast<AdminLog::Widget*>(_mainSection.data()))) {
 		params.inPlaceFade = true;
 	}
 
