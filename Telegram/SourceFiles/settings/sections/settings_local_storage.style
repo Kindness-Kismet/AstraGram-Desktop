@@ -39,9 +39,6 @@ localStorageCategoryHeight: 44px;
 localStorageCategoryPadding: margins(22px, 0px, 20px, 0px);
 localStorageCategoryCheckSkip: 14px;
 localStorageCategoryPercentSkip: 8px;
-localStorageCategoryCheck: Check(defaultCheck) {
-	diameter: 20px;
-}
 localStorageClearMargin: margins(12px, 6px, 12px, 9px);
 localStorageClearHeight: 38px;
 localStorageClearFont: font(13px semibold);

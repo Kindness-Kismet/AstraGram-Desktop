@@ -970,7 +970,7 @@ CacheCategoryRow::CacheCategoryRow(
 	const Extras::MediaCacheUsage &data)
 : RippleButton(parent, st::defaultRippleAnimation)
 , _checkColor([=] { return CachePartColor(chartIndex); })
-, _checkStyle(st::localStorageCategoryCheck)
+, _checkStyle(st::defaultCheck)
 , _check(_checkStyle, checked, [=] { Ui::RpWidget::update(); })
 , _percent(this, QString(), st::localStorageCategoryPercent)
 , _name(this, title, st::localStorageCategoryName)
@@ -1038,6 +1038,9 @@ int CacheCategoryRow::resizeGetHeight(int newWidth) {
 void CacheCategoryRow::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 	paintRipple(p, 0, 0);
+	if (isDisabled()) {
+		p.setOpacity(st::defaultCheckbox.disabledOpacity);
+	}
 	const auto pad = st::localStorageCategoryPadding;
 	const auto checkSize = _check.getSize();
 	_check.paint(
@@ -1045,6 +1048,13 @@ void CacheCategoryRow::paintEvent(QPaintEvent *e) {
 		pad.left(),
 		(height() - checkSize.height()) / 2,
 		width());
+}
+
+void CacheCategoryRow::onStateChanged(State was, StateChangeSource source) {
+	RippleButton::onStateChanged(was, source);
+	_check.setOver(
+		isOver() && !isDisabled(),
+		isDisabled() ? anim::type::instant : anim::type::normal);
 }
 
 QImage CacheCategoryRow::prepareRippleMask() const {

@@ -181,6 +181,7 @@ public:
 protected:
 	int resizeGetHeight(int newWidth) override;
 	void paintEvent(QPaintEvent *e) override;
+	void onStateChanged(State was, StateChangeSource source) override;
 	QImage prepareRippleMask() const override;
 	QPoint prepareRippleStartPosition() const override;
 
@@ -190,7 +191,7 @@ private:
 
 	style::complex_color _checkColor;
 	style::Check _checkStyle;
-	Ui::RoundCheckView _check;
+	Ui::CheckView _check;
 	object_ptr<Ui::FlatLabel> _percent;
 	object_ptr<Ui::FlatLabel> _name;
 	object_ptr<Ui::FlatLabel> _size;
