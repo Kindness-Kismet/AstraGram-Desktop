@@ -113,6 +113,7 @@ private:
 	};
 
 	void scheduleSave();
+	void preloadUserpic(History *history);
 	void saveDialogs();
 	void restoreListMetadata();
 	void saveIndex();

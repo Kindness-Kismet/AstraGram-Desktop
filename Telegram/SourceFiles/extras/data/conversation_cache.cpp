@@ -3,6 +3,8 @@
 #include "extras/data/conversation_cache_serialization.h"
 #include "core/version.h"
 #include "data/data_chat_filters.h"
+#include "data/data_changes.h"
+#include "data/data_channel.h"
 #include "data/data_folder.h"
 #include "data/data_session.h"
 #include "history/history_unread_things.h"
@@ -129,8 +131,35 @@ void ConversationCache::restore() {
 	}
 	_restoring = false;
 	_ready = true;
+	const auto preload = [&](not_null<Dialogs::MainList*> list) {
+		for (const auto row : list->indexed()->all()) {
+			preloadUserpic(row->history());
+		}
+	};
+	preload(_session->data().chatsList());
+	if (const auto folder = _session->data().folderLoaded(Data::Folder::kId)) {
+		preload(folder->chatsList());
+	}
 	_session->data().chatListEntryRefreshes(
-	) | rpl::on_next([=] { scheduleSave(); }, _lifetime);
+	) | rpl::on_next([=](const Data::Session::ChatListEntryRefresh &event) {
+		preloadUserpic(event.key.history());
+		scheduleSave();
+	}, _lifetime);
+	_session->changes().peerUpdates(
+		Data::PeerUpdate::Flag::Photo | Data::PeerUpdate::Flag::MonoforumLink
+	) | rpl::on_next([=](const Data::PeerUpdate &update) {
+		preloadUserpic(_session->data().historyLoaded(update.peer));
+		if (const auto linked = update.peer->broadcastMonoforum()) {
+			preloadUserpic(_session->data().historyLoaded(linked));
+		}
+		scheduleSave();
+	}, _lifetime);
+	_session->changes().historyUpdates(
+		Data::HistoryUpdate::Flag::Folder
+	) | rpl::on_next([=](const Data::HistoryUpdate &update) {
+		preloadUserpic(update.history);
+		scheduleSave();
+	}, _lifetime);
 	_session->data().chatsFilters().changed(
 	) | rpl::on_next([=] { scheduleSave(); }, _lifetime);
 
@@ -198,6 +227,16 @@ void ConversationCache::scheduleSave() {
 	if (_enabled && _ready && !_restoring && !_saveTimer.isActive()) {
 		_saveTimer.callOnce(1000);
 	}
+}
+
+void ConversationCache::preloadUserpic(History *history) {
+	const auto links = history ? history->chatListLinks(0) : nullptr;
+	if (!links) {
+		return;
+	}
+	// 主列表行持有解码结果，各标签页共用同一份头像。
+	[[maybe_unused]] const auto image = history->peer->userpicPaintingPeer()
+		->userpicCloudImage(links->main->userpicView());
 }
 
 void ConversationCache::flush() {
