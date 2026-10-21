@@ -77,14 +77,6 @@ inline bool AreTestingTheme() {
 	return !GlobalApplying.paletteForRevert.isEmpty();
 }
 
-[[nodiscard]] QImage ReadDefaultImage() {
-	return Ui::ReadBackgroundImage(
-		u":/gui/art/background.tgv"_q,
-		QByteArray(),
-		true
-	).image;
-}
-
 [[nodiscard]] bool GoodImageFormatAndSize(const QImage &image) {
 	return !image.size().isEmpty()
 		&& (image.format() == QImage::Format_ARGB32_Premultiplied
@@ -680,6 +672,7 @@ void ChatBackground::start() {
 		if (path.isEmpty()) {
 			palette.reset(ColorizerForTheme(path));
 			ApplyAccentPalette(palette);
+			ApplyDefaultServicePalette(palette);
 		} else {
 			auto instance = Instance();
 			if (!LoadFromFile(path, &instance, nullptr, nullptr)) {
@@ -820,8 +813,8 @@ void ChatBackground::set(const Data::WallPaper &paper, QImage image) {
 		|| Data::details::IsTestingEditorWallPaper(_paper)) {
 		if (Data::details::IsTestingDefaultWallPaper(_paper)
 			|| image.isNull()) {
-			image = ReadDefaultImage();
 			setPaper(Data::details::TestingDefaultWallPaper());
+			image = QImage();
 		}
 		setPreparedAfterPaper(std::move(image));
 	} else {
@@ -835,8 +828,8 @@ void ChatBackground::set(const Data::WallPaper &paper, QImage image) {
 			}
 		} else if (Data::IsDefaultWallPaper(_paper)
 			|| (_paper.backgroundColors().empty() && image.isNull())) {
-			setPaper(Data::DefaultWallPaper().withParamsFrom(_paper));
-			image = ReadDefaultImage();
+			setPaper(Data::DefaultWallPaper());
+			image = QImage();
 		}
 		Local::writeBackground(
 			_paper,
@@ -1241,6 +1234,7 @@ void ChatBackground::applyDefaultThemeAccentColorizer() {
 	auto palette = style::palette();
 	palette.reset(colorizer);
 	ApplyAccentPalette(palette);
+	ApplyDefaultServicePalette(palette);
 	if (colorizer) {
 		auto reference = style::palette();
 		reference.finalize();

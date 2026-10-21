@@ -11,7 +11,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/serialize_common.h"
 #include "core/application.h"
 #include "core/core_settings.h"
-#include "data/data_wall_paper.h"
 #include "ui/chat/chat_theme.h"
 #include "ui/chat/chat_theme_readability.h"
 #include "ui/style/style_palette_colorizer.h"
@@ -42,6 +41,9 @@ constexpr auto kDayBaseFile = ":/gui/day-custom-base.tdesktop-theme"_cs;
 constexpr auto kNightBaseFile = ":/gui/night-custom-base.tdesktop-theme"_cs;
 
 const auto kColorizeIgnoredKeys = base::flat_set<QLatin1String>{ {
+	qstr("msgServiceFg"),
+	qstr("msgServiceBg"),
+	qstr("msgServiceBgSelected"),
 	qstr("boxTextFgGood"),
 	qstr("boxTextFgError"),
 	qstr("callIconFg"),
@@ -470,6 +472,16 @@ void ApplyAccentPalette(style::palette &palette) {
 	ApplyHoverPalette(palette);
 }
 
+void ApplyDefaultServicePalette(style::palette &palette) {
+	const auto dark = Ui::IsDarkPalette(palette);
+	palette.setColor(qstr("msgServiceFg"),
+		dark ? QColor(166, 171, 179) : QColor(98, 104, 115));
+	palette.setColor(qstr("msgServiceBg"),
+		dark ? QColor(255, 255, 255, 18) : QColor(0, 0, 0, 10));
+	palette.setColor(qstr("msgServiceBgSelected"),
+		dark ? QColor(255, 255, 255, 41) : QColor(0, 0, 0, 26));
+}
+
 std::vector<EmbeddedScheme> EmbeddedThemes() {
 	const auto qColor = [](auto hex) {
 		return style::ColorFromHex(hex);
@@ -581,6 +593,7 @@ std::unique_ptr<style::palette> PrepareEmbeddedPalette(
 	auto result = std::make_unique<style::palette>();
 	if (i->path.isEmpty()) {
 		result->reset(colorizer);
+		ApplyDefaultServicePalette(*result);
 		return result;
 	}
 	auto instance = Instance();
@@ -597,34 +610,9 @@ std::unique_ptr<style::palette> PrepareEmbeddedPalette(
 }
 
 Ui::ChatThemeBackground PrepareDefaultBackground(bool dark) {
-	if (!dark) {
-		const auto paper = Data::DefaultWallPaper();
-		return Ui::PrepareBackgroundImage({
-			.path = u":/gui/art/background.tgv"_q,
-			.gzipSvg = true,
-			.colors = paper.backgroundColors(),
-			.isPattern = true,
-			.patternOpacity = paper.patternOpacity(),
-			.generateGradient = true,
-			.gradientRotation = paper.gradientRotation(),
-		});
-	}
-	auto instance = Instance();
-	const auto loaded = LoadFromFile(
-		kNightBaseFile.utf16(),
-		&instance,
-		nullptr,
-		nullptr,
-		style::colorizer());
-	Assert(loaded);
-	auto prepared = Ui::PreprocessBackgroundImage(
-		std::move(instance.background));
-	prepared.setDevicePixelRatio(style::DevicePixelRatio());
 	return {
-		.prepared = prepared,
-		.preparedForTiled = Ui::PrepareImageForTiled(prepared),
-		.colorForFill = Ui::CalculateImageMonoColor(prepared),
-		.tile = instance.tiled,
+		.colorForFill = Ui::DefaultChatBackgroundColor(dark),
+		.colors = { Ui::DefaultChatBackgroundColor(dark) },
 	};
 }
 

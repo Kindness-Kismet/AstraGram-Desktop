@@ -311,6 +311,11 @@ CachedBackground::CachedBackground(CacheBackgroundResult &&result)
 ChatTheme::ChatTheme() {
 }
 
+QColor DefaultChatBackgroundColor(bool dark) {
+	const auto value = dark ? 25 : 242;
+	return QColor(value, value, value);
+}
+
 // Runs from background thread.
 ChatTheme::ChatTheme(ChatThemeDescriptor &&descriptor)
 : _key(descriptor.key)

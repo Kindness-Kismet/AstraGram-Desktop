@@ -71,6 +71,9 @@ struct ChatThemeBackgroundData {
 	int gradientRotation = 0;
 };
 
+// 默认对话区保持中性灰，与会话列表保留明暗层次。
+[[nodiscard]] QColor DefaultChatBackgroundColor(bool dark);
+
 struct ChatThemeBubblesData {
 	std::vector<QColor> colors;
 	std::optional<QColor> accent;
