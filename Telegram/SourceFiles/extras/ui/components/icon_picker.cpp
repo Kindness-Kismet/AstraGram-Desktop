@@ -45,8 +45,8 @@ void IconPicker::drawIcon(
 	{
 		const auto padding = st::iconPickerSelectedPadding;
 		p.save();
-		p.setPen(QPen(st::boxDividerBg, 0));
-		p.setBrush(QBrush(st::boxDividerBg));
+		p.setPen(QPen(st::windowBgActive, style::ConvertScale(2)));
+		p.setBrush(Qt::NoBrush);
 		p.setOpacity(strokeOpacity);
 		p.drawRoundedRect(
 			rect.adjusted(-padding, -padding, padding, padding),
@@ -88,6 +88,7 @@ void IconPicker::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
 	const auto &icons = ExtrasAssets::appIcons();
+	const auto selected = ExtrasSettings::getInstance().appIcon();
 	for (auto index = 0; index < int(icons.size()); ++index) {
 		const auto &iconName = icons[index];
 		if (iconName.isEmpty()) {
@@ -102,7 +103,7 @@ void IconPicker::paintEvent(QPaintEvent *e) {
 		auto opacity = 0.0f;
 		if (iconName == _wasSelected) {
 			opacity = 1.0f - _animation.value(1.0f);
-		} else if (iconName == ExtrasAssets::currentAppLogoName()) {
+		} else if (iconName == selected) {
 			opacity = _wasSelected.isEmpty() ? 1.0f : _animation.value(1.0f);
 		}
 
