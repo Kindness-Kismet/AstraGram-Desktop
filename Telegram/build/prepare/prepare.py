@@ -4,6 +4,7 @@ executePath = os.getcwd()
 sys.dont_write_bytecode = True
 scriptPath = os.path.dirname(os.path.realpath(__file__))
 libjxlPatch = os.path.join(scriptPath, 'patches', 'libjxl-macos-universal.patch')
+qtMacPacPatch = os.path.join(scriptPath, 'patches', 'qt-macos-pac-cleanup.patch')
 sys.path.append(scriptPath + '/..')
 import qt_version
 import build_mac
@@ -1686,6 +1687,8 @@ mac:
         find "$PWD/../patches/qt6_highsierra" -maxdepth 1 -name "*.patch" -print0 | sort -z | xargs -0 git -C qtbase apply -v
     fi
     find $PWD/../patches/qtbase_$QT -type f -print0 | sort -z | xargs -0 git -C qtbase apply -v
+depends:""" + qtMacPacPatch + """
+    git -C qtbase apply """ + '"' + qtMacPacPatch + '"' + """
     sed -i.bak 's/tqtc-//' {qtimageformats,qtsvg}/dependencies.yaml
 
     CONFIGURATIONS=-debug

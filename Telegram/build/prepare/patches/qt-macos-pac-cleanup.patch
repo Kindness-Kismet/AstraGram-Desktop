@@ -1,0 +1,11 @@
+diff --git a/src/network/kernel/qnetworkproxy_darwin.cpp b/src/network/kernel/qnetworkproxy_darwin.cpp
+--- a/src/network/kernel/qnetworkproxy_darwin.cpp
++++ b/src/network/kernel/qnetworkproxy_darwin.cpp
+@@ -271,6 +271,7 @@
+             CFRunLoopAddSource(CFRunLoopGetCurrent(), pacRunLoopSource, pacRunLoopMode);
+             while (!pacInfo.done)
+                 CFRunLoopRunInMode(pacRunLoopMode, 1000, /*returnAfterSourceHandled*/ true);
++            CFRunLoopSourceInvalidate(pacRunLoopSource);
+
+             if (!pacInfo.proxies) {
+                 QString pacLocation = QString::fromCFString(cfPacLocation);
