@@ -374,6 +374,8 @@ private:
 	void refreshBackdrop();
 	[[nodiscard]] bool inWindowShown() const;
 	[[nodiscard]] bool lightboxStyle() const;
+	// 按下点在顶部栏时交给系统拖动宿主窗口，返回是否已接管。
+	bool startHostMove();
 	// 窗口内为 0，全屏为 1，展开和收回时取中间值。
 	[[nodiscard]] float64 fullScreenProgress() const;
 	[[nodiscard]] float64 backdropOpacity() const;
@@ -926,7 +928,6 @@ private:
 	bool _touchRightButton = false;
 	base::Timer _touchTimer;
 	QPoint _touchStart;
-	base::Timer _closeByClickTimer;
 
 	QString _saveMsgFilename;
 	QRect _saveMsg;

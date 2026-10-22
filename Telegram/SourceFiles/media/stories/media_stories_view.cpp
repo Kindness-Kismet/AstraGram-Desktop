@@ -52,10 +52,6 @@ ContentLayout View::contentLayout() const {
 	return _controller->contentLayout();
 }
 
-bool View::closeByClickAt(QPoint position) const {
-	return _controller->closeByClickAt(position);
-}
-
 void View::updatePlayback(const Player::TrackState &state) {
 	_controller->updateVideoPlayback(state);
 }

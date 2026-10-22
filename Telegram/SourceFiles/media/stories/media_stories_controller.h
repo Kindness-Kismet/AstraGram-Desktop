@@ -136,7 +136,6 @@ public:
 	[[nodiscard]] Layout layout() const;
 	[[nodiscard]] rpl::producer<Layout> layoutValue() const;
 	[[nodiscard]] ContentLayout contentLayout() const;
-	[[nodiscard]] bool closeByClickAt(QPoint position) const;
 	[[nodiscard]] Data::FileOrigin fileOrigin() const;
 	[[nodiscard]] TextWithEntities captionText() const;
 	[[nodiscard]] bool videoStream() const;

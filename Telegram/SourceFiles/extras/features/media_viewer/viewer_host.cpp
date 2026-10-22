@@ -27,6 +27,15 @@
 namespace ExtrasFeatures::MediaViewer {
 namespace {
 
+void startWindowMove(QWidget *window) {
+	if (!window) {
+		return;
+	}
+	if (const auto handle = window->windowHandle()) {
+		handle->startSystemMove();
+	}
+}
+
 // 先缩小再模糊，等效于大半径模糊，放大回原尺寸时顺带柔化。
 constexpr auto kBackdropDownscale = 8;
 constexpr auto kBackdropBlurRadius = 3;
@@ -278,6 +287,10 @@ void ViewerHost::minimizeHost() const {
 	}
 }
 
+void ViewerHost::startMove() const {
+	startWindowMove(_host);
+}
+
 EmbeddedViewerHost::EmbeddedViewerHost(
 		not_null<QWidget*> viewer,
 		not_null<Ui::RpWidget*> host,
@@ -376,6 +389,10 @@ void EmbeddedViewerHost::minimizeHost() const {
 		const auto window = _host->window();
 		window->setWindowState(window->windowState() | Qt::WindowMinimized);
 	}
+}
+
+void EmbeddedViewerHost::startMove() const {
+	startWindowMove(_window);
 }
 
 void EmbeddedViewerHost::restoreFocus() const {

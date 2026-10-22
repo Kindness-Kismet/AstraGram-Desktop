@@ -53,6 +53,8 @@ public:
 	[[nodiscard]] bool nativeBackdrop() const;
 	[[nodiscard]] bool hosts(not_null<QWidget*> window) const;
 	void minimizeHost() const;
+	// 须在鼠标左键按住时调用，由系统接管拖动宿主窗口。
+	void startMove() const;
 
 private:
 	void updateCorners();
@@ -84,6 +86,8 @@ public:
 	[[nodiscard]] QImage grabBackdrop() const;
 	void activate() const;
 	void minimizeHost() const;
+	// 须在鼠标左键按住时调用，由系统接管拖动文章窗口。
+	void startMove() const;
 	void restoreFocus() const;
 	void setContentScreenshotProtected(bool protectedContent) const;
 
