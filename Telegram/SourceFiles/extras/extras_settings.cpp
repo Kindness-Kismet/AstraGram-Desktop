@@ -730,6 +730,12 @@ void ExtrasSettings::setShowDownloadsButtonInHeader(bool val) {
 	save();
 }
 
+void ExtrasSettings::setSkippedUpdateVersion(uint64 val) {
+	if (_skippedUpdateVersion.current() == val) return;
+	_skippedUpdateVersion = val;
+	save();
+}
+
 void ExtrasSettings::setShowCommunityChannelInvite(bool val) {
 	if (_showCommunityChannelInvite.current() == val) return;
 	_showCommunityChannelInvite = val;
@@ -1460,6 +1466,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"hidePremiumStatuses", s._hidePremiumStatuses.current()},
 		{"hideProxySettingsIcon", s._hideProxySettingsIcon.current()},
 		{"showDownloadsButtonInHeader", s._showDownloadsButtonInHeader.current()},
+		{"skippedUpdateVersion", s._skippedUpdateVersion.current()},
 		{"showCommunityChannelInvite", s._showCommunityChannelInvite.current()},
 		{"showOnlyAddedEmojisAndStickers", s._showOnlyAddedEmojisAndStickers.current()},
 		{"collapseSimilarChannels", s._collapseSimilarChannels.current()},
@@ -1618,6 +1625,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._showDownloadsButtonInHeader = j.contains("showDownloadsButtonInHeader")
 		? j.value("showDownloadsButtonInHeader", defaults._showDownloadsButtonInHeader.current())
 		: j.value("showDownloadsButtonInSearch", defaults._showDownloadsButtonInHeader.current());
+	s._skippedUpdateVersion = j.value("skippedUpdateVersion", defaults._skippedUpdateVersion.current());
 	s._showCommunityChannelInvite = j.value("showCommunityChannelInvite", defaults._showCommunityChannelInvite.current());
 	s._showOnlyAddedEmojisAndStickers = j.value("showOnlyAddedEmojisAndStickers", defaults._showOnlyAddedEmojisAndStickers.current());
 	s._collapseSimilarChannels = j.value("collapseSimilarChannels", defaults._collapseSimilarChannels.current());

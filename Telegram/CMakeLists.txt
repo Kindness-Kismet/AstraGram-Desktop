@@ -232,6 +232,8 @@ set(extras_files
         extras/ui/settings/filters/per_dialog_filter.h
         extras/ui/settings/filters/edit_filter.cpp
         extras/ui/settings/filters/edit_filter.h
+        extras/ui/controls/download_header_button.cpp
+        extras/ui/controls/download_header_button.h
         extras/ui/controls/attach_menu.cpp
         extras/ui/controls/attach_menu.h
         extras/ui/controls/proxy_type_field.cpp
@@ -258,6 +260,8 @@ set(extras_files
         extras/ui/boxes/font_selector.h
         extras/ui/boxes/import_filters_box.cpp
         extras/ui/boxes/import_filters_box.h
+        extras/ui/boxes/update_box.cpp
+        extras/ui/boxes/update_box.h
         extras/ui/boxes/theme_selector_box.cpp
         extras/ui/boxes/theme_selector_box.h
         extras/ui/boxes/message_shot_box.cpp

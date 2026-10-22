@@ -2316,6 +2316,18 @@ void UpdateApplication() {
 	}
 }
 
+uint64 ReadyUpdateVersion() {
+	auto file = QFile(cWorkingDir() + u"tupdates/temp/tdata/version"_q);
+	auto version = VersionInt();
+	if (!file.open(QIODevice::ReadOnly)
+		|| file.read((char*)&version, sizeof(VersionInt)) != sizeof(VersionInt)
+		|| !version
+		|| version == VersionInt(kVersionFileCanaryMarker)) {
+		return 0;
+	}
+	return uint64(version);
+}
+
 QString countAlphaVersionSignature(uint64 version) { // duplicated in packer.cpp
 	if (cAlphaPrivateKey().isEmpty()) {
 		LOG(("Error: Trying to count alpha version signature without alpha private key!"));

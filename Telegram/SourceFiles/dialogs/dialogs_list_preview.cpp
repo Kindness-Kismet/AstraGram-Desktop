@@ -12,13 +12,13 @@
 #include "dialogs/ui/chat_search_in.h"
 #include "extras/debug/commands/commands_internal.h"
 #include "extras/debug/debug_login.h"
+#include "extras/ui/controls/download_header_button.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/view/history_view_contact_status.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
 #include "ui/chat/more_chats_bar.h"
-#include "ui/controls/download_bar.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/elastic_scroll.h"
 #include "window/window_session_controller.h"
@@ -80,7 +80,7 @@ void Widget::setListPreview(Preview preview) {
 	controller()->closeCommunity();
 	cancelSearch({ .forceFullCancel = true });
 	clearListPreviewSuggestion();
-	_downloadBar = nullptr;
+	_downloadsButton->setLoading(_downloadsLoading, false);
 	_moreChatsBar = nullptr;
 	refreshLoadMoreButton(false, false);
 	const auto forumPeer = ExtrasDebug::Commands::simulationPeer(&session(), u"topic"_q);
@@ -117,19 +117,12 @@ void Widget::setListPreview(Preview preview) {
 		_moreChatsBar->show();
 		_moreChatsBar->finishAnimating();
 	}
-	if (listPreviewIs(Preview::Download) || preview == Preview::DownloadDone) {
-		const auto done = (preview == Preview::DownloadDone);
-		_downloadBar = std::make_unique<Ui::DownloadBar>(
-			this, rpl::single(Ui::DownloadBarProgress{
-				.ready = done ? 10000000 : 4500000, .total = 10000000,
-			}));
-		_downloadBar->show({
-			.singleName = { u"本地预览.zip"_q }, .count = 1, .done = done ? 1 : 0,
-		});
-		_downloadBar->clicks() | rpl::on_next(action, _downloadBar->lifetime());
-		_downloadBar->heightValue() | rpl::on_next([=] {
-			updateControlsGeometry();
-		}, _downloadBar->lifetime());
+	if (listPreviewIs(Preview::Download)) {
+		_downloadsButton->setLoading(3, false);
+	} else if (preview == Preview::DownloadDone) {
+		// 先进入下载状态，再归零触发完成提示。
+		_downloadsButton->setLoading(1, false);
+		_downloadsButton->setLoading(0, true);
 	}
 	if (preview == Preview::LoadMore || preview == Preview::Loading) {
 		refreshLoadMoreButton(true, preview == Preview::LoadMore);

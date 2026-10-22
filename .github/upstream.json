@@ -34,7 +34,10 @@
     "Telegram/SourceFiles/ui/controls/subsection_tabs_slider.cpp": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。",
     "Telegram/SourceFiles/ui/controls/subsection_tabs_slider.h": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。",
     "Telegram/SourceFiles/ui/controls/subsection_tabs_slider_reorder.cpp": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。",
-    "Telegram/SourceFiles/ui/controls/subsection_tabs_slider_reorder.h": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。"
+    "Telegram/SourceFiles/ui/controls/subsection_tabs_slider_reorder.h": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。",
+    "Telegram/Resources/icons/fast_to_original.svg": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。",
+    "Telegram/SourceFiles/ui/controls/download_bar.cpp": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。",
+    "Telegram/SourceFiles/ui/controls/download_bar.h": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。"
   },
   "svgReplaced": {
     "Telegram/Resources/icons/**/*.png": "本地已改用同名 svg 图标，样式生成器只读 svg；官方重绘了图形时按需对照更新 svg。"

@@ -585,24 +585,6 @@ dialogsUnreadReactionMuted: ThreeStateIcon {
 }
 
 
-downloadBarHeight: 46px;
-downloadArrow: icon{{ "fast_to_original", menuIconFg }};
-downloadArrowOver: icon{{ "fast_to_original", menuIconFgOver }};
-downloadArrowRight: 10px;
-downloadTitleLeft: 57px;
-downloadTitleTop: 4px;
-downloadInfoStyle: TextStyle(defaultTextStyle) {
-	font: font(12px);
-}
-downloadInfoLeft: 57px;
-downloadInfoTop: 23px;
-downloadLoadingLeft: 15px;
-downloadLoadingSize: 24px;
-downloadLoadingLine: 2px;
-downloadIconDocument: icon {{ "dialogs/dialogs_downloads", windowFgActive }};
-downloadIconSize: 16px;
-downloadIconSizeDone: 20px;
-
 forumTopicRow: DialogRow(defaultDialogRow) {
 	height: 54px;
 	padding: margins(8px, 7px, 10px, 7px);

@@ -14,6 +14,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/features/music_player/music_player_floating.h"
 
 #include "extras/features/window_material/window_material.h"
+#include "extras/ui/boxes/update_box.h"
+#include "extras/ui/controls/download_header_button.h"
 #include "base/call_delayed.h"
 #include "base/qt/qt_key_modifiers.h"
 #include "base/options.h"
@@ -40,6 +42,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/choose_filter_box.h"
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/buttons.h"
+#include "ui/layers/generic_box.h"
 #include "ui/widgets/chat_filters_tabs_strip.h"
 #include "ui/widgets/elastic_scroll.h"
 #include "ui/widgets/fields/input_field.h"
@@ -53,7 +56,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/requests_bar.h"
 #include "ui/chat/group_call_bar.h"
 #include "ui/chat/more_chats_bar.h"
-#include "ui/controls/download_bar.h"
 #include "ui/controls/jump_down_button.h"
 #include "ui/controls/swipe_handler.h"
 #include "ui/painter.h"
@@ -73,6 +75,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/application.h"
 #include "core/ui_integration.h"
 #include "core/update_checker.h"
+#include "core/version.h"
 #include "core/shortcuts.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
@@ -240,58 +243,6 @@ public:
 	return false;
 }
 
-[[nodiscard]] QImage UpdateIcon() {
-	const auto iconSize = st::dialogsInstallUpdateIconSize;
-	const auto ratio = style::DevicePixelRatio();
-	auto result = QImage(
-		Size(iconSize) * ratio,
-		QImage::Format_ARGB32_Premultiplied);
-	result.setDevicePixelRatio(ratio);
-	result.fill(Qt::transparent);
-	{
-		auto p = QPainter(&result);
-		auto hq = PainterHighQualityEnabler(p);
-		auto path = QPainterPath();
-
-		const auto fullRect = QRectF(0, 0, iconSize, iconSize);
-		const auto rect = fullRect
-			- Margins(st::dialogsInstallUpdateIconInnerMargin);
-		p.setPen(Qt::NoPen);
-		p.setBrush(Qt::white);
-		p.drawEllipse(fullRect);
-
-		p.setCompositionMode(QPainter::CompositionMode_Clear);
-
-		auto pen = QPen(Qt::black);
-		pen.setWidthF(style::ConvertFloatScale(2.));
-		pen.setCapStyle(Qt::RoundCap);
-		p.setPen(pen);
-
-		using namespace arc;
-		constexpr auto kShift = int(20 * 16);
-		p.drawArc(rect, -kShift, kQuarterLength + kShift);
-		p.drawArc(rect, kHalfLength - kShift, kQuarterLength + kShift);
-
-		const auto side1 = st::dialogsInstallUpdateIconSide1;
-		const auto side2 = st::dialogsInstallUpdateIconSide2;
-		const auto top = rect.y() - side1;
-		const auto bottom = rect::bottom(rect) - side1;
-		const auto centerX = rect::center(rect).x();
-		path.moveTo(centerX, bottom + side1 + side2);
-		path.lineTo(centerX, bottom + side1 - side2);
-		path.lineTo(centerX + side2, bottom + side1);
-		path.closeSubpath();
-
-		path.moveTo(centerX, top + side1 + side2);
-		path.lineTo(centerX, top + side1 - side2);
-		path.lineTo(centerX - side2, top + side1);
-		path.closeSubpath();
-
-		p.fillPath(path, Qt::black);
-	}
-	return result;
-}
-
 class CommunityAddChatNarrowButton final : public Ui::RippleButton {
 public:
 	explicit CommunityAddChatNarrowButton(not_null<QWidget*> parent);
@@ -335,8 +286,7 @@ public:
 		const QString &text,
 		const style::FlatButton &st,
 		const style::icon &icon,
-		const style::icon &iconOver,
-		bool hasTextIcon);
+		const style::icon &iconOver);
 
 	void setText(const QString &text);
 
@@ -352,10 +302,7 @@ private:
 	const style::FlatButton &_st;
 	const style::icon &_icon;
 	const style::icon &_iconOver;
-	const bool _hasTextIcon;
 	std::unique_ptr<Ui::InfiniteRadialAnimation> _loading;
-
-	QImage _textIcon;
 
 };
 
@@ -364,24 +311,14 @@ Widget::BottomButton::BottomButton(
 	const QString &text,
 	const style::FlatButton &st,
 	const style::icon &icon,
-	const style::icon &iconOver,
-	bool hasTextIcon)
+	const style::icon &iconOver)
 : RippleButton(parent, st.ripple)
 , _text(text)
 , _st(st)
 , _icon(icon)
-, _iconOver(iconOver)
-, _hasTextIcon(hasTextIcon) {
+, _iconOver(iconOver) {
 	ExtrasFeatures::WindowMaterial::watchSurface(this);
 	resize(st::columnMinimalWidthLeft, _st.height);
-
-	if (_hasTextIcon) {
-		rpl::single(rpl::empty_value()) | rpl::then(
-			style::PaletteChanged()
-		) | rpl::on_next([this] {
-			_textIcon = UpdateIcon();
-		}, lifetime());
-	}
 }
 
 void Widget::BottomButton::setText(const QString &text) {
@@ -419,28 +356,10 @@ void Widget::BottomButton::paintEvent(QPaintEvent *e) {
 
 	auto r = QRect(0, height() - _st.height, width(), _st.height);
 
-	if (_hasTextIcon) {
-		auto gradient = QLinearGradient(0, 0, width(), 0);
-		gradient.setStops({
-			{ 0., st::groupCallLive1->c },
-			{ 1., st::groupCallLive2->c },
-		});
-		p.fillRect(r, QBrush(std::move(gradient)));
-		if (over) {
-			p.fillRect(
-				r,
-				anim::with_alpha(st::universalRippleAnimation.color->c, .3));
-		}
-
-		if (!isDisabled()) {
-			paintRipple(p, 0, 0, &st::universalRippleAnimation.color->c);
-		}
-	} else {
-		p.fillRect(r, over ? _st.overBgColor->c
-			: ExtrasFeatures::WindowMaterial::surfaceColor(this, _st.bgColor->c));
-		if (!isDisabled()) {
-			paintRipple(p, 0, 0);
-		}
+	p.fillRect(r, over ? _st.overBgColor->c
+		: ExtrasFeatures::WindowMaterial::surfaceColor(this, _st.bgColor->c));
+	if (!isDisabled()) {
+		paintRipple(p, 0, 0);
 	}
 
 	const auto &font = over ? _st.overFont : _st.font;
@@ -450,24 +369,7 @@ void Widget::BottomButton::paintEvent(QPaintEvent *e) {
 
 	if (width() >= st::columnMinimalWidthLeft) {
 		r.setTop(_st.textTop);
-		if (_hasTextIcon) {
-			const auto &icon = _textIcon;
-			const auto iconSize = icon.size() / style::DevicePixelRatio();
-			const auto skip = st::dialogsInstallUpdateIconSkip;
-			const auto textWidth = font->width(_text);
-			const auto rect = QRect(
-				(width() - (iconSize.width() + textWidth + skip)) / 2,
-				r.y(),
-				textWidth,
-				r.height());
-			p.drawText(
-				rect.translated(iconSize.width() + skip, 0),
-				_text,
-				style::al_top);
-			p.drawImage(rect.x(), (height() - iconSize.height()) / 2, icon);
-		} else {
-			p.drawText(r, _text, style::al_top);
-		}
+		p.drawText(r, _text, style::al_top);
 	} else if (isDisabled() && _loading) {
 		_loading->draw(
 			p,
@@ -476,15 +378,7 @@ void Widget::BottomButton::paintEvent(QPaintEvent *e) {
 				(height() - st::dialogsLoadMoreLoading.size.height()) / 2),
 			width());
 	} else {
-		if (_hasTextIcon) {
-			const auto size = _textIcon.size() / style::DevicePixelRatio();
-			p.drawImage(
-				(width() - size.width()) / 2,
-				(height() - size.height()) / 2,
-				_textIcon);
-		} else {
-			(over ? _iconOver : _icon).paintInCenter(p, r);
-		}
+		(over ? _iconOver : _icon).paintInCenter(p, r);
 	}
 }
 
@@ -548,7 +442,7 @@ Widget::Widget(
 		_searchForNarrowLayout.data(),
 		st::menuIconFgOver);
 	for (const auto button : {
-			_downloadsButton.data(),
+			static_cast<Ui::IconButton*>(_downloadsButton.data()),
 			_lockUnlock->entity() }) {
 		ExtrasFeatures::WindowMaterial::watchIconButton(
 			button,
@@ -840,6 +734,7 @@ Widget::Widget(
 	_downloadsButton->setObjectName(u"downloadsButtonInHeader"_q);
 	_downloadsButton->setAccessibleName(tr::lng_downloads_section(tr::now));
 	_downloadsButton->setClickedCallback([=] {
+		Core::App().downloadManager().clearIfFinished();
 		controller->showSection(
 			Info::Downloads::Make(controller->session().user()));
 	});
@@ -851,9 +746,12 @@ Widget::Widget(
 	) | rpl::on_next([=] {
 		updateLockUnlockPosition();
 	}, lifetime());
-	ExtrasSettings::getInstance().showDownloadsButtonInHeaderValue(
+	rpl::merge(
+		ExtrasSettings::getInstance().showDownloadsButtonInHeaderValue(
+		) | rpl::to_empty,
+		_downloadsButton->activeValue() | rpl::skip(1) | rpl::to_empty
 	) | rpl::on_next([=] {
-		updateDownloadsButton();
+		updateHeaderButtons();
 	}, lifetime());
 
 	setupMainMenuToggle();
@@ -970,7 +868,7 @@ Widget::Widget(
 		}, lifetime());
 
 		setupMoreChatsBar();
-		setupDownloadBar();
+		setupDownloadsButton();
 	}
 	setupSwipeBack();
 
@@ -1774,72 +1672,21 @@ void Widget::setupMoreChatsBar() {
 	}, lifetime());
 }
 
-void Widget::setupDownloadBar() {
+void Widget::setupDownloadsButton() {
 	if (_layout == Layout::Child) {
 		return;
 	}
 
-	Data::MakeDownloadBarContent(
-	) | rpl::on_next([=](Ui::DownloadBarContent &&content) {
+	Data::DownloadsCountValue(
+	) | rpl::on_next([=](const Data::DownloadsCount &count) {
+		_downloadsLoading = count.loading;
 #ifdef _DEBUG
 		if (listPreviewIs(ExtrasDebug::DialogsPreview::Download)
 			|| listPreviewIs(ExtrasDebug::DialogsPreview::DownloadDone)) {
 			return;
 		}
 #endif // _DEBUG
-		const auto create = (content.count && !_downloadBar);
-		if (create) {
-			_downloadBar = std::make_unique<Ui::DownloadBar>(
-				this,
-				Data::MakeDownloadBarProgress());
-		}
-		if (_downloadBar) {
-			_downloadBar->show(std::move(content));
-		}
-		if (create) {
-			_downloadBar->heightValue(
-			) | rpl::on_next([=] {
-				updateControlsGeometry();
-			}, _downloadBar->lifetime());
-
-			_downloadBar->shownValue(
-			) | rpl::filter(
-				!rpl::mappers::_1
-			) | rpl::on_next([=] {
-				_downloadBar = nullptr;
-				updateControlsGeometry();
-			}, _downloadBar->lifetime());
-
-			_downloadBar->clicks(
-			) | rpl::on_next([=] {
-				auto &&list = Core::App().downloadManager().loadingList();
-				const auto guard = gsl::finally([] {
-					Core::App().downloadManager().clearIfFinished();
-				});
-				auto first = (HistoryItem*)nullptr;
-				for (const auto id : list) {
-					if (!first) {
-						first = id->object.item;
-					} else {
-						controller()->showSection(
-							Info::Downloads::Make(
-								controller()->session().user()));
-						return;
-					}
-				}
-				if (first && first->isHistoryEntry()) {
-					controller()->showMessage(first);
-				} else if (first) {
-					controller()->showSection(
-						Info::Downloads::Make(
-							controller()->session().user()));
-				}
-			}, _downloadBar->lifetime());
-
-			if (_connecting) {
-				_connecting->raise();
-			}
-		}
+		_downloadsButton->setLoading(count.loading, count.done > 0);
 	}, lifetime());
 }
 
@@ -1903,7 +1750,7 @@ void Widget::setupSupportMode() {
 void Widget::setupMainMenuToggle() {
 	ExtrasSettings::getInstance().customAppNameValue(
 	) | rpl::on_next([=] {
-		updateDownloadsButton();
+		updateHeaderButtons();
 		update(0, 0, width(), listHeaderHeight());
 	}, lifetime());
 	_headingMenu->setObjectName(u"brandMenuButton"_q);
@@ -2165,9 +2012,6 @@ void Widget::updateControlsVisibility(bool fast) {
 		&& _searchHasFocus) {
 		setInnerFocus();
 	}
-	if (_updateTelegram) {
-		_updateTelegram->show();
-	}
 	_searchControls->setVisible(
 		(!_openedFolder || _archiveSearchShown)
 		&& !_openedForum
@@ -2240,38 +2084,49 @@ void Widget::updateLockUnlockPosition() {
 		_searchAdditionalRightMargin = margin;
 		_search->setAdditionalMargins(QMargins(0, 0, margin, 0));
 	}
-	updateDownloadsButton();
+	updateHeaderButtons();
 }
 
-void Widget::updateDownloadsButton() {
+void Widget::updateHeaderButtons() {
 	const auto header = listHeaderHeight();
-	const auto buttonRight = width() - st::dialogsFilterPadding.x();
-	const auto buttonLeft = buttonRight - _downloadsButton->width();
 	const auto titleLeft = st::dialogsHeadingLeft
 		+ (_headingMenu->isHidden()
 			? 0
 			: _headingMenu->width() + st::dialogsFilterSkip);
-	// 按默认标题宽度保留下载入口，过长的自定义名称在绘制时省略。
+	// 按默认标题宽度保留顶部按钮，过长的自定义名称在绘制时省略。
 	const auto titleRight = titleLeft
 		+ std::min(
 			st::dialogsHeadingFont->width(
 				ExtrasSettings::getInstance().appDisplayName()),
 			st::dialogsHeadingFont->width(u"AstraGram"_q));
-	const auto show = ExtrasSettings::getInstance().showDownloadsButtonInHeader()
-		&& (_layout == Layout::Main)
+	const auto allowed = (_layout == Layout::Main)
 		&& header > 0
 		&& !_showAnimation
 		&& !_childList
 		&& !_openedFolder
 		&& !_openedForum
-		&& !_openedCommunity
-		&& buttonLeft >= titleRight + st::dialogsFilterSkip;
-	const auto changed = (_downloadsButton->isHidden() == show);
-	_downloadsButton->setVisible(show);
-	if (show) {
-		_downloadsButton->moveToRight(
-			st::dialogsFilterPadding.x(),
-			(header - _downloadsButton->height()) / 2);
+		&& !_openedCommunity;
+	auto right = width() - st::dialogsFilterPadding.x();
+	auto changed = false;
+	const auto place = [&](not_null<Ui::RpWidget*> button, bool wanted) {
+		const auto left = right - button->width();
+		const auto show = allowed
+			&& wanted
+			&& (left >= titleRight + st::dialogsFilterSkip);
+		changed |= (button->isHidden() == show);
+		button->setVisible(show);
+		if (show) {
+			button->move(left, (header - button->height()) / 2);
+			right = left - st::extrasHeaderUpdateSkip;
+		}
+	};
+	// 下载中即使关闭了顶部入口也临时显示，完成提示结束后按设置收起。
+	place(
+		_downloadsButton.data(),
+		ExtrasSettings::getInstance().showDownloadsButtonInHeader()
+			|| _downloadsButton->active());
+	if (_updateButton) {
+		place(_updateButton.data(), true);
 	}
 	if (changed) {
 		update(0, 0, width(), header);
@@ -3014,19 +2869,44 @@ void Widget::checkUpdateStatus() {
 	}
 
 	using Checker = Core::UpdateChecker;
-	if (preview || (!Core::UpdaterDisabled() && Checker().state() == Checker::State::Ready)) {
-		if (_updateTelegram) {
-			return;
-		}
-		_updateTelegram.create(
-			this,
-			tr::extras_Update(tr::now),
-			st::dialogsUpdateButton,
-			st::dialogsInstallUpdate,
-			st::dialogsInstallUpdateOver,
-			true);
-		_updateTelegram->show();
-		_updateTelegram->setClickedCallback([=] {
+	const auto ready = preview
+		|| (!Core::UpdaterDisabled()
+			&& Checker().state() == Checker::State::Ready);
+	// 版本号读不出时仍提示更新，只是无法按版本忽略。
+	const auto version = !ready
+		? uint64()
+		: preview
+		? uint64(AppUpdateVersion)
+		: Core::ReadyUpdateVersion();
+	const auto skipped = !preview
+		&& version
+		&& (version
+			== ExtrasSettings::getInstance().skippedUpdateVersion());
+	_updateVersion = version;
+	if (!ready || skipped) {
+		_updateButton.destroy();
+		updateHeaderButtons();
+		return;
+	} else if (_updateButton) {
+		return;
+	}
+	_updateButton.create(
+		this,
+		tr::extras_UpdateShort(),
+		st::extrasHeaderUpdateButton);
+	_updateButton->setObjectName(u"updateButtonInHeader"_q);
+	_updateButton->setClickedCallback([=] {
+		showUpdateBox();
+	});
+	_updateButton->hide();
+	updateHeaderButtons();
+}
+
+void Widget::showUpdateBox() {
+	const auto version = _updateVersion;
+	controller()->show(Box(ExtrasUi::UpdateBox, ExtrasUi::UpdateBoxArgs{
+		.version = version,
+		.update = [=] {
 #ifdef _DEBUG
 			if (handleListPreviewAction()) {
 				return;
@@ -3034,17 +2914,12 @@ void Widget::checkUpdateStatus() {
 #endif // _DEBUG
 			Core::checkReadyUpdate();
 			Core::Restart();
-		});
-		if (_connecting) {
-			_connecting->raise();
-		}
-	} else {
-		if (!_updateTelegram) {
-			return;
-		}
-		_updateTelegram.destroy();
-	}
-	updateControlsGeometry();
+		},
+		.skip = [=] {
+			ExtrasSettings::getInstance().setSkippedUpdateVersion(version);
+			checkUpdateStatus();
+		},
+	}));
 }
 
 void Widget::setInnerFocus(bool unfocusSearch) {
@@ -3325,9 +3200,6 @@ void Widget::showAnimated(
 	showFast();
 	auto newContentCache = Ui::GrabWidget(this);
 
-	if (_updateTelegram) {
-		_updateTelegram->hide();
-	}
 	if (_connecting) {
 		_connecting->setForceHidden(true);
 	}
@@ -3357,6 +3229,9 @@ void Widget::startSlideAnimation(
 	_searchControls->hide();
 	_headingMenu->hide();
 	_downloadsButton->hide();
+	if (_updateButton) {
+		_updateButton->hide();
+	}
 	if (_subsectionTopBar) {
 		_subsectionTopBar->hide();
 	}
@@ -3494,8 +3369,7 @@ void Widget::refreshLoadMoreButton(bool mayBlock, bool isBlocked) {
 			tr::lng_channels_your_more(tr::now),
 			st::dialogsLoadMoreButton,
 			st::dialogsLoadMore,
-			st::dialogsLoadMore,
-			false);
+			st::dialogsLoadMore);
 		_loadMoreChats->show();
 		_loadMoreChats->addClickHandler([=] {
 #ifdef _DEBUG
@@ -5141,8 +5015,6 @@ void Widget::updateControlsGeometry() {
 				buttonHeight);
 		}
 	};
-	putBottomButton(_updateTelegram);
-	putBottomButton(_downloadBar);
 	putBottomButton(_loadMoreChats);
 	if (_connecting) {
 		_connecting->setBottomSkip(bottomSkip);
@@ -5409,10 +5281,14 @@ void Widget::paintEvent(QPaintEvent *e) {
 				+ (_headingMenu->isHidden()
 					? 0
 					: _headingMenu->width() + st::dialogsFilterSkip);
-			const auto right = width() - st::dialogsFilterPadding.x()
-				- (_downloadsButton->isHidden()
-					? 0
-					: _downloadsButton->width() + st::dialogsFilterSkip);
+			auto right = width() - st::dialogsFilterPadding.x();
+			for (const auto button : std::initializer_list<QWidget*>{
+					_downloadsButton.data(),
+					_updateButton.data() }) {
+				if (button && !button->isHidden()) {
+					right = std::min(right, button->x() - st::dialogsFilterSkip);
+				}
+			}
 			const auto name = st::dialogsHeadingFont->elided(
 				ExtrasSettings::getInstance().appDisplayName(),
 				std::max(right - left, 0));
@@ -5650,9 +5526,6 @@ bool Widget::cancelSearch(CancelSearchOptions options) {
 Widget::~Widget() {
 	_musicPlayer = nullptr;
 	cancelSearchRequest();
-
-	// Destructor may hide the bar and attempt to double-destroy it.
-	base::take(_downloadBar);
 
 	// Destroying a row of _innerList removes it from the layout, resizing
 	// the layout and firing _scroll position updates into subscriptions

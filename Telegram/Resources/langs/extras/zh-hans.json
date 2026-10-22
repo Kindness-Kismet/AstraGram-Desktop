@@ -1216,5 +1216,18 @@
   "ThemeColorTerm_highlight": "高亮",
   "ThemeColorTerm_hover": "悬停",
   "ThemeColorTerm_pressed": "按下",
-  "ThemeColorTerm_background": "背景"
+  "ThemeColorTerm_background": "背景",
+  "UpdateShort": "更新",
+  "UpdateReadyTitle": "新版本已就绪",
+  "UpdateSkip": "本次忽略",
+  "UpdateNotesLoading": "正在获取更新说明…",
+  "UpdateNotesUnavailable": "没有获取到更新说明。",
+  "UpdateNotesLink": "在 GitHub 查看完整说明",
+  "UpdateNotesAdapted": "适配",
+  "UpdateNotesAdded": "新增",
+  "UpdateNotesImproved": "改善",
+  "UpdateNotesChanged": "调整",
+  "UpdateNotesFixed": "修复",
+  "UpdateNotesRemoved": "移除",
+  "UpdateNotesOther": "其他"
 }

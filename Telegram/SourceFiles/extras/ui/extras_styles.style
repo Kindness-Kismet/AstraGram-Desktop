@@ -1,6 +1,7 @@
 using "ui/basic.style";
 using "ui/colors.palette";
 using "ui/widgets/widgets.style";
+using "ui/layers/layers.style";
 using "info/info.style";
 using "settings/settings.style";
 using "media/player/media_player.style";
@@ -413,3 +414,42 @@ extrasViewerPlayback: ExtrasViewerPlayback {
 // 窗口内查看器淡入、淡出的时长。
 extrasViewerShowDuration: 240;
 extrasViewerHideDuration: 200;
+
+// 会话列表顶部下载按钮：同时下载多个文件时右上角的数量角标。
+extrasDownloadBadgeFont: font(10px semibold);
+extrasDownloadBadgeHeight: 14px;
+extrasDownloadBadgePadding: 4px;
+extrasDownloadBadgeShift: point(4px, -3px);
+
+// 会话列表顶部的更新按钮：浅色胶囊，位于下载按钮左侧。
+extrasHeaderUpdateButton: RoundButton(defaultLightButton) {
+	textFg: lightButtonFg;
+	textFgOver: lightButtonFgOver;
+	textBg: lightButtonBgOver;
+	textBgOver: lightButtonBgRipple;
+	width: -20px;
+	height: 28px;
+	radius: 14px;
+	textTop: 5px;
+	icon: icon {{ "install_update-20x20", lightButtonFg }};
+	iconOver: icon {{ "install_update-20x20", lightButtonFgOver }};
+	iconPosition: point(-1px, 4px);
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: lightButtonBgRipple;
+	}
+}
+extrasHeaderUpdateSkip: 4px;
+
+// 更新对话框：版本行、分类标签和带圆点的条目。
+extrasUpdateVersionLabel: FlatLabel(boxLabel) {
+	textFg: windowSubTextFg;
+}
+extrasUpdateNoteLabel: FlatLabel(boxLabel) {
+	minWidth: 100px;
+}
+extrasUpdateNoteChipFont: font(11px semibold);
+extrasUpdateNoteChipPadding: margins(8px, 2px, 8px, 2px);
+extrasUpdateNoteBullet: 4px;
+extrasUpdateNoteIndent: 14px;
+extrasUpdateNoteGroupSkip: 10px;
+extrasUpdateNoteItemSkip: 4px;

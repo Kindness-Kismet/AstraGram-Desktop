@@ -9985,3 +9985,16 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_ThemeColorTerm_hover" = "hover";
 "extras_ThemeColorTerm_pressed" = "pressed";
 "extras_ThemeColorTerm_background" = "background";
+"extras_UpdateShort" = "Update";
+"extras_UpdateReadyTitle" = "Update ready";
+"extras_UpdateSkip" = "Skip this version";
+"extras_UpdateNotesLoading" = "Loading release notes…";
+"extras_UpdateNotesUnavailable" = "Release notes are unavailable.";
+"extras_UpdateNotesLink" = "View full release notes on GitHub";
+"extras_UpdateNotesAdapted" = "Adapted";
+"extras_UpdateNotesAdded" = "Added";
+"extras_UpdateNotesImproved" = "Improved";
+"extras_UpdateNotesChanged" = "Changed";
+"extras_UpdateNotesFixed" = "Fixed";
+"extras_UpdateNotesRemoved" = "Removed";
+"extras_UpdateNotesOther" = "Other";

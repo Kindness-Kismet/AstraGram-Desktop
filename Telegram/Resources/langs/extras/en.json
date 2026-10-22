@@ -1056,5 +1056,18 @@
   "ThemeColorTerm_highlight": "highlight",
   "ThemeColorTerm_hover": "hover",
   "ThemeColorTerm_pressed": "pressed",
-  "ThemeColorTerm_background": "background"
+  "ThemeColorTerm_background": "background",
+  "UpdateShort": "Update",
+  "UpdateReadyTitle": "Update ready",
+  "UpdateSkip": "Skip this version",
+  "UpdateNotesLoading": "Loading release notes…",
+  "UpdateNotesUnavailable": "Release notes are unavailable.",
+  "UpdateNotesLink": "View full release notes on GitHub",
+  "UpdateNotesAdapted": "Adapted",
+  "UpdateNotesAdded": "Added",
+  "UpdateNotesImproved": "Improved",
+  "UpdateNotesChanged": "Changed",
+  "UpdateNotesFixed": "Fixed",
+  "UpdateNotesRemoved": "Removed",
+  "UpdateNotesOther": "Other"
 }

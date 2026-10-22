@@ -313,6 +313,8 @@ public:
 	[[nodiscard]] bool hidePremiumStatuses() const { return _hidePremiumStatuses.current(); }
 	[[nodiscard]] bool hideProxySettingsIcon() const { return _hideProxySettingsIcon.current(); }
 	[[nodiscard]] bool showDownloadsButtonInHeader() const { return _showDownloadsButtonInHeader.current(); }
+	// 用户选择“本次忽略”的更新版本整数，0 表示没有忽略。
+	[[nodiscard]] uint64 skippedUpdateVersion() const { return _skippedUpdateVersion.current(); }
 	[[nodiscard]] bool showCommunityChannelInvite() const { return _showCommunityChannelInvite.current(); }
 	[[nodiscard]] bool showOnlyAddedEmojisAndStickers() const { return _showOnlyAddedEmojisAndStickers.current(); }
 	[[nodiscard]] bool collapseSimilarChannels() const { return _collapseSimilarChannels.current(); }
@@ -435,6 +437,7 @@ public:
 	void setHidePremiumStatuses(bool val);
 	void setHideProxySettingsIcon(bool val);
 	void setShowDownloadsButtonInHeader(bool val);
+	void setSkippedUpdateVersion(uint64 val);
 	void setShowCommunityChannelInvite(bool val);
 	void setShowOnlyAddedEmojisAndStickers(bool val);
 	void setCollapseSimilarChannels(bool val);
@@ -842,6 +845,7 @@ private:
 	rpl::variable<bool> _hidePremiumStatuses = false;
 	rpl::variable<bool> _hideProxySettingsIcon = false;
 	rpl::variable<bool> _showDownloadsButtonInHeader = true;
+	rpl::variable<uint64> _skippedUpdateVersion = 0;
 	rpl::variable<bool> _showCommunityChannelInvite = true;
 	rpl::variable<QString> _monoFont;
 	rpl::variable<bool> _hideNotificationCounters = false;

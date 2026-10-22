@@ -9,11 +9,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/timer.h"
 
-namespace Ui {
-struct DownloadBarProgress;
-struct DownloadBarContent;
-} // namespace Ui
-
 namespace Main {
 class Session;
 } // namespace Main
@@ -231,9 +226,16 @@ private:
 
 };
 
-[[nodiscard]] auto MakeDownloadBarProgress()
--> rpl::producer<Ui::DownloadBarProgress>;
+struct DownloadsCount {
+	int loading = 0;
+	int done = 0;
 
-[[nodiscard]] rpl::producer<Ui::DownloadBarContent> MakeDownloadBarContent();
+	friend inline bool operator==(
+		const DownloadsCount &,
+		const DownloadsCount &) = default;
+};
+
+// 下载列表里正在下载与已完成的文件数，列表变化时推送。
+[[nodiscard]] rpl::producer<DownloadsCount> DownloadsCountValue();
 
 } // namespace Data

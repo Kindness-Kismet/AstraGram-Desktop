@@ -29,6 +29,10 @@ namespace Extras::MusicPlayer {
 class FloatingPlayer;
 } // namespace Extras::MusicPlayer
 
+namespace ExtrasUi {
+class DownloadHeaderButton;
+} // namespace ExtrasUi
+
 namespace MTP {
 class Error;
 } // namespace MTP
@@ -58,7 +62,7 @@ class FlatButton;
 class InputField;
 class CrossButton;
 class PlainShadow;
-class DownloadBar;
+class RoundButton;
 class GroupCallBar;
 class RequestsBar;
 class MoreChatsBar;
@@ -235,7 +239,7 @@ private:
 		bool slideLeft,
 		crl::time duration);
 	void startChatsFilterCrossFade(QPixmap wasCache, QPixmap nowCache);
-	void setupDownloadBar();
+	void setupDownloadsButton();
 	void setupShortcuts();
 	void setupStories();
 	void setupSwipeBack();
@@ -284,6 +288,7 @@ private:
 	void showSearchInTopBar(anim::type animated);
 	bool toggleArchiveSearch(bool shown);
 	void checkUpdateStatus();
+	void showUpdateBox();
 	void openBotMainApp(not_null<UserData*> bot);
 	void changeOpenedSubsection(
 		FnMut<void()> change,
@@ -331,7 +336,7 @@ private:
 	void startScrollUpButtonAnimation(bool shown);
 	void updateScrollUpPosition();
 	void updateLockUnlockPosition();
-	void updateDownloadsButton();
+	void updateHeaderButtons();
 	void updateSuggestions(anim::type animated);
 	void processSearchFocusChange();
 	void closeSuggestions();
@@ -373,7 +378,10 @@ private:
 	object_ptr<Ui::CrossButton> _cancelSearch;
 	base::unique_qptr<Ui::PopupMenu> _searchTypeMenu;
 	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _lockUnlock;
-	object_ptr<Ui::IconButton> _downloadsButton;
+	object_ptr<ExtrasUi::DownloadHeaderButton> _downloadsButton;
+	object_ptr<Ui::RoundButton> _updateButton = { nullptr };
+	uint64 _updateVersion = 0;
+	int _downloadsLoading = 0;
 	int _searchAdditionalRightMargin = -1;
 
 	std::unique_ptr<Ui::MoreChatsBar> _moreChatsBar;
@@ -407,9 +415,7 @@ private:
 	std::unique_ptr<Suggestions> _suggestions;
 	std::vector<std::unique_ptr<Suggestions>> _hidingSuggestions;
 	class BottomButton;
-	object_ptr<BottomButton> _updateTelegram = { nullptr };
 	object_ptr<BottomButton> _loadMoreChats = { nullptr };
-	std::unique_ptr<Ui::DownloadBar> _downloadBar;
 	std::unique_ptr<Window::ConnectionState> _connecting;
 	std::unique_ptr<Extras::MusicPlayer::FloatingPlayer> _musicPlayer;
 

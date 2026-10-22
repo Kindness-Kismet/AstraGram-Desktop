@@ -55,6 +55,8 @@ private:
 };
 
 bool checkReadyUpdate();
+// 已下载就绪的更新版本整数，读不到或为测试通道时返回 0。
+[[nodiscard]] uint64 ReadyUpdateVersion();
 void UpdateApplication();
 QString countAlphaVersionSignature(uint64 version);
 
