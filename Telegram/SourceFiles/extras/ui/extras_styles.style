@@ -448,3 +448,8 @@ extrasUpdateNoteItemSkip: 4px;
 
 // 查看器菜单跟随主题，主题图标里缺少受限下载这一项。
 extrasMenuIconDownloadLocked: icon {{ "menu/download_locked", menuIconColor }};
+
+// 设置页侧边栏元素列表：左侧留白里的六点抓手。
+extrasDrawerGripDot: 2px;
+extrasDrawerGripGap: 2px;
+extrasDrawerGripLeft: 3px;

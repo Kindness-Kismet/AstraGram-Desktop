@@ -1,10 +1,12 @@
 #include "extras/ui/components/drawer_menu.h"
 
+#include "base/event_filter.h"
 #include "extras/extras_settings.h"
 #include "ui/abstract_button.h"
 #include "ui/painter.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/wrap/vertical_layout_reorder.h"
+#include "styles/style_extras_styles.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_window.h"
 
@@ -18,6 +20,8 @@
 
 namespace ExtrasUi {
 namespace {
+
+constexpr auto kGripIdleOpacity = 0.6;
 
 QRect opaqueBounds(const QImage &image) {
 	auto bounds = QRect();
@@ -67,6 +71,46 @@ private:
 	qint64 _cacheKey = 0;
 	QRect _bounds;
 };
+
+// 行左侧留白里的六点抓手，提示长按可拖动排序，鼠标悬停时加深。
+void addGrip(not_null<Ui::RpWidget*> row) {
+	const auto grip = Ui::CreateChild<Ui::RpWidget>(row.get());
+	grip->setAttribute(Qt::WA_TransparentForMouseEvents);
+	const auto dot = st::extrasDrawerGripDot;
+	const auto gap = st::extrasDrawerGripGap;
+	grip->resize(2 * dot + gap, 3 * dot + 2 * gap);
+	row->sizeValue() | rpl::on_next([=](QSize size) {
+		grip->moveToLeft(
+			st::extrasDrawerGripLeft,
+			(size.height() - grip->height()) / 2,
+			size.width());
+	}, grip->lifetime());
+	const auto hovered = grip->lifetime().make_state<bool>(false);
+	base::install_event_filter(grip, row, [=](not_null<QEvent*> event) {
+		if (event->type() == QEvent::Enter || event->type() == QEvent::Leave) {
+			*hovered = (event->type() == QEvent::Enter);
+			grip->update();
+		}
+		return base::EventFilterResult::Continue;
+	});
+	grip->paintRequest() | rpl::on_next([=] {
+		auto p = QPainter(grip);
+		auto hq = PainterHighQualityEnabler(p);
+		p.setOpacity(*hovered ? 1. : kGripIdleOpacity);
+		p.setPen(Qt::NoPen);
+		p.setBrush(st::windowSubTextFg);
+		for (auto column = 0; column != 2; ++column) {
+			for (auto line = 0; line != 3; ++line) {
+				p.drawEllipse(
+					column * (dot + gap),
+					line * (dot + gap),
+					dot,
+					dot);
+			}
+		}
+	}, grip->lifetime());
+	grip->show();
+}
 
 class DrawerReorder final : public QObject {
 public:
@@ -267,6 +311,12 @@ void addDrawerIcon(
 		icon->paint(painter, 0, 0, widget->width(), st::windowFg->c);
 	}, widget->lifetime());
 	widget->show();
+}
+
+void addDrawerGrips(not_null<Ui::VerticalLayout*> layout) {
+	for (auto i = 0; i != layout->count(); ++i) {
+		addGrip(layout->widgetAt(i));
+	}
 }
 
 void setupDrawerReorder(not_null<Ui::VerticalLayout*> layout) {
