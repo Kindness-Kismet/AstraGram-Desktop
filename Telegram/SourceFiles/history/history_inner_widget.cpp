@@ -3302,6 +3302,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			_menu->addAction(tr::lng_context_cancel_download(tr::now), [=] {
 				cancelContextDownload(document);
 			}, &st::menuIconCancel);
+			// 封面不依赖视频文件，下载中也保留入口。
+			ExtrasUi::AddVideoCoverAction(_menu, controller, item, document);
 			return;
 		}
 		const auto itemId = item ? item->fullId() : FullMsgId();

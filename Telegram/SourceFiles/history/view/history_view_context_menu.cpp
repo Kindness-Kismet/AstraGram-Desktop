@@ -448,6 +448,8 @@ void AddDocumentActions(
 		menu->addAction(tr::lng_context_cancel_download(tr::now), [=] {
 			document->cancel();
 		}, &st::menuIconCancel);
+		// 封面不依赖视频文件，下载中也保留入口。
+		ExtrasUi::AddVideoCoverAction(menu, list->controller(), item, document);
 		return;
 	}
 	const auto controller = list->controller();
