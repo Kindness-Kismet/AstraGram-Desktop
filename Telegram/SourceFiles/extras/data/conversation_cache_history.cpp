@@ -765,6 +765,9 @@ void ConversationCache::messageReceived(
 		}
 	}
 	if (type == NewMessageType::Unread) {
+		if (message.type() == mtpc_messageService) {
+			serviceMessageReceived(message.c_messageService());
+		}
 		applyMessage(message, true);
 #ifdef _DEBUG
 		traceHistory("new-message", { .key = { peer } });

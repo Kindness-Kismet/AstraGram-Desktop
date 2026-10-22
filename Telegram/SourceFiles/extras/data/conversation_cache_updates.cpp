@@ -2,6 +2,7 @@
 
 #include "data/data_messages.h"
 #include "data/data_message_reaction_id.h"
+#include "data/data_todo_list.h"
 
 namespace Extras {
 namespace {
@@ -123,6 +124,71 @@ MTPMessageReactions mergeReactions(
 		field(data.vrecent_reactions()), field(data.vtop_reactors()));
 }
 
+MTPMessageMedia applyTodoAction(
+		const MTPDmessageMediaToDo &before,
+		const MTPMessageAction &action,
+		const MTPPeer &actor,
+		const MTPint &date) {
+	const auto &todo = before.vtodo().data();
+	auto tasks = todo.vlist();
+	auto completions = field(before.vcompletions());
+	if (action.type() == mtpc_messageActionTodoCompletions) {
+		const auto &update = action.c_messageActionTodoCompletions();
+		const auto erase = [&](int id) {
+			completions.v.erase(ranges::remove_if(completions.v, [=](const MTPTodoCompletion &value) {
+				return value.data().vid().v == id;
+			}), completions.v.end());
+		};
+		for (const auto &id : update.vcompleted().v) {
+			erase(id.v);
+			if (ranges::none_of(tasks.v, [=](const MTPTodoItem &task) {
+				return task.data().vid().v == id.v;
+			})) continue;
+			completions.v.push_back(MTP_todoCompletion(id, actor, date));
+		}
+		for (const auto &id : update.vincompleted().v) erase(id.v);
+	} else {
+		for (const auto &task : action.c_messageActionTodoAppendTasks().vlist().v) {
+			if (tasks.v.size() >= TodoListData::kMaxOptions) break;
+			if (ranges::any_of(tasks.v, [&](const MTPTodoItem &existing) {
+				return existing.data().vid().v == task.data().vid().v;
+			})) continue;
+			tasks.v.push_back(task);
+		}
+	}
+	using Flag = MTPDmessageMediaToDo::Flag;
+	const auto flags = completions.v.isEmpty()
+		? before.vflags().v & ~Flag::f_completions
+		: before.vflags().v | Flag::f_completions;
+	return MTP_messageMediaToDo(MTP_flags(flags),
+		MTP_todoList(todo.vflags(), todo.vtitle(), tasks), completions);
+}
+
+std::optional<MTPMessageMedia> applyPollAnswerAction(
+		const MTPDmessageMediaPoll &before,
+		const MTPMessageAction &action) {
+	const auto &poll = before.vpoll().data();
+	const auto append = action.type() == mtpc_messageActionPollAppendAnswer;
+	const auto answer = append
+		? action.c_messageActionPollAppendAnswer().vanswer()
+		: action.c_messageActionPollDeleteAnswer().vanswer();
+	if (answer.type() != mtpc_pollAnswer) return std::nullopt;
+	const auto option = answer.c_pollAnswer().voption().v;
+	auto answers = poll.vanswers();
+	const auto existing = ranges::find_if(answers.v, [&](const MTPPollAnswer &entry) {
+		return entry.type() == mtpc_pollAnswer && entry.c_pollAnswer().voption().v == option;
+	});
+	if (append) {
+		if (existing == answers.v.end()) answers.v.push_back(answer);
+	} else if (existing != answers.v.end()) {
+		answers.v.erase(existing);
+	}
+	const auto updated = MTP_poll(poll.vid(), poll.vflags(), poll.vquestion(), answers,
+		field(poll.vclose_period()), field(poll.vclose_date()), field(poll.vcountries_iso2()), poll.vhash());
+	return MTP_messageMediaPoll(before.vflags(),
+		updated, before.vresults(), field(before.vattached_media()));
+}
+
 } // namespace
 
 void ConversationCache::updateCachedMessages(
@@ -214,6 +280,39 @@ void ConversationCache::extendedMediaUpdated(
 			invoice.vtitle(), invoice.vdescription(), field(invoice.vphoto()),
 			field(invoice.vreceipt_msg_id()), invoice.vcurrency(), invoice.vtotal_amount(),
 			invoice.vstart_param(), updated), nullptr);
+		return true;
+	});
+}
+
+void ConversationCache::serviceMessageReceived(const MTPDmessageService &service) {
+	const auto reply = service.vreply_to();
+	if (!reply || reply->type() != mtpc_messageReplyHeader) return;
+	const auto target = reply->c_messageReplyHeader().vreply_to_msg_id();
+	if (!target) return;
+	const auto action = service.vaction();
+	const auto type = action.type();
+	if (type != mtpc_messageActionTodoCompletions && type != mtpc_messageActionTodoAppendTasks
+		&& type != mtpc_messageActionPollAppendAnswer && type != mtpc_messageActionPollDeleteAnswer) return;
+	const auto id = target->v;
+	const auto actor = field(service.vfrom_id(), service.vpeer_id());
+	const auto date = service.vdate();
+	updateCachedMessages(peerFromMTP(service.vpeer_id()), [=](MTPMessage &message) {
+		if (message.type() != mtpc_message || IdFromMessage(message) != MsgId(id)) return false;
+		const auto &data = message.c_message();
+		const auto media = data.vmedia();
+		if (!media) return false;
+		if (media->type() == mtpc_messageMediaToDo) {
+			if (type != mtpc_messageActionTodoCompletions
+				&& type != mtpc_messageActionTodoAppendTasks) return false;
+			message = replaceMessageParts(data,
+				applyTodoAction(media->c_messageMediaToDo(), action, actor, date), nullptr);
+			return true;
+		}
+		if (media->type() != mtpc_messageMediaPoll
+			|| (type != mtpc_messageActionPollAppendAnswer && type != mtpc_messageActionPollDeleteAnswer)) return false;
+		const auto updated = applyPollAnswerAction(media->c_messageMediaPoll(), action);
+		if (!updated) return false;
+		message = replaceMessageParts(data, *updated, nullptr);
 		return true;
 	});
 }

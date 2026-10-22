@@ -192,6 +192,7 @@ private:
 		Fn<void()> cancelled = nullptr);
 	void withIndex(Fn<void()> done);
 	void applyMessage(const MTPMessage &message, bool isNew);
+	void serviceMessageReceived(const MTPDmessageService &message);
 	void updateCachedMessages(
 		PeerId peer,
 		Fn<bool(MTPMessage &)> update);

@@ -11,6 +11,7 @@
 #include "data/data_search_controller.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
+#include "data/data_todo_list.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "main/main_session.h"
@@ -564,6 +565,78 @@ private:
 			record(10, unloaded && paidPass && invoicePass,
 				{ { "itemMissing", unloaded }, { "paidMediaUpdated", paidPass },
 					{ "invoiceUpdated", invoicePass }, { "transactionRequested", false } });
+			serviceUpdates();
+		});
+	}
+
+	void serviceUpdates() {
+		const auto peer = user(8);
+		const auto query = latest(peer);
+		const auto id = _messageBase + 81;
+		const auto text = [](const char *value) {
+			return MTP_textWithEntities(MTP_string(value), MTP_vector<MTPMessageEntity>());
+		};
+		const auto task = [&](int id) { return MTP_todoItem(MTP_int(id), text("Local task")); };
+		const auto answer = [&](const char *option) {
+			return MTP_pollAnswer(MTP_flags(0), text("Local answer"), MTP_bytes(option),
+				MTPMessageMedia(), MTPPeer(), MTPint());
+		};
+		put(query, {
+			simulationMediaMessage(peer, _session->userPeerId(), id, {}, MTP_messageMediaToDo(
+				MTP_flags(0), MTP_todoList(MTP_flags(0), text("Local checklist"),
+					MTP_vector<MTPTodoItem>({ task(1) })), MTP_vector<MTPTodoCompletion>())),
+			simulationMediaMessage(peer, _session->userPeerId(), id + 1, {}, MTP_messageMediaPoll(
+				MTP_flags(0), MTP_poll(MTP_long(id + 1), MTP_flags(0), text("Local poll"),
+					MTP_vector<MTPPollAnswer>({ answer("0") }), MTPint(), MTPint(),
+					MTP_vector<MTPstring>(), MTP_long(0)), MTP_pollResults(MTP_flags(0),
+					MTP_vector<MTPPollAnswerVoters>(), MTPint(), MTP_vector<MTPPeer>(),
+					MTPstring(), MTP_vector<MTPMessageEntity>(), MTPMessageMedia()), MTPMessageMedia())),
+		}, 2);
+		const auto unloaded = !_session->data().message(peer->id, MsgId(id));
+		auto next = id + 2;
+		const auto apply = [&](int target, const MTPMessageAction &action) {
+			using Flag = MTPDmessageService::Flag;
+			const auto message = MTPMessage(MTP_messageService(MTP_flags(Flag::f_from_id | Flag::f_reply_to),
+				MTP_int(next++), peerToMTP(_session->userPeerId()), peerToMTP(peer->id), MTPPeer(),
+				MTP_messageReplyHeader(MTP_flags(MTPDmessageReplyHeader::Flag::f_reply_to_msg_id),
+					MTP_int(target), MTPPeer(), MTPMessageFwdHeader(), MTPMessageMedia(), MTPint(),
+					MTPstring(), MTP_vector<MTPMessageEntity>(), MTPint(), MTPint(), MTPbytes()),
+				MTP_int(1700000000), action, MTPMessageReactions(), MTPint()));
+			_session->data().addNewMessage(message, {}, NewMessageType::Unread);
+		};
+		apply(id, MTP_messageActionTodoAppendTasks(MTP_vector<MTPTodoItem>({ task(2), task(2) })));
+		apply(id, MTP_messageActionTodoCompletions(MTP_vector<MTPint>({ MTP_int(1), MTP_int(2) }),
+			MTP_vector<MTPint>()));
+		apply(id, MTP_messageActionTodoCompletions(MTP_vector<MTPint>(), MTP_vector<MTPint>({ MTP_int(1) })));
+		apply(id + 1, MTP_messageActionPollAppendAnswer(answer("1")));
+		apply(id + 1, MTP_messageActionPollAppendAnswer(answer("1")));
+		apply(id + 1, MTP_messageActionPollDeleteAnswer(answer("0")));
+		auto around = query;
+		around.latest = false;
+		around.allowNearest = false;
+		around.offsetId = MsgId(id + 2);
+		around.addOffset = 0;
+		read(around, [=, this](std::optional<Slice> slice) {
+			auto todoPass = false;
+			auto pollPass = false;
+			if (slice) {
+				for (const auto &message : slice->messages.c_messages_messagesSlice().vmessages().v) {
+					if (message.type() != mtpc_message) continue;
+					const auto &media = *message.c_message().vmedia();
+					if (IdFromMessage(message) == MsgId(id)) {
+						const auto &todo = media.c_messageMediaToDo();
+						const auto completion = todo.vcompletions();
+						todoPass = todo.vtodo().data().vlist().v.size() == 2 && completion
+							&& completion->v.size() == 1 && completion->v.front().data().vid().v == 2
+							&& peerFromMTP(completion->v.front().data().vcompleted_by()) == _session->userPeerId();
+					} else if (IdFromMessage(message) == MsgId(id + 1)) {
+						const auto &answers = media.c_messageMediaPoll().vpoll().data().vanswers().v;
+						pollPass = answers.size() == 1 && answers.front().c_pollAnswer().voption().v == QByteArray("1");
+					}
+				}
+			}
+			record(11, unloaded && todoPass && pollPass,
+				{ { "itemMissing", unloaded }, { "todoUpdated", todoPass }, { "pollAnswersUpdated", pollPass } });
 			finish(_passed);
 		});
 	}
