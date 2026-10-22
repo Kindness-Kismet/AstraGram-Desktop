@@ -21,6 +21,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lottie/lottie_icon.h"
 #include "main/main_session.h"
 #include "media/audio/media_audio.h"
+#include "media/player/media_player_float.h" // Media::Player::RoundPainter.
+#include "ui/effects/voice_once_particles.h"
+#include "ui/paint/blobs.h"
 #include "ui/rect.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_lottie_custom_emoji.h"
