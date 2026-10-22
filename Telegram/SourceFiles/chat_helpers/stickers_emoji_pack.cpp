@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/stickers_emoji_pack.h"
 
 #include "chat_helpers/stickers_emoji_image_loader.h"
+#include "extras/data/sticker_set_cache.h"
 #include "history/view/history_view_element.h"
 #include "history/history_item.h"
 #include "history/history.h"
@@ -100,7 +101,10 @@ QSize LargeEmojiImage::Size() {
 
 EmojiPack::EmojiPack(not_null<Main::Session*> session)
 : _session(session) {
-	refresh();
+	crl::on_main(session, [=] {
+		restoreCachedSets();
+		refresh();
+	});
 
 	session->data().viewRemoved(
 	) | rpl::filter([](not_null<const ViewElement*> view) {
@@ -336,6 +340,11 @@ DocumentId EmojiPack::standardEmojiDocument(EmojiPtr emoji) {
 }
 
 void EmojiPack::refreshStandard() {
+#ifdef _DEBUG
+	if (cDebugOffline()) {
+		return;
+	}
+#endif
 	if (_standardRequestId) {
 		return;
 	}
@@ -345,6 +354,7 @@ void EmojiPack::refreshStandard() {
 	)).done([=](const MTPmessages_StickerSet &result) {
 		_standardRequestId = 0;
 		result.match([&](const MTPDmessages_stickerSet &data) {
+			Extras::cacheEmojiSet(_session, Extras::EmojiSetType::Standard, result);
 			applyStandardSet(data);
 		}, [](const MTPDmessages_stickerSetNotModified &) {
 			LOG(("API Error: Unexpected messages.stickerSetNotModified."));
@@ -367,7 +377,28 @@ void EmojiPack::applyStandardSet(const MTPDmessages_stickerSet &data) {
 	}
 }
 
+void EmojiPack::restoreCachedSets() {
+	for (const auto type : { Extras::EmojiSetType::Animated,
+			Extras::EmojiSetType::Interactions, Extras::EmojiSetType::Standard }) {
+		const auto cached = Extras::cachedEmojiSet(_session, type);
+		if (!cached) {
+			continue;
+		}
+		const auto &data = cached->c_messages_stickerSet();
+		switch (type) {
+		case Extras::EmojiSetType::Animated: applySet(data); break;
+		case Extras::EmojiSetType::Interactions: applyAnimationsSet(data); break;
+		case Extras::EmojiSetType::Standard: applyStandardSet(data); break;
+		}
+	}
+}
+
 void EmojiPack::refresh() {
+#ifdef _DEBUG
+	if (cDebugOffline()) {
+		return;
+	}
+#endif
 	if (_requestId) {
 		return;
 	}
@@ -378,6 +409,7 @@ void EmojiPack::refresh() {
 		_requestId = 0;
 		refreshAnimations();
 		result.match([&](const MTPDmessages_stickerSet &data) {
+			Extras::cacheEmojiSet(_session, Extras::EmojiSetType::Animated, result);
 			applySet(data);
 		}, [](const MTPDmessages_stickerSetNotModified &) {
 			LOG(("API Error: Unexpected messages.stickerSetNotModified."));
@@ -389,6 +421,11 @@ void EmojiPack::refresh() {
 }
 
 void EmojiPack::refreshAnimations() {
+#ifdef _DEBUG
+	if (cDebugOffline()) {
+		return;
+	}
+#endif
 	if (_animationsRequestId) {
 		return;
 	}
@@ -399,6 +436,7 @@ void EmojiPack::refreshAnimations() {
 		_animationsRequestId = 0;
 		refreshDelayed();
 		result.match([&](const MTPDmessages_stickerSet &data) {
+			Extras::cacheEmojiSet(_session, Extras::EmojiSetType::Interactions, result);
 			applyAnimationsSet(data);
 		}, [](const MTPDmessages_stickerSetNotModified &) {
 			LOG(("API Error: Unexpected messages.stickerSetNotModified."));

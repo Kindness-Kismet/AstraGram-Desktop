@@ -3,9 +3,25 @@
 
 #include "extras/data/media_cache_manager.h"
 #include "extras/data/conversation_cache.h"
+#include "extras/data/conversation_cache_serialization.h"
+#include "extras/data/sticker_set_cache.h"
 #include "extras/utils/rc_manager.h"
+#include "chat_helpers/stickers_emoji_pack.h"
+#include "chat_helpers/stickers_dice_pack.h"
+#include "data/data_document.h"
+#include "data/data_document_media.h"
 #include "data/data_peer.h"
+#include "data/data_photo.h"
+#include "data/data_photo_media.h"
+#include "data/data_media_types.h"
+#include "data/data_session.h"
+#include "history/history_item.h"
+#include "history/history.h"
 #include "main/main_session.h"
+#include "ui/emoji_config.h"
+
+#include <QtCore/QCryptographicHash>
+#include <QtCore/QFileInfo>
 
 namespace ExtrasDebug::Commands {
 namespace {
@@ -99,6 +115,97 @@ Result inspectHistory(const QStringList &args) {
 			finishJob(job, true, { { "info", historyInfo(state.info) },
 				{ "tracedPeer", state.tracedPeer.value }, { "events", std::move(events) } });
 		});
+	return jobStarted(job);
+}
+
+Result inspectMedia(const QStringList &args) {
+	if (args.size() != 2) {
+		return Result::Err(u"usage: cache.media-info <peerId> <messageId>"_q);
+	}
+	const auto item = findMessage(args[0], args[1]);
+	if (!item) {
+		return Result::Err(u"message not found"_q);
+	}
+	const auto session = not_null(&item->history()->session());
+	const auto emoji = item->media()
+		? nullptr
+		: Ui::Emoji::Find(item->originalText().text);
+	const auto emojiSticker = emoji
+		? session->emojiStickersPack().stickerForEmoji(emoji).document
+		: nullptr;
+	const auto dice = dynamic_cast<Data::MediaDice*>(item->media());
+	const auto document = dice
+		? session->diceStickersPacks().lookup(dice->emoji(), dice->value())
+		: item->media() ? item->media()->document() : emojiSticker;
+	const auto photo = item->media() ? item->media()->photo() : nullptr;
+	auto result = json{
+		{ "userId", session->userId().bare }, { "peerId", item->history()->peer->id.value },
+		{ "messageId", item->id.bare }, { "emojiAnimationMapped", emojiSticker != nullptr },
+		{ "animatedSetBytes", Extras::cachedEmojiSetBytes(session, Extras::EmojiSetType::Animated) },
+		{ "interactionSetBytes", Extras::cachedEmojiSetBytes(session, Extras::EmojiSetType::Interactions) },
+	};
+	if (!document && !photo) {
+		result["document"] = nullptr;
+		return Result::Ok(Compact(result));
+	}
+	auto keys = std::vector<std::pair<const char*, Storage::Cache::Key>>();
+	if (photo) {
+		const auto view = photo->activeMediaView();
+		result["photo"] = { { "id", photo->id }, { "loaded", view && view->loaded() } };
+		for (const auto &[name, size] : std::array{
+			std::pair{ "small", Data::PhotoSize::Small },
+			std::pair{ "thumbnail", Data::PhotoSize::Thumbnail },
+			std::pair{ "large", Data::PhotoSize::Large } }) {
+			keys.emplace_back(name, photo->location(size).file().cacheKey());
+		}
+	}
+	if (document) {
+		const auto media = document->activeMediaView();
+		const auto sticker = document->sticker();
+		const auto path = document->filepath(true);
+		result["document"] = {
+			{ "id", document->id }, { "size", document->size },
+			{ "mime", document->mimeString().toStdString() },
+			{ "stickerType", sticker ? json(int(sticker->type)) : json(nullptr) },
+			{ "setId", sticker ? sticker->set.id : uint64(0) },
+			{ "saveToCache", document->saveToCache() }, { "loading", document->loading() },
+			{ "loadOffset", document->loadOffset() }, { "failed", document->status == FileDownloadFailed },
+			{ "memoryBytes", media ? media->bytes().size() : 0 },
+			{ "mediaLoaded", media && media->loaded() },
+			{ "thumbnailLoaded", media && media->thumbnail() != nullptr },
+			{ "localFileBytes", path.isEmpty() ? qint64(0) : QFileInfo(path).size() },
+		};
+		keys.emplace_back("file", document->cacheKey());
+		keys.emplace_back("thumbnail", document->thumbnailLocation().file().cacheKey());
+		keys.emplace_back("goodThumbnail", document->goodThumbnailCacheKey());
+	}
+	struct Operation {
+		json result;
+		int remaining = 0;
+	};
+	const auto operation = std::make_shared<Operation>();
+	operation->result = std::move(result);
+	operation->remaining = keys.size();
+	const auto job = beginJob("cache-media-info");
+	session->lifetime().add([job] { finishJob(job, false, "session closed"); });
+	for (const auto &[name, key] : keys) {
+		const auto done = Extras::CacheSerialization::onMain<QByteArray>(session,
+				[job, operation, name](QByteArray bytes) {
+			operation->result["disk"][name] = {
+				{ "bytes", bytes.size() }, { "partial", bytes.startsWith("partial:") },
+				{ "sha256", bytes.isEmpty() ? std::string()
+					: QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex().toStdString() },
+			};
+			if (--operation->remaining == 0) {
+				finishJob(job, true, std::move(operation->result));
+			}
+		});
+		if (key.valid()) {
+			session->data().cache().get(key, done);
+		} else {
+			done({});
+		}
+	}
 	return jobStarted(job);
 }
 
@@ -228,6 +335,7 @@ const HandlerMap &cacheHandlers() {
 	static const auto result = HandlerMap{
 		{ u"cache.trace-history"_q, &traceHistory },
 		{ u"cache.history-info"_q, &inspectHistory },
+		{ u"cache.media-info"_q, &inspectMedia },
 		{ u"cache.badges"_q, &badgeState },
 		{ u"cache.media-stats"_q, &mediaStats },
 		{ u"cache.media-clear"_q, &mediaClear },

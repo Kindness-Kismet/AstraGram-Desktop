@@ -355,6 +355,8 @@ def register_commands(sub) -> None:
     command.add_argument("params", nargs=argparse.REMAINDER, help="会话编号或 off；切换目标会清空旧诊断")
     command = sub.add_parser("cache.history-info", help="查询历史缓存实际连续区间、消息数量和最近诊断事件")
     command.add_argument("params", nargs=argparse.REMAINDER, help="会话编号，可附话题编号和收藏来源编号")
+    command = sub.add_parser("cache.media-info", help="只查询消息媒体内存状态、磁盘缓存字节与动画表情名单")
+    command.add_argument("params", nargs=argparse.REMAINDER, help="会话编号和消息编号")
     sub.add_parser("cache.media-stats", help="查询媒体和消息分类、聊天归属及缓存大小")
     command = sub.add_parser("cache.media-clear", help="清理选定本机缓存；all 只包含媒体，消息需显式选 messages")
     command.add_argument("categories", help="all 或 images,stickers,documents,avatars,other,messages")
@@ -649,7 +651,7 @@ def build_server_command(args: argparse.Namespace) -> str:
         if args.peer is not None:
             parts.append(quote_arg(args.peer))
         return " ".join(parts)
-    if command in ("cache.trace-history", "cache.history-info"):
+    if command in ("cache.trace-history", "cache.history-info", "cache.media-info"):
         return " ".join([command] + [quote_arg(value) for value in args.params])
     if command == "cache.media-retention":
         return " ".join([command, args.type] + ([str(args.days)] if args.days is not None else []))

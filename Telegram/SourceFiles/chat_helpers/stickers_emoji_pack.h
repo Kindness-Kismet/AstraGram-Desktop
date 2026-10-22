@@ -120,6 +120,7 @@ private:
 	};
 
 	void refresh();
+	void restoreCachedSets();
 	void refreshDelayed();
 	void refreshStandard();
 	void applyStandardSet(const MTPDmessages_stickerSet &data);

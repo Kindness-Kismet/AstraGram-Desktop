@@ -376,6 +376,8 @@ set(extras_files
         extras/data/conversation_cache.h
         extras/data/conversation_cache_history.cpp
         extras/data/conversation_cache_serialization.h
+        extras/data/sticker_set_cache.cpp
+        extras/data/sticker_set_cache.h
         extras/data/media_cache_index.cpp
         extras/data/media_cache_index.h
         extras/data/media_cache_manager.cpp
