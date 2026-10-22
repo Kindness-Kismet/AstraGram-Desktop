@@ -25,6 +25,7 @@ struct ParsedTheme;
 void StartEditor(
 	not_null<Window::Controller*> window,
 	const Data::CloudTheme &cloud);
+void ResumeEditor(not_null<Window::Controller*> window);
 void CreateBox(
 	not_null<Ui::GenericBox*> box,
 	not_null<Window::Controller*> window);
@@ -36,12 +37,15 @@ void SaveTheme(
 	not_null<Window::Controller*> window,
 	const Data::CloudTheme &cloud,
 	const QByteArray &palette,
-	Fn<void()> unlock);
+	Fn<bool()> active,
+	Fn<void()> unlock,
+	Fn<void()> done);
 void SaveThemeBox(
 	not_null<Ui::GenericBox*> box,
 	not_null<Window::Controller*> window,
 	const Data::CloudTheme &cloud,
-	const QByteArray &palette);
+	const QByteArray &palette,
+	Fn<void()> done);
 
 [[nodiscard]] bool PaletteChanged(
 	const QByteArray &editorPalette,

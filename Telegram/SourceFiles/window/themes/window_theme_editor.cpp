@@ -9,36 +9,33 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "window/themes/window_theme.h"
 #include "window/themes/window_theme_editor_block.h"
+#include "window/themes/window_theme_editor_details.h"
 #include "window/themes/window_theme_editor_box.h"
-#include "window/themes/window_themes_embedded.h"
 #include "window/window_controller.h"
 #include "main/main_account.h"
-#include "mainwindow.h"
-#include "storage/localstorage.h"
 #include "ui/boxes/confirm_box.h"
-#include "ui/widgets/color_editor.h"
 #include "ui/widgets/scroll_area.h"
-#include "ui/widgets/shadow.h"
 #include "ui/widgets/buttons.h"
-#include "ui/widgets/multi_select.h"
-#include "ui/widgets/dropdown_menu.h"
-#include "ui/toast/toast.h"
+#include "ui/widgets/fields/input_field.h"
+#include "ui/widgets/checkbox.h"
+#include "ui/widgets/labels.h"
+#include "ui/widgets/popup_menu.h"
 #include "ui/style/style_palette_colorizer.h"
 #include "ui/image/image_prepare.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "boxes/abstract_box.h"
 #include "base/parse_helper.h"
-#include "base/zlib_help.h"
 #include "base/call_delayed.h"
 #include "core/file_utilities.h"
 #include "core/application.h"
 #include "lang/lang_keys.h"
 #include "styles/style_window.h"
-#include "styles/style_dialogs.h"
 #include "styles/style_layers.h"
 #include "styles/style_boxes.h"
 #include "styles/style_menu_icons.h"
+
+#include <QtCore/QSaveFile>
 
 namespace Window {
 namespace Theme {
@@ -157,10 +154,62 @@ bool isValidColorValue(QLatin1String value) {
 	return true;
 }
 
+struct PaletteDefinition {
+	QString name;
+	QString value;
+	int statement = 0;
+	int valueStart = 0;
+	int valueSize = 0;
+};
+
+[[nodiscard]] std::optional<std::vector<PaletteDefinition>> parsePaletteDefinitions(
+		const QByteArray &content) {
+	auto result = std::vector<PaletteDefinition>();
+	auto validNames = QSet<QString>();
+	const auto start = content.constData();
+	const auto end = start + content.size();
+	auto data = start;
+	while (data != end) {
+		skipWhitespacesAndComments(data, end);
+		if (data == end) {
+			break;
+		}
+		const auto statement = data;
+		const auto name = base::parse::readName(data, end);
+		skipWhitespacesAndComments(data, end);
+		if (name.size() == 0 || data == end || *data != ':') {
+			return std::nullopt;
+		}
+		++data;
+		skipWhitespacesAndComments(data, end);
+		const auto valueStart = data;
+		const auto value = readValue(data, end);
+		if (value.size() == 0) {
+			return std::nullopt;
+		}
+		skipWhitespacesAndComments(data, end);
+		if (data == end || *data != ';') {
+			return std::nullopt;
+		}
+		++data;
+		if (!isValidColorValue(value) && !validNames.contains(QString(value))) {
+			continue;
+		}
+		validNames.insert(QString(name));
+		result.push_back({
+			.name = QString(name),
+			.value = QString(value),
+			.statement = int(statement - start),
+			.valueStart = int(valueStart - start),
+			.valueSize = value.size(),
+		});
+	}
+	return result;
+}
+
 [[nodiscard]] QByteArray ColorizeInContent(
 		QByteArray content,
 		const style::colorizer &colorizer) {
-	auto validNames = OrderedSet<QLatin1String>();
 	content.detach();
 	auto start = content.constBegin(), data = start, end = data + content.size();
 	while (data != end) {
@@ -199,74 +248,66 @@ QString bytesToUtf8(QLatin1String bytes) {
 	return QString::fromUtf8(bytes.data(), bytes.size());
 }
 
+QByteArray removeColorFromContent(
+		const QByteArray &content,
+		const QByteArray &name) {
+	auto result = QByteArray();
+	const auto start = content.constData();
+	const auto end = start + content.size();
+	auto data = start;
+	auto remaining = start;
+	while (data != end) {
+		skipWhitespacesAndComments(data, end);
+		if (data == end) {
+			break;
+		}
+		const auto statement = data;
+		const auto found = base::parse::readName(data, end);
+		skipWhitespacesAndComments(data, end);
+		if (data == end || *data != ':') {
+			return "error";
+		}
+		++data;
+		skipWhitespacesAndComments(data, end);
+		const auto value = readValue(data, end);
+		if (value.size() == 0) {
+			return "error";
+		}
+		skipWhitespacesAndComments(data, end);
+		if (data == end || *data != ';') {
+			return "error";
+		}
+		++data;
+		if (found == name) {
+			result.append(remaining, statement - remaining);
+			remaining = data;
+		}
+	}
+	result.append(remaining, end - remaining);
+	return result;
+}
+
+QByteArray insertDefinitionsBeforeColor(
+		const QByteArray &content,
+		const QByteArray &name,
+		const QByteArray &definitions) {
+	const auto definitionsInContent = parsePaletteDefinitions(content);
+	if (!definitionsInContent) {
+		return "error";
+	}
+	auto position = content.size();
+	for (const auto &definition : *definitionsInContent) {
+		if (definition.name.toLatin1() == name) {
+			position = definition.statement;
+		}
+	}
+	const auto newline = (content.indexOf("\r\n") >= 0) ? "\r\n" : "\n";
+	const auto prefix = content.left(position);
+	return prefix + (prefix.endsWith('\n') ? "" : newline)
+		+ definitions + content.mid(position);
+}
+
 } // namespace
-
-class Editor::Inner final : public Ui::RpWidget {
-public:
-	Inner(QWidget *parent, const QString &path);
-
-	void setErrorCallback(Fn<void()> callback) {
-		_errorCallback = std::move(callback);
-	}
-	void setFocusCallback(Fn<void()> callback) {
-		_focusCallback = std::move(callback);
-	}
-	void setScrollCallback(Fn<void(int top, int bottom)> callback) {
-		_scrollCallback = std::move(callback);
-	}
-
-	void prepare();
-	[[nodiscard]] QByteArray paletteContent() const {
-		return _paletteContent;
-	}
-
-	void filterRows(const QString &query);
-	void chooseRow();
-
-	void selectSkip(int direction);
-	void selectSkipPage(int delta, int direction);
-
-	void applyNewPalette(const QByteArray &newContent);
-	void recreateRows();
-
-	~Inner() {
-		if (_context.colorEditor.box) {
-			_context.colorEditor.box->closeBox();
-		}
-	}
-
-protected:
-	void paintEvent(QPaintEvent *e) override;
-	int resizeGetHeight(int newWidth) override;
-
-private:
-	bool readData();
-	bool readExistingRows();
-	bool feedExistingRow(const QString &name, QLatin1String value);
-
-	void error() {
-		if (_errorCallback) {
-			_errorCallback();
-		}
-	}
-	void applyEditing(const QString &name, const QString &copyOf, QColor value);
-
-	void sortByAccentDistance();
-
-	EditorBlock::Context _context;
-
-	QString _path;
-	QByteArray _paletteContent;
-	Fn<void()> _errorCallback;
-	Fn<void()> _focusCallback;
-	Fn<void(int top, int bottom)> _scrollCallback;
-
-	object_ptr<EditorBlock> _existingRows;
-	object_ptr<EditorBlock> _newRows;
-
-	bool _applyingUpdate = false;
-
-};
 
 QByteArray ColorHexString(const QColor &color) {
 	auto result = QByteArray();
@@ -296,47 +337,15 @@ QByteArray ReplaceValueInPaletteContent(
 		const QByteArray &content,
 		const QByteArray &name,
 		const QByteArray &value) {
-	auto validNames = OrderedSet<QLatin1String>();
-	auto start = content.constBegin(), data = start, end = data + content.size();
-	auto lastValidValueStart = end, lastValidValueEnd = end;
-	while (data != end) {
-		skipWhitespacesAndComments(data, end);
-		if (data == end) break;
-
-		auto foundName = base::parse::readName(data, end);
-		skipWhitespacesAndComments(data, end);
-		if (data == end || *data != ':') {
-			return "error";
-		}
-		++data;
-		skipWhitespacesAndComments(data, end);
-		auto valueStart = data;
-		auto value = readValue(data, end);
-		auto valueEnd = data;
-		if (value.size() == 0) {
-			return "error";
-		}
-		auto validValue = validNames.contains(value) || isValidColorValue(value);
-		if (validValue) {
-			validNames.insert(foundName);
-			if (foundName == name) {
-				lastValidValueStart = valueStart;
-				lastValidValueEnd = valueEnd;
-			}
-		}
-		skipWhitespacesAndComments(data, end);
-		if (data == end || *data != ';') {
-			return "error";
-		}
-		++data;
+	const auto definitions = parsePaletteDefinitions(content);
+	if (!definitions) {
+		return "error";
 	}
-	if (lastValidValueStart != end) {
-		auto result = QByteArray();
-		result.reserve((lastValidValueStart - start) + value.size() + (end - lastValidValueEnd));
-		result.append(start, lastValidValueStart - start);
-		result.append(value);
-		if (end - lastValidValueEnd > 0) result.append(lastValidValueEnd, end - lastValidValueEnd);
-		return result;
+	for (auto i = definitions->crbegin(); i != definitions->crend(); ++i) {
+		if (i->name.toLatin1() == name) {
+			return content.left(i->valueStart) + value
+				+ content.mid(i->valueStart + i->valueSize);
+		}
 	}
 	auto newline = (content.indexOf("\r\n") >= 0 ? "\r\n" : "\n");
 	auto addedline = (content.endsWith('\n') ? "" : newline);
@@ -393,551 +402,670 @@ QByteArray StripCloudTextFields(const QByteArray &text) {
 	return (start > 0) ? text.mid(start) : text;
 }
 
-Editor::Inner::Inner(QWidget *parent, const QString &path)
-: RpWidget(parent)
-, _path(path)
-, _existingRows(this, EditorBlock::Type::Existing, &_context)
-, _newRows(this, EditorBlock::Type::New, &_context) {
-	resize(st::windowMinWidth, st::windowMinHeight);
-
-	_context.resized.events(
-	) | rpl::on_next([=] {
-		resizeToWidth(width());
-	}, lifetime());
-
-	using Context = EditorBlock::Context;
-	_context.pending.events(
-	) | rpl::on_next([=](const Context::EditionData &data) {
-		applyEditing(data.name, data.copyOf, data.value);
-	}, lifetime());
-
-	_context.updated.events(
-	) | rpl::on_next([=] {
-		if (_context.name.isEmpty() && _focusCallback) {
-			_focusCallback();
-		}
-	}, lifetime());
-
-	_context.scroll.events(
-	) | rpl::on_next([=](const Context::ScrollData &data) {
-		if (_scrollCallback) {
-			auto top = (data.type == EditorBlock::Type::Existing
-				? _existingRows
-				: _newRows)->y();
-			top += data.position;
-			_scrollCallback(top, top + data.height);
-		}
-	}, lifetime());
-
-	Background()->updates(
-	) | rpl::on_next([=](const BackgroundUpdate &update) {
-		if (_applyingUpdate || !Background()->editingTheme()) {
-			return;
-		}
-
-		if (update.type == BackgroundUpdate::Type::TestingTheme) {
-			Revert();
-			base::call_delayed(st::slideDuration, this, [] {
-				Ui::show(Ui::MakeInformBox(
-					tr::lng_theme_editor_cant_change_theme()));
-			});
-		}
-	}, lifetime());
-}
-
-void Editor::Inner::recreateRows() {
-	_existingRows.create(this, EditorBlock::Type::Existing, &_context);
-	_existingRows->show();
-	_newRows.create(this, EditorBlock::Type::New, &_context);
-	_newRows->show();
-	if (!readData()) {
-		error();
-	}
-}
-
-void Editor::Inner::prepare() {
-	QFile f(_path);
-	if (!f.open(QIODevice::ReadOnly)) {
-		LOG(("Theme Error: could not open color palette file '%1'").arg(_path));
-		error();
-		return;
-	}
-
-	_paletteContent = f.readAll();
-	if (f.error() != QFileDevice::NoError) {
-		LOG(("Theme Error: could not read content from palette file '%1'").arg(_path));
-		error();
-		return;
-	}
-	f.close();
-
-	if (!readData()) {
-		error();
-	}
-}
-
-void Editor::Inner::filterRows(const QString &query) {
-	if (query == ":sort-for-accent") {
-		sortByAccentDistance();
-		filterRows(QString());
-		return;
-	}
-	_existingRows->filterRows(query);
-	_newRows->filterRows(query);
-}
-
-void Editor::Inner::chooseRow() {
-	if (!_existingRows->hasSelected() && !_newRows->hasSelected()) {
-		selectSkip(1);
-	}
-	if (_existingRows->hasSelected()) {
-		_existingRows->chooseRow();
-	} else if (_newRows->hasSelected()) {
-		_newRows->chooseRow();
-	}
-}
-
-// Block::selectSkip(-1) removes the selection if it can't select anything
-// Block::selectSkip(1) leaves the selection if it can't select anything
-void Editor::Inner::selectSkip(int direction) {
-	if (direction > 0) {
-		if (_newRows->hasSelected()) {
-			_existingRows->clearSelected();
-			_newRows->selectSkip(direction);
-		} else if (_existingRows->hasSelected()) {
-			if (!_existingRows->selectSkip(direction)) {
-				if (_newRows->selectSkip(direction)) {
-					_existingRows->clearSelected();
-				}
-			}
-		} else {
-			if (!_existingRows->selectSkip(direction)) {
-				_newRows->selectSkip(direction);
-			}
-		}
-	} else {
-		if (_existingRows->hasSelected()) {
-			_newRows->clearSelected();
-			_existingRows->selectSkip(direction);
-		} else if (_newRows->hasSelected()) {
-			if (!_newRows->selectSkip(direction)) {
-				_existingRows->selectSkip(direction);
-			}
-		}
-	}
-}
-
-void Editor::Inner::selectSkipPage(int delta, int direction) {
-	auto defaultRowHeight = st::themeEditorMargin.top()
-		+ st::themeEditorSampleSize.height()
-		+ st::themeEditorDescriptionSkip
-		+ st::defaultTextStyle.font->height
-		+ st::themeEditorMargin.bottom();
-	const auto count = std::max(
-		(delta + defaultRowHeight - 1) / defaultRowHeight,
-		1);
-	for (auto i = 0; i != count; ++i) {
-		selectSkip(direction);
-	}
-}
-
-void Editor::Inner::paintEvent(QPaintEvent *e) {
-	Painter p(this);
-
-	p.setFont(st::boxTitleFont);
-	p.setPen(st::windowFg);
-	if (!_newRows->isHidden()) {
-		p.drawTextLeft(st::themeEditorMargin.left(), _existingRows->y() + _existingRows->height() + st::boxTitlePosition.y(), width(), tr::lng_theme_editor_new_keys(tr::now));
-	}
-}
-
-int Editor::Inner::resizeGetHeight(int newWidth) {
-	auto rowsWidth = newWidth;
-	_existingRows->resizeToWidth(rowsWidth);
-	_newRows->resizeToWidth(rowsWidth);
-
-	_existingRows->moveToLeft(0, 0);
-	_newRows->moveToLeft(0, _existingRows->height() + st::boxTitleHeight);
-
-	auto lowest = (_newRows->isHidden() ? _existingRows : _newRows).data();
-
-	return lowest->y() + lowest->height();
-}
-
-bool Editor::Inner::readData() {
-	if (!readExistingRows()) {
-		return false;
-	}
-
-	const auto rows = style::main_palette::data();
-	for (const auto &row : rows) {
-		auto name = bytesToUtf8(row.name);
-		auto description = bytesToUtf8(row.description);
-		if (!_existingRows->feedDescription(name, description)) {
-			if (row.value.data()[0] == '#') {
-				auto result = readColor(name, row.value.data() + 1, row.value.size() - 1);
-				Assert(!result.error);
-				_newRows->feed(name, result.color);
-				//if (!_newRows->feedFallbackName(name, row.fallback.utf16())) {
-				//	Unexpected("Row for fallback not found");
-				//}
-			} else {
-				auto copyOf = bytesToUtf8(row.value);
-				if (auto result = _existingRows->find(copyOf)) {
-					_newRows->feed(name, *result, copyOf);
-				} else if (!_newRows->feedCopy(name, copyOf)) {
-					Unexpected("Copy of unknown value in the default palette");
-				}
-				Assert(row.fallback.size() == 0);
-			}
-			if (!_newRows->feedDescription(name, description)) {
-				Unexpected("Row for description not found");
-			}
-		}
-	}
-
-	return true;
-}
-
-void Editor::Inner::sortByAccentDistance() {
-	const auto accent = *_existingRows->find("windowBgActive");
-	_existingRows->sortByDistance(accent);
-	_newRows->sortByDistance(accent);
-}
-
-bool Editor::Inner::readExistingRows() {
-	return ReadPaletteValues(_paletteContent, [this](QLatin1String name, QLatin1String value) {
-		return feedExistingRow(name, value);
-	});
-}
-
-bool Editor::Inner::feedExistingRow(const QString &name, QLatin1String value) {
-	auto data = value.data();
-	auto size = value.size();
-	if (data[0] != '#') {
-		return _existingRows->feedCopy(name, QString(value));
-	}
-	auto result = readColor(name, data + 1, size - 1);
-	if (result.error) {
-		LOG(("Theme Warning: Skipping value '%1: %2' (expected a color value in #rrggbb or #rrggbbaa or a previously defined key in the color scheme)").arg(name).arg(value));
-	} else {
-		_existingRows->feed(name, result.color);
-	}
-	return true;
-}
-
-void Editor::Inner::applyEditing(const QString &name, const QString &copyOf, QColor value) {
-	auto plainName = name.toLatin1();
-	auto plainValue = copyOf.isEmpty() ? ColorHexString(value) : copyOf.toLatin1();
-	auto newContent = ReplaceValueInPaletteContent(_paletteContent, plainName, plainValue);
-	if (newContent == "error") {
-		LOG(("Theme Error: could not replace '%1: %2' in content").arg(name, copyOf.isEmpty() ? QString::fromLatin1(ColorHexString(value)) : copyOf));
-		error();
-		return;
-	}
-	applyNewPalette(newContent);
-}
-
-void Editor::Inner::applyNewPalette(const QByteArray &newContent) {
-	QFile f(_path);
-	if (!f.open(QIODevice::WriteOnly)) {
-		LOG(("Theme Error: could not open '%1' for writing a palette update.").arg(_path));
-		error();
-		return;
-	}
-	if (f.write(newContent) != newContent.size()) {
-		LOG(("Theme Error: could not write all content to '%1' while writing a palette update.").arg(_path));
-		error();
-		return;
-	}
-	f.close();
-
-	_applyingUpdate = true;
-	if (!ApplyEditedPalette(newContent)) {
-		LOG(("Theme Error: could not apply newly composed content :("));
-		error();
-		return;
-	}
-	_applyingUpdate = false;
-
-	_paletteContent = newContent;
-}
-
 Editor::Editor(
 	QWidget*,
 	not_null<Window::Controller*> window,
 	const Data::CloudTheme &cloud)
 : _window(window)
 , _cloud(cloud)
-, _scroll(this)
-, _close(this, st::defaultMultiSelect.fieldCancel)
-, _menuToggle(this, st::themesMenuToggle)
-, _select(this, st::defaultMultiSelect, tr::lng_country_ph())
-, _leftShadow(this)
-, _topShadow(this)
-, _save(
-		this,
-		tr::lng_theme_editor_save_button(tr::now),
-		st::dialogsUpdateButton) {
-	const auto path = EditingPalettePath();
+, _search(this, st::defaultInputField, tr::extras_ThemeCreatorSearch())
+, _modified(this, tr::extras_ThemeCreatorModified(tr::now))
+, _category(this, rpl::single(EditorCategoryTitle(EditorCategory::Basic)),
+	st::defaultBoxButton)
+, _caption(this, QString(), st::boxDividerLabel)
+, _listScroll(this, st::boxScroll)
+, _detailsScroll(this, st::boxScroll) {
+	setObjectName(u"theme_creator"_q);
+	setProperty("responsiveBoxWidth", true);
+	_search->setObjectName(u"theme_creator_search"_q);
+	_search->customUpDown(true);
+	_modified->setObjectName(u"theme_creator_modified"_q);
+	_category->setObjectName(u"theme_creator_category"_q);
+	_listScroll->setObjectName(u"theme_creator_list_scroll"_q);
+	_detailsScroll->setObjectName(u"theme_creator_details_scroll"_q);
+	_list = _listScroll->setOwnedWidget(object_ptr<EditorBlock>(this));
+	_details = _detailsScroll->setOwnedWidget(object_ptr<EditorDetails>(this));
+}
 
-	_inner = _scroll->setOwnedWidget(object_ptr<Inner>(this, path));
+void Editor::prepare() {
+	setTitle(tr::extras_ThemeCreatorTitle());
+	setCloseByOutsideClick(false);
+	setCloseByEscape(false);
+	addCloseButton(st::boxTitleClose, [=] { closeWithConfirmation(); });
+	_save = addButton(tr::lng_theme_editor_save_button(), [=] { save(); });
+	_save->setObjectName(u"theme_creator_save"_q);
+	_cancel = addButton(tr::lng_cancel(), [=] { closeWithConfirmation(); });
+	_cancel->setObjectName(u"theme_creator_cancel"_q);
+	_menuButton = addLeftButton(tr::extras_ThemeCreatorMore(), [=] { showMenu(); });
+	_menuButton->setObjectName(u"theme_creator_more"_q);
+	setDimensions(style::ConvertScale(880), style::ConvertScale(624));
 
-	_save->setClickedCallback(base::fn_delayed(
-		st::defaultRippleAnimation.hideDuration,
-		this,
-		[=] { save(); }));
-
-	_inner->setErrorCallback([=] {
-		window->show(Ui::MakeInformBox(tr::lng_theme_editor_error()));
-
-		// This could be from inner->_context observable notification.
-		// We should not destroy it while iterating in subscribers.
-		crl::on_main(this, [=] {
-			closeEditor();
-		});
+	_search->changes() | rpl::on_next([=] { updateFilter(); }, lifetime());
+	_search->submits() | rpl::on_next([=] { _list->chooseRow(); }, lifetime());
+	_modified->checkedChanges() | rpl::on_next([=] { updateFilter(); }, lifetime());
+	_category->setClickedCallback([=] {
+		const auto menu = new Ui::PopupMenu(this);
+		menu->deleteOnHide(true);
+		for (auto index = 0; index != 5; ++index) {
+			const auto category = EditorCategory(index);
+			menu->addAction(EditorCategoryTitle(category), [=] {
+				_currentCategory = category;
+				_category->setText(rpl::single(EditorCategoryTitle(category)));
+				updateFilter();
+			});
+		}
+		menu->popup(_category->mapToGlobal(QPoint(0, _category->height())));
 	});
-	_inner->setFocusCallback([this] {
-		base::call_delayed(2 * st::boxDuration, this, [this] {
-			_select->setInnerFocus();
-		});
-	});
-	_inner->setScrollCallback([this](int top, int bottom) {
-		_scroll->scrollToY(top, bottom);
-	});
-	_menuToggle->setClickedCallback([=] {
-		showMenu();
-	});
-	_close->setClickedCallback([=] {
-		closeWithConfirmation();
-	});
-	_close->show(anim::type::instant);
-
-	_select->resizeToWidth(st::windowMinWidth);
-	_select->setQueryChangedCallback([this](const QString &query) { _inner->filterRows(query); _scroll->scrollToY(0); });
-	_select->setSubmittedCallback([this](Qt::KeyboardModifiers) { _inner->chooseRow(); });
-	_select->heightValue() | rpl::skip(1) | rpl::on_next([=] {
-		updateControlsGeometry();
+	_list->chosen() | rpl::on_next([=](const QString &name) {
+		selectColor(name);
+	}, lifetime());
+	_list->scrollRequests() | rpl::on_next([=](int top) {
+		_listScroll->scrollToY(top, top + EditorBlock::rowHeight());
+	}, lifetime());
+	_listScroll->scrollTopChanges() | rpl::on_next([=] {
+		const auto top = _listScroll->scrollTop();
+		_list->setVisibleTopBottom(top, top + _listScroll->height());
+	}, lifetime());
+	_details->changes() | rpl::on_next([=](const EditorDetails::Change &change) {
+		applyEditing(change.name, change.value);
+	}, lifetime());
+	_details->setCallbacks([=] { showColorList(); }, [=] { restoreSelected(); });
+	boxClosing() | rpl::on_next([=] {
+		// 页面切换或退出只关闭界面，放弃编辑由关闭确认负责。
+		_closing = true;
+	}, lifetime());
+	Background()->updates() | rpl::on_next([=](const BackgroundUpdate &update) {
+		if (_applyingUpdate || !Background()->editingTheme()) {
+			return;
+		}
+		if (update.type == BackgroundUpdate::Type::TestingTheme) {
+			Revert();
+			base::call_delayed(st::slideDuration, this, [=] {
+				getDelegate()->show(Ui::MakeInformBox(tr::lng_theme_editor_cant_change_theme()),
+					Ui::LayerOption::KeepOther);
+			});
+		}
 	}, lifetime());
 
-	_inner->prepare();
-	resizeToWidth(st::windowMinWidth);
+	auto file = QFile(EditingPalettePath());
+	if (!file.open(QIODevice::ReadOnly)) {
+		showError();
+		return;
+	}
+	_paletteContent = file.readAll();
+	if (file.error() != QFileDevice::NoError || !readRows(true)) {
+		showError();
+		return;
+	}
+	_baselineContent = _paletteContent;
+	for (auto &row : _rows) {
+		_baselineValues.insert(row.name, row.value);
+		if (row.existing) {
+			_baselineExisting.insert(row.name);
+		}
+		row.modified = false;
+	}
+	_list->setRows(_rows);
+	if (!_rows.empty()) {
+		_selected = _rows.front().name;
+		_list->setActive(_selected);
+		updateDetails();
+	}
+	updateFilter();
+	updateControlsGeometry();
+}
+
+bool Editor::readRows(bool captureBaseline) {
+	const auto definitions = parsePaletteDefinitions(_paletteContent);
+	if (!definitions) {
+		return false;
+	}
+	auto rows = std::vector<EditorColor>();
+	auto indices = QMap<QString, int>();
+	auto baselineDefinitions = std::vector<BaselineDefinition>();
+	auto baselineIndices = QMap<QString, int>();
+	const auto feed = [&](QString name, QString value, bool existing) {
+		auto color = QColor();
+		if (value.startsWith('#')) {
+			const auto bytes = value.toLatin1();
+			const auto parsed = readColor(name, bytes.constData() + 1, bytes.size() - 1);
+			if (parsed.error) {
+				LOG(("Theme Warning: Skipping invalid palette value '%1: %2'.").arg(name, value));
+				return;
+			}
+			color = parsed.color;
+		} else {
+			const auto source = indices.constFind(value);
+			if (source == indices.cend()) {
+				LOG(("Theme Warning: Skipping undefined palette reference '%1: %2'.").arg(name, value));
+				return;
+			}
+			color = rows[source.value()].color;
+		}
+		if (captureBaseline) {
+			const auto source = value.startsWith('#') ? -1 : baselineIndices.value(value, -1);
+			baselineDefinitions.push_back({ .name = name, .value = value, .source = source });
+			baselineIndices.insert(name, int(baselineDefinitions.size()) - 1);
+		}
+		if (const auto found = indices.constFind(name); found != indices.cend()) {
+			auto &row = rows[found.value()];
+			row.value = value;
+			row.color = color;
+			row.sources = indices.keys();
+			row.sources.removeAll(name);
+			return;
+		}
+		const auto sources = indices.keys();
+		indices.insert(name, int(rows.size()));
+		rows.push_back({
+			.name = name,
+			.title = EditorColorTitle(name),
+			.description = EditorColorDescription(name),
+			.value = value,
+			.color = color,
+			.category = EditorColorCategory(name),
+			.existing = existing,
+			.sources = sources,
+		});
+	};
+	for (const auto &definition : *definitions) {
+		feed(definition.name, definition.value, true);
+	}
+	for (const auto &row : style::main_palette::data()) {
+		const auto name = bytesToUtf8(row.name);
+		if (!indices.contains(name)) {
+			feed(name, QString(row.value), false);
+		}
+	}
+	for (auto &row : rows) {
+		const auto bytes = row.name.toLatin1();
+		const auto index = style::internal::GetPaletteIndex(QLatin1String(bytes));
+		if (index >= 0) {
+			row.color = style::main_palette::get()->colorAtIndex(index)->c;
+		}
+		row.modified = !_baselineContent.isEmpty()
+			&& (!_baselineValues.contains(row.name)
+				|| _baselineValues.value(row.name) != row.value);
+	}
+	_rows = std::move(rows);
+	if (captureBaseline) {
+		_baselineDefinitions = std::move(baselineDefinitions);
+		_baselineIndices = std::move(baselineIndices);
+	}
+	_list->setRows(_rows);
+	_list->setActive(_selected);
+	return true;
+}
+
+QString Editor::selectedName() const {
+	return _selected;
+}
+
+QString Editor::selectedValue() const {
+	const auto i = ranges::find(_rows, _selected, &EditorColor::name);
+	return (i != end(_rows)) ? i->value : QString();
+}
+
+QColor Editor::selectedColor() const {
+	const auto i = ranges::find(_rows, _selected, &EditorColor::name);
+	return (i != end(_rows)) ? i->color : QColor();
+}
+
+bool Editor::appendBaselineSource(
+		int index,
+		QSet<QString> &available,
+		QByteArray &definitions) const {
+	auto chain = std::vector<int>();
+	while (index >= 0 && !available.contains(_baselineDefinitions[index].name)) {
+		chain.push_back(index);
+		index = _baselineDefinitions[index].source;
+	}
+	// 来源指向当时已解析的定义，逆序补写保留原有引用关系。
+	for (auto i = chain.crbegin(); i != chain.crend(); ++i) {
+		const auto &definition = _baselineDefinitions[*i];
+		definitions += definition.name.toLatin1() + ": " + definition.value.toLatin1() + ";\n";
+		available.insert(definition.name);
+	}
+	return !chain.empty() || index >= 0;
+}
+
+int Editor::visibleColorCount() const {
+	return _list->visibleCount();
+}
+
+int Editor::modifiedColorCount() const {
+	return ranges::count_if(_rows, &EditorColor::modified);
+}
+
+bool Editor::showingDetails() const {
+	return _detailsPage && width() < style::ConvertScale(660);
+}
+
+QByteArray Editor::paletteContent() const {
+	return _paletteContent;
+}
+
+void Editor::selectColor(const QString &name) {
+	if (!_details->submitColor()) {
+		return;
+	}
+	const auto i = ranges::find(_rows, name, &EditorColor::name);
+	if (i == end(_rows)) {
+		return;
+	}
+	_selected = name;
+	_detailsPage = true;
+	_list->setActive(name);
+	updateDetails();
+	_detailsScroll->scrollToY(0);
+	updateControlsGeometry();
+	if (showingDetails()) {
+		_details->setInnerFocus();
+	}
+}
+
+void Editor::updateDetails() {
+	const auto i = ranges::find(_rows, _selected, &EditorColor::name);
+	if (i == end(_rows)) {
+		return;
+	}
+	auto sources = std::vector<EditorColor>();
+	// 最后一次有效定义决定可引用的来源，兼容主题文件中的重复定义。
+	for (const auto &source : _rows) {
+		if (source.existing && source.name != i->name
+			&& (!i->existing || i->sources.contains(source.name))) {
+			sources.push_back(source);
+		}
+	}
+	_details->showColor(*i, std::move(sources));
+}
+
+void Editor::updateFilter() {
+	_list->filterRows(_search->getLastText(), _currentCategory, _modified->checked());
+	updateCaption();
+	_listScrollTop = 0;
+	_listScroll->scrollToY(0);
+	updateControlsGeometry();
+}
+
+void Editor::updateCaption() {
+	_caption->setText((_search->getLastText().trimmed().isEmpty()
+		? EditorCategoryTitle(_currentCategory)
+		: tr::extras_ThemeCreatorSearchResults(tr::now))
+		+ u" · "_q + QString::number(visibleColorCount())
+		+ u" "_q + tr::extras_ThemeCreatorColorCount(tr::now));
+}
+
+bool Editor::applyEditing(const QString &name, const QString &value) {
+	const auto row = ranges::find(_rows, name, &EditorColor::name);
+	if (row == end(_rows)) {
+		return false;
+	}
+	if (value.startsWith('#')) {
+		const auto bytes = value.toLatin1();
+		if (readColor(name, bytes.constData() + 1, bytes.size() - 1).error) {
+			return false;
+		}
+	} else {
+		const auto source = ranges::find(_rows, value, &EditorColor::name);
+		if (source == end(_rows) || !source->existing
+			|| name == value
+			|| (row->existing && !row->sources.contains(value))) {
+			return false;
+		}
+	}
+	const auto content = ReplaceValueInPaletteContent(
+		_paletteContent, name.toLatin1(), value.toLatin1());
+	if (content == "error" || !applyNewPalette(content)) {
+		showError();
+		return false;
+	}
+	if (!readRows()) {
+		showError();
+		return false;
+	}
+	updateDetails();
+	updateCaption();
+	updateControlsGeometry();
+	return true;
+}
+
+void Editor::restoreSelected() {
+	const auto row = ranges::find(_rows, _selected, &EditorColor::name);
+	Expects(row != end(_rows));
+	const auto referenced = ranges::any_of(_rows, [&](const EditorColor &other) {
+		return other.existing && other.value == _selected;
+	});
+	if (referenced && !_baselineValues.contains(_selected)) {
+		showError();
+		return;
+	}
+	auto content = QByteArray();
+	if (!_baselineExisting.contains(_selected) && !referenced) {
+		content = removeColorFromContent(_paletteContent, _selected.toLatin1());
+	} else {
+		const auto value = _baselineValues.value(_selected);
+		auto definitions = QByteArray();
+		auto available = QSet<QString>(row->sources.begin(), row->sources.end());
+		if (!row->existing) {
+			for (const auto &other : _rows) {
+				if (other.existing) {
+					available.insert(other.name);
+				}
+			}
+		}
+		// 导入后缺失的来源按初始配色补在目标之前，保留仍被引用的定义。
+		if (!value.startsWith('#')) {
+			const auto baseline = _baselineIndices.value(_selected, -1);
+			if (baseline < 0 || !appendBaselineSource(
+					_baselineDefinitions[baseline].source, available, definitions)) {
+				showError();
+				return;
+			}
+		}
+		content = definitions.isEmpty() ? _paletteContent
+			: insertDefinitionsBeforeColor(_paletteContent,
+				_selected.toLatin1(), definitions);
+		content = ReplaceValueInPaletteContent(content,
+			_selected.toLatin1(), value.toLatin1());
+	}
+	if (content == "error" || !applyNewPalette(content) || !readRows()) {
+		showError();
+		return;
+	}
+	updateDetails();
+	updateCaption();
+	updateControlsGeometry();
+}
+
+bool Editor::applyNewPalette(const QByteArray &content) {
+	auto file = QSaveFile(EditingPalettePath());
+	if (!file.open(QIODevice::WriteOnly) || file.write(content) != content.size()) {
+		LOG(("Theme Error: Could not write edited palette."));
+		return false;
+	}
+	_applyingUpdate = true;
+	const auto applied = ApplyEditedPalette(content);
+	_applyingUpdate = false;
+	if (!applied) {
+		LOG(("Theme Error: Could not apply edited palette."));
+		return false;
+	}
+	if (!file.commit()) {
+		_applyingUpdate = true;
+		ApplyEditedPalette(_paletteContent);
+		_applyingUpdate = false;
+		LOG(("Theme Error: Could not save edited palette."));
+		return false;
+	}
+	_paletteContent = content;
+	return true;
+}
+
+void Editor::showError() {
+	getDelegate()->show(Ui::MakeInformBox(tr::lng_theme_editor_error()),
+		Ui::LayerOption::KeepOther);
 }
 
 void Editor::showMenu() {
-	if (_menu) {
-		return;
-	}
-	_menu = base::make_unique_q<Ui::DropdownMenu>(
-		this,
-		st::dropdownMenuWithIcons);
-	_menu->setHiddenCallback([weak = base::make_weak(this), menu = _menu.get()]{
-		menu->deleteLater();
-		if (weak && weak->_menu == menu) {
-			weak->_menu = nullptr;
-			weak->_menuToggle->setForceRippled(false);
-		}
-	});
-	_menu->setShowStartCallback(crl::guard(this, [this, menu = _menu.get()]{
-		if (_menu == menu) {
-			_menuToggle->setForceRippled(true);
-		}
-	}));
-	_menu->setHideStartCallback(crl::guard(this, [this, menu = _menu.get()]{
-		if (_menu == menu) {
-			_menuToggle->setForceRippled(false);
-		}
-	}));
-
-	_menuToggle->installEventFilter(_menu);
-	_menu->addAction(tr::lng_theme_editor_menu_export(tr::now), [=] {
-		base::call_delayed(st::defaultRippleAnimation.hideDuration, this, [=] {
-			exportTheme();
-		});
-	}, &st::menuIconExportTheme);
-	_menu->addAction(tr::lng_theme_editor_menu_import(tr::now), [=] {
-		base::call_delayed(st::defaultRippleAnimation.hideDuration, this, [=] {
-			importTheme();
-		});
-	}, &st::menuIconImportTheme);
-	_menu->addAction(tr::lng_theme_editor_menu_show(tr::now), [=] {
+	const auto menu = new Ui::PopupMenu(this);
+	menu->deleteOnHide(true);
+	menu->addAction(tr::lng_theme_editor_menu_export(tr::now),
+		[=] { exportTheme(); }, &st::menuIconExportTheme);
+	menu->addAction(tr::lng_theme_editor_menu_import(tr::now),
+		[=] { importTheme(); }, &st::menuIconImportTheme);
+	menu->addAction(tr::lng_theme_editor_menu_show(tr::now), [=] {
 		File::ShowInFolder(EditingPalettePath());
 	}, &st::menuIconPalette);
-	_menu->moveToRight(st::themesMenuPosition.x(), st::themesMenuPosition.y());
-	_menu->showAnimated(Ui::PanelAnimation::Origin::TopRight);
+	menu->popup(_menuButton->mapToGlobal(QPoint(0, -menu->height())));
 }
 
 void Editor::exportTheme() {
-	auto caption = tr::lng_theme_editor_choose_name(tr::now);
-	auto filter = "Themes (*.tdesktop-theme)";
-	auto name = "awesome.tdesktop-theme";
-	FileDialog::GetWritePath(this, caption, filter, name, crl::guard(this, [=](const QString &path) {
-		const auto result = CollectForExport(_inner->paletteContent());
-		QFile f(path);
-		if (!f.open(QIODevice::WriteOnly)) {
-			LOG(("Theme Error: could not open zip-ed theme file '%1' for writing").arg(path));
-			_window->show(Ui::MakeInformBox(tr::lng_theme_editor_error()));
-			return;
-		}
-		if (f.write(result) != result.size()) {
-			LOG(("Theme Error: could not write zip-ed theme to file '%1'").arg(path));
-			_window->show(Ui::MakeInformBox(tr::lng_theme_editor_error()));
-			return;
-		}
-		_window->showToast(tr::lng_theme_editor_done(tr::now));
-	}));
+	if (!_details->submitColor()) {
+		return;
+	}
+	FileDialog::GetWritePath(this,
+		tr::lng_theme_editor_choose_name(tr::now),
+		"Themes (*.tdesktop-theme)", "awesome.tdesktop-theme",
+		crl::guard(this, [=](const QString &path) {
+			if (path.isEmpty()) {
+				return;
+			}
+			const auto result = CollectForExport(_paletteContent);
+			auto file = QFile(path);
+			if (!file.open(QIODevice::WriteOnly) || file.write(result) != result.size()) {
+				LOG(("Theme Error: Could not export theme to '%1'.").arg(path));
+				showError();
+				return;
+			}
+			showToast(tr::lng_theme_editor_done(tr::now));
+		}));
 }
 
 void Editor::importTheme() {
-	auto filters = QStringList(
-		u"Theme files (*.tdesktop-theme *.tdesktop-palette)"_q);
+	auto filters = QStringList(u"Theme files (*.tdesktop-theme *.tdesktop-palette)"_q);
 	filters.push_back(FileDialog::AllFilesFilter());
-	const auto callback = crl::guard(this, [=](
-		const FileDialog::OpenResult &result) {
-		const auto path = result.paths.isEmpty()
-			? QString()
-			: result.paths.front();
-		if (path.isEmpty()) {
-			return;
-		}
-		auto f = QFile(path);
-		if (!f.open(QIODevice::ReadOnly)) {
-			return;
-		}
-		auto object = Object();
-		object.pathAbsolute = QFileInfo(path).absoluteFilePath();
-		object.pathRelative = QDir().relativeFilePath(path);
-		object.content = f.readAll();
-		if (object.content.isEmpty()) {
-			return;
-		}
-		_select->clearQuery();
-		const auto parsed = ParseTheme(object, false, false);
-		_inner->applyNewPalette(parsed.palette);
-		_inner->recreateRows();
-		updateControlsGeometry();
-		auto image = Images::Read({
-			.content = parsed.background,
-			.forceOpaque = true,
-		}).image;
-		if (!image.isNull() && !image.size().isEmpty()) {
-			Background()->set(Data::CustomWallPaper(), std::move(image));
-			Background()->setTile(parsed.tiled);
-			Ui::ForceFullRepaint(_window->widget());
-		}
-	});
-	FileDialog::GetOpenPath(
-		this,
-		tr::lng_theme_editor_menu_import(tr::now),
-		filters.join(u";;"_q),
-		crl::guard(this, callback));
+	FileDialog::GetOpenPath(this, tr::lng_theme_editor_menu_import(tr::now),
+		filters.join(u";;"_q), crl::guard(this, [=](const FileDialog::OpenResult &result) {
+			const auto path = result.paths.isEmpty() ? QString() : result.paths.front();
+			if (!path.isEmpty()) {
+				importThemeFile(path);
+			}
+		}));
+}
+
+bool Editor::importThemeFile(const QString &path) {
+	auto file = QFile(path);
+	if (!file.open(QIODevice::ReadOnly)) {
+		showError();
+		return false;
+	}
+	auto object = Object();
+	object.pathAbsolute = QFileInfo(path).absoluteFilePath();
+	object.pathRelative = QDir().relativeFilePath(path);
+	object.content = file.readAll();
+	const auto parsed = ParseTheme(object, false, false);
+	if (parsed.palette.isEmpty() || !applyNewPalette(parsed.palette) || !readRows()) {
+		showError();
+		return false;
+	}
+	_search->setText(QString());
+	if (ranges::find(_rows, _selected, &EditorColor::name) == end(_rows)) {
+		_selected = _rows.empty() ? QString() : _rows.front().name;
+	}
+	updateDetails();
+	updateFilter();
+	auto image = Images::Read({
+		.content = parsed.background,
+		.forceOpaque = true,
+	}).image;
+	if (!image.isNull()) {
+		Background()->set(Data::CustomWallPaper(), std::move(image));
+		Background()->setTile(parsed.tiled);
+		Ui::ForceFullRepaint(_window->widget());
+	}
+	return true;
 }
 
 QByteArray Editor::ColorizeInContent(
 		QByteArray content,
 		const style::colorizer &colorizer) {
-	return Window::Theme::ColorizeInContent(content, colorizer);
+	return Window::Theme::ColorizeInContent(std::move(content), colorizer);
 }
 
 void Editor::save() {
 	if (Core::App().passcodeLocked()) {
-		_window->showToast(tr::lng_theme_editor_need_unlock(tr::now));
+		showToast(tr::lng_theme_editor_need_unlock(tr::now));
 		return;
-	} else if (!_window->account().sessionExists()) {
-		_window->showToast(tr::lng_theme_editor_need_auth(tr::now));
+	}
+	if (!_window->account().sessionExists()) {
+		showToast(tr::lng_theme_editor_need_auth(tr::now));
 		return;
-	} else if (_saving) {
+	}
+	if (_saving) {
+		return;
+	}
+	if (!_details->submitColor()) {
 		return;
 	}
 	_saving = true;
-	const auto unlock = crl::guard(this, [=] { _saving = false; });
-	SaveTheme(_window, _cloud, _inner->paletteContent(), unlock);
+	const auto weak = QPointer<Editor>(this);
+	SaveTheme(_window, _cloud, _paletteContent,
+		[=] { return weak && !weak->_closing; },
+		crl::guard(this, [=] { _saving = false; }),
+		crl::guard(this, [=] { closeEditor(); }));
 }
 
 void Editor::resizeEvent(QResizeEvent *e) {
+	Ui::BoxContent::resizeEvent(e);
 	updateControlsGeometry();
 }
 
 void Editor::updateControlsGeometry() {
-	_save->resizeToWidth(width());
-	_close->moveToRight(0, 0);
-	_menuToggle->moveToRight(_close->width(), 0);
-
-	_select->resizeToWidth(width());
-	_select->moveToLeft(0, _close->height());
-
-	auto shadowTop = _select->y() + _select->height();
-
-	_topShadow->resize(width() - st::lineWidth, st::lineWidth);
-	_topShadow->moveToLeft(st::lineWidth, shadowTop);
-	_leftShadow->resize(st::lineWidth, height());
-	_leftShadow->moveToLeft(0, 0);
-	auto scrollSize = QSize(width(), height() - shadowTop - _save->height());
-	if (_scroll->size() != scrollSize) {
-		_scroll->resize(scrollSize);
+	const auto margin = st::boxRowPadding.left();
+	const auto narrow = width() < style::ConvertScale(660);
+	const auto detailWidth = narrow ? width() : style::ConvertScale(304);
+	const auto listWidth = narrow ? width() : width() - detailWidth;
+	const auto available = listWidth - margin - st::boxRowPadding.right();
+	const auto detailsPage = narrow && _detailsPage;
+	if (detailsPage && !_listPageHidden) {
+		_listScrollTop = _listScroll->scrollTop();
 	}
-	_inner->resizeToWidth(width());
-	_scroll->moveToLeft(0, shadowTop);
-	if (!_scroll->isHidden()) {
-		auto scrollTop = _scroll->scrollTop();
-		_inner->setVisibleTopBottom(scrollTop, scrollTop + _scroll->height());
+	const auto restoreScroll = !detailsPage && _listPageHidden;
+	_listPageHidden = detailsPage;
+	_search->setVisible(!detailsPage);
+	_modified->setVisible(!detailsPage);
+	_category->setVisible(!detailsPage);
+	_caption->setVisible(!detailsPage);
+	_listScroll->setVisible(!detailsPage);
+	_detailsScroll->setVisible(!narrow || detailsPage);
+	_details->setBackVisible(narrow);
+	auto top = style::ConvertScale(10);
+	const auto modifiedWidth = _modified->naturalWidth();
+	const auto stacked = available < style::ConvertScale(440);
+	_search->resizeToWidth(stacked ? available
+		: available - modifiedWidth - style::ConvertScale(10));
+	_search->moveToLeft(margin, top);
+	_modified->resizeToWidth(modifiedWidth);
+	if (stacked) {
+		top += _search->height() + style::ConvertScale(8);
+		_modified->moveToLeft(margin, top);
+		top += _modified->height() + style::ConvertScale(6);
+	} else {
+		_modified->moveToLeft(listWidth - st::boxRowPadding.right() - modifiedWidth,
+			top + (_search->height() - _modified->height()) / 2);
+		top += _search->height() + style::ConvertScale(10);
 	}
-	_save->moveToLeft(0, _scroll->y() + _scroll->height());
+	_category->moveToLeft(margin, top);
+	_caption->resizeToWidth(available - _category->width() - style::ConvertScale(10));
+	_caption->moveToLeft(margin + _category->width() + style::ConvertScale(10),
+		top + (_category->height() - _caption->height()) / 2);
+	top += _category->height() + style::ConvertScale(8);
+	if (detailsPage) {
+		top = 0;
+	}
+	const auto contentHeight = std::max(height() - top, 0);
+	_listScroll->setGeometry(0, top, listWidth, contentHeight);
+	_list->resizeToWidth(listWidth);
+	const auto detailTop = narrow ? top : 0;
+	_detailsScroll->setGeometry(width() - detailWidth, detailTop,
+		detailWidth, height() - detailTop);
+	_details->resizeToWidth(detailWidth);
+	if (restoreScroll) {
+		_listScroll->scrollToY(_listScrollTop);
+	}
+	const auto scrollTop = _listScroll->scrollTop();
+	_list->setVisibleTopBottom(scrollTop, scrollTop + contentHeight);
+}
+
+void Editor::showColorList() {
+	if (!_details->submitColor()) {
+		return;
+	}
+	_detailsPage = false;
+	updateControlsGeometry();
+	_search->setFocusFast();
+}
+
+void Editor::handleEscape() {
+	if (showingDetails()) {
+		showColorList();
+		return;
+	}
+	if (!_search->getLastText().isEmpty()) {
+		_search->setText(QString());
+		return;
+	}
+	closeWithConfirmation();
 }
 
 void Editor::keyPressEvent(QKeyEvent *e) {
 	if (e->key() == Qt::Key_Escape) {
-		if (!_select->getQuery().isEmpty()) {
-			_select->clearQuery();
-		} else {
-			_window->widget()->setInnerFocus();
-		}
-	} else if (e->key() == Qt::Key_Down) {
-		_inner->selectSkip(1);
-	} else if (e->key() == Qt::Key_Up) {
-		_inner->selectSkip(-1);
-	} else if (e->key() == Qt::Key_PageDown) {
-		_inner->selectSkipPage(_scroll->height(), 1);
-	} else if (e->key() == Qt::Key_PageUp) {
-		_inner->selectSkipPage(_scroll->height(), -1);
+		e->accept();
+		handleEscape();
+		return;
 	}
+	if (!showingDetails()
+		&& (e->key() == Qt::Key_Down || e->key() == Qt::Key_Up)) {
+		e->accept();
+		_list->selectSkip(e->key() == Qt::Key_Down ? 1 : -1);
+		return;
+	}
+	if (!showingDetails()
+		&& (e->key() == Qt::Key_PageDown || e->key() == Qt::Key_PageUp)) {
+		e->accept();
+		const auto direction = e->key() == Qt::Key_PageDown ? 1 : -1;
+		const auto count = std::max(_listScroll->height() / EditorBlock::rowHeight(), 1);
+		for (auto i = 0; i != count; ++i) {
+			_list->selectSkip(direction);
+		}
+		return;
+	}
+	Ui::BoxContent::keyPressEvent(e);
 }
 
-void Editor::focusInEvent(QFocusEvent *e) {
-	_select->setInnerFocus();
+void Editor::setInnerFocus() {
+	if (showingDetails()) {
+		_details->setInnerFocus();
+		return;
+	}
+	_search->setFocusFast();
 }
 
 void Editor::paintEvent(QPaintEvent *e) {
-	Painter p(this);
-
-	p.fillRect(e->rect(), st::dialogsBg);
-
-	p.setFont(st::boxTitleFont);
-	p.setPen(st::windowFg);
-	p.drawTextLeft(st::themeEditorMargin.left(), st::themeEditorMargin.top(), width(), tr::lng_theme_editor_title(tr::now));
+	auto p = Painter(this);
+	p.fillRect(e->rect(), st::boxBg);
+	if (!showingDetails()) {
+		p.fillRect(0, _listScroll->y(), _listScroll->width(),
+			st::lineWidth, st::controlBorder);
+	}
+	if (width() >= style::ConvertScale(660)) {
+		p.fillRect(_detailsScroll->x(), _detailsScroll->y(),
+			st::lineWidth, _detailsScroll->height(), st::controlBorder);
+	}
 }
 
 void Editor::closeWithConfirmation() {
-	if (!PaletteChanged(_inner->paletteContent(), _cloud)) {
+	_details->submitColor();
+	if (!PaletteChanged(_paletteContent, _cloud)) {
 		Background()->clearEditingTheme(ClearEditing::KeepChanges);
 		closeEditor();
 		return;
 	}
-	const auto close = crl::guard(this, [=](Fn<void()> &&close) {
-		Background()->clearEditingTheme(ClearEditing::RevertChanges);
-		closeEditor();
-		close();
-	});
-	_window->show(Ui::MakeConfirmBox({
+	getDelegate()->show(Ui::MakeConfirmBox({
 		.text = tr::lng_theme_editor_sure_close(),
-		.confirmed = close,
+		.confirmed = crl::guard(this, [=](Fn<void()> &&close) {
+			Background()->clearEditingTheme(ClearEditing::RevertChanges);
+			closeEditor();
+			close();
+		}),
 		.confirmText = tr::lng_close(),
-	}));
+	}), Ui::LayerOption::KeepOther);
 }
 
 void Editor::closeEditor() {
-	_window->widget()->showRightColumn(nullptr);
-	Background()->clearEditingTheme();
+	_closing = true;
+	closeBox();
 }
 
 } // namespace Theme

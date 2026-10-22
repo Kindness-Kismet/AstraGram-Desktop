@@ -693,7 +693,32 @@ void StartEditor(
 		Core::App().saveSettingsDelayed();
 	}
 	Background()->setEditingTheme(cloud);
-	window->showRightColumn(Box<Editor>(window, cloud));
+	window->show(Box<Editor>(window, cloud));
+}
+
+void ResumeEditor(not_null<Window::Controller*> window) {
+	auto editing = Background()->editingTheme();
+	if (!editing) {
+		auto file = QFile(EditingPalettePath());
+		if (!file.exists()) {
+			return;
+		}
+		if (!file.open(QIODevice::ReadOnly)) {
+			LOG(("Theme Error: Could not open the editing palette."));
+			window->show(Ui::MakeInformBox(tr::lng_theme_editor_error()));
+			return;
+		}
+		const auto content = file.readAll();
+		if (file.error() != QFileDevice::NoError || !ApplyEditedPalette(content)) {
+			LOG(("Theme Error: Could not restore the editing palette."));
+			window->show(Ui::MakeInformBox(tr::lng_theme_editor_error()));
+			return;
+		}
+		// 默认主题没有已保存的主题文件，也要恢复独立的编辑草稿。
+		editing = ReadCloudFromText(content);
+		Background()->setEditingTheme(*editing);
+	}
+	window->show(Box<Editor>(window, *editing));
 }
 
 void CreateBox(
@@ -755,20 +780,29 @@ void SaveTheme(
 		not_null<Window::Controller*> window,
 		const Data::CloudTheme &cloud,
 		const QByteArray &palette,
-		Fn<void()> unlock) {
+		Fn<bool()> active,
+		Fn<void()> unlock,
+		Fn<void()> done) {
 	Expects(window->account().sessionExists());
 
 	using Data::CloudTheme;
 
 	const auto save = [=](const CloudTheme &fields) {
+		if (!active()) {
+			return;
+		}
 		unlock();
-		window->show(Box(SaveThemeBox, window, fields, palette));
+		window->show(Box(SaveThemeBox, window, fields, palette, done),
+			Ui::LayerOption::KeepOther);
 	};
 	if (cloud.id) {
 		window->account().session().api().request(MTPaccount_GetTheme(
 			MTP_string(Data::CloudThemes::Format()),
 			MTP_inputTheme(MTP_long(cloud.id), MTP_long(cloud.accessHash))
 		)).done([=](const MTPTheme &result) {
+			if (!active()) {
+				return;
+			}
 			result.match([&](const MTPDtheme &data) {
 				save(CloudTheme::Parse(&window->account().session(), data));
 			});
@@ -826,7 +860,8 @@ void SaveThemeBox(
 		not_null<Ui::GenericBox*> box,
 		not_null<Window::Controller*> window,
 		const Data::CloudTheme &cloud,
-		const QByteArray &palette) {
+		const QByteArray &palette,
+		Fn<void()> finished) {
 	Expects(window->account().sessionExists());
 
 	const auto collected = CollectData(palette);
@@ -909,7 +944,7 @@ void SaveThemeBox(
 		}
 		const auto done = crl::guard(box, [=] {
 			box->closeBox();
-			window->showRightColumn(nullptr);
+			finished();
 		});
 		const auto fail = crl::guard(box, [=](
 				SaveErrorType type,

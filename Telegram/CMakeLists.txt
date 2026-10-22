@@ -436,6 +436,7 @@ set(extras_files
         extras/debug/commands/window_commands.cpp
         extras/debug/commands/anim_commands.cpp
         extras/debug/commands/editor_commands.cpp
+        extras/debug/commands/theme_editor_commands.cpp
         extras/debug/commands/iv_commands.cpp
         extras/debug/commands/dialog_commands.cpp
 
@@ -2761,6 +2762,9 @@ PRIVATE
     window/themes/window_theme_editor_block.h
     window/themes/window_theme_editor_box.cpp
     window/themes/window_theme_editor_box.h
+    window/themes/window_theme_editor_colors.cpp
+    window/themes/window_theme_editor_details.cpp
+    window/themes/window_theme_editor_details.h
     window/themes/window_theme_preview.cpp
     window/themes/window_theme_preview.h
     window/themes/window_theme_warning.cpp

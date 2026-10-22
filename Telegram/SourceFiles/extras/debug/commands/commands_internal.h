@@ -45,6 +45,7 @@ using HandlerMap = std::map<QString, Handler>;
 [[nodiscard]] const HandlerMap &transferHandlers();
 [[nodiscard]] const HandlerMap &animHandlers();
 [[nodiscard]] const HandlerMap &editorHandlers();
+[[nodiscard]] const HandlerMap &themeEditorHandlers();
 [[nodiscard]] const HandlerMap &ivHandlers();
 [[nodiscard]] const HandlerMap &dialogHandlers();
 [[nodiscard]] QWidget *controlWindow();

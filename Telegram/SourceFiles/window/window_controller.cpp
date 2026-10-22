@@ -28,7 +28,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/emoji_sets_manager.h"
 #include "window/window_session_controller.h"
 #include "window/themes/window_theme.h"
-#include "window/themes/window_theme_editor.h"
+#include "window/themes/window_theme_editor_box.h"
 #include "ui/boxes/confirm_box.h"
 #include "data/components/promo_suggestions.h"
 #include "data/data_session.h"
@@ -384,11 +384,7 @@ bool Controller::locked() const {
 }
 
 void Controller::checkThemeEditor() {
-	using namespace Window::Theme;
-
-	if (const auto editing = Background()->editingTheme()) {
-		showRightColumn(Box<Editor>(this, *editing));
-	}
+	Theme::ResumeEditor(this);
 }
 
 void Controller::setupPasscodeLock() {

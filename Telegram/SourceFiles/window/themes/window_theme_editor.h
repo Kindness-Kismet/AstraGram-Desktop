@@ -8,21 +8,22 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "data/data_cloud_themes.h"
-#include "ui/rp_widget.h"
+#include "window/themes/window_theme_editor_block.h"
+#include "ui/layers/box_content.h"
 #include "base/object_ptr.h"
+
+#include <QtCore/QSet>
 
 namespace style {
 struct colorizer;
 } // namespace style
 
 namespace Ui {
-class FlatButton;
+class InputField;
 class ScrollArea;
-class CrossButton;
-class MultiSelect;
-class PlainShadow;
-class DropdownMenu;
-class IconButton;
+class RoundButton;
+class FlatLabel;
+class Checkbox;
 } // namespace Ui
 
 namespace Window {
@@ -30,6 +31,8 @@ namespace Window {
 class Controller;
 
 namespace Theme {
+
+class EditorDetails;
 
 struct ParsedTheme {
 	QByteArray palette;
@@ -46,24 +49,33 @@ struct ParsedTheme {
 [[nodiscard]] QByteArray WriteCloudToText(const Data::CloudTheme &cloud);
 [[nodiscard]] Data::CloudTheme ReadCloudFromText(const QByteArray &text);
 [[nodiscard]] QByteArray StripCloudTextFields(const QByteArray &text);
+[[nodiscard]] QString EditorColorDescription(const QString &name);
 
-class Editor : public Ui::RpWidget {
+class Editor final : public Ui::BoxContent {
 public:
-	Editor(
-		QWidget*,
-		not_null<Window::Controller*> window,
+	Editor(QWidget*, not_null<Window::Controller*> window,
 		const Data::CloudTheme &cloud);
 
 	[[nodiscard]] static QByteArray ColorizeInContent(
 		QByteArray content,
 		const style::colorizer &colorizer);
+	[[nodiscard]] QString selectedName() const;
+	[[nodiscard]] QString selectedValue() const;
+	[[nodiscard]] QColor selectedColor() const;
+	[[nodiscard]] int visibleColorCount() const;
+	[[nodiscard]] int modifiedColorCount() const;
+	[[nodiscard]] bool showingDetails() const;
+	[[nodiscard]] QByteArray paletteContent() const;
+	void selectColor(const QString &name);
+	bool applyEditing(const QString &name, const QString &value);
+	bool importThemeFile(const QString &path);
 
 protected:
+	void prepare() override;
 	void paintEvent(QPaintEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
 	void keyPressEvent(QKeyEvent *e) override;
-
-	void focusInEvent(QFocusEvent *e) override;
+	void setInnerFocus() override;
 
 private:
 	void save();
@@ -73,22 +85,51 @@ private:
 	void closeEditor();
 	void closeWithConfirmation();
 	void updateControlsGeometry();
+	bool readRows(bool captureBaseline = false);
+	bool appendBaselineSource(int index, QSet<QString> &available,
+		QByteArray &definitions) const;
+	bool applyNewPalette(const QByteArray &content);
+	void restoreSelected();
+	void updateFilter();
+	void updateCaption();
+	void updateDetails();
+	void showColorList();
+	void handleEscape();
+	void showError();
 
 	const not_null<Window::Controller*> _window;
 	const Data::CloudTheme _cloud;
-
-	object_ptr<Ui::ScrollArea> _scroll;
-	class Inner;
-	QPointer<Inner> _inner;
-	object_ptr<Ui::CrossButton> _close;
-	object_ptr<Ui::IconButton> _menuToggle;
-	base::unique_qptr<Ui::DropdownMenu> _menu;
-	object_ptr<Ui::MultiSelect> _select;
-	object_ptr<Ui::PlainShadow> _leftShadow;
-	object_ptr<Ui::PlainShadow> _topShadow;
-	object_ptr<Ui::FlatButton> _save;
+	QByteArray _paletteContent;
+	QByteArray _baselineContent;
+	QMap<QString, QString> _baselineValues;
+	struct BaselineDefinition {
+		QString name;
+		QString value;
+		int source = -1;
+	};
+	std::vector<BaselineDefinition> _baselineDefinitions;
+	QMap<QString, int> _baselineIndices;
+	QSet<QString> _baselineExisting;
+	std::vector<EditorColor> _rows;
+	QString _selected;
+	object_ptr<Ui::InputField> _search;
+	object_ptr<Ui::Checkbox> _modified;
+	object_ptr<Ui::RoundButton> _category;
+	object_ptr<Ui::FlatLabel> _caption;
+	object_ptr<Ui::ScrollArea> _listScroll;
+	object_ptr<Ui::ScrollArea> _detailsScroll;
+	QPointer<EditorBlock> _list;
+	QPointer<EditorDetails> _details;
+	QPointer<Ui::RoundButton> _save;
+	QPointer<Ui::RoundButton> _cancel;
+	QPointer<Ui::RoundButton> _menuButton;
 	bool _saving = false;
-
+	bool _applyingUpdate = false;
+	bool _detailsPage = false;
+	bool _closing = false;
+	bool _listPageHidden = false;
+	int _listScrollTop = 0;
+	EditorCategory _currentCategory = EditorCategory::Basic;
 };
 
 } // namespace Theme

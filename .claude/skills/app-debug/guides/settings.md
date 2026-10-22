@@ -1,5 +1,13 @@
 # 设置读写
 
+## 主题创建器
+
+`theme.editor.open` 在独立模拟配置中沿正式入口打开主题创建器。
+`theme.editor.state` 查询尺寸、窄窗详情状态、选中键和值、实际颜色、可见数量和修改数量。
+`theme.editor.select <颜色键名>` 选择详情；`theme.editor.set <颜色键名> <#rrggbb[aa]|引用键名>`
+调用正式编辑接口，修改仅允许在独立模拟配置执行。界面输入、透明度、返回、还原和保存按钮使用控件指令验证。
+`theme.editor.import <文件路径>` 在独立模拟配置中复用正式导入链路，接受主题或配色文件。
+
 消息定位入口在“外观 → 主题设置 → 消息定位”，页面索引为 `chat/message-locate`。
 `messageLocateStyle` 为 0 随形断线、1 跳动定位；`messageLocateColor` 留空跟随主题，或使用 `#RRGGBB`。
 `messageLocateDuration` 为 800 至 4000 毫秒；`messageLocateStroke` 为 1 至 4，`messageLocateCorner` 为 12 至 36，
