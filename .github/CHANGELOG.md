@@ -1,37 +1,51 @@
-- Added customizable message location indicators, so you can now choose outline corners or a bouncing marker and adjust the color, duration and size with a live preview
-- Added drawer item reordering, so you can now long-press and drag items in the main menu or reorder them in appearance settings
-- Added a switch to hide live stream and group call controls, so you can now hide their buttons, menu entries and status indicators
-- Improved calendar navigation, which now offers year and month menus, date shortcuts and rounded day cells while keeping navigation visible during range selection
-- Improved emoji, sticker and GIF panel spacing, which now uses balanced side margins and centered sticker columns
-- Improved sticker suggestions, which now leave space at the bottom and darken the hovered sticker itself while preserving its transparent edges
-- Improved popup menu scrollbars, which now leave space at the top and bottom without changing menu item positions
-- Improved interface icons, which now distinguish settings import and export actions and use a clearer contacts icon in the main menu
-- Fixed an issue with group call buttons that previously caused the wrong video icon to appear and left menu buttons highlighted after dismissal
-- Fixed an issue with dark Windows title bars that previously caused solid backgrounds to cover active Mica and Acrylic materials
-- Fixed an issue with forwarding dialog folder tabs that previously caused the chat background to show through instead of matching the dialog
-- Fixed an issue with in-chat search results that previously caused top controls to overlap the list and Saved Messages tags to misalign the search bar
-- Fixed an issue with text carets that previously caused them to disappear on light search fields and translucent backgrounds
-- Fixed an issue with full-width dialog action buttons that previously caused folder invitation counts and labels to compete for space
-- Fixed an issue with the channel picker that previously caused oversized animations and loading labels that remained visible after loading
-- Fixed an issue with profile appearance settings that previously caused icon rows and custom emoji spacing to misalign
-- Fixed an issue with the tray menu that previously caused the desktop notification toggle to disappear while the app was locked
+- Added offline browsing for visited chats, so you can now open the chat list, message history, link previews, polls, reactions, stickers, custom emoji and cached small files without a connection
+- Added cache management by category and chat, so you can now see what uses storage, clear selected categories or single chats and set separate retention periods for private chats, groups, channels and stories
+- Added in-window media for articles, so you can now open photos and videos from an article without leaving the article window
+- Changed how theme editing works; it now opens a theme creator dialog with searchable color categories, opacity, reference colors, previews and per-color reset, and keeps unsaved drafts across restarts
+- Changed how downloads and updates appear in the chat list; the header download button animates and shows a count while files load, and a ready update appears as a button next to it that opens the release notes with update and skip actions
+- Changed how ghost mode and streamer mode settings are saved; each account now keeps its own settings
+- Changed how media viewers close; clicking empty space no longer closes them, and the in-window and article viewers can be moved by dragging their top bar
+- Changed the default chat background; it now uses a neutral gray in both light and dark themes
+- Improved file messages, which now show complete file names on multiple lines instead of cutting out the middle
+- Improved page and panel transitions, which now fade in place instead of sliding, and the emoji panel moves into and out of the side column with the same animation as the info panel
+- Improved media viewer menus, which now follow the light or dark app theme
+- Improved settings previews, which now share the page background and show the sticker preview above its size slider
+- Improved the sticker panel hover effect, which now darkens only the sticker itself like sticker suggestions
+- Improved chat folders, which now show chat avatars right away the first time a folder is opened
+- Improved drawer element settings, which now explain in the title that items can be long-pressed and dragged to reorder
+- Removed app icon customization; choosing an alternative app icon is no longer available
+- Removed the photo label from the media viewer header; single photos no longer show the generic Photo entry
+- Fixed an issue with chat folders at startup that previously left no folder selected when All Chats was hidden and briefly showed hidden chats
+- Fixed an issue with the forwarding dialog that previously caused it to drift downward when its list was short
+- Fixed an issue with search in dialogs that previously caused the search bar, folder tabs and list to jump after the dialog opened
+- Fixed an issue with read receipts in message menus that previously showed a single checkmark instead of a double one
+- Fixed an issue with View Video Cover that previously caused it to disappear from the context menu while a video was downloading
+- Fixed an issue with the Save As dialog on Windows that previously caused a small empty window to appear next to it
+- Fixed an issue with the sticker pack menu button that previously caused its hover background to be off center and clipped
 
 ---
 
-- 新增了消息定位标记自定义功能，现在可以选择轮廓角标或跳动标记，调整颜色、时长和大小，并实时预览效果
-- 新增了主菜单排序功能，现在可以长按拖动菜单项，也可以在外观设置中调整顺序
-- 新增了隐藏直播和群通话入口的开关，现在可以隐藏相关按钮、菜单项和状态标记
-- 对日历导航进行了改善，这使得年份和月份可以通过菜单选择，并提供快捷日期和圆角日期格，选择日期范围时也能保持导航可见
-- 对表情、贴纸和 GIF 面板的间距进行了改善，这使得左右留白更均衡，贴纸列保持居中
-- 对表情包联想进行了改善，这使得面板底部保留适当间距，悬停时只加深目标贴纸并保留透明边缘
-- 对弹出菜单的滚动条进行了改善，这使得滚动条上下留出间距，同时保持菜单项的位置不变
-- 对界面图标进行了改善，这使得设置导入和导出操作更容易区分，主菜单的联系人图标也更清晰
-- 修复了关于群通话按钮的错误，该问题曾导致视频图标不正确，关闭菜单后按钮仍保持高亮
-- 修复了关于深色主题下 Windows 标题栏的错误，该问题曾导致纯色背景遮住已启用的云母和亚克力材质
-- 修复了关于转发弹窗文件夹标签栏的错误，该问题曾导致聊天背景透出，与弹窗本身的背景不一致
-- 修复了关于聊天内搜索结果的错误，该问题曾导致顶部控件遮挡结果列表，以及收藏夹标签使搜索栏位置错乱
-- 修复了关于输入光标的错误，该问题曾导致浅色搜索框和半透明背景上的光标不可见
-- 修复了关于对话框全宽操作按钮的错误，该问题曾导致文件夹邀请中的数量标记和按钮文字互相挤占空间
-- 修复了关于频道选择器的错误，该问题曾导致动画过大，以及加载完成后提示仍不消失
-- 修复了关于资料外观设置的错误，该问题曾导致图标行和自定义表情的间距错位
-- 修复了关于托盘菜单的错误，该问题曾导致应用锁定后桌面通知开关消失
+- 新增了已访问聊天的离线浏览功能，现在没有网络时也可以查看聊天列表、消息记录、链接预览、投票、回应、贴纸、自定义表情和已缓存的小文件
+- 新增了按类别和聊天管理缓存的功能，现在可以查看存储占用，清理选中的类别或单个聊天，并分别设置私聊、群组、频道和动态的保留时长
+- 新增了文章内查看媒体的功能，现在可以直接在文章窗口里打开文章中的图片和视频
+- 调整了主题编辑的行为，现在会打开主题创建对话框，支持按类别搜索颜色、调整不透明度、引用其他颜色、实时预览和逐项还原，未保存的草稿重启后也会保留
+- 调整了聊天列表中下载和更新提示的行为，现在顶部下载按钮会在下载时播放动画并显示数量，有可用更新时旁边会出现更新按钮，点击后可以查看更新说明并选择更新或跳过
+- 调整了隐身模式和主播模式设置的保存方式，现在每个账号分别保存自己的设置
+- 调整了媒体查看器的关闭方式，现在点击空白处不会再关闭查看器，窗口内查看器和文章查看器可以拖动顶栏移动
+- 调整了默认聊天背景，现在浅色和深色主题都使用中性灰色
+- 对文件消息进行了改善，这使得文件名会完整地分行显示，不再省略中间部分
+- 对页面和面板的切换动画进行了改善，这使得切换时改为原地淡入淡出而不是滑动，表情面板移入和移出侧栏时也使用与资料面板相同的动画
+- 对媒体查看器的菜单进行了改善，这使得菜单会跟随应用的浅色或深色主题
+- 对设置页中的预览进行了改善，这使得预览与页面共用背景，贴纸预览也移到了大小滑块上方
+- 对贴纸面板的悬停效果进行了改善，这使得悬停时只加深贴纸本身，与贴纸联想保持一致
+- 对聊天文件夹进行了改善，这使得第一次打开文件夹时就能立即显示聊天头像
+- 对主菜单项目设置进行了改善，这使得标题中会提示可以长按拖动排序
+- 移除了自定义应用图标功能，选择其他应用图标不再可用
+- 移除了媒体查看器顶栏中的图片标签，单张图片不再显示通用的图片入口
+- 修复了关于启动时聊天文件夹的错误，该问题曾导致隐藏“所有聊天”后没有选中任何文件夹，以及短暂显示已隐藏的聊天
+- 修复了关于转发对话框的错误，该问题曾导致列表较短时对话框向下偏移
+- 修复了关于对话框内搜索的错误，该问题曾导致对话框打开后搜索栏、文件夹标签和列表发生跳动
+- 修复了关于消息菜单中已读回执的错误，该问题曾导致显示单个对勾而不是双对勾
+- 修复了关于查看视频封面的错误，该问题曾导致视频下载过程中右键菜单里的这一项消失
+- 修复了关于 Windows 上另存为对话框的错误，该问题曾导致旁边出现一个空白小窗口
+- 修复了关于贴纸包菜单按钮的错误，该问题曾导致悬停背景偏离中心并被裁切
