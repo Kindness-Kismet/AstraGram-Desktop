@@ -732,7 +732,7 @@ OverlayWidget::OverlayWidget()
 , _radial([=](crl::time now) { return radialAnimationCallback(now); })
 , _lastAction(-st::mediaviewDeltaFromLastAction, -st::mediaviewDeltaFromLastAction)
 , _stateAnimation([=](crl::time now) { return stateAnimationCallback(now); })
-, _dropdown(_body, st::mediaviewDropdownMenu)
+, _dropdown(_body, st::dropdownMenuWithIcons)
 , _speedBoostTicker([=] {
 	updateSpeedBoost();
 	return isSpeedBoostShown();
@@ -2662,7 +2662,7 @@ void OverlayWidget::fillContextMenuActions(
 			addAction(
 				Lang::FormatCountDecimal(invoice->amount),
 				[] {},
-				&st::mediaMenuIconStar);
+				&st::menuIconStar);
 		}
 	}
 	const auto story = _stories ? _stories->story() : nullptr;
@@ -2670,13 +2670,13 @@ void OverlayWidget::fillContextMenuActions(
 		addAction(
 			tr::lng_cancel(tr::now),
 			[=] { saveCancel(); },
-			&st::mediaMenuIconCancel);
+			&st::menuIconCancel);
 	}
 	if (_message && _message->isRegular()) {
 		addAction(
 			tr::lng_context_to_msg(tr::now),
 			[=] { toMessage(); },
-			&st::mediaMenuIconShowInChat);
+			&st::menuIconShowInChat);
 	}
 	if (currentPollAnswer()) {
 		const auto media = _message ? _message->media() : nullptr;
@@ -2691,7 +2691,7 @@ void OverlayWidget::fillContextMenuActions(
 				if (_session) {
 					_session->api().polls().sendVotes(itemId, {});
 				}
-			}, &st::mediaMenuIconRetractVote);
+			}, &st::menuIconRetractVote);
 		}
 	}
 	if (story && story->peer()->isSelf()) {
@@ -2704,8 +2704,8 @@ void OverlayWidget::fillContextMenuActions(
 				_stories->toggleInProfileRequested(!inProfile);
 			}
 		}, (inProfile
-			? &st::mediaMenuIconArchiveStory
-			: &st::mediaMenuIconSaveStory));
+			? &st::menuIconStoriesArchive
+			: &st::menuIconStoriesSave));
 	}
 	if ((!story || story->canDownloadChecked())
 		&& _document
@@ -2717,14 +2717,14 @@ void OverlayWidget::fillContextMenuActions(
 		addAction(
 			text,
 			[=] { showInFolder(); },
-			&st::mediaMenuIconShowInFolder);
+			&st::menuIconShowInFolder);
 	}
 	const auto hasRecognitionSelection = _recognition.hasSelection();
 	if (hasRecognitionSelection) {
 		addAction(
 			tr::lng_context_copy_selected(tr::now),
 			[=] { copyRecognitionSelection(); },
-			&st::mediaMenuIconCopy);
+			&st::menuIconCopy);
 	}
 	if (!hasRecognitionSelection && !hasCopyMediaRestriction()) {
 		if ((_document && documentContentShown()) || (_photo && _photoMedia->loaded())) {
@@ -2733,7 +2733,7 @@ void OverlayWidget::fillContextMenuActions(
 					? tr::lng_mediaview_copy_frame(tr::now)
 					: tr::lng_mediaview_copy(tr::now)),
 				[=] { copyMedia(); },
-				&st::mediaMenuIconCopy);
+				&st::menuIconCopy);
 		}
 	}
 	if ((_photo && _photo->hasAttachedStickers())
@@ -2741,13 +2741,13 @@ void OverlayWidget::fillContextMenuActions(
 		addAction(
 			tr::lng_context_attached_stickers(tr::now),
 			[=] { showAttachedStickers(); },
-			&st::mediaMenuIconStickers);
+			&st::menuIconStickers);
 	}
 	if (_message && _message->allowsForward()) {
 		addAction(
 			tr::lng_mediaview_forward(tr::now),
 			[=] { forwardMedia(); },
-			&st::mediaMenuIconForward);
+			&st::menuIconForward);
 		if (canShareAtTime()) {
 			const auto now = [=] {
 				return tr::lng_mediaview_share_at_time(
@@ -2758,7 +2758,7 @@ void OverlayWidget::fillContextMenuActions(
 			const auto action = addAction(
 				now(),
 				[=] { shareAtTime(); },
-				&st::mediaMenuIconShare);
+				&st::menuIconShare);
 			struct State {
 				rpl::variable<QString> text;
 				rpl::lifetime lifetime;
@@ -2777,7 +2777,7 @@ void OverlayWidget::fillContextMenuActions(
 	if (story && story->canShare()) {
 		addAction(tr::lng_mediaview_forward(tr::now), [=] {
 			_stories->shareRequested();
-		}, &st::mediaMenuIconForward);
+		}, &st::menuIconForward);
 	}
 	const auto canDelete = [&] {
 		if (story && story->canDelete()) {
@@ -2802,15 +2802,15 @@ void OverlayWidget::fillContextMenuActions(
 		addAction(
 			tr::lng_mediaview_delete(tr::now),
 			[=] { deleteMedia(); },
-			&st::mediaMenuIconDelete);
+			&st::menuIconDelete);
 	}
 	if (!hasCopyMediaRestriction(true)) {
 		addAction(
 			tr::lng_mediaview_save_as(tr::now),
 			[=] { saveAs(); },
 			(saveControlLocked()
-				? &st::mediaMenuIconDownloadLocked
-				: &st::mediaMenuIconDownload));
+				? &st::extrasMenuIconDownloadLocked
+				: &st::menuIconDownload));
 	}
 
 	if (const auto overviewType = computeOverviewType()) {
@@ -2820,7 +2820,7 @@ void OverlayWidget::fillContextMenuActions(
 		addAction(
 			text,
 			[=] { showMediaOverview(); },
-			&st::mediaMenuIconShowAll);
+			&st::menuIconShowAll);
 	}
 	[&] { // Set userpic.
 		if (!_peer || !_photo || (_peer->userpicPhotoId() == _photo->id)) {
@@ -2861,7 +2861,7 @@ void OverlayWidget::fillContextMenuActions(
 			}, *lifetime);
 
 			peer->session().api().peerPhoto().set(peer, photo);
-		}, &st::mediaMenuIconProfile);
+		}, &st::menuIconProfile);
 	}();
 	[&] { // Report userpic.
 		if (!_peer || !_photo) {
@@ -2902,7 +2902,7 @@ void OverlayWidget::fillContextMenuActions(
 					ReportProfilePhotoBox(peer, photo),
 					Ui::LayerOption::CloseOther);
 			}
-		}, &st::mediaMenuIconReport);
+		}, &st::menuIconReport);
 	}();
 	{
 		const auto channel = story ? story->peer()->asChannel() : nullptr;
@@ -2916,7 +2916,7 @@ void OverlayWidget::fillContextMenuActions(
 					using namespace Info;
 					window->showSection(Statistics::Make(peer, {}, fullId));
 				}
-			}, &st::mediaMenuIconStats);
+			}, &st::menuIconStats);
 		}
 	}
 	if (_stories
@@ -2929,13 +2929,13 @@ void OverlayWidget::fillContextMenuActions(
 		addAction(tr::lng_stealth_mode_menu_item(tr::now), [=] {
 			_stories->setupStealthMode();
 		}, ((_session->premium() || (stealth.enabledTill > now))
-			? &st::mediaMenuIconStealth
-			: &st::mediaMenuIconStealthLocked));
+			? &st::menuIconStealth
+			: &st::menuIconStealthLocked));
 	}
 	if (story && story->canReport()) {
 		addAction(tr::lng_profile_report(tr::now), [=] {
 			_stories->reportRequested();
-		}, &st::mediaMenuIconReport);
+		}, &st::menuIconReport);
 	}
 }
 
@@ -9646,7 +9646,7 @@ bool OverlayWidget::handleContextMenu(std::optional<QPoint> position) {
 	}
 	_menu = base::make_unique_q<Ui::PopupMenu>(
 		_embeddedHost ? _body->window() : _window.get(),
-		st::mediaviewPopupMenu);
+		st::popupMenuWithIcons);
 	fillContextMenuActions(Ui::Menu::CreateAddActionCallback(_menu));
 
 	if (_menu->empty()) {
