@@ -7,6 +7,9 @@
 #include "storage/storage_account.h"
 #include "storage/cache/storage_cache_database.h"
 
+#include <QtCore/QCryptographicHash>
+#include <QtCore/QtEndian>
+
 namespace Extras {
 namespace {
 
@@ -58,6 +61,15 @@ Storage::Cache::Key customEmojiKey(DocumentId id) {
 	return { 0x415347454d4f4a49ULL, id };
 }
 
+Storage::Cache::Key stickerPackKey(const StickerSetIdentifier &set) {
+	if (set.id) {
+		return { 0x4153475041434b49ULL, set.id };
+	}
+	const auto hash = QCryptographicHash::hash(
+		set.shortName.toLower().toUtf8(), QCryptographicHash::Sha256);
+	return { 0x4153475041434b4eULL, qFromBigEndian<quint64>(hash.constData()) };
+}
+
 } // namespace
 
 std::optional<MTPmessages_StickerSet> cachedEmojiSet(
@@ -90,6 +102,63 @@ void cacheStickerSet(
 		const QString &name,
 		const MTPmessages_StickerSet &set) {
 	writeSet(session, (u"special-sticker-set-"_q + name).toStdString(), set);
+}
+
+void cachedStickerPack(
+		not_null<Main::Session*> session,
+		const StickerSetIdentifier &set,
+		Fn<void(std::optional<MTPmessages_StickerSet>)> done) {
+	session->data().cache().get(stickerPackKey(set),
+		CacheSerialization::onMain<QByteArray>(session,
+		[=](QByteArray bytes) {
+			QDataStream stream(bytes);
+			if (!CacheSerialization::readHeader(stream, session->userId())) {
+				done(std::nullopt);
+				return;
+			}
+			auto payload = QByteArray();
+			stream >> payload;
+			auto pack = CacheSerialization::decode<MTPmessages_StickerSet>(payload);
+			if (stream.status() != QDataStream::Ok || !stream.atEnd()
+				|| !pack || pack->type() != mtpc_messages_stickerSet) {
+				LOG(("Sticker pack cache: invalid metadata payload."));
+				done(std::nullopt);
+				return;
+			}
+			const auto &info = pack->c_messages_stickerSet().vset().data();
+			if (set.id ? info.vid().v != set.id
+				: qs(info.vshort_name()).compare(set.shortName, Qt::CaseInsensitive) != 0) {
+				LOG(("Sticker pack cache: metadata identifier mismatch."));
+				done(std::nullopt);
+				return;
+			}
+			done(std::move(pack));
+		}));
+}
+
+void cacheStickerPack(
+		not_null<Main::Session*> session,
+		const MTPDmessages_stickerSet &set) {
+	const auto &info = set.vset().data();
+	auto bytes = QByteArray();
+	QDataStream stream(&bytes, QIODevice::WriteOnly);
+	CacheSerialization::writeHeader(stream, session->userId());
+	stream << CacheSerialization::encode<MTPmessages_StickerSet>(MTP_messages_stickerSet(
+		set.vset(), set.vpacks(), set.vkeywords(), set.vdocuments()));
+	const auto save = [&](const StickerSetIdentifier &identifier) {
+		session->data().cache().put(stickerPackKey(identifier),
+			Storage::Cache::Database::TaggedValue(base::duplicate(bytes), Data::kStickerCacheTag),
+			CacheSerialization::onMain<Storage::Cache::Error>(session, [](auto error) {
+				if (error.type != Storage::Cache::Error::Type::None) {
+					LOG(("Sticker pack cache: could not save metadata."));
+				}
+			}));
+	};
+	// 编号和短名称共用受容量限制的贴纸缓存，链接预览也能离线查询。
+	save({ info.vid().v, info.vaccess_hash().v });
+	if (!info.vshort_name().v.isEmpty()) {
+		save({ 0, 0, qs(info.vshort_name()) });
+	}
 }
 
 void cachedCustomEmoji(

@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/stickers/data_stickers.h"
 
+#include "extras/data/sticker_set_cache.h"
+
 #include "api/api_hash.h"
 #include "chat_helpers/compose/compose_show.h"
 #include "data/data_document.h"
@@ -1648,6 +1650,7 @@ not_null<StickersSet*> Stickers::feedSet(const MTPStickerSet &info) {
 
 not_null<StickersSet*> Stickers::feedSetFull(
 		const MTPDmessages_stickerSet &data) {
+	Extras::cacheStickerPack(&session(), data);
 	const auto set = feedSet(data.vset());
 	feedSetStickers(set, data.vdocuments().v, data.vpacks().v);
 	return set;

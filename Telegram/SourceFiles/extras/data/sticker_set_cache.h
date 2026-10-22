@@ -30,6 +30,13 @@ void cacheStickerSet(
 	not_null<Main::Session*> session,
 	const QString &name,
 	const MTPmessages_StickerSet &set);
+void cachedStickerPack(
+	not_null<Main::Session*> session,
+	const StickerSetIdentifier &set,
+	Fn<void(std::optional<MTPmessages_StickerSet>)> done);
+void cacheStickerPack(
+	not_null<Main::Session*> session,
+	const MTPDmessages_stickerSet &set);
 void cachedCustomEmoji(
 	not_null<Main::Session*> session,
 	DocumentId id,

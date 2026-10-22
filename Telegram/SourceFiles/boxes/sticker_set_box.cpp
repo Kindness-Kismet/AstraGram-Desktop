@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/sticker_set_box.h"
 
+#include "extras/data/sticker_set_cache.h"
+
 #include "api/api_common.h"
 #include "api/api_stickers_creator.h"
 #include "api/api_toggling_media.h"
@@ -1242,15 +1244,29 @@ StickerSetBox::Inner::Inner(
 , _previewTimer([=] { showPreview(); }) {
 	setAttribute(Qt::WA_OpaquePaintEvent);
 
-	_api.request(MTPmessages_GetStickerSet(
-		Data::InputStickerSet(_input),
-		MTP_int(0) // hash
-	)).done([=](const TLStickerSet &result) {
-		applySet(result);
-	}).fail([=] {
-		_loaded = true;
-		_errors.fire(Error::NotFound);
-	}).send();
+	Extras::cachedStickerPack(_session, _input,
+		crl::guard(this, [=](std::optional<TLStickerSet> cached) {
+			if (cached) {
+				applySet(*cached);
+			}
+#ifdef _DEBUG
+			if (cDebugOffline()) {
+				return;
+			}
+#endif
+			_api.request(MTPmessages_GetStickerSet(
+				Data::InputStickerSet(_input),
+				MTP_int(0) // hash
+			)).done([=](const TLStickerSet &result) {
+				applySet(result);
+			}).fail([=] {
+				if (_loaded) {
+					return;
+				}
+				_loaded = true;
+				_errors.fire(Error::NotFound);
+			}).send();
+		}));
 
 	_session->api().updateStickers();
 
@@ -1271,6 +1287,7 @@ void StickerSetBox::Inner::applySet(const TLStickerSet &set) {
 	const auto owner = &_session->data();
 	const auto premiumPossible = _session->premiumPossible();
 	set.match([&](const MTPDmessages_stickerSet &data) {
+		Extras::cacheStickerPack(_session, data);
 		const auto &documents = data.vdocuments().v;
 		_pack.reserve(documents.size());
 		_elements.reserve(documents.size());
