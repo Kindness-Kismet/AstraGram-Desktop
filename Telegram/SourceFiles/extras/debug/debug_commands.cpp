@@ -63,6 +63,7 @@ namespace {
 			&Commands::SessionHandlers(),
 			&Commands::cacheHandlers(),
 			&Commands::simulationHandlers(),
+			&Commands::simulationCacheHandlers(),
 			&Commands::SettingsHandlers(),
 			&Commands::GhostHandlers(),
 			&Commands::StorageHandlers(),

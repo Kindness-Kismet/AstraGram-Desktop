@@ -26,6 +26,7 @@ using HandlerMap = std::map<QString, Handler>;
 [[nodiscard]] const HandlerMap &SessionHandlers();
 [[nodiscard]] const HandlerMap &cacheHandlers();
 [[nodiscard]] const HandlerMap &simulationHandlers();
+[[nodiscard]] const HandlerMap &simulationCacheHandlers();
 [[nodiscard]] const HandlerMap &SettingsHandlers();
 [[nodiscard]] const HandlerMap &GhostHandlers();
 [[nodiscard]] const HandlerMap &StorageHandlers();

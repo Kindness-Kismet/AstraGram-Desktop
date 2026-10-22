@@ -17,6 +17,11 @@ namespace Main {
 class Session;
 } // namespace Main
 
+namespace Extras {
+struct CachedHistorySlice;
+struct HistoryCacheQuery;
+} // namespace Extras
+
 namespace Data {
 enum class LoadDirection : char;
 struct MessagePosition;
@@ -80,13 +85,21 @@ struct GlobalMediaResult {
 [[nodiscard]] HistoryRequest PrepareHistoryRequest(
 	not_null<PeerData*> peer,
 	MsgId messageId,
-	Data::LoadDirection direction);
+	Data::LoadDirection direction,
+	Extras::HistoryCacheQuery *cacheQuery = nullptr);
 
 [[nodiscard]] HistoryResult ParseHistoryResult(
 	not_null<PeerData*> peer,
 	MsgId messageId,
 	Data::LoadDirection direction,
 	const HistoryRequestResult &data);
+
+[[nodiscard]] HistoryResult ParseCachedHistoryResult(
+	not_null<PeerData*> peer,
+	MsgId messageId,
+	Data::LoadDirection direction,
+	const Extras::HistoryCacheQuery &query,
+	const Extras::CachedHistorySlice &cached);
 
 class SearchController final {
 public:

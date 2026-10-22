@@ -2,6 +2,7 @@
 #include "extras/debug/commands/commands_internal.h"
 
 #include "extras/data/media_cache_manager.h"
+#include "extras/data/conversation_cache.h"
 #include "extras/utils/rc_manager.h"
 #include "data/data_peer.h"
 #include "main/main_session.h"
@@ -19,6 +20,87 @@ constexpr auto kCategoryNames = std::array{
 constexpr auto kChatTypes = std::array{
 	"private", "groups", "channels", "stories",
 };
+
+json historyInfo(const Extras::ConversationCache::DebugHistoryInfo &info) {
+	auto ranges = json::array();
+	for (const auto &range : info.ranges) {
+		ranges.push_back({ { "from", range.from.bare },
+			{ "till", range.till.bare }, { "messages", range.messages } });
+	}
+	return {
+		{ "peerId", info.key.peer.value }, { "topicRootId", info.key.topicRootId.bare },
+		{ "sublistPeer", info.key.sublistPeer.value }, { "ranges", std::move(ranges) },
+		{ "firstId", info.firstId.bare }, { "lastId", info.lastId.bare },
+		{ "dialogTop", info.dialogTop.bare }, { "currentTop", info.currentTop.bare },
+		{ "previewId", info.previewId.bare }, { "cachedMessages", info.cachedMessages },
+		{ "total", info.total }, { "loaded", info.loaded },
+		{ "dirty", info.dirty }, { "bottomFresh", info.bottomFresh },
+	};
+}
+
+Result traceHistory(const QStringList &args) {
+	if (args.size() != 1) {
+		return Result::Err(u"usage: cache.trace-history <peerId|off>"_q);
+	}
+	const auto session = ActiveSession();
+	if (!session) {
+		return Result::Err(u"no active session"_q);
+	}
+	const auto disabled = args.front() == u"off"_q;
+	const auto peer = disabled ? nullptr : findPeer(args.front());
+	if (!disabled && !peer) {
+		return Result::Err(u"unknown peer"_q);
+	}
+	const auto peerId = peer ? peer->id : PeerId();
+	session->conversationCache().setDebugHistoryPeer(peerId);
+	return Result::Ok(Compact(json{ { "peerId", peerId.value },
+		{ "enabled", !disabled }, { "capacity", 120 } }));
+}
+
+Result inspectHistory(const QStringList &args) {
+	if (args.size() != 1 && args.size() != 3) {
+		return Result::Err(u"usage: cache.history-info <peerId> [topicRootId sublistPeer]"_q);
+	}
+	const auto session = ActiveSession();
+	const auto peer = session ? findPeer(args.front()) : nullptr;
+	if (!peer) {
+		return Result::Err(u"unknown peer"_q);
+	}
+	auto key = Extras::HistoryCacheKey{ peer->id };
+	if (args.size() == 3) {
+		auto topicOk = false;
+		auto sublistOk = false;
+		key.topicRootId = MsgId(args[1].toLongLong(&topicOk));
+		key.sublistPeer = PeerId(args[2].toULongLong(&sublistOk));
+		if (!topicOk || key.topicRootId < 0 || !sublistOk
+			|| (key.topicRootId && key.sublistPeer)) {
+			return Result::Err(u"invalid topic or sublist id"_q);
+		}
+	}
+	const auto job = beginJob("cache-history-info");
+	session->lifetime().add([job] { finishJob(job, false, "session closed"); });
+	session->conversationCache().inspectHistory(key,
+		[job](Extras::ConversationCache::DebugHistoryState state) {
+			auto events = json::array();
+			for (const auto &event : state.events) {
+				const auto &query = event.query;
+				events.push_back({
+					{ "sequence", event.sequence }, { "stage", event.stage },
+					{ "offsetId", query.offsetId.bare }, { "addOffset", query.addOffset },
+					{ "limit", query.limit }, { "latest", query.latest },
+					{ "allowNearest", query.allowNearest }, { "deleteTill", query.deleteTill.bare },
+					{ "info", historyInfo(event.info) },
+					{ "returnedFirst", event.returnedFirst.bare },
+					{ "returnedLast", event.returnedLast.bare },
+					{ "returnedMessages", event.returnedMessages }, { "deleted", event.deleted },
+					{ "atTop", event.atTop }, { "atBottom", event.atBottom },
+				});
+			}
+			finishJob(job, true, { { "info", historyInfo(state.info) },
+				{ "tracedPeer", state.tracedPeer.value }, { "events", std::move(events) } });
+		});
+	return jobStarted(job);
+}
 
 Result badgeState(const QStringList &args) {
 	if (!args.empty()) {
@@ -144,6 +226,8 @@ Result mediaRetention(const QStringList &args) {
 
 const HandlerMap &cacheHandlers() {
 	static const auto result = HandlerMap{
+		{ u"cache.trace-history"_q, &traceHistory },
+		{ u"cache.history-info"_q, &inspectHistory },
 		{ u"cache.badges"_q, &badgeState },
 		{ u"cache.media-stats"_q, &mediaStats },
 		{ u"cache.media-clear"_q, &mediaClear },

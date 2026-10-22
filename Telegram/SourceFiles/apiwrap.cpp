@@ -3707,39 +3707,90 @@ void ApiWrap::requestHistory(
 		return;
 	}
 
-	const auto prepared = Api::PrepareHistoryRequest(peer, messageId, slice);
-	auto &histories = history->owner().histories();
-	const auto requestType = Data::Histories::RequestType::History;
-	histories.sendRequest(history, requestType, [=](Fn<void()> finish) {
-		return request(
-			std::move(prepared)
-		).done([=](const Api::HistoryRequestResult &result) {
-			_historyRequests.remove(key);
-			auto parsed = Api::ParseHistoryResult(
-				peer,
-				messageId,
-				slice,
-				result);
+	auto query = Extras::HistoryCacheQuery();
+	const auto prepared = Api::PrepareHistoryRequest(peer, messageId, slice, &query);
+	_historyRequests.emplace(key);
+	_session->conversationCache().getHistory(query, [=](
+			std::optional<Extras::CachedHistorySlice> cached) {
+		const auto fromCache = cached.has_value();
+		auto cachedLast = MsgId();
+		if (cached) {
+			auto parsed = Api::ParseCachedHistoryResult(peer, messageId, slice, query, *cached);
+			for (const auto id : parsed.messageIds) {
+				accumulate_max(cachedLast, id);
+			}
+			// 部分缓存的总数可能只是占位，不能据此把现有消息判为完整历史。
 			history->messages().addSlice(
 				std::move(parsed.messageIds),
 				parsed.noSkipRange,
-				parsed.fullCount);
-			finish();
-		}).fail([=](const MTP::Error &error) {
-			_historyRequests.remove(key);
-			if (error.type() == u"CHANNEL_PRIVATE"_q
-				&& peer->isChannel()
-				&& peer->asChannel()->invitePeekExpires()) {
-				peer->asChannel()->privateErrorReceived();
-			} else if (error.type() == u"CHANNEL_PRIVATE"_q
-				|| error.type() == u"CHANNEL_PUBLIC_GROUP_NA"_q
-				|| error.type() == u"USER_BANNED_IN_CHANNEL"_q) {
-				history->owner().notifyHistoryAccessLost(history);
+				cached->atTop && cached->atBottom
+					? std::optional(parsed.fullCount)
+					: std::nullopt);
+#ifdef _DEBUG
+			_session->conversationCache().traceHistory("viewer-delivered", query,
+				nullptr, &*cached);
+#endif
+		}
+		auto &histories = history->owner().histories();
+		const auto requestType = Data::Histories::RequestType::History;
+		histories.sendRequest(history, requestType, [=](Fn<void()> finish) {
+			auto networkQuery = query;
+			if (query.latest) {
+				const auto last = history->lastServerMessage();
+				networkQuery.deleteTill = last
+					? std::max(last->id, cachedLast)
+					: cachedLast;
 			}
-			finish();
-		}).send();
+#ifdef _DEBUG
+			_session->conversationCache().traceHistory("viewer-network-sent", networkQuery);
+#endif
+			return request(
+				std::move(prepared)
+			).done([=](const Api::HistoryRequestResult &result) {
+#ifdef _DEBUG
+				_session->conversationCache().traceHistory("viewer-network-result", networkQuery, &result);
+#endif
+				_historyRequests.remove(key);
+				_session->conversationCache().putHistory(networkQuery, result, fromCache);
+				auto parsed = Api::ParseHistoryResult(peer, messageId, slice, result);
+				auto fullCount = std::optional(parsed.fullCount);
+				if (query.latest) {
+					auto responseLast = MsgId();
+					parsed.noSkipRange = { ServerMaxMsgId, 0 };
+					for (const auto id : parsed.messageIds) {
+						accumulate_min(parsed.noSkipRange.from, id);
+						accumulate_max(responseLast, id);
+					}
+					if (parsed.messageIds.size() == parsed.fullCount) {
+						parsed.noSkipRange.from = 0;
+					}
+					const auto last = history->lastServerMessage();
+					const auto stale = last && responseLast < last->id;
+					parsed.noSkipRange.till = stale ? responseLast : ServerMaxMsgId;
+					if (stale) {
+						fullCount = std::nullopt;
+					}
+				}
+				history->messages().addSlice(
+					std::move(parsed.messageIds),
+					parsed.noSkipRange,
+					fullCount);
+				finish();
+			}).fail([=](const MTP::Error &error) {
+				_historyRequests.remove(key);
+				if (error.type() == u"CHANNEL_PRIVATE"_q
+					&& peer->isChannel()
+					&& peer->asChannel()->invitePeekExpires()) {
+					peer->asChannel()->privateErrorReceived();
+				} else if (error.type() == u"CHANNEL_PRIVATE"_q
+					|| error.type() == u"CHANNEL_PUBLIC_GROUP_NA"_q
+					|| error.type() == u"USER_BANNED_IN_CHANNEL"_q) {
+					history->owner().notifyHistoryAccessLost(history);
+				}
+				finish();
+			}).send();
+		});
 	});
-	_historyRequests.emplace(key);
 }
 
 void ApiWrap::requestSharedMedia(

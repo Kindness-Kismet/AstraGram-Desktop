@@ -1135,16 +1135,45 @@ int Histories::requestHistory(
 			return;
 		}
 		const auto fromCache = cached.has_value();
+		auto cachedLast = MsgId();
+		if (cached) {
+			cached->messages.match([](const MTPDmessages_messagesNotModified &) {
+			}, [&](const auto &data) {
+				for (const auto &message : data.vmessages().v) {
+					accumulate_max(cachedLast, IdFromMessage(message));
+				}
+			});
+		}
 		if (fromCache) {
 			_cachedHistoryRequests.remove(id);
 			done(cached->messages, &*cached);
+#ifdef _DEBUG
+			session().conversationCache().traceHistory("legacy-delivered", query,
+				nullptr, &*cached);
+#endif
 		}
 		const auto history = owner().history(query.key.peer);
 		const auto requestId = sendRequest(history, RequestType::History, [=](
 				Fn<void()> finish) {
+			auto networkQuery = query;
+			if (!query.offsetId) {
+				// 话题与收藏来源只能使用各自范围，不能借父对话的最后编号。
+				const auto last = !query.key.topicRootId && !query.key.sublistPeer
+					? history->lastServerMessage()
+					: nullptr;
+				networkQuery.deleteTill = last
+					? std::max(last->id, cachedLast)
+					: cachedLast;
+			}
+#ifdef _DEBUG
+			session().conversationCache().traceHistory("legacy-network-sent", networkQuery);
+#endif
 			const auto received = [=](const MTPmessages_Messages &result) {
+#ifdef _DEBUG
+				session().conversationCache().traceHistory("legacy-network-result", networkQuery, &result);
+#endif
 				finish();
-				session().conversationCache().putHistory(query, result, fromCache);
+				session().conversationCache().putHistory(networkQuery, result, fromCache);
 				if (!fromCache) {
 					_cachedHistoryRequests.remove(id);
 					done(result, nullptr);

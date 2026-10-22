@@ -402,6 +402,7 @@ set(extras_files
         extras/debug/commands/app_commands.cpp
         extras/debug/commands/session_commands.cpp
         extras/debug/commands/simulation_commands.cpp
+        extras/debug/commands/simulation_cache_checks.cpp
         extras/debug/dialogs_preview.cpp
         extras/debug/dialogs_preview.h
         extras/debug/simulation_scenarios.cpp

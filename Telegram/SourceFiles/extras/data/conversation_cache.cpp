@@ -189,6 +189,11 @@ void ConversationCache::restore() {
 			}
 		}
 		_indexReady = true;
+		for (const auto &[peer, message] : _lastMessages) {
+			if (!peerIsChannel(peer)) {
+				_nonChannelPeers[IdFromMessage(message)] = peer;
+			}
+		}
 		for (const auto key : _historyKeys) {
 			if (key.topicRootId || key.sublistPeer) {
 				loadHistory(key, [](HistoryEntry &) {});
@@ -493,8 +498,10 @@ void ConversationCache::clearStorage(
 		}
 		if (peer) {
 			_lastMessages.remove(peer);
+			_previewMessages.remove(peer);
 		} else {
 			_lastMessages.clear();
+			_previewMessages.clear();
 		}
 		// 旧读取先失效，再完成请求，避免已清理正文写回新缓存。
 		for (auto &pending : cancelled) {

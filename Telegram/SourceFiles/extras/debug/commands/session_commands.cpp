@@ -10,9 +10,14 @@
 #include "data/data_chat_filters.h"
 #include "data/data_folder.h"
 #include "data/data_session.h"
+#include "data/data_history_messages.h"
 #include "dialogs/dialogs_indexed_list.h"
 #include "dialogs/dialogs_main_list.h"
 #include "history/history.h"
+#include "history/history_item.h"
+#include "history/view/history_view_chat_section.h"
+#include "history/view/history_view_list_widget.h"
+#include "ui/widgets/elastic_scroll.h"
 #include "mtproto/mtp_instance.h"
 #include "window/window_session_controller.h"
 #include "apiwrap.h"
@@ -74,7 +79,48 @@ using json = nlohmann::json;
 			: session->data().chatsList()->indexed()->size() },
 		{ "connectionState", session->api().instance().dcstate() },
 	};
+	auto tabs = json::array();
+	for (const auto &filter : filters.list()) {
+		const auto list = filter.id() ? filters.chatsList(filter.id())
+			: session->data().chatsList();
+		tabs.push_back({ { "id", filter.id() },
+			{ "rows", list->indexed()->size() }, { "loaded", list->loaded() } });
+	}
+	result["tabs"] = std::move(tabs);
+	const auto archive = session->data().folderLoaded(Data::Folder::kId);
+	result["archiveRows"] = archive ? archive->chatsList()->indexed()->size() : 0;
 	if (controller) {
+		for (const auto widget : controller->content()->findChildren<QWidget*>()) {
+			const auto chat = dynamic_cast<HistoryView::ChatWidget*>(widget);
+			if (!chat || !chat->isVisible()) {
+				continue;
+			}
+			for (const auto child : chat->findChildren<QWidget*>()) {
+				const auto list = dynamic_cast<HistoryView::ListWidget*>(child);
+				if (!list || !list->isVisible()) {
+					continue;
+				}
+				const auto scroll = list->delegate()->listScrollArea();
+				Expects(scroll != nullptr);
+				const auto visibleTop = scroll->scrollTop();
+				const auto visibleBottom = visibleTop + scroll->height();
+				const auto first = list->lookupItemByY(visibleTop);
+				const auto last = list->lookupItemByY(visibleBottom - 1);
+				result["view"] = {
+					{ "peerId", chat->peer()->id.value },
+					{ "empty", list->isEmpty() },
+					{ "firstId", first ? first->data()->id.bare : 0 },
+					{ "lastId", last ? last->data()->id.bare : 0 },
+					{ "visibleTop", visibleTop },
+					{ "visibleBottom", visibleBottom },
+					{ "atTopKnown", list->loadedAtTopKnown() },
+					{ "atBottomKnown", list->loadedAtBottomKnown() },
+					{ "atBottom", list->loadedAtBottom() },
+				};
+				break;
+			}
+			break;
+		}
 		if (const auto list = controller->content()->findChild<QWidget*>(u"dialogsList"_q)) {
 			result["rendered"] = {
 				{ "firstFilter", list->property("firstPaintFilter").toLongLong() },
@@ -92,12 +138,18 @@ using json = nlohmann::json;
 			return Result::Err(u"unknown peer"_q);
 		}
 		const auto history = session->data().history(peer);
+		const auto latest = history->messages().snapshot({ ServerMaxMsgId - 1, 50, 0 });
 		result["history"] = {
 			{ "empty", history->isEmpty() },
 			{ "minId", history->minMsgId().bare },
 			{ "maxId", history->maxMsgId().bare },
 			{ "atTop", history->loadedAtTop() },
 			{ "atBottom", history->loadedAtBottom() },
+			{ "archived", history->folder() != nullptr },
+			{ "latestSliceMessages", latest.messageIds.size() },
+			{ "latestSliceTotal", latest.count ? json(*latest.count) : json(nullptr) },
+			{ "latestSliceSkippedAfter", latest.skippedAfter
+				? json(*latest.skippedAfter) : json(nullptr) },
 		};
 	}
 	return Result::Ok(Compact(result));

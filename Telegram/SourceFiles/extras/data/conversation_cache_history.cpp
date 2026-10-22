@@ -7,6 +7,7 @@
 #include "data/data_forum.h"
 #include "data/data_saved_messages.h"
 #include "data/data_saved_sublist.h"
+#include "data/data_history_messages.h"
 #include "data/data_session.h"
 #include "history/history.h"
 #include "history/history_item.h"
@@ -61,6 +62,111 @@ void collectMessagePeers(
 }
 
 } // namespace
+
+#ifdef _DEBUG
+ConversationCache::DebugHistoryInfo ConversationCache::debugHistoryInfo(
+		HistoryCacheKey key) const {
+	auto result = DebugHistoryInfo{ .key = key };
+	const auto found = _histories.find(key);
+	if (found != end(_histories)) {
+		const auto &entry = found->second;
+		result.loaded = entry.loaded;
+		result.dirty = entry.dirty;
+		result.bottomFresh = entry.bottomFresh;
+		result.total = entry.count;
+		result.cachedMessages = entry.messages.size();
+		if (!entry.messages.empty()) {
+			result.firstId = entry.messages.begin()->first;
+			result.lastId = entry.messages.rbegin()->first;
+		}
+		for (const auto range : entry.ranges) {
+			const auto first = entry.messages.lower_bound(range.from);
+			const auto last = entry.messages.upper_bound(range.till);
+			result.ranges.push_back({ range.from, range.till,
+				int(std::distance(first, last)) });
+		}
+	}
+	if (const auto dialog = _dialogs.find(key.peer); dialog != end(_dialogs)) {
+		result.dialogTop = MsgId(dialog->second.c_dialog().vtop_message().v);
+	}
+	if (const auto history = _session->data().historyLoaded(key.peer)) {
+		if (const auto item = history->lastServerMessage()) {
+			result.currentTop = item->id;
+		}
+	}
+	if (const auto preview = _previewMessages.find(key.peer);
+		preview != end(_previewMessages)) {
+		result.previewId = preview->second;
+	}
+	return result;
+}
+
+void ConversationCache::setDebugHistoryPeer(PeerId peer) {
+	_debugHistoryPeer = peer;
+	_debugHistorySequence = 0;
+	_debugHistoryEvents.clear();
+}
+
+void ConversationCache::inspectHistory(
+		HistoryCacheKey key,
+		Fn<void(DebugHistoryState)> done) {
+	withIndex([=] {
+		loadHistory(key, [=](HistoryEntry &) {
+			auto events = std::vector<DebugHistoryEvent>();
+			for (const auto &event : _debugHistoryEvents) {
+				if (event.query.key == key) {
+					events.push_back(event);
+				}
+			}
+			done({ debugHistoryInfo(key), _debugHistoryPeer, std::move(events) });
+		});
+	});
+}
+
+void ConversationCache::traceHistory(
+		const char *stage,
+		const HistoryCacheQuery &query,
+		const MTPmessages_Messages *response,
+		const CachedHistorySlice *cached,
+		int deleted) {
+	if (!_debugHistoryPeer || query.key.peer != _debugHistoryPeer) {
+		return;
+	}
+	auto event = DebugHistoryEvent{
+		.sequence = ++_debugHistorySequence,
+		.stage = stage,
+		.query = query,
+		.info = debugHistoryInfo(query.key),
+		.deleted = deleted,
+	};
+	if (const auto data = cached ? &cached->messages : response) {
+		data->match([](const MTPDmessages_messagesNotModified &) {
+		}, [&](const auto &data) {
+			event.returnedMessages = data.vmessages().v.size();
+			for (const auto &message : data.vmessages().v) {
+				const auto id = IdFromMessage(message);
+				if (!event.returnedFirst || id < event.returnedFirst) {
+					event.returnedFirst = id;
+				}
+				accumulate_max(event.returnedLast, id);
+			}
+		});
+	}
+	if (cached) {
+		event.atTop = cached->atTop;
+		event.atBottom = cached->atBottom;
+	}
+	// 只保留当前账号指定会话的最近 120 条诊断，不记录正文或媒体内容。
+	if (_debugHistoryEvents.size() == 120) {
+		_debugHistoryEvents.erase(_debugHistoryEvents.begin());
+	}
+	LOG(("Conversation cache: %1 peer=%2 offset=%3 add=%4 limit=%5 returned=%6 cached=%7 deleted=%8")
+		.arg(stage).arg(query.key.peer.value).arg(query.offsetId.bare)
+		.arg(query.addOffset).arg(query.limit).arg(event.returnedMessages)
+		.arg(event.info.cachedMessages).arg(deleted));
+	_debugHistoryEvents.push_back(std::move(event));
+}
+#endif
 
 Storage::Cache::Key ConversationCache::storageKey(HistoryCacheKey key) const {
 	return {
@@ -150,6 +256,9 @@ void ConversationCache::loadHistory(
 		}
 		entry.loaded = true;
 		restoreHistoryMetadata(key, entry);
+#ifdef _DEBUG
+		traceHistory("loaded", { .key = key });
+#endif
 		for (auto &callback : base::take(entry.pending)) {
 			callback.done(entry);
 		}
@@ -201,8 +310,15 @@ void ConversationCache::getHistory(
 		}
 		withIndex([=] {
 			loadHistory(query.key, [=](HistoryEntry &entry) {
+#ifdef _DEBUG
+				traceHistory("read-before", query);
+#endif
 				auto result = slice(query, entry);
 				result ? ++_hits : ++_misses;
+#ifdef _DEBUG
+				traceHistory(result ? "read-hit" : "read-miss", query,
+					nullptr, result ? &*result : nullptr);
+#endif
 				done(std::move(result));
 			}, [=] { done(std::nullopt); });
 		});
@@ -262,6 +378,41 @@ void ConversationCache::restoreMessageFromHistories(
 	}, [=] { done(false); });
 }
 
+std::optional<CachedHistorySlice> ConversationCache::latestPreview(
+		const HistoryCacheQuery &query,
+		const HistoryEntry &entry) {
+	if (query.key.topicRootId || query.key.sublistPeer
+		|| (query.offsetId && !query.allowNearest)) {
+		return std::nullopt;
+	}
+	const auto latest = _lastMessages.find(query.key.peer);
+	if (latest == end(_lastMessages) || !cacheable(latest->second)) {
+		return std::nullopt;
+	}
+	const auto id = IdFromMessage(latest->second);
+	if (!query.latest && query.offsetId && query.offsetId < id) {
+		return std::nullopt;
+	}
+	const auto history = _session->data().historyLoaded(query.key.peer);
+	const auto item = history ? history->lastServerMessage() : nullptr;
+	const auto dialog = _dialogs.find(query.key.peer);
+	const auto lastId = item ? item->id
+		: dialog != end(_dialogs) ? MsgId(dialog->second.c_dialog().vtop_message().v)
+		: MsgId();
+	if (id != lastId) {
+		return std::nullopt;
+	}
+	if (!entry.messages.contains(id)) {
+		_previewMessages[query.key.peer] = id;
+	}
+	// 列表摘要只能证明最新一条，不能当作已缓存完整历史。
+	return CachedHistorySlice{
+		.messages = makeSlice({ latest->second }, {}, std::max(entry.count, 2)),
+		.atTop = false,
+		.atBottom = true,
+	};
+}
+
 std::optional<CachedHistorySlice> ConversationCache::slice(
 		const HistoryCacheQuery &query,
 		HistoryEntry &entry) {
@@ -290,13 +441,16 @@ std::optional<CachedHistorySlice> ConversationCache::slice(
 			scheduleSave();
 		}
 	}
-	const auto anchor = !query.offsetId
+	const auto anchor = query.latest || !query.offsetId
 		? ServerMaxMsgId
 		: query.addOffset == 0 ? query.offsetId - 1 : query.offsetId;
 	auto range = ranges::find_if(entry.ranges, [&](Range range) {
 		return range.from <= anchor && range.till >= anchor;
 	});
 	if (range == end(entry.ranges)) {
+		if (const auto preview = latestPreview(query, entry)) {
+			return preview;
+		}
 		if (query.allowNearest && !entry.ranges.empty()) {
 			range = end(entry.ranges) - 1;
 		} else {
@@ -310,27 +464,28 @@ std::optional<CachedHistorySlice> ConversationCache::slice(
 		}
 	}
 	auto offset = 0;
-	if (query.offsetId) {
+	if (query.offsetId && !query.latest) {
 		while (offset < available.size()
 			&& IdFromMessage(available[offset]) >= query.offsetId) {
 			++offset;
 		}
 	}
-	auto start = std::clamp(offset + query.addOffset, 0, int(available.size()));
+	auto start = query.latest ? 0
+		: std::clamp(offset + query.addOffset, 0, int(available.size()));
 	auto count = std::min(query.limit, int(available.size()) - start);
-	if (query.offsetId && query.addOffset <= -query.limit) {
+	if (!query.latest && query.offsetId && query.addOffset <= -query.limit) {
 		count = std::min(query.limit, offset);
 		start = offset - count;
 		if (!count && range->till != ServerMaxMsgId) {
 			return std::nullopt;
 		}
 	} else if (!count && range->from != 0) {
-		return std::nullopt;
+		return latestPreview(query, entry);
 	}
 	const auto atTop = range->from == 0 && start + count == available.size();
 	const auto atBottom = range->till == ServerMaxMsgId && !start;
 	if (!count && (!query.offsetId || query.allowNearest) && !(atTop && atBottom)) {
-		return std::nullopt;
+		return latestPreview(query, entry);
 	}
 	return CachedHistorySlice{
 		.messages = makeSlice(available.mid(start, count), {},
@@ -350,7 +505,11 @@ void ConversationCache::putHistory(
 		return;
 	}
 	loadHistory(query.key, [=](HistoryEntry &entry) {
+#ifdef _DEBUG
+		traceHistory("write-before", query, &messages);
+#endif
 		auto &owner = _session->data();
+		const auto previousCount = entry.count;
 		auto response = QVector<MTPMessage>();
 		messages.match([](const MTPDmessages_messagesNotModified &) {
 		}, [&](const auto &data) {
@@ -393,6 +552,7 @@ void ConversationCache::putHistory(
 			range.from = std::min(range.from, id);
 			range.till = std::max(range.till, id);
 		}
+		const auto responseLast = range.till;
 		if (!query.offsetId) {
 			range.till = ServerMaxMsgId;
 			if (response.isEmpty()) {
@@ -412,19 +572,45 @@ void ConversationCache::putHistory(
 		if (response.size() == entry.count) {
 			range = { 0, ServerMaxMsgId };
 		}
+		const auto deleteTill = std::min(range.till, query.deleteTill);
+		const auto ordinary = !query.key.topicRootId && !query.key.sublistPeer;
+		const auto history = owner.history(query.key.peer);
+		const auto currentLast = history->lastServerMessage();
+		if (ordinary && (query.latest || !query.offsetId) && currentLast
+			&& currentLast->id > responseLast && currentLast->id > query.deleteTill) {
+			range.till = responseLast;
+			entry.count = std::max(entry.count, previousCount);
+		}
 		if (range.till == ServerMaxMsgId) {
 			entry.bottomFresh = true;
 		}
-		const auto ordinary = !query.key.topicRootId && !query.key.sublistPeer;
 		const auto previousLast = entry.messages.empty() ? MsgId() : entry.messages.rbegin()->first;
 		auto deleted = QVector<MTPint>();
+		auto replacePreviewTop = false;
 		for (auto i = begin(entry.messages); i != end(entry.messages);) {
-			if (i->first >= range.from && i->first <= range.till
+			if (i->first >= range.from && i->first <= deleteTill
 				&& !received.contains(i->first)) {
 				deleted.push_back(MTP_int(i->first));
 				i = entry.messages.erase(i);
 			} else {
 				++i;
+			}
+		}
+		if (const auto preview = _previewMessages.find(query.key.peer);
+			ordinary && preview != end(_previewMessages)) {
+			if (received.contains(preview->second)) {
+				_previewMessages.erase(preview);
+			} else if (preview->second >= range.from && preview->second <= deleteTill) {
+				history->messages().removeOne(preview->second);
+				replacePreviewTop = currentLast && currentLast->id == preview->second;
+				if (replacePreviewTop) {
+					history->applyDialogTopMessage(MsgId());
+				}
+				if (const auto last = _lastMessages.find(query.key.peer);
+					last != end(_lastMessages) && IdFromMessage(last->second) == preview->second) {
+					_lastMessages.erase(last);
+				}
+				_previewMessages.erase(preview);
 			}
 		}
 		for (const auto &message : response) {
@@ -454,14 +640,20 @@ void ConversationCache::putHistory(
 		}
 		_indexDirty = true;
 		trimHistory(query.key, entry);
+#ifdef _DEBUG
+		traceHistory("write-after", query, &messages, nullptr, deleted.size());
+#endif
 		scheduleSave();
+		if (replacePreviewTop) {
+			owner.processMessages(response, NewMessageType::Existing);
+			history->applyDialogTopMessage(responseLast);
+		}
 		if (!refreshVisible) {
 			return;
 		}
 		if (!deleted.empty()) {
 			owner.processMessagesDeleted(query.key.peer, deleted);
 		}
-		const auto history = owner.history(query.key.peer);
 		const auto previousMax = history->maxMsgId();
 		owner.processMessages(response, NewMessageType::Existing);
 		for (const auto &message : response) {
@@ -552,11 +744,21 @@ void ConversationCache::messageReceived(
 		const auto i = _lastMessages.find(peer);
 		if (i == end(_lastMessages) || IdFromMessage(i->second) <= IdFromMessage(message)) {
 			_lastMessages[peer] = message;
+			if (!peerIsChannel(peer)) {
+				withIndex([=] {
+					_nonChannelPeers[IdFromMessage(message)] = peer;
+					_indexDirty = true;
+					scheduleSave();
+				});
+			}
 			scheduleSave();
 		}
 	}
 	if (type == NewMessageType::Unread) {
 		applyMessage(message, true);
+#ifdef _DEBUG
+		traceHistory("new-message", { .key = { peer } });
+#endif
 	}
 }
 
@@ -627,6 +829,11 @@ void ConversationCache::messagesDeleted(PeerId peer, const QVector<MTPint> &ids)
 		}
 		const auto keys = _historyKeys;
 		for (const auto &[target, messages] : byPeer) {
+			if (const auto preview = _previewMessages.find(target);
+				preview != end(_previewMessages)
+				&& ranges::contains(messages, preview->second.bare, &MTPint::v)) {
+				_previewMessages.erase(preview);
+			}
 			const auto last = _lastMessages.find(target);
 			if (last != end(_lastMessages) && ranges::contains(messages, IdFromMessage(last->second).bare, &MTPint::v)) {
 				_lastMessages.erase(last);
@@ -658,6 +865,7 @@ void ConversationCache::deleteMessages(HistoryCacheKey key, const QVector<MTPint
 }
 
 void ConversationCache::historyCleared(PeerId peer) {
+	_previewMessages.remove(peer);
 	if (!_enabled || _restoring) {
 		return;
 	}

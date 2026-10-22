@@ -19,6 +19,12 @@ namespace Storage::Cache {
 class Database;
 } // namespace Storage::Cache
 
+#ifdef _DEBUG
+namespace ExtrasDebug::Commands {
+class SimulationCacheCheck;
+} // namespace ExtrasDebug::Commands
+#endif
+
 namespace Extras {
 
 struct HistoryCacheKey {
@@ -37,6 +43,8 @@ struct HistoryCacheQuery {
 	int addOffset = 0;
 	int limit = 0;
 	bool allowNearest = false;
+	bool latest = false;
+	MsgId deleteTill = ServerMaxMsgId;
 };
 
 struct CachedHistorySlice {
@@ -90,7 +98,61 @@ public:
 	void storageStats(Fn<void(StorageStats)> done);
 	void clearStorage(PeerId peer, Fn<void(Storage::Cache::Error)> done);
 
+#ifdef _DEBUG
+	struct DebugRange {
+		MsgId from;
+		MsgId till;
+		int messages = 0;
+	};
+	struct DebugHistoryInfo {
+		HistoryCacheKey key;
+		std::vector<DebugRange> ranges;
+		MsgId firstId;
+		MsgId lastId;
+		MsgId dialogTop;
+		MsgId currentTop;
+		MsgId previewId;
+		int cachedMessages = 0;
+		int total = 0;
+		bool loaded = false;
+		bool dirty = false;
+		bool bottomFresh = false;
+	};
+	struct DebugHistoryEvent {
+		uint64 sequence = 0;
+		const char *stage = "";
+		HistoryCacheQuery query;
+		DebugHistoryInfo info;
+		MsgId returnedFirst;
+		MsgId returnedLast;
+		int returnedMessages = 0;
+		int deleted = 0;
+		bool atTop = false;
+		bool atBottom = false;
+	};
+	struct DebugHistoryState {
+		DebugHistoryInfo info;
+		PeerId tracedPeer;
+		std::vector<DebugHistoryEvent> events;
+	};
+	void setDebugHistoryPeer(PeerId peer);
+	void inspectHistory(HistoryCacheKey key, Fn<void(DebugHistoryState)> done);
+	void traceHistory(
+		const char *stage,
+		const HistoryCacheQuery &query,
+		const MTPmessages_Messages *response = nullptr,
+		const CachedHistorySlice *cached = nullptr,
+		int deleted = 0);
+#endif
+
 private:
+#ifdef _DEBUG
+	friend class ExtrasDebug::Commands::SimulationCacheCheck;
+	[[nodiscard]] DebugHistoryInfo debugHistoryInfo(HistoryCacheKey key) const;
+	PeerId _debugHistoryPeer;
+	uint64 _debugHistorySequence = 0;
+	std::vector<DebugHistoryEvent> _debugHistoryEvents;
+#endif
 	struct Range {
 		MsgId from = 0;
 		MsgId till = 0;
@@ -137,6 +199,9 @@ private:
 	[[nodiscard]] std::optional<CachedHistorySlice> slice(
 		const HistoryCacheQuery &query,
 		HistoryEntry &entry);
+	[[nodiscard]] std::optional<CachedHistorySlice> latestPreview(
+		const HistoryCacheQuery &query,
+		const HistoryEntry &entry);
 	[[nodiscard]] Storage::Cache::Key storageKey(HistoryCacheKey key) const;
 	[[nodiscard]] bool cacheable(const MTPMessage &message) const;
 
@@ -144,6 +209,7 @@ private:
 	const std::unique_ptr<Storage::Cache::Database> _database;
 	base::flat_map<PeerId, MTPDialog> _dialogs;
 	base::flat_map<PeerId, MTPMessage> _lastMessages;
+	base::flat_map<PeerId, MsgId> _previewMessages;
 	base::flat_map<PeerId, FolderId> _restoredDialogs;
 	std::map<HistoryCacheKey, HistoryEntry> _histories;
 	base::flat_set<HistoryCacheKey> _historyKeys;

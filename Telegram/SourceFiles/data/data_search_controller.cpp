@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_search_controller.h"
 
+#include "extras/data/conversation_cache.h"
 #include "main/main_session.h"
 #include "data/data_session.h"
 #include "data/data_messages.h"
@@ -294,11 +295,17 @@ SearchResult ParseSearchResult(
 HistoryRequest PrepareHistoryRequest(
 		not_null<PeerData*> peer,
 		MsgId messageId,
-		Data::LoadDirection direction) {
+		Data::LoadDirection direction,
+		Extras::HistoryCacheQuery *cacheQuery) {
 	const auto minId = 0;
 	const auto maxId = 0;
 	const auto limit = kHistoryLimit;
+	const auto latest = direction == Data::LoadDirection::Around
+		&& messageId == ServerMaxMsgId - 1;
 	const auto offsetId = [&] {
+		if (latest) {
+			return MsgId(0);
+		}
 		switch (direction) {
 		case Data::LoadDirection::Before:
 		case Data::LoadDirection::Around: return messageId;
@@ -307,6 +314,9 @@ HistoryRequest PrepareHistoryRequest(
 		Unexpected("Direction in PrepareSearchRequest");
 	}();
 	const auto addOffset = [&] {
+		if (latest) {
+			return 0;
+		}
 		switch (direction) {
 		case Data::LoadDirection::Before: return 0;
 		case Data::LoadDirection::Around: return -limit / 2;
@@ -321,6 +331,16 @@ HistoryRequest PrepareHistoryRequest(
 		offsetId.bare,
 		int64(0),
 		int64(0x3FFFFFFF)));
+	if (cacheQuery) {
+		*cacheQuery = {
+			.key = { peer->id },
+			.offsetId = mtpOffsetId,
+			.addOffset = addOffset,
+			.limit = limit,
+			.allowNearest = latest,
+			.latest = latest,
+		};
+	}
 	return MTPmessages_GetHistory(
 		peer->input(),
 		MTP_int(mtpOffsetId),
@@ -343,6 +363,32 @@ HistoryResult ParseHistoryResult(
 		messageId,
 		direction,
 		data);
+}
+
+HistoryResult ParseCachedHistoryResult(
+		not_null<PeerData*> peer,
+		MsgId messageId,
+		Data::LoadDirection direction,
+		const Extras::HistoryCacheQuery &query,
+		const Extras::CachedHistorySlice &cached) {
+	auto result = ParseHistoryResult(peer, messageId, direction, cached.messages);
+	result.noSkipRange = {
+		cached.atTop ? MsgId(0) : ServerMaxMsgId,
+		cached.atBottom ? ServerMaxMsgId : MsgId(0),
+	};
+	for (const auto id : result.messageIds) {
+		accumulate_min(result.noSkipRange.from, id);
+		accumulate_max(result.noSkipRange.till, id);
+	}
+	// 严格查询已确认锚点连续，就近缓存只采用实际消息与已知边界。
+	if (!query.allowNearest && query.offsetId) {
+		const auto anchor = direction == Data::LoadDirection::After
+			? query.offsetId - 1
+			: query.offsetId;
+		accumulate_min(result.noSkipRange.from, anchor);
+		accumulate_max(result.noSkipRange.till, anchor);
+	}
+	return result;
 }
 
 SearchController::CacheEntry::CacheEntry(
