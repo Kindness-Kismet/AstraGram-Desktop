@@ -1,20 +1,6 @@
 #pragma once
 
-#define ICON(name, value) const auto name##_ICON = QStringLiteral(value)
-
 namespace ExtrasAssets {
-
-ICON(DEFAULT, "default");
-ICON(ALT, "alt");
-ICON(DISCORD, "discord");
-ICON(SPOTIFY, "spotify");
-ICON(EXTERA, "extera");
-ICON(NOTHING, "nothing");
-ICON(BARD, "bard");
-ICON(YAPLUS, "yaplus");
-
-// 图标选择器提供的全部预设，顺序即界面顺序。
-[[nodiscard]] const QVector<QString> &appIcons();
 
 enum class AppIcoStatus {
 	Unchanged,
@@ -22,13 +8,10 @@ enum class AppIcoStatus {
 	Failed,
 };
 
+// 把内置图标写到 tdata，供任务栏与快捷方式引用；内容一致时不重写。
 [[nodiscard]] AppIcoStatus loadAppIco();
-QString appIcoPath();
+[[nodiscard]] QString appIcoPath();
 
-QImage loadPreview(const QString& name);
+[[nodiscard]] QImage currentAppLogo();
 
-QString currentAppLogoName();
-QImage currentAppLogo();
-QImage currentAppLogoPad();
-
-}
+} // namespace ExtrasAssets

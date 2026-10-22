@@ -99,12 +99,6 @@ extrasMusicCompactPlay: IconButton(extrasMusicPlay) {
 extrasMusicCompactPause: icon {{ "player/player_pause", windowFgActive }};
 extrasMusicCompactCancel: icon {{ "player/panel_close", windowFgActive }};
 
-iconPickerSelectedPadding: 2px;
-iconPickerSelectedRounding: 12px;
-iconPickerImagePadding: 4px;
-iconPickerIconSize: 64px;
-iconPickerCellPadding: 12px;
-
 recentStickersLimitPadding: margins(22px, 4px, 22px, 8px);
 imageViewPadding: margins(22px, 10px, 22px, 10px);
 imageViewInnerPadding: margins(16px, 16px, 16px, 16px);

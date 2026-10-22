@@ -122,7 +122,6 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"showChannelReactions"_q, [&] { return settings.showChannelReactions(); }, settings, &ExtrasSettings::setShowChannelReactions);
 	addSetting(entries, u"showGroupReactions"_q, [&] { return settings.showGroupReactions(); }, settings, &ExtrasSettings::setShowGroupReactions);
 	addSetting(entries, u"showPrivateChatReactions"_q, [&] { return settings.showPrivateChatReactions(); }, settings, &ExtrasSettings::setShowPrivateChatReactions);
-	addSetting(entries, u"appIcon"_q, [&] { return settings.appIcon(); }, settings, &ExtrasSettings::setAppIcon);
 	addSetting(entries, u"customAppName"_q, [&] { return settings.customAppName(); }, settings, &ExtrasSettings::setCustomAppName);
 	addSetting(entries, u"customLogoTint"_q, [&] { return settings.customLogoTint(); }, settings, &ExtrasSettings::setCustomLogoTint);
 	addSetting(entries, u"simpleQuotesAndReplies"_q, [&] { return settings.simpleQuotesAndReplies(); }, settings, &ExtrasSettings::setSimpleQuotesAndReplies);

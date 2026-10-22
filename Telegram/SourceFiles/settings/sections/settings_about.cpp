@@ -146,9 +146,6 @@ const auto kMeta = Builder::BuildHelper({
 		const auto logo = header->add(object_ptr<Ui::RpWidget>(header));
 		logo->setObjectName(u"about-app-icon"_q);
 		logo->resize(0, st::settingsAboutLogoSize);
-		ExtrasSettings::getInstance().appIconChanges() | rpl::on_next([=] {
-			logo->update();
-		}, logo->lifetime());
 		logo->paintRequest() | rpl::on_next([=] {
 			auto p = Painter(logo);
 			auto hq = PainterHighQualityEnabler(p);

@@ -5,7 +5,6 @@
 #include "extras/data/extras_database.h"
 #include "extras/features/filters/filters_cache_controller.h"
 #include "extras/features/filters/filters_utils.h"
-#include "extras/ui/components/icon_picker.h"
 #include "extras/ui/settings/settings_extras_utils.h"
 #include "extras/ui/settings/filters/edit_filter.h"
 #include "extras/ui/settings/filters/per_dialog_filter.h"

@@ -1,22 +1,8 @@
 <RCC>
     <qresource prefix="/gui">
         <file alias="fonts/NotoSansBamum-Regular.ttf">../../fonts/NotoSansBamum-Regular.ttf</file>
-        <file alias="art/extras/alt/app.svg">../../art/extras/alt/app.svg</file>
-        <file alias="art/extras/alt/app_icon.ico">../../art/extras/alt/app_icon.ico</file>
-        <file alias="art/extras/bard/app.svg">../../art/extras/bard/app.svg</file>
-        <file alias="art/extras/bard/app_icon.ico">../../art/extras/bard/app_icon.ico</file>
         <file alias="art/extras/default/app.svg">../../art/extras/default/app.svg</file>
         <file alias="art/extras/default/app_icon.ico">../../art/extras/default/app_icon.ico</file>
-        <file alias="art/extras/discord/app.svg">../../art/extras/discord/app.svg</file>
-        <file alias="art/extras/discord/app_icon.ico">../../art/extras/discord/app_icon.ico</file>
-        <file alias="art/extras/extera/app.svg">../../art/extras/extera/app.svg</file>
-        <file alias="art/extras/extera/app_icon.ico">../../art/extras/extera/app_icon.ico</file>
-        <file alias="art/extras/nothing/app.svg">../../art/extras/nothing/app.svg</file>
-        <file alias="art/extras/nothing/app_icon.ico">../../art/extras/nothing/app_icon.ico</file>
-        <file alias="art/extras/spotify/app.svg">../../art/extras/spotify/app.svg</file>
-        <file alias="art/extras/spotify/app_icon.ico">../../art/extras/spotify/app_icon.ico</file>
-        <file alias="art/extras/yaplus/app.svg">../../art/extras/yaplus/app.svg</file>
-        <file alias="art/extras/yaplus/app_icon.ico">../../art/extras/yaplus/app_icon.ico</file>
         <file alias="art/extras/donation/kiritoxdone.png">../../art/extras/donation/kiritoxdone.png</file>
         <file alias="icons/extras/donates/support_logo.svg">../../icons/extras/donates/support_logo.svg</file>
         <file alias="icons/extras/nocover.svg">../../icons/extras/nocover.svg</file>

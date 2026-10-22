@@ -117,16 +117,6 @@ bool DarkTasbarValueValid/* = false*/;
 	static auto ScaledLogoDark = base::flat_map<int, QImage>();
 	static auto ScaledLogoLight = base::flat_map<int, QImage>();
 
-	static auto lastUsedIcon = ExtrasAssets::currentAppLogoName();
-
-	if (lastUsedIcon != ExtrasAssets::currentAppLogoName()) {
-		lastUsedIcon = ExtrasAssets::currentAppLogoName();
-		ScaledLogo = base::flat_map<int, QImage>();
-		ScaledLogoNoMargin = base::flat_map<int, QImage>();
-		ScaledLogoDark = base::flat_map<int, QImage>();
-		ScaledLogoLight = base::flat_map<int, QImage>();
-	}
-
 	const auto &settings = ExtrasSettings::getInstance();
 	if (settings.hideNotificationBadge()) {
 		args.count = 0;

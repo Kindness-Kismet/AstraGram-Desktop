@@ -9,7 +9,6 @@
 #include "extras/ui/boxes/font_selector.h"
 #include "extras/ui/components/avatar_corners_preview.h"
 #include "extras/ui/components/drawer_menu.h"
-#include "extras/ui/components/icon_picker.h"
 #include "extras/ui/settings/extras_builder.h"
 #include "extras/ui/settings/settings_extras_utils.h"
 #include "extras/ui/settings/settings_main.h"
@@ -196,21 +195,11 @@ bool HasDrawerBots(not_null<Window::SessionController*> controller) {
 }
 
 void BuildAppIcon(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
+#if defined Q_OS_WIN || defined Q_OS_MAC
 	builder.addSubsectionTitle({
 		.id = u"extras/appIcon"_q,
 		.title = tr::extras_AppIconHeader(),
 	});
-
-	builder.add([](const WidgetContext &ctx) -> SectionBuilder::WidgetToAdd {
-		return {
-			.widget = object_ptr<IconPicker>(ctx.container),
-			.margin = st::settingsButtonNoIcon.padding,
-		};
-	});
-
-#if defined Q_OS_WIN || defined Q_OS_MAC
-	builder.addDivider();
-	builder.addSkip();
 	extras.addSettingToggle({
 		.id = u"extras/hideNotificationBadge"_q,
 		.title = tr::extras_HideNotificationBadge(),
@@ -220,9 +209,6 @@ void BuildAppIcon(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	builder.addSkip();
 	builder.addDividerText(tr::extras_HideNotificationBadgeDescription());
 	builder.addSkip();
-#else
-    builder.addDivider();
-    builder.addSkip();
 #endif
 }
 

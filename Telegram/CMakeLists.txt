@@ -282,8 +282,6 @@ set(extras_files
         extras/ui/components/window_appearance.h
         extras/ui/components/floating_surface_host.cpp
         extras/ui/components/floating_surface_host.h
-        extras/ui/components/icon_picker.cpp
-        extras/ui/components/icon_picker.h
         extras/ui/components/bubble_transition.cpp
         extras/ui/components/bubble_transition.h
         extras/ui/components/avatar_corners_preview.cpp
@@ -2894,23 +2892,10 @@ elseif (APPLE)
 
     set(icons_path ${CMAKE_CURRENT_SOURCE_DIR}/Telegram/Images.xcassets)
     if (CMAKE_GENERATOR STREQUAL Xcode)
-        set(extras_icons
-            Default
-            Alt
-            Discord
-            Spotify
-            Extera
-            Nothing
-            Bard
-            Yaplus
+        target_add_resource(Telegram "${CMAKE_CURRENT_SOURCE_DIR}/Telegram/AppIcon-Default.icon")
+        set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Telegram/AppIcon-Default.icon" PROPERTIES
+                XCODE_EXPLICIT_FILE_TYPE "folder.iconcomposer.icon"
         )
-
-        foreach (icon ${extras_icons})
-            target_add_resource(Telegram "${CMAKE_CURRENT_SOURCE_DIR}/Telegram/AppIcon-${icon}.icon")
-            set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Telegram/AppIcon-${icon}.icon" PROPERTIES
-                    XCODE_EXPLICIT_FILE_TYPE "folder.iconcomposer.icon"
-            )
-        endforeach()
     else()
         set(icon_path ${icons_path}/Icon.iconset)
         find_program(ICONUTIL iconutil)
@@ -3038,7 +3023,6 @@ set_target_properties(Telegram PROPERTIES
     XCODE_ATTRIBUTE_CURRENT_PROJECT_VERSION ${desktop_app_update_version}
     XCODE_ATTRIBUTE_PRODUCT_NAME ${output_name}
     XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME AppIcon-Default
-    XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES "AppIcon-Alt AppIcon-Discord AppIcon-Spotify AppIcon-Extera AppIcon-Nothing AppIcon-Bard AppIcon-Yaplus"
     XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS YES
     XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME YES
     XCODE_ATTRIBUTE_COMBINE_HIDPI_IMAGES YES

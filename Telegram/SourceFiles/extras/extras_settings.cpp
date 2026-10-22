@@ -1,6 +1,5 @@
 #include "extras/extras_settings.h"
 
-#include "extras/ui/extras_logo.h"
 #include "extras/extras_ui_settings.h"
 #include "extras/extras_worker.h"
 #include "extras/utils/telegram_helpers.h"
@@ -386,7 +385,6 @@ void from_json(const nlohmann::json &j, MessageShotSettings &s) {
 
 ExtrasSettings::ExtrasSettings()
 : _messageBubbleRadius(Ui::kBubbleRadiusSliderMax)
-, _appIcon(ExtrasAssets::DEFAULT_ICON)
 , _editedMark(Core::IsAppLaunched() ? tr::lng_edited(tr::now) : QString("edited"))
 , _drawerOrder(normalizeDrawerOrder({})) {
 }
@@ -924,12 +922,6 @@ void ExtrasSettings::setShowGroupReactions(bool val) {
 void ExtrasSettings::setShowPrivateChatReactions(bool val) {
 	if (_showPrivateChatReactions.current() == val) return;
 	_showPrivateChatReactions = val;
-	save();
-}
-
-void ExtrasSettings::setAppIcon(const QString &val) {
-	if (_appIcon.current() == val) return;
-	_appIcon = val;
 	save();
 }
 
@@ -1496,7 +1488,6 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"showChannelReactions", s._showChannelReactions.current()},
 		{"showGroupReactions", s._showGroupReactions.current()},
 		{"showPrivateChatReactions", s._showPrivateChatReactions.current()},
-		{"appIcon", s._appIcon.current()},
 		{"customAppName", s._customAppName.current()},
 		{"customLogo", s._customLogo.current()},
 		{"customLogoTint", s._customLogoTint.current()},
@@ -1667,11 +1658,6 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._showChannelReactions = j.value("showChannelReactions", defaults._showChannelReactions.current());
 	s._showGroupReactions = j.value("showGroupReactions", defaults._showGroupReactions.current());
 	s._showPrivateChatReactions = j.value("showPrivateChatReactions", defaults._showPrivateChatReactions.current());
-	// 已移除的图标预设回落到默认图标，否则窗口与任务栏图标为空。
-	const auto appIcon = j.value("appIcon", defaults._appIcon.current());
-	s._appIcon = ExtrasAssets::appIcons().contains(appIcon)
-		? appIcon
-		: defaults._appIcon.current();
 	s._customAppName = j.value("customAppName", defaults._customAppName.current()).simplified();
 	const auto customLogo = j.value("customLogo", defaults._customLogo.current());
 	s._customLogo = ExtrasFeatures::CustomLogo::isStoredName(customLogo)
