@@ -2,6 +2,7 @@
 #include "extras/debug/commands/commands_internal.h"
 
 #include "extras/data/media_cache_manager.h"
+#include "extras/utils/rc_manager.h"
 #include "data/data_peer.h"
 #include "main/main_session.h"
 
@@ -18,6 +19,23 @@ constexpr auto kCategoryNames = std::array{
 constexpr auto kChatTypes = std::array{
 	"private", "groups", "channels", "stories",
 };
+
+Result badgeState(const QStringList &args) {
+	if (!args.empty()) {
+		return Result::Err(u"usage: cache.badges"_q);
+	}
+	const auto &manager = RCManager::getInstance();
+	const auto &roster = manager.roster();
+	return Result::Ok(Compact(json{
+		{ "restoredFromCache", manager.restoredFromCache() },
+		{ "refreshing", manager.refreshing() },
+		{ "developers", roster.developers.size() },
+		{ "officialChannels", roster.officialChannels.size() },
+		{ "supporters", roster.supporters.size() },
+		{ "supporterChannels", roster.supporterChannels.size() },
+		{ "customBadges", roster.customBadges.size() },
+	}));
+}
 
 json usage(const Extras::MediaCacheUsageList &list) {
 	auto result = json::object();
@@ -126,6 +144,7 @@ Result mediaRetention(const QStringList &args) {
 
 const HandlerMap &cacheHandlers() {
 	static const auto result = HandlerMap{
+		{ u"cache.badges"_q, &badgeState },
 		{ u"cache.media-stats"_q, &mediaStats },
 		{ u"cache.media-clear"_q, &mediaClear },
 		{ u"cache.media-retention"_q, &mediaRetention },

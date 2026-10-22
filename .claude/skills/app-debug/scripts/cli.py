@@ -348,6 +348,7 @@ def register_commands(sub) -> None:
     command = sub.add_parser("anim.speed", help="查询或临时调整过渡动画速度：0.1 放慢十倍，2 加快一倍，1 恢复；不保存")
     command.add_argument("speed", nargs="?", type=float, help="0.01 至 10，省略则只报告当前速度")
 
+    sub.add_parser("cache.badges", help="查询徽标名单的本地恢复状态和后台刷新状态")
     sub.add_parser("cache.media-stats", help="查询媒体和消息分类、聊天归属及缓存大小")
     command = sub.add_parser("cache.media-clear", help="清理选定本机缓存；all 只包含媒体，消息需显式选 messages")
     command.add_argument("categories", help="all 或 images,stickers,documents,avatars,other,messages")

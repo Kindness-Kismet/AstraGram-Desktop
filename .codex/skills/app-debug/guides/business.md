@@ -47,6 +47,9 @@
 | `mention.send` | `<peerId> <userId> <displayText> <followingText>` | 通过当前账号解析目标，构造真实提及标签并沿官方发送链路提交。 |
 
 提及保留原有约束：编号必须有效，仅复用当前账号已知资料或已有消息上下文，不猜测访问参数。
+`peer.info` 还返回普通认证、官方资源、支持者和表情状态的标记，用于区分徽标来源。
+`cache.badges` 返回徽标名单的 `restoredFromCache`、`refreshing` 和各类数量；只查询状态，不请求网络。
+
 无用户名成员可先用 `chat.members <peerId> no-username` 查询；缓存不足时可查看已授权对话中的消息发送者，再用 `peer.info` 核对。
 
 发送任务的 `state: submitted` 只表示已交给官方发送链路，不等于服务器确认。

@@ -1,6 +1,8 @@
 #include "extras/utils/rc_manager.h"
+#include "storage/details/storage_file_utilities.h"
 
 #include <QCoreApplication>
+#include <QFile>
 #include <QtNetwork/QNetworkAccessManager>
 #include <QTimer>
 #include <algorithm>
@@ -9,6 +11,10 @@ namespace {
 
 constexpr auto kBadgeUrl = "https://badge.astragram.dpdns.org/v1/badges";
 constexpr auto kFetchTimeout = 15 * 1000;
+
+[[nodiscard]] QString rosterCachePath() {
+	return cWorkingDir() + u"tdata/badge_roster.json"_q;
+}
 
 void appendAffectedPeers(std::vector<PeerId> &result, const BadgeRoster &roster) {
 	const auto append = [&](const auto &ids, bool channel) {
@@ -33,6 +39,7 @@ void RCManager::start() {
 	if (_manager) {
 		return;
 	}
+	restoreRoster();
 	_manager = std::make_unique<QNetworkAccessManager>();
 	_timer = new QTimer(this);
 	connect(_timer, &QTimer::timeout, this, &RCManager::makeRequest);
@@ -43,7 +50,26 @@ void RCManager::start() {
 	makeRequest();
 }
 
+void RCManager::restoreRoster() {
+	auto file = QFile(rosterCachePath());
+	if (!file.open(QIODevice::ReadOnly)) {
+		return;
+	}
+	const auto parsed = parseBadgeRoster(file.read(kBadgeRosterMaxBytes + 1));
+	if (!parsed) {
+		LOG(("BadgeRoster: could not restore cached roster"));
+		return;
+	}
+	_roster = *parsed;
+	_restoredFromCache = true;
+}
+
 void RCManager::makeRequest() {
+#ifdef _DEBUG
+	if (cDebugOffline()) {
+		return;
+	}
+#endif
 	if (!_manager || _reply) {
 		return;
 	}
@@ -84,6 +110,12 @@ void RCManager::gotResponse() {
 		return;
 	}
 	_etag = etag;
+	Storage::details::WriteFile(rosterCachePath(), response, [=](bool saved) {
+		if (!saved) {
+			_etag.clear();
+			LOG(("BadgeRoster: could not save cached roster"));
+		}
+	});
 	if (_roster == *parsed) {
 		return;
 	}

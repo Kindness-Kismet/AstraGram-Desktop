@@ -4,6 +4,7 @@
 #include "extras/features/mention_by_id/mention_by_id.h"
 #include "extras/features/message_shot/message_shot.h"
 #include "extras/features/video_cover/video_cover.h"
+#include "extras/utils/badge_helpers.h"
 
 #include "apiwrap.h"
 #include "api/api_common.h"
@@ -104,9 +105,14 @@ Result peerInfo(const QStringList &args) {
 	if (args.size() != 1) return Result::Err(u"usage: peer.info <peerId>"_q);
 	const auto peer = findPeer(args[0]);
 	if (!peer) return Result::Err(u"peer not found"_q);
-	if (const auto user = peer->asUser()) return Result::Ok(Compact(userInfo(user)));
-	return Result::Ok(Compact(Json{ { "peerId", peer->id.value },
-		{ "name", peer->name().toStdString() }, { "kind", peer->isChat() ? "chat" : "channel" } }));
+	auto result = peer->isUser() ? userInfo(peer->asUser())
+		: Json{ { "peerId", peer->id.value }, { "name", peer->name().toStdString() },
+			{ "kind", peer->isChat() ? "chat" : "channel" } };
+	result["verified"] = peer->isVerified();
+	result["officialResource"] = isExteraPeer(peer);
+	result["supporter"] = isSupporterPeer(peer);
+	result["hasEmojiStatus"] = bool(peer->emojiStatusId());
+	return Result::Ok(Compact(result));
 }
 
 Result members(const QStringList &args) {

@@ -24,6 +24,8 @@ public:
 
 	void start();
 	[[nodiscard]] const BadgeRoster &roster() const { return _roster; }
+	[[nodiscard]] bool restoredFromCache() const { return _restoredFromCache; }
+	[[nodiscard]] bool refreshing() const { return _reply != nullptr; }
 	[[nodiscard]] rpl::producer<std::vector<PeerId>> changes() const {
 		return _changes.events();
 	}
@@ -33,11 +35,13 @@ private:
 	~RCManager();
 
 	void makeRequest();
+	void restoreRoster();
 	void gotResponse();
 	void clearSentRequest();
 	void stop();
 
 	BadgeRoster _roster;
+	bool _restoredFromCache = false;
 	QByteArray _etag;
 	QTimer *_timer = nullptr;
 	std::unique_ptr<QNetworkAccessManager> _manager;
