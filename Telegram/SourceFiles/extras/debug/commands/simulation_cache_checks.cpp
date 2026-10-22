@@ -384,7 +384,131 @@ private:
 			const auto cleared = !_session->conversationCache()._pendingConfirmedMessages.contains(id);
 			record(6, survivedRestore && cleared && error.type == Storage::Cache::Error::Type::None,
 				{ { "survivedRestore", survivedRestore }, { "cleared", cleared } });
-			finish(_passed);
+			dynamicUpdatesDuringLoad();
+		});
+	}
+
+	void dynamicUpdatesDuringLoad() {
+		const auto peer = user(6);
+		const auto query = latest(peer);
+		const auto pollId = uint64(_messageBase + 61);
+		const auto pageId = uint64(_messageBase + 62);
+		const auto results = [](bool partial, int votes) {
+			using Flag = MTPDpollResults::Flag;
+			using AnswerFlag = MTPDpollAnswerVoters::Flag;
+			return MTP_pollResults(MTP_flags(Flag::f_results | Flag::f_total_voters
+				| (partial ? Flag::f_min : Flag(0))),
+				MTP_vector<MTPPollAnswerVoters>({ MTP_pollAnswerVoters(
+					MTP_flags(AnswerFlag::f_voters | (partial ? AnswerFlag(0) : AnswerFlag::f_chosen)),
+					MTP_bytes("0"), MTP_int(votes), MTP_vector<MTPPeer>()) }),
+				MTP_int(votes), MTP_vector<MTPPeer>(), MTPstring(),
+				MTP_vector<MTPMessageEntity>(), MTPMessageMedia());
+		};
+		const auto poll = MTP_poll(MTP_long(pollId), MTP_flags(0),
+			MTP_textWithEntities(MTP_string("Cache update check"), MTP_vector<MTPMessageEntity>()),
+			MTP_vector<MTPPollAnswer>(), MTPint(), MTPint(), MTP_vector<MTPstring>(), MTP_long(0));
+		const auto pollMessage = simulationMediaMessage(peer, _session->userPeerId(),
+			int(pollId), {}, MTP_messageMediaPoll(MTP_flags(0), poll, results(false, 1), MTPMessageMedia()));
+		const auto pageMessage = simulationMediaMessage(peer, _session->userPeerId(),
+			int(pageId), {}, MTP_messageMediaWebPage(MTP_flags(0),
+				MTP_webPagePending(MTP_flags(0), MTP_long(pageId), MTPstring(), MTP_int(1))));
+		put(query, { pageMessage, pollMessage }, 2);
+		auto &cache = _session->conversationCache();
+		const auto pending = !cache.debugHistoryInfo(query.key).loaded;
+		cache.pollUpdated(MTP_updateMessagePoll(MTP_flags(0), MTPPeer(), MTPint(), MTPint(),
+			MTP_long(pollId), MTPPoll(), results(true, 3)).c_updateMessagePoll());
+		cache.webPageUpdated(MTP_webPageEmpty(MTP_flags(0), MTP_long(pageId), MTPstring()));
+		const auto reaction = [](bool partial, int count) {
+			using Flag = MTPDmessageReactions::Flag;
+			return MTP_messageReactions(MTP_flags(partial ? Flag::f_min : Flag(0)),
+				MTP_vector<MTPReactionCount>({ MTP_reactionCount(
+					MTP_flags(partial ? MTPDreactionCount::Flag(0) : MTPDreactionCount::Flag::f_chosen_order),
+					MTP_int(0), MTP_reactionEmoji(MTP_string("\xf0\x9f\x91\x8d")), MTP_int(count)) }),
+				MTP_vector<MTPMessagePeerReaction>(), MTP_vector<MTPMessageReactor>());
+		};
+		cache.reactionsUpdated(FullMsgId(peer->id, MsgId(pollId)), reaction(false, 2));
+		cache.reactionsUpdated(FullMsgId(peer->id, MsgId(pollId)), reaction(true, 4));
+		read(query, [=, this](std::optional<Slice> slice) {
+			auto pollPass = false;
+			auto pagePass = false;
+			auto reactionPass = false;
+			if (slice && slice->messages.type() == mtpc_messages_messagesSlice) {
+				for (const auto &message : slice->messages.c_messages_messagesSlice().vmessages().v) {
+					const auto &data = message.c_message();
+					if (data.vid().v == pollId) {
+						const auto &poll = data.vmedia()->c_messageMediaPoll().vresults().data();
+						pollPass = poll.vtotal_voters()->v == 3 && poll.vresults()->v.front().data().is_chosen();
+						if (const auto reactions = data.vreactions()) {
+							const auto &count = reactions->data().vresults().v.front().data();
+							reactionPass = count.vcount().v == 4 && count.vchosen_order();
+						}
+					} else if (data.vid().v == pageId) {
+						pagePass = data.vmedia()->c_messageMediaWebPage().vwebpage().type() == mtpc_webPageEmpty;
+					}
+				}
+			}
+			record(7, pending && pollPass && pagePass && reactionPass,
+				{ { "startedWhileLoading", pending }, { "pollChoicePreserved", pollPass },
+					{ "webPageUpdated", pagePass }, { "reactionChoicePreserved", reactionPass } });
+			sparsePollUpdates(peer, query, pollId);
+		});
+	}
+
+	void sparsePollUpdates(not_null<PeerData*> peer, Query query, uint64 pollId) {
+		using Flag = MTPDpollResults::Flag;
+		using AnswerFlag = MTPDpollAnswerVoters::Flag;
+		const auto partial = MTP_pollResults(MTP_flags(Flag::f_min | Flag::f_results),
+			MTP_vector<MTPPollAnswerVoters>({ MTP_pollAnswerVoters(MTP_flags(AnswerFlag::f_correct),
+				MTP_bytes("0"), MTPint(), MTP_vector<MTPPeer>()) }),
+			MTPint(), MTP_vector<MTPPeer>(), MTPstring(), MTP_vector<MTPMessageEntity>(), MTPMessageMedia());
+		const auto added = MTP_pollResults(MTP_flags(Flag::f_results | Flag::f_total_voters),
+			MTP_vector<MTPPollAnswerVoters>({ MTP_pollAnswerVoters(MTP_flags(AnswerFlag::f_voters),
+				MTP_bytes("1"), MTP_int(2), MTP_vector<MTPPeer>()) }),
+			MTP_int(5), MTP_vector<MTPPeer>(), MTPstring(), MTP_vector<MTPMessageEntity>(), MTPMessageMedia());
+		for (const auto &results : { partial, added }) {
+			_session->conversationCache().pollUpdated(MTP_updateMessagePoll(MTP_flags(0),
+				MTPPeer(), MTPint(), MTPint(), MTP_long(pollId), MTPPoll(), results).c_updateMessagePoll());
+		}
+		read(query, [=, this](std::optional<Slice> slice) {
+			auto preserved = false;
+			if (slice) {
+				for (const auto &message : slice->messages.c_messages_messagesSlice().vmessages().v) {
+					if (IdFromMessage(message).bare != pollId) continue;
+					const auto &results = message.c_message().vmedia()->c_messageMediaPoll().vresults().data();
+					const auto answers = results.vresults();
+					if (answers && answers->v.size() == 2) {
+						const auto &first = answers->v.front().data();
+						preserved = first.is_chosen() && first.is_correct()
+							&& first.vvoters() && first.vvoters()->v == 3
+							&& answers->v.back().data().vvoters()->v == 2;
+					}
+				}
+			}
+			record(8, preserved, { { "omittedAnswersAndCountsPreserved", preserved } });
+			const auto empty = MTP_pollResults(MTP_flags(Flag::f_total_voters),
+				MTP_vector<MTPPollAnswerVoters>(), MTP_int(0), MTP_vector<MTPPeer>(),
+				MTPstring(), MTP_vector<MTPMessageEntity>(), MTPMessageMedia());
+			_session->conversationCache().pollUpdated(MTP_updateMessagePoll(MTP_flags(0),
+				MTPPeer(), MTPint(), MTPint(), MTP_long(pollId), MTPPoll(), empty).c_updateMessagePoll());
+			_session->conversationCache().reactionsUpdated(FullMsgId(peer->id, MsgId(pollId)),
+				MTP_messageReactions(MTP_flags(0), MTP_vector<MTPReactionCount>(),
+					MTP_vector<MTPMessagePeerReaction>(), MTP_vector<MTPMessageReactor>()));
+			read(query, [=, this](std::optional<Slice> slice) {
+				auto cleared = false;
+				if (slice) {
+					for (const auto &message : slice->messages.c_messages_messagesSlice().vmessages().v) {
+						if (IdFromMessage(message).bare != pollId) continue;
+						const auto &data = message.c_message();
+						const auto &results = data.vmedia()->c_messageMediaPoll().vresults().data();
+						cleared = results.vtotal_voters() && results.vtotal_voters()->v == 0
+							&& results.vresults() && ranges::none_of(results.vresults()->v, [](const auto &answer) {
+								return answer.data().is_chosen();
+							}) && data.vreactions() && data.vreactions()->data().vresults().v.isEmpty();
+					}
+				}
+				record(9, cleared, { { "withdrawnVotesAndReactionsCleared", cleared } });
+				finish(_passed);
+			});
 		});
 	}
 

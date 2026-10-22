@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_item.h"
+#include "extras/data/conversation_cache.h"
 
 #include "api/api_premium.h"
 #include "api/api_sensitive_content.h"
@@ -5481,6 +5482,10 @@ void HistoryItem::updateReactions(const MTPMessageReactions *reactions) {
 	const auto wasRecentUsers = LookupRecentUnreadReactedUsers(this);
 	const auto hadUnread = hasUnreadReaction();
 	const auto changed = changeReactions(reactions);
+	if (reactions && !_history->owner().reactions().sending(this)) {
+		// 本人选择已提前显示，服务器确认即使没有界面变化也要保存。
+		_history->session().conversationCache().reactionsUpdated(fullId(), *reactions);
+	}
 	if (!changed) {
 		return;
 	}

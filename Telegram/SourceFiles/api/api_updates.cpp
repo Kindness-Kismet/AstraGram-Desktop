@@ -1992,6 +1992,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 		// Update web page anyway.
 		session().data().processWebpage(d.vwebpage());
+		session().conversationCache().webPageUpdated(d.vwebpage());
 		session().data().sendWebPageGamePollTodoListNotifications();
 
 		updateAndApply(d.vpts().v, d.vpts_count().v, update);
@@ -2002,6 +2003,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 		// Update web page anyway.
 		session().data().processWebpage(d.vwebpage());
+		session().conversationCache().webPageUpdated(d.vwebpage());
 		session().data().sendWebPageGamePollTodoListNotifications();
 
 		auto channel = session().data().channelLoaded(d.vchannel_id());

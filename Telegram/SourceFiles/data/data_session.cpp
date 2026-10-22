@@ -5105,6 +5105,7 @@ void Session::checkPollsClosings() {
 }
 
 void Session::applyUpdate(const MTPDupdateMessagePoll &update) {
+	_session->conversationCache().pollUpdated(update);
 	const auto updated = [&] {
 		const auto poll = update.vpoll();
 		const auto i = _polls.find(update.vpoll_id().v);

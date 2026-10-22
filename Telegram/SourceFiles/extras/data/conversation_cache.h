@@ -68,6 +68,9 @@ public:
 	void messageReceived(const MTPMessage &message, NewMessageType type);
 	void messageEdited(const MTPMessage &message);
 	void cacheConfirmedMessage(FullMsgId id);
+	void reactionsUpdated(FullMsgId id, const MTPMessageReactions &reactions);
+	void pollUpdated(const MTPDupdateMessagePoll &update);
+	void webPageUpdated(const MTPWebPage &page);
 	void messagesDeleted(PeerId peer, const QVector<MTPint> &ids);
 	void historyCleared(PeerId peer);
 	void restoreMessage(PeerId peer, MsgId id, Fn<void(bool)> done);
@@ -188,6 +191,9 @@ private:
 		Fn<void()> cancelled = nullptr);
 	void withIndex(Fn<void()> done);
 	void applyMessage(const MTPMessage &message, bool isNew);
+	void updateCachedMessages(
+		PeerId peer,
+		Fn<bool(MTPMessage &)> update);
 	void deleteMessages(HistoryCacheKey key, const QVector<MTPint> &ids);
 	void trimHistory(HistoryCacheKey key, HistoryEntry &entry);
 	void restoreMessageFromHistories(

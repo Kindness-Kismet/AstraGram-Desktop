@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_web_page.h"
+#include "extras/data/conversation_cache.h"
 
 #include "main/main_session.h"
 #include "apiwrap.h"
@@ -437,6 +438,7 @@ void WebPageData::ApplyChanges(
 			if (const auto media = data.vmedia()) {
 				media->match([&](const MTPDmessageMediaWebPage &data) {
 					session->data().processWebpage(data.vwebpage());
+					session->conversationCache().webPageUpdated(data.vwebpage());
 				}, [&](const auto &) {
 				});
 			}
