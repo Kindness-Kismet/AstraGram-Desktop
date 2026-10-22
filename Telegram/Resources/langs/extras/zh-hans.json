@@ -437,7 +437,7 @@
   "RecordMessage": "录制消息",
   "RecordVoiceMessage": "语音消息",
   "RecordVideoMessage": "视频消息",
-  "DrawerElementsHeader": "主菜单项目",
+  "DrawerElementsHeader": "主菜单项目（长按可以拖动排序）",
   "TrayElementsHeader": "系统托盘菜单项目",
   "MessageBubbleRadius": "消息气泡圆角半径",
   "SettingsWideMultiplier": "宽屏消息宽度比例",

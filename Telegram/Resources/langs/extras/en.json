@@ -340,7 +340,7 @@
   "RecordMessage": "Record Message",
   "RecordVoiceMessage": "Voice Message",
   "RecordVideoMessage": "Video Message",
-  "DrawerElementsHeader": "Drawer Elements",
+  "DrawerElementsHeader": "Drawer Elements (long press to drag and reorder)",
   "TrayElementsHeader": "Tray Elements",
   "MessageBubbleRadius": "Message Bubble Radius",
   "SettingsWideMultiplier": "Wide Messages Multiplier",

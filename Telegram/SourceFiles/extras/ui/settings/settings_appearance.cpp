@@ -533,7 +533,6 @@ void BuildDrawerElements(SectionBuilder &builder, ExtrasSectionBuilder &extras) 
 	});
 	if (rows) {
 		ExtrasUi::setupDrawerReorder(rows);
-		ExtrasUi::addDrawerGrips(rows);
 	}
 	builder.addSkip();
 }
