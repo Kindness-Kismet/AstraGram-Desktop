@@ -9,6 +9,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "apiwrap.h"
 #include "main/main_session.h"
+#include "data/data_session.h"
+#include "storage/cache/storage_cache_database.h"
 #include "storage/streamed_file_downloader.h"
 #include "storage/cache/storage_cache_types.h"
 
@@ -25,11 +27,31 @@ LoaderMtproto::LoaderMtproto(
 	not_null<Storage::DownloadManagerMtproto*> owner,
 	const StorageFileLocation &location,
 	int64 size,
-	Data::FileOrigin origin)
+	Data::FileOrigin origin,
+	Storage::Cache::Key fileCacheKey)
 : DownloadMtprotoTask(owner, location, origin)
 , _size(size)
 , _api(&api().instance())
 , _statsTimer([=] { checkStats(); }) {
+	if (!fileCacheKey.valid()) {
+		return;
+	}
+	_cacheReadPending = true;
+	const auto done = crl::guard(this, [=](QByteArray bytes) {
+		_cacheReadPending = false;
+		if (bytes.size() == _size && !bytes.startsWith("partial:")) {
+			_cachedFile = std::move(bytes);
+		}
+		while (const auto offset = _requested.take()) {
+			load(*offset);
+		}
+	});
+	// 小文件缓存与流媒体分块分开保存，先复用已有的完整文件。
+	owner->api().session().data().cache().get(fileCacheKey, [done](QByteArray bytes) {
+		crl::on_main([done, bytes = std::move(bytes)]() mutable {
+			done(std::move(bytes));
+		});
+	});
 }
 
 Storage::Cache::Key LoaderMtproto::baseCacheKey() const {
@@ -44,6 +66,14 @@ int64 LoaderMtproto::size() const {
 
 void LoaderMtproto::load(int64 offset) {
 	crl::on_main(this, [=] {
+		if (_cacheReadPending) {
+			_requested.add(offset);
+			return;
+		}
+		if (!_cachedFile.isEmpty()) {
+			_parts.fire({ offset, _cachedFile.mid(offset, kPartSize) });
+			return;
+		}
 		if (_downloader) {
 			auto bytes = _downloader->readLoadedPart(offset);
 			if (!bytes.isEmpty()) {
@@ -123,7 +153,7 @@ void LoaderMtproto::setPriority(int priority) {
 }
 
 bool LoaderMtproto::readyToRequest() const {
-	return !_requested.empty();
+	return !_cacheReadPending && _cachedFile.isEmpty() && !_requested.empty();
 }
 
 int64 LoaderMtproto::takeNextRequestOffset() {

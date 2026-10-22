@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mtproto/sender.h"
 #include "data/data_file_origin.h"
 #include "storage/download_manager_mtproto.h"
+#include "storage/cache/storage_cache_types.h"
 
 namespace Media {
 namespace Streaming {
@@ -22,7 +23,8 @@ public:
 		not_null<Storage::DownloadManagerMtproto*> owner,
 		const StorageFileLocation &location,
 		int64 size,
-		Data::FileOrigin origin);
+		Data::FileOrigin origin,
+		Storage::Cache::Key fileCacheKey = {});
 
 	[[nodiscard]] Storage::Cache::Key baseCacheKey() const override;
 	[[nodiscard]] int64 size() const override;
@@ -66,6 +68,8 @@ private:
 	MTP::Sender _api;
 
 	PriorityQueue _requested;
+	QByteArray _cachedFile;
+	bool _cacheReadPending = false;
 	rpl::event_stream<LoadedPart> _parts;
 	rpl::event_stream<SpeedEstimate> _speedEstimate;
 

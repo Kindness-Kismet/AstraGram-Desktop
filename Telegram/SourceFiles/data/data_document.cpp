@@ -1751,7 +1751,8 @@ auto DocumentData::createStreamingLoader(
 					MTP_bytes(_fileReference),
 					MTP_string())),
 			size,
-			origin)
+			origin,
+			(saveToCache() && !forceRemoteLoader) ? cacheKey() : Storage::Cache::Key())
 		: nullptr;
 }
 
