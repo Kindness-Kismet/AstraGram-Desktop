@@ -968,9 +968,9 @@ void PeerData::clearPaysPerMessage() {
 }
 
 bool PeerData::hideLinks() const {
-	//if (!isUser()) {
-	//	return false;
-	//}
+	if (isSelf()) {
+		return false;
+	}
 	if (const auto to = migrateTo()) {
 		return to->hideLinks();
 	}
