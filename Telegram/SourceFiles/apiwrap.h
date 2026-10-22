@@ -182,6 +182,7 @@ public:
 		Fn<void()> callback);
 
 	void requestMessageData(PeerData *peer, MsgId msgId, Fn<void()> done);
+	void requestMessageDataFromServer(PeerData *peer, MsgId msgId, Fn<void()> done);
 	QString exportDirectMessageLink(
 		not_null<HistoryItem*> item,
 		bool inRepliesContext,
@@ -542,7 +543,6 @@ private:
 		Fn<void(const MTP::Error &)> fail = nullptr);
 
 	void resolveMessageDatas();
-	void requestMessageDataFromServer(PeerData *peer, MsgId msgId, Fn<void()> done);
 	void finalizeMessageDataRequest(
 		ChannelData *channel,
 		mtpRequestId requestId);

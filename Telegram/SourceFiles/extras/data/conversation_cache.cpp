@@ -35,7 +35,8 @@ constexpr auto kListMetadataPref = "conversation-list-metadata";
 
 [[nodiscard]] MTPDialog makeDialog(
 		not_null<History*> history,
-		const MTPDdialog &data) {
+		const MTPDdialog &data,
+		MsgId topId) {
 	using Flag = MTPDdialog::Flag;
 	auto flags = data.vflags().v
 		& ~(Flag::f_pts | Flag::f_draft | Flag::f_pinned | Flag::f_unread_mark);
@@ -46,11 +47,10 @@ constexpr auto kListMetadataPref = "conversation-list-metadata";
 	if (history->unreadMark()) {
 		flags |= Flag::f_unread_mark;
 	}
-	const auto last = history->lastServerMessage();
 	return MTP_dialog(
 		MTP_flags(flags),
 		data.vpeer(),
-		MTP_int(last ? last->id : 0),
+		MTP_int(topId),
 		MTP_int(history->inboxReadTillId()),
 		MTP_int(history->outboxReadTillId()),
 		MTP_int(history->unreadCount()),
@@ -275,15 +275,24 @@ void ConversationCache::saveDialogs() {
 			if (i == end(_dialogs)) {
 				continue;
 			}
-			dialogs.push_back(makeDialog(history, i->second.c_dialog()));
+			const auto last = _lastMessages.find(history->peer->id);
+			auto item = history->lastServerMessage();
+			if (last != end(_lastMessages) && cacheable(last->second)
+				&& (!item || IdFromMessage(last->second) > item->id)) {
+				// 发送确认可能早于列表刷新，快照使用已确认的最新消息。
+				if (const auto confirmed = _session->data().message(
+						history->peer->id, IdFromMessage(last->second))) {
+					item = confirmed;
+				}
+			}
+			dialogs.push_back(makeDialog(history, i->second.c_dialog(), item ? item->id : MsgId()));
 			metadataStream << SerializePeerId(history->peer->id)
-				<< qint32(history->chatListTimeId());
+				<< qint32(item ? std::max(history->chatListTimeId(), item->date())
+					: history->chatListTimeId());
 			peers.emplace(history->peer->id);
-			const auto item = history->lastServerMessage();
 			if (!item) {
 				continue;
 			}
-			const auto last = _lastMessages.find(history->peer->id);
 			const auto entry = _histories.find({ history->peer->id });
 			auto message = (last != end(_lastMessages) && IdFromMessage(last->second) == item->id)
 				? &last->second : nullptr;
@@ -341,7 +350,8 @@ void ConversationCache::dialogReceived(const MTPDdialog &dialog) {
 	}
 	const auto peer = peerFromMTP(dialog.vpeer());
 	const auto history = _session->data().history(peer);
-	_dialogs[peer] = makeDialog(history, dialog);
+	const auto last = history->lastServerMessage();
+	_dialogs[peer] = makeDialog(history, dialog, last ? last->id : MsgId());
 	_restoredDialogs.remove(peer);
 	scheduleSave();
 }
@@ -473,6 +483,9 @@ void ConversationCache::clearStorage(
 	withIndex([=] {
 		_storageClearing = true;
 		_saveTimer.cancel();
+		for (auto i = _pendingConfirmedMessages.begin(); i != _pendingConfirmedMessages.end();) {
+			i = !peer || i->peer == peer ? _pendingConfirmedMessages.erase(i) : std::next(i);
+		}
 		auto keys = std::vector<HistoryCacheKey>();
 		auto cancelled = std::vector<HistoryEntry::Pending>();
 		for (auto i = _histories.begin(); i != _histories.end();) {
@@ -548,6 +561,7 @@ void ConversationCache::clearStorage(
 
 void ConversationCache::disable() {
 	_enabled = false;
+	_pendingConfirmedMessages.clear();
 	_saveTimer.cancel();
 	_lifetime.destroy();
 }

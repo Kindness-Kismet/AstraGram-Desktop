@@ -1,6 +1,7 @@
 #include "extras/data/conversation_cache.h"
 
 #include "extras/data/conversation_cache_serialization.h"
+#include "apiwrap.h"
 #include "base/unixtime.h"
 #include "data/data_channel.h"
 #include "data/data_changes.h"
@@ -18,6 +19,21 @@ namespace Extras {
 namespace {
 
 using namespace CacheSerialization;
+
+template <typename Range>
+void mergeRange(std::vector<Range> &stored, Range range) {
+	stored.push_back(range);
+	ranges::sort(stored, {}, &Range::from);
+	auto merged = std::vector<Range>();
+	for (const auto part : stored) {
+		if (!merged.empty() && part.from <= merged.back().till + 1) {
+			merged.back().till = std::max(merged.back().till, part.till);
+		} else {
+			merged.push_back(part);
+		}
+	}
+	stored = std::move(merged);
+}
 
 void collectForwardedPeers(
 		base::flat_set<PeerId> &peers,
@@ -619,17 +635,7 @@ void ConversationCache::putHistory(
 			}
 		}
 		if (range.from <= range.till) {
-			entry.ranges.push_back(range);
-			ranges::sort(entry.ranges, {}, &Range::from);
-			auto merged = std::vector<Range>();
-			for (const auto part : entry.ranges) {
-				if (!merged.empty() && part.from <= merged.back().till + 1) {
-					merged.back().till = std::max(merged.back().till, part.till);
-				} else {
-					merged.push_back(part);
-				}
-			}
-			entry.ranges = std::move(merged);
+			mergeRange(entry.ranges, range);
 		}
 		entry.dirty = true;
 		_historyKeys.emplace(query.key);
@@ -739,6 +745,10 @@ void ConversationCache::messageReceived(
 	if (!_enabled || _restoring || !cacheable(message)) {
 		return;
 	}
+	const auto id = FullMsgId(PeerFromMessage(message), IdFromMessage(message));
+	if (_pendingConfirmedMessages.remove(id)) {
+		type = NewMessageType::Unread;
+	}
 	const auto peer = PeerFromMessage(message);
 	if (type == NewMessageType::Last || type == NewMessageType::Unread) {
 		const auto i = _lastMessages.find(peer);
@@ -760,6 +770,16 @@ void ConversationCache::messageReceived(
 		traceHistory("new-message", { .key = { peer } });
 #endif
 	}
+}
+
+void ConversationCache::cacheConfirmedMessage(FullMsgId id) {
+	if (!_enabled || _restoring || !_pendingConfirmedMessages.emplace(id).second) {
+		return;
+	}
+	// 简短发送回执缺少完整消息资料，沿官方合并请求补取已确认消息。
+	_session->api().requestMessageDataFromServer(_session->data().peer(id.peer), id.msg, [=] {
+		_pendingConfirmedMessages.remove(id);
+	});
 }
 
 void ConversationCache::messageEdited(const MTPMessage &message) {
@@ -791,12 +811,21 @@ void ConversationCache::applyMessage(const MTPMessage &message, bool isNew) {
 					entry.dirty = true;
 					scheduleSave();
 				}
-				const auto append = isNew && !key.topicRootId && !key.sublistPeer
-					&& !entry.ranges.empty() && entry.ranges.back().till == ServerMaxMsgId;
-				if (!entry.messages.contains(id) && !append) {
+				const auto ordinaryNew = isNew && !key.topicRootId && !key.sublistPeer;
+				if (!entry.messages.contains(id) && !ordinaryNew) {
 					return;
 				}
 				if (cacheable(message)) {
+					if (ordinaryNew && ranges::none_of(entry.ranges, [=](Range range) {
+						return range.from <= id && id <= range.till;
+					})) {
+						// 新消息单独保存，旧尾部与新消息之间的空档仍需服务器确认。
+						const auto newest = entry.messages.empty() || id > entry.messages.rbegin()->first;
+						mergeRange(entry.ranges, Range{ id, newest ? ServerMaxMsgId : id });
+						if (newest) {
+							entry.bottomFresh = true;
+						}
+					}
 					entry.count += int(!entry.messages.contains(id));
 					entry.messages[id] = message;
 					if (!peerIsChannel(peer)) {

@@ -329,10 +329,62 @@ private:
 						record(4, pass, { { "topic", sliceNumbers(topicState) },
 							{ "sublist", sliceNumbers(sublistState) },
 							{ "main", sliceNumbers(mainState) }, { "topId", last ? last->id.bare : 0 } });
-						finish(_passed);
+						outOfOrderMessages();
 					});
 				});
 			});
+		});
+	}
+
+	void outOfOrderMessages() {
+		const auto peer = user(5);
+		const auto query = latest(peer);
+		read(query, [=, this](std::optional<Slice>) {
+			put(query, { message(peer, 52), message(peer, 51) }, 20);
+			setTop(peer, message(peer, 55));
+			read(query, [=, this](std::optional<Slice>) {
+				auto &cache = _session->conversationCache();
+				for (const auto offset : { 56, 54, 55, 54 }) {
+					cache.messageReceived(message(peer, offset), NewMessageType::Unread);
+				}
+				const auto info = cache.debugHistoryInfo(query.key);
+				auto around = query;
+				around.latest = false;
+				around.allowNearest = false;
+				around.offsetId = MsgId(_messageBase + 54);
+				around.addOffset = -around.limit;
+				read(around, [=, this](std::optional<Slice> slice) {
+					const auto state = describeSlice(slice);
+					const auto pass = state.ids == std::vector<MsgId>{ MsgId(_messageBase + 56),
+						MsgId(_messageBase + 55), MsgId(_messageBase + 54) }
+						&& !state.atTop && state.atBottom && info.cachedMessages == 5
+						&& info.ranges.size() == 2 && info.ranges[0].till == MsgId(_messageBase + 52)
+						&& info.ranges[1].from == MsgId(_messageBase + 54)
+						&& info.ranges[1].till == ServerMaxMsgId;
+					auto numbers = sliceNumbers(state);
+					numbers["cachedMessages"] = info.cachedMessages;
+					numbers["ranges"] = info.ranges.size();
+					record(5, pass, std::move(numbers));
+					clearPendingConfirmation(peer);
+				});
+			});
+		});
+	}
+
+	void clearPendingConfirmation(not_null<PeerData*> peer) {
+		auto &cache = _session->conversationCache();
+		const auto id = FullMsgId(peer->id, MsgId(_messageBase + 56));
+		cache._pendingConfirmedMessages.emplace(id);
+		cache._restoring = true;
+		cache.messageReceived(message(peer, 56), NewMessageType::Existing);
+		cache._restoring = false;
+		const auto survivedRestore = cache._pendingConfirmedMessages.contains(id);
+		const auto self = shared_from_this();
+		cache.clearStorage(peer->id, [this, self, id, survivedRestore](Storage::Cache::Error error) {
+			const auto cleared = !_session->conversationCache()._pendingConfirmedMessages.contains(id);
+			record(6, survivedRestore && cleared && error.type == Storage::Cache::Error::Type::None,
+				{ { "survivedRestore", survivedRestore }, { "cleared", cleared } });
+			finish(_passed);
 		});
 	}
 

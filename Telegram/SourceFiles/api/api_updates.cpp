@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "api/api_updates.h"
+#include "extras/data/conversation_cache.h"
 
 #include "api/api_authorizations.h"
 #include "api/api_user_names.h"
@@ -1333,6 +1334,7 @@ void Updates::applyUpdateNoPtsCheck(const MTPUpdate &update) {
 		if (d.vmessage().type() == mtpc_message) { // index forwarded messages to links _overview
 			const auto &data = d.vmessage().c_message();
 			if (_session->data().updateExistingMessage(data)) { // already in blocks
+				_session->conversationCache().messageReceived(d.vmessage(), NewMessageType::Unread);
 				LOG(("Skipping message, because it is already in blocks!"));
 				needToAdd = false;
 			}
@@ -1430,6 +1432,7 @@ void Updates::applyUpdateNoPtsCheck(const MTPUpdate &update) {
 		if (d.vmessage().type() == mtpc_message) { // index forwarded messages to links _overview
 			const auto &data = d.vmessage().c_message();
 			if (_session->data().updateExistingMessage(data)) { // already in blocks
+				_session->conversationCache().messageReceived(d.vmessage(), NewMessageType::Unread);
 				LOG(("Skipping message, because it is already in blocks!"));
 				needToAdd = false;
 			}
@@ -1616,6 +1619,7 @@ void Updates::applyUpdates(
 			if (const auto item = lookupMessage()) {
 				_session->data().fillMessagePeers(item->fullId(), d);
 				item->applySentMessage(sent.text, d, wasAlready);
+				_session->conversationCache().cacheConfirmedMessage(item->fullId());
 			}
 		}
 

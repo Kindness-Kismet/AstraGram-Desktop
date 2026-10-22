@@ -67,6 +67,7 @@ public:
 	void dialogsDone(Data::Folder *folder);
 	void messageReceived(const MTPMessage &message, NewMessageType type);
 	void messageEdited(const MTPMessage &message);
+	void cacheConfirmedMessage(FullMsgId id);
 	void messagesDeleted(PeerId peer, const QVector<MTPint> &ids);
 	void historyCleared(PeerId peer);
 	void restoreMessage(PeerId peer, MsgId id, Fn<void(bool)> done);
@@ -210,6 +211,7 @@ private:
 	base::flat_map<PeerId, MTPDialog> _dialogs;
 	base::flat_map<PeerId, MTPMessage> _lastMessages;
 	base::flat_map<PeerId, MsgId> _previewMessages;
+	base::flat_set<FullMsgId> _pendingConfirmedMessages;
 	base::flat_map<PeerId, FolderId> _restoredDialogs;
 	std::map<HistoryCacheKey, HistoryEntry> _histories;
 	base::flat_set<HistoryCacheKey> _historyKeys;
