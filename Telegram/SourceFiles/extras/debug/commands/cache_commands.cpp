@@ -17,11 +17,13 @@
 #include "data/data_peer.h"
 #include "data/data_photo.h"
 #include "data/data_photo_media.h"
+#include "data/data_poll.h"
 #include "data/data_media_types.h"
 #include "data/stickers/data_custom_emoji.h"
 #include "data/stickers/data_stickers.h"
 #include "data/data_session.h"
 #include "history/history_item.h"
+#include "history/history_item_components.h"
 #include "history/history.h"
 #include "main/main_session.h"
 #include "window/window_session_controller.h"
@@ -243,9 +245,31 @@ Result stickerPack(const QStringList &args) {
 	return jobStarted(job);
 }
 
+std::optional<PollMedia> selectNestedMedia(
+		not_null<HistoryItem*> item,
+		const QString &selector) {
+	if (selector == u"reply"_q) {
+		const auto reply = item->Get<HistoryMessageReply>();
+		const auto media = !reply ? nullptr : reply->fields().externalMedia
+			? reply->fields().externalMedia.get()
+			: reply->resolvedMessage ? reply->resolvedMessage->media() : nullptr;
+		return PollMedia{ .photo = media ? media->photo() : nullptr,
+			.document = media ? media->document() : nullptr };
+	}
+	const auto poll = item->media() ? item->media()->poll() : nullptr;
+	if (!poll) return std::nullopt;
+	if (selector == u"attached"_q) return poll->attachedMedia;
+	if (selector == u"solution"_q) return poll->solutionMedia;
+	auto ok = false;
+	const auto index = selector.mid(7).toInt(&ok);
+	if (!selector.startsWith(u"answer:"_q) || !ok
+		|| index < 0 || index >= poll->answers.size()) return std::nullopt;
+	return poll->answers[index].media;
+}
+
 Result inspectMedia(const QStringList &args) {
-	if (args.size() != 2) {
-		return Result::Err(u"usage: cache.media-info <peerId> <messageId>"_q);
+	if (args.size() < 2 || args.size() > 3) {
+		return Result::Err(u"usage: cache.media-info <peerId> <messageId> [reply|attached|solution|answer:N]"_q);
 	}
 	const auto item = findMessage(args[0], args[1]);
 	if (!item) {
@@ -264,11 +288,17 @@ Result inspectMedia(const QStringList &args) {
 		? session->emojiStickersPack().stickerForEmoji(emoji).document
 		: nullptr;
 	const auto dice = dynamic_cast<Data::MediaDice*>(item->media());
-	const auto document = dice
+	auto document = dice
 		? session->diceStickersPacks().lookup(dice->emoji(), dice->value())
 		: item->media() ? item->media()->document()
 		: customId ? session->data().document(customId).get() : emojiSticker;
-	const auto photo = item->media() ? item->media()->photo() : nullptr;
+	auto photo = item->media() ? item->media()->photo() : nullptr;
+	if (args.size() == 3) {
+		const auto media = selectNestedMedia(item, args[2]);
+		if (!media) return Result::Err(u"poll or media selector not found"_q);
+		document = media->document;
+		photo = media->photo;
+	}
 	auto result = json{
 		{ "userId", session->userId().bare }, { "peerId", item->history()->peer->id.value },
 		{ "messageId", item->id.bare }, { "emojiAnimationMapped", emojiSticker != nullptr },

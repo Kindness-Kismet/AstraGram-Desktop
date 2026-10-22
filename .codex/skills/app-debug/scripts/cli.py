@@ -47,7 +47,7 @@ GENERIC_COMMANDS = {
     'cache.special-stickers': '按需加载并查询骰子和礼物贴纸名单的本地缓存与映射，不执行交易；离线模式只恢复本地',
     'message.cache-state': '只查询收藏样本的类型、投票、反应和加载状态：<消息编号>...',
     'message.cache-react': '仅在会员账号收藏切换反应标签：<消息编号> <表情>',
-    'message.cache-sample': '仅向当前真实账号的收藏发送缓存验证样本：<poll|contact|location|voice|round|album|document|sticker|custom-emoji> [参数]',
+    'message.cache-sample': '仅向当前真实账号的收藏发送缓存验证样本：<poll|poll-media|reply|contact|location|voice|round|album|document|sticker|custom-emoji> [参数]',
     'message.cache-vote': '仅在当前真实账号收藏投票：<消息编号> <答案下标>',
     'message.cache-play': '播放当前真实账号收藏中的语音、圆视频或音乐：<消息编号>，通过 player.state 核对实际播放',
     'simulation.cache-history-check': '在独立模拟配置中验证固定历史缓存边界，返回异步任务；不请求网络或清全缓存',
@@ -369,7 +369,7 @@ def register_commands(sub) -> None:
     command = sub.add_parser("cache.history-info", help="查询历史缓存实际连续区间、消息数量和最近诊断事件")
     command.add_argument("params", nargs=argparse.REMAINDER, help="会话编号，可附话题编号和收藏来源编号")
     command = sub.add_parser("cache.media-info", help="只查询消息媒体内存状态、磁盘缓存字节与动画表情名单")
-    command.add_argument("params", nargs=argparse.REMAINDER, help="会话编号和消息编号")
+    command.add_argument("params", nargs=argparse.REMAINDER, help="会话编号和消息编号，可附 reply、attached、solution 或 answer:N")
     sub.add_parser("cache.media-stats", help="查询媒体和消息分类、聊天归属及缓存大小")
     command = sub.add_parser("cache.media-clear", help="清理选定本机缓存；all 只包含媒体，消息需显式选 messages")
     command.add_argument("categories", help="all 或 images,stickers,documents,avatars,other,messages")
