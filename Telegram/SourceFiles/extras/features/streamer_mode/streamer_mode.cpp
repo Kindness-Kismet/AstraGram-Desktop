@@ -125,7 +125,9 @@ void inheritWidgetWindow(not_null<QWidget*> widget, not_null<QWidget*> owner) {
 
 void refreshWidgetWindow(not_null<QWidget*> widget) {
 	const auto window = widget->window();
-	if (!window->internalWinId()) {
+	// 原生文件对话框的 Qt 占位窗口不上屏，设置显示亲和性会让系统把它画出来。
+	if (!window->internalWinId()
+		|| window->testAttribute(Qt::WA_DontShowOnScreen)) {
 		return;
 	}
 	Platform::SetWindowCaptureExcluded(window,
