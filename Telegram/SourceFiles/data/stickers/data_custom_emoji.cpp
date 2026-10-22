@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "boxes/peers/edit_forum_topic_box.h" // MakeTopicIconEmoji.
 #include "chat_helpers/stickers_emoji_pack.h"
+#include "extras/data/sticker_set_cache.h"
 #include "main/main_app_config.h"
 #include "main/main_session.h"
 #include "data/data_channel.h"
@@ -21,7 +22,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_peer.h"
 #include "data/data_message_reactions.h"
 #include "data/stickers/data_stickers.h"
-#include "dialogs/ui/dialogs_stories_content.h"
 #include "dialogs/ui/dialogs_stories_content.h"
 #include "lottie/lottie_common.h"
 #include "lottie/lottie_frame_generator.h"
@@ -771,6 +771,9 @@ QString CustomEmojiManager::lookupSetName(uint64 setId) {
 }
 
 void CustomEmojiManager::request() {
+	if (_cacheRequestPending || _requestId) {
+		return;
+	}
 	auto ids = QVector<MTPlong>();
 	ids.reserve(std::min(kMaxPerRequest, int(_pendingForRequest.size())));
 	while (!_pendingForRequest.empty() && ids.size() < kMaxPerRequest) {
@@ -781,6 +784,47 @@ void CustomEmojiManager::request() {
 	if (ids.isEmpty()) {
 		return;
 	}
+	_cacheRequestPending = true;
+	struct Pending {
+		int remaining = 0;
+		QVector<MTPlong> missing;
+	};
+	const auto pending = std::make_shared<Pending>();
+	pending->remaining = ids.size();
+	for (const auto id : ids) {
+		Extras::cachedCustomEmoji(&_owner->session(), id.v,
+			crl::guard(this, [=](std::optional<MTPDocument> cached) {
+				if (cached) {
+					const auto document = _owner->processDocument(*cached);
+					fillColoredFlags(document);
+					processLoaders(document);
+					processListeners(document);
+				} else {
+					pending->missing.push_back(id);
+				}
+				if (--pending->remaining) {
+					return;
+				}
+				_cacheRequestPending = false;
+				if (pending->missing.isEmpty()) {
+					requestFinished();
+					return;
+				}
+				requestDocuments(std::move(pending->missing));
+			}));
+	}
+}
+
+void CustomEmojiManager::requestDocuments(QVector<MTPlong> ids) {
+#ifdef _DEBUG
+	if (cDebugOffline()) {
+		for (const auto id : ids) {
+			processListeners(_owner->document(id.v));
+		}
+		requestFinished();
+		return;
+	}
+#endif
 	const auto api = &_owner->session().api();
 	_requestId = api->request(MTPmessages_GetCustomEmojiDocuments(
 		MTP_vector<MTPlong>(ids)

@@ -30,4 +30,12 @@ void cacheStickerSet(
 	not_null<Main::Session*> session,
 	const QString &name,
 	const MTPmessages_StickerSet &set);
+void cachedCustomEmoji(
+	not_null<Main::Session*> session,
+	DocumentId id,
+	Fn<void(std::optional<MTPDocument>)> done);
+void cacheCustomEmoji(
+	not_null<Main::Session*> session,
+	const MTPDdocument &document);
+
 } // namespace Extras

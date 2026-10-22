@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_session.h"
+#include "extras/data/sticker_set_cache.h"
 
 #include "extras/data/conversation_cache.h"
 
@@ -4142,6 +4143,7 @@ not_null<DocumentData*> Session::processDocument(
 		const MTPdocument &data,
 		const ImageWithLocation &thumbnail) {
 	return data.match([&](const MTPDdocument &data) {
+		Extras::cacheCustomEmoji(&session(), data);
 		return document(
 			data.vid().v,
 			data.vaccess_hash().v,
@@ -4294,6 +4296,7 @@ void Session::documentApplyFields(
 void Session::documentApplyFields(
 		not_null<DocumentData*> document,
 		const MTPDdocument &data) {
+	Extras::cacheCustomEmoji(&session(), data);
 	const auto inlineThumbnail = FindDocumentInlineThumbnail(data);
 	const auto thumbnailSize = FindDocumentThumbnail(data);
 	const auto videoThumbnailSize = FindDocumentVideoThumbnail(data);

@@ -117,6 +117,7 @@ private:
 		int sizeOverride = 0);
 
 	void request();
+	void requestDocuments(QVector<MTPlong> ids);
 	void requestFinished();
 	void repaintLater(
 		not_null<Ui::CustomEmoji::Instance*> instance,
@@ -167,6 +168,7 @@ private:
 	base::flat_set<DocumentId> _pendingForRequest;
 
 	mtpRequestId _requestId = 0;
+	bool _cacheRequestPending = false;
 
 	uint64 _coloredSetId = 0;
 
