@@ -4,7 +4,6 @@
 #include "extras/extras_settings.h"
 #include "extras/data/extras_database.h"
 #include "extras/features/filters/filters_cache_controller.h"
-#include "extras/ui/toasts.h"
 #include "base/event_filter.h"
 #include "base/platform/base_platform_info.h"
 #include "boxes/delete_messages_box.h"
@@ -126,10 +125,15 @@ void RegexEditBuilder(
 	std::optional<long long> dialogId,
 	bool showToast
 ) {
+	const auto isNew = !filter || filter->id.empty();
+	const auto effectiveDialogId = dialogId.has_value()
+		? dialogId
+		: (filter ? filter->dialogId : std::nullopt);
+
 	RegexFilter data;
 
 	if (filter) {
-		box->setTitle(showToast ? tr::extras_RegexFiltersAdd() : tr::extras_RegexFiltersEdit());
+		box->setTitle(isNew ? tr::extras_RegexFiltersAdd() : tr::extras_RegexFiltersEdit());
 		data = *filter;
 	} else {
 		box->setTitle(tr::extras_RegexFiltersAdd());
@@ -165,6 +169,18 @@ void RegexEditBuilder(
 			data.reversed,
 			st::settingsButtonNoIcon), style::margins());
 
+	// 仅在存在指定会话上下文时允许配置是否共享，无会话时（全局设置）天然为共享过滤器。
+	Ui::SettingsToggle *sharedToggle = nullptr;
+	if (effectiveDialogId.has_value()) {
+		const auto initialIsShared = isNew ? false : !data.dialogId.has_value();
+		sharedToggle = box->addRow(
+			object_ptr<Ui::SettingsToggle>(
+				box,
+				tr::extras_RegexFiltersShared(tr::now),
+				initialIsShared,
+				st::settingsButtonNoIcon), style::margins());
+	}
+
 	regexValue->setText(QString::fromStdString(data.text));
 
 	auto saveAndClose = [=, id = data.id]
@@ -187,8 +203,12 @@ void RegexEditBuilder(
 		newFilter.caseInsensitive = caseInsensitive->checked();
 		newFilter.reversed = reversed->checked();
 
-		if (!showToast && dialogId.has_value()) {
-			newFilter.dialogId = dialogId;
+		// 根据开关显式状态赋值 dialogId，非共享且有上下文时绑定具体对话。
+		const auto isShared = sharedToggle ? sharedToggle->checked() : true;
+		if (!isShared && effectiveDialogId.has_value()) {
+			newFilter.dialogId = effectiveDialogId;
+		} else {
+			newFilter.dialogId = std::nullopt;
 		}
 
 		if (!id.empty()) {
@@ -199,6 +219,7 @@ void RegexEditBuilder(
 
 		box->closeBox();
 
+		// 异步持久化并通知刷新缓存，完全移除原有的 ShowToastWithAction 逆向撤销。
 		crl::async([=]
 		{
 			Database::addRegexFilter(newFilter);
@@ -215,25 +236,12 @@ void RegexEditBuilder(
 					return;
 				}
 				auto config = Ui::Toast::Config{
-					.text = tr::extras_RegexFilterBulletinText(
-						tr::now,
-						tr::rich),
+					.text = newFilter.dialogId.has_value()
+						? tr::extras_RegexFilters(tr::now, tr::rich)
+						: tr::extras_RegexFilterBulletinText(tr::now, tr::rich),
 					.adaptive = true,
 				};
-				if (dialogId.has_value()) {
-					Extras::Ui::ShowToastWithAction(
-						std::move(config),
-						tr::extras_RegexFilterBulletinAction(tr::now),
-						[=]() mutable {
-							newFilter.dialogId = dialogId;
-
-							Database::updateRegexFilter(newFilter);
-							FiltersCacheController::rebuildCache();
-							FiltersCacheController::fireUpdate();
-						});
-				} else {
-					Ui::Toast::Show(std::move(config));
-				}
+				Ui::Toast::Show(std::move(config));
 			});
 		});
 	};
