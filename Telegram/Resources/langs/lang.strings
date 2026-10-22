@@ -9991,10 +9991,3 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_UpdateNotesLoading" = "Loading release notes…";
 "extras_UpdateNotesUnavailable" = "Release notes are unavailable.";
 "extras_UpdateNotesLink" = "View full release notes on GitHub";
-"extras_UpdateNotesAdapted" = "Adapted";
-"extras_UpdateNotesAdded" = "Added";
-"extras_UpdateNotesImproved" = "Improved";
-"extras_UpdateNotesChanged" = "Changed";
-"extras_UpdateNotesFixed" = "Fixed";
-"extras_UpdateNotesRemoved" = "Removed";
-"extras_UpdateNotesOther" = "Other";

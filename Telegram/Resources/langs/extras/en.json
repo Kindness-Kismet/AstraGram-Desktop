@@ -1062,12 +1062,5 @@
   "UpdateSkip": "Skip this version",
   "UpdateNotesLoading": "Loading release notes…",
   "UpdateNotesUnavailable": "Release notes are unavailable.",
-  "UpdateNotesLink": "View full release notes on GitHub",
-  "UpdateNotesAdapted": "Adapted",
-  "UpdateNotesAdded": "Added",
-  "UpdateNotesImproved": "Improved",
-  "UpdateNotesChanged": "Changed",
-  "UpdateNotesFixed": "Fixed",
-  "UpdateNotesRemoved": "Removed",
-  "UpdateNotesOther": "Other"
+  "UpdateNotesLink": "View full release notes on GitHub"
 }

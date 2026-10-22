@@ -6,25 +6,8 @@ class GenericBox;
 
 namespace ExtrasUi {
 
-enum class ReleaseNoteKind {
-	Adapted,
-	Added,
-	Improved,
-	Changed,
-	Fixed,
-	Removed,
-	Other,
-};
-
-struct ReleaseNoteGroup {
-	ReleaseNoteKind kind = ReleaseNoteKind::Other;
-	QStringList items;
-};
-
 // 按单独一行的 --- 切段，只取全部由 "- " 条目组成的段，中文段或英文段二选一。
-[[nodiscard]] std::vector<ReleaseNoteGroup> ParseReleaseNotes(
-	const QString &body,
-	bool chinese);
+[[nodiscard]] QStringList ParseReleaseNotes(const QString &body, bool chinese);
 
 // 更新版本整数转为发布标签，例如 70300110 转为 v7.3.1.10。
 [[nodiscard]] QString UpdateVersionTag(uint64 version);

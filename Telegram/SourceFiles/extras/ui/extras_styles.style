@@ -440,16 +440,14 @@ extrasHeaderUpdateButton: RoundButton(defaultLightButton) {
 }
 extrasHeaderUpdateSkip: 4px;
 
-// 更新对话框：版本行、分类标签和带圆点的条目。
+// 更新对话框：版本行和带圆点的条目。
 extrasUpdateVersionLabel: FlatLabel(boxLabel) {
 	textFg: windowSubTextFg;
 }
 extrasUpdateNoteLabel: FlatLabel(boxLabel) {
 	minWidth: 100px;
 }
-extrasUpdateNoteChipFont: font(11px semibold);
-extrasUpdateNoteChipPadding: margins(8px, 2px, 8px, 2px);
 extrasUpdateNoteBullet: 4px;
 extrasUpdateNoteIndent: 14px;
-extrasUpdateNoteGroupSkip: 10px;
+extrasUpdateNoteTopSkip: 10px;
 extrasUpdateNoteItemSkip: 4px;

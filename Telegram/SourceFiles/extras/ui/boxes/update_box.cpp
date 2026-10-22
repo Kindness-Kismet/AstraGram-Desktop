@@ -25,111 +25,29 @@ constexpr auto kReleaseApi
 constexpr auto kReleasePage
 	= "https://github.com/Kindness-Kismet/AstraGram-Desktop/releases/tag/%1";
 
-[[nodiscard]] ReleaseNoteKind classify(const QString &text, bool chinese) {
-	struct Rule {
-		ReleaseNoteKind kind;
-		const char *pattern;
-	};
-	static const auto chineseRules = std::array{
-		Rule{ ReleaseNoteKind::Adapted, "^适配了" },
-		Rule{ ReleaseNoteKind::Added, "^新增了" },
-		Rule{ ReleaseNoteKind::Improved, "^对.+进行了改善" },
-		Rule{ ReleaseNoteKind::Changed, "^调整了" },
-		Rule{ ReleaseNoteKind::Fixed, "^修复了" },
-		Rule{ ReleaseNoteKind::Removed, "^移除了" },
-	};
-	static const auto englishRules = std::array{
-		Rule{ ReleaseNoteKind::Adapted, "^Adapted\\b" },
-		Rule{ ReleaseNoteKind::Added, "^Added\\b" },
-		Rule{ ReleaseNoteKind::Improved, "^Improved\\b" },
-		Rule{ ReleaseNoteKind::Changed, "^Changed\\b" },
-		Rule{ ReleaseNoteKind::Fixed, "^Fixed\\b" },
-		Rule{ ReleaseNoteKind::Removed, "^Removed\\b" },
-	};
-	for (const auto &rule : (chinese ? chineseRules : englishRules)) {
-		if (QRegularExpression(QString::fromUtf8(rule.pattern)).match(text).hasMatch()) {
-			return rule.kind;
-		}
-	}
-	return ReleaseNoteKind::Other;
-}
-
-[[nodiscard]] QString kindLabel(ReleaseNoteKind kind) {
-	switch (kind) {
-	case ReleaseNoteKind::Adapted: return tr::extras_UpdateNotesAdapted(tr::now);
-	case ReleaseNoteKind::Added: return tr::extras_UpdateNotesAdded(tr::now);
-	case ReleaseNoteKind::Improved: return tr::extras_UpdateNotesImproved(tr::now);
-	case ReleaseNoteKind::Changed: return tr::extras_UpdateNotesChanged(tr::now);
-	case ReleaseNoteKind::Fixed: return tr::extras_UpdateNotesFixed(tr::now);
-	case ReleaseNoteKind::Removed: return tr::extras_UpdateNotesRemoved(tr::now);
-	case ReleaseNoteKind::Other: return tr::extras_UpdateNotesOther(tr::now);
-	}
-	Unexpected("Kind in ExtrasUi::kindLabel.");
-}
-
-[[nodiscard]] const style::color &kindColor(ReleaseNoteKind kind) {
-	switch (kind) {
-	case ReleaseNoteKind::Added: return st::historyPeer2UserpicBg;
-	case ReleaseNoteKind::Improved: return st::historyPeer4UserpicBg;
-	case ReleaseNoteKind::Fixed: return st::historyPeer8UserpicBg;
-	case ReleaseNoteKind::Removed: return st::historyPeer1UserpicBg;
-	case ReleaseNoteKind::Adapted:
-	case ReleaseNoteKind::Changed: return st::historyPeer5UserpicBg;
-	case ReleaseNoteKind::Other: return st::windowSubTextFg;
-	}
-	Unexpected("Kind in ExtrasUi::kindColor.");
-}
-
-void addChip(not_null<Ui::VerticalLayout*> container, const ReleaseNoteGroup &group) {
-	const auto text = kindLabel(group.kind) + ' ' + QString::number(group.items.size());
-	const auto &font = st::extrasUpdateNoteChipFont;
-	const auto &padding = st::extrasUpdateNoteChipPadding;
-	const auto size = QSize(
-		font->width(text) + padding.left() + padding.right(),
-		font->height + padding.top() + padding.bottom());
-	const auto row = container->add(
-		object_ptr<Ui::RpWidget>(container),
-		st::boxRowPadding + QMargins(0, st::extrasUpdateNoteGroupSkip, 0, 0));
-	row->resize(row->width(), size.height());
-	const auto color = &kindColor(group.kind);
-	row->paintRequest() | rpl::on_next([=] {
-		auto p = QPainter(row);
-		auto hq = PainterHighQualityEnabler(p);
-		p.setPen(Qt::NoPen);
-		p.setBrush(*color);
-		p.drawRoundedRect(QRect(QPoint(), size), size.height() / 2., size.height() / 2.);
-		p.setPen(st::historyPeerUserpicFg);
-		p.setFont(font);
-		p.drawText(
-			QRect(QPoint(), size).marginsRemoved(padding),
-			Qt::AlignCenter,
-			text);
-	}, row->lifetime());
-}
-
 void fillNotes(
 		not_null<Ui::VerticalLayout*> notes,
-		const std::vector<ReleaseNoteGroup> &groups) {
+		const QStringList &items) {
 	notes->clear();
-	if (groups.empty()) {
+	if (items.isEmpty()) {
 		notes->add(
 			object_ptr<Ui::FlatLabel>(
 				notes,
 				tr::extras_UpdateNotesUnavailable(tr::now),
 				st::extrasUpdateVersionLabel),
-			st::boxRowPadding + QMargins(0, st::extrasUpdateNoteGroupSkip, 0, 0));
+			st::boxRowPadding + QMargins(0, st::extrasUpdateNoteTopSkip, 0, 0));
 		return;
 	}
-	const auto items = notes->lifetime().make_state<
+	const auto labels = notes->lifetime().make_state<
 		std::vector<not_null<Ui::FlatLabel*>>>();
 	const auto indent = st::extrasUpdateNoteIndent;
-	for (const auto &group : groups) {
-		addChip(notes, group);
-		for (const auto &item : group.items) {
-			items->push_back(notes->add(
-				object_ptr<Ui::FlatLabel>(notes, item, st::extrasUpdateNoteLabel),
-				st::boxRowPadding + QMargins(indent, st::extrasUpdateNoteItemSkip, 0, 0)));
-		}
+	for (const auto &item : items) {
+		const auto top = labels->empty()
+			? st::extrasUpdateNoteTopSkip
+			: st::extrasUpdateNoteItemSkip;
+		labels->push_back(notes->add(
+			object_ptr<Ui::FlatLabel>(notes, item, st::extrasUpdateNoteLabel),
+			st::boxRowPadding + QMargins(indent, top, 0, 0)));
 	}
 	// 条目圆点画在标签左侧的缩进里，换行后正文仍然对齐。
 	notes->paintRequest() | rpl::on_next([=] {
@@ -139,7 +57,7 @@ void fillNotes(
 		p.setBrush(st::windowSubTextFg);
 		const auto size = st::extrasUpdateNoteBullet;
 		const auto line = st::extrasUpdateNoteLabel.style.font->height;
-		for (const auto label : *items) {
+		for (const auto label : *labels) {
 			p.drawEllipse(
 				label->x() - indent + (indent - size) / 2,
 				label->y() + (line - size) / 2,
@@ -179,12 +97,9 @@ void requestNotes(
 
 } // namespace
 
-std::vector<ReleaseNoteGroup> ParseReleaseNotes(
-		const QString &body,
-		bool chinese) {
+QStringList ParseReleaseNotes(const QString &body, bool chinese) {
 	static const auto separator = QRegularExpression(u"\\r?\\n---[ \\t]*\\r?\\n"_q);
 	static const auto cjk = QRegularExpression(u"[\\x{4e00}-\\x{9fff}]"_q);
-	auto chosen = QStringList();
 	const auto normalized = u"\n"_q + body + u"\n"_q;
 	for (const auto &section : normalized.split(separator)) {
 		auto items = QStringList();
@@ -206,32 +121,10 @@ std::vector<ReleaseNoteGroup> ParseReleaseNotes(
 			return cjk.match(item).hasMatch();
 		});
 		if (isChinese == chinese) {
-			chosen = std::move(items);
-			break;
+			return items;
 		}
 	}
-	constexpr auto kOrder = std::array{
-		ReleaseNoteKind::Adapted,
-		ReleaseNoteKind::Added,
-		ReleaseNoteKind::Improved,
-		ReleaseNoteKind::Changed,
-		ReleaseNoteKind::Fixed,
-		ReleaseNoteKind::Removed,
-		ReleaseNoteKind::Other,
-	};
-	auto result = std::vector<ReleaseNoteGroup>();
-	for (const auto kind : kOrder) {
-		auto group = ReleaseNoteGroup{ .kind = kind };
-		for (const auto &item : chosen) {
-			if (classify(item, chinese) == kind) {
-				group.items.push_back(item);
-			}
-		}
-		if (!group.items.isEmpty()) {
-			result.push_back(std::move(group));
-		}
-	}
-	return result;
+	return {};
 }
 
 QString UpdateVersionTag(uint64 version) {
@@ -274,7 +167,7 @@ void UpdateBox(not_null<Ui::GenericBox*> box, UpdateBoxArgs args) {
 			notes,
 			tr::extras_UpdateNotesLoading(tr::now),
 			st::extrasUpdateVersionLabel),
-		st::boxRowPadding + QMargins(0, st::extrasUpdateNoteGroupSkip, 0, 0));
+		st::boxRowPadding + QMargins(0, st::extrasUpdateNoteTopSkip, 0, 0));
 	container->add(
 		object_ptr<Ui::FlatLabel>(
 			container,
@@ -282,7 +175,7 @@ void UpdateBox(not_null<Ui::GenericBox*> box, UpdateBoxArgs args) {
 				tr::extras_UpdateNotesLink(tr::now),
 				QString::fromLatin1(kReleasePage).arg(tag))),
 			st::boxLabel),
-		st::boxRowPadding + QMargins(0, st::extrasUpdateNoteGroupSkip, 0, 0));
+		st::boxRowPadding + QMargins(0, st::extrasUpdateNoteTopSkip, 0, 0));
 	requestNotes(box, notes, tag);
 
 	const auto update = args.update;
