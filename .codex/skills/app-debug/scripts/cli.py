@@ -42,10 +42,12 @@ BACKGROUND_START = False
 OFFLINE_START = None
 
 GENERIC_COMMANDS = {
+    'cache.custom-emoji': '查询自定义表情的完整协议资料缓存，未命中时联网获取：<文档编号>；返回异步任务',
+    'cache.sticker-pack': '查询完整贴纸包缓存，未缓存时联网获取；可打开原生预览：<短名称> [--open]',
     'cache.special-stickers': '按需加载并查询骰子和礼物贴纸名单的本地缓存与映射，不执行交易；离线模式只恢复本地',
     'message.cache-state': '只查询收藏样本的类型、投票、反应和加载状态：<消息编号>...',
     'message.cache-react': '仅在会员账号收藏切换反应标签：<消息编号> <表情>',
-    'message.cache-sample': '仅向当前真实账号的收藏发送缓存验证样本：<poll|contact|location|voice|round|album|document|custom-emoji> [参数]',
+    'message.cache-sample': '仅向当前真实账号的收藏发送缓存验证样本：<poll|contact|location|voice|round|album|document|sticker|custom-emoji> [参数]',
     'message.cache-vote': '仅在当前真实账号收藏投票：<消息编号> <答案下标>',
     'message.cache-play': '播放当前真实账号收藏中的语音、圆视频或音乐：<消息编号>，通过 player.state 核对实际播放',
     'simulation.cache-history-check': '在独立模拟配置中验证固定历史缓存边界，返回异步任务；不请求网络或清全缓存',

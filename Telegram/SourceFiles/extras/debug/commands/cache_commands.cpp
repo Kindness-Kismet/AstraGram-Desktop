@@ -9,6 +9,9 @@
 #include "chat_helpers/stickers_emoji_pack.h"
 #include "chat_helpers/stickers_dice_pack.h"
 #include "chat_helpers/stickers_gift_box_pack.h"
+#include "chat_helpers/compose/compose_show.h"
+#include "boxes/sticker_set_box.h"
+#include "apiwrap.h"
 #include "data/data_document.h"
 #include "data/data_document_media.h"
 #include "data/data_peer.h"
@@ -16,10 +19,12 @@
 #include "data/data_photo_media.h"
 #include "data/data_media_types.h"
 #include "data/stickers/data_custom_emoji.h"
+#include "data/stickers/data_stickers.h"
 #include "data/data_session.h"
 #include "history/history_item.h"
 #include "history/history.h"
 #include "main/main_session.h"
+#include "window/window_session_controller.h"
 #include "ui/emoji_config.h"
 
 #include <QtCore/QCryptographicHash>
@@ -143,6 +148,99 @@ Result specialStickers(const QStringList &args) {
 	describe(u"premium-gifts"_q, gifts.lookup(3));
 	describe(u"ton-gifts"_q, gifts.tonLookup(10));
 	return Result::Ok(Compact(json{ { "userId", session->userId().bare }, { "sets", result } }));
+}
+
+Result customEmoji(const QStringList &args) {
+	const auto session = ActiveSession();
+	auto ok = false;
+	const auto id = args.size() == 1 ? args.front().toULongLong(&ok) : 0;
+	if (!session || !ok || !id) {
+		return Result::Err(u"usage: cache.custom-emoji <documentId>"_q);
+	}
+	const auto job = beginJob("cache-custom-emoji");
+	session->lifetime().add([job] { finishJob(job, false, "session closed"); });
+	const auto apply = [=](const MTPDocument &document, bool cached) {
+		if (document.type() != mtpc_document || document.c_document().vid().v != id) {
+			finishJob(job, false, "unexpected custom emoji document");
+			return;
+		}
+		const auto &data = document.c_document();
+		finishJob(job, true, { { "userId", session->userId().bare },
+			{ "cached", cached }, { "documentId", id }, { "size", data.vsize().v },
+			{ "mime", qs(data.vmime_type()).toStdString() } });
+	};
+	Extras::cachedCustomEmoji(session, id, [=](std::optional<MTPDocument> cached) {
+		if (cached) {
+			apply(*cached, true);
+			return;
+		}
+		if (cDebugOffline()) {
+			finishJob(job, false, "custom emoji metadata is not cached");
+			return;
+		}
+		session->api().request(MTPmessages_GetCustomEmojiDocuments(
+			MTP_vector<MTPlong>({ MTP_long(id) })
+		)).done([=](const MTPVector<MTPDocument> &documents) {
+			if (documents.v.isEmpty()) {
+				finishJob(job, false, "custom emoji was not found");
+				return;
+			}
+			session->data().processDocument(documents.v.front());
+			apply(documents.v.front(), false);
+		}).fail([=](const MTP::Error &error) {
+			finishJob(job, false, error.type().toStdString());
+		}).send();
+	});
+	return jobStarted(job);
+}
+
+Result stickerPack(const QStringList &args) {
+	const auto session = ActiveSession();
+	if (!session || args.empty() || args.size() > 2
+		|| (args.size() == 2 && args[1] != u"--open"_q)) {
+		return Result::Err(u"usage: cache.sticker-pack <shortName> [--open]"_q);
+	}
+	const auto identifier = StickerSetIdentifier{ 0, 0, args.front() };
+	const auto job = beginJob("cache-sticker-pack");
+	session->lifetime().add([job] { finishJob(job, false, "session closed"); });
+	const auto apply = [=](const MTPmessages_StickerSet &result, bool cached) {
+		if (result.type() != mtpc_messages_stickerSet) {
+			finishJob(job, false, "unexpected sticker pack response");
+			return;
+		}
+		const auto set = session->data().stickers().feedSetFull(result.c_messages_stickerSet());
+		auto documents = json::array();
+		for (const auto document : set->stickers) {
+			documents.push_back({ { "id", document->id }, { "size", document->size },
+				{ "mime", document->mimeString().toStdString() } });
+		}
+		if (args.size() == 2) {
+			if (const auto controller = session->tryResolveWindow()) {
+				controller->uiShow()->showBox(Box<StickerSetBox>(controller->uiShow(), set));
+			}
+		}
+		finishJob(job, true, { { "userId", session->userId().bare },
+			{ "setId", set->id }, { "cached", cached }, { "documents", documents } });
+	};
+	Extras::cachedStickerPack(session, identifier,
+		[=](std::optional<MTPmessages_StickerSet> cached) {
+			if (cached) {
+				apply(*cached, true);
+				return;
+			}
+			if (cDebugOffline()) {
+				finishJob(job, false, "sticker pack is not cached");
+				return;
+			}
+			session->api().request(MTPmessages_GetStickerSet(
+				Data::InputStickerSet(identifier), MTP_int(0)
+			)).done([=](const MTPmessages_StickerSet &result) {
+				apply(result, false);
+			}).fail([=](const MTP::Error &error) {
+				finishJob(job, false, error.type().toStdString());
+			}).send();
+		});
+	return jobStarted(job);
 }
 
 Result inspectMedia(const QStringList &args) {
@@ -370,7 +468,9 @@ const HandlerMap &cacheHandlers() {
 		{ u"cache.trace-history"_q, &traceHistory },
 		{ u"cache.history-info"_q, &inspectHistory },
 		{ u"cache.media-info"_q, &inspectMedia },
+		{ u"cache.custom-emoji"_q, &customEmoji },
 		{ u"cache.special-stickers"_q, &specialStickers },
+		{ u"cache.sticker-pack"_q, &stickerPack },
 		{ u"cache.badges"_q, &badgeState },
 		{ u"cache.media-stats"_q, &mediaStats },
 		{ u"cache.media-clear"_q, &mediaClear },

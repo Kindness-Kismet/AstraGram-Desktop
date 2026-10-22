@@ -49,7 +49,7 @@ Api::SendAction savedAction(not_null<Main::Session*> session) {
 Result sample(const QStringList &args) {
 	const auto session = savedSession();
 	if (!session) return Result::Err(u"an authenticated session is required"_q);
-	if (args.empty()) return Result::Err(u"usage: message.cache-sample <poll|contact|location|voice|round|album|document|custom-emoji> [args]"_q);
+	if (args.empty()) return Result::Err(u"usage: message.cache-sample <poll|contact|location|voice|round|album|document|sticker|custom-emoji> [args]"_q);
 	const auto type = args[0];
 	const auto action = savedAction(session);
 	if (type == u"poll"_q && args.size() == 1) {
@@ -93,6 +93,14 @@ Result sample(const QStringList &args) {
 		const auto item = findMessage(args[1], args[2]);
 		const auto document = item && item->media() ? item->media()->document() : nullptr;
 		if (!document) return Result::Err(u"source document not found"_q);
+		Api::SendExistingDocument(Api::MessageToSend(action), document);
+		return Result::Ok(Compact(Json{ { "state", "submitted" } }));
+	}
+	if (type == u"sticker"_q && args.size() == 2) {
+		const auto document = session->data().document(args[1].toULongLong());
+		if (!document->sticker() || !document->hasRemoteLocation()) {
+			return Result::Err(u"expected a loaded sticker document"_q);
+		}
 		Api::SendExistingDocument(Api::MessageToSend(action), document);
 		return Result::Ok(Compact(Json{ { "state", "submitted" } }));
 	}

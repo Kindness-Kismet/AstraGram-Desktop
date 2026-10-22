@@ -11,6 +11,8 @@
 - `cache.trace-history <peerId|off>`：跟踪当前账号指定会话的读写、查询参数与旧/新视图网络交付；只保留最近 120 条编号和数量，不含正文。切换目标清空旧事件，重启后关闭。
 - `cache.history-info <peerId> [topicRootId sublistPeer]`：异步返回实际连续区间、区间内数量、当前及缓存顶部、临时摘要编号和诊断事件；用 `job.status` 读取结果，不建立聊天视图或发送网络请求。
 - `cache.special-stickers`：按需加载六类骰子及两类礼物贴纸的官方名单，返回本地缓存和实际映射；没有交易或发送。联网首次返回可能仍在加载，离线模式只恢复本地名单。
+- `cache.sticker-pack <shortName> [--open]`：查询完整贴纸包缓存，未命中时联网获取，离线只查询本地；返回任务编号。`--open` 沿原生包预览入口打开，不安装或发送。
+- `cache.custom-emoji <documentId>`：查询完整自定义表情资料缓存，未命中时联网获取，离线只查询本地；任务结果的 `cached` 代表协议资料解析通过，与动画文件是否存在分开检查。
 - `cache.media-info <peerId> <messageId>`：查询消息附件、首个自定义表情或单个普通表情的动画映射、内存字节、加载状态及文件和缩略图的实际磁盘缓存字节与摘要；返回任务编号后用 `job.status` 阅读，不导出正文。骰子查询会调用原有名单加载入口，验证离线缓存时须使用 `--offline`。
 
 验证离线重启时，先联网浏览需要测试的会话，再运行 `app.restart --offline --background`。
