@@ -42,6 +42,8 @@ BACKGROUND_START = False
 OFFLINE_START = None
 
 GENERIC_COMMANDS = {
+    'message.cache-state': '只查询收藏样本的类型、投票、反应和加载状态：<消息编号>...',
+    'message.cache-react': '仅在会员账号收藏切换反应标签：<消息编号> <表情>',
     'simulation.cache-history-check': '在独立模拟配置中验证固定历史缓存边界，返回异步任务；不请求网络或清全缓存',
     'cache.state': '查询会话缓存、当前分组及连接状态，可附带内存历史范围： [会话编号]',
     'cache.read': '只查询持久历史缓存，不请求服务器；返回异步任务与消息编号、摘要：[会话编号] [起始消息编号] [偏移量] [数量]',

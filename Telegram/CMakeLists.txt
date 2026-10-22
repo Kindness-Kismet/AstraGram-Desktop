@@ -424,6 +424,7 @@ set(extras_files
         extras/debug/commands/player_commands.cpp
         extras/debug/commands/download_commands.cpp
         extras/debug/commands/message_business_commands.cpp
+        extras/debug/commands/message_cache_commands.cpp
         extras/debug/commands/transfer_commands.cpp
         extras/debug/commands/ghost_commands.cpp
         extras/debug/commands/storage_commands.cpp

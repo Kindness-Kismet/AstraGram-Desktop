@@ -41,6 +41,7 @@ using HandlerMap = std::map<QString, Handler>;
 [[nodiscard]] const HandlerMap &playerHandlers();
 [[nodiscard]] const HandlerMap &downloadHandlers();
 [[nodiscard]] const HandlerMap &messageBusinessHandlers();
+[[nodiscard]] const HandlerMap &messageCacheHandlers();
 [[nodiscard]] const HandlerMap &transferHandlers();
 [[nodiscard]] const HandlerMap &animHandlers();
 [[nodiscard]] const HandlerMap &editorHandlers();

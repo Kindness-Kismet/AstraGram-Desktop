@@ -78,6 +78,7 @@ namespace {
 			&Commands::playerHandlers(),
 			&Commands::downloadHandlers(),
 			&Commands::messageBusinessHandlers(),
+			&Commands::messageCacheHandlers(),
 			&Commands::transferHandlers(),
 			&Commands::animHandlers(),
 			&Commands::editorHandlers(),

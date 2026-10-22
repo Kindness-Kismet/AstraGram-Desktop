@@ -1526,6 +1526,9 @@ void Reactions::send(not_null<HistoryItem*> item, bool addToRecent) {
 	)).done([=](const MTPUpdates &result) {
 		_sentRequests.remove(id);
 		_owner->session().api().applyUpdates(result);
+#ifdef _DEBUG
+		LOG(("Reaction send: server confirmed."));
+#endif
 
 		const auto &ghost = ExtrasSettings::ghost(&_owner->session());
 		if (!ghost.sendReadMessages() && ghost.markReadAfterAction() && item) {
@@ -1533,6 +1536,9 @@ void Reactions::send(not_null<HistoryItem*> item, bool addToRecent) {
 		}
 	}).fail([=](const MTP::Error &error) {
 		_sentRequests.remove(id);
+#ifdef _DEBUG
+		LOG(("Reaction send: server rejected with %1.").arg(error.type()));
+#endif
 	}).send();
 }
 
