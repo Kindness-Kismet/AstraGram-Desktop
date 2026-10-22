@@ -4,6 +4,7 @@
 #include "extras/data/conversation_cache.h"
 #include "extras/extras_settings.h"
 #include "extras/debug/debug_login.h"
+#include "api/api_updates.h"
 #include "data/data_channel.h"
 #include "data/data_history_messages.h"
 #include "data/data_messages.h"
@@ -426,8 +427,12 @@ private:
 					MTP_int(0), MTP_reactionEmoji(MTP_string("\xf0\x9f\x91\x8d")), MTP_int(count)) }),
 				MTP_vector<MTPMessagePeerReaction>(), MTP_vector<MTPMessageReactor>());
 		};
-		cache.reactionsUpdated(FullMsgId(peer->id, MsgId(pollId)), reaction(false, 2));
-		cache.reactionsUpdated(FullMsgId(peer->id, MsgId(pollId)), reaction(true, 4));
+		const auto reactionItemMissing = !_session->data().message(peer->id, MsgId(pollId));
+		for (const auto &value : { reaction(false, 2), reaction(true, 4) }) {
+			_session->updates().applyUpdates(MTP_updateShort(MTP_updateMessageReactions(
+				MTP_flags(0), MTP_peerUser(MTP_long(peerToUser(peer->id).bare)),
+				MTP_int(pollId), MTPint(), MTPPeer(), value), MTP_int(1)));
+		}
 		read(query, [=, this](std::optional<Slice> slice) {
 			auto pollPass = false;
 			auto pagePass = false;
@@ -447,9 +452,10 @@ private:
 					}
 				}
 			}
-			record(7, pending && pollPass && pagePass && reactionPass,
+			record(7, pending && pollPass && pagePass && reactionPass && reactionItemMissing,
 				{ { "startedWhileLoading", pending }, { "pollChoicePreserved", pollPass },
-					{ "webPageUpdated", pagePass }, { "reactionChoicePreserved", reactionPass } });
+					{ "webPageUpdated", pagePass }, { "reactionChoicePreserved", reactionPass },
+					{ "reactionItemMissing", reactionItemMissing } });
 			sparsePollUpdates(peer, query, pollId);
 		});
 	}

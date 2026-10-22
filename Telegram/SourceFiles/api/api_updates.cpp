@@ -1825,6 +1825,11 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 	case mtpc_updateMessageReactions: {
 		const auto &d = update.c_updateMessageReactions();
 		const auto peer = peerFromMTP(d.vpeer());
+		if (!session().data().message(peer, d.vmsg_id().v)) {
+			// 未加载的消息仍可能有持久缓存，服务器反应更新也要写入。
+			session().conversationCache().reactionsUpdated(
+				FullMsgId(peer, d.vmsg_id().v), d.vreactions());
+		}
 		if (const auto history = session().data().historyLoaded(peer)) {
 			const auto item = session().data().message(
 				peer,
