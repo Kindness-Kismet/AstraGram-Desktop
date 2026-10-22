@@ -13,6 +13,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 struct HistoryDocumentNamed;
 struct HistoryDocumentThumbed;
 
+namespace style {
+struct HistoryFileLayout;
+} // namespace style
+
 namespace Data {
 class DocumentMedia;
 } // namespace Data
@@ -127,6 +131,9 @@ private:
 
 	QSize countOptimalSize() override;
 	QSize countCurrentSize(int newWidth) override;
+	[[nodiscard]] int nameWrapExtraHeight(
+		int width,
+		const style::HistoryFileLayout &st) const;
 
 	void refreshCaption(bool last);
 	void createComponents();

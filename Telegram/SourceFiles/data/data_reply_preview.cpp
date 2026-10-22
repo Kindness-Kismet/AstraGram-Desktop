@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_document_media.h"
 #include "data/data_photo.h"
 #include "data/data_photo_media.h"
+#include "main/main_session.h"
 #include "ui/image/image.h"
 #include "styles/style_chat.h"
 
@@ -27,13 +28,13 @@ ReplyPreview::ReplyPreview(not_null<PhotoData*> photo)
 
 ReplyPreview::~ReplyPreview() = default;
 
-void ReplyPreview::prepare(
+bool ReplyPreview::prepare(
 		not_null<Image*> image,
 		Images::Options options,
 		bool spoiler) {
 	using namespace Images;
 	if (image->isNull()) {
-		return;
+		return false;
 	}
 	int w = image->width(), h = image->height();
 	if (w <= 0) w = 1;
@@ -61,6 +62,52 @@ void ReplyPreview::prepare(
 	(spoiler ? _spoilered : _regular) = std::make_unique<Image>(
 		std::move(prepared));
 	_good = spoiler || ((options & Option::Blur) == 0);
+	return _good;
+}
+
+bool ReplyPreview::preparePhoto(bool spoiler) {
+	using Size = PhotoSize;
+	if (spoiler) {
+		if (const auto blurred = _photoMedia->thumbnailInline()) {
+			return prepare(blurred, {}, true);
+		}
+	}
+	if (const auto small = _photoMedia->image(Size::Small)) {
+		return prepare(small, {}, spoiler);
+	}
+	if (const auto large = _photoMedia->image(Size::Large)) {
+		return prepare(large, {}, spoiler);
+	}
+	if (!spoiler && !_regular) {
+		if (const auto blurred = _photoMedia->thumbnailInline()) {
+			prepare(blurred, Images::Option::Blur);
+		}
+	}
+	return false;
+}
+
+void ReplyPreview::refreshPhoto() {
+	// wanted() 可能同步完成加载，并在回调中释放媒体。
+	if (!_photoMedia) {
+		return;
+	}
+	if (_requestedRegular && !_checkedRegular) {
+		_checkedRegular = preparePhoto(false);
+	}
+	if (_requestedSpoilered && !_checkedSpoilered) {
+		_checkedSpoilered = preparePhoto(true);
+	}
+	if ((!_requestedRegular || _checkedRegular)
+		&& (!_requestedSpoilered || _checkedSpoilered)) {
+		_photoLifetime.destroy();
+		_photoMedia = nullptr;
+	} else if (!_photoLifetime) {
+		// 离开聊天后也要生成小预览，避免继续持有整张照片。
+		_photo->session().downloaderTaskFinished(
+		) | rpl::on_next([=] {
+			refreshPhoto();
+		}, _photoLifetime);
+	}
 }
 
 Image *ReplyPreview::image(
@@ -101,40 +148,18 @@ Image *ReplyPreview::image(
 		}
 	} else {
 		Assert(_photo != nullptr);
-		if (!image || !_good) {
-			const auto inlineThumbnailBytes = _photo->inlineThumbnailBytes();
-			if (!_photoMedia) {
-				_photoMedia = _photo->createMediaView();
-			}
-			using Size = PhotoSize;
-			const auto loadThumbnail = inlineThumbnailBytes.isEmpty()
-				|| (!spoiler
-					&& _photoMedia->autoLoadThumbnailAllowed(context));
-			if (loadThumbnail) {
-				_photoMedia->wanted(Size::Small, origin);
-			}
-			if (spoiler) {
-				if (const auto blurred = _photoMedia->thumbnailInline()) {
-					prepare(blurred, {}, true);
-				} else if (const auto small = _photoMedia->image(Size::Small)) {
-					prepare(small, {}, true);
-				} else if (const auto large = _photoMedia->image(Size::Large)) {
-					prepare(large, {}, true);
-				}
-			} else if (const auto small = _photoMedia->image(Size::Small)) {
-				prepare(small, {});
-			} else if (const auto large = _photoMedia->image(Size::Large)) {
-				prepare(large, {});
-			} else if (!image) {
-				if (const auto blurred = _photoMedia->thumbnailInline()) {
-					prepare(blurred, Images::Option::Blur);
-				}
-			}
-			if (_good) {
-				checked = true;
-				_photoMedia = nullptr;
-			}
+		(spoiler ? _requestedSpoilered : _requestedRegular) = true;
+		const auto inlineThumbnailBytes = _photo->inlineThumbnailBytes();
+		if (!_photoMedia) {
+			_photoMedia = _photo->createMediaView();
 		}
+		const auto media = _photoMedia;
+		const auto loadThumbnail = inlineThumbnailBytes.isEmpty()
+			|| (!spoiler && media->autoLoadThumbnailAllowed(context));
+		if (loadThumbnail) {
+			media->wanted(PhotoSize::Small, origin);
+		}
+		refreshPhoto();
 	}
 	return image.get();
 }
