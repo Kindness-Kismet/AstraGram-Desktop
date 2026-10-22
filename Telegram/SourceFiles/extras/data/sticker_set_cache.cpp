@@ -197,7 +197,7 @@ void cacheCustomEmoji(
 	auto bytes = QByteArray();
 	QDataStream stream(&bytes, QIODevice::WriteOnly);
 	CacheSerialization::writeHeader(stream, session->userId());
-	stream << CacheSerialization::encode(MTP_document(document.vflags(),
+	stream << CacheSerialization::encode<MTPDocument>(MTP_document(document.vflags(),
 		document.vid(), document.vaccess_hash(), document.vfile_reference(),
 		document.vdate(), document.vmime_type(), document.vsize(),
 		MTP_vector<MTPPhotoSize>(document.vthumbs().value_or_empty()),
