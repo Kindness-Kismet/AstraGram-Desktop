@@ -8,12 +8,14 @@
 #include "extras/utils/rc_manager.h"
 #include "chat_helpers/stickers_emoji_pack.h"
 #include "chat_helpers/stickers_dice_pack.h"
+#include "chat_helpers/stickers_gift_box_pack.h"
 #include "data/data_document.h"
 #include "data/data_document_media.h"
 #include "data/data_peer.h"
 #include "data/data_photo.h"
 #include "data/data_photo_media.h"
 #include "data/data_media_types.h"
+#include "data/stickers/data_custom_emoji.h"
 #include "data/data_session.h"
 #include "history/history_item.h"
 #include "history/history.h"
@@ -118,6 +120,31 @@ Result inspectHistory(const QStringList &args) {
 	return jobStarted(job);
 }
 
+Result specialStickers(const QStringList &args) {
+	const auto session = ActiveSession();
+	if (!session || !args.empty()) {
+		return Result::Err(u"usage: cache.special-stickers (requires a session)"_q);
+	}
+	auto result = json::array();
+	const auto describe = [&](const QString &name, DocumentData *document) {
+		const auto cached = Extras::cachedStickerSet(session, name);
+		result.push_back({ { "name", name.toStdString() }, { "cached", cached.has_value() },
+			{ "documents", cached ? cached->c_messages_stickerSet().vdocuments().v.size() : 0 },
+			{ "mappedDocument", document ? document->id : uint64(0) } });
+	};
+	for (const auto emoji : { "\xf0\x9f\x8e\xb2", "\xf0\x9f\x8e\xaf", "\xf0\x9f\x8f\x80",
+			"\xe2\x9a\xbd", "\xf0\x9f\x8e\xb3", "\xf0\x9f\x8e\xb0" }) {
+		const auto text = QString::fromUtf8(emoji);
+		describe(u"dice-"_q + text, session->diceStickersPacks().lookup(text, 1));
+	}
+	auto &gifts = session->giftBoxStickersPacks();
+	gifts.load();
+	gifts.tonLoad();
+	describe(u"premium-gifts"_q, gifts.lookup(3));
+	describe(u"ton-gifts"_q, gifts.tonLookup(10));
+	return Result::Ok(Compact(json{ { "userId", session->userId().bare }, { "sets", result } }));
+}
+
 Result inspectMedia(const QStringList &args) {
 	if (args.size() != 2) {
 		return Result::Err(u"usage: cache.media-info <peerId> <messageId>"_q);
@@ -127,20 +154,27 @@ Result inspectMedia(const QStringList &args) {
 		return Result::Err(u"message not found"_q);
 	}
 	const auto session = not_null(&item->history()->session());
-	const auto emoji = item->media()
+	const auto &text = item->originalText();
+	const auto custom = ranges::find(text.entities,
+		EntityType::CustomEmoji, &EntityInText::type);
+	const auto customId = custom != text.entities.end()
+		? Data::ParseCustomEmojiData(custom->data()) : DocumentId();
+	const auto emoji = (item->media() || customId)
 		? nullptr
-		: Ui::Emoji::Find(item->originalText().text);
+		: Ui::Emoji::Find(text.text);
 	const auto emojiSticker = emoji
 		? session->emojiStickersPack().stickerForEmoji(emoji).document
 		: nullptr;
 	const auto dice = dynamic_cast<Data::MediaDice*>(item->media());
 	const auto document = dice
 		? session->diceStickersPacks().lookup(dice->emoji(), dice->value())
-		: item->media() ? item->media()->document() : emojiSticker;
+		: item->media() ? item->media()->document()
+		: customId ? session->data().document(customId).get() : emojiSticker;
 	const auto photo = item->media() ? item->media()->photo() : nullptr;
 	auto result = json{
 		{ "userId", session->userId().bare }, { "peerId", item->history()->peer->id.value },
 		{ "messageId", item->id.bare }, { "emojiAnimationMapped", emojiSticker != nullptr },
+		{ "customEmojiId", customId },
 		{ "animatedSetBytes", Extras::cachedEmojiSetBytes(session, Extras::EmojiSetType::Animated) },
 		{ "interactionSetBytes", Extras::cachedEmojiSetBytes(session, Extras::EmojiSetType::Interactions) },
 	};
@@ -336,6 +370,7 @@ const HandlerMap &cacheHandlers() {
 		{ u"cache.trace-history"_q, &traceHistory },
 		{ u"cache.history-info"_q, &inspectHistory },
 		{ u"cache.media-info"_q, &inspectMedia },
+		{ u"cache.special-stickers"_q, &specialStickers },
 		{ u"cache.badges"_q, &badgeState },
 		{ u"cache.media-stats"_q, &mediaStats },
 		{ u"cache.media-clear"_q, &mediaClear },
