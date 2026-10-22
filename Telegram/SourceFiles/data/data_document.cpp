@@ -1037,6 +1037,7 @@ void DocumentData::forceToCache(bool force) {
 bool DocumentData::saveToCache() const {
 	return (size < Storage::kMaxFileInMemory)
 		&& ((type == StickerDocument)
+			|| (type == FileDocument)
 			|| (_flags & Flag::ForceToCache)
 			|| isAnimation()
 			|| isVoiceMessage()
