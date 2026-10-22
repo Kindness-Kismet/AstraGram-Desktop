@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/stickers_gift_box_pack.h"
 
 #include "apiwrap.h"
+#include "extras/data/sticker_set_cache.h"
 #include "data/data_document.h"
 #include "data/data_file_origin.h"
 #include "data/data_session.h"
@@ -90,7 +91,18 @@ void GiftBoxPack::tonLoad() {
 }
 
 void GiftBoxPack::load(Pack &pack, const MTPInputStickerSet &set) {
-	if (pack.requestId || !pack.documents.empty()) {
+	if (!pack.requestId && pack.documents.empty()) {
+		const auto name = (&pack == &_premium) ? u"premium-gifts"_q : u"ton-gifts"_q;
+		if (const auto cached = Extras::cachedStickerSet(_session, name)) {
+			applySet(pack, cached->c_messages_stickerSet());
+		}
+	}
+#ifdef _DEBUG
+	if (cDebugOffline()) {
+		return;
+	}
+#endif
+	if (pack.requestId || pack.refreshed) {
 		return;
 	}
 	pack.requestId = _session->api().request(MTPmessages_GetStickerSet(
@@ -99,6 +111,10 @@ void GiftBoxPack::load(Pack &pack, const MTPInputStickerSet &set) {
 	)).done([=, &pack](const MTPmessages_StickerSet &result) {
 		pack.requestId = 0;
 		result.match([&](const MTPDmessages_stickerSet &data) {
+			pack.refreshed = true;
+			pack.documents.clear();
+			Extras::cacheStickerSet(_session,
+				(&pack == &_premium) ? u"premium-gifts"_q : u"ton-gifts"_q, result);
 			applySet(pack, data);
 		}, [](const MTPDmessages_stickerSetNotModified &) {
 			LOG(("API Error: Unexpected messages.stickerSetNotModified."));

@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "main/main_session.h"
 #include "chat_helpers/stickers_lottie.h"
+#include "extras/data/sticker_set_cache.h"
 #include "data/data_media_types.h"
 #include "data/data_session.h"
 #include "data/data_document.h"
@@ -30,6 +31,9 @@ const QString DicePacks::kPartyPopper = QString::fromUtf8("\xf0\x9f\x8e\x89");
 DicePack::DicePack(not_null<Main::Session*> session, const QString &emoji)
 : _session(session)
 , _emoji(emoji) {
+	if (const auto cached = Extras::cachedStickerSet(session, u"dice-"_q + _emoji)) {
+		applySet(cached->c_messages_stickerSet());
+	}
 }
 
 DicePack::~DicePack() = default;
@@ -44,6 +48,11 @@ DocumentData *DicePack::lookup(int value) {
 }
 
 void DicePack::load() {
+#ifdef _DEBUG
+	if (cDebugOffline()) {
+		return;
+	}
+#endif
 	if (_requestId) {
 		return;
 	}
@@ -52,6 +61,8 @@ void DicePack::load() {
 		MTP_int(0) // hash
 	)).done([=](const MTPmessages_StickerSet &result) {
 		result.match([&](const MTPDmessages_stickerSet &data) {
+			_map.clear();
+			Extras::cacheStickerSet(_session, u"dice-"_q + _emoji, result);
 			applySet(data);
 		}, [](const MTPDmessages_stickerSetNotModified &) {
 			LOG(("API Error: Unexpected messages.stickerSetNotModified."));

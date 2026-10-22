@@ -43,6 +43,7 @@ private:
 		uint64 accessHash = 0;
 		std::vector<DocumentData*> documents;
 		mtpRequestId requestId = 0;
+		bool refreshed = false;
 		std::vector<int> dividers;
 		rpl::event_stream<> updated;
 	};

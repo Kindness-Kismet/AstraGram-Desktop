@@ -72,4 +72,17 @@ int cachedEmojiSetBytes(
 	return session->local().readPref<QByteArray>(preferenceKey(type)).size();
 }
 
+std::optional<MTPmessages_StickerSet> cachedStickerSet(
+		not_null<Main::Session*> session,
+		const QString &name) {
+	return readSet(session, (u"special-sticker-set-"_q + name).toStdString());
+}
+
+void cacheStickerSet(
+		not_null<Main::Session*> session,
+		const QString &name,
+		const MTPmessages_StickerSet &set) {
+	writeSet(session, (u"special-sticker-set-"_q + name).toStdString(), set);
+}
+
 } // namespace Extras
