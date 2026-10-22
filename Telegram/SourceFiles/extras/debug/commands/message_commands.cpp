@@ -4,6 +4,7 @@
 #include "apiwrap.h"
 #include "extras/extras_settings.h"
 #include "extras/debug/debug_login.h"
+#include "extras/debug/simulation_media.h"
 #include "extras/utils/telegram_helpers.h"
 #include "api/api_common.h"
 #include "core/application.h"
@@ -13,8 +14,6 @@
 #include "data/data_folder.h"
 #include "data/data_msg_id.h"
 #include "data/data_peer.h"
-#include "data/data_photo.h"
-#include "data/data_photo_media.h"
 #include "data/data_session.h"
 #include "data/data_thread.h"
 #include "data/data_types.h"
@@ -30,10 +29,8 @@
 #include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
-#include "media/clip/media_clip_reader.h"
 #include "platform/platform_notifications_manager.h"
 #include "storage/storage_shared_media.h"
-#include "ui/chat/attach/attach_prepare.h"
 #include "ui/text/text_entity.h"
 #include "window/window_session_controller.h"
 
@@ -41,7 +38,6 @@
 
 #include <QBuffer>
 #include <QFile>
-#include <QFileInfo>
 #include <QImage>
 #include <QtGui/QEnterEvent>
 #include <QtGui/QMouseEvent>
@@ -129,51 +125,6 @@ using json = nlohmann::json;
 		data->createMediaView());
 	media->setBytes(bytes);
 	media->setThumbnail(image);
-	return MTP_messageMediaDocument(
-		MTP_flags(MTPDmessageMediaDocument::Flag::f_document),
-		document, MTPVector<MTPDocument>(), MTPPhoto(), MTPint(), MTPint());
-}
-
-// 本地视频样本：首帧作缩略图，播放直接读取本地文件。
-[[nodiscard]] std::optional<MTPMessageMedia> simulationVideoMedia(
-		not_null<Main::Session*> session,
-		const QString &path,
-		int32 messageId) {
-	const auto info = Media::Clip::PrepareForSending(path, QByteArray());
-	using Video = Ui::PreparedFileInformation::Video;
-	const auto video = std::get_if<Video>(&info.media);
-	if (!video || video->thumbnail.isNull() || video->duration <= 0) {
-		return std::nullopt;
-	}
-	const auto file = QFileInfo(path);
-	const auto size = video->thumbnail.size();
-	const auto document = MTP_document(
-		MTP_flags(0),
-		MTP_long(7000000000LL + messageId),
-		MTP_long(0),
-		MTP_bytes(),
-		MTP_int(base::unixtime::now()),
-		MTP_string("video/mp4"),
-		MTP_long(file.size()),
-		MTP_vector<MTPPhotoSize>(),
-		MTPVector<MTPVideoSize>(),
-		MTP_int(0),
-		MTP_vector<MTPDocumentAttribute>({
-			MTP_documentAttributeVideo(
-				MTP_flags(MTPDdocumentAttributeVideo::Flag::f_supports_streaming),
-				MTP_double(video->duration / 1000.),
-				MTP_int(size.width()),
-				MTP_int(size.height()),
-				MTPint(),
-				MTPdouble(),
-				MTPstring()),
-			MTP_documentAttributeFilename(MTP_string(file.fileName())),
-		}));
-	const auto data = session->data().processDocument(document);
-	data->setLocation(Core::FileLocation(file.absoluteFilePath()));
-	auto &media = *session->lifetime().make_state<std::shared_ptr<Data::DocumentMedia>>(
-		data->createMediaView());
-	media->setThumbnail(video->thumbnail);
 	return MTP_messageMediaDocument(
 		MTP_flags(MTPDmessageMediaDocument::Flag::f_document),
 		document, MTPVector<MTPDocument>(), MTPPhoto(), MTPint(), MTPint());
@@ -314,30 +265,11 @@ using json = nlohmann::json;
 	const auto messageId = nextSimulationMessageId();
 	auto media = MTPMessageMedia();
 	if (!photoPath.isEmpty()) {
-		const auto image = QImage(photoPath);
-		if (image.isNull() || image.width() > 2048 || image.height() > 2048) {
+		const auto photo = simulationPhotoMedia(session, photoPath, messageId);
+		if (!photo) {
 			return Result::Err(u"expected a photo up to 2048 pixels per side"_q);
 		}
-		auto bytes = QByteArray();
-		auto buffer = QBuffer(&bytes);
-		if (!image.save(&buffer, "JPG")) {
-			return Result::Err(u"could not encode the photo"_q);
-		}
-		const auto photo = MTP_photo(MTP_flags(0),
-			MTP_long(9000000000LL + messageId), MTP_long(0), MTP_bytes(),
-			MTP_int(base::unixtime::now()),
-			MTP_vector<MTPPhotoSize>({ MTP_photoSize(
-				MTP_string("y"), MTP_int(image.width()), MTP_int(image.height()),
-				MTP_int(bytes.size())) }),
-			MTPVector<MTPVideoSize>(), MTP_int(0));
-		const auto data = session->data().processPhoto(photo, PreparedPhotoThumbs{
-			{ 'y', PreparedPhotoThumb{ .image = image, .bytes = bytes } },
-		});
-		auto &view = *session->lifetime().make_state<std::shared_ptr<Data::PhotoMedia>>(
-			data->createMediaView());
-		view->set(Data::PhotoSize::Large, Data::PhotoSize::Large, image, bytes);
-		media = MTP_messageMediaPhoto(
-			MTP_flags(MTPDmessageMediaPhoto::Flag::f_photo), photo, MTPint(), MTPDocument());
+		media = *photo;
 	}
 	if (!stickerPath.isEmpty()) {
 		const auto sticker = simulationStickerMedia(session, stickerPath, messageId);

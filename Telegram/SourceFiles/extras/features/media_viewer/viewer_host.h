@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base/unique_qptr.h"
+#include "base/weak_ptr.h"
 #include <QtCore/QMargins>
 #include <QtGui/QColor>
 #include <QtGui/QImage>
@@ -10,6 +11,8 @@ class QAbstractNativeEventFilter;
 
 namespace Ui {
 class LayerWidget;
+class RpWidget;
+class RpWindow;
 } // namespace Ui
 
 namespace ExtrasFeatures::WindowMaterial::Platform {
@@ -62,6 +65,40 @@ private:
 	std::unique_ptr<QAbstractNativeEventFilter> _activationFilter;
 	std::unique_ptr<WindowMaterial::Platform::Backend> _backdropBackend;
 	bool _nativeBackdrop = false;
+
+};
+
+// 文章媒体使用真正的子控件，宿主销毁前把控件交回原父级。
+class EmbeddedViewerHost final : public base::has_weak_ptr {
+public:
+	EmbeddedViewerHost(
+		not_null<QWidget*> viewer,
+		not_null<Ui::RpWidget*> host,
+		Fn<void()> geometryChanged,
+		Fn<void()> hostHidden,
+		Fn<void()> hostDestroyed);
+	~EmbeddedViewerHost();
+
+	[[nodiscard]] QRect geometry() const;
+	[[nodiscard]] bool hosts(not_null<QWidget*> window) const;
+	[[nodiscard]] QImage grabBackdrop() const;
+	void activate() const;
+	void minimizeHost() const;
+	void restoreFocus() const;
+	void setContentScreenshotProtected(bool protectedContent) const;
+
+private:
+	void restoreScreenshotProtection() const;
+
+	const not_null<QWidget*> _viewer;
+	const QPointer<QWidget> _host;
+	const QPointer<Ui::RpWindow> _window;
+	const QPointer<QWidget> _originalParent;
+	QPointer<QWidget> _previousFocus;
+	bool _previousScreenshotProtected = false;
+	bool _hostClosing = false;
+	base::unique_qptr<QObject> _filter;
+	rpl::lifetime _lifetime;
 
 };
 

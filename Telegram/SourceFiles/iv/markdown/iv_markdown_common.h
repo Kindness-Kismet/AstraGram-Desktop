@@ -25,6 +25,7 @@ class QFileInfo;
 
 namespace Ui {
 class DynamicImage;
+class RpWidget;
 class Show;
 } // namespace Ui
 
@@ -141,6 +142,7 @@ public:
 class MediaRuntime {
 public:
 	virtual ~MediaRuntime() = default;
+	virtual void setViewerHost(not_null<Ui::RpWidget*> host) = 0;
 
 	[[nodiscard]] virtual Ui::Text::MarkedContext textContext() const;
 	[[nodiscard]] virtual QString mentionNameEntityData(uint64 userId) const;

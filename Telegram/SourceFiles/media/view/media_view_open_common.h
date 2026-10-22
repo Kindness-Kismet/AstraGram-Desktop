@@ -9,6 +9,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "data/data_cloud_themes.h"
 #include "data/data_stories.h"
+#include "ui/rp_widget.h"
+
+#include <QtCore/QPointer>
 
 class DocumentData;
 class PeerData;
@@ -156,6 +159,17 @@ public:
 		return _showDrawButton;
 	}
 
+	void setEmbeddedHost(not_null<Ui::RpWidget*> host) {
+		_embeddedHost = host.get();
+		_embeddedHostRequested = true;
+	}
+	[[nodiscard]] Ui::RpWidget *embeddedHost() const {
+		return _embeddedHost;
+	}
+	[[nodiscard]] bool embeddedHostRequested() const {
+		return _embeddedHostRequested;
+	}
+
 private:
 	Window::SessionController *_controller = nullptr;
 	DocumentData *_document = nullptr;
@@ -170,6 +184,8 @@ private:
 	bool _continueStreaming = false;
 	crl::time _startTime = 0;
 	bool _showDrawButton = false;
+	QPointer<Ui::RpWidget> _embeddedHost;
+	bool _embeddedHostRequested = false;
 
 	std::shared_ptr<Data::GroupCall> _call;
 	QString _callLinkSlug;

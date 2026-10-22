@@ -86,6 +86,7 @@ GENERIC_COMMANDS = {
     "control.mouse": "在应用控件内部点击、打开菜单或分开按下松开：<目标> <横坐标> <纵坐标> [left|right|double|press|move|release]",
     "crash.log": "读取当前调试配置的崩溃日志",
     "iv.open-file": "打开本地文章预览：<文件路径>",
+    "iv.open-media-sample": "在独立模拟模式打开本地媒体文章：<图片一> <图片二> <视频>",
     "iv.open-editor": "在独立模拟模式打开空白文章编辑窗口，不发送消息",
     "iv.toggle-search": "切换当前活动文章预览或编辑器窗口的搜索栏",
     "iv.open-site": "打开内置网页浏览窗口：<TON 站点网址>",

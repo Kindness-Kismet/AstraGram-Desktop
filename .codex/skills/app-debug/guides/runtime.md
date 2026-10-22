@@ -63,6 +63,7 @@ python .claude/skills/app-debug/scripts/cli.py anim.speed 1
 状态包含该窗口的 `windowMaterialActive`；`window.close` 保留原有关闭确认，不强制丢弃内容。
 
 - `iv.open-file <文件路径>`：通过正式入口打开本地文章预览，窗口标识为 `iv.preview`。
+- `iv.open-media-sample <图片一> <图片二> <视频>`：仅在独立模拟配置中生成完整本地富消息，通过正式入口打开 `iv.preview`，包含独立图片、视频、拼图与幻灯片；不发送消息。图片每边不超过 2048 像素，视频播放直接使用原文件，验证期间保留文件。返回模拟消息与媒体编号，可配合 `message.inspect`、`control.list --all` 查询实际状态。
 - `iv.open-site <站点网址>`：通过正式入口打开 TON 站点，窗口标识为 `iv.browser`；返回成功只表示已打开窗口，不代表网页加载成功。
 - `iv.open-editor`：仅在独立模拟模式调用正式文章编辑入口，创建空白独立编辑窗口 `iv.editor`，不发送消息、不迁移聊天草稿。
 - `iv.toggle-search`：向当前选中的活动文章预览或编辑器窗口发送搜索快捷键事件；需要时先用 `window.activation active` 设置应用内部焦点。

@@ -4,8 +4,12 @@
 #include "base/platform/base_platform_info.h"
 #include "extras/extras_settings.h"
 #include "extras/features/window_material/platform/window_material_platform.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 #include "ui/image/image_prepare.h"
 #include "ui/layers/layer_widget.h"
+#include "ui/rp_widget.h"
+#include "ui/widgets/rp_window.h"
+#include "ui/platform/ui_platform_window_title.h"
 #include "ui/ui_utility.h"
 #include "styles/style_basic.h"
 
@@ -13,6 +17,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
+#include <QtWidgets/QApplication>
 
 #ifdef Q_OS_WIN
 #include <Windows.h>
@@ -271,6 +276,122 @@ void ViewerHost::minimizeHost() const {
 	if (_host) {
 		_host->setWindowState(_host->windowState() | Qt::WindowMinimized);
 	}
+}
+
+EmbeddedViewerHost::EmbeddedViewerHost(
+		not_null<QWidget*> viewer,
+		not_null<Ui::RpWidget*> host,
+		Fn<void()> geometryChanged,
+		Fn<void()> hostHidden,
+		Fn<void()> hostDestroyed)
+: _viewer(viewer)
+, _host(host.get())
+, _window(dynamic_cast<Ui::RpWindow*>(host->window()))
+, _originalParent(viewer->parentWidget())
+, _previousFocus(QApplication::focusWidget())
+, _previousScreenshotProtected(
+	host->window()->property("ExtrasContentScreenshotProtected").toBool()) {
+	Expects(_window != nullptr);
+	viewer->setObjectName(u"iv.mediaViewer"_q);
+	// 媒体覆盖整个文章窗口，标题栏也进入遮罩范围。
+	viewer->setParent(_window);
+	viewer->setGeometry(_window->rect());
+	_window->hitTestRequests() | rpl::on_next([=](
+			not_null<Ui::Platform::HitTestRequest*> request) {
+		if (_viewer->isVisible()) {
+			request->result = Ui::Platform::HitTestResult::Client;
+		}
+	}, _lifetime);
+	_filter.reset(base::install_event_filter(
+		viewer,
+		_window,
+		[=](not_null<QEvent*> event) {
+			if (event->type() == QEvent::Resize) {
+				geometryChanged();
+			} else if (event->type() == QEvent::Hide) {
+				hostHidden();
+			}
+			return base::EventFilterResult::Continue;
+		}).get());
+	host->lifetime().add([weak = base::make_weak(this), hostDestroyed] {
+		const auto strong = weak.get();
+		if (!strong) {
+			return;
+		}
+		// 界面控件的生命周期先于 QWidget 析构结束，此时子控件仍完整。
+		strong->_hostClosing = true;
+		strong->_viewer->hide();
+		strong->_viewer->setParent(strong->_originalParent);
+		hostDestroyed();
+	});
+}
+
+EmbeddedViewerHost::~EmbeddedViewerHost() {
+	_viewer->hide();
+	_viewer->setParent(_originalParent);
+	_viewer->setObjectName(QString());
+	restoreScreenshotProtection();
+}
+
+void EmbeddedViewerHost::restoreScreenshotProtection() const {
+	if (_host && !_hostClosing) {
+		_host->window()->setProperty(
+			"ExtrasContentScreenshotProtected",
+			_previousScreenshotProtected);
+		StreamerMode::refreshWidgetWindow(_host);
+	}
+}
+
+QRect EmbeddedViewerHost::geometry() const {
+	return _window ? _window->rect() : QRect();
+}
+
+QImage EmbeddedViewerHost::grabBackdrop() const {
+	Expects(_window != nullptr);
+	const auto shown = !_viewer->isHidden();
+	const auto focused = shown && Ui::InFocusChain(_viewer);
+	if (shown) _viewer->hide();
+	auto result = prepareBackdrop(grabOpaque(_window));
+	if (shown) {
+		_viewer->show();
+		_viewer->raise();
+		if (focused) _viewer->setFocus();
+	}
+	return result;
+}
+
+bool EmbeddedViewerHost::hosts(not_null<QWidget*> window) const {
+	return _host && _host->window() == window.get();
+}
+
+void EmbeddedViewerHost::activate() const {
+	if (_host) {
+		_viewer->raise();
+		_host->window()->activateWindow();
+	}
+}
+
+void EmbeddedViewerHost::minimizeHost() const {
+	if (_host) {
+		const auto window = _host->window();
+		window->setWindowState(window->windowState() | Qt::WindowMinimized);
+	}
+}
+
+void EmbeddedViewerHost::restoreFocus() const {
+	restoreScreenshotProtection();
+	if (!_hostClosing && _previousFocus && _previousFocus->isVisible()) {
+		_previousFocus->setFocus();
+	}
+}
+
+void EmbeddedViewerHost::setContentScreenshotProtected(
+		bool protectedContent) const {
+	Expects(_host != nullptr);
+	_host->window()->setProperty(
+		"ExtrasContentScreenshotProtected",
+		protectedContent || _previousScreenshotProtected);
+	StreamerMode::refreshWidgetWindow(_host);
 }
 
 } // namespace ExtrasFeatures::MediaViewer

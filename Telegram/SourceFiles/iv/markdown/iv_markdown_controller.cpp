@@ -491,6 +491,9 @@ bool Controller::updateExistingPreview(
 		OpenOptions options,
 		int scrollTop) {
 	Expects(_preview != nullptr);
+	if (content.mediaRuntime) {
+		content.mediaRuntime->setViewerHost(_window->body());
+	}
 
 	_preparedContent = std::move(content);
 	_options = std::move(options);
@@ -1063,6 +1066,9 @@ void Controller::createPreview() {
 		return;
 	}
 	const auto parent = _container;
+	if (_preparedContent && _preparedContent->mediaRuntime) {
+		_preparedContent->mediaRuntime->setViewerHost(_window->body());
+	}
 	auto options = _options;
 	options.clickHandlerContextRef = _clickHandlerContextRef;
 	options.clickHandlerContext = ExtendClickHandlerContext(

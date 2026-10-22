@@ -117,6 +117,8 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 三者互斥。照片和视频可配合 `--group <positiveId>` 构造相册，同一对话内使用相同编号。
 图片只保存在内存中，不上传。`--rich-table` 生成富消息：`text` 作为正文段落，后接一张带表头的两列表格，与图片参数互斥。
 
+文章媒体样本使用 `iv.open-media-sample <图片一> <图片二> <视频>`，仅接受独立模拟配置，返回本地消息编号后打开正式文章预览；包含单项媒体、拼图和幻灯片，图片保存在会话内存中，视频保留原文件路径。`iv.open-file` 只准备本地文字文章，不能用本地图片或视频链接替代此样本入口。
+
 `simulation.download <path> <loading|done>` 将本地文件加入下载管理器；拒绝音视频素材。
 `simulation.download-progress <peerId> <messageId> <bytes|done>` 推进模拟进度。
 这类事件用于检查下载列表、分类和进度，真实下载验证见[业务指令](business.md)。

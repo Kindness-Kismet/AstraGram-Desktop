@@ -90,6 +90,7 @@ struct ContentLayout;
 
 namespace ExtrasFeatures::MediaViewer {
 class ViewerHost;
+class EmbeddedViewerHost;
 } // namespace ExtrasFeatures::MediaViewer
 
 namespace Media::View {
@@ -362,6 +363,7 @@ private:
 	void updateGeometry(bool inMove = false);
 	void updateGeometryToScreen(bool inMove = false);
 	void prepareOpenMode(const OpenRequest &request);
+	void restoreWindowMode();
 	void updateGeometryToHost();
 	void updateBodyGeometry();
 	void updateSurfaceGeometry();
@@ -716,6 +718,7 @@ private:
 
 	// 非空表示本次以窗口内模式打开：窗口始终全屏，窗口内时只露出宿主那块。
 	std::unique_ptr<ExtrasFeatures::MediaViewer::ViewerHost> _viewerHost;
+	std::unique_ptr<ExtrasFeatures::MediaViewer::EmbeddedViewerHost> _embeddedHost;
 	QImage _backdrop;
 	base::Timer _backdropRefreshTimer;
 	Ui::Animations::Simple _fullScreenAnimation;
