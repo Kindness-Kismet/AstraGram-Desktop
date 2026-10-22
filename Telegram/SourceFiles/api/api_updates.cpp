@@ -1854,6 +1854,8 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 		const auto &d = update.c_updateMessageExtendedMedia();
 		const auto peerId = peerFromMTP(d.vpeer());
 		const auto msgId = d.vmsg_id().v;
+		session().conversationCache().extendedMediaUpdated(
+			FullMsgId(peerId, msgId), d.vextended_media().v);
 		if (const auto item = session().data().message(peerId, msgId)) {
 			item->applyEdition(d.vextended_media().v);
 		}

@@ -513,8 +513,58 @@ private:
 					}
 				}
 				record(9, cleared, { { "withdrawnVotesAndReactionsCleared", cleared } });
-				finish(_passed);
+				extendedMediaUpdates();
 			});
+		});
+	}
+
+	void extendedMediaUpdates() {
+		const auto peer = user(7);
+		const auto query = latest(peer);
+		const auto id = _messageBase + 71;
+		const auto preview = MTPMessageExtendedMedia(MTP_messageExtendedMediaPreview(
+			MTP_flags(MTPDmessageExtendedMediaPreview::Flag::f_w),
+			MTP_int(320), MTP_int(240), MTPPhotoSize(), MTPint()));
+		const auto full = MTPMessageExtendedMedia(MTP_messageExtendedMedia(
+			MTP_messageMediaPhoto(MTP_flags(MTPDmessageMediaPhoto::Flag::f_photo),
+				MTP_photoEmpty(MTP_long(900001)), MTPint(), MTPDocument())));
+		const auto invoice = MTPMessageMedia(MTP_messageMediaInvoice(MTP_flags(0),
+			MTP_string("Local invoice"), MTP_string("No transaction"), MTPWebDocument(),
+			MTPint(), MTP_string("XTR"), MTP_long(1), MTPstring(), MTPMessageExtendedMedia()));
+		put(query, {
+			simulationMediaMessage(peer, _session->userPeerId(), id, {},
+				MTP_messageMediaPaidMedia(MTP_long(1), MTP_vector<MTPMessageExtendedMedia>({ preview }))),
+			simulationMediaMessage(peer, _session->userPeerId(), id + 1, {}, invoice),
+		}, 2);
+		const auto unloaded = !_session->data().message(peer->id, MsgId(id));
+		for (const auto &value : { full, preview }) {
+			for (const auto messageId : { id, id + 1 }) {
+				_session->updates().applyUpdates(MTP_updateShort(MTP_updateMessageExtendedMedia(
+					peerToMTP(peer->id), MTP_int(messageId),
+					MTP_vector<MTPMessageExtendedMedia>({ value })), MTP_int(1)));
+			}
+		}
+		read(query, [=, this](std::optional<Slice> slice) {
+			auto paidPass = false;
+			auto invoicePass = false;
+			if (slice) {
+				for (const auto &message : slice->messages.c_messages_messagesSlice().vmessages().v) {
+					const auto &media = *message.c_message().vmedia();
+					if (IdFromMessage(message) == MsgId(id)) {
+						const auto &paid = media.c_messageMediaPaidMedia();
+						paidPass = paid.vstars_amount().v == 1 && paid.vextended_media().v.size() == 1
+							&& paid.vextended_media().v.front().type() == mtpc_messageExtendedMedia;
+					} else {
+						const auto &invoice = media.c_messageMediaInvoice();
+						invoicePass = invoice.vextended_media()
+							&& invoice.vextended_media()->type() == mtpc_messageExtendedMedia;
+					}
+				}
+			}
+			record(10, unloaded && paidPass && invoicePass,
+				{ { "itemMissing", unloaded }, { "paidMediaUpdated", paidPass },
+					{ "invoiceUpdated", invoicePass }, { "transactionRequested", false } });
+			finish(_passed);
 		});
 	}
 

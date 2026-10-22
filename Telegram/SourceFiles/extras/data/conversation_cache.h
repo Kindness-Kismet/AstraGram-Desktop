@@ -69,6 +69,7 @@ public:
 	void messageEdited(const MTPMessage &message);
 	void cacheConfirmedMessage(FullMsgId id);
 	void reactionsUpdated(FullMsgId id, const MTPMessageReactions &reactions);
+	void extendedMediaUpdated(FullMsgId id, const QVector<MTPMessageExtendedMedia> &media);
 	void pollUpdated(const MTPDupdateMessagePoll &update);
 	void webPageUpdated(const MTPWebPage &page);
 	void messagesDeleted(PeerId peer, const QVector<MTPint> &ids);

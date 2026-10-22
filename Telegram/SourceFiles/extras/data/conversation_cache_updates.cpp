@@ -181,6 +181,43 @@ void ConversationCache::reactionsUpdated(
 	});
 }
 
+void ConversationCache::extendedMediaUpdated(
+		FullMsgId id,
+		const QVector<MTPMessageExtendedMedia> &media) {
+	updateCachedMessages(id.peer, [=](MTPMessage &message) {
+		if (message.type() != mtpc_message || IdFromMessage(message) != id.msg) return false;
+		const auto &data = message.c_message();
+		const auto before = data.vmedia();
+		if (!before) return false;
+		const auto merge = [](const MTPMessageExtendedMedia &previous,
+				const MTPMessageExtendedMedia &incoming) {
+			// 已解锁内容不被后续预览覆盖，文件仍沿原有下载限制处理。
+			return previous.type() == mtpc_messageExtendedMedia
+				&& incoming.type() == mtpc_messageExtendedMediaPreview ? previous : incoming;
+		};
+		if (before->type() == mtpc_messageMediaPaidMedia) {
+			const auto &paid = before->c_messageMediaPaidMedia();
+			auto updated = media;
+			for (auto i = 0; i < std::min(updated.size(), paid.vextended_media().v.size()); ++i) {
+				updated[i] = merge(paid.vextended_media().v[i], updated[i]);
+			}
+			message = replaceMessageParts(data, MTP_messageMediaPaidMedia(
+				paid.vstars_amount(), MTP_vector<MTPMessageExtendedMedia>(updated)), nullptr);
+			return true;
+		}
+		if (before->type() != mtpc_messageMediaInvoice || media.size() != 1) return false;
+		const auto &invoice = before->c_messageMediaInvoice();
+		const auto prior = invoice.vextended_media();
+		const auto updated = prior ? merge(*prior, media.front()) : media.front();
+		message = replaceMessageParts(data, MTP_messageMediaInvoice(
+			MTP_flags(invoice.vflags().v | MTPDmessageMediaInvoice::Flag::f_extended_media),
+			invoice.vtitle(), invoice.vdescription(), field(invoice.vphoto()),
+			field(invoice.vreceipt_msg_id()), invoice.vcurrency(), invoice.vtotal_amount(),
+			invoice.vstart_param(), updated), nullptr);
+		return true;
+	});
+}
+
 void ConversationCache::pollUpdated(const MTPDupdateMessagePoll &update) {
 	const auto pollId = update.vpoll_id().v;
 	const auto poll = field(update.vpoll());
