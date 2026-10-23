@@ -102,6 +102,14 @@ public:
 		QByteArray bytes,
 		QString caption = {},
 		Fn<void(qint64, QString)> done = {});
+	void sendDocumentReply(
+		int chatId,
+		QString fileName,
+		QString mimeType,
+		QByteArray bytes,
+		QString caption,
+		qint64 replyTo,
+		Fn<void(qint64, QString)> done = {});
 	void downloadDocument(
 		int chatId,
 		qint64 messageId,
@@ -114,6 +122,7 @@ public:
 	void discard(int chatId, bool deleteHistory, Fn<void(QString)> done = {});
 	void setTtl(int chatId, int seconds, Fn<void(QString)> done = {});
 	void read(int chatId, int maxDate, Fn<void(QString)> done = {});
+	void readContents(int chatId, QVector<qint64> ids, Fn<void(QString)> done = {});
 	void retry(int chatId, qint64 messageId, Fn<void(QString)> done = {});
 	void logout(Fn<void(bool)> done = {});
 
