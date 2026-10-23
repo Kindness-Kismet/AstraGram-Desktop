@@ -1409,7 +1409,9 @@ void OverlayWidget::prepareOpenMode(const OpenRequest &request) {
 	_backdrop = QImage();
 	_fullscreenForVideo = false;
 	_fullScreenAnimation.stop();
-	if (const auto host = request.embeddedHost()) {
+	const auto article = request.embeddedHost();
+	// Windows 上文章媒体与窗口内模式一样用独立窗口覆盖宿主，全屏才有展开动画。
+	if (const auto host = Platform::IsWindows() ? nullptr : article) {
 		_fullscreen = _windowed = false;
 		_embeddedHost = std::make_unique<EmbeddedViewerHost>(
 			_body,
@@ -1427,14 +1429,18 @@ void OverlayWidget::prepareOpenMode(const OpenRequest &request) {
 		_backdrop = _embeddedHost->grabBackdrop();
 		return;
 	}
-	const auto window = !inWindowEnabled()
+	const auto window = (article || !inWindowEnabled())
 		? nullptr
 		: (request.story() || request.call())
 		? nullptr
 		: request.controller()
 		? &request.controller()->window()
 		: Core::App().activeWindow();
-	const auto host = window ? window->widget().get() : nullptr;
+	const auto host = article
+		? article->window()
+		: window
+		? window->widget().get()
+		: nullptr;
 	if (host && !host->isHidden() && !host->isMinimized()) {
 		_viewerHost = std::make_unique<ViewerHost>(
 			_window,
@@ -1444,7 +1450,8 @@ void OverlayWidget::prepareOpenMode(const OpenRequest &request) {
 					updateGeometryToHost();
 				}
 			},
-			[=] { close(); });
+			// 宿主已隐藏或即将销毁，不再播放收起动画。
+			[=] { hide(); });
 		_backdrop = _viewerHost->grabBackdrop();
 		_fullscreen = _windowed = false;
 		_helper->setTitleControlsHidden(true);
@@ -5131,9 +5138,12 @@ void OverlayWidget::show(OpenRequest request) {
 		&& (!request.embeddedHost() || !request.embeddedHost()->isVisible())) {
 		return;
 	}
-	const auto sameEmbeddedHost = request.embeddedHostRequested()
-		&& _embeddedHost
-		&& _embeddedHost->hosts(request.embeddedHost()->window());
+	const auto requestedHost = request.embeddedHostRequested()
+		? request.embeddedHost()->window()
+		: nullptr;
+	const auto sameEmbeddedHost = requestedHost
+		&& ((_embeddedHost && _embeddedHost->hosts(requestedHost))
+			|| (_viewerHost && _viewerHost->hosts(requestedHost)));
 	if (!isHidden()
 		&& (request.embeddedHostRequested() || _embeddedHost)
 		&& !sameEmbeddedHost) {
