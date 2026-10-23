@@ -539,7 +539,8 @@ void fillHistory(not_null<Main::Session*> session, not_null<PeerData*> peer, int
 				pinned && i < 2, kind == Kind::Topic, 0,
 				kind == Kind::Keyboard && i == count - 1,
 				rich && i == 2, protectedContent || (rich && i == 7),
-				(kind != Kind::Topic && i == 1) ? MsgId(baseId) : MsgId(),
+				// 末尾的表情回复首条消息，覆盖气泡外的回复块。
+				(kind != Kind::Topic && (i == 1 || i == 15)) ? MsgId(baseId) : MsgId(),
 				root, savedPeer, kind == Kind::InlineBot && i == count - 1,
 				media, (i == 13 || i == 14) ? int64(baseId) : 0));
 			topicIds[topic].push_back(MsgId(id));

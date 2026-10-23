@@ -6,6 +6,7 @@
 #include "boxes/add_contact_box.h"
 #include "boxes/auto_lock_box.h"
 #include "boxes/background_box.h"
+#include "boxes/background_preview_box.h"
 #include "boxes/connection_box.h"
 #include "boxes/create_poll_box.h"
 #include "boxes/delete_messages_box.h"
@@ -30,6 +31,7 @@
 #include "chat_helpers/emoji_sets_manager.h"
 #include "data/data_poll.h"
 #include "data/data_user.h"
+#include "data/data_wall_paper.h"
 #include "extras/ui/boxes/donate_qr_box.h"
 #include "extras/ui/boxes/edit_mark_box.h"
 #include "extras/ui/boxes/font_selector.h"
@@ -46,6 +48,7 @@
 #include "ui/boxes/country_select_box.h"
 #include "ui/boxes/single_choice_box.h"
 #include "ui/dynamic_thumbnails.h"
+#include "ui/image/image.h"
 #include "ui/layers/generic_box.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/option_list.h"
@@ -342,6 +345,13 @@ void lockedDemoBox(not_null<Ui::GenericBox*> box) {
 		} },
 		{ "background", "picker", [](Controller controller) -> object_ptr<Ui::BoxContent> {
 			return Box<BackgroundBox>(controller);
+		} },
+		{ "background-preview", "custom", [](Controller controller) -> object_ptr<Ui::BoxContent> {
+			// 内置照片壁纸无需联网，用于核对预览中服务消息的可读性。
+			auto paper = Data::Legacy1DefaultWallPaper();
+			paper.setLocalImageAsThumbnail(std::make_shared<Image>(
+				u":/gui/art/bg_initial.jpg"_q));
+			return Box<BackgroundPreviewBox>(controller, paper);
 		} },
 		{ "contacts", "list", [](Controller controller) -> object_ptr<Ui::BoxContent> {
 			return PrepareContactsBox(controller);
