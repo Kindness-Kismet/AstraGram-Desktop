@@ -3689,16 +3689,7 @@ void Message::toggleReplyRipple(bool pressed) {
 	}
 
 	if (pressed) {
-		if (!unwrapped()) {
-			const auto &padding = st::msgPadding;
-			const auto geometry = countGeometry();
-			const auto margins = reply->margins();
-			const auto size = QSize(
-				geometry.width() - padding.left() - padding.right(),
-				reply->height() - margins.top() - margins.bottom());
-			reply->createRippleAnimation(this, size);
-		}
-		reply->addRipple();
+		reply->addRipple(this);
 	} else {
 		reply->stopLastRipple();
 	}
@@ -4712,7 +4703,7 @@ bool Message::getStateReplyInfo(
 			if (g.contains(point)) {
 				if (const auto link = reply->link()) {
 					outResult->link = reply->link();
-					reply->saveRipplePoint(point - g.topLeft());
+					reply->saveRippleArea(point - g.topLeft(), g.size());
 				}
 			}
 			return true;

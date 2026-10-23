@@ -1548,8 +1548,9 @@ TextState Gif::textState(QPoint point, StateRequest request) const {
 			const auto replyRect = QRect(rectx, recty, rectw, recth);
 			if (replyRect.contains(point)) {
 				result.link = reply->link();
-				reply->saveRipplePoint(point - replyRect.topLeft());
-				reply->createRippleAnimation(_parent, replyRect.size());
+				reply->saveRippleArea(
+					point - replyRect.topLeft(),
+					replyRect.size());
 				return result;
 			}
 		}

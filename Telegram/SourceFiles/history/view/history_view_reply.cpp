@@ -1100,9 +1100,16 @@ void Reply::paint(
 	}
 }
 
-void Reply::createRippleAnimation(
-		not_null<const Element*> view,
-		QSize size) {
+void Reply::saveRippleArea(QPoint point, QSize size) const {
+	_ripple.lastPoint = point;
+	_ripple.size = size;
+}
+
+void Reply::addRipple(not_null<const Element*> view) {
+	const auto size = _ripple.size;
+	if (size.isEmpty()) {
+		return;
+	}
 	_ripple.animation = std::make_unique<Ui::RippleAnimation>(
 		st::defaultRippleAnimation,
 		Ui::RippleAnimation::RoundRectMask(
@@ -1113,16 +1120,7 @@ void Reply::createRippleAnimation(
 				? QRect()
 				: QRect(_ripple.lastPaintedPoint, size));
 		});
-}
-
-void Reply::saveRipplePoint(QPoint point) const {
-	_ripple.lastPoint = point;
-}
-
-void Reply::addRipple() {
-	if (_ripple.animation) {
-		_ripple.animation->add(_ripple.lastPoint);
-	}
+	_ripple.animation->add(_ripple.lastPoint);
 }
 
 void Reply::stopLastRipple() {

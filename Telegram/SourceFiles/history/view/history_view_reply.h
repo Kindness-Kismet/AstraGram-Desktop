@@ -102,9 +102,9 @@ public:
 		bool inBubble) const;
 	void unloadPersistentAnimation();
 
-	void createRippleAnimation(not_null<const Element*> view, QSize size);
-	void saveRipplePoint(QPoint point) const;
-	void addRipple();
+	// 命中检测记录按下位置与回复区域，按下时按该区域创建波纹。
+	void saveRippleArea(QPoint point, QSize size) const;
+	void addRipple(not_null<const Element*> view);
 	void stopLastRipple();
 
 	[[nodiscard]] int maxWidth() const {
@@ -153,6 +153,7 @@ private:
 		std::unique_ptr<Ui::RippleAnimation> animation;
 		QPoint lastPoint;
 		QPoint lastPaintedPoint;
+		QSize size;
 	} _ripple;
 	mutable Ui::Text::String _name;
 	mutable Ui::Text::String _text;
