@@ -1654,6 +1654,9 @@ SessionController::SessionController(
 	}, lifetime());
 
 	const auto processFiltersMenu = [this] {
+		if (!widget()->sessionContent()) {
+			return;
+		}
 		if (SessionNavigation::session().data().chatsFilters().has()) {
 			const auto isHorizontal
 				= Core::App().settings().chatFiltersHorizontal()
@@ -1674,6 +1677,13 @@ SessionController::SessionController(
 			processFiltersMenu();
 		}
 		checkOpenedFilter();
+		crl::on_main(this, processFiltersMenu);
+	}, lifetime());
+
+	// 窗口显示前的尺寸变化会合并成一次，宽度监听不触发；
+	// 首次显示后按最终宽度再决定用侧边栏还是顶部标签。
+	widget()->shownValue(
+	) | rpl::filter(rpl::mappers::_1) | rpl::take(1) | rpl::on_next([=] {
 		crl::on_main(this, processFiltersMenu);
 	}, lifetime());
 

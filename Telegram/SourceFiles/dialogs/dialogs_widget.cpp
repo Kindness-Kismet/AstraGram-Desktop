@@ -2208,6 +2208,7 @@ void Widget::toggleFiltersMenu(bool enabled) {
 		updateControlsGeometry();
 	} else {
 		_chatFilters = nullptr;
+		updateControlsGeometry();
 	}
 }
 
