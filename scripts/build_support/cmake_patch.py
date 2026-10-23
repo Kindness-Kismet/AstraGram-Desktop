@@ -14,6 +14,7 @@ _VALIDATE = ROOT / "cmake" / "validate_special_target.cmake"
 _ROOT_LISTS = ROOT / "CMakeLists.txt"
 _CMARK = ROOT / "cmake" / "external" / "cmark_gfm" / "CMakeLists.txt"
 _WINDOWS_OPTIONS = ROOT / "cmake" / "options_win.cmake"
+_OPENSSL_COMMON = ROOT / "cmake" / "external" / "openssl" / "openssl_common" / "CMakeLists.txt"
 
 _MARKER = f"# {LIBS_LOC_OPTION} override"
 _CMARK_MARKER = "# cmark_gfm warnings off"
@@ -40,6 +41,26 @@ _WINDOWS_TRIM_PATCHED = f"""        /Zc:__cplusplus
         /d1trimfile:${{CMAKE_SOURCE_DIR}}/
     )
 """
+
+# 官方用 /wd4996 压 OpenSSL 3 的弃用标记，会随链接传给全部使用方，Qt 的弃用警告也被关掉；
+# MSVC 下改用 OpenSSL 自带开关，只关它自己的标记。
+_OPENSSL_DEPRECATED_MARKER = "OPENSSL_SUPPRESS_DEPRECATED"
+_OPENSSL_DEPRECATED_ORIGINAL = """target_compile_options(external_openssl_common
+INTERFACE
+    $<IF:$<BOOL:${MSVC}>,/wd4996,-Wno-deprecated-declarations>
+)"""
+# 定义为空，与 webauthn 源码里的同名 #define 一致，避免重复定义警告。
+_OPENSSL_DEPRECATED_PATCHED = f"""if (MSVC)
+    target_compile_definitions(external_openssl_common
+    INTERFACE
+        {_OPENSSL_DEPRECATED_MARKER}=
+    )
+else()
+    target_compile_options(external_openssl_common
+    INTERFACE
+        -Wno-deprecated-declarations
+    )
+endif()"""
 
 
 _VARIABLES_ORIGINAL = """if (build_win64)
@@ -120,6 +141,7 @@ _PATCHES = (
     (_WINDOWS_OPTIONS, _WINDOWS_DEBUG_MARKER, _WINDOWS_DEBUG_ORIGINAL, _WINDOWS_DEBUG_PATCHED),
     (_WINDOWS_OPTIONS, _WINDOWS_INCREMENTAL_MARKER, _WINDOWS_INCREMENTAL_ORIGINAL, _WINDOWS_INCREMENTAL_PATCHED),
     (_WINDOWS_OPTIONS, _WINDOWS_TRIM_MARKER, _WINDOWS_TRIM_ORIGINAL, _WINDOWS_TRIM_PATCHED),
+    (_OPENSSL_COMMON, _OPENSSL_DEPRECATED_MARKER, _OPENSSL_DEPRECATED_ORIGINAL, _OPENSSL_DEPRECATED_PATCHED),
 )
 
 
