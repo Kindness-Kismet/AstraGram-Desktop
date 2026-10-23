@@ -140,7 +140,7 @@ class HistoryAuditTest(unittest.TestCase):
 
     def test_unix_and_network_share_paths_are_candidates(self):
         paths = ["/home/" + "example/project", "/mnt/" + "q/project", "/q/" + "project",
-                 "/Users/" + "Example/project", "\\\\" + "example-pc" + "\\project\\file"]
+                 "/Users/" + "Example/project", "\\\\" + "example-pc" + "\\" + "project\\file"]
         self.put("paths.txt", "\n".join(paths))
         self.commit()
         report, _ = self.scan(expected=1)
