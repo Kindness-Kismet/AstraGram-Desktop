@@ -99,6 +99,7 @@ void Manager::initialize(Fn<void(bool)> done) {
 				snapshot->selfId = selfId;
 				Details::expire(*snapshot, now);
 				Details::drainInbox(*snapshot, now);
+				Details::normalizeDrafts(*snapshot);
 			}
 			auto bytes = snapshot ? Details::serialize(*snapshot) : QByteArray();
 			crl::on_main([weak, finish, snapshot = std::move(snapshot), bytes = std::move(bytes), error]() mutable {
@@ -182,6 +183,7 @@ void Manager::Private::runNext() {
 	crl::async([weak, next, timestamp, task = std::move(task)]() mutable {
 		Details::expire(*next, timestamp);
 		const auto error = task.apply(*next);
+		if (error.isEmpty()) Details::normalizeDrafts(*next);
 		auto bytes = error.isEmpty() ? Details::serialize(*next) : QByteArray();
 		crl::on_main([weak, next, bytes = std::move(bytes), task = std::move(task), error]() mutable {
 			const auto manager = weak.get();
@@ -316,6 +318,30 @@ QVector<Message> Manager::messages(int chatId) const {
 	}
 	return result;
 }
+
+Draft Manager::draft(int chatId) const {
+	return _private->state->drafts.value(chatId);
+}
+
+void Manager::setDraft(int chatId, Draft draft, Fn<void(QString)> done) {
+	_private->enqueue([=](Private::Snapshot &snapshot) {
+		const auto chat = snapshot.chats.constFind(chatId);
+		if (chat == snapshot.chats.cend() || chat->view.state != State::Active) {
+			return u"Secret chat is not active"_q;
+		}
+		if (draft.text.size() > 32768) {
+			return u"Secret draft exceeds 32768 text characters"_q;
+		}
+		const auto target = chat->messages.constFind(draft.replyTo);
+		if (draft.replyTo && (target == chat->messages.cend()
+			|| target->packet.action != Codec::Action::None)) {
+			return u"Secret draft reply target was not found"_q;
+		}
+		snapshot.drafts.insert(chatId, draft);
+		return QString();
+	}, std::move(done));
+}
+
 rpl::producer<> Manager::changed() const {
 	return _private->changes.events();
 }
@@ -359,13 +385,12 @@ void Manager::discard(int chatId, bool deleteHistory, Fn<void(QString)> done) {
 		if (i == snapshot.chats.end()) {
 			return u"Secret chat was not found"_q;
 		}
-		if (deleteHistory) {
-			const auto error = Details::clearMessages(*i);
-			if (!error.isEmpty()) {
-				return error;
-			}
-		}
 		Details::discardState(*i, {});
+		if (deleteHistory) {
+			i->messages.clear();
+			i->messageOrder.clear();
+			i->deleted.clear();
+		}
 		i->discardHistory = deleteHistory;
 		return QString();
 	}, std::move(done));

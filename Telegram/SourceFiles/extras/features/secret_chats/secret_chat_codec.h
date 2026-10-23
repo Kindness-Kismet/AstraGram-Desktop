@@ -35,6 +35,7 @@ struct Packet {
 	qint64 randomId = 0;
 	int ttl = 0;
 	QString text;
+	qint64 replyTo = 0;
 	Action action = Action::None;
 	QVector<qint64> ids;
 	int value = 0;

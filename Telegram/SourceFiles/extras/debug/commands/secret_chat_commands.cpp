@@ -115,6 +115,7 @@ Result messages(const QStringList &args) {
 		auto entry = Json{
 			{ "id", message.id }, { "date", message.date },
 			{ "outgoing", message.outgoing },
+			{ "replyTo", message.replyTo },
 			{ "delivery", int(message.delivery) },
 			{ "textBytes", message.text.toUtf8().size() },
 			{ "textDigest", digest(message.text.toUtf8()).toStdString() },
@@ -174,6 +175,55 @@ Result send(const QStringList &args) {
 			? Json{ { "messageId", id }, { "status", "queued" } }
 			: Json(error.toStdString()));
 	});
+	return jobStarted(job);
+}
+
+Result reply(const QStringList &args) {
+	if (args.size() < 4) {
+		return Result::Err(u"usage: secret.reply <accountUserId> <chatId> <messageId> <text>"_q);
+	}
+	const auto session = specifiedSession(args[0]);
+	const auto chatId = specifiedChat(args[1]);
+	auto ok = false;
+	const auto target = args[2].toLongLong(&ok);
+	if (!session || !ok || !target || !session->secretChats().chat(chatId)) {
+		return Result::Err(u"unknown reply target in the specified account"_q);
+	}
+	const auto job = sessionJob(session, "secret-reply");
+	session->secretChats().sendReply(chatId, args.mid(3).join(u' '), target,
+		[=](qint64 id, QString error) {
+			finishJob(job, error.isEmpty(), error.isEmpty()
+				? Json{ { "messageId", id }, { "replyTo", target }, { "status", "queued" } }
+				: Json(error.toStdString()));
+		});
+	return jobStarted(job);
+}
+
+Result draft(const QStringList &args) {
+	if (args.size() < 2) {
+		return Result::Err(u"usage: secret.draft <accountUserId> <chatId> [<replyTo> <text>]"_q);
+	}
+	const auto session = specifiedSession(args[0]);
+	const auto chatId = specifiedChat(args[1]);
+	if (!session || !session->secretChats().chat(chatId)) {
+		return Result::Err(u"unknown chat in the specified account"_q);
+	}
+	if (args.size() == 2) {
+		const auto value = session->secretChats().draft(chatId);
+		return Result::Ok(Compact(Json{
+			{ "replyTo", value.replyTo }, { "textBytes", value.text.toUtf8().size() },
+			{ "textDigest", digest(value.text.toUtf8()).toStdString() },
+		}));
+	}
+	auto ok = false;
+	const auto target = args[2].toLongLong(&ok);
+	if (!ok) return Result::Err(u"invalid secret draft reply target"_q);
+	const auto job = sessionJob(session, "secret-draft");
+	session->secretChats().setDraft(chatId,
+		Extras::SecretChats::Draft{ args.mid(3).join(u' '), target }, [=](QString error) {
+			finishJob(job, error.isEmpty(), error.isEmpty()
+				? Json{ { "status", "committed" } } : Json(error.toStdString()));
+		});
 	return jobStarted(job);
 }
 
@@ -289,6 +339,7 @@ Result action(const QStringList &args, const QString &kind) {
 	else if (kind == u"retry"_q) manager.retry(chatId, value, done);
 	else if (kind == u"clear"_q) manager.clear(chatId, done);
 	else if (kind == u"end"_q) manager.discard(chatId, false, done);
+	else if (kind == u"destroy"_q) manager.discard(chatId, true, done);
 	else {
 		auto date = 0;
 		for (const auto &message : manager.messages(chatId)) {
@@ -305,6 +356,7 @@ Result erase(const QStringList &args) { return action(args, u"delete"_q); }
 Result retry(const QStringList &args) { return action(args, u"retry"_q); }
 Result clear(const QStringList &args) { return action(args, u"clear"_q); }
 Result end(const QStringList &args) { return action(args, u"end"_q); }
+Result destroy(const QStringList &args) { return action(args, u"destroy"_q); }
 
 } // namespace
 
@@ -313,10 +365,12 @@ const HandlerMap &secretChatHandlers() {
 		{ u"secret.list"_q, &list }, { u"secret.messages"_q, &messages },
 		{ u"secret.create"_q, &create }, { u"secret.open"_q, &open },
 		{ u"secret.send"_q, &send }, { u"secret.sample"_q, &sample },
+		{ u"secret.reply"_q, &reply }, { u"secret.draft"_q, &draft },
 		{ u"secret.download"_q, &download }, { u"secret.read"_q, &read },
 		{ u"secret.ttl"_q, &ttl }, { u"secret.delete"_q, &erase },
 		{ u"secret.retry"_q, &retry }, { u"secret.clear"_q, &clear },
 		{ u"secret.end"_q, &end },
+		{ u"secret.destroy"_q, &destroy },
 	};
 	return result;
 }

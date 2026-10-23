@@ -121,10 +121,25 @@ QByteArray serialize(const Snapshot &state) {
 	auto bytes = QByteArray();
 	QDataStream s(&bytes, QIODevice::WriteOnly);
 	s.setVersion(QDataStream::Qt_5_1);
-	s << quint32(12) << state.selfId << state.baseline << state.qts
+	s << quint32(13) << state.selfId << state.baseline << state.qts
 		<< state.hasRecovery << state.recovery.pts << state.recovery.date << state.recovery.seq
 		<< state.dhGenerator << state.dhVersion << state.dhPrime
 		<< state.chats << state.creations << state.pendingQts << state.inbox;
+	// 扩展保存在快照末尾，原会话和消息字段顺序保持兼容。
+	s << quint32(state.drafts.size());
+	for (auto i = state.drafts.cbegin(); i != state.drafts.cend(); ++i) {
+		s << i.key() << i->text << i->replyTo;
+	}
+	auto replies = QMap<int, QMap<qint64, qint64>>();
+	for (auto i = state.chats.cbegin(); i != state.chats.cend(); ++i) {
+		const auto collect = [&](const Codec::Packet &packet) {
+			if (packet.replyTo) replies[i.key()].insert(packet.randomId, packet.replyTo);
+		};
+		for (const auto &message : i->messages) collect(message.packet);
+		for (const auto &operation : i->outgoing) collect(operation.packet);
+		for (const auto &operation : i->incoming) collect(operation.packet);
+	}
+	s << replies;
 	return s.status() == QDataStream::Ok ? bytes : QByteArray();
 }
 
@@ -134,13 +149,42 @@ std::optional<Snapshot> deserialize(const QByteArray &bytes) {
 	QDataStream s(bytes);
 	s.setVersion(QDataStream::Qt_5_1);
 	s >> version;
-	if (version != 12) {
+	if (version != 12 && version != 13) {
 		return std::nullopt;
 	}
 	s >> result.selfId >> result.baseline >> result.qts
 		>> result.hasRecovery >> result.recovery.pts >> result.recovery.date >> result.recovery.seq
 		>> result.dhGenerator >> result.dhVersion >> result.dhPrime
 		>> result.chats >> result.creations >> result.pendingQts >> result.inbox;
+	if (version == 13) {
+		auto count = quint32();
+		s >> count;
+		if (count > result.chats.size()) return std::nullopt;
+		for (auto i = quint32(); i != count; ++i) {
+			auto chatId = int();
+			auto draft = Draft();
+			s >> chatId >> draft.text >> draft.replyTo;
+			if (!result.chats.contains(chatId) || result.drafts.contains(chatId)) {
+				return std::nullopt;
+			}
+			result.drafts.insert(chatId, std::move(draft));
+		}
+		auto replies = QMap<int, QMap<qint64, qint64>>();
+		s >> replies;
+		for (auto i = result.chats.begin(); i != result.chats.end(); ++i) {
+			const auto references = replies.value(i.key());
+			for (auto &message : i->messages) {
+				message.packet.replyTo = references.value(message.packet.randomId);
+				message.view.replyTo = message.packet.replyTo;
+			}
+			for (auto &operation : i->outgoing) {
+				operation.packet.replyTo = references.value(operation.packet.randomId);
+			}
+			for (auto &operation : i->incoming) {
+				operation.packet.replyTo = references.value(operation.packet.randomId);
+			}
+		}
+	}
 	return s.status() == QDataStream::Ok && s.atEnd()
 		? std::make_optional(std::move(result)) : std::nullopt;
 }
@@ -217,6 +261,7 @@ QString addOutgoing(ChatState &chat, Codec::Packet packet, QByteArray fileCipher
 
 void insertMessage(ChatState &chat, StoredMessage message) {
 	const auto id = message.view.id;
+	message.view.replyTo = message.packet.replyTo;
 	chat.messages.insert(id, std::move(message));
 	chat.messageOrder.push_back(id);
 	const auto localParity = chat.view.creator ? 1 : 0;
@@ -288,6 +333,7 @@ QString eraseMessages(ChatState &chat, const QVector<qint64> &ids) {
 }
 
 QString clearMessages(ChatState &chat, bool includeWaiting) {
+	chat.draftCleared = true;
 	auto ids = QVector<qint64>();
 	ids.reserve(chat.messages.size());
 	for (auto i = chat.messages.cbegin(); i != chat.messages.cend(); ++i) {
@@ -410,6 +456,29 @@ void expire(Snapshot &state, qint64 now) {
 	}
 }
 
+void normalizeDrafts(Snapshot &state) {
+	for (auto i = state.chats.begin(); i != state.chats.end(); ++i) {
+		if (std::exchange(i->draftCleared, false)) state.drafts.remove(i.key());
+	}
+	for (auto i = state.drafts.begin(); i != state.drafts.end();) {
+		const auto chat = state.chats.constFind(i.key());
+		if (chat == state.chats.cend() || chat->view.state == State::Discarded) {
+			i = state.drafts.erase(i);
+			continue;
+		}
+		const auto target = chat->messages.constFind(i->replyTo);
+		if (i->replyTo && (target == chat->messages.cend()
+			|| target->packet.action != Codec::Action::None)) {
+			i->replyTo = 0;
+		}
+		if (i->text.isEmpty() && !i->replyTo) {
+			i = state.drafts.erase(i);
+			continue;
+		}
+		++i;
+	}
+}
+
 void discardState(ChatState &chat, QString error) {
 	chat.view.state = State::Discarded;
 	chat.view.error = std::move(error);
@@ -419,6 +488,15 @@ void discardState(ChatState &chat, QString error) {
 	chat.pendingFingerprint = 0;
 	chat.pendingReadDate = 0;
 	chat.peerReads.clear();
+	chat.draftCleared = true;
+	for (const auto &operation : chat.outgoing) {
+		const auto id = operation.packet.randomId;
+		const auto message = chat.messages.constFind(id);
+		if (!operation.sent && message != chat.messages.cend() && !message->serverDate) {
+			chat.messages.remove(id);
+			chat.messageOrder.removeAll(id);
+		}
+	}
 	chat.outgoing.clear();
 	chat.incoming.clear();
 	chat.resendQueue.clear();

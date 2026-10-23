@@ -533,7 +533,8 @@ std::optional<QByteArray> encode(const Packet &packet) {
 		if (!writeService(writer, packet)) return std::nullopt;
 	} else {
 		writer.word(packet.layer >= 73 ? kMessage : kOldMessage);
-		writer.word(packet.document ? (1 << 9) : 0);
+		writer.word((packet.document ? (1 << 9) : 0)
+			| (packet.replyTo ? (1 << 3) : 0));
 		writer.longInteger(packet.randomId);
 		writer.word(packet.ttl);
 		writer.string(packet.text);
@@ -557,6 +558,7 @@ std::optional<QByteArray> encode(const Packet &packet) {
 			writer.string(packet.fileName);
 			writer.string(packet.caption);
 		}
+		if (packet.replyTo) writer.longInteger(packet.replyTo);
 	}
 	auto result = writer.finish();
 	return result.size() <= kMaxPacketBytes
@@ -595,7 +597,7 @@ std::optional<Packet> decode(const QByteArray &bytes) {
 		if ((flags & (1 << 9)) && !media(reader, packet)) return std::nullopt;
 		if ((flags & (1 << 7)) && !entities(reader, packet)) return std::nullopt;
 		if (flags & (1 << 11)) reader.string();
-		if (flags & (1 << 3)) reader.longInteger();
+		if (flags & (1 << 3)) packet.replyTo = reader.longInteger();
 		if (flags & (1 << 17)) reader.longInteger();
 	} else {
 		return std::nullopt;
