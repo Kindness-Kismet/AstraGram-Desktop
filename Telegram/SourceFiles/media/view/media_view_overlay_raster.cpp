@@ -381,12 +381,21 @@ void OverlayWidget::RendererSW::paintRoundedCorners(float64 radius) {
 		// The RpWindow rounding overlay will do the job.
 		return;
 	}
-	// 窗口内查看器的窗口没有系统圆角，按宿主圆角把四角擦成透明。
+	// 窗口内查看器的窗口没有系统圆角，按宿主圆角把四角擦成透明；
+	// 弧线向外多盖半个物理像素，压住系统边框内沿漏出的宿主内容，直边不变。
 	const auto rect = QRectF(_owner->_widget->rect());
 	auto corners = QPainterPath();
 	corners.addRect(rect);
+	const auto rounding = _owner->roundingRect();
+	const auto overlap = 0.5 / _owner->_widget->devicePixelRatioF();
+	auto bounds = QPainterPath();
+	bounds.addRect(rounding);
 	auto rounded = QPainterPath();
-	rounded.addRoundedRect(_owner->roundingRect(), radius, radius);
+	rounded.addRoundedRect(
+		rounding.marginsAdded({ overlap, overlap, overlap, overlap }),
+		radius + overlap,
+		radius + overlap);
+	rounded = rounded.intersected(bounds);
 	auto hq = PainterHighQualityEnabler(*_p);
 	const auto mode = _p->compositionMode();
 	_p->setCompositionMode(QPainter::CompositionMode_DestinationOut);

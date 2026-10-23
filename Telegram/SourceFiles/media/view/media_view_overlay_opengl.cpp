@@ -108,6 +108,35 @@ float roundedCorner() {
 	};
 }
 
+// 擦四角时弧线比宿主圆角向外多盖半个像素，压住系统边框内沿漏出的宿主内容；
+// 直边仍按原矩形裁齐，不盖住边框。
+[[nodiscard]] ShaderPart FragmentHostCorners() {
+	return {
+		.header = R"(
+uniform vec4 roundRect;
+uniform float roundRadius;
+
+float hostCorner() {
+	const float overlap = 0.5;
+	vec2 rectHalf = roundRect.zw / 2.;
+	vec2 rectCenter = roundRect.xy + rectHalf;
+	vec2 fromRectCenter = abs(gl_FragCoord.xy - rectCenter);
+	vec2 edges = clamp(rectHalf + 0.5 - fromRectCenter, 0., 1.);
+	float radius = roundRadius + overlap;
+	vec2 outerHalf = rectHalf + overlap;
+	vec2 fromRoundingCenter = max(
+		fromRectCenter + vec2(radius + 0.5),
+		outerHalf) - outerHalf;
+	float rounded = length(fromRoundingCenter) - radius;
+	return edges.x * edges.y * (1. - smoothstep(0., 1., rounded));
+}
+)",
+		.body = R"(
+	result *= hostCorner();
+)",
+	};
+}
+
 [[nodiscard]] QRectF StoryCropTextureRect(
 		QSizeF imageSize,
 		QSizeF targetSize) {
@@ -269,7 +298,7 @@ void OverlayWidget::RendererGL::init(QOpenGLFunctions &f) {
 		VertexShader({ VertexViewportTransform() }),
 		FragmentShader({
 			{ .body = "result = vec4(1.);" },
-			FragmentRoundedCorners(),
+			FragmentHostCorners(),
 		}));
 
 	const auto renderer = reinterpret_cast<const char*>(
