@@ -401,7 +401,8 @@ void GroupedMedia::drawHighlight(
 	const auto subpart = IsSubGroupSelection(selection);
 	const auto parentGeometry = bubble.geometry;
 	const auto shift = mediaPosition + QPoint(0, groupedPadding().top());
-	if (_mode == Mode::Grid && !empty && !subpart) {
+	// 相册共用一个气泡，回复指向其中一张时也沿整条消息绘制定位标记。
+	if (_mode == Mode::Grid) {
 		ExtrasFeatures::MessageLocate::paint(
 			p, context, parentGeometry, bubble.rounding, _parent->width(),
 			_parent->hasRightLayout(), _parent->hasFromPhoto() ? parentGeometry.x() : 0, action);
