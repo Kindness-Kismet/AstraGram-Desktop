@@ -17,11 +17,12 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# 补丁锚点与仓库路径和构建脚本共用，放在 scripts/build_support。
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "scripts"))
 
 from build_support.cmake_patch import patch_anchors  # noqa: E402
 from build_support.paths import ROOT  # noqa: E402
-from build_support.upstream_releases import Release, parse_releases, pick, select_target  # noqa: E402
+from upstream_releases import Release, parse_releases, pick, select_target  # noqa: E402
 
 TRACKING = ROOT / ".github" / "upstream.json"
 OUT_DIR = ROOT / "build" / "upstream-sync"
@@ -382,7 +383,7 @@ def check(args: argparse.Namespace) -> int:
     moved = sorted(path for path in old.keys() | new.keys() if old.get(path) != new.get(path))
     print(f"{current} -> {target.version}: {count} new upstream commits, "
           f"{len(moved)} changed submodules{(': ' + ', '.join(moved)) if moved else ''}")
-    print("Generate a synchronization report: python scripts/upstream.py report")
+    print("Generate a synchronization report: python .codex/skills/upstream-sync/scripts/upstream.py report")
     return 0
 
 
@@ -472,7 +473,7 @@ def report(args: argparse.Namespace) -> int:
         for entry in item.merge + item.take + item.added + item.deleted:
             if entry.note and entry.note not in ("本地改过", "本地未改"):
                 flagged.append(f"- {item.name}：`{entry.path}`：{entry.note}")
-    regenerate = f"python scripts/upstream.py report --base {base.version} --to {head.version}"
+    regenerate = f"python .codex/skills/upstream-sync/scripts/upstream.py report --base {base.version} --to {head.version}"
     lines = [
         f"# 官方同步报告：{base.version} → {head.version}\n",
         f"生成于 {datetime.date.today().isoformat()}，按本地已提交的 HEAD "
@@ -511,7 +512,7 @@ def report(args: argparse.Namespace) -> int:
         "\n## 接下来\n",
         "1. 阅读各仓库的报告，按用户决定的范围合并；每个仓库的处理方式写在它的报告开头。",
         "2. 子模块指针或依赖配方有变化时先运行 `python scripts/prebuild.py`，再编译验证。",
-        f"3. 暂时不跟进的改动写进 `upstream.json` 的 `deferred`，然后登记：`python scripts/upstream.py done {head.version}`。",
+        f"3. 暂时不跟进的改动写进 `upstream.json` 的 `deferred`，然后登记：`python .codex/skills/upstream-sync/scripts/upstream.py done {head.version}`。",
         f"4. 用 version-bump 把本应用版本改为 {head.version}，按原有 main 发版流程处理。",
     ]
     write(out, "README.md", "\n".join(lines) + "\n")

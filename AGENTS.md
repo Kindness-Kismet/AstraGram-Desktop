@@ -343,9 +343,9 @@ Settings → AstraGram Preferences → Debug，可见条件是 `#ifdef _DEBUG` �
 同步官方 Telegram Desktop 最新 tag，包含正式版与测试版。`.github/upstream.json` 只登记已适配的官方版本号，子模块基线取官方该版本记录的子模块指针，本地定制用 git diff 计算：
 
 ```bash
-python scripts/upstream.py check              # 官方有没有更新的 tag，包含测试版
-python scripts/upstream.py report             # 生成各仓库的改动报告，保存在 build/upstream-sync/
-python scripts/upstream.py done <官方版本>     # 适配并编译通过后登记
+python .codex/skills/upstream-sync/scripts/upstream.py check              # 官方有没有更新的 tag，包含测试版
+python .codex/skills/upstream-sync/scripts/upstream.py report             # 生成各仓库的改动报告，保存在 build/upstream-sync/
+python .codex/skills/upstream-sync/scripts/upstream.py done <官方版本>     # 适配并编译通过后登记
 ```
 
 - 按版本号选取最新官方 tag，正式版与测试版一同参与比较；不跟进 tag 之间的开发分支提交

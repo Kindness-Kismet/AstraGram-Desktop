@@ -28,10 +28,10 @@ description: "同步官方 Telegram Desktop 最新 tag，包含稳定版与测�
 ## 检查与报告
 
 ```bash
-python scripts/upstream.py check                          # 官方有没有更新的 tag，包含测试版
-python scripts/upstream.py report                         # 从已登记版本到官方最新 tag
-python scripts/upstream.py report --to 7.2.10             # 固定目标，正式版和测试版均可
-python scripts/upstream.py report --base 7.2.7 --to 7.2.9 # 指定基线，用于演练或复查
+python .codex/skills/upstream-sync/scripts/upstream.py check                          # 官方有没有更新的 tag，包含测试版
+python .codex/skills/upstream-sync/scripts/upstream.py report                         # 从已登记版本到官方最新 tag
+python .codex/skills/upstream-sync/scripts/upstream.py report --to 7.2.10             # 固定目标，正式版和测试版均可
+python .codex/skills/upstream-sync/scripts/upstream.py report --base 7.2.7 --to 7.2.9 # 指定基线，用于演练或复查
 ```
 
 报告按**已提交的 HEAD** 计算，工作区未提交的改动不计入；同步过程中分批提交后重新生成，
@@ -84,7 +84,7 @@ python scripts/upstream.py report --base 7.2.7 --to 7.2.9 # 指定基线，用�
 适配完成且编译验证通过后：
 
 ```bash
-python scripts/upstream.py done <已适配的官方版本>
+python .codex/skills/upstream-sync/scripts/upstream.py done <已适配的官方版本>
 ```
 
 `done` 会检查每个子模块已提交的指针等于或包含官方该版本的指针，不满足时拒绝登记；只能往更新的版本登记。
