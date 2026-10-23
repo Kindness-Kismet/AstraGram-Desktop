@@ -472,13 +472,8 @@ Result runAction(const QStringList &args) {
 		const auto text = keys.toString(QKeySequence::PortableText);
 		auto handled = true;
 		for (auto k = 0; handled && k != int(keys.count()); ++k) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 			const auto key = int(keys[k].key());
 			const auto modifiers = keys[k].keyboardModifiers();
-#else // Qt >= 6.0.0
-			const auto key = int(keys[k] & ~Qt::KeyboardModifierMask);
-			const auto modifiers = Qt::KeyboardModifiers(keys[k] & Qt::KeyboardModifierMask);
-#endif // Qt < 6.0.0
 			handled = QWindowSystemInterface::handleShortcutEvent(
 				window->windowHandle(), 0, key, modifiers, 0, 0, 0);
 		}

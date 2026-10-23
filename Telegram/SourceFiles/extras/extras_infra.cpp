@@ -32,11 +32,7 @@ namespace {
 // 保留这段头部，后接系统自带的语种字体，让它们排在字母序之前。
 [[nodiscard]] QStringList windowsFallbacks() {
 	const auto database = QGuiApplicationPrivate::platformIntegration()->fontDatabase();
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
 	constexpr auto script = QFontDatabasePrivate::Script_Common;
-#else
-	constexpr auto script = QChar::Script_Common;
-#endif
 	auto result = database->fallbacksForFamily(
 		u"Open Sans"_q,
 		QFont::StyleNormal,
