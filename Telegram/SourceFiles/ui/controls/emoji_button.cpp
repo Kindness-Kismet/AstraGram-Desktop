@@ -118,10 +118,12 @@ QPoint EmojiButton::prepareRippleStartPosition() const {
 }
 
 QImage EmojiButton::prepareRippleMask() const {
-	const auto size = _st.inner.rippleAreaSize;
-	return RippleAnimation::RoundRectMask(
-		QSize(size, size),
-		st::iconButtonRadius);
+	const auto size = QSize(
+		_st.inner.rippleAreaSize,
+		_st.inner.rippleAreaSize);
+	return _st.inner.rippleCircle
+		? RippleAnimation::EllipseMask(size)
+		: RippleAnimation::RoundRectMask(size, st::iconButtonRadius);
 }
 
 } // namespace Ui

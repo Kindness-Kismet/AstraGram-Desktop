@@ -1317,6 +1317,7 @@ historyAttach: IconButton(defaultIconButton) {
 
 	rippleAreaPosition: point(2px, 3px);
 	rippleAreaSize: 40px;
+	rippleCircle: true;
 	ripple: defaultRippleAnimationBgOver;
 }
 
