@@ -128,6 +128,9 @@
 !/.github/ISSUE_TEMPLATE/*.yml
 !/.github/workflows/
 !/.github/workflows/*.yml
+!/.github/scripts/
+!/.github/scripts/*.py
+!/.github/scripts/*.sh
 !/.claude/
 !/.claude/skills/
 !/.claude/skills/**/

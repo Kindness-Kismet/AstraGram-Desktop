@@ -38,6 +38,7 @@ AyuGramDesktop/
 │   ├── lib_base / lib_crl / lib_rpl / lib_storage / ...  # 其余 desktop-app 子模块，一般不改
 │   └── 其余文件             # 均为上游原样
 ├── scripts/                 # prebuild.py / build.py（见构建章节）
+├── .github/scripts/         # 只在云端运行的发版与缓存脚本，构建仓库按此路径调用
 └── .github/upstream.json    # 已适配的官方 tag 版本号与同步跳过规则
 ```
 

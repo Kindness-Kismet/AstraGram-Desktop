@@ -15,7 +15,7 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
-from build_support.artifact_provenance import (
+from artifact_provenance import (
     SOURCE_REPOSITORY,
     TARGETS,
     ProvenanceError,

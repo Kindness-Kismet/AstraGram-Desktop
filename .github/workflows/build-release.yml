@@ -106,7 +106,7 @@ jobs:
           REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
         run: |
           set -euo pipefail
-          exec python3 scripts/remote_build.py \
+          exec python3 .github/scripts/remote_build.py \
             --label "Windows x64" \
             --repository Kindness-Net/AstraGram-Desktop-Windows-Build \
             --workflow build.yml \
@@ -126,10 +126,10 @@ jobs:
           REMOTE_RUN_ID: ${{ steps.remote.outputs.run_id }}
         run: |
           set -euo pipefail
-          python3 - <<'PY'
+          PYTHONPATH=.github/scripts python3 - <<'PY'
           import os
 
-          from scripts.remote_build import GitHubApi, cancel_remote_run
+          from remote_build import GitHubApi, cancel_remote_run
 
           cancel_remote_run(
               GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
@@ -161,7 +161,7 @@ jobs:
           REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
         run: |
           set -euo pipefail
-          exec python3 scripts/remote_build.py \
+          exec python3 .github/scripts/remote_build.py \
             --label "Windows ARM64" \
             --repository Kindness-Net/AstraGram-Desktop-Windows-ARM64-Build \
             --workflow build.yml \
@@ -181,10 +181,10 @@ jobs:
           REMOTE_RUN_ID: ${{ steps.remote.outputs.run_id }}
         run: |
           set -euo pipefail
-          python3 - <<'PY'
+          PYTHONPATH=.github/scripts python3 - <<'PY'
           import os
 
-          from scripts.remote_build import GitHubApi, cancel_remote_run
+          from remote_build import GitHubApi, cancel_remote_run
 
           cancel_remote_run(
               GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
@@ -215,7 +215,7 @@ jobs:
           REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
         run: |
           set -euo pipefail
-          exec python3 scripts/remote_build.py \
+          exec python3 .github/scripts/remote_build.py \
             --label Linux \
             --repository Kindness-Net/AstraGram-Desktop-Linux-Build \
             --workflow build.yml \
@@ -235,10 +235,10 @@ jobs:
           REMOTE_RUN_ID: ${{ steps.remote.outputs.run_id }}
         run: |
           set -euo pipefail
-          python3 - <<'PY'
+          PYTHONPATH=.github/scripts python3 - <<'PY'
           import os
 
-          from scripts.remote_build import GitHubApi, cancel_remote_run
+          from remote_build import GitHubApi, cancel_remote_run
 
           cancel_remote_run(
               GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
@@ -269,7 +269,7 @@ jobs:
           REMOTE_BUILD_TOKEN: ${{ secrets.REMOTE_BUILD_TOKEN }}
         run: |
           set -euo pipefail
-          exec python3 scripts/remote_build.py \
+          exec python3 .github/scripts/remote_build.py \
             --label macOS \
             --repository Kindness-Net/AstraGram-Desktop-macOS-Build \
             --workflow build.yml \
@@ -289,10 +289,10 @@ jobs:
           REMOTE_RUN_ID: ${{ steps.remote.outputs.run_id }}
         run: |
           set -euo pipefail
-          python3 - <<'PY'
+          PYTHONPATH=.github/scripts python3 - <<'PY'
           import os
 
-          from scripts.remote_build import GitHubApi, cancel_remote_run
+          from remote_build import GitHubApi, cancel_remote_run
 
           cancel_remote_run(
               GitHubApi(os.environ["REMOTE_BUILD_TOKEN"]),
@@ -420,7 +420,7 @@ jobs:
           add_target macos-arm64 Kindness-Net/AstraGram-Desktop-macOS-Build \
             "$MACOS_RUN_ID" "$MACOS_RUN_ATTEMPT" "$MACOS_RESULT" true
 
-          python3 scripts/build_provenance.py verify-artifacts \
+          python3 .github/scripts/build_provenance.py verify-artifacts \
             --root artifacts \
             --source-repository "$GITHUB_REPOSITORY" \
             --source-sha "$GITHUB_SHA" \
@@ -449,7 +449,7 @@ jobs:
           APPVERSION: ${{ needs.validate.outputs.appversion }}
         run: |
           set -euo pipefail
-          python3 scripts/release_update_map.py release-artifacts "$APPVERSION"
+          python3 .github/scripts/release_update_map.py release-artifacts "$APPVERSION"
 
       - name: List release files.
         run: |
