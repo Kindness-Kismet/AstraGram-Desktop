@@ -7,6 +7,7 @@ from build_support.dependency_cache import (
     clear_cache_key,
     compute_cache_key,
     ensure_key_directories,
+    prune_obsolete,
     stage_directory,
     write_cache_key,
 )
@@ -25,6 +26,8 @@ def run_stages(stages: list[Stage], base_environment: dict[str, str], only: list
                 raise SystemExit(f"Unknown stage: {name}. Use --list to see available stages.")
 
     ensure_key_directories()
+    for path in prune_obsolete(stages):
+        print(f"  removed obsolete {path}", flush=True)
     environment = build_environment(base_environment)
     selected = [stage for stage in stages if not only or stage.name in only]
     total = len(selected)

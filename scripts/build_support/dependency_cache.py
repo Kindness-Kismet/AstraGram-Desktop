@@ -2,6 +2,7 @@ import glob
 import hashlib
 import os
 import re
+import subprocess
 from pathlib import Path
 
 from build_support.dependency_env import environment_keys
@@ -22,6 +23,13 @@ def stage_directory(stage: Stage) -> Path:
 
 def key_path(stage: Stage) -> Path:
     return stage_directory(stage) / KEYS_DIR_NAME / stage.name
+
+
+def installed_prefix(stage_name: str) -> str | None:
+    # Qt 阶段把安装目录放在同级 Qt-<版本>，与源码构建目录分开。
+    if stage_name.startswith("qt_"):
+        return "Qt-" + stage_name.removeprefix("qt_")
+    return None
 
 
 def compute_cache_key(stage: Stage) -> str:
@@ -56,7 +64,7 @@ def check_cache_key(stage: Stage, key: str) -> str:
         return "Stale"
     if stage.name.startswith("qt_6."):
         # Qt 6 的安装包引用独立对象文件，缓存键一致也不能复用被裁剪的安装目录。
-        prefix = directory / ("Qt-" + stage.name.removeprefix("qt_"))
+        prefix = directory / installed_prefix(stage.name)
         objects = set()
         for target in (prefix / "lib/cmake").glob("**/*Targets-*.cmake"):
             objects.update(re.findall(
@@ -78,6 +86,30 @@ def write_cache_key(stage: Stage, key: str) -> None:
     path = key_path(stage)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(key, encoding="utf-8")
+
+
+def prune_obsolete(stages: list[Stage]) -> list[Path]:
+    """删除配方已移除的阶段产物；有缓存键的才是本脚本建过的阶段。"""
+    current = {(stage.location, stage.name) for stage in stages}
+    removed: list[Path] = []
+    for location, directory in _LOCATIONS.items():
+        keys = directory / KEYS_DIR_NAME
+        if not keys.is_dir():
+            continue
+        for key in sorted(keys.iterdir()):
+            if (location, key.name) in current:
+                continue
+            for name in filter(None, (key.name, installed_prefix(key.name))):
+                path = directory / name
+                if not path.exists():
+                    continue
+                # rmdir 能删 git 的只读文件；删不掉时保留缓存键，下次再清理。
+                subprocess.run(["cmd", "/c", "rmdir", "/S", "/Q", str(path)])
+                if path.exists():
+                    raise SystemExit(f"Unable to remove obsolete stage output: {path}")
+                removed.append(path)
+            key.unlink()
+    return removed
 
 
 def ensure_key_directories() -> None:
