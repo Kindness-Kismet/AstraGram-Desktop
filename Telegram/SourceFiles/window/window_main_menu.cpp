@@ -144,9 +144,20 @@ public:
 	explicit MainMenuMaterialEffect(not_null<MainMenu*> menu)
 	: QGraphicsEffect(menu.get())
 	, _menu(menu) {
+		_menu->window()->installEventFilter(this);
 	}
 
 private:
+	bool eventFilter(QObject *object, QEvent *event) override {
+		if (event->type() == QEvent::UpdateRequest
+			&& isEnabled()
+			&& _menu->isVisible()) {
+			// 图形效果会扩大局部重绘范围，刷新前先让整块菜单背景失效。
+			Ui::ForceFullRepaint(_menu);
+		}
+		return QGraphicsEffect::eventFilter(object, event);
+	}
+
 	void draw(QPainter *p) override {
 		auto offset = QPoint();
 		const auto content = sourcePixmap(Qt::LogicalCoordinates, &offset, NoPad);
