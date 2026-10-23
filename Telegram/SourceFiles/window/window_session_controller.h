@@ -660,6 +660,8 @@ public:
 		FilterId id,
 		const SectionShow &params = SectionShow::Way::ClearStack);
 
+	// 侧边栏与顶部标签只由这里决定，须在窗口尺寸确定后调用。
+	void updateFiltersLayout();
 	void toggleFiltersMenu(bool enabled);
 	void setFiltersMenuSuppressed(bool suppressed);
 	[[nodiscard]] rpl::producer<> filtersMenuChanged() const;

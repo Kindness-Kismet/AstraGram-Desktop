@@ -872,12 +872,6 @@ Widget::Widget(
 	}
 	setupSwipeBack();
 
-	if (session().settings().dialogsFiltersEnabled()
-		&& (Core::App().settings().chatFiltersHorizontal()
-			|| !controller->enoughSpaceForFilters())) {
-		toggleFiltersMenu(true);
-	}
-
 	setupFrozenAccountBar();
 	setupTopBarSuggestions();
 	if (_layout == Layout::Main) {

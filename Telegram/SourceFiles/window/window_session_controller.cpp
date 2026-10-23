@@ -1653,38 +1653,16 @@ SessionController::SessionController(
 		closeFolder();
 	}, lifetime());
 
-	const auto processFiltersMenu = [this] {
-		if (!widget()->sessionContent()) {
-			return;
-		}
-		if (SessionNavigation::session().data().chatsFilters().has()) {
-			const auto isHorizontal
-				= Core::App().settings().chatFiltersHorizontal()
-					|| !enoughSpaceForFilters();
-			content()->toggleFiltersMenu(isHorizontal);
-			toggleFiltersMenu(!isHorizontal);
-		} else {
-			content()->toggleFiltersMenu(false);
-			toggleFiltersMenu(false);
-		}
-	};
 	rpl::merge(
 		enoughSpaceForFiltersValue() | rpl::skip(1) | rpl::to_empty,
 		Core::App().settings().chatFiltersHorizontalChanges() | rpl::to_empty,
 		session->data().chatsFilters().changed()
 	) | rpl::on_next([=] {
 		if (!_filtersActivated) {
-			processFiltersMenu();
+			updateFiltersLayout();
 		}
 		checkOpenedFilter();
-		crl::on_main(this, processFiltersMenu);
-	}, lifetime());
-
-	// 窗口显示前的尺寸变化会合并成一次，宽度监听不触发；
-	// 首次显示后按最终宽度再决定用侧边栏还是顶部标签。
-	widget()->shownValue(
-	) | rpl::filter(rpl::mappers::_1) | rpl::take(1) | rpl::on_next([=] {
-		crl::on_main(this, processFiltersMenu);
+		crl::on_main(this, [=] { updateFiltersLayout(); });
 	}, lifetime());
 
 	session->data().itemIdChanged(
@@ -2023,6 +2001,23 @@ void SessionController::setupShortcuts() {
 			return chatEntryHistoryMove(1);
 		});
 	}, lifetime());
+}
+
+void SessionController::updateFiltersLayout() {
+	const auto main = widget()->sessionContent();
+	if (!main) {
+		return;
+	}
+	// 沿用上次缓存的分组开关，分组未加载完时也能立刻显示。
+	if (!SessionNavigation::session().settings().dialogsFiltersEnabled()) {
+		main->toggleFiltersMenu(false);
+		toggleFiltersMenu(false);
+		return;
+	}
+	const auto horizontal = Core::App().settings().chatFiltersHorizontal()
+		|| !enoughSpaceForFilters();
+	main->toggleFiltersMenu(horizontal);
+	toggleFiltersMenu(!horizontal);
 }
 
 void SessionController::toggleFiltersMenu(bool enabled) {

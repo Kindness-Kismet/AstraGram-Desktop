@@ -200,6 +200,10 @@ void Controller::showAccount(
 		if (session) {
 			setupSideBar();
 			setupMain(singlePeerShowAtMsgId, std::move(oldContentCache));
+			// 首次显示前窗口尺寸未定，由 firstShow 决定文件夹布局。
+			if (_firstShown) {
+				_sessionController->updateFiltersLayout();
+			}
 
 			session->updates().isIdleValue(
 			) | rpl::filter([=](bool idle) {
@@ -256,14 +260,7 @@ void Controller::setupSideBar() {
 	) | rpl::on_next([=] {
 		sideBarChanged();
 	}, _sessionController->lifetime());
-
-	if (_sessionController->session().settings().dialogsFiltersEnabled()
-		&& _sessionController->enoughSpaceForFilters()
-		&& !Core::App().settings().chatFiltersHorizontal()) {
-		_sessionController->toggleFiltersMenu(true);
-	} else {
-		sideBarChanged();
-	}
+	sideBarChanged();
 }
 
 void Controller::checkLockByTerms() {
@@ -353,6 +350,10 @@ void Controller::showTermsDelete() {
 
 void Controller::firstShow() {
 	_widget.firstShow();
+	_firstShown = true;
+	if (_sessionController) {
+		_sessionController->updateFiltersLayout();
+	}
 }
 
 void Controller::finishFirstShow() {

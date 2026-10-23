@@ -194,6 +194,7 @@ private:
 	rpl::variable<FloatDelegate*> _floatPlayerDelegate = nullptr;
 
 	QString _highlightControlId;
+	bool _firstShown = false;
 
 	rpl::lifetime _accountLifetime;
 	rpl::lifetime _lifetime;
