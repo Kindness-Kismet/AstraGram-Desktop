@@ -10,8 +10,8 @@ from build_support.recipes_rust import RUST_STAGES
 from build_support.qt_native_backdrop_patch import PATCH_SCRIPT, patch_command
 from build_support import qt_text_caret_patch
 
-# Qt 版本决定补丁目录与产物前缀，随上游 qt_version 同步
-QT_VERSION = "5.15.19"
+# Qt 版本决定补丁目录与产物前缀，随上游 qt_version 的 Qt 6 分支同步
+QT_VERSION = "6.11.2"
 
 # venv 绑定创建它的解释器，Python 版本变动必须重建，故版本号在运行时填入
 PYTHON_VERSION_PLACEHOLDER = "__PYTHON_VERSION__"
@@ -477,32 +477,16 @@ deactivate
 """,
     ),
     Stage(
-        name="tg_angle",
-        location="Libraries",
-        version="0",
-        dependencies=[],
-        commands=r"""git clone https://github.com/desktop-app/tg_angle.git
-cd tg_angle
-git checkout f62ce7f6efe014cf1f7d95830c505fd2ac1c49e0
-cmake -B out ^
--DTG_ANGLE_SPECIAL_TARGET=%SPECIAL_TARGET% ^
--DTG_ANGLE_ZLIB_INCLUDE_PATH=%LIBS_DIR%/zlib
-cmake --build out --config Debug
-cmake --build out --config Release
-""",
-    ),
-    Stage(
         name=f"qt_{QT_VERSION}",
         location="Libraries",
-        version="0",
         dependencies=[
             f"patches/qtbase_{QT_VERSION}/*.patch",
             str(PATCH_SCRIPT),
             str(qt_text_caret_patch.PATCH_SCRIPT),
         ],
-        commands=r"""git clone -b v$QT-lts-lgpl https://github.com/qt/qt5.git qt_$QT
+        commands=r"""git clone -b v$QT https://github.com/qt/qt5.git qt_$QT
 cd qt_$QT
-git submodule update --init --recursive --progress qtbase qtimageformats qtsvg
+git submodule update --init --recursive --progress qtbase qtimageformats qtshadertools qtsvg
 cd qtbase
 setlocal enabledelayedexpansion
 for /r %%i in (..\..\patches\qtbase_%QT%\*) do (
@@ -514,62 +498,61 @@ exit /b 1
 )
 __QT_NATIVE_BACKDROP_PATCH__
 __QT_TEXT_CARET_PATCH__
-rem jom 1.1.3 在命令行超过 1000 字符时崩溃（0xC0000409），bootstrap 换 nmake；
-rem 主构建的 qmake Makefile 本身用响应文件链接，不受影响
-%THIRDPARTY_DIR%\msys64\usr\bin\sed.exe -i "s/set MAKE=jom/set MAKE=nmake/" configure.bat
 cd ..
 SET CONFIGURATIONS=-debug
+SET ASSERTS=
 SET CONFIGURATIONS=-debug-and-release
-if exist "%LIBS_DIR%\Qt-5.15.19" rmdir /Q /S "%LIBS_DIR%\Qt-5.15.19"
-if exist "%LIBS_DIR%\Qt-5.15.19" exit /b 1
-SET ANGLE_DIR=%LIBS_DIR%\tg_angle
-SET ANGLE_LIBS_DIR=%ANGLE_DIR%\out
+if exist "%LIBS_DIR%\Qt-%QT%" rmdir /Q /S "%LIBS_DIR%\Qt-%QT%"
+if exist "%LIBS_DIR%\Qt-%QT%" exit /b 1
 SET MOZJPEG_DIR=%LIBS_DIR%\mozjpeg
 SET OPENSSL_DIR=%LIBS_DIR%\openssl3
 SET OPENSSL_LIBS_DIR=%OPENSSL_DIR%\out
 SET ZLIB_LIBS_DIR=%LIBS_DIR%\zlib
 SET WEBP_DIR=%LIBS_DIR%\libwebp
+SET LCMS2_DIR=%LIBS_DIR%\liblcms2
 configure -prefix "%LIBS_DIR%\Qt-%QT%" ^
 %CONFIGURATIONS% ^
+%ASSERTS% ^
 -force-debug-info ^
 -opensource ^
 -confirm-license ^
 -static ^
 -static-runtime ^
--opengl es2 -no-angle ^
--I "%ANGLE_DIR%\include" ^
--D "KHRONOS_STATIC=" ^
--D "DESKTOP_APP_QT_STATIC_ANGLE=" ^
-QMAKE_LIBS_OPENGL_ES2_DEBUG="%ANGLE_LIBS_DIR%\Debug\tg_angle.lib %ZLIB_LIBS_DIR%\Debug\libzsd.lib d3d9.lib dxgi.lib dxguid.lib" ^
-QMAKE_LIBS_OPENGL_ES2_RELEASE="%ANGLE_LIBS_DIR%\Release\tg_angle.lib %ZLIB_LIBS_DIR%\Release\libzs.lib d3d9.lib dxgi.lib dxguid.lib" ^
--egl ^
-QMAKE_LIBS_EGL_DEBUG="%ANGLE_LIBS_DIR%\Debug\tg_angle.lib %ZLIB_LIBS_DIR%\Debug\libzsd.lib d3d9.lib dxgi.lib dxguid.lib Gdi32.lib User32.lib" ^
-QMAKE_LIBS_EGL_RELEASE="%ANGLE_LIBS_DIR%\Release\tg_angle.lib %ZLIB_LIBS_DIR%\Release\libzs.lib d3d9.lib dxgi.lib dxguid.lib Gdi32.lib User32.lib" ^
--openssl-linked ^
--I "%OPENSSL_DIR%\include" ^
-OPENSSL_LIBS_DEBUG="%OPENSSL_LIBS_DIR%.dbg\libssl.lib %OPENSSL_LIBS_DIR%.dbg\libcrypto.lib Ws2_32.lib Gdi32.lib Advapi32.lib Crypt32.lib User32.lib" ^
-OPENSSL_LIBS_RELEASE="%OPENSSL_LIBS_DIR%\libssl.lib %OPENSSL_LIBS_DIR%\libcrypto.lib Ws2_32.lib Gdi32.lib Advapi32.lib Crypt32.lib User32.lib" ^
--I "%MOZJPEG_DIR%" ^
-LIBJPEG_LIBS_DEBUG="%MOZJPEG_DIR%\Debug\jpeg-static.lib" ^
-LIBJPEG_LIBS_RELEASE="%MOZJPEG_DIR%\Release\jpeg-static.lib" ^
+-feature-c++20 ^
+-openssl linked ^
 -system-webp ^
--I "%WEBP_DIR%\src" ^
--L "%WEBP_DIR%\out\release-static\$X8664\lib" ^
--mp ^
--no-feature-netlistmgr ^
--nomake examples ^
--nomake tests ^
--platform win32-msvc
-cd qtbase\qmake
-rem jom 1.1.3 在命令行超过 1000 字符时崩溃（0xC0000409），nmake 自动转响应文件；
-rem 预链出 qmake.exe，主构建递归到 binary 时判依赖已满足而跳过
-nmake binary
-cd ..\..
-rem jom -jN occasionally fails to create the shared mkspecs\modules-inst
-rem directory due to a race in qmake's mkpath under parallel builds; the
-rem build is incremental, so simply retrying picks up where it stopped.
-jom -j%NUMBER_OF_PROCESSORS% || jom -j%NUMBER_OF_PROCESSORS%
-jom -j%NUMBER_OF_PROCESSORS% install
+-system-zlib ^
+-system-libjpeg ^
+-platform win32-msvc ^
+-D ZLIB_WINAPI ^
+-- ^
+-D OPENSSL_FOUND=1 ^
+-D OPENSSL_INCLUDE_DIR="%OPENSSL_DIR%\include" ^
+-D LIB_EAY_DEBUG="%OPENSSL_LIBS_DIR%.dbg\libcrypto.lib" ^
+-D SSL_EAY_DEBUG="%OPENSSL_LIBS_DIR%.dbg\libssl.lib" ^
+-D LIB_EAY_RELEASE="%OPENSSL_LIBS_DIR%\libcrypto.lib" ^
+-D SSL_EAY_RELEASE="%OPENSSL_LIBS_DIR%\libssl.lib" ^
+-D JPEG_FOUND=1 ^
+-D JPEG_INCLUDE_DIR="%MOZJPEG_DIR%" ^
+-D JPEG_LIBRARY_DEBUG="%MOZJPEG_DIR%\Debug\jpeg-static.lib" ^
+-D JPEG_LIBRARY_RELEASE="%MOZJPEG_DIR%\Release\jpeg-static.lib" ^
+-D ZLIB_FOUND=1 ^
+-D ZLIB_INCLUDE_DIR="%ZLIB_LIBS_DIR%" ^
+-D ZLIB_LIBRARY_DEBUG="%ZLIB_LIBS_DIR%\Debug\libzsd.lib" ^
+-D ZLIB_LIBRARY_RELEASE="%ZLIB_LIBS_DIR%\Release\libzs.lib" ^
+-D WebP_INCLUDE_DIR="%WEBP_DIR%\src" ^
+-D WebP_demux_INCLUDE_DIR="%WEBP_DIR%\src" ^
+-D WebP_mux_INCLUDE_DIR="%WEBP_DIR%\src" ^
+-D WebP_LIBRARY="%WEBP_DIR%\out\release-static\$X8664\lib\webp.lib" ^
+-D WebP_demux_LIBRARY="%WEBP_DIR%\out\release-static\$X8664\lib\webpdemux.lib" ^
+-D WebP_mux_LIBRARY="%WEBP_DIR%\out\release-static\$X8664\lib\webpmux.lib" ^
+-D LCMS2_FOUND=1 ^
+-D LCMS2_INCLUDE_DIR="%LCMS2_DIR%\include" ^
+-D LCMS2_LIBRARIES="%LCMS2_DIR%\out\Release\src\liblcms2.a"
+cmake --build . --config Debug
+cmake --install . --config Debug
+cmake --build .
+cmake --install .
 """.replace("__QT_NATIVE_BACKDROP_PATCH__", patch_command()).replace(
         "__QT_TEXT_CARET_PATCH__", qt_text_caret_patch.patch_command()),
     ),
@@ -674,8 +657,8 @@ STAGE_NAMES = [stage.name for stage in STAGES]
 
 
 def qt_version(target: str) -> str:
-    """arm64 换 Qt 6：Qt 5.15 没有 Windows arm64 支持，上游同样这么选。"""
-    return recipes_arm64.QT_VERSION if target == "winarm64" else QT_VERSION
+    """两个架构都用 Qt 6，配方相同，平台差异由 $X8664 等变量提供。"""
+    return QT_VERSION
 
 
 def stages_for(target: str) -> list[Stage]:
@@ -686,14 +669,9 @@ def stages_for(target: str) -> list[Stage]:
         return list(STAGES)
     if target != "winarm64":
         raise SystemExit(f"unknown target: {target}")
-    qt_stage = f"qt_{QT_VERSION}"
     result: list[Stage] = []
     for stage in STAGES:
-        if stage.name == qt_stage:
-            result.append(recipes_arm64.QT_STAGE)
-        elif stage.name in recipes_arm64.SKIP:
-            continue
-        elif stage.name in recipes_arm64.OVERRIDES:
+        if stage.name in recipes_arm64.OVERRIDES:
             result.append(replace(stage, commands=recipes_arm64.OVERRIDES[stage.name]))
         else:
             result.append(stage)

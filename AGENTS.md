@@ -14,7 +14,7 @@ AstraGram 是 Telegram Desktop 的 fork，前身是 AyuGram Desktop。本文档�
 - **文本处理**：中英文之间自动加空格、过滤异常组合字符
 - **界面定制**：宽消息倍率、头像圆角、开关样式等
 
-技术栈：C++20、Qt 5.15.19（静态编译，源码见 prebuild 的 `qt_5.15.19` 阶段）、rpl 响应式库、CMake 3.16+、nlohmann::json。
+技术栈：C++20、Qt 6.11.2（静态编译，源码见 prebuild 的 `qt_6.11.2` 阶段，最低支持 Windows 10）、rpl 响应式库、CMake 3.16+、nlohmann::json。
 
 ---
 
@@ -247,8 +247,8 @@ void Process(const TextWithEntities &text) {
 
 ```bash
 python scripts/prebuild.py            # 全量预编译，产物在 build/tmp
-python scripts/prebuild.py --list     # 34 个阶段清单（qt_5.15.19、openssl3、ffmpeg、tg_angle、tg_owt、breakpad、tde2e 等）
-python scripts/prebuild.py --stage openssl3 --stage qt_5.15.19   # 只跑指定阶段，可重复指定
+python scripts/prebuild.py --list     # 34 个阶段清单（qt_6.11.2、openssl3、ffmpeg、tg_owt、breakpad、tde2e 等）
+python scripts/prebuild.py --stage openssl3 --stage qt_6.11.2   # 只跑指定阶段，可重复指定
 python scripts/prebuild.py --clean    # 清空依赖缓存
 ```
 

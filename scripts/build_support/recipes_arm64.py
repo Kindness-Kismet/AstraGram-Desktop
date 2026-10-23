@@ -4,14 +4,6 @@
 """
 
 from build_support.recipe import Stage
-from build_support.qt_native_backdrop_patch import PATCH_SCRIPT, patch_command
-from build_support import qt_text_caret_patch
-
-# arm64 上 Qt 换 6.11.2：Qt 5.15 没有 Windows arm64 支持，上游同样这么选
-QT_VERSION = "6.11.2"
-
-# Qt 换成 6.11.2，ANGLE 只有 x64 一份
-SKIP = frozenset({"qt_5.15.19", "tg_angle"})
 
 OVERRIDES: dict[str, str] = {
 	"breakpad": r"""git clone https://chromium.googlesource.com/breakpad/breakpad
@@ -125,84 +117,3 @@ move libssl.lib out
 move ossl_static.pdb out
 """,
 }
-
-QT_STAGE = Stage(
-	name=f"qt_{QT_VERSION}",
-	location="Libraries",
-	dependencies=[
-		f"patches/qtbase_{QT_VERSION}/*.patch",
-		str(PATCH_SCRIPT),
-		str(qt_text_caret_patch.PATCH_SCRIPT),
-	],
-	commands=r"""git clone -b v$QT https://github.com/qt/qt5.git qt_$QT
-cd qt_$QT
-git submodule update --init --recursive --progress qtbase qtimageformats qtshadertools qtsvg
-cd qtbase
-setlocal enabledelayedexpansion
-for /r %%i in (..\..\patches\qtbase_%QT%\*) do (
-git apply %%i -v
-if errorlevel 1 (
-echo ERROR: Applying patch %%~nxi failed!
-exit /b 1
-)
-)
-__QT_NATIVE_BACKDROP_PATCH__
-__QT_TEXT_CARET_PATCH__
-cd ..
-SET CONFIGURATIONS=-debug
-SET ASSERTS=
-SET CONFIGURATIONS=-debug-and-release
-if exist "%LIBS_DIR%\Qt-%QT%" rmdir /Q /S "%LIBS_DIR%\Qt-%QT%"
-if exist "%LIBS_DIR%\Qt-%QT%" exit /b 1
-SET MOZJPEG_DIR=%LIBS_DIR%\mozjpeg
-SET OPENSSL_DIR=%LIBS_DIR%\openssl3
-SET OPENSSL_LIBS_DIR=%OPENSSL_DIR%\out
-SET ZLIB_LIBS_DIR=%LIBS_DIR%\zlib
-SET WEBP_DIR=%LIBS_DIR%\libwebp
-SET LCMS2_DIR=%LIBS_DIR%\liblcms2
-configure -prefix "%LIBS_DIR%\Qt-%QT%" ^
-%CONFIGURATIONS% ^
-%ASSERTS% ^
--force-debug-info ^
--opensource ^
--confirm-license ^
--static ^
--static-runtime ^
--feature-c++20 ^
--openssl linked ^
--system-webp ^
--system-zlib ^
--system-libjpeg ^
--platform win32-msvc ^
--D ZLIB_WINAPI ^
--- ^
--D OPENSSL_FOUND=1 ^
--D OPENSSL_INCLUDE_DIR="%OPENSSL_DIR%\include" ^
--D LIB_EAY_DEBUG="%OPENSSL_LIBS_DIR%.dbg\libcrypto.lib" ^
--D SSL_EAY_DEBUG="%OPENSSL_LIBS_DIR%.dbg\libssl.lib" ^
--D LIB_EAY_RELEASE="%OPENSSL_LIBS_DIR%\libcrypto.lib" ^
--D SSL_EAY_RELEASE="%OPENSSL_LIBS_DIR%\libssl.lib" ^
--D JPEG_FOUND=1 ^
--D JPEG_INCLUDE_DIR="%MOZJPEG_DIR%" ^
--D JPEG_LIBRARY_DEBUG="%MOZJPEG_DIR%\Debug\jpeg-static.lib" ^
--D JPEG_LIBRARY_RELEASE="%MOZJPEG_DIR%\Release\jpeg-static.lib" ^
--D ZLIB_FOUND=1 ^
--D ZLIB_INCLUDE_DIR="%ZLIB_LIBS_DIR%" ^
--D ZLIB_LIBRARY_DEBUG="%ZLIB_LIBS_DIR%\Debug\libzsd.lib" ^
--D ZLIB_LIBRARY_RELEASE="%ZLIB_LIBS_DIR%\Release\libzs.lib" ^
--D WebP_INCLUDE_DIR="%WEBP_DIR%\src" ^
--D WebP_demux_INCLUDE_DIR="%WEBP_DIR%\src" ^
--D WebP_mux_INCLUDE_DIR="%WEBP_DIR%\src" ^
--D WebP_LIBRARY="%WEBP_DIR%\out\release-static\$X8664\lib\webp.lib" ^
--D WebP_demux_LIBRARY="%WEBP_DIR%\out\release-static\$X8664\lib\webpdemux.lib" ^
--D WebP_mux_LIBRARY="%WEBP_DIR%\out\release-static\$X8664\lib\webpmux.lib" ^
--D LCMS2_FOUND=1 ^
--D LCMS2_INCLUDE_DIR="%LCMS2_DIR%\include" ^
--D LCMS2_LIBRARIES="%LCMS2_DIR%\out\Release\src\liblcms2.a"
-cmake --build . --config Debug
-cmake --install . --config Debug
-cmake --build .
-cmake --install .
-""".replace("__QT_NATIVE_BACKDROP_PATCH__", patch_command()).replace(
-	"__QT_TEXT_CARET_PATCH__", qt_text_caret_patch.patch_command()),
-)
