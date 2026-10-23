@@ -75,6 +75,7 @@ public:
 	void checkStickerLarge(not_null<FileLoader*> loader);
 
 	void setBytes(const QByteArray &bytes);
+	void clearLocalData();
 	[[nodiscard]] QByteArray bytes() const;
 	[[nodiscard]] bool loaded(bool check = false) const;
 	[[nodiscard]] float64 progress() const;
@@ -88,6 +89,9 @@ public:
 	static void CheckGoodThumbnail(not_null<DocumentData*> document);
 
 private:
+	friend class ::DocumentData;
+	void setLocalSourceValid(Fn<bool()> valid);
+
 	enum class Flag : uchar {
 		GoodThumbnailWanted = 0x01,
 	};
@@ -112,6 +116,7 @@ private:
 	std::unique_ptr<Image> _sticker;
 	QByteArray _bytes;
 	QByteArray _videoThumbnailBytes;
+	Fn<bool()> _localSourceValid;
 	Flags _flags;
 
 };

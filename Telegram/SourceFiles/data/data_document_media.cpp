@@ -186,6 +186,10 @@ not_null<DocumentData*> DocumentMedia::owner() const {
 	return _owner;
 }
 
+void DocumentMedia::setLocalSourceValid(Fn<bool()> valid) {
+	_localSourceValid = std::move(valid);
+}
+
 void DocumentMedia::goodThumbnailWanted() {
 	_flags |= Flag::GoodThumbnailWanted;
 }
@@ -200,6 +204,9 @@ Image *DocumentMedia::goodThumbnail() const {
 }
 
 void DocumentMedia::setGoodThumbnail(QImage thumbnail) {
+	if (_localSourceValid && !_localSourceValid()) {
+		return;
+	}
 	if (!(_flags & Flag::GoodThumbnailWanted) || thumbnail.isNull()) {
 		return;
 	}
@@ -254,6 +261,9 @@ QSize DocumentMedia::thumbnailSize() const {
 }
 
 void DocumentMedia::setThumbnail(QImage thumbnail) {
+	if (_localSourceValid && !_localSourceValid()) {
+		return;
+	}
 	_thumbnail = std::make_unique<Image>(std::move(thumbnail));
 	_owner->session().notifyDownloaderTaskFinished();
 }
@@ -263,6 +273,9 @@ QByteArray DocumentMedia::videoThumbnailContent() const {
 }
 
 QSize DocumentMedia::videoThumbnailSize() const {
+	if (_localSourceValid) {
+		return _owner->dimensions;
+	}
 	const auto &location = _owner->videoThumbnailLocation();
 	return { location.width(), location.height() };
 }
@@ -274,6 +287,9 @@ void DocumentMedia::videoThumbnailWanted(Data::FileOrigin origin) {
 }
 
 void DocumentMedia::setVideoThumbnail(QByteArray content) {
+	if (_localSourceValid && !_localSourceValid()) {
+		return;
+	}
 	_videoThumbnailBytes = std::move(content);
 }
 
@@ -368,16 +384,35 @@ void DocumentMedia::collectLocalData(not_null<DocumentMedia*> local) {
 }
 
 void DocumentMedia::setBytes(const QByteArray &bytes) {
+	if (_localSourceValid && !_localSourceValid()) {
+		return;
+	}
 	if (!bytes.isEmpty()) {
 		_bytes = bytes;
 	}
 }
 
+void DocumentMedia::clearLocalData() {
+	_bytes.clear();
+	_videoThumbnailBytes.clear();
+	_goodThumbnail = nullptr;
+	_inlineThumbnail = nullptr;
+	_thumbnail = nullptr;
+	_sticker = nullptr;
+	_pathThumbnail = QPainterPath();
+}
+
 QByteArray DocumentMedia::bytes() const {
+	if (_localSourceValid && !_localSourceValid()) {
+		return {};
+	}
 	return _bytes;
 }
 
 bool DocumentMedia::loaded(bool check) const {
+	if (_localSourceValid) {
+		return _localSourceValid() && !_bytes.isEmpty();
+	}
 	return !_bytes.isEmpty() || !_owner->filepath(check).isEmpty();
 }
 
@@ -440,6 +475,11 @@ void DocumentMedia::checkStickerLarge(not_null<FileLoader*> loader) {
 void DocumentMedia::GenerateGoodThumbnail(
 		not_null<DocumentData*> document,
 		QByteArray data) {
+	const auto localSource = document->hasLocalSource();
+	const auto generation = document->_localSourceGeneration;
+	if (localSource && !document->localSourceValid()) {
+		return;
+	}
 	const auto type = document->isPatternWallPaperSVG()
 		? FileType::WallPatternSVG
 		: document->isPatternWallPaperPNG()
@@ -486,15 +526,21 @@ void DocumentMedia::GenerateGoodThumbnail(
 		}
 		const auto cache = bytes.isEmpty() ? QByteArray("(failed)") : bytes;
 		crl::on_main(guard, [=] {
+			if (localSource && (generation != document->_localSourceGeneration
+				|| !document->localSourceValid())) {
+				return;
+			}
 			document->setGoodThumbnailChecked(true);
 			if (const auto active = document->activeMediaView()) {
 				active->setGoodThumbnail(result);
 			}
-			document->owner().cache().put(
-				document->goodThumbnailCacheKey(),
-				Storage::Cache::Database::TaggedValue{
-					base::duplicate(cache),
-					kImageCacheTag });
+			if (!localSource) {
+				document->owner().cache().put(
+					document->goodThumbnailCacheKey(),
+					Storage::Cache::Database::TaggedValue{
+						base::duplicate(cache),
+						kImageCacheTag });
+			}
 		});
 	});
 }
@@ -513,6 +559,11 @@ void DocumentMedia::ReadOrGenerateThumbnail(
 		return;
 	}
 	document->setGoodThumbnailGenerating();
+	if (document->hasLocalSource()) {
+		const auto active = document->activeMediaView();
+		GenerateGoodThumbnail(document, active ? active->bytes() : QByteArray());
+		return;
+	}
 
 	const auto guard = base::make_weak(&document->session());
 	const auto active = document->activeMediaView();

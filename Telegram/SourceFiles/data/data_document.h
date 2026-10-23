@@ -113,11 +113,23 @@ class Document;
 
 class DocumentData final {
 public:
+	struct LocalSource {
+		Fn<void(Fn<void(QByteArray, QString)>, Fn<void(qint64)>)> download;
+		Fn<void()> cancel;
+		Fn<bool()> valid;
+	};
+
 	DocumentData(not_null<Data::Session*> owner, DocumentId id);
 	~DocumentData();
 
 	[[nodiscard]] Data::Session &owner() const;
 	[[nodiscard]] Main::Session &session() const;
+
+	// 本地来源只在内存保留附件内容，保存文件必须由用户主动触发。
+	void setLocalSource(LocalSource source);
+	[[nodiscard]] bool hasLocalSource() const;
+	[[nodiscard]] bool localSourceValid() const;
+	void clearLocalSource();
 
 	void setattributes(
 		const QVector<MTPDocumentAttribute> &attributes);
@@ -385,6 +397,11 @@ private:
 	static constexpr Flags kStreamingSupportedNo = Flags();
 
 	friend class Serialize::Document;
+	friend class Data::DocumentMedia;
+
+	struct LocalSourceState;
+	void saveLocalSource(const QString &toFile, bool autoLoading);
+	void cancelLocalSource();
 
 	void validateLottieSticker();
 	void setMaybeSupportsStreaming(bool supports);
@@ -417,6 +434,8 @@ private:
 	Data::CloudFile _videoThumbnail;
 	std::unique_ptr<Data::ReplyPreview> _replyPreview;
 	std::weak_ptr<Data::DocumentMedia> _media;
+	std::shared_ptr<LocalSourceState> _localSource;
+	uint64 _localSourceGeneration = 0;
 	PhotoData *_goodThumbnailPhoto = nullptr;
 	crl::time _duration = -1;
 
