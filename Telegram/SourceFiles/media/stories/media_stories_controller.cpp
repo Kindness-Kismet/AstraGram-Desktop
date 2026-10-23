@@ -607,6 +607,15 @@ ContentLayout Controller::contentLayout() const {
 	};
 }
 
+bool Controller::closeByClickAt(QPoint position) const {
+	const auto &current = _layout.current();
+	Assert(current.has_value());
+
+	return (position.x() < current->content.x() - st::storiesControlSize)
+		|| (position.x() > current->content.x() + current->content.width()
+			+ st::storiesControlSize);
+}
+
 Data::FileOrigin Controller::fileOrigin() const {
 	return _shown;
 }
