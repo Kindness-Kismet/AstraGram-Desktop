@@ -66,7 +66,9 @@ private:
 			not_null<const style::ServiceCheck*> st,
 			float64 progress);
 
-		base::flat_map<not_null<const style::ServiceCheck*>, Frames> _data;
+		// 预览等自带调色板改色时不会通知，帧按样式与当前颜色区分。
+		using Key = std::pair<const style::ServiceCheck*, QRgb>;
+		base::flat_map<Key, Frames> _data;
 		rpl::lifetime _lifetime;
 
 	};
@@ -85,10 +87,11 @@ ServiceCheck::Generator::Generator() {
 
 auto ServiceCheck::Generator::framesForStyle(
 		not_null<const style::ServiceCheck*> st) -> not_null<Frames*> {
-	if (const auto i = _data.find(st); i != _data.end()) {
+	const auto key = Key(st.get(), st->color->c.rgba());
+	if (const auto i = _data.find(key); i != _data.end()) {
 		return &i->second;
 	}
-	const auto result = &_data.emplace(st, Frames()).first->second;
+	const auto result = &_data.emplace(key, Frames()).first->second;
 	const auto size = st->diameter;
 	const auto count = (st->duration / kAnimationTimerDelta) + 2;
 	result->image = QImage(
