@@ -168,15 +168,15 @@ QString cryptoChecks(bytes::const_span key) {
 			|| Crypto::decrypt(context, *encrypted, message, !edited)) {
 			return u"archive accepted the wrong key or message kind"_q;
 		}
-		for (const auto position : { 0, 4, 16, encrypted->size() - 1 }) {
+		const auto size = int(encrypted->size());
+		for (const auto position : { 0, 4, 16, size - 1 }) {
 			auto damaged = *encrypted;
 			damaged[position] = char(damaged.at(position) ^ 1);
 			if (Crypto::decrypt(context, damaged, message, edited)) {
 				return u"archive accepted a modified ciphertext"_q;
 			}
 		}
-		for (const auto length : { 0, 3, 16, encrypted->size() - 16,
-				encrypted->size() - 1 }) {
+		for (const auto length : { 0, 3, 16, size - 16, size - 1 }) {
 			if (Crypto::decrypt(context, encrypted->left(length), message, edited)) {
 				return u"archive accepted a truncated ciphertext"_q;
 			}

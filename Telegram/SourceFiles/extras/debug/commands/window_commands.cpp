@@ -94,7 +94,7 @@ void showWithoutActivating(not_null<QWidget*> window, bool maximized) {
 		return Result::Err(u"no active window"_q);
 	}
 	using Interface = QWindowSystemInterface;
-	Interface::handleWindowActivated<Interface::SynchronousDelivery>(
+	Interface::handleFocusWindowChanged<Interface::SynchronousDelivery>(
 		(text == u"active"_q) ? window->windowHandle() : nullptr);
 	return Result::Ok(Compact(WindowState(window)));
 }

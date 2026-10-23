@@ -472,7 +472,7 @@ Result sendMention(const QStringList &args) {
 			action.clearDraft = false;
 			auto message = Api::MessageToSend(action);
 			message.textWithTags = { args[2] + args[3], {
-				{ 0, args[2].size(), PrepareMentionTag(user) },
+				{ 0, int(args[2].size()), PrepareMentionTag(user) },
 			} };
 			session->api().sendMessage(std::move(message));
 			finishJob(id, true, Json{ { "state", "submitted" },

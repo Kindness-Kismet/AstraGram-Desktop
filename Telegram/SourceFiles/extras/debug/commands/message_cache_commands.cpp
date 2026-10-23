@@ -135,7 +135,7 @@ Result sample(const QStringList &args) {
 		const auto id = args[1].toULongLong(&ok);
 		if (!ok || !id || args[2].isEmpty()) return Result::Err(u"expected a document id and emoji text"_q);
 		auto message = Api::MessageToSend(action);
-		message.textWithTags = { args[2], { { 0, args[2].size(),
+		message.textWithTags = { args[2], { { 0, int(args[2].size()),
 			Ui::InputField::CustomEmojiLink(Data::SerializeCustomEmojiId(id)) } } };
 		session->api().sendMessage(std::move(message));
 		return Result::Ok(Compact(Json{ { "state", "submitted" } }));
