@@ -328,7 +328,17 @@ DocumentData::DocumentData(not_null<Data::Session*> owner, DocumentId id)
 , _owner(owner) {
 }
 
+struct DocumentData::LocalSourceState {
+	LocalSource source;
+	std::shared_ptr<Data::DocumentMedia> media;
+	QString saveTo;
+	qint64 offset = 0;
+	bool active = true;
+	bool downloading = false;
+};
+
 DocumentData::~DocumentData() {
+	cancelLocalSource();
 	base::take(_thumbnail.loader).reset();
 	base::take(_videoThumbnail.loader).reset();
 	destroyLoader();
@@ -340,6 +350,133 @@ Data::Session &DocumentData::owner() const {
 
 Main::Session &DocumentData::session() const {
 	return _owner->session();
+}
+
+void DocumentData::setLocalSource(LocalSource source) {
+	Expects(source.download != nullptr && source.valid != nullptr);
+	Expects(!hasRemoteLocation() && !hasWebLocation() && _url.isEmpty());
+	Expects(!uploading() && !_loader);
+
+	clearLocalSource();
+	_localSource = std::make_shared<LocalSourceState>();
+	_localSource->source = std::move(source);
+	_localSource->media = createMediaView();
+	const auto weak = std::weak_ptr<LocalSourceState>(_localSource);
+	_localSource->media->setLocalSourceValid([=] {
+		const auto local = weak.lock();
+		return local && local->active && local->source.valid();
+	});
+	_location = Core::FileLocation();
+	resetCancelled();
+}
+
+bool DocumentData::hasLocalSource() const {
+	return _localSource != nullptr;
+}
+
+bool DocumentData::localSourceValid() const {
+	return _localSource
+		&& _localSource->active
+		&& _localSource->source.valid();
+}
+
+void DocumentData::clearLocalSource() {
+	if (!_localSource) {
+		return;
+	}
+	_localSource->active = false;
+	cancelLocalSource();
+	_localSource->media->clearLocalData();
+	_thumbnail.clear();
+	_videoThumbnail.clear();
+	_inlineThumbnailBytes.clear();
+	_replyPreview = nullptr;
+	_goodThumbnailState = GoodThumbnailState();
+	_goodThumbnailPhoto = nullptr;
+	_location = Core::FileLocation();
+	_owner->notifyDocumentLayoutChanged(this);
+}
+
+void DocumentData::cancelLocalSource() {
+	if (!_localSource) {
+		return;
+	}
+	++_localSourceGeneration;
+	const auto wasDownloading = std::exchange(_localSource->downloading, false);
+	_localSource->saveTo.clear();
+	_localSource->offset = 0;
+	if (wasDownloading && _localSource->source.cancel) {
+		_localSource->source.cancel();
+	}
+}
+
+void DocumentData::saveLocalSource(const QString &toFile, bool autoLoading) {
+	if (!localSourceValid() || (!toFile.isEmpty() && forbidsFileSave())) {
+		return;
+	}
+	const auto local = _localSource;
+	if (local->media->loaded()) {
+		if (toFile.isEmpty()) {
+			return;
+		}
+		auto file = QFile(toFile);
+		const auto bytes = local->media->bytes();
+		if (!file.open(QIODevice::WriteOnly)
+			|| file.write(bytes) != bytes.size()) {
+			status = FileDownloadFailed;
+			_owner->documentLoadFail(this, true);
+			return;
+		}
+		file.close();
+		_location = Core::FileLocation(toFile);
+		return;
+	}
+	if (!toFile.isEmpty()) {
+		local->saveTo = toFile;
+	}
+	if (local->downloading) {
+		return;
+	}
+	status = FileReady;
+	resetCancelled();
+	local->downloading = true;
+	local->offset = 0;
+	const auto generation = ++_localSourceGeneration;
+	const auto weak = std::weak_ptr<LocalSourceState>(local);
+	_owner->documentLoadProgress(this);
+	local->source.download([=](QByteArray bytes, QString error) {
+		const auto local = weak.lock();
+		if (!local || generation != _localSourceGeneration) {
+			return;
+		}
+		local->downloading = false;
+		if (!localSourceValid()) {
+			clearLocalSource();
+			return;
+		}
+		if (!error.isEmpty() || bytes.size() != size) {
+			local->saveTo.clear();
+			status = FileDownloadFailed;
+			LOG(("Local document download failed: %1").arg(error));
+			_owner->documentLoadFail(this, !autoLoading);
+			return;
+		}
+		local->media->setBytes(bytes);
+		setGoodThumbnailDataReady();
+		const auto saveTo = base::take(local->saveTo);
+		if (!saveTo.isEmpty()) {
+			saveLocalSource(saveTo, false);
+		}
+		_owner->documentLoadDone(this);
+		session().notifyDownloaderTaskFinished();
+	}, [=](qint64 offset) {
+		const auto local = weak.lock();
+		if (!local || generation != _localSourceGeneration || !localSourceValid()) {
+			return;
+		}
+		local->offset = std::clamp(offset, qint64(0), qint64(size));
+		_owner->documentLoadProgress(this);
+	});
 }
 
 void DocumentData::setattributes(
@@ -733,6 +870,12 @@ void DocumentData::validateLottieSticker() {
 }
 
 void DocumentData::setDataAndCache(const QByteArray &data) {
+	if (hasLocalSource()) {
+		if (localSourceValid()) {
+			_localSource->media->setBytes(data);
+		}
+		return;
+	}
 	if (const auto media = activeMediaView()) {
 		media->setBytes(data);
 	}
@@ -778,6 +921,18 @@ void DocumentData::updateThumbnails(
 		} else {
 			_flags &= ~Flag::InlineThumbnailIsPath;
 		}
+	}
+	if (hasLocalSource()) {
+		if (!localSourceValid()) {
+			return;
+		}
+		if (!thumbnail.preloaded.isNull()) {
+			_localSource->media->setThumbnail(thumbnail.preloaded);
+		}
+		if (!videoThumbnail.bytes.isEmpty()) {
+			_localSource->media->setVideoThumbnail(videoThumbnail.bytes);
+		}
+		return;
 	}
 	if (!sticker() || sticker()->setType != Data::StickersType::Emoji) {
 		if (isPremiumSticker) {
@@ -856,6 +1011,9 @@ void DocumentData::overrideEmojiUsesTextColor(bool value) {
 }
 
 bool DocumentData::hasThumbnail() const {
+	if (hasLocalSource()) {
+		return localSourceValid() && _localSource->media->thumbnail();
+	}
 	return _thumbnail.location.valid()
 		&& !thumbnailFailed()
 		&& !(_flags & Flag::PossibleCoverThumbnail);
@@ -870,6 +1028,9 @@ bool DocumentData::thumbnailFailed() const {
 }
 
 void DocumentData::loadThumbnail(Data::FileOrigin origin) {
+	if (hasLocalSource()) {
+		return;
+	}
 	session().mediaCache().trackDocument(this, origin);
 	const auto autoLoading = false;
 	const auto finalCheck = [=] {
@@ -904,6 +1065,10 @@ int DocumentData::thumbnailByteSize() const {
 }
 
 bool DocumentData::hasVideoThumbnail() const {
+	if (hasLocalSource()) {
+		return localSourceValid()
+			&& !_localSource->media->videoThumbnailContent().isEmpty();
+	}
 	return _videoThumbnail.location.valid();
 }
 
@@ -916,6 +1081,9 @@ bool DocumentData::videoThumbnailFailed() const {
 }
 
 void DocumentData::loadVideoThumbnail(Data::FileOrigin origin) {
+	if (hasLocalSource()) {
+		return;
+	}
 	session().mediaCache().trackDocument(this, origin);
 	const auto autoLoading = false;
 	const auto finalCheck = [=] {
@@ -949,6 +1117,9 @@ int DocumentData::videoThumbnailByteSize() const {
 }
 
 Storage::Cache::Key DocumentData::goodThumbnailCacheKey() const {
+	if (hasLocalSource()) {
+		return {};
+	}
 	return Data::DocumentThumbCacheKey(_dc, id);
 }
 
@@ -1035,6 +1206,9 @@ void DocumentData::forceToCache(bool force) {
 }
 
 bool DocumentData::saveToCache() const {
+	if (hasLocalSource()) {
+		return true;
+	}
 	return (size < Storage::kMaxFileInMemory)
 		&& ((type == StickerDocument)
 			|| (type == FileDocument)
@@ -1083,7 +1257,7 @@ void DocumentData::destroyLoader() {
 }
 
 bool DocumentData::loading() const {
-	return (_loader != nullptr);
+	return _localSource ? _localSource->downloading : (_loader != nullptr);
 }
 
 void DocumentData::permitLoadFromCloud() {
@@ -1101,16 +1275,25 @@ bool DocumentData::forbidsFileSave() const {
 }
 
 QString DocumentData::loadingFilePath() const {
+	if (_localSource) {
+		return _localSource->downloading ? _localSource->saveTo : QString();
+	}
 	return loading() ? _loader->fileName() : QString();
 }
 
 bool DocumentData::displayLoading() const {
+	if (_localSource) {
+		return _localSource->downloading;
+	}
 	return loading()
 		? !_loader->loadingLocal()
 		: (uploading() && !waitingForAlbum());
 }
 
 float64 DocumentData::progress() const {
+	if (_localSource) {
+		return (size > 0) ? float64(_localSource->offset) / float64(size) : 0.;
+	}
 	if (uploading()) {
 		if (uploadingData->preparing) {
 			return 0.;
@@ -1126,6 +1309,9 @@ float64 DocumentData::progress() const {
 }
 
 int64 DocumentData::loadOffset() const {
+	if (_localSource) {
+		return _localSource->offset;
+	}
 	return loading() ? _loader->currentOffset() : 0;
 }
 
@@ -1138,6 +1324,9 @@ bool DocumentData::loadedInMediaCache() const {
 }
 
 void DocumentData::setLoadedInMediaCache(bool loaded) {
+	if (hasLocalSource()) {
+		return;
+	}
 	const auto flags = loaded
 		? (_flags | Flag::LoadedInMediaCache)
 		: (_flags & ~Flag::LoadedInMediaCache);
@@ -1233,6 +1422,12 @@ void DocumentData::save(
 		const QString &toFile,
 		LoadFromCloudSetting fromCloud,
 		bool autoLoading) {
+	if (hasLocalSource()) {
+		if (fromCloud != LoadFromLocalOnly || _localSource->media->loaded()) {
+			saveLocalSource(toFile, autoLoading);
+		}
+		return;
+	}
 	session().mediaCache().trackDocument(this, origin);
 	Test::NotifyDocumentSave(this, toFile, autoLoading);
 	if (const auto media = activeMediaView(); media && media->loaded(true)) {
@@ -1377,7 +1572,11 @@ void DocumentData::cancel() {
 	}
 
 	_flags |= Flag::DownloadCancelled;
-	destroyLoader();
+	if (hasLocalSource()) {
+		cancelLocalSource();
+	} else {
+		destroyLoader();
+	}
 	_owner->documentLoadDone(this);
 }
 
@@ -1443,6 +1642,12 @@ QByteArray documentWaveformEncode5bit(const VoiceWaveform &waveform) {
 }
 
 const Core::FileLocation &DocumentData::location(bool check) const {
+	if (hasLocalSource()) {
+		if (check && !_location.check()) {
+			const_cast<DocumentData*>(this)->_location = Core::FileLocation();
+		}
+		return _location;
+	}
 	if (check && !_location.check()) {
 		const auto location = session().local().readFileLocation(mediaKey());
 		const auto that = const_cast<DocumentData*>(this);
@@ -1474,6 +1679,9 @@ bool DocumentData::saveFromData() {
 }
 
 bool DocumentData::saveFromDataSilent() {
+	if (hasLocalSource()) {
+		return !filepath(true).isEmpty();
+	}
 	return !filepath(true).isEmpty()
 		|| (Core::App().canSaveFileWithoutAskingForPath()
 			&& saveFromDataChecked());
@@ -1502,7 +1710,9 @@ bool DocumentData::saveFromDataChecked() {
 	}
 	file.close();
 	_location = Core::FileLocation(path);
-	session().local().writeFileLocation(mediaKey(), _location);
+	if (!hasLocalSource()) {
+		session().local().writeFileLocation(mediaKey(), _location);
+	}
 	return true;
 }
 
@@ -1726,6 +1936,12 @@ auto DocumentData::createStreamingLoader(
 	Data::FileOrigin origin,
 	bool forceRemoteLoader) const
 -> std::unique_ptr<Media::Streaming::Loader> {
+	if (hasLocalSource()) {
+		const auto media = activeMediaView();
+		return (localSourceValid() && media && !media->bytes().isEmpty())
+			? Media::Streaming::MakeBytesLoader(media->bytes())
+			: nullptr;
+	}
 	if (!useStreamingLoader()) {
 		return nullptr;
 	}
@@ -1762,6 +1978,9 @@ bool DocumentData::hasWebLocation() const {
 }
 
 bool DocumentData::isNull() const {
+	if (hasLocalSource()) {
+		return !localSourceValid();
+	}
 	return !hasRemoteLocation()
 		&& !hasWebLocation()
 		&& _url.isEmpty()
@@ -1815,6 +2034,9 @@ MediaKey DocumentData::mediaKey() const {
 }
 
 Storage::Cache::Key DocumentData::cacheKey() const {
+	if (hasLocalSource()) {
+		return {};
+	}
 	if (hasWebLocation()) {
 		return Data::WebDocumentCacheKey(_urlLocation);
 	} else if (!_access && !_url.isEmpty()) {
@@ -1981,6 +2203,7 @@ void DocumentData::setRemoteLocation(
 		int32 dc,
 		uint64 access,
 		const QByteArray &fileReference) {
+	Expects(!hasLocalSource());
 	_fileReference = fileReference;
 	if (_dc != dc || _access != access) {
 		_dc = dc;
@@ -2024,6 +2247,7 @@ void DocumentData::setWebLocation(const WebFileLocation &location) {
 }
 
 void DocumentData::collectLocalData(not_null<DocumentData*> local) {
+	Expects(!hasLocalSource() && !local->hasLocalSource());
 	if (local == this) {
 		return;
 	}

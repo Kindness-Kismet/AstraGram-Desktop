@@ -80,6 +80,11 @@ void DocumentSaveClickHandler::Save(
 		return;
 	}
 
+	if (data->hasLocalSource() && mode == Mode::ToCacheOrFile) {
+		data->save(origin, QString());
+		return;
+	}
+
 	if (data->forbidsFileSave()) {
 		return;
 	}
