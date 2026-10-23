@@ -448,6 +448,39 @@ void Manager::read(int chatId, int maxDate, Fn<void(QString)> done) {
 	}, std::move(done));
 }
 
+void Manager::readContents(int chatId, QVector<qint64> ids, Fn<void(QString)> done) {
+	const auto timestamp = _private->now();
+	_private->enqueue([=](Private::Snapshot &snapshot) {
+		auto i = snapshot.chats.find(chatId);
+		if (i == snapshot.chats.end() || i->view.state != State::Active) {
+			return u"Secret chat is not active"_q;
+		}
+		auto packet = Codec::Packet();
+		packet.action = Codec::Action::Read;
+		for (const auto id : ids) {
+			const auto message = i->messages.constFind(id);
+			// 当前附件只有普通文件，普通已读已覆盖的文件无需再发内容回执。
+			if (message == i->messages.cend() || message->view.outgoing
+				|| !message->packet.document || message->view.unsupported
+				|| message->view.delivery == Delivery::Read || packet.ids.contains(id)) {
+				continue;
+			}
+			packet.ids.push_back(id);
+		}
+		if (packet.ids.isEmpty()) {
+			return QString();
+		}
+		const auto error = Details::addService(*i, packet);
+		if (!error.isEmpty()) {
+			return error;
+		}
+		for (const auto id : packet.ids) {
+			Details::startTtl(i->messages[id], timestamp);
+		}
+		return QString();
+	}, std::move(done));
+}
+
 void Manager::retry(int chatId, qint64 messageId, Fn<void(QString)> done) {
 	_private->enqueue([=](Private::Snapshot &snapshot) {
 		auto i = snapshot.chats.find(chatId);

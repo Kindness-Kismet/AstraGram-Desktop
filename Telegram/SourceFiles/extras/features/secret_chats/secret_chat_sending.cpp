@@ -35,6 +35,13 @@ void Manager::sendReply(int chatId, QString text, qint64 replyTo,
 
 void Manager::sendDocument(int chatId, QString fileName, QString mimeType,
 		QByteArray bytes, QString caption, Fn<void(qint64, QString)> done) {
+	sendDocumentReply(chatId, std::move(fileName), std::move(mimeType),
+		std::move(bytes), std::move(caption), 0, std::move(done));
+}
+
+void Manager::sendDocumentReply(int chatId, QString fileName, QString mimeType,
+		QByteArray bytes, QString caption, qint64 replyTo,
+		Fn<void(qint64, QString)> done) {
 	const auto id = Details::randomId();
 	_private->enqueue([=](Private::Snapshot &snapshot) {
 		auto i = snapshot.chats.find(chatId);
@@ -42,8 +49,14 @@ void Manager::sendDocument(int chatId, QString fileName, QString mimeType,
 			|| fileName.isEmpty() || mimeType.isEmpty()) {
 			return u"Invalid secret document or document exceeds size limit"_q;
 		}
+		const auto target = i->messages.constFind(replyTo);
+		if (replyTo && (target == i->messages.cend()
+			|| target->packet.action != Codec::Action::None)) {
+			return u"Secret reply target was not found"_q;
+		}
 		auto packet = Codec::Packet();
 		packet.randomId = id;
+		packet.replyTo = replyTo;
 		packet.document = true;
 		packet.fileName = fileName;
 		packet.mimeType = mimeType;

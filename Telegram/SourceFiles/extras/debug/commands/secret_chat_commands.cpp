@@ -228,8 +228,8 @@ Result draft(const QStringList &args) {
 }
 
 Result sample(const QStringList &args) {
-	if (args.size() != 3) {
-		return Result::Err(u"usage: secret.sample <accountUserId> <chatId> <bytes>"_q);
+	if (args.size() < 3 || args.size() > 4) {
+		return Result::Err(u"usage: secret.sample <accountUserId> <chatId> <bytes> [replyTo]"_q);
 	}
 	const auto session = specifiedSession(args[0]);
 	const auto chatId = specifiedChat(args[1]);
@@ -239,6 +239,8 @@ Result sample(const QStringList &args) {
 		|| !ok || size < 1 || size > Extras::SecretChats::kMaxDocumentBytes) {
 		return Result::Err(u"expected a valid account, chat and sample size up to 32 MiB"_q);
 	}
+	const auto replyTo = args.size() == 4 ? args[3].toLongLong(&ok) : 0;
+	if (!ok) return Result::Err(u"invalid secret document reply target"_q);
 	const auto job = sessionJob(session, "secret-sample");
 	const auto weak = base::make_weak(session);
 	// 样本只在内存构造，指令不接受真实文件路径。
@@ -252,12 +254,13 @@ Result sample(const QStringList &args) {
 			if (!weak) {
 				return;
 			}
-			weak->secretChats().sendDocument(chatId,
+			weak->secretChats().sendDocumentReply(chatId,
 				u"加密测试-"_q + QString::number(size) + u".bin"_q,
-				u"application/octet-stream"_q, std::move(bytes), QString(),
+				u"application/octet-stream"_q, std::move(bytes), QString(), replyTo,
 				[=](qint64 id, QString error) {
 					finishJob(job, error.isEmpty(), error.isEmpty()
 						? Json{ { "messageId", id }, { "bytes", size },
+							{ "replyTo", replyTo },
 							{ "sha256", hash }, { "status", "queued" } }
 						: Json(error.toStdString()));
 				});
@@ -291,6 +294,30 @@ Result download(const QStringList &args) {
 				finishJob(job, true, Json{ { "bytes", size }, { "sha256", hash } });
 			});
 		});
+	});
+	return jobStarted(job);
+}
+
+Result readContents(const QStringList &args) {
+	if (args.size() < 3) {
+		return Result::Err(u"usage: secret.read-contents <accountUserId> <chatId> <messageId>..."_q);
+	}
+	const auto session = specifiedSession(args[0]);
+	const auto chatId = specifiedChat(args[1]);
+	if (!session || !session->secretChats().chat(chatId)) {
+		return Result::Err(u"unknown chat in the specified account"_q);
+	}
+	auto ids = QVector<qint64>();
+	for (const auto &value : args.mid(2)) {
+		auto ok = false;
+		const auto id = value.toLongLong(&ok);
+		if (!ok || !id) return Result::Err(u"invalid secret content message id"_q);
+		ids.push_back(id);
+	}
+	const auto job = sessionJob(session, "secret-read-contents");
+	session->secretChats().readContents(chatId, std::move(ids), [=](QString error) {
+		finishJob(job, error.isEmpty(), error.isEmpty()
+			? Json{ { "status", "committed" } } : Json(error.toStdString()));
 	});
 	return jobStarted(job);
 }
@@ -367,6 +394,7 @@ const HandlerMap &secretChatHandlers() {
 		{ u"secret.send"_q, &send }, { u"secret.sample"_q, &sample },
 		{ u"secret.reply"_q, &reply }, { u"secret.draft"_q, &draft },
 		{ u"secret.download"_q, &download }, { u"secret.read"_q, &read },
+		{ u"secret.read-contents"_q, &readContents },
 		{ u"secret.ttl"_q, &ttl }, { u"secret.delete"_q, &erase },
 		{ u"secret.retry"_q, &retry }, { u"secret.clear"_q, &clear },
 		{ u"secret.end"_q, &end },
