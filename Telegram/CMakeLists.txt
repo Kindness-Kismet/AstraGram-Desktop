@@ -129,6 +129,24 @@ PRIVATE
 )
 
 set(extras_files
+        extras/features/secret_chats/secret_chat_crypto.cpp
+        extras/features/secret_chats/secret_chat_crypto.h
+        extras/features/secret_chats/secret_chat_codec.cpp
+        extras/features/secret_chats/secret_chat_codec.h
+        extras/features/secret_chats/secret_chat_manager.cpp
+        extras/features/secret_chats/secret_chat_manager.h
+        extras/features/secret_chats/secret_chat_internal.h
+        extras/features/secret_chats/secret_chat_state.cpp
+        extras/features/secret_chats/secret_chat_handshake.cpp
+        extras/features/secret_chats/secret_chat_sending.cpp
+        extras/features/secret_chats/secret_chat_updates.cpp
+        extras/features/secret_chats/secret_chat_files.cpp
+        extras/features/secret_chats/secret_chat_files.h
+        extras/data/secret_chat_store.cpp
+        extras/data/secret_chat_store.h
+        extras/ui/secret_chat_box.cpp
+        extras/ui/secret_chat_box.h
+        extras/debug/commands/secret_chat_commands.cpp
         extras/features/mention_by_id/mention_by_id.cpp
         extras/features/mention_by_id/mention_by_id.h
         extras/features/community_channel/community_channel.cpp

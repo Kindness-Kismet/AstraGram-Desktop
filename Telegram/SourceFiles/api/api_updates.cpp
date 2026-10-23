@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "api/api_updates.h"
+#include "extras/features/secret_chats/secret_chat_manager.h"
 #include "extras/data/conversation_cache.h"
 
 #include "api/api_authorizations.h"
@@ -246,7 +247,8 @@ Updates::Updates(not_null<Main::Session*> session)
 , _bySeqTimer([=] { getDifference(); })
 , _byMinChannelTimer([=] { getDifference(); })
 , _failDifferenceTimer([=] { getDifferenceAfterFail(); })
-, _idleFinishTimer([=] { checkIdleFinish(); }) {
+, _idleFinishTimer([=] { checkIdleFinish(); })
+, _secretCheckpointTimer([=] { checkpointSecretRecovery(); }) {
 	_ptsWaiter.setRequesting(true);
 
 	session->account().mtpUpdates(
@@ -372,7 +374,8 @@ void Updates::setState(int32 pts, int32 date, int32 qts, int32 seq) {
 		_updatesDate = date;
 	}
 	if (qts && _updatesQts < qts) {
-		_updatesQts = qts;
+		const auto &secret = session().secretChats();
+		_updatesQts = secret.hasBaseline() ? std::min(qts, secret.committedQts()) : qts;
 	}
 	if (seq && seq != _updatesSeq) {
 		_updatesSeq = seq;
@@ -482,8 +485,38 @@ void Updates::channelDifferenceFail(
 }
 
 void Updates::stateDone(const MTPupdates_State &state) {
+	if (!_secretReady) {
+		session().secretChats().initialize([=](bool ok) {
+			if (!ok) {
+				LOG(("Secret chats: could not restore account state."));
+				_secretReady = true;
+				stateDone(state);
+				return;
+			}
+			const auto &data = state.c_updates_state();
+			const auto recovery = Extras::SecretChats::RecoveryState{
+				data.vpts().v, data.vdate().v, data.vseq().v };
+			session().secretChats().ensureBaseline(
+				state.c_updates_state().vqts().v, [=](bool saved) {
+				if (!saved) {
+					LOG(("Secret chats: could not persist receive baseline."));
+				}
+				_secretReady = true;
+				_secretRestorePending = saved;
+				stateDone(state);
+				getDifference();
+			}, recovery);
+		});
+		return;
+	}
 	const auto &d = state.c_updates_state();
-	setState(d.vpts().v, d.vdate().v, d.vqts().v, d.vseq().v);
+	const auto recovery = _secretRestorePending ? session().secretChats().recoveryState() : std::nullopt;
+	_secretRestorePending = false;
+	if (recovery) {
+		setState(recovery->pts, recovery->date, session().secretChats().committedQts(), recovery->seq);
+	} else {
+		setState(d.vpts().v, d.vdate().v, d.vqts().v, d.vseq().v);
+	}
 
 	_lastUpdateTime = crl::now();
 	_noUpdatesTimer.callOnce(kNoUpdatesTimeout);
@@ -493,7 +526,53 @@ void Updates::stateDone(const MTPupdates_State &state) {
 	updateOnline();
 }
 
+void Updates::checkpointSecretRecovery() {
+	auto &secret = session().secretChats();
+	if (!secret.available() || !secret.hasBaseline() || requestingDifference()
+		|| _ptsWaiter.waitingForSkipped() || !_bySeqUpdates.empty()) return;
+	const auto position = Extras::SecretChats::RecoveryState{
+		_ptsWaiter.current(), _updatesDate, _updatesSeq };
+	const auto saved = secret.recoveryState();
+	if (saved && saved->pts == position.pts && saved->date == position.date && saved->seq == position.seq) return;
+	// 该保存排在此前所有私密事件之后，崩溃最多从较旧位置重复重放。
+	secret.persistRecovery(position);
+}
+
 void Updates::differenceDone(const MTPupdates_Difference &result) {
+	const auto checkpoint = gsl::finally([&] {
+		if (_secretReady && session().secretChats().available() && !_secretCheckpointTimer.isActive()) {
+			_secretCheckpointTimer.callOnce(1000);
+		}
+	});
+	if (!_secretDifferenceCommitted
+		&& session().secretChats().available()
+		&& (result.type() == mtpc_updates_difference
+			|| result.type() == mtpc_updates_differenceSlice)) {
+		const auto persist = [&](const auto &data, const MTPupdates_State &state) {
+			const auto &position = state.c_updates_state();
+			const auto recovery = Extras::SecretChats::RecoveryState{
+				position.vpts().v, position.vdate().v, position.vseq().v };
+			session().data().processUsers(data.vusers());
+			session().secretChats().persistDifference(
+				data.vnew_encrypted_messages().v, data.vother_updates().v, position.vqts().v,
+				[=](bool ok) {
+				if (!ok) {
+					LOG(("Secret chats: could not persist difference."));
+				}
+				_secretDifferenceCommitted = true;
+				differenceDone(result);
+				_secretDifferenceCommitted = false;
+			}, recovery);
+		};
+		if (result.type() == mtpc_updates_difference) {
+			const auto &data = result.c_updates_difference();
+			persist(data, data.vstate());
+			return;
+		}
+		const auto &data = result.c_updates_differenceSlice();
+		persist(data, data.vintermediate_state());
+		return;
+	}
 	_failDifferenceTimeout = 1;
 
 	switch (result.type()) {
@@ -518,7 +597,11 @@ void Updates::differenceDone(const MTPupdates_Difference &result) {
 		MTP_LOG(0, ("getDifference "
 			"{ good - after a slice of difference was received }%1"
 			).arg(_session->mtp().isTestMode() ? " TESTMODE" : ""));
-		getDifference();
+		if (session().secretChats().available() || !session().secretChats().hasBaseline()) {
+			getDifference();
+		} else {
+			_noUpdatesTimer.callOnce(kNoUpdatesTimeout);
+		}
 	} break;
 	case mtpc_updates_difference: {
 		const auto &d = result.c_updates_difference();
@@ -628,7 +711,18 @@ void Updates::feedDifference(
 	applyConvertToScheduledOnSend(other);
 	feedMessageIds(other);
 	session().data().processMessages(msgs, NewMessageType::Unread);
-	feedUpdateVector(other, SkipUpdatePolicy::SkipMessageIds);
+	if (_secretDifferenceCommitted) {
+		auto filtered = QVector<MTPUpdate>();
+		for (const auto &update : other.v) {
+			const auto type = update.type();
+			if (type == mtpc_updateNewEncryptedMessage || type == mtpc_updateEncryption
+				|| type == mtpc_updateEncryptedMessagesRead || type == mtpc_updateEncryptedChatTyping) continue;
+			filtered.push_back(update);
+		}
+		feedUpdateVector(MTP_vector<MTPUpdate>(std::move(filtered)), SkipUpdatePolicy::SkipMessageIds);
+	} else {
+		feedUpdateVector(other, SkipUpdatePolicy::SkipMessageIds);
+	}
 }
 
 void Updates::differenceFail(const MTP::Error &error) {
@@ -702,6 +796,9 @@ void Updates::getDifference() {
 	if (requestingDifference()) {
 		return;
 	}
+	const auto &secret = session().secretChats();
+	const auto includeSecret = secret.available() && secret.hasBaseline();
+	const auto recovery = includeSecret ? secret.recoveryState() : std::nullopt;
 
 	_bySeqUpdates.clear();
 	_bySeqTimer.cancel();
@@ -710,14 +807,13 @@ void Updates::getDifference() {
 	_getDifferenceTimeAfterFail = 0;
 
 	_ptsWaiter.setRequesting(true);
-
 	api().request(MTPupdates_GetDifference(
 		MTP_flags(0),
-		MTP_int(_ptsWaiter.current()),
+		MTP_int(recovery ? recovery->pts : _ptsWaiter.current()),
 		MTPint(), // pts_limit
 		MTPint(), // pts_total_limit
-		MTP_int(_updatesDate),
-		MTP_int(_updatesQts),
+		MTP_int(recovery ? recovery->date : _updatesDate),
+		MTP_int(secret.hasBaseline() ? secret.committedQts() : _updatesQts),
 		MTPint() // qts_limit
 	)).done([=](const MTPupdates_Difference &result) {
 		differenceDone(result);
@@ -1515,6 +1611,11 @@ void Updates::applyUpdates(
 		const MTPUpdates &updates,
 		uint64 sentMessageRandomId) {
 	const auto randomId = sentMessageRandomId;
+	const auto checkpoint = gsl::finally([&] {
+		if (_secretReady && session().secretChats().available() && !_secretCheckpointTimer.isActive()) {
+			_secretCheckpointTimer.callOnce(1000);
+		}
+	});
 
 	switch (updates.type()) {
 	case mtpc_updates: {
@@ -1534,7 +1635,7 @@ void Updates::applyUpdates(
 		session().data().processChats(d.vchats());
 		feedUpdateVector(d.vupdates());
 
-		setState(0, d.vdate().v, _updatesQts, d.vseq().v);
+		setState(0, d.vseq().v ? d.vdate().v : _updatesDate, _updatesQts, d.vseq().v);
 	} break;
 
 	case mtpc_updatesCombined: {
@@ -1554,14 +1655,12 @@ void Updates::applyUpdates(
 		session().data().processChats(d.vchats());
 		feedUpdateVector(d.vupdates());
 
-		setState(0, d.vdate().v, _updatesQts, d.vseq().v);
+		setState(0, d.vseq().v ? d.vdate().v : _updatesDate, _updatesQts, d.vseq().v);
 	} break;
 
 	case mtpc_updateShort: {
 		const auto &d = updates.c_updateShort();
 		feedUpdate(d.vupdate());
-
-		setState(0, d.vdate().v, _updatesQts, _updatesSeq);
 	} break;
 
 	case mtpc_updateShortMessage: {
@@ -1573,10 +1672,7 @@ void Updates::applyUpdates(
 			return getDifference();
 		}
 		_session->data().fillMessagePeers(d);
-		if (updateAndApply(d.vpts().v, d.vpts_count().v, updates)) {
-			// Update date as well.
-			setState(0, d.vdate().v, _updatesQts, _updatesSeq);
-		}
+		updateAndApply(d.vpts().v, d.vpts_count().v, updates);
 	} break;
 
 	case mtpc_updateShortChatMessage: {
@@ -1588,10 +1684,7 @@ void Updates::applyUpdates(
 			return getDifference();
 		}
 		_session->data().fillMessagePeers(d);
-		if (updateAndApply(d.vpts().v, d.vpts_count().v, updates)) {
-			// Update date as well.
-			setState(0, d.vdate().v, _updatesQts, _updatesSeq);
-		}
+		updateAndApply(d.vpts().v, d.vpts_count().v, updates);
 	} break;
 
 	case mtpc_updateShortSentMessage: {
@@ -1623,10 +1716,7 @@ void Updates::applyUpdates(
 			}
 		}
 
-		if (updateAndApply(d.vpts().v, d.vpts_count().v, updates)) {
-			// Update date as well.
-			setState(0, d.vdate().v, _updatesQts, _updatesSeq);
-		}
+		updateAndApply(d.vpts().v, d.vpts_count().v, updates);
 	} break;
 
 	case mtpc_updatesTooLong: {
@@ -2243,16 +2333,11 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 		}
 	} break;
 
-	case mtpc_updateNewEncryptedMessage: {
-	} break;
-
-	case mtpc_updateEncryptedChatTyping: {
-	} break;
-
-	case mtpc_updateEncryption: {
-	} break;
-
+	case mtpc_updateNewEncryptedMessage:
+	case mtpc_updateEncryptedChatTyping:
+	case mtpc_updateEncryption:
 	case mtpc_updateEncryptedMessagesRead: {
+		session().secretChats().update(update);
 	} break;
 
 	case mtpc_updatePhoneCall:

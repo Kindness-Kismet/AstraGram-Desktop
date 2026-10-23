@@ -117,6 +117,7 @@ private:
 		const MTPVector<MTPMessage> &msgs,
 		const MTPVector<MTPUpdate> &other);
 	void stateDone(const MTPupdates_State &state);
+	void checkpointSecretRecovery();
 	void setState(int32 pts, int32 date, int32 qts, int32 seq);
 	void channelDifferenceDone(
 		not_null<ChannelData*> channel,
@@ -215,6 +216,10 @@ private:
 	base::Timer _idleFinishTimer;
 	crl::time _lastSetOnline = 0;
 	bool _lastWasOnline = false;
+	bool _secretReady = false;
+	bool _secretRestorePending = false;
+	bool _secretDifferenceCommitted = false;
+	base::Timer _secretCheckpointTimer;
 	rpl::variable<bool> _isIdle = false;
 
 	rpl::lifetime _lifetime;
