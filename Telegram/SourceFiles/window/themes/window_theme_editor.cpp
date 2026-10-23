@@ -201,7 +201,7 @@ struct PaletteDefinition {
 			.value = QString(value),
 			.statement = int(statement - start),
 			.valueStart = int(valueStart - start),
-			.valueSize = value.size(),
+			.valueSize = int(value.size()),
 		});
 	}
 	return result;
