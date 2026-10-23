@@ -42,7 +42,8 @@ struct ContentUniforms {
 	float shadowBottomSkipOpacityFullFade[4];
 	float roundRect[4];
 	float roundRadius;
-	float _pad1[3];
+	float g_opacity;
+	float _pad1[2];
 };
 static_assert(sizeof(ContentUniforms) == 80);
 
@@ -55,7 +56,8 @@ struct TransparentContentUniforms {
 	float transparentBg[4];
 	float transparentFg[4];
 	float transparentSize;
-	float _pad1[3];
+	float g_opacity;
+	float _pad1[2];
 };
 static_assert(sizeof(TransparentContentUniforms) == 96);
 
@@ -256,6 +258,23 @@ void OverlayWidget::RendererRhi::createPipelines() {
 	imageBlendPipeline->setRenderPassDescriptor(rpDesc);
 	imageBlendPipeline->create();
 	_imageBlendPipeline = imageBlendPipeline;
+
+	// 磨砂快照与背景色按比例相加，和 OpenGL 渲染器的混合方式一致。
+	auto add = blend;
+	add.dstColor = QRhiGraphicsPipeline::One;
+	add.dstAlpha = QRhiGraphicsPipeline::One;
+	auto *imageAddPipeline = _rhi->newGraphicsPipeline();
+	imageAddPipeline->setShaderStages({
+		{ QRhiShaderStage::Vertex, argb32Vert },
+		{ QRhiShaderStage::Fragment, controlsFrag },
+	});
+	imageAddPipeline->setVertexInputLayout(inputLayout);
+	imageAddPipeline->setTargetBlends({ add });
+	imageAddPipeline->setTopology(QRhiGraphicsPipeline::TriangleStrip);
+	imageAddPipeline->setShaderResourceBindings(sampleSrb);
+	imageAddPipeline->setRenderPassDescriptor(rpDesc);
+	imageAddPipeline->create();
+	_imageAddPipeline = imageAddPipeline;
 
 	const auto staticContentFrag = LoadShader(u"static_content.frag"_q);
 	const auto transparentContentFrag = LoadShader(
@@ -602,6 +621,8 @@ void OverlayWidget::RendererRhi::releaseResources() {
 	_imagePipeline = nullptr;
 	delete _imageBlendPipeline;
 	_imageBlendPipeline = nullptr;
+	delete _imageAddPipeline;
+	_imageAddPipeline = nullptr;
 	delete _staticContentPipeline;
 	_staticContentPipeline = nullptr;
 	delete _staticContentBlendPipeline;
@@ -634,6 +655,10 @@ void OverlayWidget::RendererRhi::releaseResources() {
 	delete _controlsFadeTexture;
 	_controlsFadeTexture = nullptr;
 	_controlsFadeSize = QSize();
+	delete _backdropTexture;
+	_backdropTexture = nullptr;
+	_backdropSize = QSize();
+	_backdropKey = 0;
 
 	for (auto *srb : _perDrawSrbs) {
 		delete srb;
@@ -864,7 +889,7 @@ void OverlayWidget::RendererRhi::fillShadowUniforms(
 	} else {
 		const auto &top = st::mediaviewShadowTop.size();
 		const auto point = QPoint(
-			_shadowTopFlip ? 0 : (_viewport.width() - top.width()),
+			_shadowTopFlip ? 0 : (_owner->width() - top.width()),
 			0);
 		const auto tRect = transformRect(QRect(point, top));
 		shadowTopRect[0] = tRect.x();
@@ -930,6 +955,7 @@ void OverlayWidget::RendererRhi::drawContentQuad(
 		uniforms.transparentFg[3] = float(c_fg.alphaF());
 		uniforms.transparentSize =
 			st::transparentPlaceholderSize * _factor;
+		uniforms.g_opacity = float(geometry.opacity);
 		_rub->updateDynamicBuffer(
 			_uniformBuffer,
 			uOffset,
@@ -960,6 +986,7 @@ void OverlayWidget::RendererRhi::drawContentQuad(
 			uniforms.roundRect[3] = vh;
 		}
 		uniforms.roundRadius = geometry.roundRadius * _factor;
+		uniforms.g_opacity = float(geometry.opacity);
 		_rub->updateDynamicBuffer(
 			_uniformBuffer,
 			uOffset,
@@ -1002,10 +1029,15 @@ void OverlayWidget::RendererRhi::drawContentQuad(
 }
 
 void OverlayWidget::RendererRhi::paintBackground() {
-	const auto &bg = _owner->_fullScreenVideo
-		? st::mediaviewVideoBg
-		: st::mediaviewBg;
-	const auto c = bg->c;
+	const auto shown = _owner->shownProgress();
+	auto c = _owner->_fullScreenVideo
+		? st::mediaviewVideoBg->c
+		: st::mediaviewBg->c;
+	if (shown < 1. || _owner->lightboxStyle()) {
+		// 开合动画中背景随进度出现，磨砂快照按剩余比例叠加在背景色上。
+		c = _owner->backdropColor();
+		c.setAlphaF(shown * (1. - _owner->backdropOpacity()) * c.alphaF());
+	}
 	const auto vw = float(_viewport.width() * _factor);
 	const auto vh = float(_viewport.height() * _factor);
 
@@ -1026,6 +1058,45 @@ void OverlayWidget::RendererRhi::paintBackground() {
 		vw,  0.f, 1.f, 1.f,
 	};
 	drawTexturedQuad(_imagePipeline, tex, coords);
+
+	if (const auto opacity = _owner->backdropOpacity() * shown; opacity > 0.) {
+		paintBackdrop(opacity);
+	}
+}
+
+void OverlayWidget::RendererRhi::paintBackdrop(float64 opacity) {
+	const auto &image = _owner->_backdrop;
+	if (_backdropKey != image.cacheKey()) {
+		_backdropKey = image.cacheKey();
+		if (!_backdropTexture || _backdropSize != image.size()) {
+			delete _backdropTexture;
+			_backdropTexture = _rhi->newTexture(
+				QRhiTexture::BGRA8,
+				image.size());
+			_backdropTexture->create();
+			_backdropSize = image.size();
+		}
+		_rub->uploadTexture(
+			_backdropTexture,
+			QRhiTextureUploadDescription(
+				QRhiTextureUploadEntry(0, 0,
+					QRhiTextureSubresourceUploadDescription(
+						image.convertToFormat(
+							QImage::Format_ARGB32_Premultiplied)))));
+	}
+	// 快照保持屏幕原位，只淡出到系统模糊，不随查看器放大。
+	const auto rect = transformRect(_owner->backdropRect());
+	const float coords[] = {
+		rect.left(), rect.bottom(), 0.f, 0.f,
+		rect.right(), rect.bottom(), 1.f, 0.f,
+		rect.left(), rect.top(), 0.f, 1.f,
+		rect.right(), rect.top(), 1.f, 1.f,
+	};
+	drawTexturedQuad(
+		_imageAddPipeline,
+		_backdropTexture,
+		coords,
+		float(opacity));
 }
 
 void OverlayWidget::RendererRhi::paintVideoStream() {
@@ -1236,10 +1307,12 @@ void OverlayWidget::RendererRhi::paintTransformedVideoFrame(
 		uniforms.roundRect[3] = vh;
 	}
 	uniforms.roundRadius = geometry.roundRadius * _factor;
+	uniforms.g_opacity = float(geometry.opacity);
 	_rub->updateDynamicBuffer(
 		_uniformBuffer, uOffset, sizeof(ContentUniforms), &uniforms);
 
-	const auto blendEnabled = (geometry.roundRadius > 0.);
+	const auto blendEnabled = (geometry.roundRadius > 0.)
+		|| (geometry.opacity < 1.);
 	auto *srb = _rhi->newShaderResourceBindings();
 	if (nv12) {
 		srb->setBindings({
@@ -1476,6 +1549,7 @@ void OverlayWidget::RendererRhi::paintTransformedStaticContent(
 	};
 
 	const auto blend = (geometry.roundRadius > 0.)
+		|| (geometry.opacity < 1.)
 		|| (semiTransparent && !fillTransparentBackground);
 	drawContentQuad(
 		_rgbaTextures[index],
@@ -1584,14 +1658,19 @@ void OverlayWidget::RendererRhi::validateControls() {
 		Control{ 9, &st::extrasViewerFullScreenOut },
 		Control{ 10, &st::extrasViewerClose },
 	};
+	const auto rounded = st::extrasViewerTopBarButton;
+	const auto nav = st::extrasViewerNavSize;
+	// 纯色块四周留空，取中间部分采样，避免线性过滤混入透明像素。
+	const auto solid = 8;
+	const auto solidSkip = 2;
 	auto maxWidth = 0;
 	auto fullHeight = 0;
 	for (const auto &meta : metas) {
 		maxWidth = std::max(meta.icon->width(), maxWidth);
 		fullHeight += meta.icon->height();
 	}
-	maxWidth = std::max(st::mediaviewIconOver, maxWidth);
-	fullHeight += st::mediaviewIconOver;
+	maxWidth = std::max({ st::mediaviewIconOver, rounded, nav, maxWidth });
+	fullHeight += st::mediaviewIconOver + rounded + solid + nav;
 	auto image = QImage(
 		QSize(maxWidth, fullHeight) * _ifactor,
 		QImage::Format_ARGB32_Premultiplied);
@@ -1616,6 +1695,25 @@ void OverlayWidget::RendererRhi::validateControls() {
 		_controlsTextures[index++] = QRect(
 			QPoint(0, height) * _ifactor,
 			QSize(st::mediaviewIconOver, st::mediaviewIconOver) * _ifactor);
+		height += st::mediaviewIconOver;
+
+		const auto radius = st::extrasViewerTopBarButtonRadius;
+		p.drawRoundedRect(QRect(0, height, rounded, rounded), radius, radius);
+		_controlsTextures[index++] = QRect(
+			QPoint(0, height) * _ifactor,
+			QSize(rounded, rounded) * _ifactor);
+		height += rounded;
+
+		p.fillRect(QRect(0, height, solid, solid), st::mediaviewControlFg);
+		_controlsTextures[index++] = QRect(
+			QPoint(solidSkip, height + solidSkip) * _ifactor,
+			QSize(solid - 2 * solidSkip, solid - 2 * solidSkip) * _ifactor);
+		height += solid;
+
+		p.drawEllipse(QRect(0, height, nav, nav));
+		_controlsTextures[index++] = QRect(
+			QPoint(0, height) * _ifactor,
+			QSize(nav, nav) * _ifactor);
 	}
 
 	const auto size = image.size();
@@ -1652,54 +1750,51 @@ void OverlayWidget::RendererRhi::paintControl(
 	const auto meta = controlMeta(control);
 	Assert(meta.icon == &icon);
 
+	if (!over.isEmpty() && overOpacity > 0.) {
+		const auto nav = (control == Over::Left) || (control == Over::Right);
+		const auto overTexture = !_owner->lightboxStyle()
+			? kControlsCount
+			: nav
+			? (kControlsCount + 3)
+			: (kControlsCount + 1);
+		drawAtlasQuad(
+			over,
+			_controlsTextures[overTexture],
+			float(overOpacity * kOverBackgroundOpacity));
+	}
+	drawAtlasQuad(inner, _controlsTextures[meta.index], float(innerOpacity));
+}
+
+void OverlayWidget::RendererRhi::paintTopBarSeparator(
+		QRect rect,
+		float64 opacity) {
+	validateControls();
+	drawAtlasQuad(rect, _controlsTextures[kControlsCount + 2], float(opacity));
+}
+
+void OverlayWidget::RendererRhi::drawAtlasQuad(
+		QRect rect,
+		QRect texture,
+		float opacity) {
 	const auto atlasW = float(_controlsAtlasSize.width());
 	const auto atlasH = float(_controlsAtlasSize.height());
-
-	if (!over.isEmpty() && overOpacity > 0.) {
-		const auto overAlpha = float(overOpacity * kOverBackgroundOpacity);
-		const auto &overTex = _controlsTextures[kControlsCount];
-		const auto overGeometry = transformRect(over);
-		// QRect::right()/bottom() return x+width-1 / y+height-1
-		// (inclusive), which is one texel short of the atlas sub-rect.
-		// Sampling only up to that coordinate stretches the (width-1)
-		// texels across the full destination quad, making the rendered
-		// icon / hover circle look one pixel too wide and clips its
-		// right/bottom antialiased edge.
-		const auto tl = overTex.left() / atlasW;
-		const auto tr = (overTex.x() + overTex.width()) / atlasW;
-		const auto tt = overTex.top() / atlasH;
-		const auto tb = (overTex.y() + overTex.height()) / atlasH;
-		const float overCoords[] = {
-			overGeometry.left(), overGeometry.bottom(), tl, tt,
-			overGeometry.right(), overGeometry.bottom(), tr, tt,
-			overGeometry.left(), overGeometry.top(), tl, tb,
-			overGeometry.right(), overGeometry.top(), tr, tb,
-		};
-		drawTexturedQuad(
-			_imagePipeline,
-			_controlsAtlasTexture,
-			overCoords,
-			overAlpha,
-			true);
-	}
-
-	const auto &iconTex = _controlsTextures[meta.index];
-	const auto iconGeometry = transformRect(inner);
-	const auto tl = iconTex.left() / atlasW;
-	const auto tr = (iconTex.x() + iconTex.width()) / atlasW;
-	const auto tt = iconTex.top() / atlasH;
-	const auto tb = (iconTex.y() + iconTex.height()) / atlasH;
-	const float iconCoords[] = {
-		iconGeometry.left(), iconGeometry.bottom(), tl, tt,
-		iconGeometry.right(), iconGeometry.bottom(), tr, tt,
-		iconGeometry.left(), iconGeometry.top(), tl, tb,
-		iconGeometry.right(), iconGeometry.top(), tr, tb,
+	const auto geometry = transformRect(rect);
+	// 用 x + width 取右下边界，QRect::right() 少一个像素会把图标拉宽。
+	const auto tl = texture.x() / atlasW;
+	const auto tr = (texture.x() + texture.width()) / atlasW;
+	const auto tt = texture.y() / atlasH;
+	const auto tb = (texture.y() + texture.height()) / atlasH;
+	const float coords[] = {
+		geometry.left(), geometry.bottom(), tl, tt,
+		geometry.right(), geometry.bottom(), tr, tt,
+		geometry.left(), geometry.top(), tl, tb,
+		geometry.right(), geometry.top(), tr, tb,
 	};
 	drawTexturedQuad(
 		_imagePipeline,
 		_controlsAtlasTexture,
-		iconCoords,
-		float(innerOpacity),
+		coords,
+		opacity,
 		true);
 }
 
@@ -1739,9 +1834,8 @@ void OverlayWidget::RendererRhi::paintGroupThumbs(
 	}, true);
 }
 
-void OverlayWidget::RendererRhi::paintRoundedCorners(float64 rounding) {
-	const auto radius = int(base::SafeRound(rounding));
-	if (!_roundedCornersPipeline || radius <= 0) {
+void OverlayWidget::RendererRhi::paintRoundedCorners(float64 radius) {
+	if (!_roundedCornersPipeline || radius <= 0.) {
 		return;
 	}
 
@@ -1753,34 +1847,34 @@ void OverlayWidget::RendererRhi::paintRoundedCorners(float64 rounding) {
 	uniforms.viewport[1] = vh;
 	uniforms.flipY = NdcFlipY(_rhi);
 	uniforms.fragCoordYUp = FragCoordYUp(_rhi);
-	const auto roundRect = transformRect(QRect(QPoint(), _viewport));
+	const auto rounding = _owner->roundingRect();
+	const auto roundRect = transformRect(rounding);
 	uniforms.roundRect[0] = roundRect.x();
 	uniforms.roundRect[1] = roundRect.y();
 	uniforms.roundRect[2] = roundRect.width();
 	uniforms.roundRect[3] = roundRect.height();
 	uniforms.roundRadius = radius * _factor;
 
-	const auto topLeft = transformRect(
-		QRect(0, 0, radius, radius));
-	const auto topRight = transformRect(
-		QRect(_viewport.width() - radius, 0, radius, radius));
-	const auto bottomRight = transformRect(QRect(
-		_viewport.width() - radius,
-		_viewport.height() - radius,
-		radius,
-		radius));
-	const auto bottomLeft = transformRect(
-		QRect(0, _viewport.height() - radius, radius, radius));
-
-	const auto corners = {
-		std::ref(topLeft),
-		std::ref(topRight),
-		std::ref(bottomRight),
-		std::ref(bottomLeft),
+	// 圆角矩形可能向内收（露出宿主边框），沿四边各擦一条带，宽度覆盖圆角与内收部分。
+	const auto w = _owner->width();
+	const auto h = _owner->height();
+	const auto inset = std::max({
+		0.,
+		rounding.left(),
+		rounding.top(),
+		w - rounding.right(),
+		h - rounding.bottom(),
+	});
+	const auto band = int(std::ceil(radius + inset));
+	const auto bands = {
+		transformRect(QRect(0, 0, w, band)),
+		transformRect(QRect(0, h - band, w, band)),
+		transformRect(QRect(0, band, band, h - 2 * band)),
+		transformRect(QRect(w - band, band, band, h - 2 * band)),
 	};
 
 	auto cornerIndex = 0;
-	for (const auto &corner : corners) {
+	for (const auto &corner : bands) {
 		if (_nextVertexSlot >= kMaxDraws) {
 			break;
 		}
@@ -1788,10 +1882,10 @@ void OverlayWidget::RendererRhi::paintRoundedCorners(float64 rounding) {
 		const auto uOffset = slot * 256;
 
 		const float coords[] = {
-			corner.get().left(), corner.get().bottom(),
-			corner.get().right(), corner.get().bottom(),
-			corner.get().left(), corner.get().top(),
-			corner.get().right(), corner.get().top(),
+			corner.left(), corner.bottom(),
+			corner.right(), corner.bottom(),
+			corner.left(), corner.top(),
+			corner.right(), corner.top(),
 		};
 
 		_rub->updateDynamicBuffer(

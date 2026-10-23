@@ -77,6 +77,7 @@ private:
 		float64 innerOpacity,
 		const style::icon &icon) override;
 	void paintFooter(QRect outer, float64 opacity) override;
+	void paintTopBarSeparator(QRect rect, float64 opacity) override;
 	void paintCaption(QRect outer, float64 opacity) override;
 	void paintGroupThumbs(QRect outer, float64 opacity) override;
 	void paintRoundedCorners(float64 radius) override;
@@ -89,6 +90,8 @@ private:
 	void paintRecognitionOverlay(
 		const QImage &image,
 		ContentGeometry geometry);
+	void paintBackdrop(float64 opacity);
+	void drawAtlasQuad(QRect rect, QRect texture, float opacity);
 
 	struct Control {
 		int index = -1;
@@ -144,7 +147,7 @@ private:
 	float _factor = 1.;
 	int _ifactor = 1;
 
-	static constexpr int kMaxDraws = 32;
+	static constexpr int kMaxDraws = 64;
 	static constexpr int kVertexSize = 4 * 4 * sizeof(float);
 
 	QRhiBuffer *_vertexBuffer = nullptr;
@@ -155,6 +158,7 @@ private:
 
 	QRhiGraphicsPipeline *_imagePipeline = nullptr;
 	QRhiGraphicsPipeline *_imageBlendPipeline = nullptr;
+	QRhiGraphicsPipeline *_imageAddPipeline = nullptr;
 	QRhiGraphicsPipeline *_staticContentPipeline = nullptr;
 	QRhiGraphicsPipeline *_staticContentBlendPipeline = nullptr;
 	QRhiGraphicsPipeline *_transparentContentPipeline = nullptr;
@@ -200,7 +204,8 @@ private:
 	static constexpr auto kControlsCount = 11;
 	QRhiTexture *_controlsAtlasTexture = nullptr;
 	QSize _controlsAtlasSize;
-	std::array<QRect, kControlsCount + 1> _controlsTextures;
+	// 图标之后依次是悬停圆形、圆角悬停底、纯色块和翻页圆形。
+	std::array<QRect, kControlsCount + 4> _controlsTextures;
 
 	static constexpr auto kStoriesSiblingPartsCount = 4;
 	QRhiTexture *_storiesSiblingTextures[kStoriesSiblingPartsCount] = {};
@@ -209,6 +214,9 @@ private:
 
 	QRhiTexture *_controlsFadeTexture = nullptr;
 	QSize _controlsFadeSize;
+	QRhiTexture *_backdropTexture = nullptr;
+	QSize _backdropSize;
+	quint64 _backdropKey = 0;
 	bool _shadowTopFlip = false;
 	bool _shadowsForStories = false;
 

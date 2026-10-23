@@ -14,6 +14,7 @@ layout(std140, binding = 0) uniform Params {
 	vec4 shadowBottomSkipOpacityFullFade;
 	vec4 roundRect;
 	float roundRadius;
+	float g_opacity;
 };
 
 float roundedCorner(vec2 fragCoord) {
@@ -52,6 +53,6 @@ void main() {
 	float fade = min((1.0 - fadeTop.a) * (1.0 - fadeBottom.a), fullFade);
 	result.rgb = result.rgb * fade;
 
-	result *= roundedCorner(fragCoord);
+	result *= roundedCorner(fragCoord) * g_opacity;
 	fragColor = result;
 }

@@ -15,6 +15,7 @@ layout(std140, binding = 0) uniform Params {
 	vec4 transparentBg;
 	vec4 transparentFg;
 	float transparentSize;
+	float g_opacity;
 };
 
 void main() {
@@ -48,5 +49,5 @@ void main() {
 	float fade = min((1.0 - fadeTop.a) * (1.0 - fadeBottom.a), fullFade);
 	result.rgb = result.rgb * fade;
 
-	fragColor = result;
+	fragColor = result * g_opacity;
 }
