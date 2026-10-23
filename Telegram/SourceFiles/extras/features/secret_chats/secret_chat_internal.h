@@ -97,6 +97,8 @@ struct ChatState {
 	QVector<qint64> messageOrder;
 	QSet<qint64> deleted;
 	QVector<int> resendQueue;
+	// 清理标记只在当前保存事务内传播，不写入原会话格式。
+	bool draftCleared = false;
 };
 
 struct Creation {
@@ -118,6 +120,7 @@ struct Snapshot {
 	QMap<int, Creation> creations;
 	QMap<int, QByteArray> pendingQts;
 	QVector<QByteArray> inbox;
+	QMap<int, Draft> drafts;
 };
 
 template <typename Type>
@@ -161,6 +164,7 @@ void applySendResult(Snapshot &state, int chatId, int seq, qint64 transportId,
 	int date, const QByteArray &file, const QString &error);
 void clearConfirmed(ChatState &chat);
 void expire(Snapshot &state, qint64 now);
+void normalizeDrafts(Snapshot &state);
 void discardState(ChatState &chat, QString error);
 void applyEncryption(Snapshot &state, const MTPEncryptedChat &value, qint64 now, int creationId = 0);
 void applyUpdate(Snapshot &state, const MTPUpdate &update, qint64 now, int readBoundary = -1);

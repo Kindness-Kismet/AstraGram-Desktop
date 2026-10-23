@@ -3,16 +3,31 @@
 namespace Extras::SecretChats {
 
 void Manager::send(int chatId, QString text, Fn<void(qint64, QString)> done) {
+	sendReply(chatId, std::move(text), 0, std::move(done));
+}
+
+void Manager::sendReply(int chatId, QString text, qint64 replyTo,
+		Fn<void(qint64, QString)> done) {
 	const auto id = Details::randomId();
 	_private->enqueue([=](Private::Snapshot &snapshot) {
 		auto i = snapshot.chats.find(chatId);
 		if (i == snapshot.chats.end() || text.isEmpty() || text.size() > 32768) {
 			return u"Secret message requires a chat and 1 to 32768 text characters"_q;
 		}
+		const auto target = i->messages.constFind(replyTo);
+		if (replyTo && (target == i->messages.cend()
+			|| target->packet.action != Codec::Action::None)) {
+			return u"Secret reply target was not found"_q;
+		}
 		auto packet = Codec::Packet();
 		packet.randomId = id;
 		packet.text = text;
-		return Details::addOutgoing(*i, std::move(packet));
+		packet.replyTo = replyTo;
+		const auto error = Details::addOutgoing(*i, std::move(packet));
+		if (error.isEmpty() && snapshot.drafts.value(chatId) == Draft{ text, replyTo }) {
+			snapshot.drafts.remove(chatId);
+		}
+		return error;
 	}, [done = std::move(done), id](QString error) {
 		if (done) done(error.isEmpty() ? id : 0, error);
 	});

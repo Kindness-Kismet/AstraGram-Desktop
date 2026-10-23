@@ -40,12 +40,19 @@ struct Message {
 	int date = 0;
 	bool outgoing = false;
 	QString text;
+	qint64 replyTo = 0;
 	Delivery delivery = Delivery::Pending;
 	int ttl = 0;
 	qint64 expiresAt = 0;
 	std::optional<Document> document;
 	bool unsupported = false;
 	bool screenshot = false;
+};
+
+struct Draft {
+	QString text;
+	qint64 replyTo = 0;
+	friend bool operator==(const Draft &, const Draft &) = default;
 };
 
 struct RecoveryState {
@@ -80,10 +87,14 @@ public:
 	[[nodiscard]] QVector<Chat> chats() const;
 	[[nodiscard]] std::optional<Chat> chat(int chatId) const;
 	[[nodiscard]] QVector<Message> messages(int chatId) const;
+	[[nodiscard]] Draft draft(int chatId) const;
+	void setDraft(int chatId, Draft draft, Fn<void(QString)> done = {});
 	[[nodiscard]] rpl::producer<> changed() const;
 
 	void create(not_null<UserData*> user, Fn<void(int, QString)> done);
 	void send(int chatId, QString text, Fn<void(qint64, QString)> done = {});
+	void sendReply(int chatId, QString text, qint64 replyTo,
+		Fn<void(qint64, QString)> done = {});
 	void sendDocument(
 		int chatId,
 		QString fileName,
