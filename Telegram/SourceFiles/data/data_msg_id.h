@@ -270,7 +270,7 @@ struct hash<MsgId> : private hash<int64> {
 template <>
 struct hash<FullStoryId> {
 	size_t operator()(FullStoryId value) const {
-		return QtPrivate::QHashCombine().operator()(
+		return QtPrivate::QHashCombine(0).operator()(
 			std::hash<BareId>()(value.peer.value),
 			value.story);
 	}
@@ -279,7 +279,7 @@ struct hash<FullStoryId> {
 template <>
 struct hash<FullMsgId> {
 	size_t operator()(FullMsgId value) const {
-		return QtPrivate::QHashCombine().operator()(
+		return QtPrivate::QHashCombine(0).operator()(
 			std::hash<BareId>()(value.peer.value),
 			value.msg.bare);
 	}

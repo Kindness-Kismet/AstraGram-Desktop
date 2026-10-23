@@ -147,8 +147,10 @@ void Start(not_null<Instance*> instance) {
 	qRegisterMetaType<AudioMsgId>();
 	qRegisterMetaType<VoiceWaveform>();
 
-	const auto loglevel = getenv("ALSOFT_LOGLEVEL");
-	LOG(("OpenAL Logging Level: %1").arg(loglevel ? loglevel : "(not set)"));
+	const auto loglevel = qEnvironmentVariable("ALSOFT_LOGLEVEL");
+	LOG(("OpenAL Logging Level: %1").arg(loglevel.isEmpty()
+		? u"(not set)"_q
+		: loglevel));
 
 	MixerInstance = new Player::Mixer(instance);
 }

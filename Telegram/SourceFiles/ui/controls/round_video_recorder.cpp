@@ -606,8 +606,7 @@ bool RoundVideoRecorder::Private::copyPackets(
 		not_null<AVFormatContext*> output,
 		CopyContext &context,
 		crl::time offset) {
-	AVPacket packet;
-	av_init_packet(&packet);
+	auto packet = AVPacket();
 
 	auto offsets = std::array<int64, kMaxStreams>{ 0 };
 	while (av_read_frame(input, &packet) >= 0) {

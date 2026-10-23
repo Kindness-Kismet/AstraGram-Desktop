@@ -97,7 +97,6 @@ namespace Media {
 	auto copied = 0;
 
 	auto packet = AVPacket();
-	av_init_packet(&packet);
 	while (true) {
 		error = AvErrorWrap(av_read_frame(input.get(), &packet));
 		if (error.code() == AVERROR_EOF) {
@@ -300,7 +299,6 @@ namespace Media {
 		auto sourceEndPts = offsetPts;
 
 		auto packet = AVPacket();
-		av_init_packet(&packet);
 		while (true) {
 			auto error = AvErrorWrap(av_read_frame(input, &packet));
 			if (error.code() == AVERROR_EOF) {

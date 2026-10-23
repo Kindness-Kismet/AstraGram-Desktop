@@ -24,6 +24,12 @@ if (MSVC AND CMAKE_GENERATOR MATCHES "^Visual Studio ")
 endif()
 
 target_precompile_headers(td_iv PRIVATE ${src_loc}/iv/iv_pch.h)
+
+# MicroTeX 的头文件调用了 wctomb，只在引入它的文件里关闭弃用警告。
+set_source_files_properties(${src_loc}/iv/markdown/iv_markdown_microtex.cpp
+PROPERTIES
+    COMPILE_OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/wd4996>
+)
 nice_target_sources(td_iv ${src_loc}
 PRIVATE
     iv/editor/iv_editor_article_style.cpp

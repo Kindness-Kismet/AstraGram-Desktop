@@ -2,6 +2,9 @@
 
 #include "extras/data/entities.h"
 #include "extras/data/message_archive_store.h"
+
+// 不使用 std::wstring 列，省去依赖已弃用 codecvt 的转换代码。
+#define SQLITE_ORM_OMITS_CODECVT
 #include "extras/libs/sqlite/sqlite_orm.h"
 
 namespace {

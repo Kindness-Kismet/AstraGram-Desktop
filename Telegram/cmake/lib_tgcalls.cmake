@@ -262,6 +262,11 @@ if (NOT MSVC)
         -Wno-unqualified-std-cast-call
         -Wno-unused-function
     )
+else()
+    target_compile_options(lib_tgcalls
+    PRIVATE
+        /wd4996
+    )
 endif()
 
 remove_target_sources(lib_tgcalls ${tgcalls_loc}
