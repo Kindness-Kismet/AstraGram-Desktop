@@ -227,6 +227,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/features/message_shot/message_shot.h"
 #include "extras/features/forward/extras_forward.h"
 #include "extras/features/auto_space/auto_space.h"
+#include "extras/features/window_material/window_material.h"
 #include "boxes/abstract_box.h"
 #include "history/history_widget_internal.h"
 
@@ -524,14 +525,14 @@ void HistoryWidget::paintEvent(QPaintEvent *e) {
 		updateListSize();
 	}
 
-	// 未打开聊天时空白区与会话列表同色，打开后才画聊天背景。
+	// 未打开聊天时空白区与会话列表同色，系统材质生效时同样透出材质；打开后才画聊天背景。
 	if (_history) {
 		Window::SectionWidget::PaintBackground(
 			controller(),
 			controller()->currentChatTheme(),
 			this,
 			e->rect());
-	} else {
+	} else if (!ExtrasFeatures::WindowMaterial::isActive(this)) {
 		QPainter(this).fillRect(e->rect(), st::dialogsBg);
 	}
 	invalidateFrostedBackground(e->rect());
