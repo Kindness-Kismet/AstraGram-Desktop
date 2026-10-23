@@ -524,11 +524,16 @@ void HistoryWidget::paintEvent(QPaintEvent *e) {
 		updateListSize();
 	}
 
-	Window::SectionWidget::PaintBackground(
-		controller(),
-		controller()->currentChatTheme(),
-		this,
-		e->rect());
+	// 未打开聊天时空白区与会话列表同色，打开后才画聊天背景。
+	if (_history) {
+		Window::SectionWidget::PaintBackground(
+			controller(),
+			controller()->currentChatTheme(),
+			this,
+			e->rect());
+	} else {
+		QPainter(this).fillRect(e->rect(), st::dialogsBg);
+	}
 	invalidateFrostedBackground(e->rect());
 
 	Painter p(this);
