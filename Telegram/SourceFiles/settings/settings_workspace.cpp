@@ -129,6 +129,13 @@ void Workspace::showCategory(Type type) {
 		}
 		return;
 	}
+	openCategory(type);
+}
+
+bool Workspace::openCategory(Type type) {
+	if (!_navigation->has(type)) {
+		return false;
+	}
 	_content->checkBeforeClose([=] {
 		_listShown = false;
 		_category = type;
@@ -137,6 +144,7 @@ void Workspace::showCategory(Type type) {
 		updateLayout();
 		_content->setInnerFocus();
 	});
+	return true;
 }
 
 void Workspace::backFromCategory() {
@@ -214,6 +222,18 @@ std::shared_ptr<Window::SectionMemento> Workspace::createMemento() {
 		.category = _category,
 	});
 	return result;
+}
+
+Workspace::State Workspace::state() const {
+	const auto wide = width() >= wideThreshold();
+	return {
+		.section = _content->controller()->section().settingsType(),
+		.category = _category,
+		.wide = wide,
+		.navigationShown = wide || _listShown,
+		.contentShown = wide || !_listShown,
+		.wideThreshold = wideThreshold(),
+	};
 }
 
 bool Workspace::floatPlayerHandleWheelEvent(QEvent *e) {

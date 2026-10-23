@@ -6,12 +6,23 @@
 ## 页面和值
 
 `page.list [filter]` 从应用实时设置索引返回编号、标题、页面路径和勾选状态。
-`page.open <id>` 打开该入口所在页面并定位控件；`settings` 和 `extras` 分别打开官方设置和定制设置主页。
+`page.sections` 列出可直接打开的页面键名，含通知分类、自动下载分类、商业子页和定制子页；
+`flow` 为 true 的是流程入口（本地密码、两步验证、下载列表），只打开入口页，不跳过中间步骤；
+未进入搜索索引的页面 `title` 和 `path` 为空。
+`page.open <key|id>` 优先按键名匹配，按手动路径先切换左侧分类再进入子页；
+不是键名时按 `page.list` 编号打开该入口所在页面并定位控件。
 索引随当前账号、功能开关和平台变化。
+
+页面按逻辑身份区分，窗口宽度只改变展示方式。设置区宽度达到 `wideThreshold` 时左右两栏同时显示；
+不足时分类列表和内容页各占一页。`page.current` 返回当前页面键名、所属分类、
+`settingsLayout`（宽窄、两栏可见性、宽度、阈值）和窗口的单栏／双栏／三栏布局。
+没有键名的流程页在 `sectionClass` 给出页面类型。
+验证两种布局时先用 `window.resize` 调整窗口：
 
 ```bash
 python .codex/skills/app-debug/scripts/cli.py page.list
 python .codex/skills/app-debug/scripts/cli.py page.open settings + control.list
+python .codex/skills/app-debug/scripts/cli.py window.resize 570 900 + page.open business-greeting + page.current
 python .codex/skills/app-debug/scripts/cli.py control.get '<控件编号或名称>'
 ```
 

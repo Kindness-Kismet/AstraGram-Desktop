@@ -760,7 +760,16 @@ void NotificationsType::showFinished() {
 }
 
 Type NotificationsType::Id(Notify type) {
-	return std::make_shared<Factory>(type);
+	// 每类复用同一个实例，搜索索引和调试查询按指针识别页面。
+	static const auto user = std::make_shared<Factory>(Notify::User);
+	static const auto group = std::make_shared<Factory>(Notify::Group);
+	static const auto broadcast = std::make_shared<Factory>(Notify::Broadcast);
+	switch (type) {
+	case Notify::User: return user;
+	case Notify::Group: return group;
+	case Notify::Broadcast: return broadcast;
+	}
+	Unexpected("Type in NotificationsType::Id.");
 }
 
 void NotificationsType::setupContent(

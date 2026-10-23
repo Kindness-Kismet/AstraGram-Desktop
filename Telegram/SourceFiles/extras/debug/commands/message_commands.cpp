@@ -618,6 +618,43 @@ using json = nlohmann::json;
 	}));
 }
 
+// 直接打开资料页；默认弹层，--side 在窗口够宽时放进侧栏。
+[[nodiscard]] Result OpenProfile(const QStringList &args) {
+	const auto usage = u"usage: chat.profile <peerId> [--side]"_q;
+	if (args.isEmpty() || args.size() > 2) {
+		return Result::Err(usage);
+	}
+	const auto side = (args.size() == 2);
+	if (side && args[1] != u"--side"_q) {
+		return Result::Err(usage);
+	}
+	auto ok = false;
+	const auto idValue = args[0].toLongLong(&ok);
+	if (!ok) {
+		return Result::Err(u"expected an integer peerId"_q);
+	}
+	const auto session = ActiveSession();
+	const auto controller = session ? session->tryResolveWindow() : nullptr;
+	if (!controller) {
+		return Result::Err(u"an active session is required"_q);
+	}
+	const auto peer = ResolvePeer(session, idValue);
+	if (!peer) {
+		return Result::Err(u"peer not found, run chat.list first"_q);
+	}
+	auto params = Window::SectionShow(
+		Window::SectionShow::Way::Forward,
+		anim::type::instant);
+	controller->showSection(
+		std::make_shared<Info::Memento>(peer),
+		side ? params.withThirdColumn() : params);
+	return Result::Ok(Compact(json{
+		{ "peerId", peer->id.value },
+		{ "name", peer->name().toStdString() },
+		{ "side", side },
+	}));
+}
+
 // 直接打开归档文件夹，不走抽屉入口，用于单独验证归档页行为。
 [[nodiscard]] Result OpenArchive(const QStringList &args) {
 	if (!args.isEmpty()) {
@@ -784,6 +821,7 @@ const HandlerMap &MessageHandlers() {
 		{ u"message.send"_q, &SendTextMessage },
 		{ u"chat.open"_q, &OpenChat },
 		{ u"chat.media"_q, &OpenMedia },
+		{ u"chat.profile"_q, &OpenProfile },
 		{ u"chat.open-archive"_q, &OpenArchive },
 		{ u"chat.history-stats"_q, &HistoryStats },
 	};

@@ -113,6 +113,10 @@ GENERIC_COMMANDS = {
     "privacy.reload": "重新请求服务端隐私配置，需要真实登录",
     "settings.schema": "列出设置值、类型与完整键名：[前缀]",
     "page.list": "查询全部官方与定制设置入口：[关键词]",
+    "page.sections": "列出可直接打开的设置页与子页键名",
+    "page.current": "查询当前页面、设置区宽窄布局与窗口布局",
+    "chat.folder": "列出或切换聊天文件夹：[编号|all]",
+    "chat.profile": "打开对话资料页：<peerId> [--side]",
     "action.list": "列出官方快捷动作",
     "action.run": "按绑定按键触发官方快捷动作，应用窗口须在前台：<名称>",
     "control.get": "查询控件当前值、状态与动作：<目标>",
@@ -299,7 +303,7 @@ def register_commands(sub) -> None:
     command = sub.add_parser("settings.set", help="修改设置，按当前类型解析取值")
     command.add_argument("key")
     command.add_argument("value")
-    command = sub.add_parser("page.open", help="打开设置页：settings / extras 或 page.list 中的编号")
+    command = sub.add_parser("page.open", help="打开设置页：page.sections 中的键名或 page.list 中的编号")
     command.add_argument("section")
     sub.add_parser("theme.reset-background", help="重置聊天背景到默认壁纸")
     command = sub.add_parser("theme.set", help="切换浅色或暗色主题")

@@ -18,6 +18,15 @@ class Navigation;
 
 class Workspace final : public Window::SectionWidget {
 public:
+	struct State {
+		Type section;
+		Type category;
+		bool wide = false;
+		bool navigationShown = false;
+		bool contentShown = false;
+		int wideThreshold = 0;
+	};
+
 	Workspace(
 		QWidget *parent,
 		not_null<Window::SessionController*> controller,
@@ -36,6 +45,11 @@ public:
 	bool floatPlayerHandleWheelEvent(QEvent *e) override;
 	QRect floatPlayerAvailableRect() override;
 	QPixmap grabForShowAnimation(const Window::SectionSlideParams &params) override;
+
+	// 当前内容页与左右栏布局，供调试指令查询。
+	[[nodiscard]] State state() const;
+	// 与点击左侧分类一致：清空设置区历史后打开分类；不在分类列表时返回 false。
+	bool openCategory(Type type);
 
 protected:
 	void resizeEvent(QResizeEvent *e) override;
