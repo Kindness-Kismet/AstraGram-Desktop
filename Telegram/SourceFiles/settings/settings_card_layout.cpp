@@ -229,6 +229,7 @@ not_null<PeerListContent*> AddCardList(
 		object_ptr<PeerListContent>(container, controller),
 		QMargins(0, -padding.top(), 0, -padding.bottom())))->entity();
 	content->setObjectName(u"settings.cardList"_q);
+	content->setRowBackgroundRounding(QMargins(), st::settingsRowRadius);
 	return content;
 }
 

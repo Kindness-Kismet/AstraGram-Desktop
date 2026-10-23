@@ -290,10 +290,13 @@ void FilterRowButton::paintEvent(QPaintEvent *e) {
 
 	const auto over = isOver() || isDown();
 	if (_state == State::Normal) {
+		p.save();
+		ClipCardRow(p, this);
 		if (over) {
 			p.fillRect(e->rect(), st::windowBgOver);
 		}
 		RippleButton::paintRipple(p, 0, 0);
+		p.restore();
 
 		if (_colorIndex) {
 			p.setPen(Qt::NoPen);

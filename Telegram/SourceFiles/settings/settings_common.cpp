@@ -497,6 +497,19 @@ bool IsInCardGroup(not_null<QWidget*> widget) {
 	return false;
 }
 
+void ClipCardRow(QPainter &p, not_null<QWidget*> row) {
+	if (!IsInCardGroup(row)) {
+		return;
+	}
+	auto shape = QPainterPath();
+	shape.addRoundedRect(
+		row->rect(),
+		st::settingsRowRadius,
+		st::settingsRowRadius);
+	p.setRenderHint(QPainter::Antialiasing);
+	p.setClipPath(shape, Qt::IntersectClip);
+}
+
 CheckboxLook CardCheckboxLook(not_null<QWidget*> parent) {
 	if (IsInCardGroup(parent)) {
 		return { st::settingsCardCheckbox, st::settingsCardSendTypePadding };

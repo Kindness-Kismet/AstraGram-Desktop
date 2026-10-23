@@ -1,5 +1,6 @@
 #include "settings/detailed_settings_button.h"
 
+#include "settings/settings_common.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "ui/wrap/vertical_layout.h"
@@ -147,10 +148,14 @@ void DetailedSettingsButton::paintEvent(QPaintEvent *e) {
 	const auto over = isOver() || isDown();
 	// 对话框里不画行高亮，悬停只加深开关和文字。
 	const auto highlight = over && !Ui::UsesFlatRowHover(this);
-	p.fillRect(
-		e->rect(),
-		highlight ? _style.button.textBgOver : _style.button.textBg);
+	p.fillRect(e->rect(), _style.button.textBg);
+	p.save();
+	Settings::ClipCardRow(p, this);
+	if (highlight) {
+		p.fillRect(e->rect(), _style.button.textBgOver);
+	}
 	paintRipple(p, 0, 0);
+	p.restore();
 
 	paintIcon(p);
 

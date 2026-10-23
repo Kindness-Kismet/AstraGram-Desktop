@@ -2,6 +2,7 @@
 
 #include "settings.h"
 #include "lang/lang_keys.h"
+#include "settings/settings_common.h"
 #include "statistics/view/stack_linear_chart_common.h"
 #include "ui/text/format_values.h"
 #include "ui/effects/ripple_animation.h"
@@ -1037,7 +1038,10 @@ int CacheCategoryRow::resizeGetHeight(int newWidth) {
 
 void CacheCategoryRow::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
+	p.save();
+	ClipCardRow(p, this);
 	paintRipple(p, 0, 0);
+	p.restore();
 	if (isDisabled()) {
 		p.setOpacity(st::defaultCheckbox.disabledOpacity);
 	}

@@ -274,6 +274,8 @@ void AddButtonIcon(
 	IconDescriptor &&descriptor);
 // 控件位于设置卡片内时，行内容统一使用卡片缩进。
 [[nodiscard]] bool IsInCardGroup(not_null<QWidget*> widget);
+// 卡片内把后续绘制裁成整行圆角矩形，与 SettingsButton 的悬停一致；卡片外不裁切。
+void ClipCardRow(QPainter &p, not_null<QWidget*> row);
 struct CheckboxLook {
 	const style::Checkbox &st;
 	const style::margins &padding;
