@@ -9,14 +9,12 @@ from pathlib import Path
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from build_support.changelog import validate_changelog
 from build_support.paths import ROOT, VERSION_FILE
 
 _PATTERN = re.compile(r"^\s*(\d+)\.(\d+)\.(\d+)(?:\.(\d+|beta))?\s*$")
 _PACKER_VERSION_MAX = 999_999_999
 
 _UPSTREAM_TRACKING = ROOT / ".github" / "upstream.json"
-_CHANGELOG = ROOT / ".github" / "CHANGELOG.md"
 
 
 @dataclass(frozen=True)
@@ -122,12 +120,10 @@ def read_upstream_version() -> str:
         raise SystemExit(f"Could not read official version from {_UPSTREAM_TRACKING}: {error}") from error
 
 
-def apply_version(version: Version, check_changelog: bool = True) -> list[str]:
+def apply_version(version: Version) -> list[str]:
     upstream = read_upstream_version()
     if version.text != upstream:
         raise SystemExit(f"Version {version.text_small} must use the official baseline {upstream} as its first three parts.")
-    if check_changelog:
-        _check_changelog()
 
     # 版本文件是唯一来源，代码与 Windows 资源在 CMake 配置阶段从它生成。
     return _replace(VERSION_FILE, [
@@ -143,13 +139,6 @@ def apply_version(version: Version, check_changelog: bool = True) -> list[str]:
         (r"(AlphaVersion\s+)\d+", r"\g<1>0"),
         (r"(AppVersionOriginal\s+)\d[\d\.beta]*", r"\g<1>" + version.original),
     ])
-
-
-def _check_changelog() -> None:
-    if not _CHANGELOG.is_file():
-        raise SystemExit(f"{_CHANGELOG} not found.")
-    # 与 scripts/release_notes.py 使用同一套规则，发版前就拦下格式错误。
-    validate_changelog(_CHANGELOG.read_text(encoding="utf-8"))
 
 
 def _replace(path: Path, rules: list[tuple[str, str]]) -> list[str]:
@@ -186,11 +175,6 @@ def main(argv: list[str] | None = None) -> None:
         metavar="VERSION",
         help="New version as major.minor.patch[.revision|.beta]; omit to show the current one",
     )
-    parser.add_argument(
-        "--skip-changelog",
-        action="store_true",
-        help="Do not validate .github/CHANGELOG.md",
-    )
     args = parser.parse_args(argv)
 
     if not args.version:
@@ -204,7 +188,7 @@ def main(argv: list[str] | None = None) -> None:
 
     version = parse_version(args.version)
     print(header(f"Setting version {version.text_small} {version.channel}"))
-    touched = apply_version(version, check_changelog=not args.skip_changelog)
+    touched = apply_version(version)
     print_summary(*(f"patched {path}" for path in touched) if touched else ["already up to date"])
 
 

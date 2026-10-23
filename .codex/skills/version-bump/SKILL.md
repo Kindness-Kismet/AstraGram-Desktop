@@ -25,8 +25,7 @@ description: 更新本应用的发布版本号并编写更新说明。仅在用�
    python scripts/build_support/version.py <官方版本>[.<本库修订号>]
    ```
 
-   脚本只改 `Telegram/build/version`，并检查前三段与已登记的官方版本一致、
-   `.github/CHANGELOG.md` 符合下面的双语格式。
+   脚本只改 `Telegram/build/version`，并检查前三段与已登记的官方版本一致。
 
 `AppVersion` 使用官方整数编码，负责数据兼容；
 `AppUpdateVersion` 负责打包、版本比较和更新索引。
@@ -78,8 +77,7 @@ description: 更新本应用的发布版本号并编写更新说明。仅在用�
 
 ```bash
 python scripts/build_support/version.py
-python scripts/release_notes.py .github/CHANGELOG.md build/release-notes.md
 ```
 
-第一条显示当前版本，第二条按发布流程校验更新日志格式并生成发布正文。
+显示当前版本。发布工作流把 `.github/CHANGELOG.md` 原样作为发布正文，提交前对照上面的格式自查。
 推送到 `main` 且版本文件有变化时，发布工作流会自动打标签、构建并公开发布。

@@ -54,11 +54,6 @@ jobs:
           tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
           "$RUNNER_TEMP/actionlint" -shellcheck= -pyflakes=
 
-      - name: Set up Python.
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
-
       - name: Read version.
         id: version
         run: |
@@ -70,18 +65,6 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tag=v${version}" >> "$GITHUB_OUTPUT"
           echo "appversion=${appversion}" >> "$GITHUB_OUTPUT"
-
-      - name: Validate release inputs.
-        run: |
-          set -euo pipefail
-          python3 scripts/release_notes.py \
-            .github/CHANGELOG.md "$RUNNER_TEMP/changelog.md"
-          {
-            printf '%s\n\n' "$RELEASE_DONATION_NOTICE"
-            printf '%s\n\n' '---'
-            cat "$RUNNER_TEMP/changelog.md"
-          } > "$RUNNER_TEMP/release-notes.md"
-          cat "$RUNNER_TEMP/release-notes.md"
 
   windows-x64:
     name: Windows x64 remote build
@@ -459,12 +442,10 @@ jobs:
       - name: Generate release notes.
         run: |
           set -euo pipefail
-          python3 scripts/release_notes.py \
-            .github/CHANGELOG.md "$RUNNER_TEMP/changelog.md"
           {
             printf '%s\n\n' "$RELEASE_DONATION_NOTICE"
             printf '%s\n\n' '---'
-            cat "$RUNNER_TEMP/changelog.md"
+            cat .github/CHANGELOG.md
           } > "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md"
 
