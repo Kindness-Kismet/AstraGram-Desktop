@@ -150,6 +150,18 @@ namespace Media {
 namespace View {
 namespace {
 
+// Windows 上查看器的背景模糊和开合动画按 OpenGL 调校，有 OpenGL 时不走 RHI。
+[[nodiscard]] Ui::GL::Backend ChooseViewerBackend(
+		Ui::GL::Capabilities capabilities) {
+	const auto result = Ui::GL::ChooseBackendDefault(capabilities);
+	if (!Platform::IsWindows() || result != Ui::GL::Backend::QRhi) {
+		return result;
+	}
+	return Ui::GL::CheckOpenGLCapabilities().supported
+		? Ui::GL::Backend::OpenGL
+		: result;
+}
+
 struct RecognitionId {
 	uint64 sessionUniqueId = 0;
 	PhotoId photoId = 0;
@@ -712,7 +724,9 @@ OverlayWidget::PipWrap::PipWrap(
 }
 
 OverlayWidget::OverlayWidget()
-: _wrap(std::make_unique<Ui::GL::Window>(Ui::GL::Window::Translucent::Yes))
+: _wrap(std::make_unique<Ui::GL::Window>(
+	ChooseViewerBackend,
+	Ui::GL::Window::Translucent::Yes))
 , _window(_wrap->window())
 , _helper(Platform::CreateOverlayWidgetHelper(_window.get(), [=](bool maximized) {
 	toggleFullScreen(maximized);
