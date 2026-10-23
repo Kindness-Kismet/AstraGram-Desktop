@@ -274,10 +274,19 @@ void BottomInfo::paint(
 		QPoint position,
 		int outerWidth,
 		bool unread,
-		bool inverted,
+		InfoDisplayType type,
 		const PaintContext &context) const {
 	const auto st = context.st;
 	const auto stm = context.messageStyle();
+	const auto inverted = (type != InfoDisplayType::Default);
+	const auto iconColor = p.pen().color();
+	const auto paintIcon = [&](const style::icon &icon, QPoint point) {
+		if (type == InfoDisplayType::Background) {
+			icon.paint(p, point, outerWidth, iconColor);
+			return;
+		}
+		icon.paint(p, point, outerWidth);
+	};
 
 	auto right = position.x() + width();
 	const auto firstLineBottom = position.y() + st::msgDateFont->height;
@@ -293,10 +302,9 @@ void BottomInfo::paint(
 			: (inverted
 				? st->historyReceivedInvertedIcon()
 				: stm->historyReceivedIcon);
-		icon.paint(
-			p,
-			QPoint(right, firstLineBottom) + st::historySendStatePosition,
-			outerWidth);
+		paintIcon(
+			icon,
+			QPoint(right, firstLineBottom) + st::historySendStatePosition);
 		right -= st::historySendStateSpace;
 	}
 
@@ -314,22 +322,14 @@ void BottomInfo::paint(
 			? st->historySilentInvertedIcon()
 			: stm->historySilentIcon;
 		right -= st::historySilentWidth;
-		icon.paint(
-			p,
-			right,
-			firstLineBottom + st::historySilentTop,
-			outerWidth);
+		paintIcon(icon, { right, firstLineBottom + st::historySilentTop });
 	}
 	if (_data.flags & Data::Flag::Ephemeral) {
 		const auto &icon = inverted
 			? st->historyEphemeralInvertedIcon()
 			: stm->historyEphemeralIcon;
 		right -= st::historyEphemeralStateWidth;
-		icon.paint(
-			p,
-			right,
-			firstLineBottom + st::historyEphemeralStateTop,
-			outerWidth);
+		paintIcon(icon, { right, firstLineBottom + st::historyEphemeralStateTop });
 	}
 
 	if (_data.flags & Data::Flag::Pinned) {
@@ -337,11 +337,7 @@ void BottomInfo::paint(
 			? st->historyPinInvertedIcon()
 			: stm->historyPinIcon;
 		right -= st::historyPinWidth;
-		icon.paint(
-			p,
-			right,
-			firstLineBottom + st::historyPinTop,
-			outerWidth);
+		paintIcon(icon, { right, firstLineBottom + st::historyPinTop });
 	}
 	if (!_views.isEmpty()) {
 		const auto viewsWidth = _views.maxWidth();
@@ -352,11 +348,7 @@ void BottomInfo::paint(
 			? st->historyViewsInvertedIcon()
 			: stm->historyViewsIcon;
 		right -= st::historyViewsWidth;
-		icon.paint(
-			p,
-			right,
-			firstLineBottom + st::historyViewsTop,
-			outerWidth);
+		paintIcon(icon, { right, firstLineBottom + st::historyViewsTop });
 	}
 	if (!_replies.isEmpty()) {
 		const auto repliesWidth = _replies.maxWidth();
@@ -367,11 +359,7 @@ void BottomInfo::paint(
 			? st->historyRepliesInvertedIcon()
 			: stm->historyRepliesIcon;
 		right -= st::historyViewsWidth;
-		icon.paint(
-			p,
-			right,
-			firstLineBottom + st::historyViewsTop,
-			outerWidth);
+		paintIcon(icon, { right, firstLineBottom + st::historyViewsTop });
 	}
 	if (!ExtrasFeatures::MessageShot::isTakingShot() && (_data.flags & Data::Flag::Sending)
 		&& !(_data.flags & Data::Flag::OutLayout)) {
@@ -379,11 +367,7 @@ void BottomInfo::paint(
 		const auto &icon = inverted
 			? st->historyViewsSendingInvertedIcon()
 			: st->historyViewsSendingIcon();
-		icon.paint(
-			p,
-			right,
-			firstLineBottom + st::historyViewsTop,
-			outerWidth);
+		paintIcon(icon, { right, firstLineBottom + st::historyViewsTop });
 	}
 	if (_effect) {
 		auto left = position.x();

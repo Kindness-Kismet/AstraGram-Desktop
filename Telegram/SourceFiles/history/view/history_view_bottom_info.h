@@ -28,6 +28,7 @@ using PaintContext = Ui::ChatPaintContext;
 
 class Message;
 struct TextState;
+enum class InfoDisplayType : char;
 
 class BottomInfo final : public Object {
 public:
@@ -85,7 +86,7 @@ public:
 		QPoint position,
 		int outerWidth,
 		bool unread,
-		bool inverted,
+		InfoDisplayType type,
 		const PaintContext &context) const;
 
 	[[nodiscard]] auto takeEffectAnimation()
