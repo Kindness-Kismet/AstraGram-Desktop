@@ -275,6 +275,12 @@ void Navigation::setActive(Type type) {
 	}
 }
 
+bool Navigation::has(Type type) const {
+	return ranges::any_of(_items, [&](const auto &pair) {
+		return pair.first && pair.first == type;
+	});
+}
+
 void Navigation::setNarrow(bool narrow) {
 	setProperty("narrow", narrow);
 	update();

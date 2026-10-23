@@ -28,6 +28,7 @@ public:
 	~Navigation();
 
 	void setActive(Type type);
+	[[nodiscard]] bool has(Type type) const;
 	void setNarrow(bool narrow);
 
 protected:

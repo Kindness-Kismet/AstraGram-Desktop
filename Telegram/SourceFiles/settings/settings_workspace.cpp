@@ -155,7 +155,11 @@ void Workspace::closeWorkspace() {
 
 void Workspace::updateNavigation() {
 	const auto type = _content->controller()->section().settingsType();
-	if (!_category || !_content->hasSettingsHistory()) {
+	// 已登记的页面按所属分类高亮；未登记的子页沿用进入时的分类。
+	const auto category = Builder::SearchRegistry::Instance().sectionCategory(type);
+	if (_navigation->has(category)) {
+		_category = category;
+	} else if (!_category || !_content->hasSettingsHistory()) {
 		_category = type;
 	}
 	_navigation->setActive(_category);
