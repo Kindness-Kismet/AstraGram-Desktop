@@ -11,8 +11,20 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Api {
 
-MessagesSearchMerged::MessagesSearchMerged(not_null<History*> history)
-: _apiSearch(history) {
+MessagesSearchMerged::MessagesSearchMerged(
+	not_null<History*> history,
+	LocalSource local)
+: _apiSearch(history)
+, _localSource(std::move(local)) {
+	if (_localSource.search) {
+		std::move(_localSource.changes) | rpl::on_next([=] {
+			if (_outputStarted) {
+				refreshLocal();
+				_updatedFounds.fire({});
+			}
+		}, _lifetime);
+		return;
+	}
 	if (const auto migrated = history->migrateFrom()) {
 		_migratedSearch.emplace(migrated);
 	}
@@ -126,6 +138,11 @@ void MessagesSearchMerged::clear() {
 void MessagesSearchMerged::search(const Request &search) {
 	_request = search;
 	clear();
+	if (_localSource.search) {
+		refreshLocal();
+		fireFound();
+		return;
+	}
 	if (_migratedSearch) {
 		_migratedSearch->cancel();
 	}
@@ -133,6 +150,9 @@ void MessagesSearchMerged::search(const Request &search) {
 }
 
 void MessagesSearchMerged::searchMore() {
+	if (_localSource.search) {
+		return;
+	}
 	if (_apiFailed || _migratedFailed) {
 		return;
 	} else if (!_apiFinished) {
@@ -150,6 +170,20 @@ rpl::producer<> MessagesSearchMerged::newFounds() const {
 
 rpl::producer<> MessagesSearchMerged::nextFounds() const {
 	return _nextFounds.events();
+}
+
+void MessagesSearchMerged::refreshLocal() {
+	_concatedFound = _localSource.search(_request);
+	_concatedFound.total = int(_concatedFound.messages.size());
+	_concatedFound.totalOnly = false;
+	_concatedFound.finished = !_concatedFound.failed;
+	_apiTotal = _concatedFound.total;
+	_apiFailed = _concatedFound.failed;
+	_apiFinished = _concatedFound.finished;
+}
+
+rpl::producer<> MessagesSearchMerged::updatedFounds() const {
+	return _updatedFounds.events();
 }
 
 } // namespace Api
