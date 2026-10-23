@@ -182,6 +182,11 @@ struct BackgroundPreviewBox::OverridenStyle {
 	style::FlatLabel subtitle;
 };
 
+struct BackgroundPreviewBox::BlurStyle {
+	style::Checkbox checkbox;
+	style::ServiceCheck check;
+};
+
 BackgroundPreviewBox::BackgroundPreviewBox(
 	QWidget*,
 	not_null<Window::SessionController*> controller,
@@ -541,12 +546,23 @@ void BackgroundPreviewBox::recreateBlurCheckbox() {
 		return;
 	}
 
+	if (!_blurStyle) {
+		// 勾选框画在壁纸上，文字和勾选标记跟随预览自己的服务配色。
+		_blurStyle = std::make_unique<BlurStyle>(BlurStyle{
+			.checkbox = st::backgroundCheckbox,
+			.check = st::backgroundCheck,
+		});
+		const auto &fg = _chatStyle->msgServiceFg();
+		_blurStyle->checkbox.textFg = fg;
+		_blurStyle->checkbox.textFgActive = fg;
+		_blurStyle->check.color = fg;
+	}
 	const auto blurred = _blur ? _blur->checked() : _paper.isBlurred();
 	_blur = Ui::MakeChatServiceCheckbox(
 		this,
 		tr::lng_background_blur(tr::now),
-		st::backgroundCheckbox,
-		st::backgroundCheck,
+		_blurStyle->checkbox,
+		_blurStyle->check,
 		blurred,
 		[=] { return _serviceBg.value_or(QColor(255, 255, 255, 0)); });
 	_blur->show();
@@ -1066,10 +1082,22 @@ void BackgroundPreviewBox::updateServiceBg(const std::vector<QColor> &bg) {
 
 	_serviceBgLifetime = _paletteServiceBg.value(
 	) | rpl::on_next([=](QColor color) {
-		_serviceBg = Ui::ThemeAdjustedColor(
-			color,
-			QColor(red / count, green / count, blue / count));
-		_chatStyle->applyAdjustedServiceBg(*_serviceBg);
+		// 与当前明暗不同时预览使用内置主题调色板。
+		const auto embedded = (_boxDarkMode.current()
+				!= Window::Theme::IsNightMode())
+			|| Window::Theme::Background()->embeddedServicePalette();
+		if (embedded) {
+			const auto colors = Window::Theme::EmbeddedServiceColors(
+				_paper,
+				_chatStyle->dark());
+			_serviceBg = colors.bg;
+			_chatStyle->applyServiceColors(colors);
+		} else {
+			_serviceBg = Ui::ThemeAdjustedColor(
+				color,
+				QColor(red / count, green / count, blue / count));
+			_chatStyle->applyAdjustedServiceBg(*_serviceBg);
+		}
 		recreateBlurCheckbox();
 	});
 

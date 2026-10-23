@@ -473,13 +473,16 @@ void ApplyAccentPalette(style::palette &palette) {
 }
 
 void ApplyDefaultServicePalette(style::palette &palette) {
-	const auto dark = Ui::IsDarkPalette(palette);
-	palette.setColor(qstr("msgServiceFg"),
-		dark ? QColor(166, 171, 179) : QColor(98, 104, 115));
-	palette.setColor(qstr("msgServiceBg"),
-		dark ? QColor(255, 255, 255, 18) : QColor(0, 0, 0, 10));
-	palette.setColor(qstr("msgServiceBgSelected"),
-		dark ? QColor(255, 255, 255, 41) : QColor(0, 0, 0, 26));
+	const auto colors = Ui::FlatServiceColors(Ui::IsDarkPalette(palette));
+	// 画在服务底色上的派生键在加载时已解析为旧前景色，需要一起改。
+	for (const auto key : {
+			qstr("msgServiceFg"),
+			qstr("msgImgReplyBarColor"),
+			qstr("msgBotKbIconFg") }) {
+		palette.setColor(key, colors.fg);
+	}
+	palette.setColor(qstr("msgServiceBg"), colors.bg);
+	palette.setColor(qstr("msgServiceBgSelected"), colors.bgSelected);
 }
 
 std::vector<EmbeddedScheme> EmbeddedThemes() {

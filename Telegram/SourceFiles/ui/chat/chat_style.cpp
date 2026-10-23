@@ -29,8 +29,6 @@ namespace Ui {
 
 namespace {
 
-constexpr auto kMediaTimestampOpacity = 0.65;
-
 void EnsureCorners(
 		CornersPixmaps &corners,
 		int radius,
@@ -84,10 +82,8 @@ void EnsurePreCache(
 } // namespace
 
 MediaTimestampStyle::MediaTimestampStyle(bool dark)
-: _foreground(dark ? QColor(58, 58, 58) : QColor(255, 255, 255))
-, _background(dark ? QColor(255, 255, 255) : QColor(0, 0, 0)) {
-	// 背景透明度不影响文字和状态图标。
-	_background.setAlphaF(kMediaTimestampOpacity);
+: _foreground(CapsuleServiceColors(dark).fg)
+, _background(CapsuleServiceColors(dark).bg) {
 }
 
 void MediaTimestampStyle::paintBackground(
@@ -732,6 +728,22 @@ void ChatStyle::applyAdjustedServiceBg(QColor serviceBg) {
 	auto r = 0, g = 0, b = 0, a = 0;
 	serviceBg.getRgb(&r, &g, &b, &a);
 	msgServiceBg().set(uchar(r), uchar(g), uchar(b), uchar(a));
+}
+
+void ChatStyle::applyServiceColors(const ServiceColors &colors) {
+	const auto set = [](const style::color &color, const QColor &value) {
+		color.set(
+			uchar(value.red()),
+			uchar(value.green()),
+			uchar(value.blue()),
+			uchar(value.alpha()));
+	};
+	// 派生键在加载时已解析为独立颜色，需要与前景色一起改。
+	set(msgServiceFg(), colors.fg);
+	set(msgImgReplyBarColor(), colors.fg);
+	set(msgBotKbIconFg(), colors.fg);
+	set(msgServiceBg(), colors.bg);
+	set(msgServiceBgSelected(), colors.bgSelected);
 }
 
 std::span<Text::SpecialColor> ChatStyle::highlightColors() const {

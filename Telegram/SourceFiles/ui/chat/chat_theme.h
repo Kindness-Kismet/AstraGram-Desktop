@@ -74,6 +74,17 @@ struct ChatThemeBackgroundData {
 // 默认对话区保持中性灰，与会话列表保留明暗层次。
 [[nodiscard]] QColor DefaultChatBackgroundColor(bool dark);
 
+struct ServiceColors {
+	QColor fg;
+	QColor bg;
+	QColor bgSelected;
+};
+
+// 浅淡样式只适合中性灰底色。
+[[nodiscard]] ServiceColors FlatServiceColors(bool dark);
+// 实底胶囊在任意壁纸上可读，媒体时间戳与壁纸上的服务消息共用。
+[[nodiscard]] ServiceColors CapsuleServiceColors(bool dark);
+
 struct ChatThemeBubblesData {
 	std::vector<QColor> colors;
 	std::optional<QColor> accent;

@@ -42,6 +42,7 @@ namespace Ui {
 
 class ChatTheme;
 class ChatStyle;
+struct ServiceColors;
 struct BubblePattern;
 
 inline constexpr auto kColorPatternsCount = Text::kMaxQuoteOutlines;
@@ -363,6 +364,7 @@ public:
 	void apply(not_null<ChatTheme*> theme);
 	void applyCustomPalette(const style::palette *palette);
 	void applyAdjustedServiceBg(QColor serviceBg);
+	void applyServiceColors(const ServiceColors &colors);
 
 	[[nodiscard]] bool dark() const {
 		return _dark;

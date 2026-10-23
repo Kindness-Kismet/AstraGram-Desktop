@@ -247,16 +247,9 @@ void PaintServiceTime(
 		top,
 		metrics.width,
 		metrics.height);
-	const auto bg = QColor(0x00, 0x00, 0x00, 0x1e);
-	PainterHighQualityEnabler hq(p);
-	p.setPen(Qt::NoPen);
-	p.setBrush(bg);
-	const auto radius = rect.height() / 2.;
-	p.drawRoundedRect(
-		rect,
-		radius,
-		radius);
-	p.setPen(st->msgServiceFg());
+	const auto &timestamp = st->mediaTimestampStyle();
+	timestamp.paintBackground(p, rect);
+	p.setPen(timestamp.foreground());
 	p.setFont(st::extrasServiceTimeBadgeFont);
 	p.drawText(
 		rect.x() + st::extrasServiceTimeBadgeHorizontalPadding,

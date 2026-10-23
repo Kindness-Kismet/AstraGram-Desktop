@@ -61,6 +61,7 @@ protected:
 
 private:
 	struct OverridenStyle;
+	struct BlurStyle;
 
 	using Element = HistoryView::Element;
 	not_null<HistoryView::ElementDelegate*> delegate();
@@ -121,6 +122,7 @@ private:
 	Ui::RadialAnimation _radial;
 	base::binary_guard _generating;
 	std::optional<QColor> _serviceBg;
+	std::unique_ptr<BlurStyle> _blurStyle;
 	object_ptr<Ui::Checkbox> _blur = { nullptr };
 
 	rpl::variable<bool> _appNightMode;

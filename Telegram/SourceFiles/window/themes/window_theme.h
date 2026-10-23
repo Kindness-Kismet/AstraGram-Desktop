@@ -29,6 +29,7 @@ class Controller;
 namespace Ui {
 struct ChatThemeBackground;
 class ChatTheme;
+struct ServiceColors;
 } // namespace Ui
 
 namespace Webview {
@@ -45,6 +46,10 @@ struct ParsedTheme;
 enum class EmbeddedType;
 
 [[nodiscard]] bool IsEmbeddedTheme(const QString &path);
+// 内置主题在中性灰背景上用浅淡服务样式，其余壁纸用实底胶囊。
+[[nodiscard]] Ui::ServiceColors EmbeddedServiceColors(
+	const Data::WallPaper &paper,
+	bool dark);
 
 struct Object {
 	QString pathRelative;
@@ -180,6 +185,8 @@ public:
 	void setThemeObject(const Object &object);
 	[[nodiscard]] const Object &themeObject() const;
 	[[nodiscard]] std::optional<Data::CloudTheme> editingTheme() const;
+	// 内置主题的服务配色不按壁纸色相调整，而是按底色切换整套样式。
+	[[nodiscard]] bool embeddedServicePalette() const;
 	void setEditingTheme(const Data::CloudTheme &editing);
 	void clearEditingTheme(ClearEditing clear = ClearEditing::Temporary);
 	void reset();
@@ -232,6 +239,7 @@ private:
 	void setPaper(const Data::WallPaper &paper);
 
 	[[nodiscard]] bool adjustPaletteRequired();
+	void applyEmbeddedServiceColors();
 	void applyDefaultThemeAccentColorizer();
 	void adjustPaletteUsingPaper(const QImage &prepared);
 	void adjustPaletteUsingBackground(const QImage &image);

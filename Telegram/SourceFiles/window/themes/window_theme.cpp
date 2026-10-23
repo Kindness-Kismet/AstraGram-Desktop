@@ -916,6 +916,28 @@ void ChatBackground::setPaper(const Data::WallPaper &paper) {
 	_paper = paper.withoutImageData();
 }
 
+bool ChatBackground::embeddedServicePalette() const {
+	const auto &object = AreTestingTheme()
+		? GlobalApplying.data.object
+		: _themeObject;
+	return !object.cloud.id && IsEmbeddedTheme(object.pathAbsolute);
+}
+
+void ChatBackground::applyEmbeddedServiceColors() {
+	const auto dark = Ui::IsDarkPalette(*style::main_palette::get());
+	const auto colors = ExtrasSettings::getInstance().disableChatBackground()
+		? Ui::FlatServiceColors(dark)
+		: EmbeddedServiceColors(_paper, dark);
+	const auto set = [](const style::color &color, const QColor &value) {
+		color.set(value.red(), value.green(), value.blue(), value.alpha());
+	};
+	set(st::msgServiceFg, colors.fg);
+	set(st::msgImgReplyBarColor, colors.fg);
+	set(st::msgBotKbIconFg, colors.fg);
+	set(st::msgServiceBg, colors.bg);
+	set(st::msgServiceBgSelected, colors.bgSelected);
+}
+
 bool ChatBackground::adjustPaletteRequired() {
 	const auto usingThemeBackground = [&] {
 		return Data::IsThemeWallPaper(_paper)
@@ -928,13 +950,6 @@ bool ChatBackground::adjustPaletteRequired() {
 
 	// 禁用聊天壁纸时不画壁纸,再按壁纸主色染 msgServiceBg 等键只会串色。
 	if (ExtrasSettings::getInstance().disableChatBackground()) {
-		return false;
-	}
-	const auto &object = AreTestingTheme()
-		? GlobalApplying.data.object
-		: _themeObject;
-	// 内置主题的日期和服务提示跟随强调色，壁纸不能再次覆盖配色。
-	if (!object.cloud.id && IsEmbeddedTheme(object.pathAbsolute)) {
 		return false;
 	}
 	if (_editingTheme.has_value()) {
@@ -981,6 +996,10 @@ void ChatBackground::adjustPaletteUsingColors(
 }
 
 void ChatBackground::adjustPaletteUsingPaper(const QImage &prepared) {
+	if (embeddedServicePalette()) {
+		applyEmbeddedServiceColors();
+		return;
+	}
 	if (!adjustPaletteRequired()) {
 		return;
 	}
@@ -1428,6 +1447,20 @@ ChatBackground *Background() {
 
 bool IsEmbeddedTheme(const QString &path) {
 	return path.isEmpty() || path.startsWith(u":/gui/"_q);
+}
+
+Ui::ServiceColors EmbeddedServiceColors(
+		const Data::WallPaper &paper,
+		bool dark) {
+	// 主题自带背景是对应明暗的中性灰，默认壁纸只有浅灰一种。
+	const auto neutral = Data::IsThemeWallPaper(paper)
+		|| Data::details::IsTestingThemeWallPaper(paper)
+		|| (!dark
+			&& (Data::IsDefaultWallPaper(paper)
+				|| Data::details::IsTestingDefaultWallPaper(paper)));
+	return neutral
+		? Ui::FlatServiceColors(dark)
+		: Ui::CapsuleServiceColors(dark);
 }
 
 std::optional<EmbeddedType> CurrentEmbeddedType() {

@@ -316,6 +316,32 @@ QColor DefaultChatBackgroundColor(bool dark) {
 	return QColor(value, value, value);
 }
 
+ServiceColors FlatServiceColors(bool dark) {
+	return dark
+		? ServiceColors{
+			QColor(166, 171, 179),
+			QColor(255, 255, 255, 18),
+			QColor(255, 255, 255, 41),
+		}
+		: ServiceColors{
+			QColor(98, 104, 115),
+			QColor(0, 0, 0, 10),
+			QColor(0, 0, 0, 26),
+		};
+}
+
+ServiceColors CapsuleServiceColors(bool dark) {
+	auto bg = dark ? QColor(255, 255, 255) : QColor(0, 0, 0);
+	auto bgSelected = bg;
+	bg.setAlphaF(0.65);
+	bgSelected.setAlphaF(0.8);
+	return {
+		.fg = dark ? QColor(58, 58, 58) : QColor(255, 255, 255),
+		.bg = bg,
+		.bgSelected = bgSelected,
+	};
+}
+
 // Runs from background thread.
 ChatTheme::ChatTheme(ChatThemeDescriptor &&descriptor)
 : _key(descriptor.key)
