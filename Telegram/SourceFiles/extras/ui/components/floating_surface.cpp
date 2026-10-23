@@ -1,6 +1,5 @@
 #include "extras/ui/components/floating_surface.h"
 
-#include "extras/extras_settings.h"
 #include "extras/features/window_material/window_material.h"
 #include "extras/ui/components/floating_surface_host.h"
 #include "ui/chat/chat_theme_readability.h"
@@ -37,15 +36,11 @@ constexpr auto kHoverOpacity = 0.08;
 } // namespace
 
 QColor chatSurfaceBackground() {
-	return (ExtrasSettings::getInstance().disableChatBackground()
-		? st::windowBgOver
-		: st::historyComposeAreaBg)->c;
+	return st::historyComposeAreaBg->c;
 }
 
 QColor chatSurfaceBorder() {
-	return (ExtrasSettings::getInstance().disableChatBackground()
-		? st::filterInputBorderFg
-		: st::windowDividerFg)->c;
+	return st::windowDividerFg->c;
 }
 
 QColor hoverOverlay(bool dark) {

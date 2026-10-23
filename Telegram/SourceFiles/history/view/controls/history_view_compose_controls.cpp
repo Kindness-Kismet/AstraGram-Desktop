@@ -5837,7 +5837,6 @@ void ComposeControls::startRecordFromMenu(bool round) {
 
 void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
 	if (ComposeOuterMargin(_st)) {
-		const auto flat = ExtrasSettings::getInstance().disableChatBackground();
 		const auto halfStroke = st::lineWidth / 2.;
 		const auto outline = QRectF(full).adjusted(
 			halfStroke, halfStroke, -halfStroke, -halfStroke);
@@ -5845,9 +5844,8 @@ void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
 			qreal(MessageFieldCapsuleRadius()), outline.height() / 2.);
 		auto hq = PainterHighQualityEnabler(p);
 		p.setBrush(ExtrasFeatures::WindowMaterial::cardColor(
-			_wrap.get(), (flat ? st::windowBgOver : _st.bg)->c));
-		p.setPen(QPen((flat ? st::filterInputBorderFg : st::windowDividerFg)->c,
-			st::lineWidth));
+			_wrap.get(), _st.bg->c));
+		p.setPen(QPen(st::windowDividerFg->c, st::lineWidth));
 		p.drawRoundedRect(outline, radius, radius);
 	} else if (_st.radius > 0) {
 		auto hq = PainterHighQualityEnabler(p);
