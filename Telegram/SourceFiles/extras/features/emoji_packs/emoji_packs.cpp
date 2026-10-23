@@ -51,8 +51,7 @@ QNetworkAccessManager &networkManager() {
 			qApp,
 			&QCoreApplication::aboutToQuit,
 			qApp,
-			[] { Downloads.clear(); Manager = nullptr; },
-			Qt::UniqueConnection);
+			[] { Downloads.clear(); Manager = nullptr; });
 	}
 	return *Manager;
 }

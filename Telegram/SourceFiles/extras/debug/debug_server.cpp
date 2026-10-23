@@ -140,8 +140,7 @@ void StartServer() {
 		qApp,
 		&QCoreApplication::aboutToQuit,
 		qApp,
-		[] { Server = nullptr; },
-		Qt::UniqueConnection);
+		[] { Server = nullptr; });
 	LOG(("Debug server: listening on 127.0.0.1:%1").arg(kPort));
 }
 
