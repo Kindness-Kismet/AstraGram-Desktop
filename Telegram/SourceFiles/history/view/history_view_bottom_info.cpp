@@ -281,7 +281,7 @@ void BottomInfo::paint(
 	const auto inverted = (type != InfoDisplayType::Default);
 	const auto iconColor = p.pen().color();
 	const auto paintIcon = [&](const style::icon &icon, QPoint point) {
-		if (type == InfoDisplayType::Background) {
+		if (inverted) {
 			icon.paint(p, point, outerWidth, iconColor);
 			return;
 		}

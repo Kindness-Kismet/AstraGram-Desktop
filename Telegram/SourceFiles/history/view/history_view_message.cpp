@@ -105,7 +105,7 @@ constexpr auto kLineHeightAppearDuration = crl::time(100);
 constexpr auto kLineHeightAppearFinalDuration = crl::time(60);
 constexpr auto kMinWidthAppearDuration = crl::time(160);
 constexpr auto kInfoWidthAnimationDuration = crl::time(150);
-constexpr auto kBackgroundTimestampOpacity = 0.65;
+constexpr auto kMediaTimestampOpacity = 0.65;
 
 [[nodiscard]] int RevealLineRight(const Ui::Text::LineLayoutInfo &line) {
 	return line.left + line.width;
@@ -5538,7 +5538,6 @@ void Message::drawInfo(
 	p.setFont(st::msgDateFont);
 
 	const auto st = context.st;
-	const auto sti = context.imageStyle();
 	const auto stm = context.messageStyle();
 	int32 infoRight = right, infoBottom = bottom;
 	switch (type) {
@@ -5550,30 +5549,25 @@ void Message::drawInfo(
 	case InfoDisplayType::Image:
 		infoRight -= st::msgDateImgDelta + st::msgDateImgPadding.x();
 		infoBottom -= st::msgDateImgDelta + st::msgDateImgPadding.y();
-		p.setPen(st->msgDateImgFg());
 	break;
 	case InfoDisplayType::Background:
 		infoRight -= st::msgDateImgPadding.x();
 		infoBottom -= st::msgDateImgPadding.y();
-		p.setPen(st->dark() ? QColor(58, 58, 58) : QColor(255, 255, 255));
 	break;
 	}
 
 	const auto size = _bottomInfo.currentSize();
 	const auto dateX = infoRight - size.width();
 	const auto dateY = infoBottom - size.height();
-	if (type == InfoDisplayType::Image) {
-		const auto dateW = size.width() + 2 * st::msgDateImgPadding.x();
-		const auto dateH = size.height() + 2 * st::msgDateImgPadding.y();
-		Ui::FillRoundRect(p, dateX - st::msgDateImgPadding.x(), dateY - st::msgDateImgPadding.y(), dateW, dateH, sti->msgDateImgBg, sti->msgDateImgBgCorners);
-	} else if (type == InfoDisplayType::Background) {
+	if (type != InfoDisplayType::Default) {
+		p.setPen(st->dark() ? QColor(58, 58, 58) : QColor(255, 255, 255));
 		const auto dateW = size.width() + 2 * st::msgDateImgPadding.x();
 		const auto dateH = size.height() + 2 * st::msgDateImgPadding.y();
 		auto background = st->dark()
 			? QColor(255, 255, 255)
 			: QColor(0, 0, 0);
 		// 仅背景半透明，文字和状态图标保持固定颜色。
-		background.setAlphaF(kBackgroundTimestampOpacity);
+		background.setAlphaF(kMediaTimestampOpacity);
 		const auto rect = QRectF(
 			dateX - st::msgDateImgPadding.x(),
 			dateY - st::msgDateImgPadding.y(),
