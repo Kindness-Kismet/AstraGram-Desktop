@@ -143,6 +143,21 @@ struct MessageImageStyle {
 	style::icon historyPageEnlarge = { Qt::Uninitialized };
 };
 
+class MediaTimestampStyle final {
+public:
+	explicit MediaTimestampStyle(bool dark);
+
+	[[nodiscard]] const QColor &foreground() const {
+		return _foreground;
+	}
+	void paintBackground(QPainter &p, const QRect &rect) const;
+
+private:
+	QColor _foreground;
+	QColor _background;
+	mutable QPixmap _backgroundCaps;
+};
+
 struct ColorCollectible {
 	uint64 collectibleId = 0;
 	uint64 giftEmojiId = 0;
@@ -406,6 +421,9 @@ public:
 		bool outbg,
 		bool selected) const;
 	[[nodiscard]] const MessageImageStyle &imageStyle(bool selected) const;
+	[[nodiscard]] const MediaTimestampStyle &mediaTimestampStyle() const {
+		return _mediaTimestampStyles[_dark ? 1 : 0];
+	}
 
 	[[nodiscard]] int colorPatternIndex(uint8 colorIndex) const;
 	[[nodiscard]] int collectiblePatternIndex(
@@ -698,6 +716,10 @@ private:
 
 	mutable std::array<MessageStyle, 4> _messageStyles;
 	mutable std::array<MessageImageStyle, 2> _imageStyles;
+	std::array<MediaTimestampStyle, 2> _mediaTimestampStyles = {
+		MediaTimestampStyle(false),
+		MediaTimestampStyle(true),
+	};
 
 	mutable CornersPixmaps _msgBotKbOverBgAddCornersSmall;
 	mutable CornersPixmaps _msgBotKbOverBgAddCornersLarge;

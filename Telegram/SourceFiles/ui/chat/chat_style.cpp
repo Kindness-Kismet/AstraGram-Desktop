@@ -29,6 +29,8 @@ namespace Ui {
 
 namespace {
 
+constexpr auto kMediaTimestampOpacity = 0.65;
+
 void EnsureCorners(
 		CornersPixmaps &corners,
 		int radius,
@@ -80,6 +82,46 @@ void EnsurePreCache(
 }
 
 } // namespace
+
+MediaTimestampStyle::MediaTimestampStyle(bool dark)
+: _foreground(dark ? QColor(58, 58, 58) : QColor(255, 255, 255))
+, _background(dark ? QColor(255, 255, 255) : QColor(0, 0, 0)) {
+	// 背景透明度不影响文字和状态图标。
+	_background.setAlphaF(kMediaTimestampOpacity);
+}
+
+void MediaTimestampStyle::paintBackground(
+		QPainter &p,
+		const QRect &rect) const {
+	Expects(rect.width() >= rect.height());
+	const auto height = rect.height();
+	const auto ratio = style::DevicePixelRatio();
+	const auto size = QSize(2 * height, height) * ratio;
+	if (_backgroundCaps.size() != size
+		|| _backgroundCaps.devicePixelRatio() != ratio) {
+		_backgroundCaps = QPixmap(size);
+		_backgroundCaps.setDevicePixelRatio(ratio);
+		_backgroundCaps.fill(Qt::transparent);
+		auto q = QPainter(&_backgroundCaps);
+		auto hq = PainterHighQualityEnabler(q);
+		q.setPen(Qt::NoPen);
+		q.setBrush(_background);
+		q.drawRoundedRect(QRectF(0, 0, 2 * height, height), height / 2., height / 2.);
+	}
+	const auto leftCapWidth = height / 2;
+	const auto rightCapWidth = height - leftCapWidth;
+	p.drawPixmap(
+		QRectF(rect.x(), rect.y(), leftCapWidth, height),
+		_backgroundCaps,
+		QRectF(0, 0, leftCapWidth * ratio, height * ratio));
+	p.fillRect(
+		QRect(rect.x() + leftCapWidth, rect.y(), rect.width() - height, height),
+		_background);
+	p.drawPixmap(
+		QRectF(rect.x() + rect.width() - rightCapWidth, rect.y(), rightCapWidth, height),
+		_backgroundCaps,
+		QRectF((2 * height - rightCapWidth) * ratio, 0, rightCapWidth * ratio, height * ratio));
+}
 
 not_null<const MessageStyle*> ChatPaintContext::messageStyle() const {
 	return &st->messageStyle(outbg, selected());

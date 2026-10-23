@@ -105,7 +105,6 @@ constexpr auto kLineHeightAppearDuration = crl::time(100);
 constexpr auto kLineHeightAppearFinalDuration = crl::time(60);
 constexpr auto kMinWidthAppearDuration = crl::time(160);
 constexpr auto kInfoWidthAnimationDuration = crl::time(150);
-constexpr auto kMediaTimestampOpacity = 0.65;
 
 [[nodiscard]] int RevealLineRight(const Ui::Text::LineLayoutInfo &line) {
 	return line.left + line.width;
@@ -5560,23 +5559,15 @@ void Message::drawInfo(
 	const auto dateX = infoRight - size.width();
 	const auto dateY = infoBottom - size.height();
 	if (type != InfoDisplayType::Default) {
-		p.setPen(st->dark() ? QColor(58, 58, 58) : QColor(255, 255, 255));
+		const auto &timestamp = st->mediaTimestampStyle();
+		p.setPen(timestamp.foreground());
 		const auto dateW = size.width() + 2 * st::msgDateImgPadding.x();
 		const auto dateH = size.height() + 2 * st::msgDateImgPadding.y();
-		auto background = st->dark()
-			? QColor(255, 255, 255)
-			: QColor(0, 0, 0);
-		// 仅背景半透明，文字和状态图标保持固定颜色。
-		background.setAlphaF(kMediaTimestampOpacity);
-		const auto rect = QRectF(
+		timestamp.paintBackground(p, QRect(
 			dateX - st::msgDateImgPadding.x(),
 			dateY - st::msgDateImgPadding.y(),
 			dateW,
-			dateH);
-		auto path = QPainterPath();
-		path.addRoundedRect(rect, dateH / 2., dateH / 2.);
-		auto hq = PainterHighQualityEnabler(p);
-		p.fillPath(path, background);
+			dateH));
 	}
 	_bottomInfo.paint(
 		p,
