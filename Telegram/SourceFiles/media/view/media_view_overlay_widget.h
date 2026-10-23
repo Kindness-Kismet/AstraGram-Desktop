@@ -928,6 +928,7 @@ private:
 	bool _touchRightButton = false;
 	base::Timer _touchTimer;
 	QPoint _touchStart;
+	base::Timer _closeByClickTimer;
 
 	QString _saveMsgFilename;
 	QRect _saveMsg;

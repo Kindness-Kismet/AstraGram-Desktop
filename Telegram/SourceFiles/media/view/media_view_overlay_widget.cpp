@@ -770,6 +770,8 @@ OverlayWidget::OverlayWidget()
 		startSpeedBoost();
 	});
 
+	_closeByClickTimer.setCallback([=] { close(); });
+
 	_frameStepThrottle.setCallback([=] {
 		flushPendingFrameStep();
 	});
@@ -8915,6 +8917,7 @@ void OverlayWidget::handleMousePress(
 		QPoint position,
 		Qt::MouseButton button) {
 	updateOver(position);
+	_closeByClickTimer.cancel();
 	if (_menu || !_receiveMouse) {
 		return;
 	}
@@ -9011,6 +9014,7 @@ bool OverlayWidget::handleDoubleClick(
 	if (button == Qt::LeftButton
 		&& _over == Over::None
 		&& zoomsByDoubleClickAt(position)) {
+		_closeByClickTimer.cancel();
 		toggleZoomAt(position);
 		return true;
 	}
@@ -9623,9 +9627,29 @@ void OverlayWidget::handleMouseRelease(
 			}
 			_dragging = 0;
 			setCursor(style::cur_default);
-		} else if (_recognition.hasSelection()) {
-			// 点击空白只清除识别选区，不关闭查看器。
-			clearRecognitionSelection();
+		} else if (!_windowed
+			&& position.y() > (lightboxStyle()
+				? (_minUsedTop + ExtrasFeatures::MediaViewer::topBarHeight())
+				: st::mediaviewTitleButton.height)
+			&& (position - _lastAction).manhattanLength()
+				>= st::mediaviewDeltaFromLastAction) {
+			if (_recognition.hasSelection()) {
+				clearRecognitionSelection();
+			} else if (_themePreviewShown) {
+				if (!_themePreviewRect.contains(position)) {
+					close();
+				}
+			} else if (!_document
+				|| documentContentShown()
+				|| !documentBubbleShown()
+				|| !_docRect.contains(position)) {
+				if (zoomsByDoubleClickAt(position)) {
+					_closeByClickTimer.callOnce(
+						QApplication::doubleClickInterval());
+				} else if (!_stories || _stories->closeByClickAt(position)) {
+					close();
+				}
+			}
 		}
 		_pressed = false;
 	}
@@ -9921,6 +9945,7 @@ Window::SessionController *OverlayWidget::findWindow(bool switchTo) const {
 // #TODO unite and check
 void OverlayWidget::clearBeforeHide() {
 	Ui::Tooltip::Hide();
+	_closeByClickTimer.cancel();
 	ExtrasState::disableGhostModeOnStoryClose(_storiesSession);
 	checkSingleViewMediaBurn();
 	_message = nullptr;
