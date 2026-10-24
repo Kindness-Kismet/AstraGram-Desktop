@@ -83,7 +83,7 @@ struct Context {
 }
 
 [[nodiscard]] QString timerText(int ttl) {
-	return ttl ? Ui::FormatTTL(ttl) : tr::extras_SecretChatTimerOff(tr::now);
+	return ttl ? Ui::FormatMuteFor(ttl) : tr::extras_SecretChatTimerOff(tr::now);
 }
 
 [[nodiscard]] bool activeChat(const Context &context, int chatId) {

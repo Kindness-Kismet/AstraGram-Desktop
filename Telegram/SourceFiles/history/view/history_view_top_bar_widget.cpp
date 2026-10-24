@@ -1872,7 +1872,7 @@ void TopBarWidget::updateOnlineDisplay() {
 			: chat->state == Extras::SecretChats::State::Active
 			? tr::extras_SecretChatReady(tr::now)
 			: tr::extras_SecretChatPending(tr::now);
-		if (chat && chat->ttl) { text += u" · "_q + Ui::FormatTTL(chat->ttl); }
+		if (chat && chat->ttl) { text += u" · "_q + Ui::FormatMuteFor(chat->ttl); }
 	} else if (const auto user = peer->asUser()) {
 		if (session().supportMode()
 			&& !session().supportHelper().infoCurrent(user).text.empty()) {
