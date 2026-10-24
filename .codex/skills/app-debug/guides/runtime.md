@@ -13,6 +13,7 @@
 | `window.resize` | `[width height]` | 报告窗口尺寸与最大化状态；给出尺寸时按逻辑像素调整窗口。 |
 | `window.maximize` | `true\|false` | 最大化或还原窗口。 |
 | `window.activation` | `active\|inactive` | 只切换 Qt 内部的焦点窗口与应用激活状态，系统前台不变。 |
+| `window.tray` | `hide\|show` | 调用真实托盘流程，隐藏或恢复最近活动的主窗口。 |
 | `anim.speed` | `[speed]` | 查询或临时调整过渡动画速度，范围 0.01 至 10，1 为正常；只存内存，重启恢复。 |
 
 `app.quit` 一般不直接调，`app.stop` 内部先发它。
@@ -42,6 +43,9 @@ python .claude/skills/app-debug/scripts/cli.py window.maximize true + screenshot
 
 `window.activation` 用来验证依赖“应用在前台”的逻辑（已读、阅读时长统计、暂停与恢复）。
 它注入 Qt 的窗口激活事件，用户真正点击或切走窗口时会被系统事件覆盖；返回的 `applicationActive` 为应用级激活状态。
+
+`window.tray hide` 要求托盘已启用；`window.tray show` 会显示并激活窗口。
+验证关闭到托盘时先用 `window.close`，再用 `window.tray show` 恢复，检查原对话、滚动位置和草稿是否保留。
 
 `anim.speed` 用来观察过渡动画：`0.1` 放慢十倍，`2` 加快一倍。它缩放全部
 `Ui::Animations::Simple` 动画（页面滑动、弹出菜单、开关、渐隐渐显、点击波纹），

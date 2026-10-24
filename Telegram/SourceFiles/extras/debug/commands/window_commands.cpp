@@ -3,6 +3,9 @@
 
 #include "extras/features/window_material/window_material.h"
 
+#include "core/application.h"
+#include "window/window_controller.h"
+
 #include <QGuiApplication>
 #include <QWindow>
 #include <qpa/qwindowsysteminterface.h>
@@ -112,6 +115,26 @@ void showWithoutActivating(not_null<QWidget*> window, bool maximized) {
 		: Result::Err(u"window close was rejected"_q);
 }
 
+[[nodiscard]] Result windowTray(const QStringList &args) {
+	const auto action = args.size() == 1 ? args.front() : QString();
+	if (action != u"hide"_q && action != u"show"_q) {
+		return Result::Err(u"usage: window.tray <hide|show>"_q);
+	}
+	const auto controller = Core::App().activeWindow();
+	if (!controller) {
+		return Result::Err(u"no active window"_q);
+	}
+	const auto window = controller->widget();
+	if (action == u"hide"_q) {
+		if (!window->minimizeToTray()) {
+			return Result::Err(u"window could not minimize to tray"_q);
+		}
+	} else {
+		window->showFromTray();
+	}
+	return Result::Ok(Compact(WindowState(window)));
+}
+
 } // namespace
 
 const HandlerMap &WindowHandlers() {
@@ -120,6 +143,7 @@ const HandlerMap &WindowHandlers() {
 		{ u"window.maximize"_q, &WindowMaximize },
 		{ u"window.activation"_q, &windowActivation },
 		{ u"window.close"_q, &closeWindow },
+		{ u"window.tray"_q, &windowTray },
 	};
 	return result;
 }
