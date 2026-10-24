@@ -732,7 +732,13 @@ QMargins MessageFieldCenteringMargins(
 		MessageFieldMinHeight() - lineHeight - documentMargins
 			- fieldStyle.textMargins.top() - fieldStyle.textMargins.bottom()
 			- 2 * scaledMargin);
-	const auto top = remaining / 2;
+	// 固定行高把基线放在行高 4/5 处，按大写字母中线而非行框居中。
+	const auto &font = fieldStyle.style.font;
+	const auto baseline = lineHeight * 4. / 5.
+		- std::max(font->fleading.toReal(), 0.);
+	const auto glyphCenter = baseline - font->metrics().capHeight() / 2.;
+	const auto shift = int(base::SafeRound(glyphCenter - lineHeight / 2.));
+	const auto top = std::clamp(remaining / 2 - shift, 0, remaining);
 	return { 0, top, 0, remaining - top };
 }
 
