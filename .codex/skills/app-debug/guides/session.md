@@ -37,10 +37,15 @@
 给所有自绘通知窗口发合成的进入／离开事件，模拟鼠标悬停，不移动真实光标。`on` 之后右下角的回复文字按钮和右上角的关闭按钮淡入，
 `off` 恢复；配合 `screenshot.take --notification` 检查悬停态。悬停期间通知不会自动消失。
 
-## `notification.click <reply|close>`
+## `notification.click <open|reply|close>`
 
-给所有自绘通知中可见的按钮投递合成点击（按真实的进入、按下、抬起事件），`reply` 展开回复输入框，
+给所有自绘通知投递合成点击（按真实的进入、按下、抬起事件），`open` 点击通知打开对应对话，`reply` 展开回复输入框，
 `close` 关闭该通知。先用 `notification.hover on` 显示按钮；展开回复后仍可关闭通知，隐藏或不可回复时拒绝点击回复按钮。
+
+## `notification.native-activate <arguments> [replyText]`
+
+仅 Windows 开发版可用，必须先启用原生通知。把通知的激活参数送进正式激活队列，复用账号解析、回复、已读及重启后的草稿恢复。
+参数取实际系统通知的 `launch` 或动作参数；返回 `submitted` 只代表入队，须查询消息、草稿及当前账号确认最终结果。
 
 ## `chat.list [filter]`
 

@@ -9,10 +9,15 @@
 #include "extras/debug/debug_login.h"
 #include "extras/features/secret_chats/secret_chat_files.h"
 #include "extras/features/secret_chats/secret_chat_manager.h"
+#include "extras/features/secret_chats/secret_chat_dialog.h"
 #include "extras/ui/secret_chat_box.h"
+#include "history/history.h"
+#include "history/history_item.h"
 #include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
+#include "window/notifications_manager.h"
+#include "window/notifications_utilities.h"
 
 #include <QtCore/QCryptographicHash>
 
@@ -80,6 +85,7 @@ Result list(const QStringList &args) {
 	auto chats = Json::array();
 	for (const auto &chat : session->secretChats().chats()) {
 		const auto user = session->data().userLoaded(chat.userId);
+		const auto dialog = session->secretChats().dialog(chat.id);
 		chats.push_back({
 			{ "chatId", chat.id }, { "userId", chat.userId.bare },
 			{ "name", user ? user->name().toStdString() : std::string() },
@@ -88,6 +94,9 @@ Result list(const QStringList &args) {
 			{ "layer", chat.layer },
 			{ "verification", chat.verification.toHex().toStdString() },
 			{ "error", chat.error.toStdString() },
+			{ "unreadCount", dialog ? dialog->chatListUnreadState().messages : 0 },
+			{ "muted", dialog && dialog->muted() },
+			{ "notificationPending", dialog && dialog->owningHistory()->hasNotification() },
 		});
 	}
 	return Result::Ok(Compact(Json{
@@ -133,6 +142,36 @@ Result messages(const QStringList &args) {
 		result.push_back(std::move(entry));
 	}
 	return Result::Ok(Compact(result));
+}
+
+Result notification(const QStringList &args) {
+	if (args.size() != 3) {
+		return Result::Err(u"usage: secret.notification <accountUserId> <chatId> <messageId>"_q);
+	}
+	const auto session = specifiedSession(args[0]);
+	const auto chatId = specifiedChat(args[1]);
+	const auto dialog = session ? session->secretChats().dialog(chatId) : nullptr;
+	const auto history = dialog ? dialog->owningHistory().get() : nullptr;
+	const auto item = history
+		? session->data().message(history->peer, dialog->localId(args[2].toLongLong()))
+		: nullptr;
+	if (!item) {
+		return Result::Err(u"unknown message in the specified account"_q);
+	}
+	const auto &manager = Core::App().notifications().manager();
+	const auto options = manager.getNotificationOptions(item, Data::ItemNotificationType::Message);
+	return Result::Ok(Compact(Json{
+		{ "sessionId", session->uniqueId() },
+		{ "peerId", history->peer->id.value },
+		{ "messageId", Window::Notifications::NotificationMessageId(item).bare },
+		{ "localMessageId", item->id.bare },
+		{ "managerType", int(manager.type()) },
+		{ "skipToast", manager.skipToast() },
+		{ "hideNameAndPhoto", bool(options.hideNameAndPhoto) },
+		{ "hideMessageText", bool(options.hideMessageText) },
+		{ "hideMarkAsRead", bool(options.hideMarkAsRead) },
+		{ "hideReplyButton", bool(options.hideReplyButton) },
+	}));
 }
 
 Result create(const QStringList &args) {
@@ -409,6 +448,7 @@ Result destroy(const QStringList &args) { return action(args, u"destroy"_q); }
 const HandlerMap &secretChatHandlers() {
 	static const auto result = HandlerMap{
 		{ u"secret.list"_q, &list }, { u"secret.messages"_q, &messages },
+		{ u"secret.notification"_q, &notification },
 		{ u"secret.create"_q, &create }, { u"secret.open"_q, &open },
 		{ u"secret.send"_q, &send }, { u"secret.sample"_q, &sample },
 		{ u"secret.reply"_q, &reply }, { u"secret.draft"_q, &draft },

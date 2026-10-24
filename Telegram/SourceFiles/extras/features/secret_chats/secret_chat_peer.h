@@ -11,6 +11,7 @@ public:
 	Peer(not_null<Data::Session*> owner, PeerId id);
 	void setUser(not_null<UserData*> user);
 	[[nodiscard]] not_null<UserData*> user() const;
+	[[nodiscard]] UserData *userOrNull() const { return _user; }
 	[[nodiscard]] int chatId() const;
 	[[nodiscard]] bool canSend() const;
 

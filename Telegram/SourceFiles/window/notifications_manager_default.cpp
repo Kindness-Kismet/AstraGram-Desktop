@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/notifications_manager_default.h"
+#include "window/notifications_utilities.h"
+#include "core/core_screenshot_protection.h"
 
 #include "platform/platform_notifications_manager.h"
 #include "platform/platform_specific.h"
@@ -1327,6 +1329,7 @@ void Notification::showReplyField() {
 		st::notifyReplyArea,
 		Ui::InputField::Mode::MultiLine,
 		tr::lng_message_ph());
+	_replyArea->setObjectName(u"notification.compose"_q);
 	_replyArea->resize(
 		width()
 			- padding.left()
@@ -1341,17 +1344,22 @@ void Notification::showReplyField() {
 		Data::PremiumLimits(&_item->history()->session()).messageLengthCurrent());
 	_replyArea->setSubmitSettings(Ui::InputField::SubmitSettings::Both);
 	const auto session = &_item->history()->session();
+	const auto peer = _item->history()->peer;
+	if (peer->isSecretChat()) {
+		Core::App().screenshotProtection().addContentReason(
+			this, rpl::single(true), _replyArea->lifetime());
+	}
 	InitMessageFieldHandlers({
 		.session = session,
 		.field = _replyArea.data(),
+		.allowTypedMarkdown = !peer->isSecretChat(),
 	});
-	const auto peer = _item->history()->peer;
 	Ui::Emoji::SuggestionsController::Init(
 		this,
 		_replyArea.data(),
 		session,
 		{
-			.suggestCustomEmoji = true,
+			.suggestCustomEmoji = !peer->isSecretChat(),
 			.allowCustomWithoutPremium = [=](
 					not_null<DocumentData*> emoji) {
 				return Data::AllowEmojiWithoutPremium(peer, emoji);
@@ -1372,6 +1380,7 @@ void Notification::showReplyField() {
 	}, _replyArea->lifetime());
 
 	_replySend.create(this, st::notifySendReply);
+	_replySend->setObjectName(u"notification.send"_q);
 	_replySend->moveToRight(padding.right(), top);
 	_replySend->show();
 	_replySend->setClickedCallback([this] { sendReply(); });
@@ -1400,7 +1409,7 @@ Notifications::Manager::NotificationId Notification::myId() const {
 		.sessionId = _history->session().uniqueId(),
 		.peerId = _history->peer->id,
 		.topicRootId = _topicRootId,
-	}, .msgId = _item ? _item->id : ShowAtUnreadMsgId };
+	}, .msgId = _item ? NotificationMessageId(_item) : ShowAtUnreadMsgId };
 }
 
 void Notification::changeHeight(int newHeight) {

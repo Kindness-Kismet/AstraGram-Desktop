@@ -44,6 +44,8 @@ OFFLINE_START = None
 GENERIC_COMMANDS = {
     "secret.list": "查询指定账号的加密对话、握手状态和密钥核对摘要：<账号用户编号>",
     "secret.messages": "查询加密消息编号、发送状态和正文摘要，不输出正文：<账号用户编号> <加密对话编号>",
+    "secret.notification": "查询指定加密消息的通知身份和隐藏选项，不输出正文：<账号用户编号> <加密对话编号> <消息编号>",
+    "notification.native-activate": "在 Windows 开发版中复用系统通知激活队列：<激活参数> [回复文字]；异步结果通过消息和草稿查询确认",
     "secret.create": "向明确指定的联系人新建加密对话：<账号用户编号> <目标用户编号>",
     "secret.open": "打开指定账号的加密对话：<账号用户编号> <加密对话编号>",
     "secret.send": "向指定加密对话发送加密文字：<账号用户编号> <加密对话编号> <文字>",
@@ -356,8 +358,8 @@ def register_commands(sub) -> None:
     command.add_argument("--peer", metavar="USER_ID", help="发送通知的模拟用户编号，默认 830000001")
     command = sub.add_parser("notification.hover", help="给自绘通知窗口发合成的进入／离开事件，模拟鼠标悬停")
     command.add_argument("state", choices=["on", "off"], help="on 进入，off 离开")
-    command = sub.add_parser("notification.click", help="点击自绘通知中可见的按钮：reply 展开回复输入框，close 关闭")
-    command.add_argument("button", choices=["reply", "close"], help="要点击的按钮")
+    command = sub.add_parser("notification.click", help="点击自绘通知：open 打开对话，reply 展开回复输入框，close 关闭")
+    command.add_argument("button", choices=["open", "reply", "close"], help="要点击的通知动作")
     command = sub.add_parser("chat.open", help="打开指定对话并清空导航栈；参数取 chat.list 的 peerId，缺省 Saved Messages")
     command.add_argument("peerId", nargs="?")
     command.add_argument("msgId", nargs="?", help="定位到的消息编号，缺省为对话末尾")

@@ -35,6 +35,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat_helpers.h"
 
 #include <QtCore/QOperatingSystemVersion>
+#include <QtCore/QCryptographicHash>
 
 #include <Shobjidl.h>
 #include <shellapi.h>
@@ -553,7 +554,7 @@ void Manager::Private::clearFromItem(not_null<HistoryItem*> item) {
 	if (i == _notifications.cend()) {
 		return;
 	}
-	const auto j = i->second.find(item->id);
+	const auto j = i->second.find(Window::Notifications::NotificationMessageId(item));
 	if (j == end(i->second)) {
 		return;
 	}
@@ -660,12 +661,19 @@ void Manager::Private::afterNotificationActivated(
 
 void Manager::Private::clearNotification(NotificationId id) {
 	auto i = _notifications.find(id.contextId);
-	if (i != _notifications.cend()) {
-		i->second.remove(id.msgId);
-		if (i->second.empty()) {
-			_notifications.erase(i);
-		}
+	if (i == _notifications.cend()) {
+		return;
 	}
+	const auto j = i->second.find(id.msgId);
+	if (j == i->second.end()) {
+		return;
+	}
+	const auto taken = std::exchange(j->second, nullptr);
+	i->second.erase(j);
+	if (i->second.empty()) {
+		_notifications.erase(i);
+	}
+	tryHide(taken);
 }
 
 bool Manager::Private::handleActivation(const ToastActivation &activation) {
@@ -829,6 +837,13 @@ bool Manager::Private::showNotificationInTryCatch(
 	};
 
 	auto toast = ToastNotification(toastXml);
+	const auto hashId = [](const QString &value) {
+		return QString::fromLatin1(QCryptographicHash::hash(
+			value.toUtf8(), QCryptographicHash::Sha256).toHex().left(16)).toStdWString();
+	};
+	toast.Tag(hashId(idString));
+	toast.Group(hashId(u"%1:%2:%3:%4"_q.arg(key.sessionId)
+		.arg(key.peerId.value).arg(key.topicRootId.bare).arg(key.monoforumPeerId.value)));
 	const auto token1 = toast.Activated([=](
 			const ToastNotification &sender,
 			const winrt::Windows::Foundation::IInspectable &object) {
@@ -919,6 +934,10 @@ bool Manager::Private::showNotificationInTryCatch(
 void Manager::Private::tryHide(const ToastNotification &notification) {
 	base::WinRT::Try([&] {
 		_notifier.Hide(notification);
+	});
+	base::WinRT::Try([&] {
+		ToastNotificationManager::History().Remove(
+			notification.Tag(), notification.Group(), AppUserModelId::Id());
 	});
 }
 

@@ -5,6 +5,7 @@
 #include "data/data_changes.h"
 #include "data/data_document.h"
 #include "data/data_document_media.h"
+#include "data/notify/data_notify_settings.h"
 #include "extras/features/secret_chats/secret_chat_peer.h"
 #include "history/history.h"
 #include "history/history_item.h"
@@ -15,6 +16,8 @@
 #include "dialogs/ui/dialogs_layout.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
+#include "window/notifications_manager.h"
+#include "window/notifications_utilities.h"
 #include "ui/painter.h"
 #include "ui/text/text_utilities.h"
 #include "styles/style_dialogs.h"
@@ -37,6 +40,25 @@ Dialog::Dialog(not_null<Main::Session*> session, Chat chat)
 		_nameSortKey = TextUtilities::NameSortKey(_user->name());
 		updateChatListEntry();
 	}, _lifetime);
+	const auto updateMuted = [=] {
+		const auto wasUnread = chatListUnreadState();
+		setMuted(owner().notifySettings().isMuted(_user));
+		_history->setMuted(muted());
+		if (muted()) {
+			Core::App().notifications().clearIncomingFromHistory(_history);
+		}
+		if (inChatList()) {
+			notifyUnreadStateChange(wasUnread);
+		}
+		updateChatListEntry();
+	};
+	session->changes().peerUpdates(Data::PeerUpdate::Flag::Notifications
+	) | rpl::filter([=](const Data::PeerUpdate &update) {
+		return update.peer == _user;
+	}) | rpl::on_next(updateMuted, _lifetime);
+	owner().notifySettings().defaultUpdates(_user
+	) | rpl::on_next(updateMuted, _lifetime);
+	updateMuted();
 }
 
 Dialog::~Dialog() {
@@ -55,6 +77,7 @@ Dialog::~Dialog() {
 
 void Dialog::refresh(const Chat &chat, const QVector<Message> &messages) {
 	const auto wasUnread = chatListUnreadState();
+	auto notifications = std::vector<FullMsgId>();
 	_chat = chat;
 	_hasMessages = !messages.isEmpty();
 	for (const auto &message : messages) {
@@ -68,6 +91,9 @@ void Dialog::refresh(const Chat &chat, const QVector<Message> &messages) {
 	for (const auto &message : messages) {
 		auto &rendered = _rendered[message.id];
 		auto item = owner().message(_history->peer->id, rendered.id);
+		const auto becameRead = item
+			&& rendered.message.delivery != Delivery::Read
+			&& message.delivery == Delivery::Read;
 		const auto text = message.unsupported ? tr::extras_SecretChatUnsupported(tr::now)
 			: message.screenshot ? tr::extras_SecretChatScreenshotNotice(tr::now) : message.text;
 		if (!item) {
@@ -123,7 +149,12 @@ void Dialog::refresh(const Chat &chat, const QVector<Message> &messages) {
 			if (message.replyTo) {
 				addedReplies.push_back(item);
 			}
+			// 本地恢复不重复提醒，只将新收件交给普通通知队列。
+			if (_initialized && !message.outgoing && message.delivery != Delivery::Read) {
+				notifications.push_back(item->fullId());
+			}
 		}
+		Window::Notifications::SetNotificationMessageId(item, message.id);
 		rendered.message = message;
 		if (rendered.document && message.outgoing) {
 			if (message.delivery == Delivery::Failed) {
@@ -137,6 +168,9 @@ void Dialog::refresh(const Chat &chat, const QVector<Message> &messages) {
 			message.delivery == Delivery::Pending,
 			message.delivery == Delivery::Failed,
 			message.delivery != Delivery::Read, message.ttl);
+		if (becameRead) {
+			Core::App().notifications().clearFromItem(item);
+		}
 		_messageIds.push_back(item->fullId());
 	}
 	auto removed = std::vector<not_null<HistoryItem*>>();
@@ -200,7 +234,24 @@ void Dialog::refresh(const Chat &chat, const QVector<Message> &messages) {
 		: messages.back().date);
 	updateChatListExistence();
 	updateChatListEntry();
+	_initialized = true;
 	_historyChanges.fire({});
+	if (_chat.state != State::Active) {
+		Core::App().notifications().clearFromHistory(_history);
+		return;
+	}
+	for (const auto &id : notifications) {
+		const auto item = owner().message(id);
+		if (!item || !item->showNotification()) {
+			continue;
+		}
+		const auto notification = Data::ItemNotification{
+			.item = item,
+			.type = Data::ItemNotificationType::Message,
+		};
+		item->notificationThread()->pushNotification(notification);
+		Core::App().notifications().schedule(notification);
+	}
 }
 
 not_null<History*> Dialog::owningHistory() { return _history; }
@@ -276,7 +327,13 @@ HistoryItem *Dialog::chatListMessage() const {
 }
 
 Dialogs::UnreadState Dialog::chatListUnreadState() const {
-	return { .messages = _unreadCount, .chats = int(_unreadCount > 0), .known = true };
+	return {
+		.messages = _unreadCount,
+		.messagesMuted = muted() ? _unreadCount : 0,
+		.chats = int(_unreadCount > 0),
+		.chatsMuted = int(muted() && _unreadCount > 0),
+		.known = true,
+	};
 }
 
 Dialogs::BadgesState Dialog::chatListBadgesState() const {

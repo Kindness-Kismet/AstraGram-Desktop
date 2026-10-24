@@ -22,15 +22,25 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_forum_topic.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
+#include "extras/features/secret_chats/secret_chat_peer.h"
 #include "main/main_session.h"
 #include "history/history.h"
-#include "main/main_session.h"
 #include "window/notifications_manager.h"
 
 namespace Data {
 namespace {
 
 constexpr auto kMaxNotifyCheckDelay = 24 * 3600 * crl::time(1000);
+
+[[nodiscard]] not_null<const PeerData*> NotificationPeer(
+		not_null<const PeerData*> peer) {
+	if (!peer->isSecretChat()) {
+		return peer;
+	}
+	const auto user = static_cast<const Extras::SecretChats::Peer*>(peer.get())->userOrNull();
+	// 加密历史构造时尚未绑定联系人，先使用私聊默认设置。
+	return user ? not_null<const PeerData*>(user) : peer;
+}
 
 [[nodiscard]] bool MutedFromUntil(TimeId until, crl::time *changesIn) {
 	const auto now = base::unixtime::now();
@@ -69,7 +79,7 @@ constexpr auto kMaxNotifyCheckDelay = 24 * 3600 * crl::time(1000);
 } // namespace
 
 DefaultNotify DefaultNotifyType(not_null<const PeerData*> peer) {
-	return peer->isUser()
+	return (peer->isUser() || peer->isSecretChat())
 		? DefaultNotify::User
 		: (peer->isChat() || peer->isMegagroup())
 		? DefaultNotify::Group
@@ -91,6 +101,12 @@ NotifySettings::NotifySettings(not_null<Session*> owner)
 }
 
 void NotifySettings::request(not_null<PeerData*> peer) {
+	if (peer->isSecretChat()) {
+		if (const auto user = static_cast<Extras::SecretChats::Peer*>(peer.get())->userOrNull()) {
+			request(user);
+		}
+		return;
+	}
 	if (peer->notify().settingsUnknown()) {
 		const auto channel = peer->asChannel();
 		peer->session().api().requestNotifySettings(
@@ -541,12 +557,13 @@ bool NotifySettings::soundUnknown(not_null<const Thread*> thread) const {
 	const auto topic = thread->asTopic();
 	return (topic && topic->notify().settingsUnknown())
 		|| ((!topic || !topic->notify().sound().has_value())
-			&& soundUnknown(topic->peer()));
+			&& soundUnknown(thread->peer()));
 }
 
 bool NotifySettings::isMuted(
 		not_null<const PeerData*> peer,
 		crl::time *changesIn) const {
+	peer = NotificationPeer(peer);
 	if (const auto until = peer->notify().muteUntil()) {
 		return MutedFromUntil(*until, changesIn);
 	} else if (const auto community = CommunityFallback(peer)) {
@@ -565,6 +582,7 @@ bool NotifySettings::isMuted(not_null<const PeerData*> peer) const {
 }
 
 bool NotifySettings::silentPosts(not_null<const PeerData*> peer) const {
+	peer = NotificationPeer(peer);
 	if (const auto silent = peer->notify().silentPosts()) {
 		return *silent;
 	} else if (const auto community = CommunityFallback(peer)) {
@@ -579,6 +597,7 @@ bool NotifySettings::silentPosts(not_null<const PeerData*> peer) const {
 }
 
 NotifySound NotifySettings::sound(not_null<const PeerData*> peer) const {
+	peer = NotificationPeer(peer);
 	// Explicitly ignore a notify sound for Saved Messages
 	// to follow the global notify sound.
 	if (const auto sound = peer->notify().sound(); !peer->isSelf() && sound) {
@@ -595,6 +614,7 @@ NotifySound NotifySettings::sound(not_null<const PeerData*> peer) const {
 }
 
 bool NotifySettings::muteUnknown(not_null<const PeerData*> peer) const {
+	peer = NotificationPeer(peer);
 	if (peer->notify().settingsUnknown()) {
 		return true;
 	} else if (peer->notify().muteUntil().has_value()) {
@@ -609,6 +629,7 @@ bool NotifySettings::muteUnknown(not_null<const PeerData*> peer) const {
 
 bool NotifySettings::silentPostsUnknown(
 		not_null<const PeerData*> peer) const {
+	peer = NotificationPeer(peer);
 	if (peer->notify().settingsUnknown()) {
 		return true;
 	} else if (peer->notify().silentPosts().has_value()) {
@@ -622,6 +643,7 @@ bool NotifySettings::silentPostsUnknown(
 }
 
 bool NotifySettings::soundUnknown(not_null<const PeerData*> peer) const {
+	peer = NotificationPeer(peer);
 	if (peer->notify().settingsUnknown()) {
 		return true;
 	} else if (peer->notify().sound().has_value()) {
@@ -653,11 +675,7 @@ rpl::producer<> NotifySettings::defaultUpdates(DefaultNotify type) const {
 
 rpl::producer<> NotifySettings::defaultUpdates(
 		not_null<const PeerData*> peer) const {
-	return defaultUpdates(peer->isUser()
-		? DefaultNotify::User
-		: (peer->isChat() || peer->isMegagroup())
-		? DefaultNotify::Group
-		: DefaultNotify::Broadcast);
+	return defaultUpdates(DefaultNotifyType(peer));
 }
 
 void NotifySettings::loadExceptions() {

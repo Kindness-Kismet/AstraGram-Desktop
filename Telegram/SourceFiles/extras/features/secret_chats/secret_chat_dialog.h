@@ -60,6 +60,7 @@ private:
 	QString _nameSortKey;
 	int _unreadCount = 0;
 	bool _hasMessages = false;
+	bool _initialized = false;
 	struct Rendered {
 		MsgId id;
 		Message message;

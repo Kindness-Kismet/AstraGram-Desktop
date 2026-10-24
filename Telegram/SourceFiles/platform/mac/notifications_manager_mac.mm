@@ -579,7 +579,7 @@ void Manager::Private::clearFromItem(not_null<HistoryItem*> item) {
 		.peerId = item->history()->peer->id,
 		.topicRootId = item->topicRootId(),
 		.monoforumPeerId = item->sublistPeerId(),
-	}, item->id });
+	}, Window::Notifications::NotificationMessageId(item) });
 }
 
 void Manager::Private::clearFromTopic(not_null<Data::ForumTopic*> topic) {

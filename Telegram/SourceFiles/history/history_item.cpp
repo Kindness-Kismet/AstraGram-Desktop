@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_item.h"
+#include "window/notifications_utilities.h"
 #include "extras/data/conversation_cache.h"
 
 #include "api/api_premium.h"
@@ -1023,6 +1024,9 @@ HistoryItem::~HistoryItem() {
 	clearDependencyMessage();
 	applyTTL(0);
 	unarmMediaDestroy();
+	if (_history->peer->isSecretChat()) {
+		Window::Notifications::SetNotificationMessageId(this, 0);
+	}
 }
 
 TimeId HistoryItem::date() const {

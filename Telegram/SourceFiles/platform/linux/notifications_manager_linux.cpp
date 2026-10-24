@@ -863,7 +863,7 @@ void Manager::Private::clearFromItem(not_null<HistoryItem*> item) {
 		.monoforumPeerId = item->sublistPeerId(),
 	});
 	if (i != _notifications.cend()
-			&& i->second.remove(item->id)
+			&& i->second.remove(Window::Notifications::NotificationMessageId(item))
 			&& i->second.empty()) {
 		_notifications.erase(i);
 	}
