@@ -10,6 +10,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_pts_waiter.h"
 #include "base/timer.h"
 
+#include <deque>
+
 class ApiWrap;
 class History;
 
@@ -118,6 +120,7 @@ private:
 		const MTPVector<MTPUpdate> &other);
 	void stateDone(const MTPupdates_State &state);
 	void checkpointSecretRecovery();
+	void replaySecretUpdates();
 	void setState(int32 pts, int32 date, int32 qts, int32 seq);
 	void channelDifferenceDone(
 		not_null<ChannelData*> channel,
@@ -219,6 +222,8 @@ private:
 	bool _secretReady = false;
 	bool _secretRestorePending = false;
 	bool _secretDifferenceCommitted = false;
+	bool _secretUpdatePending = false;
+	std::deque<MTPUpdates> _secretPendingUpdates;
 	base::Timer _secretCheckpointTimer;
 	rpl::variable<bool> _isIdle = false;
 

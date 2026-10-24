@@ -543,12 +543,14 @@ void Updates::differenceDone(const MTPupdates_Difference &result) {
 		if (_secretReady && session().secretChats().available() && !_secretCheckpointTimer.isActive()) {
 			_secretCheckpointTimer.callOnce(1000);
 		}
+		replaySecretUpdates();
 	});
 	if (!_secretDifferenceCommitted
 		&& session().secretChats().available()
 		&& (result.type() == mtpc_updates_difference
 			|| result.type() == mtpc_updates_differenceSlice)) {
 		const auto persist = [&](const auto &data, const MTPupdates_State &state) {
+			_secretUpdatePending = true;
 			const auto &position = state.c_updates_state();
 			const auto recovery = Extras::SecretChats::RecoveryState{
 				position.vpts().v, position.vdate().v, position.vseq().v };
@@ -558,10 +560,12 @@ void Updates::differenceDone(const MTPupdates_Difference &result) {
 				[=](bool ok) {
 				if (!ok) {
 					LOG(("Secret chats: could not persist difference."));
+					return;
 				}
 				_secretDifferenceCommitted = true;
 				differenceDone(result);
 				_secretDifferenceCommitted = false;
+				replaySecretUpdates();
 			}, recovery);
 		};
 		if (result.type() == mtpc_updates_difference) {
@@ -798,6 +802,9 @@ void Updates::getDifference() {
 	}
 	const auto &secret = session().secretChats();
 	const auto includeSecret = secret.available() && secret.hasBaseline();
+	if (includeSecret) {
+		_secretUpdatePending = true;
+	}
 	const auto recovery = includeSecret ? secret.recoveryState() : std::nullopt;
 
 	_bySeqUpdates.clear();
@@ -997,12 +1004,49 @@ void Updates::mtpNewSessionCreated() {
 	getDifference();
 }
 
+void Updates::replaySecretUpdates() {
+	if (_secretDifferenceCommitted || requestingDifference()) {
+		return;
+	}
+	_secretUpdatePending = false;
+	while (!_secretPendingUpdates.empty() && !requestingDifference()) {
+		auto updates = std::move(_secretPendingUpdates.front());
+		_secretPendingUpdates.pop_front();
+		mtpUpdateReceived(updates);
+	}
+	_secretUpdatePending = requestingDifference() || !_secretPendingUpdates.empty();
+}
+
 void Updates::mtpUpdateReceived(const MTPUpdates &updates) {
 	Core::App().checkAutoLock();
 	_lastUpdateTime = crl::now();
 	_noUpdatesTimer.callOnce(kNoUpdatesTimeout);
+	const auto forceLogout = HasForceLogoutNotification(updates);
+#ifdef _DEBUG
+	const auto hasEncryption = updates.match([](const MTPDupdates &data) {
+		return ranges::any_of(data.vupdates().v, [](const MTPUpdate &update) {
+			return update.type() == mtpc_updateEncryption;
+		});
+	}, [](const MTPDupdatesCombined &data) {
+		return ranges::any_of(data.vupdates().v, [](const MTPUpdate &update) {
+			return update.type() == mtpc_updateEncryption;
+		});
+	}, [](const MTPDupdateShort &data) {
+		return data.vupdate().type() == mtpc_updateEncryption;
+	}, [](const auto &) { return false; });
+	if (hasEncryption) {
+		LOG(("Secret chats: account %1 encryption update, difference=%2, deferred=%3.")
+			.arg(session().userId().bare).arg(requestingDifference()).arg(_secretUpdatePending));
+	}
+#endif // _DEBUG
+	// 补取结果保存完成后再重放实时容器，避免新通知被旧快照覆盖或忽略。
+	if (_secretUpdatePending && !forceLogout) {
+		_secretPendingUpdates.push_back(updates);
+		applyGroupCallParticipantUpdates(updates);
+		return;
+	}
 	if (!requestingDifference()
-		|| HasForceLogoutNotification(updates)) {
+		|| forceLogout) {
 		applyUpdates(updates);
 	} else {
 		applyGroupCallParticipantUpdates(updates);
