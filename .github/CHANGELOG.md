@@ -1,11 +1,11 @@
-- Added encrypted chats in the chat list, so you can now exchange encrypted text and files, reply to messages, keep local drafts and use notifications and self-destruct timers
+- Added encrypted chats in the chat list, so you can now exchange encrypted text and files, reply to messages, keep local drafts, search locally and use notifications and self-destruct timers with smooth chat transitions
 - Added fullscreen viewing for article media on Windows, so you can now expand article photos and videos and drag the top bar to move the article window
 - Changed how media viewers close; clicking empty space now closes the viewer again, while dragging its top bar still moves the host window
-- Changed the Windows system requirements; the app now requires Windows 10 or later
+- Changed the Windows system requirements after upgrading to Qt 6.11.2; older Windows versions are no longer supported, and Windows 10 or later is now required
 - Improved media timestamps, which now use rounded capsules with clearer text and matching status icons on photos, albums, videos, locations and stickers
 - Improved service messages on custom wallpapers, which now keep date labels, replies and wallpaper preview controls readable
 - Improved media viewers on Windows, which now restore fullscreen blur and transitions and avoid light fringes at in-window corners
-- Improved compose and search controls, which now use circular button backgrounds and keep the attachment button centered in the input capsule
+- Improved compose and search controls, which now use circular button backgrounds and keep input text and attachment buttons centered in the input capsule
 - Improved settings cards, which now use rounded hover backgrounds for custom rows
 - Fixed an issue with compose colors that previously caused the input capsule to use different colors when the chat background was disabled
 - Fixed an issue with reply click effects that previously caused sticker and round-video reply ripples to disappear or extend outside the reply area
@@ -15,18 +15,24 @@
 - Fixed an issue with tray restoration that previously caused the current chat and visible content to disappear after hiding the window
 - Fixed an issue with shutdown logging that previously caused the app to crash when late Qt warnings arrived after the launcher was destroyed
 - Fixed an issue with the material drawer that previously caused incomplete repainting when parts of the interface changed
-- Changed how bars above a chat are shown; pinned messages, contact actions, business bots and sponsored messages now share one card, while translation, join requests, video chats, topic reopening and paid message notices appear as compact capsules below it
+- Improved chat bar transitions, which now fade in and out with smoother spacing changes; translation settings also use a gear icon
+- Improved profile attachments, which now group music and personal channels in aligned cards and present community entries and security notices more clearly
+- Added a smooth scrolling switch in Appearance, so you can now choose smooth mouse-wheel scrolling in chats and article previews
+- Improved cache management, which now responds faster when scrolling through many chats, refreshing statistics and opening chat details
+- Fixed an issue with system screenshots of material windows that previously caused Mica and Acrylic areas to appear as pale blocks
+- Fixed an issue with saving music covers that previously saved small previews instead of the original embedded artwork
+- Improved music playback, which now saves fully cached tracks to the configured download folder and lists them in Downloads when no path prompt is required
 
 ---
 
-- 新增了聊天列表中的加密对话，现在可以发送加密文字和文件、回复消息、保存本机草稿，并使用消息通知和阅后即焚计时
+- 新增了聊天列表中的加密对话，现在可以发送加密文字和文件、回复消息、保存本地草稿、搜索本地消息，并使用消息通知、阅后即焚计时和平滑的对话切换动画
 - 新增了 Windows 上文章媒体的全屏查看功能，现在可以全屏打开文章中的图片和视频，并拖动顶栏移动文章窗口
 - 调整了媒体查看器的关闭方式，现在点击空白处会再次关闭查看器，拖动顶栏仍可移动宿主窗口
-- 调整了 Windows 版本的系统要求，现在需要 Windows 10 或更新的系统
+- 调整了 Windows 版本的系统要求，升级至 Qt 6.11.2 后不再支持旧版 Windows，最低要求为 Windows 10
 - 对媒体时间标签进行了改善，这使得图片、相册、视频、位置和贴纸上的时间会使用圆角胶囊，文字及状态图标也更清晰
 - 对自定义壁纸上的服务消息进行了改善，这使得日期标签、回复和壁纸预览控件保持清晰可读
 - 对 Windows 上的媒体查看器进行了改善，这使得全屏背景模糊和切换动画恢复正常，窗口内查看器的圆角边缘也不再出现亮边
-- 对输入栏和搜索栏控件进行了改善，这使得按钮背景使用圆形，附件按钮也与输入胶囊左端保持同心
+- 对输入栏和搜索栏控件进行了改善，这使得按钮背景使用圆形，输入文字垂直居中，附件按钮也与输入胶囊左端保持同心
 - 对设置卡片进行了改善，这使得自绘项目的悬停背景也会使用圆角
 - 修复了关于输入栏配色的错误，该问题曾导致关闭聊天背景后输入胶囊使用不同的颜色
 - 修复了关于回复点击效果的错误，该问题曾导致贴纸和圆形视频旁的回复动画消失或超出回复区域
@@ -36,4 +42,10 @@
 - 修复了关于托盘恢复的错误，该问题曾导致隐藏窗口后当前聊天和可见内容消失
 - 修复了关于退出日志的错误，该问题曾导致启动器销毁后收到 Qt 警告时应用崩溃
 - 修复了关于系统材质主菜单的错误，该问题曾导致界面局部变化时菜单绘制不完整
-- 调整了聊天顶部横条的显示方式，现在置顶消息、联系人操作、商业机器人和广告合并在同一张卡片中，翻译、入群申请、视频聊天、重新开启话题和付费消息提示以小胶囊形式显示在卡片下方
+- 对聊天顶部横条的过渡动画进行了改善，这使得各个横条会渐入渐出，间距变化更平滑，翻译设置也改用齿轮图标
+- 对资料页的附加内容进行了改善，这使得音乐和个人频道集中在与上方操作按钮对齐的卡片中，社区入口与安全提示也更清晰
+- 新增了外观设置中的平滑滚动开关，现在可以为对话区和文章预览选择平滑的鼠标滚轮滚动效果
+- 对缓存管理页进行了改善，这使得聊天较多时滚动列表、刷新统计和打开详情的响应更快
+- 修复了关于系统材质窗口截图的错误，该问题曾导致云母和亚克力区域显示成泛白的色块
+- 修复了关于保存音乐封面的错误，该问题曾导致保存的是小尺寸预览图，而非音频中内嵌的原始封面
+- 对音乐播放进行了改善，这使得歌曲缓存完整后，会在无需询问保存路径时自动保存到配置的下载目录，并显示在已下载列表中
