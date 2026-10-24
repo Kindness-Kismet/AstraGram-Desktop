@@ -4,6 +4,7 @@
 #include "extras/features/window_material/window_material.h"
 
 #include "core/application.h"
+#include "core/core_screenshot_protection.h"
 #include "core/update_checker.h"
 #include "core/version.h"
 #include "logs.h"
@@ -34,6 +35,8 @@ using json = nlohmann::json;
 		{ "testAgent", cTestAgent() },
 		{ "offline", cDebugOffline() },
 		{ "hasWindow", window != nullptr },
+		{ "screenshotProtected", window
+			&& Core::App().screenshotProtection().active(window->widget()) },
 		{ "windowMaterialActive", window
 			&& ExtrasFeatures::WindowMaterial::isActive(window->widget().get()) },
 		{ "passcodeLocked", Core::App().passcodeLocked() },

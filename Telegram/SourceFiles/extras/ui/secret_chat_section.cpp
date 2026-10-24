@@ -43,6 +43,7 @@
 #include "window/window_peer_menu.h"
 #include "window/window_adaptive.h"
 #include "window/window_controller.h"
+#include "window/window_slide_animation.h"
 #include "styles/style_chat.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_window.h"
@@ -248,7 +249,7 @@ public:
 			});
 		}, lifetime());
 		Core::App().screenshotProtection().addContentReason(
-			controller->widget(), _screenshotProtected.value(), lifetime());
+			controller->widget(), _screenshotProtected.value(), lifetime(), this);
 		controller->widget()->ui_layerShownValue(
 		) | rpl::on_next([=](bool shown) {
 			_layerShown = shown;
@@ -289,6 +290,14 @@ public:
 		return true;
 	}
 	void checkActivation() override { if (_inner) { _inner->checkActivation(); } }
+	void showAnimated(Window::SlideDirection,
+			const Window::SectionSlideParams &params) override {
+		// 正文实时显示，旧画面淡出，不为加密内容创建动画截图。
+		showFast();
+		Window::ShowFadeOutAnimation(this, rect(), params.oldContentCache,
+			Window::InPlaceCrossFade(params.crossFadeDuration).duration
+		)->setObjectName(u"secret/chat-transition"_q);
+	}
 	QPixmap grabForShowAnimation(const Window::SectionSlideParams &) override {
 		// 原生切页动画只保存背景，加密正文不进入截图缓存。
 		auto result = QPixmap(size() * style::DevicePixelRatio());

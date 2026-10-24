@@ -1,4 +1,6 @@
 {
+  "SmoothScrolling": "平滑滚动",
+  "SmoothScrollingDescription": "让对话区和文章预览中的鼠标滚轮滚动更平滑。",
   "SecretChatDestroy": "销毁加密对话",
   "SecretChatDestroyConfirm": "销毁这段加密对话，并删除双方的消息记录？",
   "SecretChatStart": "加密对话",

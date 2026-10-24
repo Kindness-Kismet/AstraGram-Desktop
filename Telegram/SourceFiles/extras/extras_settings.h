@@ -404,6 +404,7 @@ public:
 	[[nodiscard]] bool mediaViewerInWindow() const { return _mediaViewerInWindow.current(); }
 	[[nodiscard]] PeerIdDisplay showPeerId() const { return _showPeerId.current(); }
 	[[nodiscard]] bool showMessageSeconds() const { return _showMessageSeconds.current(); }
+	[[nodiscard]] bool smoothScrolling() const { return _smoothScrolling.current(); }
 	[[nodiscard]] bool showMessageId() const { return _showMessageId.current(); }
 	[[nodiscard]] bool showMessageShot() const { return _showMessageShot.current(); }
 	[[nodiscard]] bool filterZalgo() const { return _filterZalgo.current(); }
@@ -523,6 +524,7 @@ public:
 	void setMediaViewerInWindow(bool val);
 	void setShowPeerId(PeerIdDisplay val);
 	void setShowMessageSeconds(bool val);
+	void setSmoothScrolling(bool val);
 	void setShowMessageId(bool val);
 	void setShowMessageShot(bool val);
 	void setFilterZalgo(bool val);
@@ -709,6 +711,7 @@ public:
 	[[nodiscard]] rpl::producer<PeerIdDisplay> showPeerIdValue() const { return _showPeerId.value(); }
 	[[nodiscard]] rpl::producer<PeerIdDisplay> showPeerIdChanges() const { return _showPeerId.changes(); }
 	[[nodiscard]] rpl::producer<bool> showMessageSecondsValue() const { return _showMessageSeconds.value(); }
+	[[nodiscard]] rpl::producer<bool> smoothScrollingValue() const { return _smoothScrolling.value(); }
 	[[nodiscard]] rpl::producer<bool> showMessageSecondsChanges() const { return _showMessageSeconds.changes(); }
 	[[nodiscard]] rpl::producer<bool> showMessageIdValue() const { return _showMessageId.value(); }
 	[[nodiscard]] rpl::producer<bool> showMessageIdChanges() const { return _showMessageId.changes(); }
@@ -855,6 +858,7 @@ private:
 	rpl::variable<bool> _mediaViewerInWindow = true;
 	rpl::variable<PeerIdDisplay> _showPeerId = PeerIdDisplay::BotApi;
 	rpl::variable<bool> _showMessageSeconds = false;
+	rpl::variable<bool> _smoothScrolling = true;
 	rpl::variable<bool> _showMessageId = false;
 	rpl::variable<bool> _showMessageShot = true;
 	rpl::variable<bool> _filterZalgo = false;

@@ -20,6 +20,8 @@
 #include <QShortcutEvent>
 #include <QMap>
 #include <QMouseEvent>
+#include <QWheelEvent>
+#include <QPointingDevice>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMimeData>
@@ -547,6 +549,32 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	}));
 }
 
+[[nodiscard]] Result controlWheel(const QStringList &args) {
+	if (args.size() < 2 || args.size() > 3
+		|| (args.size() == 3 && args[2] != u"pixel"_q)) {
+		return Result::Err(u"usage: control.wheel <target> <delta> [pixel]"_q);
+	}
+	const auto target = findControl(args.front());
+	auto ok = false;
+	const auto delta = args[1].toInt(&ok);
+	if (!target || !target->isVisible() || !ok) {
+		return Result::Err(u"visible target and integer delta required"_q);
+	}
+	const auto pixel = args.size() == 3;
+	const auto local = QPointF(target->rect().center());
+	const auto touchpad = QPointingDevice(u"Debug touchpad"_q, 0,
+		QInputDevice::DeviceType::TouchPad, QPointingDevice::PointerType::Finger,
+		QInputDevice::Capability::Position | QInputDevice::Capability::PixelScroll, 1, 0);
+	auto event = QWheelEvent(local, target->mapToGlobal(local.toPoint()),
+		pixel ? QPoint(0, delta) : QPoint(), pixel ? QPoint() : QPoint(0, delta),
+		Qt::NoButton, Qt::NoModifier, pixel ? Qt::ScrollUpdate : Qt::NoScrollPhase, false,
+		Qt::MouseEventSynthesizedByApplication,
+		pixel ? &touchpad : QPointingDevice::primaryPointingDevice());
+	event.setTimestamp(crl::now());
+	QApplication::sendEvent(target, &event);
+	return Result::Ok(Compact(json{ { "accepted", event.isAccepted() } }));
+}
+
 [[nodiscard]] Result controlScroll(const QStringList &args) {
 	if (args.isEmpty() || args.size() > 2) {
 		return Result::Err(u"usage: control.scroll <objectName | #index> [top]"_q);
@@ -895,6 +923,7 @@ const HandlerMap &ControlHandlers() {
 		{ u"control.click"_q, &ControlClick },
 		{ u"control.input"_q, &controlInput },
 		{ u"control.scroll"_q, &controlScroll },
+		{ u"control.wheel"_q, &controlWheel },
 		{ u"control.hover"_q, &controlHover },
 		{ u"control.ripple"_q, &controlRipple },
 		{ u"control.pointer"_q, &controlPointer },

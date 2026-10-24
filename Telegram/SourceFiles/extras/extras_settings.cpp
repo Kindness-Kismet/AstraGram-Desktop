@@ -1310,6 +1310,14 @@ void ExtrasSettings::setShowMessageSeconds(bool val) {
 	save();
 }
 
+void ExtrasSettings::setSmoothScrolling(bool val) {
+	if (_smoothScrolling.current() == val) {
+		return;
+	}
+	_smoothScrolling = val;
+	save();
+}
+
 void ExtrasSettings::setShowMessageId(bool val) {
 	if (_showMessageId.current() == val) return;
 	_showMessageId = val;
@@ -1546,6 +1554,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"mediaViewerInWindow", s._mediaViewerInWindow.current()},
 		{"showPeerId", s._showPeerId.current()},
 		{"showMessageSeconds", s._showMessageSeconds.current()},
+		{"smoothScrolling", s._smoothScrolling.current()},
 		{"showMessageId", s._showMessageId.current()},
 		{"showMessageShot", s._showMessageShot.current()},
 		{"filterZalgo", s._filterZalgo.current()},
@@ -1721,6 +1730,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._mediaViewerInWindow = j.value("mediaViewerInWindow", defaults._mediaViewerInWindow.current());
 	s._showPeerId = j.value("showPeerId", defaults._showPeerId.current());
 	s._showMessageSeconds = j.value("showMessageSeconds", defaults._showMessageSeconds.current());
+	s._smoothScrolling = j.value("smoothScrolling", defaults._smoothScrolling.current());
 	s._showMessageId = j.value("showMessageId", defaults._showMessageId.current());
 	s._showMessageShot = j.value("showMessageShot", defaults._showMessageShot.current());
 	s._filterZalgo = j.value("filterZalgo", defaults._filterZalgo.current());

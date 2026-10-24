@@ -28,6 +28,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/elastic_scroll.h"
+#include "extras/ui/components/smooth_scroll.h"
 #include "ui/widgets/selecting_scroll.h"
 #include "ui/basic_click_handlers.h"
 #include "ui/integration.h"
@@ -296,6 +297,8 @@ void MarkdownPreviewRoot::setup() {
 	_footnoteLayerManager->setHideByBackgroundClick(true);
 
 	_scroll = Ui::CreateChild<Ui::ElasticScroll>(this, st::boxScroll);
+	_scroll->setObjectName(u"iv.scroll"_q);
+	ExtrasUi::setupSmoothScroll(_scroll, [=] { _scrollToAnimation.stop(); });
 	using OverscrollType = Ui::ElasticScroll::OverscrollType;
 	_scroll->setOverscrollTypes(OverscrollType::Real, OverscrollType::Real);
 	ExtrasFeatures::WindowMaterial::changes(_scroll) | rpl::on_next([=] {

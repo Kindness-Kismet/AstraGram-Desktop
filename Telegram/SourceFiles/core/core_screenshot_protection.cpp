@@ -59,8 +59,9 @@ ScreenshotProtection::~ScreenshotProtection() = default;
 void ScreenshotProtection::addContentReason(
 		not_null<QWidget*> window,
 		rpl::producer<bool> active,
-		rpl::lifetime &lifetime) {
-	addReason(window, std::move(active), lifetime);
+		rpl::lifetime &lifetime,
+		QWidget *animationRedaction) {
+	addReason(window, std::move(active), lifetime, animationRedaction);
 }
 
 void ScreenshotProtection::addAmbientReason(
@@ -75,11 +76,16 @@ void ScreenshotProtection::addAmbientReason(
 void ScreenshotProtection::addReason(
 		not_null<QWidget*> window,
 		rpl::producer<bool> active,
-		rpl::lifetime &lifetime) {
+		rpl::lifetime &lifetime,
+		QWidget *animationRedaction) {
 	Expects(window->isWindow());
+	Expects(!animationRedaction || animationRedaction->window() == window);
 	const auto weakWindow = QPointer<QWidget>(window.get());
 	const auto id = ++_lastReasonId;
-	_reasons.emplace(id, Reason{ .window = weakWindow });
+	_reasons.emplace(id, Reason{
+		.window = weakWindow,
+		.animationRedaction = animationRedaction,
+	});
 	std::move(
 		active
 	) | rpl::on_next(crl::guard(this, [=](bool value) {
@@ -126,7 +132,42 @@ QPixmap ScreenshotProtection::grabForAnimation(
 	auto result = QPixmap(rect.size() * style::DevicePixelRatio());
 	result.setDevicePixelRatio(style::DevicePixelRatio());
 	result.fill(Qt::transparent);
-	widget->render(&result, QPoint(), rect, QWidget::DrawWindowBackground);
+	auto visible = QRegion(rect);
+	auto redactions = std::vector<std::pair<QWidget*, QRect>>();
+	for (const auto &[id, reason] : _reasons) {
+		if (!reason.active || reason.window != widget->window()) {
+			continue;
+		}
+		const auto target = reason.animationRedaction.data();
+		if (!target) {
+			widget->render(&result, QPoint(), rect, QWidget::DrawWindowBackground);
+			return result;
+		}
+		if (target != widget.get() && target->isAncestorOf(widget)) {
+			return result;
+		}
+		if (target != widget.get()
+			&& (!widget->isAncestorOf(target) || !target->isVisibleTo(widget))) {
+			continue;
+		}
+		const auto area = QRect(target->mapTo(widget, QPoint()), target->size());
+		if (!area.intersects(rect)) {
+			continue;
+		}
+		visible -= area;
+		redactions.emplace_back(target, area);
+	}
+	// 先排除正文区域再绘制，禁止先截取正文再盖住。
+	if (!visible.isEmpty()) {
+		widget->render(&result,
+			visible.boundingRect().topLeft() - rect.topLeft(), visible);
+	}
+	for (const auto &[target, area] : redactions) {
+		const auto clipped = area.intersected(rect);
+		target->render(&result, clipped.topLeft() - rect.topLeft(),
+			QRegion(clipped.translated(-area.topLeft())),
+			QWidget::DrawWindowBackground);
+	}
 	return result;
 }
 

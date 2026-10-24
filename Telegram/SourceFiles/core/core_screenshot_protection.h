@@ -25,7 +25,8 @@ public:
 	void addContentReason(
 		not_null<QWidget*> window,
 		rpl::producer<bool> active,
-		rpl::lifetime &lifetime);
+		rpl::lifetime &lifetime,
+		QWidget *animationRedaction = nullptr);
 
 	// 仅平台支持时保护当前窗口的周边上下文。
 	void addAmbientReason(
@@ -37,7 +38,7 @@ public:
 	[[nodiscard]] rpl::producer<bool> activeValue(
 		not_null<QWidget*> window) const;
 
-	// 受保护窗口的动画只保存背景，不保存正文。
+	// 指定保护区域只保存背景；未指定区域时保护整个窗口。
 	[[nodiscard]] QPixmap grabForAnimation(
 		not_null<QWidget*> widget,
 		QRect rect = QRect()) const;
@@ -45,12 +46,14 @@ public:
 private:
 	struct Reason {
 		QPointer<QWidget> window;
+		QPointer<QWidget> animationRedaction;
 		bool active = false;
 	};
 	void addReason(
 		not_null<QWidget*> window,
 		rpl::producer<bool> active,
-		rpl::lifetime &lifetime);
+		rpl::lifetime &lifetime,
+		QWidget *animationRedaction = nullptr);
 	void refresh(not_null<QWidget*> window);
 
 	base::flat_map<uint64, Reason> _reasons;

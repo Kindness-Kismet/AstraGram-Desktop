@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_list_widget.h"
+#include "extras/ui/components/smooth_scroll.h"
 
 #include "ui/chat/message_bubble.h"
 
@@ -589,6 +590,9 @@ ListWidget::ListWidget(
 	setMouseTracking(true);
 	setAccessibleName(tr::lng_sr_message_list(tr::now));
 	if (const auto scroll = _delegate->listScrollArea()) {
+		ExtrasUi::setupSmoothScroll(scroll, crl::guard(this, [=] {
+			_scrollToAnimation.stop();
+		}));
 		scroll->lockWheelDirection();
 		scroll->setCrossAxisWheelProcess([=](
 				QPoint delta,

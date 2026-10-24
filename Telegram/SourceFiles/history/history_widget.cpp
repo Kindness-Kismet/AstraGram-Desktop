@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "extras/ui/components/smooth_scroll.h"
 
 #include "extras/ui/components/chat_surface_button.h"
 #include "extras/features/window_material/window_material.h"
@@ -380,6 +381,7 @@ HistoryWidget::HistoryWidget(
 	}, lifetime());
 
 	_scroll->setHandleTouch(false);
+	ExtrasUi::setupSmoothScroll(_scroll);
 	_scroll->lockWheelDirection();
 	_scroll->setCrossAxisWheelProcess([=](QPoint delta, Qt::ScrollPhase phase) {
 		return _list && _list->consumeScrollAction(delta, phase);

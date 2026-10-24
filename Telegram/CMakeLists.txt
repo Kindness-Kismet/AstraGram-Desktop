@@ -317,6 +317,8 @@ set(extras_files
         extras/ui/components/message_preview.h
         extras/ui/components/smooth_transition.cpp
         extras/ui/components/smooth_transition.h
+        extras/ui/components/smooth_scroll.cpp
+        extras/ui/components/smooth_scroll.h
         extras/ui/components/sticker_preview.cpp
         extras/ui/components/sticker_preview.h
         extras/ui/components/saved_music.cpp
@@ -2328,6 +2330,8 @@ PRIVATE
     settings/sections/settings_local_passcode.h
     settings/sections/settings_cache_widgets.cpp
     settings/sections/settings_cache_widgets.h
+    settings/sections/settings_cache_chats.cpp
+    settings/sections/settings_cache_chats.h
     settings/sections/settings_local_storage.cpp
     settings/sections/settings_local_storage.h
     settings/sections/settings_main.cpp

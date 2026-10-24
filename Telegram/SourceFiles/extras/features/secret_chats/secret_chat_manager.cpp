@@ -10,6 +10,10 @@
 #include "crl/crl_on_main.h"
 
 #include <QtCore/QDateTime>
+#ifdef _DEBUG
+#include "extras/debug/debug_login.h"
+#include "settings.h"
+#endif
 
 namespace Extras::SecretChats {
 
@@ -33,6 +37,34 @@ Manager::~Manager() {
 	_private->timer.cancel();
 	_private->dialogs.clear();
 }
+
+#ifdef _DEBUG
+int Manager::seedForDebug(UserId userId, int count) {
+	auto &p = *_private;
+	Expects(cDebugProfile() && ExtrasDebug::isSimulationSession(p.session));
+	constexpr auto kChatId = 1900000001;
+	auto snapshot = std::make_shared<Details::Snapshot>(*p.state);
+	auto chat = Details::ChatState();
+	chat.view = { .id = kChatId, .userId = userId, .state = State::Active };
+	for (auto i = 0; i != count; ++i) {
+		auto message = Details::StoredMessage();
+		message.view = {
+			.id = i + 1,
+			.date = int(p.now()) - count + i,
+			.outgoing = (i % 2 == 0),
+			.text = u"加密对话动画与滚动样本 %1"_q.arg(i + 1),
+			.delivery = Delivery::Read,
+		};
+		message.packet.inSeq = (i / 2) * 2;
+		message.packet.outSeq = (i / 2) * 2 + (message.view.outgoing ? 0 : 1);
+		Details::insertMessage(chat, std::move(message));
+	}
+	snapshot->chats.insert(kChatId, std::move(chat));
+	p.state = std::move(snapshot);
+	p.publish();
+	return kChatId;
+}
+#endif
 
 void Manager::initialize(Fn<void(bool)> done) {
 	auto &p = *_private;

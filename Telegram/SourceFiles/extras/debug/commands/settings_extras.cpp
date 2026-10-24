@@ -179,6 +179,7 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"mediaViewerInWindow"_q, [&] { return settings.mediaViewerInWindow(); }, settings, &ExtrasSettings::setMediaViewerInWindow);
 	addSetting(entries, u"showPeerId"_q, [&] { return settings.showPeerId(); }, settings, &ExtrasSettings::setShowPeerId);
 	addSetting(entries, u"showMessageSeconds"_q, [&] { return settings.showMessageSeconds(); }, settings, &ExtrasSettings::setShowMessageSeconds);
+	addSetting(entries, u"smoothScrolling"_q, [&] { return settings.smoothScrolling(); }, settings, &ExtrasSettings::setSmoothScrolling);
 	addSetting(entries, u"showMessageId"_q, [&] { return settings.showMessageId(); }, settings, &ExtrasSettings::setShowMessageId);
 	addSetting(entries, u"showMessageShot"_q, [&] { return settings.showMessageShot(); }, settings, &ExtrasSettings::setShowMessageShot);
 	addSetting(entries, u"filterZalgo"_q, [&] { return settings.filterZalgo(); }, settings, &ExtrasSettings::setFilterZalgo);

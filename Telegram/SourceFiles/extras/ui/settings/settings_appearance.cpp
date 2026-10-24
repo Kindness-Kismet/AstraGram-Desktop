@@ -326,6 +326,13 @@ void BuildAppearance(SectionBuilder &builder, ExtrasSectionBuilder &extras) {
 	builder.addSubsectionTitle(tr::extras_CategoryAppearance());
 	buildAppName(builder);
 	buildCustomLogo(builder);
+	extras.addSettingToggle({
+		.id = u"extras/smoothScrolling"_q,
+		.title = tr::extras_SmoothScrolling(),
+		.getter = &ExtrasSettings::smoothScrolling,
+		.setter = &ExtrasSettings::setSmoothScrolling,
+	});
+	builder.addDividerText(tr::extras_SmoothScrollingDescription());
 
 	extras.addSettingToggle({
 		.id = u"extras/hidePremiumStatuses"_q,

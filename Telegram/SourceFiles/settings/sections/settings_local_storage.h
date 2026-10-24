@@ -19,6 +19,7 @@ class CacheCategoryRow;
 class CacheChart;
 class CacheClearButton;
 class CacheDeviceBar;
+class CacheChats;
 
 [[nodiscard]] Type LocalStorageId();
 
@@ -30,6 +31,9 @@ public:
 
 	[[nodiscard]] rpl::producer<QString> title() override;
 	void showFinished() override;
+#ifdef _DEBUG
+	void setDebugChats(int count);
+#endif
 
 private:
 	void setupContent();
@@ -68,7 +72,7 @@ private:
 	CacheChart *_chart = nullptr;
 	CacheClearButton *_clearButton = nullptr;
 	CacheDeviceBar *_deviceBar = nullptr;
-	Ui::VerticalLayout *_chats = nullptr;
+	CacheChats *_chats = nullptr;
 	Ui::FlatLabel *_status = nullptr;
 	Ui::MediaSlider *_totalSlider = nullptr;
 	Ui::LabelSimple *_totalLabel = nullptr;
@@ -79,6 +83,9 @@ private:
 	bool _snapshotPending = false;
 	bool _snapshotAgain = false;
 	bool _loaded = false;
+#ifdef _DEBUG
+	bool _debugChats = false;
+#endif
 };
 
 } // namespace Settings

@@ -135,7 +135,7 @@ public:
 	virtual bool forceAnimateBack() const {
 		return false;
 	}
-	void showAnimated(
+	virtual void showAnimated(
 		SlideDirection direction,
 		const SectionSlideParams &params);
 	void showFast();

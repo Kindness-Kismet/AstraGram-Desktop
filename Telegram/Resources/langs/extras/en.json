@@ -1,4 +1,6 @@
 {
+  "SmoothScrolling": "Smooth Scrolling",
+  "SmoothScrollingDescription": "Smooth mouse wheel scrolling in chats and article previews.",
   "SecretChatDestroy": "Destroy Encrypted Chat",
   "SecretChatDestroyConfirm": "Destroy this encrypted chat and delete its history for both participants?",
   "SecretChatStart": "Encrypted Chat",

@@ -2,6 +2,7 @@
 
 #include "settings/settings_card_layout.h"
 #include "settings/sections/settings_cache_widgets.h"
+#include "settings/sections/settings_cache_chats.h"
 #include "base/weak_qptr.h"
 #include "base/weak_ptr.h"
 #include "data/data_peer.h"
@@ -25,6 +26,10 @@
 #include "styles/style_layers.h"
 #include "styles/style_settings.h"
 #include "styles/style_settings_local_storage.h"
+#ifdef _DEBUG
+#include "extras/debug/debug_login.h"
+#include "settings.h"
+#endif
 
 namespace Settings {
 namespace {
@@ -201,8 +206,9 @@ void LocalStorage::setupContent() {
 	setupLimits(AddCardGroup(content));
 	AddCardDescription(content, tr::extras_CacheLimitsAbout());
 	AddCardTitle(content, tr::extras_CacheByChat());
-	_chats = AddCardGroup(content);
-	_chats->setObjectName(u"cache/chats"_q);
+	const auto chats = AddCardGroup(content);
+	_chats = chats->add(object_ptr<CacheChats>(chats, _session,
+		[=](Extras::MediaCacheChat chat) { showChatCache(std::move(chat)); }));
 	AddCardDescription(content, tr::extras_CacheChatListAbout());
 	_manager->changes() | rpl::on_next([=] {
 		updateClearButton();
@@ -260,6 +266,11 @@ void LocalStorage::setupRetention(not_null<Ui::VerticalLayout*> container) {
 }
 
 void LocalStorage::requestSnapshot() {
+#ifdef _DEBUG
+	if (_debugChats) {
+		return;
+	}
+#endif
 	if (_snapshotPending) {
 		_snapshotAgain = true;
 		return;
@@ -267,12 +278,34 @@ void LocalStorage::requestSnapshot() {
 	_snapshotPending = true;
 	_manager->snapshot(crl::guard(this, [=](Extras::MediaCacheSnapshot snapshot) {
 		_snapshotPending = false;
+#ifdef _DEBUG
+		if (_debugChats) {
+			return;
+		}
+#endif
 		updateSnapshot(std::move(snapshot));
 		if (base::take(_snapshotAgain)) {
 			requestSnapshot();
 		}
 	}));
 }
+
+#ifdef _DEBUG
+void LocalStorage::setDebugChats(int count) {
+	Expects(cDebugProfile() && ExtrasDebug::isSimulationSession(_session));
+	_debugChats = true;
+	auto snapshot = Extras::MediaCacheSnapshot();
+	for (auto i = 0; i != count; ++i) {
+		auto chat = Extras::MediaCacheChat{ .peer = UserId(8900000000ULL + i) };
+		chat.bytes = (count - i) * int64(1024);
+		chat.categories[int(Category::Images)] = { chat.bytes, 1 };
+		snapshot.categories[int(Category::Images)].bytes += chat.bytes;
+		++snapshot.categories[int(Category::Images)].count;
+		snapshot.chats.push_back(chat);
+	}
+	updateSnapshot(std::move(snapshot));
+}
+#endif
 
 void LocalStorage::updateSnapshot(Extras::MediaCacheSnapshot snapshot) {
 	if (snapshot.error.type != Storage::Cache::Error::Type::None) {
@@ -332,12 +365,7 @@ void LocalStorage::updateClearButton() {
 		row->setDisabled(clearing);
 	}
 	if (_chats) {
-		for (const auto child : _chats->findChildren<QWidget*>()) {
-			if (const auto button = dynamic_cast<Ui::AbstractButton*>(child);
-					button && button->objectName().startsWith(u"cache/chat/"_q)) {
-				button->setDisabled(clearing);
-			}
-		}
+		_chats->setClearing(clearing);
 	}
 }
 
@@ -356,30 +384,7 @@ void LocalStorage::clearSelected() {
 }
 
 void LocalStorage::updateChats() {
-	_chats->clear();
-	if (_snapshot.chats.empty()) {
-		_chats->add(object_ptr<Ui::FlatLabel>(
-			_chats, tr::extras_CacheNoChats(), st::localStorageAbout),
-			st::localStorageAboutMargin);
-	}
-	for (const auto &chat : _snapshot.chats) {
-		const auto row = AddButtonWithLabel(
-			_chats,
-			rpl::single(cacheChatName(_session, chat.peer)),
-			rpl::single(Ui::FormatSizeText(chat.bytes)),
-			st::settingsButtonNoIcon);
-		row->setObjectName(u"cache/chat/"_q + QString::number(chat.peer.value));
-		row->setClickedCallback([=] { showChatCache(chat); });
-		row->setDisabled(_manager->clearing());
-	}
-	const auto unassigned = totalBytes(_snapshot.unassigned);
-	if (unassigned) {
-		AddButtonWithLabel(
-			_chats,
-			tr::extras_CacheUnassigned(),
-			rpl::single(Ui::FormatSizeText(unassigned)),
-			st::settingsButtonNoIcon)->setDisabled(true);
-	}
+	_chats->setChats(_snapshot.chats, totalBytes(_snapshot.unassigned));
 }
 
 void LocalStorage::showChatCache(Extras::MediaCacheChat chat) {

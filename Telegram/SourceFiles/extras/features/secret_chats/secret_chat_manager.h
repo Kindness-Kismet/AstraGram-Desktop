@@ -96,6 +96,9 @@ public:
 	[[nodiscard]] rpl::producer<> changed() const;
 	[[nodiscard]] rpl::producer<int> draftCleared() const;
 	[[nodiscard]] Dialog *dialog(int chatId) const;
+#ifdef _DEBUG
+	int seedForDebug(UserId userId, int count);
+#endif
 
 	void create(not_null<UserData*> user, Fn<void(int, QString)> done);
 	void send(int chatId, QString text, Fn<void(qint64, QString)> done = {});

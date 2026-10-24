@@ -2,6 +2,8 @@
 #include "extras/debug/commands/commands_internal.h"
 
 #include "ui/widgets/popup_menu.h"
+#include "core/application.h"
+#include "core/core_screenshot_protection.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -128,6 +130,22 @@ using json = nlohmann::json;
 }
 
 [[nodiscard]] Result ScreenshotTake(const QStringList &args) {
+	if (args.size() == 2 && args[1] == u"animation"_q) {
+		const auto window = controlWindow();
+		if (!window || !window->isVisible()) {
+			return Result::Err(u"no visible window"_q);
+		}
+		const auto image = Core::App().screenshotProtection().grabForAnimation(window);
+		const auto target = QFileInfo(args[0]).absoluteFilePath();
+		QDir().mkpath(QFileInfo(target).absolutePath());
+		if (!image.save(target, "PNG")) {
+			return Result::Err(u"cannot write "_q + target);
+		}
+		return Result::Ok(Compact(json{
+			{ "path", target.toStdString() },
+			{ "protected", Core::App().screenshotProtection().active(window) },
+		}));
+	}
 	if (args.size() == 2 && args[1] == u"screen"_q) {
 		return screenshotScreen(args[0]);
 	}

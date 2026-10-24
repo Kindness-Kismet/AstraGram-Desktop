@@ -42,6 +42,9 @@ BACKGROUND_START = False
 OFFLINE_START = None
 
 GENERIC_COMMANDS = {
+    "control.wheel": "在应用内部投递滚轮事件：<目标> <角度增量> [pixel]",
+    "simulation.secret": "在独立模拟配置中创建并打开加密对话样本：[1..2000]",
+    "simulation.cache-chats": "给已打开的缓存设置页注入本地列表样本：<0..10000>",
     "secret.list": "查询指定账号的加密对话、握手状态和密钥核对摘要：<账号用户编号>",
     "secret.messages": "查询加密消息编号、发送状态和正文摘要，不输出正文：<账号用户编号> <加密对话编号>",
     "secret.notification": "查询指定加密消息的通知身份和隐藏选项，不输出正文：<账号用户编号> <加密对话编号> <消息编号>",
@@ -416,6 +419,7 @@ def register_commands(sub) -> None:
     command = sub.add_parser("screenshot.take", help="截图当前活动窗口到 build/screenshots/")
     mode = command.add_mutually_exclusive_group()
     mode.add_argument("--popup", action="store_true", help="改为截取活动浮动菜单")
+    mode.add_argument("--animation", action="store_true", help="通过切页动画的保护接口截图，保存为 PNG")
     mode.add_argument("--notification", action="store_true", help="改为截取应用自绘通知，合成到底色上保存为 PNG")
     mode.add_argument("--screen", action="store_true", help="改为从屏幕拷贝窗口区域保存为 PNG，包含系统材质；窗口须可见且未被遮挡")
     command.add_argument("--bg", default="#5b6b7f", help="--notification 的底色，格式 #RRGGBB")
@@ -527,11 +531,13 @@ def execute_command(args: argparse.Namespace) -> None:
     if command == "screenshot.take":
         ensure_debug_app()
         SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
-        extension = "png" if (args.notification or args.screen) else "jpg"
+        extension = "png" if (args.notification or args.screen or args.animation) else "jpg"
         target = SCREENSHOT_DIR / datetime.now().strftime(f"shot-%Y%m%d-%H%M%S-%f.{extension}")
         suffix = ""
         if args.popup:
             suffix = " popup"
+        elif args.animation:
+            suffix = " animation"
         elif args.screen:
             suffix = " screen"
         elif args.notification:

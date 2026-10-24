@@ -31,6 +31,9 @@
 先用 `control.list @scroll` 找到滚动区，再用默认模式的 `#序号` 定位；页面变化后重新列举。
 返回 `top`、`maximum` 和 `height`。主聊天滚动区名称为 `historyScroll`。
 
+`control.wheel <目标> <增量> [pixel]` 在应用内部投递滚轮事件；普通滚轮一格为 120，负值向下。
+`pixel` 使用像素增量与触控板更新阶段；结合多次 `control.scroll` 查询验证位置变化，不移动系统鼠标。
+
 ## `control.hover <objectName | #序号> <on|off>`
 
 设置可见且启用的按钮悬停状态，通过截图检查背景、圆角和文字，不触发点击、不移动系统光标。

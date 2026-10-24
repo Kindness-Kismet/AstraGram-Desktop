@@ -1,5 +1,8 @@
 # 截图
 
+`screenshot.take --animation` 使用切页动画的截图保护接口，保存为 PNG；加密正文区域只保留背景，周边界面正常保留。
+返回 `protected` 表示当前窗口是否启用截图保护，也可通过 `app.info` 的 `screenshotProtected` 查询。
+
 ## `screenshot.take`
 
 截取当前选定窗口并保存为 JPG（质量 80）。CLI 自动生成路径 `build/screenshots/shot-<时间戳>.jpg`，

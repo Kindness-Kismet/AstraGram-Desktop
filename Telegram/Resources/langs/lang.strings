@@ -9225,6 +9225,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_UnforwardableContextMenuText" = "Plain forwarding is not allowed";
 "extras_GhostModeShortcut" = "Enter with Ghost";
 "extras_SettingsShowMessageSeconds" = "Show Message Seconds";
+"extras_SmoothScrolling" = "Smooth Scrolling";
+"extras_SmoothScrollingDescription" = "Smooth mouse wheel scrolling in chats and article previews.";
 "extras_SettingsShowMessageId" = "Show Message ID";
 "extras_FilterZalgo" = "Filter Zalgo";
 "extras_AutoSpaceSending" = "Auto Space on Sending";

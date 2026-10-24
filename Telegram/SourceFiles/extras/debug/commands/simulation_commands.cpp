@@ -16,6 +16,12 @@
 #include "lang/lang_instance.h"
 #include "main/main_session.h"
 #include "settings.h"
+#include "settings/sections/settings_local_storage.h"
+#include "extras/features/secret_chats/secret_chat_manager.h"
+#include "extras/ui/secret_chat_box.h"
+#include "data/data_user.h"
+#include <QtCore/QElapsedTimer>
+#include <QtWidgets/QApplication>
 #include "wallet/wallet_panel.h"
 #include "wallet/wallet_session.h"
 #include "ui/emoji_config.h"
@@ -30,6 +36,52 @@ constexpr auto kWalletBalance = int64(123456789000);
 constexpr auto kStickerSetId = uint64(9800000000);
 constexpr auto kEmojiSetId = uint64(9800000100);
 constexpr auto kEmojiSetCount = 3;
+
+Result simulationSecret(const QStringList &args) {
+	auto ok = false;
+	const auto count = args.empty() ? 120 : args.front().toInt(&ok);
+	if (args.size() > 1 || (!args.empty() && !ok) || count < 1 || count > 2000) {
+		return Result::Err(u"usage: simulation.secret [1..2000]"_q);
+	}
+	const auto session = ActiveSession();
+	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	const auto peer = simulationPeer(session, u"private"_q);
+	const auto controller = session->tryResolveWindow();
+	if (!peer || !peer->isUser() || !controller) {
+		return Result::Err(u"simulation peer or window not found"_q);
+	}
+	const auto chatId = session->secretChats().seedForDebug(peer->id.to<UserId>(), count);
+	Extras::SecretChats::showChat(controller, chatId);
+	return Result::Ok(Compact(json{ { "chatId", chatId }, { "messages", count } }));
+}
+
+Result simulationCacheChats(const QStringList &args) {
+	auto ok = false;
+	const auto count = args.size() == 1 ? args.front().toInt(&ok) : 0;
+	if (!ok || count < 0 || count > 10000) {
+		return Result::Err(u"usage: simulation.cache-chats <0..10000>"_q);
+	}
+	const auto session = ActiveSession();
+	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	for (const auto widget : QApplication::allWidgets()) {
+		const auto page = dynamic_cast<Settings::LocalStorage*>(widget);
+		if (!page || !page->isVisible()) {
+			continue;
+		}
+		auto timer = QElapsedTimer();
+		timer.start();
+		page->setDebugChats(count);
+		return Result::Ok(Compact(json{
+			{ "chats", count }, { "elapsedUs", timer.nsecsElapsed() / 1000 },
+			{ "widgets", page->findChildren<QWidget*>().size() },
+		}));
+	}
+	return Result::Err(u"open the cache settings page first"_q);
+}
 
 Result simulationChatFolders(const QStringList &args) {
 	if (args.size() != 1
@@ -290,6 +342,8 @@ void applyWalletLists(Wallet::Session &wallet, bool withCollectibles) {
 
 const HandlerMap &simulationHandlers() {
 	static const auto result = HandlerMap{
+		{ u"simulation.secret"_q, &simulationSecret },
+		{ u"simulation.cache-chats"_q, &simulationCacheChats },
 		{ u"simulation.chat-folders"_q, &simulationChatFolders },
 		{ u"simulation.language"_q, &simulationLanguage },
 		{ u"simulation.search"_q, &seedSearchPreview },
