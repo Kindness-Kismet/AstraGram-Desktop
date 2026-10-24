@@ -16,6 +16,16 @@ namespace ExtrasUi {
 
 class FloatingSurfaceHost;
 
+// 圆角超过短边一半时按短边一半绘制。
+struct FloatingSurfaceShape {
+	QRect rect;
+	int radius = 0;
+
+	friend inline bool operator==(
+		const FloatingSurfaceShape&,
+		const FloatingSurfaceShape&) = default;
+};
+
 struct FloatingSurfaceStyle {
 	int radius = 0;
 	Fn<QColor()> background;
@@ -24,7 +34,8 @@ struct FloatingSurfaceStyle {
 	bool windowMaterial = false;
 	bool maskInput = false;
 	Fn<qreal()> opacity;
-	Fn<std::vector<QRect>()> rects;
+	// 为空时整个控件按 radius 绘制成一个形状。
+	Fn<std::vector<FloatingSurfaceShape>()> shapes;
 };
 
 // 聊天磨砂表面统一沿用输入框配色，关闭聊天背景时改用扁平配色。
@@ -65,7 +76,7 @@ private:
 	QPointer<FloatingSurfaceHost> _host;
 	FloatingSurfaceStyle _style;
 	std::vector<QPointer<QWidget>> _ancestors;
-	std::vector<QRect> _rects;
+	std::vector<FloatingSurfaceShape> _shapes;
 	QPixmap _mask;
 	rpl::lifetime _lifetime;
 };
