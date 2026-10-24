@@ -16,6 +16,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_histories.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
+#include "extras/features/secret_chats/secret_chat_peer.h"
+#include "extras/features/secret_chats/secret_chat_manager.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "lang/lang_keys.h"
@@ -87,6 +89,9 @@ rpl::producer<QString> DeleteMessagesBox::prepareTitle() const {
 	if (!peer) {
 		return tr::extras_DialogConfirmTitle();
 	}
+	if (peer->isSecretChat()) {
+		return _wipeHistoryJustClear ? tr::extras_SecretChatClear() : tr::extras_SecretChatDestroy();
+	}
 	if (!_wipeHistoryFirstToDelete.isNull() || _wipeHistoryJustClear) {
 		return tr::lng_profile_clear_history();
 	}
@@ -109,7 +114,12 @@ void DeleteMessagesBox::prepare() {
 	auto deleteStyle = &st::defaultBoxButton;
 	auto canDelete = true;
 	if (const auto peer = _wipeHistoryPeer) {
-		if (!_wipeHistoryFirstToDelete.isNull()) {
+		if (peer->isSecretChat()) {
+			details.text = _wipeHistoryJustClear
+				? tr::extras_SecretChatClearConfirm(tr::now) : tr::extras_SecretChatDestroyConfirm(tr::now);
+			*deleteText = _wipeHistoryJustClear ? tr::extras_SecretChatClear() : tr::extras_SecretChatDestroy();
+			deleteStyle = &st::attentionBoxButton;
+		} else if (!_wipeHistoryFirstToDelete.isNull()) {
 			details = (_wipeHistoryFirstToDelete
 				== _wipeHistoryLastToDelete)
 				? tr::lng_sure_delete_by_date_one(
@@ -203,7 +213,9 @@ void DeleteMessagesBox::prepare() {
 			: tr::lng_selected_delete_sure(tr::now, lt_count, _ids.size());
 		if (const auto peer = checkFromSinglePeer()) {
 			auto count = int(_ids.size());
-			if (hasScheduledMessages()
+			if (peer->isSecretChat()) {
+				appendDetails({ tr::extras_SecretChatDeleteConfirm(tr::now) });
+			} else if (hasScheduledMessages()
 				|| hasWelcomeTemplateMessages()
 				|| hasSavedMusicMessages()) {
 			} else if (auto revoke = revokeText(peer)) {
@@ -261,7 +273,7 @@ void DeleteMessagesBox::prepare() {
 	_text.create(this, rpl::single(std::move(details)), st::boxLabel);
 	_text->resizeToWidth(st::boxWidth - rect::m::sum::h(st::boxPadding));
 
-	if (_wipeHistoryJustClear && _wipeHistoryPeer) {
+	if (_wipeHistoryJustClear && _wipeHistoryPeer && !_wipeHistoryPeer->isSecretChat()) {
 		const auto validator = TTLMenu::TTLValidator(
 			uiShow(),
 			_wipeHistoryPeer);
@@ -362,6 +374,9 @@ PeerData *DeleteMessagesBox::checkFromSinglePeer() const {
 
 auto DeleteMessagesBox::revokeText(not_null<PeerData*> peer) const
 -> std::optional<RevokeConfig> {
+	if (peer->isSecretChat()) {
+		return std::nullopt;
+	}
 	auto result = RevokeConfig();
 	if (peer == _wipeHistoryPeer) {
 		if (!peer->canRevokeFullHistory()) {
@@ -589,7 +604,17 @@ void DeleteMessagesBox::deleteAndClear() {
 		return;
 	} else if (const auto peer = _wipeHistoryPeer) {
 		const auto justClear = _wipeHistoryJustClear;
+		const auto show = uiShow();
 		invokeCallbackAndClose();
+		if (peer->isSecretChat()) {
+			const auto chatId = static_cast<Extras::SecretChats::Peer*>(peer)->chatId();
+			const auto done = [=](QString error) {
+				if (!error.isEmpty()) { show->showToast(tr::extras_SecretChatFailed(tr::now)); }
+			};
+			if (justClear) { session->secretChats().clear(chatId, done); }
+			else { session->secretChats().discard(chatId, true, done); }
+			return;
+		}
 
 		if (justClear) {
 			session->api().clearHistory(peer, revoke);

@@ -7,6 +7,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_widget.h"
 
+#include "extras/features/secret_chats/secret_chat_dialog.h"
+#include "extras/ui/secret_chat_box.h"
+
 #ifdef _DEBUG
 #include "extras/debug/debug_login.h"
 #endif // _DEBUG
@@ -1046,6 +1049,10 @@ void Widget::setupSwipeBack() {
 
 void Widget::chosenRow(const ChosenRow &row) {
 	storiesToggleExplicitExpand(false);
+	if (const auto secret = row.key.entry()->asSecretChat()) {
+		Extras::SecretChats::showChat(controller(), secret->chatId());
+		return;
+	}
 
 	if (!row.sponsoredRandomId.isEmpty()) {
 		auto &messages = session().sponsoredMessages();

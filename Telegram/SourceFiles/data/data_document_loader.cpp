@@ -200,7 +200,7 @@ QString DocumentData::loadingFilePath() const {
 
 bool DocumentData::displayLoading() const {
 	if (_localSource) {
-		return _localSource->downloading;
+		return _localSource->downloading || (uploading() && !waitingForAlbum());
 	}
 	return loading()
 		? !_loader->loadingLocal()
@@ -208,9 +208,6 @@ bool DocumentData::displayLoading() const {
 }
 
 float64 DocumentData::progress() const {
-	if (_localSource) {
-		return (size > 0) ? float64(_localSource->offset) / float64(size) : 0.;
-	}
 	if (uploading()) {
 		if (uploadingData->preparing) {
 			return 0.;
@@ -221,6 +218,9 @@ float64 DocumentData::progress() const {
 			return std::clamp(result, 0., 1.);
 		}
 		return 0.;
+	}
+	if (_localSource) {
+		return (size > 0) ? float64(_localSource->offset) / float64(size) : 0.;
 	}
 	return loading() ? _loader->currentProgress() : 0.;
 }

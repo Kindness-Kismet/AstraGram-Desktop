@@ -3070,7 +3070,7 @@ void HistoryItem::clearMediaAsExpired() {
 	}
 
 	const auto &settings = ExtrasSettings::getInstance();
-	if (settings.saveDeletedMessages()) {
+	if (settings.saveDeletedMessages() && !_history->peer->isSecretChat()) {
 		return;
 	}
 	unarmMediaDestroy();
@@ -3371,6 +3371,24 @@ void HistoryItem::setRealId(MsgId newId) {
 	}
 }
 
+void HistoryItem::updateLocalState(TimeId date, bool sending, bool failed, bool unread, int ttl) {
+	Expects(isLocal() && _history->peer->isSecretChat());
+	const auto mask = MessageFlag::BeingSent | MessageFlag::SendingFailed | MessageFlag::ClientSideUnread;
+	const auto flags = (_flags & ~mask)
+		| (sending ? MessageFlag::BeingSent : MessageFlag())
+		| (failed ? MessageFlag::SendingFailed : MessageFlag())
+		| (unread ? MessageFlag::ClientSideUnread : MessageFlag());
+	if (_flags == flags && _date == date && _localTtl == ttl) {
+		return;
+	}
+	_flags = flags;
+	_date = date;
+	_localTtl = ttl;
+	_history->owner().notifyItemDataChange(this);
+	_history->owner().requestItemResize(this);
+	_history->owner().requestItemRepaint(this);
+}
+
 bool HistoryItem::canPin() const {
 	if (_deleted) {
 		return false;
@@ -3437,6 +3455,9 @@ bool HistoryItem::allowsEditMedia() const {
 }
 
 bool HistoryItem::canBeEdited() const {
+	if (_history->peer->isSecretChat()) {
+		return false;
+	}
 	if (_deleted) {
 		return false;
 	}
@@ -3479,10 +3500,13 @@ bool HistoryItem::canStopPoll() const {
 }
 
 bool HistoryItem::forbidsForward() const {
-	return false;
+	return _history->peer->isSecretChat();
 }
 
 bool HistoryItem::forbidsSaving() const {
+	if (_history->peer->isSecretChat()) {
+		return _localTtl > 0;
+	}
 	if (forbidsForward()) {
 		return true;
 	}/* else if (const auto invoice = _media ? _media->invoice() : nullptr) {
@@ -3492,6 +3516,9 @@ bool HistoryItem::forbidsSaving() const {
 }
 
 bool HistoryItem::allowsMediaDownloadControls() const {
+	if (_history->peer->isSecretChat()) {
+		return true;
+	}
 	return !forbidsSaving()
 		&& _history->peer->allowsForwarding()
 		&& (!_media || _media->allowsForward());
@@ -3539,6 +3566,9 @@ bool HistoryItem::canDelete() const {
 }
 
 bool HistoryItem::canDeleteForEveryone(TimeId now) const {
+	if (_history->peer->isSecretChat()) {
+		return canDelete();
+	}
 	const auto peer = _history->peer;
 	const auto &config = _history->session().serverConfig();
 	const auto messageToMyself = peer->isSelf();
@@ -3580,6 +3610,9 @@ bool HistoryItem::canDeleteForEveryone(TimeId now) const {
 }
 
 bool HistoryItem::canBeSelected() const {
+	if (_history->peer->isSecretChat()) {
+		return isHistoryEntry() && !isService();
+	}
 	return (isRegular() || isEphemeral())
 		&& !isService()
 		&& !IsAnchoredEphemeral(this);
@@ -4539,6 +4572,9 @@ bool HistoryItem::isService() const {
 }
 
 bool HistoryItem::unread(not_null<Data::Thread*> thread) const {
+	if (_history->peer->isSecretChat()) {
+		return _flags & MessageFlag::ClientSideUnread;
+	}
 	// Messages from myself are always read, unless scheduled.
 	if (_history->peer->isSelf() && !isFromScheduled()) {
 		return false;

@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_entry.h"
 
+#include "extras/features/secret_chats/secret_chat_dialog.h"
+
 #include "dialogs/dialogs_key.h"
 #include "dialogs/dialogs_indexed_list.h"
 #include "base/options.h"
@@ -105,6 +107,8 @@ Entry::Entry(not_null<Data::Session*> owner, Type type)
 	? (Flag::IsThread | Flag::IsForumTopic)
 	: (type == Type::SavedSublist)
 	? (Flag::IsThread | Flag::IsSavedSublist)
+	: (type == Type::SecretChat)
+	? (Flag::IsThread | Flag::IsSecretChat)
 	: Flag(0)) {
 }
 
@@ -131,7 +135,7 @@ Data::Forum *Entry::asForum() {
 }
 
 Data::Folder *Entry::asFolder() {
-	return (_flags & Flag::IsThread)
+	return (_flags & (Flag::IsThread | Flag::IsSecretChat))
 		? nullptr
 		: static_cast<Data::Folder*>(this);
 }
@@ -176,6 +180,16 @@ const Data::ForumTopic *Entry::asTopic() const {
 
 const Data::SavedSublist *Entry::asSublist() const {
 	return const_cast<Entry*>(this)->asSublist();
+}
+
+Extras::SecretChats::Dialog *Entry::asSecretChat() {
+	return (_flags & Flag::IsSecretChat)
+		? static_cast<Extras::SecretChats::Dialog*>(this)
+		: nullptr;
+}
+
+const Extras::SecretChats::Dialog *Entry::asSecretChat() const {
+	return const_cast<Entry*>(this)->asSecretChat();
 }
 
 void Entry::pinnedIndexChanged(FilterId filterId, int was, int now) {

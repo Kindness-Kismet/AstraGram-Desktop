@@ -27,7 +27,12 @@ Manager::Manager(not_null<Main::Session*> session)
 , _private(std::make_unique<Private>(this, session)) {
 }
 
-Manager::~Manager() = default;
+Manager::~Manager() {
+	_private->stopping = true;
+	_private->enabled = false;
+	_private->timer.cancel();
+	_private->dialogs.clear();
+}
 
 void Manager::initialize(Fn<void(bool)> done) {
 	auto &p = *_private;
@@ -183,9 +188,15 @@ void Manager::Private::runNext() {
 	crl::async([weak, next, timestamp, task = std::move(task)]() mutable {
 		Details::expire(*next, timestamp);
 		const auto error = task.apply(*next);
-		if (error.isEmpty()) Details::normalizeDrafts(*next);
+		auto clearedDrafts = QVector<int>();
+		if (error.isEmpty()) {
+			for (auto i = next->chats.cbegin(); i != next->chats.cend(); ++i) {
+				if (i->draftCleared) { clearedDrafts.push_back(i.key()); }
+			}
+			Details::normalizeDrafts(*next);
+		}
 		auto bytes = error.isEmpty() ? Details::serialize(*next) : QByteArray();
-		crl::on_main([weak, next, bytes = std::move(bytes), task = std::move(task), error]() mutable {
+		crl::on_main([weak, next, clearedDrafts = std::move(clearedDrafts), bytes = std::move(bytes), task = std::move(task), error]() mutable {
 			const auto manager = weak.get();
 			if (!manager) {
 				return;
@@ -199,7 +210,7 @@ void Manager::Private::runNext() {
 				p.runNext();
 				return;
 			}
-			p.store->save(std::move(bytes), [weak, next, done = std::move(task.done)](bool ok) {
+			p.store->save(std::move(bytes), [weak, next, clearedDrafts = std::move(clearedDrafts), done = std::move(task.done)](bool ok) {
 				const auto manager = weak.get();
 				if (!manager) {
 					return;
@@ -208,6 +219,9 @@ void Manager::Private::runNext() {
 				p.busy = false;
 				if (ok && !p.stopping) {
 					p.state = next;
+					for (const auto chatId : clearedDrafts) {
+						p.draftClearEvents.fire_copy(chatId);
+					}
 				} else if (!ok) {
 					p.enabled = false;
 					p.failure = u"Secret storage commit failed; reception is paused"_q;
@@ -229,6 +243,20 @@ void Manager::Private::runNext() {
 
 void Manager::Private::publish() {
 	cancelTransfers();
+	for (auto i = dialogs.begin(); i != dialogs.end();) {
+		if (state->chats.contains(i->first)) {
+			++i;
+			continue;
+		}
+		i = dialogs.erase(i);
+	}
+	for (const auto &chat : state->chats) {
+		auto &dialog = dialogs[chat.view.id];
+		if (!dialog) {
+			dialog = std::make_unique<Dialog>(session, chat.view);
+		}
+		dialog->refresh(chat.view, owner->messages(chat.view.id));
+	}
 	changes.fire({});
 	pump();
 }
@@ -314,6 +342,16 @@ QVector<Message> Manager::messages(int chatId) const {
 		if (message != i->messages.cend()
 			&& (!message->view.expiresAt || message->view.expiresAt > _private->now())) {
 			result.push_back(message->view);
+			auto &view = result.back();
+			if (view.outgoing && view.document && view.delivery == Delivery::Pending) {
+				for (const auto &operation : i->outgoing) {
+					if (operation.packet.randomId == id && operation.packet.document
+						&& operation.inputFile.isEmpty() && !operation.failed) {
+						view.uploadOffset = _private->uploadOffsets.value({ chatId, id });
+						break;
+					}
+				}
+			}
 		}
 	}
 	return result;
@@ -324,9 +362,15 @@ Draft Manager::draft(int chatId) const {
 }
 
 void Manager::setDraft(int chatId, Draft draft, Fn<void(QString)> done) {
+	const auto current = _private->state->chats.constFind(chatId);
+	const auto revision = current == _private->state->chats.cend() ? 0 : current->draftRevision;
 	_private->enqueue([=](Private::Snapshot &snapshot) {
 		const auto chat = snapshot.chats.constFind(chatId);
-		if (chat == snapshot.chats.cend() || chat->view.state != State::Active) {
+		if (chat == snapshot.chats.cend()) {
+			return u"Secret chat is not active"_q;
+		}
+		if (chat->draftRevision != revision) { return QString(); }
+		if (chat->view.state != State::Active) {
 			return u"Secret chat is not active"_q;
 		}
 		if (draft.text.size() > 32768) {
@@ -344,6 +388,15 @@ void Manager::setDraft(int chatId, Draft draft, Fn<void(QString)> done) {
 
 rpl::producer<> Manager::changed() const {
 	return _private->changes.events();
+}
+
+rpl::producer<int> Manager::draftCleared() const {
+	return _private->draftClearEvents.events();
+}
+
+Dialog *Manager::dialog(int chatId) const {
+	const auto i = _private->dialogs.find(chatId);
+	return (i != _private->dialogs.end()) ? i->second.get() : nullptr;
 }
 
 void Manager::deleteMessages(int chatId, QVector<qint64> ids, Fn<void(QString)> done) {
@@ -509,6 +562,7 @@ void Manager::logout(Fn<void(bool)> done) {
 	auto &p = *_private;
 	p.stopping = true;
 	p.enabled = false;
+	p.dialogs.clear();
 	p.timer.cancel();
 	for (const auto &map : { p.handshakes, p.sending, p.reading }) {
 		for (const auto requestId : map) {
@@ -519,6 +573,9 @@ void Manager::logout(Fn<void(bool)> done) {
 	request(p.ackRequest).cancel();
 	p.files.reset();
 	p.transfers.clear();
+	p.uploadTransfers.clear();
+	p.uploadOffsets.clear();
+	p.pausedUploads.clear();
 	p.runNext();
 	if (!p.store) {
 		if (done) {

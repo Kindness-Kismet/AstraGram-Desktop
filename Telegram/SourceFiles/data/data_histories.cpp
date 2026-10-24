@@ -8,6 +8,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_histories.h"
 
 #include "extras/data/conversation_cache.h"
+#include "extras/features/secret_chats/secret_chat_dialog.h"
+#include "extras/features/secret_chats/secret_chat_peer.h"
 
 #include "api/api_text_entities.h"
 #include "data/business/data_shortcut_messages.h"
@@ -413,6 +415,10 @@ void Histories::requestDialogEntry(not_null<Data::Folder*> folder) {
 void Histories::requestDialogEntry(
 		not_null<History*> history,
 		Fn<void()> callback) {
+	if (history->peer->isSecretChat()) {
+		if (callback) { callback(); }
+		return;
+	}
 	if (const auto channel = history->peer->asChannel()) {
 		if (channel->isCommunity()) {
 			return;
@@ -988,12 +994,21 @@ void Histories::deleteMessages(const MessageIdsList &ids, bool revoke) {
 	auto remove = std::vector<not_null<HistoryItem*>>();
 	remove.reserve(ids.size());
 	base::flat_map<not_null<History*>, QVector<MTPint>> idsByPeer;
+	base::flat_map<int, QVector<qint64>> encryptedIds;
 	base::flat_map<not_null<PeerData*>, QVector<MTPint>> scheduledIdsByPeer;
 	base::flat_map<BusinessShortcutId, QVector<MTPint>> quickIdsByShortcut;
 	base::flat_set<not_null<DocumentData*>> savedMusic;
 	for (const auto &itemId : ids) {
 		if (const auto item = _owner->message(itemId)) {
 			const auto history = item->history();
+			if (history->peer->isSecretChat()) {
+				const auto chatId = static_cast<Extras::SecretChats::Peer*>(history->peer.get())->chatId();
+				const auto dialog = session().secretChats().dialog(chatId);
+				if (dialog) {
+					encryptedIds[chatId].push_back(dialog->randomId(itemId.msg));
+				}
+				continue;
+			}
 			if (item->isSavedMusicItem()) {
 				savedMusic.emplace(item->media()->document());
 				continue;
@@ -1039,6 +1054,13 @@ void Histories::deleteMessages(const MessageIdsList &ids, bool revoke) {
 		}
 	}
 
+	for (const auto &[chatId, ids] : encryptedIds) {
+		session().secretChats().deleteMessages(chatId, ids, [](QString error) {
+			if (!error.isEmpty()) {
+				LOG(("Secret Chats: delete failed: %1").arg(error));
+			}
+		});
+	}
 	for (const auto &[history, ids] : idsByPeer) {
 		history->owner().histories().deleteMessages(history, ids, revoke);
 	}

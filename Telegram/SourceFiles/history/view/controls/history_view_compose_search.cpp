@@ -1603,6 +1603,7 @@ void ComposeSearch::Inner::setFrom(PeerData *from) {
 }
 
 void ComposeSearch::Inner::raise() {
+	_list.container->setVisible(_listShown.current());
 	_findBar->raiseWithSurface();
 	if (!_list.container->isHidden()) {
 		_list.container->raise();

@@ -4023,7 +4023,8 @@ bool Message::hasFromPhoto() const {
 		if (item->isGuestChatBotMessage()) {
 			return true;
 		}
-		return !item->out() && !item->history()->peer->isUser();
+		return !item->out() && !item->history()->peer->isUser()
+			&& !item->history()->peer->isSecretChat();
 	} break;
 	case Context::ContactPreview:
 	case Context::ShortcutMessages:
@@ -5932,7 +5933,8 @@ bool Message::hasFromName() const {
 				}
 			}
 			return false;
-		} else if (!peer->isUser() || item->isGuestChatBotMessage()) {
+		} else if ((!peer->isUser() && !peer->isSecretChat())
+			|| item->isGuestChatBotMessage()) {
 			if (const auto media = this->media()) {
 				return !media->hideFromName();
 			}

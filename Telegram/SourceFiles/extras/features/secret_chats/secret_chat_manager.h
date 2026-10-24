@@ -15,6 +15,8 @@ class UserData;
 
 namespace Extras::SecretChats {
 
+class Dialog;
+
 enum class State { Waiting, Requested, Active, Discarded };
 enum class Delivery { Pending, Sent, Failed, Read };
 
@@ -47,6 +49,8 @@ struct Message {
 	std::optional<Document> document;
 	bool unsupported = false;
 	bool screenshot = false;
+	// 上传进度只保存在内存，重启后从待发送队列恢复。
+	std::optional<qint64> uploadOffset;
 };
 
 struct Draft {
@@ -90,6 +94,8 @@ public:
 	[[nodiscard]] Draft draft(int chatId) const;
 	void setDraft(int chatId, Draft draft, Fn<void(QString)> done = {});
 	[[nodiscard]] rpl::producer<> changed() const;
+	[[nodiscard]] rpl::producer<int> draftCleared() const;
+	[[nodiscard]] Dialog *dialog(int chatId) const;
 
 	void create(not_null<UserData*> user, Fn<void(int, QString)> done);
 	void send(int chatId, QString text, Fn<void(qint64, QString)> done = {});
@@ -113,7 +119,10 @@ public:
 	void downloadDocument(
 		int chatId,
 		qint64 messageId,
-		Fn<void(QByteArray, QString)> done);
+		Fn<void(QByteArray, QString)> done,
+		Fn<void(qint64)> progress = {});
+	void cancelDocumentDownload(int chatId, qint64 messageId);
+	void setDocumentUploadPaused(int chatId, qint64 messageId, bool paused);
 	void deleteMessages(
 		int chatId,
 		QVector<qint64> ids,

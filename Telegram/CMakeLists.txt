@@ -135,6 +135,10 @@ set(extras_files
         extras/features/secret_chats/secret_chat_codec.h
         extras/features/secret_chats/secret_chat_manager.cpp
         extras/features/secret_chats/secret_chat_manager.h
+        extras/features/secret_chats/secret_chat_dialog.cpp
+        extras/features/secret_chats/secret_chat_dialog.h
+        extras/features/secret_chats/secret_chat_peer.cpp
+        extras/features/secret_chats/secret_chat_peer.h
         extras/features/secret_chats/secret_chat_internal.h
         extras/features/secret_chats/secret_chat_state.cpp
         extras/features/secret_chats/secret_chat_handshake.cpp
@@ -146,6 +150,9 @@ set(extras_files
         extras/data/secret_chat_store.h
         extras/ui/secret_chat_box.cpp
         extras/ui/secret_chat_box.h
+        extras/ui/secret_chat_section.cpp
+        extras/ui/secret_chat_attachments.cpp
+        extras/ui/secret_chat_attachments.h
         extras/debug/commands/secret_chat_commands.cpp
         extras/features/mention_by_id/mention_by_id.cpp
         extras/features/mention_by_id/mention_by_id.h

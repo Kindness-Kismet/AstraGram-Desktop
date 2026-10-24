@@ -96,6 +96,7 @@ Result list(const QStringList &args) {
 		{ "available", session->secretChats().available() },
 		{ "baseline", session->secretChats().hasBaseline() },
 		{ "qts", session->secretChats().committedQts() },
+		{ "currentTime", session->secretChats().currentTime() },
 		{ "error", session->secretChats().error().toStdString() },
 		{ "chats", std::move(chats) },
 	}));
@@ -126,6 +127,8 @@ Result messages(const QStringList &args) {
 			entry["fileName"] = message.document->fileName.toStdString();
 			entry["mimeType"] = message.document->mimeType.toStdString();
 			entry["fileSize"] = message.document->size;
+			entry["uploadOffset"] = message.uploadOffset
+				? Json(*message.uploadOffset) : Json(nullptr);
 		}
 		result.push_back(std::move(entry));
 	}
@@ -378,6 +381,22 @@ Result action(const QStringList &args, const QString &kind) {
 }
 
 Result read(const QStringList &args) { return action(args, u"read"_q); }
+
+Result pauseUpload(const QStringList &args) {
+	if (args.size() != 4 || (args[3] != u"true"_q && args[3] != u"false"_q)) {
+		return Result::Err(u"usage: secret.pause-upload <accountUserId> <chatId> <messageId> <true|false>"_q);
+	}
+	const auto session = specifiedSession(args[0]);
+	const auto chatId = specifiedChat(args[1]);
+	const auto messageId = args[2].toLongLong();
+	if (!session || !ranges::any_of(session->secretChats().messages(chatId), [=](const auto &message) {
+		return message.id == messageId && message.uploadOffset.has_value();
+	})) {
+		return Result::Err(u"secret document is not waiting for upload"_q);
+	}
+	session->secretChats().setDocumentUploadPaused(chatId, messageId, args[3] == u"true"_q);
+	return Result::Ok(Compact(Json{ { "paused", args[3] == u"true"_q } }));
+}
 Result ttl(const QStringList &args) { return action(args, u"ttl"_q); }
 Result erase(const QStringList &args) { return action(args, u"delete"_q); }
 Result retry(const QStringList &args) { return action(args, u"retry"_q); }
@@ -394,6 +413,7 @@ const HandlerMap &secretChatHandlers() {
 		{ u"secret.send"_q, &send }, { u"secret.sample"_q, &sample },
 		{ u"secret.reply"_q, &reply }, { u"secret.draft"_q, &draft },
 		{ u"secret.download"_q, &download }, { u"secret.read"_q, &read },
+		{ u"secret.pause-upload"_q, &pauseUpload },
 		{ u"secret.read-contents"_q, &readContents },
 		{ u"secret.ttl"_q, &ttl }, { u"secret.delete"_q, &erase },
 		{ u"secret.retry"_q, &retry }, { u"secret.clear"_q, &clear },

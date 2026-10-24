@@ -96,6 +96,7 @@ void map(not_null<HistoryItem*> item, ExtrasMessageBase &message) {
 }
 
 void addEditedMessage(not_null<HistoryItem *> item) {
+	if (item->history()->peer->isSecretChat()) { return; }
 #ifdef _DEBUG
 	if (ExtrasDebug::isSimulationSession(&item->history()->session())) {
 		return;
@@ -128,6 +129,7 @@ bool hasRevisions(not_null<HistoryItem*> item) {
 }
 
 void addDeletedMessage(not_null<HistoryItem*> item) {
+	if (item->history()->peer->isSecretChat()) { return; }
 #ifdef _DEBUG
 	if (ExtrasDebug::isSimulationSession(&item->history()->session())) {
 		return;

@@ -58,6 +58,9 @@ public:
 	void searchMore();
 
 	[[nodiscard]] rpl::producer<FoundMessages> messagesFounds() const;
+	[[nodiscard]] static bool matchesLocalFilter(
+		not_null<HistoryItem*> item,
+		SearchFilter filter);
 
 private:
 	friend class MessagesSearchMerged;
@@ -93,10 +96,7 @@ private:
 	void maybeChooseCandidate();
 	void maybeFireCandidateOutput(bool force);
 	[[nodiscard]] bool matchesSender(not_null<HistoryItem*> item) const;
-	[[nodiscard]] bool matchesText(not_null<HistoryItem*> item) const;
-	[[nodiscard]] bool matchesLocalFilter(
-		not_null<HistoryItem*> item,
-		SearchFilter filter) const;
+	[[nodiscard]] static bool matchesText(not_null<HistoryItem*> item);
 
 	void cancelCurrentRequests();
 	void cancel();

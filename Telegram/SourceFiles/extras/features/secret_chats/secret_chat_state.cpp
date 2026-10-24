@@ -334,6 +334,7 @@ QString eraseMessages(ChatState &chat, const QVector<qint64> &ids) {
 
 QString clearMessages(ChatState &chat, bool includeWaiting) {
 	chat.draftCleared = true;
+	++chat.draftRevision;
 	auto ids = QVector<qint64>();
 	ids.reserve(chat.messages.size());
 	for (auto i = chat.messages.cbegin(); i != chat.messages.cend(); ++i) {
@@ -489,6 +490,7 @@ void discardState(ChatState &chat, QString error) {
 	chat.pendingReadDate = 0;
 	chat.peerReads.clear();
 	chat.draftCleared = true;
+	++chat.draftRevision;
 	for (const auto &operation : chat.outgoing) {
 		const auto id = operation.packet.randomId;
 		const auto message = chat.messages.constFind(id);

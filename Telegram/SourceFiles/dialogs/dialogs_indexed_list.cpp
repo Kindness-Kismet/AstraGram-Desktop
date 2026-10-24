@@ -10,8 +10,19 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "data/data_session.h"
 #include "history/history.h"
+#include "extras/features/secret_chats/secret_chat_dialog.h"
 
 namespace Dialogs {
+namespace {
+
+Entry *entryForPeer(not_null<PeerData*> peer) {
+	if (peer->isSecretChat()) {
+		return peer->session().secretChats().dialog(int(peer->id.to<SecretChatId>().bare));
+	}
+	return peer->owner().historyLoaded(peer);
+}
+
+} // namespace
 
 IndexedList::IndexedList(SortMode sortMode, FilterId filterId)
 : _sortMode(sortMode)
@@ -92,11 +103,11 @@ void IndexedList::peerNameChanged(
 		const base::flat_set<QChar> &oldLetters) {
 	Expects(_sortMode != SortMode::Date);
 
-	if (const auto history = peer->owner().historyLoaded(peer)) {
+	if (const auto entry = entryForPeer(peer)) {
 		if (_sortMode == SortMode::Name) {
-			adjustByName(history, oldLetters);
+			adjustByName(entry, oldLetters);
 		} else {
-			adjustNames(FilterId(), history, oldLetters);
+			adjustNames(FilterId(), entry, oldLetters);
 		}
 	}
 }
@@ -107,8 +118,8 @@ void IndexedList::peerNameChanged(
 		const base::flat_set<QChar> &oldLetters) {
 	Expects(_sortMode == SortMode::Date);
 
-	if (const auto history = peer->owner().historyLoaded(peer)) {
-		adjustNames(filterId, history, oldLetters);
+	if (const auto entry = entryForPeer(peer)) {
+		adjustNames(filterId, entry, oldLetters);
 	}
 }
 
@@ -151,9 +162,9 @@ void IndexedList::adjustByName(
 
 void IndexedList::adjustNames(
 		FilterId filterId,
-		not_null<History*> history,
+		not_null<Entry*> entry,
 		const base::flat_set<QChar> &oldLetters) {
-	const auto key = Dialogs::Key(history);
+	const auto key = Dialogs::Key(entry);
 	auto mainRow = _list.getRow(key);
 	if (!mainRow) return;
 
@@ -169,7 +180,7 @@ void IndexedList::adjustNames(
 	}
 	for (auto ch : toRemove) {
 		if (_sortMode == SortMode::Date) {
-			history->removeChatListEntryByLetter(filterId, ch);
+			entry->removeChatListEntryByLetter(filterId, ch);
 		}
 		if (auto it = _index.find(ch); it != _index.cend()) {
 			it->second.remove(key, mainRow);
@@ -182,7 +193,7 @@ void IndexedList::adjustNames(
 		}
 		auto row = j->second.addToEnd(key);
 		if (_sortMode == SortMode::Date) {
-			history->addChatListEntryByLetter(filterId, ch, row);
+			entry->addChatListEntryByLetter(filterId, ch, row);
 		}
 	}
 	++_dateVersion;
@@ -257,6 +268,7 @@ std::vector<not_null<Row*>> IndexedList::filtered(
 	}
 	result.reserve(minimal->size());
 	for (const auto &row : *minimal) {
+		if (row->entry()->asSecretChat()) { continue; }
 		const auto &nameWords = row->entry()->chatListNameWords();
 		const auto found = [&](const QString &word) {
 			for (const auto &name : nameWords) {

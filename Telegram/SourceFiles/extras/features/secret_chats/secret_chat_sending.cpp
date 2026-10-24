@@ -1,4 +1,5 @@
 #include "extras/features/secret_chats/secret_chat_internal.h"
+#include "extras/features/secret_chats/secret_chat_dialog.h"
 
 namespace Extras::SecretChats {
 
@@ -76,12 +77,26 @@ void Manager::sendDocumentReply(int chatId, QString fileName, QString mimeType,
 
 void Manager::Private::cancelTransfers() {
 	auto cancelled = QVector<quint64>();
-	for (auto i = transfers.begin(); i != transfers.end();) {
+	const auto collect = [&](auto &active) {
+		for (auto i = active.begin(); i != active.end();) {
+			const auto chat = state->chats.constFind(i.key().first);
+			if (chat == state->chats.cend() || chat->view.state == State::Discarded
+				|| !chat->messages.contains(i.key().second)) {
+				cancelled.push_back(i.value());
+				uploadOffsets.remove(i.key());
+				i = active.erase(i);
+			} else {
+				++i;
+			}
+		}
+	};
+	collect(transfers);
+	collect(uploadTransfers);
+	for (auto i = pausedUploads.begin(); i != pausedUploads.end();) {
 		const auto chat = state->chats.constFind(i.key().first);
 		if (chat == state->chats.cend() || chat->view.state == State::Discarded
 			|| !chat->messages.contains(i.key().second)) {
-			cancelled.push_back(i.value());
-			i = transfers.erase(i);
+			i = pausedUploads.erase(i);
 		} else {
 			++i;
 		}
@@ -114,6 +129,7 @@ void Manager::Private::pumpSending() {
 		}
 		if (operation == i->outgoing.cend() || operation->failed) continue;
 		const auto seq = operation.key();
+		if (pausedUploads.contains({ chatId, operation->packet.randomId })) { continue; }
 		if (!operation->packet.document || !operation->inputFile.isEmpty()) {
 			transmit(chatId, seq, false);
 			continue;
@@ -126,7 +142,7 @@ void Manager::Private::pumpSending() {
 				const auto manager = weak.get();
 				if (!manager) return;
 				auto &p = *manager->_private;
-				p.transfers.remove({ chatId, messageId });
+				p.uploadTransfers.remove({ chatId, messageId });
 				const auto inputFile = file ? Details::serializeTl(*file) : QByteArray();
 				p.enqueue([=](Snapshot &snapshot) {
 					auto chat = snapshot.chats.find(chatId);
@@ -141,9 +157,21 @@ void Manager::Private::pumpSending() {
 						if (message != chat->messages.end()) message->view.delivery = Delivery::Failed;
 					}
 					return QString();
-				}, [weak, chatId](QString) { if (weak) weak.get()->_private->sending.remove(chatId); });
+				}, [weak, chatId, messageId](QString) {
+					if (weak) {
+						weak->_private->uploadOffsets.remove({ chatId, messageId });
+						weak->_private->sending.remove(chatId);
+					}
+				});
+			}, [weak, chatId, messageId](qint64 offset) {
+				if (!weak) { return; }
+				auto &p = *weak->_private;
+				p.uploadOffsets.insert({ chatId, messageId }, offset);
+				if (const auto dialog = weak->dialog(chatId)) {
+					dialog->updateDocumentUploadProgress(messageId, offset);
+				}
 			});
-		if (transferId) transfers.insert({ chatId, messageId }, transferId);
+		if (transferId) uploadTransfers.insert({ chatId, messageId }, transferId);
 	}
 }
 
@@ -248,7 +276,8 @@ void Manager::Private::pumpReads() {
 	}
 }
 
-void Manager::downloadDocument(int chatId, qint64 messageId, Fn<void(QByteArray, QString)> done) {
+void Manager::downloadDocument(int chatId, qint64 messageId, Fn<void(QByteArray, QString)> done,
+		Fn<void(qint64)> progress) {
 	auto &p = *_private;
 	const auto chat = p.state->chats.constFind(chatId);
 	if (!available() || chat == p.state->chats.cend() || chat->view.state == State::Discarded
@@ -321,8 +350,24 @@ void Manager::downloadDocument(int chatId, qint64 messageId, Fn<void(QByteArray,
 		decode({}, u"Secret document file reference is invalid"_q);
 		return;
 	}
-	const auto transferId = p.files->download(*file, decode);
+	const auto fileSize = message.packet.fileSize;
+	const auto transferId = p.files->download(*file, decode, [=](qint64 bytes) {
+		if (progress) { progress(std::min(bytes, fileSize)); }
+	});
 	if (transferId) p.transfers.insert({ chatId, messageId }, transferId);
+}
+
+void Manager::cancelDocumentDownload(int chatId, qint64 messageId) {
+	const auto transferId = _private->transfers.value({ chatId, messageId });
+	if (transferId) { _private->files->cancel(transferId); }
+}
+
+void Manager::setDocumentUploadPaused(int chatId, qint64 messageId, bool paused) {
+	if (paused) { _private->pausedUploads.insert({ chatId, messageId }, true); }
+	else { _private->pausedUploads.remove({ chatId, messageId }); }
+	const auto transferId = _private->uploadTransfers.value({ chatId, messageId });
+	if (transferId) { _private->files->setUploadPaused(transferId, paused); }
+	if (!paused) { _private->pump(); }
 }
 
 } // namespace Extras::SecretChats

@@ -7,6 +7,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_top_bar_widget.h"
 
+#include "extras/features/secret_chats/secret_chat_dialog.h"
+#include "extras/ui/secret_chat_box.h"
+#include "ui/text/format_values.h"
+#include "styles/style_menu_icons.h"
+
 #include "extras/features/window_material/window_material.h"
 #include "ui/chat/floating_bar.h"
 #include "history/history.h"
@@ -68,6 +73,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_chat_participants.h"
 #include "styles/style_window.h"
 #include "styles/style_dialogs.h"
+#include "styles/style_dialogs_layout.h"
 #include "styles/style_chat.h"
 #include "styles/style_info.h"
 
@@ -386,6 +392,9 @@ rpl::producer<> TopBarWidget::searchRequest() const {
 }
 
 void TopBarWidget::toggleInfoSection() {
+	if (_activeChat.key && _activeChat.key.entry()->asSecretChat()) {
+		return;
+	}
 	if (_controller->content()->reopenThirdSection()) {
 		return;
 	}
@@ -499,7 +508,15 @@ void TopBarWidget::paintTopBar(Painter &p) {
 	const auto folder = _activeChat.key.folder();
 	const auto topic = _activeChat.key.topic();
 	const auto namePeer = titleNamePeer();
-	if (topic
+	if (peer && peer->isSecretChat()) {
+		const auto &lock = st::dialogsLockIcon.icon;
+		lock.paint(p, nameleft, nametop + (st::semiboldFont->height - lock.height()) / 2, width());
+		const auto skip = lock.width() + st::dialogsChatTypeSkip;
+		p.setPen(st::dialogsNameFg);
+		p.setFont(st::semiboldFont);
+		p.drawTextLeft(nameleft + skip, nametop, width(), st::semiboldFont->elided(peer->name(), std::max(namewidth - skip, 0)));
+		paintStatus(p, statusleft, statustop, statuswidth, width());
+	} else if (topic
 		&& _activeChat.section == Section::Replies
 		&& !_subsectionSwitcher) {
 		p.setPen(st::dialogsNameFg);
@@ -790,7 +807,7 @@ void TopBarWidget::mousePressEvent(QMouseEvent *e) {
 
 void TopBarWidget::infoClicked() {
 	const auto key = _activeChat.key;
-	if (!key) {
+	if (!key || key.entry()->asSecretChat()) {
 		return;
 	} else if (_subsectionSwitcher) {
 		_controller->showPeerInfo(titleNamePeer());
@@ -837,10 +854,14 @@ void TopBarWidget::setActiveChat(
 	}
 	const auto topicChanged = (_activeChat.key.topic()
 		!= activeChat.key.topic());
-	const auto peerChanged = (_activeChat.key.history()
-		!= activeChat.key.history());
+	const auto peerChanged = (_activeChat.key.history() != activeChat.key.history())
+		|| (_activeChat.key.peer() != activeChat.key.peer());
 
 	_activeChat = activeChat;
+	setCursor(_activeChat.key && _activeChat.key.entry()->asSecretChat()
+		? style::cur_default : style::cur_pointer);
+	_menuToggle->setAccessibleName(_activeChat.key && _activeChat.key.entry()->asSecretChat()
+		? tr::extras_SecretChatOptions(tr::now) : tr::lng_chat_menu(tr::now));
 	_titlePeerText.clear();
 	_back->clearState();
 	update();
@@ -850,6 +871,12 @@ void TopBarWidget::setActiveChat(
 		_titleNameVersion = 0;
 		_emojiInteractionSeen = nullptr;
 		_activeChatLifetime.destroy();
+		if (const auto secret = _activeChat.key
+			? _activeChat.key.entry()->asSecretChat() : nullptr) {
+			session().secretChats().changed() | rpl::on_next([=] {
+				updateOnlineDisplay();
+			}, _activeChatLifetime);
+		}
 		if (const auto peer = _activeChat.key.peer()) {
 			session().changes().peerFlagsValue(
 				peer,
@@ -1014,7 +1041,9 @@ void TopBarWidget::refreshInfoButton() {
 		_info.destroy();
 	} else if (const auto peer = _activeChat.key.peer()) {
 		const auto sublist = _activeChat.key.sublist();
-		const auto infoPeer = (sublist && !_subsectionSwitcher)
+		const auto secret = _activeChat.key.entry()->asSecretChat();
+		const auto infoPeer = secret ? static_cast<PeerData*>(secret->user().get())
+			: (sublist && !_subsectionSwitcher)
 			? sublist->sublistPeer().get()
 			: peer;
 		auto info = object_ptr<Ui::UserpicButton>(
@@ -1258,6 +1287,7 @@ void TopBarWidget::updateControlsVisibility() {
 				_activeChat.key.peer()->asChannel()))
 		: false;
 	const auto hasInfo = !_activeChat.key.folder()
+		&& !_activeChat.key.entry()->asSecretChat()
 		&& (section == Section::History
 			? true
 			: (section == Section::Replies)
@@ -1834,7 +1864,16 @@ void TopBarWidget::updateOnlineDisplay() {
 	QString text;
 	const auto now = base::unixtime::now();
 	bool titlePeerTextOnline = false;
-	if (const auto user = peer->asUser()) {
+	if (peer->isSecretChat()) {
+		const auto secret = _activeChat.key.entry()->asSecretChat();
+		const auto chat = secret ? session().secretChats().chat(secret->chatId()) : std::nullopt;
+		text = !chat || chat->state == Extras::SecretChats::State::Discarded
+			? tr::extras_SecretChatEnded(tr::now)
+			: chat->state == Extras::SecretChats::State::Active
+			? tr::extras_SecretChatReady(tr::now)
+			: tr::extras_SecretChatPending(tr::now);
+		if (chat && chat->ttl) { text += u" · "_q + Ui::FormatTTL(chat->ttl); }
+	} else if (const auto user = peer->asUser()) {
 		if (session().supportMode()
 			&& !session().supportHelper().infoCurrent(user).text.empty()) {
 			text = QString::fromUtf8("\xe2\x9a\xa0\xef\xb8\x8f check info");

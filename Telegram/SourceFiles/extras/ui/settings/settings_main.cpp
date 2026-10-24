@@ -2,7 +2,6 @@
 
 #include "core/version.h"
 #include "extras/ui/settings/settings_content.h"
-#include "extras/ui/secret_chat_box.h"
 #include "extras/extras_settings.h"
 #include "extras/ui/settings/settings_appearance.h"
 #include "extras/ui/settings/settings_chats.h"
@@ -32,15 +31,6 @@ using namespace Builder;
 namespace {
 
 void buildCategories(SectionBuilder &builder) {
-	const auto controller = builder.controller();
-	builder.addButton({
-		.id = u"extras/cat/secret-chats"_q,
-		.title = tr::extras_SecretChatsTitle(),
-		.icon = { &st::menuIconLock },
-		.onClick = controller ? Fn<void()>([=] {
-			Extras::SecretChats::showChats(controller);
-		}) : Fn<void()>(),
-	});
 	const auto dev = ExtrasSettings::getInstance().devFeaturesEnabled();
 	if (dev) {
 		builder.addSectionButton({

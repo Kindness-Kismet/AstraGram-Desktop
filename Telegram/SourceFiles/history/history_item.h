@@ -485,6 +485,8 @@ public:
 	void setExtrasHint(const QString &hint);
 	void setRealId(MsgId newId);
 	void markEphemeralSent();
+	// 独立本地历史保留本地编号，只同步投递状态和销毁限制。
+	void updateLocalState(TimeId date, bool sending, bool failed, bool unread, int ttl);
 	void markTextAppearingStarted();
 	void incrementReplyToTopCounter();
 	void applyEffectWatchedOnUnreadKnown();
@@ -856,6 +858,7 @@ private:
 	int _unsupportedTTL = 0;
 
 	TimeId _date = 0;
+	int _localTtl = 0;
 	TimeId _ttlDestroyAt = 0;
 	int _boostsApplied = 0;
 	int _starsPaid = 0;

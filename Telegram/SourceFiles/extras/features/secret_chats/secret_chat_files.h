@@ -20,10 +20,13 @@ public:
 	quint64 upload(
 		QByteArray ciphertext,
 		qint32 fingerprint,
-		Fn<void(std::optional<MTPInputEncryptedFile>, QString)> done);
+		Fn<void(std::optional<MTPInputEncryptedFile>, QString)> done,
+		Fn<void(qint64)> progress = {});
+	void setUploadPaused(quint64 transferId, bool paused);
 	quint64 download(
 		const MTPEncryptedFile &file,
-		Fn<void(QByteArray, QString)> done);
+		Fn<void(QByteArray, QString)> done,
+		Fn<void(qint64)> progress = {});
 	void cancel(quint64 transferId);
 
 private:

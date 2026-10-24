@@ -1,6 +1,7 @@
 #pragma once
 
 #include "extras/features/secret_chats/secret_chat_manager.h"
+#include "extras/features/secret_chats/secret_chat_dialog.h"
 #include "extras/features/secret_chats/secret_chat_codec.h"
 #include "extras/features/secret_chats/secret_chat_crypto.h"
 #include "extras/features/secret_chats/secret_chat_files.h"
@@ -99,6 +100,8 @@ struct ChatState {
 	QVector<int> resendQueue;
 	// 清理标记只在当前保存事务内传播，不写入原会话格式。
 	bool draftCleared = false;
+	// 清理前排队的草稿保存不能恢复已清空的输入。
+	quint64 draftRevision = 0;
 };
 
 struct Creation {
@@ -210,8 +213,10 @@ struct Manager::Private {
 	std::unique_ptr<Store> store;
 	std::unique_ptr<FileTransfer> files;
 	std::shared_ptr<const Snapshot> state;
+	base::flat_map<int, std::unique_ptr<Dialog>> dialogs;
 	std::deque<Task> tasks;
 	rpl::event_stream<> changes;
+	rpl::event_stream<int> draftClearEvents;
 	base::Timer timer;
 	bool initializing = false;
 	bool ready = false;
@@ -226,6 +231,9 @@ struct Manager::Private {
 	QMap<int, mtpRequestId> reading;
 	QMap<int, Fn<void(int, QString)>> createCallbacks;
 	QMap<std::pair<int, qint64>, quint64> transfers;
+	QMap<std::pair<int, qint64>, quint64> uploadTransfers;
+	QMap<std::pair<int, qint64>, qint64> uploadOffsets;
+	QMap<std::pair<int, qint64>, bool> pausedUploads;
 	mtpRequestId dhRequest = 0;
 	QVector<Fn<void(int, QByteArray, QByteArray, int, QString)>> dhCallbacks;
 	mtpRequestId ackRequest = 0;

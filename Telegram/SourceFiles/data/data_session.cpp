@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_session.h"
+
+#include "extras/features/secret_chats/secret_chat_peer.h"
 #include "extras/data/sticker_set_cache.h"
 
 #include "extras/data/conversation_cache.h"
@@ -608,6 +610,8 @@ not_null<PeerData*> Session::peer(PeerId id) {
 			return std::make_unique<ChatData>(this, id);
 		} else if (peerIsChannel(id)) {
 			return std::make_unique<ChannelData>(this, id);
+		} else if (peerIsSecretChat(id)) {
+			return std::make_unique<Extras::SecretChats::Peer>(this, id);
 		}
 		Unexpected("Peer id type.");
 	}();

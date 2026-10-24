@@ -19,6 +19,8 @@ struct FileTransfer::Upload {
 	quint64 transferId = 0;
 	mtpRequestId requestId = 0;
 	bool finished = false;
+	bool ready = false;
+	bool paused = false;
 	QByteArray bytes;
 	QString checksum;
 	quint64 id = 0;
@@ -27,6 +29,7 @@ struct FileTransfer::Upload {
 	int parts = 0;
 	bool big = false;
 	Fn<void(std::optional<MTPInputEncryptedFile>, QString)> done;
+	Fn<void(qint64)> progress;
 };
 
 struct FileTransfer::Download {
@@ -36,6 +39,7 @@ struct FileTransfer::Download {
 	MTPEncryptedFile file;
 	QByteArray bytes;
 	qint64 size = 0;
+	Fn<void(qint64)> progress;
 	Fn<void(QByteArray, QString)> done;
 };
 
@@ -48,7 +52,8 @@ FileTransfer::~FileTransfer() = default;
 quint64 FileTransfer::upload(
 		QByteArray ciphertext,
 		qint32 fingerprint,
-		Fn<void(std::optional<MTPInputEncryptedFile>, QString)> done) {
+		Fn<void(std::optional<MTPInputEncryptedFile>, QString)> done,
+		Fn<void(qint64)> progress) {
 	if (ciphertext.isEmpty()
 		|| ciphertext.size() > kMaxDocumentBytes + 16
 		|| ciphertext.size() % 16) {
@@ -59,6 +64,7 @@ quint64 FileTransfer::upload(
 	operation->bytes = std::move(ciphertext);
 	operation->fingerprint = fingerprint;
 	operation->done = std::move(done);
+	operation->progress = std::move(progress);
 	operation->parts = (operation->bytes.size() + kPartSize - 1) / kPartSize;
 	operation->big = operation->bytes.size() > kBigFileThreshold;
 	operation->transferId = _nextId++;
@@ -77,6 +83,7 @@ quint64 FileTransfer::upload(
 				return;
 			}
 			operation->checksum = checksum;
+			operation->ready = true;
 			weak->uploadPart(operation);
 		});
 	});
@@ -84,6 +91,9 @@ quint64 FileTransfer::upload(
 }
 
 void FileTransfer::uploadPart(std::shared_ptr<Upload> operation) {
+	if (operation->finished || operation->paused) {
+		return;
+	}
 	if (operation->part == operation->parts) {
 		const auto input = operation->big
 			? MTP_inputEncryptedFileBigUploaded(
@@ -103,6 +113,10 @@ void FileTransfer::uploadPart(std::shared_ptr<Upload> operation) {
 			return;
 		}
 		++operation->part;
+		if (operation->progress) {
+			operation->progress(std::min(qint64(operation->part) * kPartSize,
+				qint64(operation->bytes.size())));
+		}
 		uploadPart(operation);
 	};
 	const auto fail = [=](const MTP::Error &error) {
@@ -121,9 +135,22 @@ void FileTransfer::uploadPart(std::shared_ptr<Upload> operation) {
 	)).done(done).fail(fail).send();
 }
 
+void FileTransfer::setUploadPaused(quint64 transferId, bool paused) {
+	const auto i = _uploads.find(transferId);
+	if (i == _uploads.end()) {
+		return;
+	}
+	const auto operation = i->second;
+	operation->paused = paused;
+	if (!paused && operation->ready && !operation->requestId) {
+		uploadPart(operation);
+	}
+}
+
 quint64 FileTransfer::download(
 		const MTPEncryptedFile &file,
-		Fn<void(QByteArray, QString)> done) {
+		Fn<void(QByteArray, QString)> done,
+		Fn<void(qint64)> progress) {
 	if (file.type() != mtpc_encryptedFile) {
 		done(QByteArray(), u"encrypted file reference is empty"_q);
 		return 0;
@@ -140,6 +167,7 @@ quint64 FileTransfer::download(
 	operation->size = size;
 	operation->bytes.reserve(size);
 	operation->done = std::move(done);
+	operation->progress = std::move(progress);
 	operation->transferId = _nextId++;
 	_downloads.emplace(operation->transferId, operation);
 	downloadPart(operation);
@@ -147,6 +175,9 @@ quint64 FileTransfer::download(
 }
 
 void FileTransfer::downloadPart(std::shared_ptr<Download> operation) {
+	if (operation->finished) {
+		return;
+	}
 	if (operation->bytes.size() == operation->size) {
 		completeDownload(operation, std::move(operation->bytes), QString());
 		return;
@@ -170,6 +201,7 @@ void FileTransfer::downloadPart(std::shared_ptr<Download> operation) {
 			return;
 		}
 		operation->bytes.append(part);
+		if (operation->progress) { operation->progress(operation->bytes.size()); }
 		downloadPart(operation);
 	}).fail([=](const MTP::Error &error) {
 		operation->requestId = 0;
