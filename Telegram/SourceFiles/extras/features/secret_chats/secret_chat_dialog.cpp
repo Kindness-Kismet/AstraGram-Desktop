@@ -59,7 +59,11 @@ void Dialog::refresh(const Chat &chat, const QVector<Message> &messages) {
 	_hasMessages = !messages.isEmpty();
 	for (const auto &message : messages) {
 		(void)ensureLocalId(message.id);
+		if (message.replyTo) {
+			(void)ensureLocalId(message.replyTo);
+		}
 	}
+	auto addedReplies = std::vector<not_null<HistoryItem*>>();
 	_messageIds.clear();
 	for (const auto &message : messages) {
 		auto &rendered = _rendered[message.id];
@@ -74,7 +78,7 @@ void Dialog::refresh(const Chat &chat, const QVector<Message> &messages) {
 				.from = message.outgoing ? session().userId() : _user->id,
 				.date = message.date,
 			};
-			if (message.replyTo && localId(message.replyTo)) {
+			if (message.replyTo) {
 				fields.flags |= MessageFlag::HasReplyInfo;
 				fields.replyTo.messageId = FullMsgId(_history->peer->id, localId(message.replyTo));
 			}
@@ -116,6 +120,9 @@ void Dialog::refresh(const Chat &chat, const QVector<Message> &messages) {
 			} else {
 				item = _history->makeMessage(std::move(fields), TextWithEntities{ text }, MTP_messageMediaEmpty());
 			}
+			if (message.replyTo) {
+				addedReplies.push_back(item);
+			}
 		}
 		rendered.message = message;
 		if (rendered.document && message.outgoing) {
@@ -152,6 +159,9 @@ void Dialog::refresh(const Chat &chat, const QVector<Message> &messages) {
 		if (const auto item = owner().message(_history->peer->id, i->second.id)) { item->destroy(); }
 		_randomIds.erase(i->second.id);
 		i = _rendered.erase(i);
+	}
+	for (const auto item : addedReplies) {
+		item->updateDependencyItem();
 	}
 	_unreadCount = ranges::count_if(messages, [](const Message &message) {
 		return !message.outgoing && message.delivery != Delivery::Read;
