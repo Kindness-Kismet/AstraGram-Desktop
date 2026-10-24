@@ -418,7 +418,10 @@ private:
 					.globalStartGeometry = start,
 				});
 			}
-			if (_compose->fieldLastText() == original) { _compose->clear(); }
+			const auto currentReply = _dialog->randomId(_compose->replyingToMessage().messageId.msg);
+			if (_compose->fieldLastText() == original && currentReply == reply) {
+				_compose->clear();
+			}
 			_inner->showAtPosition(Data::MaxMessagePosition, {});
 		}));
 	}
