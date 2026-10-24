@@ -9604,8 +9604,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SecretChatConfirm" = "Start a separate end-to-end encrypted chat with this person?";
 "extras_SecretChatPending" = "Establishing encrypted chat…";
 "extras_SecretChatReady" = "End-to-end encrypted";
-"extras_SecretChatEnded" = "Secret chat ended";
-"extras_SecretChatUnavailable" = "Secret chat storage is unavailable. Please restart and try again.";
+"extras_SecretChatEnded" = "Encrypted chat ended";
+"extras_SecretChatUnavailable" = "Encrypted chat storage is unavailable. Please restart and try again.";
 "extras_SecretChatFailed" = "The operation failed. Please try again.";
 "extras_SecretChatVerify" = "Encryption Key";
 "extras_SecretChatVerifyHelp" = "Compare this key with the key shown in the other person's encrypted chat. They must match.";
