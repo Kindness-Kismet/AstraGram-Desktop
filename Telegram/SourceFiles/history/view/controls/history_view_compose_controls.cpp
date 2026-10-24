@@ -5222,7 +5222,12 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		_replaceMedia->moveToLeft(left, buttonsTop);
 	}
 	if (_attachToggle && settings.showAttachButtonInMessageField()) {
-		_attachToggle->moveToLeft(left, buttonsTop);
+		// 附件圆与胶囊左侧圆弧同心，专用圆角样式沿用自身布局。
+		const auto attachLeft = ComposeOuterMargin(_st)
+			? (left + (_st.send.inner.height - _attachToggle->width()) / 2
+				- leftPadding)
+			: left;
+		_attachToggle->moveToLeft(attachLeft, buttonsTop);
 		left += _attachToggle->width();
 	}
 	if (showSendAs) {
