@@ -1,51 +1,39 @@
-- Added offline browsing for visited chats, so you can now open the chat list, message history, link previews, polls, reactions, stickers, custom emoji and cached small files without a connection
-- Added cache management by category and chat, so you can now see what uses storage, clear selected categories or single chats and set separate retention periods for private chats, groups, channels and stories
-- Added in-window media for articles, so you can now open photos and videos from an article without leaving the article window
-- Changed how theme editing works; it now opens a theme creator dialog with searchable color categories, opacity, reference colors, previews and per-color reset, and keeps unsaved drafts across restarts
-- Changed how downloads and updates appear in the chat list; the header download button animates and shows a count while files load, and a ready update appears as a button next to it that opens the release notes with update and skip actions
-- Changed how ghost mode and streamer mode settings are saved; each account now keeps its own settings
-- Changed how media viewers close; clicking empty space no longer closes them, and the in-window and article viewers can be moved by dragging their top bar
-- Changed the default chat background; it now uses a neutral gray in both light and dark themes
-- Improved file messages, which now show complete file names on multiple lines instead of cutting out the middle
-- Improved page and panel transitions, which now fade in place instead of sliding, and the emoji panel moves into and out of the side column with the same animation as the info panel
-- Improved media viewer menus, which now follow the light or dark app theme
-- Improved settings previews, which now share the page background and show the sticker preview above its size slider
-- Improved the sticker panel hover effect, which now darkens only the sticker itself like sticker suggestions
-- Improved chat folders, which now show chat avatars right away the first time a folder is opened
-- Improved drawer element settings, which now explain in the title that items can be long-pressed and dragged to reorder
-- Removed app icon customization; choosing an alternative app icon is no longer available
-- Removed the photo label from the media viewer header; single photos no longer show the generic Photo entry
-- Fixed an issue with chat folders at startup that previously left no folder selected when All Chats was hidden and briefly showed hidden chats
-- Fixed an issue with the forwarding dialog that previously caused it to drift downward when its list was short
-- Fixed an issue with search in dialogs that previously caused the search bar, folder tabs and list to jump after the dialog opened
-- Fixed an issue with read receipts in message menus that previously showed a single checkmark instead of a double one
-- Fixed an issue with View Video Cover that previously caused it to disappear from the context menu while a video was downloading
-- Fixed an issue with the Save As dialog on Windows that previously caused a small empty window to appear next to it
-- Fixed an issue with the sticker pack menu button that previously caused its hover background to be off center and clipped
+- Added encrypted chats in the chat list, so you can now exchange encrypted text and files, reply to messages, keep local drafts and use notifications and self-destruct timers
+- Added fullscreen viewing for article media on Windows, so you can now expand article photos and videos and drag the top bar to move the article window
+- Changed how media viewers close; clicking empty space now closes the viewer again, while dragging its top bar still moves the host window
+- Changed the Windows system requirements; the app now requires Windows 10 or later
+- Improved media timestamps, which now use rounded capsules with clearer text and matching status icons on photos, albums, videos, locations and stickers
+- Improved service messages on custom wallpapers, which now keep date labels, replies and wallpaper preview controls readable
+- Improved media viewers on Windows, which now restore fullscreen blur and transitions and avoid light fringes at in-window corners
+- Improved compose and search controls, which now use circular button backgrounds and keep the attachment button centered in the input capsule
+- Improved settings cards, which now use rounded hover backgrounds for custom rows
+- Fixed an issue with compose colors that previously caused the input capsule to use different colors when the chat background was disabled
+- Fixed an issue with reply click effects that previously caused sticker and round-video reply ripples to disappear or extend outside the reply area
+- Fixed an issue with settings navigation that previously caused the category highlight to disagree with pages opened from outside settings
+- Fixed an issue with chat folder layouts that previously caused the sidebar and top tabs to appear together at startup and left extra tabs in Archived Chats
+- Fixed an issue with the empty chat area that previously caused it to cover the system window material
+- Fixed an issue with tray restoration that previously caused the current chat and visible content to disappear after hiding the window
+- Fixed an issue with shutdown logging that previously caused the app to crash when late Qt warnings arrived after the launcher was destroyed
+- Fixed an issue with the material drawer that previously caused incomplete repainting when parts of the interface changed
+- Changed how bars above a chat are shown; pinned messages, contact actions, business bots and sponsored messages now share one card, while translation, join requests, video chats, topic reopening and paid message notices appear as compact capsules below it
 
 ---
 
-- 新增了已访问聊天的离线浏览功能，现在没有网络时也可以查看聊天列表、消息记录、链接预览、投票、回应、贴纸、自定义表情和已缓存的小文件
-- 新增了按类别和聊天管理缓存的功能，现在可以查看存储占用，清理选中的类别或单个聊天，并分别设置私聊、群组、频道和动态的保留时长
-- 新增了文章内查看媒体的功能，现在可以直接在文章窗口里打开文章中的图片和视频
-- 调整了主题编辑的行为，现在会打开主题创建对话框，支持按类别搜索颜色、调整不透明度、引用其他颜色、实时预览和逐项还原，未保存的草稿重启后也会保留
-- 调整了聊天列表中下载和更新提示的行为，现在顶部下载按钮会在下载时播放动画并显示数量，有可用更新时旁边会出现更新按钮，点击后可以查看更新说明并选择更新或跳过
-- 调整了隐身模式和主播模式设置的保存方式，现在每个账号分别保存自己的设置
-- 调整了媒体查看器的关闭方式，现在点击空白处不会再关闭查看器，窗口内查看器和文章查看器可以拖动顶栏移动
-- 调整了默认聊天背景，现在浅色和深色主题都使用中性灰色
-- 对文件消息进行了改善，这使得文件名会完整地分行显示，不再省略中间部分
-- 对页面和面板的切换动画进行了改善，这使得切换时改为原地淡入淡出而不是滑动，表情面板移入和移出侧栏时也使用与资料面板相同的动画
-- 对媒体查看器的菜单进行了改善，这使得菜单会跟随应用的浅色或深色主题
-- 对设置页中的预览进行了改善，这使得预览与页面共用背景，贴纸预览也移到了大小滑块上方
-- 对贴纸面板的悬停效果进行了改善，这使得悬停时只加深贴纸本身，与贴纸联想保持一致
-- 对聊天文件夹进行了改善，这使得第一次打开文件夹时就能立即显示聊天头像
-- 对主菜单项目设置进行了改善，这使得标题中会提示可以长按拖动排序
-- 移除了自定义应用图标功能，选择其他应用图标不再可用
-- 移除了媒体查看器顶栏中的图片标签，单张图片不再显示通用的图片入口
-- 修复了关于启动时聊天文件夹的错误，该问题曾导致隐藏“所有聊天”后没有选中任何文件夹，以及短暂显示已隐藏的聊天
-- 修复了关于转发对话框的错误，该问题曾导致列表较短时对话框向下偏移
-- 修复了关于对话框内搜索的错误，该问题曾导致对话框打开后搜索栏、文件夹标签和列表发生跳动
-- 修复了关于消息菜单中已读回执的错误，该问题曾导致显示单个对勾而不是双对勾
-- 修复了关于查看视频封面的错误，该问题曾导致视频下载过程中右键菜单里的这一项消失
-- 修复了关于 Windows 上另存为对话框的错误，该问题曾导致旁边出现一个空白小窗口
-- 修复了关于贴纸包菜单按钮的错误，该问题曾导致悬停背景偏离中心并被裁切
+- 新增了聊天列表中的加密对话，现在可以发送加密文字和文件、回复消息、保存本机草稿，并使用消息通知和阅后即焚计时
+- 新增了 Windows 上文章媒体的全屏查看功能，现在可以全屏打开文章中的图片和视频，并拖动顶栏移动文章窗口
+- 调整了媒体查看器的关闭方式，现在点击空白处会再次关闭查看器，拖动顶栏仍可移动宿主窗口
+- 调整了 Windows 版本的系统要求，现在需要 Windows 10 或更新的系统
+- 对媒体时间标签进行了改善，这使得图片、相册、视频、位置和贴纸上的时间会使用圆角胶囊，文字及状态图标也更清晰
+- 对自定义壁纸上的服务消息进行了改善，这使得日期标签、回复和壁纸预览控件保持清晰可读
+- 对 Windows 上的媒体查看器进行了改善，这使得全屏背景模糊和切换动画恢复正常，窗口内查看器的圆角边缘也不再出现亮边
+- 对输入栏和搜索栏控件进行了改善，这使得按钮背景使用圆形，附件按钮也与输入胶囊左端保持同心
+- 对设置卡片进行了改善，这使得自绘项目的悬停背景也会使用圆角
+- 修复了关于输入栏配色的错误，该问题曾导致关闭聊天背景后输入胶囊使用不同的颜色
+- 修复了关于回复点击效果的错误，该问题曾导致贴纸和圆形视频旁的回复动画消失或超出回复区域
+- 修复了关于设置页导航的错误，该问题曾导致从设置页之外打开页面后，分类高亮与当前页面不一致
+- 修复了关于聊天文件夹布局的错误，该问题曾导致启动时侧栏和顶部标签同时显示，以及归档聊天出现多余标签
+- 修复了关于空白聊天区域的错误，该问题曾导致该区域遮住系统窗口材质
+- 修复了关于托盘恢复的错误，该问题曾导致隐藏窗口后当前聊天和可见内容消失
+- 修复了关于退出日志的错误，该问题曾导致启动器销毁后收到 Qt 警告时应用崩溃
+- 修复了关于系统材质主菜单的错误，该问题曾导致界面局部变化时菜单绘制不完整
+- 调整了聊天顶部横条的显示方式，现在置顶消息、联系人操作、商业机器人和广告合并在同一张卡片中，翻译、入群申请、视频聊天、重新开启话题和付费消息提示以小胶囊形式显示在卡片下方
