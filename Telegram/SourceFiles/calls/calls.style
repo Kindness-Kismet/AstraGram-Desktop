@@ -1072,6 +1072,14 @@ groupCallTopBarJoin: RoundButton(defaultActiveButton) {
 groupCallTopBarOpen: RoundButton(groupCallTopBarJoin) {
 	ripple: universalRippleAnimation;
 }
+groupCallCapsuleJoin: RoundButton(groupCallTopBarJoin) {
+	width: -20px;
+	height: 22px;
+	textTop: 2px;
+}
+groupCallCapsuleOpen: RoundButton(groupCallCapsuleJoin) {
+	ripple: universalRippleAnimation;
+}
 groupCallBoxButton: RoundButton(defaultBoxButton) {
 	textFg: groupCallActiveFg;
 	textFgOver: groupCallActiveFg;

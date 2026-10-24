@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/fields/input_field.h"
 #include "mtproto/sender.h"
 #include "extras/ui/components/smooth_transition.h"
+#include "extras/ui/components/chat_bars_surface.h"
 
 enum class SendMediaType;
 class MessageLinksParser;
@@ -92,6 +93,7 @@ class RoundButton;
 class PinnedBar;
 class GroupCallBar;
 class RequestsBar;
+class ChatBarStack;
 struct PreparedList;
 struct PreparedBundle;
 class SendFilesWay;
@@ -662,6 +664,7 @@ private:
 	void checkPinnedBarState();
 	void clearHidingPinnedBar();
 	[[nodiscard]] Ui::PinnedBar *visiblePinnedBar() const;
+	[[nodiscard]] Ui::ChatBarStack topBarsStack() const;
 	void refreshPinnedBarButton(bool many, HistoryItem *item);
 	void checkLastPinnedClickedIdReset(
 		int wasScrollTop,
@@ -876,6 +879,7 @@ private:
 	object_ptr<Ui::IconButton> _fieldBarCancel;
 
 	std::unique_ptr<Ui::RpWidget> _topBars;
+	ExtrasUi::ChatBarsSurface _topBarsSurface;
 
 	std::unique_ptr<HistoryView::TranslateBar> _translateBar;
 	int _translateBarHeight = 0;

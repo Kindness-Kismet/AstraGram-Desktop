@@ -787,17 +787,52 @@ int HistoryWidget::composeOverlap() const {
 }
 
 int HistoryWidget::topBarsOverlap() const {
-	auto bars = Ui::ChatBarStack();
-	bars.add(_groupCallBar ? _groupCallBar->height() : 0);
-	bars.add(_requestsBar ? _requestsBar->height() : 0);
-	const auto pinnedBar = visiblePinnedBar();
-	bars.add(pinnedBar ? pinnedBar->height() : 0);
-	bars.add(_sponsoredMessageBar ? _sponsoredMessageBar->height() : 0);
-	bars.add(_translateBar ? _translateBar->height() : 0);
-	bars.add(_paysStatus ? _paysStatus->bar().height() : 0);
-	bars.add(_contactStatus ? _contactStatus->bar().height() : 0);
-	bars.add(_businessBotStatus ? _businessBotStatus->bar().height() : 0);
-	return bars.height();
+	return topBarsStack().height();
+}
+
+// 内容横条合成卡片，动作横条在卡片下方排成胶囊，左右与输入胶囊对齐。
+Ui::ChatBarStack HistoryWidget::topBarsStack() const {
+	const auto margin = st::historyComposeCapsuleMargin;
+	auto result = Ui::ChatBarStack(width() - 2 * margin);
+	if (const auto pinnedBar = visiblePinnedBar()) {
+		result.addRow(pinnedBar, pinnedBar->height());
+	}
+	if (_sponsoredMessageBar) {
+		result.addRow(
+			_sponsoredMessageBar.get(),
+			_sponsoredMessageBar->height());
+	}
+	if (_contactStatus) {
+		result.addRow(_contactStatus.get(), _contactStatus->bar().height());
+	}
+	if (_businessBotStatus) {
+		result.addRow(
+			_businessBotStatus.get(),
+			_businessBotStatus->bar().height());
+	}
+	if (_groupCallBar) {
+		result.addCapsule(
+			_groupCallBar.get(),
+			_groupCallBar->naturalWidth(),
+			_groupCallBar->height());
+	}
+	if (_requestsBar) {
+		result.addCapsule(
+			_requestsBar.get(),
+			_requestsBar->naturalWidth(),
+			_requestsBar->height());
+	}
+	if (_translateBar) {
+		result.addCapsule(
+			_translateBar.get(),
+			_translateBar->naturalWidth(),
+			_translateBar->height());
+	}
+	if (_paysStatus) {
+		const auto &bar = _paysStatus->bar();
+		result.addCapsule(_paysStatus.get(), bar.naturalWidth(), bar.height());
+	}
+	return result;
 }
 
 int HistoryWidget::visibleScrollHeight() const {
@@ -1062,58 +1097,50 @@ void HistoryWidget::updateControlsGeometry() {
 	moveFieldControls();
 
 	_topBars->move(margin, _topBar->bottomNoMargins());
-	auto stack = Ui::ChatBarStack();
-	const auto place = [&](int height) { return stack.add(height); };
-	const auto groupCallTop = place(_groupCallBar ? _groupCallBar->height() : 0);
-	if (_groupCallBar) {
-		_groupCallBar->move(0, groupCallTop);
-		_groupCallBar->resizeToWidth(innerWidth);
+	const auto stack = topBarsStack();
+	const auto place = [&](auto &bar, const void *key) {
+		const auto geometry = stack.geometry(key);
+		bar.move(geometry.x(), geometry.y());
+		bar.resizeToWidth(geometry.width());
+	};
+	if (const auto pinnedBar = visiblePinnedBar()) {
+		place(*pinnedBar, pinnedBar);
 	}
-	const auto requestsTop = place(_requestsBar ? _requestsBar->height() : 0);
-	if (_requestsBar) {
-		_requestsBar->move(0, requestsTop);
-		_requestsBar->resizeToWidth(innerWidth);
-	}
-	const auto pinnedBar = visiblePinnedBar();
-	const auto pinnedBarTop = place(pinnedBar ? pinnedBar->height() : 0);
-	if (pinnedBar) {
-		pinnedBar->move(0, pinnedBarTop);
-		pinnedBar->resizeToWidth(innerWidth);
-	}
-	const auto sponsoredMessageBarTop = place(
-		_sponsoredMessageBar ? _sponsoredMessageBar->height() : 0);
 	if (_sponsoredMessageBar) {
-		_sponsoredMessageBar->move(0, sponsoredMessageBarTop);
-		_sponsoredMessageBar->resizeToWidth(innerWidth);
+		place(*_sponsoredMessageBar, _sponsoredMessageBar.get());
 	}
-	const auto translateTop = place(_translateBar ? _translateBar->height() : 0);
-	if (_translateBar) {
-		_translateBar->move(0, translateTop);
-		_translateBar->resizeToWidth(innerWidth);
-	}
-	const auto paysStatusTop = place(
-		_paysStatus ? _paysStatus->bar().height() : 0);
-	if (_paysStatus) {
-		_paysStatus->bar().move(0, paysStatusTop);
-	}
-	const auto contactStatusTop = place(
-		_contactStatus ? _contactStatus->bar().height() : 0);
+	// 卡片行跟随容器宽度，只需定位。
 	if (_contactStatus) {
-		_contactStatus->bar().move(0, contactStatusTop);
+		_contactStatus->bar().move(
+			0,
+			stack.geometry(_contactStatus.get()).y());
 	}
-	const auto businessBotTop = place(
-		_businessBotStatus ? _businessBotStatus->bar().height() : 0);
 	if (_businessBotStatus) {
-		_businessBotStatus->bar().move(0, businessBotTop);
+		_businessBotStatus->bar().move(
+			0,
+			stack.geometry(_businessBotStatus.get()).y());
 	}
-	const auto overlap = topBarsOverlap();
-	const auto scrollAreaTop = _topBars->y() + stack.height() - overlap;
-	_topBars->resize(innerWidth, stack.height());
+	if (_groupCallBar) {
+		place(*_groupCallBar, _groupCallBar.get());
+	}
+	if (_requestsBar) {
+		place(*_requestsBar, _requestsBar.get());
+	}
+	if (_translateBar) {
+		place(*_translateBar, _translateBar.get());
+	}
+	if (_paysStatus) {
+		place(_paysStatus->bar(), _paysStatus.get());
+	}
+	const auto overlap = stack.height();
+	const auto scrollAreaTop = _topBars->y();
+	_topBars->resize(innerWidth, overlap);
 	if (overlap) {
-		_topBars->setMask(stack.cardRegion(innerWidth));
+		_topBars->setMask(stack.region());
 	} else {
 		_topBars->clearMask();
 	}
+	_topBarsSurface.apply(stack);
 	_scroll->setBarTopInset(overlap);
 	if (_scroll->y() != scrollAreaTop) {
 		_scroll->moveToLeft(0, scrollAreaTop);
@@ -1385,18 +1412,8 @@ void HistoryWidget::updateHistoryGeometry(
 	}
 
 	const auto newScrollWidth = width();
+	// 横条整体浮在列表上方，列表高度不扣除横条。
 	auto newScrollHeight = height() - _topBar->bottomNoMargins();
-	auto bars = Ui::ChatBarStack();
-	bars.add(_groupCallBar ? _groupCallBar->height() : 0);
-	bars.add(_requestsBar ? _requestsBar->height() : 0);
-	const auto pinnedBar = visiblePinnedBar();
-	bars.add(pinnedBar ? pinnedBar->height() : 0);
-	bars.add(_sponsoredMessageBar ? _sponsoredMessageBar->height() : 0);
-	bars.add(_translateBar ? _translateBar->height() : 0);
-	bars.add(_paysStatus ? _paysStatus->bar().height() : 0);
-	bars.add(_contactStatus ? _contactStatus->bar().height() : 0);
-	bars.add(_businessBotStatus ? _businessBotStatus->bar().height() : 0);
-	newScrollHeight -= bars.height() - topBarsOverlap();
 	// 输入区悬浮在列表底部之上，四周留白透出消息，只有胶囊本身遮挡。
 	const auto margin = st::historyComposeCapsuleMargin;
 	auto composeHeight = 0;
@@ -1436,7 +1453,7 @@ void HistoryWidget::updateHistoryGeometry(
 	const auto topOverlapChanged = (_lastTopBarsOverlap != topOverlap);
 	auto topShift = 0;
 	if (topOverlapChanged && _historyInited && !initial) {
-		const auto newScrollY = _topBars->y() + bars.height() - topOverlap;
+		const auto newScrollY = _topBars->y();
 		topShift = _preserveScrollTop
 			? 0
 			: (newScrollY - _lastScrollAreaY)

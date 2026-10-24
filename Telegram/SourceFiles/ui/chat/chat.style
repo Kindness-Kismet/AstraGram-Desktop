@@ -824,17 +824,17 @@ historyBankCardMenuMultilinePosition: point(18px, 4px);
 historyTranslateLabel: FlatLabel(defaultFlatLabel) {
 	style: semiboldTextStyle;
 	textFg: windowActiveTextFg;
-	minWidth: 80px;
+	maxHeight: 20px;
 }
 historyTranslateIcon: icon{{ "menu/translate", windowActiveTextFg }};
-historyTranslateBarHeight: 36px;
+historyTranslateBarHeight: 30px;
 historyTranslateSettings: IconButton(defaultIconButton) {
-	width: 46px;
-	height: 36px;
+	width: 30px;
+	height: 30px;
 	icon: icon{{ "menu/customize", windowActiveTextFg }};
 	iconOver: icon{{ "menu/customize", windowActiveTextFg }};
-	rippleAreaPosition: point(6px, 2px);
-	rippleAreaSize: 32px;
+	rippleAreaPosition: point(3px, 3px);
+	rippleAreaSize: 24px;
 	ripple: RippleAnimation(defaultRippleAnimation) {
 		color: lightButtonBgOver;
 	}

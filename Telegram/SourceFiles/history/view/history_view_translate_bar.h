@@ -44,6 +44,8 @@ public:
 	void resizeToWidth(int width);
 	[[nodiscard]] int height() const;
 	[[nodiscard]] rpl::producer<int> heightValue() const;
+	[[nodiscard]] int naturalWidth() const;
+	[[nodiscard]] rpl::producer<int> naturalWidthValue() const;
 
 	[[nodiscard]] rpl::lifetime &lifetime() {
 		return _wrap.lifetime();

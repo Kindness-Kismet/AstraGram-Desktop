@@ -33,6 +33,13 @@ constexpr auto kHoverOpacity = 0.08;
 	return false;
 }
 
+[[nodiscard]] qreal shapeRadius(const FloatingSurfaceShape &shape) {
+	const auto &rect = shape.rect;
+	return std::min(
+		qreal(shape.radius),
+		std::min(rect.width(), rect.height()) / 2.);
+}
+
 } // namespace
 
 QColor chatSurfaceBackground() {
@@ -117,14 +124,18 @@ void FloatingSurface::refreshGeometry() {
 	if (!_widget) {
 		return;
 	}
-	auto rects = _style.rects
-		? _style.rects()
-		: std::vector<QRect>{ _widget->rect() };
-	std::erase_if(rects, [](QRect rect) { return rect.isEmpty(); });
-	if (_rects == rects) {
+	auto shapes = _style.shapes
+		? _style.shapes()
+		: std::vector<FloatingSurfaceShape>{
+			{ _widget->rect(), _style.radius },
+		};
+	std::erase_if(shapes, [](const FloatingSurfaceShape &shape) {
+		return shape.rect.isEmpty();
+	});
+	if (_shapes == shapes) {
 		return;
 	}
-	_rects = std::move(rects);
+	_shapes = std::move(shapes);
 	_mask = QPixmap();
 	updateInputMask();
 	if (_host) {
@@ -220,10 +231,9 @@ void FloatingSurface::updateInputMask() {
 	}
 	auto path = QPainterPath();
 	path.setFillRule(Qt::WindingFill);
-	for (const auto &rect : _rects) {
-		const auto radius = std::min(qreal(_style.radius),
-			std::min(rect.width(), rect.height()) / 2.);
-		path.addRoundedRect(QRectF(rect), radius, radius);
+	for (const auto &shape : _shapes) {
+		const auto radius = shapeRadius(shape);
+		path.addRoundedRect(QRectF(shape.rect), radius, radius);
 	}
 	const auto mask = QRegion(path.toFillPolygon().toPolygon());
 	if (_widget->mask() != mask) {
@@ -242,10 +252,9 @@ void FloatingSurface::updateMask(QSize size, qreal ratio) {
 	painter.setRenderHint(QPainter::Antialiasing);
 	painter.setPen(Qt::NoPen);
 	painter.setBrush(Qt::white);
-	for (const auto &rect : _rects) {
-		const auto radius = std::min(qreal(_style.radius),
-			std::min(rect.width(), rect.height()) / 2.);
-		painter.drawRoundedRect(QRectF(rect), radius, radius);
+	for (const auto &shape : _shapes) {
+		const auto radius = shapeRadius(shape);
+		painter.drawRoundedRect(QRectF(shape.rect), radius, radius);
 	}
 }
 
@@ -287,10 +296,13 @@ void FloatingSurface::draw(QPainter *p) {
 			painter.setPen(QPen(_style.border(), _style.borderWidth));
 			painter.setBrush(Qt::NoBrush);
 			const auto half = _style.borderWidth / 2.;
-			for (const auto &area : _rects) {
-				const auto rect = QRectF(area).adjusted(half, half, -half, -half);
-				const auto radius = std::max(0., std::min(qreal(_style.radius),
-					std::min(area.width(), area.height()) / 2.) - half);
+			for (const auto &shape : _shapes) {
+				const auto rect = QRectF(shape.rect).adjusted(
+					half,
+					half,
+					-half,
+					-half);
+				const auto radius = std::max(0., shapeRadius(shape) - half);
 				painter.drawRoundedRect(rect, radius, radius);
 			}
 		}

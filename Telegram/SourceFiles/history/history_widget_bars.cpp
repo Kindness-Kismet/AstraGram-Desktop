@@ -319,6 +319,10 @@ void HistoryWidget::setupTranslateBar() {
 		updateControlsGeometry();
 		_topDelta = 0;
 	}, _translateBar->lifetime());
+	_translateBar->naturalWidthValue(
+	) | rpl::skip(1) | rpl::on_next([=] {
+		updateControlsGeometry();
+	}, _translateBar->lifetime());
 
 	orderWidgets();
 }
@@ -641,9 +645,10 @@ void HistoryWidget::setupGroupCallBar() {
 		_topBars.get(),
 		HistoryView::GroupCallBarContentByPeer(
 			peer,
-			st::historyGroupCallUserpics.size,
+			st::historyRequestsUserpics.size,
 			false),
-		Core::App().appDeactivatedValue());
+		Core::App().appDeactivatedValue(),
+		Ui::ChatBarShape::Capsule);
 
 	controller()->adaptive().oneColumnValue(
 	) | rpl::on_next([=](bool one) {
@@ -674,6 +679,10 @@ void HistoryWidget::setupGroupCallBar() {
 		updateControlsGeometry();
 		_topDelta = 0;
 	}, _groupCallBar->lifetime());
+	_groupCallBar->naturalWidthValue(
+	) | rpl::skip(1) | rpl::on_next([=] {
+		updateControlsGeometry();
+	}, _groupCallBar->lifetime());
 
 	orderWidgets();
 }
@@ -691,7 +700,8 @@ void HistoryWidget::setupRequestsBar() {
 		HistoryView::RequestsBarContentByPeer(
 			peer,
 			st::historyRequestsUserpics.size,
-			false));
+			false),
+		Ui::ChatBarShape::Capsule);
 
 	controller()->adaptive().oneColumnValue(
 	) | rpl::on_next([=](bool one) {
@@ -716,6 +726,10 @@ void HistoryWidget::setupRequestsBar() {
 		updateHistoryGeometry();
 		updateControlsGeometry();
 		_topDelta = 0;
+	}, _requestsBar->lifetime());
+	_requestsBar->naturalWidthValue(
+	) | rpl::skip(1) | rpl::on_next([=] {
+		updateControlsGeometry();
 	}, _requestsBar->lifetime());
 
 	orderWidgets();
