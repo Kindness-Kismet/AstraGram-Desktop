@@ -5,6 +5,7 @@
 #include "extras/extras_settings.h"
 #include "extras/debug/debug_login.h"
 #include "extras/debug/simulation_media.h"
+#include "extras/features/secret_chats/secret_chat_dialog.h"
 #include "extras/utils/telegram_helpers.h"
 #include "api/api_common.h"
 #include "core/application.h"
@@ -522,6 +523,17 @@ using json = nlohmann::json;
 	return Result::Ok(Compact(result));
 }
 
+[[nodiscard]] PeerData *resolveNavigationPeer(
+		not_null<Main::Session*> session,
+		int64 idValue) {
+	const auto id = PeerId(BareId(idValue));
+	if (peerIsSecretChat(id)) {
+		const auto dialog = session->secretChats().dialog(int(id.to<SecretChatId>().bare));
+		return dialog ? dialog->peer().get() : nullptr;
+	}
+	return ResolvePeer(session, idValue);
+}
+
 // 打开对话并清空导航栈；参数取 chat.list 输出的 peerId，
 // 不指定会话时打开收藏夹。
 [[nodiscard]] Result OpenChat(const QStringList &args) {
@@ -540,8 +552,8 @@ using json = nlohmann::json;
 	if (args.size() == 2) {
 		auto ok = false;
 		const auto value = args[1].toLongLong(&ok);
-		if (!ok || value <= 0) {
-			return Result::Err(u"expected a positive integer msgId"_q);
+		if (!ok || (!IsServerMsgId(MsgId(value)) && !IsClientMsgId(MsgId(value)))) {
+			return Result::Err(u"expected a server or local message id"_q);
 		}
 		msgId = MsgId(value);
 	}
@@ -553,7 +565,7 @@ using json = nlohmann::json;
 	if (!controller) {
 		return Result::Err(u"no window controller"_q);
 	}
-	const auto peer = ResolvePeer(session, idValue);
+	const auto peer = resolveNavigationPeer(session, idValue);
 	if (!peer) {
 		return Result::Err(u"peer not found, run chat.list first"_q);
 	}
@@ -566,6 +578,52 @@ using json = nlohmann::json;
 		{ "name", peer->name().toStdString() },
 		{ "isSelf", peer->isSelf() },
 	}));
+}
+
+[[nodiscard]] Result previewChat(const QStringList &args) {
+	if (args.size() != 1) {
+		return Result::Err(u"usage: chat.preview <peerId>"_q);
+	}
+	const auto session = ActiveSession();
+	const auto controller = session ? session->tryResolveWindow() : nullptr;
+	if (!controller) {
+		return Result::Err(u"no window controller"_q);
+	}
+	auto ok = false;
+	const auto id = args.front().toLongLong(&ok);
+	const auto peer = ok ? resolveNavigationPeer(session, id) : nullptr;
+	if (!peer) {
+		return Result::Err(u"expected a loaded peerId"_q);
+	}
+	const auto thread = peer->isSecretChat()
+		? static_cast<Data::Thread*>(session->secretChats().dialog(
+			int(peer->id.to<SecretChatId>().bare)))
+		: static_cast<Data::Thread*>(session->data().history(peer).get());
+	if (!thread) {
+		return Result::Err(u"chat not found"_q);
+	}
+	const auto shown = controller->showChatPreview({ thread, {} }, nullptr);
+	return Result::Ok(Compact(json{ { "shown", shown } }));
+}
+
+[[nodiscard]] Result openChatCalendar(const QStringList &args) {
+	if (args.size() != 1) {
+		return Result::Err(u"usage: chat.calendar <peerId>"_q);
+	}
+	const auto session = ActiveSession();
+	const auto controller = session ? session->tryResolveWindow() : nullptr;
+	if (!controller) {
+		return Result::Err(u"no window controller"_q);
+	}
+	auto ok = false;
+	const auto id = args.front().toLongLong(&ok);
+	const auto peer = ok ? resolveNavigationPeer(session, id) : nullptr;
+	if (!peer) {
+		return Result::Err(u"expected a loaded peerId"_q);
+	}
+	// 与日期浮标相同，普通聊天加载媒体缩略图，加密对话只查本地日期。
+	controller->showCalendar({ session->data().history(peer), QDate(), true, true });
+	return Result::Ok();
 }
 
 // 直接打开资料页里的共享媒体分类；默认弹层，--side 在窗口够宽时放进侧栏。
@@ -845,6 +903,8 @@ const HandlerMap &MessageHandlers() {
 		{ u"chat.list"_q, &Chats },
 		{ u"message.send"_q, &SendTextMessage },
 		{ u"chat.open"_q, &OpenChat },
+		{ u"chat.preview"_q, &previewChat },
+		{ u"chat.calendar"_q, &openChatCalendar },
 		{ u"chat.media"_q, &OpenMedia },
 		{ u"chat.profile"_q, &OpenProfile },
 		{ u"chat.open-archive"_q, &OpenArchive },

@@ -27,6 +27,9 @@ constexpr auto kChatPreviewDelay = crl::time(1000);
 
 [[nodiscard]] bool SkipChatPreviewFor(Dialogs::Key key) {
 	const auto peer = key.peer();
+	if (peer && peer->isSecretChat()) {
+		return true;
+	}
 	const auto channel = peer ? peer->asChannel() : nullptr;
 	return channel && channel->isCommunity();
 }

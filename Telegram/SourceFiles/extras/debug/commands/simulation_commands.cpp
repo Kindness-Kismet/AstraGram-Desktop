@@ -20,6 +20,7 @@
 #include "settings.h"
 #include "settings/sections/settings_local_storage.h"
 #include "extras/features/secret_chats/secret_chat_manager.h"
+#include "extras/features/secret_chats/secret_chat_dialog.h"
 #include "extras/ui/secret_chat_box.h"
 #include "data/data_user.h"
 #include <QtCore/QElapsedTimer>
@@ -55,8 +56,17 @@ Result simulationSecret(const QStringList &args) {
 		return Result::Err(u"simulation peer or window not found"_q);
 	}
 	const auto chatId = session->secretChats().seedForDebug(peer->id.to<UserId>(), count);
+	const auto dialog = session->secretChats().dialog(chatId);
+	// 模拟模式未启用真实加密收发，单独加入列表以验证导航入口。
+	session->data().refreshChatListEntry(dialog);
 	Extras::SecretChats::showChat(controller, chatId);
-	return Result::Ok(Compact(json{ { "chatId", chatId }, { "messages", count } }));
+	const auto messages = dialog->slice();
+	return Result::Ok(Compact(json{
+		{ "chatId", chatId }, { "messages", count },
+		{ "peerId", dialog->peer()->id.value },
+		{ "firstMessageId", messages.ids.front().msg.bare },
+		{ "lastMessageId", messages.ids.back().msg.bare },
+	}));
 }
 
 Result simulationCacheChats(const QStringList &args) {

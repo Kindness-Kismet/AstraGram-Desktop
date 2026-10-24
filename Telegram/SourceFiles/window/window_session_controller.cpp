@@ -32,6 +32,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history.h"
 #include "history/history_item.h"
 #include "extras/features/secret_chats/secret_chat_dialog.h"
+#include "extras/ui/secret_chat_box.h"
 #include "history/view/reactions/history_view_reactions.h"
 //#include "history/view/reactions/history_view_reactions_button.h"
 #include "history/view/history_view_chat_section.h"
@@ -1386,7 +1387,7 @@ void SessionNavigation::showThread(
 	} else if (const auto sublist = thread->asSublist()) {
 		showSublist(sublist, itemId, params);
 	} else {
-		showPeerHistory(thread->asHistory(), params, itemId);
+		showPeerHistory(thread->peer(), params, itemId);
 	}
 	if (parentController()->activeChatCurrent().thread() == thread) {
 		parentController()->content()->hideDragForwardInfo();
@@ -3058,7 +3059,8 @@ void SessionController::showCalendar(ShowCalendarDescriptor &&descriptor) {
 	const auto searchCalendarResult = [&]() -> SearchCalendarResult {
 		using Factory = Fn<void(QDate, Ui::CalendarImageSetter)>;
 		using CustomJump = Fn<void(const QDate &, Fn<void()>)>;
-		if (!descriptor.mediaPhoto && !descriptor.mediaVideo) {
+		if (history->peer->isSecretChat()
+			|| (!descriptor.mediaPhoto && !descriptor.mediaVideo)) {
 			return {};
 		}
 		const auto search = std::make_shared<Api::SearchCalendarController>(
@@ -3210,6 +3212,11 @@ void SessionController::showPeerHistory(
 		PeerId peerId,
 		const SectionShow &params,
 		MsgId msgId) {
+	if (peerIsSecretChat(peerId)) {
+		Extras::SecretChats::showChat(
+			this, int(peerId.to<SecretChatId>().bare), params, msgId);
+		return;
+	}
 	if (const auto peer = session().data().peerLoaded(peerId)) {
 		if (const auto channel = peer->asChannel()) {
 			if (channel->isCommunity()) {

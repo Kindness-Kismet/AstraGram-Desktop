@@ -68,7 +68,13 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 ## `chat.open [peerId] [msgId]`
 
 打开指定对话并清空导航栈；参数取 `chat.list` 输出的 peerId，缺省 self（Saved Messages）。配合 `screenshot.take` 做 UI 观测，
-免去找列表项点击的不稳定。`msgId` 定位到指定消息，缺省为对话末尾；目标尚未加载时走首次加载流程。
+免去找列表项点击的不稳定。`msgId` 定位到指定消息，支持服务端编号和加密消息的本地编号，缺省为对话末尾；目标尚未加载时走首次加载流程。
+
+## `chat.preview <peerId>` / `chat.calendar <peerId>`
+
+`chat.preview` 沿原生预览资格检查打开浮层，返回 `shown`；不支持预览的加密对话返回 `false`。
+`chat.calendar` 沿消息日期浮标的入口打开日历；普通聊天加载媒体缩略图，加密对话仅使用本地日期跳转。
+两者均使用当前账号已加载的对话编号，不发送消息。
 
 ## `chat.media <peerId> <photo|video|file|music|link|gif|voice> [--side]`
 

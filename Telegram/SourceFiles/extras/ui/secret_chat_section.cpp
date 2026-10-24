@@ -61,6 +61,8 @@ public:
 		const QRect &geometry) override;
 	[[nodiscard]] Dialog *dialog() const { return _dialog.get(); }
 	HistoryView::ListMemento list;
+	MsgId requestedMessage;
+	Window::SectionShow showParams;
 private:
 	base::weak_ptr<Dialog> _dialog;
 };
@@ -270,6 +272,9 @@ public:
 		const auto saved = dynamic_cast<Memento*>(memento.get());
 		if (!saved || saved->dialog() != _dialog) { return false; }
 		_inner->restoreState(&saved->list);
+		if (saved->requestedMessage) {
+			showMessage(_dialog->peer()->id, saved->showParams, saved->requestedMessage);
+		}
 		return true;
 	}
 	std::shared_ptr<Window::SectionMemento> createMemento() override {
@@ -599,6 +604,7 @@ object_ptr<Window::SectionWidget> Memento::createWidget(QWidget *parent,
 	if (!_dialog || column == Window::Column::Third) { return nullptr; }
 	auto result = object_ptr<Widget>(parent, controller, _dialog.get());
 	result->setGeometry(geometry);
+	Ui::SendPendingMoveResizeEvents(result);
 	result->showInternal(this, {});
 	return result;
 }
@@ -606,9 +612,24 @@ object_ptr<Window::SectionWidget> Memento::createWidget(QWidget *parent,
 } // namespace
 
 void showChat(not_null<Window::SessionController*> controller, int chatId) {
+	showChat(controller, chatId, Window::SectionShow::Way::ClearStack, 0);
+}
+
+void showChat(not_null<Window::SessionController*> controller, int chatId,
+		const Window::SectionShow &params, MsgId messageId) {
 	const auto dialog = controller->session().secretChats().dialog(chatId);
 	if (!dialog) { return; }
-	controller->showSection(std::make_shared<Memento>(dialog), Window::SectionShow::Way::ClearStack);
+	auto memento = std::make_shared<Memento>(dialog);
+	memento->showParams = params;
+	if (messageId == ShowAtTheEndMsgId) {
+		memento->list.setAroundPosition(Data::MaxMessagePosition);
+	} else if (IsClientMsgId(messageId) || IsServerMsgId(messageId)) {
+		if (const auto item = dialog->owner().message(dialog->peer()->id, messageId)) {
+			memento->requestedMessage = messageId;
+			memento->list.setAroundPosition(item->position());
+		}
+	}
+	controller->showSection(std::move(memento), params);
 }
 
 } // namespace Extras::SecretChats
