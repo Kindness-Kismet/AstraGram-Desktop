@@ -299,7 +299,10 @@ HistoryWidget::HistoryWidget(
 	st::historyComposeButton))
 , _reportMessages(ExtrasUi::CreateChatSurfaceButton(
 	this, QString(), st::historyComposeButton))
-, _attachToggle(this, st::historyAttach)
+, _attachToggle(
+	this,
+	*lifetime().make_state<style::IconButton>(
+		Ui::SendCircleIconButtonStyle(st::historyAttach, st::historySend)))
 , _tabbedSelectorToggle(this, st::historyAttachEmoji)
 , _botKeyboardShow(this, st::historyBotKeyboardShow)
 , _botKeyboardHide(this, st::historyBotKeyboardHide)

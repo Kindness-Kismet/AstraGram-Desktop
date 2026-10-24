@@ -162,6 +162,17 @@ namespace {
 	return style.radius ? 0 : st::historyComposeCapsuleMargin;
 }
 
+// 胶囊布局里附件点击圆与发送圆同径同心，专用圆角样式沿用自身设置。
+[[nodiscard]] const style::IconButton &AttachToggleStyle(
+		not_null<Ui::RpWidget*> parent,
+		const style::ComposeControls &style) {
+	if (!ComposeOuterMargin(style)) {
+		return style.attach;
+	}
+	return *parent->lifetime().make_state<style::IconButton>(
+		Ui::SendCircleIconButtonStyle(style.attach, style.send));
+}
+
 [[nodiscard]] bool HasChatBackdrop(not_null<QWidget*> widget) {
 	const auto surface = dynamic_cast<ExtrasUi::FloatingSurface*>(
 		widget->graphicsEffect());
@@ -1290,7 +1301,9 @@ ComposeControls::ComposeControls(
 	: nullptr)
 , _chosenStarsCount(_features.editMessageStars ? 0 : std::optional<int>())
 , _attachToggle(_features.attachments
-	? Ui::CreateChild<Ui::IconButton>(_wrap.get(), _st.attach)
+	? Ui::CreateChild<Ui::IconButton>(
+		_wrap.get(),
+		AttachToggleStyle(_wrap.get(), _st))
 	: nullptr)
 , _tabbedSelectorToggle(Ui::CreateChild<Ui::EmojiButton>(
 	_wrap.get(),
@@ -1721,7 +1734,7 @@ void ComposeControls::updateFeatures(ChatHelpers::ComposeFeatures features) {
 		} else {
 			_attachToggle = Ui::CreateChild<Ui::IconButton>(
 				_wrap.get(),
-				_st.attach);
+				AttachToggleStyle(_wrap.get(), _st));
 			_attachToggle->setObjectName(u"attachButton"_q);
 			updateControlsVisibility();
 		}

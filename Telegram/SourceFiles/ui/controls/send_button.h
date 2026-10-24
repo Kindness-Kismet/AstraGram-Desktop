@@ -23,6 +23,11 @@ struct RoundButton;
 
 namespace Ui {
 
+// 点击圆与发送圆同径同心，尺寸取缩放后的样式值，避免分别取整产生偏差。
+[[nodiscard]] style::IconButton SendCircleIconButtonStyle(
+	const style::IconButton &st,
+	const style::SendButton &send);
+
 class SendButton final : public RippleButton {
 public:
 	SendButton(QWidget *parent, const style::SendButton &st);

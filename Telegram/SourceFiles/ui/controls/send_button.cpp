@@ -26,7 +26,36 @@ constexpr auto kVoiceToRoundIndex = 0;
 constexpr auto kRoundToVoiceIndex = 1;
 constexpr auto kForbiddenOpacity = 0.5;
 
+[[nodiscard]] QRect SendEllipseRect(
+		const style::SendButton &st,
+		QSize size) {
+	const auto &icon = st.inner.icon;
+	const auto padding = st.sendIconFillPadding;
+	const auto side = std::min({
+		icon.width() + 2 * padding,
+		icon.height() + 2 * padding,
+		size.width(),
+		size.height(),
+	});
+	return QRect(
+		(size.width() - side) / 2,
+		(size.height() - side) / 2,
+		side,
+		side);
+}
+
 } // namespace
+
+style::IconButton SendCircleIconButtonStyle(
+		const style::IconButton &st,
+		const style::SendButton &send) {
+	const auto circle = SendEllipseRect(send, QSize(st.width, st.height));
+	auto result = st;
+	result.rippleAreaPosition = circle.topLeft();
+	result.rippleAreaSize = circle.width();
+	result.rippleCircle = true;
+	return result;
+}
 
 SendButton::SendButton(QWidget *parent, const style::SendButton &st)
 : RippleButton(parent, st.inner.ripple)
@@ -465,24 +494,7 @@ SendButton::RippleShape SendButton::currentRippleShape() const {
 }
 
 QRect SendButton::sendEllipseRect() const {
-	const auto &sendIcon = _st.inner.icon;
-	const auto padding = _st.sendIconFillPadding;
-	const auto natural = QRect(
-		_st.sendIconPosition,
-		sendIcon.size()
-	).marginsAdded({ padding, padding, padding, padding });
-
-	const auto side = std::min({
-		natural.width(),
-		natural.height(),
-		width(),
-		height(),
-	});
-	return QRect(
-		(width() - side) / 2,
-		(height() - side) / 2,
-		side,
-		side);
+	return SendEllipseRect(_st, size());
 }
 
 // 与发送键共用填充圆，切换类型时位置和大小不跳动。
