@@ -437,14 +437,32 @@ void Manager::Private::pumpHandshakes() {
 			handshakes[id] = owner->request(MTPmessages_DiscardEncryption(
 				MTP_flags(i->discardHistory ? MTPmessages_DiscardEncryption::Flag::f_delete_history
 					: MTPmessages_DiscardEncryption::Flags()), MTP_int(id)))
-				.done([weak, id] {
+				.done([weak, id](const MTPBool &result) {
+					const auto accepted = result.type() == mtpc_boolTrue;
+					LOG(("Secret chats: discard %1 completed, accepted=%2.").arg(id).arg(accepted));
 					if (const auto manager = weak.get()) {
+						if (!accepted) {
+							manager->_private->handshakes.remove(id);
+							return;
+						}
 						manager->_private->enqueue([=](Snapshot &snapshot) {
 							snapshot.chats[id].discardPending = false;
 							return QString();
 						}, [weak, id](QString) { if (weak) weak.get()->_private->handshakes.remove(id); });
 					}
-				}).fail([weak, id] { if (weak) weak.get()->_private->handshakes.remove(id); }).send();
+				}).fail([weak, id](const MTP::Error &error) {
+					if (error.type() == u"ENCRYPTION_ALREADY_DECLINED"_q) {
+						if (const auto manager = weak.get()) {
+							manager->_private->enqueue([=](Snapshot &snapshot) {
+								snapshot.chats[id].discardPending = false;
+								return QString();
+							}, [weak, id](QString) { if (weak) weak.get()->_private->handshakes.remove(id); });
+						}
+						return;
+					}
+					LOG(("Secret chats: discard %1 failed: %2.").arg(id).arg(error.type()));
+					if (weak) weak.get()->_private->handshakes.remove(id);
+				}).send();
 			continue;
 		}
 		if (i->view.state != State::Requested || !i->view.error.isEmpty()) continue;
