@@ -32,6 +32,7 @@ namespace Core {
 namespace {
 
 uint64 InstallationTag = 0;
+QtMessageHandler OriginalQtMessageHandler = nullptr;
 
 base::options::toggle OptionHighDpiDownscale({
 	.id = kOptionHighDpiDownscale,
@@ -333,6 +334,8 @@ Launcher::Launcher(int argc, char *argv[])
 }
 
 Launcher::~Launcher() {
+	// 静态对象退出时仍会发出警告，先解除依赖启动器的日志回调。
+	qInstallMessageHandler(OriginalQtMessageHandler);
 	InstanceSetter::Instance = nullptr;
 }
 
@@ -515,13 +518,12 @@ void Launcher::prepareSettings() {
 }
 
 void Launcher::initQtMessageLogging() {
-	static QtMessageHandler OriginalMessageHandler = nullptr;
-	OriginalMessageHandler = qInstallMessageHandler([](
+	OriginalQtMessageHandler = qInstallMessageHandler([](
 			QtMsgType type,
 			const QMessageLogContext &context,
 			const QString &msg) {
-		if (OriginalMessageHandler) {
-			OriginalMessageHandler(type, context, msg);
+		if (OriginalQtMessageHandler) {
+			OriginalQtMessageHandler(type, context, msg);
 		}
 		// Warnings carry RHI and DirectComposition diagnostics of user reports.
 		if (Logs::DebugEnabled()
