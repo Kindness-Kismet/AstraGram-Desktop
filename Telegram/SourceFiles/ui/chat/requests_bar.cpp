@@ -24,15 +24,19 @@ namespace Ui {
 
 RequestsBar::RequestsBar(
 	not_null<QWidget*> parent,
-	rpl::producer<RequestsBarContent> content)
-: _wrap(parent, object_ptr<RpWidget>(parent))
+	rpl::producer<RequestsBarContent> content,
+	ChatBarShape shape)
+: _shape(shape)
+, _wrap(parent, object_ptr<RpWidget>(parent))
 , _inner(_wrap.entity())
 , _shadow(std::make_unique<PlainShadow>(_wrap.parentWidget()))
 , _userpics(std::make_unique<GroupCallUserpics>(
 		st::historyRequestsUserpics,
 		rpl::single(false),
 		[=] { _inner->update(); })) {
-	ApplyChatControlSurface(_wrap.entity(), st::windowCardRadius);
+	if (_shape == ChatBarShape::Card) {
+		ApplyChatControlSurface(_wrap.entity(), st::windowCardRadius);
+	}
 	_wrap.entity()->setObjectName(u"chatBar.requests"_q);
 	_wrap.hide(anim::type::instant);
 	_shadow->hide();
@@ -73,6 +77,7 @@ RequestsBar::RequestsBar(
 			}
 		}
 		_userpics->update(_content.users, !_wrap.isHidden());
+		updateNaturalWidth();
 		_inner->update();
 	}, lifetime());
 
@@ -93,6 +98,7 @@ RequestsBar::RequestsBar(
 	_userpics->widthValue(
 	) | rpl::on_next([=](int width) {
 		_userpicsWidth = width;
+		updateNaturalWidth();
 	}, lifetime());
 
 	setupInner();
@@ -101,12 +107,19 @@ RequestsBar::RequestsBar(
 RequestsBar::~RequestsBar() = default;
 
 void RequestsBar::setupInner() {
-	_inner->resize(0, st::historyRequestsHeight);
+	_inner->resize(0, barHeight());
 	_inner->paintRequest(
 	) | rpl::on_next([=](QRect rect) {
 		auto p = Painter(_inner);
-		paint(p);
+		if (_shape == ChatBarShape::Capsule) {
+			paintCapsule(p);
+		} else {
+			paint(p);
+		}
 	}, _inner->lifetime());
+	if (_shape == ChatBarShape::Capsule) {
+		setupCapsule();
+	}
 
 	// Clicks.
 	_inner->setCursor(style::cur_pointer);
@@ -157,6 +170,66 @@ void RequestsBar::paint(Painter &p) {
 
 	// Skip shadow of the bar above.
 	_userpics->paint(p, userpicsLeft, userpicsTop, userpicsSize);
+}
+
+void RequestsBar::setupCapsule() {
+	_inner->events(
+	) | rpl::filter([=](not_null<QEvent*> event) {
+		return (event->type() == QEvent::Enter)
+			|| (event->type() == QEvent::Leave);
+	}) | rpl::on_next([=](not_null<QEvent*> event) {
+		_over = (event->type() == QEvent::Enter);
+		_inner->update();
+	}, _inner->lifetime());
+}
+
+// 头像与胶囊左端同心，文字紧随其后。
+int RequestsBar::capsuleTextLeft() const {
+	const auto userpicsLeft = (st::chatBarCapsuleHeight
+		- st::historyRequestsUserpics.size) / 2;
+	return userpicsLeft + _userpicsWidth + st::chatBarCapsuleSkip;
+}
+
+void RequestsBar::updateNaturalWidth() {
+	if (_shape != ChatBarShape::Capsule) {
+		return;
+	}
+	const auto &text = _textFull.isEmpty() ? _textShort : _textFull;
+	_inner->setNaturalWidth(capsuleTextLeft()
+		+ text.maxWidth()
+		+ st::chatBarCapsulePadding.right());
+}
+
+void RequestsBar::paintCapsule(Painter &p) {
+	if (_over) {
+		PaintChatBar(
+			p,
+			_inner,
+			_inner->rect(),
+			st::historyComposeButtonBg->c,
+			st::historyComposeButtonBgOver->c);
+	}
+	const auto height = st::chatBarCapsuleHeight;
+	const auto userpicsSize = st::historyRequestsUserpics.size;
+	const auto userpicsTop = (height - userpicsSize) / 2;
+	const auto textLeft = capsuleTextLeft();
+	const auto available = _inner->width()
+		- textLeft
+		- st::chatBarCapsulePadding.right();
+	const auto &font = st::defaultMessageBar.title.font;
+	p.setPen(st::defaultMessageBar.titleFg);
+	p.setFont(font);
+	const auto &text = (_textFull.isEmpty() || available < _textFull.maxWidth())
+		? _textShort
+		: _textFull;
+	text.drawElided(p, textLeft, (height - font->height) / 2, available);
+	_userpics->paint(p, userpicsTop, userpicsTop, userpicsSize);
+}
+
+int RequestsBar::barHeight() const {
+	return (_shape == ChatBarShape::Capsule)
+		? st::chatBarCapsuleHeight
+		: st::historyRequestsHeight;
 }
 
 void RequestsBar::updateControlsGeometry(QRect wrapGeometry) {
@@ -220,12 +293,20 @@ int RequestsBar::height() const {
 	return !_forceHidden
 		? _wrap.height()
 		: _shouldBeShown
-		? st::historyRequestsHeight
+		? barHeight()
 		: 0;
 }
 
 rpl::producer<int> RequestsBar::heightValue() const {
 	return _wrap.heightValue();
+}
+
+int RequestsBar::naturalWidth() const {
+	return _inner->naturalWidth();
+}
+
+rpl::producer<int> RequestsBar::naturalWidthValue() const {
+	return _inner->naturalWidthValue();
 }
 
 rpl::producer<> RequestsBar::barClicks() const {

@@ -7,7 +7,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/chat/sponsored_message_bar.h"
 
-#include "ui/chat/floating_bar.h"
 #include "core/application.h"
 #include "core/click_handler_types.h"
 #include "core/ui_integration.h" // TextContext
@@ -160,7 +159,6 @@ void FillSponsoredMessageBar(
 		FullMsgId fullId,
 		Data::SponsoredFrom from,
 		const TextWithEntities &textWithEntities) {
-	ApplyChatControlSurface(container, st::windowCardRadius);
 	container->setObjectName(u"chatBar.sponsored"_q);
 	const auto widget = CreateSimpleRectButton(
 		container,

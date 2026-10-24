@@ -32,6 +32,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 #include "styles/style_chat.h"
 #include "styles/style_menu_icons.h"
+#include "styles/style_window.h"
 
 #include <QtGui/QtEvents>
 
@@ -238,7 +239,7 @@ TranslateBar::TranslateBar(
 , _history(history)
 , _wrap(parent, object_ptr<Ui::AbstractButton>(parent))
 , _shadow(std::make_unique<Ui::PlainShadow>(parent)) {
-	Ui::ApplyChatControlSurface(_wrap.entity(), st::windowCardRadius);
+	// 作为动作胶囊，表面由横条容器统一绘制。
 	_wrap.entity()->setObjectName(u"chatBar.translate"_q);
 	_wrap.hide(anim::type::instant);
 	_shadow->hide();
@@ -283,6 +284,18 @@ void TranslateBar::setup(not_null<History*> history) {
 	button->setClickedCallback([=] {
 		translateTo(history->translatedTo() ? LanguageId() : _to.current());
 	});
+	button->paintRequest() | rpl::on_next([=] {
+		if (!button->isOver()) {
+			return;
+		}
+		auto p = QPainter(button);
+		Ui::PaintChatBar(
+			p,
+			button,
+			button->rect(),
+			st::historyComposeButtonBg->c,
+			st::historyComposeButtonBgOver->c);
+	}, button->lifetime());
 
 	const auto label = Ui::CreateChild<Ui::FlatLabel>(
 		button,
@@ -300,28 +313,30 @@ void TranslateBar::setup(not_null<History*> history) {
 		st::historyTranslateSettings);
 	settings->setClickedCallback([=] { showMenu(createMenu(settings)); });
 
+	// 胶囊内依次排列图标、文字和设置按钮，宽度不足时文字省略。
+	const auto labelLeft = st::chatBarCapsulePadding.left()
+		+ icon->width()
+		+ st::chatBarCapsuleSkip;
+	const auto updateNaturalWidth = [=] {
+		button->setNaturalWidth(labelLeft
+			+ label->textMaxWidth()
+			+ settings->width());
+	};
 	const auto updateLabelGeometry = [=] {
-		const auto full = _wrap.width() - icon->width();
-		const auto skip = st::semiboldFont->spacew * 2;
-		const auto natural = label->textMaxWidth();
-		const auto top = [&] {
-			return (_wrap.height() - label->height()) / 2;
-		};
-		if (natural <= full - 2 * (settings->width() + skip)) {
-			label->resizeToWidth(natural);
-			label->moveToRight((full - label->width()) / 2, top());
-		} else {
-			const auto available = full - settings->width() - 2 * skip;
-			label->resizeToWidth(std::min(natural, available));
-			label->moveToRight(settings->width() + skip, top());
-		}
-		icon->move(
-			label->x() - icon->width(),
-			(_wrap.height() - icon->height()) / 2);
+		const auto width = button->width();
+		const auto height = button->height();
+		const auto available = width - labelLeft - settings->width();
+		label->resizeToWidth(
+			std::clamp(label->textMaxWidth(), 0, std::max(available, 0)));
+		label->moveToLeft(labelLeft, (height - label->height()) / 2, width);
+		icon->moveToLeft(
+			st::chatBarCapsulePadding.left(),
+			(height - icon->height()) / 2,
+			width);
+		settings->moveToRight(0, (height - settings->height()) / 2, width);
 	};
 
-	_wrap.sizeValue() | rpl::on_next([=](QSize size) {
-		settings->moveToRight(0, 0, size.width());
+	button->sizeValue() | rpl::on_next([=] {
 		updateLabelGeometry();
 	}, lifetime());
 
@@ -384,6 +399,7 @@ void TranslateBar::setup(not_null<History*> history) {
 		_shouldBeShown = !phrase.isEmpty();
 		if (_shouldBeShown) {
 			label->setText(phrase);
+			updateNaturalWidth();
 			updateLabelGeometry();
 		}
 		if (!_forceHidden) {
@@ -619,6 +635,14 @@ int TranslateBar::height() const {
 
 rpl::producer<int> TranslateBar::heightValue() const {
 	return _wrap.heightValue();
+}
+
+int TranslateBar::naturalWidth() const {
+	return _wrap.entity()->naturalWidth();
+}
+
+rpl::producer<int> TranslateBar::naturalWidthValue() const {
+	return _wrap.entity()->naturalWidthValue();
 }
 
 } // namespace Ui

@@ -42,6 +42,11 @@ windowCardRadius: 12px;
 windowCardFloatOpenShift: 14px;
 windowCardFloatCloseShift: 8px;
 chatFloatingBarGap: 4px;
+chatBarDividerSkip: 12px;
+chatBarCapsuleHeight: 30px;
+chatBarCapsuleGap: 6px;
+chatBarCapsulePadding: margins(10px, 0px, 12px, 0px);
+chatBarCapsuleSkip: 6px;
 
 adaptiveChatWideWidth: 880px;
 

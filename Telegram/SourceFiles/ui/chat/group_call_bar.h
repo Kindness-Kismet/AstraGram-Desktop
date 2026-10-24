@@ -20,6 +20,7 @@ class PlainShadow;
 class RoundButton;
 struct GroupCallUser;
 class GroupCallUserpics;
+enum class ChatBarShape;
 
 struct GroupCallBarContent {
 	QString title;
@@ -63,7 +64,8 @@ public:
 	GroupCallBar(
 		not_null<QWidget*> parent,
 		rpl::producer<GroupCallBarContent> content,
-		rpl::producer<bool> &&hideBlobs);
+		rpl::producer<bool> &&hideBlobs,
+		ChatBarShape shape);
 	~GroupCallBar();
 
 	void show();
@@ -77,6 +79,8 @@ public:
 	void resizeToWidth(int width);
 	[[nodiscard]] int height() const;
 	[[nodiscard]] rpl::producer<int> heightValue() const;
+	[[nodiscard]] int naturalWidth() const;
+	[[nodiscard]] rpl::producer<int> naturalWidthValue() const;
 	[[nodiscard]] rpl::producer<> barClicks() const;
 	[[nodiscard]] rpl::producer<> joinClicks() const;
 
@@ -92,11 +96,20 @@ private:
 	void updateControlsGeometry(QRect wrapGeometry);
 	void updateUserpics();
 	void setupInner();
+	void setupCapsule();
 	void setupRightButton(not_null<RoundButton*> button);
+	void updateNaturalWidth();
 	void paint(Painter &p);
 	void paintTitleAndStatus(Painter &p);
 	void paintUserpics(Painter &p);
+	void paintCapsule(Painter &p);
+	[[nodiscard]] QString titleText() const;
+	[[nodiscard]] QString statusText() const;
+	[[nodiscard]] not_null<RoundButton*> rightButton() const;
+	[[nodiscard]] int barHeight() const;
+	[[nodiscard]] int capsuleTextLeft() const;
 
+	const ChatBarShape _shape;
 	SlideWrap<> _wrap;
 	not_null<RpWidget*> _inner;
 	std::unique_ptr<RoundButton> _join;
@@ -107,10 +120,12 @@ private:
 	Fn<QRect(QRect)> _shadowGeometryPostprocess;
 	bool _shouldBeShown = false;
 	bool _forceHidden = false;
+	bool _over = false;
 
 	GroupCallBarContent _content;
 	std::unique_ptr<GroupCallScheduledLeft> _scheduledProcess;
 	std::unique_ptr<GroupCallUserpics> _userpics;
+	int _userpicsWidth = 0;
 
 };
 

@@ -272,6 +272,8 @@ set(extras_files
         extras/ui/components/image_view.h
         extras/ui/components/chat_frosted_background.cpp
         extras/ui/components/chat_frosted_background.h
+        extras/ui/components/chat_bars_surface.cpp
+        extras/ui/components/chat_bars_surface.h
         extras/ui/components/chat_surface_button.cpp
         extras/ui/components/chat_surface_button.h
         extras/ui/components/field_height_animation.cpp

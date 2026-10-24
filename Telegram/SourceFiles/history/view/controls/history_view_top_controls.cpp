@@ -96,7 +96,8 @@ TopControls::TopControls(
 , _showAtPosition(std::move(descriptor.showAtPosition))
 , _preparePinnedClickContext(std::move(descriptor.preparePinnedClickContext))
 , _wrap(std::make_unique<Ui::RpWidget>(_parent))
-, _topBars(std::make_unique<Ui::RpWidget>(_wrap.get())) {
+, _topBars(std::make_unique<Ui::RpWidget>(_wrap.get()))
+, _topBarsSurface(_topBars.get()) {
 	_topBars->show();
 	_wrap->show();
 	setupTranslateBar();
@@ -440,6 +441,10 @@ void TopControls::setupTopicReopenBar() {
 			applyHeightChangeWithRelayout(was, this->height());
 		}
 	}, _topicReopenBar->bar().lifetime());
+	_topicReopenBar->bar().naturalWidthValue(
+	) | rpl::skip(1) | rpl::on_next([=] {
+		relayoutCapsules();
+	}, _topicReopenBar->bar().lifetime());
 }
 
 void TopControls::setupTranslateBar() {
@@ -468,6 +473,10 @@ void TopControls::setupTranslateBar() {
 		updateLayout();
 		applyHeightChangeWithTopMoved(was, this->height());
 	}, _translateBar->lifetime());
+	_translateBar->naturalWidthValue(
+	) | rpl::skip(1) | rpl::on_next([=] {
+		relayoutCapsules();
+	}, _translateBar->lifetime());
 
 	_translateBar->finishAnimating();
 }
@@ -481,9 +490,10 @@ void TopControls::setupGroupCallBar() {
 		_topBars.get(),
 		GroupCallBarContentByPeer(
 			peer,
-			st::historyGroupCallUserpics.size,
+			st::historyRequestsUserpics.size,
 			showInForum()),
-		Core::App().appDeactivatedValue());
+		Core::App().appDeactivatedValue(),
+		Ui::ChatBarShape::Capsule);
 
 	_controller->adaptive().oneColumnValue(
 	) | rpl::on_next([=](bool one) {
@@ -515,6 +525,10 @@ void TopControls::setupGroupCallBar() {
 		updateLayout();
 		applyHeightChangeWithTopMoved(was, this->height());
 	}, _groupCallBar->lifetime());
+	_groupCallBar->naturalWidthValue(
+	) | rpl::skip(1) | rpl::on_next([=] {
+		relayoutCapsules();
+	}, _groupCallBar->lifetime());
 }
 
 void TopControls::setupRequestsBar() {
@@ -527,7 +541,8 @@ void TopControls::setupRequestsBar() {
 		RequestsBarContentByPeer(
 			peer,
 			st::historyRequestsUserpics.size,
-			showInForum()));
+			showInForum()),
+		Ui::ChatBarShape::Capsule);
 
 	_controller->adaptive().oneColumnValue(
 	) | rpl::on_next([=](bool one) {
@@ -555,6 +570,10 @@ void TopControls::setupRequestsBar() {
 		updateLayout();
 		applyHeightChangeWithTopMoved(was, this->height());
 	}, _requestsBar->lifetime());
+	_requestsBar->naturalWidthValue(
+	) | rpl::skip(1) | rpl::on_next([=] {
+		relayoutCapsules();
+	}, _requestsBar->lifetime());
 }
 
 void TopControls::setupPeerBars() {
@@ -563,7 +582,8 @@ void TopControls::setupPeerBars() {
 			_controller,
 			_topBars.get(),
 			_history->peer,
-			showInForum());
+			showInForum(),
+			Ui::ChatBarShape::Row);
 		_contactStatus->show();
 		_contactStatusHeight = 0;
 		_contactStatus->bar().heightValue(
@@ -599,6 +619,10 @@ void TopControls::setupPeerBars() {
 			_paysStatusHeight = height;
 			updateLayout();
 			applyHeightChangeWithRelayout(was, this->height());
+		}, _paysStatus->bar().lifetime());
+		_paysStatus->bar().naturalWidthValue(
+		) | rpl::skip(1) | rpl::on_next([=] {
+			relayoutCapsules();
 		}, _paysStatus->bar().lifetime());
 	}
 	if (!_businessBotStatus) {
@@ -1139,59 +1163,118 @@ void TopControls::rebuildModeSensitiveBars() {
 	updateZOrder();
 }
 
+// 内容横条合成卡片，动作横条在卡片下方排成胶囊，左右与输入胶囊对齐。
 void TopControls::updateLayout() {
 	const auto margin = st::historyComposeCapsuleMargin;
 	const auto innerWidth = std::max(_width - 2 * margin, 0);
-	auto stack = Ui::ChatBarStack();
 	const auto pinnedBar = _pinnedBar
 		? _pinnedBar.get()
 		: _hidingPinnedBar.get();
-	_topBars->move(margin, 0);
+	auto stack = Ui::ChatBarStack(innerWidth);
 	if (_repliesRootView) {
-		_repliesRootView->move(0, stack.add(_repliesRootViewHeight));
-		_repliesRootView->resizeToWidth(innerWidth);
-	}
-	if (_groupCallBar) {
-		_groupCallBar->move(0, stack.add(_groupCallBarHeight));
-		_groupCallBar->resizeToWidth(innerWidth);
-	}
-	if (_requestsBar) {
-		_requestsBar->move(0, stack.add(_requestsBarHeight));
-		_requestsBar->resizeToWidth(innerWidth);
+		stack.addRow(_repliesRootView.get(), _repliesRootViewHeight);
 	}
 	if (pinnedBar) {
-		pinnedBar->move(0, stack.add(_pinnedBarHeight));
-		pinnedBar->resizeToWidth(innerWidth);
+		stack.addRow(pinnedBar, _pinnedBarHeight);
 	}
 	if (_sponsoredMessageBar) {
-		_sponsoredMessageBar->move(0, stack.add(_sponsoredMessageBarHeight));
-		_sponsoredMessageBar->resizeToWidth(innerWidth);
-	}
-	if (_topicReopenBar) {
-		_topicReopenBar->bar().move(0, stack.add(_topicReopenBarHeight));
-	}
-	if (_translateBar) {
-		_translateBar->move(0, stack.add(_translateBarHeight));
-		_translateBar->resizeToWidth(innerWidth);
-	}
-	if (_paysStatus) {
-		_paysStatus->bar().move(0, stack.add(_paysStatusHeight));
+		stack.addRow(_sponsoredMessageBar.get(), _sponsoredMessageBarHeight);
 	}
 	if (_contactStatus) {
-		_contactStatus->bar().move(0, stack.add(_contactStatusHeight));
+		stack.addRow(_contactStatus.get(), _contactStatusHeight);
 	}
 	if (_businessBotStatus) {
-		_businessBotStatus->bar().move(0, stack.add(_businessBotStatusHeight));
+		stack.addRow(_businessBotStatus.get(), _businessBotStatusHeight);
+	}
+	if (_groupCallBar) {
+		stack.addCapsule(
+			_groupCallBar.get(),
+			_groupCallBar->naturalWidth(),
+			_groupCallBarHeight);
+	}
+	if (_requestsBar) {
+		stack.addCapsule(
+			_requestsBar.get(),
+			_requestsBar->naturalWidth(),
+			_requestsBarHeight);
+	}
+	if (_topicReopenBar) {
+		stack.addCapsule(
+			_topicReopenBar.get(),
+			_topicReopenBar->bar().naturalWidth(),
+			_topicReopenBarHeight);
+	}
+	if (_translateBar) {
+		stack.addCapsule(
+			_translateBar.get(),
+			_translateBar->naturalWidth(),
+			_translateBarHeight);
+	}
+	if (_paysStatus) {
+		stack.addCapsule(
+			_paysStatus.get(),
+			_paysStatus->bar().naturalWidth(),
+			_paysStatusHeight);
+	}
+
+	const auto place = [&](auto &bar, const void *key) {
+		const auto geometry = stack.geometry(key);
+		bar.move(geometry.x(), geometry.y());
+		bar.resizeToWidth(geometry.width());
+	};
+	_topBars->move(margin, 0);
+	if (_repliesRootView) {
+		place(*_repliesRootView, _repliesRootView.get());
+	}
+	if (pinnedBar) {
+		place(*pinnedBar, pinnedBar);
+	}
+	if (_sponsoredMessageBar) {
+		place(*_sponsoredMessageBar, _sponsoredMessageBar.get());
+	}
+	// 卡片行跟随容器宽度，只需定位。
+	if (_contactStatus) {
+		_contactStatus->bar().move(
+			0,
+			stack.geometry(_contactStatus.get()).y());
+	}
+	if (_businessBotStatus) {
+		_businessBotStatus->bar().move(
+			0,
+			stack.geometry(_businessBotStatus.get()).y());
+	}
+	if (_groupCallBar) {
+		place(*_groupCallBar, _groupCallBar.get());
+	}
+	if (_requestsBar) {
+		place(*_requestsBar, _requestsBar.get());
+	}
+	if (_topicReopenBar) {
+		place(_topicReopenBar->bar(), _topicReopenBar.get());
+	}
+	if (_translateBar) {
+		place(*_translateBar, _translateBar.get());
+	}
+	if (_paysStatus) {
+		place(_paysStatus->bar(), _paysStatus.get());
 	}
 	const auto height = stack.height();
 	_topBars->resize(innerWidth, height);
 	_wrap->resize(_width, height);
 	if (pinnedBar && _pinnedBarHeight > 0) {
-		_wrap->setMask(stack.cardRegion(innerWidth).translated(margin, 0));
+		_wrap->setMask(stack.region().translated(margin, 0));
 	} else {
 		_wrap->clearMask();
 	}
+	_topBarsSurface.apply(stack);
 	_height = height;
+}
+
+// 胶囊宽度变化可能改变换行，总高度随之变化。
+void TopControls::relayoutCapsules() {
+	const auto was = height();
+	updateLayout();
+	applyHeightChangeWithTopMoved(was, height());
 }
 
 void TopControls::updateZOrder() {

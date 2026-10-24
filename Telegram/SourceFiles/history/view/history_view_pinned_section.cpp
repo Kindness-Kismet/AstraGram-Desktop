@@ -117,7 +117,12 @@ PinnedWidget::PinnedWidget(
 	: nullptr)
 , _topBar(this, controller)
 , _topBarShadow(this)
-, _translateBar(std::make_unique<TranslateBar>(this, controller, _history))
+, _topBars(std::make_unique<Ui::RpWidget>(this))
+, _topBarsSurface(_topBars.get())
+, _translateBar(std::make_unique<TranslateBar>(
+	_topBars.get(),
+	controller,
+	_history))
 , _scroll(std::make_unique<Ui::ElasticScroll>(
 	this,
 	controller->chatStyle()->value(lifetime(), st::historyScroll)))
@@ -183,7 +188,7 @@ PinnedWidget::PinnedWidget(
 		searchInPinned();
 	}, _topBar->lifetime());
 
-	_translateBar->raise();
+	_topBars->raise();
 	_topBarShadow->raise();
 	controller->adaptive().value(
 	) | rpl::on_next([=] {
@@ -261,11 +266,9 @@ void PinnedWidget::setupTranslateBar() {
 		});
 	}, _translateBar->lifetime());
 
-	// 条目上下的间隙随条目一起出现，滚动补偿按整段占位计算。
+	// 胶囊上下的间隙随胶囊一起出现，滚动补偿按整段占位计算。
 	const auto reserved = [](int height) {
-		auto bars = Ui::ChatBarStack();
-		bars.add(height);
-		return bars.height();
+		return height ? (height + 2 * st::chatFloatingBarGap) : 0;
 	};
 	_translateBarHeight = 0;
 	_translateBar->heightValue(
@@ -275,6 +278,10 @@ void PinnedWidget::setupTranslateBar() {
 		if (delta) {
 			setGeometryWithTopMoved(geometry(), delta);
 		}
+	}, _translateBar->lifetime());
+	_translateBar->naturalWidthValue(
+	) | rpl::skip(1) | rpl::on_next([=] {
+		updateControlsGeometry();
 	}, _translateBar->lifetime());
 
 	_translateBar->finishAnimating();
@@ -568,9 +575,16 @@ void PinnedWidget::updateControlsGeometry() {
 	_clearButton->resizeToWidth(innerWidth);
 	_clearButton->move(margin, bottom + margin);
 	auto top = _topBar->height();
-	auto bars = Ui::ChatBarStack();
-	_translateBar->move(margin, top + bars.add(_translateBarHeight));
-	_translateBar->resizeToWidth(innerWidth);
+	auto bars = Ui::ChatBarStack(innerWidth);
+	bars.addCapsule(
+		_translateBar.get(),
+		_translateBar->naturalWidth(),
+		_translateBarHeight);
+	const auto translate = bars.geometry(_translateBar.get());
+	_translateBar->move(translate.x(), translate.y());
+	_translateBar->resizeToWidth(translate.width());
+	_topBars->setGeometry(margin, top, innerWidth, bars.height());
+	_topBarsSurface.apply(bars);
 	top += bars.height();
 	const auto scrollHeight = bottom - top;
 	const auto scrollSize = QSize(contentWidth, scrollHeight);

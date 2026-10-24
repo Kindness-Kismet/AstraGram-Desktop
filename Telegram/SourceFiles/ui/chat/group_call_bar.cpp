@@ -25,6 +25,26 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QLocale>
 
 namespace Ui {
+namespace {
+
+// 胶囊高度容不下说话时的光晕，头像改用较小的尺寸。
+[[nodiscard]] const style::GroupCallUserpics &UserpicsStyle(
+		ChatBarShape shape) {
+	return (shape == ChatBarShape::Capsule)
+		? st::historyRequestsUserpics
+		: st::historyGroupCallUserpics;
+}
+
+[[nodiscard]] rpl::producer<bool> HideBlobs(
+		ChatBarShape shape,
+		rpl::producer<bool> &&hideBlobs) {
+	if (shape == ChatBarShape::Capsule) {
+		return rpl::single(true);
+	}
+	return std::move(hideBlobs);
+}
+
+} // namespace
 
 GroupCallScheduledLeft::GroupCallScheduledLeft(TimeId date)
 : _date(date)
@@ -109,15 +129,19 @@ void GroupCallScheduledLeft::update() {
 GroupCallBar::GroupCallBar(
 	not_null<QWidget*> parent,
 	rpl::producer<GroupCallBarContent> content,
-	rpl::producer<bool> &&hideBlobs)
-: _wrap(parent, object_ptr<RpWidget>(parent))
+	rpl::producer<bool> &&hideBlobs,
+	ChatBarShape shape)
+: _shape(shape)
+, _wrap(parent, object_ptr<RpWidget>(parent))
 , _inner(_wrap.entity())
 , _shadow(std::make_unique<PlainShadow>(_wrap.parentWidget()))
 , _userpics(std::make_unique<GroupCallUserpics>(
-		st::historyGroupCallUserpics,
-		std::move(hideBlobs),
+		UserpicsStyle(shape),
+		HideBlobs(shape, std::move(hideBlobs)),
 		[=] { updateUserpics(); })) {
-	ApplyChatControlSurface(_wrap.entity(), st::windowCardRadius);
+	if (_shape == ChatBarShape::Card) {
+		ApplyChatControlSurface(_wrap.entity(), st::windowCardRadius);
+	}
 	_wrap.entity()->setObjectName(u"chatBar.call"_q);
 	_wrap.hide(anim::type::instant);
 	_shadow->hide();
@@ -133,6 +157,7 @@ GroupCallBar::GroupCallBar(
 		_userpics->update(_content.users, !_wrap.isHidden());
 		_inner->update();
 		refreshScheduledProcess();
+		updateNaturalWidth();
 	}, lifetime());
 	if (!_open && !_join) {
 		refreshScheduledProcess();
@@ -159,6 +184,7 @@ GroupCallBar::~GroupCallBar() = default;
 
 void GroupCallBar::refreshScheduledProcess() {
 	const auto date = _content.scheduleDate;
+	const auto capsule = (_shape == ChatBarShape::Capsule);
 	if (!date) {
 		if (_scheduledProcess) {
 			_scheduledProcess = nullptr;
@@ -168,7 +194,7 @@ void GroupCallBar::refreshScheduledProcess() {
 			_join = std::make_unique<RoundButton>(
 				_inner.get(),
 				tr::lng_group_call_join(),
-				st::groupCallTopBarJoin);
+				capsule ? st::groupCallCapsuleJoin : st::groupCallTopBarJoin);
 			setupRightButton(_join.get());
 		}
 	} else if (!_scheduledProcess) {
@@ -177,7 +203,7 @@ void GroupCallBar::refreshScheduledProcess() {
 		_open = std::make_unique<RoundButton>(
 			_inner.get(),
 			_scheduledProcess->text(GroupCallScheduledLeft::Negative::Show),
-			st::groupCallTopBarOpen);
+			capsule ? st::groupCallCapsuleOpen : st::groupCallTopBarOpen);
 		_open->setTextTransform(RoundButtonTextTransform::ToUpper);
 		setupRightButton(_open.get());
 	} else {
@@ -186,12 +212,15 @@ void GroupCallBar::refreshScheduledProcess() {
 }
 
 void GroupCallBar::setupInner() {
-	_inner->resize(0, st::historyReplyHeight);
+	_inner->resize(0, barHeight());
 	_inner->paintRequest(
 	) | rpl::on_next([=](QRect rect) {
 		auto p = Painter(_inner);
 		paint(p);
 	}, _inner->lifetime());
+	if (_shape == ChatBarShape::Capsule) {
+		setupCapsule();
+	}
 
 	// Clicks.
 	_inner->setCursor(style::cur_pointer);
@@ -218,12 +247,36 @@ void GroupCallBar::setupInner() {
 	}, _inner->lifetime());
 }
 
+void GroupCallBar::setupCapsule() {
+	_inner->events(
+	) | rpl::filter([=](not_null<QEvent*> event) {
+		return (event->type() == QEvent::Enter)
+			|| (event->type() == QEvent::Leave);
+	}) | rpl::on_next([=](not_null<QEvent*> event) {
+		_over = (event->type() == QEvent::Enter);
+		_inner->update();
+	}, _inner->lifetime());
+
+	_userpics->widthValue(
+	) | rpl::on_next([=](int width) {
+		_userpicsWidth = width;
+		updateNaturalWidth();
+	}, _inner->lifetime());
+}
+
 void GroupCallBar::setupRightButton(not_null<RoundButton*> button) {
 	button->setFullRadius(true);
 	rpl::combine(
 		_inner->widthValue(),
 		button->widthValue()
 	) | rpl::on_next([=](int outerWidth, int buttonWidth) {
+		if (_shape == ChatBarShape::Capsule) {
+			// 按钮与胶囊右端同心。
+			const auto skip = (barHeight() - button->height()) / 2;
+			button->moveToRight(skip, skip, outerWidth);
+			updateNaturalWidth();
+			return;
+		}
 		// Skip shadow of the bar above.
 		const auto top = (st::historyReplyHeight
 			- st::lineWidth
@@ -247,6 +300,10 @@ void GroupCallBar::setupRightButton(not_null<RoundButton*> button) {
 }
 
 void GroupCallBar::paint(Painter &p) {
+	if (_shape == ChatBarShape::Capsule) {
+		paintCapsule(p);
+		return;
+	}
 	const auto narrow = (_inner->width() < st::columnMinimalWidthLeft / 2);
 	if (!narrow) {
 		paintTitleAndStatus(p);
@@ -263,25 +320,30 @@ void GroupCallBar::paintTitleAndStatus(Painter &p) {
 	p.setPen(st::defaultMessageBar.textFg);
 	p.setFont(font);
 
-	const auto available = (_join ? _join->x() : _open->x()) - left;
-	const auto titleWidth = font->width(_content.title);
+	const auto available = rightButton()->x() - left;
 	p.drawTextLeft(
 		left,
 		titleTop,
 		width,
-		(!_content.scheduleDate
-			? (_content.livestream
-				? tr::lng_group_call_title_channel
-				: tr::lng_group_call_title)(tr::now)
-			: _content.title.isEmpty()
-			? (_content.livestream
-				? tr::lng_group_call_scheduled_title_channel
-				: tr::lng_group_call_scheduled_title)(tr::now)
-			: (titleWidth > available)
-			? font->elided(_content.title, available)
-			: _content.title));
+		font->elided(titleText(), available));
 	p.setPen(st::historyStatusFg);
 	p.setFont(st::defaultMessageBar.text.font);
+	p.drawTextLeft(left, textTop, width, statusText());
+}
+
+QString GroupCallBar::titleText() const {
+	return !_content.scheduleDate
+		? (_content.livestream
+			? tr::lng_group_call_title_channel
+			: tr::lng_group_call_title)(tr::now)
+		: _content.title.isEmpty()
+		? (_content.livestream
+			? tr::lng_group_call_scheduled_title_channel
+			: tr::lng_group_call_scheduled_title)(tr::now)
+		: _content.title;
+}
+
+QString GroupCallBar::statusText() const {
 	const auto when = [&] {
 		if (!_content.scheduleDate) {
 			return QString();
@@ -308,22 +370,93 @@ void GroupCallBar::paintTitleAndStatus(Painter &p) {
 				time);
 		}
 	}();
+	return _content.scheduleDate
+		? (_content.title.isEmpty()
+			? tr::lng_group_call_starts_short
+			: _content.livestream
+			? tr::lng_group_call_starts_channel
+			: tr::lng_group_call_starts)(tr::now, lt_when, when)
+		: _content.count > 0
+		? tr::lng_group_call_members(
+			tr::now,
+			lt_count_decimal,
+			_content.count)
+		: tr::lng_group_call_no_members(tr::now);
+}
+
+not_null<RoundButton*> GroupCallBar::rightButton() const {
+	return _join ? _join.get() : _open.get();
+}
+
+int GroupCallBar::barHeight() const {
+	return (_shape == ChatBarShape::Capsule)
+		? st::chatBarCapsuleHeight
+		: st::historyReplyHeight;
+}
+
+// 头像与胶囊左端同心，标题紧随其后。
+int GroupCallBar::capsuleTextLeft() const {
+	const auto userpicsLeft = (barHeight()
+		- st::historyRequestsUserpics.size) / 2;
+	return userpicsLeft + _userpicsWidth + st::chatBarCapsuleSkip;
+}
+
+void GroupCallBar::updateNaturalWidth() {
+	if (_shape != ChatBarShape::Capsule) {
+		return;
+	}
+	const auto button = rightButton();
+	const auto skip = st::chatBarCapsuleSkip;
+	_inner->setNaturalWidth(capsuleTextLeft()
+		+ st::defaultMessageBar.title.font->width(titleText())
+		+ skip
+		+ st::defaultMessageBar.text.font->width(statusText())
+		+ skip
+		+ button->width()
+		+ (barHeight() - button->height()) / 2);
+}
+
+// 宽度不足时先省略状态，再省略标题。
+void GroupCallBar::paintCapsule(Painter &p) {
+	if (_over) {
+		PaintChatBar(
+			p,
+			_inner,
+			_inner->rect(),
+			st::historyComposeButtonBg->c,
+			st::historyComposeButtonBgOver->c);
+	}
+	const auto height = barHeight();
+	const auto userpicsSize = st::historyRequestsUserpics.size;
+	const auto userpicsTop = (height - userpicsSize) / 2;
+	_userpics->paint(p, userpicsTop, userpicsTop, userpicsSize);
+
+	const auto skip = st::chatBarCapsuleSkip;
+	const auto left = capsuleTextLeft();
+	const auto width = _inner->width();
+	const auto available = rightButton()->x() - skip - left;
+	const auto &titleFont = st::defaultMessageBar.title.font;
+	const auto &statusFont = st::defaultMessageBar.text.font;
+	const auto title = titleText();
+	const auto titleWidth = std::min(titleFont->width(title), available);
+	p.setPen(st::defaultMessageBar.textFg);
+	p.setFont(titleFont);
 	p.drawTextLeft(
 		left,
-		textTop,
+		(height - titleFont->height) / 2,
 		width,
-		(_content.scheduleDate
-			? (_content.title.isEmpty()
-				? tr::lng_group_call_starts_short
-				: _content.livestream
-				? tr::lng_group_call_starts_channel
-				: tr::lng_group_call_starts)(tr::now, lt_when, when)
-			: _content.count > 0
-			? tr::lng_group_call_members(
-				tr::now,
-				lt_count_decimal,
-				_content.count)
-			: tr::lng_group_call_no_members(tr::now)));
+		titleFont->elided(title, available));
+	const auto statusAvailable = available - titleWidth - skip;
+	if (statusAvailable <= 0) {
+		return;
+	}
+	p.setPen(st::historyStatusFg);
+	p.setFont(statusFont);
+	p.drawTextLeft(
+		left + titleWidth + skip,
+		(height - statusFont->height) / 2,
+		width,
+		statusFont->elided(statusText(), statusAvailable));
 }
 
 void GroupCallBar::paintUserpics(Painter &p) {
@@ -356,6 +489,10 @@ void GroupCallBar::updateShadowGeometry(QRect wrapGeometry) {
 
 void GroupCallBar::updateUserpics() {
 	const auto widget = _wrap.entity();
+	if (_shape == ChatBarShape::Capsule) {
+		widget->update();
+		return;
+	}
 	const auto middle = widget->width() / 2;
 	const auto width = _userpics->maxWidth();
 	widget->update(
@@ -406,12 +543,20 @@ int GroupCallBar::height() const {
 	return !_forceHidden
 		? _wrap.height()
 		: _shouldBeShown
-		? st::historyReplyHeight
+		? barHeight()
 		: 0;
 }
 
 rpl::producer<int> GroupCallBar::heightValue() const {
 	return _wrap.heightValue();
+}
+
+int GroupCallBar::naturalWidth() const {
+	return _inner->naturalWidth();
+}
+
+rpl::producer<int> GroupCallBar::naturalWidthValue() const {
+	return _inner->naturalWidthValue();
 }
 
 rpl::producer<> GroupCallBar::barClicks() const {

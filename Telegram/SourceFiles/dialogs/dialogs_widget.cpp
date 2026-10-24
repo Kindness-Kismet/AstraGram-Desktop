@@ -55,6 +55,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/slide_animation.h"
 #include "ui/chat/requests_bar.h"
 #include "ui/chat/group_call_bar.h"
+#include "ui/chat/floating_bar.h"
 #include "ui/chat/more_chats_bar.h"
 #include "ui/controls/jump_down_button.h"
 #include "ui/controls/swipe_handler.h"
@@ -2607,7 +2608,8 @@ void Widget::refreshTopBars() {
 			controller(),
 			this,
 			peer,
-			true
+			true,
+			Ui::ChatBarShape::Card
 #ifdef _DEBUG
 			, (_listPreview != ExtrasDebug::DialogsPreview::None)
 				? Fn<void()>([=] { handleListPreviewAction(); }) : nullptr
@@ -2618,14 +2620,16 @@ void Widget::refreshTopBars() {
 			HistoryView::RequestsBarContentByPeer(
 				peer,
 				st::historyRequestsUserpics.size,
-				true));
+				true),
+			Ui::ChatBarShape::Card);
 		_forumGroupCallBar = std::make_unique<Ui::GroupCallBar>(
 			this,
 			HistoryView::GroupCallBarContentByPeer(
 				peer,
 				st::historyGroupCallUserpics.size,
 				true),
-			Core::App().appDeactivatedValue());
+			Core::App().appDeactivatedValue(),
+			Ui::ChatBarShape::Card);
 		_forumTopShadow = std::make_unique<Ui::PlainShadow>(this);
 		ExtrasFeatures::WindowMaterial::watchSurface(_forumTopShadow.get());
 
