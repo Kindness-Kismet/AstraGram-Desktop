@@ -12,7 +12,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_list_widget.h"
 #include "history/view/history_view_corner_buttons.h"
 #include "data/data_messages.h"
-#include "extras/ui/components/chat_bars_surface.h"
 #include "base/weak_ptr.h"
 #include "base/timer.h"
 
@@ -22,7 +21,6 @@ namespace Ui {
 class ElasticScroll;
 class PlainShadow;
 class FlatButton;
-class RpWidget;
 } // namespace Ui
 
 namespace Profile {
@@ -197,8 +195,6 @@ private:
 	object_ptr<TopBarWidget> _topBar;
 	object_ptr<Ui::PlainShadow> _topBarShadow;
 
-	std::unique_ptr<Ui::RpWidget> _topBars;
-	ExtrasUi::ChatBarsSurface _topBarsSurface;
 	std::unique_ptr<TranslateBar> _translateBar;
 	int _translateBarHeight = 0;
 

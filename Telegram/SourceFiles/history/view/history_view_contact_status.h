@@ -22,7 +22,6 @@ namespace Ui {
 class FlatButton;
 class IconButton;
 class FlatLabel;
-enum class ChatBarShape;
 } // namespace Ui
 
 namespace HistoryView {
@@ -31,19 +30,14 @@ class SlidingBar final {
 public:
 	SlidingBar(
 		not_null<Ui::RpWidget*> parent,
-		object_ptr<Ui::RpWidget> wrapped,
-		Ui::ChatBarShape shape);
+		object_ptr<Ui::RpWidget> wrapped);
 
 	void setVisible(bool visible);
 	void raise();
 
 	void move(int x, int y);
-	// 只有胶囊由容器排版定宽，其余外形跟随容器宽度。
-	void resizeToWidth(int width);
 	[[nodiscard]] int height() const;
 	[[nodiscard]] rpl::producer<int> heightValue() const;
-	[[nodiscard]] int naturalWidth() const;
-	[[nodiscard]] rpl::producer<int> naturalWidthValue() const;
 	void toggleContent(bool visible);
 
 	void show() {
@@ -61,7 +55,6 @@ private:
 	void setup(not_null<Ui::RpWidget*> parent);
 
 	Ui::SlideWrap<Ui::RpWidget> _wrapped;
-	const Ui::ChatBarShape _shape;
 	bool _shown = false;
 	bool _contentShown = false;
 
@@ -75,8 +68,7 @@ public:
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::RpWidget*> parent,
 		not_null<PeerData*> peer,
-		bool showInForum,
-		Ui::ChatBarShape shape
+		bool showInForum
 #ifdef _DEBUG
 		, Fn<void()> previewAction = nullptr
 #endif // _DEBUG

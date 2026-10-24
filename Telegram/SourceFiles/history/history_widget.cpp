@@ -248,7 +248,6 @@ HistoryWidget::HistoryWidget(
 , _updateEditTimeLeftDisplay([=] { updateField(); })
 , _fieldBarCancel(this, st::historyReplyCancel)
 , _topBars(std::make_unique<Ui::RpWidget>(this))
-, _topBarsSurface(_topBars.get())
 , _topBar(this, controller)
 , _scroll(
 	this,

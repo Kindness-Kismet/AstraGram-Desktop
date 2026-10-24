@@ -1063,11 +1063,6 @@ historyContactStatusBlock: FlatButton(historyContactStatusButton) {
 	color: attentionButtonFg;
 	overColor: attentionButtonFg;
 }
-historyChatBarCapsuleButton: FlatButton(historyComposeButton) {
-	width: -24px;
-	height: 30px;
-	textTop: 6px;
-}
 historyContactStatusLabel: FlatLabel(defaultFlatLabel) {
 	minWidth: 240px;
 }
@@ -1111,8 +1106,8 @@ historyBusinessBotSettings: IconButton(defaultIconButton) {
 	width: 48px;
 }
 paysStatusLabel: FlatLabel(historyBusinessBotStatus) {
-	minWidth: 0px;
-	maxHeight: 20px;
+	align: align(top);
+	minWidth: 240px;
 }
 
 historyReplyCancelIcon: icon {{ "box_button_close", historyReplyCancelFg }};

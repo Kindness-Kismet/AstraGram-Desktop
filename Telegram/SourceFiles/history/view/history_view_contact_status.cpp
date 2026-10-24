@@ -211,18 +211,6 @@ void FinalizeSetBotPhotoFirstOpenState(not_null<PeerData*> peer) {
 	return button;
 }
 
-// 胶囊按钮按文字定宽，宽度即排版用的自然宽度。
-[[nodiscard]] object_ptr<Ui::FlatButton> CreateCapsuleButton(
-		QWidget *parent,
-		const QString &text) {
-	auto result = ExtrasUi::CreateChatSurfaceButton(
-		parent,
-		text,
-		st::historyChatBarCapsuleButton);
-	result->setNaturalWidth(result->width());
-	return result;
-}
-
 } // namespace
 
 class ContactStatus::BgButton final : public Ui::RippleButton {
@@ -697,41 +685,20 @@ void ContactStatus::Bar::emojiStatusRepaint() {
 
 SlidingBar::SlidingBar(
 	not_null<Ui::RpWidget*> parent,
-	object_ptr<Ui::RpWidget> wrapped,
-	Ui::ChatBarShape shape)
-: _wrapped(parent, std::move(wrapped))
-, _shape(shape) {
-	if (_shape == Ui::ChatBarShape::Card) {
-		Ui::ApplyChatControlSurface(_wrapped.entity(), st::windowCardRadius);
-	}
+	object_ptr<Ui::RpWidget> wrapped)
+: _wrapped(parent, std::move(wrapped)) {
+	Ui::ApplyChatBarSurface(_wrapped);
 	_wrapped.entity()->setObjectName(u"chatBar.status"_q);
 	setup(parent);
 	_wrapped.hide(anim::type::instant);
 }
 
 void SlidingBar::setup(not_null<Ui::RpWidget*> parent) {
-	if (_shape == Ui::ChatBarShape::Capsule) {
-		return;
-	}
 	parent->widthValue(
 	) | rpl::on_next([=](int width) {
 		_wrapped.resizeToWidth(width);
 	}, _wrapped.lifetime());
 
-}
-
-void SlidingBar::resizeToWidth(int width) {
-	Expects(_shape == Ui::ChatBarShape::Capsule);
-
-	_wrapped.resizeToWidth(width);
-}
-
-int SlidingBar::naturalWidth() const {
-	return _wrapped.entity()->naturalWidth();
-}
-
-rpl::producer<int> SlidingBar::naturalWidthValue() const {
-	return _wrapped.entity()->naturalWidthValue();
 }
 
 void SlidingBar::toggleContent(bool visible) {
@@ -772,8 +739,7 @@ ContactStatus::ContactStatus(
 	not_null<Window::SessionController*> window,
 	not_null<Ui::RpWidget*> parent,
 	not_null<PeerData*> peer,
-	bool showInForum,
-	Ui::ChatBarShape shape
+	bool showInForum
 #ifdef _DEBUG
 	, Fn<void()> previewAction
 #endif // _DEBUG
@@ -783,7 +749,7 @@ ContactStatus::ContactStatus(
 	parent.get(),
 	window->widget()->body(),
 	peer->shortName()))
-, _bar(parent, object_ptr<Bar>::fromRaw(_inner), shape) {
+, _bar(parent, object_ptr<Bar>::fromRaw(_inner)) {
 	FinalizeSetBotPhotoFirstOpenState(peer);
 	setupState(peer, showInForum);
 #ifdef _DEBUG
@@ -1282,10 +1248,7 @@ BusinessBotStatus::BusinessBotStatus(
 	not_null<PeerData*> peer)
 : _controller(window)
 , _inner(Ui::CreateChild<Bar>(parent.get()))
-, _bar(
-	parent,
-	object_ptr<Bar>::fromRaw(_inner),
-	Ui::ChatBarShape::Row) {
+, _bar(parent, object_ptr<Bar>::fromRaw(_inner)) {
 	setupState(peer);
 	setupHandlers(peer);
 }
@@ -1368,13 +1331,11 @@ TopicReopenBar::TopicReopenBar(
 	not_null<Ui::RpWidget*> parent,
 	not_null<Data::ForumTopic*> topic)
 : _topic(topic)
-, _reopen(CreateCapsuleButton(
+, _reopen(Ui::CreateChild<Ui::FlatButton>(
 	parent.get(),
-	tr::lng_forum_topic_reopen(tr::now)).release())
-, _bar(
-	parent,
-	object_ptr<Ui::FlatButton>::fromRaw(_reopen),
-	Ui::ChatBarShape::Capsule) {
+	tr::lng_forum_topic_reopen(tr::now),
+	st::historyContactStatusButton))
+, _bar(parent, object_ptr<Ui::FlatButton>::fromRaw(_reopen)) {
 	setupState();
 	setupHandler();
 }
@@ -1422,7 +1383,6 @@ private:
 
 };
 
-// 胶囊里说明单行显示，放不下时省略，移除按钮始终靠右。
 PaysStatus::Bar::Bar(QWidget *parent, not_null<PeerData*> peer)
 : RpWidget(parent)
 , _peer(peer)
@@ -1439,12 +1399,6 @@ void PaysStatus::Bar::showState(State state) {
 		lt_cost,
 		PaidSendButtonText(tr::now, state.perMessage),
 		tr::marked));
-	const auto &padding = st::chatBarCapsulePadding;
-	setNaturalWidth(padding.left()
-		+ _label->textMaxWidth()
-		+ st::chatBarCapsuleSkip
-		+ _remove->width()
-		+ padding.right());
 	resizeToWidth(width());
 }
 
@@ -1453,23 +1407,13 @@ rpl::producer<> PaysStatus::Bar::removeClicks() const {
 }
 
 int PaysStatus::Bar::resizeGetHeight(int newWidth) {
-	const auto &padding = st::chatBarCapsulePadding;
-	const auto height = st::chatBarCapsuleHeight;
-	_remove->moveToRight(
-		padding.right(),
-		(height - _remove->height()) / 2,
-		newWidth);
-	const auto available = newWidth
-		- padding.left()
-		- st::chatBarCapsuleSkip
-		- _remove->width()
-		- padding.right();
-	_label->resizeToWidth(std::max(available, 0));
-	_label->moveToLeft(
-		padding.left(),
-		(height - _label->height()) / 2,
-		newWidth);
-	return height;
+	const auto skip = st::defaultPeerListItem.photoPosition.y();
+	_label->resizeToWidth(newWidth - skip);
+	_label->moveToLeft(skip, skip, newWidth);
+	_remove->move(
+		(newWidth - _remove->width()) / 2,
+		skip + _label->height() + skip);
+	return _remove->y() + _remove->height() + skip;
 }
 
 PaysStatus::PaysStatus(
@@ -1480,10 +1424,7 @@ PaysStatus::PaysStatus(
 , _user(user)
 , _paidAlready(std::make_shared<rpl::variable<int>>())
 , _inner(Ui::CreateChild<Bar>(parent.get(), user))
-, _bar(
-	parent,
-	object_ptr<Bar>::fromRaw(_inner),
-	Ui::ChatBarShape::Capsule) {
+, _bar(parent, object_ptr<Bar>::fromRaw(_inner)) {
 	setupState();
 	setupHandlers();
 }

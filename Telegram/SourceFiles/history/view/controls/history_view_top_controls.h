@@ -11,7 +11,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/required.h"
 #include "core/click_handler_types.h"
 #include "data/data_messages.h"
-#include "extras/ui/components/chat_bars_surface.h"
 #include "ui/rp_widget.h"
 
 #include <optional>
@@ -116,7 +115,6 @@ private:
 	void hidePinnedMessage();
 	void resetPinnedState();
 	void updateLayout();
-	void relayoutCapsules();
 	void updateZOrder();
 	void applyHeightChange(int was, int now, bool preserveTop);
 	void applyHeightChangeWithTopMoved(int was, int now);
@@ -141,7 +139,6 @@ private:
 
 	const std::unique_ptr<Ui::RpWidget> _wrap;
 	const std::unique_ptr<Ui::RpWidget> _topBars;
-	const ExtrasUi::ChatBarsSurface _topBarsSurface;
 	std::unique_ptr<Ui::GroupCallBar> _groupCallBar;
 	std::unique_ptr<Ui::RequestsBar> _requestsBar;
 	std::unique_ptr<TranslateBar> _translateBar;

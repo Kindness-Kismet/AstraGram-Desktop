@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/chat/pinned_bar.h"
 
+#include "ui/chat/floating_bar.h"
 #include "ui/chat/message_bar.h"
 #include "ui/effects/spoiler_mess.h"
 #include "ui/widgets/shadow.h"
@@ -26,6 +27,7 @@ PinnedBar::PinnedBar(
 : _wrap(parent, object_ptr<RpWidget>(parent))
 , _shadow(std::make_unique<PlainShadow>(_wrap.parentWidget()))
 , _customEmojiPaused(std::move(customEmojiPaused)) {
+	ApplyChatBarSurface(_wrap);
 	_wrap.entity()->setObjectName(u"chatBar.pinned"_q);
 	_wrap.hide(anim::type::instant);
 	_shadow->hide();

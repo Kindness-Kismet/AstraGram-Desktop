@@ -20,7 +20,6 @@ namespace Ui {
 class PlainShadow;
 struct GroupCallUser;
 class GroupCallUserpics;
-enum class ChatBarShape;
 
 struct RequestsBarContent {
 	std::vector<GroupCallUser> users;
@@ -34,8 +33,7 @@ class RequestsBar final {
 public:
 	RequestsBar(
 		not_null<QWidget*> parent,
-		rpl::producer<RequestsBarContent> content,
-		ChatBarShape shape);
+		rpl::producer<RequestsBarContent> content);
 	~RequestsBar();
 
 	void show();
@@ -49,8 +47,6 @@ public:
 	void resizeToWidth(int width);
 	[[nodiscard]] int height() const;
 	[[nodiscard]] rpl::producer<int> heightValue() const;
-	[[nodiscard]] int naturalWidth() const;
-	[[nodiscard]] rpl::producer<int> naturalWidthValue() const;
 	[[nodiscard]] rpl::producer<> barClicks() const;
 
 	[[nodiscard]] rpl::lifetime &lifetime() {
@@ -64,14 +60,8 @@ private:
 	void updateControlsGeometry(QRect wrapGeometry);
 	void updateUserpics();
 	void setupInner();
-	void setupCapsule();
-	void updateNaturalWidth();
 	void paint(Painter &p);
-	void paintCapsule(Painter &p);
-	[[nodiscard]] int barHeight() const;
-	[[nodiscard]] int capsuleTextLeft() const;
 
-	const ChatBarShape _shape;
 	SlideWrap<> _wrap;
 	not_null<RpWidget*> _inner;
 	std::unique_ptr<PlainShadow> _shadow;
@@ -79,7 +69,6 @@ private:
 	Fn<QRect(QRect)> _shadowGeometryPostprocess;
 	bool _shouldBeShown = false;
 	bool _forceHidden = false;
-	bool _over = false;
 
 	RequestsBarContent _content;
 	std::unique_ptr<GroupCallUserpics> _userpics;

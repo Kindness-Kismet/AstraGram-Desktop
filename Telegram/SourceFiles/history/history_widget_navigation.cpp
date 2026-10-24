@@ -444,8 +444,7 @@ void HistoryWidget::showHistory(
 			controller(),
 			_topBars.get(),
 			_peer,
-			false,
-			Ui::ChatBarShape::Row);
+			false);
 		_contactStatus->bar().heightValue(
 		) | rpl::on_next([=] {
 			updateControlsGeometry();
@@ -458,9 +457,7 @@ void HistoryWidget::showHistory(
 				controller(),
 				_topBars.get(),
 				user);
-			rpl::merge(
-				_paysStatus->bar().heightValue() | rpl::to_empty,
-				_paysStatus->bar().naturalWidthValue() | rpl::to_empty
+			_paysStatus->bar().heightValue(
 			) | rpl::on_next([=] {
 				updateControlsGeometry();
 			}, _paysStatus->bar().lifetime());
