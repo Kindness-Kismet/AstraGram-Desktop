@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/streaming/media_streaming_file_delegate.h"
 #include "base/weak_ptr.h"
 #include "base/timer.h"
+#include "rpl/variable.h"
 
 namespace Media {
 namespace Player {
@@ -60,6 +61,7 @@ public:
 
 	[[nodiscard]] rpl::producer<Update, Error> updates() const;
 	[[nodiscard]] rpl::producer<bool> fullInCache() const;
+	[[nodiscard]] rpl::producer<QImage> coverValue() const;
 
 	[[nodiscard]] int64 fileSize() const;
 	[[nodiscard]] QSize videoSize() const;
@@ -106,6 +108,7 @@ private:
 	void fileError(Error error) override;
 	void fileWaitingForData() override;
 	void fileFullInCache(bool fullInCache) override;
+	void fileCover(QImage cover) override;
 	bool fileProcessPackets(
 		base::flat_map<int, std::vector<FFmpeg::Packet>> &packets) override;
 	void fileProcessEndOfFile() override;
@@ -204,6 +207,7 @@ private:
 	base::Timer _renderFrameTimer;
 	rpl::event_stream<Update, Error> _updates;
 	rpl::event_stream<bool> _fullInCache;
+	rpl::variable<QImage> _cover;
 	std::optional<bool> _fullInCacheSinceStart;
 
 	crl::time _totalDuration = kTimeUnknown;

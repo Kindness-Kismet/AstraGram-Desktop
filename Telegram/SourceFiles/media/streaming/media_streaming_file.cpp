@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/streaming/media_streaming_loader.h"
 #include "media/streaming/media_streaming_file_delegate.h"
 #include "ffmpeg/ffmpeg_utility.h"
+#include "ui/image/image_prepare.h"
 
 namespace Media {
 namespace Streaming {
@@ -17,6 +18,27 @@ namespace {
 
 constexpr auto kMaxSingleReadAmount = 8 * 1024 * 1024;
 constexpr auto kMaxQueuedPackets = 1024;
+
+[[nodiscard]] QImage ReadAlbumCover(not_null<AVFormatContext*> format) {
+	for (auto i = 0U; i != format->nb_streams; ++i) {
+		const auto stream = format->streams[i];
+		if (!(stream->disposition & AV_DISPOSITION_ATTACHED_PIC)) {
+			continue;
+		}
+		const auto &packet = stream->attached_pic;
+		if (packet.size <= 0) {
+			continue;
+		}
+		auto result = Images::Read({
+			.content = QByteArray(reinterpret_cast<const char*>(packet.data), packet.size),
+			.forceOpaque = true,
+		});
+		if (!result.image.isNull()) {
+			return std::move(result.image);
+		}
+	}
+	return {};
+}
 
 [[nodiscard]] bool UnreliableFormatDuration(
 		not_null<AVFormatContext*> format,
@@ -317,6 +339,9 @@ void File::Context::start(StartOptions options) {
 	}
 
 	_reader->headerDone();
+	if (mode == Mode::Audio && audio.codec) {
+		_delegate->fileCover(ReadAlbumCover(format.get()));
+	}
 	if (_reader->isRemoteLoader()) {
 		sendFullInCache(true);
 	}

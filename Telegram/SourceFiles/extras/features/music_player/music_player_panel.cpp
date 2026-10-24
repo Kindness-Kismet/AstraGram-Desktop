@@ -85,7 +85,7 @@ CompactPanel::CompactPanel(
 , _controller(controller)
 , _type(type)
 , _cover(new TrackCover(this, [=] {
-	_save->setDisabled(_cover->image().isNull());
+	_save->setDisabled(_cover->originalImage().isNull());
 	update();
 }))
 , _save(this, st::extrasMusicCompactSave)
@@ -491,7 +491,7 @@ rpl::producer<> CompactPanel::collapseRequests() const {
 }
 
 void CompactPanel::saveCover() {
-	const auto cover = _cover->image();
+	const auto cover = _cover->originalImage();
 	if (cover.isNull()) {
 		return;
 	}

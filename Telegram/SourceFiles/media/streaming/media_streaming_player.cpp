@@ -331,6 +331,12 @@ void Player::fileError(Error error) {
 	});
 }
 
+void Player::fileCover(QImage cover) {
+	crl::on_main(&_sessionGuard, [=, cover = std::move(cover)]() mutable {
+		_cover = std::move(cover);
+	});
+}
+
 void Player::fileFullInCache(bool fullInCache) {
 	crl::on_main(&_sessionGuard, [=] {
 		if (!_fullInCacheSinceStart.has_value()) {
@@ -897,6 +903,10 @@ rpl::producer<Update, Error> Player::updates() const {
 
 rpl::producer<bool> Player::fullInCache() const {
 	return _fullInCache.events();
+}
+
+rpl::producer<QImage> Player::coverValue() const {
+	return _cover.value();
 }
 
 int64 Player::fileSize() const {

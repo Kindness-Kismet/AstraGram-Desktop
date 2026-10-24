@@ -347,6 +347,8 @@ set(extras_files
         extras/features/topic_switcher/topic_switcher_panel.h
         extras/features/music_player/music_player_cover.cpp
         extras/features/music_player/music_player_cover.h
+        extras/features/music_player/music_player_download.cpp
+        extras/features/music_player/music_player_download.h
         extras/features/music_player/music_player_floating.cpp
         extras/features/music_player/music_player_floating.h
         extras/features/music_player/music_player_panel.cpp
@@ -441,6 +443,8 @@ set(extras_files
         extras/debug/simulation_scenarios.h
         extras/debug/simulation_profile.cpp
         extras/debug/simulation_profile.h
+        extras/debug/simulation_music.cpp
+        extras/debug/simulation_music.h
         extras/debug/simulation_media.cpp
         extras/debug/simulation_media.h
         extras/debug/simulation_search.cpp

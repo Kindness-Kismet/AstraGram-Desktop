@@ -9,6 +9,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_document_loader.h"
 #include "extras/data/media_cache_manager.h"
 
+#ifdef _DEBUG
+#include "extras/debug/simulation_music.h"
+#endif
+
 #include "data/data_document_resolver.h"
 #include "data/data_session.h"
 #include "data/data_streaming.h"
@@ -1479,6 +1483,11 @@ auto DocumentData::createStreamingLoader(
 	if (!useStreamingLoader()) {
 		return nullptr;
 	}
+#ifdef _DEBUG
+	if (auto loader = ExtrasDebug::Commands::musicLoaderForDebug(this)) {
+		return loader;
+	}
+#endif
 	if (!forceRemoteLoader) {
 		const auto media = activeMediaView();
 		const auto &location = this->location(true);

@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "media/player/media_player_instance.h"
+#include "extras/features/music_player/music_player_download.h"
 
 #include "data/data_document.h"
 #include "data/data_session.h"
@@ -969,6 +970,10 @@ void Instance::playStreamed(
 		audioId,
 		std::move(shared));
 	data->streamed->instance.lockPlayer();
+	data->streamed->instance.player().fullInCache(
+	) | rpl::filter(rpl::mappers::_1) | rpl::take(1) | rpl::on_next([=] {
+		Extras::MusicPlayer::saveCachedTrack(audioId);
+	}, data->streamed->lifetime);
 
 	data->streamed->instance.player().updates(
 	) | rpl::on_next_error([=](Streaming::Update &&update) {

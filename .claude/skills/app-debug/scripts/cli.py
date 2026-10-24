@@ -98,6 +98,8 @@ GENERIC_COMMANDS = {
     'dialog.open': '在独立模拟配置中关闭现有图层并无动画打开对话框样本：<键名>',
     'dialog.close': '在独立模拟配置中关闭全部对话框图层',
     'player.control': '直接控制当前播放器，不抢焦点：<play|pause|toggle|stop> [song|voice]',
+    'player.cover': '查询当前音乐可保存的原始封面尺寸，独立模拟配置可保存：[新 PNG 路径]',
+    'simulation.music': '用本地音频模拟远端分块播放并查询状态：[路径 [protected|cancelled]]',
     'downloads.list': '查询真实下载列表及分类与搜索交集：[all|archives|music|videos|other] [关键词]',
     'downloads.start': '指定路径保存消息附件，返回异步任务：<会话编号> <消息编号> <新文件绝对路径>',
     'downloads.cancel': '取消指定附件下载：<会话编号> <消息编号>',

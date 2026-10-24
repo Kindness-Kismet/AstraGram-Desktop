@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+class QImage;
+
 namespace FFmpeg {
 class Packet;
 } // namespace FFmpeg
@@ -27,6 +29,7 @@ public:
 	virtual void fileError(Error error) = 0;
 	virtual void fileWaitingForData() = 0;
 	virtual void fileFullInCache(bool fullInCache) = 0;
+	virtual void fileCover(QImage cover) = 0;
 
 	virtual void fileProcessEndOfFile() = 0;
 	// Return true if reading and processing more packets is desired.
