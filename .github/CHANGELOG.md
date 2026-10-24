@@ -1,4 +1,4 @@
-- Added encrypted chats in the chat list, so you can now exchange encrypted text and files, reply to messages, keep local drafts, search locally and use notifications and self-destruct timers with smooth chat transitions
+- Added encrypted chats in the chat list, so you can now exchange encrypted text and files, reply to messages, keep local drafts, search locally, jump by date and use notifications and self-destruct timers with smooth transitions and keyboard navigation
 - Added fullscreen viewing for article media on Windows, so you can now expand article photos and videos and drag the top bar to move the article window
 - Changed how media viewers close; clicking empty space now closes the viewer again, while dragging its top bar still moves the host window
 - Changed the Windows system requirements after upgrading to Qt 6.11.2; older Windows versions are no longer supported, and Windows 10 or later is now required
@@ -25,7 +25,7 @@
 
 ---
 
-- 新增了聊天列表中的加密对话，现在可以发送加密文字和文件、回复消息、保存本地草稿、搜索本地消息，并使用消息通知、阅后即焚计时和平滑的对话切换动画
+- 新增了聊天列表中的加密对话，现在可以发送加密文字和文件、回复消息、保存本地草稿、搜索本地消息、按日期跳转，并使用消息通知、阅后即焚计时、平滑的切换动画与键盘导航
 - 新增了 Windows 上文章媒体的全屏查看功能，现在可以全屏打开文章中的图片和视频，并拖动顶栏移动文章窗口
 - 调整了媒体查看器的关闭方式，现在点击空白处会再次关闭查看器，拖动顶栏仍可移动宿主窗口
 - 调整了 Windows 版本的系统要求，升级至 Qt 6.11.2 后不再支持旧版 Windows，最低要求为 Windows 10
