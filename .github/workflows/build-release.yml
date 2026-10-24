@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Tests and static checks
+    name: Release metadata and static checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -37,6 +37,30 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
+
+      # 先展示本轮版本与说明，后续校验或构建失败时仍能查看。
+      - name: Read version and release notes.
+        id: version
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^AppVersionStrSmall //p' Telegram/build/version)
+          test -n "$version"
+          appversion=$(sed -n 's/^AppUpdateVersion  *//p' Telegram/build/version)
+          test -n "$appversion"
+          test -s .github/CHANGELOG.md
+          {
+            echo "version=${version}"
+            echo "tag=v${version}"
+            echo "appversion=${appversion}"
+          } >> "$GITHUB_OUTPUT"
+          {
+            printf '## AstraGram %s\n\n' "$version"
+            printf 'Update code: %s\n\n' "$appversion"
+            printf 'Source: [%s](%s/%s/commit/%s)\n\n' \
+              "${GITHUB_SHA:0:10}" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
+            printf '### Release notes\n\n'
+            cat .github/CHANGELOG.md
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Validate workflows.
         env:
@@ -53,18 +77,6 @@ jobs:
             | (cd "$RUNNER_TEMP" && sha256sum --check -)
           tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
           "$RUNNER_TEMP/actionlint" -shellcheck= -pyflakes=
-
-      - name: Read version.
-        id: version
-        run: |
-          set -euo pipefail
-          version=$(sed -n 's/^AppVersionStrSmall //p' Telegram/build/version)
-          test -n "$version"
-          appversion=$(sed -n 's/^AppUpdateVersion  *//p' Telegram/build/version)
-          test -n "$appversion"
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
-          echo "appversion=${appversion}" >> "$GITHUB_OUTPUT"
 
   windows-x64:
     name: Windows x64 remote build
