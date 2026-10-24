@@ -831,8 +831,8 @@ historyTranslateBarHeight: 30px;
 historyTranslateSettings: IconButton(defaultIconButton) {
 	width: 30px;
 	height: 30px;
-	icon: icon{{ "menu/customize", windowActiveTextFg }};
-	iconOver: icon{{ "menu/customize", windowActiveTextFg }};
+	icon: icon{{ "menu/settings", windowActiveTextFg }};
+	iconOver: icon{{ "menu/settings", windowActiveTextFg }};
 	rippleAreaPosition: point(3px, 3px);
 	rippleAreaSize: 24px;
 	ripple: RippleAnimation(defaultRippleAnimation) {
