@@ -21,7 +21,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/profile/tabs/info_profile_tabs_host.h"
 #include "info/profile/info_profile_icon.h"
 #include "info/profile/info_profile_members.h"
-#include "info/profile/info_profile_music_button.h"
 #include "info/profile/info_profile_shared_media_classic.h"
 #include "info/profile/info_profile_top_bar.h"
 #include "info/profile/info_profile_actions.h"
@@ -37,8 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_user.h"
 #include "data/data_saved_music.h"
 #include "data/data_saved_sublist.h"
-#include "info/saved/info_saved_music_common.h"
-#include "info_profile_actions.h"
+#include "extras/ui/components/profile_attachments.h"
 #include "main/main_session.h"
 #include "apiwrap.h"
 #include "api/api_peer_photo.h"
@@ -79,66 +77,6 @@ constexpr auto kMembersInlineMax = 5;
 	}) | rpl::map([](int count) {
 		return (count > kMembersInlineMax);
 	}) | rpl::take(1);
-}
-
-void AddSavedMusic(
-		not_null<Ui::VerticalLayout*> layout,
-		not_null<Controller*> controller,
-		not_null<PeerData*> peer,
-		rpl::producer<std::optional<QColor>> topBarColor) {
-	const auto wrap = layout->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			layout,
-			object_ptr<Ui::VerticalLayout>(layout)));
-	wrap->toggleOn(
-		Info::Saved::SetupSavedMusic(
-			wrap->entity(),
-			controller,
-			peer,
-			std::move(topBarColor)),
-		anim::type::instant);
-}
-
-void AddUnofficialSecurityRiskWarning(
-		not_null<Ui::VerticalLayout*> layout,
-		not_null<UserData*> user) {
-	const auto wrap = layout->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			layout,
-			object_ptr<Ui::VerticalLayout>(layout)));
-	const auto content = wrap->entity();
-	user->session().changes().peerFlagsValue(
-		user,
-		Data::PeerUpdate::Flag::FullInfo
-	) | rpl::on_next([=] {
-		while (content->count()) {
-			delete content->widgetAt(0);
-		}
-		if (user->unofficialSecurityRisk()) {
-			auto helper = Ui::Text::CustomEmojiHelper();
-			auto icon = helper.paletteDependent(Ui::AttentionMarkEmoji());
-			auto label = object_ptr<Ui::FlatLabel>(
-				content,
-				tr::lng_profile_unofficial_warning(
-					lt_icon,
-					rpl::single(std::move(icon)),
-					lt_name,
-					rpl::single(TextWithEntities{ user->firstName }),
-					tr::marked),
-				st::defaultDividerLabel.label,
-				st::defaultPopupMenu,
-				helper.context([=] { content->update(); }));
-			content->add(object_ptr<Ui::DividerLabel>(
-				content,
-				std::move(label),
-				st::defaultBoxDividerLabelPadding));
-		}
-		content->resizeToWidth(content->width());
-	}, content->lifetime());
-	using namespace rpl::mappers;
-	wrap->toggleOn(
-		content->heightValue() | rpl::map(_1 > 0),
-		anim::type::instant);
 }
 
 } // namespace
@@ -192,14 +130,8 @@ object_ptr<Ui::RpWidget> InnerWidget::setupContent(
 		const auto musicPeer = _sublist
 			? _sublist->sublistPeer().get()
 			: _peer.get();
-		AddSavedMusic(
-			result.data(),
-			_controller,
-			musicPeer,
-			_topBarColor.value());
-		if (const auto user = _peer->asUser()) {
-			AddUnofficialSecurityRiskWarning(result.data(), user);
-		}
+		Extras::Profile::setupAttachments(
+			result.data(), _controller, musicPeer, _sublist != nullptr);
 	}
 
 	auto stack = SectionStack(result.data());

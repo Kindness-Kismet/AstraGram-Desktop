@@ -175,3 +175,11 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 `message.inspect` 返回实际删除、置顶、引用、话题、评论和 `ttlDestroyAt`；短倒计时到期后再次查询存在状态。
 模拟删除和编辑不得新增 `storage.deleted/edits` 记录。留档数据库独立验证使用 `storage.verify-archive`。
 固定场景的原生按钮仍保留业务路径，发送、加入、付费等联网动作不能作为本地模拟的成功证据。
+
+## 资料页布局
+
+`simulation.profile <music|combined|channel-only|long|warning|community|hidden|empty> [--side|--stories|--keep]` 仅用于独立模拟配置。
+八种场景依次覆盖音乐、音乐与频道、仅频道、无封面长歌名、安全提示、频道所属社区、群组隐藏说明和空内容。
+默认打开资料弹层；`--side` 使用侧栏，`--stories` 使用模拟账号的动态资料页，`--keep` 只更新数据并保留当前视图。
+音乐、封面、消息和社区均在本地生成，不发送消息、不播放音频；返回实际资料编号、音乐数量、消息编号与提示状态。
+音乐列表沿正式数据通知更新，重复调用替换样本；模拟账号名和资料只影响此独立配置，重启模拟模式恢复。

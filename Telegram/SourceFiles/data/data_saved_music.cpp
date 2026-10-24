@@ -48,6 +48,22 @@ bool SavedMusic::Supported(PeerId peerId) {
 	return peerId && peerIsUser(peerId);
 }
 
+#ifdef _DEBUG
+void SavedMusic::setForDebug(
+		PeerId peerId,
+		const std::vector<not_null<DocumentData*>> &documents) {
+	auto &entry = _entries[peerId];
+	if (const auto requestId = base::take(entry.requestId)) {
+		_owner->session().api().request(requestId).cancel();
+	}
+	entry = Entry{ .total = int(documents.size()), .loaded = true };
+	for (const auto document : documents) {
+		entry.list.push_back(musicIdToMsg(peerId, entry, document));
+	}
+	_changed.fire_copy(peerId);
+}
+#endif
+
 not_null<HistoryItem*> SavedMusic::musicIdToMsg(
 		PeerId peerId,
 		Entry &entry,

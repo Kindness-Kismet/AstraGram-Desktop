@@ -7,14 +7,21 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_music_button.h"
 
-#include "ui/color_contrast.h"
-#include "ui/effects/animation_value.h"
-#include "ui/text/text_utilities.h"
+#include "data/data_document.h"
+#include "data/data_document_media.h"
+#include "data/data_file_origin.h"
+#include "data/data_session.h"
+#include "extras/ui/utils/itunes_search.h"
+#include "main/main_session.h"
+#include "main/main_session_settings.h"
+#include "ui/image/image.h"
 #include "ui/painter.h"
-#include "ui/rect.h"
-#include "ui/ui_utility.h"
-#include "styles/style_chat.h"
 #include "styles/style_info.h"
+#include "styles/style_chat.h"
+
+#ifdef _DEBUG
+#include "extras/debug/debug_login.h"
+#endif
 
 namespace Info::Profile {
 
@@ -22,9 +29,8 @@ MusicButton::MusicButton(
 	QWidget *parent,
 	MusicButtonData data,
 	Fn<void()> handler)
-: RippleButton(parent, st::infoMusicButtonRipple)
-, _noteSymbol(u"\u266B"_q + QChar(' '))
-, _noteWidth(st::normalFont->width(_noteSymbol)) {
+: RippleButton(parent, st::infoMusicButtonRipple) {
+	setObjectName(u"profile.attachments.music"_q);
 	updateData(std::move(data));
 	setClickedCallback(std::move(handler));
 }
@@ -32,132 +38,116 @@ MusicButton::MusicButton(
 MusicButton::~MusicButton() = default;
 
 void MusicButton::updateData(MusicButtonData data) {
-	const auto result = data.name.textWithEntities();
-	const auto performerLength = result.entities.empty()
-		? 0
-		: int(result.entities.front().length());
-	_performer.setText(
-		st::semiboldTextStyle,
-		result.text.mid(0, performerLength));
-	_title.setText(
-		st::defaultTextStyle,
-		result.text.mid(performerLength, result.text.size()));
-	setAccessibleName(result.text);
+	_title.setText(st::semiboldTextStyle, data.title);
+	_performer.setText(st::defaultTextStyle, data.performer);
+	setAccessibleName(data.name.textWithEntities().text);
+	setToolTip(data.title + QChar('\n') + data.performer);
+	loadCover(data);
 	update();
 }
 
-void MusicButton::setOverrideBg(std::optional<QColor> color) {
-	_overrideBg = color;
+rpl::producer<std::optional<QColor>> MusicButton::coverColorValue() const {
+	return _coverColor.value();
+}
+
+void MusicButton::setCover(QImage image) {
+	_cover = std::move(image);
+	_coverColor = _cover.isNull()
+		? std::nullopt
+		: std::make_optional(_cover.scaled(
+			1, 1, Qt::IgnoreAspectRatio, Qt::SmoothTransformation).pixelColor(0, 0));
 	update();
+}
+
+void MusicButton::loadCover(const MusicButtonData &data) {
+	_downloadLifetime.destroy();
+	const auto generation = ++_coverGeneration;
+	_mediaView = data.mediaView;
+	setCover({});
+	if (!_mediaView) {
+		return;
+	}
+	if (const auto thumbnail = _mediaView->thumbnail()) {
+		setCover(thumbnail->original());
+		return;
+	}
+	const auto document = _mediaView->owner();
+	if (document->isSongWithCover()
+		&& document->session().settings().autoDownload().shouldDownload(
+			Data::AutoDownload::Source::User,
+			Data::AutoDownload::Type::File,
+			document->size)) {
+		_mediaView->thumbnailWanted(Data::FileOrigin(data.msgId));
+		document->session().downloaderTaskFinished(
+		) | rpl::on_next([=] {
+			if (const auto thumbnail = _mediaView->thumbnail()) {
+				setCover(thumbnail->original());
+			}
+		}, _downloadLifetime);
+	}
+#ifdef _DEBUG
+	if (ExtrasDebug::isSimulationSession(&document->session())) {
+		return;
+	}
+#endif
+	// 工作线程只处理图片和文字，界面与文档状态留在主线程。
+	const auto weak = base::make_weak(this);
+	crl::async([weak, generation, title = data.title, performer = data.performer] {
+		auto image = Extras::Ui::Itunes::FetchCover(performer, title, 96);
+		crl::on_main([weak, generation, image = std::move(image)]() mutable {
+			const auto strong = weak.get();
+			if (strong && strong->_coverGeneration == generation
+				&& strong->_cover.isNull() && !image.isNull()) {
+				strong->setCover(std::move(image));
+			}
+		});
+	});
 }
 
 void MusicButton::paintEvent(QPaintEvent *e) {
-	auto p = QPainter(this);
-
-	if (_overrideBg) {
-		p.fillRect(e->rect(), Ui::BlendColors(
-			*_overrideBg,
-			Qt::black,
-			st::infoProfileTopBarActionButtonBgOpacity));
+	auto p = Painter(this);
+	auto hq = PainterHighQualityEnabler(p);
+	paintRipple(p, QPoint());
+	const auto size = style::ConvertScale(48);
+	const auto top = (height() - size) / 2;
+	const auto coverRect = QRect(0, top, size, size);
+	auto path = QPainterPath();
+	path.addRoundedRect(coverRect, style::ConvertScale(9), style::ConvertScale(9));
+	p.save();
+	p.setClipPath(path);
+	if (_cover.isNull()) {
+		p.fillRect(coverRect, st::windowBgOver);
+		st::infoIconMediaAudio.paintInCenter(p, coverRect);
 	} else {
-		p.fillRect(e->rect(), st::shadowFg);
+		const auto side = std::min(_cover.width(), _cover.height());
+		p.drawImage(coverRect, _cover, QRect(
+			(_cover.width() - side) / 2, (_cover.height() - side) / 2, side, side));
 	}
-	const auto lightBackground = _overrideBg
-		&& Ui::IsLightBackground(*_overrideBg);
-	const auto rippleColor = !_overrideBg
-		? std::nullopt
-		: std::make_optional(anim::with_alpha(
-			(lightBackground
-				? QColor(Qt::black)
-				: st::groupCallMembersFg->c),
-			st::infoProfileTopBarBackdropRippleOpacity));
-	paintRipple(p, QPoint(), rippleColor ? &*rippleColor : nullptr);
-
-	const auto &icon = st::topicButtonArrow;
-	const auto iconWidth = icon.width();
-	const auto iconHeight = icon.height();
-
-	const auto padding = st::infoMusicButtonPadding;
-	const auto skip = st::normalFont->spacew;
-
-	const auto titleWidth = _title.maxWidth();
-	const auto performerWidth = _performer.maxWidth();
-	const auto totalNeeded = titleWidth + performerWidth + skip;
-	const auto availableWidth = width()
-		- rect::m::sum::h(padding)
-		- iconWidth
-		- skip
-		- _noteWidth;
-
-	auto actualTitleWidth = 0;
-	auto actualPerformerWidth = 0;
-	if (totalNeeded <= availableWidth) {
-		actualTitleWidth = titleWidth;
-		actualPerformerWidth = performerWidth;
-	} else {
-		const auto ratio = float64(titleWidth) / totalNeeded;
-		actualPerformerWidth = int(availableWidth * (1.0 - ratio));
-		actualTitleWidth = availableWidth - actualPerformerWidth;
-	}
-
-	const auto totalContentWidth = _noteWidth
-		+ actualPerformerWidth
-		+ skip
-		+ actualTitleWidth
-		+ skip
-		+ iconWidth;
-	const auto centerX = width() / 2;
-	const auto contentStartX = centerX - totalContentWidth / 2;
-	const auto textTop = (height() - st::normalFont->height) / 2;
-
-	p.setPen(!_overrideBg
-		? st::windowBoldFg->c
-		: lightBackground
-		? QColor(Qt::black)
-		: st::groupCallMembersFg->c);
-	p.setFont(st::normalFont);
-	p.drawText(contentStartX, textTop + st::normalFont->ascent, _noteSymbol);
-
-	_performer.draw(p, {
-		.position = { contentStartX + _noteWidth, textTop },
-		.availableWidth = actualPerformerWidth,
-		.now = crl::now(),
-		.elisionLines = 1,
-		.elisionMiddle = true,
-	});
-
-	p.setPen(!_overrideBg
-		? st::windowSubTextFg->c
-		: lightBackground
-		? anim::with_alpha(
-			QColor(Qt::black),
-			st::groupCallVideoSubTextFg->c.alphaF())
-		: st::groupCallVideoSubTextFg->c);
+	p.restore();
+	const auto &arrow = st::topicButtonArrow;
+	const auto left = size + style::ConvertScale(12);
+	const auto available = std::max(width() - left - arrow.width()
+		- style::ConvertScale(12), 0);
+	const auto titleTop = (height() - st::semiboldFont->height
+		- st::normalFont->height - style::ConvertScale(3)) / 2;
+	p.setPen(st::windowBoldFg);
 	_title.draw(p, {
-		.position = QPoint(
-			contentStartX + _noteWidth + actualPerformerWidth + skip,
-			textTop),
-		.availableWidth = actualTitleWidth,
-		.now = crl::now(),
+		.position = { left, titleTop },
+		.availableWidth = available,
 		.elisionLines = 1,
-		.elisionMiddle = true,
 	});
-
-	const auto iconLeft = contentStartX
-		+ _noteWidth
-		+ actualPerformerWidth
-		+ actualTitleWidth
-		+ skip
-		+ skip;
-	const auto iconTop = (height() - iconHeight) / 2;
-	icon.paint(p, iconLeft, iconTop, iconWidth, p.pen().color());
+	p.setPen(st::windowSubTextFg);
+	_performer.draw(p, {
+		.position = { left, titleTop + st::semiboldFont->height + style::ConvertScale(3) },
+		.availableWidth = available,
+		.elisionLines = 1,
+	});
+	arrow.paint(p, width() - arrow.width(), (height() - arrow.height()) / 2,
+		width(), st::windowSubTextFg->c);
 }
 
 int MusicButton::resizeGetHeight(int newWidth) {
-	const auto padding = st::infoMusicButtonPadding;
-	const auto &font = st::defaultTextStyle.font;
-
-	return padding.top() + font->height + padding.bottom();
+	return style::ConvertScale(48);
 }
 
 } // namespace Info::Profile

@@ -1,4 +1,8 @@
 {
+  "ProfileMusic": "个人音乐",
+  "ProfilePersonalChannel": "个人频道",
+  "ProfileCommunity": "所属社区",
+  "ProfileSecurityNotice": "客户端安全提示",
   "SmoothScrolling": "平滑滚动",
   "SmoothScrollingDescription": "让对话区和文章预览中的鼠标滚轮滚动更平滑。",
   "SecretChatDestroy": "销毁加密对话",

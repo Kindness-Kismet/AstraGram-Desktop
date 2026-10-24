@@ -917,6 +917,7 @@ void TopBar::finalizeActions(
 		shadowRaw->update();
 	}, _actions->lifetime());
 	const auto padding = st::infoProfileTopBarActionButtonsPadding;
+	_actions->setObjectName(u"profile.actions"_q);
 	sizeValue() | rpl::on_next([=](const QSize &size) {
 		const auto ratio = float64(size.height())
 			/ (st::infoProfileTopBarActionButtonsHeight

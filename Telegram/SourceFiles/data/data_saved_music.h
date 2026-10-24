@@ -44,6 +44,10 @@ public:
 
 	void clear();
 
+#ifdef _DEBUG
+	void setForDebug(PeerId peerId, const std::vector<not_null<DocumentData*>> &documents);
+#endif
+
 private:
 	using OwnedItem = std::unique_ptr<HistoryItem, HistoryItem::Destroyer>;
 

@@ -1,4 +1,8 @@
 {
+  "ProfileMusic": "Profile Music",
+  "ProfilePersonalChannel": "Personal Channel",
+  "ProfileCommunity": "Community",
+  "ProfileSecurityNotice": "Client Security Notice",
   "SmoothScrolling": "Smooth Scrolling",
   "SmoothScrollingDescription": "Smooth mouse wheel scrolling in chats and article previews.",
   "SecretChatDestroy": "Destroy Encrypted Chat",

@@ -31,18 +31,21 @@ public:
 	~MusicButton();
 
 	void updateData(MusicButtonData data);
-	void setOverrideBg(std::optional<QColor> color);
+	[[nodiscard]] rpl::producer<std::optional<QColor>> coverColorValue() const;
 
 private:
+	void loadCover(const MusicButtonData &data);
+	void setCover(QImage image);
 	void paintEvent(QPaintEvent *e) override;
 	int resizeGetHeight(int newWidth) override;
 
 	Ui::Text::String _performer;
 	Ui::Text::String _title;
-	std::optional<QColor> _overrideBg;
-
-	const QString _noteSymbol;
-	const int _noteWidth;
+	QImage _cover;
+	std::shared_ptr<Data::DocumentMedia> _mediaView;
+	rpl::variable<std::optional<QColor>> _coverColor;
+	rpl::lifetime _downloadLifetime;
+	int _coverGeneration = 0;
 
 };
 

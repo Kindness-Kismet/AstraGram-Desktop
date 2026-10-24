@@ -7,153 +7,90 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/saved/info_saved_music_common.h"
 
+#include "data/data_document.h"
 #include "data/data_peer.h"
 #include "data/data_saved_music.h"
-#include "data/data_saved_sublist.h"
+#include "extras/extras_settings.h"
 #include "history/history_item.h"
 #include "info/info_controller.h"
 #include "info/info_memento.h"
 #include "info/profile/info_profile_music_button.h"
 #include "info/saved/info_saved_music_widget.h"
+#include "lang/lang_keys.h"
 #include "ui/text/format_song_document_name.h"
-#include "ui/widgets/buttons.h"
-#include "ui/wrap/slide_wrap.h"
-#include "ui/wrap/vertical_layout.h"
-#include "ui/vertical_list.h"
-
-// AyuGram includes
-#include "lang_auto.h"
-#include "extras/extras_settings.h"
-#include "extras/ui/components/saved_music.h"
-#include "extras/utils/telegram_helpers.h"
-#include "data/data_document.h"
-#include "styles/style_menu_icons.h"
 #include "ui/widgets/popup_menu.h"
-
+#include "ui/wrap/vertical_layout.h"
+#include "styles/style_menu_icons.h"
 
 namespace Info::Saved {
-
-namespace {
-
-[[nodiscard]] Profile::MusicButtonData DocumentMusicButtonData(
-		not_null<DocumentData*> document, not_null<HistoryItem*> message) {
-	const auto name = Ui::Text::FormatSongNameFor(document);
-
-	return {
-		.name = name,
-		.title = name.composedName().title,
-		.performer = name.composedName().performer,
-		.msgId = message->fullId(),
-		.mediaView = document->createMediaView(),
-	};
-}
-
-} // namespace
 
 rpl::producer<bool> SetupSavedMusic(
 		not_null<Ui::VerticalLayout*> container,
 		not_null<Info::Controller*> controller,
 		not_null<PeerData*> peer,
-		rpl::producer<std::optional<QColor>> topBarColor) {
-	const auto hasMusic = container->lifetime().make_state<
-		rpl::variable<bool>>(false);
-	auto musicValue = Data::SavedMusic::Supported(peer->id)
-		? Data::SavedMusicList(
-			peer,
-			nullptr,
-			1
-		) | rpl::map([=](const Data::SavedMusicSlice &data) {
-			return data.size() ? data[0].get() : nullptr;
-		}) | rpl::type_erased
-		: rpl::single<HistoryItem*>((HistoryItem*)(nullptr));
-
-	const auto divider = container->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			container,
-			object_ptr<Ui::VerticalLayout>(container)));
-
-	rpl::combine(
-		std::move(musicValue),
-		std::move(topBarColor)
-	) | rpl::on_next([=](
-			HistoryItem *item,
-			std::optional<QColor> color) {
-		while (divider->entity()->count()) {
-			delete divider->entity()->widgetAt(0);
+		Fn<void(std::optional<QColor>)> coverColorChanged) {
+	struct State {
+		rpl::variable<bool> shown = false;
+		Profile::MusicButton *button = nullptr;
+		FullMsgId id;
+		base::unique_qptr<Ui::PopupMenu> menu;
+	};
+	const auto state = container->lifetime().make_state<State>();
+	if (!Data::SavedMusic::Supported(peer->id)) {
+		return state->shown.value();
+	}
+	Data::SavedMusicList(peer, nullptr, 1
+	) | rpl::on_next([=](const Data::SavedMusicSlice &slice) {
+		const auto item = slice.size() ? slice[0].get() : nullptr;
+		const auto document = (item && item->media())
+			? item->media()->document() : nullptr;
+		state->shown = (document != nullptr);
+		if (!document) {
+			container->clear();
+			state->button = nullptr;
+			state->id = {};
+			coverColorChanged(std::nullopt);
+			return;
 		}
-		auto shown = false;
-		if (item) {
-			if (const auto document = item->media()
-					? item->media()->document()
-					: nullptr) {
-				const auto buttonData = DocumentMusicButtonData(document, item);
-				auto musicButton = divider->entity()->add(object_ptr<Ui::SlideWrap<Profile::ExtrasMusicButton>>(
-					divider->entity(),
-					object_ptr<Profile::ExtrasMusicButton>(
-						divider->entity(),
-						buttonData,
-						color,
-						[window = controller, peer]
-						{
-							window->showSection(Info::Saved::MakeMusic(peer));
-						})));
-
-				musicButton->hide(anim::type::instant);
-				musicButton->ease = anim::easeOutCubic;
-				musicButton->setDuration(250);
-				musicButton->entity()->setAcceptBoth(true);
-				musicButton->entity()->clicks() | rpl::filter([=](Qt::MouseButton mouseButton)
-				{
-					return mouseButton == Qt::RightButton;
-				}) | rpl::on_next([=]
-										  {
-											  const auto &settings = ExtrasSettings::getInstance();
-
-											  const auto contextMenu = new Ui::PopupMenu(
-												  musicButton,
-												  st::popupMenuWithIcons);
-											  contextMenu->setAttribute(Qt::WA_DeleteOnClose);
-
-											  contextMenu->addAction(
-												  settings.adaptiveCoverColor()
-													  ? tr::extras_DisableColorfulCover(tr::now)
-													  : tr::extras_EnableColorfulCover(tr::now),
-												  crl::guard(musicButton, [=]
-												  {
-													  ExtrasSettings::getInstance().setAdaptiveCoverColor(!ExtrasSettings::getInstance().adaptiveCoverColor());
-													  musicButton->entity()->updateData(buttonData);
-												  }),
-												  &st::menuIconPalette);
-
-											  contextMenu->popup(QCursor::pos());
-										  },
-										  musicButton->lifetime());
-
-				const auto weak = base::make_weak(musicButton);
-				musicButton->entity()->onReady() | rpl::on_next(
-					[=]
-					{
-						// fix animation glitch
-						dispatchToMainThread(
-							[=]
-							{
-								if (const auto strong = weak.get()) {
-									strong->show(anim::type::normal);
-								}
-							},
-							st::widgetFadeDuration);
-					},
-					musicButton->lifetime());
-
-				shown = true;
-			}
-			divider->toggle(true, anim::type::normal);
+		if (state->button && state->id == item->fullId()) {
+			return;
 		}
-		*hasMusic = shown;
+		const auto name = Ui::Text::FormatSongNameFor(document);
+		auto data = Profile::MusicButtonData{
+			.name = name,
+			.title = name.composedName().title,
+			.performer = name.composedName().performer,
+			.msgId = item->fullId(),
+			.mediaView = document->createMediaView(),
+		};
+		state->id = data.msgId;
+		if (state->button) {
+			state->button->updateData(std::move(data));
+			return;
+		}
+		const auto button = state->button = container->add(
+			object_ptr<Profile::MusicButton>(container, std::move(data), [=] {
+				controller->showSection(MakeMusic(peer));
+			}));
+		button->coverColorValue(
+		) | rpl::on_next(coverColorChanged, button->lifetime());
+		button->setAcceptBoth(true);
+		button->clicks() | rpl::filter([](Qt::MouseButton mouse) {
+			return mouse == Qt::RightButton;
+		}) | rpl::on_next([=] {
+			state->menu = base::make_unique_q<Ui::PopupMenu>(
+				button, st::popupMenuWithIcons);
+			const auto enabled = ExtrasSettings::getInstance().adaptiveCoverColor();
+			state->menu->addAction(enabled
+				? tr::extras_DisableColorfulCover(tr::now)
+				: tr::extras_EnableColorfulCover(tr::now), [=] {
+					auto &settings = ExtrasSettings::getInstance();
+					settings.setAdaptiveCoverColor(!settings.adaptiveCoverColor());
+				}, &st::menuIconPalette);
+			state->menu->popup(QCursor::pos());
+		}, button->lifetime());
 	}, container->lifetime());
-	divider->finishAnimating();
-
-	return hasMusic->value();
+	return state->shown.value();
 }
 
 } // namespace Info::Saved

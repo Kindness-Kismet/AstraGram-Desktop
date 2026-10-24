@@ -9,7 +9,6 @@
 #include <QtCore/QTimer>
 #include <QtCore/QUrlQuery>
 #include <QtGui/QImage>
-#include <QtGui/QPixmap>
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
 
@@ -18,11 +17,11 @@ namespace {
 
 struct CacheEntry
 {
-	QPixmap pix;
+	QImage pix;
 };
 
 QCache<QString, CacheEntry> &cache() {
-	static QCache<QString, CacheEntry> c(50);
+	thread_local QCache<QString, CacheEntry> c(50);
 	return c;
 }
 
@@ -707,7 +706,7 @@ QString upgradeArtworkSize(QString url, int sizeHint) {
 
 } // namespace
 
-QPixmap FetchCover(const QString &performer, const QString &title, int sizeHintPx, int timeoutMs) {
+QImage FetchCover(const QString &performer, const QString &title, int sizeHintPx, int timeoutMs) {
 	const auto perf = performer.trimmed();
 	const auto titl = title.trimmed();
 	if (perf.isEmpty() && titl.isEmpty()) return {};
@@ -734,7 +733,7 @@ QPixmap FetchCover(const QString &performer, const QString &title, int sizeHintP
 
 	QImage img;
 	if (!img.loadFromData(imgBytes)) return {};
-	QPixmap pix = QPixmap::fromImage(img);
+	const auto pix = img;
 
 	auto *stored = new CacheEntry{pix};
 	cache().insert(key, stored);

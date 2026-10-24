@@ -43,6 +43,7 @@ OFFLINE_START = None
 
 GENERIC_COMMANDS = {
     "control.wheel": "在应用内部投递滚轮事件：<目标> <角度增量> [pixel]",
+    "simulation.profile": "注入并打开资料页八种本地场景：<music|combined|channel-only|long|warning|community|hidden|empty> [--side|--stories|--keep]",
     "simulation.secret": "在独立模拟配置中创建并打开加密对话样本：[1..2000]",
     "simulation.cache-chats": "给已打开的缓存设置页注入本地列表样本：<0..10000>",
     "secret.list": "查询指定账号的加密对话、握手状态和密钥核对摘要：<账号用户编号>",

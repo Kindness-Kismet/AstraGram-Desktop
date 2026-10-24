@@ -321,8 +321,8 @@ set(extras_files
         extras/ui/components/smooth_scroll.h
         extras/ui/components/sticker_preview.cpp
         extras/ui/components/sticker_preview.h
-        extras/ui/components/saved_music.cpp
-        extras/ui/components/saved_music.h
+        extras/ui/components/profile_attachments.cpp
+        extras/ui/components/profile_attachments.h
         extras/libs/json.hpp
         extras/libs/json_ext.hpp
         extras/libs/sqlite/sqlite3.c
@@ -441,6 +441,8 @@ set(extras_files
         extras/debug/dialogs_preview.h
         extras/debug/simulation_scenarios.cpp
         extras/debug/simulation_scenarios.h
+        extras/debug/simulation_profile.cpp
+        extras/debug/simulation_profile.h
         extras/debug/simulation_media.cpp
         extras/debug/simulation_media.h
         extras/debug/simulation_search.cpp

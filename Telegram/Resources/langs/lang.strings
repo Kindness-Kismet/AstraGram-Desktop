@@ -10014,3 +10014,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_UpdateNotesLoading" = "Loading release notes…";
 "extras_UpdateNotesUnavailable" = "Release notes are unavailable.";
 "extras_UpdateNotesLink" = "View full release notes on GitHub";
+
+"extras_ProfileMusic" = "Profile Music";
+"extras_ProfilePersonalChannel" = "Personal Channel";
+"extras_ProfileCommunity" = "Community";
+"extras_ProfileSecurityNotice" = "Client Security Notice";

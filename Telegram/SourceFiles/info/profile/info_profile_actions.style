@@ -9,7 +9,6 @@ using "info/info.style";
 
 infoProfileLabeledPadding: margins(23px, 9px, 20px, 7px);
 infoProfileLabeledUsernamePadding: margins(23px, 9px, 20px, 7px);
-infoProfilePersonalChannelPadding: margins(79px, 9px, 20px, 7px);
 infoProfileLabeledButtonQrRightSkip: 0px;
 infoIconInformation: icon {{ "info/info_information", infoIconFg }};
 infoIconAddMember: icon {{ "info/info_add_member", infoIconFg }};
@@ -25,21 +24,6 @@ infoChannelAdminsIconPosition: point(24px, 7px);
 infoEarnCreditsIconPosition: point(24px, 7px);
 infoEarnCurrencyIconPosition: point(20px, 3px);
 infoOpenAppMargin: margins(16px, 12px, 16px, 12px);
-infoPersonalChannelIconPosition: point(25px, 12px);
-infoPersonalChannelNameLabel: FlatLabel(infoProfileStatus) {
-	textFg: windowBoldFg;
-	style: semiboldTextStyle;
-	maxHeight: 20px;
-}
-infoPersonalChannelDateSkip: 20px;
-infoPersonalChannelDateLabel: FlatLabel(infoProfileStatus) {
-	textFg: dialogsDateFg;
-	style: TextStyle(semiboldTextStyle) {
-		font: dialogsDateFont;
-	}
-	maxHeight: 20px;
-}
-infoPersonalChannelUserpicSkip: -5px;
 infoMainButtonAttention: SettingsButton(infoMainButton) {
 	textFg: attentionButtonFg;
 	textFgOver: attentionButtonFgOver;
