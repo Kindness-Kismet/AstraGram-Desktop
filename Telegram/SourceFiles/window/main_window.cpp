@@ -505,9 +505,6 @@ bool MainWindow::hideNoQuit() {
 	using Mode = Core::Settings::WorkMode;
 	if (workMode == Mode::TrayOnly || workMode == Mode::WindowAndTray) {
 		if (minimizeToTray()) {
-			if (const auto controller = sessionController()) {
-				controller->clearSectionStack();
-			}
 			return true;
 		}
 	}
@@ -524,9 +521,6 @@ bool MainWindow::hideNoQuit() {
 	}
 	controller().updateIsActiveBlur();
 	updateGlobalMenu();
-	if (const auto controller = sessionController()) {
-		controller->clearSectionStack();
-	}
 	return true;
 }
 
