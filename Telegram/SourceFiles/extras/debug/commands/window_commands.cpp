@@ -110,7 +110,8 @@ void showWithoutActivating(not_null<QWidget*> window, bool maximized) {
 	if (!window) {
 		return Result::Err(u"no selected window"_q);
 	}
-	return window->close()
+	const auto accepted = window->close();
+	return (accepted || !window->isVisible())
 		? Result::Ok()
 		: Result::Err(u"window close was rejected"_q);
 }
