@@ -133,7 +133,7 @@ void refreshWidgetWindow(not_null<QWidget*> widget) {
 	Platform::SetWindowCaptureExcluded(window,
 		window->property(kHiddenProperty).toBool()
 			|| window->property("ExtrasContentScreenshotProtected").toBool()
-			|| Core::App().screenshotProtection().active());
+			|| Core::App().screenshotProtection().active(window));
 }
 
 } // namespace ExtrasFeatures::StreamerMode

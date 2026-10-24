@@ -1035,13 +1035,10 @@ OverlayWidget::OverlayWidget()
 	}
 	_widget->setMouseTracking(true);
 
-	// Toggling between windowed and fullscreen changes the window flags,
-	// and that is a path where Qt recreates the native window, dropping
-	// everything set on the old one. Reapply on every handle change,
-	// and after the app-wide protection is applied to all windows.
+	// 原生窗口重建和同一窗口的保护理由变化时，重新合并媒体保护。
 	rpl::combine(
 		_window->winIdValue(),
-		Core::App().screenshotProtection().activeValue()
+		Core::App().screenshotProtection().activeValue(_window)
 	) | rpl::on_next([=](WId, bool active) {
 		Platform::SetWindowScreenshotProtection(
 			_window,
@@ -6866,7 +6863,7 @@ void OverlayWidget::refreshScreenshotProtection() {
 	Platform::SetWindowScreenshotProtection(
 		_window,
 		(_screenshotProtected
-			|| Core::App().screenshotProtection().active()));
+			|| Core::App().screenshotProtection().active(_window)));
 }
 
 void OverlayWidget::refreshSystemMediaControls() {

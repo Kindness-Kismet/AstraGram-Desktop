@@ -104,6 +104,7 @@ public:
 	[[nodiscard]] std::shared_ptr<Show> uiShow();
 
 	[[nodiscard]] rpl::lifetime &lifetime();
+	[[nodiscard]] not_null<QWidget*> widget() const;
 
 private:
 	struct Progress;
