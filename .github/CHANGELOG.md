@@ -22,6 +22,8 @@
 - Fixed an issue with system screenshots of material windows that previously caused Mica and Acrylic areas to appear as pale blocks
 - Fixed an issue with saving music covers that previously saved small previews instead of the original embedded artwork
 - Improved music playback, which now saves fully cached tracks to the configured download folder and lists them in Downloads when no path prompt is required
+- Changed how message filters created from a chat work; they now apply only to that chat by default, with a Shared Filters switch to apply them across chats
+- Fixed an issue with reply navigation in albums that previously highlighted only the replied-to image instead of the entire album and its caption
 
 ---
 
@@ -49,3 +51,5 @@
 - 修复了关于系统材质窗口截图的错误，该问题曾导致云母和亚克力区域显示成泛白的色块
 - 修复了关于保存音乐封面的错误，该问题曾导致保存的是小尺寸预览图，而非音频中内嵌的原始封面
 - 对音乐播放进行了改善，这使得歌曲缓存完整后，会在无需询问保存路径时自动保存到配置的下载目录，并显示在已下载列表中
+- 调整了从聊天中新建消息过滤器的行为，现在默认仅对当前聊天生效，也可以通过共享过滤器开关应用到所有聊天
+- 修复了关于相册回复定位的错误，该问题曾导致只标记被回复的单张图片，而不是整个相册和附带文字
