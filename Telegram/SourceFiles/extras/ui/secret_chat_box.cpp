@@ -10,6 +10,7 @@
 #include "data/data_user.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
+#include "mainwindow.h"
 #include "settings/settings_common.h"
 #include "crl/crl_on_main.h"
 #include "ui/layers/generic_box.h"
@@ -76,8 +77,6 @@ struct Context {
 		closed->store(true);
 	}, box->lifetime());
 	box->lifetime().add([closed = result._closed] { closed->store(true); });
-	Core::App().screenshotProtection().addContentReason(
-		box->shownValue(), box->lifetime());
 	box->setWidth(st::boxWideWidth);
 	return result;
 }
@@ -163,6 +162,8 @@ void verifyKey(const Context &context, int chatId) {
 	const auto digest = lines.join('\n');
 	context._controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 		const auto child = bindBox(box, context._controller.get());
+		Core::App().screenshotProtection().addContentReason(
+			context._controller->widget(), box->shownValue(), box->lifetime());
 		watchChat(child, chatId);
 		child._manager->changed() | rpl::on_next([=] {
 			const auto current = child.valid() ? child._manager->chat(chatId) : std::nullopt;

@@ -14,6 +14,7 @@
 #include "history/view/controls/history_view_compose_controls.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
+#include "mainwindow.h"
 #include "menu/menu_send.h"
 #include "storage/storage_media_prepare.h"
 #include "window/window_session_controller.h"
@@ -147,7 +148,8 @@ bool confirmAttachments(not_null<Window::SessionController*> controller,
 	box->takeTextWithTagsRequests() | rpl::on_next([=](TextWithTags text) {
 		compose->setText(std::move(text));
 	}, box->lifetime());
-	Core::App().screenshotProtection().addContentReason(box->shownValue(), box->lifetime());
+	Core::App().screenshotProtection().addContentReason(
+		controller->widget(), box->shownValue(), box->lifetime());
 	controller->show(std::move(box));
 	return true;
 }

@@ -26,6 +26,7 @@
 #include "data/data_user.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
+#include "mainwindow.h"
 #include "menu/menu_send.h"
 #include "ui/chat/chat_theme.h"
 #include "ui/painter.h"
@@ -107,7 +108,6 @@ public:
 		static_cast<HistoryView::CornerButtonsDelegate*>(this))
 	, _draftTimer([=] { saveDraft(); }) {
 		setObjectName(u"secret/chat/"_q + QString::number(dialog->chatId()));
-		Core::App().screenshotProtection().addContentReason(shownValue(), lifetime());
 		Window::ChatThemeValueFromPeer(controller, dialog->user())
 			| rpl::on_next([=](std::shared_ptr<Ui::ChatTheme> theme) {
 				_theme = std::move(theme);
@@ -247,6 +247,20 @@ public:
 				return true;
 			});
 		}, lifetime());
+		Core::App().screenshotProtection().addContentReason(
+			controller->widget(), _screenshotProtected.value(), lifetime());
+		controller->widget()->ui_layerShownValue(
+		) | rpl::on_next([=](bool shown) {
+			_layerShown = shown;
+			updateScreenshotProtection();
+		}, lifetime());
+		rpl::merge(
+			shownValue() | rpl::to_empty,
+			events() | rpl::filter([](not_null<QEvent*> event) {
+				return event->type() == QEvent::Show
+					|| event->type() == QEvent::Hide;
+			}) | rpl::to_empty
+		) | rpl::on_next([=] { updateScreenshotProtection(); }, lifetime());
 	}
 
 	~Widget() { saveDraft(); controller()->sendingAnimation().clear(); }
@@ -276,10 +290,12 @@ public:
 	}
 	void checkActivation() override { if (_inner) { _inner->checkActivation(); } }
 	QPixmap grabForShowAnimation(const Window::SectionSlideParams &) override {
-		_topBar->updateControlsVisibility();
-		_compose->showForGrab();
-		if (_search) { _compose->hide(); _search->raise(); }
-		return Ui::GrabWidget(this);
+		// 原生切页动画只保存背景，加密正文不进入截图缓存。
+		auto result = QPixmap(size() * style::DevicePixelRatio());
+		result.setDevicePixelRatio(style::DevicePixelRatio());
+		result.fill(Qt::transparent);
+		render(&result, QPoint(), QRegion(), QWidget::DrawWindowBackground);
+		return result;
 	}
 	bool floatPlayerHandleWheelEvent(QEvent *event) override { return _scroll->viewportEvent(event); }
 	QRect floatPlayerAvailableRect() override { return mapToGlobal(_scroll->geometry()); }
@@ -315,6 +331,38 @@ protected:
 	}
 
 private:
+	void updateScreenshotProtection() {
+		if (_changingVisibility) {
+			return;
+		}
+		if (_layerShown) {
+			hideForLayer();
+			_screenshotProtected = false;
+			return;
+		}
+		if (_restoreAfterLayer) {
+			_restoreAfterLayer = false;
+			_changingVisibility = true;
+			// 先恢复保护，再重新显示正文；父级隐藏时等待真实显示事件。
+			_screenshotProtected = parentWidget()->isVisible();
+			show();
+			_changingVisibility = false;
+		}
+		_screenshotProtected = isVisible();
+	}
+	void hideForLayer() {
+		if (isHidden()) {
+			return;
+		}
+		_restoreAfterLayer = true;
+		_changingVisibility = true;
+		if (animatingShow()) {
+			showFast();
+		}
+		hide();
+		controller()->widget()->repaint();
+		_changingVisibility = false;
+	}
 	Manager &manager() const { return *_manager; }
 	void showSearch(const QString &query) {
 		if (_search) {
@@ -530,6 +578,10 @@ private:
 	int _overlap = 0;
 	bool _sending = false;
 	bool _choosingAttach = false;
+	rpl::variable<bool> _screenshotProtected = false;
+	bool _layerShown = false;
+	bool _restoreAfterLayer = false;
+	bool _changingVisibility = false;
 };
 
 object_ptr<Window::SectionWidget> Memento::createWidget(QWidget *parent,

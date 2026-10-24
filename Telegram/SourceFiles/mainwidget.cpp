@@ -83,6 +83,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/update_checker.h"
 #include "core/shortcuts.h"
 #include "core/application.h"
+#include "core/core_screenshot_protection.h"
 #include "core/click_handler_types.h"
 #include "core/changelogs.h"
 #include "core/mime_type.h"
@@ -1902,11 +1903,9 @@ Window::SectionSlideParams MainWidget::prepareShowAnimation(
 	} else if (!isOneColumn() || !_history->isHidden()) {
 		result.oldContentCache = _history->grabForShowAnimation(result);
 	} else {
-		result.oldContentCache = Ui::GrabWidget(this, QRect(
-			0,
-			sectionTop,
-			_dialogsWidth,
-			height() - sectionTop));
+		result.oldContentCache = Core::App().screenshotProtection().grabForAnimation(
+			this,
+			QRect(0, sectionTop, _dialogsWidth, height() - sectionTop));
 	}
 
 	if (_hider && hiderVisible) {
@@ -1973,7 +1972,8 @@ Fn<void()> MainWidget::prepareFullWidthAnimation(
 
 QPixmap MainWidget::grabFullWidthAnimationContent() {
 	floatPlayerHideAll();
-	auto result = Ui::GrabWidget(parentWidget());
+	auto result = Core::App().screenshotProtection().grabForAnimation(
+		parentWidget());
 	floatPlayerShowVisible();
 	return result;
 }
@@ -2020,7 +2020,9 @@ Fn<void()> MainWidget::prepareSectionFade(
 		const QString &name) {
 	floatPlayerHideAll();
 	// 截取整块区域，连续切换时正在淡出的上一张旧画面也包含在内。
-	auto cache = Ui::GrabWidget(this, geometry);
+	auto cache = Core::App().screenshotProtection().grabForAnimation(
+		this,
+		geometry);
 	floatPlayerShowVisible();
 	return [=, &fade, cache = std::move(cache)] {
 		// 旧画面盖在切换后的实时内容上淡出，过渡中到达的内容同样随之淡入。
@@ -2549,11 +2551,9 @@ QPixmap MainWidget::grabForShowAnimation(const Window::SectionSlideParams &param
 
 	auto sectionTop = getMainSectionTop();
 	if (isOneColumn()) {
-		result = Ui::GrabWidget(this, QRect(
-			0,
-			sectionTop,
-			width(),
-			height() - sectionTop));
+		result = Core::App().screenshotProtection().grabForAnimation(
+			this,
+			QRect(0, sectionTop, width(), height() - sectionTop));
 	} else {
 		if (_sideShadow) {
 			_sideShadow->hide();
@@ -2561,11 +2561,13 @@ QPixmap MainWidget::grabForShowAnimation(const Window::SectionSlideParams &param
 		if (_thirdShadow) {
 			_thirdShadow->hide();
 		}
-		result = Ui::GrabWidget(this, QRect(
-			_dialogsWidth,
-			sectionTop,
-			width() - _dialogsWidth,
-			height() - sectionTop));
+		result = Core::App().screenshotProtection().grabForAnimation(
+			this,
+			QRect(
+				_dialogsWidth,
+				sectionTop,
+				width() - _dialogsWidth,
+				height() - sectionTop));
 		if (_sideShadow) {
 			_sideShadow->show();
 		}
@@ -2602,7 +2604,7 @@ void MainWidget::showAnimated(QPixmap oldContentCache, bool back) {
 
 	showAll();
 	floatPlayerHideAll();
-	auto newContentCache = Ui::GrabWidget(this);
+	auto newContentCache = Core::App().screenshotProtection().grabForAnimation(this);
 	hideAll();
 	floatPlayerShowVisible();
 

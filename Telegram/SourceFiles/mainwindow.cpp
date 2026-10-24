@@ -26,6 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_instance.h"
 #include "core/sandbox.h"
 #include "core/application.h"
+#include "core/core_screenshot_protection.h"
 #include "export/export_manager.h"
 #include "inline_bots/bot_attach_web_view.h" // AttachWebView::cancel.
 #include "intro/intro_widget.h"
@@ -215,7 +216,9 @@ void MainWindow::clearWidgetsHook() {
 
 QPixmap MainWindow::grabForSlideAnimation() {
 	const auto body = bodyWidget();
-	return body->size().isEmpty() ? QPixmap() : Ui::GrabWidget(body);
+	return body->size().isEmpty()
+		? QPixmap()
+		: Core::App().screenshotProtection().grabForAnimation(body);
 }
 
 void MainWindow::preventOrInvoke(Fn<void()> callback) {
@@ -462,6 +465,8 @@ void MainWindow::ensureLayerCreated() {
 		bodyWidget(),
 		crl::guard(this, [=] { return controller().uiShow(); }));
 	_layer->setObjectName(u"window.layers"_q);
+	// 先通知正文遮挡，再让弹层生成动画缓存。
+	_layerShown = true;
 
 	_layer->hideFinishEvents(
 	) | rpl::filter([=] {
@@ -492,6 +497,7 @@ void MainWindow::destroyLayer() {
 		setFocus();
 	}
 	layer = nullptr;
+	_layerShown = false;
 
 	if (const auto controller = sessionController()) {
 		controller->disableGifPauseReason(Window::GifPauseReason::Layer);
@@ -552,6 +558,10 @@ void MainWindow::showOrHideBoxOrLayer(
 
 bool MainWindow::ui_isLayerShown() const {
 	return _layer != nullptr;
+}
+
+rpl::producer<bool> MainWindow::ui_layerShownValue() const {
+	return _layerShown.value();
 }
 
 rpl::producer<bool> MainWindow::ui_boxShownValue() const {
