@@ -270,6 +270,10 @@ void FloatingSurface::draw(QPainter *p) {
 	}
 	auto offset = QPoint();
 	const auto source = sourcePixmap(Qt::LogicalCoordinates, &offset, NoPad);
+	// 带遮罩时 QWidget::render 把遮罩外接矩形左上角画在取图原点，需移回控件坐标。
+	if (const auto mask = _widget->mask(); !mask.isEmpty()) {
+		offset += (mask & _widget->rect()).boundingRect().topLeft();
+	}
 	const auto ratio = source.isNull()
 		? _widget->devicePixelRatioF()
 		: source.devicePixelRatio();
