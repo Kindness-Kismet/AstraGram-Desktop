@@ -8,6 +8,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/core_screenshot_protection.h"
 
 #include "platform/platform_specific.h"
+#include "ui/style/style_core.h"
+#include "ui/ui_utility.h"
 
 #include <QtWidgets/QApplication>
 
@@ -45,72 +47,92 @@ bool WindowFilter::eventFilter(QObject *watched, QEvent *event) {
 } // namespace
 
 ScreenshotProtection::ScreenshotProtection() {
-	_active.value(
-	) | rpl::on_next([=](bool active) {
-		apply(active);
-	}, _lifetime);
+	_filter = std::make_unique<WindowFilter>(crl::guard(this, [=](
+			not_null<QWidget*> window) {
+		refresh(window);
+	}));
+	qApp->installEventFilter(_filter.get());
 }
 
 ScreenshotProtection::~ScreenshotProtection() = default;
 
 void ScreenshotProtection::addContentReason(
+		not_null<QWidget*> window,
 		rpl::producer<bool> active,
 		rpl::lifetime &lifetime) {
-	addReason(std::move(active), lifetime);
+	addReason(window, std::move(active), lifetime);
 }
 
 void ScreenshotProtection::addAmbientReason(
+		not_null<QWidget*> window,
 		rpl::producer<bool> active,
 		rpl::lifetime &lifetime) {
 	if (Platform::AmbientScreenshotProtectionSupported()) {
-		addReason(std::move(active), lifetime);
+		addReason(window, std::move(active), lifetime);
 	}
 }
 
 void ScreenshotProtection::addReason(
+		not_null<QWidget*> window,
 		rpl::producer<bool> active,
 		rpl::lifetime &lifetime) {
+	Expects(window->isWindow());
+	const auto weakWindow = QPointer<QWidget>(window.get());
 	const auto id = ++_lastReasonId;
-	_reasons.emplace(id, false);
+	_reasons.emplace(id, Reason{ .window = weakWindow });
 	std::move(
 		active
 	) | rpl::on_next(crl::guard(this, [=](bool value) {
-		_reasons[id] = value;
-		refresh();
+		_reasons[id].active = value;
+		if (weakWindow) {
+			refresh(weakWindow.data());
+		}
 	}), lifetime);
 	lifetime.add(crl::guard(this, [=] {
 		_reasons.remove(id);
-		refresh();
+		if (weakWindow) {
+			refresh(weakWindow.data());
+		}
 	}));
 }
 
-bool ScreenshotProtection::active() const {
-	return _active.current();
-}
-
-rpl::producer<bool> ScreenshotProtection::activeValue() const {
-	return _active.value();
-}
-
-void ScreenshotProtection::refresh() {
-	_active = ranges::any_of(_reasons, [](const auto &reason) {
-		return reason.second;
+bool ScreenshotProtection::active(not_null<QWidget*> window) const {
+	return ranges::any_of(_reasons, [&](const auto &reason) {
+		return reason.second.active
+			&& reason.second.window.data() == window.get();
 	});
 }
 
-void ScreenshotProtection::apply(bool enabled) {
-	if (enabled) {
-		_filter = std::make_unique<WindowFilter>([](
-				not_null<QWidget*> window) {
-			Platform::SetWindowScreenshotProtection(window, true);
-		});
-		qApp->installEventFilter(_filter.get());
-	} else {
-		_filter = nullptr;
+rpl::producer<bool> ScreenshotProtection::activeValue(
+		not_null<QWidget*> window) const {
+	return _changes.events_starting_with_copy(window)
+		| rpl::filter([=](not_null<QWidget*> changed) {
+			return changed == window;
+		})
+		| rpl::map([=] { return active(window); })
+		| rpl::distinct_until_changed();
+}
+
+QPixmap ScreenshotProtection::grabForAnimation(
+		not_null<QWidget*> widget,
+		QRect rect) const {
+	if (!active(widget->window())) {
+		return Ui::GrabWidget(widget, rect);
 	}
-	for (const auto widget : QApplication::topLevelWidgets()) {
-		Platform::SetWindowScreenshotProtection(widget, enabled);
+	Ui::SendPendingMoveResizeEvents(widget);
+	if (rect.isNull()) {
+		rect = widget->rect();
 	}
+	auto result = QPixmap(rect.size() * style::DevicePixelRatio());
+	result.setDevicePixelRatio(style::DevicePixelRatio());
+	result.fill(Qt::transparent);
+	widget->render(&result, QPoint(), rect, QWidget::DrawWindowBackground);
+	return result;
+}
+
+void ScreenshotProtection::refresh(not_null<QWidget*> window) {
+	Platform::SetWindowScreenshotProtection(window, active(window));
+	_changes.fire_copy(window);
 }
 
 } // namespace Core

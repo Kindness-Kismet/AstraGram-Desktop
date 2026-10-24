@@ -956,4 +956,8 @@ rpl::lifetime &Panel::lifetime() {
 	return _widget->lifetime();
 }
 
+not_null<QWidget*> Panel::widget() const {
+	return _widget.get();
+}
+
 } // namespace Payments::Ui

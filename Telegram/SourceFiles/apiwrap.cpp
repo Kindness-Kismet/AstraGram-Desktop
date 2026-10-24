@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "apiwrap.h"
+#include "extras/features/secret_chats/secret_chat_dialog.h"
+#include "extras/features/secret_chats/secret_chat_peer.h"
 
 #include "extras/data/conversation_cache.h"
 
@@ -665,6 +667,10 @@ void ApiWrap::requestMessageData(
 		PeerData *peer,
 		MsgId msgId,
 		Fn<void()> done) {
+	if (peer && peer->isSecretChat()) {
+		if (done) { done(); }
+		return;
+	}
 	_session->conversationCache().restoreMessage(
 		peer ? peer->id : PeerId(), msgId, [=](bool cached) {
 			if (cached && done) {
@@ -1487,6 +1493,10 @@ void ApiWrap::markContentsRead(
 		QVector<MTPint>>();
 	markedIds.reserve(items.size());
 	for (const auto &item : items) {
+		if (item->history()->peer->isSecretChat()) {
+			markContentsRead(item);
+			continue;
+		}
 		const auto passthrough = (item->isUnreadMention() || item->hasUnreadReaction()) && !item->isUnreadMedia();
 
 		if (!item->markContentsRead(true) || !item->isRegular()) {
@@ -1519,6 +1529,20 @@ void ApiWrap::markContentsRead(
 }
 
 void ApiWrap::markContentsRead(not_null<HistoryItem*> item) {
+	if (item->history()->peer->isSecretChat()) {
+		const auto chatId = static_cast<Extras::SecretChats::Peer*>(item->history()->peer.get())->chatId();
+		const auto dialog = session().secretChats().dialog(chatId);
+		const auto message = dialog ? dialog->message(item->id) : std::nullopt;
+		if (!message || message->outgoing || !message->document
+			|| message->delivery == Extras::SecretChats::Delivery::Read) {
+			return;
+		}
+		session().secretChats().readContents(chatId, { message->id }, [](QString error) {
+			if (!error.isEmpty()) { LOG(("Secret Chats: content read failed: %1").arg(error)); }
+		});
+		item->markContentsRead(true);
+		return;
+	}
 	const auto passthrough = (item->isUnreadMention() || item->hasUnreadReaction()) && !item->isUnreadMedia();
 
 	if (!item->markContentsRead(true) || !item->isRegular()) {
@@ -3536,6 +3560,23 @@ void ApiWrap::resolveJumpToTime(
 		TimeId when,
 		Fn<void(not_null<PeerData*>, MsgId)> callback) {
 	if (const auto peer = chat.peer()) {
+		if (peer->isSecretChat()) {
+			const auto dialog = session().secretChats().dialog(
+				static_cast<Extras::SecretChats::Peer*>(peer)->chatId());
+			if (!dialog) {
+				return;
+			}
+			auto id = MsgId();
+			for (const auto &fullId : dialog->slice().ids) {
+				const auto message = session().data().message(fullId);
+				id = fullId.msg;
+				if (message->date() >= when) {
+					break;
+				}
+			}
+			callback(peer, id ? id : ShowAtTheEndMsgId);
+			return;
+		}
 		const auto topic = chat.topic();
 		const auto sublist = chat.sublist();
 		const auto rootId = topic ? topic->rootId() : MsgId();

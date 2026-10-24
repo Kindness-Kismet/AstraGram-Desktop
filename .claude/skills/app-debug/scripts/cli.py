@@ -42,6 +42,26 @@ BACKGROUND_START = False
 OFFLINE_START = None
 
 GENERIC_COMMANDS = {
+    "secret.list": "查询指定账号的加密对话、握手状态和密钥核对摘要：<账号用户编号>",
+    "secret.messages": "查询加密消息编号、发送状态和正文摘要，不输出正文：<账号用户编号> <加密对话编号>",
+    "secret.notification": "查询指定加密消息的通知身份和隐藏选项，不输出正文：<账号用户编号> <加密对话编号> <消息编号>",
+    "notification.native-activate": "在 Windows 开发版中复用系统通知激活队列：<激活参数> [回复文字]；异步结果通过消息和草稿查询确认",
+    "secret.create": "向明确指定的联系人新建加密对话：<账号用户编号> <目标用户编号>",
+    "secret.open": "打开指定账号的加密对话：<账号用户编号> <加密对话编号>",
+    "secret.send": "向指定加密对话发送加密文字：<账号用户编号> <加密对话编号> <文字>",
+    "secret.reply": "回复指定加密消息：<账号用户编号> <加密对话编号> <消息编号> <文字>",
+    "secret.draft": "查询本地加密草稿摘要，或保存草稿：<账号用户编号> <加密对话编号> [<回复消息编号或0> <文字>]；仅传0清空草稿",
+    "secret.sample": "只在内存生成并发送专用测试附件，可回复原消息：<账号用户编号> <加密对话编号> <字节数> [回复消息编号]",
+    "secret.download": "下载解密指定加密附件，仅返回字节数与摘要：<账号用户编号> <加密对话编号> <消息编号>",
+    "secret.pause-upload": "暂停或恢复指定加密附件上传：<账号用户编号> <加密对话编号> <消息编号> <true|false>",
+    "secret.read": "明确将指定加密对话已接收消息标为已读：<账号用户编号> <加密对话编号>",
+    "secret.read-contents": "明确标记指定收件附件为内容已读：<账号用户编号> <加密对话编号> <消息编号>...；已读附件不会重复发送回执或重启计时",
+    "secret.ttl": "设置加密对话阅后即焚时长：<账号用户编号> <加密对话编号> <秒数>",
+    "secret.delete": "为双方删除指定加密消息：<账号用户编号> <加密对话编号> <消息编号>",
+    "secret.retry": "重试指定加密发送操作：<账号用户编号> <加密对话编号> <消息编号>",
+    "secret.clear": "为双方清空指定加密对话：<账号用户编号> <加密对话编号>",
+    "secret.end": "结束指定加密对话并保留现有本地历史：<账号用户编号> <加密对话编号>",
+    "secret.destroy": "销毁指定加密对话并请求清除双方历史：<账号用户编号> <加密对话编号>",
     'cache.custom-emoji': '查询自定义表情的完整协议资料缓存，未命中时联网获取：<文档编号>；返回异步任务',
     'cache.sticker-pack': '查询完整贴纸包缓存，未缓存时联网获取；可打开原生预览：<短名称> [--open]',
     'cache.special-stickers': '按需加载并查询骰子和礼物贴纸名单的本地缓存与映射，不执行交易；离线模式只恢复本地',
@@ -338,8 +358,8 @@ def register_commands(sub) -> None:
     command.add_argument("--peer", metavar="USER_ID", help="发送通知的模拟用户编号，默认 830000001")
     command = sub.add_parser("notification.hover", help="给自绘通知窗口发合成的进入／离开事件，模拟鼠标悬停")
     command.add_argument("state", choices=["on", "off"], help="on 进入，off 离开")
-    command = sub.add_parser("notification.click", help="点击自绘通知中可见的按钮：reply 展开回复输入框，close 关闭")
-    command.add_argument("button", choices=["reply", "close"], help="要点击的按钮")
+    command = sub.add_parser("notification.click", help="点击自绘通知：open 打开对话，reply 展开回复输入框，close 关闭")
+    command.add_argument("button", choices=["open", "reply", "close"], help="要点击的通知动作")
     command = sub.add_parser("chat.open", help="打开指定对话并清空导航栈；参数取 chat.list 的 peerId，缺省 Saved Messages")
     command.add_argument("peerId", nargs="?")
     command.add_argument("msgId", nargs="?", help="定位到的消息编号，缺省为对话末尾")
@@ -364,6 +384,8 @@ def register_commands(sub) -> None:
     command.add_argument("maximized", choices=["true", "false"], help="true 最大化，false 还原")
     command = sub.add_parser("window.activation", help="只切换 Qt 内部的焦点窗口与应用激活状态，不抢系统前台")
     command.add_argument("state", choices=["active", "inactive"])
+    command = sub.add_parser("window.tray", help="通过真实托盘流程隐藏或恢复最近活动的主窗口")
+    command.add_argument("action", choices=["hide", "show"])
     command = sub.add_parser("anim.speed", help="查询或临时调整过渡动画速度：0.1 放慢十倍，2 加快一倍，1 恢复；不保存")
     command.add_argument("speed", nargs="?", type=float, help="0.01 至 10，省略则只报告当前速度")
 
@@ -413,6 +435,9 @@ def register_commands(sub) -> None:
     command = sub.add_parser("control.hover", help="设置按钮悬停绘制状态，不触发点击")
     command.add_argument("target", help="按钮名称或 control.list 默认模式的 #序号")
     command.add_argument("state", choices=("on", "off"), help="开启或关闭悬停状态")
+    command = sub.add_parser("control.ripple", help="临时显示按钮完整点击圆，不点击或移动系统鼠标")
+    command.add_argument("target", help="按钮名称或 control.list 默认模式的 #序号")
+    command.add_argument("state", choices=("on", "off"), help="开启或关闭完整点击圆")
     command = sub.add_parser("control.key", help="向控件合成按键，用于菜单导航、关闭和验证码输入")
     command.add_argument("target", help="控件名称、#序号或 @menu")
     command.add_argument("key", type=key_name, help="escape、up、down、left、right、enter、tab、space，或最多 16 位数字")
@@ -532,8 +557,8 @@ def build_server_command(args: argparse.Namespace) -> str:
         return f"simulation.open {quote_arg(args.key)} --view {args.view} --input {args.input}"
     if command == "simulation.trigger":
         return f"simulation.trigger {quote_arg(args.key)}"
-    if command == "control.hover":
-        return f"control.hover {quote_arg(args.target)} {args.state}"
+    if command in ("control.hover", "control.ripple"):
+        return f"{command} {quote_arg(args.target)} {args.state}"
     if command == "control.key":
         return f"control.key {quote_arg(args.target)} {args.key}"
     if command == "control.shortcut":
@@ -653,6 +678,8 @@ def build_server_command(args: argparse.Namespace) -> str:
         return f"window.maximize {args.maximized}"
     if command == "window.activation":
         return f"window.activation {args.state}"
+    if command == "window.tray":
+        return f"window.tray {args.action}"
     if command == "anim.speed":
         return ("anim.speed" if args.speed is None
                 else f"anim.speed {args.speed}")

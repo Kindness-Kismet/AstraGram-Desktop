@@ -712,7 +712,7 @@ bool MessagesSearch::matchesSender(not_null<HistoryItem*> item) const {
 	return item->from() == _request.from;
 }
 
-bool MessagesSearch::matchesText(not_null<HistoryItem*> item) const {
+bool MessagesSearch::matchesText(not_null<HistoryItem*> item) {
 	return !item->isService()
 		&& !item->originalText().text.isEmpty()
 		&& !IsDisplayedAsAnimatedEmoji(item)
@@ -721,7 +721,7 @@ bool MessagesSearch::matchesText(not_null<HistoryItem*> item) const {
 
 bool MessagesSearch::matchesLocalFilter(
 		not_null<HistoryItem*> item,
-		SearchFilter filter) const {
+		SearchFilter filter) {
 	using Type = Storage::SharedMediaType;
 	const auto types = item->sharedMediaTypes();
 	switch (filter) {

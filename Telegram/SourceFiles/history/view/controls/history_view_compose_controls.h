@@ -345,6 +345,8 @@ public:
 	Fn<void()> restoreTextCallback(const QString &insertTextOnCancel) const;
 
 	[[nodiscard]] Ui::InputField *fieldForMention() const;
+	// 初始化和草稿订阅不依赖输入框是否显示。
+	[[nodiscard]] not_null<Ui::InputField*> field() const;
 	[[nodiscard]] auto fieldTabbed() const
 	-> rpl::producer<not_null<Ui::InputField::TabbedRequest*>>;
 	void insertTextToField(const QString &text);

@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/ui/dialogs_layout.h"
 
+#include "extras/features/secret_chats/secret_chat_dialog.h"
+
 #include "base/options.h"
 #include "base/unixtime.h"
 #include "core/ui_integration.h"
@@ -81,7 +83,7 @@ const auto kPsaBadgePrefix = "cloud_lng_badge_psa_";
 
 [[nodiscard]] bool ShowSendActionInDialogs(Data::Thread *thread) {
 	const auto history = thread ? thread->owningHistory().get() : nullptr;
-	if (!history || thread->asSublist()) {
+	if (!history || thread->asSublist() || history->peer->isSecretChat()) {
 		return false;
 	} else if (const auto user = history->peer->asUser()) {
 		return !user->lastseen().isHidden();
@@ -482,6 +484,7 @@ void PaintRow(
 	const auto history = entry->asHistory();
 	const auto thread = entry->asThread();
 	const auto sublist = entry->asSublist();
+	const auto secret = entry->asSecretChat();
 	const auto itemIsFiltered = item && FiltersController::filtered(item);
 	const auto itemIsEmpty = item && (item->isEmpty() || itemIsFiltered);
 	const auto showFilteredItem = !fakeRow
@@ -576,9 +579,9 @@ void PaintRow(
 		PaintExpandedTopicsBar(p, context.topicsExpanded);
 	}
 	if (context.narrow) {
-		if (!draft
+		if (secret || (!draft
 			&& item
-			&& (!itemIsEmpty || showFilteredItem)) {
+			&& (!itemIsEmpty || showFilteredItem))) {
 			PaintNarrowCounter(p, context, badgesState);
 		}
 		return;
@@ -598,7 +601,12 @@ void PaintRow(
 			|| (!(flags & Flag::SavedMessages) && !(flags & Flag::MyNotes))))
 		? from->botVerifyDetails()
 		: nullptr;
-	if (promoted) {
+	if (secret) {
+		const auto &icon = ThreeStateIcon(
+			st::dialogsLockIcon, context.active, context.selected);
+		icon.paint(p, rectForName.topLeft(), context.width);
+		rectForName.setLeft(rectForName.left() + icon.width() + st::dialogsChatTypeSkip);
+	} else if (promoted) {
 		const auto type = history->topPromotionType();
 		const auto custom = type.isEmpty()
 			? QString()
@@ -687,7 +695,7 @@ void PaintRow(
 			.elisionLines = 1,
 		});
 	} else if (draft
-		|| (supportMode
+		|| (supportMode && history
 			&& entry->session().supportHelper().isOccupiedBySomeone(history))) {
 		if (!promoted) {
 			PaintDialogDate(p, entry, fakeRow, date, rectForName, context);
@@ -830,7 +838,7 @@ void PaintRow(
 			}
 		}
 	} else if (!itemIsEmpty || showFilteredItem) {
-		if ((thread || sublist) && !promoted) {
+		if ((thread || sublist || secret) && !promoted) {
 			PaintDialogDate(p, entry, fakeRow, date, rectForName, context);
 		}
 
@@ -1181,6 +1189,7 @@ void RowPainter::Paint(
 		VideoUserpic *videoUserpic,
 		const PaintContext &context) {
 	const auto entry = row->entry();
+	const auto secret = entry->asSecretChat();
 	const auto history = row->history();
 	const auto thread = row->thread();
 	const auto sublist = row->sublist();
@@ -1206,6 +1215,9 @@ void RowPainter::Paint(
 		return nullptr;
 	}();
 	const auto displayDate = [&]() -> TimeId {
+		if (secret) {
+			return entry->chatListTimeId();
+		}
 		const auto itemDate = item ? item->date() : TimeId(0);
 		const auto draftDate = cloudDraft ? cloudDraft->date : TimeId(0);
 		return std::max(itemDate, draftDate);
@@ -1221,7 +1233,7 @@ void RowPainter::Paint(
 		: sublist
 		? sublist->sublistPeer().get()
 		: nullptr;
-	const auto allowUserOnline = true;// !context.narrow || badgesState.empty();
+	const auto allowUserOnline = !secret;
 	const auto flags = (allowUserOnline ? Flag::AllowUserOnline : Flag(0))
 		| ((sublist && !sublist->parentChat() && from->isSelf())
 			? Flag::MyNotes
@@ -1271,6 +1283,12 @@ void RowPainter::Paint(
 			: thread
 			? &thread->lastItemDialogsView()
 			: nullptr;
+		if (secret) {
+			p.setPen(SecondaryTextFg(context, st::dialogsTextFgActive,
+				st::dialogsTextFgOver, st::dialogsTextFg));
+			secret->preview().drawElided(p, rect.x(), rect.y(), rect.width());
+			return;
+		}
 		if (view) {
 			const auto forum = (peer && context.st->topicsHeight)
 				? peer->forum()

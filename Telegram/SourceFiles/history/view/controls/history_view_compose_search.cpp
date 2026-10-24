@@ -105,7 +105,7 @@ public:
 	void loadMoreRows() override;
 
 	void setContent(PeerListContent *content);
-	void addItems(const MessageIdsList &ids, bool clear);
+	void addItems(const MessageIdsList &ids, bool clear, bool resetScroll = true);
 	void setQuery(const QString &query);
 
 	[[nodiscard]] rpl::producer<FullMsgId> showItemRequests() const;
@@ -196,9 +196,14 @@ rpl::producer<> ListController::resetScrollRequests() const {
 	return _resetScrollRequests.events();
 }
 
-void ListController::addItems(const MessageIdsList &ids, bool clear) {
+void ListController::addItems(
+		const MessageIdsList &ids,
+		bool clear,
+		bool resetScroll) {
 	if (clear) {
-		_resetScrollRequests.fire({});
+		if (resetScroll) {
+			_resetScrollRequests.fire({});
+		}
 		for (auto i = 0; i != delegate()->peerListFullRowsCount();) {
 			delegate()->peerListRemoveRow(delegate()->peerListRowAt(i));
 		}
@@ -401,7 +406,7 @@ public:
 	void setLoading(bool loading);
 	void setFailed(bool failed);
 	void setListShown(bool shown);
-	void setCurrent(int current);
+	void setCurrent(int current, bool activate = true);
 	bool navigate(int delta);
 	void requestSearch(bool cache = true);
 
@@ -986,11 +991,13 @@ void FindBar::clearResults() {
 	updateCounterText();
 }
 
-void FindBar::setCurrent(int current) {
+void FindBar::setCurrent(int current, bool activate) {
 	_current = current;
 	refreshButtons();
 	updateCounterText();
-	_showItemRequests.fire(current - 1);
+	if (activate) {
+		_showItemRequests.fire(current - 1);
+	}
 }
 
 bool FindBar::navigate(int delta) {
@@ -1240,7 +1247,8 @@ public:
 		not_null<Window::SessionController*> window,
 		not_null<History*> history,
 		PeerData *from,
-		const QString &query);
+		const QString &query,
+		ComposeSearch::LocalSource local);
 	~Inner();
 
 	void hideAnimated();
@@ -1276,6 +1284,8 @@ private:
 	Api::MessagesSearchMerged _apiSearch;
 	bool _searching = false;
 	bool _autoJump = false;
+	FullMsgId _currentResult;
+	FindBar::Index _currentResultIndex = -1;
 	rpl::variable<bool> _listShown = false;
 
 	struct {
@@ -1300,7 +1310,8 @@ ComposeSearch::Inner::Inner(
 	not_null<Window::SessionController*> window,
 	not_null<History*> history,
 	PeerData *from,
-	const QString &query)
+	const QString &query,
+	ComposeSearch::LocalSource local)
 : _parent(parent)
 , _window(window)
 , _history(history)
@@ -1312,7 +1323,7 @@ ComposeSearch::Inner::Inner(
 		_findBar->keyEvents() | rpl::filter([](not_null<QKeyEvent*> e) {
 			return e->key() == Qt::Key_PageDown || e->key() == Qt::Key_PageUp;
 		})))
-, _apiSearch(history)
+, _apiSearch(history, std::move(local))
 , _calendarChat(history) {
 	_findBar->show();
 	_findBar->raiseWithSurface();
@@ -1357,6 +1368,8 @@ ComposeSearch::Inner::Inner(
 			return;
 		}
 		_searching = true;
+		_currentResult = {};
+		_currentResultIndex = -1;
 		_pendingJump.data = {};
 		_findBar->clearResults();
 		_findBar->setLoading(true);
@@ -1423,6 +1436,35 @@ ComposeSearch::Inner::Inner(
 		}
 	}, _findBar->lifetime());
 
+	_apiSearch.updatedFounds(
+	) | rpl::on_next([=] {
+		if (!_searching) {
+			return;
+		}
+		const auto &data = _apiSearch.messages();
+		const auto &messages = data.messages;
+		const auto selected = ranges::find(messages, _currentResult);
+		const auto keepSelected = selected != end(messages);
+		_pendingJump.data = {};
+		_findBar->setLoading(false);
+		_findBar->setFailed(data.failed);
+		_list.controller->addItems(messages, true, false);
+		_findBar->setTotal(data.total, false);
+		if (messages.empty()) {
+			_currentResult = {};
+			_currentResultIndex = -1;
+			_findBar->setCurrent(0, false);
+			return;
+		}
+		_currentResultIndex = keepSelected
+			? int(std::distance(begin(messages), selected))
+			: std::clamp(_currentResultIndex, 0, int(messages.size()) - 1);
+		_currentResult = messages[_currentResultIndex];
+		_autoJump = true;
+		_findBar->setCurrent(_currentResultIndex + 1, !keepSelected);
+		_autoJump = false;
+	}, _findBar->lifetime());
+
 	rpl::merge(
 		_pendingJump.jumps.events() | rpl::filter(rpl::mappers::_1 >= 0),
 		_findBar->showItemRequests()
@@ -1438,6 +1480,8 @@ ComposeSearch::Inner::Inner(
 			return;
 		}
 		_pendingJump.data = {};
+		_currentResult = messages[index];
+		_currentResultIndex = index;
 		const auto item = _history->owner().message(messages[index]);
 		if (!item) {
 			return;
@@ -1507,6 +1551,8 @@ ComposeSearch::Inner::Inner(
 
 void ComposeSearch::Inner::clearResults() {
 	_searching = false;
+	_currentResult = {};
+	_currentResultIndex = -1;
 	_pendingJump.data = {};
 	_findBar->setLoading(false);
 	_findBar->clearResults();
@@ -1557,6 +1603,7 @@ void ComposeSearch::Inner::setFrom(PeerData *from) {
 }
 
 void ComposeSearch::Inner::raise() {
+	_list.container->setVisible(_listShown.current());
 	_findBar->raiseWithSurface();
 	if (!_list.container->isHidden()) {
 		_list.container->raise();
@@ -1625,8 +1672,15 @@ ComposeSearch::ComposeSearch(
 	not_null<Window::SessionController*> window,
 	not_null<History*> history,
 	PeerData *from,
-	const QString &query)
-: _inner(std::make_unique<Inner>(parent, window, history, from, query)) {
+	const QString &query,
+	LocalSource local)
+: _inner(std::make_unique<Inner>(
+	parent,
+	window,
+	history,
+	from,
+	query,
+	std::move(local))) {
 }
 
 ComposeSearch::~ComposeSearch() {

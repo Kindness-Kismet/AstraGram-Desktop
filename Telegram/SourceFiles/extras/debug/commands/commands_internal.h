@@ -48,6 +48,7 @@ using HandlerMap = std::map<QString, Handler>;
 [[nodiscard]] const HandlerMap &themeEditorHandlers();
 [[nodiscard]] const HandlerMap &ivHandlers();
 [[nodiscard]] const HandlerMap &dialogHandlers();
+[[nodiscard]] const HandlerMap &secretChatHandlers();
 [[nodiscard]] QWidget *controlWindow();
 
 [[nodiscard]] uint64 beginJob(const char *kind);

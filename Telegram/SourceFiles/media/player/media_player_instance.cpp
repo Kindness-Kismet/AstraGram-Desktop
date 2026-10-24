@@ -146,6 +146,7 @@ void SaveLastPlaybackPosition(
 
 bool IsRealPlaybackContext(not_null<const HistoryItem*> item) {
 	return item->isRegular()
+		|| item->history()->peer->isSecretChat()
 		|| item->isScheduled()
 		|| item->isSavedMusicItem();
 }

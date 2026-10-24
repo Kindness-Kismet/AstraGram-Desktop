@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "inline_bots/bot_attach_web_view.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "extras/features/secret_chats/secret_chat_dialog.h"
 #include "history/view/reactions/history_view_reactions.h"
 //#include "history/view/reactions/history_view_reactions_button.h"
 #include "history/view/history_view_chat_section.h"
@@ -1908,10 +1909,10 @@ void SessionController::init() {
 }
 
 void SessionController::setupScreenshotProtection() {
-	Core::App().screenshotProtection().addAmbientReason(activeChatValue(
+	Core::App().screenshotProtection().addAmbientReason(widget(), activeChatValue(
 	) | rpl::map([](Dialogs::Key key) {
 		const auto peer = key.peer();
-		return peer
+		return (peer && !peerIsSecretChat(peer->id))
 			? (Data::AllowsForwardingValue(peer)
 				| rpl::map(!rpl::mappers::_1))
 			: (rpl::single(false) | rpl::type_erased);
@@ -3245,6 +3246,36 @@ void SessionController::showMessage(
 
 void SessionController::cancelUploadLayer(not_null<HistoryItem*> item) {
 	const auto itemId = item->fullId();
+	if (item->history()->peer->isSecretChat()) {
+		const auto chatId = int(itemId.peer.to<SecretChatId>().bare);
+		const auto dialog = session().secretChats().dialog(chatId);
+		Expects(dialog != nullptr);
+		const auto randomId = dialog->randomId(itemId.msg);
+		const auto manager = base::make_weak(&session().secretChats());
+		manager->setDocumentUploadPaused(chatId, randomId, true);
+		const auto show = uiShow();
+		show->show(Ui::MakeConfirmBox({
+			.text = tr::lng_selected_cancel_sure_this(),
+			.confirmed = [=](Fn<void()> close) {
+				if (manager) {
+					manager->deleteMessages(chatId, { randomId }, [=](QString error) {
+						if (!error.isEmpty()) {
+							if (manager) { manager->setDocumentUploadPaused(chatId, randomId, false); }
+							show->showToast(tr::extras_SecretChatFailed(tr::now));
+						}
+					});
+				}
+				close();
+			},
+			.cancelled = [=](Fn<void()> close) {
+				if (manager) { manager->setDocumentUploadPaused(chatId, randomId, false); }
+				close();
+			},
+			.confirmText = tr::lng_box_yes(),
+			.cancelText = tr::lng_box_no(),
+		}));
+		return;
+	}
 	session().uploader().pause(itemId);
 	const auto stopUpload = [=](Fn<void()> close) {
 		auto &data = session().data();

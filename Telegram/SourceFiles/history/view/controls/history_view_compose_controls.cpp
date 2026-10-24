@@ -1559,6 +1559,10 @@ void ComposeControls::setHistory(SetHistoryArgs &&args) {
 	untrackThreadFieldVisibility();
 	unregisterDraftSources();
 	_history = history;
+	if (history && history->peer->isSecretChat()) {
+		_field->setMarkdownReplacesEnabled(false);
+		_field->setTagMimeProcessor([](QStringView) { return QString(); });
+	}
 	_fieldDisabled = nullptr;
 	_topicRootId = args.topicRootId;
 	_monoforumPeerId = args.monoforumPeerId;
@@ -1598,8 +1602,10 @@ void ComposeControls::setHistory(SetHistoryArgs &&args) {
 			_wrap.get(),
 			peer->asChannel());
 	}
-	session().local().readDraftsWithCursors(_history);
-	applyDraft();
+	if (!peer->isSecretChat()) {
+		session().local().readDraftsWithCursors(_history);
+		applyDraft();
+	}
 	orderControls();
 	_field->setMode(args.videoStream
 		? Ui::InputField::Mode::NoNewlines
@@ -2638,6 +2644,9 @@ bool ComposeControls::hasEditDraft() const {
 }
 
 bool ComposeControls::bypassNormalDraftHandling() const {
+	if (_history && _history->peer->isSecretChat()) {
+		return true;
+	}
 	return !isEditingMessage()
 		&& !hasEditDraft()
 		&& isComposeBoxOpen();
@@ -5213,7 +5222,12 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		_replaceMedia->moveToLeft(left, buttonsTop);
 	}
 	if (_attachToggle && settings.showAttachButtonInMessageField()) {
-		_attachToggle->moveToLeft(left, buttonsTop);
+		// 附件圆与胶囊左侧圆弧同心，专用圆角样式沿用自身布局。
+		const auto attachLeft = ComposeOuterMargin(_st)
+			? (left + (_st.send.inner.height - _attachToggle->width()) / 2
+				- leftPadding)
+			: left;
+		_attachToggle->moveToLeft(attachLeft, buttonsTop);
 		left += _attachToggle->width();
 	}
 	if (showSendAs) {
@@ -5468,6 +5482,7 @@ void ComposeControls::updateSendAsFileVisibility() {
 		return;
 	}
 	const auto hidden = !textExceedsMaxSize()
+		|| (_history && _history->peer->isSecretChat())
 		|| _wrap->isHidden()
 		|| _recording.current()
 		|| _field->isHidden()
@@ -5507,6 +5522,7 @@ bool ComposeControls::updateLikeShown() {
 }
 
 void ComposeControls::showAiComposeBox() {
+	if (_history && _history->peer->isSecretChat()) { return; }
 	const auto text = prepareTextForEditMsg();
 	if (text.text.isEmpty()) {
 		return;
@@ -5545,7 +5561,7 @@ void ComposeControls::showAiComposeBox() {
 }
 
 void ComposeControls::triggerAiApplyInPlace() {
-	if (!_session) {
+	if (!_session || (_history && _history->peer->isSecretChat())) {
 		return;
 	}
 	const auto field = _field;
@@ -5575,6 +5591,7 @@ bool ComposeControls::canSendAiComposeDirect() const {
 
 bool ComposeControls::canShowAiComposeButton() const {
 	return _history
+		&& !_history->peer->isSecretChat()
 		&& !_recording.current()
 		&& Ui::CanShowAiComposeButton(&session(), _field);
 }
@@ -6270,7 +6287,7 @@ void ComposeControls::tryProcessKeyInput(not_null<QKeyEvent*> e) {
 }
 
 void ComposeControls::initWebpageProcess() {
-	if (!_history) {
+	if (!_history || _history->peer->isSecretChat()) {
 		_preview = nullptr;
 		_previewShown = false;
 		_header->previewUnregister();
@@ -6689,6 +6706,10 @@ Ui::InputField *ComposeControls::fieldForMention() const {
 	return (_writeRestriction.current() || !_field->isVisible())
 		? nullptr
 		: _field.get();
+}
+
+not_null<Ui::InputField*> ComposeControls::field() const {
+	return _field.get();
 }
 
 auto ComposeControls::fieldTabbed() const

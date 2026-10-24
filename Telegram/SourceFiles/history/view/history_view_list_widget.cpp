@@ -1275,7 +1275,7 @@ bool ListWidget::jumpToBottomInsteadOfUnread() const {
 	const auto firstReadMessage = [&]() -> Element* {
 		for (const auto &view : ranges::views::reverse(_items)) {
 			const auto item = view->data();
-			if (item->isRegular()
+			if ((item->isRegular() || item->history()->peer->isSecretChat())
 				&& (item->out()
 					|| !_delegate->listElementShownUnread(view))) {
 				return view;
@@ -2243,13 +2243,13 @@ bool ListWidget::hasCopyRestrictionForSelected() const {
 		return true;
 	}
 	if (_selected.empty()) {
-		if (_selectedTextItem && _selectedTextItem->forbidsForward()) {
+		if (_selectedTextItem && hasCopyRestriction(_selectedTextItem)) {
 			return true;
 		}
 	}
 	for (const auto &[itemId, selection] : _selected) {
 		if (const auto item = session().data().message(itemId)) {
-			if (item->forbidsForward()) {
+			if (hasCopyRestriction(item)) {
 				return true;
 			}
 		}
@@ -3073,7 +3073,7 @@ void ListWidget::checkActivation() {
 		const auto bottom = itemTop(view) + view->height();
 		if (_visibleBottom + _itemsRevealHeight >= bottom) {
 			const auto item = view->data();
-			if (item->isRegular()) {
+			if (item->isRegular() || (item->history()->peer->isSecretChat() && !item->out())) {
 				delegate()->listMarkReadTill(item);
 				return;
 			}
@@ -3264,7 +3264,7 @@ void ListWidget::paintList(Painter &p, QRect clip, bool backdrop) {
 		}
 		const auto isSponsored = item->isSponsored();
 		const auto isUnread = _delegate->listElementShownUnread(view)
-			&& item->isRegular();
+			&& (item->isRegular() || item->history()->peer->isSecretChat());
 		const auto withReaction = context.reactionInfo
 			&& item->hasUnreadReaction();
 		const auto readable = (_visibleTop < _visibleBottom);
@@ -4041,7 +4041,9 @@ void ListWidget::mouseDoubleClickEvent(QMouseEvent *e) {
 		&& _selected.empty()
 		&& _overElement
 		&& (_overElement->data()->isRegular()
-			|| CanReplyToEphemeral(_overElement->data()))) {
+			|| CanReplyToEphemeral(_overElement->data())
+			|| (_overElement->data()->history()->peer->isSecretChat()
+				&& _overElement->data()->canBeSelected()))) {
 		mouseActionCancel();
 		switch (CurrentQuickAction()) {
 		case DoubleClickQuickAction::Reply: {
@@ -6098,6 +6100,7 @@ void ListWidget::replyNextMessage(FullMsgId fullId, bool next) {
 		if (view) {
 			const auto newFullId = view->data()->fullId();
 			if (!view->data()->isRegular()
+				&& !(view->data()->history()->peer->isSecretChat() && view->data()->canBeSelected())
 				&& !CanReplyToEphemeral(view->data())) {
 				return replyNextMessage(newFullId, next);
 			}
@@ -6109,7 +6112,7 @@ void ListWidget::replyNextMessage(FullMsgId fullId, bool next) {
 		}
 	};
 	const auto replyFirst = [&] {
-		reply(next ? nullptr : _items.back().get());
+		reply(next || _items.empty() ? nullptr : _items.back().get());
 	};
 	if (!fullId) {
 		replyFirst();

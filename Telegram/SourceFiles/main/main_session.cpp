@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "extras/data/conversation_cache.h"
 #include "extras/data/media_cache_manager.h"
+#include "extras/features/secret_chats/secret_chat_manager.h"
 
 #include "extras/utils/badge_helpers.h"
 
@@ -162,6 +163,7 @@ Session::Session(
 , _mediaCache(std::make_unique<Extras::MediaCacheManager>(this))
 , _data(std::make_unique<Data::Session>(this))
 , _user(_data->processUser(user))
+, _secretChats(std::make_unique<Extras::SecretChats::Manager>(this))
 , _emojiStickersPack(std::make_unique<Stickers::EmojiPack>(this))
 , _diceStickersPacks(std::make_unique<Stickers::DicePacks>(this))
 , _giftBoxStickersPacks(std::make_unique<Stickers::GiftBoxPack>(this))
@@ -325,6 +327,7 @@ Session::Session(
 	}, _lifetime);
 
 	InitializeBlockedPeers(this);
+	_secretChats->initialize([](bool) {});
 }
 
 void Session::appConfigRefreshed() {
@@ -364,6 +367,7 @@ QByteArray Session::validTmpPassword() const {
 // Can be called only right before ~Session.
 void Session::finishLogout() {
 	unlockTerms();
+	_secretChats->logout();
 	_mediaCache->disable();
 	_conversationCache->clear();
 	data().clear();
@@ -372,6 +376,7 @@ void Session::finishLogout() {
 
 Session::~Session() {
 	unlockTerms();
+	_secretChats = nullptr;
 	_conversationCache->flush();
 	_mediaCache->flush();
 	_conversationCache->disable();

@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/notifications_manager.h"
+#include "window/notifications_utilities.h"
+#include "crl/crl_on_main.h"
 
 #include "base/options.h"
 #include "base/platform/base_platform_info.h"
@@ -56,6 +58,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/features/secret_chats/secret_chat_dialog.h"
+#include "extras/features/secret_chats/secret_chat_manager.h"
+#include "extras/ui/secret_chat_box.h"
 #include "extras/utils/telegram_helpers.h"
 
 
@@ -183,6 +188,56 @@ base::options::toggle HideReplyButtonOption({
 [[nodiscard]] bool AllowNotificationActions(not_null<PeerData*> peer) {
 	return (Platform::IsMac() || Platform::IsLinux())
 		&& peer->isNotificationsUser();
+}
+
+void ReportSecretNotificationError(not_null<Main::Session*> session, const QString &error) {
+	LOG(("Secret chats: notification action failed: %1.").arg(error));
+	if (const auto window = session->tryResolveWindow()) {
+		window->showToast(tr::extras_SecretChatFailed(tr::now));
+	}
+}
+
+void ReplySecretNotification(
+		not_null<Main::Session*> session,
+		not_null<History*> history,
+		MsgId messageId,
+		const TextWithTags &reply) {
+	const auto chatId = int(history->peer->id.to<SecretChatId>().bare);
+	const auto dialog = session->secretChats().dialog(chatId);
+	if (!dialog) {
+		return;
+	}
+	auto maxDate = 0;
+	for (const auto &message : session->secretChats().messages(chatId)) {
+		if (!message.outgoing) {
+			maxDate = std::max(maxDate, message.date);
+		}
+	}
+	const auto finish = crl::guard(session.get(), [session](QString error) {
+		if (!error.isEmpty()) {
+			ReportSecretNotificationError(session, error);
+		}
+	});
+	const auto read = [weak = base::make_weak(session.get()), chatId, maxDate, finish] {
+		if (weak) {
+			weak->secretChats().read(chatId, maxDate, finish);
+		}
+	};
+	if (reply.text.isEmpty()) {
+		read();
+		return;
+	}
+	session->secretChats().sendReply(chatId, reply.text, messageId.bare,
+		[weak = base::make_weak(session.get()), read](qint64, QString error) {
+		if (!weak) {
+			return;
+		}
+		if (!error.isEmpty()) {
+			ReportSecretNotificationError(weak.get(), error);
+			return;
+		}
+		read();
+	});
 }
 
 } // namespace
@@ -400,6 +455,10 @@ System::Timing System::countTiming(
 	auto delay = minimalDelay;
 	const auto t = base::unixtime::now();
 	const auto ms = crl::now();
+	// 本机加密消息不受其他设备的云消息通知延迟影响。
+	if (thread->peer()->isSecretChat()) {
+		return { .delay = delay, .when = ms + delay };
+	}
 	const auto &updates = thread->session().updates();
 	const auto &config = thread->session().serverConfig();
 	const bool isOnline = updates.lastWasOnline();
@@ -1105,13 +1164,15 @@ Manager::DisplayOptions Manager::getNotificationOptions(
 	const auto view = Core::App().settings().notifyView();
 	const auto peer = item ? item->history()->peer.get() : nullptr;
 	const auto topic = item ? item->topic() : nullptr;
+	const auto hideContent = hideEverything
+		|| (view > Core::Settings::NotifyView::ShowPreview);
 
 	auto result = DisplayOptions();
 	result.hideNameAndPhoto = hideEverything
 		|| (view > Core::Settings::NotifyView::ShowName);
-	result.hideMessageText = hideEverything
-		|| (view > Core::Settings::NotifyView::ShowPreview);
-	result.hideMarkAsRead = result.hideMessageText
+	// 系统通知会保留历史，加密正文不交给系统或普通通知缓存。
+	result.hideMessageText = hideContent || (peer && peer->isSecretChat());
+	result.hideMarkAsRead = hideContent
 		|| (type != Data::ItemNotificationType::Message)
 		|| !item
 		|| ((item->out() || peer->isSelf()) && item->isFromScheduled());
@@ -1294,51 +1355,94 @@ void Manager::notificationActivated(
 		NotificationId id,
 		ActivateOptions &&options) {
 	onBeforeNotificationActivated(id);
-	if (const auto session = system()->findSession(id.contextId.sessionId)) {
-		const auto history = session->data().history(
-			id.contextId.peerId);
-		const auto item = history->owner().message(
-			history->peer,
-			id.msgId);
-		const auto topic = item ? item->topic() : nullptr;
-		const auto sublist = item ? item->savedSublist() : nullptr;
-		if (!options.draft.text.isEmpty()) {
-			const auto topicRootId = topic
-				? topic->rootId()
-				: history->peer->isForum()
-				? id.contextId.topicRootId
-				: MsgId();
-			const auto monoforumPeerId = (sublist && sublist->parentChat())
-				? sublist->sublistPeer()->id
-				: id.contextId.monoforumPeerId;
-			const auto replyToId = (id.msgId > 0
-				&& !history->peer->isUser()
-				&& id.msgId != topicRootId)
-				? FullMsgId(history->peer->id, id.msgId)
-				: FullMsgId();
-			const auto length = int(options.draft.text.size());
-			auto draft = std::make_unique<Data::Draft>(
-				std::move(options.draft),
-				FullReplyTo{
-					.messageId = replyToId,
-					.topicRootId = topicRootId,
-					.monoforumPeerId = monoforumPeerId,
-				},
-				SuggestOptions(),
-				MessageCursor{
-					length,
-					length,
-					Ui::kQFixedMax,
-				},
-				Data::WebPageDraft());
-			history->setLocalDraft(std::move(draft));
+	const auto session = system()->findSession(id.contextId.sessionId);
+	if (!session) {
+		return;
+	}
+	const auto history = session->data().history(
+		id.contextId.peerId);
+	if (history->peer->isSecretChat() && !session->secretChats().available()) {
+		session->secretChats().initialize(
+			[weak = base::make_weak(session), id, options = std::move(options)](bool ok) mutable {
+			if (!weak) {
+				return;
+			}
+			if (!ok) {
+				ReportSecretNotificationError(weak.get(), weak->secretChats().error());
+				return;
+			}
+			// 初始化回调先于历史发布，下一轮再恢复通知动作。
+			crl::on_main(weak.get(), [id, options = std::move(options)]() mutable {
+				Core::App().notifications().manager().notificationActivated(id, std::move(options));
+			});
+		});
+		return;
+	}
+	const auto item = ResolveNotificationMessage(history, id.msgId);
+	if (history->peer->isSecretChat() && !options.draft.text.isEmpty()) {
+		const auto chatId = int(history->peer->id.to<SecretChatId>().bare);
+		const auto dialog = session->secretChats().dialog(chatId);
+		if (!dialog) {
+			return;
 		}
-		const auto openSeparated = options.allowNewWindow
-			&& base::IsCtrlPressed();
-		const auto window = openNotificationMessage(
-			history,
-			id.msgId,
-			openSeparated);
+		const auto draft = Extras::SecretChats::Draft{
+			.text = options.draft.text,
+			.replyTo = item ? id.msgId.bare : 0,
+		};
+		options.draft = {};
+		session->secretChats().setDraft(chatId, draft,
+			[weak = base::make_weak(session), id, options = std::move(options)](QString error) mutable {
+			if (!weak) {
+				return;
+			}
+			if (!error.isEmpty()) {
+				ReportSecretNotificationError(weak.get(), error);
+				return;
+			}
+			Core::App().notifications().manager().notificationActivated(id, std::move(options));
+		});
+		return;
+	}
+	const auto topic = item ? item->topic() : nullptr;
+	const auto sublist = item ? item->savedSublist() : nullptr;
+	if (!options.draft.text.isEmpty()) {
+		const auto topicRootId = topic
+			? topic->rootId()
+			: history->peer->isForum()
+			? id.contextId.topicRootId
+			: MsgId();
+		const auto monoforumPeerId = (sublist && sublist->parentChat())
+			? sublist->sublistPeer()->id
+			: id.contextId.monoforumPeerId;
+		const auto replyToId = (id.msgId > 0
+			&& !history->peer->isUser()
+			&& id.msgId != topicRootId)
+			? FullMsgId(history->peer->id, id.msgId)
+			: FullMsgId();
+		const auto length = int(options.draft.text.size());
+		auto draft = std::make_unique<Data::Draft>(
+			std::move(options.draft),
+			FullReplyTo{
+				.messageId = replyToId,
+				.topicRootId = topicRootId,
+				.monoforumPeerId = monoforumPeerId,
+			},
+			SuggestOptions(),
+			MessageCursor{
+				length,
+				length,
+				Ui::kQFixedMax,
+			},
+			Data::WebPageDraft());
+		history->setLocalDraft(std::move(draft));
+	}
+	const auto openSeparated = options.allowNewWindow
+		&& base::IsCtrlPressed();
+	const auto window = openNotificationMessage(
+		history,
+		id.msgId,
+		openSeparated);
+	if (window) {
 		onAfterNotificationActivated(id, window);
 	}
 }
@@ -1353,6 +1457,15 @@ Window::SessionController *Manager::openNotificationMessage(
 			window->widget()->showFromTray();
 			window->widget()->setInnerFocus();
 			system()->clearAll();
+		}
+		return window;
+	}
+	if (history->peer->isSecretChat()) {
+		const auto window = history->session().tryResolveWindow();
+		if (window) {
+			window->widget()->showFromTray();
+			Extras::SecretChats::showChat(window, int(history->peer->id.to<SecretChatId>().bare));
+			system()->clearFromHistory(history);
 		}
 		return window;
 	}
@@ -1444,6 +1557,10 @@ void Manager::notificationReplied(
 		return;
 	}
 	const auto history = session->data().history(id.contextId.peerId);
+	if (history->peer->isSecretChat()) {
+		ReplySecretNotification(session, history, id.msgId, reply);
+		return;
+	}
 	const auto item = history->owner().message(history->peer, id.msgId);
 	const auto topic = item ? item->topic() : nullptr;
 	const auto topicRootId = topic
@@ -1612,6 +1729,8 @@ void NativeManager::doShowNotification(NotificationFields &&fields) {
 			: QString())
 		: options.hideNameAndPhoto
 		? QString()
+		: peer->isSecretChat()
+		? tr::extras_SecretChatStart(tr::now)
 		: item->notificationHeader();
 	const auto text = pollVote
 		? TextWithPermanentSpoiler(ComposePollVoteNotification(
@@ -1674,7 +1793,7 @@ void NativeManager::doShowNotification(NotificationFields &&fields) {
 		.monoforumPeerId = (item->history()->amMonoforumAdmin()
 			? item->sublistPeerId()
 			: PeerId()),
-		.itemId = item->id,
+		.itemId = NotificationMessageId(item),
 		.title = scheduled ? WrapFromScheduled(fullTitle) : fullTitle,
 		.subtitle = subtitle,
 		.message = text,

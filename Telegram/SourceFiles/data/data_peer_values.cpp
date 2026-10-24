@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_peer_values.h"
 
+#include "extras/features/secret_chats/secret_chat_manager.h"
+
 #include "lang/lang_keys.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
@@ -224,6 +226,11 @@ inline auto DefaultRestrictionValue(
 		not_null<PeerData*> peer,
 		ChatRestrictions rights,
 		bool forbidInForums) {
+	if (peer->isSecretChat()) {
+		return rpl::single(rpl::empty) | rpl::then(peer->session().secretChats().changed())
+			| rpl::map([=] { return CanSendAnyOf(peer, rights, forbidInForums); })
+			| rpl::distinct_until_changed();
+	}
 	if (const auto user = peer->asUser()) {
 		if (user->isRepliesChat() || user->isVerifyCodes()) {
 			return rpl::single(false);
@@ -324,6 +331,9 @@ inline auto DefaultRestrictionValue(
 // This is duplicated in PeerData::canPinMessages().
 rpl::producer<bool> CanPinMessagesValue(not_null<PeerData*> peer) {
 	using namespace rpl::mappers;
+	if (peer->isSecretChat()) {
+		return rpl::single(false);
+	}
 	if (const auto user = peer->asUser()) {
 		return PeerFlagsValue(
 			user,
@@ -383,6 +393,9 @@ rpl::producer<bool> CanPinMessagesValue(not_null<PeerData*> peer) {
 }
 
 rpl::producer<bool> AllowsForwardingValue(not_null<PeerData*> peer) {
+	if (peer->isSecretChat()) {
+		return rpl::single(false);
+	}
 	if (const auto user = peer->asUser()) {
 		return rpl::combine(
 			PeerFlagValue(user, UserDataFlag::NoForwardsMyEnabled),

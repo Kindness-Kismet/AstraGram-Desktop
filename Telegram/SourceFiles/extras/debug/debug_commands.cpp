@@ -85,6 +85,7 @@ namespace {
 			&Commands::themeEditorHandlers(),
 			&Commands::ivHandlers(),
 			&Commands::dialogHandlers(),
+			&Commands::secretChatHandlers(),
 		}) {
 			all.insert(part->begin(), part->end());
 		}

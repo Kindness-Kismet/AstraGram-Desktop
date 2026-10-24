@@ -497,6 +497,9 @@ int getScheduleTime(int64 sumSize) {
 }
 
 bool isMessageSavable(const not_null<HistoryItem*> item) {
+	if (item->history()->peer->isSecretChat()) {
+		return false;
+	}
 	const auto &settings = ExtrasSettings::getInstance();
 
 	if (!settings.saveDeletedMessages()) {

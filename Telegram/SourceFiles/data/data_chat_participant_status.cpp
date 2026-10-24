@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_chat_participant_status.h"
 
+#include "extras/features/secret_chats/secret_chat_peer.h"
+
 #include "base/unixtime.h"
 #include "boxes/peers/edit_peer_permissions_box.h"
 #include "boxes/premium_limits_box.h" // FileSizeLimitBox.
@@ -239,6 +241,12 @@ bool CanSendAnyOf(
 		not_null<const PeerData*> peer,
 		ChatRestrictions rights,
 		bool forbidInForums) {
+	if (peer->isSecretChat()) {
+		const auto supported = ChatRestriction::SendOther | ChatRestriction::SendFiles
+			| ChatRestriction::SendPhotos | ChatRestriction::SendVideos;
+		return static_cast<const Extras::SecretChats::Peer*>(peer.get())->canSend()
+			&& bool(rights & supported);
+	}
 	if (ExtrasForward::isForwarding(peer->id)) {
 		return false;
 	}

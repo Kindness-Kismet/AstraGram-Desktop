@@ -17,6 +17,10 @@ class HistoryItem;
 class History;
 class UserData;
 
+namespace Extras::SecretChats {
+class Dialog;
+} // namespace Extras::SecretChats
+
 namespace Main {
 class Session;
 } // namespace Main
@@ -78,6 +82,7 @@ public:
 		Folder,
 		ForumTopic,
 		SavedSublist,
+		SecretChat,
 	};
 	Entry(not_null<Data::Session*> owner, Type type);
 	virtual ~Entry();
@@ -91,6 +96,7 @@ public:
 	Data::Thread *asThread();
 	Data::ForumTopic *asTopic();
 	Data::SavedSublist *asSublist();
+	Extras::SecretChats::Dialog *asSecretChat();
 
 	const History *asHistory() const;
 	const Data::Forum *asForum() const;
@@ -98,6 +104,7 @@ public:
 	const Data::Thread *asThread() const;
 	const Data::ForumTopic *asTopic() const;
 	const Data::SavedSublist *asSublist() const;
+	const Extras::SecretChats::Dialog *asSecretChat() const;
 
 	PositionChange adjustByPosInChatList(
 		FilterId filterId,
@@ -195,6 +202,7 @@ private:
 		IsSavedSublist = (1 << 3),
 		UpdatePostponed = (1 << 4),
 		InUnreadChangeBlock = (1 << 5),
+		IsSecretChat = (1 << 6),
 	};
 	friend inline constexpr bool is_flag_type(Flag) { return true; }
 	using Flags = base::flags<Flag>;

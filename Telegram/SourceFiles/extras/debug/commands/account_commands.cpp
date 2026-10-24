@@ -26,6 +26,7 @@ Result listAccounts(const QStringList &args) {
 		const auto session = account.sessionExists() ? &account.session() : nullptr;
 		result.push_back({{"index", entry.index}, {"active", &account == &Core::App().activeAccount()},
 			{"hasSession", session != nullptr}, {"userId", session ? Json(session->userId().bare) : Json(nullptr)},
+			{"name", session ? Json(session->user()->name().toStdString()) : Json(nullptr)},
 			{"fake", session && isSimulationSession(session)}});
 	}
 	return Result::Ok(Compact(result));

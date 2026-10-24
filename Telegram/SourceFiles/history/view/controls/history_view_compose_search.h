@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+#include "api/api_messages_search_merged.h"
+
 namespace Dialogs {
 class Key;
 } // namespace Dialogs
@@ -30,12 +32,15 @@ namespace HistoryView {
 // 查找栏占用输入区胶囊的位置，宿主需按 height() 预留底部空间。
 class ComposeSearch final {
 public:
+	using LocalSource = Api::MessagesSearchMerged::LocalSource;
+
 	ComposeSearch(
 		not_null<Ui::RpWidget*> parent,
 		not_null<Window::SessionController*> window,
 		not_null<History*> history,
 		PeerData *from = nullptr,
-		const QString &query = QString());
+		const QString &query = QString(),
+		LocalSource local = {});
 	~ComposeSearch();
 
 	void hideAnimated();

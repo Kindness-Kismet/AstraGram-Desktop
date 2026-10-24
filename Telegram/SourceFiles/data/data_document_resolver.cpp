@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_item.h"
 #include "iv/iv_instance.h"
 #include "lang/lang_keys.h"
+#include "main/main_session.h"
 #include "media/player/media_player_instance.h"
 #include "platform/platform_file_utilities.h"
 #include "ui/boxes/confirm_box.h"
@@ -335,6 +336,20 @@ void ResolveDocument(
 			}
 		} else if (document->status == FileReady
 			|| document->status == FileDownloadFailed) {
+			if (document->hasLocalSource() && media->loaded()) {
+				const auto weak = base::weak_ptr<Window::SessionController>(controller);
+				DocumentSaveClickHandler::Save(msgId, document,
+					DocumentSaveClickHandler::Mode::ToFile,
+					crl::guard(&document->session(), [=] {
+						if (!document->localSourceValid() || document->filepath(true).isEmpty()) {
+							return;
+						}
+						ResolveDocument(weak.get(), document,
+							document->owner().message(msgId), topicRootId,
+							monoforumPeerId, showDrawButton);
+					}));
+				return;
+			}
 			DocumentSaveClickHandler::Save(
 				item ? item->fullId() : Data::FileOrigin(),
 				document);

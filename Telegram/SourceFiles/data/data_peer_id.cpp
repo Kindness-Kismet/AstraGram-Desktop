@@ -18,6 +18,7 @@ PeerId peerFromMTP(const MTPPeer &peer) {
 }
 
 MTPpeer peerToMTP(PeerId id) {
+	Expects(!peerIsSecretChat(id));
 	if (peerIsUser(id)) {
 		return MTP_peerUser(peerToBareMTPInt(id));
 	} else if (peerIsChat(id)) {

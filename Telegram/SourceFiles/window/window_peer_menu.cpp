@@ -50,6 +50,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/peers/edit_contact_box.h"
 #include "boxes/peers/prepare_short_info_box.h"
 #include "calls/calls_instance.h"
+#include "extras/ui/secret_chat_box.h"
+#include "extras/features/secret_chats/secret_chat_dialog.h"
 #include "inline_bots/bot_attach_web_view.h" // InlineBots::PeerType.
 #include "ui/toast/toast.h"
 #include "ui/text/format_values.h"
@@ -344,6 +346,7 @@ private:
 	void addReport();
 	void addNewContact();
 	void addShareContact();
+	void addSecretChat();
 	void addEditContact();
 	void addBotToGroup();
 	void addNewMembers();
@@ -1155,6 +1158,17 @@ void Filler::addShareContact() {
 		tr::lng_info_share_contact(tr::now),
 		[=] { PeerMenuShareContactBox(controller, user); },
 		&st::menuIconShare);
+}
+
+void Filler::addSecretChat() {
+	const auto user = _peer->asUser();
+	if (!user || user->isSelf() || user->isBot() || user->isInaccessible()) {
+		return;
+	}
+	const auto controller = _controller;
+	_addAction(tr::extras_SecretChatStart(tr::now), [=] {
+		Extras::SecretChats::confirmCreate(controller, user);
+	}, &st::menuIconLock);
 }
 
 void Filler::addEditContact() {
@@ -2015,6 +2029,7 @@ void Filler::fillHistoryActions() {
 }
 
 void Filler::fillProfileActions() {
+	addSecretChat();
 	addTTLSubmenu(true);
 	addSupportInfo();
 	addNewContact();
@@ -4524,6 +4539,12 @@ void FillDialogsEntryMenu(
 		not_null<SessionController*> controller,
 		Dialogs::EntryState request,
 		const PeerMenuCallback &callback) {
+	if (request.key) {
+		if (const auto secret = request.key.entry()->asSecretChat()) {
+			Extras::SecretChats::fillMenu(controller, controller->content(), secret->chatId(), callback);
+			return;
+		}
+	}
 	Filler(controller, request, callback).fill();
 }
 

@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_context_menu.h"
+#include "extras/features/secret_chats/secret_chat_dialog.h"
+#include "extras/features/secret_chats/secret_chat_peer.h"
 
 #include "api/api_attached_stickers.h"
 #include "api/api_editing.h"
@@ -979,7 +981,8 @@ bool AddReplyToMessageAction(
 	const auto topic = item ? item->topic() : nullptr;
 	const auto peer = item ? item->history()->peer.get() : nullptr;
 	if (!item
-		|| (!item->isRegular() && !CanReplyToEphemeral(item))
+		|| (!item->isRegular() && !CanReplyToEphemeral(item)
+			&& !(peer->isSecretChat() && item->canBeSelected()))
 		|| IsAnchoredEphemeral(item)
 		|| (context != Context::History
 			&& context != Context::Replies
@@ -997,7 +1000,7 @@ bool AddReplyToMessageAction(
 	const auto todoListTaskId = request.link
 		? request.link->property(kTodoListItemIdProperty).toInt()
 		: 0;
-	const auto &quote = request.quote;
+	const auto quote = peer->isSecretChat() ? SelectedQuote() : request.quote;
 	auto text = (todoListTaskId
 		? tr::lng_context_reply_to_task
 		: quote.highlight.quote.empty()
@@ -1463,7 +1466,8 @@ bool AddSelectMessageAction(
 	if (request.overSelection && !request.selectedItems.empty()) {
 		return false;
 	} else if (!item
-		|| (item->isLocal() && !item->isEphemeral())
+		|| (item->isLocal() && !item->isEphemeral()
+			&& !item->history()->peer->isSecretChat())
 		|| item->isService()
 		|| IsAnchoredEphemeral(item)
 		|| list->hasSelectRestriction()) {
@@ -1555,6 +1559,22 @@ void AddMessageActions(
 
 	AddPostLinkAction(menu, request);
 	AddForwardAction(menu, request, list);
+	if (request.item && request.item->hasFailed()
+		&& request.item->history()->peer->isSecretChat()) {
+		const auto item = request.item;
+		const auto controller = list->controller();
+		const auto chatId = static_cast<Extras::SecretChats::Peer*>(item->history()->peer.get())->chatId();
+		const auto dialog = item->history()->session().secretChats().dialog(chatId);
+		const auto randomId = dialog->randomId(item->id);
+		menu->addAction(tr::extras_SecretChatRetry(tr::now), [=] {
+			controller->session().secretChats().retry(chatId, randomId,
+				crl::guard(controller, [=](QString error) {
+					if (!error.isEmpty()) {
+						controller->showToast(tr::extras_SecretChatFailed(tr::now));
+					}
+				}));
+		}, &st::menuIconSend);
+	}
 	if (request.item) {
 		const auto context = request.view ? request.view->context() : Context::History;
 		ExtrasUi::AddRepeatMessageAction(menu, request.item, context);
@@ -2005,6 +2025,7 @@ void FillContextMenuItems(
 	}
 	if (request.overSelection
 		&& view
+		&& !view->history()->peer->isSecretChat()
 		&& !Ui::SkipTranslate(list->getSelectedText().rich)) {
 		const auto owner = &view->history()->owner();
 		result->addAction(tr::lng_context_translate_selected(tr::now), [=] {

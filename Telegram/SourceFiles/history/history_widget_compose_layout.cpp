@@ -846,7 +846,11 @@ void HistoryWidget::moveFieldControls() {
 		_replaceMedia->moveToLeft(left, buttonsBottom);
 	}
 	if (settings.showAttachButtonInMessageField()) {
-		_attachToggle->moveToLeft(left, buttonsBottom);
+		// 附件圆与胶囊左侧圆弧同心，输入框保留原有占位。
+		const auto attachLeft = left
+			+ (st::historySendSize.height() - _attachToggle->width()) / 2
+			- st::historyComposeCapsulePadding;
+		_attachToggle->moveToLeft(attachLeft, buttonsBottom);
 		left += _attachToggle->width();
 	}
 	if (_sendAs && settings.showSendAsButtonInMessageField()) {

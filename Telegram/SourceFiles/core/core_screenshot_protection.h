@@ -9,34 +9,54 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/weak_ptr.h"
 
+#include <QtCore/QPointer>
+#include <QtCore/QRect>
+
+class QPixmap;
+
 namespace Core {
 
-// A reason may be held by an object that outlives this one, so the callbacks
-// that mutate the registry are guarded rather than capturing a bare this.
+// 理由按宿主窗口合并，界面销毁后自动撤销。
 class ScreenshotProtection final : public base::has_weak_ptr {
 public:
 	ScreenshotProtection();
 	~ScreenshotProtection();
 
-	// Window shows protected content itself.
-	void addContentReason(rpl::producer<bool> active, rpl::lifetime &lifetime);
+	void addContentReason(
+		not_null<QWidget*> window,
+		rpl::producer<bool> active,
+		rpl::lifetime &lifetime);
 
-	// Only context around the window is protected, not the window content.
-	void addAmbientReason(rpl::producer<bool> active, rpl::lifetime &lifetime);
+	// 仅平台支持时保护当前窗口的周边上下文。
+	void addAmbientReason(
+		not_null<QWidget*> window,
+		rpl::producer<bool> active,
+		rpl::lifetime &lifetime);
 
-	[[nodiscard]] bool active() const;
-	[[nodiscard]] rpl::producer<bool> activeValue() const;
+	[[nodiscard]] bool active(not_null<QWidget*> window) const;
+	[[nodiscard]] rpl::producer<bool> activeValue(
+		not_null<QWidget*> window) const;
+
+	// 受保护窗口的动画只保存背景，不保存正文。
+	[[nodiscard]] QPixmap grabForAnimation(
+		not_null<QWidget*> widget,
+		QRect rect = QRect()) const;
 
 private:
-	void addReason(rpl::producer<bool> active, rpl::lifetime &lifetime);
-	void refresh();
-	void apply(bool enabled);
+	struct Reason {
+		QPointer<QWidget> window;
+		bool active = false;
+	};
+	void addReason(
+		not_null<QWidget*> window,
+		rpl::producer<bool> active,
+		rpl::lifetime &lifetime);
+	void refresh(not_null<QWidget*> window);
 
-	base::flat_map<uint64, bool> _reasons;
+	base::flat_map<uint64, Reason> _reasons;
 	uint64 _lastReasonId = 0;
-	rpl::variable<bool> _active = false;
+	rpl::event_stream<not_null<QWidget*>> _changes;
 	std::unique_ptr<QObject> _filter;
-	rpl::lifetime _lifetime;
 
 };
 

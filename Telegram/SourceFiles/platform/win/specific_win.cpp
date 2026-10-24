@@ -537,7 +537,12 @@ bool AmbientScreenshotProtectionSupported() {
 }
 
 void SetWindowScreenshotProtection(not_null<QWidget*> window, bool enabled) {
-	enabled = enabled || window->property("ExtrasStreamerModeHidden").toBool();
+	enabled = enabled
+		|| window->property("ExtrasStreamerModeHidden").toBool()
+		|| window->property("ExtrasContentScreenshotProtected").toBool();
+	if (window->testAttribute(Qt::WA_DontShowOnScreen)) {
+		return;
+	}
 	const auto handle = window->internalWinId();
 	if (!handle) {
 		return;

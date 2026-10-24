@@ -258,21 +258,27 @@ void EditFileCaptionBox(
 				.allowPremiumEmoji = allow,
 				.fieldStyle = &st.files.caption,
 			});
-			const auto aiButton = Ui::SetupCaptionAiButton({
-				.parent = field->parentWidget(),
-				.field = field,
-				.session = &controller->session(),
-				.show = controller->uiShow(),
-				.chatStyle = chatStyle,
-			});
-			rpl::combine(
-				box->sizeValue(),
-				field->geometryValue()
-			) | rpl::on_next([=](QSize, QRect) {
-				Ui::UpdateCaptionAiButtonGeometry(aiButton, field);
-				aiButton->raise();
-			}, aiButton->lifetime());
+			if (!captionToPeer || !captionToPeer->isSecretChat()) {
+				const auto aiButton = Ui::SetupCaptionAiButton({
+					.parent = field->parentWidget(),
+					.field = field,
+					.session = &controller->session(),
+					.show = controller->uiShow(),
+					.chatStyle = chatStyle,
+				});
+				rpl::combine(
+					box->sizeValue(),
+					field->geometryValue()
+				) | rpl::on_next([=](QSize, QRect) {
+					Ui::UpdateCaptionAiButtonGeometry(aiButton, field);
+					aiButton->raise();
+				}, aiButton->lifetime());
+			}
 		}
+	}
+	if (captionToPeer && captionToPeer->isSecretChat()) {
+		field->setMarkdownReplacesEnabled(false);
+		field->setTagMimeProcessor([](QStringView) { return QString(); });
 	}
 	field->setTextWithTags(std::move(currentCaption));
 
@@ -787,6 +793,9 @@ Fn<SendMenu::Details()> SendFilesBox::prepareSendMenuDetails(
 	auto initial = descriptor.sendMenuDetails;
 	return crl::guard(this, [=] {
 		auto result = initial ? initial() : SendMenu::Details();
+		if (_toPeer->isSecretChat()) {
+			return result;
+		}
 		if ((result.type == SendMenu::Type::Scheduled
 			|| result.type == SendMenu::Type::ScheduledToUser)
 			&& ranges::any_of(
@@ -1407,6 +1416,7 @@ void SendFilesBox::updateCaptionVisibility() {
 	}
 	if (_aiButton) {
 		_aiButton->setVisible(can
+			&& !_toPeer->isSecretChat()
 			&& Ui::CanShowAiComposeButton(&_show->session(), _caption.data()));
 	}
 }
@@ -2135,6 +2145,10 @@ void SendFilesBox::setupCaption() {
 		cursor.movePosition(QTextCursor::End);
 		_caption->setTextCursor(cursor);
 	}
+	if (_toPeer && _toPeer->isSecretChat()) {
+		_caption->setMarkdownReplacesEnabled(false);
+		_caption->setTagMimeProcessor([](QStringView) { return QString(); });
+	}
 	_caption->setSubmitSettings(
 		Core::App().settings().sendSubmitWay());
 	_caption->setMaxLength(
@@ -2177,13 +2191,15 @@ void SendFilesBox::setupCaption() {
 		refreshMessagesCount();
 	}, _caption->lifetime());
 
-	_aiButton = Ui::SetupCaptionAiButton({
-		.parent = this,
-		.field = _caption.data(),
-		.session = &_show->session(),
-		.show = _show,
-		.chatStyle = chatStyle,
-	});
+	if (!_toPeer->isSecretChat()) {
+		_aiButton = Ui::SetupCaptionAiButton({
+			.parent = this,
+			.field = _caption.data(),
+			.session = &_show->session(),
+			.show = _show,
+			.chatStyle = chatStyle,
+		});
+	}
 }
 
 void SendFilesBox::setupCaptionAutocomplete() {

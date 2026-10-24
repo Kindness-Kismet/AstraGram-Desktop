@@ -9598,6 +9598,27 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DialogDetailsTitle" = "Details";
 "extras_DialogInfoTitle" = "Information";
 "extras_DialogConfirmTitle" = "Confirm action";
+"extras_SecretChatDestroy" = "Destroy Encrypted Chat";
+"extras_SecretChatDestroyConfirm" = "Destroy this encrypted chat and delete its history for both participants?";
+"extras_SecretChatStart" = "Encrypted Chat";
+"extras_SecretChatConfirm" = "Start a separate end-to-end encrypted chat with this person?";
+"extras_SecretChatPending" = "Establishing encrypted chat…";
+"extras_SecretChatReady" = "End-to-end encrypted";
+"extras_SecretChatEnded" = "Encrypted chat ended";
+"extras_SecretChatUnavailable" = "Encrypted chat storage is unavailable. Please restart and try again.";
+"extras_SecretChatFailed" = "The operation failed. Please try again.";
+"extras_SecretChatVerify" = "Encryption Key";
+"extras_SecretChatVerifyHelp" = "Compare this key with the key shown in the other person's encrypted chat. They must match.";
+"extras_SecretChatDeleteConfirm" = "Selected messages will be deleted for both participants and will not be archived.";
+"extras_SecretChatClear" = "Clear Encrypted History";
+"extras_SecretChatClearConfirm" = "Clear the encrypted chat history for both participants? This cannot be undone.";
+"extras_SecretChatUnsupported" = "This encrypted message type is not supported yet.";
+"extras_SecretChatTimer" = "Self-Destruct Timer";
+"extras_SecretChatTimerOff" = "Off";
+"extras_SecretChatFileLimit" = "Encrypted attachments can be up to 32 MB.";
+"extras_SecretChatRetry" = "Retry Sending";
+"extras_SecretChatOptions" = "Encrypted Chat Menu";
+"extras_SecretChatScreenshotNotice" = "The other participant sent a screenshot notice.";
 "extras_DialogCalendarTitle" = "Select date";
 
 "extras_CacheImages" = "Images";

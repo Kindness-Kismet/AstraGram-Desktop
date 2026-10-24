@@ -89,7 +89,7 @@ private:
 		const base::flat_set<QChar> &oldChars);
 	void adjustNames(
 		FilterId filterId,
-		not_null<History*> history,
+		not_null<Entry*> entry,
 		const base::flat_set<QChar> &oldChars);
 
 	SortMode _sortMode = SortMode();

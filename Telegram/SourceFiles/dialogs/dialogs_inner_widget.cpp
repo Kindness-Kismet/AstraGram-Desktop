@@ -3917,7 +3917,8 @@ Row *InnerWidget::shownRowByKey(Key key) {
 		}
 	} else {
 		const auto history = entry->asHistory();
-		if (!entry->asFolder() && (!history || history->folder())) {
+		if (!entry->asFolder() && !entry->asSecretChat()
+			&& (!history || history->folder())) {
 			return nullptr;
 		}
 	}

@@ -22,6 +22,10 @@ namespace Extras::Translator {
 class MessageTranslationManager;
 } // namespace Extras::Translator
 
+namespace Extras::SecretChats {
+class Manager;
+} // namespace Extras::SecretChats
+
 namespace Api {
 class Updates;
 class SendProgressManager;
@@ -133,6 +137,9 @@ public:
 		return *_mediaCache;
 	}
 	[[nodiscard]] Extras::Translator::MessageTranslationManager &messageTranslations();
+	[[nodiscard]] Extras::SecretChats::Manager &secretChats() const {
+		return *_secretChats;
+	}
 	[[nodiscard]] Storage::Account &local() const;
 	[[nodiscard]] Domain &domain() const;
 	[[nodiscard]] Storage::Domain &domainLocal() const;
@@ -338,6 +345,7 @@ private:
 	// _data depends on _downloader / _uploader.
 	const std::unique_ptr<Data::Session> _data;
 	const not_null<UserData*> _user;
+	std::unique_ptr<Extras::SecretChats::Manager> _secretChats;
 
 	// _emojiStickersPack depends on _data.
 	const std::unique_ptr<Stickers::EmojiPack> _emojiStickersPack;

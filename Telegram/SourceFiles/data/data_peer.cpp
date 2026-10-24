@@ -664,6 +664,9 @@ void PeerData::setHasSensitiveContent(bool has) {
 
 // This is duplicated in CanPinMessagesValue().
 bool PeerData::canPinMessages() const {
+	if (isSecretChat()) {
+		return false;
+	}
 	if (const auto user = asUser()) {
 		return !user->amRestricted(ChatRestriction::PinMessages);
 	} else if (const auto chat = asChat()) {
@@ -757,6 +760,9 @@ bool PeerData::canTransferGifts() const {
 }
 
 bool PeerData::canEditMessagesIndefinitely() const {
+	if (isSecretChat()) {
+		return false;
+	}
 	if (const auto user = asUser()) {
 		return user->isSelf();
 	} else if (isChat()) {
@@ -1872,6 +1878,9 @@ int PeerData::slowmodeSecondsLeft() const {
 }
 
 bool PeerData::canManageGroupCall() const {
+	if (isSecretChat()) {
+		return false;
+	}
 	if (const auto user = asUser()) {
 		return user->isSelf();
 	} else if (const auto chat = asChat()) {
@@ -2072,6 +2081,7 @@ Data::ProfileTab PeerData::mainProfileTab() const {
 }
 
 MTPInputPeer PeerData::input() const {
+	Expects(!isSecretChat());
 	if (const auto user = asUser()) {
 		const auto specific = user->inputUser();
 		return specific.match([](const MTPDinputUser &data) {

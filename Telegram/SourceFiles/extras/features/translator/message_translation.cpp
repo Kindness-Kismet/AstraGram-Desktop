@@ -201,6 +201,9 @@ void addMessageTranslationActions(
 		not_null<Ui::PopupMenu*> menu,
 		not_null<HistoryItem*> item,
 		not_null<Window::SessionController*> controller) {
+	if (item->history()->peer->isSecretChat()) {
+		return;
+	}
 	const auto session = &item->history()->session();
 	const auto id = item->fullId();
 	const auto weak = base::make_weak(session);

@@ -16,6 +16,13 @@ struct PeerUserpicView;
 
 namespace Window::Notifications {
 
+// 加密通知保存随机消息编号，避免重启后本地编号变化。
+void SetNotificationMessageId(not_null<HistoryItem*> item, qint64 id);
+[[nodiscard]] MsgId NotificationMessageId(not_null<HistoryItem*> item);
+[[nodiscard]] HistoryItem *ResolveNotificationMessage(
+	not_null<History*> history,
+	MsgId id);
+
 [[nodiscard]] QImage GenerateUserpic(
 	not_null<PeerData*> peer,
 	Ui::PeerUserpicView &view);
