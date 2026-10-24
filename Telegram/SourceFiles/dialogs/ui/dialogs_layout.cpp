@@ -603,9 +603,13 @@ void PaintRow(
 		: nullptr;
 	if (secret) {
 		const auto &icon = ThreeStateIcon(
-			st::dialogsLockIcon, context.active, context.selected);
+			st::dialogsSecretChatIcon,
+			context.active,
+			context.selected);
 		icon.paint(p, rectForName.topLeft(), context.width);
-		rectForName.setLeft(rectForName.left() + icon.width() + st::dialogsChatTypeSkip);
+		rectForName.setLeft(rectForName.left()
+			+ icon.width()
+			+ st::dialogsChatTypeSkip);
 	} else if (promoted) {
 		const auto type = history->topPromotionType();
 		const auto custom = type.isEmpty()

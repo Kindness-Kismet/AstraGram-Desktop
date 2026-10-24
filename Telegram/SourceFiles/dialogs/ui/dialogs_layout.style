@@ -47,6 +47,11 @@ dialogsForumIcon: ThreeStateIcon {
 	over: icon {{ "dialogs/dialogs_forum", dialogsChatIconFgOver, point(3px, 3px) }};
 	active: icon {{ "dialogs/dialogs_forum", dialogsChatIconFgActive, point(3px, 3px) }};
 }
+dialogsSecretChatIcon: ThreeStateIcon {
+	icon: icon {{ "dialogs/dialogs_secret_chat", dialogsChatIconFg, point(3px, 3px) }};
+	over: icon {{ "dialogs/dialogs_secret_chat", dialogsChatIconFgOver, point(3px, 3px) }};
+	active: icon {{ "dialogs/dialogs_secret_chat", dialogsChatIconFgActive, point(3px, 3px) }};
+}
 dialogsSendingIcon: ThreeStateIcon {
 	icon: icon {{ "dialogs/dialogs_sending", dialogsSendingIconFg, point(8px, 4px) }};
 	over: icon {{ "dialogs/dialogs_sending", dialogsSendingIconFgOver, point(8px, 4px) }};
