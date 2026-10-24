@@ -120,6 +120,7 @@ private:
 		const MTPVector<MTPUpdate> &other);
 	void stateDone(const MTPupdates_State &state);
 	void checkpointSecretRecovery();
+	void updateSecretRefreshTimer();
 	void replaySecretUpdates();
 	void setState(int32 pts, int32 date, int32 qts, int32 seq);
 	void channelDifferenceDone(
@@ -225,6 +226,7 @@ private:
 	bool _secretUpdatePending = false;
 	std::deque<MTPUpdates> _secretPendingUpdates;
 	base::Timer _secretCheckpointTimer;
+	base::Timer _secretRefreshTimer;
 	rpl::variable<bool> _isIdle = false;
 
 	rpl::lifetime _lifetime;

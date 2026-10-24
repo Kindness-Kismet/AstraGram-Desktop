@@ -94,6 +94,7 @@ constexpr auto kWaitForChannelGetDifference = crl::time(1000);
 
 // If nothing is received in 1 min we ping.
 constexpr auto kNoUpdatesTimeout = 60 * 1000;
+constexpr auto kSecretRefreshPeriod = 30 * crl::time(1000);
 
 // If nothing is received in 1 min when was a sleepmode we ping.
 constexpr auto kNoUpdatesAfterSleepTimeout = 60 * crl::time(1000);
@@ -248,7 +249,11 @@ Updates::Updates(not_null<Main::Session*> session)
 , _byMinChannelTimer([=] { getDifference(); })
 , _failDifferenceTimer([=] { getDifferenceAfterFail(); })
 , _idleFinishTimer([=] { checkIdleFinish(); })
-, _secretCheckpointTimer([=] { checkpointSecretRecovery(); }) {
+, _secretCheckpointTimer([=] { checkpointSecretRecovery(); })
+, _secretRefreshTimer([=] {
+	_secretRefreshTimer.callOnce(kSecretRefreshPeriod);
+	getDifference();
+}) {
 	_ptsWaiter.setRequesting(true);
 
 	session->account().mtpUpdates(
@@ -503,6 +508,9 @@ void Updates::stateDone(const MTPupdates_State &state) {
 				}
 				_secretReady = true;
 				_secretRestorePending = saved;
+				session().secretChats().changed(
+				) | rpl::on_next([=] { updateSecretRefreshTimer(); }, _lifetime);
+				updateSecretRefreshTimer();
 				stateDone(state);
 				getDifference();
 			}, recovery);
@@ -536,6 +544,21 @@ void Updates::checkpointSecretRecovery() {
 	if (saved && saved->pts == position.pts && saved->date == position.date && saved->seq == position.seq) return;
 	// 该保存排在此前所有私密事件之后，崩溃最多从较旧位置重复重放。
 	secret.persistRecovery(position);
+}
+
+void Updates::updateSecretRefreshTimer() {
+	const auto &secret = session().secretChats();
+	if (!secret.available() || !secret.hasBaseline()
+		|| !ranges::any_of(secret.chats(), [](const Extras::SecretChats::Chat &chat) {
+			return chat.state != Extras::SecretChats::State::Discarded;
+		})) {
+		_secretRefreshTimer.cancel();
+		return;
+	}
+	// 服务端可能只在补取时返回结束通知，按已保存位置定期核对。
+	if (!_secretRefreshTimer.isActive()) {
+		_secretRefreshTimer.callOnce(kSecretRefreshPeriod);
+	}
 }
 
 void Updates::differenceDone(const MTPupdates_Difference &result) {
