@@ -433,6 +433,9 @@ def register_commands(sub) -> None:
     command = sub.add_parser("control.hover", help="设置按钮悬停绘制状态，不触发点击")
     command.add_argument("target", help="按钮名称或 control.list 默认模式的 #序号")
     command.add_argument("state", choices=("on", "off"), help="开启或关闭悬停状态")
+    command = sub.add_parser("control.ripple", help="临时显示按钮完整点击圆，不点击或移动系统鼠标")
+    command.add_argument("target", help="按钮名称或 control.list 默认模式的 #序号")
+    command.add_argument("state", choices=("on", "off"), help="开启或关闭完整点击圆")
     command = sub.add_parser("control.key", help="向控件合成按键，用于菜单导航、关闭和验证码输入")
     command.add_argument("target", help="控件名称、#序号或 @menu")
     command.add_argument("key", type=key_name, help="escape、up、down、left、right、enter、tab、space，或最多 16 位数字")
@@ -552,8 +555,8 @@ def build_server_command(args: argparse.Namespace) -> str:
         return f"simulation.open {quote_arg(args.key)} --view {args.view} --input {args.input}"
     if command == "simulation.trigger":
         return f"simulation.trigger {quote_arg(args.key)}"
-    if command == "control.hover":
-        return f"control.hover {quote_arg(args.target)} {args.state}"
+    if command in ("control.hover", "control.ripple"):
+        return f"{command} {quote_arg(args.target)} {args.state}"
     if command == "control.key":
         return f"control.key {quote_arg(args.target)} {args.key}"
     if command == "control.shortcut":

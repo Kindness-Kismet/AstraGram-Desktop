@@ -490,6 +490,22 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	return Result::Ok(Compact(json{ { "hovered", button->isOver() } }));
 }
 
+[[nodiscard]] Result controlRipple(const QStringList &args) {
+	if (args.size() != 2 || (args[1] != u"on"_q && args[1] != u"off"_q)) {
+		return Result::Err(u"usage: control.ripple <objectName | #index> <on|off>"_q);
+	}
+	const auto button = dynamic_cast<Ui::RippleButton*>(findControl(args[0]));
+	if (!button || !button->isVisible() || button->isDisabled()) {
+		return Result::Err(u"visible enabled ripple button not found"_q);
+	}
+	const auto previous = button->forceRippled();
+	button->setForceRippled(args[1] == u"on"_q, anim::type::instant);
+	return Result::Ok(Compact(json{
+		{ "previousForceRippled", previous },
+		{ "forceRippled", button->forceRippled() },
+	}));
+}
+
 [[nodiscard]] Result controlPointer(const QStringList &args) {
 	if (args.size() != 1 && args.size() != 3) {
 		return Result::Err(u"usage: control.pointer <objectName | #index> [x y]"_q);
@@ -880,6 +896,7 @@ const HandlerMap &ControlHandlers() {
 		{ u"control.input"_q, &controlInput },
 		{ u"control.scroll"_q, &controlScroll },
 		{ u"control.hover"_q, &controlHover },
+		{ u"control.ripple"_q, &controlRipple },
 		{ u"control.pointer"_q, &controlPointer },
 		{ u"control.key"_q, &controlKey },
 		{ u"control.shortcut"_q, &controlShortcut },
