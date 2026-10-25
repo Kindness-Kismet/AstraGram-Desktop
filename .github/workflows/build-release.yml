@@ -11,12 +11,6 @@ on:
 permissions:
   contents: read
 
-env:
-  RELEASE_DONATION_NOTICE: |-
-    Donations are optional and never affect feature access. If AstraGram is useful to you, you can consider supporting the project through Afdian at https://afdian.com/a/KiritoXD under the account KiritoXDone. Contributions help cover daily token maintenance costs and encourage us to keep maintaining the project
-
-    捐赠完全自愿，不会影响任何功能使用。如果 AstraGram 对你有帮助，欢迎量力通过爱发电支持项目，账户为 KiritoXDone：https://afdian.com/a/KiritoXD。捐赠主要用于日常 token 维护开销，也会让我们更有动力继续维护项目
-
 # 发版排队执行，不中断已在构建的版本。
 concurrency:
   group: build-release
@@ -60,7 +54,7 @@ jobs:
               "${GITHUB_SHA:0:10}" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
             printf '### Release notes\n\n'
             cat .github/CHANGELOG.md
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Validate workflows.
         env:
@@ -452,6 +446,11 @@ jobs:
           find release-artifacts -maxdepth 1 -type f -printf '%f\n' | sort
 
       - name: Generate release notes.
+        env:
+          RELEASE_DONATION_NOTICE: |-
+            Donations are optional and never affect feature access. If AstraGram is useful to you, you can consider supporting the project through Afdian at https://afdian.com/a/KiritoXD under the account KiritoXDone. Contributions help cover daily token maintenance costs and encourage us to keep maintaining the project
+
+            捐赠完全自愿，不会影响任何功能使用。如果 AstraGram 对你有帮助，欢迎量力通过爱发电支持项目，账户为 KiritoXDone：[爱发电](https://afdian.com/a/KiritoXD)。捐赠主要用于日常 token 维护开销，也会让我们更有动力继续维护项目
         run: |
           set -euo pipefail
           {
