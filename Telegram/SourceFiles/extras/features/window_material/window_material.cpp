@@ -216,7 +216,9 @@ private:
 		}
 		_panel->setProperty(kModeProperty, int(effective));
 		_panel->setProperty(kActiveProperty, active);
-		_panel->setSystemBackdrop(active);
+		_panel->setSystemBackdrop(active, active
+			? rootTintColor(_panel.get())
+			: QColor(Qt::transparent));
 		_panel->setProperty(kRevisionProperty, ++_revision);
 		Ui::ForceFullRepaint(_panel);
 	}
@@ -293,16 +295,30 @@ rpl::producer<bool> changes(not_null<QWidget*> widget) {
 	Unexpected("Missing window material surface watcher.");
 }
 
-QColor rootTintColor(const QWidget *widget) {
-	// 原生材质负责着色与失焦效果，透明标题栏不再叠加实色。
-	return isActive(widget)
-		? QColor(Qt::transparent)
-		: widget->palette().color(QPalette::Window);
+QColor rootTintColor(not_null<const QWidget*> widget) {
+	if (!isActive(widget.get())) {
+		return widget->palette().color(QPalette::Window);
+	}
+	if (widget->window()->property(kModeProperty).toInt()
+		!= int(::WindowMaterial::Acrylic)) {
+		return QColor(Qt::transparent);
+	}
+	// 沿用 Zen 的中性色与混色比例，根部只叠加一次以保证正文对比度。
+	return Window::Theme::IsNightMode()
+		? QColor(27, 27, 27, 179)
+		: QColor(255, 255, 255, 153);
 }
 
 QColor cardColor(const QWidget *widget, QColor opaque) {
 	if (!isActive(widget)) {
 		return opaque;
+	}
+	if (widget->window()->property(kModeProperty).toInt()
+		== int(::WindowMaterial::Acrylic)) {
+		// 输入表面使用两成中性色，保留原生材质的背景色。
+		return Window::Theme::IsNightMode()
+			? QColor(0, 0, 0, 51)
+			: QColor(255, 255, 255, 51);
 	}
 	return Window::Theme::IsNightMode()
 		? QColor(0, 0, 0, 0xCC)

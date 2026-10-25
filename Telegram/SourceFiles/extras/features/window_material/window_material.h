@@ -29,7 +29,7 @@ void attachPanel(not_null<Ui::SeparatePanel*> panel);
 void watchSurface(not_null<QWidget*> widget);
 // 有效模式或主题变化也会通知，即使生效状态仍为 true。
 [[nodiscard]] rpl::producer<bool> changes(not_null<QWidget*> widget);
-[[nodiscard]] QColor rootTintColor(const QWidget *widget);
+[[nodiscard]] QColor rootTintColor(not_null<const QWidget*> widget);
 [[nodiscard]] QColor cardColor(const QWidget *widget, QColor opaque);
 // 材质背景随桌面变化，灰色图标与文字改用正文色，与设置页导航一致。
 // 生效时返回正文色，否则为空，可直接传给控件的颜色覆盖接口。
