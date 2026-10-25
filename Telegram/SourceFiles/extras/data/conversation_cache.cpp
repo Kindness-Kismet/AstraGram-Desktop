@@ -72,7 +72,9 @@ ConversationCache::ConversationCache(not_null<Main::Session*> session)
 	// 媒体缓存会清理自身目录，历史缓存必须放在同级目录。
 	session->local().cachePath() + u"-conversations"_q,
 	cacheSettings()))
-, _saveTimer([=] { flush(); }) {
+, _saveTimer([=] { flush(); })
+, _preloadTimer([=] { preloadNext(); })
+, _preloadAfter(crl::now() + 1500) {
 	_database->open(session->local().cacheKey(), onMain<Storage::Cache::Error>(session, [=](
 			Storage::Cache::Error error) {
 		if (error.type != Storage::Cache::Error::Type::None) {
@@ -83,6 +85,7 @@ ConversationCache::ConversationCache(not_null<Main::Session*> session)
 }
 
 ConversationCache::~ConversationCache() {
+	cancelPreload();
 	_database->close();
 	_database->sync();
 }
@@ -429,6 +432,9 @@ void ConversationCache::saveIndex() {
 }
 
 void ConversationCache::clear() {
+	cancelPreload();
+	_preloadQueries.clear();
+	_preloadedHistories.clear();
 	disable();
 	_session->local().clearPref(kSnapshotPref);
 	_session->local().clearPref(kListMetadataPref);
@@ -480,6 +486,9 @@ void ConversationCache::storageStats(Fn<void(StorageStats)> done) {
 void ConversationCache::clearStorage(
 		PeerId peer,
 		Fn<void(Storage::Cache::Error)> done) {
+	cancelPreload();
+	_preloadQueries.clear();
+	_preloadedHistories.clear();
 	withIndex([=] {
 		_storageClearing = true;
 		_saveTimer.cancel();
@@ -560,6 +569,8 @@ void ConversationCache::clearStorage(
 }
 
 void ConversationCache::disable() {
+	cancelPreload();
+	_preloadQueries.clear();
 	_enabled = false;
 	_pendingConfirmedMessages.clear();
 	_saveTimer.cancel();

@@ -60,6 +60,7 @@ using json = nlohmann::json;
 		return Result::Err(u"no active session"_q);
 	}
 	const auto stats = session->conversationCache().stats();
+	const auto preload = session->conversationCache().preloadStats();
 	const auto controller = session->tryResolveWindow();
 	const auto active = controller ? controller->activeChatsFilterCurrent() : 0;
 	auto &filters = session->data().chatsFilters();
@@ -71,6 +72,11 @@ using json = nlohmann::json;
 		{ "hits", stats.hits },
 		{ "misses", stats.misses },
 		{ "messageDataHits", stats.messageDataHits },
+		{ "preloadQueued", preload.queued },
+		{ "preloadCacheHits", preload.cacheHits },
+		{ "preloadNetworkRequests", preload.networkRequests },
+		{ "preloadCancellations", preload.cancellations },
+		{ "preloadActive", preload.active.value },
 		{ "filtersLoaded", filters.loaded() },
 		{ "activeFilter", active },
 		{ "defaultFilter", filters.defaultId() },
@@ -79,6 +85,11 @@ using json = nlohmann::json;
 			: session->data().chatsList()->indexed()->size() },
 		{ "connectionState", session->api().instance().dcstate() },
 	};
+	auto preloaded = json::array();
+	for (const auto peer : preload.ready) {
+		preloaded.push_back(peer.value);
+	}
+	result["preloadedPeers"] = std::move(preloaded);
 	auto tabs = json::array();
 	for (const auto &filter : filters.list()) {
 		const auto list = filter.id() ? filters.chatsList(filter.id())

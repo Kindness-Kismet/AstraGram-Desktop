@@ -194,6 +194,10 @@ std::optional<MTPMessageMedia> applyPollAnswerAction(
 void ConversationCache::updateCachedMessages(
 		PeerId peer,
 		Fn<bool(MTPMessage &)> update) {
+	if (_preloading && (!peer || _preloading->key.peer == peer)) {
+		cancelPreload();
+		_preloadTimer.callOnce(250);
+	}
 	if (!_enabled || _restoring) {
 		return;
 	}

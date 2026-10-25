@@ -84,6 +84,17 @@ public:
 		const MTPmessages_Messages &messages,
 		bool refreshVisible);
 	[[nodiscard]] rpl::producer<HistoryCacheKey> historyRefreshes() const;
+	void preloadHistories(const std::vector<History*> &histories);
+	void foregroundHistoryRequested(HistoryCacheKey key);
+	struct PreloadStats {
+		std::vector<PeerId> ready;
+		int queued = 0;
+		int cacheHits = 0;
+		int networkRequests = 0;
+		int cancellations = 0;
+		PeerId active;
+	};
+	[[nodiscard]] PreloadStats preloadStats() const;
 
 	struct Stats {
 		int restoredDialogs = 0;
@@ -213,7 +224,10 @@ private:
 		const HistoryCacheQuery &query,
 		const HistoryEntry &entry);
 	[[nodiscard]] Storage::Cache::Key storageKey(HistoryCacheKey key) const;
-	[[nodiscard]] bool cacheable(const MTPMessage &message) const;
+	[[nodiscard]] static bool cacheable(const MTPMessage &message);
+	void preloadNext();
+	void finishPreload(const HistoryCacheQuery &query, bool ready);
+	void cancelPreload();
 
 	const not_null<Main::Session*> _session;
 	const std::unique_ptr<Storage::Cache::Database> _database;
@@ -227,6 +241,23 @@ private:
 	base::flat_map<MsgId, PeerId> _nonChannelPeers;
 	std::vector<Fn<void()>> _afterIndex;
 	base::Timer _saveTimer;
+	base::Timer _preloadTimer;
+	struct PreloadedHistory {
+		MsgId offsetId;
+		MsgId topId;
+		crl::time when = 0;
+		bool ready = true;
+	};
+	std::vector<HistoryCacheQuery> _preloadQueries;
+	std::map<HistoryCacheKey, PreloadedHistory> _preloadedHistories;
+	std::optional<HistoryCacheQuery> _preloading;
+	int _preloadRequest = 0;
+	crl::time _preloadAfter = 0;
+	uint64 _preloadGeneration = 0;
+	int _preloadCacheHits = 0;
+	int _preloadNetworkRequests = 0;
+	int _preloadCancellations = 0;
+	bool _preloadReading = false;
 	rpl::event_stream<HistoryCacheKey> _historyRefreshes;
 	int _restoredCount = 0;
 	int _hits = 0;

@@ -318,6 +318,9 @@ public:
 		Fn<void(not_null<PeerData*>, MsgId)> callback);
 
 	using SliceType = Data::LoadDirection;
+	[[nodiscard]] bool historyRequestsPending() const {
+		return !_historyRequests.empty();
+	}
 	void requestHistory(
 		not_null<History*> history,
 		MsgId messageId,

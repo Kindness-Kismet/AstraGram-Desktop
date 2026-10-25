@@ -114,6 +114,7 @@ public:
 
 	void deleteMessages(const MessageIdsList &ids, bool revoke);
 
+	[[nodiscard]] bool hasHistoryRequests() const;
 	int sendRequest(
 		not_null<History*> history,
 		RequestType type,

@@ -5950,6 +5950,21 @@ void InnerWidget::preloadRowsData() {
 	if (!parentWidget()) {
 		return;
 	}
+	auto histories = std::vector<History*>();
+	if (_state == WidgetState::Default) {
+		const auto offset = dialogsOffset();
+		for (auto i = _shownList->findByY(std::max(0, _visibleTop - offset));
+			i != _shownList->cend() && (*i)->top() < _visibleBottom - offset;
+			++i) {
+			if (const auto history = (*i)->history()) {
+				histories.push_back(history);
+				if (histories.size() == 10) {
+					break;
+				}
+			}
+		}
+	}
+	session().conversationCache().preloadHistories(histories);
 
 	auto yFrom = _visibleTop;
 	auto yTo = _visibleTop + (_visibleBottom - _visibleTop) * (PreloadHeightsCount + 1);

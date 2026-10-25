@@ -3750,6 +3750,7 @@ void ApiWrap::requestHistory(
 
 	auto query = Extras::HistoryCacheQuery();
 	const auto prepared = Api::PrepareHistoryRequest(peer, messageId, slice, &query);
+	_session->conversationCache().foregroundHistoryRequested(query.key);
 	_historyRequests.emplace(key);
 	_session->conversationCache().getHistory(query, [=](
 			std::optional<Extras::CachedHistorySlice> cached) {

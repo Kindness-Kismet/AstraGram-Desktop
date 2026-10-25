@@ -4,6 +4,8 @@
 
 - `cache.state [peerId]`：查询恢复的会话数、缓存命中次数、当前分组、连接状态；指定会话时附带已显示消息范围。
 - `messageDataHits` 表示引用原文等单条消息从缓存恢复的次数；`rendered` 记录会话列表首次与最近一次实际绘制的标签和行数。
+- `preloadedPeers` 是已预加载首屏的会话；`preloadQueued`、`preloadActive`、`preloadCacheHits`、`preloadNetworkRequests`、`preloadCancellations` 可验证未点击前的后台加载与取消。
+- 普通会话只预加载当前可见的最多 10 个，启动后延迟调度；先异步读取缓存，后台网络串行，前台历史请求和删除更新优先。话题及收藏来源继续按各自范围加载。
 - `tabs` 和 `archiveRows` 返回标签列表和归档的缓存行数；指定会话时，`latestSliceMessages`、`latestSliceTotal`、`latestSliceSkippedAfter` 核对新历史视图的最新切片，不导出正文。
 - 当前新聊天视图可见时，`view` 返回实际列表是否为空、可见范围首尾消息编号、滚动坐标及底部加载边界；坐标落在列表留白时编号为 0，切片指标本身不代表界面已显示。
 - `cache.read <peerId> [offsetId] [addOffset] [limit]`：只查询缓存，返回任务编号；用 `job.status` 获取消息编号和内容摘要，不导出消息正文。

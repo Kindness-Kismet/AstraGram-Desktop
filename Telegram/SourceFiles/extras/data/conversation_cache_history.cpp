@@ -2,6 +2,8 @@
 
 #include "extras/data/conversation_cache_serialization.h"
 #include "apiwrap.h"
+#include "core/version.h"
+#include "crl/crl_async.h"
 #include "base/unixtime.h"
 #include "data/data_channel.h"
 #include "data/data_changes.h"
@@ -14,11 +16,53 @@
 #include "history/history_item.h"
 #include "main/main_session.h"
 #include "storage/cache/storage_cache_database.h"
+#include "storage/serialize_peer.h"
 
 namespace Extras {
 namespace {
 
 using namespace CacheSerialization;
+
+class PeerRestorer final : public std::enable_shared_from_this<PeerRestorer> {
+public:
+	PeerRestorer(
+			not_null<Main::Session*> session,
+			QByteArray bytes,
+			Fn<void(base::flat_set<PeerId>)> done)
+	: _session(session)
+	, _bytes(std::move(bytes))
+	, _stream(_bytes)
+	, _done(std::move(done)) {
+		_stream.setVersion(QDataStream::Qt_5_1);
+	}
+
+	void process() {
+		const auto started = crl::now();
+		for (auto count = 0; !_stream.atEnd()
+			&& _stream.status() == QDataStream::Ok; ++count) {
+			const auto peer = Serialize::readPeer(_session, AppVersion, _stream);
+			if (!peer) {
+				break;
+			}
+			_peers.emplace(peer->id);
+			// 资料恢复限制每批数量和用时，批间交还界面事件循环。
+			if (count == 15 || crl::now() - started >= 2) {
+				crl::on_main(_session, [state = shared_from_this()] {
+					state->process();
+				});
+				return;
+			}
+		}
+		base::take(_done)(std::move(_peers));
+	}
+
+private:
+	const not_null<Main::Session*> _session;
+	QByteArray _bytes;
+	QDataStream _stream;
+	Fn<void(base::flat_set<PeerId>)> _done;
+	base::flat_set<PeerId> _peers;
+};
 
 template <typename Range>
 void mergeRange(std::vector<Range> &stored, Range range) {
@@ -193,7 +237,7 @@ Storage::Cache::Key ConversationCache::storageKey(HistoryCacheKey key) const {
 	};
 }
 
-bool ConversationCache::cacheable(const MTPMessage &message) const {
+bool ConversationCache::cacheable(const MTPMessage &message) {
 	if (!IsServerMsgId(IdFromMessage(message))) {
 		return false;
 	}
@@ -236,49 +280,73 @@ void ConversationCache::loadHistory(
 	}
 	entry.generation = ++_historyGeneration;
 	const auto generation = entry.generation;
-	_database->get(storageKey(key), onMain<QByteArray>(_session, [=](QByteArray bytes) {
+	struct LoadedHistory {
+		HistoryEntry entry;
+		QByteArray peers;
+	};
+	const auto userId = _session->userId();
+	const auto loaded = onMain<LoadedHistory>(_session, [=](LoadedHistory result) {
 		const auto found = _histories.find(key);
 		if (found == _histories.end() || found->second.generation != generation) {
 			return;
 		}
-		auto &entry = found->second;
-		QDataStream stream(bytes);
-		if (!bytes.isEmpty() && readHeader(stream, _session->userId())) {
-			auto peers = QByteArray();
-			auto payload = QByteArray();
-			auto ranges = qint32();
-			stream >> peers >> payload >> ranges;
-			for (auto i = 0; i < ranges && !stream.atEnd(); ++i) {
-				auto from = qint64();
-				auto till = qint64();
-				stream >> from >> till;
-				entry.ranges.push_back({ MsgId(from), MsgId(till) });
+		auto peers = std::move(result.peers);
+		auto finish = [=, result = std::move(result)](
+				base::flat_set<PeerId> peers) mutable {
+			const auto found = _histories.find(key);
+			if (found == end(_histories) || found->second.generation != generation) {
+				return;
 			}
-			const auto parsed = decode<MTPmessages_Messages>(payload);
-			if (stream.status() == QDataStream::Ok && stream.atEnd()
-				&& parsed && parsed->type() == mtpc_messages_messagesSlice) {
-				entry.peers = restorePeers(peers);
-				const auto &data = parsed->c_messages_messagesSlice();
-				entry.count = data.vcount().v;
-				entry.topics = data.vtopics().v;
-				for (const auto &message : data.vmessages().v) {
-					if (cacheable(message)) {
-						entry.messages.emplace(IdFromMessage(message), message);
-					}
-				}
-			} else {
-				entry.ranges.clear();
-			}
-		}
-		entry.loaded = true;
-		restoreHistoryMetadata(key, entry);
+			auto &entry = found->second;
+			entry.messages = std::move(result.entry.messages);
+			entry.ranges = std::move(result.entry.ranges);
+			entry.topics = std::move(result.entry.topics);
+			entry.count = result.entry.count;
+			entry.peers = std::move(peers);
+			entry.loaded = true;
+			restoreHistoryMetadata(key, entry);
 #ifdef _DEBUG
-		traceHistory("loaded", { .key = key });
+			traceHistory("loaded", { .key = key });
 #endif
-		for (auto &callback : base::take(entry.pending)) {
-			callback.done(entry);
-		}
-	}));
+			for (auto &callback : base::take(entry.pending)) {
+				callback.done(entry);
+			}
+		};
+		std::make_shared<PeerRestorer>(
+			_session, std::move(peers), std::move(finish))->process();
+	});
+	_database->get(storageKey(key), [userId, loaded](QByteArray bytes) {
+		crl::async([userId, loaded, bytes = std::move(bytes)] {
+			auto result = LoadedHistory();
+			QDataStream stream(bytes);
+			if (!bytes.isEmpty() && readHeader(stream, userId)) {
+				auto payload = QByteArray();
+				auto rangeCount = qint32();
+				stream >> result.peers >> payload >> rangeCount;
+				for (auto i = 0; i < rangeCount && !stream.atEnd(); ++i) {
+					auto from = qint64();
+					auto till = qint64();
+					stream >> from >> till;
+					result.entry.ranges.push_back({ MsgId(from), MsgId(till) });
+				}
+				const auto parsed = decode<MTPmessages_Messages>(payload);
+				if (stream.status() == QDataStream::Ok && stream.atEnd()
+					&& parsed && parsed->type() == mtpc_messages_messagesSlice) {
+					const auto &data = parsed->c_messages_messagesSlice();
+					result.entry.count = data.vcount().v;
+					result.entry.topics = data.vtopics().v;
+					for (const auto &message : data.vmessages().v) {
+						if (cacheable(message)) {
+							result.entry.messages.emplace(IdFromMessage(message), message);
+						}
+					}
+				} else {
+					result = LoadedHistory();
+				}
+			}
+			loaded(std::move(result));
+		});
+	});
 }
 
 void ConversationCache::restoreHistoryMetadata(
@@ -778,6 +846,11 @@ void ConversationCache::saveHistories() {
 void ConversationCache::messageReceived(
 		const MTPMessage &message,
 		NewMessageType type) {
+	if (type == NewMessageType::Unread && _preloading
+		&& _preloading->key.peer == PeerFromMessage(message)) {
+		cancelPreload();
+		_preloadTimer.callOnce(250);
+	}
 	if (!_enabled || _restoring || !cacheable(message)) {
 		return;
 	}
@@ -822,6 +895,10 @@ void ConversationCache::cacheConfirmedMessage(FullMsgId id) {
 }
 
 void ConversationCache::messageEdited(const MTPMessage &message) {
+	if (_preloading && _preloading->key.peer == PeerFromMessage(message)) {
+		cancelPreload();
+		_preloadTimer.callOnce(250);
+	}
 	if (!_enabled || _restoring) {
 		return;
 	}
@@ -887,6 +964,10 @@ void ConversationCache::applyMessage(const MTPMessage &message, bool isNew) {
 }
 
 void ConversationCache::messagesDeleted(PeerId peer, const QVector<MTPint> &ids) {
+	if (_preloading && (!peer || _preloading->key.peer == peer)) {
+		cancelPreload();
+		_preloadTimer.callOnce(250);
+	}
 	if (!_enabled || _restoring) {
 		return;
 	}
@@ -937,6 +1018,10 @@ void ConversationCache::deleteMessages(HistoryCacheKey key, const QVector<MTPint
 }
 
 void ConversationCache::historyCleared(PeerId peer) {
+	if (_preloading && _preloading->key.peer == peer) {
+		cancelPreload();
+		_preloadTimer.callOnce(250);
+	}
 	_previewMessages.remove(peer);
 	if (!_enabled || _restoring) {
 		return;

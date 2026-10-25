@@ -1100,6 +1100,16 @@ void Histories::deleteMessages(const MessageIdsList &ids, bool revoke) {
 	}
 }
 
+bool Histories::hasHistoryRequests() const {
+	return !_cachedHistoryRequests.empty()
+		|| ranges::any_of(_states, [](const auto &pair) {
+			return !pair.second.postponed.empty()
+				|| ranges::any_of(pair.second.sent, [](const auto &request) {
+					return request.second.type == RequestType::History;
+				});
+		});
+}
+
 int Histories::sendRequest(
 		not_null<History*> history,
 		RequestType type,
@@ -1149,6 +1159,7 @@ int Histories::requestHistory(
 		const Extras::HistoryCacheQuery &query,
 		Fn<void(const MTPmessages_Messages&, const Extras::CachedHistorySlice*)> done,
 		Fn<void(const MTP::Error&)> fail) {
+	session().conversationCache().foregroundHistoryRequested(query.key);
 	const auto id = ++_requestAutoincrement;
 	_cachedHistoryRequests.emplace(id, 0);
 	session().conversationCache().getHistory(query, [=](
