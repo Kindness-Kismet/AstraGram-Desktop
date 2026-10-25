@@ -800,6 +800,10 @@ void ConversationCache::messageEdited(const MTPMessage &message) {
 void ConversationCache::applyMessage(const MTPMessage &message, bool isNew) {
 	withIndex([=] {
 		const auto peer = PeerFromMessage(message);
+		// 首条实时消息也要建立缓存，不能依赖先请求历史记录。
+		if (isNew && _historyKeys.emplace(HistoryCacheKey{ peer }).second) {
+			_indexDirty = true;
+		}
 		const auto keys = _historyKeys;
 		for (const auto key : keys) {
 			if (key.peer != peer) {
