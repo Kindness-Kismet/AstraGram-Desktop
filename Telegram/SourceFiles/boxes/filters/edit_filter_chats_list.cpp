@@ -15,6 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 #include "lang/lang_keys.h"
 #include "ui/widgets/labels.h"
+#include "ui/boxes/dialog_layout.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/painter.h"
 #include "main/main_app_config.h"
@@ -27,6 +28,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/ui/extras_userpic.h"
+#include "extras/features/window_material/window_material.h"
 
 
 namespace {
@@ -370,16 +372,26 @@ object_ptr<Ui::RpWidget> CreatePeerListSectionSubtitle(
 		st::windowFilterChatsSectionSubtitleHeight);
 
 	const auto raw = result.data();
+	const auto labelStyle = raw->lifetime().make_state<style::FlatLabel>(
+		st::windowFilterChatsSectionSubtitle);
+	ExtrasFeatures::WindowMaterial::watchSurface(raw);
 	raw->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
+		// 联系人列表先独立构造，绘制时才能确定所属弹窗。
+		const auto dialog = Ui::IsDialogContent(raw);
+		labelStyle->textFg = dialog ? st::windowSubTextFg : st::searchedBarFg;
+		if (dialog) {
+			return;
+		}
 		auto p = QPainter(raw);
-		p.fillRect(clip, st::searchedBarBg);
+		p.fillRect(clip, ExtrasFeatures::WindowMaterial::surfaceColor(
+			raw, st::searchedBarBg->c));
 	}, raw->lifetime());
 
 	const auto label = Ui::CreateChild<Ui::FlatLabel>(
 		raw,
 		std::move(text),
-		st::windowFilterChatsSectionSubtitle);
+		*labelStyle);
 	raw->widthValue(
 	) | rpl::on_next([=](int width) {
 		const auto padding = st::windowFilterChatsSectionSubtitlePadding;

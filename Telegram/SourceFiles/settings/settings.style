@@ -870,3 +870,27 @@ detailedSettingsButtonStyle: DetailedSettingsButtonStyle {
 }
 
 settingsToastStarIcon: icon {{ "toast/star", toastFg }};
+
+settingsServiceTitle: FlatLabel(defaultFlatLabel) {
+	minWidth: 1px;
+	textFg: settingsCardFg;
+	style: TextStyle(defaultTextStyle) {
+		font: font(20px semibold);
+	}
+}
+settingsServiceTitlePadding: margins(16px, 16px, 16px, 8px);
+settingsServiceAboutPadding: margins(16px, 0px, 16px, 16px);
+settingsServiceButton: RoundButton(defaultActiveButton) {
+	height: 38px;
+	textTop: 11px;
+	style: TextStyle(defaultTextStyle) {
+		font: font(13px semibold);
+	}
+}
+settingsServiceBalance: FlatLabel(settingsServiceTitle) {
+	style: TextStyle(defaultTextStyle) {
+		font: font(28px semibold);
+	}
+}
+settingsServiceBalancePadding: 16px;
+settingsServiceBalanceSkip: 8px;

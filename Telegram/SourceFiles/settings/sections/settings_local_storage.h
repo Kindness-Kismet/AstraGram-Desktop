@@ -33,6 +33,7 @@ public:
 	void showFinished() override;
 #ifdef _DEBUG
 	void setDebugChats(int count);
+	void setDebugUsage(std::array<int64, Extras::kMediaCacheCategoryCount> sizes);
 #endif
 
 private:

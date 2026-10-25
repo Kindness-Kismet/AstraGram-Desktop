@@ -1089,5 +1089,6 @@
   "UpdateSkip": "Skip this version",
   "UpdateNotesLoading": "Loading release notes…",
   "UpdateNotesUnavailable": "Release notes are unavailable.",
-  "UpdateNotesLink": "View full release notes on GitHub"
+  "UpdateNotesLink": "View full release notes on GitHub",
+  "StarsHistoryEmpty": "No transactions yet"
 }

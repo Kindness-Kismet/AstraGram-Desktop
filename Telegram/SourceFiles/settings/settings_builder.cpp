@@ -38,8 +38,7 @@ namespace Settings::Builder {
 namespace {
 
 [[nodiscard]] bool UseCardLayout(Type type) {
-	return (type != PremiumId())
-		&& (type != CreditsId());
+	return type != CurrencyId();
 }
 
 [[nodiscard]] QString ResolveTitle(rpl::producer<QString> title) {
@@ -79,7 +78,7 @@ BuildHelper::BuildHelper(
 	const auto isPaused = Window::PausedIn(
 		controller,
 		Window::GifPauseReason::Layer);
-	// 推广页有独立封面和自绘布局，不套用普通设置卡片。
+	// 货币页保留独立封面，其余页面使用公共卡片。
 	const auto cards = UseCardLayout(_meta.id);
 	const auto content = cards
 		? container.get()

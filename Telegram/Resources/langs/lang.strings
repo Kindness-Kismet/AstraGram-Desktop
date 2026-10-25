@@ -10019,3 +10019,5 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_ProfilePersonalChannel" = "Personal Channel";
 "extras_ProfileCommunity" = "Community";
 "extras_ProfileSecurityNotice" = "Client Security Notice";
+
+"extras_StarsHistoryEmpty" = "No transactions yet";

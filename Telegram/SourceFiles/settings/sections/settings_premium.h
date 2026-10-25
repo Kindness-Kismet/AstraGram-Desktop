@@ -95,6 +95,9 @@ struct SubscribeButtonArgs final {
 	const style::RoundButton &st,
 	rpl::producer<bool> locked);
 
+[[nodiscard]] not_null<Ui::RoundButton*> CreateFlatSubscribeButton(
+	SubscribeButtonArgs &&args);
+
 [[nodiscard]] not_null<Ui::GradientButton*> CreateSubscribeButton(
 	SubscribeButtonArgs &&args);
 

@@ -37,6 +37,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "settings/sections/settings_main.h"
 #include "settings/settings_builder.h"
+#include "settings/settings_card_layout.h"
 #include "settings/settings_common.h"
 #include "settings/settings_common_session.h"
 #include "settings/settings_credits_graphics.h"
@@ -120,6 +121,7 @@ public:
 
 private:
 	void setupContent();
+	void setupStarsContent();
 	void setupSwipeBack();
 	void setupHistory(not_null<Ui::VerticalLayout*> container);
 	void setupSubscriptions(not_null<Ui::VerticalLayout*> container);
@@ -133,9 +135,6 @@ private:
 
 	QWidget *_parent = nullptr;
 
-	QImage _star;
-	QImage _balanceStar;
-
 	base::unique_qptr<Ui::FadeWrap<Ui::IconButton>> _back;
 	base::unique_qptr<Ui::IconButton> _close;
 	rpl::variable<bool> _backToggles;
@@ -144,7 +143,6 @@ private:
 
 	rpl::event_stream<> _showBack;
 	rpl::event_stream<> _showFinished;
-	rpl::variable<QString> _buttonText;
 
 	QPointer<Ui::SettingsButton> _statsButton;
 	QPointer<Ui::SettingsButton> _giftButton;
@@ -157,16 +155,12 @@ Credits::Credits(
 	not_null<Window::SessionController*> controller,
 	CreditsType type)
 : Section(parent, controller)
-, _creditsType(type)
-, _star(Ui::GenerateStars(st::creditsTopupButton.height, 1))
-, _balanceStar((_creditsType == CreditsType::Ton)
-		? Ui::Earn::IconCurrencyTwoTone(
-			st::tonFieldIconSize,
-			st::currencyFg->c)
-		: Ui::GenerateStars(st::creditsBalanceStarHeight, 1)) {
+, _creditsType(type) {
 	controller->session().giftBoxStickersPacks().tonLoad();
 	setupContent();
-	setupSwipeBack();
+	if (_creditsType == CreditsType::Ton) {
+		setupSwipeBack();
+	}
 
 	controller->session().premiumPossibleValue(
 	) | rpl::on_next([=](bool premiumPossible) {
@@ -184,7 +178,7 @@ rpl::producer<QString> Credits::title() {
 }
 
 bool Credits::hasFlexibleTopBar() const {
-	return true;
+	return _creditsType == CreditsType::Ton;
 }
 
 rpl::producer<> Credits::sectionShowBack() {
@@ -216,16 +210,13 @@ void Credits::setupSubscriptions(not_null<Ui::VerticalLayout*> container) {
 		if (fullSlice.subscriptions.empty()) {
 			return;
 		}
-		Ui::AddSkip(inner);
-		Ui::AddSubsectionTitle(
-			inner,
-			tr::lng_credits_subscription_section(),
-			{ 0, 0, 0, -st::settingsPremiumOptionsPadding.bottom() });
+		AddCardTitle(inner, tr::lng_credits_subscription_section());
+		const auto group = AddCardGroup(inner);
 
-		const auto fullWrap = inner->add(
+		const auto fullWrap = group->add(
 			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-				inner,
-				object_ptr<Ui::VerticalLayout>(inner)));
+				group,
+				object_ptr<Ui::VerticalLayout>(group)));
 
 		const auto window = controller()->parentController();
 		const auto entryClicked = [=](
@@ -244,10 +235,6 @@ void Credits::setupSubscriptions(not_null<Ui::VerticalLayout*> container) {
 			true,
 			true,
 			true);
-
-		Ui::AddSkip(inner);
-		Ui::AddSkip(inner);
-		Ui::AddDivider(inner);
 
 		inner->resizeToWidth(container->width());
 	};
@@ -293,6 +280,12 @@ void Credits::setupHistory(not_null<Ui::VerticalLayout*> container) {
 			const Data::CreditsStatusSlice &outSlice) {
 		const auto inner = content;
 		if (fullSlice.list.empty()) {
+			if (!currency) {
+				AddCardTitle(inner, tr::lng_credits_summary_history_tab_full());
+				const auto group = AddCardGroup(inner);
+				Ui::AddSkip(group, st::settingsCardRowInset);
+				AddCardDescription(group, tr::extras_StarsHistoryEmpty());
+			}
 			return;
 		}
 		const auto hasOneTab = inSlice.list.empty() && outSlice.list.empty();
@@ -304,7 +297,9 @@ void Credits::setupHistory(not_null<Ui::VerticalLayout*> container) {
 			tr::now);
 		const auto outTabText = tr::lng_credits_summary_history_tab_out(
 			tr::now);
-		if (hasOneTab) {
+		if (!currency) {
+			AddCardTitle(inner, tr::lng_credits_summary_history_tab_full());
+		} else if (hasOneTab) {
 			Ui::AddSubsectionTitle(
 				inner,
 				tr::lng_credits_summary_history_tab_full(),
@@ -340,8 +335,12 @@ void Credits::setupHistory(not_null<Ui::VerticalLayout*> container) {
 				+ rect::m::sum::h(st::creditsHistoryTabsSliderPadding));
 		}
 
-		const auto tabs = inner->add(
-			object_ptr<Ui::SlidingTabs>(inner, 3, st::windowBg));
+		const auto group = currency
+			? not_null<Ui::VerticalLayout*>(inner)
+			: AddCardGroup(inner);
+		const auto tabs = group->add(
+			object_ptr<Ui::SlidingTabs>(group, 3,
+				currency ? st::windowBg : st::transparent));
 		const auto fullTab = tabs->tab(0);
 		const auto inTab = tabs->tab(1);
 		const auto outTab = tabs->tab(2);
@@ -469,7 +468,85 @@ void Credits::setupSwipeBack() {
 	});
 }
 
+void Credits::setupStarsContent() {
+	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
+	_content = content;
+	const auto session = &controller()->session();
+	session->credits().load(true);
+	const SectionBuildMethod buildMethod = [=](
+			not_null<Ui::VerticalLayout*> container,
+			not_null<Window::SessionController*> controller,
+			Fn<void(Type)> showOther,
+			rpl::producer<> showFinished) {
+		auto builder = SectionBuilder(WidgetContext{
+			.container = container,
+			.controller = controller,
+			.showOther = std::move(showOther),
+			.isPaused = Window::PausedIn(controller, Window::GifPauseReason::Layer),
+		});
+		builder.addPageContent([=](const WidgetContext &ctx) {
+			const auto group = AddCardGroup(ctx.container);
+			const auto summary = group->add(object_ptr<Ui::RpWidget>(group));
+			summary->setObjectName(u"stars/overview"_q);
+			const auto title = Ui::CreateChild<Ui::FlatLabel>(summary,
+				tr::lng_credits_summary_balance(), st::settingsCardHint);
+			const auto amount = Ui::CreateChild<Ui::FlatLabel>(summary,
+				session->credits().balanceValue() | rpl::map([](CreditsAmount value) {
+					return Lang::FormatCreditsAmountDecimal(value);
+				}), st::settingsServiceBalance);
+			const auto buy = summary->lifetime().make_state<BuyStarsHandler>();
+			const auto button = Ui::CreateChild<Ui::RoundButton>(summary,
+				rpl::conditional(buy->loadingValue(), rpl::single(QString()),
+					tr::lng_credits_topup_button(lt_emoji, rpl::single(QString())
+					) | rpl::map([](QString text) { return text.trimmed(); })),
+				st::settingsServiceButton);
+			button->setObjectName(u"stars/topup"_q);
+			button->setFullWidth(button->width());
+			button->setClickedCallback(buy->handler(controller->uiShow()));
+			using namespace Info::Statistics;
+			const auto loading = InfiniteRadialAnimationWidget(button, button->height() / 2);
+			AddChildToWidgetCenter(button, loading);
+			loading->showOn(buy->loadingValue());
+			rpl::combine(summary->widthValue(), title->heightValue(),
+				amount->sizeValue(), button->sizeValue(), amount->naturalWidthValue()
+			) | rpl::on_next([=](int width, int titleHeight, QSize, QSize size, int naturalWidth) {
+				const auto padding = st::settingsServiceBalancePadding;
+				const auto skip = st::settingsServiceBalanceSkip;
+				const auto separate = width < naturalWidth
+					+ size.width() + padding * 2 + skip;
+				amount->resizeToNaturalWidth(std::max(width - padding * 2, 1));
+				const auto amountHeight = amount->height();
+				title->moveToLeft(padding, padding);
+				amount->moveToLeft(padding, padding + titleHeight + skip);
+				const auto textBottom = padding + titleHeight + skip + amountHeight;
+				if (separate) {
+					button->moveToLeft(padding, textBottom + skip);
+				} else {
+					button->moveToRight(padding,
+						padding + (titleHeight + skip + amountHeight - size.height()) / 2);
+				}
+				summary->resize(width, separate
+					? textBottom + skip + size.height() + padding
+					: textBottom + padding);
+			}, summary->lifetime());
+			group->add(object_ptr<Ui::FlatLabel>(group,
+				tr::lng_credits_summary_about(), st::settingsCardHint),
+				st::settingsServiceAboutPadding);
+		});
+		BuildCreditsSectionContent(builder, false,
+			&_statsButton, &_giftButton, &_earnButton,
+			[=](not_null<Ui::VerticalLayout*> inner) { setupSubscriptions(inner); },
+			[=](not_null<Ui::VerticalLayout*> inner) { setupHistory(inner); });
+	};
+	build(content, buildMethod);
+	Ui::ResizeFitChild(this, content);
+}
+
 void Credits::setupContent() {
+	if (_creditsType == CreditsType::Stars) {
+		setupStarsContent();
+		return;
+	}
 	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
 	_content = content;
 	const auto isCurrency = _creditsType == CreditsType::Ton;
@@ -639,6 +716,7 @@ void Credits::setupContent() {
 			.controller = controller,
 			.showOther = std::move(showOther),
 			.isPaused = isPaused,
+			.cardLayout = false,
 		});
 
 		BuildCreditsSectionContent(
@@ -658,6 +736,9 @@ void Credits::setupContent() {
 
 base::weak_qptr<Ui::RpWidget> Credits::createPinnedToTop(
 		not_null<QWidget*> parent) {
+	if (_creditsType == CreditsType::Stars) {
+		return nullptr;
+	}
 	_parent = parent;
 	const auto isCurrency = _creditsType == CreditsType::Ton;
 
@@ -1025,17 +1106,13 @@ void BuildCreditsSectionContent(
 	}
 
 	if (!isCurrency) {
-		builder.add([=](const WidgetContext &ctx) {
-			Ui::AddSkip(ctx.container, st::lineWidth * 4);
-			Ui::AddDivider(ctx.container);
+		builder.addPageContent([=](const WidgetContext &ctx) {
 			setupSubscriptions(ctx.container);
-			return SectionBuilder::WidgetToAdd{};
 		});
 	}
 
-	builder.add([=](const WidgetContext &ctx) {
+	builder.addPageContent([=](const WidgetContext &ctx) {
 		setupHistory(ctx.container);
-		return SectionBuilder::WidgetToAdd{};
 	});
 }
 
@@ -1061,7 +1138,7 @@ struct SectionFactory<Credits> : AbstractSectionFactory {
 		return object_ptr<Credits>(parent, controller, CreditsType::Stars);
 	}
 	bool hasCustomTopBar() const final override {
-		return true;
+		return false;
 	}
 
 	[[nodiscard]] static const std::shared_ptr<SectionFactory> &Instance() {

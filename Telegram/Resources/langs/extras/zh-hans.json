@@ -1249,5 +1249,6 @@
   "UpdateSkip": "本次忽略",
   "UpdateNotesLoading": "正在获取更新说明…",
   "UpdateNotesUnavailable": "没有获取到更新说明。",
-  "UpdateNotesLink": "在 GitHub 查看完整说明"
+  "UpdateNotesLink": "在 GitHub 查看完整说明",
+  "StarsHistoryEmpty": "暂无交易记录"
 }

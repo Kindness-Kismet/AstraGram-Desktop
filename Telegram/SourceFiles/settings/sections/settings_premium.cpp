@@ -24,23 +24,18 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/stickers/data_stickers.h"
 #include "history/view/media/history_view_sticker.h" // EmojiSize.
 #include "history/view/media/history_view_sticker_player.h"
-#include "info/info_wrap_widget.h" // Info::Wrap.
 #include "info/profile/info_profile_values.h"
-#include "info/settings/info_settings_widget.h" // SectionCustomTopBarData.
 #include "lang/lang_keys.h"
 #include "main/main_app_config.h"
 #include "main/main_session.h"
 #include "settings/sections/settings_main.h"
 #include "settings/settings_builder.h"
+#include "settings/settings_card_layout.h"
 #include "settings/settings_common_session.h"
 #include "ui/abstract_button.h"
 #include "ui/basic_click_handlers.h"
 #include "ui/effects/gradient.h"
 #include "ui/effects/premium_graphics.h"
-#include "ui/effects/premium_stars_colored.h"
-#include "ui/effects/premium_top_bar.h"
-#include "ui/controls/swipe_handler.h"
-#include "ui/controls/swipe_handler_data.h"
 #include "ui/layers/generic_box.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_utilities.h"
@@ -48,11 +43,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/checkbox.h" // Ui::RadiobuttonGroup.
 #include "ui/widgets/gradient_round_button.h"
 #include "ui/widgets/labels.h"
-#include "ui/wrap/fade_wrap.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
-#include "ui/new_badges.h"
 #include "ui/painter.h"
 #include "ui/power_saving.h"
 #include "ui/vertical_list.h"
@@ -74,13 +67,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "extras/extras_settings.h"
 
-
 namespace Settings {
 namespace {
 
 using namespace Builder;
-
-using SectionCustomTopBarData = Info::Settings::SectionCustomTopBarData;
 
 [[nodiscard]] Data::PremiumSubscriptionOptions SubscriptionOptionsForRows(
 		Data::PremiumSubscriptionOptions result) {
@@ -110,11 +100,6 @@ using SectionCustomTopBarData = Info::Settings::SectionCustomTopBarData;
 		}
 	}
 	return result;
-}
-
-[[nodiscard]] int TopTransitionSkip() {
-	return (st::settingsButton.padding.top()
-		+ st::settingsPremiumRowTitlePadding.top()) / 2;
 }
 
 namespace Ref {
@@ -226,12 +211,10 @@ struct Entry {
 	rpl::producer<QString> title;
 	rpl::producer<QString> description;
 	PremiumFeature section = PremiumFeature::DoubleLimits;
-	bool newBadge = false;
 };
 
 struct PremiumState {
 	QString ref;
-	Fn<void(bool)> setPaused;
 	std::shared_ptr<Ui::RadiobuttonGroup> radioGroup;
 	base::flat_map<QString, QPointer<Ui::AbstractButton>> featureButtons;
 
@@ -484,7 +467,6 @@ using Order = std::vector<QString>;
 				tr::lng_premium_summary_subtitle_ai_compose(),
 				tr::lng_premium_summary_about_ai_compose(),
 				PremiumFeature::AiCompose,
-				true,
 			},
 		},
 		{
@@ -494,7 +476,6 @@ using Order = std::vector<QString>;
 				tr::lng_premium_summary_subtitle_rich_formatting(),
 				tr::lng_premium_summary_about_rich_formatting(),
 				PremiumFeature::RichFormatting,
-				true,
 			},
 		},
 	};
@@ -644,366 +625,6 @@ void EmojiStatusTopBar::paint(QPainter &p) {
 	}
 }
 
-enum class TopBarWithStickerType {
-	EmojiStatus,
-	PremiumGift,
-};
-
-struct TopBarWithStickerArgs {
-	rpl::producer<DocumentData*> stickerValue;
-	rpl::producer<QString> nameValue;
-	rpl::producer<TextWithEntities> aboutValue;
-	TopBarWithStickerType type = TopBarWithStickerType::EmojiStatus;
-};
-
-class TopBarWithSticker final : public Ui::Premium::TopBarAbstract {
-public:
-	TopBarWithSticker(
-		not_null<QWidget*> parent,
-		not_null<Window::SessionController*> controller,
-		not_null<PeerData*> peer,
-		rpl::producer<> showFinished);
-	TopBarWithSticker(
-		not_null<QWidget*> parent,
-		not_null<Window::SessionController*> controller,
-		TopBarWithStickerArgs args,
-		rpl::producer<> showFinished);
-
-	void setPaused(bool paused) override;
-	void setTextPosition(int x, int y) override;
-
-	rpl::producer<int> additionalHeight() const override;
-
-protected:
-	void paintEvent(QPaintEvent *e) override;
-	void resizeEvent(QResizeEvent *e) override;
-
-private:
-	void updateTitle(
-		DocumentData *document,
-		const TextWithEntities &name,
-		not_null<Window::SessionController*> controller);
-	void updateAbout(
-		DocumentData *document,
-		const TextWithEntities &about) const;
-
-	TopBarWithStickerType _type = TopBarWithStickerType::EmojiStatus;
-	object_ptr<Ui::RpWidget> _content;
-	object_ptr<Ui::FlatLabel> _title;
-	object_ptr<Ui::FlatLabel> _about;
-	Ui::Premium::ColoredMiniStars _ministars;
-
-	struct {
-		object_ptr<Ui::RpWidget> widget;
-		Ui::Text::String text;
-		Ui::Animations::Simple animation;
-		bool shown = false;
-		QPoint position;
-	} _smallTop;
-
-	std::unique_ptr<EmojiStatusTopBar> _emojiStatus;
-	QImage _imageStar;
-
-	QRectF _starRect;
-
-};
-
-TopBarWithSticker::TopBarWithSticker(
-	not_null<QWidget*> parent,
-	not_null<Window::SessionController*> controller,
-	not_null<PeerData*> peer,
-	rpl::producer<> showFinished)
-: TopBarWithSticker(parent, controller, {
-	.stickerValue = Info::Profile::EmojiStatusIdValue(
-		peer
-	) | rpl::map([=](EmojiStatusId id) -> DocumentData* {
-		const auto documentId = id.collectible
-			? id.collectible->documentId
-			: id.documentId;
-		const auto document = documentId
-			? controller->session().data().document(documentId).get()
-			: nullptr;
-		return (document && document->sticker()) ? document : nullptr;
-	}),
-	.nameValue = Info::Profile::NameValue(peer),
-	.type = TopBarWithStickerType::EmojiStatus,
-}, std::move(showFinished)) {
-}
-
-TopBarWithSticker::TopBarWithSticker(
-	not_null<QWidget*> parent,
-	not_null<Window::SessionController*> controller,
-	TopBarWithStickerArgs args,
-	rpl::producer<> showFinished)
-: TopBarAbstract(parent, st::userPremiumCover)
-, _type(args.type)
-, _content(this)
-, _title(_content, st::settingsPremiumUserTitle)
-, _about(_content, st::userPremiumCover.about)
-, _ministars(_content, true)
-, _smallTop({
-	.widget = object_ptr<Ui::RpWidget>(this),
-	.text = Ui::Text::String(
-		st::boxTitle.style,
-		tr::lng_premium_summary_title(tr::now)),
-}) {
-	_starRect = TopBarAbstract::starRect(1., 1.);
-
-	if (_type == TopBarWithStickerType::PremiumGift) {
-		_ministars.setColorOverride(Ui::Premium::CreditsIconGradientStops());
-	}
-
-	rpl::single() | rpl::then(
-		style::PaletteChanged()
-	) | rpl::on_next([=] {
-		TopBarAbstract::computeIsDark();
-		update();
-	}, lifetime());
-
-	rpl::combine(
-		(args.stickerValue
-			? std::move(args.stickerValue)
-			: rpl::single((DocumentData*)nullptr)),
-		(args.nameValue
-			? std::move(args.nameValue)
-			: rpl::single(QString())),
-		(args.aboutValue
-			? std::move(args.aboutValue)
-			: rpl::single(TextWithEntities()))
-	) | rpl::on_next([=](
-			DocumentData *document,
-			const QString &name,
-			const TextWithEntities &about) {
-		if (document) {
-			_emojiStatus = std::make_unique<EmojiStatusTopBar>(
-				document,
-				[=](QRect r) { _content->update(std::move(r)); },
-				HistoryView::Sticker::EmojiSize());
-			_imageStar = QImage();
-		} else {
-			_emojiStatus = nullptr;
-			_imageStar = Ui::Premium::GenerateStarForLightTopBar(_starRect);
-		}
-
-		updateTitle(document, { name }, controller);
-		updateAbout(document, about);
-
-		auto event = QResizeEvent(size(), size());
-		resizeEvent(&event);
-		update();
-	}, lifetime());
-
-	_title->naturalWidthValue() | rpl::on_next([=] {
-		_title->resizeToNaturalWidth(st::settingsPremiumUserTitle.minWidth);
-	}, _title->lifetime());
-
-	_about->naturalWidthValue() | rpl::on_next([=] {
-		_about->resizeToNaturalWidth(st::userPremiumCover.about.minWidth);
-	}, _about->lifetime());
-
-	rpl::combine(
-		_title->sizeValue(),
-		_about->sizeValue(),
-		_content->sizeValue()
-	) | rpl::on_next([=](
-			const QSize &titleSize,
-			const QSize &aboutSize,
-			const QSize &size) {
-		const auto rect = TopBarAbstract::starRect(1., 1.);
-		const auto &padding = st::settingsPremiumUserTitlePadding;
-		_title->moveToLeft(
-			(size.width() - titleSize.width()) / 2,
-			rect.top() + rect.height() + padding.top());
-		_about->moveToLeft(
-			(size.width() - aboutSize.width()) / 2,
-			_title->y() + titleSize.height() + padding.bottom());
-
-		const auto aboutBottom = _about->y() + _about->height();
-		const auto height = (aboutBottom > st::settingsPremiumUserHeight)
-			? aboutBottom + padding.bottom()
-			: st::settingsPremiumUserHeight;
-		{
-			const auto was = maximumHeight();
-			const auto now = height;
-			if (was != now) {
-				setMaximumHeight(now);
-				if (was == size.height()) {
-					resize(size.width(), now);
-				}
-			}
-		}
-
-		_content->resize(size.width(), maximumHeight());
-	}, lifetime());
-
-	rpl::combine(
-		rpl::single(
-			false
-		) | rpl::then(std::move(showFinished) | rpl::map_to(true)),
-		sizeValue()
-	) | rpl::on_next([=](bool showFinished, const QSize &size) {
-		_content->resize(size.width(), maximumHeight());
-		const auto skip = TopTransitionSkip();
-		_content->moveToLeft(0, size.height() - _content->height() - skip);
-
-		_smallTop.widget->resize(size.width(), minimumHeight());
-		const auto shown = (minimumHeight() * 2 > size.height());
-		if (_smallTop.shown != shown) {
-			_smallTop.shown = shown;
-			if (!showFinished) {
-				_smallTop.widget->update();
-			} else {
-				_smallTop.animation.start(
-					[=] { _smallTop.widget->update(); },
-					_smallTop.shown ? 0. : 1.,
-					_smallTop.shown ? 1. : 0.,
-					st::infoTopBarDuration);
-			}
-		}
-	}, lifetime());
-
-	_smallTop.widget->paintRequest(
-	) | rpl::on_next([=] {
-		Painter p(_smallTop.widget);
-
-		p.setOpacity(_smallTop.animation.value(_smallTop.shown ? 1. : 0.));
-		TopBarAbstract::paintEdges(p);
-
-		p.setPen(st::boxTitleFg);
-		_smallTop.text.drawLeft(
-			p,
-			_smallTop.position.x(),
-			_smallTop.position.y(),
-			width(),
-			width());
-	}, lifetime());
-
-	_content->paintRequest(
-	) | rpl::on_next([=] {
-		auto p = QPainter(_content);
-
-		_ministars.paint(p);
-
-		if (_emojiStatus) {
-			_emojiStatus->paint(p);
-		} else if (!_imageStar.isNull()) {
-			p.drawImage(_starRect.topLeft(), _imageStar);
-		}
-	}, lifetime());
-}
-
-void TopBarWithSticker::updateTitle(
-		DocumentData *document,
-		const TextWithEntities &name,
-		not_null<Window::SessionController*> controller) {
-	if (_type == TopBarWithStickerType::PremiumGift) {
-		return _title->setMarkedText(name);
-	} else if (!document) {
-		return _title->setMarkedText(
-			tr::lng_premium_summary_user_title(
-				tr::now,
-				lt_user,
-				std::move(name),
-				tr::marked));
-	}
-	const auto stickerInfo = document->sticker();
-	if (!stickerInfo) {
-		return;
-	}
-	const auto owner = &document->owner();
-	const auto &sets = owner->stickers().sets();
-	const auto setId = stickerInfo->set.id;
-	const auto it = sets.find(setId);
-	if (it == sets.cend()) {
-		return;
-	}
-	const auto set = it->second.get();
-	const auto coloredId = owner->customEmojiManager().coloredSetId();
-
-	const auto text = (set->thumbnailDocumentId ? QChar('0') : QChar())
-		+ set->title;
-	const auto linkIndex = 1;
-	const auto entityEmojiData = Data::SerializeCustomEmojiId(
-		set->thumbnailDocumentId);
-	const auto entities = EntitiesInText{
-		{ EntityType::CustomEmoji, 0, 1, entityEmojiData },
-		tr::link(text, linkIndex).entities.front(),
-	};
-	auto title = (setId == coloredId)
-		? tr::lng_premium_emoji_status_title_colored(
-			tr::now,
-			lt_user,
-			std::move(name),
-			tr::marked)
-		: tr::lng_premium_emoji_status_title(
-			tr::now,
-			lt_user,
-			std::move(name),
-			lt_link,
-			{ .text = text, .entities = entities, },
-			tr::marked);
-	_title->setMarkedText(
-		std::move(title),
-		Core::TextContext({ .session = &controller->session() }));
-	auto link = std::make_shared<LambdaClickHandler>([=,
-			stickerSetIdentifier = stickerInfo->set] {
-		setPaused(true);
-		const auto box = controller->show(Box<StickerSetBox>(
-			controller->uiShow(),
-			stickerSetIdentifier,
-			Data::StickersType::Emoji));
-
-		box->boxClosing(
-		) | rpl::on_next(crl::guard(this, [=] {
-			setPaused(false);
-		}), box->lifetime());
-	});
-	_title->setLink(linkIndex, std::move(link));
-}
-
-void TopBarWithSticker::updateAbout(
-		DocumentData *document,
-		const TextWithEntities &about) const {
-	_about->setMarkedText((_type == TopBarWithStickerType::PremiumGift)
-		? about
-		: (document
-			? tr::lng_premium_emoji_status_about
-			: tr::lng_premium_summary_user_about)(
-				tr::now,
-				tr::rich));
-}
-
-void TopBarWithSticker::setPaused(bool paused) {
-	_ministars.setPaused(paused);
-	if (_emojiStatus) {
-		_emojiStatus->setPaused(paused);
-	}
-}
-
-void TopBarWithSticker::setTextPosition(int x, int y) {
-	_smallTop.position = { x, y };
-}
-
-rpl::producer<int> TopBarWithSticker::additionalHeight() const {
-	return rpl::never<int>();
-}
-
-void TopBarWithSticker::paintEvent(QPaintEvent *e) {
-	auto p = QPainter(this);
-
-	TopBarAbstract::paintEdges(p);
-}
-
-void TopBarWithSticker::resizeEvent(QResizeEvent *e) {
-	_starRect = TopBarAbstract::starRect(1., 1.);
-
-	_ministars.setCenter(_starRect.toRect());
-
-	if (_emojiStatus) {
-		_emojiStatus->setCenter(_starRect.center());
-	}
-}
-
 [[nodiscard]] QString GetFeatureTitle(const QString &key) {
 	if (key == u"saved_tags"_q) {
 		return tr::lng_premium_summary_subtitle_tags_for_messages(tr::now);
@@ -1084,55 +705,73 @@ void SetupSubscriptionOptions(
 		not_null<Window::SessionController*> controller,
 		const QString &ref,
 		std::shared_ptr<Ui::RadiobuttonGroup> radioGroup) {
-	const auto isEmojiStatus = (!!Ref::EmojiStatus::Parse(ref));
-	const auto isGift = (!!Ref::Gift::Parse(ref));
-
-	const auto options = container->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			container,
-			object_ptr<Ui::VerticalLayout>(container)));
-	const auto skip = container->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			container,
-			object_ptr<Ui::VerticalLayout>(container)));
-	const auto content = options->entity();
-
-	Ui::AddSkip(content, st::settingsPremiumOptionsPadding.top());
-
-	const auto apiPremium = &controller->session().api().premium();
-	Ui::Premium::AddGiftOptions(
-		content,
-		radioGroup,
-		SubscriptionOptionsForRows(apiPremium->subscriptionOptions()),
-		st::premiumSubscriptionOption,
-		true);
-
-	Ui::AddSkip(content, st::settingsPremiumOptionsPadding.bottom());
-	Ui::AddDivider(content);
-
-	const auto lastSkip = TopTransitionSkip() * (isEmojiStatus ? 1 : 2);
-
-	Ui::AddSkip(content, lastSkip - st::defaultVerticalListSkip);
-	Ui::AddSkip(skip->entity(), lastSkip);
-
-	if (isEmojiStatus || isGift) {
-		options->toggle(false, anim::type::instant);
-		skip->toggle(true, anim::type::instant);
+	if (Ref::EmojiStatus::Parse(ref) || Ref::Gift::Parse(ref)) {
 		return;
 	}
-	auto toggleOn = rpl::combine(
+	const auto options = container->add(
+		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+			container, object_ptr<Ui::VerticalLayout>(container)));
+	const auto apiPremium = &controller->session().api().premium();
+	apiPremium->statusTextValue() | rpl::on_next([=] {
+		const auto outer = options->entity();
+		while (outer->count()) {
+			delete outer->widgetAt(0);
+		}
+		const auto plans = SubscriptionOptionsForRows(apiPremium->subscriptionOptions());
+		if (!plans.empty()
+			&& (!radioGroup->hasValue() || radioGroup->current() >= int(plans.size()))) {
+			radioGroup->setValue(0);
+		}
+		if (plans.size() < 2) {
+			return;
+		}
+		const auto content = AddCardGroup(outer);
+		for (auto i = 0; i != int(plans.size()); ++i) {
+			const auto &plan = plans[i];
+			const auto button = AddButtonWithIcon(content,
+				rpl::single(plan.duration), st::settingsButtonNoIcon, {});
+			button->setObjectName(u"premium/option/"_q + QString::number(i));
+			auto padding = button->st().padding;
+			padding.setLeft(st::settingsCardRowInset + st::defaultRadio.diameter
+				+ st::settingsCardTextGap);
+			button->setPaddingOverride(padding);
+			const auto radio = Ui::CreateChild<Ui::Radiobutton>(button,
+				radioGroup, i, QString(), st::settingsSendType);
+			radio->setObjectName(u"premium/plan/"_q + QString::number(i));
+			radio->setAccessibleName(plan.duration);
+			radio->setAttribute(Qt::WA_TransparentForMouseEvents);
+			button->setClickedCallback([=] { radioGroup->setValue(i); });
+			const auto description = plan.costPerYear
+				+ (plan.costPerMonth.isEmpty() ? QString() : u" · "_q + plan.costPerMonth)
+				+ (plan.discount.isEmpty() ? QString() : u" · "_q + plan.discount);
+			const auto label = Ui::CreateChild<Ui::FlatLabel>(button,
+				description, st::settingsCardRowDescription);
+			label->setAttribute(Qt::WA_TransparentForMouseEvents);
+			button->widthValue() | rpl::on_next([=](int width) {
+				label->resizeToWidth(std::max(width - padding.left() - padding.right(), 1));
+				label->moveToLeft(padding.left(), st::settingsCardDescriptionTop);
+			}, label->lifetime());
+			label->heightValue() | rpl::on_next([=](int height) mutable {
+				padding.setBottom(st::settingsCardDescriptionTop + height
+					+ st::settingsCardRowInset - padding.top() - button->st().height);
+				button->setPaddingOverride(padding);
+			}, label->lifetime());
+			button->heightValue() | rpl::on_next([=](int height) {
+				radio->moveToLeft(st::settingsCardRowInset,
+					(height - radio->height()) / 2);
+			}, radio->lifetime());
+			radio->show();
+			label->show();
+		}
+	}, options->lifetime());
+	options->toggleOn(rpl::combine(
 		Data::AmPremiumValue(&controller->session()),
-		apiPremium->statusTextValue(
-		) | rpl::map([=] {
+		apiPremium->statusTextValue() | rpl::map([=] {
 			return apiPremium->subscriptionOptions().size() < 2;
 		})
-	) | rpl::map([=](bool premium, bool noOptions) {
+	) | rpl::map([](bool premium, bool noOptions) {
 		return !premium && !noOptions;
-	});
-	options->toggleOn(rpl::duplicate(toggleOn), anim::type::instant);
-	skip->toggleOn(std::move(
-		toggleOn
-	) | rpl::map([](bool value) { return !value; }), anim::type::instant);
+	}), anim::type::instant);
 }
 
 void AddSummaryPremium(
@@ -1141,159 +780,27 @@ void AddSummaryPremium(
 		const QString &ref,
 		Fn<void(PremiumFeature)> buttonCallback,
 		std::shared_ptr<PremiumState> state) {
-	const auto &stDefault = st::settingsButton;
-	const auto &stLabel = st::defaultFlatLabel;
-	const auto iconSize = st::settingsPremiumIconDouble.size();
-	const auto &titlePadding = st::settingsPremiumRowTitlePadding;
-	const auto &descriptionPadding = st::settingsPremiumRowAboutPadding;
-
 	auto entryMap = EntryMap();
-	auto iconContainers = std::vector<Ui::AbstractButton*>();
-	iconContainers.reserve(int(entryMap.size()));
-
-	const auto addRow = [&](const QString &key, Entry &entry) {
-		const auto labelAscent = stLabel.style.font->ascent;
-		const auto button = Ui::CreateChild<Ui::SettingsButton>(
-			content.get(),
-			rpl::single(QString()));
-
-		const auto label = content->add(
-			object_ptr<Ui::FlatLabel>(
-				content,
-				std::move(entry.title) | rpl::map(tr::bold),
-				stLabel),
-			titlePadding);
-		label->setAttribute(Qt::WA_TransparentForMouseEvents);
-		const auto description = content->add(
-			object_ptr<Ui::FlatLabel>(
-				content,
-				std::move(entry.description),
-				st::boxDividerLabel),
-			descriptionPadding);
-		description->setAttribute(Qt::WA_TransparentForMouseEvents);
-
-		if (entry.newBadge) {
-			Ui::NewBadge::AddAfterLabel(content, label);
+	const auto order = controller->session().appConfig().get<Order>(
+		"premium_promo_order", FallbackOrder());
+	for (const auto &key : order) {
+		const auto i = entryMap.find(key);
+		if (i == entryMap.end()) {
+			continue;
 		}
-		const auto dummy = Ui::CreateChild<Ui::AbstractButton>(content.get());
-		dummy->setAttribute(Qt::WA_TransparentForMouseEvents);
-
-		content->sizeValue(
-		) | rpl::on_next([=](const QSize &s) {
-			dummy->resize(s.width(), iconSize.height());
-		}, dummy->lifetime());
-
-		label->geometryValue(
-		) | rpl::on_next([=](const QRect &r) {
-			dummy->moveToLeft(0, r.y() + (r.height() - labelAscent));
-		}, dummy->lifetime());
-
-		rpl::combine(
-			content->widthValue(),
-			label->heightValue(),
-			description->heightValue()
-		) | rpl::on_next([=,
-			topPadding = titlePadding,
-			bottomPadding = descriptionPadding](
-				int width,
-				int topHeight,
-				int bottomHeight) {
-			button->resize(
-				width,
-				topPadding.top()
-					+ topHeight
-					+ topPadding.bottom()
-					+ bottomPadding.top()
-					+ bottomHeight
-					+ bottomPadding.bottom());
-		}, button->lifetime());
-		label->topValue(
-		) | rpl::on_next([=, padding = titlePadding.top()](int top) {
-			button->moveToLeft(0, top - padding);
-		}, button->lifetime());
-		const auto arrow = Ui::CreateChild<Ui::IconButton>(
-			button,
-			st::backButton);
-		arrow->setIconOverride(
-			&st::settingsPremiumArrow,
-			&st::settingsPremiumArrowOver);
-		arrow->setAttribute(Qt::WA_TransparentForMouseEvents);
-		button->sizeValue(
-		) | rpl::on_next([=](const QSize &s) {
-			const auto &point = st::settingsPremiumArrowShift;
-			arrow->moveToRight(
-				-point.x(),
-				point.y() + (s.height() - arrow->height()) / 2);
-		}, arrow->lifetime());
-
-		const auto section = entry.section;
-		button->setClickedCallback([=] { buttonCallback(section); });
-
+		auto &entry = i->second;
+		const auto button = AddButtonWithIcon(content,
+			std::move(entry.title), st::settingsButton, { .icon = entry.icon });
+		button->setObjectName(u"premium/"_q + key);
+		AddSectionRowDetails(button, std::move(entry.description));
+		button->setClickedCallback([=, feature = entry.section] {
+			buttonCallback(feature);
+		});
 		if (state) {
 			state->featureButtons[key] = button;
 		}
-
-		iconContainers.push_back(dummy);
-	};
-
-	auto icons = std::vector<const style::icon *>();
-	icons.reserve(int(entryMap.size()));
-	{
-		const auto session = &controller->session();
-		const auto mtpOrder = session->appConfig().get<Order>(
-			"premium_promo_order",
-			FallbackOrder());
-		const auto processEntry = [&](const QString &key, Entry &entry) {
-			icons.push_back(entry.icon);
-			addRow(key, entry);
-		};
-
-		for (const auto &key : mtpOrder) {
-			auto it = entryMap.find(key);
-			if (it == end(entryMap)) {
-				continue;
-			}
-			processEntry(key, it->second);
-		}
-
-		SendScreenShow(controller, mtpOrder, ref);
 	}
-
-	content->resizeToWidth(content->height());
-
-	// Icons.
-	Assert(iconContainers.size() > 2);
-	const auto from = iconContainers.front()->y();
-	const auto to = iconContainers.back()->y() + iconSize.height();
-	auto gradient = QLinearGradient(0, 0, 0, to - from);
-	gradient.setStops(Ui::Premium::FullHeightGradientStops());
-	for (auto i = 0; i < int(icons.size()); i++) {
-		const auto &iconContainer = iconContainers[i];
-
-		const auto pointTop = iconContainer->y() - from;
-		const auto pointBottom = pointTop + iconContainer->height();
-		const auto ratioTop = pointTop / float64(to - from);
-		const auto ratioBottom = pointBottom / float64(to - from);
-
-		auto resultGradient = QLinearGradient(
-			QPointF(),
-			QPointF(0, pointBottom - pointTop));
-
-		resultGradient.setColorAt(
-			.0,
-			anim::gradient_color_at(gradient, ratioTop));
-		resultGradient.setColorAt(
-			.1,
-			anim::gradient_color_at(gradient, ratioBottom));
-
-		const auto brush = QBrush(resultGradient);
-		AddButtonIcon(
-			iconContainer,
-			stDefault,
-			{ .icon = icons[i], .backgroundBrush = brush });
-	}
-
-	Ui::AddSkip(content, descriptionPadding.bottom());
+	SendScreenShow(controller, order, ref);
 }
 
 void BuildPremiumSectionContent(
@@ -1302,13 +809,14 @@ void BuildPremiumSectionContent(
 	const auto controller = builder.controller();
 
 	if (controller && state) {
-		builder.add([controller, state](const WidgetContext &ctx) {
+		builder.addPageContent([controller, state](const WidgetContext &ctx) {
 			SetupSubscriptionOptions(
 				ctx.container,
 				controller,
 				state->ref,
 				state->radioGroup);
-
+		});
+		builder.add([controller, state](const WidgetContext &ctx) {
 			auto buttonCallback = [controller](PremiumFeature section) {
 				ShowPremiumPreviewToBuy(controller, section, nullptr);
 			};
@@ -1334,35 +842,18 @@ public:
 
 	[[nodiscard]] rpl::producer<QString> title() override;
 
-	[[nodiscard]] base::weak_qptr<Ui::RpWidget> createPinnedToTop(
-		not_null<QWidget*> parent) override;
 	[[nodiscard]] base::weak_qptr<Ui::RpWidget> createPinnedToBottom(
 		not_null<Ui::RpWidget*> parent) override;
 
 	void showFinished() override;
 
-	[[nodiscard]] bool hasFlexibleTopBar() const override;
-
-	void setStepDataReference(std::any &data) override;
-
-	[[nodiscard]] rpl::producer<> sectionShowBack() override final;
-
 private:
 	void setupContent();
-	void setupSwipeBack();
+	void addOverview(not_null<Ui::VerticalLayout*> container);
 
 	std::shared_ptr<PremiumState> _state;
 
-	QPointer<Ui::GradientButton> _subscribe;
-	base::unique_qptr<Ui::FadeWrap<Ui::IconButton>> _back;
-	base::unique_qptr<Ui::IconButton> _close;
-	rpl::variable<bool> _backToggles;
-	rpl::variable<bool> _navigationVisible = false;
-	rpl::variable<Info::Wrap> _wrap;
 
-	rpl::event_stream<> _showBack;
-	rpl::event_stream<> _showFinished;
-	rpl::variable<QString> _buttonText;
 
 };
 
@@ -1375,7 +866,6 @@ Premium::Premium(
 	.radioGroup = std::make_shared<Ui::RadiobuttonGroup>(),
 })) {
 	setupContent();
-	setupSwipeBack();
 	controller->session().api().premium().reload();
 }
 
@@ -1383,70 +873,11 @@ rpl::producer<QString> Premium::title() {
 	return tr::lng_premium_summary_title();
 }
 
-bool Premium::hasFlexibleTopBar() const {
-	return true;
-}
-
-rpl::producer<> Premium::sectionShowBack() {
-	return _showBack.events();
-}
-
-void Premium::setStepDataReference(std::any &data) {
-	const auto my = std::any_cast<SectionCustomTopBarData>(&data);
-	if (my) {
-		_backToggles = std::move(
-			my->backButtonEnables
-		) | rpl::map_to(true);
-		_wrap = std::move(my->wrapValue);
-		_navigationVisible = std::move(my->navigationVisible);
-	}
-}
-
-void Premium::setupSwipeBack() {
-	using namespace Ui::Controls;
-
-	auto swipeBackData = lifetime().make_state<SwipeBackResult>();
-
-	auto update = [=](SwipeContextData data) {
-		if (data.translation > 0) {
-			if (!swipeBackData->callback) {
-				(*swipeBackData) = SetupSwipeBack(
-					this,
-					[]() -> std::pair<QColor, QColor> {
-						return {
-							st::historyForwardChooseBg->c,
-							st::historyForwardChooseFg->c,
-						};
-					});
-			}
-			swipeBackData->callback(data);
-			return;
-		} else if (swipeBackData->lifetime) {
-			(*swipeBackData) = {};
-		}
-	};
-
-	auto init = [=](Ui::Controls::SwipeHandlerInitData data) {
-		return (data.direction == Qt::RightToLeft)
-			? DefaultSwipeBackHandlerFinishData([=] {
-				_showBack.fire({});
-			})
-			: SwipeHandlerFinishData();
-	};
-
-	SetupSwipeHandler({
-		.widget = this,
-		.scroll = v::null,
-		.update = std::move(update),
-		.init = std::move(init),
-	});
-}
-
 void Premium::setupContent() {
 	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
 	const auto state = _state;
 
-	const SectionBuildMethod buildMethod = [state](
+	const SectionBuildMethod buildMethod = [this, state](
 			not_null<Ui::VerticalLayout*> container,
 			not_null<Window::SessionController*> controller,
 			Fn<void(Type)> showOther,
@@ -1462,6 +893,9 @@ void Premium::setupContent() {
 			.isPaused = isPaused,
 		});
 
+		builder.addPageContent([=](const WidgetContext &ctx) {
+			addOverview(ctx.container);
+		});
 		BuildPremiumSectionContent(builder, state);
 	};
 
@@ -1470,14 +904,9 @@ void Premium::setupContent() {
 	Ui::ResizeFitChild(this, content);
 }
 
-base::weak_qptr<Ui::RpWidget> Premium::createPinnedToTop(
-		not_null<QWidget*> parent) {
-	auto title = controller()->session().premium()
-		? tr::lng_premium_summary_title()
-		: rpl::conditional(
-			Data::AmPremiumValue(&controller()->session()),
-			tr::lng_premium_summary_title_subscribed(),
-			tr::lng_premium_summary_title());
+void Premium::addOverview(not_null<Ui::VerticalLayout*> container) {
+	const auto group = AddCardGroup(container);
+	rpl::producer<QString> heading = tr::lng_premium_summary_title();
 	auto about = [&]() -> rpl::producer<TextWithEntities> {
 		const auto gift = Ref::Gift::Parse(_state->ref);
 		if (gift) {
@@ -1506,163 +935,64 @@ base::weak_qptr<Ui::RpWidget> Premium::createPinnedToTop(
 
 		return rpl::conditional(
 			Data::AmPremiumValue(&controller()->session()),
-			controller()->session().api().premium().statusTextValue(),
+			controller()->session().api().premium().statusTextValue(
+			) | rpl::map([](TextWithEntities text) {
+				return text.text.isEmpty()
+					? tr::lng_premium_summary_user_about(tr::now, tr::rich)
+					: text;
+			}),
 			tr::lng_premium_summary_top_about(tr::rich));
 	}();
 
-	const auto emojiStatusData = Ref::EmojiStatus::Parse(_state->ref);
-	const auto premiumGiftData = Ref::PremiumGift::Parse(_state->ref);
-	const auto isEmojiStatus = (!!emojiStatusData);
-	const auto isPremiumGift = (!!premiumGiftData);
-
-	auto peerWithPremium = [&]() -> PeerData* {
-		if (isEmojiStatus) {
-			auto &data = controller()->session().data();
-			if (const auto peer = data.peer(emojiStatusData.peerId)) {
-				return peer;
+	if (const auto gift = Ref::PremiumGift::Parse(_state->ref)) {
+		heading = tr::lng_gift_premium_title();
+		about = tr::lng_gift_premium_text(
+			lt_count, rpl::single(gift.perUserTotal * 1.), tr::rich);
+	} else if (const auto status = Ref::EmojiStatus::Parse(_state->ref)) {
+		const auto peer = controller()->session().data().peer(status.peerId);
+		heading = Info::Profile::NameValue(peer);
+		about = tr::lng_premium_emoji_status_about(tr::rich);
+	}
+	group->add(object_ptr<Ui::FlatLabel>(group, std::move(heading),
+		st::settingsServiceTitle), st::settingsServiceTitlePadding);
+	group->add(object_ptr<Ui::FlatLabel>(group,
+		std::move(about), st::settingsCardHint, st::defaultPopupMenu,
+		Core::TextContext({ .session = &controller()->session() })),
+		st::settingsServiceAboutPadding);
+	if (const auto status = Ref::EmojiStatus::Parse(_state->ref)) {
+		const auto session = &controller()->session();
+		const auto peer = session->data().peer(status.peerId);
+		const auto details = group->add(object_ptr<Ui::VerticalLayout>(group));
+		Info::Profile::EmojiStatusIdValue(peer) | rpl::on_next([=](EmojiStatusId id) {
+			while (details->count()) {
+				delete details->widgetAt(0);
 			}
-		}
-		return nullptr;
-	}();
-	auto premiumGift = [&]() -> DocumentData* {
-		if (isPremiumGift) {
-			auto &data = controller()->session().data();
-			return data.document(premiumGiftData.documentId);
-		}
-		return nullptr;
-	}();
-
-	const auto content = [&]() -> Ui::Premium::TopBarAbstract* {
-		if (peerWithPremium) {
-			return Ui::CreateChild<TopBarWithSticker>(
-				parent.get(),
-				controller(),
-				peerWithPremium,
-				_showFinished.events());
-		} else if (premiumGift) {
-			return Ui::CreateChild<TopBarWithSticker>(
-				parent.get(),
-				controller(),
-				TopBarWithStickerArgs{
-					.stickerValue = rpl::single(premiumGift),
-					.nameValue = tr::lng_gift_premium_title(),
-					.aboutValue = tr::lng_gift_premium_text(
-						lt_count,
-						rpl::single(premiumGiftData.perUserTotal * 1.),
-						tr::rich),
-					.type = TopBarWithStickerType::PremiumGift,
-				},
-				_showFinished.events());
-		}
-		const auto weak = base::make_weak(controller());
-		const auto clickContextOther = [=] {
-			return QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = weak,
-				.botStartAutoSubmit = true,
+			const auto documentId = id.collectible ? id.collectible->documentId : id.documentId;
+			if (!documentId) {
+				return;
+			}
+			const auto document = session->data().document(documentId);
+			const auto sticker = document->sticker();
+			if (!sticker) {
+				return;
+			}
+			const auto &sets = session->data().stickers().sets();
+			const auto set = sets.find(sticker->set.id);
+			if (set == sets.end()) {
+				return;
+			}
+			const auto button = AddButtonWithIcon(details,
+				rpl::single(set->second->title), st::settingsButtonNoIcon, {});
+			AddSectionRowDetails(button);
+			button->setClickedCallback([=, identifier = sticker->set] {
+				controller()->show(Box<StickerSetBox>(controller()->uiShow(),
+					identifier, Data::StickersType::Emoji));
 			});
-		};
-		return Ui::CreateChild<Ui::Premium::TopBar>(
-			parent.get(),
-			st::defaultPremiumCover,
-			Ui::Premium::TopBarDescriptor{
-				.clickContextOther = clickContextOther,
-				.title = std::move(title),
-				.about = std::move(about),
-				.use3dStar = true,
-				.showFinished = _showFinished.events(),
-			});
-	}();
-	_state->setPaused = [=](bool paused) {
-		content->setPaused(paused);
-		if (_subscribe) {
-			_subscribe->setGlarePaused(paused);
-		}
-	};
-	controller()->boxShownValue(
-	) | rpl::on_next([=](bool shown) {
-		_state->setPaused(shown);
-	}, content->lifetime());
-
-	_wrap.value(
-	) | rpl::on_next([=](Info::Wrap wrap) {
-		content->setRoundEdges(wrap == Info::Wrap::Layer);
-	}, content->lifetime());
-
-	const auto calculateMaximumHeight = [=] {
-		return (isEmojiStatus || isPremiumGift)
-			? st::settingsPremiumUserHeight + TopTransitionSkip()
-			: st::settingsPremiumTopHeight;
-	};
-
-	content->setMaximumHeight(calculateMaximumHeight());
-	content->setMinimumHeight(st::infoLayerTopBarHeight);
-
-	content->resize(content->width(), content->maximumHeight());
-	content->additionalHeight(
-	) | rpl::on_next([=](int additionalHeight) {
-		const auto wasMax = (content->height() == content->maximumHeight());
-		content->setMaximumHeight(calculateMaximumHeight()
-			+ additionalHeight);
-		if (wasMax) {
-			content->resize(content->width(), content->maximumHeight());
-		}
-	}, content->lifetime());
-
-	_wrap.value(
-	) | rpl::on_next([=](Info::Wrap wrap) {
-		const auto isLayer = (wrap == Info::Wrap::Layer);
-		_back = base::make_unique_q<Ui::FadeWrap<Ui::IconButton>>(
-			content,
-			object_ptr<Ui::IconButton>(
-				content,
-				isEmojiStatus
-					? (isLayer ? st::infoLayerTopBarBack : st::historyTopBarBack)
-					: (isLayer
-						? st::settingsPremiumLayerTopBarBack
-						: st::settingsPremiumTopBarBack)),
-			st::infoTopBarScale);
-		_back->setDuration(0);
-		_back->toggleOn(rpl::combine(
-			_backToggles.value(),
-			_navigationVisible.value()
-		) | rpl::map([=](bool enabled, bool navigation) {
-			return enabled || (!navigation && !isLayer);
-		}));
-		_back->entity()->addClickHandler([=] {
-			_showBack.fire({});
-		});
-		_back->toggledValue(
-		) | rpl::on_next([=](bool toggled) {
-			const auto &st = isLayer ? st::infoLayerTopBar : st::settingsPageTopBar;
-			content->setTextPosition(
-				toggled ? st.back.width : st.titlePosition.x(),
-				st.titlePosition.y());
-		}, _back->lifetime());
-
-		if (!isLayer) {
-			_close = nullptr;
-		} else {
-			_close = base::make_unique_q<Ui::IconButton>(
-				content,
-				isEmojiStatus
-					? st::infoTopBarClose
-					: st::settingsPremiumTopBarClose);
-			_close->addClickHandler([=] {
-				controller()->parentController()->hideLayer();
-				controller()->parentController()->hideSpecialLayer();
-			});
-			content->widthValue(
-			) | rpl::on_next([=] {
-				_close->moveToRight(0, 0);
-			}, _close->lifetime());
-		}
-	}, content->lifetime());
-
-	return base::make_weak(not_null<Ui::RpWidget*>{ content });
+		}, details->lifetime());
+	}
 }
 
 void Premium::showFinished() {
-	_showFinished.fire({});
 	crl::on_main(this, [=] {
 		for (const auto &[key, button] : _state->featureButtons) {
 			const auto id = u"premium/"_q + key;
@@ -1673,13 +1003,14 @@ void Premium::showFinished() {
 
 base::weak_qptr<Ui::RpWidget> Premium::createPinnedToBottom(
 		not_null<Ui::RpWidget*> parent) {
-	const auto content = Ui::CreateChild<Ui::RpWidget>(parent.get());
-
 	if (Ref::Gift::Parse(_state->ref)) {
 		return nullptr;
 	}
+	const auto content = Ui::CreateChild<Ui::RpWidget>(parent.get());
+	const auto state = _state;
+	const auto labelText = content->lifetime().make_state<rpl::variable<QString>>();
 
-	const auto emojiStatusData = Ref::EmojiStatus::Parse(_state->ref);
+	const auto emojiStatusData = Ref::EmojiStatus::Parse(state->ref);
 	const auto session = &controller()->session();
 
 	auto buttonText = [&]() -> std::optional<rpl::producer<QString>> {
@@ -1691,44 +1022,31 @@ base::weak_qptr<Ui::RpWidget> Premium::createPinnedToBottom(
 				) | rpl::map([=](EmojiStatusId id) {
 					return id
 						? tr::lng_premium_emoji_status_button()
-						: _buttonText.value();
-						// : tr::lng_premium_summary_user_button();
+						: labelText->value();
 				}) | rpl::flatten_latest();
 			}
 		}
-		return _buttonText.value();
+		return labelText->value();
 	}();
 
-	_subscribe = CreateSubscribeButton({
+	const auto subscribe = CreateFlatSubscribeButton({
 		controller(),
 		content,
-		[ref = _state->ref] { return ref; },
+		[ref = state->ref] { return ref; },
 		std::move(buttonText),
 		std::nullopt,
-		[=, options = session->api().premium().subscriptionOptions()] {
-			const auto value = _state->radioGroup->current();
+		[=] {
+			const auto &options = session->api().premium().subscriptionOptions();
+			const auto value = state->radioGroup->current();
 			return (value < options.size() && value >= 0)
 				? options[value].botUrl
 				: QString();
 		},
 	});
-#if 0
-	if (emojiStatusData) {
-		// "Learn More" should open the general Premium Settings
-		// so we override the button callback.
-		// To have ability to jump back to the User Premium Settings
-		// we should replace the ref explicitly.
-		_subscribe->setClickedCallback([=] {
-			const auto ref = _ref;
-			const auto window = controller();
-			ShowPremium(window, QString());
-			window->setPremiumRef(ref);
-		});
-	} else {
-#endif
+
 	{
 		const auto callback = [=](int value) {
-			auto &api = controller()->session().api();
+			auto &api = session->api();
 			const auto options = api.premium().subscriptionOptions();
 			if (options.empty()) {
 				return;
@@ -1738,25 +1056,22 @@ base::weak_qptr<Ui::RpWidget> Premium::createPinnedToBottom(
 				tr::now,
 				lt_cost,
 				options[value].costPerMonth);
-			_buttonText = std::move(text);
+			*labelText = std::move(text);
 		};
-		_state->radioGroup->setChangedCallback(callback);
-		callback(0);
+		state->radioGroup->changes() | rpl::on_next(callback, subscribe->lifetime());
+		session->api().premium().statusTextValue() | rpl::on_next([=] {
+			callback(state->radioGroup->current());
+		}, subscribe->lifetime());
 	}
-
-	_showFinished.events(
-	) | rpl::take(1) | rpl::on_next([=] {
-		_subscribe->startGlareAnimation();
-	}, _subscribe->lifetime());
 
 	content->widthValue(
 	) | rpl::on_next([=](int width) {
 		const auto padding = st::settingsPremiumButtonPadding;
-		_subscribe->resizeToWidth(width - padding.left() - padding.right());
-	}, _subscribe->lifetime());
+		subscribe->setFullWidth(width - padding.left() - padding.right());
+	}, subscribe->lifetime());
 
 	rpl::combine(
-		_subscribe->heightValue(),
+		subscribe->heightValue(),
 		Data::AmPremiumValue(session),
 		session->premiumPossibleValue()
 	) | rpl::on_next([=](
@@ -1770,9 +1085,9 @@ base::weak_qptr<Ui::RpWidget> Premium::createPinnedToBottom(
 			? (padding.top() + buttonHeight + padding.bottom())
 			: 0;
 		content->resize(content->width(), finalHeight);
-		_subscribe->moveToLeft(padding.left(), padding.top());
-		_subscribe->setVisible(!premium && premiumPossible);
-	}, _subscribe->lifetime());
+		subscribe->moveToLeft(padding.left(), padding.top());
+		subscribe->setVisible(!premium && premiumPossible);
+	}, subscribe->lifetime());
 
 	return base::make_weak(not_null<Ui::RpWidget*>{ content });
 }
@@ -1799,7 +1114,7 @@ struct SectionFactory<Premium> : AbstractSectionFactory {
 		return object_ptr<Premium>(parent, controller);
 	}
 	bool hasCustomTopBar() const final override {
-		return true;
+		return false;
 	}
 
 	[[nodiscard]] static const std::shared_ptr<SectionFactory> &Instance() {
@@ -2020,17 +1335,13 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 		std::move(args));
 }
 
-not_null<Ui::GradientButton*> CreateSubscribeButton(
-		std::shared_ptr<::Main::SessionShow> show,
-		Fn<Window::SessionController*(
-			not_null<::Main::Session*>)> resolveWindow,
-		SubscribeButtonArgs &&args) {
-	const auto result = Ui::CreateChild<Ui::GradientButton>(
-		args.parent.get(),
-		args.gradientStops
-			? base::take(*args.gradientStops)
-			: Ui::Premium::ButtonGradientStops());
+namespace {
 
+rpl::producer<QString> SetupSubscribeButton(
+		not_null<Ui::AbstractButton*> result,
+		std::shared_ptr<::Main::SessionShow> show,
+		Fn<Window::SessionController*(not_null<::Main::Session*>)> resolveWindow,
+		SubscribeButtonArgs &&args) {
 	result->setClickedCallback([
 			show,
 			resolveWindow,
@@ -2041,7 +1352,8 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 			&show->session());
 		if (!window) {
 			return;
-		} else if (promo) {
+		}
+		if (promo) {
 			Settings::ShowPremium(window, computeRef());
 			return;
 		}
@@ -2064,9 +1376,6 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 		}
 	});
 
-	const auto &st = st::premiumPreviewBox.button;
-	result->resize(args.parent->width(), st.height);
-
 	const auto premium = &show->session().api().premium();
 	premium->reload();
 	const auto computeCost = [=] {
@@ -2078,25 +1387,56 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 			valid ? currency : "USD");
 	};
 
-	const auto label = Ui::CreateChild<Ui::FlatLabel>(
-		result,
-		args.text
-			? base::take(*args.text)
-			: tr::lng_premium_summary_button(
-				lt_cost,
-				premium->statusTextValue() | rpl::map(computeCost)),
-		st::premiumPreviewButtonLabel);
-	label->setAttribute(Qt::WA_TransparentForMouseEvents);
-	rpl::combine(
-		result->widthValue(),
-		label->widthValue()
-	) | rpl::on_next([=](int outer, int width) {
-		label->moveToLeft(
-			(outer - width) / 2,
-			st::premiumPreviewBox.button.textTop,
-			outer);
-	}, label->lifetime());
+	return args.text
+		? base::take(*args.text)
+		: tr::lng_premium_summary_button(
+			lt_cost, premium->statusTextValue() | rpl::map(computeCost));
+}
 
+} // namespace
+
+not_null<Ui::RoundButton*> CreateFlatSubscribeButton(SubscribeButtonArgs &&args) {
+	Expects(args.show || args.controller);
+	auto show = args.show ? std::move(args.show) : args.controller->uiShow();
+	auto resolve = [show](not_null<::Main::Session*> session) {
+		Expects(session == &show->session());
+		return show->resolveWindow();
+	};
+	const auto result = Ui::CreateChild<Ui::RoundButton>(
+		args.parent.get(), rpl::never<QString>(), st::settingsServiceButton);
+	result->setText(rpl::combine(
+		SetupSubscribeButton(result, show, resolve, std::move(args)),
+		tr::lng_channel_invite_subscription_button()
+	) | rpl::map([](QString text, QString subscribe) {
+		return text.isEmpty() ? subscribe : text;
+	}));
+	return result;
+}
+
+not_null<Ui::GradientButton*> CreateSubscribeButton(
+		std::shared_ptr<::Main::SessionShow> show,
+		Fn<Window::SessionController*(
+			not_null<::Main::Session*>)> resolveWindow,
+		SubscribeButtonArgs &&args) {
+	const auto result = Ui::CreateChild<Ui::GradientButton>(
+		args.parent.get(),
+		args.gradientStops
+			? base::take(*args.gradientStops)
+			: Ui::Premium::ButtonGradientStops());
+
+	auto text = SetupSubscribeButton(result, show, resolveWindow, std::move(args));
+
+	const auto &st = st::premiumPreviewBox.button;
+	result->resize(args.parent->width(), st.height);
+
+	const auto label = Ui::CreateChild<Ui::FlatLabel>(
+		result, std::move(text), st::premiumPreviewButtonLabel);
+	label->setAttribute(Qt::WA_TransparentForMouseEvents);
+	rpl::combine(result->widthValue(), label->widthValue()
+	) | rpl::on_next([=](int outer, int width) {
+		label->moveToLeft((outer - width) / 2,
+			st::premiumPreviewBox.button.textTop, outer);
+	}, label->lifetime());
 	return result;
 }
 

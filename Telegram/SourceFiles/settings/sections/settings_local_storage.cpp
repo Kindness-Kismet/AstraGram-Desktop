@@ -185,7 +185,7 @@ void LocalStorage::setupContent() {
 	const auto page = Ui::CreateChild<CardPage>(this);
 	const auto content = page->content();
 	const auto overview = AddCardGroup(content);
-	_chart = overview->add(object_ptr<CacheChart>(overview, controller()));
+	_chart = overview->add(object_ptr<CacheChart>(overview));
 	_chart->setObjectName(u"cache/chart"_q);
 	_chart->setPartInfo([=](int index) {
 		auto result = TextWithEntities();
@@ -302,6 +302,16 @@ void LocalStorage::setDebugChats(int count) {
 		snapshot.categories[int(Category::Images)].bytes += chat.bytes;
 		++snapshot.categories[int(Category::Images)].count;
 		snapshot.chats.push_back(chat);
+	}
+	updateSnapshot(std::move(snapshot));
+}
+
+void LocalStorage::setDebugUsage(std::array<int64, Extras::kMediaCacheCategoryCount> sizes) {
+	Expects(cDebugProfile() && ExtrasDebug::isSimulationSession(_session));
+	_debugChats = true;
+	auto snapshot = Extras::MediaCacheSnapshot();
+	for (auto i = 0; i != Extras::kMediaCacheCategoryCount; ++i) {
+		snapshot.categories[i] = { sizes[i], sizes[i] ? 1 : 0 };
 	}
 	updateSnapshot(std::move(snapshot));
 }

@@ -12,6 +12,7 @@
 #include "data/data_chat_filters.h"
 #include "data/data_document.h"
 #include "data/data_session.h"
+#include "data/components/credits.h"
 #include "data/stickers/data_stickers.h"
 #include "dialogs/dialogs_widget.h"
 #include "lang/lang_keys.h"
@@ -93,6 +94,46 @@ Result simulationCacheChats(const QStringList &args) {
 		}));
 	}
 	return Result::Err(u"open the cache settings page first"_q);
+}
+
+Result simulationCacheUsage(const QStringList &args) {
+	auto sizes = std::array<int64, Extras::kMediaCacheCategoryCount>();
+	if (args.size() != sizes.size()) {
+		return Result::Err(u"usage: simulation.cache-usage <images> <stickers> <documents> <avatars> <other> <messages>"_q);
+	}
+	for (auto i = 0; i != int(sizes.size()); ++i) {
+		auto ok = false;
+		sizes[i] = args[i].toLongLong(&ok);
+		if (!ok || sizes[i] < 0 || sizes[i] > (int64(1) << 50)) {
+			return Result::Err(u"cache category size must be between 0 and 1 PiB"_q);
+		}
+	}
+	const auto session = ActiveSession();
+	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	for (const auto widget : QApplication::allWidgets()) {
+		const auto page = dynamic_cast<Settings::LocalStorage*>(widget);
+		if (page && page->isVisible()) {
+			page->setDebugUsage(sizes);
+			return Result::Ok(Compact(json{ { "sizes", sizes } }));
+		}
+	}
+	return Result::Err(u"open the cache settings page first"_q);
+}
+
+Result simulationStars(const QStringList &args) {
+	auto ok = false;
+	const auto amount = args.size() == 1 ? args.front().toLongLong(&ok) : int64();
+	if (!ok || amount < 0 || amount > 1000000000000LL) {
+		return Result::Err(u"usage: simulation.stars <0..1000000000000>"_q);
+	}
+	const auto session = ActiveSession();
+	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	session->credits().apply(CreditsAmount(amount));
+	return Result::Ok(Compact(json{ { "balance", session->credits().balance().whole() } }));
 }
 
 Result simulationChatFolders(const QStringList &args) {
@@ -358,6 +399,8 @@ const HandlerMap &simulationHandlers() {
 		{ u"simulation.profile"_q, &seedProfilePreview },
 		{ u"simulation.music"_q, &simulateMusic },
 		{ u"simulation.cache-chats"_q, &simulationCacheChats },
+		{ u"simulation.cache-usage"_q, &simulationCacheUsage },
+		{ u"simulation.stars"_q, &simulationStars },
 		{ u"simulation.chat-folders"_q, &simulationChatFolders },
 		{ u"simulation.language"_q, &simulationLanguage },
 		{ u"simulation.search"_q, &seedSearchPreview },
