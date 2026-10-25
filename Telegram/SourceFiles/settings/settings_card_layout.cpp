@@ -29,12 +29,24 @@ public:
 
 protected:
 	void draw(QPainter *p) override {
-		auto offset = QPoint();
-		auto source = sourcePixmap(Qt::LogicalCoordinates, &offset, NoPad);
-		if (source.isNull()) {
+		auto visible = _widget->rect();
+		for (auto parent = _widget->parentWidget(); parent; parent = parent->parentWidget()) {
+			visible &= QRect(_widget->mapFrom(parent, QPoint()), parent->size());
+		}
+		if (visible.isEmpty()) {
 			return;
 		}
-		const auto ratio = source.devicePixelRatio();
+		// 长列表只绘制父控件可见的部分，避免按全部会话分配图片。
+		const auto offset = visible.topLeft();
+		const auto ratio = p->device()->devicePixelRatioF();
+		auto source = QPixmap(visible.size() * ratio);
+		source.setDevicePixelRatio(ratio);
+		source.fill(Qt::transparent);
+		{
+			auto painter = QPainter(&source);
+			painter.translate(-offset);
+			_widget->render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+		}
 		const auto rect = QRect(-offset, _widget->size());
 		if (_mask.size() != source.size()
 			|| _mask.devicePixelRatio() != ratio
