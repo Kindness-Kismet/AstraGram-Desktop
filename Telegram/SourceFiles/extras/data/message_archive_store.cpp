@@ -474,7 +474,7 @@ public:
 			ID maxId,
 			int limit,
 			const std::string &search) {
-		if (!checkReady() || limit == 0) {
+		if (!checkReady() || limit == 0 || (!edited && userId == dialogId)) {
 			return {};
 		}
 		// 普通消息与临时消息编号互不相干，统一按留档顺序分页。
@@ -592,6 +592,10 @@ bool Store::hasMessages() {
 }
 
 bool Store::add(const ExtrasMessageBase &message, bool edited) {
+	// 个人收藏的删除只同步正常删除，不写入本地留档。
+	if (!edited && message.userId == message.dialogId) {
+		return true;
+	}
 	const auto lock = std::lock_guard(_private->mutex);
 	if (!_private->checkReady()) {
 		return false;
@@ -638,7 +642,7 @@ std::vector<ExtrasMessageBase> Store::get(
 
 std::vector<ID> Store::deletedIds(ID userId, ID dialogId, ID topicId) {
 	const auto lock = std::lock_guard(_private->mutex);
-	if (!_private->checkReady()) {
+	if (!_private->checkReady() || userId == dialogId) {
 		return {};
 	}
 	const auto sql = std::string("SELECT ") + kRecordColumns

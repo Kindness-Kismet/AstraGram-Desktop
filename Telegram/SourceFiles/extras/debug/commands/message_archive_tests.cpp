@@ -520,6 +520,39 @@ QString migrationChecks(const QString &path, bytes::const_span key) {
 	return {};
 }
 
+QString savedMessagesChecks(const QString &path, bytes::const_span key) {
+	auto database = TestDatabase(path);
+	auto saved = sample(904);
+	saved.dialogId = saved.userId;
+	if (!createLegacyTable(database, "DeletedMessage")
+		|| !createLegacyTable(database, "EditedMessage")
+		|| !insertLegacy(database, "DeletedMessage", saved)
+		|| !insertLegacy(database, "EditedMessage", saved)) {
+		return u"could not prepare existing Saved Messages archive records"_q;
+	}
+	auto store = Store();
+	if (!store.unlock(path, key)
+		|| database.scalar("SELECT COUNT(*) FROM EncryptedMessages") != qint64(2)
+		|| !store.get(false, kUser, kUser, 0, 0, 0, 0, 100).empty()
+		|| !store.deletedIds(kUser, kUser, 0).empty()
+		|| store.contains(false, kUser, kUser, 0)
+		|| !store.contains(true, kUser, kUser, 0, saved.messageId)
+		|| !store.add(saved, false)
+		|| database.scalar("SELECT COUNT(*) FROM EncryptedMessages") != qint64(2)) {
+		return u"Saved Messages exclusion changed or exposed existing archive records"_q;
+	}
+	auto otherAccount = saved;
+	++otherAccount.userId;
+	if (!store.add(otherAccount, false)
+		|| !store.contains(false, otherAccount.userId, kUser, 0)
+		|| !store.add(saved, true)
+		|| store.get(true, kUser, kUser, 0, saved.messageId, 0, 0, 100).size() != 2
+		|| database.scalar("SELECT COUNT(*) FROM EncryptedMessages") != qint64(4)) {
+		return u"Saved Messages exclusion affected another account or revisions"_q;
+	}
+	return {};
+}
+
 QString corruptionChecks(const QString &path, bytes::const_span key) {
 	auto store = Store();
 	if (!store.unlock(path, key) || !store.add(sample(10), false)
@@ -627,6 +660,11 @@ Result verifyMessageArchive(const QStringList &args) {
 		return Result::Err(error);
 	}
 	checks.push_back("Complete legacy migration, rollback, regex preservation and plaintext cleanup");
+	if (const auto error = savedMessagesChecks(directory.filePath(u"saved.db"_q),
+			bytes::make_span(key)); !error.isEmpty()) {
+		return Result::Err(error);
+	}
+	checks.push_back("Saved Messages deletion exclusion, existing records and account isolation");
 	if (const auto error = corruptionChecks(directory.filePath(u"corruption.db"_q),
 			bytes::make_span(key)); !error.isEmpty()) {
 		return Result::Err(error);

@@ -261,7 +261,8 @@ void AddExtrasActions(PeerData *peerData,
 	const auto user = peerData->asUser();
 	const auto showFilters = settings.filtersEnabled()
 		&& (!user || user->isBot());
-	const auto saveDeletedMessages = settings.saveDeletedMessages();
+	const auto saveDeletedMessages = settings.saveDeletedMessages()
+		&& !peerData->isSelf();
 	if (!showFilters && !saveDeletedMessages) {
 		return;
 	}

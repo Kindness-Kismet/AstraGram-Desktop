@@ -86,8 +86,9 @@ Result seedArchive(const QStringList &args) {
 	const auto userId = session->userId().bare & PeerId::kChatTypeMask;
 	auto message = DeletedMessage();
 	message.userId = userId;
-	message.dialogId = getDialogIdFromPeer(session->user());
-	message.peerId = userId;
+	const auto peer = session->data().peer(peerFromChat(ChatId(999999001)));
+	message.dialogId = getDialogIdFromPeer(peer);
+	message.peerId = peer->id.value & PeerId::kChatTypeMask;
 	message.fromId = userId;
 	message.messageId = kMessageId;
 	message.date = message.entityCreateDate = base::unixtime::now();
@@ -102,7 +103,7 @@ Result seedArchive(const QStringList &args) {
 		return Result::Err(u"archive fixture could not be saved and read back"_q);
 	}
 	return Result::Ok(Compact(Json{
-		{ "peerId", session->user()->id.value },
+		{ "peerId", peer->id.value },
 		{ "messageId", kMessageId },
 		{ "text", i->text },
 	}));

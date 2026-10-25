@@ -497,7 +497,8 @@ int getScheduleTime(int64 sumSize) {
 }
 
 bool isMessageSavable(const not_null<HistoryItem*> item) {
-	if (item->history()->peer->isSecretChat()) {
+	const auto peer = item->history()->peer;
+	if (peer->isSelf() || peer->isSecretChat()) {
 		return false;
 	}
 	const auto &settings = ExtrasSettings::getInstance();
@@ -522,13 +523,13 @@ bool isMessageSavable(const not_null<HistoryItem*> item) {
 void processMessageDelete(not_null<HistoryItem*> item) {
 	if (!isMessageSavable(item)) {
 		item->destroy();
-	} else {
-		if (item->ttlDestroyAt() > 0) {
-			item->applyTTL(0);
-		}
-		item->setDeleted();
-		ExtrasMessages::addDeletedMessage(item);
+		return;
 	}
+	if (item->ttlDestroyAt() > 0) {
+		item->applyTTL(0);
+	}
+	item->setDeleted();
+	ExtrasMessages::addDeletedMessage(item);
 }
 
 void resolvePeer(
