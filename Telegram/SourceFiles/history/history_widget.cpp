@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "extras/data/conversation_cache.h"
 #include "extras/ui/components/smooth_scroll.h"
 
 #include "extras/ui/components/chat_surface_button.h"
@@ -748,6 +749,15 @@ HistoryWidget::HistoryWidget(
 	session().data().newItemAdded(
 	) | rpl::on_next([=](not_null<HistoryItem*> item) {
 		newItemAdded(item);
+	}, lifetime());
+	session().conversationCache().historyRefreshes(
+	) | rpl::on_next([=](Extras::HistoryCacheKey key) {
+		if (!_historyInited || key.topicRootId || key.sublistPeer
+			|| (key.peer != _history->peer->id
+				&& (!_migrated || key.peer != _migrated->peer->id))) {
+			return;
+		}
+		startFirstLoadFade();
 	}, lifetime());
 
 	session().data().historyChanged(

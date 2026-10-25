@@ -1042,7 +1042,7 @@ void HistoryWidget::messagesReceived(
 }
 
 void HistoryWidget::startFirstLoadFade() {
-	if (!isVisible() || _showAnimation || _scroll->isHidden()) {
+	if (!isVisible() || _showAnimation || _scroll->isHidden() || anim::Disabled()) {
 		return;
 	}
 	const auto geometry = _scroll->geometry();

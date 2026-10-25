@@ -1988,6 +1988,47 @@ void History::addNewerSlice(const QVector<MTPMessage> &slice) {
 	checkLastMessage();
 }
 
+void History::addMiddleSlice(const QVector<MTPMessage> &slice) {
+	const auto first = minMsgId();
+	const auto last = maxMsgId();
+	auto items = std::vector<not_null<HistoryItem*>>();
+	for (const auto &message : slice) {
+		const auto id = IdFromMessage(message);
+		const auto item = owner().message(peer, id);
+		if (id <= first || id >= last || !item || item->mainView()) {
+			continue;
+		}
+		items.push_back(item);
+	}
+	if (items.empty()) {
+		return;
+	}
+	ranges::sort(items, {}, &HistoryItem::id);
+	// 同一批缺口按编号顺序补入，保留已有消息视图和滚动锚点。
+	auto blockIndex = 0;
+	auto itemIndex = 0;
+	for (const auto item : items) {
+		while (true) {
+			const auto &block = blocks[blockIndex];
+			if (itemIndex == block->messages.size()) {
+				++blockIndex;
+				itemIndex = 0;
+				continue;
+			}
+			const auto current = block->messages[itemIndex]->data();
+			if (IsServerMsgId(current->id) && current->id > item->id) {
+				break;
+			}
+			++itemIndex;
+		}
+		addNewInTheMiddle(item, blockIndex, itemIndex++);
+	}
+	if (loadedAtBottom()) {
+		addItemsToLists(items);
+	}
+	addToSharedMedia(items);
+}
+
 void History::checkLastMessage() {
 	if (const auto last = lastMessage()) {
 		if (!_loadedAtBottom && last->mainView()) {

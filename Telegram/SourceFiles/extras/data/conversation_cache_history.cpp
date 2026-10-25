@@ -512,6 +512,10 @@ std::optional<CachedHistorySlice> ConversationCache::slice(
 	};
 }
 
+rpl::producer<HistoryCacheKey> ConversationCache::historyRefreshes() const {
+	return _historyRefreshes.events();
+}
+
 void ConversationCache::putHistory(
 		const HistoryCacheQuery &query,
 		const MTPmessages_Messages &messages,
@@ -561,9 +565,15 @@ void ConversationCache::putHistory(
 			entry.peers.emplace(query.key.sublistPeer);
 		}
 		auto received = base::flat_set<MsgId>();
+		auto changed = QVector<MTPMessage>();
 		auto range = Range{ ServerMaxMsgId, 0 };
 		for (const auto &message : response) {
 			const auto id = IdFromMessage(message);
+			const auto previous = entry.messages.find(id);
+			if (previous == end(entry.messages)
+				|| encode(previous->second) != encode(message)) {
+				changed.push_back(message);
+			}
 			received.emplace(id);
 			range.from = std::min(range.from, id);
 			range.till = std::max(range.till, id);
@@ -611,6 +621,9 @@ void ConversationCache::putHistory(
 			} else {
 				++i;
 			}
+		}
+		if (refreshVisible && (!changed.empty() || !deleted.empty())) {
+			_historyRefreshes.fire_copy(query.key);
 		}
 		if (const auto preview = _previewMessages.find(query.key.peer);
 			ordinary && preview != end(_previewMessages)) {
@@ -660,22 +673,45 @@ void ConversationCache::putHistory(
 		if (!deleted.empty()) {
 			owner.processMessagesDeleted(query.key.peer, deleted);
 		}
+		const auto previousMin = history->minMsgId();
 		const auto previousMax = history->maxMsgId();
 		owner.processMessages(response, NewMessageType::Existing);
-		for (const auto &message : response) {
+		for (const auto &message : changed) {
 			owner.updateEditedMessage(message);
-			if (!ordinary && range.from <= previousLast && range.till >= previousLast) {
+		}
+		if (!ordinary && range.from <= previousLast && range.till >= previousLast) {
+			for (const auto &message : response) {
 				if (const auto item = owner.message(query.key.peer, IdFromMessage(message))) {
 					_session->changes().messageUpdated(item, Data::MessageUpdate::Flag::NewMaybeAdded);
 				}
 			}
 		}
-		if (ordinary && !history->isEmpty() && range.from <= previousMax
-			&& range.till >= previousMax && history->loadedAtBottom()) {
-			history->addNewerSlice(response);
+		if (ordinary && !history->isEmpty()) {
+			// 重叠区间保留原视图，只把两端缺少的消息接入列表。
+			auto older = QVector<MTPMessage>();
+			auto newer = QVector<MTPMessage>();
+			const auto prepend = range.from <= previousMin && range.till >= previousMin;
+			const auto append = range.from <= previousMax && range.till >= previousMax
+				&& history->loadedAtBottom();
+			for (const auto &message : response) {
+				const auto id = IdFromMessage(message);
+				if (prepend && id < previousMin) {
+					older.push_back(message);
+				} else if (append && id > previousMax) {
+					newer.push_back(message);
+				}
+			}
+			if (!older.empty()) {
+				history->addOlderSlice(older);
+			}
+			if (!newer.empty()) {
+				history->addNewerSlice(newer);
+			}
+			history->addMiddleSlice(response);
+			if (range.from > previousMax) {
+				history->setNotLoadedAtBottom();
+			}
 			owner.sendHistoryChangeNotifications();
-		} else if (ordinary && !history->isEmpty() && range.from > previousMax) {
-			history->setNotLoadedAtBottom();
 		}
 	});
 }

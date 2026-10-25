@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_list_widget.h"
 #include "extras/ui/components/smooth_scroll.h"
+#include "extras/data/conversation_cache.h"
+#include "window/window_slide_animation.h"
 
 #include "ui/chat/message_bubble.h"
 
@@ -105,6 +107,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_message_reactions.h"
 #include "data/data_peer_values.h"
 #include "styles/style_chat.h"
+#include "styles/style_extras_styles.h"
 #include "styles/style_window.h" // columnMaximalWidthLeft
 
 #include <QtWidgets/QApplication>
@@ -125,6 +128,23 @@ constexpr auto kPreloadedScreensCountFull
 	= kPreloadedScreensCount + 1 + kPreloadedScreensCount;
 constexpr auto kClearUserpicsAfter = 50;
 constexpr auto kScrollDateHideOnDayCrossingTimeout = crl::time(3000);
+
+[[nodiscard]] bool MatchesHistoryCacheKey(
+		Extras::HistoryCacheKey key,
+		Context context,
+		const std::vector<not_null<Element*>> &items) {
+	if (key.topicRootId) {
+		return context == Context::Replies && ranges::any_of(items, [&](not_null<Element*> view) {
+			const auto item = view->data();
+			return item->inThread(key.topicRootId) || item->id == key.topicRootId;
+		});
+	}
+	if (key.sublistPeer) {
+		return (context == Context::SavedSublist || context == Context::Monoforum)
+			&& items.front()->data()->sublistPeerId() == key.sublistPeer;
+	}
+	return context == Context::History;
+}
 
 [[nodiscard]] std::unique_ptr<TranslateTracker> MaybeTranslateTracker(
 		History *history) {
@@ -593,6 +613,17 @@ ListWidget::ListWidget(
 		ExtrasUi::setupSmoothScroll(scroll, crl::guard(this, [=] {
 			_scrollToAnimation.stop();
 		}));
+		_session->conversationCache().historyRefreshes(
+		) | rpl::on_next([=](Extras::HistoryCacheKey key) {
+			const auto history = _delegate->listTranslateHistory();
+			if (!isVisible() || _items.empty() || !history || key.peer != history->peer->id
+				|| anim::Disabled() || !MatchesHistoryCacheKey(key, _delegate->listContext(), _items)) {
+				return;
+			}
+			Window::ShowFadeOutAnimation(scroll->parentWidget(), scroll->geometry(),
+				Ui::GrabWidget(scroll), st::extrasInPlaceFadeDuration
+			)->setObjectName(u"history-cache-refresh-fade"_q);
+		}, lifetime());
 		scroll->lockWheelDirection();
 		scroll->setCrossAxisWheelProcess([=](
 				QPoint delta,

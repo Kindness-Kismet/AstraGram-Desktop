@@ -201,6 +201,7 @@ public:
 
 	void addOlderSlice(const QVector<MTPMessage> &slice);
 	void addNewerSlice(const QVector<MTPMessage> &slice);
+	void addMiddleSlice(const QVector<MTPMessage> &slice);
 
 	void newItemAdded(not_null<HistoryItem*> item, NewAddType type);
 

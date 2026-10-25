@@ -83,6 +83,7 @@ public:
 		const HistoryCacheQuery &query,
 		const MTPmessages_Messages &messages,
 		bool refreshVisible);
+	[[nodiscard]] rpl::producer<HistoryCacheKey> historyRefreshes() const;
 
 	struct Stats {
 		int restoredDialogs = 0;
@@ -226,6 +227,7 @@ private:
 	base::flat_map<MsgId, PeerId> _nonChannelPeers;
 	std::vector<Fn<void()>> _afterIndex;
 	base::Timer _saveTimer;
+	rpl::event_stream<HistoryCacheKey> _historyRefreshes;
 	int _restoredCount = 0;
 	int _hits = 0;
 	int _misses = 0;
