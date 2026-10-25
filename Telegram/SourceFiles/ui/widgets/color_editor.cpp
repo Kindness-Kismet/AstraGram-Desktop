@@ -706,14 +706,11 @@ void ColorEditor::Field::correctValue(
 void ColorEditor::Field::paintAdditionalPlaceholder(QPainter &p) {
 	p.setFont(_st.style.font);
 	p.setPen(_st.placeholderFg);
-	const auto inner = QRect(
-		_st.textMargins.right(),
-		_st.textMargins.top(),
-		width() - 2 * _st.textMargins.right(),
-		height() - rect::m::sum::v(_st.textMargins));
-	p.drawText(inner, _placeholder, style::al_topleft);
+	const auto baseline = placeholderBaseline();
+	p.drawText(QPointF(_st.textMargins.right(), baseline), _placeholder);
 	if (!_units.isEmpty()) {
-		p.drawText(inner, _units, style::al_topright);
+		p.drawText(QPointF(width() - _st.textMargins.right()
+			- _st.style.font->width(_units), baseline), _units);
 	}
 }
 
@@ -831,14 +828,7 @@ void ColorEditor::ResultField::correctValue(
 void ColorEditor::ResultField::paintAdditionalPlaceholder(QPainter &p) {
 	p.setFont(_st.style.font);
 	p.setPen(_st.placeholderFg);
-	p.drawText(
-		QRect(
-			_st.textMargins.right(),
-			_st.textMargins.top(),
-			width(),
-			height() - rect::m::sum::v(_st.textMargins)),
-		"#",
-		style::al_topleft);
+	p.drawText(QPointF(_st.textMargins.right(), placeholderBaseline()), "#");
 }
 
 ColorEditor::ColorEditor(

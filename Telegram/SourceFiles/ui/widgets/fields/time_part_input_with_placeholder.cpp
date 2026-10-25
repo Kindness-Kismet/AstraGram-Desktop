@@ -25,9 +25,9 @@ void TimePartWithPlaceholder::paintAdditionalPlaceholder(QPainter &p) {
 	if (_lastPlaceholder.width < phRect.width()) {
 		placeholderAdditionalPrepare(p);
 		p.drawText(
-			phRect.translated(-_lastPlaceholder.leftOffset, 0),
-			_lastPlaceholder.text,
-			style::al_left);
+			QPointF(phRect.left() - _lastPlaceholder.leftOffset,
+				placeholderBaseline()),
+			_lastPlaceholder.text);
 	}
 
 }

@@ -128,7 +128,7 @@ void PhonePartInput::paintAdditionalPlaceholder(QPainter &p) {
 			if (tw < phRect.width()) {
 				phRect.setLeft(phRect.left() + tw);
 				placeholderAdditionalPrepare(p);
-				p.drawText(phRect, ph, style::al_topleft);
+				p.drawText(QPointF(phRect.left(), placeholderBaseline()), ph);
 			}
 		}
 	}
@@ -308,7 +308,9 @@ void UsernameInput::paintAdditionalPlaceholder(QPainter &p) {
 	if (!_linkPlaceholder.isEmpty()) {
 		p.setFont(_st.style.font);
 		p.setPen(_st.placeholderFg);
-		p.drawText(QRect(_st.textMargins.left(), _st.textMargins.top(), width(), height() - _st.textMargins.top() - _st.textMargins.bottom()), _linkPlaceholder, style::al_topleft);
+		p.drawText(
+			QPointF(_st.textMargins.left(), placeholderBaseline()),
+			_linkPlaceholder);
 	}
 }
 
@@ -385,7 +387,7 @@ void PhoneInput::paintAdditionalPlaceholder(QPainter &p) {
 			if (tw < phRect.width()) {
 				phRect.setLeft(phRect.left() + tw);
 				placeholderAdditionalPrepare(p);
-				p.drawText(phRect, ph, style::al_topleft);
+				p.drawText(QPointF(phRect.left(), placeholderBaseline()), ph);
 			}
 		}
 	}
