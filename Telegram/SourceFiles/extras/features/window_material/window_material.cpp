@@ -3,9 +3,11 @@
 #include "extras/extras_settings.h"
 #include "chat_helpers/tabbed_panel.h"
 #include "extras/features/window_material/platform/window_material_platform.h"
+#include "ui/controls/jump_down_button.h"
 #include "ui/layers/layer_widget.h"
 #include "rpl/map.h"
 #include "ui/widgets/buttons.h"
+#include "ui/widgets/popup_menu.h"
 #include "ui/widgets/rp_window.h"
 #include "ui/widgets/separate_panel.h"
 #include "ui/ui_utility.h"
@@ -303,6 +305,7 @@ bool isActive(const QWidget *widget) {
 	for (auto ancestor = widget; ancestor; ancestor = ancestor->parentWidget()) {
 		if ((dynamic_cast<const Ui::LayerWidget*>(ancestor)
 				&& !dynamic_cast<const Window::MainMenu*>(ancestor))
+			|| dynamic_cast<const Ui::PopupMenu*>(ancestor)
 			|| dynamic_cast<const ChatHelpers::TabbedPanel*>(ancestor)) {
 			return false;
 		}
@@ -377,7 +380,10 @@ QColor widgetColor(
 		not_null<const QWidget*> widget,
 		QColor normal,
 		Ui::WidgetColorRole role) {
-	if (!normal.alpha() || !isActive(widget.get())) {
+	// 跳转按钮由底色、阴影和箭头叠成，整体沿用聊天配色。
+	if (!normal.alpha()
+		|| !isActive(widget.get())
+		|| dynamic_cast<const Ui::JumpDownButton*>(widget.get())) {
 		return normal;
 	}
 	// 只适配中性色，警告、链接、选中态等语义色沿用原样式。

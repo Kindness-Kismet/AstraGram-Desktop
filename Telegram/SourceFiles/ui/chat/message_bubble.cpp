@@ -547,7 +547,8 @@ void PaintSolidBubble(QPainter &p, const SimpleBubble &args) {
 			: st.msgBgCornersSmall;
 		p.drawPixmap(x, y, corners.p[index]);
 	}, [&](const QPoint &bottomPosition) {
-		tail.paint(p, bottomPosition - tailShift, args.outerWidth);
+		// 尖角沿用气泡底色，不参与控件前景色适配。
+		tail.paint(p, bottomPosition - tailShift, args.outerWidth, bg->c);
 	});
 
 	if (ExtrasSettings::getInstance().showBubbleOutline()) {
