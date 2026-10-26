@@ -392,6 +392,8 @@ def register_commands(sub) -> None:
     command.add_argument("--peer", help="查询指定对话，默认收藏夹")
     command = sub.add_parser("window.resize", help="读或设窗口尺寸（Qt 逻辑像素）；最大化的窗口先还原再设尺寸")
     command.add_argument("size", nargs="*", type=int, metavar="WIDTH HEIGHT", help="省略则只报告当前尺寸，给出时须成对")
+    command = sub.add_parser("window.material", help="查询材质状态与绘制缓冲像素，不触发截图或重绘")
+    command.add_argument("point", nargs="*", type=int, metavar="X Y")
     command = sub.add_parser("window.maximize", help="最大化或还原窗口")
     command.add_argument("maximized", choices=["true", "false"], help="true 最大化，false 还原")
     command = sub.add_parser("window.activation", help="只切换 Qt 内部的焦点窗口与应用激活状态，不抢系统前台")
@@ -691,6 +693,10 @@ def build_server_command(args: argparse.Namespace) -> str:
         if len(args.size) != 2:
             raise ValueError("window.resize requires both width and height")
         return f"window.resize {args.size[0]} {args.size[1]}"
+    if command == "window.material":
+        if len(args.point) not in (0, 2):
+            raise ValueError("window.material requires both x and y")
+        return "window.material" + (" " + " ".join(map(str, args.point)) if args.point else "")
     if command == "window.maximize":
         return f"window.maximize {args.maximized}"
     if command == "window.activation":

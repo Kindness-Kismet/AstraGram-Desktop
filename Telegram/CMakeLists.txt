@@ -2751,6 +2751,8 @@ PRIVATE
     window/notifications_utilities.cpp
     window/notifications_utilities.h
     window/section_memento.h
+    window/window_animation_snapshot.cpp
+    window/window_animation_snapshot.h
     window/section_widget.cpp
     window/section_widget.h
     window/window_adaptive.cpp

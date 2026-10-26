@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_scheduled_section.h"
+#include "window/window_animation_snapshot.h"
 
 #include "history/view/controls/history_view_compose_controls.h"
 #include "history/view/history_view_empty_list_bubble.h"
@@ -1094,7 +1095,7 @@ QPixmap ScheduledWidget::grabForShowAnimation(const Window::SectionSlideParams &
 	_topBar->updateControlsVisibility();
 	if (params.withTopBarShadow) _topBarShadow->hide();
 	_composeControls->showForGrab();
-	auto result = Ui::GrabWidget(this);
+	auto result = Window::GrabForAnimation(this);
 	if (params.withTopBarShadow) _topBarShadow->show();
 	return result;
 }

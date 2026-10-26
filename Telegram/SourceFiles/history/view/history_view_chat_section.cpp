@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_chat_section.h"
+#include "window/window_animation_snapshot.h"
 
 #include "history/admin_log/history_admin_log_section.h"
 #include "history/view/controls/history_view_top_controls.h"
@@ -3904,7 +3905,7 @@ QPixmap ChatWidget::grabForShowAnimation(const Window::SectionSlideParams &param
 		_composeControls->showForGrab();
 	}
 	updateControlsVisibility();
-	auto result = Ui::GrabWidget(this);
+	auto result = Window::GrabForAnimation(this);
 	if (hideTopBarShadow) {
 		_topBarShadow->show();
 	}

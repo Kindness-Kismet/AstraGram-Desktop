@@ -1,4 +1,5 @@
 #include "extras/ui/message_history/history_section.h"
+#include "window/window_animation_snapshot.h"
 
 #include "apiwrap.h"
 #include "extras/ui/message_history/history_inner.h"
@@ -335,7 +336,7 @@ Dialogs::RowDescriptor Widget::activeChat() const {
 
 QPixmap Widget::grabForShowAnimation(const Window::SectionSlideParams &params) {
 	if (params.withTopBarShadow) _fixedBarShadow->hide();
-	auto result = Ui::GrabWidget(this);
+	auto result = Window::GrabForAnimation(this);
 	if (params.withTopBarShadow) _fixedBarShadow->show();
 	return result;
 }

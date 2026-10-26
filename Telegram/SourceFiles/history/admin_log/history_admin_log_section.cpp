@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/admin_log/history_admin_log_section.h"
+#include "window/window_animation_snapshot.h"
 #include "ui/chat/floating_bar.h"
 
 #include "history/admin_log/history_admin_log_inner.h"
@@ -462,7 +463,7 @@ QPixmap Widget::grabForShowAnimation(
 	if (params.withTopBarShadow) {
 		_fixedBarShadow->hide();
 	}
-	auto result = Ui::GrabWidget(this);
+	auto result = Window::GrabForAnimation(this);
 	if (params.withTopBarShadow) {
 		_fixedBarShadow->show();
 	}

@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/section_widget.h"
+#include "window/window_animation_snapshot.h"
 
 #include "extras/features/window_material/window_material.h"
 #include "mainwidget.h"
@@ -353,7 +354,7 @@ void SectionWidget::showFast() {
 
 QPixmap SectionWidget::grabForShowAnimation(
 		const SectionSlideParams &params) {
-	return Ui::GrabWidget(this);
+	return Window::GrabForAnimation(this);
 }
 
 void SectionWidget::PaintBackground(

@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "intro/intro_widget.h"
+#include "window/window_animation_snapshot.h"
 
 #include "intro/intro_phone.h"
 #include "intro/intro_qr.h"
@@ -797,7 +798,7 @@ void Widget::showAnimated(QPixmap oldContentCache, bool back) {
 
 	showControls();
 	floatPlayerHideAll();
-	auto newContentCache = Ui::GrabWidget(this);
+	auto newContentCache = Window::GrabForAnimation(this);
 	hideControls();
 	floatPlayerShowVisible();
 

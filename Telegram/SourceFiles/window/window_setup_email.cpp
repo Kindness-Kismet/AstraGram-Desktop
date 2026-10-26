@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_setup_email.h"
+#include "window/window_animation_snapshot.h"
 
 #include "api/api_cloud_password.h"
 #include "apiwrap.h"
@@ -345,7 +346,7 @@ void SetupEmailLockWidget::showEmailInput() {
 		return;
 	}
 
-	auto oldContentCache = Ui::GrabWidget(_confirmWidget);
+	auto oldContentCache = Window::GrabForAnimation(_confirmWidget);
 	_confirmWidget->hide();
 	_confirmWidget->deleteLater();
 	_confirmWidget = nullptr;
@@ -385,7 +386,7 @@ void SetupEmailLockWidget::showEmailInput() {
 }
 
 QPixmap SetupEmailLockWidget::grabContent() {
-	return Ui::GrabWidget(this);
+	return Window::GrabForAnimation(this);
 }
 
 void SetupEmailLockWidget::resizeEvent(QResizeEvent *e) {
@@ -537,7 +538,7 @@ void SetupEmailConfirmWidget::showAnimated(QPixmap oldContentCache) {
 	_showAnimation = nullptr;
 
 	showChildren();
-	auto newContentCache = Ui::GrabWidget(this);
+	auto newContentCache = Window::GrabForAnimation(this);
 	hideChildren();
 
 	_showAnimation = std::make_unique<SlideAnimation>();

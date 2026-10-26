@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_widget.h"
+#include "window/window_animation_snapshot.h"
 
 #include "extras/features/secret_chats/secret_chat_dialog.h"
 #include "extras/ui/secret_chat_box.h"
@@ -2412,9 +2413,9 @@ void Widget::changeOpenedSubsection(
 			showDirection,
 			Window::CrossFadeArgs{
 				.shift = st::extrasSectionCrossFadeShift,
-				.bg = ExtrasFeatures::WindowMaterial::surfaceColor(
-					this,
-					st::dialogsBg->c),
+				.bg = ExtrasFeatures::WindowMaterial::isActive(this)
+					? ExtrasFeatures::WindowMaterial::rootTintColor(this)
+					: st::dialogsBg->c,
 			});
 	}
 }
@@ -2769,7 +2770,9 @@ QPixmap Widget::grabForChatsFilterSlide() {
 		_scrollToTop->hide();
 	}
 	auto result = ExtrasFeatures::WindowMaterial::isActive(this)
-		? Ui::GrabWidget(_scroll.data())
+		? (_chatsFilterSwipeSwitch
+			? Ui::GrabWidget(_scroll.data())
+			: Window::GrabForAnimation(_scroll.data()))
 		: Ui::GrabOpaque(
 			_scroll.data(),
 			_scroll->rect(),
@@ -2851,7 +2854,7 @@ QPixmap Widget::grabForFolderSlideAnimation() {
 	}
 
 	const auto rect = QRect(0, 0, width(), rect::bottom(_scroll));
-	auto result = Ui::GrabWidget(this, rect);
+	auto result = Window::GrabForAnimation(this, rect);
 
 	if (!hidden) {
 		_scrollToTop->show();
@@ -3200,7 +3203,7 @@ void Widget::showAnimated(
 
 	auto oldContentCache = params.oldContentCache;
 	showFast();
-	auto newContentCache = Ui::GrabWidget(this);
+	auto newContentCache = Window::GrabForAnimation(this);
 
 	if (_connecting) {
 		_connecting->setForceHidden(true);
@@ -4214,7 +4217,7 @@ void Widget::openChildList(
 		&& (params.animated == anim::type::normal);
 	if (animated) {
 		destroyChildListCanvas();
-		slide.oldContentCache = Ui::GrabWidget(
+		slide.oldContentCache = Window::GrabForAnimation(
 			this,
 			QRect(_narrowWidth, 0, width() - _narrowWidth, height()));
 	}
@@ -4278,7 +4281,7 @@ void Widget::closeChildList(anim::type animated) {
 	auto oldContentCache = QPixmap();
 	auto animation = (Window::SlideAnimation*)nullptr;
 	if (animated == anim::type::normal) {
-		oldContentCache = Ui::GrabWidget(_childList.get());
+		oldContentCache = Window::GrabForAnimation(_childList.get());
 		_hideChildListCanvas = std::make_unique<Ui::RpWidget>(this);
 		_hideChildListCanvas->setAttribute(Qt::WA_TransparentForMouseEvents);
 		_hideChildListCanvas->setGeometry(geometry);
@@ -4302,7 +4305,7 @@ void Widget::closeChildList(anim::type animated) {
 	}
 	if (animated == anim::type::normal) {
 		_hideChildListCanvas->hide();
-		auto newContentCache = Ui::GrabWidget(this, geometry);
+		auto newContentCache = Window::GrabForAnimation(this, geometry);
 		_hideChildListCanvas->show();
 
 		_childListShown = shown;

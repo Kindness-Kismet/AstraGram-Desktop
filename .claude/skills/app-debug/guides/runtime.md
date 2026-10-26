@@ -11,6 +11,7 @@
 | `app.help` | 空 | 列出服务端已注册的全部指令名。 |
 | `app.quit` | 空 | 让应用走正常退出流程；退出动作排在事件循环尾部，确保 `OK` 写完 socket 再退。 |
 | `window.resize` | `[width height]` | 报告窗口尺寸与最大化状态；给出尺寸时按逻辑像素调整窗口。 |
+| `window.material` | `[x y]` | 查询生效模式、状态修订号、根部混色与 Windows 原生材质编号；可选坐标采样现有绘制缓冲，不触发截图、重绘或系统输入。 |
 | `window.maximize` | `true\|false` | 最大化或还原窗口。 |
 | `window.activation` | `active\|inactive` | 只切换 Qt 内部的焦点窗口与应用激活状态，系统前台不变。 |
 | `window.tray` | `hide\|show` | 调用真实托盘流程，隐藏或恢复最近活动的主窗口。 |
@@ -40,6 +41,10 @@
 python .claude/skills/app-debug/scripts/cli.py window.resize 1300 900 + screenshot.take
 python .claude/skills/app-debug/scripts/cli.py window.maximize true + screenshot.take
 ```
+
+`window.material` 的 `mode` 为 0 关闭、1 云母、2 亚克力、3 模糊；`rootTint` 和 `pixel` 均按红、绿、蓝、透明度返回 0 至 255。
+Windows 的 `nativeBackdrop` 为 1 关闭、2 云母、3 亚克力；`revision` 仅在材质或主题状态改变时递增。
+坐标使用选定窗口内的逻辑像素；采样来自上一帧已绘制的缓冲，切换后需让事件循环继续运行，不包含系统合成后的桌面。
 
 `window.activation` 用来验证依赖“应用在前台”的逻辑（已读、阅读时长统计、暂停与恢复）。
 它注入 Qt 的窗口激活事件，用户真正点击或切走窗口时会被系统事件覆盖；返回的 `applicationActive` 为应用级激活状态。

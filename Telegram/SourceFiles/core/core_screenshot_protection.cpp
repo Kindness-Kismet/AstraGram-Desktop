@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "core/core_screenshot_protection.h"
+#include "window/window_animation_snapshot.h"
+#include "extras/features/window_material/window_material.h"
 
 #include "platform/platform_specific.h"
 #include "ui/style/style_core.h"
@@ -123,7 +125,7 @@ QPixmap ScreenshotProtection::grabForAnimation(
 		not_null<QWidget*> widget,
 		QRect rect) const {
 	if (!active(widget->window())) {
-		return Ui::GrabWidget(widget, rect);
+		return Window::GrabForAnimation(widget, rect);
 	}
 	Ui::SendPendingMoveResizeEvents(widget);
 	if (rect.isNull()) {
@@ -131,7 +133,9 @@ QPixmap ScreenshotProtection::grabForAnimation(
 	}
 	auto result = QPixmap(rect.size() * style::DevicePixelRatio());
 	result.setDevicePixelRatio(style::DevicePixelRatio());
-	result.fill(Qt::transparent);
+	result.fill(ExtrasFeatures::WindowMaterial::isActive(widget.get())
+		? ExtrasFeatures::WindowMaterial::rootTintColor(widget)
+		: QColor(Qt::transparent));
 	auto visible = QRegion(rect);
 	auto redactions = std::vector<std::pair<QWidget*, QRect>>();
 	for (const auto &[id, reason] : _reasons) {

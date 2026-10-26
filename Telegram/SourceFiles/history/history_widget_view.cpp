@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "window/window_animation_snapshot.h"
 
 #include "extras/data/conversation_cache.h"
 
@@ -1049,7 +1050,7 @@ void HistoryWidget::startFirstLoadFade() {
 	Window::ShowFadeOutAnimation(
 		this,
 		geometry,
-		Ui::GrabWidget(this, geometry),
+		Window::GrabForAnimation(this, geometry),
 		st::extrasInPlaceFadeDuration
 	)->setObjectName(u"history-first-load-fade"_q);
 }

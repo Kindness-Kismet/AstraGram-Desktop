@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_list_widget.h"
+#include "window/window_animation_snapshot.h"
 #include "extras/ui/components/smooth_scroll.h"
 #include "extras/data/conversation_cache.h"
 #include "window/window_slide_animation.h"
@@ -621,7 +622,7 @@ ListWidget::ListWidget(
 				return;
 			}
 			Window::ShowFadeOutAnimation(scroll->parentWidget(), scroll->geometry(),
-				Ui::GrabWidget(scroll), st::extrasInPlaceFadeDuration
+				Window::GrabForAnimation(scroll), st::extrasInPlaceFadeDuration
 			)->setObjectName(u"history-cache-refresh-fade"_q);
 		}, lifetime());
 		scroll->lockWheelDirection();

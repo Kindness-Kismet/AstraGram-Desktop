@@ -94,6 +94,8 @@ void SlideAnimation::paintContents(QPainter &p) const {
 		paintCrossFade(p);
 		return;
 	}
+	p.save();
+	p.setCompositionMode(QPainter::CompositionMode_Source);
 	const auto retina = style::DevicePixelRatio();
 
 	const auto slideLeft = (_direction == SlideDirection::FromLeft);
@@ -128,6 +130,7 @@ void SlideAnimation::paintContents(QPainter &p) const {
 					coordOver * retina,
 					_cacheUnder.height()));
 			p.setOpacity(progress);
+			p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 			p.fillRect(
 				0,
 				0,
@@ -135,11 +138,13 @@ void SlideAnimation::paintContents(QPainter &p) const {
 				st::slideFadeOutBg);
 			p.setOpacity(1);
 		}
+		p.setCompositionMode(QPainter::CompositionMode_Source);
 		p.drawPixmap(
 			QRect(QPoint(coordOver, 0), _cacheOver.size() / retina),
 			_cacheOver,
 			QRect(QPoint(), _cacheOver.size()));
 		p.setOpacity(progress);
+		p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 		st::slideShadow.fill(
 			p,
 			QRect(
@@ -148,6 +153,7 @@ void SlideAnimation::paintContents(QPainter &p) const {
 				st::slideShadow.width(),
 				_cacheOver.height() / retina));
 	}
+	p.restore();
 }
 
 void SlideAnimation::paintCrossFade(QPainter &p) const {

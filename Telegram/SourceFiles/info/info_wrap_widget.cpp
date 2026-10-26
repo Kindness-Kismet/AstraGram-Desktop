@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/info_wrap_widget.h"
+#include "window/window_animation_snapshot.h"
 
 #include "info/profile/info_profile_widget.h"
 #include "info/profile/info_profile_values.h"
@@ -933,7 +934,7 @@ QPixmap WrapWidget::grabForShowAnimation(
 	if (expanding) {
 		_grabbingForExpanding = true;
 	}
-	auto result = Ui::GrabWidget(this);
+	auto result = Window::GrabForAnimation(this);
 	if (expanding) {
 		_grabbingForExpanding = false;
 	}

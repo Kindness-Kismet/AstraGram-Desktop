@@ -1,4 +1,5 @@
 #include "extras/ui/secret_chat_box.h"
+#include "extras/features/window_material/window_material.h"
 #include "extras/ui/secret_chat_attachments.h"
 
 #include "extras/features/secret_chats/secret_chat_dialog.h"
@@ -307,7 +308,9 @@ public:
 		// 原生切页动画只保存背景，加密正文不进入截图缓存。
 		auto result = QPixmap(size() * style::DevicePixelRatio());
 		result.setDevicePixelRatio(style::DevicePixelRatio());
-		result.fill(Qt::transparent);
+		result.fill(ExtrasFeatures::WindowMaterial::isActive(this)
+			? ExtrasFeatures::WindowMaterial::rootTintColor(this)
+			: QColor(Qt::transparent));
 		render(&result, QPoint(), QRegion(), QWidget::DrawWindowBackground);
 		return result;
 	}

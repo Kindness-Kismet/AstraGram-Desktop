@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_lock_widgets.h"
+#include "window/window_animation_snapshot.h"
 
 #include "base/platform/base_platform_info.h"
 #include "base/call_delayed.h"
@@ -84,7 +85,7 @@ void LockWidget::showAnimated(QPixmap oldContentCache) {
 
 	showChildren();
 	setInnerFocus();
-	auto newContentCache = Ui::GrabWidget(this);
+	auto newContentCache = Window::GrabForAnimation(this);
 	hideChildren();
 
 	_showAnimation = std::make_unique<Window::SlideAnimation>();

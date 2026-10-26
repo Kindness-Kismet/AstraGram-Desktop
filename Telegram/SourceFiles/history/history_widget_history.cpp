@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "window/window_animation_snapshot.h"
 
 #include "extras/data/conversation_cache.h"
 
@@ -1002,7 +1003,7 @@ QPixmap HistoryWidget::grabForShowAnimation(
 	}
 	_inGrab = true;
 	updateControlsGeometry();
-	auto result = Ui::GrabWidget(this);
+	auto result = Window::GrabForAnimation(this);
 	_inGrab = false;
 	updateControlsGeometry();
 	if (params.withTopBarShadow) {

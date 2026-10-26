@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_pinned_section.h"
+#include "window/window_animation_snapshot.h"
 #include "ui/chat/floating_bar.h"
 
 #include "history/view/history_view_top_bar_widget.h"
@@ -443,7 +444,7 @@ Dialogs::RowDescriptor PinnedWidget::activeChat() const {
 QPixmap PinnedWidget::grabForShowAnimation(const Window::SectionSlideParams &params) {
 	_topBar->updateControlsVisibility();
 	if (params.withTopBarShadow) _topBarShadow->hide();
-	auto result = Ui::GrabWidget(this);
+	auto result = Window::GrabForAnimation(this);
 	if (params.withTopBarShadow) _topBarShadow->show();
 	_translateBar->hide();
 	return result;

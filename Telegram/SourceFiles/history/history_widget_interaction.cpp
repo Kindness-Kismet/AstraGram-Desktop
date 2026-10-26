@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "window/window_animation_snapshot.h"
 
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
@@ -263,7 +264,7 @@ void HistoryWidget::showAnimated(
 	_preserveScrollTop = false;
 	_stickerToast = nullptr;
 
-	auto newContentCache = Ui::GrabWidget(this);
+	auto newContentCache = Window::GrabForAnimation(this);
 
 	hideChildWidgets();
 	if (params.withTopBarShadow && !fromBottom) {

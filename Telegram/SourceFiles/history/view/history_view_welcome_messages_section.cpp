@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_welcome_messages_section.h"
+#include "window/window_animation_snapshot.h"
 
 #include "api/api_sending.h"
 #include "apiwrap.h"
@@ -762,7 +763,7 @@ QPixmap WelcomeMessagesWidget::grabForShowAnimation(
 		_topBarShadow->hide();
 	}
 	_composeControls->showForGrab();
-	auto result = Ui::GrabWidget(this);
+	auto result = Window::GrabForAnimation(this);
 	if (params.withTopBarShadow) {
 		_topBarShadow->show();
 	}
