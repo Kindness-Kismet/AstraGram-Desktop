@@ -758,7 +758,7 @@ void SetupSubscriptionOptions(
 			}, label->lifetime());
 			button->heightValue() | rpl::on_next([=](int height) {
 				radio->moveToLeft(st::settingsCardRowInset,
-					(height - radio->height()) / 2);
+					(height - radio->heightNoMargins()) / 2);
 			}, radio->lifetime());
 			radio->show();
 			label->show();
