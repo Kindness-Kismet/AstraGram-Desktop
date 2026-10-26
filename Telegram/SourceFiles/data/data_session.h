@@ -67,6 +67,7 @@ class Streaming;
 class MediaRotation;
 class Histories;
 class DocumentMedia;
+class DocumentFileWatcher;
 class PhotoMedia;
 class Stickers;
 class GroupCall;
@@ -204,6 +205,9 @@ public:
 	}
 	[[nodiscard]] Streaming &streaming() const {
 		return *_streaming;
+	}
+	[[nodiscard]] DocumentFileWatcher &documentFileWatcher() const {
+		return *_documentFileWatcher;
 	}
 	[[nodiscard]] MediaRotation &mediaRotation() const {
 		return *_mediaRotation;
@@ -1432,6 +1436,7 @@ private:
 	const std::unique_ptr<CloudThemes> _cloudThemes;
 	const std::unique_ptr<SendActionManager> _sendActionManager;
 	const std::unique_ptr<Streaming> _streaming;
+	const std::unique_ptr<DocumentFileWatcher> _documentFileWatcher;
 	const std::unique_ptr<MediaRotation> _mediaRotation;
 	const std::unique_ptr<Histories> _histories;
 	const std::unique_ptr<Stickers> _stickers;

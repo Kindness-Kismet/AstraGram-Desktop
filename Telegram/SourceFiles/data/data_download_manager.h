@@ -162,6 +162,7 @@ private:
 	void removed(not_null<const HistoryItem*> item);
 	void detach(SessionData &data, DownloadedId &id);
 	void untrack(not_null<Main::Session*> session);
+	void invalidatePath(not_null<Main::Session*> session, const QString &path);
 	void remove(
 		SessionData &data,
 		std::vector<DownloadingId>::iterator i);

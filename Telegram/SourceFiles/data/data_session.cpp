@@ -87,6 +87,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_saved_sublist.h"
 #include "data/data_stories.h"
 #include "data/data_streaming.h"
+#include "data/data_document_file_watcher.h"
 #include "data/data_media_rotation.h"
 #include "data/data_histories.h"
 #include "data/data_peer_values.h"
@@ -351,6 +352,7 @@ Session::Session(not_null<Main::Session*> session)
 , _cloudThemes(std::make_unique<CloudThemes>(session))
 , _sendActionManager(std::make_unique<SendActionManager>())
 , _streaming(std::make_unique<Streaming>(this))
+, _documentFileWatcher(std::make_unique<DocumentFileWatcher>(this))
 , _mediaRotation(std::make_unique<MediaRotation>())
 , _histories(std::make_unique<Histories>(this))
 , _stickers(std::make_unique<Stickers>(this))
@@ -582,6 +584,7 @@ void Session::clear() {
 	_locations.clear();
 	_polls.clear();
 	_games.clear();
+	_documentFileWatcher->clear();
 	_documents.clear();
 	_photos.clear();
 }

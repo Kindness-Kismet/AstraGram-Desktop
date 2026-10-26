@@ -21,6 +21,7 @@ constexpr auto kRetentionPref = "media-cache-retention";
 constexpr auto kIndexFormat = quint32(1);
 constexpr auto kQueryKey = Storage::Cache::Key{ 0, 1 };
 constexpr auto kSweepInterval = crl::time(60 * 60 * 1000);
+constexpr auto kClearBatchSize = 32;
 
 template <typename Callback>
 [[nodiscard]] auto onMain(not_null<Main::Session*> session, Callback callback) {
@@ -455,6 +456,14 @@ void MediaCacheManager::finishSnapshot(MediaCacheSnapshot snapshot) {
 	}
 }
 
+struct MediaCacheManager::ClearOperation {
+	std::vector<Key> keys;
+	size_t next = 0;
+	int pending = 0;
+	MediaCacheClearResult result;
+	Fn<void(MediaCacheClearResult)> done;
+};
+
 void MediaCacheManager::clearKeys(
 		std::vector<Key> keys,
 		Fn<void(MediaCacheClearResult)> done) {
@@ -462,13 +471,31 @@ void MediaCacheManager::clearKeys(
 		done({});
 		return;
 	}
-	struct Operation {
-		int remaining = 0;
-		MediaCacheClearResult result;
-	};
-	const auto operation = std::make_shared<Operation>();
-	operation->remaining = keys.size();
-	for (const auto key : keys) {
+	const auto operation = std::make_shared<ClearOperation>();
+	operation->keys = std::move(keys);
+	operation->done = std::move(done);
+	clearNextBatch(operation);
+}
+
+void MediaCacheManager::clearNextBatch(
+		const std::shared_ptr<ClearOperation> &operation) {
+	if (_disabled) {
+		operation->result.error = { Storage::Cache::Error::Type::IO, {} };
+		operation->done(operation->result);
+		return;
+	}
+	if (operation->next == operation->keys.size()) {
+		scheduleSave();
+		_changes.fire({});
+		operation->done(operation->result);
+		return;
+	}
+	operation->pending = std::min(
+		size_t(kClearBatchSize),
+		operation->keys.size() - operation->next);
+	const auto till = operation->next + operation->pending;
+	while (operation->next != till) {
+		const auto key = operation->keys[operation->next++];
 		const auto size = _entries.at(key).size;
 		database(key.bigFile).remove(key.storage, onMain(_session, [=](
 				Storage::Cache::Error error) {
@@ -478,10 +505,8 @@ void MediaCacheManager::clearKeys(
 			} else {
 				operation->result.error = error;
 			}
-			if (--operation->remaining == 0) {
-				scheduleSave();
-				_changes.fire({});
-				done(operation->result);
+			if (--operation->pending == 0) {
+				clearNextBatch(operation);
 			}
 		}));
 	}
@@ -532,6 +557,7 @@ bool MediaCacheManager::clear(
 			}
 			keys.push_back(key);
 		}
+		const auto messageBytes = snapshot.categories[int(MediaCacheCategory::Messages)].bytes;
 		clearKeys(std::move(keys), [=](MediaCacheClearResult result) {
 			if (_disabled || !(mask & mediaCacheBit(MediaCacheCategory::Messages))) {
 				finishClearing();
@@ -551,8 +577,7 @@ bool MediaCacheManager::clear(
 						done(result);
 						return;
 					}
-					const auto before = snapshot.categories[int(MediaCacheCategory::Messages)].bytes;
-					result.freedBytes += std::max(int64(0), before - remaining.bytes);
+					result.freedBytes += std::max(int64(0), messageBytes - remaining.bytes);
 					finishClearing();
 					done(result);
 				});

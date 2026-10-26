@@ -112,6 +112,7 @@ public:
 		not_null<DocumentData*> document);
 
 private:
+	struct ClearOperation;
 	struct Key {
 		bool bigFile = false;
 		Storage::Cache::Key storage;
@@ -136,6 +137,7 @@ private:
 		bool bigFile,
 		Fn<void(Storage::Cache::Error)> done);
 	void clearKeys(std::vector<Key> keys, Fn<void(MediaCacheClearResult)> done);
+	void clearNextBatch(const std::shared_ptr<ClearOperation> &operation);
 	[[nodiscard]] bool selectForClearing(Entry &entry, PeerId peer);
 	void scheduleSave();
 	[[nodiscard]] MediaCacheSnapshot collectSnapshot() const;

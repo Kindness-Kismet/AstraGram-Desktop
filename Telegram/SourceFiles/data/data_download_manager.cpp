@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_session.h"
 #include "data/data_photo.h"
 #include "data/data_document.h"
+#include "data/data_document_file_watcher.h"
 #include "data/data_document_media.h"
 #include "data/data_web_page.h"
 #include "data/data_changes.h"
@@ -172,6 +173,13 @@ void DownloadManager::trackSession(not_null<Main::Session*> session) {
 	auto &data = _sessions.emplace(session, SessionData()).first->second;
 	data.downloaded = deserialize(session);
 	data.resolveNeeded = data.downloaded.size();
+	for (const auto &id : data.downloaded) {
+		session->data().documentFileWatcher().watchDownload(id.path);
+	}
+	session->data().documentFileWatcher().invalidatedPaths(
+	) | rpl::on_next([=](const QString &path) {
+		invalidatePath(session, path);
+	}, data.lifetime);
 
 	session->data().documentLoadProgress(
 	) | rpl::filter([=](not_null<DocumentData*> document) {
@@ -486,6 +494,16 @@ void DownloadManager::addLoaded(
 	const auto id = object.document
 		? DownloadId{ object.document->id, DownloadType::Document }
 		: DownloadId{ object.photo->id, DownloadType::Photo };
+	if (const auto document = object.document) {
+		document->setLocation(Core::FileLocation(path));
+		if (!document->hasLocalSource()) {
+			document->session().local().writeFileLocation(
+				document->mediaKey(),
+				document->location());
+		}
+		document->owner().requestDocumentViewRepaint(document);
+	}
+	item->history()->owner().documentFileWatcher().watchDownload(path);
 	data.downloaded.push_back({
 		.download = id,
 		.started = started,
@@ -1274,6 +1292,43 @@ std::vector<DownloadedId> DownloadManager::deserialize(
 		});
 	}
 	return result;
+}
+
+void DownloadManager::invalidatePath(
+		not_null<Main::Session*> session,
+		const QString &path) {
+	auto &data = sessionData(session);
+	for (auto i = int(data.downloaded.size()); i > 0;) {
+		auto &id = data.downloaded[--i];
+		if (id.path.isEmpty() || QFileInfo(id.path).absoluteFilePath() != path) {
+			continue;
+		}
+		// 未解析的条目保留位置，等待现有解析流程移除。
+		id.path.clear();
+		if (!id.object) {
+			continue;
+		}
+		const auto item = id.object->item;
+		const auto document = id.object->document;
+		data.downloaded.erase(data.downloaded.begin() + i);
+		if (document && !ranges::any_of(data.downloaded, [&](const DownloadedId &entry) {
+			return entry.object && entry.object->document == document;
+		})) {
+			_generatedDocuments.remove(document);
+		}
+		if (!ranges::contains(data.downloaded, item.get(), ByItem)) {
+			_loaded.remove(item);
+			_generated.remove(item);
+			_loadedRemoved.fire_copy(item);
+		}
+	}
+	for (auto i = int(data.downloading.size()); i > 0;) {
+		const auto &id = data.downloading[--i];
+		if (id.done && QFileInfo(id.path).absoluteFilePath() == path) {
+			remove(data, data.downloading.begin() + i);
+		}
+	}
+	writePostponed(session);
 }
 
 void DownloadManager::untrack(not_null<Main::Session*> session) {

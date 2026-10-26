@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_document.h"
 #include "data/data_document_loader.h"
+#include "data/data_document_file_watcher.h"
 #include "extras/data/media_cache_manager.h"
 
 #ifdef _DEBUG
@@ -1151,6 +1152,7 @@ bool DocumentData::enforceNameType(Core::NameType nameType) {
 
 void DocumentData::setLoadedInMediaCacheLocation() {
 	_location = Core::FileLocation();
+	_owner->documentFileWatcher().watch(this, {});
 	_flags |= Flag::LoadedInMediaCache;
 }
 
@@ -1222,6 +1224,7 @@ const Core::FileLocation &DocumentData::location(bool check) const {
 		if (check && !_location.check()) {
 			const_cast<DocumentData*>(this)->_location = Core::FileLocation();
 		}
+		_owner->documentFileWatcher().watch(const_cast<DocumentData*>(this), _location.name());
 		return _location;
 	}
 	if (check && !_location.check()) {
@@ -1233,15 +1236,17 @@ const Core::FileLocation &DocumentData::location(bool check) const {
 			that->_location = location;
 		}
 	}
+	_owner->documentFileWatcher().watch(const_cast<DocumentData*>(this), _location.name());
 	return _location;
 }
 
 void DocumentData::setLocation(const Core::FileLocation &loc) {
 	if (loc.inMediaCache()) {
 		setLoadedInMediaCacheLocation();
-	} else if (loc.check()) {
+	} else if (loc.isEmpty() || loc.check()) {
 		_location = loc;
 	}
+	_owner->documentFileWatcher().watch(this, _location.name());
 }
 
 QString DocumentData::filepath(bool check) const {
@@ -1285,7 +1290,7 @@ bool DocumentData::saveFromDataChecked() {
 		return false;
 	}
 	file.close();
-	_location = Core::FileLocation(path);
+	setLocation(Core::FileLocation(path));
 	if (!hasLocalSource()) {
 		session().local().writeFileLocation(mediaKey(), _location);
 	}
@@ -1766,6 +1771,7 @@ void DocumentData::setRemoteLocation(
 			}
 		}
 	}
+	_owner->documentFileWatcher().watch(this, _location.name());
 }
 
 void DocumentData::setStoryMedia(bool value) {
@@ -1802,7 +1808,7 @@ void DocumentData::collectLocalData(not_null<DocumentData*> local) {
 		_owner->keepAlive(std::move(media));
 	}
 	if (!local->_location.inMediaCache() && !local->_location.isEmpty()) {
-		_location = local->_location;
+		setLocation(local->_location);
 		session().local().writeFileLocation(mediaKey(), _location);
 	}
 }

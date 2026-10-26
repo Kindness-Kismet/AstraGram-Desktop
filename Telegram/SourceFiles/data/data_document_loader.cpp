@@ -33,7 +33,7 @@ void DocumentData::setLocalSource(LocalSource source) {
 		const auto local = weak.lock();
 		return local && local->active && local->source.valid();
 	});
-	_location = Core::FileLocation();
+	setLocation(Core::FileLocation());
 	resetCancelled();
 }
 
@@ -60,7 +60,7 @@ void DocumentData::clearLocalSource() {
 	_replyPreview = nullptr;
 	_goodThumbnailState = GoodThumbnailState();
 	_goodThumbnailPhoto = nullptr;
-	_location = Core::FileLocation();
+	setLocation(Core::FileLocation());
 	_owner->notifyDocumentLayoutChanged(this);
 }
 
@@ -95,7 +95,7 @@ void DocumentData::saveLocalSource(const QString &toFile, bool autoLoading) {
 			return;
 		}
 		file.close();
-		_location = Core::FileLocation(toFile);
+		setLocation(Core::FileLocation(toFile));
 		return;
 	}
 	if (!toFile.isEmpty()) {

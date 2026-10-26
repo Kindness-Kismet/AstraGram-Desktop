@@ -1,5 +1,6 @@
 #ifdef _DEBUG
 #include "extras/debug/commands/commands_internal.h"
+#include "extras/debug/debug_login.h"
 
 #include "extras/data/media_cache_manager.h"
 #include "extras/data/conversation_cache.h"
@@ -15,6 +16,7 @@
 #include "data/data_document.h"
 #include "data/data_document_media.h"
 #include "data/data_peer.h"
+#include "data/data_user.h"
 #include "data/data_photo.h"
 #include "data/data_photo_media.h"
 #include "data/data_poll.h"
@@ -26,6 +28,9 @@
 #include "history/history_item_components.h"
 #include "history/history.h"
 #include "main/main_session.h"
+#include "settings.h"
+#include "base/random.h"
+#include "storage/cache/storage_cache_database.h"
 #include "window/window_session_controller.h"
 #include "ui/emoji_config.h"
 
@@ -429,6 +434,59 @@ Result mediaStats(const QStringList &args) {
 	return jobStarted(job);
 }
 
+Result simulateCacheFiles(const QStringList &args) {
+	const auto session = ActiveSession();
+	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	auto filesOk = false;
+	auto chatsOk = false;
+	const auto files = args.size() >= 2 ? args[0].toInt(&filesOk) : 0;
+	const auto chats = args.size() >= 2 ? args[1].toInt(&chatsOk) : 0;
+	if (!filesOk || !chatsOk || files < 1 || files > 50000
+		|| chats < 1 || chats > 5000 || chats > files || args.size() > 3
+		|| (args.size() == 3 && args[2] != u"shared"_q)) {
+		return Result::Err(u"usage: simulation.cache-files <1..50000> <1..5000> [shared]"_q);
+	}
+	struct Operation {
+		int remaining = 0;
+		bool failed = false;
+	};
+	const auto operation = std::make_shared<Operation>();
+	operation->remaining = files;
+	const auto job = beginJob("simulation-cache-files");
+	session->lifetime().add([job] { finishJob(job, false, "session closed"); });
+	const auto prefix = base::RandomValue<uint64>();
+	const auto shared = args.size() == 3;
+	for (auto i = 0; i != files; ++i) {
+		const auto peer = session->data().user(UserId(940000000 + i % chats));
+		peer->setName(u"本地缓存样本 %1"_q.arg(i % chats + 1), {}, {}, {});
+		peer->setLoadedStatus(PeerData::LoadedStatus::Full);
+		const auto key = Storage::Cache::Key{ prefix, uint64(i + 1) };
+		const auto category = i % 2 ? Category::Documents : Category::Images;
+		const auto bigFile = (i % 4 >= 2);
+		session->mediaCache().track(key, bigFile, FullMsgId(peer->id, MsgId(1)), 0, category);
+		if (shared) {
+			session->mediaCache().track(key, bigFile, FullMsgId(session->userPeerId(), MsgId(1)), 0, category);
+		}
+		auto &cache = bigFile ? session->data().cacheBigFile() : session->data().cache();
+		cache.put(key, QByteArray(128, char(i % 127)),
+			Extras::CacheSerialization::onMain<Storage::Cache::Error>(not_null(session),
+				[=](Storage::Cache::Error error) {
+				operation->failed |= error.type != Storage::Cache::Error::Type::None;
+				if (--operation->remaining == 0) {
+					finishJob(job, !operation->failed, {
+						{ "files", files }, { "chats", chats }, { "shared", shared },
+						{ "bytes", files * 128 },
+						{ "chatEntryBytes", sizeof(Extras::MediaCacheChat) },
+						{ "firstPeerId", peerFromUser(UserId(940000000)).value },
+					});
+				}
+			}));
+	}
+	return jobStarted(job);
+}
+
 Result mediaClear(const QStringList &args) {
 	if (args.empty() || args.size() > 2) {
 		return Result::Err(u"usage: cache.media-clear <all|category[,category...]> [peerId]"_q);
@@ -503,6 +561,7 @@ const HandlerMap &cacheHandlers() {
 		{ u"cache.sticker-pack"_q, &stickerPack },
 		{ u"cache.badges"_q, &badgeState },
 		{ u"cache.media-stats"_q, &mediaStats },
+		{ u"simulation.cache-files"_q, &simulateCacheFiles },
 		{ u"cache.media-clear"_q, &mediaClear },
 		{ u"cache.media-retention"_q, &mediaRetention },
 	};

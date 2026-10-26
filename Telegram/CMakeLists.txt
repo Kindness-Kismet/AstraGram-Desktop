@@ -1079,6 +1079,8 @@ PRIVATE
     data/data_compose_stash.h
     data/data_document.cpp
     data/data_document.h
+    data/data_document_file_watcher.cpp
+    data/data_document_file_watcher.h
     data/data_document_loader.cpp
     data/data_document_loader.h
     data/data_document_media.cpp

@@ -104,7 +104,7 @@ Result simulateMusic(const QStringList &args) {
 		}
 		const auto index = int(MusicState->entries.size());
 		const auto id = DocumentId(9700050000ULL + index);
-		const auto messageId = MsgId(2950000 + index);
+		const auto messageId = session->data().nextLocalMessageId();
 		using Flag = MTPDdocumentAttributeAudio::Flag;
 		const auto mtp = MTP_document(MTP_flags(0), MTP_long(id), MTP_long(1),
 			MTP_bytes(), MTP_int(base::unixtime::now()), MTP_string("audio/mpeg"),
@@ -117,13 +117,12 @@ Result simulateMusic(const QStringList &args) {
 		const auto document = session->data().processDocument(mtp);
 		const auto peer = simulationPeer(session, args.contains(u"protected"_q)
 			? u"protected-group"_q : u"saved"_q);
-		const auto item = session->data().addNewMessage(
-			simulationMediaMessage(peer, session->userPeerId(), messageId.bare,
-				u"本地音乐播放样本"_q,
-				MTP_messageMediaDocument(MTP_flags(MTPDmessageMediaDocument::Flag::f_document),
-					mtp, MTPVector<MTPDocument>(), MTPPhoto(), MTPint(), MTPint())),
-			MessageFlags(), NewMessageType::Existing);
-		Expects(item != nullptr);
+		const auto item = session->data().history(peer)->addNewLocalMessage({
+			.id = messageId,
+			.flags = MessageFlag::Outgoing,
+			.from = session->userPeerId(),
+			.date = base::unixtime::now(),
+		}, document, TextWithEntities{ u"本地音乐播放样本"_q });
 		auto &media = *session->lifetime().make_state<std::shared_ptr<Data::DocumentMedia>>(
 			document->createMediaView());
 		auto thumbnail = QImage(90, 90, QImage::Format_RGB32);

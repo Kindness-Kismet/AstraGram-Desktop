@@ -997,8 +997,7 @@ void Document::drawCornerDownload(
 		Painter &p,
 		const PaintContext &context,
 		LayoutMode mode) const {
-	if (dataLoaded()
-		|| _data->loadedInMediaCache()
+	if (!_data->filepath().isEmpty()
 		|| !downloadInCorner()
 		|| ExtrasFeatures::MessageShot::isTakingShot()) {
 		return;
@@ -1063,8 +1062,7 @@ TextState Document::cornerDownloadTextState(
 		StateRequest request,
 		LayoutMode mode) const {
 	auto result = TextState(_parent);
-	if (dataLoaded()
-		|| _data->loadedInMediaCache()
+	if (!_data->filepath().isEmpty()
 		|| !downloadInCorner()) {
 		return result;
 	}
