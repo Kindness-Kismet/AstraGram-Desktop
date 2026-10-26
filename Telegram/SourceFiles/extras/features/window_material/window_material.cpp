@@ -9,6 +9,7 @@
 #include "ui/widgets/rp_window.h"
 #include "ui/widgets/separate_panel.h"
 #include "ui/ui_utility.h"
+#include "ui/style/style_core_palette.h"
 #include "ui/style/style_widget_color.h"
 #include "window/themes/window_theme.h"
 #include "window/window_main_menu.h"
@@ -146,6 +147,7 @@ private:
 			|| _window->property(kModeProperty).toInt() != int(effective)) {
 			_window->setProperty(kModeProperty, int(effective));
 			_window->setProperty(kActiveProperty, active);
+			refreshTitleStyle(active);
 			// 模式与生效状态写齐后统一通知，避免暴露一半更新的状态。
 			_window->setProperty(kRevisionProperty, ++_revision);
 			std::vector<QPointer<Ui::LayerStackWidget>> layers;
@@ -164,6 +166,40 @@ private:
 		_refreshing = false;
 	}
 
+	void refreshTitleStyle(bool active) {
+		if (!active) {
+			_window->setTitleStyle(st::defaultWindowTitle);
+			return;
+		}
+		_titlePalette = *style::main_palette::get();
+		const auto dark = Window::Theme::IsNightMode();
+		const auto hover = dark
+			? QColor(255, 255, 255, 26)
+			: QColor(0, 0, 0, 26);
+		// 复合图标的底色使用纯黑白叠加，避免被材质的前景色适配加深。
+		for (const auto name : {
+			"titleButtonBgOver",
+			"titleButtonBgActiveOver",
+		}) {
+			_titlePalette.setColor(QLatin1String(name), hover);
+		}
+		_titlePalette.finalize();
+		auto updated = std::make_unique<style::WindowTitle>(st::defaultWindowTitle);
+		// 只替换最小化、最大化与还原的悬停图标，关闭按钮保留原样式。
+		for (const auto icon : {
+			&updated->minimize.iconOver,
+			&updated->minimizeIconActiveOver,
+			&updated->maximize.iconOver,
+			&updated->maximizeIconActiveOver,
+			&updated->restoreIconOver,
+			&updated->restoreIconActiveOver,
+		}) {
+			*icon = icon->withPalette(_titlePalette);
+		}
+		_window->setTitleStyle(*updated);
+		_titleStyle = std::move(updated);
+	}
+
 	bool eventFilter(QObject *, QEvent *event) override {
 		if (event->type() == QEvent::WinIdChange
 			|| event->type() == QEvent::Show
@@ -176,6 +212,8 @@ private:
 
 	const not_null<Ui::RpWindow*> _window;
 	const std::unique_ptr<Platform::Backend> _backend;
+	style::palette _titlePalette;
+	std::unique_ptr<style::WindowTitle> _titleStyle;
 	QTimer _timer;
 	int _revision = 0;
 	bool _refreshing = false;
