@@ -10,6 +10,7 @@
 class QWidget;
 enum class WindowMaterial;
 namespace Ui {
+enum class WidgetColorRole;
 class RpWindow;
 class IconButton;
 class SeparatePanel;
@@ -31,6 +32,11 @@ void watchSurface(not_null<QWidget*> widget);
 [[nodiscard]] rpl::producer<bool> changes(not_null<QWidget*> widget);
 [[nodiscard]] QColor rootTintColor(not_null<const QWidget*> widget);
 [[nodiscard]] QColor cardColor(const QWidget *widget, QColor opaque);
+[[nodiscard]] QColor secondaryColor(QColor normal);
+[[nodiscard]] QColor widgetColor(
+	not_null<const QWidget*> widget,
+	QColor normal,
+	Ui::WidgetColorRole role);
 // 材质背景随桌面变化，灰色图标与文字改用正文色，与设置页导航一致。
 // 生效时返回正文色，否则为空，可直接传给控件的颜色覆盖接口。
 [[nodiscard]] std::optional<QColor> foregroundOverride(const QWidget *widget);

@@ -1061,7 +1061,7 @@ void MultiSelect::Inner::paintEvent(QPaintEvent *e) {
 		std::max(0, _st.padding.right() - st::searchFieldPadding),
 		_st.padding.bottom()));
 	if (!_content) {
-		InputField::paintSearchBackground(p, capsule, _st.field, focused, underMouse());
+		InputField::paintSearchBackground(this, p, capsule, _st.field, focused, underMouse());
 	}
 
 	auto offset = QPoint(

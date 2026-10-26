@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/peer_list_box.h"
 
 #include "extras/features/window_material/window_material.h"
+#include "ui/style/style_widget_color.h"
 #include "boxes/peer_list_section_headers.h"
 #include "boxes/peer_list_section_index.h"
 #include "history/history.h" // chatListNameSortKey.
@@ -1021,7 +1022,9 @@ void PeerListRow::paintStatusText(
 	auto statusHasOnlineColor = (_statusType == PeerListRow::StatusType::Online)
 		|| (_statusType == PeerListRow::StatusType::CustomActive);
 	p.setFont(st::contactsStatusFont);
-	p.setPen(statusHasOnlineColor ? st.statusFgActive : (selected ? st.statusFgOver : st.statusFg));
+	const auto normal = (statusHasOnlineColor ? st.statusFgActive : (selected ? st.statusFgOver : st.statusFg))->c;
+	const auto widget = dynamic_cast<const QWidget*>(p.device());
+	p.setPen(widget ? Ui::ResolveWidgetColor(widget, normal) : normal);
 	_status.drawLeftElided(p, x, y, availableWidth, outerWidth);
 }
 
@@ -2154,7 +2157,7 @@ void PeerListContent::paintRowContent(
 	});
 
 	const auto background = highlighted
-		? bg->c
+		? Ui::ResolveWidgetColor(this, bg->c, Ui::WidgetColorRole::Hover)
 		: ExtrasFeatures::WindowMaterial::surfaceColor(this, bg->c);
 	const auto rowRect = QRect(0, 0, outerWidth, _rowHeight);
 	if (_rowBackgroundRadius > 0) {
@@ -2239,7 +2242,8 @@ void PeerListContent::paintRowContent(
 		width(),
 		selected);
 	auto nameCheckedRatio = row->disabled() ? 0. : row->checkedRatio();
-	p.setPen(anim::pen(st.nameFg, st.nameFgChecked, nameCheckedRatio));
+	p.setPen(anim::color(Ui::ResolveWidgetColor(this, st.nameFg->c),
+		Ui::ResolveWidgetColor(this, st.nameFgChecked->c), nameCheckedRatio));
 	name.drawLeftElided(p, namex + leading, namey, namew, width());
 
 	p.setFont(st::contactsStatusFont);
@@ -2264,7 +2268,7 @@ void PeerListContent::paintRowContent(
 			grayedPart = st::contactsStatusFont->elided(grayedPart, availableWidth - highlightedWidth);
 			p.setPen(st.statusFgActive);
 			p.drawTextLeft(statusx, statusy, width(), highlightedPart);
-			p.setPen(selected ? st.statusFgOver : st.statusFg);
+			p.setPen(Ui::ResolveWidgetColor(this, (selected ? st.statusFgOver : st.statusFg)->c));
 			p.drawTextLeft(statusx + highlightedWidth, statusy, width(), grayedPart);
 		}
 	} else {

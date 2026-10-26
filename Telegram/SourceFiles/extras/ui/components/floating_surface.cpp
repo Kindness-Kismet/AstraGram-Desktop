@@ -285,7 +285,7 @@ void FloatingSurface::draw(QPainter *p) {
 		auto painter = QPainter(&result);
 		const auto windowMaterial = usesWindowMaterial();
 		const auto tint = windowMaterial
-			? QColor(Qt::transparent)
+			? ExtrasFeatures::WindowMaterial::cardColor(_widget, _style.background())
 			: _style.background();
 		painter.fillRect(_widget->rect(), tint);
 		if (_host) {

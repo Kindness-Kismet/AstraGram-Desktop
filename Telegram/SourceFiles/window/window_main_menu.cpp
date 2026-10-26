@@ -159,6 +159,8 @@ private:
 	}
 
 	void draw(QPainter *p) override {
+		const auto backdrop = _menu->windowBackdropColor();
+		Expects(backdrop.has_value());
 		auto offset = QPoint();
 		const auto content = sourcePixmap(Qt::LogicalCoordinates, &offset, NoPad);
 		// 前景完整合成后再清除底下的界面，避免子控件重绘擦掉相邻文字。
@@ -166,7 +168,7 @@ private:
 		{
 			auto hq = PainterHighQualityEnabler(*p);
 			p->setCompositionMode(QPainter::CompositionMode_Source);
-			p->fillPath(MenuBackgroundPath(_menu->size()), Qt::transparent);
+			p->fillPath(MenuBackgroundPath(_menu->size()), *backdrop);
 		}
 		p->setCompositionMode(QPainter::CompositionMode_SourceOver);
 		p->drawPixmap(offset, content);
@@ -463,7 +465,7 @@ MainMenu::MainMenu(
 			snowRaw->paintRequest(
 			) | rpl::on_next([=](const QRect &r) {
 				auto p = Painter(snowRaw);
-				if (!hasWindowBackdrop()) {
+				if (!windowBackdropColor()) {
 					FillBackground(p, size(), false);
 					drawName(p);
 				}
@@ -492,8 +494,10 @@ MainMenu::MainMenu(
 
 MainMenu::~MainMenu() = default;
 
-bool MainMenu::hasWindowBackdrop() const {
-	return ExtrasFeatures::WindowMaterial::isActive(this);
+std::optional<QColor> MainMenu::windowBackdropColor() const {
+	return ExtrasFeatures::WindowMaterial::isActive(this)
+		? std::make_optional(ExtrasFeatures::WindowMaterial::rootTintColor(this))
+		: std::nullopt;
 }
 
 void MainMenu::moveBadge() {
@@ -1020,7 +1024,7 @@ void MainMenu::paintEvent(QPaintEvent *e) {
 	const auto clip = e->rect();
 	const auto cover = QRect(0, 0, width(), st::mainMenuCoverHeight);
 
-	FillBackground(p, size(), hasWindowBackdrop());
+	FillBackground(p, size(), windowBackdropColor().has_value());
 	if (cover.intersects(clip)) {
 		drawName(p);
 	}

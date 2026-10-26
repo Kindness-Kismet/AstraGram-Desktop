@@ -1183,7 +1183,7 @@ QColor SecondaryTextFg(
 		return active->c;
 	}
 	return context.windowMaterial
-		? st::windowFg->c
+		? ExtrasFeatures::WindowMaterial::secondaryColor(normal->c)
 		: (context.selected ? over : normal)->c;
 }
 

@@ -1,4 +1,5 @@
 #include "settings/settings_card_layout.h"
+#include "ui/style/style_widget_color.h"
 #include "ui/widgets/rp_window.h"
 #include "extras/features/window_material/window_material.h"
 #include "settings/settings_common.h"
@@ -183,7 +184,7 @@ void CardPage::paintGroupDividers(QPainter &p) {
 			tops[i] - skip,
 			_content->width(),
 			st::lineWidth,
-			Ui::WindowDividerColor());
+			Ui::ResolveWidgetColor(this, Ui::WindowDividerColor(), Ui::WidgetColorRole::Border));
 	}
 }
 
@@ -318,7 +319,7 @@ void AddSectionRowDetails(
 		arrow->paintRequest() | rpl::on_next([=] {
 			auto p = QPainter(arrow);
 			auto hq = PainterHighQualityEnabler(p);
-			p.setPen(QPen(st::settingsCardSubTextFg->c,
+			p.setPen(QPen(Ui::ResolveWidgetColor(arrow, st::settingsCardSubTextFg->c),
 				style::ConvertScale(1), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 			const auto w = arrow->width();
 			const auto top = style::rtlpoint(QPointF(w * .4, w * .25), w);

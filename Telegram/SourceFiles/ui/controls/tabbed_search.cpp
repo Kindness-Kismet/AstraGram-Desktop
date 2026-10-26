@@ -192,7 +192,7 @@ void TabbedSearchField::paintEvent(QPaintEvent *e) {
 	}
 	auto p = QPainter(this);
 	// 底色和输入内容共用切页缓存坐标，避免图形特效分离两者。
-	InputField::paintSearchBackground(p, _field->geometry(), _st.field,
+	InputField::paintSearchBackground(this, p, _field->geometry(), _st.field,
 		_field->hasFocus() ? 1. : 0., underMouse());
 	st::defaultSearchFieldIcon.paint(p,
 		_field->x() + st::searchFieldPadding,

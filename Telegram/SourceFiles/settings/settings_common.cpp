@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/settings_common.h"
+#include "ui/style/style_widget_color.h"
 
 #include "base/timer.h"
 #include "lottie/lottie_icon.h"
@@ -449,7 +450,10 @@ void PaintCardIcon(
 	p.translate(area.x() + (area.width() - source.width() * scale) / 2.,
 		area.y() + (area.height() - source.height() * scale) / 2.);
 	p.scale(scale, scale);
-	icon.paint(p, 0, 0, source.width(), color->c);
+	const auto widget = dynamic_cast<const QWidget*>(p.device());
+	icon.paint(p, 0, 0, source.width(), widget
+		? Ui::ResolveWidgetColor(widget, color->c)
+		: color->c);
 	p.restore();
 }
 

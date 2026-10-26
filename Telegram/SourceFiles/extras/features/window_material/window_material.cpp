@@ -9,6 +9,7 @@
 #include "ui/widgets/rp_window.h"
 #include "ui/widgets/separate_panel.h"
 #include "ui/ui_utility.h"
+#include "ui/style/style_widget_color.h"
 #include "window/themes/window_theme.h"
 #include "window/window_main_menu.h"
 #include "styles/style_widgets.h"
@@ -323,6 +324,49 @@ QColor cardColor(const QWidget *widget, QColor opaque) {
 	return Window::Theme::IsNightMode()
 		? QColor(0, 0, 0, 0xCC)
 		: QColor(0xFF, 0xFF, 0xFF, 0xCC);
+}
+
+QColor secondaryColor(QColor normal) {
+	const auto foreground = st::windowFg->c;
+	return QColor(
+		(foreground.red() * 4 + normal.red()) / 5,
+		(foreground.green() * 4 + normal.green()) / 5,
+		(foreground.blue() * 4 + normal.blue()) / 5,
+		normal.alpha());
+}
+
+QColor widgetColor(
+		not_null<const QWidget*> widget,
+		QColor normal,
+		Ui::WidgetColorRole role) {
+	if (!normal.alpha() || !isActive(widget.get())) {
+		return normal;
+	}
+	// 只适配中性色，警告、链接、选中态等语义色沿用原样式。
+	const auto low = std::min({ normal.red(), normal.green(), normal.blue() });
+	const auto high = std::max({ normal.red(), normal.green(), normal.blue() });
+	if (high - low > 64) {
+		return normal;
+	}
+	switch (role) {
+	case Ui::WidgetColorRole::Text:
+		return (high > 60 && low < 220)
+			? secondaryColor(normal)
+			: normal;
+	case Ui::WidgetColorRole::Background:
+		return normal.alpha() == 255 ? cardColor(widget.get(), normal) : normal;
+	case Ui::WidgetColorRole::Hover: {
+		auto result = st::windowFg->c;
+		result.setAlpha(26);
+		return result;
+	}
+	case Ui::WidgetColorRole::Border: {
+		auto result = st::windowFg->c;
+		result.setAlpha(38);
+		return result;
+	}
+	}
+	Unexpected("Invalid widget color role.");
 }
 
 std::optional<QColor> foregroundOverride(const QWidget *widget) {

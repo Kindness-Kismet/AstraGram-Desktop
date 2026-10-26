@@ -56,7 +56,7 @@ public:
 
 	void parentResized() override;
 	void showFinished() override;
-	[[nodiscard]] bool hasWindowBackdrop() const override;
+	[[nodiscard]] std::optional<QColor> windowBackdropColor() const override;
 
 private:
 	class ToggleAccountsButton;

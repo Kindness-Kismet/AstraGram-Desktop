@@ -8,7 +8,8 @@
 #ifdef _DEBUG
 #include "extras/debug/debug_server.h"
 #endif
-#include "extras/ui/components/floating_surface.h"
+#include "extras/features/window_material/window_material.h"
+#include "ui/style/style_widget_color.h"
 #include "features/translator/extras_translator.h"
 #include "lang/lang_keys.h"
 #include "ui/chat/chat_style_radius.h"
@@ -95,7 +96,7 @@ void initUiSettings() {
 	ExtrasUiSettings::setWideMultiplier(settings.wideMultiplier());
 	ExtrasUiSettings::setMaterialSwitches(true);
 	ExtrasUiSettings::setAvatarCorners(settings.avatarCorners());
-	ExtrasUiSettings::setHoverOverlay(ExtrasUi::chatSurfaceHover);
+	Ui::SetWidgetColorResolver(ExtrasFeatures::WindowMaterial::widgetColor);
 	ExtrasUiSettings::setDialogTitle([] {
 		return tr::extras_DialogDetailsTitle(tr::now);
 	});
