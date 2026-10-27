@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="24" viewBox="0 0 36 24">
+<!-- 来源：MingCute v2.97 的 layout_right_line，填充右侧栏表示选中，按本项目尺寸适配。 -->
+<g transform="translate(10 4) scale(0.666667)">
+<path fill="#FFFFFF" fill-rule="evenodd" d="M5 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm11 2h3v14h-3zm-2 0H5v14h9z"/>
+<path fill="#FFFFFF" d="M15 4H19A1 1 0 0 1 20 5V19A1 1 0 0 1 19 20H15Z"/>
+</g>
+</svg>

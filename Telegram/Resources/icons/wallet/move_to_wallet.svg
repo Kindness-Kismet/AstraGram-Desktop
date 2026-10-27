@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="-1 -1 26 26">
+<!-- 来源：MingCute v2.97 的 wallet_line 与 arrow_right_circle_fill 组合，按本项目尺寸适配。 -->
+<g fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M4 11.5V6A1 1 0 0 1 5 5H19A1 1 0 0 1 20 6V9M20 15V18A1 1 0 0 1 19 19H13M20 9H15A3 3 0 0 0 15 15H20A1 1 0 0 0 21 14V10A1 1 0 0 0 20 9"/>
+</g>
+<circle cx="16" cy="12" r="1" fill="#FFFFFF"/>
+<g transform="translate(0.5 11.5) scale(0.5)">
+<path fill="#FFFFFF" fill-rule="evenodd" d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Zm.005-14.242a1 1 0 0 0 0 1.414L13.833 11H7.757a1 1 0 0 0 0 2h6.076l-1.828 1.829a1 1 0 0 0 1.414 1.414l3.535-3.536a1 1 0 0 0 0-1.414L13.42 7.758a1 1 0 0 0-1.414 0Z"/>
+</g>
+</svg>
