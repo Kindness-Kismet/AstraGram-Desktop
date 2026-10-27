@@ -64,6 +64,7 @@
 !/Telegram/Resources/winrc/*.manifest
 !/Telegram/Resources/winrc/*.rc
 !/Telegram/Resources/art/premium/*.obj
+!/Telegram/Resources/art/premium/diamond/*.bin
 !/Telegram/Resources/fonts/README.md
 !/Telegram/Resources/fonts/OFL.txt
 !/Telegram/Resources/numbers.txt
