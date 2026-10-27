@@ -704,7 +704,7 @@ bool OpenSystemSettings(SystemSettingsType type) {
 
 void NewVersionLaunched(int oldVersion) {
 #ifdef _DEBUG
-	if (cTestAgent() || cDebugProfile()) return;
+	if (cDebugProfile()) return;
 #endif
 	if (oldVersion > 0 && oldVersion < 2008012) {
 		// Reset icons cache, because we've changed the application icon.

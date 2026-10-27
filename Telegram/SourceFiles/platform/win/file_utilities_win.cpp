@@ -141,8 +141,6 @@ bool ShouldSaveZoneInformation() {
 }
 } // namespace
 
-namespace Unfused {
-
 void UnsafeOpenEmailLink(const QString &email) {
 	auto url = QUrl(qstr("mailto:") + email);
 	if (!QDesktopServices::openUrl(url)) {
@@ -300,7 +298,6 @@ void UnsafeLaunch(const QString &filepath) {
 	ShellExecute(0, L"open", wstringPath.c_str(), 0, 0, SW_SHOWNORMAL);
 }
 
-} // namespace Unfused
 
 void PostprocessDownloaded(const QString &filepath) {
 	// Mark file saved to the NTFS file system as originating from the Internet security zone

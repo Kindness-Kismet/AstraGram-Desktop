@@ -31,8 +31,7 @@ using json = nlohmann::json;
 		{ "debugLogs", Logs::DebugEnabled() },
 		{ "hasSession", session != nullptr },
 		{ "simulationMode", session && isSimulationSession(session) },
-		{ "isolatedDebug", cDebugProfile() || cTestAgent() },
-		{ "testAgent", cTestAgent() },
+		{ "isolatedDebug", cDebugProfile() },
 		{ "offline", cDebugOffline() },
 		{ "hasWindow", window != nullptr },
 		{ "screenshotProtected", window

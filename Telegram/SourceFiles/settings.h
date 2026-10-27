@@ -80,7 +80,6 @@ DeclareSetting(int32, LastUpdateCheck);
 DeclareSetting(bool, NoStartUpdate);
 DeclareSetting(bool, StartToSettings);
 DeclareSetting(bool, DebugMode);
-DeclareSetting(bool, TestAgent);
 #ifdef _DEBUG
 DeclareSetting(bool, DebugProfile);
 DeclareReadSetting(bool, DebugOffline);

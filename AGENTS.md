@@ -93,7 +93,7 @@ AyuGramDesktop/
 |---|---|
 | `ui` | 通用控件与样式应用层（基础控件在 lib_ui） |
 | `lang` | 翻译加载（`tr::lng_*`） |
-| `countries` / `ffmpeg` / `menu` / `codegen` / `test(s)` | 国家码、FFmpeg 封装、菜单、内嵌生成、测试 |
+| `countries` / `ffmpeg` / `menu` / `codegen` / `tests` | 国家码、FFmpeg 封装、菜单、内嵌生成、独立单元测试 |
 
 ### extras/ 定制层
 

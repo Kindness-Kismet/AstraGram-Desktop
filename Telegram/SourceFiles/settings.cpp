@@ -38,7 +38,6 @@ int32 gLastUpdateCheck = 0;
 bool gNoStartUpdate = false;
 bool gStartToSettings = false;
 bool gDebugMode = false;
-bool gTestAgent = false;
 #ifdef _DEBUG
 bool gDebugProfile = false;
 bool gDebugOffline = false;

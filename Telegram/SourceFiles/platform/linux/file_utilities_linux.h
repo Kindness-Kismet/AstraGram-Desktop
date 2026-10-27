@@ -16,8 +16,6 @@ inline QString UrlToLocal(const QUrl &url) {
 	return ::File::internal::UrlToLocalDefault(url);
 }
 
-namespace Unfused {
-
 inline void UnsafeOpenUrl(const QString &url) {
 	return ::File::internal::UnsafeOpenUrlDefault(url);
 }
@@ -34,7 +32,6 @@ inline void UnsafeLaunch(const QString &filepath) {
 	return ::File::internal::UnsafeLaunchDefault(filepath);
 }
 
-} // namespace Unfused
 
 inline void PostprocessDownloaded(const QString &filepath) {
 }

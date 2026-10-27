@@ -632,7 +632,7 @@ Result verifyMessageArchive(const QStringList &args) {
 		return Result::Err(u"usage: storage.verify-archive"_q);
 	}
 	const auto session = ActiveSession();
-	if ((!cDebugProfile() && !cTestAgent())
+	if (!cDebugProfile()
 		|| !session
 		|| !isSimulationSession(session)) {
 		return Result::Err(u"an isolated debug profile and simulation mode are required"_q);

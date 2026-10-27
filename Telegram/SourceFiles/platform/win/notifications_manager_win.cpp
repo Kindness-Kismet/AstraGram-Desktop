@@ -378,7 +378,7 @@ bool WaitForInputForCustom() {
 
 bool Supported() {
 #ifdef _DEBUG
-	if (cTestAgent() || cDebugProfile()) {
+	if (cDebugProfile()) {
 		return false;
 	}
 #endif
@@ -403,7 +403,7 @@ void Create(Window::Notifications::System *system) {
 		return result->init() ? std::move(result) : nullptr;
 	});
 #ifdef _DEBUG
-	if (cTestAgent() || cDebugProfile()) {
+	if (cDebugProfile()) {
 		return;
 	}
 #endif
@@ -423,7 +423,7 @@ void Create(Window::Notifications::System *system) {
 
 bool ResetRegistration(Window::Notifications::System *system) {
 #ifdef _DEBUG
-	if (cTestAgent() || cDebugProfile()) {
+	if (cDebugProfile()) {
 		return false;
 	}
 #endif

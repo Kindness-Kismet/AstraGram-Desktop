@@ -12,7 +12,6 @@
 #include "storage/streamed_file_downloader.h"
 #include "storage/file_download_mtproto.h"
 #include "storage/file_download_web.h"
-#include "test/test_transfer.h"
 #include "lang/lang_keys.h"
 #include "ui/boxes/confirm_box.h"
 #include "boxes/abstract_box.h"
@@ -275,7 +274,6 @@ void DocumentData::save(
 		return;
 	}
 	session().mediaCache().trackDocument(this, origin);
-	Test::NotifyDocumentSave(this, toFile, autoLoading);
 	if (const auto media = activeMediaView(); media && media->loaded(true)) {
 		const auto &l = location(true);
 		if (!toFile.isEmpty()) {
@@ -401,7 +399,6 @@ void DocumentData::handleLoaderUpdates() {
 		}
 		finishLoad();
 		status = FileDownloadFailed;
-		Test::NotifyDocumentLoadFailed(this, error.started);
 		_owner->documentLoadFail(this, error.started);
 	}, [=] {
 		finishLoad();

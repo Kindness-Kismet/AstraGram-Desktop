@@ -596,7 +596,6 @@ void Launcher::processArguments() {
 	};
 	auto parseMap = std::map<QByteArray, KeyFormat> {
 		{ "-debug"          , KeyFormat::NoValues },
-		{ "-testagent"      , KeyFormat::NoValues },
 #ifdef _DEBUG
 		{ "-debugprofile"   , KeyFormat::NoValues },
 		{ "-debugoffline"   , KeyFormat::NoValues },
@@ -647,8 +646,7 @@ void Launcher::processArguments() {
 	}
 
 	static const auto RegExp = QRegularExpression("[^a-z0-9\\-_]");
-	gTestAgent = parseResult.contains("-testagent");
-	gDebugMode = parseResult.contains("-debug") || gTestAgent;
+	gDebugMode = parseResult.contains("-debug");
 #ifdef _DEBUG
 	gDebugProfile = parseResult.contains("-debugprofile");
 	gDebugOffline = parseResult.contains("-debugoffline");

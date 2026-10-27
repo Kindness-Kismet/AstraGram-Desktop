@@ -37,7 +37,9 @@
     "Telegram/SourceFiles/ui/controls/subsection_tabs_slider_reorder.h": "话题标签已改为顶栏切换按钮与下拉面板（extras/features/topic_switcher），标签滑块已删除，官方改动不跟进。",
     "Telegram/Resources/icons/fast_to_original.svg": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。",
     "Telegram/SourceFiles/ui/controls/download_bar.cpp": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。",
-    "Telegram/SourceFiles/ui/controls/download_bar.h": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。"
+    "Telegram/SourceFiles/ui/controls/download_bar.h": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。",
+    "Telegram/SourceFiles/test/": "已移除官方内置测试运行器，使用 extras/debug 的独立调试与模拟场景，不再同步。",
+    "Telegram/SourceFiles/platform/platform_file_utilities.cpp": "官方测试运行器的系统启动拦截包装已移除，平台接口直接调用各系统实现。"
   },
   "svgReplaced": {
     "Telegram/Resources/icons/**/*.png": "本地已改用同名 svg 图标，样式生成器只读 svg；官方重绘了图形时按需对照更新 svg。"
@@ -46,7 +48,11 @@
     "Telegram/build/prepare/prepare.py": "依赖配方固化在 scripts/build_support/recipes.py、recipes_arm64.py 与 recipes_rust.py，官方改动要对照同步到这些文件，只合并本文件不会影响构建。",
     "Telegram/build/qt_version.py": "两个 Windows 架构都固定用其中的 Qt 6 版本，不再选择 Qt 5；官方改 Qt 6 版本时同步 scripts/build_support/recipes.py 的 QT_VERSION，并确认补丁仓库有对应的 qtbase 补丁目录。",
     "Telegram/SourceFiles/history/view/history_view_subsection_tabs.cpp": "已改写为顶栏话题切换按钮与下拉面板，只保留单一布局；官方对话题标签的行为改动按需移植到 extras/features/topic_switcher，不恢复顶部、左侧、底部标签。",
-    "Telegram/SourceFiles/history/view/history_view_subsection_tabs.h": "已改写为顶栏话题切换按钮与下拉面板，只保留单一布局；官方对话题标签的行为改动按需移植到 extras/features/topic_switcher，不恢复顶部、左侧、底部标签。"
+    "Telegram/SourceFiles/history/view/history_view_subsection_tabs.h": "已改写为顶栏话题切换按钮与下拉面板，只保留单一布局；官方对话题标签的行为改动按需移植到 extras/features/topic_switcher，不恢复顶部、左侧、底部标签。",
+    "Telegram/SourceFiles/core/": "已移除官方 test 运行器、-testagent 启动参数及沙箱测试调度接口；同步功能改动时不恢复测试接线，保留本项目 -debugprofile。",
+    "Telegram/SourceFiles/platform/": "已移除官方测试运行器的启动拦截及专用崩溃处理；文件接口直接调用各平台实现，独立调试配置继续使用 cDebugProfile。",
+    "Telegram/SourceFiles/data/data_document_loader.cpp": "已移除官方 test 目录的下载观测回调，不恢复 test_transfer 引用。",
+    "Telegram/SourceFiles/mtproto/mtp_instance.cpp": "已移除官方 test 目录的重试记录回调，不恢复 test_rpc_retry 引用。"
   },
   "deferred": {
     "Telegram/SourceFiles/core/update_checker.cpp": "暂缓删除旧格式更新包兼容：本项目发布流程仍以自有签名生成旧格式包，待配套发包流程迁移后再移除；解压与路径校验已采用新版共用实现。"

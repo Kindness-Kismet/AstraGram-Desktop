@@ -358,9 +358,7 @@ void Sandbox::launchApplication() {
 			OptionDeadlockDetector.changes()
 		) | rpl::on_next([=] {
 			using DeadlockDetector::PingThread;
-			// The test agent always wants a stuck main thread to crash with a
-			// report instead of hanging silently, so force it on for -testagent.
-			_deadlockDetector = (OptionDeadlockDetector.value() || cTestAgent())
+			_deadlockDetector = OptionDeadlockDetector.value()
 				? std::make_unique<PingThread>(this)
 				: nullptr;
 		}, _lifetime);
@@ -801,8 +799,7 @@ void Sandbox::checkForEmptyLoopNestingLevel() {
 	// after. That means we already have exited the nesting loop and
 	// there must not be any postponed calls with that nesting level.
 	if (_loopNestingLevel == _eventNestingLevel) {
-		Assert(_postponedCallsDeferred
-			|| _postponedCalls.empty()
+		Assert(_postponedCalls.empty()
 			|| _postponedCalls.back().loopNestingLevel < _loopNestingLevel);
 		Assert(!_previousLoopNestingLevels.empty());
 
@@ -877,9 +874,6 @@ bool Sandbox::notify(QObject *receiver, QEvent *e) {
 }
 
 void Sandbox::processPostponedCalls(int level) {
-	if (_postponedCallsDeferred) {
-		return;
-	}
 	while (!_postponedCalls.empty()) {
 		auto &last = _postponedCalls.back();
 		if (last.loopNestingLevel != level) {
@@ -889,32 +883,6 @@ void Sandbox::processPostponedCalls(int level) {
 		_postponedCalls.pop_back();
 		taken.callable();
 	}
-}
-
-void Sandbox::drainPostponedCalls() {
-	Expects(QThread::currentThreadId() == _mainThreadId);
-
-	if (!cTestAgent()) {
-		return;
-	}
-	const auto wasDeferred = std::exchange(_postponedCallsDeferred, true);
-	const auto guard = gsl::finally([&] {
-		_postponedCallsDeferred = wasDeferred;
-	});
-	while (!_postponedCalls.empty()) {
-		auto taken = std::move(_postponedCalls.back());
-		_postponedCalls.pop_back();
-		taken.callable();
-	}
-}
-
-void Sandbox::setPostponedCallsDeferred(bool deferred) {
-	Expects(QThread::currentThreadId() == _mainThreadId);
-
-	if (!cTestAgent()) {
-		return;
-	}
-	_postponedCallsDeferred = deferred;
 }
 
 bool Sandbox::nativeEventFilter(

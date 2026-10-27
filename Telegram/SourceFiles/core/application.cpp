@@ -100,7 +100,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/accessible/ui_accessible_factory.h"
 #include "ui/boxes/confirm_box.h"
 #include "core/cached_webview_availability.h"
-#include "test/test_agent.h"
 
 #include <QtCore/QStandardPaths>
 #include <QtCore/QMimeDatabase>
@@ -316,7 +315,6 @@ void Application::run() {
 	style::internal::StartFonts();
 	ExtrasInfra::initFontFallbacks();
 
-	Test::ApplyStartupOverrides();
 
 	ValidateScale();
 
@@ -480,8 +478,6 @@ void Application::run() {
 
 	_savedWindows->startRestore();
 
-	Test::Fire(u"launch_finished"_q);
-	Test::Start();
 }
 
 void Application::autoRegisterUrlScheme() {
@@ -2068,7 +2064,7 @@ void Application::startShortcuts() {
 
 void Application::RegisterUrlScheme() {
 #ifdef _DEBUG
-	if (cTestAgent() || cDebugProfile()) return;
+	if (cDebugProfile()) return;
 #endif
 	const auto arguments = Launcher::Instance().customWorkingDir()
 		? u"-workdir \"%1\""_q.arg(cWorkingDir())

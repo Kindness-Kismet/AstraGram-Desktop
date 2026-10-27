@@ -14,17 +14,7 @@ namespace File {
 
 QString UrlToLocal(const QUrl &url);
 
-namespace Unfused {
-
-void UnsafeOpenUrl(const QString &url);
-void UnsafeOpenEmailLink(const QString &email);
-bool UnsafeShowOpenWithDropdown(const QString &filepath);
-bool UnsafeShowOpenWith(const QString &filepath);
-void UnsafeLaunch(const QString &filepath);
-
-} // namespace Unfused
-
-// All these functions may enter a nested event loop. Use with caution.
+// 这些调用可能进入嵌套事件循环，调用方须保证对象生命周期。
 void UnsafeOpenUrl(const QString &url);
 void UnsafeOpenEmailLink(const QString &email);
 bool UnsafeShowOpenWithDropdown(const QString &filepath);

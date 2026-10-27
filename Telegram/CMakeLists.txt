@@ -2239,7 +2239,6 @@ PRIVATE
     platform/win/windows_notification_registration.h
     platform/win/windows_toast_activator.cpp
     platform/win/windows_toast_activator.h
-    platform/platform_file_utilities.cpp
     platform/platform_file_utilities.h
     platform/platform_launcher.h
     platform/platform_integration.cpp
@@ -2442,100 +2441,6 @@ PRIVATE
     support/support_templates.h
     tde2e/tde2e_integration.cpp
     tde2e/tde2e_integration.h
-    test/test_activation.cpp
-    test/test_activation.h
-    test/test_agent.cpp
-    test/test_agent.h
-    test/test_animation_clock.cpp
-    test/test_animation_clock.h
-    test/test_box_button.cpp
-    test/test_box_button.h
-    test/test_capture.cpp
-    test/test_capture.h
-    test/test_clipboard.cpp
-    test/test_clipboard.h
-    test/test_console_lock.cpp
-    test/test_console_lock.h
-    test/test_corner_patch.cpp
-    test/test_corner_patch.h
-    test/test_custom_emoji.cpp
-    test/test_custom_emoji.h
-    test/test_gated_stage.cpp
-    test/test_gated_stage.h
-    test/test_gram_reconcile.cpp
-    test/test_gram_reconcile.h
-    test/test_history_fixtures.cpp
-    test/test_history_fixtures.h
-    test/test_hover.cpp
-    test/test_hover.h
-    test/test_ink.cpp
-    test/test_ink.h
-    test/test_ink_self_test.cpp
-    test/test_lang_pack.cpp
-    test/test_lang_pack.h
-    test/test_launch_fuse.cpp
-    test/test_launch_fuse.h
-    test/test_layer_root.cpp
-    test/test_layer_root.h
-    test/test_log.cpp
-    test/test_log.h
-    test/test_log_lines.cpp
-    test/test_log_lines.h
-    test/test_mapped_target.cpp
-    test/test_mapped_target.h
-    test/test_marking_read.cpp
-    test/test_marking_read.h
-    test/test_menu.cpp
-    test/test_menu.h
-    test/test_messages.cpp
-    test/test_messages.h
-    test/test_notify_override.cpp
-    test/test_notify_override.h
-    test/test_open_handoff.cpp
-    test/test_open_handoff.h
-    test/test_panel.cpp
-    test/test_panel.h
-    test/test_post_paint.cpp
-    test/test_post_paint.h
-    test/test_probe.cpp
-    test/test_probe.h
-    test/test_rpc_fixture.cpp
-    test/test_rpc_fixture.h
-    test/test_rpc_retry.cpp
-    test/test_rpc_retry.h
-    test/test_runner.cpp
-    test/test_runner.h
-    test/test_scenario.cpp
-    test/test_secrecy_scan.cpp
-    test/test_secrecy_scan_internal.h
-    test/test_secrecy_scan_matcher.cpp
-    test/test_secrecy_scan_self_numbers.cpp
-    test/test_secrecy_scan_self_test.cpp
-    test/test_secrecy_scan.h
-    test/test_style.cpp
-    test/test_style.h
-    test/test_text_drop.cpp
-    test/test_text_drop.h
-    test/test_text_reads.cpp
-    test/test_text_reads.h
-    test/test_toast_capture.cpp
-    test/test_toast_capture.h
-    test/test_transfer.cpp
-    test/test_transfer.h
-    test/test_via_window.cpp
-    test/test_via_window.h
-    test/test_wallet_intercept.cpp
-    test/test_wallet_intercept.h
-    test/test_wallet_ready.cpp
-    test/test_wallet_ready.h
-    test/test_web_cache.cpp
-    test/test_web_cache.h
-    test/test_wheel.cpp
-    test/test_wheel.h
-    test/test_widgets.cpp
-    test/test_widgets.h
-    test/test_window_exposure.cpp
-    test/test_window_exposure.h
     ui/boxes/dialog_layout.cpp
     ui/boxes/dialog_layout.h
     ui/boxes/edit_invite_link_session.cpp
