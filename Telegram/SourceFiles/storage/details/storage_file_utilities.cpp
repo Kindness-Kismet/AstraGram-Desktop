@@ -203,15 +203,22 @@ bool WriteManager::writeDataNow(const WriteEntry &entry) {
 	const auto open = [&](auto &file, char postfix) {
 		return this->open(file, entry, postfix);
 	};
+	auto writeError = QString();
 	const auto write = [&](auto &file) {
-		const auto success = (file.write(entry.data) == entry.data.size())
-			&& (file.write(entry.md5) == entry.md5.size())
-			&& FlushFile(file);
-		if (!success) {
-			LOG(("Storage Error: Could not write or flush '%1'.")
-				.arg(file.fileName()));
+		writeError = QString();
+		if (file.write(entry.data) == entry.data.size()
+			&& file.write(entry.md5) == entry.md5.size()
+			&& FlushFile(file)) {
+			return true;
 		}
-		return success;
+		// 关闭或提交会覆盖写入错误，提前保存原因。
+		writeError = file.errorString();
+		LOG(("Storage Error: Could not write or flush '%1': %2.")
+			.arg(file.fileName(), writeError));
+		return false;
+	};
+	const auto reason = [&](const QFileDevice &file) {
+		return writeError.isEmpty() ? file.errorString() : writeError;
 	};
 	const auto safe = path('s');
 	const auto simple = path('0');
@@ -227,7 +234,8 @@ bool WriteManager::writeDataNow(const WriteEntry &entry) {
 			QFile::remove(backup);
 			return true;
 		}
-		LOG(("Storage Error: Could not commit '%1'.").arg(safe));
+		LOG(("Storage Error: Could not commit '%1': %2."
+			).arg(safe, reason(save)));
 	}
 	QFile plain;
 	if (open(plain, '0')) {
@@ -290,7 +298,8 @@ bool WriteManager::open(File &file, const WriteEntry &entry, char postfix) {
 	const auto name = path(entry, postfix);
 	file.setFileName(name);
 	if (!writeHeader(entry.basePath, file)) {
-		LOG(("Storage Error: Could not open '%1' for writing.").arg(name));
+		LOG(("Storage Error: Could not open '%1' for writing: %2."
+			).arg(name, file.errorString()));
 		return false;
 	}
 	return true;

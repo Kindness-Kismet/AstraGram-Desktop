@@ -413,6 +413,7 @@ void Controller::activate() {
 	_window->activateWindow();
 	_window->setFocus();
 	setInnerFocus();
+	_delegate->ivActivated(_window.get());
 }
 
 void Controller::setInnerFocus() {

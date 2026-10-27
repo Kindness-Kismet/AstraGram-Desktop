@@ -8,10 +8,11 @@ uint64 Session::createPreviewOwner(rpl::lifetime &lifetime) {
 		_preview = std::make_unique<PreviewState>();
 	}
 	const auto owner = ++_preview->lastOwner;
+	const auto registration = std::make_shared<rpl::lifetime>(
+		crl::guard(_preview.get(), [=, this] { retirePreviewOwner(owner); }));
 	_preview->owners.emplace(owner, 0);
-	lifetime.add(crl::guard(_preview.get(), [=, this] {
-		retirePreviewOwner(owner);
-	}));
+	_preview->registrations.emplace(owner, registration);
+	lifetime.add([registration] {});
 	refreshGaslessInfo(true);
 	return owner;
 }
@@ -26,6 +27,7 @@ void Session::estimateFee(
 	}
 	done = LoggedFeeDone(std::move(done));
 	const auto transfersCollectible = !args.collectible.isEmpty();
+	const auto deposit = transfersCollectible && !args.payload.isEmpty();
 	const auto collectible = transfersCollectible
 		? CanonicalAddress(args.collectible)
 		: QString();
@@ -42,6 +44,11 @@ void Session::estimateFee(
 		? SendError::CommentTooLong
 		: collectibleInvalid
 		? SendError::InvalidRequest
+		: !args.payload.isEmpty()
+		? GiftDepositInputError(
+			args,
+			_collectibles,
+			(_collectiblesCompletedAt > 0) && !_collectiblesHasMore)
 		: transfersCollectible
 		? SendError::None
 		: (args.amountNano <= 0
@@ -94,7 +101,9 @@ void Session::estimateFee(
 	};
 	if (transfersCollectible) {
 		request.args.collectible = collectible;
-		request.args.amountNano = kCollectibleTransferAttachedNanos;
+		if (!deposit) {
+			request.args.amountNano = kCollectibleTransferAttachedNanos;
+		}
 	}
 	enqueuePreview(std::move(request));
 }
@@ -269,6 +278,7 @@ void Session::resolveDnsName(
 void Session::retirePreviewOwner(uint64 owner) {
 	cancelFeeEstimate(owner);
 	_preview->owners.remove(owner);
+	_preview->registrations.remove(owner);
 	if (_preview->owners.empty()) {
 		retireGaslessRequest();
 	}
@@ -407,7 +417,11 @@ void Session::startPreview() {
 		};
 		_previewPending = true;
 		const auto &request = _preview->active->request;
-		if (!request.args.collectible.isEmpty()) {
+		if (!request.args.payload.isEmpty()) {
+			previewPrepared(flight, engine::SendMessageBody::kRawPayload{
+				.boc = request.args.payload.toStdString(),
+			});
+		} else if (!request.args.collectible.isEmpty()) {
 			previewCollectible(flight);
 		} else if (request.tonConnect || request.args.comment.text.isEmpty()) {
 			previewPrepared(flight, engine::SendMessageBody::kEmpty{});
@@ -479,9 +493,13 @@ void Session::previewPrepared(uint64 flight, engine::SendMessageBody body) {
 			IntentFromArgs(active.request.args, std::move(body)));
 	active.stage = PreviewState::Flight::Stage::Previewing;
 	const auto client = active.request.client;
-	const auto paired = !tonConnect && active.request.terms.eligible(
-		active.request.args.amountNano,
-		active.request.args.destination);
+	const auto deposit = !active.request.args.payload.isEmpty();
+	const auto item = active.request.args.collectible;
+	const auto paired = !tonConnect
+		&& !deposit
+		&& active.request.terms.eligible(
+			active.request.args.amountNano,
+			active.request.args.destination);
 	const auto own = active.request.identity
 		? active.request.identity->address
 		: QString();
@@ -493,7 +511,9 @@ void Session::previewPrepared(uint64 flight, engine::SendMessageBody body) {
 			: client->preview_send(request);
 	}, [=, this](engine::SendPreview preview) {
 		const auto fee = DecimalInt64(preview.emulation.wallet_fees_nanograms);
-		auto result = (fee && *fee >= 0)
+		auto result = deposit
+			? GiftDepositFee(preview.emulation, item)
+			: (fee && *fee >= 0)
 			? FeeResult{ .feeNano = *fee }
 			: FeeResult{ .error = SendError::Failed };
 		if (tonConnect && result.error == SendError::None) {
@@ -511,7 +531,11 @@ void Session::previewPrepared(uint64 flight, engine::SendMessageBody body) {
 			finishPreview(flight, FeeResult{ .feeNano = 0 });
 			return;
 		}
-		finishPreview(flight, FeeResult{ .error = SendErrorFrom(error) });
+		finishPreview(flight, FeeResult{
+			.error = (deposit && GiftDepositRejected(error))
+				? SendError::CollectibleRejected
+				: SendErrorFrom(error),
+		});
 	});
 }
 

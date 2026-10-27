@@ -35,8 +35,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "wallet/wallet_engine.h"
 #include "wallet/wallet_key_protection.h"
 #include "wallet/wallet_onramp.h"
+#include "wallet/wallet_own_card.h"
 #include "wallet/wallet_phrase_shares.h"
 #include "wallet/wallet_rates.h"
+#include "wallet/wallet_session_deposit.h"
+#include "wallet/wallet_session_gift_moves.h"
+#include "wallet/wallet_session_waits.h"
 #include "wallet/wallet_ton_connect.h"
 #include "wallet/wallet_ton_connect_emulation.h"
 #include "wallet/wallet_transfer_messages.h"
@@ -100,6 +104,7 @@ struct Session::CollectiblesRequest {
 	int generation = 0;
 	QString offset;
 	bool more = false;
+	crl::time sentAt = 0;
 	mtpRequestId id = 0;
 };
 
@@ -189,6 +194,7 @@ struct Session::PreviewState : base::has_weak_ptr {
 	};
 
 	base::flat_map<uint64, uint64> owners;
+	base::flat_map<uint64, std::weak_ptr<rpl::lifetime>> registrations;
 	std::deque<PreviewRequest> queue;
 	std::optional<Flight> active;
 	uint64 lastOwner = 0;
@@ -323,9 +329,6 @@ constexpr auto kTonConnectChallengeAnswerSize = 32;
 
 [[nodiscard]] std::optional<int64> DecimalInt64(const std::string &value);
 
-[[nodiscard]] std::optional<uint64> DecimalUint64(
-		const std::string &value);
-
 void FinishHistoryWaiters(std::vector<Fn<void()>> callbacks);
 
 [[nodiscard]] bool SameHistory(
@@ -353,13 +356,13 @@ struct MergedHead {
 		const std::vector<TransferItem> &was,
 		const std::vector<TransferItem> &head);
 
-[[nodiscard]] std::vector<Gram::NftItem> UnheldCollectibles(
-		const std::vector<Gram::NftItem> &was,
-		std::vector<Gram::NftItem> &&page);
+[[nodiscard]] std::vector<CollectibleRecord> UnheldCollectibles(
+		const std::vector<CollectibleRecord> &was,
+		std::vector<CollectibleRecord> &&page);
 
 [[nodiscard]] bool SameCollectibles(
-		const std::vector<Gram::NftItem> &was,
-		const std::vector<Gram::NftItem> &now);
+		const std::vector<CollectibleRecord> &was,
+		const std::vector<CollectibleRecord> &now);
 
 [[nodiscard]] std::string NewRecordId();
 
@@ -519,10 +522,6 @@ void FailShareFetch(
 
 [[nodiscard]] QString RotationErrorToken(const EngineError &error);
 
-[[nodiscard]] engine::SendIntent IntentFromArgs(
-		const SendArgs &args,
-		engine::SendMessageBody body);
-
 [[nodiscard]] engine::NftTransferIntent CollectibleTransferIntent(
 		const SendArgs &args);
 
@@ -582,7 +581,8 @@ void KeepSubmittedRecipient(
 [[nodiscard]] std::optional<Gram::NftWebDocument> WebDocumentFromServer(
 		const tl::conditional<MTPWebDocument> &document);
 
-[[nodiscard]] std::optional<Gram::NftItem> CollectibleFromServer(
+[[nodiscard]] std::optional<CollectibleRecord> CollectibleFromServer(
+		not_null<Main::Session*> session,
 		const MTPwallet_NftItem &item);
 
 void SetDirectedAmount(
@@ -590,11 +590,8 @@ void SetDirectedAmount(
 		int64 nanograms,
 		bool incoming);
 
-[[nodiscard]] std::optional<TransferItem> HistoryItemFromEngine(
-		const engine::ActivityItem &item,
-		const std::optional<TransferWalletIdentity> &identity);
-
 [[nodiscard]] TransferItem HistoryItemFromServer(
+		not_null<Main::Session*> session,
 		const MTPWalletTransaction &item,
 		const std::optional<TransferWalletIdentity> &identity);
 
@@ -617,10 +614,12 @@ bool EncryptedCommentRevealable(const TransferItem &item);
 QByteArray DecodeServerEncryptedComment(const QString &encoded);
 
 std::vector<TransferItem> HistoryFromServer(
+		not_null<Main::Session*> session,
 		const QVector<MTPWalletTransaction> &list,
 		std::optional<TransferWalletIdentity> identity);
 
-std::vector<Gram::NftItem> CollectiblesFromServer(
+std::vector<CollectibleRecord> CollectiblesFromServer(
+		not_null<Main::Session*> session,
 		const QVector<MTPwallet_NftItem> &list);
 
 bool IsWordlistWord(const QString &word);

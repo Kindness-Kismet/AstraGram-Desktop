@@ -600,7 +600,8 @@ private:
 				MTP_int(next++), peerToMTP(_session->userPeerId()), peerToMTP(peer->id), MTPPeer(),
 				MTP_messageReplyHeader(MTP_flags(MTPDmessageReplyHeader::Flag::f_reply_to_msg_id),
 					MTP_int(target), MTPPeer(), MTPMessageFwdHeader(), MTPMessageMedia(), MTPint(),
-					MTPstring(), MTP_vector<MTPMessageEntity>(), MTPint(), MTPint(), MTPbytes()),
+					MTPstring(), MTP_vector<MTPMessageEntity>(), MTPint(), MTPint(), MTPbytes(),
+					MTPVector<MTPRichText>()),
 				MTP_int(1700000000), action, MTPMessageReactions(), MTPint()));
 			_session->data().addNewMessage(message, {}, NewMessageType::Unread);
 		};

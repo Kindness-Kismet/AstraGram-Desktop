@@ -622,6 +622,48 @@ base::unique_qptr<Ui::InputField> Widget::reviveRetainedLeafField(
 	return {};
 }
 
+void Widget::restoreInlineFieldAfterMutation(
+		const std::optional<State::LeafPath> &restoreLeaf,
+		const std::optional<InlineFieldStyleKey> &restoreStyleKey,
+		State::FieldMode restoreMode,
+		const std::optional<HistoryLeafSelection> &restoreSelection) {
+	if (restoreLeaf && restoreStyleKey) {
+		if (auto revived = reviveRetainedLeafField(
+				_historyIndex,
+				*restoreLeaf,
+				restoreMode,
+				*restoreStyleKey)) {
+			_field = std::move(revived);
+			_activeFieldStyleKey = restoreStyleKey;
+			_fieldMode = restoreMode;
+			_fieldLeaf = *restoreLeaf;
+			refreshInlineFieldPlaceholder();
+			_fieldUndoAvailable = _field->isUndoAvailable();
+			_fieldRedoAvailable = _field->isRedoAvailable();
+			clearFieldUndoRedoNoopState();
+		}
+	}
+	if (!_fieldLeaf && restoreSelection) {
+		const auto ordinal = _state->textOrdinalForLeafPath(
+			restoreSelection->leaf);
+		if (ordinal >= 0) {
+			activateTextOrdinal(
+				ordinal,
+				restoreSelection->anchorOffset,
+				restoreSelection->cursorOffset);
+			return;
+		}
+	}
+	_field->show();
+	syncInlineFieldGeometry();
+	updateInlineFieldHeightOverride();
+	syncArticleVisibleTopBottom();
+	revealActiveInlineField();
+	_field->raise();
+	_field->setFocusFast();
+	notifyToolbarStateChanged();
+}
+
 void Widget::pruneRetainedLeafFields() {
 	for (auto i = _retainedLeafFields.begin(); i != _retainedLeafFields.end();) {
 		if (!i->field) {

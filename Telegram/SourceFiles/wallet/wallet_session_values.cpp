@@ -87,37 +87,26 @@ QByteArray DecodeServerEncryptedComment(const QString &encoded) {
 	return std::move(decoded.decoded);
 }
 
-std::vector<TransferItem> HistoryFromEngine(
-		const std::vector<engine::ActivityItem> &items,
-		std::optional<TransferWalletIdentity> identity) {
-	auto result = std::vector<TransferItem>();
-	result.reserve(items.size());
-	for (const auto &item : items) {
-		if (auto mapped = HistoryItemFromEngine(item, identity)) {
-			result.push_back(std::move(*mapped));
-		}
-	}
-	return result;
-}
-
 std::vector<TransferItem> HistoryFromServer(
+		not_null<Main::Session*> session,
 		const QVector<MTPWalletTransaction> &list,
 		std::optional<TransferWalletIdentity> identity) {
 	auto result = std::vector<TransferItem>();
 	result.reserve(list.size());
 	for (const auto &item : list) {
-		result.push_back(HistoryItemFromServer(item, identity));
+		result.push_back(HistoryItemFromServer(session, item, identity));
 	}
 	return result;
 }
 
-std::vector<Gram::NftItem> CollectiblesFromServer(
+std::vector<CollectibleRecord> CollectiblesFromServer(
+		not_null<Main::Session*> session,
 		const QVector<MTPwallet_NftItem> &list) {
-	auto result = std::vector<Gram::NftItem>();
+	auto result = std::vector<CollectibleRecord>();
 	result.reserve(list.size());
 	auto seen = base::flat_set<QString>();
 	for (const auto &item : list) {
-		if (auto mapped = CollectibleFromServer(item)) {
+		if (auto mapped = CollectibleFromServer(session, item)) {
 			if (seen.emplace(mapped->address).second) {
 				result.push_back(std::move(*mapped));
 			}
@@ -281,28 +270,6 @@ bool CommentScope::cancelled() const {
 
 rpl::producer<> CommentScope::cancelledChanges() const {
 	return _cancelledChanges.events();
-}
-
-TransferItem ItemFromPending(const PendingSendInfo &pending) {
-	return TransferItem{
-		.walletIdentity = pending.walletIdentity,
-		.kind = (!pending.collectible.isEmpty()
-			? TransferItem::Kind::Collectible
-			: pending.recipient
-			? TransferItem::Kind::PeerTransfer
-			: TransferItem::Kind::Transfer),
-		.incoming = false,
-		.counterparty = pending.destination,
-		.counterpartyBounceable = pending.bounce,
-		.counterpartyPeer = (pending.recipient
-			? peerFromUser(pending.recipient).value
-			: quint64()),
-		.collectible = pending.collectible,
-		.amountNano = pending.amountNano,
-		.comment = pending.comment,
-		.date = pending.posted,
-		.status = TransferItem::Status::Pending,
-	};
 }
 
 int SendCommentBytes(const QString &text) {

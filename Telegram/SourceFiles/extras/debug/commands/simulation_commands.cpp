@@ -27,6 +27,7 @@
 #include <QtCore/QElapsedTimer>
 #include <QtWidgets/QApplication>
 #include "wallet/wallet_panel.h"
+#include "wallet/wallet_own_card.h"
 #include "wallet/wallet_session.h"
 #include "ui/emoji_config.h"
 #include "ui/widgets/separate_panel.h"
@@ -348,7 +349,52 @@ Result simulationEmojiPacks(const QStringList &args) {
 	}));
 }
 
-void applyWalletLists(Wallet::Session &wallet, bool withCollectibles) {
+[[nodiscard]] MTPStarGift simulationWalletGift(
+		not_null<Main::Session*> session,
+		int index) {
+	const auto media = simulationMedia(
+		session, SimulationMedia::Sticker, 980100 + index);
+	const auto document = *media.c_messageMediaDocument().vdocument();
+	const auto rarity = MTP_starGiftAttributeRarity(MTP_int(100));
+	return MTP_starGiftUnique(
+		MTP_flags(MTPDstarGiftUnique::Flag::f_gift_address),
+		MTP_long(980100 + index),
+		MTP_long(980100),
+		MTP_string(u"模拟星星"_q),
+		MTP_string(u"SimulationStar-%1"_q.arg(index)),
+		MTP_int(index),
+		MTPPeer(),
+		MTPstring(),
+		MTPstring(),
+		MTP_vector<MTPStarGiftAttribute>({
+			MTP_starGiftAttributeModel(
+				MTP_flags(0), MTP_string(u"星星"_q), document, rarity),
+			MTP_starGiftAttributePattern(
+				MTP_string(u"星空"_q), document, rarity),
+			MTP_starGiftAttributeBackdrop(
+				MTP_string(index == 1 ? u"蓝色"_q : u"紫色"_q),
+				MTP_int(index),
+				MTP_int(index == 1 ? 0x5ca9db : 0xb18adb),
+				MTP_int(index == 1 ? 0x3566a5 : 0x71509b),
+				MTP_int(0x365682), MTP_int(0xffffff), rarity),
+		}),
+		MTP_int(100),
+		MTP_int(1000),
+		MTP_string(u"0:"_q + QString(64, QChar('4' + index))),
+		MTPVector<MTPStarsAmount>(),
+		MTPPeer(),
+		MTPlong(),
+		MTPstring(),
+		MTPlong(),
+		MTPPeer(),
+		MTPPeerColor(),
+		MTPPeer(),
+		MTPint(),
+		MTPint());
+}
+
+void applyWalletLists(not_null<Main::Session*> session, bool withCollectibles) {
+	auto &wallet = session->wallet();
 	const auto address = u"0:"_q + QString(64, QChar('0'));
 	const auto peerAddress = u"0:"_q + QString(64, QChar('2'));
 	const auto transaction = MTP_walletTransaction(
@@ -385,10 +431,31 @@ void applyWalletLists(Wallet::Session &wallet, bool withCollectibles) {
 			MTPWebDocument(),
 			MTPWebDocument(),
 			MTP_vector<MTPwallet_NftAttribute>(),
-			MTPDataJSON()));
+			MTPDataJSON(),
+			MTPStarGift()));
+		for (auto index = 1; index != 3; ++index) {
+			items.push_back(MTP_wallet_nftItem(
+				MTP_flags(MTPDwallet_nftItem::Flag::f_name
+					| MTPDwallet_nftItem::Flag::f_gift),
+				MTPstring(),
+				MTP_string(u"0:"_q + QString(64, QChar('4' + index))),
+				MTP_string(address),
+				MTP_string(QString::number(index)),
+				MTP_string(u"模拟星星 #%1"_q.arg(index)),
+				MTPstring(),
+				MTPWebDocument(), MTPWebDocument(),
+				MTPWebDocument(), MTPWebDocument(),
+				MTP_vector<MTPwallet_NftAttribute>(),
+				MTPDataJSON(),
+				simulationWalletGift(session, index)));
+		}
 	}
 	wallet.debugApplyLists(transactions, MTP_wallet_nftItems(
 		MTP_flags(0), MTP_vector<MTPwallet_NftItem>(items), MTPstring()));
+	wallet.ownCard().applyFullUserCard(Data::WalletCard{
+		.address = address,
+		.balance = kWalletBalance,
+	});
 }
 
 } // namespace
@@ -433,7 +500,7 @@ const HandlerMap &simulationHandlers() {
 						MTP_long(kWalletBalance)));
 				wallet.applyUpdate(MTP_updateWalletState(state).c_updateWalletState());
 				if (mode != u"missing"_q) {
-					applyWalletLists(wallet, mode == u"collectibles"_q);
+					applyWalletLists(session, mode == u"collectibles"_q);
 				}
 			}
 			Wallet::ShowWallet(session)->setObjectName(u"simulation.wallet"_q);

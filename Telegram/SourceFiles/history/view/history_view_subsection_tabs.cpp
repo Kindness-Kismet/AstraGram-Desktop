@@ -102,6 +102,15 @@ void SubsectionTabs::track() {
 			scheduleRefresh();
 		}, _lifetime);
 	} else if (const auto monoforum = _history->peer->monoforum()) {
+		monoforum->sublistDestroyed(
+		) | rpl::on_next([=](not_null<Data::SavedSublist*> sublist) {
+			if (_active == sublist) {
+				_active = _history;
+			}
+			closePanel();
+			scheduleRefresh();
+		}, _lifetime);
+
 		monoforum->chatsList()->unreadStateChanges(
 		) | rpl::on_next([=] {
 			scheduleRefresh();

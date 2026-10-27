@@ -232,6 +232,10 @@ void WalletImportBox(
 				st::walletImportField,
 				Ui::InputField::Mode::SingleLine),
 			st::walletImportFieldMargin);
+		field->setInputMethodHints(Qt::ImhLatinOnly
+			| Qt::ImhNoAutoUppercase
+			| Qt::ImhNoPredictiveText
+			| Qt::ImhSensitiveData);
 		const auto number = Ui::CreateChild<Ui::FlatLabel>(
 			field,
 			QString::number(index + 1) + QChar('.'),
@@ -936,12 +940,14 @@ void WalletConflictBox(
 			if (address.size() == kAddressLength) {
 				AddAddressPlate(
 					content,
-					address,
+					rpl::single(address),
 					QMargins(
 						st::boxRowPadding.left(),
 						st::walletAddressPlateSkip,
 						st::boxRowPadding.right(),
-						st::walletAddressPlateSkip));
+						st::walletAddressPlateSkip),
+					kAddressGroupsPerLine,
+					box->uiShow());
 			} else {
 				Ui::AddSkip(content);
 			}

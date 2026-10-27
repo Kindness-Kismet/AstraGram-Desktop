@@ -67,17 +67,6 @@ void SetAmountColor(
 	return QString::number(amountNano / Ui::kNanosInOne);
 }
 
-[[nodiscard]] QString GramMinorPart(int64 amountNano) {
-	const auto tiny = TinyAmountFraction(amountNano, kGramDigits);
-	if (!tiny.isEmpty()) {
-		return QString(QLocale().decimalPoint()) + tiny;
-	}
-	const auto cents = std::abs(amountNano % Ui::kNanosInOne)
-		/ (Ui::kNanosInOne / 100);
-	return QString(QLocale().decimalPoint())
-		+ u"%1"_q.arg(cents, 2, 10, QChar('0'));
-}
-
 [[nodiscard]] QString RowAmountSign(bool incoming) {
 	return incoming ? u"+"_q : QString(kMinus);
 }
@@ -393,8 +382,7 @@ void PaintHistoryRowChipArtwork(
 		Painter &p,
 		int outerWidth,
 		const HistoryRowChipState &state,
-		const std::shared_ptr<CollectibleMedia> &media,
-		const QString &address) {
+		const std::shared_ptr<CollectibleMedia> &media) {
 	const auto side = st::walletRowIconSize;
 	const auto radius = st::walletCollectibleThumbRadius;
 	const auto rtl = style::RightToLeft();
@@ -412,7 +400,7 @@ void PaintHistoryRowChipArtwork(
 	} else if (state.kind == Gram::NftKind::TelegramNumber) {
 		st::walletChipNumberIcon.paintInCenter(p, square);
 	} else {
-		media->paintArtwork(p, address, square, outerWidth, radius);
+		media->paintArtwork(p, state.key, square, outerWidth, radius);
 	}
 }
 
@@ -461,10 +449,14 @@ void TrackHistoryRowChip(
 		not_null<HistoryRowChipState*> state,
 		std::shared_ptr<CollectibleMedia> media,
 		QString address,
+		const std::optional<CollectibleRecord> &record,
 		Fn<void()> repaint,
 		rpl::lifetime &lifetime) {
+	const auto served = record && record->gift;
+	const auto key = served ? media->resolveServed(*record) : address;
+	state->key = key;
 	const auto refresh = [=] {
-		const auto view = media->view(address);
+		const auto view = media->view(key);
 		state->kind = view.kind;
 		using Kind = Gram::NftKind;
 		state->title.setMarkedText(
@@ -484,13 +476,15 @@ void TrackHistoryRowChip(
 		repaint();
 	};
 	const auto mine = [=](const QString &changed) {
-		return (changed == address);
+		return (changed == key);
 	};
 	media->changed(
 	) | rpl::filter(mine) | rpl::on_next(refresh, lifetime);
 	media->repaint(
 	) | rpl::filter(mine) | rpl::on_next(repaint, lifetime);
-	media->resolveBackground(address);
+	if (!served) {
+		media->resolveBackground(address);
+	}
 	refresh();
 }
 
@@ -498,7 +492,8 @@ void AddHistoryRowChip(
 		not_null<Ui::VerticalLayout*> inner,
 		not_null<HistoryRowButton*> button,
 		std::shared_ptr<CollectibleMedia> media,
-		QString address) {
+		QString address,
+		const std::optional<CollectibleRecord> &record) {
 	Ui::AddSkip(inner, st::walletChipTopSkip);
 	const auto chip = inner->add(object_ptr<Ui::FixedHeightWidget>(
 		inner,
@@ -512,7 +507,7 @@ void AddHistoryRowChip(
 	chip->paintRequest(
 	) | rpl::on_next([=] {
 		auto p = Painter(chip);
-		PaintHistoryRowChipArtwork(p, chip->width(), *state, media, address);
+		PaintHistoryRowChipArtwork(p, chip->width(), *state, media);
 		PaintHistoryRowChipText(p, chip->width(), *state);
 	}, chip->lifetime());
 	button->setPaintUnderRipple([=](Painter &p) {
@@ -521,7 +516,13 @@ void AddHistoryRowChip(
 		PaintHistoryRowChipPlate(p, chip->width(), *state);
 		p.translate(-origin);
 	});
-	TrackHistoryRowChip(state, media, address, repaint, chip->lifetime());
+	TrackHistoryRowChip(
+		state,
+		media,
+		address,
+		record,
+		repaint,
+		chip->lifetime());
 }
 
 not_null<Ui::RpWidget*> AddHistoryRow(
@@ -583,7 +584,12 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 		st::walletRowDateLabel));
 	const auto hasChip = content.itemAmount && (media != nullptr);
 	if (hasChip) {
-		AddHistoryRowChip(inner, button, media, content.collectible);
+		AddHistoryRowChip(
+			inner,
+			button,
+			media,
+			content.collectible,
+			content.collectibleRecord);
 	}
 
 	const auto circle = Ui::CreateChild<Ui::RpWidget>(wrap);
@@ -649,20 +655,21 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 		? langDateTime(base::unixtime::parse(*item.date))
 		: QString();
 	if (ShowsCollectible(item)) {
+		const auto telegram = ShowsGiftMove(item);
 		const auto peer = item.counterpartyPeer
 			? session->data().peerLoaded(PeerId(item.counterpartyPeer))
 			: nullptr;
-		const auto hasCounterparty = !item.counterparty.isEmpty();
+		const auto hasCounterparty = !telegram && !item.counterparty.isEmpty();
 		const auto domain = hasCounterparty
 			? item.counterpartyName.trimmed()
 			: QString();
-		const auto kindText = item.incoming
-			? tr::lng_wallet_row_collectible_in(tr::now)
-			: tr::lng_wallet_row_collectible_out(tr::now);
-		const auto titleIsKind = !peer && !hasCounterparty;
+		const auto kindText = CollectibleRowKindText(item);
+		const auto titleIsKind = !telegram && !peer && !hasCounterparty;
 		const auto statusText = RowStatusSubtitle(item.status);
 		return {
-			.title = (peer
+			.title = (telegram
+				? tr::lng_wallet_row_telegram(tr::now)
+				: peer
 				? peer->name()
 				: !domain.isEmpty()
 				? domain
@@ -685,6 +692,7 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 			.peer = peer,
 			.itemAmount = true,
 			.collectible = item.collectible,
+			.collectibleRecord = item.collectibleRecord,
 		};
 	}
 	const auto pending

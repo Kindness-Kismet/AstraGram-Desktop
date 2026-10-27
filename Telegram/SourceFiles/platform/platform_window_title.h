@@ -8,8 +8,17 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "window/themes/window_theme_preview.h"
+#include "base/platform/base_platform_info.h"
 
 namespace Platform {
+
+inline bool NativeTitleRequiresShadow() {
+	return Platform::IsWindows();
+}
+
+inline bool WindowTitleAlignsLeft() {
+	return IsMac26_0OrGreater();
+}
 
 int PreviewTitleHeight();
 void PreviewWindowFramePaint(QImage &preview, const style::palette &palette, QColor bg, QRect body, int outerWidth);

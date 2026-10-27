@@ -1125,6 +1125,10 @@ HistoryWidget::HistoryWidget(
 		if (flags & PeerUpdateFlag::StarsPerMessage) {
 			updateFieldPlaceholder();
 			updateSendButtonType();
+			if (_list && _peer->isUser()) {
+				_list->refreshAboutView(true);
+				_list->updateBotInfo();
+			}
 		}
 		if (flags & PeerUpdateFlag::GiftSettings) {
 			refreshSendGiftToggle();

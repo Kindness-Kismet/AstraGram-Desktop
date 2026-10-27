@@ -502,7 +502,10 @@ bool State::canLiftActiveLineOutOfContainer() const {
 		return false;
 	}
 	const auto owner = block(descriptor->leaf.block);
+	const auto parent = block(*container);
 	return owner
+		&& parent
+		&& (parent->kind == BlockKind::Quote)
 		&& JoinableTextBlockKind(owner->kind)
 		&& (descriptor->leaf.block.index == 0);
 }

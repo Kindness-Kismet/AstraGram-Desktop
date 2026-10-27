@@ -190,7 +190,10 @@ void Session::resolveTransaction(
 		// falls back to its address instead of the Telegram identity.
 		_session->data().processUsers(data.vusers());
 		_session->data().processChats(data.vchats());
-		auto list = HistoryFromServer(data.vtransactions().v, identity);
+		auto list = HistoryFromServer(
+			_session,
+			data.vtransactions().v,
+			identity);
 		rememberCollectibles(list);
 		// WHY: the id a message carries is the transfer's trace id, while
 		// the served row is named by its own lt:hash, so an answer to one
@@ -263,8 +266,17 @@ void Session::applyTransactions(
 		&& (_panel != nullptr)
 		&& !collectiblesTab();
 	_historySettled = true;
-	auto loaded = HistoryFromServer(data.vtransactions().v, request.identity);
+	auto loaded = HistoryFromServer(
+		_session,
+		data.vtransactions().v,
+		request.identity);
 	rememberCollectibles(loaded);
+	const auto covered = UpdateGiftMoveCoverage(
+		_giftMoveCoverage,
+		_history,
+		loaded,
+		next ? qs(*next) : QString(),
+		request.offset);
 	const auto shown = ranges::any_of(loaded, [&](const TransferItem &i) {
 		return !historyItemHidden(i);
 	});
@@ -281,6 +293,8 @@ void Session::applyTransactions(
 				std::make_move_iterator(begin(fresh)),
 				std::make_move_iterator(end(fresh)));
 			setHistory(std::move(list));
+		} else if (covered) {
+			_historyUpdates.fire({});
 		}
 	} else {
 		const auto served = int(loaded.size());
@@ -318,6 +332,8 @@ void Session::applyTransactions(
 		}
 		if (!SameHistory(_history, merged.list)) {
 			setHistory(std::move(merged.list));
+		} else if (covered) {
+			_historyUpdates.fire({});
 		}
 	}
 	if (weak && historyRequestCurrent(request)) {
@@ -355,6 +371,7 @@ void Session::clearHistory() {
 	}
 	clearSubmittedTransfers();
 	_history.clear();
+	_giftMoveCoverage = GiftMoveHistoryCoverage();
 	_historyHasNext = false;
 	_historyNextOffset = QString();
 	_historyRefreshedAt = 0;

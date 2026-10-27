@@ -16,12 +16,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/timer_rpl.h"
 #include "settings/settings_builder.h"
 #include "settings/settings_card_layout.h"
+#include "settings/sections/settings_advanced.h"
 #include "settings/sections/settings_main.h"
 #include "settings/sections/settings_privacy_security.h"
 #include "settings/sections/settings_shortcuts.h"
 #include "boxes/abstract_box.h"
 #include "boxes/peers/edit_peer_color_box.h"
 #include "settings/sections/settings_archive.h"
+#include "boxes/connection_box.h"
 #include "boxes/reactions_settings_box.h"
 #include "boxes/stickers_box.h"
 #include "ui/boxes/confirm_box.h"
@@ -62,6 +64,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 #include "window/section_widget.h"
 #include "window/window_controller.h"
+#include "info/info_memento.h"
 #include "storage/localstorage.h"
 #include "core/file_utilities.h"
 #include "core/application.h"
@@ -739,71 +742,6 @@ void ChooseFromFile(
 		tr::lng_choose_image(tr::now),
 		filters.join(u";;"_q),
 		crl::guard(parent, callback));
-}
-
-void SetupSupportSwitchSettings(
-		not_null<Window::SessionController*> controller,
-		not_null<Ui::VerticalLayout*> container) {
-	using SwitchType = Support::SwitchSettings;
-	const auto group = std::make_shared<Ui::RadioenumGroup<SwitchType>>(
-		controller->session().settings().supportSwitch());
-	const auto add = [&](SwitchType value, const QString &label) {
-		container->add(
-			object_ptr<Ui::Radioenum<SwitchType>>(
-				container,
-				group,
-				value,
-				label,
-				st::settingsSendType),
-			st::settingsSendTypePadding);
-	};
-	add(SwitchType::None, "Just send the reply");
-	add(SwitchType::Next, "Send and switch to next");
-	add(SwitchType::Previous, "Send and switch to previous");
-	group->setChangedCallback([=](SwitchType value) {
-		controller->session().settings().setSupportSwitch(value);
-		controller->session().saveSettingsDelayed();
-	});
-}
-
-void SetupSupportChatsLimitSlice(
-		not_null<Window::SessionController*> controller,
-		not_null<Ui::VerticalLayout*> container) {
-	constexpr auto kDayDuration = 24 * 60 * 60;
-	struct Option {
-		int days = 0;
-		QString label;
-	};
-	const auto options = std::vector<Option>{
-		{ 1, "1 day" },
-		{ 7, "1 week" },
-		{ 30, "1 month" },
-		{ 365, "1 year" },
-		{ 0, "All of them" },
-	};
-	const auto current = controller->session().settings().supportChatsTimeSlice();
-	const auto days = current / kDayDuration;
-	const auto best = ranges::min_element(
-		options,
-		std::less<>(),
-		[&](const Option &option) { return std::abs(option.days - days); });
-
-	const auto group = std::make_shared<Ui::RadiobuttonGroup>(best->days);
-	for (const auto &option : options) {
-		container->add(
-			object_ptr<Ui::Radiobutton>(
-				container,
-				group,
-				option.days,
-				option.label,
-				st::settingsSendType),
-			st::settingsSendTypePadding);
-	}
-	group->setChangedCallback([=](int days) {
-		controller->session().settings().setSupportChatsTimeSlice(
-			days * kDayDuration);
-		controller->session().saveSettingsDelayed();
-	});
 }
 
 void BuildThemeOptionsSection(SectionBuilder &builder) {
@@ -2668,65 +2606,6 @@ void SetupThemeSettings(
 			{ fontButton.get(), { .rippleShape = true } },
 		});
 	}
-}
-
-void SetupSupport(
-		not_null<Window::SessionController*> controller,
-		not_null<Ui::VerticalLayout*> container) {
-	Ui::AddSkip(container);
-
-	Ui::AddSubsectionTitle(container, rpl::single(u"Support settings"_q));
-
-	Ui::AddSkip(container, st::settingsSendTypeSkip);
-
-	const auto skip = st::settingsSendTypeSkip;
-	auto wrap = object_ptr<Ui::VerticalLayout>(container);
-	const auto inner = wrap.data();
-	container->add(
-		object_ptr<Ui::OverrideMargins>(
-			container,
-			std::move(wrap),
-			QMargins(0, skip, 0, skip)));
-
-	SetupSupportSwitchSettings(controller, inner);
-
-	Ui::AddSkip(inner, st::settingsCheckboxesSkip);
-
-	inner->add(
-		object_ptr<Ui::SettingsToggle>(
-			inner,
-			"Enable templates autocomplete",
-			controller->session().settings().supportTemplatesAutocomplete(),
-			st::settingsButtonNoIcon)
-	)->checkedChanges(
-	) | rpl::on_next([=](bool checked) {
-		controller->session().settings().setSupportTemplatesAutocomplete(
-			checked);
-		controller->session().saveSettingsDelayed();
-	}, inner->lifetime());
-
-	inner->add(
-		object_ptr<Ui::SettingsToggle>(
-			inner,
-			"Send all messages without sound",
-			controller->session().settings().supportAllSilent(),
-			st::settingsButtonNoIcon)
-	)->checkedChanges(
-	) | rpl::on_next([=](bool checked) {
-		controller->session().settings().setSupportAllSilent(
-			checked);
-		controller->session().saveSettingsDelayed();
-	}, inner->lifetime());
-
-	Ui::AddSkip(inner, st::settingsCheckboxesSkip);
-
-	Ui::AddSubsectionTitle(inner, rpl::single(u"Load chats for a period"_q));
-
-	SetupSupportChatsLimitSlice(controller, inner);
-
-	Ui::AddSkip(inner, st::settingsCheckboxesSkip);
-
-	Ui::AddSkip(inner);
 }
 
 Type ChatId() {

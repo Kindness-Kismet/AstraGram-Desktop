@@ -273,7 +273,8 @@ void initialiseUser(
 		MTP_int(replyId ? replyId.bare : topicRoot.bare),
 		MTPPeer(), MTPMessageFwdHeader(), MTPMessageMedia(),
 		MTPint(), MTPstring(), MTPVector<MTPMessageEntity>(),
-		MTPint(), MTPint(), MTPstring()) : MTPMessageReplyHeader();
+		MTPint(), MTPint(), MTPstring(),
+		MTPVector<MTPRichText>()) : MTPMessageReplyHeader();
 	const auto button = [](const QString &text) {
 		return MTP_keyboardButton(MTP_flags(0), MTPKeyboardButtonStyle(),
 			MTP_string(text), MTP_buttonTypeDefault());

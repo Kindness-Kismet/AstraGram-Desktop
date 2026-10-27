@@ -114,7 +114,6 @@ public:
 	}
 	RowsByLetter *chatListLinks(FilterId filterId);
 	const RowsByLetter *chatListLinks(FilterId filterId) const;
-	[[nodiscard]] int posInChatList(FilterId filterId) const;
 	not_null<Row*> addToChatList(
 		FilterId filterId,
 		not_null<MainList*> list);
@@ -213,7 +212,6 @@ private:
 	[[nodiscard]] bool hasUnreadUnmutedForSort() const;
 
 	void setChatListExistence(bool exists);
-	not_null<Row*> mainChatListLink(FilterId filterId) const;
 	Row *maybeMainChatListLink(FilterId filterId) const;
 
 	const not_null<Data::Session*> _owner;

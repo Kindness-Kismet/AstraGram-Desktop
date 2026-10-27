@@ -1,5 +1,7 @@
 #include "extras/features/media_viewer/viewer_host.h"
 
+#include "ui/effects/layer_backdrop.h"
+
 #include "base/event_filter.h"
 #include "base/platform/base_platform_info.h"
 #include "extras/extras_settings.h"
@@ -98,28 +100,14 @@ QImage grabOpaque(not_null<QWidget*> widget, QRect rect) {
 }
 
 QImage grabUnderLayer(not_null<Ui::LayerWidget*> layer) {
-	const auto parent = layer->parentWidget();
-	const auto target = parent->parentWidget();
-	const auto shown = !parent->isHidden();
-	const auto focused = shown && Ui::InFocusChain(parent);
-	if (shown) {
-		if (focused) {
-			target->setFocus();
-		}
-		parent->hide();
+	auto image = Ui::CaptureUnderLayer(layer);
+	if (image.isNull()) {
+		return image;
 	}
-	auto image = grabOpaque(target, layer->geometry());
-
-	if (shown) {
-		parent->show();
-		if (focused) {
-			if (layer->isHidden()) {
-				parent->setFocus();
-			} else {
-				layer->setInnerFocus();
-			}
-		}
-	}
+	auto p = QPainter(&image);
+	p.setCompositionMode(QPainter::CompositionMode_DestinationOver);
+	p.fillRect(QRect(QPoint(), image.size() / image.devicePixelRatio()), st::windowBg);
+	p.end();
 	return image;
 }
 

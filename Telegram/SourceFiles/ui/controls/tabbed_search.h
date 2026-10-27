@@ -41,6 +41,7 @@ public:
 	void setLoading(bool loading);
 	void stealFocus();
 	void returnFocus();
+	void refreshColors();
 
 private:
 	void paintEvent(QPaintEvent *e) override;
@@ -82,6 +83,7 @@ public:
 	void setLoading(bool loading);
 	void stealFocus();
 	void returnFocus();
+	void refreshColors();
 	void setRightReserved(int value);
 
 private:

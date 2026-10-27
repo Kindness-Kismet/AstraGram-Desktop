@@ -28,6 +28,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 struct ClickContext;
 struct ClickHandlerContext;
+struct HistorySelectedTextParts;
 
 namespace Data {
 struct Group;
@@ -482,6 +483,7 @@ private:
 		not_null<HistoryItem*> item) const;
 	[[nodiscard]] MessageSelection getSelectedTextSelection(
 		not_null<HistoryItem*> item) const;
+	[[nodiscard]] HistorySelectedTextParts getSelectedTextParts() const;
 	[[nodiscard]] bool isPressInSelectedText(
 		not_null<const Element*> view,
 		TextState state) const;
@@ -553,7 +555,7 @@ private:
 	void reportAsGroup(FullMsgId itemId);
 	void blockSenderItem(FullMsgId itemId);
 	void blockSenderAsGroup(FullMsgId itemId);
-	void copySelectedText();
+	void copySelectedText(bool withImageText = false);
 	void editCaptionUploadLayer(not_null<HistoryItem*> item);
 
 	[[nodiscard]] auto reactionButtonParameters(

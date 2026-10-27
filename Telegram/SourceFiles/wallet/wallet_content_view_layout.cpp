@@ -164,21 +164,103 @@ void Content::setupProtectRow() {
 
 void Content::setupBalance() {
 	_ink = std::make_unique<BalanceInk>();
+	_ink->setMarkTint([=] { return _card->markTint(*_ink); });
 
 	_pinnedBalance = Ui::CreateChild<Ui::RpWidget>(_pinned);
 	_pinnedBalance->setAttribute(Qt::WA_TransparentForMouseEvents);
 	_pinnedBalance->show();
 	_pinnedBalance->raise();
+	const auto repaintCard = [=] {
+		_pinnedBalance->update(_card->geometry());
+		if (_cardFloat) {
+			_cardFloat->update();
+		}
+	};
+	_cardStickers = std::make_unique<CardStickers>(
+		&_show->session(),
+		OwnCardStickersValue(&_show->session()),
+		repaintCard);
+	_cardForeground = std::make_unique<CardForeground>(CardForegroundArgs{
+		.paint = [=](Painter &p, const CardFold &fold, QRect clip) {
+			_card->paintForeground(p, fold);
+			_ink->paint(
+				p,
+				fold,
+				cardOutline(),
+				clip,
+				BalanceInkPart::Card,
+				BalanceInkLayer::Primary);
+		},
+		.halo = {
+			.area = [=](const CardFold &fold) {
+				return _ink->boundingRect(fold);
+			},
+			.paint = [=](Painter &p, const CardFold &fold, QRect clip) {
+				_ink->paint(
+					p,
+					fold,
+					cardOutline(),
+					clip,
+					BalanceInkPart::Card,
+					BalanceInkLayer::Secondary);
+			},
+			.tint = [=] { return _card->markTint(*_ink); },
+			.gifts = [=] { return _cardStickers->settledLayer(); },
+		},
+		.repaint = repaintCard,
+		.changes = _card->invalidations(),
+	});
+	_card->liftForeground();
+	_cardLook = std::make_unique<CardLookFollower>(
+		CardLookFollowerArgs{
+			.session = &_show->session(),
+			.stickers = _cardStickers.get(),
+			.apply = [card = _card](CardLook look, CardLookChange change) {
+				card->setLook(std::move(look), change);
+			},
+		});
+	const auto paintInkAndStickers = [=](
+			QPainter &p,
+			const CardFold &fold,
+			QRect clip) {
+		auto hq = PainterHighQualityEnabler(p);
+		if (clip.intersects(_ink->boundingRect(fold))) {
+			_ink->paint(p, fold, cardOutline(), clip, BalanceInkPart::Outside);
+		}
+		if (fold.valid && fold.opacity > 0.) {
+			_cardStickers->paint(p, fold);
+			_cardForeground->paint(p, fold);
+			_cardStickers->paintAbove(p, fold);
+			if (_cardEditor) {
+				_cardEditor->paint(p, fold);
+			}
+		}
+	};
+	_cardFloat = std::make_unique<CardFloat>(CardFloatArgs{
+		.body = this,
+		.inPlace = [=] {
+			return ComputeCardFold(cardRest(), foldProgress());
+		},
+		.arriving = rpl::combine(
+			_cardStickers->arrivingValue(),
+			_card->lookTransitionValue(),
+			rpl::mappers::_1 || rpl::mappers::_2
+		) | rpl::distinct_until_changed(),
+		.paint = [=](Painter &p, const CardFold &fold, QRect clip) {
+			_card->paintFold(p, fold, _cardFloat->widget());
+			paintInkAndStickers(p, fold, clip);
+		},
+		.changed = [=] {
+			updatePinned();
+			_titleBalance->update();
+		},
+	});
 	_pinnedBalance->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
-		const auto fold = cardFold();
-		const auto ink = _ink->boundingRect(fold);
-		if (!clip.intersects(ink)) {
-			return;
+		if (!_cardFloat->shown()) {
+			auto p = QPainter(_pinnedBalance);
+			paintInkAndStickers(p, cardFold(), clip);
 		}
-		auto p = QPainter(_pinnedBalance);
-		auto hq = PainterHighQualityEnabler(p);
-		_ink->paint(p, fold, cardOutline(), clip);
 	}, _pinnedBalance->lifetime());
 
 	_titleBalance.reset(Ui::CreateChild<Ui::RpWidget>(window()));
@@ -202,6 +284,7 @@ void Content::setupBalance() {
 	const auto repaintBalance = [=] {
 		_pinnedBalance->update();
 		_titleBalance->update();
+		_cardForeground->invalidate();
 		_paintedInk = _ink->boundingRect(cardFold());
 	};
 
@@ -218,12 +301,10 @@ void Content::setupBalance() {
 		repaintBalance,
 		this);
 
-	style::PaletteChanged(
-	) | rpl::on_next([=] {
+	style::PaletteChanged() | rpl::on_next([=] {
 		const auto scope = WindowPaletteScope(this);
 		_ink->refresh();
 		_card->invalidateCache();
-		_card->update();
 		_pinnedBackground->update();
 		repaintBalance();
 	}, lifetime());
@@ -244,18 +325,20 @@ void Content::setupBalance() {
 		_pinnedBalance->update(mark);
 		_titleBalance->update(
 			mark.translated(0, st::separatePanelTitleHeight));
+		_cardForeground->invalidate();
 	});
 }
 
 const CardFold &Content::cardFold() const {
-	return _card->fold();
+	return _cardFloat->shown() ? _cardFloat->fold() : _card->fold();
 }
 
 QRegion Content::cardOutline() const {
-	if (_card->isHidden()) {
+	const auto &fold = cardFold();
+	if (!fold.valid || fold.opacity <= 0.) {
 		return {};
 	}
-	return QRegion(_card->paintedQuad().toPolygon());
+	return QRegion(fold.quad.toPolygon());
 }
 
 void Content::paintTitle(QPainter &p, float64 fold) {
@@ -796,16 +879,12 @@ void Content::updatePinned() {
 		QPoint(rest.left(), 0),
 		rest.bottomRight());
 	_card->setGeometry(cardWidget);
-	_card->setFold(fold);
-	const auto shown = fold.valid && fold.opacity > 0.;
-	if (shown) {
-		const auto outline = _card->paintedOutline();
-		const auto bounds = outline.boundingRect().toAlignedRect();
-		_cardButton->setGeometry(bounds);
-		_cardButton->setMask(QRegion(
-			outline.translated(-bounds.topLeft()).toPolygon()));
+	_cardFloat->update();
+	_card->setFold(_cardFloat->shown() ? CardFold() : fold);
+	const auto presented = cardFold();
+	if (_cardEditor) {
+		_cardEditor->updateInput();
 	}
-	_cardButton->setVisible(shown);
 	_scroll->setVerticalBarTopSkip(height - min);
 	_headerShadow->setVisible(height == min);
 	_pinnedBalance->setGeometry(_pinned->rect());
@@ -813,7 +892,7 @@ void Content::updatePinned() {
 	// The card's dirty area is its whole widget rect, which contains
 	// every folded quad, and the ink's is the union of the rects it was
 	// and is painted into.
-	const auto inkPainted = _ink->boundingRect(fold);
+	const auto inkPainted = _ink->boundingRect(presented);
 	const auto inkDirty = _paintedInk.united(inkPainted);
 	_paintedInk = inkPainted;
 	update(cardWidget);

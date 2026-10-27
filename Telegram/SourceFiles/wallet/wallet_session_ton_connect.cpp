@@ -118,6 +118,7 @@ void Session::prepareTonConnectEvent(
 	const auto address = _address;
 	const auto served = _publicKey;
 	const auto generation = _networkGeneration;
+	const auto withProof = request.proofPayload.has_value();
 	const auto recordId = record->recordId;
 	const auto lifecycle = _engine->lifecycle();
 	const auto session = key.session;
@@ -148,6 +149,7 @@ void Session::prepareTonConnectEvent(
 	] {
 		auto account = lifecycle->ton_connect_account(descriptor);
 		auto proof = std::optional<engine::TonConnectProofReply>();
+		auto proofSignature = std::vector<uint8_t>();
 		if (payload) {
 			auto signature = lifecycle->sign_ton_connect_proof({
 				.descriptor = descriptor,
@@ -156,6 +158,7 @@ void Session::prepareTonConnectEvent(
 				.payload = *payload,
 			});
 			account.public_key = std::move(signature.public_key);
+			proofSignature = signature.signature;
 			proof = engine::TonConnectProofReply{
 				.timestamp = uint64_t(timestamp),
 				.domain = domain,
@@ -175,6 +178,8 @@ void Session::prepareTonConnectEvent(
 			.reply = {
 				.challengeAnswer = BytesFromEngine(answer),
 				.body = BytesFromEngine(body),
+				.proofTimestamp = payload ? timestamp : TimeId(0),
+				.proofSignature = BytesFromEngine(proofSignature),
 			},
 			.address = QString::fromStdString(account.address),
 			.publicKey = BytesFromEngine(account.public_key),
@@ -192,9 +197,11 @@ void Session::prepareTonConnectEvent(
 			return;
 		}
 		const auto answerSize = prepared.reply.challengeAnswer.size();
+		const auto proofSize = prepared.reply.proofSignature.size();
 		if (CanonicalAddress(prepared.address) != _address
 			|| prepared.publicKey != _publicKey
-			|| answerSize != kTonConnectChallengeAnswerSize) {
+			|| answerSize != kTonConnectChallengeAnswerSize
+			|| (withProof && proofSize != kOwnershipProofSignatureSize)) {
 			LOG(("Wallet Error: TON Connect event prepared "
 				"with an unexpected account."));
 			fail(TonConnectKeyError::Failed);

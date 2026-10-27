@@ -515,14 +515,6 @@ QString EncryptedCommentLabel::accessibilityName() {
 		- st::walletCardMargin.right();
 }
 
-[[nodiscard]] QRect CardQrRect(int cardWidth) {
-	return QRect(
-		cardWidth - st::walletCardQrRight - st::walletCardQrSize.width(),
-		st::walletCardQrTop,
-		st::walletCardQrSize.width(),
-		st::walletCardQrSize.height());
-}
-
 [[nodiscard]] QRect TransferCardInfoRect(int cardWidth) {
 	return QRect(
 		cardWidth - st::walletCardContentLeft - st::walletCardQrSize.width(),
@@ -581,18 +573,6 @@ QString EncryptedCommentLabel::accessibilityName() {
 		return std::nullopt;
 	}
 	return friendly;
-}
-
-[[nodiscard]] TextWithEntities DetailsAddressValue(
-		const QString &address) {
-	auto groups = QStringList();
-	for (auto offset = 0; offset < address.size(); offset += kAddressGroup) {
-		groups.append(address.mid(offset, kAddressGroup));
-	}
-	return Ui::Text::Wrapped(
-		{ groups.join(QChar(' ')) },
-		EntityType::Code,
-		{});
 }
 
 [[nodiscard]] Fn<void()> CopyAddressCallback(

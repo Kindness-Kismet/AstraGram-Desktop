@@ -329,9 +329,11 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 		if (_suggestOptions) {
 			_suggestOptions->paintIcon(p, 0, backy, fullWidth);
 		} else {
+			const auto quoted = _replyTo
+				&& !HistoryView::Reply::ComposePreviewQuote(_replyTo).empty();
 			(_editMsgId
 				? st::historyEditIcon
-				: (_replyTo && !_replyTo.quote.empty())
+				: quoted
 				? st::historyQuoteIcon
 				: st::historyReplyIcon).paint(
 					p,

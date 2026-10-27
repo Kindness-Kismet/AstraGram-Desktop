@@ -9,20 +9,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "extras/features/media_viewer/viewer_host.h"
 #include "ui/painter.h"
-#include "ui/ui_utility.h"
 
 #include <QtGui/QGuiApplication>
 
 namespace Editor {
 namespace {
 
-constexpr auto kCacheBackgroundFastTimeout = crl::time(200);
-constexpr auto kCacheBackgroundFullTimeout = crl::time(1000);
-constexpr auto kFadeBackgroundDuration = crl::time(200);
-
-// Thread: Main.
-[[nodiscard]] bool IsNightMode() {
-	return (st::windowBg->c.lightnessF() < 0.5);
+[[nodiscard]] int BlurOverlayAlpha(bool night) {
+	return night ? 128 : 192;
 }
 
 } // namespace
@@ -32,23 +26,20 @@ LayerWidget::LayerWidget(
 	base::unique_qptr<Ui::RpWidget> content)
 : Ui::LayerWidget(parent)
 , _content(std::move(content))
-, _backgroundTimer([=] { checkCacheBackground(); }) {
+, _backdrop(
+	this,
+	[=] { return ExtrasFeatures::MediaViewer::grabUnderLayer(this); },
+	BlurOverlayAlpha,
+	[](QImage image, int, int) {
+		return ExtrasFeatures::MediaViewer::prepareBackdrop(image);
+	}) {
 	_content->setParent(this);
 	_content->show();
 
 	paintRequest(
-	) | rpl::on_next([=](const QRect &clip) {
+	) | rpl::on_next([=] {
 		auto p = QPainter(this);
-		const auto faded = _backgroundFade.value(1.);
-		if (faded < 1.) {
-			p.drawImage(rect(), _backgroundBack);
-			if (faded > 0.) {
-				p.setOpacity(faded);
-				p.drawImage(rect(), _background);
-			}
-		} else {
-			p.drawImage(rect(), _background);
-		}
+		_backdrop.paint(p);
 	}, lifetime());
 }
 
@@ -57,97 +48,17 @@ bool LayerWidget::eventHook(QEvent *e) {
 }
 
 void LayerWidget::start() {
-	_backgroundNight = IsNightMode();
-	_background = ExtrasFeatures::MediaViewer::prepareBackdrop(
-		ExtrasFeatures::MediaViewer::grabUnderLayer(this));
+	_backdrop.start();
 
 	sizeValue(
 	) | rpl::on_next([=](const QSize &size) {
-		checkBackgroundStale();
 		_content->resize(size);
 	}, lifetime());
-
-	style::PaletteChanged() | rpl::on_next([=] {
-		checkBackgroundStale();
-	}, lifetime());
-}
-
-void LayerWidget::checkBackgroundStale() {
-	const auto ratio = style::DevicePixelRatio();
-	const auto &ready = _backgroundNext.isNull()
-		? _background
-		: _backgroundNext;
-	if (ready.size() == size() * ratio
-		&& _backgroundNight == IsNightMode()) {
-		_backgroundTimer.cancel();
-	} else if (!_backgroundCaching && !_backgroundTimer.isActive()) {
-		_lastAreaChangeTime = crl::now();
-		_backgroundTimer.callOnce(kCacheBackgroundFastTimeout);
-	}
-}
-
-void LayerWidget::checkCacheBackground() {
-	if (_backgroundCaching || _backgroundTimer.isActive()) {
-		return;
-	}
-	const auto now = crl::now();
-	if (now - _lastAreaChangeTime < kCacheBackgroundFullTimeout
-		&& QGuiApplication::mouseButtons() != 0) {
-		_backgroundTimer.callOnce(kCacheBackgroundFastTimeout);
-		return;
-	}
-	cacheBackground();
-}
-
-void LayerWidget::cacheBackground() {
-	_backgroundCaching = true;
-	const auto weak = base::make_weak(this);
-	const auto night = IsNightMode();
-	auto image = ExtrasFeatures::MediaViewer::grabUnderLayer(this);
-	crl::async([weak, night, image = std::move(image)] {
-		auto result = ExtrasFeatures::MediaViewer::prepareBackdrop(image);
-		crl::on_main([weak, night, result = std::move(result)]() mutable {
-			if (const auto strong = weak.get()) {
-				strong->backgroundReady(std::move(result), night);
-			}
-		});
-	});
-}
-
-void LayerWidget::backgroundReady(QImage background, bool night) {
-	_backgroundCaching = false;
-
-	const auto required = size() * style::DevicePixelRatio();
-	if (background.size() == required && night == IsNightMode()) {
-		_backgroundNext = std::move(background);
-		_backgroundNight = night;
-		if (!_backgroundFade.animating()) {
-			startBackgroundFade();
-		}
-		update();
-	} else if (_background.size() != required) {
-		_backgroundTimer.callOnce(kCacheBackgroundFastTimeout);
-	}
-}
-
-void LayerWidget::startBackgroundFade() {
-	if (_backgroundNext.isNull()) {
-		return;
-	}
-	_backgroundBack = std::move(_background);
-	_background = base::take(_backgroundNext);
-	_backgroundFade.start([=] {
-		update();
-		if (!_backgroundFade.animating()) {
-			_backgroundBack = QImage();
-			startBackgroundFade();
-		}
-	}, 0., 1., kFadeBackgroundDuration);
 }
 
 void LayerWidget::parentResized() {
 	resizeToWidth(parentWidget()->width());
-	if (_background.isNull()) {
+	if (!_backdrop.started()) {
 		start();
 	}
 }

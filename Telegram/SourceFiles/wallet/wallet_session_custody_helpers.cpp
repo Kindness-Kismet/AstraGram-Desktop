@@ -210,27 +210,6 @@ void FailShareFetch(
 	return u"ROTATION_FAILED"_q;
 }
 
-[[nodiscard]] engine::SendIntent IntentFromArgs(
-		const SendArgs &args,
-		engine::SendMessageBody body) {
-	auto message = engine::SendMessage{
-		.destination = FormatFriendly(
-			args.destination,
-			args.bounce).toStdString(),
-		.amount = engine::SendAmount(engine::SendAmount::kExact{
-			.nanograms = QString::number(args.amountNano).toStdString(),
-		}),
-		.body = std::move(body),
-		.bounce = args.bounce,
-		.state_init = std::nullopt,
-	};
-	return engine::SendIntent{
-		.expiration = engine::SendExpiration(
-			engine::SendExpiration::kEngineDefault{}),
-		.messages = { std::move(message) },
-	};
-}
-
 [[nodiscard]] engine::NftTransferIntent CollectibleTransferIntent(
 		const SendArgs &args) {
 	auto payload = args.comment.text.isEmpty()
@@ -592,6 +571,7 @@ void FailShareFetch(
 		.commentEncrypted = item.commentEncrypted,
 		.gasless = item.gasless,
 		.counterpartyBounceable = item.counterpartyBounceable,
+		.giftMove = item.giftMove,
 	};
 }
 

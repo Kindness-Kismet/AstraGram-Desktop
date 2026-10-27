@@ -23,7 +23,8 @@ void Session::updatePollingState() {
 		|| sendRecoveryNeeded()
 		|| submittedLookupNeeded()
 		|| custody().pendingRotation
-		|| custody().anyAwaitingServerKey();
+		|| custody().anyAwaitingServerKey()
+		|| !_collectibleWaits->empty();
 	if (!wanted) {
 		_pollTimer.cancel();
 	} else if (!_pollTimer.isActive()) {
@@ -43,6 +44,7 @@ bool Session::pollingRequested() const {
 
 void Session::pollTick() {
 	ensureLoaded();
+	_collectibleWaits->settle(nullptr, 0);
 	expireStaleSubmittedTransfers();
 	updatePollingState();
 	if (!_pollTimer.isActive()) {
@@ -187,7 +189,7 @@ rpl::producer<ListsEmptyState> Session::listsEmptyStateValue() const {
 	}) | rpl::distinct_until_changed();
 }
 
-const std::vector<Gram::NftItem> &Session::collectibles() const {
+const std::vector<CollectibleRecord> &Session::collectibles() const {
 	return _collectibles;
 }
 
@@ -222,12 +224,12 @@ void Session::setCollectiblesTab(bool value) {
 	refreshStaleHistory();
 }
 
-void Session::setWindowSend(std::string operationId) {
-	_windowSend = std::move(operationId);
+void Session::setWindowSend(WindowSend value) {
+	_windowSend = std::move(value);
 	_historyUpdates.fire({});
 }
 
-const std::string &Session::windowSend() const {
+const WindowSend &Session::windowSend() const {
 	return _windowSend;
 }
 
@@ -244,11 +246,6 @@ std::optional<PendingSendInfo> Session::pendingSend() const {
 		&& transferWalletIdentityCurrent(_pending->walletIdentity))
 		? _pending
 		: std::nullopt;
-}
-
-auto Session::lastTransferReceipt() const
--> const std::optional<TransferReceipt> & {
-	return _lastReceipt;
 }
 
 const TransferItem *Session::submittedShown(
@@ -277,18 +274,22 @@ std::vector<TransferItem> Session::submittedTransactions() const {
 
 auto Session::listedSubmittedTransactions() const
 -> std::vector<ListedSubmittedTransfer> {
-	auto result = std::vector<ListedSubmittedTransfer>();
+	auto facts = SubmittedListFacts{
+		.history = _history,
+		.boundary = _listedBoundary,
+		.coverage = _giftMoveCoverage,
+		.skew = kSendingMatchSkew,
+		.sendingId = (_submission ? _submission->operationId : std::string()),
+	};
+	facts.sending = sendingTransaction(facts.sendingId);
 	for (const auto &entry : _submitted) {
-		const auto item = submittedShown(entry);
-		if (!item
-			|| (_listedBoundary
-				&& item->date
-				&& (*item->date < *_listedBoundary))) {
-			continue;
-		}
-		result.push_back({ entry.operationId, *item });
+		facts.entries.push_back({
+			.operationId = entry.operationId,
+			.shown = submittedShown(entry),
+			.canonicalId = entry.canonicalId,
+		});
 	}
-	return result;
+	return ListedSubmittedTransfers(facts);
 }
 
 TonConnectSendFate Session::tonConnectSendFate(
@@ -373,6 +374,7 @@ std::optional<TransferItem> Session::sendingTransaction(
 		.comment = (args.comment.isPublic ? args.comment.text : QString()),
 		.recipient = args.userId,
 		.bounce = args.bounce,
+		.giftMove = SentGiftMove(args),
 	});
 	const auto entry = ranges::find(
 		_submitted,
@@ -383,7 +385,9 @@ std::optional<TransferItem> Session::sendingTransaction(
 		&& transferWalletIdentityCurrent(entry->identity)) {
 		result.id = entry->canonicalId;
 	}
-	if (!result.id.isEmpty() || result.counterparty.isEmpty()) {
+	if (!result.id.isEmpty()
+		|| result.counterparty.isEmpty()
+		|| (result.giftMove != TransferGiftMove::None)) {
 		return result;
 	}
 	const auto same = [&](const TransferItem &item) {

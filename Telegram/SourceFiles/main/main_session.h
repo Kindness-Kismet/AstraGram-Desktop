@@ -298,6 +298,7 @@ public:
 		TextWithEntities query) const;
 
 	void setTmpPassword(const QByteArray &password, TimeId validUntil);
+	void dropTmpPassword(const QByteArray &password);
 	[[nodiscard]] QByteArray validTmpPassword() const;
 
 	// Can be called only right before ~Session.

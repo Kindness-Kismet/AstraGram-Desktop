@@ -57,13 +57,6 @@ ResetClientCompletion::~ResetClientCompletion() {
 	return ok ? std::make_optional(result) : std::nullopt;
 }
 
-[[nodiscard]] std::optional<uint64> DecimalUint64(
-		const std::string &value) {
-	auto ok = false;
-	const auto result = QString::fromStdString(value).toULongLong(&ok);
-	return ok ? std::make_optional(result) : std::nullopt;
-}
-
 void FinishHistoryWaiters(std::vector<Fn<void()>> callbacks) {
 	for (const auto &callback : callbacks) {
 		callback();
@@ -199,15 +192,15 @@ void FinishHistoryWaiters(std::vector<Fn<void()>> callbacks) {
 	return result;
 }
 
-[[nodiscard]] std::vector<Gram::NftItem> UnheldCollectibles(
-		const std::vector<Gram::NftItem> &was,
-		std::vector<Gram::NftItem> &&page) {
+[[nodiscard]] std::vector<CollectibleRecord> UnheldCollectibles(
+		const std::vector<CollectibleRecord> &was,
+		std::vector<CollectibleRecord> &&page) {
 	auto held = base::flat_set<QString>();
 	held.reserve(was.size());
 	for (const auto &item : was) {
 		held.emplace(item.address);
 	}
-	auto result = std::vector<Gram::NftItem>();
+	auto result = std::vector<CollectibleRecord>();
 	result.reserve(page.size());
 	for (auto &item : page) {
 		if (!held.contains(item.address)) {
@@ -218,8 +211,8 @@ void FinishHistoryWaiters(std::vector<Fn<void()>> callbacks) {
 }
 
 [[nodiscard]] bool SameCollectibles(
-		const std::vector<Gram::NftItem> &was,
-		const std::vector<Gram::NftItem> &now) {
+		const std::vector<CollectibleRecord> &was,
+		const std::vector<CollectibleRecord> &now) {
 	return (was == now);
 }
 

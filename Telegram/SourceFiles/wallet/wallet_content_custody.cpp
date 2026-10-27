@@ -55,53 +55,6 @@ void PaintAddressGroups(
 	}
 }
 
-void AddAddressPlate(
-		not_null<Ui::VerticalLayout*> container,
-		const QString &address,
-		const style::margins &margin,
-		std::shared_ptr<Ui::Show> show) {
-	const auto font = st::walletAddressPlateFont->monospace();
-	const auto inner = st::walletAddressPlateInner;
-	const auto groups = kAddressLength / kAddressGroup;
-	const auto lines = groups / kAddressGroupsPerLine;
-	const auto plate = container->add(
-		object_ptr<Ui::FixedHeightWidget>(
-			container,
-			inner + lines * font->height + inner),
-		margin);
-	plate->paintRequest(
-	) | rpl::on_next([=] {
-		auto p = QPainter(plate);
-		auto hq = PainterHighQualityEnabler(p);
-		p.setPen(Qt::NoPen);
-		p.setBrush(st::windowBgOver);
-		p.drawRoundedRect(
-			plate->rect(),
-			st::walletAddressPlateRadius,
-			st::walletAddressPlateRadius);
-		const auto lineWidth = AddressGroupsWidth(
-			font,
-			address,
-			kAddressGroupsPerLine);
-		const auto left = (plate->width() - lineWidth) / 2;
-		PaintAddressGroups(
-			p,
-			font,
-			address,
-			{ left, inner },
-			kAddressGroupsPerLine);
-	}, plate->lifetime());
-	if (show) {
-		const auto copy = Ui::CreateChild<Ui::AbstractButton>(plate);
-		copy->setClickedCallback(
-			CopyAddressCallback(std::move(show), address));
-		plate->sizeValue(
-		) | rpl::on_next([=](QSize size) {
-			copy->setGeometry(QRect(QPoint(), size));
-		}, copy->lifetime());
-	}
-}
-
 void ShowWrongSecretWords(
 		std::shared_ptr<Main::SessionShow> show,
 		bool outdated,
@@ -128,12 +81,14 @@ void ShowWrongSecretWords(
 		if (plate) {
 			AddAddressPlate(
 				box->verticalLayout(),
-				address,
+				rpl::single(address),
 				QMargins(
 					padding.left(),
 					st::walletAddressPlateSkip,
 					padding.right(),
-					padding.bottom()));
+					padding.bottom()),
+				kAddressGroupsPerLine,
+				box->uiShow());
 		}
 		box->addButton(tr::lng_bot_download_retry(), [=] {
 			box->closeBox();
@@ -173,12 +128,13 @@ void ShowSendRecipientWallet(
 		});
 		AddAddressPlate(
 			box->verticalLayout(),
-			address,
+			rpl::single(address),
 			QMargins(
 				padding.left(),
 				st::walletAddressPlateSkip,
 				padding.right(),
 				padding.bottom()),
+			kAddressGroupsPerLine,
 			box->uiShow());
 		box->addButton(tr::lng_box_ok(), [=] {
 			box->closeBox();

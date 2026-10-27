@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QRect>
 
 class QPixmap;
+#include <QtWidgets/QWidget>
 
 namespace Core {
 
@@ -54,12 +55,17 @@ private:
 		rpl::producer<bool> active,
 		rpl::lifetime &lifetime,
 		QWidget *animationRedaction = nullptr);
-	void refresh(not_null<QWidget*> window);
+	void refresh(not_null<QWidget*> window, bool force = false);
+
+	struct Applied {
+		QPointer<QWidget> window;
+		bool enabled = false;
+	};
 
 	base::flat_map<uint64, Reason> _reasons;
 	uint64 _lastReasonId = 0;
 	rpl::event_stream<not_null<QWidget*>> _changes;
-	std::unique_ptr<QObject> _filter;
+	base::flat_map<not_null<QWidget*>, Applied> _applied;
 
 };
 

@@ -20,18 +20,16 @@ Fn<void()> CopyTextCallback(
 object_ptr<Ui::FlatLabel> AddressValueLabel(
 		not_null<QWidget*> parent,
 		std::shared_ptr<Ui::Show> show,
-		const QString &address) {
-	auto result = object_ptr<Ui::FlatLabel>(
+		const QString &address,
+		const style::FlatLabel *styleOverride) {
+	const auto &st = styleOverride
+		? *styleOverride
+		: st::walletDetailsAddressLabel;
+	return MakeAddressLabel(
 		parent,
-		rpl::single(DetailsAddressValue(address)),
-		st::walletDetailsAddressLabel);
-	result->setTryMakeSimilarLines(true);
-	const auto copy = CopyAddressCallback(std::move(show), address);
-	result->setClickHandlerFilter([=](const auto &...) {
-		copy();
-		return false;
-	});
-	return result;
+		address,
+		st,
+		CopyAddressCallback(std::move(show), address));
 }
 
 object_ptr<Ui::RpWidget> MakeActionRow(
@@ -125,6 +123,10 @@ QString SendErrorText(SendError error, int64 minTransferNano) {
 
 void ShowWalletKeyChanged(std::shared_ptr<Main::SessionShow> show) {
 	ShowKeyChangedBox(show, tr::lng_wallet_send_key_changed_text());
+}
+
+void ShowWalletHowItWorks(std::shared_ptr<Main::SessionShow> show) {
+	show->showBox(Box(WalletHowItWorksBox, &show->session()));
 }
 
 QString ErrorWithType(const QString &message, const QString &error) {
@@ -250,7 +252,8 @@ base::unique_qptr<Ui::RpWidget> CreateContent(
 object_ptr<Ui::RpWidget> MakeWalletCard(
 		QWidget *parent,
 		std::shared_ptr<Main::SessionShow> show,
-		std::shared_ptr<bool> markPlayed) {
+		std::shared_ptr<bool> markPlayed,
+		WalletCardArgs args) {
 	auto result = object_ptr<Ui::FixedHeightWidget>(
 		parent,
 		st::walletCardHeight);
@@ -260,8 +263,16 @@ object_ptr<Ui::RpWidget> MakeWalletCard(
 	const auto card = Ui::CreateChild<Card>(
 		raw,
 		show,
-		CardNameValue(&show->session()));
+		(args.name
+			? std::move(args.name)
+			: CardNameValue(&show->session())),
+		std::move(args.address));
 	card->setAttribute(Qt::WA_TransparentForMouseEvents);
+	if (args.look) {
+		std::move(args.look) | rpl::on_next([=](CardLook look) {
+			card->setLook(std::move(look));
+		}, card->lifetime());
+	}
 
 	const auto overlay = Ui::CreateChild<Ui::RpWidget>(raw);
 	overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -297,7 +308,9 @@ object_ptr<Ui::RpWidget> MakeWalletCard(
 		ink,
 		&show->session(),
 		[=] { overlay->update(); },
-		raw);
+		raw,
+		std::move(args.balanceNano),
+		std::move(args.fiat));
 	SetupCardMark(ink, raw, std::move(markPlayed), [=] {
 		overlay->update(
 			ink->markPaintRect(ComputeCardFold(raw->rect(), 0.)));
@@ -309,7 +322,6 @@ object_ptr<Ui::RpWidget> MakeWalletCard(
 		const auto scope = WindowPaletteScope(raw);
 		ink->refresh();
 		card->invalidateCache();
-		card->update();
 		overlay->update();
 	}, raw->lifetime());
 
@@ -408,6 +420,74 @@ object_ptr<Ui::RpWidget> MakeTransferCard(
 	});
 
 	return result;
+}
+
+void AddAddressPlate(
+		not_null<Ui::VerticalLayout*> container,
+		rpl::producer<QString> address,
+		const style::margins &margin,
+		int groupsPerLine,
+		std::shared_ptr<Ui::Show> show,
+		rpl::producer<bool> spinnerAllowed) {
+	const auto font = st::walletAddressPlateFont->monospace();
+	const auto inner = st::walletAddressPlateInner;
+	const auto lines = kAddressLength / kAddressGroup / groupsPerLine;
+	const auto plate = container->add(
+		object_ptr<Ui::FixedHeightWidget>(
+			container,
+			inner + lines * font->height + inner),
+		margin);
+	const auto value = plate->lifetime().make_state<QString>();
+	plate->paintRequest(
+	) | rpl::on_next([=] {
+		auto p = QPainter(plate);
+		auto hq = PainterHighQualityEnabler(p);
+		p.setPen(Qt::NoPen);
+		p.setBrush(st::windowBgOver);
+		p.drawRoundedRect(
+			plate->rect(),
+			st::walletAddressPlateRadius,
+			st::walletAddressPlateRadius);
+		if (value->isEmpty()) {
+			return;
+		}
+		const auto lineWidth = AddressGroupsWidth(font, *value, groupsPerLine);
+		const auto left = (plate->width() - lineWidth) / 2;
+		PaintAddressGroups(
+			p,
+			font,
+			*value,
+			{ left, inner },
+			groupsPerLine);
+	}, plate->lifetime());
+	const auto &loading = st::walletBusyBoxLoading;
+	const auto side = loading.size.height() + 2 * loading.thickness;
+	const auto spinner = Info::Statistics::InfiniteRadialAnimationWidget(
+		plate,
+		side,
+		&loading);
+	spinner->setAttribute(Qt::WA_TransparentForMouseEvents);
+	Info::Statistics::AddChildToWidgetCenter(plate, spinner);
+	rpl::combine(
+		std::move(address),
+		std::move(spinnerAllowed)
+	) | rpl::on_next([=](const QString &text, bool allowed) {
+		*value = (text.size() == kAddressLength) ? text : QString();
+		spinner->setVisible(allowed && value->isEmpty());
+		plate->update();
+	}, plate->lifetime());
+	if (show) {
+		const auto copy = Ui::CreateChild<Ui::AbstractButton>(plate);
+		copy->setClickedCallback([=] {
+			if (!value->isEmpty()) {
+				CopyAddressCallback(show, *value)();
+			}
+		});
+		plate->sizeValue(
+		) | rpl::on_next([=](QSize size) {
+			copy->setGeometry(QRect(QPoint(), size));
+		}, copy->lifetime());
+	}
 }
 
 void FillMenu(
@@ -565,7 +645,9 @@ void ShowSendToUser(
 void ShowCollectibleTransfer(
 		std::shared_ptr<Main::SessionShow> show,
 		std::shared_ptr<CollectibleMedia> media,
-		const QString &collectible) {
+		const QString &collectible,
+		const QString &slug,
+		std::shared_ptr<Data::UniqueGift> unique) {
 	if (!show || !show->valid() || !media || collectible.isEmpty()) {
 		return;
 	}
@@ -582,6 +664,8 @@ void ShowCollectibleTransfer(
 			QString(),
 			std::make_shared<const CollectibleTransfer>(CollectibleTransfer{
 				.address = collectible,
+				.slug = slug,
+				.unique = unique,
 				.media = strong,
 			})));
 	});

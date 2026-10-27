@@ -303,7 +303,6 @@ private:
 		Window::SectionWidget *section,
 		bool fromBottom);
 	Window::SectionSlideParams prepareHistoryAnimation(PeerId historyPeerId);
-	Window::SectionSlideParams prepareDialogsAnimation();
 
 	bool saveSectionInStack(
 		const SectionShow &params,

@@ -8,13 +8,17 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_shortcuts.h"
 
 #include "base/event_filter.h"
+#include "base/qt/qt_possible_keys.h"
+#include "core/application.h"
 #include "core/shortcuts.h"
 #include "lang/lang_keys.h"
 #include "settings/sections/settings_chat.h"
 #include "settings/settings_builder.h"
 #include "settings/settings_card_layout.h"
 #include "settings/settings_common_session.h"
+#include "ui/boxes/confirm_box.h"
 #include "ui/text/text_utilities.h"
+#include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/popup_menu.h"
@@ -24,8 +28,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
-
-#include <private/qkeymapper_p.h>
 
 namespace Settings {
 namespace {
@@ -130,17 +132,6 @@ struct Labeled {
 		{ C::MediaPrevious, tr::lng_shortcuts_media_previous() },
 		{ C::MediaNext, tr::lng_shortcuts_media_next() },
 	};
-}
-
-[[nodiscard]] QString ToString(const QKeySequence &key) {
-	auto result = key.toString();
-#ifdef Q_OS_MAC
-	result = result.replace(u"Ctrl+"_q, QString() + QChar(0x2318));
-	result = result.replace(u"Meta+"_q, QString() + QChar(0x2303));
-	result = result.replace(u"Alt+"_q, QString() + QChar(0x2325));
-	result = result.replace(u"Shift+"_q, QString() + QChar(0x21E7));
-#endif // Q_OS_MAC
-	return result;
 }
 
 struct SetupShortcutsResult {
@@ -282,9 +273,9 @@ struct SetupShortcutsResult {
 						? TextWithEntities()
 						: removed
 						? Ui::Text::Wrapped(
-							TextWithEntities{ ToString(key) },
+							TextWithEntities{ Shortcuts::ToDisplayString(key) },
 							EntityType::StrikeOut)
-						: TextWithEntities{ ToString(key) });
+						: TextWithEntities{ Shortcuts::ToDisplayString(key) });
 					keys->setTextColorOverride((recording == raw)
 						? st::boxTextFgGood->c
 						: removed
@@ -436,7 +427,7 @@ struct SetupShortcutsResult {
 			const auto r = [&] {
 				auto result = int(k);
 				if (m & Qt::ShiftModifier) {
-					const auto keys = QKeyMapper::possibleKeys(key);
+					const auto keys = base::PossibleKeys(key);
 					for (const auto &possible : keys) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 						if (possible.keyboardModifiers() == m) {
@@ -477,14 +468,21 @@ struct SetupShortcutsResult {
 		{}));
 	reset->setClickedCallback([=] {
 		stopRecording();
-		for (auto &entry : state->entries) {
-			if (entry.now != entry.original) {
-				entry.now = entry.original;
-				fill(entry);
-			}
-		}
-		checkModified();
-		S::ResetToDefaults();
+		controller->show(Ui::MakeConfirmBox({
+			.text = tr::lng_shortcuts_reset_sure(),
+			.confirmed = crl::guard(content, [=](Fn<void()> close) {
+				for (auto &entry : state->entries) {
+					if (entry.now != entry.original) {
+						entry.now = entry.original;
+						fill(entry);
+					}
+				}
+				checkModified();
+				S::ResetToDefaults();
+				close();
+			}),
+			.confirmText = tr::lng_shortcuts_reset(),
+		}));
 	});
 	modifiedWrap->toggleOn(state->modified.value());
 

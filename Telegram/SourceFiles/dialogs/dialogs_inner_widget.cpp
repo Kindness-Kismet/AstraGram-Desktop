@@ -1537,13 +1537,21 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		}
 		if (communityModeShown()) {
 			p.restore();
-			const auto paintBar = [&](const QString &text) {
+			const auto paintBar = [&](
+					const QString &text,
+					const style::icon &icon) {
 				p.fillRect(
 					0,
 					0,
 					fullWidth,
 					st::communityBarHeight,
 					currentBg());
+				if (context.narrow) {
+					icon.paintInCenter(
+						p,
+						QRect(0, 0, fullWidth, st::searchedBarHeight));
+					return;
+				}
 				const auto &font = st::defaultSubsectionTitle.style.font;
 				p.setFont(font);
 				p.setPen(st::windowActiveTextFg);
@@ -1559,13 +1567,14 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 					int sectionTop,
 					const CommunityRowsView &view,
 					const QString &text,
+					const style::icon &icon,
 					int flatBase) {
 				if (view.empty()) {
 					return;
 				}
 				p.save();
 				p.translate(0, sectionTop);
-				paintBar(text);
+				paintBar(text, icon);
 				const auto rowsTop = st::communityBarHeight;
 				p.translate(0, rowsTop);
 				const auto localClip = r.translated(
@@ -1587,19 +1596,24 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			if (!_shownList->empty()) {
 				p.save();
 				p.translate(0, dialogsOffset() - st::communityBarHeight);
-				paintBar(tr::lng_community_chats_joined(tr::now));
+				paintBar(
+					tr::lng_community_chats_joined(tr::now),
+					st::dialogsCommunityJoinedIcon);
 				p.restore();
 			}
 			paintSection(
 				communityViewableTop(),
 				_communityViewable,
 				tr::lng_community_chats_viewable(tr::now),
+				st::dialogsCommunityViewableIcon,
 				0);
 			if (_communityRequestableList
 				&& (_communityRequestableCount > 0)) {
 				p.save();
 				p.translate(0, communityRequestableTop());
-				paintBar(tr::lng_community_chats_requestable(tr::now));
+				paintBar(
+					tr::lng_community_chats_requestable(tr::now),
+					st::dialogsCommunityRequestableIcon);
 				p.restore();
 			}
 			p.translate(0, communitySectionsBottom());
@@ -5207,10 +5221,6 @@ Data::Forum *InnerWidget::shownForum() const {
 	return _openedForum;
 }
 
-Data::CommunityInfo *InnerWidget::shownCommunity() const {
-	return _openedCommunity;
-}
-
 bool InnerWidget::needCollapsedRowsRefresh() const {
 	const auto archive = !_shownList->empty()
 		? _shownList->begin()->get()->folder()
@@ -6029,19 +6039,6 @@ void InnerWidget::preloadRowsData() {
 			}
 		}
 	}
-}
-
-bool InnerWidget::chooseCollapsedRow(Qt::KeyboardModifiers modifiers) {
-	if (_state != WidgetState::Default) {
-		return false;
-	} else if ((_collapsedSelected < 0)
-		|| (_collapsedSelected >= _collapsedRows.size())) {
-		return false;
-	}
-	const auto &row = _collapsedRows[_collapsedSelected];
-	Assert(row->folder != nullptr);
-	_controller->openFolder(row->folder);
-	return true;
 }
 
 void InnerWidget::switchToFilter(FilterId filterId) {

@@ -99,21 +99,32 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/ui_utility.h"
 #include "ui/vertical_list.h"
 #include "wallet/wallet_address.h"
+#include "wallet/wallet_address_label.h"
 #include "wallet/wallet_amount_field.h"
 #include "wallet/wallet_amount_painter.h"
 #include "wallet/wallet_card_angle.h"
+#include "wallet/wallet_card_editor.h"
+#include "wallet/wallet_card_float.h"
+#include "wallet/wallet_card_foreground.h"
 #include "wallet/wallet_card_gradient.h"
+#include "wallet/wallet_card_space.h"
+#include "wallet/wallet_card_stickers.h"
+#include "wallet/wallet_card_transition.h"
 #include "wallet/wallet_chat_show.h"
 #include "wallet/wallet_collectible_media.h"
 #include "wallet/wallet_collectibles.h"
+#include "wallet/wallet_collectibles_viewport.h"
 #include "wallet/wallet_comment.h"
 #include "wallet/wallet_custody.h"
 #include "wallet/wallet_diamond_flight.h"
 #include "wallet/wallet_fiat.h"
+#include "wallet/wallet_gift_move_presentation.h"
 #include "wallet/wallet_key_protection.h"
+#include "wallet/wallet_move_to_gifts.h"
 #include "wallet/wallet_onramp.h"
 #include "wallet/wallet_palette.h"
 #include "wallet/wallet_rates.h"
+#include "wallet/wallet_send_preparation.h"
 #include "wallet/wallet_sending_effects.h"
 #include "wallet/wallet_session.h"
 #include "wallet/wallet_ton_connect.h"
@@ -187,7 +198,6 @@ constexpr auto kCoverBodyPart = 0.90;
 
 constexpr auto kCoverTitleScale = 0.05;
 
-constexpr auto kCardFoldMinHeight = 1.;
 
 constexpr auto kIntroTooltipShownPref = "wallet_intro_tooltip_shown"_cs;
 
@@ -211,17 +221,14 @@ constexpr auto kNameBusyRetryDelay = crl::time(500);
 
 constexpr auto kSendOwnerLookupDelay = crl::time(500);
 
-constexpr auto kSendRefusalRetries = 3;
 
 constexpr auto kCommentPasswordStateTimeout = 30 * crl::time(1000);
 
-constexpr auto kSigningReadyTimeout = 30 * crl::time(1000);
 
 constexpr auto kHeldSendKeyTimeout = 60 * crl::time(1000);
 
 constexpr auto kCustodyResolveTimeout = 20 * crl::time(1000);
 
-constexpr auto kGramDigits = 9;
 
 constexpr auto kSendingRowGlareDuration = crl::time(1450);
 
@@ -305,7 +312,6 @@ class BalanceInk;
 
 class Card;
 
-struct CardFold;
 
 class InfoIsland;
 
@@ -450,6 +456,11 @@ private:
 	object_ptr<Ui::ScrollArea> _scroll;
 	SingleQueuedInvokation _loadMoreCheck;
 	std::unique_ptr<BalanceInk> _ink;
+	std::unique_ptr<CardStickers> _cardStickers;
+	std::unique_ptr<CardForeground> _cardForeground;
+	std::unique_ptr<CardFloat> _cardFloat;
+	std::unique_ptr<CardStickerEditor> _cardEditor;
+	std::unique_ptr<CardLookFollower> _cardLook;
 	Ui::Text::String _title;
 	base::unique_qptr<Ui::RpWidget> _titleBalance;
 	Ui::RpWidget *_container = nullptr;
@@ -478,49 +489,41 @@ private:
 
 };
 
-struct CardFold {
-	QRect rest;
-	QPolygonF quad;
-	QTransform transform;
-	float64 topY = 0.;
-	float64 bottomY = 0.;
-	float64 opacity = 1.;
-	float64 fold = 0.;
-	bool valid = false;
-};
-
-// CardFold is expressed entirely in Content coordinates: `rest` is the
-// card's rest rect there, `quad` the folded quadrilateral it is painted
-// as, and `transform` maps the first onto the second. A Card paints with
-// a widget-local painter, so it reconciles with p.translate(-x(), -y())
-// before applying `transform` and draws into `rest`; paintedQuad() and
-// paintedOutline() return Content coordinates for the same reason.
-[[nodiscard]] CardFold ComputeCardFold(QRect cardRest, float64 fold);
-
 class Card final : public Ui::RpWidget {
 public:
 	Card(
 		QWidget *parent,
 		std::shared_ptr<Main::SessionShow> show,
-		rpl::producer<TextWithEntities> name);
+		rpl::producer<TextWithEntities> name,
+		rpl::producer<QString> address = nullptr);
 
 	void setFold(const CardFold &fold);
 	[[nodiscard]] const CardFold &fold() const;
-	[[nodiscard]] QPolygonF paintedQuad() const;
-	[[nodiscard]] QPolygonF paintedOutline() const;
+	void paintFold(
+		Painter &p,
+		const CardFold &fold,
+		not_null<QWidget*> paintOwner);
+	void liftForeground();
+	void paintForeground(Painter &p, const CardFold &fold);
 	void invalidateCache();
+	[[nodiscard]] rpl::producer<> invalidations() const;
 	void followCursor();
+	void setLook(CardLook look, CardLookChange change = {});
+	[[nodiscard]] rpl::producer<bool> lookTransitionValue() const;
+	[[nodiscard]] CardMarkTint markTint(const BalanceInk &ink) const;
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
 
 private:
 	[[nodiscard]] QRect restRect() const;
-	[[nodiscard]] QRectF paintedRect() const;
-	[[nodiscard]] float64 paintAngle();
+	[[nodiscard]] float64 paintAngle(
+		not_null<QWidget*> paintOwner,
+		QRectF rect);
 	void paintContent(Painter &p, float64 angle);
+	void paintFace(Painter &p);
 	void validateCache(float64 angle);
-	void refreshAddress();
+	void setAddress(const QString &address);
 
 	const std::shared_ptr<Main::SessionShow> _show;
 	style::TextStyle _nameStyle;
@@ -528,10 +531,13 @@ private:
 	QString _addressLine1;
 	QString _addressLine2;
 	CardFold _fold;
-	CardBackground _background;
+	QPointer<QWidget> _paintOwner;
+	rpl::event_stream<> _invalidations;
+	CardLookTransition _look;
 	QImage _cache;
 	float64 _cacheAngle = 0.;
 	std::unique_ptr<CardAngle> _angle;
+	bool _lifted = false;
 
 };
 
@@ -548,6 +554,18 @@ enum class BalanceStyle : uchar {
 	Exact,
 };
 
+enum class BalanceInkPart : uchar {
+	Both,
+	Card,
+	Outside,
+};
+
+enum class BalanceInkLayer : uchar {
+	All,
+	Primary,
+	Secondary,
+};
+
 class BalanceInk final {
 public:
 	BalanceInk();
@@ -558,21 +576,24 @@ public:
 		BalanceStyle style = BalanceStyle::Balance);
 	void setOuterWidth(int outerWidth);
 	void playMark(Fn<void()> repaint);
+	void setMarkTint(Fn<CardMarkTint()> tint);
 	void refresh();
 
 	void paint(
 		QPainter &p,
 		const CardFold &fold,
 		const QRegion &cardOutline,
-		QRect clip) const;
+		QRect clip,
+		BalanceInkPart part = BalanceInkPart::Both,
+		BalanceInkLayer layer = BalanceInkLayer::All) const;
 
 	[[nodiscard]] QRect boundingRect(const CardFold &fold) const;
 	[[nodiscard]] QRect markRect(QRect cardRest) const;
 	[[nodiscard]] QRect markPaintRect(const CardFold &fold) const;
-
-private:
 	[[nodiscard]] QRectF amountRect(const CardFold &fold) const;
 	[[nodiscard]] QRectF fiatRect(const CardFold &fold) const;
+
+private:
 	[[nodiscard]] QRectF markVisible(float64 fold) const;
 	[[nodiscard]] QRectF markDrawRect(
 		float64 fold,
@@ -589,11 +610,14 @@ private:
 		const BalancePalette &palette,
 		const QImage &mark,
 		bool card,
-		float64 secondaryOpacity) const;
+		float64 secondaryOpacity,
+		BalanceInkLayer layer) const;
 	[[nodiscard]] QTransform groupTransform(const CardFold &fold) const;
 
 	std::unique_ptr<Lottie::Icon> _markLottie;
 	Fn<void()> _markRepaint;
+	Fn<CardMarkTint()> _markTint;
+	mutable CardMarkTinter _markTinter;
 	Wallet::AmountPainter _painter;
 	QPainterPath _fiat;
 	QImage _markCard;
@@ -662,7 +686,6 @@ private:
 
 [[nodiscard]] int PanelCardWidth();
 
-[[nodiscard]] QRect CardQrRect(int cardWidth);
 
 [[nodiscard]] QRect TransferCardInfoRect(int cardWidth);
 
@@ -692,11 +715,6 @@ Fn<void()> CopyTextCallback(
 		std::shared_ptr<Ui::Show> show,
 		QString text,
 		QString toast);
-
-object_ptr<Ui::FlatLabel> AddressValueLabel(
-		not_null<QWidget*> parent,
-		std::shared_ptr<Ui::Show> show,
-		const QString &address);
 
 namespace ContentDetails {
 
@@ -728,6 +746,7 @@ struct HistoryRowContent {
 	PeerData *peer = nullptr;
 	bool itemAmount = false;
 	QString collectible;
+	std::optional<CollectibleRecord> collectibleRecord;
 
 	friend bool operator==(
 		const HistoryRowContent &,
@@ -758,8 +777,6 @@ void SetAmountColor(
 		const style::color &color);
 
 [[nodiscard]] QString GramMajorPart(int64 amountNano);
-
-[[nodiscard]] QString GramMinorPart(int64 amountNano);
 
 struct RowAmountText {
 	QString major;
@@ -874,6 +891,7 @@ struct RowAmountPlacement {
 		int width);
 
 struct HistoryRowChipState {
+	QString key;
 	Gram::NftKind kind = Gram::NftKind::Generic;
 	Ui::Text::String title;
 	Ui::Text::String subtitle;
@@ -903,8 +921,7 @@ void PaintHistoryRowChipArtwork(
 		Painter &p,
 		int outerWidth,
 		const HistoryRowChipState &state,
-		const std::shared_ptr<CollectibleMedia> &media,
-		const QString &address);
+		const std::shared_ptr<CollectibleMedia> &media);
 
 void PaintHistoryRowChipText(
 		Painter &p,
@@ -915,6 +932,7 @@ void TrackHistoryRowChip(
 		not_null<HistoryRowChipState*> state,
 		std::shared_ptr<CollectibleMedia> media,
 		QString address,
+		const std::optional<CollectibleRecord> &record,
 		Fn<void()> repaint,
 		rpl::lifetime &lifetime);
 
@@ -922,7 +940,8 @@ void AddHistoryRowChip(
 		not_null<Ui::VerticalLayout*> inner,
 		not_null<HistoryRowButton*> button,
 		std::shared_ptr<CollectibleMedia> media,
-		QString address);
+		QString address,
+		const std::optional<CollectibleRecord> &record);
 
 not_null<Ui::RpWidget*> AddHistoryRow(
 		not_null<Ui::VerticalLayout*> list,
@@ -1668,6 +1687,7 @@ private:
 [[nodiscard]] object_ptr<Ui::RpWidget> MakeRecentMoneyRecipientsList(
 		not_null<Ui::GenericBox*> box,
 		std::shared_ptr<Main::SessionShow> show,
+		bool hasMoveToMyGiftsRow,
 		rpl::producer<bool> hidden,
 		Fn<void(not_null<UserData*>)> choose);
 
@@ -1869,11 +1889,6 @@ void WalletSendConfirmBox(
 		std::shared_ptr<Main::SessionShow> show,
 		SendConfirmArgs args);
 
-struct CollectibleTransfer {
-	QString address;
-	std::shared_ptr<CollectibleMedia> media;
-};
-
 struct CollectibleRecipient {
 	QString destination;
 	QString tonName;
@@ -2067,12 +2082,6 @@ void PaintAddressGroups(
 		const QString &address,
 		QPoint origin,
 		int groupsPerLine);
-
-void AddAddressPlate(
-		not_null<Ui::VerticalLayout*> container,
-		const QString &address,
-		const style::margins &margin,
-		std::shared_ptr<Ui::Show> show = nullptr);
 
 void ShowWrongSecretWords(
 		std::shared_ptr<Main::SessionShow> show,
@@ -2371,7 +2380,9 @@ void SetupCardBalance(
 		not_null<BalanceInk*> ink,
 		not_null<Main::Session*> session,
 		Fn<void()> repaint,
-		not_null<Ui::RpWidget*> owner);
+		not_null<Ui::RpWidget*> owner,
+		rpl::producer<int64> balanceNano = nullptr,
+		rpl::producer<QString> fiat = nullptr);
 
 void SetupCardMark(
 		not_null<BalanceInk*> ink,
@@ -2380,8 +2391,6 @@ void SetupCardMark(
 		Fn<void()> repaint);
 
 
-
-CardFold ComputeCardFold(QRect cardRest, float64 fold);
 
 [[nodiscard]] bool HistoryShown(not_null<Main::Session*> session);
 
@@ -2560,11 +2569,6 @@ base::unique_qptr<Ui::RpWidget> CreateContent(
 		not_null<Ui::SeparatePanel*> panel,
 		std::shared_ptr<Main::SessionShow> show);
 
-object_ptr<Ui::RpWidget> MakeWalletCard(
-		QWidget *parent,
-		std::shared_ptr<Main::SessionShow> show,
-		std::shared_ptr<bool> markPlayed);
-
 object_ptr<Ui::RpWidget> MakeTransferCard(
 		QWidget *parent,
 		not_null<Main::Session*> session,
@@ -2596,11 +2600,6 @@ void ShowSendToUser(
 		int64 amountNano,
 		Fn<void()> notReady,
 		base::weak_qptr<Ui::BoxContent> origin);
-
-void ShowCollectibleTransfer(
-		std::shared_ptr<Main::SessionShow> show,
-		std::shared_ptr<CollectibleMedia> media,
-		const QString &collectible);
 
 void ShowSendToLinkRecipient(
 		std::shared_ptr<Main::SessionShow> show,

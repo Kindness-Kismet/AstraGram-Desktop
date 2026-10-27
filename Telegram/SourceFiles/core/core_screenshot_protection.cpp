@@ -9,52 +9,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_animation_snapshot.h"
 #include "extras/features/window_material/window_material.h"
 
+#include "base/event_filter.h"
 #include "platform/platform_specific.h"
 #include "ui/style/style_core.h"
 #include "ui/ui_utility.h"
 
-#include <QtWidgets/QApplication>
-
 namespace Core {
-namespace {
 
-class WindowFilter final : public QObject {
-public:
-	explicit WindowFilter(Fn<void(not_null<QWidget*>)> appeared);
-
-protected:
-	bool eventFilter(QObject *watched, QEvent *event) override;
-
-private:
-	Fn<void(not_null<QWidget*>)> _appeared;
-
-};
-
-WindowFilter::WindowFilter(Fn<void(not_null<QWidget*>)> appeared)
-: _appeared(std::move(appeared)) {
-}
-
-bool WindowFilter::eventFilter(QObject *watched, QEvent *event) {
-	const auto type = event->type();
-	if (type == QEvent::WinIdChange || type == QEvent::Show) {
-		if (const auto widget = qobject_cast<QWidget*>(watched)) {
-			if (widget->isWindow()) {
-				_appeared(widget);
-			}
-		}
-	}
-	return QObject::eventFilter(watched, event);
-}
-
-} // namespace
-
-ScreenshotProtection::ScreenshotProtection() {
-	_filter = std::make_unique<WindowFilter>(crl::guard(this, [=](
-			not_null<QWidget*> window) {
-		refresh(window);
-	}));
-	qApp->installEventFilter(_filter.get());
-}
+ScreenshotProtection::ScreenshotProtection() = default;
 
 ScreenshotProtection::~ScreenshotProtection() = default;
 
@@ -95,6 +57,13 @@ void ScreenshotProtection::addReason(
 		if (weakWindow) {
 			refresh(weakWindow.data());
 		}
+	}), lifetime);
+	base::install_event_filter(window, crl::guard(this, [=](
+			not_null<QEvent*> event) {
+		if (event->type() == QEvent::WinIdChange) {
+			refresh(window, true);
+		}
+		return base::EventFilterResult::Continue;
 	}), lifetime);
 	lifetime.add(crl::guard(this, [=] {
 		_reasons.remove(id);
@@ -175,8 +144,25 @@ QPixmap ScreenshotProtection::grabForAnimation(
 	return result;
 }
 
-void ScreenshotProtection::refresh(not_null<QWidget*> window) {
-	Platform::SetWindowScreenshotProtection(window, active(window));
+void ScreenshotProtection::refresh(not_null<QWidget*> window, bool force) {
+	for (auto i = _applied.begin(); i != _applied.end();) {
+		if (i->second.window) {
+			++i;
+		} else {
+			i = _applied.erase(i);
+		}
+	}
+	const auto enabled = active(window);
+	const auto i = _applied.find(window);
+	if (!force && i != _applied.end() && i->second.enabled == enabled) {
+		return;
+	}
+	Platform::SetWindowScreenshotProtection(window, enabled);
+	if (i == _applied.end()) {
+		_applied.emplace(window, Applied{ window.get(), enabled });
+	} else {
+		i->second.enabled = enabled;
+	}
 	_changes.fire_copy(window);
 }
 

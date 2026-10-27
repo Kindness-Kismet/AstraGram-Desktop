@@ -176,6 +176,15 @@ void TabbedSearchField::stealFocus() {
 	_field->setFocus();
 }
 
+void TabbedSearchField::refreshColors() {
+	_field->updatePalette();
+	_cancel->update();
+	if (_open) {
+		_open->update();
+	}
+	update();
+}
+
 void TabbedSearchField::returnFocus() {
 	if (!_focusTakenFrom) {
 		return;
@@ -269,6 +278,10 @@ void TabbedSearch::setLoading(bool loading) {
 
 void TabbedSearch::stealFocus() {
 	_search.stealFocus();
+}
+
+void TabbedSearch::refreshColors() {
+	_search.refreshColors();
 }
 
 void TabbedSearch::returnFocus() {

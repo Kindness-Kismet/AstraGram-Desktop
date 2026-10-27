@@ -17,7 +17,7 @@ SendError Session::sendRefusal(
 	}
 	const auto &args = prepared->args;
 	const auto tonConnect = prepared->tonConnect;
-	const auto ordinary = !tonConnect && !prepared->nft;
+	const auto ordinary = !tonConnect && args.collectible.isEmpty();
 	if (!SendCommentFits(args.comment.text)) {
 		return SendError::CommentTooLong;
 	}
@@ -87,14 +87,28 @@ void Session::send(
 		KeyAuthorization auth,
 		std::shared_ptr<const PreparedSend> prepared,
 		Fn<void(SendError)> done,
-		Fn<void(SendStarted)> started) {
-	startSend(
-		std::move(auth),
-		std::move(prepared),
-		std::move(done),
-		std::move(started),
-		nullptr,
-		{});
+		Fn<void(SendStarted)> started,
+		Fn<void(std::string)> preparing) {
+	if (!prepared
+		|| prepared->args.payload.isEmpty()
+		|| sendRefusal(prepared, auth) != SendError::None) {
+		startSend(auth, prepared, done, started, nullptr, {});
+		return;
+	} else if (preparing) {
+		const auto weak = base::make_weak(_preview.get());
+		preparing(prepared->operationId);
+		if (weak) {
+			send(auth, prepared, done, started);
+		}
+		return;
+	}
+	CheckGiftDepositOwner(
+		_api,
+		prepared->identity.address,
+		prepared->args.collectible,
+		_preview->registrations[prepared->owner].lock(),
+		done,
+		[=, this] { startSend(auth, prepared, done, started, nullptr, {}); });
 }
 
 void Session::sendTonConnect(
@@ -153,7 +167,7 @@ void Session::startSend(
 	}
 	const auto terms = gaslessTerms();
 	const auto &args = prepared->args;
-	const auto ordinary = !prepared->tonConnect && !prepared->nft;
+	const auto ordinary = !prepared->tonConnect && args.collectible.isEmpty();
 	const auto paired = ordinary
 		&& terms.eligible(args.amountNano, args.destination);
 	const auto linked = !tonConnectLink.operationId.empty();
@@ -195,6 +209,7 @@ void Session::startSend(
 		.network = custodyRecord->network,
 		.paired = paired,
 		.bounce = args.bounce,
+		.giftMove = SentGiftMove(args),
 	});
 	_submittedTransfersDirty = true;
 	if (!persistSubmittedTransfers()) {
@@ -218,13 +233,13 @@ void Session::startSend(
 		.comment = stored->comment,
 		.recipient = stored->recipient,
 		.bounce = stored->bounce,
+		.giftMove = stored->giftMove,
 	};
 	const auto owner = _preview->owners.find(prepared->owner);
 	if (owner != end(_preview->owners)) {
 		++owner->second;
 	}
 	++_sendRevision;
-	_lastReceipt.reset();
 	const auto userId = args.userId;
 	const auto weak = base::make_weak(_engine.get());
 	const auto current = [=, this] {
@@ -619,7 +634,8 @@ void Session::submitTransfer(
 		return;
 	}
 	const auto amount = prepared->args.amountNano;
-	const auto ordinary = !prepared->tonConnect && !prepared->nft;
+	const auto ordinary = !prepared->tonConnect
+		&& prepared->args.collectible.isEmpty();
 	if (ordinary
 		&& TransferAmountBelowMinimum(amount, TransferMinNanos(_session))) {
 		refuse(SendError::AmountTooSmall, u"WALLET_TRANSFER_AMOUNT_TOO_SMALL"_q);
@@ -709,12 +725,6 @@ void Session::submitTransfer(
 			.message = messageId,
 		};
 		crl::on_main(_session, [=] { report(started); });
-	}
-	DEBUG_LOG(("Wallet Info: wallet.sendTransfer data_normal: %1"
-		).arg(QString::fromLatin1(data.normal.toBase64())));
-	if (data.gasless) {
-		DEBUG_LOG(("Wallet Info: wallet.sendTransfer data_gasless: %1"
-			).arg(QString::fromLatin1(data.gasless->toBase64())));
 	}
 	using Flag = MTPwallet_SendTransfer::Flag;
 	_stateApi.request(MTPwallet_SendTransfer(

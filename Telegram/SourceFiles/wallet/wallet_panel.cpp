@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/menu/menu_add_action_callback.h"
 #include "ui/widgets/separate_panel.h"
 #include "wallet/wallet_address.h"
+#include "wallet/wallet_card_stickers.h"
 #include "wallet/wallet_content.h"
 #include "wallet/wallet_palette.h"
 #include "wallet/wallet_session.h"
@@ -66,12 +67,14 @@ namespace {
 not_null<Ui::SeparatePanel*> ShowWallet(not_null<Main::Session*> session) {
 	auto &wallet = session->wallet();
 	wallet.tonConnect().refreshSessions();
+	RefreshOwnCard(session);
 	if (const auto exists = wallet.panel()) {
 		const auto state = exists->windowState();
 		if (state & Qt::WindowMinimized) {
 			exists->setWindowState(state & ~Qt::WindowMinimized);
 		}
 		exists->showAndActivate();
+		Core::App().registerWindowActivation(exists);
 		return exists;
 	}
 	auto owned = std::make_unique<Ui::SeparatePanel>();
@@ -118,6 +121,7 @@ not_null<Ui::SeparatePanel*> ShowWallet(not_null<Main::Session*> session) {
 
 	wallet.setPanel(std::move(owned));
 	panel->showInner(CreateContent(panel, show));
+	Core::App().registerWindowActivation(panel);
 	return panel;
 }
 

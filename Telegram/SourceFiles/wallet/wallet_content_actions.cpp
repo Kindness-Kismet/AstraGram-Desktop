@@ -14,6 +14,7 @@ namespace ContentDetails {
 		const TransferItem &b) {
 	return (ShowsCollectible(a) == ShowsCollectible(b))
 		&& (a.collectible == b.collectible)
+		&& (a.collectibleRecord == b.collectibleRecord)
 		&& (a.amountNano == b.amountNano)
 		&& (a.incoming == b.incoming)
 		&& (a.status == b.status)

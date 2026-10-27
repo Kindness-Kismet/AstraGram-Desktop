@@ -7,14 +7,16 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
-#include "ui/layers/generic_box.h"
+class PeerData;
 
-namespace Ui {
+namespace Window {
 
-void AutoDeleteSettingsBox(
-	not_null<Ui::GenericBox*> box,
-	TimeId ttlPeriod,
-	rpl::producer<QString> about,
-	Fn<void(TimeId)> callback);
+class SessionNavigation;
 
-} // namespace Ui
+void ApplyNoPaidToken(
+	not_null<SessionNavigation*> navigation,
+	not_null<PeerData*> peer,
+	const QString &token,
+	Fn<void()> open);
+
+} // namespace Window

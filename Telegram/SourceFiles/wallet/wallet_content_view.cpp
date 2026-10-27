@@ -28,15 +28,18 @@ Content::Content(
 }
 
 Content::~Content() {
+	_cardLook = nullptr;
 	_show->session().wallet().stopPolling();
 }
 
 [[nodiscard]] bool HistoryShown(not_null<Main::Session*> session) {
 	const auto wallet = &session->wallet();
-	return !wallet->listsGated()
-		&& (!wallet->historyVisibleEmpty()
-			|| !wallet->listedSubmittedTransactions().empty()
-			|| wallet->sendingTransaction(wallet->windowSend()));
+	return CurrentGiftMovePreview(wallet)
+		|| (!wallet->listsGated()
+			&& (!wallet->historyVisibleEmpty()
+				|| !wallet->listedSubmittedTransactions().empty()
+				|| wallet->sendingTransaction(
+					wallet->windowSend().operationId)));
 }
 
 [[nodiscard]] rpl::producer<bool> HistoryShownValue(
@@ -262,7 +265,7 @@ void Content::setupContent() {
 
 	const auto rowsTopSkip = column->add(Ui::CreateSlideSkipWidget(
 		column,
-		st::walletRowsTopSkip));
+		st::walletTransactionsTopSkip));
 	rowsTopSkip->toggleOn(rpl::combine(
 		std::move(collectiblesShown),
 		wallet->collectiblesTabValue(),
@@ -393,6 +396,11 @@ void Content::setupContent() {
 		return created;
 	};
 	const auto rebuildList = [=] {
+		auto submitted = wallet->listedSubmittedTransactions();
+		const auto window = WindowSendingRowFor(wallet, submitted);
+		if (_sendingRow && _sendingRow->operationId == window.predecessor) {
+			_sendingRow->operationId = window.operationId;
+		}
 		const auto scrollTop = _scroll->scrollTop();
 		const auto anchor = listWrap->toggled()
 			? CountListAnchor(listedRows(), column, scrollTop - _reserve)
@@ -403,8 +411,7 @@ void Content::setupContent() {
 		// then keep their place on screen in one move.
 		place->rebuilding = true;
 		list->clear();
-		const auto &history = wallet->history();
-		auto submitted = wallet->listedSubmittedTransactions();
+		const auto &history = ListedHistory(wallet);
 		// A row sits by date, so old failures stop covering fresh history.
 		ranges::stable_sort(submitted, ranges::greater(), [](const auto &entry) {
 			return entry.item.date.value_or(kUndatedRowDate);
@@ -420,8 +427,8 @@ void Content::setupContent() {
 		};
 		auto created = false;
 		if (HistoryShown(&_show->session())) {
-			const auto &op = wallet->windowSend();
-			const auto sending = wallet->sendingTransaction(op);
+			const auto &op = window.operationId;
+			const auto &sending = window.sending;
 			const auto settled = (op.empty() || sending)
 				? end(submitted)
 				: ranges::find(
@@ -474,7 +481,7 @@ void Content::setupContent() {
 			const auto skipId = !held
 				? QString()
 				: sending
-				? sending->id
+				? (sending->id.isEmpty() ? window.servedId : sending->id)
 				: kept
 				? kept->id
 				: QString();
@@ -541,10 +548,32 @@ void Content::setupContent() {
 	listWrap->finishAnimating();
 
 	const auto collectiblesWrap = column->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+		object_ptr<Ui::SlideWrap<CollectiblesViewport>>(
 			column,
-			object_ptr<Ui::VerticalLayout>(column)));
-	AddCollectiblesList(collectiblesWrap->entity(), _show, media);
+			object_ptr<CollectiblesViewport>(column, listWrap, rowsTopSkip)));
+	const auto host = CardHost{
+		.body = this,
+		.painter = base::make_weak(_cardStickers),
+		.fold = [=] { return cardFold(); },
+		.bring = [=] { _cardFloat->bring(); },
+	};
+	_cardEditor = std::make_unique<CardStickerEditor>(CardEditorArgs{
+		.show = _show,
+		.host = host,
+		.input = _cardButton,
+		.header = _pinned,
+		.squares = AddCollectiblesList(
+			collectiblesWrap->entity()->page(),
+			_scroll.data(),
+			_show,
+			media,
+			host),
+		.repaint = [=](QRect rect) {
+			_pinnedBalance->update(rect);
+			_cardFloat->update();
+		},
+	});
+	_cardEditor->updateInput();
 	collectiblesWrap->toggleOn(wallet->collectiblesTabValue());
 	collectiblesWrap->finishAnimating();
 
@@ -603,10 +632,11 @@ void Content::setupContent() {
 	_pinnedBackground->raise();
 	_card->raise();
 	_pinned->raise();
-	_cardButton->raise();
 	_headerShadow->raise();
 	_stripShadow->raise();
 	_strip->raise();
+	_cardButton->raise();
+	_cardFloat->widget()->raise();
 
 	const auto local = &_show->session().local();
 	if (!local->readPref<bool>(kIntroTooltipShownPref)) {

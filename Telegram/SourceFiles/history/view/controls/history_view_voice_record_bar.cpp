@@ -3481,10 +3481,6 @@ float64 VoiceRecordBar::showListenAnimationRatio() const {
 	return value;
 }
 
-void VoiceRecordBar::computeAndSetLockProgress(QPoint globalPos) {
-	_lock->requestPaintProgress(calcLockProgress(globalPos));
-}
-
 float64 VoiceRecordBar::calcLockProgress(QPoint globalPos) {
 	const auto localPos = mapFromGlobal(globalPos);
 	const auto lower = _lock->height();

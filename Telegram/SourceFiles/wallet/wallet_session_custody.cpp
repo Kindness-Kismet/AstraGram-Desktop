@@ -11,10 +11,6 @@ rpl::producer<> Session::keyProtectionUpdates() const {
 	return vault().protectionChanges();
 }
 
-void Session::notifyKeyProtectionChanged(bool vaultKeyStillUnusable) {
-	vault().notifyProtectionChanged(vaultKeyStillUnusable);
-}
-
 bool Session::vaultKeyUnusable() const {
 	return vault().unusable();
 }

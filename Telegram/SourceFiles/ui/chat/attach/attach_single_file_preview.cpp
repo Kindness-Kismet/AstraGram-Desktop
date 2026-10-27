@@ -119,6 +119,8 @@ void SingleFilePreview::preparePreview(const PreparedFile &file) {
 		captionContext());
 
 	setData(std::move(data));
+	setSelectable(!file.archive && !file.path.isEmpty());
+	setSelected(file.selected, anim::type::instant);
 }
 
 } // namespace Ui

@@ -358,7 +358,7 @@ TabbedSelector::TabbedSelector(
 , _categoriesRounding(
 	Ui::PrepareCornerPixmaps(st::emojiPanRadius, _st.categoriesBg))
 , _bottomShadow(this)
-, _scroll(this, st::emojiScroll)
+, _scroll(this, _st.scroll)
 , _tabs([&] {
 	std::vector<Tab> tabs;
 	if (full()) {
@@ -489,12 +489,7 @@ TabbedSelector::TabbedSelector(
 
 	style::PaletteChanged(
 	) | rpl::on_next([=] {
-		_panelRounding = Ui::PrepareCornerPixmaps(
-			st::emojiPanRadius,
-			_st.bg);
-		_categoriesRounding = Ui::PrepareCornerPixmaps(
-			st::emojiPanRadius,
-			_st.categoriesBg);
+		refreshRounding();
 	}, lifetime());
 
 	if (hasEmojiTab() && _mode == Mode::Full) {
@@ -870,6 +865,12 @@ void TabbedSelector::paintEvent(QPaintEvent *e) {
 	}
 }
 
+void TabbedSelector::refreshRounding() {
+	const auto radius = _roundRadius ? _roundRadius : st::emojiPanRadius;
+	_panelRounding = Ui::PrepareCornerPixmaps(radius, _st.bg);
+	_categoriesRounding = Ui::PrepareCornerPixmaps(radius, _st.categoriesBg);
+}
+
 void TabbedSelector::paintSlideFrame(QPainter &p) {
 	if (_roundRadius > 0) {
 		paintBgRoundedPart(p);
@@ -1138,6 +1139,16 @@ void TabbedSelector::setMarkedCustomIds(
 	}
 }
 
+void TabbedSelector::setMarkedCustomPainter(
+		Fn<void(QPainter&, QRect, DocumentId)> painter) {
+	for (const auto &tab : _tabs) {
+		if (tab.type() == SelectorTab::Emoji) {
+			const auto emoji = static_cast<EmojiListWidget*>(tab.widget());
+			emoji->setMarkedCustomPainter(painter);
+		}
+	}
+}
+
 void TabbedSelector::checkRestrictedPeer() {
 	if (_currentPeer) {
 		const auto error = (_currentTabType == SelectorTab::Stickers)
@@ -1235,6 +1246,7 @@ void TabbedSelector::handleScroll() {
 
 void TabbedSelector::setRoundRadius(int radius) {
 	_roundRadius = radius;
+	refreshRounding();
 }
 
 void TabbedSelector::setAllowEmojiWithoutPremium(bool allow) {
@@ -1401,6 +1413,12 @@ void TabbedSelector::switchTab() {
 
 void TabbedSelector::setSearchRightReserved(int value) {
 	emoji()->setSearchRightReserved(value);
+}
+
+void TabbedSelector::refreshSearchColors() {
+	if (hasEmojiTab()) {
+		emoji()->refreshSearchColors();
+	}
 }
 
 not_null<EmojiListWidget*> TabbedSelector::emoji() const {

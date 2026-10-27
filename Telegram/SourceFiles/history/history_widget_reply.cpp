@@ -844,9 +844,10 @@ void HistoryWidget::updateReplyEditText(not_null<HistoryItem*> item) {
 				return answer->text;
 			}
 		}
-		return (_editMsgId || _replyTo.quote.empty())
+		const auto &quote = HistoryView::Reply::ComposePreviewQuote(_replyTo);
+		return (_editMsgId || quote.empty())
 			? item->inReplyText()
-			: _replyTo.quote;
+			: quote;
 	}();
 	_replyEditMsgText.setMarkedText(
 		st::defaultTextStyle,

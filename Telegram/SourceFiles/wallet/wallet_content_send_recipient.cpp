@@ -251,9 +251,15 @@ void WalletSendRecipientBox(
 			0));
 	errorWrap->toggleOn(state->invalid.value());
 	errorWrap->finishAnimating();
+	const auto hasMoveToMyGiftsRow = AddMoveToMyGiftsRow(
+		recipient,
+		show,
+		collectible,
+		state->recentHidden.value());
 	recipient->add(MakeRecentMoneyRecipientsList(
 		box,
 		show,
+		hasMoveToMyGiftsRow,
 		state->recentHidden.value(),
 		choose));
 

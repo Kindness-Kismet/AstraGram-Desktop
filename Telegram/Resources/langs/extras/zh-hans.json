@@ -294,6 +294,8 @@
   "ExperimentalFractionalScalingEnabledDescription": "严格按照系统设置的界面缩放比例显示",
   "ExperimentalHighDpiDownscale": "使用降采样适配高分辨率屏幕",
   "ExperimentalHighDpiDownscaleDescription": "通过另一种缩放方式精确跟随系统比例，可能获得更清晰的显示效果",
+  "ExperimentalForceANGLE": "强制使用 ANGLE 渲染器",
+  "ExperimentalForceANGLEDescription": "在 Windows 上通过 ANGLE 将 OpenGL 绘制转换为 Direct3D。",
   "ExperimentalUseQtRhi": "使用 Qt RHI 渲染器",
   "ExperimentalUseQtRhiDescription": "使用显卡渲染主窗口，减轻处理器负担",
   "ExperimentalEnableVulkanRhi": "启用 Vulkan 渲染器",

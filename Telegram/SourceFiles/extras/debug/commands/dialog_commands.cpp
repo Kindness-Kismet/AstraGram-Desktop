@@ -46,6 +46,7 @@
 #include "ui/boxes/collectible_info_box.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/boxes/country_select_box.h"
+#include "ui/boxes/peer_qr_box.h"
 #include "ui/boxes/single_choice_box.h"
 #include "ui/dynamic_thumbnails.h"
 #include "ui/image/image.h"
@@ -429,6 +430,24 @@ void lockedDemoBox(not_null<Ui::GenericBox*> box) {
 				Ui::fillDonateQrBox,
 				u"https://example.com/donate"_q,
 				u":/gui/icons/extras/donates/support_logo.svg"_q);
+		} },
+		{ "peer-qr", "custom", [](Controller controller) -> object_ptr<Ui::BoxContent> {
+			const auto self = controller->session().user();
+			self->setUsername(u"astragram_simulation"_q);
+			return Box(
+				Ui::FillPeerQrBox,
+				self,
+				std::optional<QString>(),
+				rpl::producer<QString>(),
+				rpl::producer<QString>());
+		} },
+		{ "link-qr", "custom", [](Controller) -> object_ptr<Ui::BoxContent> {
+			return Box(
+				Ui::FillPeerQrBox,
+				nullptr,
+				std::optional<QString>(u"https://example.com/astragram"_q),
+				rpl::single(u"扫描二维码查看模拟链接"_q),
+				rpl::single(u"模拟邀请链接"_q));
 		} },
 	};
 	return result;

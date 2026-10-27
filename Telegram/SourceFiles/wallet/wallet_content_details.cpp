@@ -35,6 +35,8 @@ void AddDetailsTable(
 			table,
 			tr::lng_wallet_details_operation(),
 			tr::lng_wallet_row_key_change(tr::marked));
+	} else if (ShowsGiftMove(item)) {
+		AddGiftMoveDetailsRows(table, item);
 	} else if (peer) {
 		AddPeerCounterpartyRows(box, table, show, peer, item);
 	} else if (!item.counterparty.isEmpty()) {
@@ -494,8 +496,7 @@ void WalletReceiveBox(
 			hintTop + hintFont->ascent,
 			hint);
 	}, plate->lifetime());
-	style::PaletteChanged(
-	) | rpl::on_next([=] {
+	style::PaletteChanged() | rpl::on_next([=] {
 		const auto scope = WindowPaletteScope(plate);
 		state->image = ReceiveQrImage(
 			address,
@@ -1131,7 +1132,7 @@ void WalletTransactionBox(
 			[=] { show->showBox(Box(WalletHowItWorksBox, session)); },
 			&st::menuIconFaq);
 		raw->setForcedOrigin(Ui::PanelAnimation::Origin::TopRight);
-		const auto scope = WindowPaletteScope(box);
+		const auto scope = WindowPaletteScope(raw);
 		raw->popup(toggle->mapToGlobal(QPoint(
 			toggle->width(),
 			toggle->height())));

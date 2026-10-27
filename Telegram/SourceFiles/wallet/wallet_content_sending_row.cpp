@@ -198,7 +198,8 @@ void SendingHistoryRow::updateSurfaceGeometry() {
 
 void SendingHistoryRow::setContent(HistoryRowContent content) {
 	const auto peerChanged = !_userpic || (_content.peer != content.peer);
-	const auto chipChanged = (_content.collectible != content.collectible);
+	const auto chipChanged = (_content.collectible != content.collectible)
+		|| (_content.collectibleRecord != content.collectibleRecord);
 	_content = std::move(content);
 	_text = PrepareHistoryRowText(_content);
 	if (!_content.itemAmount) {
@@ -219,6 +220,7 @@ void SendingHistoryRow::setContent(HistoryRowContent content) {
 				&_chip,
 				_media,
 				_content.collectible,
+				_content.collectibleRecord,
 				[=] { _surface->update(); },
 				_chipLifetime);
 		}
@@ -1013,7 +1015,7 @@ void SendingHistoryRow::paintChip(Painter &p) {
 		rowLayout().chipTop);
 	p.translate(origin);
 	PaintHistoryRowChipPlate(p, outer, _chip);
-	PaintHistoryRowChipArtwork(p, outer, _chip, _media, _content.collectible);
+	PaintHistoryRowChipArtwork(p, outer, _chip, _media);
 	PaintHistoryRowChipText(p, outer, _chip);
 	p.translate(-origin);
 }

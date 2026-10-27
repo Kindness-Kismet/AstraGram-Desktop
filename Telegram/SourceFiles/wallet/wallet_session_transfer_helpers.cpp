@@ -40,7 +40,8 @@ void KeepSubmittedRecipient(
 	});
 }
 
-[[nodiscard]] std::optional<Gram::NftItem> CollectibleFromServer(
+[[nodiscard]] std::optional<CollectibleRecord> CollectibleFromServer(
+		not_null<Main::Session*> session,
 		const MTPwallet_NftItem &item) {
 	const auto &data = item.data();
 	const auto address = CanonicalAddress(qs(data.vaddress()));
@@ -48,7 +49,7 @@ void KeepSubmittedRecipient(
 		LOG(("Wallet Error: wallet.NftItem address is not parseable."));
 		return std::nullopt;
 	}
-	auto result = Gram::NftItem();
+	auto result = CollectibleRecord();
 	result.address = address;
 	if (const auto collection = data.vcollection_address()) {
 		result.collection = CanonicalAddress(qs(*collection));
@@ -61,7 +62,9 @@ void KeepSubmittedRecipient(
 	result.imageSmall = WebDocumentFromServer(data.vimage_small());
 	result.contentUrl = WebDocumentFromServer(data.vcontent_url());
 	result.lottie = WebDocumentFromServer(data.vlottie());
-	Gram::ClassifyNftKind(result);
+	if (!FillServedGift(session, result, data.vgift())) {
+		Gram::ClassifyNftKind(result);
+	}
 	return result;
 }
 
@@ -89,53 +92,8 @@ void SetDirectedAmount(
 	item.incoming = fold ? false : incoming;
 }
 
-[[nodiscard]] std::optional<TransferItem> HistoryItemFromEngine(
-		const engine::ActivityItem &item,
-		const std::optional<TransferWalletIdentity> &identity) {
-	constexpr auto kMaxTimestamp = uint64(std::numeric_limits<TimeId>::max());
-	const auto amount = DecimalInt64(item.amount_nanograms);
-	const auto fee = DecimalInt64(item.transaction_fee_nanograms);
-	const auto lt = DecimalUint64(item.logical_time);
-	if (!amount || !fee || !lt || (item.timestamp > kMaxTimestamp)) {
-		LOG(("Wallet Error: engine activity item %1 has a bad number."
-			).arg(QString::fromStdString(item.id)));
-		return std::nullopt;
-	}
-	auto result = TransferItem();
-	result.source = TransferItem::Source::Engine;
-	result.id = QString::fromStdString(item.id);
-	result.walletIdentity = identity;
-	result.kind = TransferItem::Kind::Transfer;
-	if (item.counterparty) {
-		result.counterparty = CanonicalAddress(
-			QString::fromStdString(*item.counterparty));
-	}
-	SetDirectedAmount(
-		result,
-		*amount,
-		(item.direction == engine::ActivityDirection::kReceived));
-	result.feeNano = *fee;
-	if (item.encrypted_comment) {
-		result.commentEncrypted = true;
-		result.encryptedPayload = QByteArray::fromStdString(
-			*item.encrypted_comment);
-		if (!result.encryptedPayload.isEmpty()) {
-			result.encryptedFormat = TransferItem::EncryptedFormat::EngineBodyBoc;
-		}
-	} else if (item.comment) {
-		result.comment = QString::fromStdString(*item.comment);
-	}
-	result.date = TimeId(item.timestamp);
-	result.lt = *lt;
-	result.traceId = QByteArray::fromBase64(
-		QByteArray::fromStdString(item.transaction_hash));
-	result.status = (item.status == engine::ActivityStatus::kSuccess)
-		? TransferItem::Status::Success
-		: TransferItem::Status::Failure;
-	return result;
-}
-
 [[nodiscard]] TransferItem HistoryItemFromServer(
+		not_null<Main::Session*> session,
 		const MTPWalletTransaction &item,
 		const std::optional<TransferWalletIdentity> &identity) {
 	const auto &data = item.data();
@@ -181,6 +139,12 @@ void SetDirectedAmount(
 			setCounterparty(data);
 		}, [&](const MTPDwalletTransactionPeerAddress &data) {
 			setCounterparty(data);
+		}, [&](const MTPDwalletTransactionPeerChannel &data) {
+			setCounterparty(data);
+		}, [&](const MTPDwalletTransactionPeerTelegramGift &data) {
+			result.giftMove = data.is_own_profile()
+				? TransferGiftMove::OwnProfile
+				: TransferGiftMove::Telegram;
 		}, [&](const MTPDwalletTransactionPeerOnramp &data) {
 			setCounterparty(data);
 			// Without a provider or an address it reads as the address peer.
@@ -198,7 +162,7 @@ void SetDirectedAmount(
 			// for, so no lang key is invented for it.
 		});
 		if (const auto nft = data.vnft()) {
-			if (auto record = CollectibleFromServer(*nft)) {
+			if (auto record = CollectibleFromServer(session, *nft)) {
 				result.kind = TransferItem::Kind::Collectible;
 				result.collectible = record->address;
 				result.collectibleRecord = std::move(*record);

@@ -13,8 +13,12 @@ Session::Session(not_null<Main::Session*> session)
 , _userAddresses(std::make_unique<UserAddresses>(session))
 , _transferMessages(std::make_unique<TransferMessages>(session))
 , _tonConnect(std::make_unique<TonConnect>(session))
+, _ownCard(std::make_unique<OwnCard>(session))
 , _stream(std::make_unique<Stream>(&_api, [=](StreamRefresh wanted) {
 	applyStreamRefresh(wanted);
+}))
+, _collectibleWaits(std::make_unique<CollectibleWaits>([=] {
+	updatePollingState();
 }))
 , _pollTimer([=] { pollTick(); })
 , _gaslessTimer([=] { refreshGaslessInfo(); })
@@ -36,7 +40,6 @@ Session::Session(not_null<Main::Session*> session)
 		}
 	}, _commentLifetime);
 	transferWalletIdentityChanges() | rpl::on_next([=] {
-		_lastReceipt.reset();
 		const auto hadSubmission = _submission
 			|| _pending
 			|| (_sendState.current() != SendState::Idle);
@@ -73,6 +76,10 @@ Session::Session(not_null<Main::Session*> session)
 }
 
 Session::~Session() {
+	if (_windowSend.guard) {
+		*_windowSend.guard = false;
+	}
+	_windowSend = WindowSend();
 	_tonConnect->stop();
 	retireCommentScopes();
 	_commentLifetime.destroy();
@@ -103,6 +110,10 @@ TonConnect &Session::tonConnect() {
 	return *_tonConnect;
 }
 
+OwnCard &Session::ownCard() {
+	return *_ownCard;
+}
+
 Ui::SeparatePanel *Session::panel() const {
 	return _panel.get();
 }
@@ -126,7 +137,7 @@ void Session::setPanel(std::unique_ptr<Ui::SeparatePanel> panel) {
 		_stateApi.request(base::take(_waltBalanceRequestId)).cancel();
 		_waltBalanceRequested = false;
 		_existingWaltBalanceUrl = QString();
-		_windowSend.clear();
+		_windowSend.operationId.clear();
 	}
 }
 
@@ -902,6 +913,25 @@ void Session::setPresence(Presence presence) {
 	if (current()) {
 		_transferWalletIdentityChanges.fire({});
 	}
+}
+
+rpl::producer<CollectibleRecord> Session::collectibleInfoReplaced() const {
+	return _collectibleInfoReplaced.events();
+}
+
+uint64 Session::expectIncomingCollectible(
+		Fn<bool(const Gram::NftItem &)> matches,
+		Fn<void(bool arrived)> done) {
+	ensureLoaded();
+	if (!_walletAvailable
+		|| (_presence.current() == Presence::Unavailable)) {
+		return 0;
+	}
+	return _collectibleWaits->add(std::move(matches), std::move(done));
+}
+
+void Session::cancelIncomingCollectible(uint64 id) {
+	_collectibleWaits->cancel(id);
 }
 
 #ifdef _DEBUG

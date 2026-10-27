@@ -18,10 +18,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/info_top_bar.h"
 #include "info/settings/info_settings_widget.h"
 #include "settings/cloud_password/settings_cloud_password_email_confirm.h"
+#include "boxes/keys_legend.h"
 #include "settings/sections/settings_chat.h"
 #include "settings/sections/settings_information.h"
 #include "settings/sections/settings_main.h"
 #include "settings/sections/settings_premium.h"
+#include "settings/sections/settings_shortcuts.h"
 #include "ui/widgets/menu/menu_add_action_callback.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/widgets/menu/menu_item_base.h"
@@ -455,21 +457,29 @@ void WrapWidget::setupTopBarMenuToggle() {
 		addProfileCallsButton();
 	} else if (section.type() == Section::Type::Settings) {
 		addTopBarMenuButton();
-		if (section.settingsType() == ::Settings::InformationId()) {
+		if (section.settingsType() == ::Settings::ShortcutsId()) {
+			const auto &st = (wrap() == Wrap::Layer)
+				? st::infoLayerTopBarKeysLegend
+				: st::infoTopBarKeysLegend;
+			const auto button = _topBar->addButton(
+				base::make_unique_q<Ui::IconButton>(_topBar, st));
+			button->setAccessibleName(tr::lng_keys_legend_title(tr::now));
+			button->addClickHandler([=] {
+				ShowKeysLegend(&_controller->parentController()->window());
+			});
+		} else if (section.settingsType() == ::Settings::InformationId()) {
 			const auto controller = _controller->parentController();
 			const auto self = controller->session().user();
-			if (!self->username().isEmpty()) {
-				const auto show = controller->uiShow();
-				const auto &st = (wrap() == Wrap::Layer)
-					? st::infoLayerTopBarQr
-					: st::infoTopBarQr;
-				const auto button = _topBar->addButton(
-					base::make_unique_q<Ui::IconButton>(_topBar, st));
-				button->setAccessibleName(tr::lng_group_invite_context_qr(tr::now));
-				button->addClickHandler([show, self] {
-					Ui::DefaultShowFillPeerQrBoxCallback(show, self);
-				});
-			}
+			const auto show = controller->uiShow();
+			const auto &st = (wrap() == Wrap::Layer)
+				? st::infoLayerTopBarQr
+				: st::infoTopBarQr;
+			const auto button = _topBar->addButton(
+				base::make_unique_q<Ui::IconButton>(_topBar, st));
+			button->setAccessibleName(tr::lng_group_invite_context_qr(tr::now));
+			button->addClickHandler([show, self] {
+				Ui::DefaultShowFillPeerQrBoxCallback(show, self);
+			});
 		} else if (section.settingsType() == ::Settings::ExtrasFiltersList::Id()) {
 			const auto controller = _controller->parentController();
 			const auto &st = st::filtersAddIcon;

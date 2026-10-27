@@ -169,7 +169,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 打开 `compose.emoji`，用 `control.set compose.emoji.tabs 0` 切到表情页，再用 `control.list emoji.categories` 定位自绘底栏；通过 `control.mouse` 和 `control.pointer` 检查分类与表情包切换、悬停，状态随模拟会话销毁。
 
 `simulation.wallet [keep|missing|ready|collectibles|close]` 仅在独立模拟配置中打开或关闭钱包窗口。
-`missing` 显示未创建状态，`ready` 注入固定公开地址、余额和交易记录，`collectibles` 另加固定藏品以显示标签页。
+`missing` 显示未创建状态，`ready` 注入固定公开地址、余额和交易记录，`collectibles` 另加普通藏品与两种配色的礼物，显示标签页和卡片装饰入口。
 列表沿正式响应处理入口更新；不安装私钥或提交交易，状态随模拟会话销毁。
 打开后用 `control.window simulation.wallet` 选择该窗口，检查结束用 `simulation.wallet close` 关闭并恢复主窗口目标。
 
@@ -178,6 +178,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 配合 `control.list dialog.` 与截图检查标题、关闭按钮和底部按钮。保存类按钮仍走原有业务路径，模拟模式下联网请求不会成功，不作为业务结果的证据。
 新增搜索样本：`giveaway-countries`、`translate-language`、`official-font`、`dictionary`、`peer-lists`、`share`；只用于模拟模式布局与筛选验证，不执行保存或发送。
 `background-preview` 用内置照片壁纸打开背景预览，无需联网即可检查预览中的日期与服务消息。
+`peer-qr` 为模拟账号设置固定用户名并打开个人二维码面板；`link-qr` 打开带标题和说明的链接二维码，可检查卡片、按钮与配色。
 
 先用 `simulation.list`、`message.list/inspect`、`chat.draft` 核对状态，再截图观察布局。
 `message.inspect` 返回实际删除、置顶、引用、话题、评论和 `ttlDestroyAt`；短倒计时到期后再次查询存在状态。

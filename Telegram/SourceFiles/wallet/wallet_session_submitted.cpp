@@ -60,7 +60,6 @@ bool Session::applySubmittedUpdate(
 			&& (!_submission->receipt
 				|| _submission->receipt->messageHash.isEmpty())) {
 			_submission->receipt = receipt;
-			_lastReceipt = receipt;
 			changed = true;
 		}
 		if (record && (!record->messageHash || record->messageHash->isEmpty())) {
@@ -77,7 +76,7 @@ bool Session::applySubmittedUpdate(
 			changed = !entry->lookupStopped || changed;
 			entry->lookupStopped = true;
 			auto items = std::vector{
-				HistoryItemFromServer(*transaction, identity),
+				HistoryItemFromServer(_session, *transaction, identity),
 			};
 			rememberCollectibles(items);
 			changed = adoptSubmittedTransaction(
@@ -311,6 +310,7 @@ Session::SubmittedTransfer *Session::upsertSubmittedTransfer(
 		.comment = record->comment,
 		.recipient = record->recipient,
 		.bounce = record->bounce,
+		.giftMove = record->giftMove,
 	}));
 	if (FailedTransferTerminal(record->terminal)) {
 		fallback->status = TransferItem::Status::Failure;
@@ -331,6 +331,7 @@ Session::SubmittedTransfer *Session::upsertSubmittedTransfer(
 		item->counterpartyBounceable = stored.counterpartyBounceable;
 		item->counterpartyName = stored.counterpartyName;
 		item->counterpartyPeer = stored.counterpartyPeer;
+		item->giftMove = stored.giftMove;
 		item->collectible = stored.collectible;
 		item->amountNano = stored.amountNano;
 		item->feeNano = stored.feeNano;
@@ -507,7 +508,10 @@ void Session::applySubmittedLookup(
 	// nor applyTransactions(): the state lane and the engine refresh are
 	// the balance authority, and a by-message answer is not the paged
 	// feed, so its offset would page a list that nobody renders.
-	auto loaded = HistoryFromServer(data.vtransactions().v, request->identity);
+	auto loaded = HistoryFromServer(
+		_session,
+		data.vtransactions().v,
+		request->identity);
 	rememberCollectibles(loaded);
 	// wallet.transactions echoes neither the requested message hash nor
 	// any per-row link to it, so the attribution is made by the request:
@@ -715,14 +719,16 @@ void Session::retireSubmission() {
 }
 
 void Session::clearSubmittedTransfers() {
+	if (_windowSend.guard) {
+		*_windowSend.guard = false;
+	}
 	dropSubmittedLookup();
 	_submitted.clear();
 	_pending.reset();
 	retireSubmission();
-	_lastReceipt.reset();
 	_lastLookupOperationId.clear();
 	_unresolvedOperationId.clear();
-	_windowSend.clear();
+	_windowSend = WindowSend();
 	_sendUnresolved = false;
 	_sendRecoveryReady = false;
 	++_sendRevision;

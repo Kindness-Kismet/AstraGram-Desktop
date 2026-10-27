@@ -183,6 +183,8 @@
   "ExperimentalFractionalScalingEnabledDescription": "Follow system interface scale settings exactly.",
   "ExperimentalHighDpiDownscale": "High DPI downscale",
   "ExperimentalHighDpiDownscaleDescription": "Follow system interface scale settings exactly (another approach, likely better quality).",
+  "ExperimentalForceANGLE": "Force ANGLE renderer",
+  "ExperimentalForceANGLEDescription": "Use ANGLE to render OpenGL through Direct3D on Windows.",
   "ExperimentalUseQtRhi": "Use Qt RHI renderer",
   "ExperimentalUseQtRhiDescription": "Render the main window on the GPU instead of the CPU.",
   "ExperimentalEnableVulkanRhi": "Enable Vulkan renderer",

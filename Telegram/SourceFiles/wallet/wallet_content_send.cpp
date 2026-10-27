@@ -248,7 +248,7 @@ void WalletSendBox(
 			editComment,
 			&st::menuIconChatBubble);
 		raw->setForcedOrigin(Ui::PanelAnimation::Origin::TopRight);
-		const auto scope = WindowPaletteScope(box);
+		const auto scope = WindowPaletteScope(raw);
 		raw->popup(toggle->mapToGlobal(QPoint(
 			toggle->width(),
 			toggle->height())));
@@ -1277,7 +1277,7 @@ void WalletSendBox(
 		const auto panel = wallet->panel();
 		if (panel && box->window() == panel->window()) {
 			state->handedOver = true;
-			wallet->setWindowSend(started.operationId);
+			SetWindowSendOperation(wallet, started.operationId);
 			if (const auto content = dynamic_cast<Content*>(panel->inner())) {
 				content->flySendDiamond(started.operationId, amountField);
 			}

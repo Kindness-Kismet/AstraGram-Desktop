@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_reply_button.h"
 #include "history/view/reactions/history_view_reactions_selector.h"
 #include "history/view/history_view_context_menu.h"
+#include "history/view/history_view_copy_selection.h"
 #include "history/view/history_view_about_view.h"
 #include "history/view/history_view_drag.h"
 #include "history/view/history_view_element.h"
@@ -46,7 +47,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_poll.h"
 #include "history/view/history_view_top_peers_selector.h"
 #include "history/view/history_view_quick_action.h"
-#include "iv/iv_rich_message_html_export.h"
 #include "chat_helpers/message_field.h"
 #include "chat_helpers/stickers_emoji_pack.h"
 #include "mainwindow.h"
@@ -92,7 +92,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/moderate_messages_box.h"
 #include "boxes/premium_preview_box.h"
 #include "boxes/send_gif_with_caption_box.h"
-#include "core/crash_reports.h"
 #include "data/components/sponsored_messages.h"
 #include "data/data_session.h"
 #include "data/data_changes.h"
@@ -842,39 +841,6 @@ void ListWidget::refreshViewer() {
 		std::swap(_slice, slice);
 		refreshRows(slice);
 	}, _viewerLifetime);
-}
-
-void ListWidget::setGeometryCrashAnnotations(not_null<Element*> view) {
-	CrashReports::SetAnnotation(
-		"Geometry",
-		u"size: %1x%2, visibleTop: %3, visibleBottom: %4, top: %5"_q
-		.arg(width())
-		.arg(height())
-		.arg(_visibleTop)
-		.arg(_visibleBottom)
-		.arg(_itemsTop));
-	const auto logItems = [&] {
-		auto items = QStringList();
-		auto top = _itemsTop;
-		auto index = 0;
-		for (const auto &some : _items) {
-			items.push_back(u"(%1)%2=%3,%4,%5"_q
-				.arg(index++)
-				.arg(top)
-				.arg(itemTop(some))
-				.arg(some->y())
-				.arg(some->height()));
-			top += some->height();
-		}
-		return items.join(';');
-	};
-	CrashReports::SetAnnotation("Chosen", u"%1,%2,%3"_q
-		.arg(itemTop(view))
-		.arg(view->y())
-		.arg(view->height()));
-	CrashReports::SetAnnotation("Before", logItems());
-	updateSize();
-	CrashReports::SetAnnotation("After", logItems());
 }
 
 void ListWidget::refreshRows(const Data::MessagesSlice &old) {
@@ -3651,6 +3617,10 @@ void ListWidget::applyDragSelection(SelectedMap &applyTo) const {
 }
 
 TextForMimeData ListWidget::getSelectedText() const {
+	return getSelectedTextParts().composed();
+}
+
+HistorySelectedTextParts ListWidget::getSelectedTextParts() const {
 	auto selected = _selected;
 
 	if (_mouseAction == MouseAction::Selecting && !_dragSelected.empty()) {
@@ -3659,9 +3629,9 @@ TextForMimeData ListWidget::getSelectedText() const {
 
 	if (selected.empty()) {
 		if (const auto view = viewForItem(_selectedTextItem)) {
-			return view->selectedText(_selectedTextSelection);
+			return { .texts = { view->selectedText(_selectedTextSelection) } };
 		}
-		return _selectedText;
+		return { .texts = { _selectedText } };
 	}
 
 	const auto richContext = (selected.size() > 1);
@@ -3702,7 +3672,7 @@ TextForMimeData ListWidget::getSelectedText() const {
 			const HistorySelectedTextEntry &b) {
 			return _delegate->listIsLessInOrder(a.item, b.item);
 		});
-	return HistorySelectedItemsText(entries, richContext);
+	return HistorySelectedItemsTextParts(entries, richContext);
 }
 
 Iv::RichPageBlocksSlice ListWidget::getSelectedRichBlocks() const {
@@ -3726,18 +3696,24 @@ Iv::RichPageBlocksSlice ListWidget::getSelectedRichBlocks() const {
 		: HistoryItemRichBlocks(item);
 }
 
-void ListWidget::copySelectedText() {
+void ListWidget::copySelectedText(bool withImageText) {
 	if (showCopyRestrictionForSelected()) {
 		return;
 	}
-	const auto text = getSelectedText();
-	if (text.empty()) {
+	auto text = getSelectedTextParts();
+	if (text.empty() && (!withImageText || text.images.empty())) {
 		return;
 	}
-	Iv::SetRichBlocksClipboard(
-		text,
-		getSelectedRichBlocks(),
-		&session());
+	CopySelection({
+		.show = _delegate->listUiShow(),
+		.session = &session(),
+		.text = std::move(text),
+		.blocks = getSelectedRichBlocks(),
+		.withImageText = withImageText,
+	});
+	if (hasSelectedItems()) {
+		clearSelected();
+	}
 }
 
 MessageIdsList ListWidget::getSelectedIds() const {
@@ -4019,6 +3995,11 @@ void ListWidget::keyPressEvent(QKeyEvent *e) {
 		&& !showCopyRestriction()
 		&& !hasCopyRestrictionForSelected()) {
 		copySelectedText();
+	} else if (IsCopyWithImageTextShortcut(e, &session())
+		&& (hasSelectedText() || hasSelectedItems())
+		&& !showCopyRestriction()
+		&& !hasCopyRestrictionForSelected()) {
+		copySelectedText(true);
 #ifdef Q_OS_MAC
 	} else if (key == Qt::Key_E
 		&& e->modifiers().testFlag(Qt::ControlModifier)
@@ -4298,7 +4279,7 @@ void ListWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 	request.pointState = _overState.pointState;
 	request.quote = (_overElement
 		&& _selectedTextItem == _overElement->data())
-		? _overElement->selectedQuote(_selectedTextSelection)
+		? _overElement->selectedReplyQuote(_selectedTextSelection)
 		: SelectedQuote();
 	request.selectedText = _selectedText;
 	request.selectedItems = collectSelectedItems();
@@ -5548,6 +5529,9 @@ std::unique_ptr<QMimeData> ListWidget::prepareDrag() {
 		pressedView,
 		_pressItemExact ? _pressItemExact : pressedItem,
 		_pressState);
+	if (uponSelected && hasCopyRestrictionForSelected()) {
+		return nullptr;
+	}
 
 	auto urls = QList<QUrl>();
 	const auto selectedText = [&] {
@@ -5561,6 +5545,18 @@ std::unique_ptr<QMimeData> ListWidget::prepareDrag() {
 		}
 		return TextForMimeData();
 	}();
+	const auto canForwardAll = [&] {
+		for (const auto &[itemId, data] : _selected) {
+			if (!data.canForward) {
+				return false;
+			}
+		}
+		return true;
+	};
+	const auto forwardSelection = uponSelected
+		&& !_delegate->listAllowsDragForward()
+		&& !_selected.empty()
+		&& canForwardAll();
 	if (auto mimeData = TextUtilities::MimeDataFromText(selectedText)) {
 		clearDragSelection();
 		_selectScroll.cancel();
@@ -5568,22 +5564,9 @@ std::unique_ptr<QMimeData> ListWidget::prepareDrag() {
 		if (!urls.isEmpty()) {
 			mimeData->setUrls(urls);
 		}
-		if (uponSelected && !_delegate->listAllowsDragForward()) {
-			const auto canForwardAll = [&] {
-				for (const auto &[itemId, data] : _selected) {
-					if (!data.canForward) {
-						return false;
-					}
-				}
-				return true;
-			}();
-			auto items = canForwardAll
-				? collectSelectedIds()
-				: MessageIdsList();
-			if (!items.empty()) {
-				session().data().setMimeForwardIds(std::move(items));
-				mimeData->setData(u"application/x-td-forward"_q, "1");
-			}
+		if (forwardSelection) {
+			session().data().setMimeForwardIds(collectSelectedIds());
+			mimeData->setData(u"application/x-td-forward"_q, "1");
 		}
 		return mimeData;
 	} else if (pressedView) {
@@ -5591,7 +5574,12 @@ std::unique_ptr<QMimeData> ListWidget::prepareDrag() {
 		const auto exactItem = _pressItemExact
 			? _pressItemExact
 			: pressedItem;
-		if (_mouseCursorState == CursorState::Date) {
+		if (hasCopyRestriction(exactItem)) {
+			return nullptr;
+		}
+		if (forwardSelection) {
+			forwardIds = collectSelectedIds();
+		} else if (_mouseCursorState == CursorState::Date) {
 			if (_overElement->data()->allowsForward()) {
 				forwardIds = session().data().itemOrItsGroup(
 					_overElement->data());
@@ -6107,14 +6095,10 @@ auto ListWidget::replyToMessageRequested() const
 void ListWidget::replyToMessageRequestNotify(
 		FullReplyTo to,
 		bool forceAnotherChat) {
-	if (!to.quote.empty()) {
+	if (!to.quote.empty() || to.richQuote) {
 		clearTextSelection();
 	}
 	_requestedToReplyToMessage.fire({ std::move(to), forceAnotherChat });
-}
-
-rpl::producer<FullMsgId> ListWidget::readMessageRequested() const {
-	return _requestedToReadMessage.events();
 }
 
 rpl::producer<FullMsgId> ListWidget::showMessageRequested() const {

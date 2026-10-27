@@ -28,12 +28,14 @@ void AddDetailsAmountHeader(
 			? u"+"_q
 			: QString(kMinus)) + formatted.wholeString,
 		st::walletDetailsAmountMajorLabel);
+	major->show();
 	const auto minor = Ui::CreateChild<Ui::FlatLabel>(
 		container,
 		formatted.nanoString.isEmpty()
 			? QString()
 			: (formatted.separator + formatted.nanoString),
 		st::walletDetailsAmountMinorLabel);
+	minor->show();
 	// The unit is spelled out instead of drawn as the currency mark: the
 	// mark is the animation above the amount now, and saying it twice in
 	// one header only makes the line harder to read.
@@ -44,6 +46,7 @@ void AddDetailsAmountHeader(
 			lt_count,
 			std::abs(item.amountNano / float64(Ui::kNanosInOne))).toUpper(),
 		st::walletDetailsTickerLabel);
+	ticker->show();
 	const auto subdued = (item.status == TransferItem::Status::Pending)
 		|| (item.status == TransferItem::Status::Failure);
 	const auto &color = subdued
@@ -105,6 +108,7 @@ void AddDetailsAmountHeader(
 		}
 	};
 	if (fiat) {
+		fiat->show();
 		std::move(rate) | rpl::on_next([=](const FiatRate &value) {
 			fiat->setText(FormatFiat(amountNano, value));
 			relayout();
@@ -129,6 +133,13 @@ void AddDetailsCollectibleHeader(
 		style::margins(0, st::walletDetailsAmountTopSkip, 0, bottomSkip),
 		style::al_top);
 	const auto address = item.collectible;
+	const auto &record = item.collectibleRecord;
+	const auto served = record && record->gift;
+	const auto key = served ? media->resolveServed(*record) : address;
+	// A served record may omit the collection its list record knows.
+	const auto collectionKey = [=] {
+		return media->collection(key).isEmpty() ? address : key;
+	};
 	const auto available = st::boxWideWidth
 		- st::giveawayGiftCodeTableMargin.left()
 		- st::giveawayGiftCodeTableMargin.right();
@@ -139,12 +150,13 @@ void AddDetailsCollectibleHeader(
 		st::walletDetailsCollectibleSize,
 		st::walletDetailsCollectibleSize);
 	artwork->setAttribute(Qt::WA_TransparentForMouseEvents);
+	artwork->show();
 	artwork->paintRequest(
 	) | rpl::on_next([=] {
 		auto p = Painter(artwork);
 		media->paint(
 			p,
-			address,
+			key,
 			artwork->rect(),
 			artwork->width(),
 			st::walletDetailsCollectibleRadius);
@@ -153,6 +165,7 @@ void AddDetailsCollectibleHeader(
 		container,
 		st::walletCollectibleTitleLabel);
 	name->setAttribute(Qt::WA_TransparentForMouseEvents);
+	name->show();
 	const auto collection = Ui::CreateChild<Ui::AbstractButton>(container);
 	const auto collectionLabel = Ui::CreateChild<Ui::FlatLabel>(
 		collection,
@@ -160,7 +173,7 @@ void AddDetailsCollectibleHeader(
 	collectionLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
 	collection->hide();
 	collection->setClickedCallback([=] {
-		const auto contract = media->collection(address);
+		const auto contract = media->collection(collectionKey());
 		if (!contract.isEmpty()) {
 			UrlClickHandler::Open(Core::TonExplorerUrl(
 				session,
@@ -184,7 +197,7 @@ void AddDetailsCollectibleHeader(
 	}, collection->lifetime());
 	const auto relayout = [=] {
 		const auto hasCollection = withCollection
-			&& !media->collection(address).isEmpty();
+			&& !media->collection(collectionKey()).isEmpty();
 		collection->setVisible(hasCollection);
 		const auto nameTop = st::walletDetailsCollectibleSize
 			+ st::walletDetailsCollectibleNameSkip;
@@ -206,23 +219,27 @@ void AddDetailsCollectibleHeader(
 		}
 	};
 	const auto apply = [=] {
-		const auto view = media->view(address);
+		const auto view = media->view(key);
 		name->setMarkedText(CollectibleTitleText(view));
 		name->resizeToNaturalWidth(available);
-		const auto contract = media->collection(address);
+		const auto from = collectionKey();
+		const auto contract = media->collection(from);
 		if (!contract.isEmpty()) {
-			collectionLabel->setText(view.collectionName.isEmpty()
+			const auto collectionName = media->view(from).collectionName;
+			collectionLabel->setText(collectionName.isEmpty()
 				? ShortAddress(contract)
-				: view.collectionName);
+				: collectionName);
 			collectionLabel->resizeToNaturalWidth(available - arrowWidth);
 		}
 		relayout();
 	};
 	const auto mine = [=](const QString &changed) {
-		return (changed == address);
+		return (changed == key);
 	};
 	media->changed(
-	) | rpl::filter(mine) | rpl::on_next(apply, container->lifetime());
+	) | rpl::filter([=](const QString &changed) {
+		return mine(changed) || (changed == address);
+	}) | rpl::on_next(apply, container->lifetime());
 	media->repaint(
 	) | rpl::filter(mine) | rpl::on_next([=] {
 		artwork->update();

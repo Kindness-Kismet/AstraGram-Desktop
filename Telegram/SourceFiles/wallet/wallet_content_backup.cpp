@@ -340,6 +340,10 @@ void WalletBackupPhraseBox(
 			st::walletBackupQuizField,
 			Ui::InputField::Mode::SingleLine),
 		st::walletImportFieldMargin);
+	field->setInputMethodHints(Qt::ImhLatinOnly
+		| Qt::ImhNoAutoUppercase
+		| Qt::ImhNoPredictiveText
+		| Qt::ImhSensitiveData);
 	const auto number = Ui::CreateChild<Ui::FlatLabel>(
 		field,
 		QString::number(index + 1) + QChar('.'),

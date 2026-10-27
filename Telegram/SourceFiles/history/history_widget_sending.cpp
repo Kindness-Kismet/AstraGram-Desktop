@@ -525,7 +525,8 @@ Api::SendAction HistoryWidget::prepareSendAction(
 	if (const auto forum = _history->asForum()) {
 		if (forum->bot() && Data::IsBotUserCreatesTopics(_history->peer)) {
 			const auto readyRootId = [&]() -> MsgId {
-				if (const auto id = result.replyTo.messageId) {
+				const auto id = result.replyTo.messageId;
+				if (id.peer == _history->peer->id) {
 					if (const auto item = session().data().message(id)) {
 						return item->topicRootId();
 					}
@@ -546,8 +547,13 @@ Api::SendAction HistoryWidget::prepareSendAction(
 							std::move(draft));
 					}
 				}
-				result = Api::SendAction(_creatingBotTopic, options);
-				result.replyTo.topicRootId = _creatingBotTopic->rootId();
+				const auto rootId = _creatingBotTopic->rootId();
+				if (!result.replyTo.messageId) {
+					result.replyTo.messageId = FullMsgId(
+						_history->peer->id,
+						rootId);
+				}
+				result.replyTo.topicRootId = rootId;
 			}
 		}
 	}
@@ -1440,14 +1446,6 @@ bool HistoryWidget::confirmSendingFiles(
 				list.files.push_back(Storage::PrepareFolderArchive(folder));
 				confirmSendingFiles(std::move(list), QString());
 			}
-			return true;
-		}
-		if (overrideSendImagesAsPhotos == true
-			&& (Storage::ComputeMimeDataState(data)
-				== Storage::MimeDataState::FilesArchive)) {
-			auto list = Ui::PreparedList();
-			list.files.push_back(Storage::PrepareFilesArchive(urls));
-			confirmSendingFiles(std::move(list), QString());
 			return true;
 		}
 		auto list = Storage::PrepareMediaList(

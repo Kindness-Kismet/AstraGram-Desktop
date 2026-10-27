@@ -189,7 +189,6 @@ public:
 
 	[[nodiscard]] Data::Folder *shownFolder() const;
 	[[nodiscard]] Data::Forum *shownForum() const;
-	[[nodiscard]] Data::CommunityInfo *shownCommunity() const;
 
 	[[nodiscard]] WidgetState state() const;
 	[[nodiscard]] not_null<const style::DialogRow*> st() const {
@@ -347,7 +346,6 @@ private:
 	void repaintCollapsedFolderRow(not_null<Data::Folder*> folder);
 	void refreshWithCollapsedRows(bool toTop = false);
 	bool needCollapsedRowsRefresh() const;
-	bool chooseCollapsedRow(Qt::KeyboardModifiers modifiers);
 	bool chooseHashtag();
 	ChosenRow computeChosenRow() const;
 	bool isRowActive(not_null<Row*> row, const RowDescriptor &entry) const;

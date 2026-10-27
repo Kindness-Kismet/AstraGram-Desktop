@@ -11,12 +11,15 @@ void Session::refreshCollectibles(bool force) {
 	// A forced ask refused below is owed until a head request goes out.
 	_collectiblesForced = _collectiblesForced || force;
 	const auto forced = _collectiblesForced
-		|| !_collectibleFollowUps.empty();
+		|| !_collectibleFollowUps.empty()
+		|| !_collectibleWaits->empty();
 	const auto interval = forced
 		? kForcedCollectiblesInterval
 		: kCollectiblesPollInterval;
 	if (_collectiblesRequest
-		|| _collectiblesPaged
+		|| (_collectiblesPaged
+			&& _collectibleWaits->empty()
+			&& _collectibleFollowUps.empty())
 		|| (_collectiblesRefreshedAt
 			&& (crl::now() - _collectiblesRefreshedAt < interval))) {
 		return;
@@ -52,6 +55,7 @@ void Session::requestCollectibles(bool more) {
 			.generation = _networkGeneration,
 			.offset = more ? _collectiblesNextOffset : QString(),
 			.more = more,
+			.sentAt = crl::now(),
 		});
 	_collectiblesRequest = request;
 	request->id = _stateApi.request(MTPwallet_GetNfts(
@@ -93,20 +97,43 @@ void Session::applyCollectibles(
 		const MTPwallet_NftItems &result,
 		const CollectiblesRequest &request) {
 	const auto &data = result.data();
+	auto loaded = CollectiblesFromServer(_session, data.vitems().v);
+	if (!request.more && _collectiblesPaged) {
+		// A paged list keeps its pages and cursor; only arrivals are added.
+		const auto left = [&](const CollectibleRecord &item) {
+			const auto i = _collectibleFollowUps.find(item.address);
+			return (i != end(_collectibleFollowUps))
+				&& !i->second.incoming
+				&& !ranges::contains(
+					loaded,
+					item.address,
+					&Gram::NftItem::address);
+		};
+		auto list = UnheldCollectibles(
+			_collectibles,
+			std::vector<CollectibleRecord>(loaded));
+		list.insert(end(list), begin(_collectibles), end(_collectibles));
+		list.erase(ranges::remove_if(list, left), end(list));
+		spendCollectibleFollowUps(&loaded);
+		if (!SameCollectibles(_collectibles, list)) {
+			setCollectibles(std::move(list));
+		}
+		_collectibleWaits->settle(&loaded, request.sentAt);
+		return;
+	}
 	const auto served = data.vnext_offset();
 	auto next = served ? qs(*served) : QString();
 	if (!next.isEmpty() && (next == request.offset)) {
 		LOG(("Wallet Error: wallet.getNfts repeated its offset."));
 		next = QString();
 	}
-	auto loaded = CollectiblesFromServer(data.vitems().v);
 	_collectiblesNextOffset = next;
 	_collectiblesHasMore = !next.isEmpty();
 	_collectiblesCompletedAt = crl::now();
 	_collectiblesPaged = request.more
 		&& (_panel != nullptr)
 		&& collectiblesTab();
-	auto list = std::vector<Gram::NftItem>();
+	auto list = std::vector<CollectibleRecord>();
 	if (request.more) {
 		auto fresh = UnheldCollectibles(_collectibles, std::move(loaded));
 		list = _collectibles;
@@ -121,9 +148,12 @@ void Session::applyCollectibles(
 	if (!SameCollectibles(_collectibles, list)) {
 		setCollectibles(std::move(list));
 	}
+	_collectibleWaits->settle(
+		request.more ? nullptr : &_collectibles,
+		request.sentAt);
 }
 
-void Session::setCollectibles(std::vector<Gram::NftItem> &&list) {
+void Session::setCollectibles(std::vector<CollectibleRecord> &&list) {
 	_collectibles = std::move(list);
 	if (_collectibles.empty()) {
 		_collectiblesTab = false;
@@ -131,13 +161,20 @@ void Session::setCollectibles(std::vector<Gram::NftItem> &&list) {
 	}
 	for (const auto &item : _collectibles) {
 		_collectibleInfo[item.address] = item;
+		_collectibleInfoLookedUp.remove(item.address);
 	}
 	_collectiblesUpdates.fire({});
 }
 
 void Session::rememberCollectibles(const std::vector<TransferItem> &items) {
 	for (const auto &item : items) {
-		if (const auto &record = item.collectibleRecord) {
+		const auto &record = item.collectibleRecord;
+		if (!record) {
+			continue;
+		} else if (_collectibleInfoLookedUp.remove(record->address)) {
+			_collectibleInfo[record->address] = *record;
+			_collectibleInfoReplaced.fire_copy(*record);
+		} else {
 			_collectibleInfo.emplace(record->address, *record);
 		}
 	}
@@ -180,7 +217,7 @@ void Session::followCollectible(const QString &address, bool incoming) {
 }
 
 void Session::spendCollectibleFollowUps(
-		const std::vector<Gram::NftItem> *list) {
+		const std::vector<CollectibleRecord> *list) {
 	auto &followUps = _collectibleFollowUps;
 	for (auto i = begin(followUps); i != end(followUps);) {
 		const auto listed = list
@@ -222,7 +259,7 @@ bool Session::listsConfirmedEmpty() const {
 
 void Session::resolveCollectibleInfo(
 		const QString &item,
-		Fn<void(const Gram::NftItem &)> done) {
+		Fn<void(const CollectibleRecord &)> done) {
 	const auto i = _collectibleInfo.find(item);
 	if (i != end(_collectibleInfo)) {
 		done(i->second);
@@ -234,12 +271,13 @@ void Session::resolveCollectibleInfo(
 	if (!first) {
 		return;
 	}
-	const auto finish = [=](Gram::NftItem found, bool remember) {
+	const auto finish = [=](CollectibleRecord found, bool remember) {
 		const auto i = _collectibleInfo.find(item);
 		if (i != end(_collectibleInfo)) {
 			found = i->second;
 		} else if (remember) {
 			_collectibleInfo.emplace(item, found);
+			_collectibleInfoLookedUp.emplace(item);
 		}
 		auto &waiting = _collectibleInfoWaiters[item];
 		for (const auto &callback : base::take(waiting)) {
@@ -259,10 +297,10 @@ void Session::resolveCollectibleInfo(
 					}
 				}
 			}
-			finish(found, true);
+			finish(CollectibleRecord{ std::move(found) }, true);
 		},
 		[=](const Gram::ApiError &) {
-			finish(Gram::NftItem(), false);
+			finish(CollectibleRecord(), false);
 		});
 }
 

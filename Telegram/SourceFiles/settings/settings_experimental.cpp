@@ -471,11 +471,13 @@ std::vector<Category> experimentalCategories() {
 					&tr::extras_ExperimentalHighDpiDownscaleDescription },
 				{ Ui::GL::kOptionUseQtRhi, tr::extras_ExperimentalUseQtRhi,
 					&tr::extras_ExperimentalUseQtRhiDescription },
+				{ Ui::GL::kOptionForceANGLE, tr::extras_ExperimentalForceANGLE,
+					&tr::extras_ExperimentalForceANGLEDescription },
 				{ Ui::GL::kOptionEnableVulkanRhi, tr::extras_ExperimentalEnableVulkanRhi,
 					&tr::extras_ExperimentalEnableVulkanRhiDescription },
 				{ Core::kOptionFreeType, tr::extras_ExperimentalFreeType,
 					&tr::extras_ExperimentalFreeTypeDescription },
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 				{ Ui::kOptionKineticScroller, tr::extras_ExperimentalKineticScroller },
 #endif
 				{ Window::kOptionDisableTouchbar, tr::extras_ExperimentalDisableTouchbar },
