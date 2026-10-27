@@ -3,6 +3,7 @@
 #include "ui/effects/layer_backdrop.h"
 
 #include "base/event_filter.h"
+#include "base/debug_log.h"
 #include "base/platform/base_platform_info.h"
 #include "extras/extras_settings.h"
 #include "extras/features/window_material/platform/window_material_platform.h"
@@ -43,11 +44,10 @@ constexpr auto kBackdropDownscale = 8;
 constexpr auto kBackdropBlurRadius = 3;
 
 #ifdef Q_OS_WIN
-// 查看器是独立窗口，激活后宿主会改画未激活的边框和阴影；
-// 查看器激活期间宿主保持激活外观。
-class ActivationFilter final : public QAbstractNativeEventFilter {
+// 保留查看器的全屏合成余量，激活期间宿主保持激活外观。
+class ViewerWindowFilter final : public QAbstractNativeEventFilter {
 public:
-	ActivationFilter(not_null<QWidget*> viewer, not_null<QWidget*> host)
+	ViewerWindowFilter(not_null<QWidget*> viewer, not_null<QWidget*> host)
 	: _viewer(viewer)
 	, _host(host.get()) {
 	}
@@ -57,10 +57,16 @@ public:
 			void *message,
 			native_event_filter_result *result) override {
 		const auto msg = static_cast<MSG*>(message);
-		if ((msg->message != WM_NCACTIVATE && msg->message != WM_ACTIVATE)
+		if ((msg->message != WM_NCACTIVATE
+				&& msg->message != WM_ACTIVATE
+				&& msg->message != WM_WINDOWPOSCHANGING)
 			|| eventType != "windows_generic_MSG"
 			|| !_host
 			|| msg->hwnd != reinterpret_cast<HWND>(_viewer->winId())) {
+			return false;
+		}
+		if (msg->message == WM_WINDOWPOSCHANGING && _viewer->isFullScreen()) {
+			preserveFullScreenBorder(reinterpret_cast<WINDOWPOS*>(msg->lParam));
 			return false;
 		}
 		const auto host = reinterpret_cast<HWND>(_host->winId());
@@ -68,7 +74,8 @@ public:
 			if (msg->wParam) {
 				SendMessage(host, WM_NCACTIVATE, TRUE, 0);
 			}
-		} else if (LOWORD(msg->wParam) == WA_INACTIVE
+		} else if (msg->message == WM_ACTIVATE
+			&& LOWORD(msg->wParam) == WA_INACTIVE
 			&& reinterpret_cast<HWND>(msg->lParam) != host) {
 			// 激活转给宿主时由系统重新激活宿主，转给其他窗口时宿主随查看器失活。
 			SendMessage(host, WM_NCACTIVATE, FALSE, 0);
@@ -77,6 +84,36 @@ public:
 	}
 
 private:
+	void preserveFullScreenBorder(not_null<WINDOWPOS*> position) const {
+		if (position->flags & SWP_NOSIZE) {
+			return;
+		}
+		auto rect = RECT{
+			position->x,
+			position->y,
+			position->x + position->cx,
+			position->y + position->cy,
+		};
+		if (position->flags & SWP_NOMOVE) {
+			if (!GetWindowRect(position->hwnd, &rect)) {
+				return;
+			}
+			rect.right = rect.left + position->cx;
+			rect.bottom = rect.top + position->cy;
+		}
+		auto info = MONITORINFO{ .cbSize = sizeof(MONITORINFO) };
+		const auto monitor = MonitorFromRect(&rect, MONITOR_DEFAULTTONULL);
+		if (!GetMonitorInfo(monitor, &info) || !EqualRect(&rect, &info.rcMonitor)) {
+			return;
+		}
+		// 系统重排窗口也须保留 Qt 的 1 像素余量，避免 OpenGL 窗口占用整屏输出。
+		++position->cx;
+#ifdef _DEBUG
+		LOG(("MediaViewer: Preserved fullscreen border at %1,%2 %3x%4.")
+			.arg(rect.left).arg(rect.top).arg(position->cx).arg(position->cy));
+#endif
+	}
+
 	const not_null<QWidget*> _viewer;
 	const QPointer<QWidget> _host;
 
@@ -145,9 +182,9 @@ ViewerHost::ViewerHost(
 	viewer->windowHandle()->setTransientParent(host->windowHandle());
 	updateCorners();
 #ifdef Q_OS_WIN
-	_activationFilter = std::make_unique<ActivationFilter>(viewer, host);
+	_windowFilter = std::make_unique<ViewerWindowFilter>(viewer, host);
 	QCoreApplication::instance()->installNativeEventFilter(
-		_activationFilter.get());
+		_windowFilter.get());
 #endif // Q_OS_WIN
 
 	_filter.reset(base::install_event_filter(host, [=](not_null<QEvent*> e) {

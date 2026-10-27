@@ -64,7 +64,7 @@ private:
 	base::unique_qptr<QObject> _filter;
 	QMarginsF _cornerMargins;
 	float64 _cornerRadius = 0.;
-	std::unique_ptr<QAbstractNativeEventFilter> _activationFilter;
+	std::unique_ptr<QAbstractNativeEventFilter> _windowFilter;
 	std::unique_ptr<WindowMaterial::Platform::Backend> _backdropBackend;
 	bool _nativeBackdrop = false;
 
