@@ -16,6 +16,7 @@
 | `window.activation` | `active\|inactive` | 只切换 Qt 内部的焦点窗口与应用激活状态，系统前台不变。 |
 | `window.tray` | `hide\|show` | 调用真实托盘流程，隐藏或恢复最近活动的主窗口。 |
 | `anim.speed` | `[speed]` | 查询或临时调整过渡动画速度，范围 0.01 至 10，1 为正常；只存内存，重启恢复。 |
+| `anim.check-image-transition` | 空 | 用真实动画驱动检查同图中途续帧，返回任务编号；用 `job.status` 核对重建前后像素与最终蓝色。要求动画开启、速度为 1，不改消息或设置。 |
 
 `app.quit` 一般不直接调，`app.stop` 内部先发它。
 

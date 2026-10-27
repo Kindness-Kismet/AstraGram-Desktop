@@ -42,6 +42,7 @@ BACKGROUND_START = False
 OFFLINE_START = None
 
 GENERIC_COMMANDS = {
+    "anim.check-image-transition": "异步检查图片渐变中途重建的连续性，不改消息或设置",
     "control.wheel": "在应用内部投递滚轮事件：<目标> <角度增量> [pixel]",
     "simulation.profile": "注入并打开资料页八种本地场景：<music|combined|channel-only|long|warning|community|hidden|empty> [--side|--stories|--keep]",
     "simulation.secret": "在独立模拟配置中创建并打开加密对话样本：[1..2000]",

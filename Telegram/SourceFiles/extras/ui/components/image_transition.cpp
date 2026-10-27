@@ -1,6 +1,7 @@
 #include "extras/ui/components/image_transition.h"
 
 #include <QtGui/QPainter>
+#include <utility>
 
 namespace ExtrasUi {
 
@@ -16,7 +17,9 @@ void ImageTransition::paint(
 	const auto sameSize = (_size == rect.size())
 		&& (_image.size() == image.size())
 		&& (_image.devicePixelRatio() == image.devicePixelRatio());
-	if (_contentKey != contentKey && sameSize && !anim::Disabled()) {
+	const auto continuing = std::exchange(_continueAnimation, false);
+	if ((_contentKey != contentKey || continuing)
+		&& sameSize && !anim::Disabled()) {
 		_previous = frame();
 		_progress.jumpTo(0.);
 		_progress.animateTo(1., std::move(update));
@@ -67,13 +70,17 @@ void ImageTransition::reset() {
 	_size = QSize();
 	_contentKey = 0;
 	_pixmapKey = 0;
+	_continueAnimation = false;
 }
 
 void ImageTransition::continueFrom(const ImageTransition &previous) {
+	const auto continuing = previous._continueAnimation
+		|| previous._progress.animating();
 	reset();
 	_image = previous.frame();
 	_size = previous._size;
 	_contentKey = previous._contentKey;
+	_continueAnimation = continuing;
 }
 
 } // namespace ExtrasUi

@@ -32,6 +32,7 @@ private:
 	uint64 _contentKey = 0;
 	qint64 _pixmapKey = 0;
 	QImage _pixmapImage;
+	bool _continueAnimation = false;
 };
 
 } // namespace ExtrasUi
