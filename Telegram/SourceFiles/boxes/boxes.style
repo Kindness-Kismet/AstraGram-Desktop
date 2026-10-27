@@ -567,10 +567,6 @@ peerQrButton: IconButton(defaultIconButton) {
 		color: shadowFg;
 	}
 }
-peerQrClose: IconButton(peerQrButton) {
-	icon: icon {{ "box_button_close", windowFg }};
-	iconOver: icon {{ "box_button_close", windowFg }};
-}
 peerQrCopy: IconButton(peerQrButton) {
 	icon: icon {{ "menu/copy", windowFg }};
 	iconOver: icon {{ "menu/copy", windowFg }};

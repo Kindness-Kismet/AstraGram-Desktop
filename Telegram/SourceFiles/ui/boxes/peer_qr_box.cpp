@@ -938,7 +938,7 @@ void SetupFreeCodes(
 		- st::peerQrPillHeight;
 	const auto bottom = pillTop - st::peerQrPillSkip;
 	const auto edge = st::peerQrButtonSkip;
-	const auto &close = st::peerQrClose;
+	const auto &close = st::boxTitleClose;
 	const auto scaleFor = [&](int top) {
 		return std::clamp((bottom - top) / float64(card.height()), 0., 1.);
 	};
@@ -1531,10 +1531,9 @@ void FillPeerQrBox(
 		cancel.setTimestamp(e->timestamp());
 		box->sendScrollViewportEvent(&cancel);
 	}, box->lifetime());
-	const auto close = AddButton(
-		surface,
-		st::peerQrClose,
-		tr::lng_close(tr::now));
+	const auto close = box->addCloseButton(st::boxTitleClose, [=] {
+		box->closeBox();
+	});
 	const auto copy = AddFadingButton(
 		surface,
 		st::peerQrCopy,
@@ -1674,7 +1673,6 @@ void FillPeerQrBox(
 		}
 		const auto rowTop = bottom + st::peerQrCardSkip;
 		const auto height = rowTop + copy->height() + skip;
-		close->moveToRight(skip, skip, width);
 		copy->moveToLeft(skip, rowTop, width);
 		if (share) {
 			share->moveToRight(skip, rowTop, width);
@@ -1770,9 +1768,6 @@ void FillPeerQrBox(
 		gifts->openHeightChanges() | rpl::on_next(relayout, box->lifetime());
 	}
 
-	close->setClickedCallback([=] {
-		box->closeBox();
-	});
 	const auto dropRendered = [=](const ImageSnapshot &snapshot) {
 		return !ImageIsCurrent(surface, state, snapshot)
 			|| RefuseImage(surface, state)
@@ -1839,7 +1834,6 @@ void FillPeerQrBox(
 		}
 	});
 
-	box->addCloseButton(st::boxTitleClose, [=] { box->closeBox(); });
 	box->showFinishes(
 	) | rpl::take(1) | rpl::on_next([=] {
 		surface->startAnimations();
