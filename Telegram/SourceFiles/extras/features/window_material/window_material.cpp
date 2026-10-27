@@ -4,6 +4,7 @@
 #include "chat_helpers/tabbed_panel.h"
 #include "extras/features/window_material/platform/window_material_platform.h"
 #include "ui/controls/jump_down_button.h"
+#include "ui/gl/gl_surface.h"
 #include "ui/layers/layer_widget.h"
 #include "rpl/map.h"
 #include "ui/widgets/buttons.h"
@@ -278,6 +279,78 @@ private:
 	int _revision = 0;
 };
 
+class PopupController final : public QObject {
+public:
+	explicit PopupController(not_null<Ui::PopupMenu*> menu)
+	: QObject(menu.get())
+	, _menu(menu)
+	, _backend(Platform::create(menu)) {
+		_menu->installEventFilter(this);
+		ExtrasSettings::getInstance().windowMaterialValue(
+		) | rpl::on_next([=] { settingsChanged(); }, _menu->lifetime());
+		style::PaletteChanged(
+		) | rpl::on_next([=] { settingsChanged(); }, _menu->lifetime());
+	}
+
+	void refresh() {
+		if (_refreshing) {
+			return;
+		}
+		_refreshing = true;
+		const auto mode = ExtrasSettings::getInstance().windowMaterial();
+		const auto supported = _backend->panelSupported(mode);
+		if (supported) {
+			// 几何准备前保留原生窗口，避免把整个宿主窗口当成菜单设置材质。
+			if (!_menu->systemBackdrop()) {
+				_menu->setSystemBackdrop(true);
+			}
+			if (!_rhiPrepared) {
+				Ui::GL::EnsureWindowRhi(_menu);
+				_rhiPrepared = true;
+			}
+			_menu->createWinId();
+		}
+		const auto active = supported
+			&& _backend->apply(mode, Window::Theme::IsNightMode())
+			&& _backend->setRoundedCorners(true);
+		if (!active) {
+			_backend->release();
+		}
+		_menu->setProperty(kModeProperty, int(active ? mode : ::WindowMaterial::Off));
+		_menu->setProperty(kActiveProperty, active);
+		_menu->setSystemBackdrop(active, active
+			? rootTintColor(_menu.get())
+			: QColor(Qt::transparent));
+		_menu->setProperty(kRevisionProperty, ++_revision);
+		_refreshing = false;
+	}
+
+private:
+	void settingsChanged() {
+		if (_menu->isVisible()) {
+			// 切换窗口类型会重建句柄，显示中的菜单先关闭，下次展开时重新准备。
+			_menu->hideMenu(true);
+			return;
+		}
+		refresh();
+	}
+
+	bool eventFilter(QObject *, QEvent *event) override {
+		if (event->type() == QEvent::WinIdChange) {
+			QTimer::singleShot(0, this, [=] { refresh(); });
+		} else if (event->type() == QEvent::Show) {
+			QTimer::singleShot(0, this, [=] { _backend->activatePopupBackdrop(); });
+		}
+		return false;
+	}
+
+	const not_null<Ui::PopupMenu*> _menu;
+	const std::unique_ptr<Platform::Backend> _backend;
+	int _revision = 0;
+	bool _refreshing = false;
+	bool _rhiPrepared = false;
+};
+
 } // namespace
 
 void initialize(not_null<Ui::RpWindow*> window) {
@@ -298,6 +371,19 @@ void attachPanel(not_null<Ui::SeparatePanel*> panel) {
 	new PanelController(panel);
 }
 
+void attachPopup(not_null<Ui::PopupMenu*> menu) {
+	if (availableModes().size() <= 1) {
+		return;
+	}
+	for (const auto child : menu->children()) {
+		if (const auto controller = dynamic_cast<PopupController*>(child)) {
+			controller->refresh();
+			return;
+		}
+	}
+	new PopupController(menu);
+}
+
 bool isActive(const QWidget *widget) {
 	if (!widget || !widget->window()->property(kActiveProperty).toBool()) {
 		return false;
@@ -305,9 +391,13 @@ bool isActive(const QWidget *widget) {
 	for (auto ancestor = widget; ancestor; ancestor = ancestor->parentWidget()) {
 		if ((dynamic_cast<const Ui::LayerWidget*>(ancestor)
 				&& !dynamic_cast<const Window::MainMenu*>(ancestor))
-			|| dynamic_cast<const Ui::PopupMenu*>(ancestor)
+			|| (dynamic_cast<const Ui::PopupMenu*>(ancestor)
+				&& !ancestor->isWindow())
 			|| dynamic_cast<const ChatHelpers::TabbedPanel*>(ancestor)) {
 			return false;
+		}
+		if (ancestor == widget->window()) {
+			break;
 		}
 	}
 	return true;
@@ -345,10 +435,13 @@ QColor rootTintColor(not_null<const QWidget*> widget) {
 		!= int(::WindowMaterial::Acrylic)) {
 		return QColor(Qt::transparent);
 	}
-	// 沿用 Zen 的中性色与混色比例，根部只叠加一次以保证正文对比度。
-	return Window::Theme::IsNightMode()
-		? QColor(27, 27, 27, 179)
-		: QColor(255, 255, 255, 153);
+	// 根部只叠加一次中性色，以保证正文对比度。
+	if (!Window::Theme::IsNightMode()) {
+		return QColor(255, 255, 255, 153);
+	}
+	return dynamic_cast<const Ui::PopupMenu*>(widget->window())
+		? QColor(0, 0, 0, 153)
+		: QColor(27, 27, 27, 179);
 }
 
 QColor cardColor(const QWidget *widget, QColor opaque) {
@@ -385,6 +478,13 @@ QColor widgetColor(
 		|| !isActive(widget.get())
 		|| dynamic_cast<const Ui::JumpDownButton*>(widget.get())) {
 		return normal;
+	}
+	if (const auto menu = dynamic_cast<const Ui::PopupMenu*>(widget->window())) {
+		// 普通行与分隔区透出同一层材质，悬停和语义色仍由各项绘制。
+		if (role == Ui::WidgetColorRole::Background
+			&& normal == menu->st().menu.itemBg->c) {
+			return Qt::transparent;
+		}
 	}
 	// 只适配中性色，警告、链接、选中态等语义色沿用原样式。
 	const auto low = std::min({ normal.red(), normal.green(), normal.blue() });

@@ -43,6 +43,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "extras/ui/context_menu/context_menu.h"
 #include "extras/extras_settings.h"
+#include "extras/features/window_material/window_material.h"
 #include "extras/utils/qt_key_modifiers_extended.h"
 
 
@@ -309,7 +310,9 @@ Selector::Selector(
 		});
 	}
 
-	_useTransparency = child || Ui::Platform::TranslucentWindowsSupported();
+	const auto menu = dynamic_cast<Ui::PopupMenu*>(parent.get());
+	_useTransparency = (!menu || !menu->systemBackdrop())
+		&& (child || Ui::Platform::TranslucentWindowsSupported());
 }
 
 Selector::~Selector() = default;
@@ -682,7 +685,8 @@ void Selector::paintCollapsed(QPainter &p) {
 		}
 		p.drawImage(_outer.topLeft(), _paintBuffer);
 	} else {
-		p.fillRect(_outer.marginsRemoved(marginsForShadow()), _st.bg);
+		p.fillRect(_outer.marginsRemoved(marginsForShadow()),
+			ExtrasFeatures::WindowMaterial::surfaceColor(this, _st.bg->c));
 	}
 	_strip->paint(
 		p,
@@ -1507,6 +1511,8 @@ auto AttachSelectorToMenu(
 		return base::make_unexpected(AttachSelectorResult::Skipped);
 	}
 	const auto withSearch = reactions.customAllowed;
+	// 原生菜单的回应条并入菜单主体，不预留悬浮阴影与展开占位。
+	Ui::Integration::Instance().preparePopupMenu(menu);
 	const auto selector = Ui::CreateChild<Selector>(
 		menu.get(),
 		st,

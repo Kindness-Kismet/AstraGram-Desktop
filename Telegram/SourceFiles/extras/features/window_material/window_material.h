@@ -14,6 +14,7 @@ enum class WidgetColorRole;
 class RpWindow;
 class IconButton;
 class SeparatePanel;
+class PopupMenu;
 } // namespace Ui
 
 namespace ExtrasFeatures::WindowMaterial {
@@ -21,6 +22,7 @@ namespace ExtrasFeatures::WindowMaterial {
 void initialize(not_null<Ui::RpWindow*> window);
 // 独立面板跟随系统材质：生效时去掉自绘阴影，主体透出材质，平台不支持时保持原样。
 void attachPanel(not_null<Ui::SeparatePanel*> panel);
+void attachPopup(not_null<Ui::PopupMenu*> menu);
 [[nodiscard]] bool isActive(const QWidget *widget);
 [[nodiscard]] QColor surfaceColor(
 	const QWidget *widget,

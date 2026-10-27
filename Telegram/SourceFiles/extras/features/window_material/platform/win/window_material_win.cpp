@@ -157,6 +157,14 @@ public:
 		releaseHandle();
 	}
 
+	void activatePopupBackdrop() override {
+		if (!_active || !_widget->isVisible()) {
+			return;
+		}
+		// Qt 会吞掉无边框窗口的激活消息，菜单材质需交给系统更新活跃外观。
+		DefWindowProcW(_handle, WM_NCACTIVATE, TRUE, -1);
+	}
+
 private:
 	bool ownsMarker() {
 		return _handle && GetPropW(_handle, kOwner) == reinterpret_cast<HANDLE>(this)
@@ -184,7 +192,10 @@ private:
 		if (window->format().alphaBufferSize() <= 0) {
 			return { "alpha-buffer-missing" };
 		}
-		if (window->opacity() != 1.
+		const auto fadingPopup = (_widget->windowType() == Qt::Popup)
+			&& (window->surfaceType() == QSurface::Direct3DSurface)
+			&& (window->opacity() != 1.);
+		if ((window->opacity() != 1. && !fadingPopup)
 			|| window->flags().testFlag(Qt::WindowTransparentForInput)) {
 			return { "layered-window-required" };
 		}
@@ -193,7 +204,7 @@ private:
 		if (!style && GetLastError() != ERROR_SUCCESS) {
 			return { "read-window-style", GetLastError() };
 		}
-		if (style & WS_EX_LAYERED) {
+		if ((style & WS_EX_LAYERED) && !fadingPopup) {
 			// Qt 创建窗口时尚未看到标记；后续绘制由专用补丁保持非分层窗口。
 			SetLastError(ERROR_SUCCESS);
 			const auto previous = SetWindowLongPtrW(_handle, GWL_EXSTYLE, style & ~WS_EX_LAYERED);

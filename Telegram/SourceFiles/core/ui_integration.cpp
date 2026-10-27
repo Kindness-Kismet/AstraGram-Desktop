@@ -43,6 +43,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/extras_settings.h"
 #include "extras/extras_url_handlers.h"
 #include "extras/features/streamer_mode/streamer_mode.h"
+#include "extras/features/window_material/window_material.h"
+#include "ui/widgets/popup_menu.h"
 
 
 namespace Core {
@@ -489,6 +491,9 @@ rpl::producer<> UiIntegration::forcePopupMenuHideRequests() {
 }
 
 void UiIntegration::preparePopupMenu(not_null<QWidget*> widget) {
+	if (const auto menu = dynamic_cast<Ui::PopupMenu*>(widget.get())) {
+		ExtrasFeatures::WindowMaterial::attachPopup(menu);
+	}
 	ExtrasFeatures::StreamerMode::inheritWidgetWindow(widget);
 }
 
