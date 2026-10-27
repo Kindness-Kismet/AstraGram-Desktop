@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/serialize_common.h"
 #include "core/application.h"
 #include "core/core_settings.h"
+#include "data/data_wall_paper.h"
 #include "ui/chat/chat_theme.h"
 #include "ui/chat/chat_theme_readability.h"
 #include "ui/style/style_palette_colorizer.h"
@@ -880,9 +881,34 @@ const EmbeddedAccentRecipe &AccentRecipe(EmbeddedType type) {
 }
 
 Ui::ChatThemeBackground PrepareDefaultBackground(bool dark) {
+	if (!dark) {
+		const auto paper = Data::DefaultWallPaper();
+		return Ui::PrepareBackgroundImage({
+			.path = u":/gui/art/background.tgv"_q,
+			.gzipSvg = true,
+			.colors = paper.backgroundColors(),
+			.isPattern = true,
+			.patternOpacity = paper.patternOpacity(),
+			.generateGradient = true,
+			.gradientRotation = paper.gradientRotation(),
+		});
+	}
+	auto instance = Instance();
+	const auto loaded = LoadFromFile(
+		kNightBaseFile.utf16(),
+		&instance,
+		nullptr,
+		nullptr,
+		style::colorizer());
+	Assert(loaded);
+	auto prepared = Ui::PreprocessBackgroundImage(
+		std::move(instance.background));
+	prepared.setDevicePixelRatio(style::DevicePixelRatio());
 	return {
-		.colorForFill = Ui::DefaultChatBackgroundColor(dark),
-		.colors = { Ui::DefaultChatBackgroundColor(dark) },
+		.prepared = prepared,
+		.preparedForTiled = Ui::PrepareImageForTiled(prepared),
+		.colorForFill = Ui::CalculateImageMonoColor(prepared),
+		.tile = instance.tiled,
 	};
 }
 

@@ -77,6 +77,14 @@ inline bool AreTestingTheme() {
 	return !GlobalApplying.paletteForRevert.isEmpty();
 }
 
+[[nodiscard]] QImage ReadDefaultImage() {
+	return Ui::ReadBackgroundImage(
+		u":/gui/art/background.tgv"_q,
+		QByteArray(),
+		true
+	).image;
+}
+
 [[nodiscard]] bool GoodImageFormatAndSize(const QImage &image) {
 	return !image.size().isEmpty()
 		&& (image.format() == QImage::Format_ARGB32_Premultiplied
@@ -817,7 +825,7 @@ void ChatBackground::set(const Data::WallPaper &paper, QImage image) {
 		if (Data::details::IsTestingDefaultWallPaper(_paper)
 			|| image.isNull()) {
 			setPaper(Data::details::TestingDefaultWallPaper());
-			image = QImage();
+			image = ReadDefaultImage();
 		}
 		setPreparedAfterPaper(std::move(image));
 	} else {
@@ -831,8 +839,9 @@ void ChatBackground::set(const Data::WallPaper &paper, QImage image) {
 			}
 		} else if (Data::IsDefaultWallPaper(_paper)
 			|| (_paper.backgroundColors().empty() && image.isNull())) {
+			// 默认壁纸使用内置参数，避免旧版保存的纯灰配置覆盖图案。
 			setPaper(Data::DefaultWallPaper());
-			image = QImage();
+			image = ReadDefaultImage();
 		}
 		Local::writeBackground(
 			_paper,
@@ -1455,13 +1464,13 @@ bool IsEmbeddedTheme(const QString &path) {
 Ui::ServiceColors EmbeddedServiceColors(
 		const Data::WallPaper &paper,
 		bool dark) {
-	// 主题自带背景是对应明暗的中性灰，默认壁纸只有浅灰一种。
-	const auto neutral = Data::IsThemeWallPaper(paper)
+	// 内置背景与主题明暗匹配；浅色默认壁纸用于深色主题时仍需实底。
+	const auto matchingBackground = Data::IsThemeWallPaper(paper)
 		|| Data::details::IsTestingThemeWallPaper(paper)
 		|| (!dark
 			&& (Data::IsDefaultWallPaper(paper)
 				|| Data::details::IsTestingDefaultWallPaper(paper)));
-	return neutral
+	return matchingBackground
 		? Ui::FlatServiceColors(dark)
 		: Ui::CapsuleServiceColors(dark);
 }

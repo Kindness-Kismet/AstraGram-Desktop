@@ -13,8 +13,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mainwindow.h"
 #include "ui/ui_utility.h"
 #include "ui/chat/chat_theme.h"
-#include "ui/chat/chat_theme_readability.h"
-#include "ui/style/style_core_palette.h"
 #include "ui/painter.h"
 #include "boxes/premium_preview_box.h"
 #include "data/data_peer.h"
@@ -419,10 +417,9 @@ void SectionWidget::PaintBackground(
 		QRect clip,
 		bool paused) {
 	const auto &background = theme->background();
-	// 禁用壁纸只去掉图案，纯色背景仍与会话列表分层。
+	// 禁用壁纸时与会话列表使用相同底色。
 	if (ExtrasSettings::getInstance().disableChatBackground()) {
-		p.fillRect(clip, Ui::DefaultChatBackgroundColor(
-			Ui::IsDarkPalette(*style::main_palette::get())));
+		p.fillRect(clip, st::dialogsBg->c);
 		return;
 	}
 	if (background.colorForFill) {
