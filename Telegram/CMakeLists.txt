@@ -309,6 +309,8 @@ set(extras_files
         extras/ui/components/floating_surface_host.h
         extras/ui/components/bubble_transition.cpp
         extras/ui/components/bubble_transition.h
+        extras/ui/components/image_transition.cpp
+        extras/ui/components/image_transition.h
         extras/ui/components/avatar_corners_preview.cpp
         extras/ui/components/avatar_corners_preview.h
         extras/ui/components/message_preview.cpp

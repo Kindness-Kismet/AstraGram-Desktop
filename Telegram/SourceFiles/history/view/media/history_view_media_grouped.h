@@ -34,6 +34,7 @@ public:
 	~GroupedMedia();
 
 	void refreshParentId(not_null<HistoryItem*> realParent) override;
+	void continueImageTransition(const Media &previous) override;
 
 	HistoryItem *itemForText() const override;
 	bool hideMessageText() const override;

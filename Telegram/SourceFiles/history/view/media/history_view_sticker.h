@@ -61,6 +61,7 @@ public:
 
 	bool hasHeavyPart() const override;
 	void unloadHeavyPart() override;
+	void continueImageTransition(const Content &previous) override;
 
 	void refreshLink() override;
 	bool hasTextForCopy() const override {
@@ -131,6 +132,7 @@ private:
 	void checkPremiumEffectStart();
 
 	const not_null<Element*> _parent;
+	ExtrasUi::ImageTransition _imageTransition;
 	const not_null<DocumentData*> _data;
 	const Lottie::ColorReplacements *_replacements = nullptr;
 	std::unique_ptr<StickerPlayer> _player;

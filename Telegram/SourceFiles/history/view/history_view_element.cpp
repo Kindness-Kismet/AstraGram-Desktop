@@ -1833,15 +1833,21 @@ void Element::refreshMedia(Element *replacing) {
 		return;
 	}
 	if (const auto media = item->media()) {
+		const auto previous = _media ? _media.get()
+			: replacing ? replacing->media() : nullptr;
 		if (media->canBeGrouped()) {
 			if (const auto group = history()->owner().groups().find(item)) {
 				if (group->items.front() != item) {
 					_media = nullptr;
 					_flags |= Flag::HiddenByGroup;
 				} else {
-					_media = std::make_unique<GroupedMedia>(
+					auto updated = std::make_unique<GroupedMedia>(
 						this,
 						group->items);
+					if (previous) {
+						updated->continueImageTransition(*previous);
+					}
+					_media = std::move(updated);
 					if (!pendingResize()) {
 						history()->owner().requestViewResize(this);
 					}
@@ -1849,7 +1855,11 @@ void Element::refreshMedia(Element *replacing) {
 				return;
 			}
 		}
-		_media = media->createView(this, replacing);
+		auto updated = media->createView(this, replacing);
+		if (updated && previous) {
+			updated->continueImageTransition(*previous);
+		}
+		_media = std::move(updated);
 	} else if (item->Has<HistoryServiceGramTransfer>()) {
 		_media = CreateGramTransferMedia(this, replacing);
 	} else if (item->showSimilarChannels()) {

@@ -53,6 +53,8 @@ public:
 		}
 		virtual void refreshLink() {
 		}
+		virtual void continueImageTransition(const Content &previous) {
+		}
 		[[nodiscard]] virtual bool alwaysShowOutTimestamp() {
 			return false;
 		}
@@ -70,6 +72,7 @@ public:
 		std::unique_ptr<Content> content);
 
 	void draw(Painter &p, const PaintContext &context) const override;
+	void continueImageTransition(const Media &previous) override;
 	PointState pointState(QPoint point) const override;
 	TextState textState(QPoint point, StateRequest request) const override;
 

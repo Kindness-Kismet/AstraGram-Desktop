@@ -774,7 +774,7 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 				activeOwnPlaying->frozenRequest = request;
 				activeOwnPlaying->frozenFrame = streamed->frame(request);
 			}
-			p.drawImage(rthumb, activeOwnPlaying->frozenFrame);
+			paintImage(p, rthumb, activeOwnPlaying->frozenFrame, uint64(-1));
 		} else {
 			if (activeOwnPlaying
 				&& !activeOwnPlaying->frozenFrame.isNull()) {
@@ -783,7 +783,7 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 			}
 
 			const auto frame = streamed->frameWithInfo(request);
-			p.drawImage(rthumb, frame.image);
+			paintImage(p, rthumb, frame.image, uint64(-1));
 			if (_seeking) {
 				_seekLastFrame = frame.image;
 			}
@@ -794,11 +794,11 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 	} else if (!_seekLastFrame.isNull()
 			&& !skipDrawingContent
 			&& !fullHiddenBySpoiler) {
-		p.drawImage(rthumb, _seekLastFrame);
+		paintImage(p, rthumb, _seekLastFrame, uint64(-1));
 	} else if (!skipDrawingContent && !fullHiddenBySpoiler) {
 		ensureDataMediaCreated();
 		validateThumbCache({ usew, painth }, isRound, rounding);
-		p.drawImage(rthumb, _thumbCache);
+		paintImage(p, rthumb, _thumbCache, _thumbCache.cacheKey());
 	}
 	if (isRound && !mediaEditor) {
 		paintRoundPlaybackProgress(p, context, rthumb, inTTLViewer);
@@ -1245,6 +1245,10 @@ void Gif::validateThumbCache(
 	const auto videothumb = (normal || _videoCoverMedia)
 		? nullptr
 		: _videoThumbnailFrame.get();
+	const auto source = normal ? normal : videothumb ? videothumb
+		: _videoCoverMedia ? _videoCoverMedia->thumbnailInline()
+		: _dataMedia->thumbnailInline();
+	const auto sourceKey = source ? source->original().cacheKey() : 0;
 	const auto blurred = normal
 		? (!good
 			&& (normal->width() < kUseNonBlurredThreshold)
@@ -1257,7 +1261,8 @@ void Gif::validateThumbCache(
 	if (_thumbCache.size() == (scaled * ratio)
 		&& _thumbCacheRounding == rounding
 		&& _thumbCacheBlurred == blurred
-		&& _thumbIsEllipse == isEllipse) {
+		&& _thumbIsEllipse == isEllipse
+		&& _thumbSourceKey == sourceKey) {
 		return;
 	}
 	auto cache = prepareThumbCache(scaled);
@@ -1266,6 +1271,8 @@ void Gif::validateThumbCache(
 		: Images::Round(std::move(cache), MediaRoundingMask(rounding));
 	_thumbCacheRounding = rounding;
 	_thumbCacheBlurred = blurred;
+	_thumbIsEllipse = isEllipse;
+	_thumbSourceKey = sourceKey;
 }
 
 QImage Gif::prepareThumbCache(QSize outer) const {
@@ -1894,13 +1901,13 @@ void Gif::drawGrouped(
 				activeOwnPlaying->frozenRequest = request;
 				activeOwnPlaying->frozenFrame = streamed->frame(request);
 			}
-			p.drawImage(geometry, activeOwnPlaying->frozenFrame);
+			paintImage(p, geometry, activeOwnPlaying->frozenFrame, uint64(-1));
 		} else {
 			if (activeOwnPlaying) {
 				activeOwnPlaying->frozenFrame = QImage();
 				activeOwnPlaying->frozenStatusText = QString();
 			}
-			p.drawImage(geometry, streamed->frame(request));
+			paintImage(p, geometry, streamed->frame(request), uint64(-1));
 			const auto paused = context.paused
 				|| (autoplayUnderCursor() && !underCursor(!_smallGroupPart));
 			if (!paused) {
@@ -1909,7 +1916,7 @@ void Gif::drawGrouped(
 		}
 	} else if (!fullHiddenBySpoiler) {
 		validateGroupedCache(geometry, rounding, cacheKey, cache);
-		p.drawPixmap(geometry, *cache);
+		paintImage(p, geometry, *cache, cache->cacheKey());
 	}
 
 	if (revealed < 1.) {
@@ -2280,7 +2287,8 @@ void Gif::validateGroupedCache(
 		| (uint64(options) << 16)
 		| (uint64(rounding.key()) << 8)
 		| (uint64(loadLevel));
-	if (*cacheKey == key) {
+	const auto sourceKey = image ? image->original().cacheKey() : 0;
+	if (*cacheKey == key && _groupedSourceKey == sourceKey) {
 		return;
 	}
 
@@ -2293,6 +2301,7 @@ void Gif::validateGroupedCache(
 	const auto ratio = style::DevicePixelRatio();
 
 	*cacheKey = key;
+	_groupedSourceKey = sourceKey;
 	auto prepared = Images::Prepare(
 		(image ? image : Image::BlankMedia().get())->original(),
 		pixSize * ratio,
@@ -2386,10 +2395,12 @@ bool Gif::isReadyForOpen() const {
 }
 
 bool Gif::hasHeavyPart() const {
-	return (_spoiler && _spoiler->animation) || _streamed || _dataMedia;
+	return Media::hasHeavyPart()
+		|| (_spoiler && _spoiler->animation) || _streamed || _dataMedia;
 }
 
 void Gif::unloadHeavyPart() {
+	resetImageTransition();
 	stopAnimation();
 	_dataMedia = nullptr;
 	_videoCoverMedia = nullptr;

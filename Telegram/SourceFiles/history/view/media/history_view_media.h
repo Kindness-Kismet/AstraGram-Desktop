@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "history/view/history_view_object.h"
+#include "extras/ui/components/image_transition.h"
 #include "ui/chat/message_bubble.h"
 #include "ui/rect_part.h"
 
@@ -94,6 +95,7 @@ public:
 
 	[[nodiscard]] not_null<Element*> parent() const;
 	[[nodiscard]] not_null<History*> history() const;
+	virtual void continueImageTransition(const Media &previous);
 
 	[[nodiscard]] virtual TextForMimeData selectedText(
 			TextSelection selection) const {
@@ -400,9 +402,10 @@ public:
 	}
 
 	virtual bool hasHeavyPart() const {
-		return false;
+		return _imageTransition != nullptr;
 	}
 	virtual void unloadHeavyPart() {
+		resetImageTransition();
 	}
 
 	// Should be called only by Data::Session.
@@ -424,6 +427,10 @@ public:
 	virtual ~Media() = default;
 
 protected:
+	void paintImage(QPainter &p, QRect rect, const QImage &image, uint64 key) const;
+	void paintImage(QPainter &p, QRect rect, const QPixmap &image, uint64 key) const;
+	void resetImageTransition() const;
+
 	[[nodiscard]] QSize countCurrentSize(int newWidth) override;
 	[[nodiscard]] Ui::Text::String createCaption(
 		not_null<HistoryItem*> item) const;
@@ -466,6 +473,7 @@ protected:
 	const not_null<Element*> _parent;
 	MediaInBubbleState _inBubbleState = MediaInBubbleState::None;
 	Ui::BubbleRounding _bubbleRounding;
+	mutable std::unique_ptr<ExtrasUi::ImageTransition> _imageTransition;
 
 };
 

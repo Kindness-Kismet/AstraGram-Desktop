@@ -54,6 +54,12 @@ UnwrappedMedia::UnwrappedMedia(
 , _content(std::move(content)) {
 }
 
+void UnwrappedMedia::continueImageTransition(const Media &previous) {
+	if (const auto media = dynamic_cast<const UnwrappedMedia*>(&previous)) {
+		_content->continueImageTransition(*media->_content);
+	}
+}
+
 QSize UnwrappedMedia::countOptimalSize() {
 	_content->refreshLink();
 	const auto optimal = _content->countOptimalSize();

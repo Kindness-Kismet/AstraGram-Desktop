@@ -208,6 +208,35 @@ bool Media::allowTextSelectionByHandler(
 	return false;
 }
 
+void Media::continueImageTransition(const Media &previous) {
+	if (typeid(*this) != typeid(previous) || !previous._imageTransition) {
+		return;
+	}
+	_imageTransition = std::make_unique<ExtrasUi::ImageTransition>();
+	_imageTransition->continueFrom(*previous._imageTransition);
+	history()->owner().registerHeavyViewPart(_parent);
+}
+
+void Media::paintImage(
+		QPainter &p, QRect rect, const QImage &image, uint64 key) const {
+	if (!_imageTransition) {
+		_imageTransition = std::make_unique<ExtrasUi::ImageTransition>();
+	}
+	_imageTransition->paint(p, rect, image, key, [=] { repaint(); });
+}
+
+void Media::paintImage(
+		QPainter &p, QRect rect, const QPixmap &image, uint64 key) const {
+	if (!_imageTransition) {
+		_imageTransition = std::make_unique<ExtrasUi::ImageTransition>();
+	}
+	_imageTransition->paint(p, rect, image, key, [=] { repaint(); });
+}
+
+void Media::resetImageTransition() const {
+	_imageTransition = nullptr;
+}
+
 not_null<Element*> Media::parent() const {
 	return _parent;
 }

@@ -962,11 +962,12 @@ bool WebPage::hasHeavyPart() const {
 			}
 		}
 	}
-	return _photoMedia
+	return Media::hasHeavyPart() || _photoMedia
 		|| (_attach ? _attach->hasHeavyPart() : false);
 }
 
 void WebPage::unloadHeavyPart() {
+	resetImageTransition();
 	if (_attach) {
 		_attach->unloadHeavyPart();
 	}
@@ -1138,7 +1139,9 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 		} else if (const auto blurred = _photoMedia->thumbnailInline()) {
 			pix = blurred->pixSingle(size, args.blurred());
 		}
-		p.drawPixmapLeft(inner.left() + paintw - pw, tshift, width(), pix);
+		paintImage(p, style::rtlrect(
+			inner.left() + paintw - pw, tshift, pw, ph, width()),
+			pix, pix.cacheKey());
 		if (context.selected()) {
 			const auto st = context.st;
 			Ui::FillRoundRect(

@@ -288,6 +288,8 @@ private:
 		int topAdded = 0;
 	} _ephemeral;
 	mutable QImage _thumbCache;
+	mutable qint64 _thumbSourceKey = 0;
+	mutable qint64 _groupedSourceKey = 0;
 	mutable QImage _roundingMask;
 	mutable crl::time _videoPosition = 0;
 	std::shared_ptr<VoiceSeekClickHandler> _seekl;

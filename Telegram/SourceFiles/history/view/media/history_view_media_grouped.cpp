@@ -108,6 +108,23 @@ GroupedMedia::~GroupedMedia() {
 	base::take(_parts);
 }
 
+void GroupedMedia::continueImageTransition(const Media &previous) {
+	const auto group = dynamic_cast<const GroupedMedia*>(&previous);
+	if (!group) {
+		return;
+	}
+	for (auto i = 0; i != _parts.size(); ++i) {
+		const auto &part = _parts[i];
+		const auto match = (i < group->_parts.size()
+			&& group->_parts[i].item == part.item)
+			? begin(group->_parts) + i
+			: ranges::find(group->_parts, part.item, &Part::item);
+		if (match != end(group->_parts)) {
+			part.content->continueImageTransition(*match->content);
+		}
+	}
+}
+
 HistoryItem *GroupedMedia::itemForText() const {
 	if (_mode == Mode::Column) {
 		return Media::itemForText();

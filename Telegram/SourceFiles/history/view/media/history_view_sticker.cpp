@@ -402,13 +402,13 @@ void Sticker::paintAnimationFrame(
 		: image;
 	prepared = Images::Round(std::move(prepared), MediaRoundingMask(rounding));
 	const auto size = prepared.size() / style::DevicePixelRatio();
-	p.drawImage(
+	_imageTransition.paint(p,
 		QRect(
 			QPoint(
 				r.x() + (r.width() - size.width()) / 2,
 				r.y() + (r.height() - size.height()) / 2),
 			size),
-		prepared);
+		prepared, uint64(-1), [=] { _parent->repaint(); });
 	if (!_lastFrameCached.isNull()) {
 		return;
 	}
@@ -461,7 +461,12 @@ bool Sticker::paintPixmap(
 		p.scale(-1., 1.);
 		p.translate(-middle);
 	}
-	p.drawPixmap(position, pixmap);
+	const auto large = _sensitiveBlurred ? nullptr : _dataMedia->getStickerLarge();
+	const auto good = _sensitiveBlurred ? nullptr : _dataMedia->goodThumbnail();
+	const auto source = large ? large : good ? good : _dataMedia->thumbnail();
+	const auto contentKey = source ? source->original().cacheKey() : 0;
+	_imageTransition.paint(p, QRect(position, size), pixmap,
+		contentKey, [=] { _parent->repaint(); });
 	if (mirror) {
 		p.restore();
 	}
@@ -711,12 +716,22 @@ void Sticker::playerCreated() {
 }
 
 bool Sticker::hasHeavyPart() const {
-	return _player || _dataMedia;
+	return !_imageTransition.empty() || _player || _dataMedia;
 }
 
 void Sticker::unloadHeavyPart() {
+	_imageTransition.reset();
 	unloadPlayer();
 	_dataMedia = nullptr;
+}
+
+void Sticker::continueImageTransition(const Content &previous) {
+	if (const auto sticker = dynamic_cast<const Sticker*>(&previous);
+		sticker && _sensitiveBlurred == sticker->_sensitiveBlurred
+		&& !sticker->_imageTransition.empty()) {
+		_imageTransition.continueFrom(sticker->_imageTransition);
+		_parent->history()->owner().registerHeavyViewPart(_parent);
+	}
 }
 
 void Sticker::unloadPlayer() {

@@ -298,10 +298,12 @@ void Photo::dataMediaCreated() const {
 }
 
 bool Photo::hasHeavyPart() const {
-	return (_spoiler && _spoiler->animation) || _streamed || _dataMedia;
+	return Media::hasHeavyPart()
+		|| (_spoiler && _spoiler->animation) || _streamed || _dataMedia;
 }
 
 void Photo::unloadHeavyPart() {
+	resetImageTransition();
 	stopAnimation();
 	_dataMedia = nullptr;
 	if (_spoiler) {
@@ -485,7 +487,7 @@ void Photo::draw(Painter &p, const PaintContext &context) const {
 		}
 		if (revealed > 0.) {
 			validateImageCache(rthumb.size(), rounding);
-			p.drawImage(rthumb, _imageCache);
+			paintImage(p, rthumb, _imageCache, _imageCache.cacheKey());
 		}
 		if (revealed < 1.) {
 			p.setOpacity(1. - revealed);
@@ -673,6 +675,11 @@ void Photo::validateImageCache(
 		QSize outer,
 		std::optional<Ui::BubbleRounding> rounding) const {
 	const auto large = _dataMedia->image(PhotoSize::Large);
+	const auto source = large ? large
+		: _dataMedia->thumbnailInline() ? _dataMedia->thumbnailInline()
+		: _dataMedia->image(PhotoSize::Thumbnail) ? _dataMedia->image(PhotoSize::Thumbnail)
+		: _dataMedia->image(PhotoSize::Small);
+	const auto sourceKey = source ? source->original().cacheKey() : 0;
 	const auto ratio = style::DevicePixelRatio();
 	const auto scaled = ScaledInstantViewMediaSize(
 		outer,
@@ -680,7 +687,8 @@ void Photo::validateImageCache(
 	const auto blurredValue = large ? 0 : 1;
 	if (_imageCache.size() == (scaled * ratio)
 		&& _imageCacheRounding == rounding
-		&& _imageCacheBlurred == blurredValue) {
+		&& _imageCacheBlurred == blurredValue
+		&& _imageSourceKey == sourceKey) {
 		return;
 	}
 	_imageCache = Images::Round(
@@ -688,6 +696,7 @@ void Photo::validateImageCache(
 		MediaRoundingMask(rounding));
 	_imageCacheRounding = rounding;
 	_imageCacheBlurred = blurredValue;
+	_imageSourceKey = sourceKey;
 }
 
 void Photo::validateSpoilerImageCache(
@@ -965,7 +974,7 @@ void Photo::drawGrouped(
 	}
 	if (revealed > 0.) {
 		validateGroupedCache(geometry, rounding, cacheKey, cache);
-		p.drawPixmap(geometry, *cache);
+		paintImage(p, geometry, *cache, cache->cacheKey());
 	}
 	if (revealed < 1.) {
 		p.setOpacity(1. - revealed);
@@ -1149,10 +1158,6 @@ void Photo::validateGroupedCache(
 		| (uint64(options) << 16)
 		| (uint64(rounding.key()) << 8)
 		| (uint64(loadLevel));
-	if (*cacheKey == key) {
-		return;
-	}
-
 	const auto unscaled = photoSize();
 	const auto originalWidth = style::ConvertScale(unscaled.width());
 	const auto originalHeight = style::ConvertScale(unscaled.height());
@@ -1169,8 +1174,13 @@ void Photo::validateGroupedCache(
 		: _dataMedia->thumbnailInline()
 		? _dataMedia->thumbnailInline()
 		: Image::BlankMedia().get();
+	const auto sourceKey = image->original().cacheKey();
+	if (*cacheKey == key && _groupedSourceKey == sourceKey) {
+		return;
+	}
 
 	*cacheKey = key;
+	_groupedSourceKey = sourceKey;
 	auto prepared = Images::Prepare(
 		image->original(),
 		pixSize * ratio,

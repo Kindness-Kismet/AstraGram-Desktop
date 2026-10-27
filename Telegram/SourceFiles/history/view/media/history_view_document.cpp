@@ -534,7 +534,7 @@ void Document::draw(
 	if (thumbed) {
 		const auto rounding = thumbRounding(mode, outsideRounding);
 		validateThumbnail(thumbed, st.thumbSize, rounding);
-		p.drawImage(rthumb, thumbed->thumbnail);
+		paintImage(p, rthumb, thumbed->thumbnail, thumbed->thumbnail.cacheKey());
 		if (context.selected()) {
 			FillThumbnailOverlay(p, rthumb, rounding, context);
 		}
@@ -926,13 +926,15 @@ void Document::validateThumbnail(
 		return;
 	}
 	const auto outer = QSize(size, size);
+	const auto image = normal ? normal : blurred;
+	const auto sourceKey = image->original().cacheKey();
 	if ((thumbed->thumbnail.size() == outer * style::DevicePixelRatio())
 		&& (thumbed->blurred == !normal)
-		&& (thumbed->rounding == rounding)) {
+		&& (thumbed->rounding == rounding)
+		&& (_thumbnailSourceKey == sourceKey)) {
 		return;
 	}
 	const auto small = (rounding == Ui::BubbleRounding());
-	auto image = normal ? normal : blurred;
 	const auto imageWidth = thumbed->thumbw * style::DevicePixelRatio();
 	auto thumbnail = Images::Prepare(image->original(), imageWidth, {
 		.options = (normal ? Images::Option() : Images::Option::Blur)
@@ -956,13 +958,15 @@ void Document::validateThumbnail(
 	thumbed->thumbnail = std::move(thumbnail);
 	thumbed->blurred = !normal;
 	thumbed->rounding = rounding;
+	_thumbnailSourceKey = sourceKey;
 }
 
 bool Document::hasHeavyPart() const {
-	return (_dataMedia != nullptr);
+	return Media::hasHeavyPart() || (_dataMedia != nullptr);
 }
 
 void Document::unloadHeavyPart() {
+	resetImageTransition();
 	_dataMedia = nullptr;
 	if (const auto captioned = Get<HistoryDocumentCaptioned>()) {
 		captioned->caption.unloadPersistentAnimation();

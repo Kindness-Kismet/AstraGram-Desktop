@@ -43,6 +43,7 @@
 | `peer.resolve` | `<username>` | 异步按用户名解析公开频道或用户，返回会话编号；不加入、不关注。 |
 | `message.inspect` | `<peerId> <messageId>` | 原有消息状态，以及发送者、提及实体、附件名、类型、大小和下载状态。 |
 | `message.send-file` | `<peerId> <absolutePath> [caption] [--media]` | 后台准备单个文件并沿官方附件发送链路提交，不打开附件预览、不清除草稿；默认按文件发送，`--media` 对应“压缩”，视频按可播放的媒体发送。 |
+| `message.send-album` | `<peerId> <absolutePath> <absolutePath> [path...]` | 把 2 至 10 个图片或视频沿官方相册发送链路提交，不清除草稿；返回任务编号，须通过 `message.fetch` 核对共同的 `groupId` 和全部消息编号。真实发送仍只限已授权的测试会话。 |
 | `mention.resolve` | `<userId>` | 与编号提及弹窗共用解析逻辑，返回异步任务，不插入输入框。 |
 | `mention.send` | `<peerId> <userId> <displayText> <followingText>` | 通过当前账号解析目标，构造真实提及标签并沿官方发送链路提交。 |
 

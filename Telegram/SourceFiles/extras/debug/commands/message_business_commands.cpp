@@ -481,29 +481,35 @@ Result sendMention(const QStringList &args) {
 	return jobStarted(id);
 }
 
-// --media 对应发送窗口里的“压缩”，视频按可播放的媒体发送。
-Result sendFile(const QStringList &arguments) {
-	auto args = arguments;
-	const auto asMedia = (args.removeAll(u"--media"_q) > 0);
-	if (args.size() < 2 || args.size() > 3) return Result::Err(u"usage: message.send-file <peerId> <path> [caption] [--media]"_q);
-	const auto peer = findPeer(args[0]);
-	if (!peer) return Result::Err(u"peer not found"_q);
+Result sendAttachments(
+		not_null<PeerData*> peer,
+		QStringList filenames,
+		QString caption,
+		bool asMedia,
+		bool album) {
 	const auto session = &peer->session();
 	if (isSimulationSession(session)) return Result::Err(u"an authenticated session is required"_q);
-	const auto path = QFileInfo(args[1]);
-	if (!path.isAbsolute() || !path.isFile()) return Result::Err(u"expected an absolute file path"_q);
+	for (auto &filename : filenames) {
+		const auto path = QFileInfo(filename);
+		if (!path.isAbsolute() || !path.isFile()) {
+			return Result::Err(u"expected absolute file paths"_q);
+		}
+		filename = path.absoluteFilePath();
+	}
 	const auto id = beginJob("file-send");
 	const auto weak = base::make_weak(session);
 	const auto premium = session->premium();
 	const auto peerId = peer->id;
-	const auto filename = path.absoluteFilePath();
-	const auto caption = args.value(2);
 	session->lifetime().add([id] { finishJob(id, false, "session closed"); });
 	crl::async([=] {
-		auto list = Storage::PrepareMediaList(QStringList{ filename }, 320, premium);
+		auto list = Storage::PrepareMediaList(filenames, 320, premium);
 		crl::on_main([=, list = std::move(list)]() mutable {
 			if (!weak) return;
-			if (list.error != Ui::PreparedList::Error::None || list.files.size() != 1) {
+			if (list.error != Ui::PreparedList::Error::None
+				|| list.files.size() != filenames.size()
+				|| (album && !ranges::all_of(list.files, [](const Ui::PreparedFile &file) {
+					return file.canBeInAlbumType(Ui::AlbumType::PhotoVideo);
+				}))) {
 				finishJob(id, false, "could not prepare the attachment");
 				return;
 			}
@@ -511,12 +517,35 @@ Result sendFile(const QStringList &arguments) {
 			auto action = Api::SendAction(weak->data().history(peerId));
 			action.clearDraft = false;
 			const auto type = asMedia ? SendMediaType::Photo : SendMediaType::File;
-			weak->api().sendFiles(std::move(list), type, nullptr, action);
+			weak->api().sendFiles(std::move(list), type,
+				album ? std::make_shared<SendingAlbum>() : nullptr, action);
 			finishJob(id, true, Json{ { "state", "submitted" }, { "peerId", peerId.value },
-				{ "filename", QFileInfo(filename).fileName().toStdString() }, { "media", asMedia } });
+				{ "filename", QFileInfo(filenames.front()).fileName().toStdString() },
+				{ "count", filenames.size() }, { "album", album }, { "media", asMedia } });
 		});
 	});
 	return jobStarted(id);
+}
+
+// --media 对应发送窗口里的“压缩”，视频按可播放的媒体发送。
+Result sendFile(const QStringList &arguments) {
+	auto args = arguments;
+	const auto asMedia = (args.removeAll(u"--media"_q) > 0);
+	if (args.size() < 2 || args.size() > 3) {
+		return Result::Err(u"usage: message.send-file <peerId> <path> [caption] [--media]"_q);
+	}
+	const auto peer = findPeer(args[0]);
+	if (!peer) return Result::Err(u"peer not found"_q);
+	return sendAttachments(peer, { args[1] }, args.value(2), asMedia, false);
+}
+
+Result sendAlbum(const QStringList &args) {
+	if (args.size() < 3 || args.size() > 11) {
+		return Result::Err(u"usage: message.send-album <peerId> <path> <path> [path...]"_q);
+	}
+	const auto peer = findPeer(args[0]);
+	if (!peer) return Result::Err(u"peer not found"_q);
+	return sendAttachments(peer, args.mid(1), {}, true, true);
 }
 
 // 与右键“查看视频封面”相同；视频没有封面和缩略图时直接报错。
@@ -644,6 +673,7 @@ const HandlerMap &messageBusinessHandlers() {
 		{ u"message.media-file"_q, &saveAltFile },
 		{ u"peer.resolve"_q, &resolvePeer },
 		{ u"message.send-file"_q, &sendFile },
+		{ u"message.send-album"_q, &sendAlbum },
 		{ u"video.cover"_q, &openVideoCover },
 		{ u"media.open"_q, &openMedia },
 		{ u"message.shot"_q, &openMessageShot },

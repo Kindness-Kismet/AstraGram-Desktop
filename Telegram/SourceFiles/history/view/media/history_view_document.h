@@ -169,6 +169,7 @@ private:
 	mutable std::shared_ptr<Data::DocumentMedia> _dataMedia;
 	mutable QImage _iconCache;
 	mutable QImage _cornerDownloadCache;
+	mutable qint64 _thumbnailSourceKey = 0;
 
 	class TooltipFilename {
 	public:
