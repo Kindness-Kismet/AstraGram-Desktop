@@ -98,6 +98,7 @@ base::options::toggle UnlimitedMessageWidth({
 constexpr auto kPlayStatusLimit = 12;
 constexpr auto kMaxWidth = (1 << 16) - 1;
 constexpr auto kMaxNiceToReadLines = 6;
+constexpr auto kExtraRightMargin = 30;
 const auto kPsaTooltipPrefix = "cloud_lng_tooltip_psa_";
 constexpr auto kFullLineAppearDuration = crl::time(300);
 constexpr auto kFullLineAppearFinalDuration = crl::time(120);
@@ -6699,7 +6700,9 @@ QRect Message::countGeometry() const {
 		: st::msgMargin.right();
 	const auto availableWidth = width()
 		- st::msgMargin.left()
-		- (centeredView ? st::msgMargin.left() : wideSkip);
+		- (centeredView
+			? st::msgMargin.left()
+			: wideSkip + style::ConvertScale(kExtraRightMargin));
 	auto contentLeft = hasRightLayout() ? wideSkip : st::msgMargin.left();
 	auto contentWidth = availableWidth;
 	if (hasFromPhoto()) {
@@ -6853,7 +6856,9 @@ int Message::resizeContentGetHeight(int newWidth) {
 		: st::msgMargin.right();
 	auto contentWidth = newWidth
 		- st::msgMargin.left()
-		- (centeredView ? st::msgMargin.left() : wideSkip);
+		- (centeredView
+			? st::msgMargin.left()
+			: wideSkip + style::ConvertScale(kExtraRightMargin));
 	if (hasFromPhoto()) {
 		if (const auto size = rightActionSize()) {
 			contentWidth -= size->width() + (st::msgPhotoSkip - st::historyFastShareSize);
