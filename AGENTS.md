@@ -248,7 +248,7 @@ void Process(const TextWithEntities &text) {
 
 ```bash
 python scripts/prebuild.py            # 全量预编译，产物在 build/tmp
-python scripts/prebuild.py --list     # 34 个阶段清单（qt_6.11.2、openssl3、ffmpeg、tg_owt、breakpad、tde2e 等）
+python scripts/prebuild.py --list     # 36 个阶段清单（qt_6.11.2、tg_angle、openssl3、ffmpeg、tg_owt 等）
 python scripts/prebuild.py --stage openssl3 --stage qt_6.11.2   # 只跑指定阶段，可重复指定
 python scripts/prebuild.py --clean    # 清空依赖缓存
 ```

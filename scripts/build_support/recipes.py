@@ -9,12 +9,28 @@ from build_support.recipe import Stage
 from build_support.recipes_rust import RUST_STAGES
 from build_support.qt_native_backdrop_patch import PATCH_SCRIPT, patch_command
 from build_support import qt_text_caret_patch
+from build_support.paths import ROOT
 
 # Qt 版本决定补丁目录与产物前缀，随上游 qt_version 的 Qt 6 分支同步
 QT_VERSION = "6.11.2"
 
 # venv 绑定创建它的解释器，Python 版本变动必须重建，故版本号在运行时填入
 PYTHON_VERSION_PLACEHOLDER = "__PYTHON_VERSION__"
+
+_QT_ANGLE_CMAKE = ROOT / "cmake/external/angle/qt.cmake"
+_QT_ANGLE_PATCHES = r"""for %%i in (..\..\qt6_windows7\*.patch) do (
+git apply %%i --ignore-whitespace -v
+if errorlevel 1 (
+echo ERROR: Applying patch %%~nxi failed!
+exit /b 1
+)
+)
+"""
+_QT_ANGLE_FEATURES = "-trace no ^\n-feature-egl ^\n"
+_QT_ANGLE_FLAGS = (
+    f'-D CMAKE_PROJECT_QtBase_INCLUDE:FILEPATH="{_QT_ANGLE_CMAKE.as_posix()}" ^\n'
+    '-D DESKTOP_APP_ANGLE_DIR:PATH="%LIBS_DIR%\\tg_angle" ^\n'
+)
 
 
 STAGES: list[Stage] = [
@@ -25,7 +41,7 @@ STAGES: list[Stage] = [
         dependencies=[],
         commands=r"""git clone https://github.com/desktop-app/patches.git
 cd patches
-git checkout aec474953ff7ee9b6e4cd9b8658288ea86d124f3
+git checkout a895fef40eaa7d66481cff542c623b039b7ce494
 """,
     ),
     Stage(
@@ -438,7 +454,7 @@ cmake --install . --config Release
         dependencies=[],
         commands=r"""git clone https://github.com/telegramdesktop/openal-soft.git
 cd openal-soft
-git checkout 291c0fdbbd
+git checkout 00cb9b649c
 cmake -B build . ^
 -D LIBTYPE:STRING=STATIC ^
 -D FORCE_STATIC_VCRT=ON ^
@@ -477,10 +493,35 @@ deactivate
 """,
     ),
     Stage(
+        name="qt6_windows7",
+        location="Libraries",
+        commands=r"""git clone https://github.com/desktop-app/qt6_windows7_patches.git qt6_windows7
+cd qt6_windows7
+git checkout 9ce1ffe051161a22f7e78f715b042c773f868e59
+""",
+    ),
+    Stage(
+        name="tg_angle",
+        location="Libraries",
+        commands=r"""git clone https://github.com/desktop-app/tg_angle.git
+cd tg_angle
+git checkout 9fd174a91e6155d1006c5f427366b23006f5d899
+cmake -B out ^
+-DTG_ANGLE_SPECIAL_TARGET=%SPECIAL_TARGET% ^
+-DTG_ANGLE_ZLIB_INCLUDE_PATH=%LIBS_DIR%/zlib
+cmake --build out --config Debug
+cmake --build out --config Release
+""",
+    ),
+    Stage(
         name=f"qt_{QT_VERSION}",
         location="Libraries",
         dependencies=[
             f"patches/qtbase_{QT_VERSION}/*.patch",
+            f"patches/qtsvg_{QT_VERSION}/*.patch",
+            "qt6_windows7/*.patch",
+            "cache_keys/tg_angle",
+            str(_QT_ANGLE_CMAKE),
             str(PATCH_SCRIPT),
             str(qt_text_caret_patch.PATCH_SCRIPT),
         ],
@@ -489,8 +530,9 @@ cd qt_$QT
 git submodule update --init --recursive --progress qtbase qtimageformats qtshadertools qtsvg
 cd qtbase
 setlocal enabledelayedexpansion
+__QT_ANGLE_PATCHES__
 for /r %%i in (..\..\patches\qtbase_%QT%\*) do (
-git apply %%i -v
+git apply %%i --ignore-whitespace -v
 if errorlevel 1 (
 echo ERROR: Applying patch %%~nxi failed!
 exit /b 1
@@ -498,6 +540,14 @@ exit /b 1
 )
 __QT_NATIVE_BACKDROP_PATCH__
 __QT_TEXT_CARET_PATCH__
+cd ..\qtsvg
+for /r %%i in (..\..\patches\qtsvg_%QT%\*) do (
+git apply %%i --ignore-whitespace -v
+if errorlevel 1 (
+echo ERROR: Applying patch %%~nxi failed!
+exit /b 1
+)
+)
 cd ..
 SET CONFIGURATIONS=-debug
 SET ASSERTS=
@@ -523,9 +573,11 @@ configure -prefix "%LIBS_DIR%\Qt-%QT%" ^
 -system-webp ^
 -system-zlib ^
 -system-libjpeg ^
+__QT_ANGLE_FEATURES__
 -platform win32-msvc ^
 -D ZLIB_WINAPI ^
 -- ^
+__QT_ANGLE_FLAGS__
 -D OPENSSL_FOUND=1 ^
 -D OPENSSL_INCLUDE_DIR="%OPENSSL_DIR%\include" ^
 -D LIB_EAY_DEBUG="%OPENSSL_LIBS_DIR%.dbg\libcrypto.lib" ^
@@ -554,7 +606,10 @@ cmake --install . --config Debug
 cmake --build .
 cmake --install .
 """.replace("__QT_NATIVE_BACKDROP_PATCH__", patch_command()).replace(
-        "__QT_TEXT_CARET_PATCH__", qt_text_caret_patch.patch_command()),
+        "__QT_TEXT_CARET_PATCH__", qt_text_caret_patch.patch_command()).replace(
+        "__QT_ANGLE_PATCHES__\n", _QT_ANGLE_PATCHES).replace(
+        "__QT_ANGLE_FEATURES__\n", _QT_ANGLE_FEATURES).replace(
+        "__QT_ANGLE_FLAGS__\n", _QT_ANGLE_FLAGS),
     ),
     Stage(
         name="tg_owt",
@@ -563,7 +618,7 @@ cmake --install .
         dependencies=[],
         commands=r"""git clone https://github.com/desktop-app/tg_owt.git
 cd tg_owt
-git checkout d1cf250ea73de26c4c1f0a3c8173eb2648efbb04
+git checkout 07fb35bc33b3e79125a1beab7690e830f183f5d8
 git submodule update --init --recursive
 SET MOZJPEG_PATH=$LIBS_DIR/mozjpeg
 SET OPUS_PATH=$USED_PREFIX/include/opus
@@ -671,6 +726,16 @@ def stages_for(target: str) -> list[Stage]:
         raise SystemExit(f"unknown target: {target}")
     result: list[Stage] = []
     for stage in STAGES:
+        if stage.name in {"qt6_windows7", "tg_angle"}:
+            continue
+        if stage.name == f"qt_{QT_VERSION}":
+            result.append(replace(stage,
+                dependencies=[path for path in stage.dependencies if path not in {
+                    "qt6_windows7/*.patch", "cache_keys/tg_angle", str(_QT_ANGLE_CMAKE),
+                }],
+                commands=stage.commands.replace(_QT_ANGLE_PATCHES, "").replace(
+                    _QT_ANGLE_FEATURES, "").replace(_QT_ANGLE_FLAGS, "")))
+            continue
         if stage.name in recipes_arm64.OVERRIDES:
             result.append(replace(stage, commands=recipes_arm64.OVERRIDES[stage.name]))
         else:

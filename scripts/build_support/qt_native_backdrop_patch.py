@@ -14,7 +14,7 @@ _CONSTRUCTOR = "    QWindowsContext::instance()->addWindow(m_data.hwnd, this);\n
 _CAPABILITY = '    aWindow->setProperty("_q_extrasNativeBackdropSupported", true);\n'
 _PREFIX = "    const bool needsLayered = (flags & Qt::WindowTransparentForInput)\n        || ("
 _SUFFIX = ") || opacity < 1.0;"
-_ALPHA = ("hasAlpha", "hasAlpha && hasNoNativeFrame(hwnd, flags)")
+_ALPHA = "hasAlpha && !dcompAlpha && hasNoNativeFrame(hwnd, flags)"
 _OPT_IN = '!GetPropW(hwnd, L"ExtrasNativeBackdrop") && '
 
 
@@ -26,12 +26,12 @@ def patch_source(source: bytes) -> bytes:
     """完整校验后返回补丁文本；不接受缺失锚点或半应用状态。"""
     newline = b"\r\n" if b"\r\n" in source else b"\n"
     text = source.decode("utf-8").replace("\r\n", "\n")
-    original = [_PREFIX + alpha + _SUFFIX for alpha in _ALPHA]
-    patched = [_PREFIX + _OPT_IN + alpha + _SUFFIX for alpha in _ALPHA]
+    original = _PREFIX + _ALPHA + _SUFFIX
+    patched = _PREFIX + _OPT_IN + _ALPHA + _SUFFIX
     if text.count(_CONSTRUCTOR) != 1 or text.count(_INCLUDE) != 1:
         raise SystemExit("Qt native backdrop: constructor/include anchor changed.")
-    before = sum(text.count(block) for block in original)
-    after = sum(text.count(block) for block in patched)
+    before = text.count(original)
+    after = text.count(patched)
     capabilities = text.count("_q_extrasNativeBackdropSupported")
     switches = text.count("ExtrasNativeBackdrop")
     added_include = text.count(_ADDED_VARIANT)
@@ -45,8 +45,7 @@ def patch_source(source: bytes) -> bytes:
     if _VARIANT not in text:
         text = text.replace(_INCLUDE, _INCLUDE + _ADDED_VARIANT, 1)
     text = text.replace(_CONSTRUCTOR, _CONSTRUCTOR + _CAPABILITY, 1)
-    for old, new in zip(original, patched):
-        text = text.replace(old, new, 1)
+    text = text.replace(original, patched, 1)
     return text.replace("\n", newline.decode("ascii")).encode("utf-8")
 
 

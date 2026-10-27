@@ -63,6 +63,7 @@ thirdPartyDir = os.path.realpath(os.path.join(rootDir, 'ThirdParty'))
 usedPrefix = os.path.realpath(os.path.join(libsDir, 'local'))
 
 optionsList = [
+    'qt5',
     'qt6',
     'skip-release',
     'build-stackwalk',
@@ -530,7 +531,7 @@ if customRunCommand:
 stage('patches', """
     git clone https://github.com/desktop-app/patches.git
     cd patches
-    git checkout aec474953ff7ee9b6e4cd9b8658288ea86d124f3
+    git checkout a895fef40eaa7d66481cff542c623b039b7ce494
 mac:
     sed -i '' "s/10.13/$MACOSX_DEPLOYMENT_TARGET/g" macos_meson_*.txt
     git clone https://github.com/desktop-app/qt6_highsierra_patches.git qt6_highsierra
@@ -1430,7 +1431,7 @@ stage('openal-soft', """
     git clone https://github.com/telegramdesktop/openal-soft.git
     cd openal-soft
 win:
-    git checkout 291c0fdbbd
+    git checkout 00cb9b649c
     cmake -B build . ^
         -D LIBTYPE:STRING=STATIC ^
         -D FORCE_STATIC_VCRT=ON ^
@@ -1593,13 +1594,21 @@ release:
     lipo -create Release.arm64/libcrashpad_client.a Release.x86_64/libcrashpad_client.a -output Release/libcrashpad_client.a
 """)
 
-if qt < '6':
-    if win:
-        stage('tg_angle', """
-win:
+if win and qt >= '6':
+    # Windows 7 and 8 support for qtbase, and the ANGLE backend Qt 6 dropped.
+    stage('qt6_windows7', """
+win32_win64:
+    git clone https://github.com/desktop-app/qt6_windows7_patches.git qt6_windows7
+    cd qt6_windows7
+    git checkout 9ce1ffe051161a22f7e78f715b042c773f868e59
+""")
+
+if win:
+    stage('tg_angle', """
+win32_win64:
     git clone https://github.com/desktop-app/tg_angle.git
     cd tg_angle
-    git checkout f62ce7f6efe014cf1f7d95830c505fd2ac1c49e0
+    git checkout 9fd174a91e6155d1006c5f427366b23006f5d899
     cmake -B out ^
         -DTG_ANGLE_SPECIAL_TARGET=%SPECIAL_TARGET% ^
         -DTG_ANGLE_ZLIB_INCLUDE_PATH=%LIBS_DIR%/zlib
@@ -1608,6 +1617,7 @@ release:
     cmake --build out --config Release
 """)
 
+if qt < '6':
     stage('qt_' + qt, """
     git clone -b v$QT-lts-lgpl https://github.com/qt/qt5.git qt_$QT
     cd qt_$QT
@@ -1676,12 +1686,20 @@ win:
     jom -j%NUMBER_OF_PROCESSORS% install
 """)
 else: # qt > '6'
+    qtAngleCmake = os.path.realpath(os.path.join(
+        scriptPath, '../../../cmake/external/angle/qt.cmake')).replace('\\', '/')
+    # checkouts share Libraries, so the cache key gets the content, not the path
+    modifiedEnv['QT_ANGLE_CMAKE'] = qtAngleCmake
     branch = 'v$QT' + ('-lts-lgpl' if qt.startswith('6.2.') else '')
     stage('qt_' + qt, """
     git clone -b """ + branch + """ https://github.com/qt/qt5.git qt_$QT
     cd qt_$QT
     git submodule update --init --recursive --progress qtbase qtimageformats qtshadertools qtsvg
 depends:patches/qtbase_""" + qt + """/*.patch
+depends:patches/qtsvg_""" + qt + """/*.patch
+win32_win64:
+depends:qt6_windows7/*.patch
+version:""" + computeFileHash(qtAngleCmake) + """
 mac:
     if [ -d "../patches/qt6_highsierra" ]; then
         find "$PWD/../patches/qt6_highsierra" -maxdepth 1 -name "*.patch" -print0 | sort -z | xargs -0 git -C qtbase apply -v
@@ -1689,6 +1707,7 @@ mac:
     find $PWD/../patches/qtbase_$QT -type f -print0 | sort -z | xargs -0 git -C qtbase apply -v
 depends:""" + qtMacPacPatch + """
     git -C qtbase apply """ + '"' + qtMacPacPatch + '"' + """
+    find $PWD/../patches/qtsvg_$QT -type f -print0 | sort -z | xargs -0 git -C qtsvg apply -v
     sed -i.bak 's/tqtc-//' {qtimageformats,qtsvg}/dependencies.yaml
 
     CONFIGURATIONS=-debug
@@ -1727,8 +1746,25 @@ mac:
 win:
     cd qtbase
     setlocal enabledelayedexpansion
+win32_win64:
+    for %%i in (..\\..\\qt6_windows7\\*.patch) do (
+        git apply %%i --ignore-whitespace -v
+        if errorlevel 1 (
+            echo ERROR: Applying patch %%~nxi failed!
+            exit /b 1
+        )
+    )
+win:
     for /r %%i in (..\\..\\patches\\qtbase_%QT%\\*) do (
-        git apply %%i -v
+        git apply %%i --ignore-whitespace -v
+        if errorlevel 1 (
+            echo ERROR: Applying patch %%~nxi failed!
+            exit /b 1
+        )
+    )
+    cd ..\\qtsvg
+    for /r %%i in (..\\..\\patches\\qtsvg_%QT%\\*) do (
+        git apply %%i --ignore-whitespace -v
         if errorlevel 1 (
             echo ERROR: Applying patch %%~nxi failed!
             exit /b 1
@@ -1763,9 +1799,21 @@ win:
         -system-webp ^
         -system-zlib ^
         -system-libjpeg ^
+win32_win64:
+    # ANGLE is restored by qt6_windows7 series, tracing pulls Windows 10 ETW.
+        -trace no ^
+        -feature-egl ^
+win32:
+    # qioring_win.cpp static_asserts on 64-bit pointers, so no IoRing on x86.
+        -no-feature-windows-ioring ^
+win:
         -platform win32-msvc ^
         -D ZLIB_WINAPI ^
         -- ^
+win32_win64:
+        -D CMAKE_PROJECT_QtBase_INCLUDE:FILEPATH="%QT_ANGLE_CMAKE%" ^
+        -D DESKTOP_APP_ANGLE_DIR:PATH="%LIBS_DIR%\\tg_angle" ^
+win:
         -D OPENSSL_FOUND=1 ^
         -D OPENSSL_INCLUDE_DIR="%OPENSSL_DIR%\\include" ^
         -D LIB_EAY_DEBUG="%OPENSSL_LIBS_DIR%.dbg\\libcrypto.lib" ^
@@ -1799,7 +1847,7 @@ win:
 stage('tg_owt', """
     git clone https://github.com/desktop-app/tg_owt.git
     cd tg_owt
-    git checkout d1cf250ea73de26c4c1f0a3c8173eb2648efbb04
+    git checkout 07fb35bc33b3e79125a1beab7690e830f183f5d8
     git submodule update --init --recursive
 win:
     SET MOZJPEG_PATH=$LIBS_DIR/mozjpeg
