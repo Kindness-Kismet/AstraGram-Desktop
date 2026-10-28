@@ -314,6 +314,7 @@ void DetailedSettingsButton::paintIcon(QPainter &p) const {
 			const auto shiftY = (foreground.height()
 				- (source.height() * scale)) / 2.;
 			p.save();
+			const auto hq = PainterHighQualityEnabler(p);
 			p.translate(foreground.x() + shiftX, foreground.y() + shiftY);
 			p.scale(scale, scale);
 			_iconForeground->paint(p, 0, 0, source.width());
