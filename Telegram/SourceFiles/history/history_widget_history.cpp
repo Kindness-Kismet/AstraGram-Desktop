@@ -995,6 +995,8 @@ void HistoryWidget::handleHistoryChange(not_null<const History*> history) {
 				updateControlsGeometry();
 			}
 		}
+		// 联网后尾部失效时，即使用户没有滚动也要补齐可见范围。
+		preloadHistoryIfNeeded();
 	}
 }
 
