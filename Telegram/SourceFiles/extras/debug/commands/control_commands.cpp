@@ -528,8 +528,20 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	}
 	// 只保留弱引用；合成事件不改变系统光标位置。
 	static auto pointed = QPointer<QWidget>();
+	const auto chain = [](QWidget *widget) {
+		auto result = std::vector<QPointer<QWidget>>();
+		for (auto current = widget; current; current = current->parentWidget()) {
+			result.emplace_back(current);
+			if (current->isWindow()) {
+				break;
+			}
+		}
+		return result;
+	};
 	if (args.size() == 1) {
-		sendIfAlive(pointed, QEvent(QEvent::Leave));
+		for (const auto &widget : chain(pointed.data())) {
+			sendIfAlive(widget, QEvent(QEvent::Leave));
+		}
 		pointed.clear();
 		return Result::Ok(u"left"_q);
 	}
@@ -541,15 +553,31 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	}
 	const auto global = target->mapToGlobal(point);
 	const auto root = target->window();
-	const auto receiver = root->childAt(root->mapFromGlobal(global));
-	if (!receiver || (receiver != target && !target->isAncestorOf(receiver))) {
+	const auto child = root->childAt(root->mapFromGlobal(global));
+	const auto receiver = child ? child : root;
+	if (receiver != target && !target->isAncestorOf(receiver)) {
 		return Result::Err(u"control is covered at the requested point"_q);
 	}
 	const auto local = receiver->mapFromGlobal(global);
 	if (pointed != receiver) {
-		sendIfAlive(pointed, QEvent(QEvent::Leave));
+		auto previous = chain(pointed.data());
+		auto current = chain(receiver);
+		while (!previous.empty() && !current.empty()
+			&& previous.back() == current.back()) {
+			previous.pop_back();
+			current.pop_back();
+		}
 		pointed = receiver;
-		sendIfAlive(pointed, QEnterEvent(local, root->mapFromGlobal(global), global));
+		for (const auto &widget : previous) {
+			sendIfAlive(widget, QEvent(QEvent::Leave));
+		}
+		// Qt 会先通知外层，再通知命中的子控件，菜单悬停同样依赖这条顺序。
+		for (auto i = current.rbegin(); i != current.rend(); ++i) {
+			if (const auto widget = i->data()) {
+				sendIfAlive(*i, QEnterEvent(widget->mapFromGlobal(global),
+					widget->window()->mapFromGlobal(global), global));
+			}
+		}
 	}
 	sendIfAlive(pointed, QMouseEvent(QEvent::MouseMove, local, global,
 		Qt::NoButton, Qt::NoButton, Qt::NoModifier));
