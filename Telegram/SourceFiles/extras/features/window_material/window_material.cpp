@@ -25,6 +25,7 @@
 #include <QtCore/QVariant>
 #include <QtGui/QPainter>
 #include <QtGui/QWindow>
+#include <QtWidgets/QRhiWidget>
 
 namespace ExtrasFeatures::WindowMaterial {
 namespace {
@@ -301,13 +302,16 @@ public:
 		const auto mode = ExtrasSettings::getInstance().windowMaterial();
 		const auto supported = _backend->panelSupported(mode);
 		if (supported) {
+			// 原生窗口创建前准备画布；内嵌菜单使用宿主原有的绘制接口。
+			if (!_rhiPrepared) {
+				Ui::GL::EnsureWindowRhi(_menu);
+				_rhiPrimer = _menu->findChild<QRhiWidget*>(
+					QString(), Qt::FindDirectChildrenOnly);
+				_rhiPrepared = true;
+			}
 			// 几何准备前保留原生窗口，避免把整个宿主窗口当成菜单设置材质。
 			if (!_menu->systemBackdrop()) {
 				_menu->setSystemBackdrop(true);
-			}
-			if (!_rhiPrepared) {
-				Ui::GL::EnsureWindowRhi(_menu);
-				_rhiPrepared = true;
 			}
 			_menu->createWinId();
 			// 菜单尺寸逐帧变化，提交不能再等待一次屏幕刷新。
@@ -320,6 +324,9 @@ public:
 			&& _backend->setRoundedCorners(true);
 		if (!active) {
 			_backend->release();
+			// 内嵌前移除原生画布控件，避免将不同的绘制接口带进宿主。
+			delete _rhiPrimer.data();
+			_rhiPrepared = false;
 		}
 		_menu->setProperty(kModeProperty, int(active ? mode : ::WindowMaterial::Off));
 		_menu->setProperty(kActiveProperty, active);
@@ -341,7 +348,7 @@ private:
 	}
 
 	bool eventFilter(QObject *, QEvent *event) override {
-		if (event->type() == QEvent::WinIdChange) {
+		if (event->type() == QEvent::WinIdChange && !_refreshing) {
 			QTimer::singleShot(0, this, [=] { refresh(); });
 		} else if (event->type() == QEvent::Show) {
 			_backend->activatePopupBackdrop();
@@ -351,6 +358,7 @@ private:
 
 	const not_null<Ui::PopupMenu*> _menu;
 	const std::unique_ptr<Platform::Backend> _backend;
+	QPointer<QRhiWidget> _rhiPrimer;
 	int _revision = 0;
 	bool _refreshing = false;
 	bool _rhiPrepared = false;
