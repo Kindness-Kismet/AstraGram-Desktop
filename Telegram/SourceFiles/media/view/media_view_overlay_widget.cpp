@@ -3171,7 +3171,7 @@ OverlayWidget::ContentGeometry OverlayWidget::contentGeometry() const {
 
 auto OverlayWidget::withShowAnimation(ContentGeometry geometry) const
 -> ContentGeometry {
-	if (!_showAnimation.animating()) {
+	if (!_showAnimationPending && !_showAnimation.animating()) {
 		return geometry;
 	}
 	const auto progress = shownProgress();
@@ -3663,15 +3663,22 @@ void OverlayWidget::close() {
 }
 
 float64 OverlayWidget::shownProgress() const {
-	return _showAnimation.value(_hidingAnimated ? 0. : 1.);
+	return _showAnimationPending
+		? 0.
+		: _showAnimation.value(_hidingAnimated ? 0. : 1.);
 }
 
-void OverlayWidget::startShowAnimation() {
+void OverlayWidget::prepareShowAnimation() {
+	_showAnimationPending = true;
 	_hidingAnimated = false;
 	_widget->setAttribute(Qt::WA_TransparentForMouseEvents, false);
 	if (_streamed && _streamed->controls) {
 		_streamed->controls->hideInstantly();
 	}
+}
+
+void OverlayWidget::startShowAnimation() {
+	_showAnimationPending = false;
 	_showAnimation.start(
 		[=] { showAnimationCallback(); },
 		0.,
@@ -5651,6 +5658,10 @@ void OverlayWidget::showAndActivate() {
 		_widget->update();
 		activate();
 		return;
+	}
+	// 首次显示会同步绘制，先保持透明，窗口初始化完成后再计时。
+	if (_viewerHost && !_stories) {
+		prepareShowAnimation();
 	}
 	_body->show();
 	initNormalGeometry();
@@ -10056,6 +10067,7 @@ void OverlayWidget::clearAfterHide() {
 	_backdropRefreshTimer.cancel();
 	_fullScreenAnimation.stop();
 	_showAnimation.stop();
+	_showAnimationPending = false;
 	_hidingAnimated = false;
 	_widget->setAttribute(Qt::WA_TransparentForMouseEvents, false);
 	_recognitionResult = {};

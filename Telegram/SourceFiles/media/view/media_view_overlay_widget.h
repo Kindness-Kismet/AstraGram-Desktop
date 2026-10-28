@@ -383,6 +383,7 @@ private:
 	[[nodiscard]] QColor backdropColor() const;
 	// 窗口内开合动画的进度，打开时 0 到 1，收起时回到 0。
 	[[nodiscard]] float64 shownProgress() const;
+	void prepareShowAnimation();
 	void startShowAnimation();
 	// 窗口内收起时先播放淡出动画，返回 false 表示需要立即关闭。
 	[[nodiscard]] bool startHideAnimation();
@@ -726,6 +727,7 @@ private:
 	Ui::Animations::Simple _fullScreenAnimation;
 	bool _fullscreenForVideo = false;
 	Ui::Animations::Simple _showAnimation;
+	bool _showAnimationPending = false;
 	bool _hidingAnimated = false;
 
 	base::weak_ptr<Window::Controller> _openedFrom;
