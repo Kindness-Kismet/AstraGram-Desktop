@@ -33,6 +33,7 @@
 #include <QContextMenuEvent>
 #include <cmath>
 #include <QLineEdit>
+#include <QTextEdit>
 #include <QComboBox>
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
@@ -393,18 +394,27 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 		return Result::Err(u"usage: control.input <objectName> <base64>"_q);
 	}
 	const auto target = findControl(args.front());
-	const auto field = dynamic_cast<Ui::InputField*>(target);
-	if (!field || !field->isVisible() || !field->isEnabled()) {
+	if (!target || !target->isVisible() || !target->isEnabled()) {
 		return Result::Err(u"editable input not found"_q);
 	}
-	const auto previous = field->getLastText();
 	const auto text = QString::fromUtf8(
 		QByteArray::fromBase64(args[1].mid(4).toLatin1()));
-	field->setTextWithTags({ text, {} });
+	auto previous = QString();
+	if (const auto field = dynamic_cast<Ui::InputField*>(target)) {
+		previous = field->getLastText();
+		field->setTextWithTags({ text, {} });
+	} else if (const auto editor = qobject_cast<QTextEdit*>(target);
+			editor && !editor->isReadOnly()) {
+		previous = editor->toPlainText();
+		editor->selectAll();
+		editor->insertPlainText(text);
+	} else {
+		return Result::Err(u"editable input not found"_q);
+	}
 	return Result::Ok(Compact(json{
 		{ "previousText", previous.toStdString() },
 		{ "length", text.size() },
-		{ "height", field->height() },
+		{ "height", target->height() },
 	}));
 }
 
