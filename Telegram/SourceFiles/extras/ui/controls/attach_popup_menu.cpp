@@ -19,6 +19,14 @@ AttachMenu::AttachMenu(QWidget *parent)
 		_phase = phase;
 		if (phase == AnimatePhase::Shown) {
 			positionMenu();
+		} else if (phase == AnimatePhase::Hidden && _refreshAfterHide) {
+			// 重建会销毁菜单，等当前隐藏流程结束后再执行。
+			Ui::PostponeCall(this, [=] {
+				if (_phase == AnimatePhase::Hidden && _refreshAfterHide) {
+					const auto refresh = base::take(_refreshAfterHide);
+					refresh();
+				}
+			});
 		}
 	}, lifetime());
 	menu()->resizesFromInner() | rpl::on_next([=] {
@@ -47,6 +55,14 @@ void AttachMenu::setAutoHiding(bool enabled) {
 
 void AttachMenu::setPrepareCallback(Fn<void()> callback) {
 	_prepareCallback = std::move(callback);
+}
+
+bool AttachMenu::deferRefresh(Fn<void()> callback) {
+	if (_phase == AnimatePhase::Hidden) {
+		return false;
+	}
+	_refreshAfterHide = std::move(callback);
+	return true;
 }
 
 void AttachMenu::showMenu() {

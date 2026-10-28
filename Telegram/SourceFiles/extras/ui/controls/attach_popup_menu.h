@@ -13,6 +13,7 @@ public:
 	void setAnchor(not_null<QWidget*> button, bool hoverToOpen);
 	void setAutoHiding(bool enabled);
 	void setPrepareCallback(Fn<void()> callback);
+	[[nodiscard]] bool deferRefresh(Fn<void()> callback);
 
 protected:
 	bool eventFilter(QObject *watched, QEvent *event) override;
@@ -26,6 +27,7 @@ private:
 	QPointer<QWidget> _anchor;
 	base::Timer _hideTimer;
 	Fn<void()> _prepareCallback;
+	Fn<void()> _refreshAfterHide;
 	AnimatePhase _phase = AnimatePhase::Hidden;
 	bool _hoverToOpen = false;
 	bool _autoHiding = true;

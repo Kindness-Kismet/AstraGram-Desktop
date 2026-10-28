@@ -3113,8 +3113,16 @@ void ComposeControls::init() {
 		updateSubmitSettings();
 	}, _wrap->lifetime());
 
+	session().attachWebView().attachBotsUpdates(
+	) | rpl::on_next([=] {
+		if (_attachBotsMenu && _attachBotsMenu->deferRefresh([=] {
+			updateAttachBotsMenu();
+		})) {
+			return;
+		}
+		updateAttachBotsMenu();
+	}, _wrap->lifetime());
 	rpl::merge(
-		session().attachWebView().attachBotsUpdates(),
 		_voiceRecordBar->shownValue()
 			| rpl::filter(!rpl::mappers::_1) | rpl::to_empty,
 		_header->editMsgIdValue() | rpl::to_empty,
@@ -4214,6 +4222,11 @@ void ComposeControls::initSendButton() {
 		updateSendButtonType();
 		// 设备检测是异步的，结果到达后按新状态重建录制项。
 		if (_history) {
+			if (_attachBotsMenu && _attachBotsMenu->deferRefresh([=] {
+				updateAttachBotsMenu();
+			})) {
+				return;
+			}
 			updateAttachBotsMenu();
 		}
 	}, _send->lifetime());
@@ -6336,8 +6349,11 @@ void ComposeControls::initWebpageProcess() {
 		if (flags & Data::PeerUpdate::Flag::StarsPerMessage) {
 			updateFieldPlaceholder();
 		}
-		if (flags & (Data::PeerUpdate::Flag::Rights
-			| Data::PeerUpdate::Flag::StarsPerMessage)) {
+		if ((flags & (Data::PeerUpdate::Flag::Rights
+			| Data::PeerUpdate::Flag::StarsPerMessage))
+			&& (!_attachBotsMenu || !_attachBotsMenu->deferRefresh([=] {
+				updateAttachBotsMenu();
+			}))) {
 			updateAttachBotsMenu();
 		}
 		if (flags & (Data::PeerUpdate::Flag::Rights

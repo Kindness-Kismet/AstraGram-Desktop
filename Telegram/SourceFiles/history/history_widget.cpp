@@ -682,8 +682,16 @@ HistoryWidget::HistoryWidget(
 	_botKeyboardHide->hide();
 
 	session().attachWebView().requestBots();
+	session().attachWebView().attachBotsUpdates(
+	) | rpl::on_next([=] {
+		if (_attachBotsMenu && _attachBotsMenu->deferRefresh([=] {
+			refreshAttachBotsMenu();
+		})) {
+			return;
+		}
+		refreshAttachBotsMenu();
+	}, lifetime());
 	rpl::merge(
-		session().attachWebView().attachBotsUpdates(),
 		_voiceRecordBar->shownValue()
 			| rpl::filter(!rpl::mappers::_1) | rpl::to_empty,
 		session().changes().peerUpdates(
@@ -691,8 +699,16 @@ HistoryWidget::HistoryWidget(
 			| Data::PeerUpdate::Flag::StarsPerMessage
 		) | rpl::filter([=](const Data::PeerUpdate &update) {
 			return update.peer == _peer;
-		}) | rpl::to_empty,
-		ExtrasUi::recordMenuChanges()
+		}) | rpl::to_empty
+	) | rpl::on_next([=] {
+		if (_attachBotsMenu && _attachBotsMenu->deferRefresh([=] {
+			refreshAttachBotsMenu();
+		})) {
+			return;
+		}
+		refreshAttachBotsMenu();
+	}, lifetime());
+	ExtrasUi::recordMenuChanges(
 	) | rpl::on_next([=] {
 		refreshAttachBotsMenu();
 	}, lifetime());
@@ -743,6 +759,11 @@ HistoryWidget::HistoryWidget(
 			updateSendButtonType();
 		}
 		// 设备检测是异步的，结果到达后按新状态重建录制项。
+		if (_attachBotsMenu && _attachBotsMenu->deferRefresh([=] {
+			refreshAttachBotsMenu();
+		})) {
+			return;
+		}
 		refreshAttachBotsMenu();
 	}, lifetime());
 
@@ -943,6 +964,12 @@ HistoryWidget::HistoryWidget(
 	}, lifetime());
 
 	rpl::merge(
+		ExtrasUi::attachMenuChanges(),
+		ExtrasSettings::getInstance().showAttachPopupChanges() | rpl::to_empty
+	) | rpl::on_next([=] {
+		refreshAttachBotsMenu();
+	}, lifetime());
+	rpl::merge(
 		ExtrasSettings::getInstance().showAttachButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showSendAsButtonInMessageFieldChanges() | rpl::to_empty,
 		ExtrasSettings::getInstance().showEmojiButtonInMessageFieldChanges() | rpl::to_empty,
@@ -958,7 +985,6 @@ HistoryWidget::HistoryWidget(
 		ExtrasSettings::getInstance().removeMessageTailChanges() | rpl::to_empty
 	) | rpl::on_next([=] {
 		refreshSendGiftToggle();
-		refreshAttachBotsMenu();
 		updateHistoryGeometry();
 		updateControlsVisibility();
 		updateControlsGeometry();
