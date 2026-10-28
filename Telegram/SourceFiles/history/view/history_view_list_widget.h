@@ -359,6 +359,11 @@ public:
 	[[nodiscard]] int itemTop(not_null<const Element*> view) const;
 	std::optional<int> scrollTopForView(not_null<Element*> view) const;
 	[[nodiscard]] bool animatedScrolling() const;
+#ifdef _DEBUG
+	[[nodiscard]] const std::vector<not_null<Element*>> &debugItems() const {
+		return _items;
+	}
+#endif
 	bool isAbovePosition(Data::MessagePosition position) const;
 	bool isBelowPosition(Data::MessagePosition position) const;
 	void highlightMessage(

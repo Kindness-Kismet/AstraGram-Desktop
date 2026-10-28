@@ -15,6 +15,8 @@
 #include "dialogs/dialogs_main_list.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "history/history_inner_widget.h"
+#include "history/view/media/history_view_media.h"
 #include "history/view/history_view_chat_section.h"
 #include "history/view/history_view_list_widget.h"
 #include "ui/widgets/elastic_scroll.h"
@@ -216,6 +218,98 @@ using json = nlohmann::json;
 	return jobStarted(job);
 }
 
+// 只采集现有布局，不触发排版、重绘或网络请求。
+[[nodiscard]] Result cacheLayout(const QStringList &args) {
+	if (args.size() != 1) {
+		return Result::Err(u"usage: cache.layout <peerId>"_q);
+	}
+	const auto session = ActiveSession();
+	const auto peer = session ? findPeer(args.front()) : nullptr;
+	const auto controller = session ? session->tryResolveWindow() : nullptr;
+	if (!peer || !controller) {
+		return Result::Err(u"no session window or unknown peer"_q);
+	}
+	const auto history = session->data().history(peer);
+	auto result = json{
+		{ "timeMs", crl::now() },
+		{ "peerId", peer->id.value },
+		{ "visible", false },
+	};
+	auto rows = json::array();
+	auto overlays = json::array();
+	const auto widgets = controller->content()->findChildren<QWidget*>();
+	for (const auto widget : widgets) {
+		const auto name = widget->objectName();
+		if (widget->isVisible()
+			&& (name == u"history-first-load-fade"_q
+				|| name == u"history-cache-refresh-fade"_q)) {
+			overlays.push_back({ { "x", widget->x() }, { "y", widget->y() },
+				{ "width", widget->width() }, { "height", widget->height() },
+				{ "name", name.toStdString() } });
+		}
+	}
+	for (const auto widget : widgets) {
+		if (!widget->isVisible()) {
+			continue;
+		}
+		const auto legacy = dynamic_cast<HistoryInner*>(widget);
+		const auto list = dynamic_cast<HistoryView::ListWidget*>(widget);
+		if (!legacy && !list) {
+			continue;
+		}
+		auto scroll = static_cast<Ui::ElasticScroll*>(nullptr);
+		for (auto parent = widget->parentWidget(); parent; parent = parent->parentWidget()) {
+			if ((scroll = dynamic_cast<Ui::ElasticScroll*>(parent))) {
+				break;
+			}
+		}
+		if (!scroll) {
+			continue;
+		}
+		const auto append = [&](not_null<HistoryView::Element*> view, int top) {
+			if (top < 0 || view->height() <= 0 || view->data()->history() != history) {
+				return;
+			}
+			const auto y = top - scroll->scrollTop();
+			if (y + view->height() <= 0 || y >= scroll->height()) {
+				return;
+			}
+			const auto media = view->media();
+			rows.push_back({
+				{ "id", view->data()->id.bare },
+				{ "y", y }, { "top", top },
+				{ "width", view->width() }, { "height", view->height() },
+				{ "out", view->data()->out() },
+				{ "mediaWidth", media ? media->width() : 0 },
+				{ "mediaHeight", media ? media->height() : 0 },
+			});
+		};
+		if (legacy) {
+			for (const auto &block : history->blocks) {
+				for (const auto &view : block->messages) {
+					append(view.get(), legacy->itemTop(view.get()));
+				}
+			}
+		} else {
+			for (const auto view : list->debugItems()) {
+				append(view, list->itemTop(view));
+			}
+		}
+		const auto origin = scroll->mapTo(controller->content(), QPoint());
+		result["visible"] = true;
+		result["view"] = legacy ? "legacy" : "new";
+		result["scrollTop"] = scroll->scrollTop();
+		result["scrollMaximum"] = scroll->scrollTopMax();
+		result["contentHeight"] = widget->height();
+		result["viewport"] = { { "x", origin.x() }, { "y", origin.y() },
+			{ "width", scroll->width() }, { "height", scroll->height() } };
+		break;
+	}
+	result["rows"] = std::move(rows);
+	result["overlays"] = std::move(overlays);
+	return Result::Ok(Compact(result));
+}
+
 [[nodiscard]] Result cacheFlush(const QStringList &args) {
 	if (!args.empty()) {
 		return Result::Err(u"usage: cache.flush"_q);
@@ -234,6 +328,7 @@ const HandlerMap &SessionHandlers() {
 	static const auto result = HandlerMap{
 		{ u"simulation.enter"_q, &enterSimulationMode },
 		{ u"cache.state"_q, &cacheState },
+		{ u"cache.layout"_q, &cacheLayout },
 		{ u"cache.read"_q, &cacheRead },
 		{ u"cache.flush"_q, &cacheFlush },
 	};
