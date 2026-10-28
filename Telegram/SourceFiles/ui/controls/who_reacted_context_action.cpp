@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_custom_emoji.h"
 #include "ui/emoji_config.h"
 #include "ui/painter.h"
+#include "ui/style/style_widget_color.h"
 #include "ui/power_saving.h"
 #include "ui/ui_utility.h"
 #include "lang/lang_keys.h"
@@ -503,11 +504,11 @@ void Action::paint(Painter &p) {
 				: st::whoReadPlayed);
 		icon.paint(p, st::defaultWhoRead.iconPosition, width());
 	}
-	p.setPen(!enabled
+	p.setPen(ResolveWidgetColor(this, (!enabled
 		? _st.itemFgDisabled
 		: selected
 		? _st.itemFgOver
-		: _st.itemFg);
+		: _st.itemFg)->c, WidgetColorRole::Text));
 	_text.drawLeftElided(
 		p,
 		st::defaultWhoRead.itemPadding.left(),
@@ -720,7 +721,9 @@ void WhenAction::paint(Painter &p) {
 		? st::whoReadChecksOver
 		: st::whoReadChecks;
 	icon.paint(p, st::whenReadIconPosition, width());
-	p.setPen(loading ? _st.itemFgDisabled : _st.itemFg);
+	p.setPen(ResolveWidgetColor(this,
+		(loading ? _st.itemFgDisabled : _st.itemFg)->c,
+		WidgetColorRole::Text));
 	_text.drawLeftElided(
 		p,
 		st::whenReadPadding.left(),
