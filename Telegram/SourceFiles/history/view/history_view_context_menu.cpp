@@ -2082,7 +2082,8 @@ void FillContextMenuItems(
 		if (const auto document = media ? media->getDocument() : nullptr) {
 			AddDocumentActions(result, document, view->data(), list);
 		}
-		if (!link && (view->hasVisibleText() || mediaHasTextForCopy)) {
+		if ((!link || view->allowTextSelectionByHandler(link))
+			&& (view->hasVisibleText() || mediaHasTextForCopy)) {
 			if (!list->hasCopyRestriction(view->data())) {
 				const auto asGroup = (request.pointState != PointState::GroupPart);
 				result->addAction(tr::lng_context_copy_text(tr::now), [=] {
