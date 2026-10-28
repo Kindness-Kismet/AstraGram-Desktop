@@ -81,7 +81,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/ui_utility.h"
 #include "ui/vertical_list.h"
 #include "ui/widgets/checkbox.h"
-#include "ui/widgets/dropdown_menu.h"
+#include "extras/ui/controls/attach_popup_menu.h"
 #include "ui/widgets/menu/menu_action.h"
 #include "ui/widgets/menu/menu_item_base.h"
 #include "ui/widgets/popup_menu.h"
@@ -3047,7 +3047,7 @@ void ChooseAndSendLocation(
 	session->locationPickers().emplace(action, picker);
 }
 
-std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
+std::unique_ptr<ExtrasUi::AttachMenu> MakeAttachBotsMenu(
 		not_null<QWidget*> parent,
 		not_null<Window::SessionController*> controller,
 		not_null<PeerData*> peer,
@@ -3056,9 +3056,7 @@ std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
 		Fn<void(bool)> attach,
 		Fn<TextWithTags()> composeFieldText,
 		Fn<void()> composeFieldMigrated) {
-	auto result = std::make_unique<Ui::DropdownMenu>(
-		parent,
-		st::dropdownMenuWithIcons);
+	auto result = std::make_unique<ExtrasUi::AttachMenu>(parent);
 	const auto bots = &peer->session().attachWebView();
 	const auto raw = result.get();
 	const auto &settings = ExtrasSettings::getInstance();
@@ -3182,7 +3180,7 @@ std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
 			if (shown) {
 				raw->setAutoHiding(false);
 			} else {
-				raw->hideAnimated();
+				raw->hideMenu();
 				raw->setAutoHiding(true);
 			}
 		}, action->lifetime());
@@ -3217,7 +3215,6 @@ std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
 			if (wanted == (state->action != nullptr)) {
 				return;
 			}
-			raw->finishAnimating();
 			menu->finishAnimating();
 			menu->clearSelection();
 			if (wanted) {
@@ -3268,7 +3265,7 @@ std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
 				| Data::PeerUpdate::Flag::Name
 				| Data::PeerUpdate::Flag::SupportInfo
 		) | rpl::on_next(schedule, raw->lifetime());
-		raw->setShowStartCallback(update);
+		raw->setPrepareCallback(update);
 		raw->shownValue() | rpl::filter(rpl::mappers::_1) | rpl::on_next(
 			schedule,
 			raw->lifetime());

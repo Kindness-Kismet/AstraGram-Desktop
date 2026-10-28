@@ -32,6 +32,7 @@ struct ComposeControls;
 } // namespace style
 
 namespace ExtrasUi {
+class AttachMenu;
 class FieldHeightAnimation;
 struct RecordMenuOptions;
 } // namespace ExtrasUi
@@ -78,7 +79,6 @@ class RoundButton;
 class EmojiButton;
 class SendAsButton;
 class SilentToggle;
-class DropdownMenu;
 struct PreparedBundle;
 struct PreparedList;
 struct SendStarButtonState;
@@ -613,7 +613,7 @@ private:
 
 	std::unique_ptr<InlineBots::Layout::Widget> _inlineResults;
 	std::unique_ptr<ChatHelpers::TabbedPanel> _tabbedPanel;
-	std::unique_ptr<Ui::DropdownMenu> _attachBotsMenu;
+	std::unique_ptr<ExtrasUi::AttachMenu> _attachBotsMenu;
 	std::unique_ptr<ChatHelpers::FieldAutocomplete> _autocomplete;
 	std::unique_ptr<Ui::Emoji::SuggestionsController> _emojiSuggestions;
 

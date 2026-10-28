@@ -2,20 +2,18 @@
 
 class PeerData;
 
-namespace Ui {
-class DropdownMenu;
-}
-
 namespace Webrtc {
 enum class RecordAvailability : uchar;
 }
 
 namespace ExtrasUi {
 
+class AttachMenu;
+
 // 加号自身不触发操作：开启悬停弹出时悬停展开，关闭时点击只切换菜单。
 void setupAttachMenu(
 	not_null<QWidget*> button,
-	not_null<Ui::DropdownMenu*> menu);
+	not_null<AttachMenu*> menu);
 
 // 附件菜单任一项的显示开关变化时重建菜单。
 [[nodiscard]] rpl::producer<> attachMenuChanges();
@@ -37,7 +35,7 @@ struct RecordMenuOptions {
 
 // 在菜单末尾追加可展开的“录制消息”分组，前面有其他项时先加分隔线。
 void addRecordMenu(
-	not_null<Ui::DropdownMenu*> menu,
+	not_null<AttachMenu*> menu,
 	RecordMenuOptions options,
 	Fn<void(bool round)> record);
 

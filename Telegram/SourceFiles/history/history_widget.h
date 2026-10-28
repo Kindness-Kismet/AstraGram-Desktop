@@ -34,6 +34,7 @@ struct CachedHistorySlice;
 } // namespace Extras
 
 namespace ExtrasUi {
+class AttachMenu;
 class FieldHeightAnimation;
 class FloatingSurfaceHost;
 struct RecordMenuOptions;
@@ -80,7 +81,6 @@ struct Contact;
 
 namespace Ui {
 class InnerDropdown;
-class DropdownMenu;
 class PlainShadow;
 class IconButton;
 class EmojiButton;
@@ -1046,7 +1046,7 @@ private:
 
 	object_ptr<InlineBots::Layout::Widget> _inlineResults = { nullptr };
 	std::unique_ptr<TabbedPanel> _tabbedPanel;
-	std::unique_ptr<Ui::DropdownMenu> _attachBotsMenu;
+	std::unique_ptr<ExtrasUi::AttachMenu> _attachBotsMenu;
 	std::unique_ptr<HistoryView::Controls::StashManager> _stash;
 	QPointer<SendFilesBox> _sendFilesBox;
 

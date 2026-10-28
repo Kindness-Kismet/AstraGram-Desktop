@@ -22,10 +22,13 @@ namespace Data {
 class Thread;
 } // namespace Data
 
+namespace ExtrasUi {
+class AttachMenu;
+} // namespace ExtrasUi
+
 namespace Ui {
 class Show;
 class GenericBox;
-class DropdownMenu;
 } // namespace Ui
 
 namespace Ui::BotWebView {
@@ -504,7 +507,7 @@ private:
 
 };
 
-[[nodiscard]] std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
+[[nodiscard]] std::unique_ptr<ExtrasUi::AttachMenu> MakeAttachBotsMenu(
 	not_null<QWidget*> parent,
 	not_null<Window::SessionController*> controller,
 	not_null<PeerData*> peer,

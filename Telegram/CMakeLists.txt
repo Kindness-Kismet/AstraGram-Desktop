@@ -261,6 +261,8 @@ set(extras_files
         extras/ui/controls/download_header_button.h
         extras/ui/controls/attach_menu.cpp
         extras/ui/controls/attach_menu.h
+        extras/ui/controls/attach_popup_menu.cpp
+        extras/ui/controls/attach_popup_menu.h
         extras/ui/controls/proxy_type_field.cpp
         extras/ui/controls/proxy_type_field.h
         extras/ui/context_menu/context_menu.cpp

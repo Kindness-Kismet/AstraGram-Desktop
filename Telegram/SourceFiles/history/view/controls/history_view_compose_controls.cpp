@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/ui/components/field_height_animation.h"
 #include "extras/ui/components/floating_surface.h"
 #include "extras/ui/controls/attach_menu.h"
+#include "extras/ui/controls/attach_popup_menu.h"
 #include "history/view/controls/history_view_bot_menu_button.h"
 #include "mainwidget.h"
 
@@ -124,7 +125,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/ui_utility.h"
 #include "ui/widgets/fields/input_field.h"
-#include "ui/widgets/dropdown_menu.h"
 #include "ui/text/format_values.h"
 #include "ui/controls/compose_ai_button_factory.h"
 #include "ui/controls/emoji_button.h"
@@ -2467,7 +2467,7 @@ void ComposeControls::showStarted() {
 		_tabbedPanel->hideFast();
 	}
 	if (_attachBotsMenu) {
-		_attachBotsMenu->hideFast();
+		_attachBotsMenu->hideMenu(true);
 	}
 	_voiceRecordBar->hideFast();
 	if (_autocomplete) {
@@ -2487,7 +2487,7 @@ void ComposeControls::showFinished() {
 		_tabbedPanel->hideFast();
 	}
 	if (_attachBotsMenu) {
-		_attachBotsMenu->hideFast();
+		_attachBotsMenu->hideMenu(true);
 	}
 	_voiceRecordBar->hideFast();
 	if (_autocomplete) {
@@ -2872,7 +2872,7 @@ void ComposeControls::hidePanelsAnimated() {
 		_tabbedPanel->hideAnimated();
 	}
 	if (_attachBotsMenu) {
-		_attachBotsMenu->hideAnimated();
+		_attachBotsMenu->hideMenu();
 	}
 	if (_inlineResults) {
 		_inlineResults->hideAnimated();
@@ -5690,9 +5690,6 @@ void ComposeControls::updateOuterGeometry(QRect rect) {
 	if (_tabbedPanel) {
 		_tabbedPanel->moveBottomRight(bottom, rect.x() + rect.width());
 	}
-	if (_attachBotsMenu) {
-		_attachBotsMenu->moveToLeft(rect.x(), bottom - _attachBotsMenu->height());
-	}
 }
 
 void ComposeControls::updateMessagesTTLShown() {
@@ -5808,8 +5805,7 @@ void ComposeControls::updateAttachBotsMenu() {
 	} else {
 		// 计划消息、快捷回复等输入区只提供照片和文件选项。
 		const auto &settings = ExtrasSettings::getInstance();
-		_attachBotsMenu = std::make_unique<Ui::DropdownMenu>(
-			_panelsParent, st::dropdownMenuWithIcons);
+		_attachBotsMenu = std::make_unique<ExtrasUi::AttachMenu>(_panelsParent);
 		if (settings.showPhotoInAttachMenu()) {
 			_attachBotsMenu->addAction(tr::lng_attach_photo_or_video(tr::now), [=] {
 				_attachRequests.fire_copy(true);
@@ -5826,9 +5822,7 @@ void ComposeControls::updateAttachBotsMenu() {
 	}
 	const auto record = recordMenuOptions();
 	if (!_attachBotsMenu && record.shown) {
-		_attachBotsMenu = std::make_unique<Ui::DropdownMenu>(
-			_panelsParent,
-			st::dropdownMenuWithIcons);
+		_attachBotsMenu = std::make_unique<ExtrasUi::AttachMenu>(_panelsParent);
 	}
 	if (!_attachBotsMenu) {
 		return;
@@ -5837,10 +5831,6 @@ void ComposeControls::updateAttachBotsMenu() {
 		startRecordFromMenu(round);
 	});
 	ExtrasUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get());
-	_attachBotsMenu->heightValue(
-	) | rpl::on_next([=] {
-		updateOuterGeometry(_wrap->geometry());
-	}, _attachBotsMenu->lifetime());
 }
 
 ExtrasUi::RecordMenuOptions ComposeControls::recordMenuOptions() const {

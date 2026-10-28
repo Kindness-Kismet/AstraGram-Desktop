@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_widget.h"
 
 #include "extras/ui/controls/attach_menu.h"
+#include "extras/ui/controls/attach_popup_menu.h"
 
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
@@ -44,7 +45,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/inner_dropdown.h"
-#include "ui/widgets/dropdown_menu.h"
 #include "ui/widgets/labels.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/effects/message_sending_animation_controller.h"
@@ -802,9 +802,7 @@ void HistoryWidget::refreshAttachBotsMenu() {
 		}));
 	const auto record = recordMenuOptions();
 	if (!_attachBotsMenu && record.shown) {
-		_attachBotsMenu = std::make_unique<Ui::DropdownMenu>(
-			this,
-			st::dropdownMenuWithIcons);
+		_attachBotsMenu = std::make_unique<ExtrasUi::AttachMenu>(this);
 	}
 	if (!_attachBotsMenu) {
 		return;
@@ -813,10 +811,6 @@ void HistoryWidget::refreshAttachBotsMenu() {
 		startRecordFromMenu(round);
 	});
 	ExtrasUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get());
-	_attachBotsMenu->heightValue(
-	) | rpl::on_next([=] {
-		moveFieldControls();
-	}, _attachBotsMenu->lifetime());
 }
 
 ExtrasUi::RecordMenuOptions HistoryWidget::recordMenuOptions() const {
