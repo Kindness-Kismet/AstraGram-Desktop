@@ -45,7 +45,6 @@ struct StoriesContext;
 } // namespace Data
 
 namespace Ui {
-class DropdownMenu;
 class PopupMenu;
 class LinkButton;
 class RoundButton;
@@ -912,7 +911,7 @@ private:
 	bool _mousePressed = false;
 
 	base::unique_qptr<Ui::PopupMenu> _menu;
-	object_ptr<Ui::DropdownMenu> _dropdown;
+	base::unique_qptr<Ui::PopupMenu> _dropdown;
 
 	base::unique_qptr<SponsoredButton> _sponsoredButton;
 	object_ptr<Ui::RoundButton> _voteButton = { nullptr };

@@ -79,6 +79,8 @@ PlaybackControls::PlaybackControls(
 	_fadeAnimation->setUpdatedCallback([=](float64 opacity) {
 		fadeUpdated(opacity);
 	});
+	setObjectName(u"media.playbackControls"_q);
+	_speedToggle->setObjectName(u"media.playbackSettings"_q);
 
 	_speedToggle->setSpeed(_speedControllable
 		? _delegate->playbackControlsCurrentSpeed(false)
@@ -88,6 +90,7 @@ PlaybackControls::PlaybackControls(
 	if (const auto controller = _speedController.get()) {
 		// 查看器里的设置菜单必须点击才弹出，避免划过时误触。
 		controller->setShowOnHover(false);
+		controller->usePopupMenu();
 		controller->menuToggledValue(
 		) | rpl::on_next([=](bool toggled) {
 			_speedToggle->setActive(toggled);
@@ -585,7 +588,7 @@ void PlaybackControls::mousePressEvent(QMouseEvent *e) {
 }
 
 bool PlaybackControls::hasMenu() const {
-	return _speedController && _speedController->menu();
+	return _speedController && _speedController->hasMenu();
 }
 
 bool PlaybackControls::dragging() const {

@@ -15,7 +15,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/menu/menu_action.h"
 #include "ui/widgets/continuous_sliders.h"
 #include "ui/widgets/dropdown_menu.h"
+#include "ui/widgets/popup_menu.h"
 #include "ui/painter.h"
+#include "ui/style/style_widget_color.h"
 #include "ui/ui_utility.h"
 #include "styles/style_media_player.h"
 #include "styles/style_widgets.h"
@@ -119,11 +121,13 @@ SpeedSliderItem::SpeedSliderItem(
 	) | rpl::on_next([=](const QRect &clip) {
 		auto p = Painter(this);
 
-		p.fillRect(clip, _st.dropdown.menu.itemBg);
+		p.fillRect(clip, Ui::ResolveWidgetColor(this,
+			_st.dropdown.menu.itemBg->c, Ui::WidgetColorRole::Background));
 
 		const auto left = (_st.sliderPadding.left() - _text.maxWidth()) / 2;
 		const auto top = _st.dropdown.menu.itemPadding.top();
-		p.setPen(_st.dropdown.menu.itemFg);
+		p.setPen(Ui::ResolveWidgetColor(this,
+			_st.dropdown.menu.itemFg->c, Ui::WidgetColorRole::Text));
 		_text.drawLeftElided(p, left, top, _text.maxWidth(), width());
 	}, lifetime());
 
@@ -353,6 +357,13 @@ WithDropdownController::WithDropdownController(
 	}, button->lifetime());
 }
 
+WithDropdownController::~WithDropdownController() {
+	if (_popupMenu) {
+		_popupMenu->lifetime().destroy();
+		_popupMenu = nullptr;
+	}
+}
+
 not_null<Ui::AbstractButton*> WithDropdownController::button() const {
 	return _button;
 }
@@ -361,7 +372,33 @@ Ui::DropdownMenu *WithDropdownController::menu() const {
 	return _menu.get();
 }
 
+bool WithDropdownController::hasMenu() const {
+	return _menu || _popupMenu;
+}
+
+void WithDropdownController::usePopupMenu() {
+	Expects(!hasMenu());
+	_usePopupMenu = true;
+}
+
+bool WithDropdownController::usesPopupMenu() const {
+	return _usePopupMenu;
+}
+
 void WithDropdownController::updateDropdownGeometry() {
+	if (_popupMenu) {
+		using Origin = Ui::PanelAnimation::Origin;
+		const auto right = (_menuAlign & Qt::AlignRight);
+		const auto top = (_menuAlign & Qt::AlignTop);
+		_popupMenu->setForcedOrigin(top
+			? (right ? Origin::TopRight : Origin::TopLeft)
+			: (right ? Origin::BottomRight : Origin::BottomLeft));
+		const auto anchor = QPoint(
+			right ? _button->width() + _menuPosition.x() : -_menuPosition.x(),
+			top ? _button->height() + _menuPosition.y() : -_menuPosition.y());
+		_popupMenu->prepareGeometryFor(_button->mapToGlobal(anchor));
+		return;
+	}
 	if (!_menu) {
 		return;
 	}
@@ -398,22 +435,6 @@ rpl::producer<bool> WithDropdownController::menuToggledValue() const {
 	return _menuToggled.value();
 }
 
-void WithDropdownController::hideTemporarily() {
-	if (_menu && !_menu->isHidden()) {
-		_temporarilyHidden = true;
-		_menu->hide();
-	}
-}
-
-void WithDropdownController::showBack() {
-	if (_temporarilyHidden) {
-		_temporarilyHidden = false;
-		if (_menu && _menu->isHidden()) {
-			_menu->show();
-		}
-	}
-}
-
 void WithDropdownController::setOtherDropdownCheck(
 		Fn<bool(QPoint globalPosition)> check) {
 	_otherDropdownCheck = std::move(check);
@@ -424,6 +445,10 @@ void WithDropdownController::setShowOnHover(bool enabled) {
 }
 
 void WithDropdownController::showMenu() {
+	if (_usePopupMenu) {
+		showPopupMenu();
+		return;
+	}
 	if (_menu) {
 		return;
 	}
@@ -457,7 +482,7 @@ void WithDropdownController::showMenu() {
 		_menuToggled = false;
 	});
 	_button->installEventFilter(raw);
-	fillMenu(raw);
+	fillMenu(raw->menu());
 	updateDropdownGeometry();
 	const auto origin = [&] {
 		using Origin = Ui::PanelAnimation::Origin;
@@ -471,6 +496,33 @@ void WithDropdownController::showMenu() {
 	}();
 	_menu->showAnimated(origin);
 	_menuToggled = true;
+}
+
+void WithDropdownController::showPopupMenu() {
+	if (_popupMenu) {
+		_popupMenu->hideMenu();
+		return;
+	}
+	_popupMenu = base::make_unique_q<Ui::PopupMenu>(_menuParent, st::popupMenuWithIcons);
+	const auto raw = _popupMenu.get();
+	raw->setObjectName(u"media.playbackMenu"_q);
+	raw->animatePhaseValue(
+	) | rpl::on_next([=](Ui::PopupMenu::AnimatePhase phase) {
+		if (phase == Ui::PopupMenu::AnimatePhase::StartShow) {
+			_menuToggled = true;
+		} else if (phase == Ui::PopupMenu::AnimatePhase::StartHide) {
+			_menuToggled = false;
+		}
+	}, raw->lifetime());
+	raw->events(
+	) | rpl::filter([](not_null<QEvent*> event) {
+		return event->type() == QEvent::Hide;
+	}) | rpl::on_next([=] {
+		_menuToggled = false;
+	}, raw->lifetime());
+	fillMenu(raw->menu());
+	updateDropdownGeometry();
+	raw->popupPrepared();
 }
 
 void WithDropdownController::handleMenuMove(QPoint globalPosition) {
@@ -511,7 +563,7 @@ OrderController::OrderController(
 	}, button->lifetime());
 }
 
-void OrderController::fillMenu(not_null<Ui::DropdownMenu*> menu) {
+void OrderController::fillMenu(not_null<Ui::Menu::Menu*> menu) {
 	const auto addOrderAction = [&](OrderMode mode) {
 		struct Fields {
 			QString label;
@@ -543,7 +595,7 @@ void OrderController::fillMenu(not_null<Ui::DropdownMenu*> menu) {
 			Unexpected("Order mode in addOrderAction.");
 		}();
 		menu->addAction(base::make_unique_q<Ui::Menu::Action>(
-			menu->menu(),
+			menu,
 			(active
 				? st::mediaPlayerOrderMenuActive
 				: st::mediaPlayerOrderMenu),
@@ -673,11 +725,14 @@ void SpeedController::setQuality(VideoQuality quality) {
 	_changeQuality(quality);
 }
 
-void SpeedController::fillMenu(not_null<Ui::DropdownMenu*> menu) {
+void SpeedController::fillMenu(not_null<Ui::Menu::Menu*> menu) {
+	const auto &st = usesPopupMenu()
+		? st::mediaPlayerSpeedMenu
+		: _st.menu;
 	if (_lookup) {
 		FillSpeedMenu(
-			menu->menu(),
-			_st.menu,
+			menu,
+			st,
 			_speedChanged.events_starting_with(speed()),
 			[=](float64 speed) { setSpeed(speed); save(); },
 			!_qualities.empty());
@@ -686,8 +741,7 @@ void SpeedController::fillMenu(not_null<Ui::DropdownMenu*> menu) {
 		return;
 	}
 	_quality = _lookupQuality();
-	const auto raw = menu->menu();
-	const auto &st = _st.menu;
+	const auto raw = menu;
 	if (_lookup) {
 		raw->addSeparator(&st.dropdown.menu.separator);
 	}

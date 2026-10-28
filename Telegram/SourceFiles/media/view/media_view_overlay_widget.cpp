@@ -29,7 +29,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/shortcuts.h"
 #include "ui/widgets/menu/menu_add_action_callback.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
-#include "ui/widgets/dropdown_menu.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/tooltip.h"
@@ -729,7 +728,6 @@ OverlayWidget::OverlayWidget()
 , _radial([=](crl::time now) { return radialAnimationCallback(now); })
 , _lastAction(-st::mediaviewDeltaFromLastAction, -st::mediaviewDeltaFromLastAction)
 , _stateAnimation([=](crl::time now) { return stateAnimationCallback(now); })
-, _dropdown(_body, st::dropdownMenuWithIcons)
 , _speedBoostTicker([=] {
 	updateSpeedBoost();
 	return isSpeedBoostShown();
@@ -1026,6 +1024,8 @@ OverlayWidget::OverlayWidget()
 	}, lifetime());
 
 	_window->setTitle(tr::lng_mediaview_title(tr::now));
+	_window->setObjectName(u"media.viewer"_q);
+	_body->setObjectName(u"media.viewerBody"_q);
 	_window->setTitleStyle(st::mediaviewTitle);
 
 	if constexpr (Platform::IsMac()) {
@@ -1095,8 +1095,6 @@ OverlayWidget::OverlayWidget()
 	_docDownload->addClickHandler([=] { downloadMedia(); });
 	_docSaveAs->addClickHandler([=] { saveAs(); });
 	_docCancel->addClickHandler([=] { saveCancel(); });
-
-	_dropdown->setHiddenCallback([this] { dropdownHidden(); });
 
 	orderWidgets();
 }
@@ -3533,10 +3531,11 @@ void OverlayWidget::clearSession() {
 }
 
 OverlayWidget::~OverlayWidget() {
+	if (_dropdown) {
+		_dropdown->lifetime().destroy();
+		_dropdown = nullptr;
+	}
 	clearSession();
-
-	// Otherwise dropdownHidden() may be called from the destructor.
-	_dropdown.destroy();
 }
 
 void OverlayWidget::assignMediaPointer(DocumentData *document) {
@@ -3811,7 +3810,7 @@ void OverlayWidget::hideControls(bool force) {
 		_helper->setControlsOpacity(1.);
 		return;
 	} else if (!force) {
-		if (!_dropdown->isHidden()
+		if ((_dropdown && !_dropdown->isHidden())
 			|| (_streamed
 				&& _streamed->controls
 				&& _streamed->controls->hasMenu())
@@ -4340,7 +4339,9 @@ void OverlayWidget::copyMedia() {
 	if (showCopyMediaRestriction()) {
 		return;
 	}
-	_dropdown->hideAnimated(Ui::DropdownMenu::HideOption::IgnoreShow);
+	if (_dropdown) {
+		_dropdown->hideMenu();
+	}
 	if (_document) {
 		const auto filepath = _document->filepath(true);
 		auto image = transformedShownContent();
@@ -8769,7 +8770,9 @@ void OverlayWidget::setContext(
 			{ story->peer->id, story->id });
 		if (maybeStory) {
 			_stories->show(*maybeStory, story->within);
-			_dropdown->raise();
+			if (_dropdown) {
+				_dropdown->raise();
+			}
 		}
 	} else {
 		_message = nullptr;
@@ -9719,6 +9722,10 @@ bool OverlayWidget::handleContextMenu(std::optional<QPoint> position) {
 	_menu = base::make_unique_q<Ui::PopupMenu>(
 		_embeddedHost ? _body->window() : _window.get(),
 		st::popupMenuWithIcons);
+	_menu->setObjectName(u"media.contextMenu"_q);
+	if (_dropdown) {
+		_dropdown->hideMenu(true);
+	}
 	fillContextMenuActions(Ui::Menu::CreateAddActionCallback(_menu));
 
 	if (_menu->empty()) {
@@ -9864,7 +9871,7 @@ bool OverlayWidget::filterApplicationEvent(
 			const auto layer = _layerBg->topShownLayer();
 			for (auto target = widget; target; target = target->parentWidget()) {
 				if (target == layer
-					|| (target == _dropdown.data() && !_dropdown->isHidden())) {
+					|| dynamic_cast<Ui::PopupMenu*>(target)) {
 					return false;
 				}
 			}
@@ -9993,6 +10000,9 @@ Window::SessionController *OverlayWidget::findWindow(bool switchTo) const {
 // #TODO unite and check
 void OverlayWidget::clearBeforeHide() {
 	Ui::Tooltip::Hide();
+	if (_dropdown) {
+		_dropdown->hideMenu(true);
+	}
 	_closeByClickTimer.cancel();
 	ExtrasState::disableGhostModeOnStoryClose(_storiesSession);
 	checkSingleViewMediaBurn();
@@ -10078,27 +10088,44 @@ void OverlayWidget::receiveMouse() {
 }
 
 void OverlayWidget::showDropdown() {
-	_dropdown->clearActions();
+	if (_menu) {
+		_menu->hideMenu(true);
+	}
+	if (_dropdown) {
+		_dropdown->lifetime().destroy();
+	}
+	_dropdown = base::make_unique_q<Ui::PopupMenu>(_body, st::popupMenuWithIcons);
+	const auto raw = _dropdown.get();
+	raw->setObjectName(u"media.moreMenu"_q);
+	raw->events(
+	) | rpl::filter([](not_null<QEvent*> event) {
+		return event->type() == QEvent::Hide;
+	}) | rpl::on_next([=] {
+		if (_dropdown.get() == raw) {
+			dropdownHidden();
+		}
+	}, raw->lifetime());
 	fillContextMenuActions(Ui::Menu::CreateAddActionCallback(_dropdown));
+	if (_dropdown->empty()) {
+		_dropdown = nullptr;
+		return;
+	}
 	moveDropdown();
-	_dropdown->showAnimated(lightboxStyle()
-		? Ui::PanelAnimation::Origin::TopRight
-		: Ui::PanelAnimation::Origin::BottomRight);
-	_dropdown->setFocus();
+	_dropdown->popupPrepared();
 	if (_stories) {
 		_stories->menuShown(true);
 	}
 }
 
 void OverlayWidget::moveDropdown() {
-	if (!lightboxStyle()) {
-		_dropdown->moveToRight(0, height() - _dropdown->height());
-		return;
-	}
-	// 更多按钮在顶栏，菜单从按钮下方展开。
-	_dropdown->moveToRight(
-		width() - rect::right(_moreNav),
-		rect::bottom(_moreNav));
+	_dropdown->setForcedOrigin(lightboxStyle()
+		? Ui::PanelAnimation::Origin::TopRight
+		: Ui::PanelAnimation::Origin::BottomRight);
+	// 顶栏从更多按钮下方展开，全屏从查看器右下角向上展开。
+	const auto anchor = lightboxStyle()
+		? QPoint(rect::right(_moreNav), rect::bottom(_moreNav))
+		: QPoint(width(), height());
+	_dropdown->prepareGeometryFor(_body->mapToGlobal(anchor));
 }
 
 void OverlayWidget::handleTouchTimer() {

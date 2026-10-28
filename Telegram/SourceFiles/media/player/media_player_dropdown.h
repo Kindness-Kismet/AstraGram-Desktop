@@ -18,6 +18,7 @@ struct DropdownMenu;
 
 namespace Ui {
 class DropdownMenu;
+class PopupMenu;
 class AbstractButton;
 class IconButton;
 } // namespace Ui
@@ -37,25 +38,27 @@ public:
 		Qt::Alignment menuAlign,
 		QPoint menuPosition,
 		Fn<void(bool)> menuOverCallback);
-	virtual ~WithDropdownController() = default;
+	virtual ~WithDropdownController();
 
 	[[nodiscard]] not_null<Ui::AbstractButton*> button() const;
 	Ui::DropdownMenu *menu() const;
+	[[nodiscard]] bool hasMenu() const;
+	void usePopupMenu();
 
 	void updateDropdownGeometry();
 	[[nodiscard]] rpl::producer<bool> menuToggledValue() const;
 
-	void hideTemporarily();
-	void showBack();
 	void setOtherDropdownCheck(Fn<bool(QPoint globalPosition)> check);
 	// 关闭后菜单只在点击按钮时弹出，悬停不触发。
 	void setShowOnHover(bool enabled);
 
 protected:
 	void showMenu();
+	[[nodiscard]] bool usesPopupMenu() const;
 
 private:
-	virtual void fillMenu(not_null<Ui::DropdownMenu*> menu) = 0;
+	virtual void fillMenu(not_null<Ui::Menu::Menu*> menu) = 0;
+	void showPopupMenu();
 
 	void handleMenuMove(QPoint globalPosition);
 
@@ -67,8 +70,9 @@ private:
 	const Fn<void(bool)> _menuOverCallback;
 	Fn<bool(QPoint globalPosition)> _otherDropdownCheck;
 	base::unique_qptr<Ui::DropdownMenu> _menu;
+	base::unique_qptr<Ui::PopupMenu> _popupMenu;
+	bool _usePopupMenu = false;
 	rpl::variable<bool> _menuToggled;
-	bool _temporarilyHidden = false;
 	bool _overButton = false;
 	bool _showOnHover = true;
 
@@ -84,7 +88,7 @@ public:
 		Fn<void(OrderMode)> change);
 
 private:
-	void fillMenu(not_null<Ui::DropdownMenu*> menu) override;
+	void fillMenu(not_null<Ui::Menu::Menu*> menu) override;
 	void updateIcon();
 
 	const not_null<Ui::IconButton*> _button;
@@ -112,7 +116,7 @@ public:
 	void setQualities(std::vector<VideoQuality> qualities);
 
 private:
-	void fillMenu(not_null<Ui::DropdownMenu*> menu) override;
+	void fillMenu(not_null<Ui::Menu::Menu*> menu) override;
 
 	[[nodiscard]] float64 speed() const;
 	[[nodiscard]] bool isDefault() const;
