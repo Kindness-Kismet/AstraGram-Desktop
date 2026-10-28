@@ -619,6 +619,7 @@ protected:
 	int resizeGetHeight(int newWidth) override;
 
 private:
+	void finishCacheRefreshFade();
 	[[nodiscard]] static int SelectionViewOffset(
 		not_null<const ListWidget*> inner,
 		not_null<const Element*> view);
@@ -1010,6 +1011,7 @@ private:
 	int _visibleTopFromItem = 0;
 	ScrollTopState _scrollTopState;
 	Ui::Animations::Simple _scrollToAnimation;
+	QPointer<Ui::RpWidget> _cacheRefreshFade;
 	Fn<bool()> _overrideInitialScroll;
 
 	bool _scrollInited = false;

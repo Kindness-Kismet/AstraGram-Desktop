@@ -327,6 +327,8 @@ void HistoryWidget::animatedScrollToY(
 
 	const auto toEnd = (scrollTo == ScrollMax);
 	stopScrollAnimation();
+	// 滚动时撤掉固定截图，避免旧画面与移动中的消息重叠。
+	finishFirstLoadFade();
 	if (toEnd) {
 		handlePendingHistoryUpdate();
 	} else if (hasPendingResizedItems()) {

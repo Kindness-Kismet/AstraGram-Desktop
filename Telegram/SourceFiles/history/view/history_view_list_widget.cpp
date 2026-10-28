@@ -617,12 +617,15 @@ ListWidget::ListWidget(
 		) | rpl::on_next([=](Extras::HistoryCacheKey key) {
 			const auto history = _delegate->listTranslateHistory();
 			if (!isVisible() || _items.empty() || !history || key.peer != history->peer->id
-				|| anim::Disabled() || !MatchesHistoryCacheKey(key, _delegate->listContext(), _items)) {
+				|| _scrollToAnimation.animating() || anim::Disabled()
+				|| !MatchesHistoryCacheKey(key, _delegate->listContext(), _items)) {
 				return;
 			}
-			Window::ShowFadeOutAnimation(scroll->parentWidget(), scroll->geometry(),
+			finishCacheRefreshFade();
+			_cacheRefreshFade = Window::ShowFadeOutAnimation(scroll->parentWidget(), scroll->geometry(),
 				Window::GrabForAnimation(scroll), st::extrasInPlaceFadeDuration
-			)->setObjectName(u"history-cache-refresh-fade"_q);
+			).get();
+			_cacheRefreshFade->setObjectName(u"history-cache-refresh-fade"_q);
 		}, lifetime());
 		scroll->lockWheelDirection();
 		scroll->setCrossAxisWheelProcess([=](
@@ -1129,6 +1132,8 @@ void ListWidget::scrollTo(
 		int delta,
 		AnimatedScroll type) {
 	_scrollToAnimation.stop();
+	// 滚动时撤掉固定截图，避免旧画面与移动中的消息重叠。
+	finishCacheRefreshFade();
 	if (!delta || _items.empty() || type == AnimatedScroll::None) {
 		_delegate->listScrollTo(scrollTop);
 		return;
@@ -1169,6 +1174,13 @@ void ListWidget::scrollTo(
 
 bool ListWidget::animatedScrolling() const {
 	return _scrollToAnimation.animating();
+}
+
+void ListWidget::finishCacheRefreshFade() {
+	if (const auto fade = base::take(_cacheRefreshFade)) {
+		fade->hide();
+		fade->deleteLater();
+	}
 }
 
 void ListWidget::scrollToCurrentVoiceMessage(

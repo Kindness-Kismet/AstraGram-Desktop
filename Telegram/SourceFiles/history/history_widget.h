@@ -709,6 +709,7 @@ private:
 		const Extras::CachedHistorySlice *cached = nullptr);
 	// 首屏消息就位前用当前画面盖住消息区，随后原地淡出。
 	void startFirstLoadFade();
+	void finishFirstLoadFade();
 	void messagesFailed(const MTP::Error &error, int requestId);
 	void addMessagesToFront(not_null<PeerData*> peer, const QVector<MTPMessage> &messages);
 	void addMessagesToBack(not_null<PeerData*> peer, const QVector<MTPMessage> &messages);
@@ -953,6 +954,7 @@ private:
 	crl::time _lastUserScrolled = 0;
 	bool _synteticScrollEvent = false;
 	Ui::Animations::Simple _scrollToAnimation;
+	QPointer<Ui::RpWidget> _firstLoadFade;
 	rpl::lifetime _scrollToInputLifetime;
 
 	HistoryView::CornerButtons _cornerButtons;

@@ -1043,16 +1043,26 @@ void HistoryWidget::messagesReceived(
 }
 
 void HistoryWidget::startFirstLoadFade() {
-	if (!isVisible() || _showAnimation || _scroll->isHidden() || anim::Disabled()) {
+	if (!isVisible() || _showAnimation || _scroll->isHidden()
+		|| _scrollToAnimation.animating() || anim::Disabled()) {
 		return;
 	}
+	finishFirstLoadFade();
 	const auto geometry = _scroll->geometry();
-	Window::ShowFadeOutAnimation(
+	_firstLoadFade = Window::ShowFadeOutAnimation(
 		this,
 		geometry,
 		Window::GrabForAnimation(this, geometry),
 		st::extrasInPlaceFadeDuration
-	)->setObjectName(u"history-first-load-fade"_q);
+	).get();
+	_firstLoadFade->setObjectName(u"history-first-load-fade"_q);
+}
+
+void HistoryWidget::finishFirstLoadFade() {
+	if (const auto fade = base::take(_firstLoadFade)) {
+		fade->hide();
+		fade->deleteLater();
+	}
 }
 
 void HistoryWidget::historyLoaded() {
