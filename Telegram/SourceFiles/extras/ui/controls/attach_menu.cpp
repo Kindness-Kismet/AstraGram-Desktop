@@ -248,9 +248,11 @@ rpl::producer<> recordMenuChanges() {
 }
 
 void setupAttachMenu(
-		not_null<QWidget*> button,
-		not_null<AttachMenu*> menu) {
+		not_null<Ui::AbstractButton*> button,
+		not_null<AttachMenu*> menu,
+		Fn<void()> refresh) {
 	menu->setObjectName(u"compose.attachMenu"_q);
+	menu->setRefreshCallback(std::move(refresh));
 	menu->setAnchor(button, ExtrasSettings::getInstance().showAttachPopup());
 }
 

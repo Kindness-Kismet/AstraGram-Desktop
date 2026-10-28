@@ -5796,7 +5796,7 @@ bool ComposeControls::updateSendAsButton(
 }
 
 void ComposeControls::updateAttachBotsMenu() {
-	_attachBotsMenu = nullptr;
+	const auto previous = std::move(_attachBotsMenu);
 	if (!_features.attachments) {
 		return;
 	}
@@ -5843,7 +5843,10 @@ void ComposeControls::updateAttachBotsMenu() {
 	ExtrasUi::addRecordMenu(_attachBotsMenu.get(), record, [=](bool round) {
 		startRecordFromMenu(round);
 	});
-	ExtrasUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get());
+	_attachBotsMenu->inheritHoverState(previous.get());
+	ExtrasUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get(), [=] {
+		updateAttachBotsMenu();
+	});
 }
 
 ExtrasUi::RecordMenuOptions ComposeControls::recordMenuOptions() const {

@@ -2,6 +2,10 @@
 
 class PeerData;
 
+namespace Ui {
+class AbstractButton;
+}
+
 namespace Webrtc {
 enum class RecordAvailability : uchar;
 }
@@ -12,8 +16,9 @@ class AttachMenu;
 
 // 加号自身不触发操作：开启悬停弹出时悬停展开，关闭时点击只切换菜单。
 void setupAttachMenu(
-	not_null<QWidget*> button,
-	not_null<AttachMenu*> menu);
+	not_null<Ui::AbstractButton*> button,
+	not_null<AttachMenu*> menu,
+	Fn<void()> refresh);
 
 // 附件菜单任一项的显示开关变化时重建菜单。
 [[nodiscard]] rpl::producer<> attachMenuChanges();

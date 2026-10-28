@@ -782,7 +782,7 @@ void HistoryWidget::injectSponsoredMessages() const {
 }
 
 void HistoryWidget::refreshAttachBotsMenu() {
-	_attachBotsMenu = nullptr;
+	const auto previous = std::move(_attachBotsMenu);
 	if (!_history) {
 		return;
 	}
@@ -810,7 +810,10 @@ void HistoryWidget::refreshAttachBotsMenu() {
 	ExtrasUi::addRecordMenu(_attachBotsMenu.get(), record, [=](bool round) {
 		startRecordFromMenu(round);
 	});
-	ExtrasUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get());
+	_attachBotsMenu->inheritHoverState(previous.get());
+	ExtrasUi::setupAttachMenu(_attachToggle, _attachBotsMenu.get(), [=] {
+		refreshAttachBotsMenu();
+	});
 }
 
 ExtrasUi::RecordMenuOptions HistoryWidget::recordMenuOptions() const {
