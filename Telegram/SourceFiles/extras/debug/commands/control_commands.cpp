@@ -649,7 +649,24 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 
 [[nodiscard]] Result describeControlValue(QWidget *target) {
 	auto data = json{{"name", target->objectName().toStdString()}, {"text", WidgetText(target).toStdString()},
-		{"enabled", target->isEnabled()}};
+		{"enabled", target->isEnabled()}, {"focused", target->hasFocus()}};
+	if (const auto menu = dynamic_cast<Ui::PopupMenu*>(target)) {
+		auto phase = Ui::PopupMenu::AnimatePhase::Hidden;
+		auto lifetime = rpl::lifetime();
+		menu->animatePhaseValue() | rpl::take(1) | rpl::on_next([&](auto value) {
+			phase = value;
+		}, lifetime);
+		const auto focused = QApplication::focusWidget();
+		data["animatePhase"] = int(phase);
+		data["systemBackdrop"] = menu->systemBackdrop();
+		data["windowOpacity"] = menu->windowOpacity();
+		data["windowActive"] = menu->isActiveWindow();
+		data["focusInside"] = focused
+			&& (focused == menu || menu->isAncestorOf(focused));
+		data["acceptsFocus"] = !menu->windowFlags().testFlag(Qt::WindowDoesNotAcceptFocus);
+		data["transparentForInput"] = menu->windowFlags().testFlag(Qt::WindowTransparentForInput);
+		data["transparentForMouseEvents"] = menu->testAttribute(Qt::WA_TransparentForMouseEvents);
+	}
 	if (const auto button = dynamic_cast<Ui::AbstractButton*>(target)) {
 		data["hovered"] = button->isOver();
 		data["pressed"] = button->isDown();

@@ -2,14 +2,17 @@
 
 `control.window [main|objectName|#序号]` 查询或选择控件与截图的目标顶层窗口，不改变系统焦点。
 默认目标为主窗口；例如 `control.window simulation.wallet` 选择模拟钱包，关闭该窗口后自动恢复主窗口。
-媒体查看器等没有 objectName 的窗口，用 `control.list --all` 中 `isWindow` 为 true 的序号选择。
+图片和视频查看器用 `control.window media.viewer` 选择，内容区标识为 `media.viewerBody`。
+其他没有 objectName 的窗口，用 `control.list --all` 中 `isWindow` 为 true 的序号选择。
 切换目标后重新查询控件序号；`--all` 的遍历范围保持不变。
 
 ## 值与动作
 
-`control.get <target>` 查询当前值、类型、文字、启用状态及辅助功能动作。
+`control.get <target>` 查询当前值、类型、文字、启用状态、`focused` 聚焦状态及辅助功能动作。
 按钮还返回 `hovered`、`pressed`；波纹按钮另返回 `forceRippled`，可分别核对鼠标悬停、按下和菜单高亮。
 可选列表项还会返回 `selected`，可用于核对当前选中的会话分组。
+弹出菜单另返回 `animatePhase`（0 隐藏、1 展开、2 显示、3 收起）、`systemBackdrop`、`windowOpacity`、`windowActive` 和 `focusInside`。
+`acceptsFocus`、`transparentForInput`、`transparentForMouseEvents` 分别表示接受激活、原生输入透明和控件鼠标事件透明；系统命中仍须用真实鼠标验证。
 控件自己设置过光标时返回 `cursor`（`pointer`、`text`、`default` 或 Qt 光标编号），配合 `control.pointer` 核对悬停光标。
 `control.set <target> <value>` 修改输入框、开关、单选项、选择框或滑块，并调用原有业务回调。
 滑块值为 0 至 1；输入字符串保留原文。单选项通过选择另一个选项切换，不直接取消选中。
