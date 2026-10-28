@@ -24,6 +24,7 @@
 #include <QtCore/QTimer>
 #include <QtCore/QVariant>
 #include <QtGui/QPainter>
+#include <QtGui/QWindow>
 
 namespace ExtrasFeatures::WindowMaterial {
 namespace {
@@ -309,6 +310,10 @@ public:
 				_rhiPrepared = true;
 			}
 			_menu->createWinId();
+			// 菜单尺寸逐帧变化，提交不能再等待一次屏幕刷新。
+			auto format = _menu->windowHandle()->requestedFormat();
+			format.setSwapInterval(0);
+			_menu->windowHandle()->setFormat(format);
 		}
 		const auto active = supported
 			&& _backend->apply(mode, Window::Theme::IsNightMode())
@@ -339,7 +344,7 @@ private:
 		if (event->type() == QEvent::WinIdChange) {
 			QTimer::singleShot(0, this, [=] { refresh(); });
 		} else if (event->type() == QEvent::Show) {
-			QTimer::singleShot(0, this, [=] { _backend->activatePopupBackdrop(); });
+			_backend->activatePopupBackdrop();
 		}
 		return false;
 	}
