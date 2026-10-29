@@ -35,7 +35,6 @@
 #include "ui/ui_utility.h"
 #include "ui/screen_reader_mode.h"
 #include "apiwrap.h"
-#include "ui/effects/message_sending_animation_controller.h"
 #include "crl/crl_on_main.h"
 #include "ui/widgets/elastic_scroll.h"
 #include "window/section_memento.h"
@@ -267,7 +266,7 @@ public:
 		) | rpl::on_next([=] { updateScreenshotProtection(); }, lifetime());
 	}
 
-	~Widget() { saveDraft(); controller()->sendingAnimation().clear(); }
+	~Widget() { saveDraft(); }
 	Dialogs::RowDescriptor activeChat() const override { return { static_cast<Data::Thread*>(_dialog.get()), {} }; }
 	bool showInternal(not_null<Window::SectionMemento*> memento, const Window::SectionShow &) override {
 		const auto saved = dynamic_cast<Memento*>(memento.get());
@@ -467,22 +466,11 @@ private:
 		const auto text = _compose->getTextWithAppliedMarkdown().text;
 		if (text.trimmed().isEmpty()) { return; }
 		const auto reply = _dialog->randomId(_compose->replyingToMessage().messageId.msg);
-		const auto field = _compose->field();
-		const auto animate = field->document()->size().height() <= field->height();
-		const auto start = field->mapToGlobal(Rect(field->size()).translated(
-			0, MessageFieldCenteringMargins(field).top()));
 		const auto original = _compose->fieldLastText();
 		_sending = true;
 		manager().sendReply(_dialog->chatId(), text, reply, crl::guard(this, [=](qint64 randomId, QString error) {
 			_sending = false;
 			if (!error.isEmpty()) { controller()->showToast(tr::extras_SecretChatFailed(tr::now)); return; }
-			if (animate) {
-				controller()->sendingAnimation().appendSending({
-					.type = Ui::MessageSendingAnimationFrom::Type::Text,
-					.localId = _dialog->ensureLocalId(randomId),
-					.globalStartGeometry = start,
-				});
-			}
 			const auto currentReply = _dialog->randomId(_compose->replyingToMessage().messageId.msg);
 			if (_compose->fieldLastText() == original && currentReply == reply) {
 				_compose->clear();

@@ -45,7 +45,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/dropdown_menu.h"
 #include "ui/widgets/labels.h"
 #include "ui/effects/ripple_animation.h"
-#include "ui/effects/message_sending_animation_controller.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_utilities.h"
 #include "ui/chat/message_bar.h"
@@ -782,18 +781,6 @@ void HistoryWidget::sendTextWithTags(
 
 	const auto nextLocalMessageId = session().data().nextLocalMessageId();
 	const auto hasText = !message.textWithTags.text.trimmed().isEmpty();
-
-	if (hasText
-		&& message.webPage.url.isEmpty()
-		&& (_field->document()->size().height() <= _field->height())) {
-		controller()->sendingAnimation().appendSending({
-			.type = Ui::MessageSendingAnimationFrom::Type::Text,
-			.localId = nextLocalMessageId,
-			.globalStartGeometry = _field->mapToGlobal(
-				Rect(_field->size()).translated(
-					0, MessageFieldCenteringMargins(_field.data()).top())),
-		});
-	}
 
 	// Just a flag not to drop reply info if we're not sending anything.
 	_justMarkingAsRead = !hasText
@@ -1539,8 +1526,6 @@ void HistoryWidget::sendInlineResult(InlineBots::ResultSelected result) {
 		return;
 	}
 
-	controller()->sendingAnimation().appendSending(
-		result.messageSendingFrom);
 	session().api().sendInlineResult(
 		result.bot,
 		result.result.get(),

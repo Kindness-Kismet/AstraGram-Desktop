@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "history/view/history_view_item_animation.h"
 #include "window/window_animation_snapshot.h"
 
 #include "extras/data/conversation_cache.h"
@@ -48,7 +49,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/dropdown_menu.h"
 #include "ui/widgets/labels.h"
 #include "ui/effects/ripple_animation.h"
-#include "ui/effects/message_sending_animation_controller.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_utilities.h"
 #include "ui/chat/message_bar.h"
@@ -1540,13 +1540,14 @@ void HistoryWidget::revealItemsCallback() {
 	}
 	for (auto i = begin(_itemRevealAnimations)
 		; i != end(_itemRevealAnimations);) {
+		_list->repaintItem(i->first);
 		if (!i->second.animation.animating()) {
 			i = _itemRevealAnimations.erase(i);
 		} else {
 			height += anim::interpolate(
 				i->second.startHeight,
 				0,
-				i->second.animation.value(1.));
+				HistoryView::ItemExpansionProgress(i->second.animation.value(1.)));
 			++i;
 		}
 	}
@@ -1569,68 +1570,36 @@ void HistoryWidget::revealItemsCallback() {
 	}
 }
 
-void HistoryWidget::startItemRevealAnimations() {
-	for (const auto &item : base::take(_itemRevealPending)) {
-		if (const auto view = item->mainView()) {
-			if (const auto top = _list->itemTop(view); top >= 0) {
-				if (const auto height = view->height()) {
-					startMessageSendingAnimation(item);
-					if (!_itemRevealAnimations.contains(item)) {
-						auto &animation = _itemRevealAnimations[item];
-						animation.startHeight = height;
-						_itemsRevealHeight += height;
-						animation.animation.start(
-							[=] { revealItemsCallback(); },
-							0.,
-							1.,
-							st::itemRevealDuration,
-							anim::easeOutCirc);
-						if (item->out() || _history->peer->isSelf()) {
-							_list->theme()->rotateComplexGradientBackground();
-						}
-					}
-				}
-			}
-		}
+float64 HistoryWidget::itemRevealOpacity(not_null<HistoryItem*> item) const {
+	if (anim::Disabled()) {
+		return 1.;
 	}
+	if (_itemRevealPending.contains(item)) {
+		return 0.;
+	}
+	const auto i = _itemRevealAnimations.find(item);
+	return (i == end(_itemRevealAnimations))
+		? 1.
+		: HistoryView::ItemRevealOpacity(i->second.animation.value(1.));
 }
 
-void HistoryWidget::startMessageSendingAnimation(
-		not_null<HistoryItem*> item) {
-	if (_list->elementChatMode() == HistoryView::ElementChatMode::Default
-		&& width() > st::columnMaximalWidthLeft
-		&& !item->media()) {
-		return;
-	}
-	auto &sendingAnimation = controller()->sendingAnimation();
-	if (!sendingAnimation.checkExpectedType(item)) {
-		return;
-	}
-	Assert(item->mainView() != nullptr);
-
-	auto globalEndTopLeft = rpl::merge(
-		_scroll->innerResizes() | rpl::to_empty,
-		session().data().newItemAdded() | rpl::to_empty,
-		geometryValue() | rpl::to_empty,
-		_scroll->geometryValue() | rpl::to_empty,
-		_list->geometryValue() | rpl::to_empty
-	) | rpl::map([=]() -> std::optional<QPoint> {
+void HistoryWidget::startItemRevealAnimations() {
+	for (const auto &item : base::take(_itemRevealPending)) {
 		const auto view = item->mainView();
-		const auto top = view ? _list->itemTop(view) : -1;
-		if (top < 0) {
-			return std::nullopt;
+		if (!view || _list->itemTop(view) < 0 || !view->height()
+			|| _itemRevealAnimations.contains(item)) {
+			continue;
 		}
-		const auto additional = (_list->height() == _scroll->height())
-			? view->height()
-			: 0;
-		return _list->mapToGlobal(QPoint(0, top - additional));
-	});
-
-	sendingAnimation.startAnimation({
-		.globalEndTopLeft = std::move(globalEndTopLeft),
-		.view = [=] { return item->mainView(); },
-		.paintContext = [=] { return _list->preparePaintContext({}); },
-	});
+		auto &animation = _itemRevealAnimations[item];
+		animation.startHeight = view->height();
+		_itemsRevealHeight += animation.startHeight;
+		animation.animation.start(
+			[=] { revealItemsCallback(); },
+			0., 1., HistoryView::kItemRevealDuration);
+		if (item->out() || _history->peer->isSelf()) {
+			_list->theme()->rotateComplexGradientBackground();
+		}
+	}
 }
 
 void HistoryWidget::updateListSize() {

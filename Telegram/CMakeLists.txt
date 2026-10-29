@@ -1539,6 +1539,8 @@ PRIVATE
     history/view/history_view_group_call_bar.h
     history/view/history_view_group_members_widget.cpp
     history/view/history_view_group_members_widget.h
+    history/view/history_view_item_animation.cpp
+    history/view/history_view_item_animation.h
     history/view/history_view_item_preview.h
     history/view/history_view_keyboard_text_selection.cpp
     history/view/history_view_keyboard_text_selection.h
@@ -2519,8 +2521,6 @@ PRIVATE
     ui/effects/emoji_fly_animation.cpp
     ui/effects/emoji_fly_animation.h
     ui/effects/message_sending_animation_common.h
-    ui/effects/message_sending_animation_controller.cpp
-    ui/effects/message_sending_animation_controller.h
     ui/effects/peer_qr_colors_panel.cpp
     ui/effects/peer_qr_colors_panel.h
     ui/effects/peer_qr_emoji_field.cpp

@@ -40,7 +40,6 @@ struct ChatPaintContext;
 struct ChatPaintContextArgs;
 enum class TouchScrollState;
 struct PeerUserpicView;
-class MessageSendingAnimationController;
 } // namespace Ui
 
 namespace Dialogs::Ui {
@@ -214,8 +213,6 @@ public:
 		FullMsgId context) = 0;
 	virtual void listCancelUploadLayer(not_null<HistoryItem*> item) = 0;
 	virtual bool listAnimationsPaused() = 0;
-	virtual auto listSendingAnimation()
-		-> Ui::MessageSendingAnimationController* = 0;
 	virtual Ui::ChatPaintContext listPreparePaintContext(
 		Ui::ChatPaintContextArgs &&args) = 0;
 	virtual bool listMarkingContentRead() = 0;
@@ -255,7 +252,6 @@ public:
 		FullMsgId context) override;
 	void listCancelUploadLayer(not_null<HistoryItem*> item) override;
 	bool listAnimationsPaused() override;
-	Ui::MessageSendingAnimationController *listSendingAnimation() override;
 	Ui::ChatPaintContext listPreparePaintContext(
 		Ui::ChatPaintContextArgs &&args) override;
 	bool listMarkingContentRead() override;
@@ -331,6 +327,7 @@ class ListWidget final
 	, public ElementDelegate
 	, public Ui::AbstractTooltipShower {
 public:
+	[[nodiscard]] float64 itemRevealOpacity(not_null<Element*> view) const;
 	ListWidget(
 		QWidget *parent,
 		not_null<Main::Session*> session,
@@ -898,7 +895,6 @@ private:
 	void revealItemsCallback();
 	void maybeMarkReactionsRead(not_null<HistoryItem*> item);
 
-	void startMessageSendingAnimation(not_null<HistoryItem*> item);
 	void showPremiumStickerTooltip(
 		not_null<const HistoryView::Element*> view);
 

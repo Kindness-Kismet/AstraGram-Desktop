@@ -56,7 +56,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/scroll_area.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_utilities.h"
-#include "ui/effects/message_sending_animation_controller.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
 #include "ui/screen_reader_mode.h"
@@ -1109,9 +1108,6 @@ ChatWidget::~ChatWidget() {
 	base::take(_sendAction);
 	clearSupportPreloadRequest();
 	_supportPreloadHistory = nullptr;
-	if (_repliesRootId) {
-		controller()->sendingAnimation().clear();
-	}
 	if (_subsectionTabs && !_subsectionTabs->dying()) {
 		_subsectionTabsLifetime.destroy();
 		controller()->saveSubsectionTabs(base::take(_subsectionTabs));
@@ -1723,8 +1719,6 @@ void ChatWidget::setupComposeControls() {
 	_composeControls->fileChosen(
 	) | rpl::on_next([=](ChatHelpers::FileChosen data) {
 		controller()->hideLayer(anim::type::normal);
-		controller()->sendingAnimation().appendSending(
-			data.messageSendingFrom);
 		auto messageToSend = Api::MessageToSend(
 			prepareSendAction(data.options));
 		messageToSend.textWithTags = base::take(data.caption);
@@ -1741,8 +1735,6 @@ void ChatWidget::setupComposeControls() {
 
 	_composeControls->inlineResultChosen(
 	) | rpl::on_next([=](ChatHelpers::InlineChosen chosen) {
-		controller()->sendingAnimation().appendSending(
-			chosen.messageSendingFrom);
 		const auto localId = chosen.messageSendingFrom.localId;
 		sendInlineResult(chosen.result, chosen.bot, chosen.options, localId);
 	}, lifetime());
@@ -2660,19 +2652,6 @@ void ChatWidget::sendTextWithTags(
 
 	const auto nextLocalMessageId = session().data().nextLocalMessageId();
 	const auto hasText = !message.textWithTags.text.trimmed().isEmpty();
-
-	if (const auto field = _composeControls->fieldForMention(); field
-		&& hasText
-		&& message.webPage.url.isEmpty()
-		&& (field->document()->size().height() <= field->height())) {
-		controller()->sendingAnimation().appendSending({
-			.type = Ui::MessageSendingAnimationFrom::Type::Text,
-			.localId = nextLocalMessageId,
-			.globalStartGeometry = field->mapToGlobal(
-				Rect(field->size()).translated(
-					0, MessageFieldCenteringMargins(field).top())),
-		});
-	}
 
 	const auto justMarkingAsRead = !hasText
 		&& message.webPage.url.isEmpty();

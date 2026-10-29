@@ -71,7 +71,6 @@ struct ChatThemeKey;
 struct ChatPaintContext;
 struct ChatThemeBackground;
 struct ChatThemeBackgroundData;
-class MessageSendingAnimationController;
 struct BoostCounters;
 struct ChatPaintContextArgs;
 struct PreparedList;
@@ -451,8 +450,6 @@ public:
 		anim::type animated = anim::type::normal);
 	void hideLayer(anim::type animated = anim::type::normal);
 
-	[[nodiscard]] auto sendingAnimation() const
-	-> Ui::MessageSendingAnimationController &;
 	[[nodiscard]] auto tabbedSelector() const
 	-> not_null<ChatHelpers::TabbedSelector*>;
 	void takeTabbedSelectorOwnershipFrom(not_null<QWidget*> parent);
@@ -844,9 +841,6 @@ private:
 	const bool _hasDialogs = false;
 
 	mutable std::shared_ptr<ChatHelpers::Show> _cachedShow;
-
-	using SendingAnimation = Ui::MessageSendingAnimationController;
-	const std::unique_ptr<SendingAnimation> _sendingAnimation;
 
 	std::unique_ptr<Passport::FormController> _passportForm;
 	std::unique_ptr<FiltersMenu> _filters;

@@ -45,7 +45,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/dropdown_menu.h"
 #include "ui/widgets/labels.h"
 #include "ui/effects/ripple_animation.h"
-#include "ui/effects/message_sending_animation_controller.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_utilities.h"
 #include "ui/chat/message_bar.h"
@@ -482,8 +481,6 @@ void HistoryWidget::fileChosen(ChatHelpers::FileChosen &&data) {
 					const auto effectiveFrom = options.scheduled
 						? Ui::MessageSendingAnimationFrom()
 						: from;
-					controller()->sendingAnimation().appendSending(
-						effectiveFrom);
 					auto messageToSend = Api::MessageToSend(
 						prepareSendAction(options));
 					messageToSend.textWithTags = std::move(caption);
@@ -494,8 +491,6 @@ void HistoryWidget::fileChosen(ChatHelpers::FileChosen &&data) {
 				}));
 			return;
 		}
-		controller()->sendingAnimation().appendSending(
-			data.messageSendingFrom);
 		const auto localId = data.messageSendingFrom.localId;
 		auto messageToSend = Api::MessageToSend(
 			prepareSendAction(data.options));

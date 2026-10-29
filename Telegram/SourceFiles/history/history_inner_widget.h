@@ -263,6 +263,7 @@ public:
 
 	// -1 if should not be visible, -2 if bad history()
 	[[nodiscard]] int itemTop(const HistoryItem *item) const;
+	[[nodiscard]] float64 itemRevealOpacity(not_null<HistoryItem*> item) const;
 	[[nodiscard]] int itemTop(const Element *view) const;
 	[[nodiscard]] Element *viewByItem(const HistoryItem *item) const;
 	bool scrollToElementLocalY(

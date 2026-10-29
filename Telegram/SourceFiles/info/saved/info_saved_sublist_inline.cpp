@@ -142,8 +142,6 @@ private:
 		FullMsgId context) override;
 	void listCancelUploadLayer(not_null<HistoryItem*> item) override;
 	bool listAnimationsPaused() override;
-	auto listSendingAnimation()
-		-> Ui::MessageSendingAnimationController* override;
 	Ui::ChatPaintContext listPreparePaintContext(
 		Ui::ChatPaintContextArgs &&args) override;
 	bool listMarkingContentRead() override;
@@ -526,11 +524,6 @@ void InlineSublistInner::listCancelUploadLayer(
 
 bool InlineSublistInner::listAnimationsPaused() {
 	return false;
-}
-
-auto InlineSublistInner::listSendingAnimation()
--> Ui::MessageSendingAnimationController* {
-	return nullptr;
 }
 
 Ui::ChatPaintContext InlineSublistInner::listPreparePaintContext(

@@ -45,7 +45,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/ui/controls/attach_popup_menu.h"
 #include "ui/widgets/labels.h"
 #include "ui/effects/ripple_animation.h"
-#include "ui/effects/message_sending_animation_controller.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_utilities.h"
 #include "ui/chat/message_bar.h"

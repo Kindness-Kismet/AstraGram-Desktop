@@ -89,7 +89,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/boxes/boost_box.h"
 #include "ui/chat/chat_style.h"
 #include "ui/chat/chat_theme.h"
-#include "ui/effects/message_sending_animation_controller.h"
 #include "ui/style/style_palette_colorizer.h"
 #include "ui/toast/toast.h"
 #include "calls/calls_instance.h" // Core::App().calls().inCall().
@@ -1593,8 +1592,6 @@ SessionController::SessionController(
 , _chatPreviewManager(std::make_unique<ChatPreviewManager>(this))
 , _isPrimary(window->isPrimary())
 , _hasDialogs(window->id().hasChatsList())
-, _sendingAnimation(
-	std::make_unique<Ui::MessageSendingAnimationController>(this))
 , _tabbedSelector(
 	std::make_unique<ChatHelpers::TabbedSelector>(
 		_window->widget(),
@@ -1878,11 +1875,6 @@ not_null<::MainWindow*> SessionController::widget() const {
 
 rpl::producer<> SessionController::imeCompositionStarts() const {
 	return widget()->imeCompositionStarts();
-}
-
-auto SessionController::sendingAnimation() const
--> Ui::MessageSendingAnimationController & {
-	return *_sendingAnimation;
 }
 
 auto SessionController::tabbedSelector() const

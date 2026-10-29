@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_list_widget.h"
+#include "history/view/history_view_item_animation.h"
 #include "window/window_animation_snapshot.h"
 #include "extras/ui/components/smooth_scroll.h"
 #include "extras/data/conversation_cache.h"
@@ -75,7 +76,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/scroll_area.h"
 #include "ui/toast/toast.h"
 #include "ui/inactive_press.h"
-#include "ui/effects/message_sending_animation_controller.h"
 #include "ui/effects/path_shift_gradient.h"
 #include "ui/effects/reaction_fly_animation.h"
 #include "ui/chat/chat_theme.h"
@@ -218,11 +218,6 @@ void WindowListDelegate::listCancelUploadLayer(not_null<HistoryItem*> item) {
 
 bool WindowListDelegate::listAnimationsPaused() {
 	return _window->isGifPausedAtLeastFor(Window::GifPauseReason::Any);
-}
-
-auto WindowListDelegate::listSendingAnimation()
--> Ui::MessageSendingAnimationController * {
-	return &_window->sendingAnimation();
 }
 
 Ui::ChatPaintContext WindowListDelegate::listPreparePaintContext(
@@ -2820,10 +2815,22 @@ bool ListWidget::setBottomPadding(int padding) {
 	return std::exchange(_bottomPadding, padding) != padding;
 }
 
+float64 ListWidget::itemRevealOpacity(not_null<Element*> view) const {
+	if (anim::Disabled()) {
+		return 1.;
+	}
+	if (_itemRevealPending.contains(view)) {
+		return 0.;
+	}
+	const auto i = _itemRevealAnimations.find(view);
+	return (i == end(_itemRevealAnimations))
+		? 1.
+		: ItemRevealOpacity(i->second.animation.value(1.));
+}
+
 void ListWidget::startItemRevealAnimations() {
 	for (const auto &view : base::take(_itemRevealPending)) {
 		if (const auto height = view->height()) {
-			startMessageSendingAnimation(view->data());
 			if (!_itemRevealAnimations.contains(view)) {
 				auto &animation = _itemRevealAnimations[view];
 				animation.startHeight = height;
@@ -2832,47 +2839,14 @@ void ListWidget::startItemRevealAnimations() {
 					[=] { revealItemsCallback(); },
 					0.,
 					1.,
-					st::itemRevealDuration,
-					anim::easeOutQuint);
+					kItemRevealDuration,
+					anim::linear);
 				if (view->data()->out()) {
 					_delegate->listChatTheme()->rotateComplexGradientBackground();
 				}
 			}
 		}
 	}
-}
-
-void ListWidget::startMessageSendingAnimation(
-		not_null<HistoryItem*> item) {
-	if (elementChatMode() == HistoryView::ElementChatMode::Default
-		&& width() > st::columnMaximalWidthLeft
-		&& !item->media()) {
-		return;
-	}
-	const auto sendingAnimation = _delegate->listSendingAnimation();
-	if (!sendingAnimation || !sendingAnimation->checkExpectedType(item)) {
-		return;
-	}
-
-	auto globalEndTopLeft = rpl::merge(
-		session().data().newItemAdded() | rpl::to_empty,
-		geometryValue() | rpl::to_empty
-	) | rpl::map([=]() -> std::optional<QPoint> {
-		const auto view = viewForItem(item);
-		if (!view) {
-			return std::nullopt;
-		}
-		const auto additional = (_visibleTop == _topPadding)
-			? view->height()
-			: 0;
-		return mapToGlobal(QPoint(0, itemTop(view) - additional));
-	});
-
-	sendingAnimation->startAnimation({
-		.globalEndTopLeft = std::move(globalEndTopLeft),
-		.view = [=] { return viewForItem(item); },
-		.paintContext = [=] { return preparePaintContext({}); },
-	});
 }
 
 void ListWidget::showPremiumStickerTooltip(
@@ -2888,13 +2862,14 @@ void ListWidget::revealItemsCallback() {
 	auto revealHeight = 0;
 	for (auto i = begin(_itemRevealAnimations)
 		; i != end(_itemRevealAnimations);) {
+		repaintItem(i->first);
 		if (!i->second.animation.animating()) {
 			i = _itemRevealAnimations.erase(i);
 		} else {
 			revealHeight += anim::interpolate(
 				i->second.startHeight,
 				0,
-				i->second.animation.value(1.));
+				ItemExpansionProgress(i->second.animation.value(1.)));
 			++i;
 		}
 	}
@@ -3232,7 +3207,6 @@ void ListWidget::paintList(Painter &p, QRect clip, bool backdrop) {
 
 	context = context.translated(0, -top);
 	p.translate(0, top);
-	const auto sendingAnimation = _delegate->listSendingAnimation();
 	for (auto i = from; i != to; ++i) {
 		while (nextGapIndex < int(collapseGaps().size())) {
 			const auto &gap = collapseGaps()[nextGapIndex];
@@ -3247,8 +3221,8 @@ void ListWidget::paintList(Painter &p, QRect clip, bool backdrop) {
 		const auto view = *i;
 		const auto item = view->data();
 		const auto height = view->height();
-		if (!sendingAnimation
-			|| !sendingAnimation->hasAnimatedMessage(item)) {
+		const auto opacity = itemRevealOpacity(view);
+		if (opacity > 0.) {
 			if (_reactionsManager && !backdrop) {
 				context.reactionInfo
 					= _reactionsManager->currentReactionPaintInfo();
@@ -3259,9 +3233,9 @@ void ListWidget::paintList(Painter &p, QRect clip, bool backdrop) {
 			context.fullMessageSelected = selection.fullMessageSelected;
 			context.messageSelection = selection.messageSelection;
 			context.highlight = _highlighter.state(item);
-			view->draw(p, context);
+			PaintFadingItem(p, view, context, opacity);
 		}
-		if (backdrop) {
+		if (backdrop || opacity <= 0.) {
 			top += height;
 			context.translate(0, -height);
 			p.translate(0, height);

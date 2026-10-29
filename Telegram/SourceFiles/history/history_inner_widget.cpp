@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_inner_widget.h"
+#include "history/view/history_view_item_animation.h"
 
 #include "ui/chat/message_bubble.h"
 
@@ -54,7 +55,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/delayed_activation.h"
 #include "ui/power_saving.h"
 #include "ui/effects/path_shift_gradient.h"
-#include "ui/effects/message_sending_animation_controller.h"
 #include "ui/effects/reaction_fly_animation.h"
 #include "ui/text/text_isolated_emoji.h"
 #include "ui/text/text_utilities.h"
@@ -1558,7 +1558,8 @@ void HistoryInner::paintHistory(
 			context.fullMessageSelected = selection.fullMessageSelected;
 			context.messageSelection = selection.messageSelection;
 			p.translate(0, top);
-			view->draw(p, context);
+			HistoryView::PaintFadingItem(p, view, context,
+				_widget->itemRevealOpacity(view->data()));
 			context.translate(0, top);
 			p.translate(0, -top);
 		}
@@ -1755,7 +1756,8 @@ void HistoryInner::paintHistory(
 			context.fullMessageSelected = selection.fullMessageSelected;
 			context.messageSelection = selection.messageSelection;
 			context.highlight = _widget->itemHighlight(view->data());
-			view->draw(p, context);
+			HistoryView::PaintFadingItem(p, view, context,
+				_widget->itemRevealOpacity(view->data()));
 			processPainted(view, top, height);
 
 			top += height;
@@ -1796,7 +1798,6 @@ void HistoryInner::paintHistory(
 			QRect(0, hdrawtop, width(), clip.top() + clip.height()));
 		context.translate(0, -top);
 		p.translate(0, top);
-		const auto &sendingAnimation = _controller->sendingAnimation();
 		while (top < drawToY) {
 			while (nextGapIndex < int(collapseGaps().size())) {
 				const auto &gap = collapseGaps()[nextGapIndex];
@@ -1812,7 +1813,7 @@ void HistoryInner::paintHistory(
 			const auto item = view->data();
 			if ((context.clip.y() < height + shadowPadding)
 				&& (hdrawtop < top + height)
-				&& !sendingAnimation.hasAnimatedMessage(item)) {
+				&& _widget->itemRevealOpacity(item) > 0.) {
 				context.reactionInfo = backdrop
 					? nullptr
 					: _reactionsManager->currentReactionPaintInfo().get();
@@ -1825,7 +1826,8 @@ void HistoryInner::paintHistory(
 				context.fullMessageSelected = selection.fullMessageSelected;
 				context.messageSelection = selection.messageSelection;
 				context.highlight = _widget->itemHighlight(item);
-				view->draw(p, context);
+				HistoryView::PaintFadingItem(p, view, context,
+					_widget->itemRevealOpacity(view->data()));
 				processPainted(view, top, height);
 			}
 			top += height;
@@ -6199,6 +6201,10 @@ auto HistoryInner::viewByItem(const HistoryItem *item) const -> Element* {
 // -1 if should not be visible, -2 if bad history()
 int HistoryInner::itemTop(const HistoryItem *item) const {
 	return item ? itemTop(viewByItem(item)) : -2;
+}
+
+float64 HistoryInner::itemRevealOpacity(not_null<HistoryItem*> item) const {
+	return _widget->itemRevealOpacity(item);
 }
 
 int HistoryInner::itemTop(const Element *view) const {

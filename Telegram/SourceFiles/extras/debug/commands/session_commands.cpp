@@ -280,6 +280,9 @@ using json = nlohmann::json;
 				{ "y", y }, { "top", top },
 				{ "width", view->width() }, { "height", view->height() },
 				{ "out", view->data()->out() },
+				{ "opacity", legacy
+					? legacy->itemRevealOpacity(view->data())
+					: list->itemRevealOpacity(view) },
 				{ "mediaWidth", media ? media->width() : 0 },
 				{ "mediaHeight", media ? media->height() : 0 },
 			});

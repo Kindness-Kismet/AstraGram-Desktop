@@ -164,6 +164,7 @@ class HistoryWidget final
 	: public Window::AbstractSectionWidget
 	, private HistoryView::CornerButtonsDelegate {
 public:
+	[[nodiscard]] float64 itemRevealOpacity(not_null<HistoryItem*> item) const;
 	using FieldHistoryAction = Ui::InputField::HistoryAction;
 	using RecordLock = HistoryView::Controls::RecordLock;
 	using VoiceRecordBar = HistoryView::Controls::VoiceRecordBar;
@@ -726,7 +727,6 @@ private:
 	void startItemRevealAnimations();
 	void revealItemsCallback();
 
-	void startMessageSendingAnimation(not_null<HistoryItem*> item);
 
 	// Does any of the shown histories has this flag set.
 	bool hasPendingResizedItems() const;
