@@ -142,6 +142,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 `simulation.cache-history-check` 仅在独立模拟配置中运行固定历史缓存检查，先用 `app.start --profile cache-history-check + simulation.enter` 进入。
 返回异步任务编号，用 `job.status <编号>` 查看完成结果；覆盖摘要删除、未知末条、请求乱序、话题与收藏来源隔离、发送确认、加载中的动态更新与选择保留。
 同时覆盖未加载消息的反应、扩展媒体资料、待办追加与完成、开放投票答案增删；扩展媒体使用本地协议样本，不执行交易。
+历史内存检查覆盖未保存和写入中保护、闲置回收、磁盘恢复后的编辑删除，以及超出会话数量预算时的淘汰。
 检查沿真实 `ConversationCache` 的读写接口构造有限本地响应，并调用最新请求准备、缓存解析和新消息列表快照；不建立联网视图，不发送消息或清全缓存。
 结果只含编号、数量和通过状态，全部 `cases[].pass`、`latestRequestPass` 与总 `pass` 均应为 `true`；任务结束恢复缓存原启用状态，固定样本随模拟会话销毁。
 这证明本地缓存和新列表边界；`cache.state` 的 `latestSliceMessages` 仅反映当前列表快照，不能单凭它证明新视图网络入口已执行。

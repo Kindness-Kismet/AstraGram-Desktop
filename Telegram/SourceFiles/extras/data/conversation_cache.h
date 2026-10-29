@@ -106,6 +106,18 @@ public:
 		bool available = false;
 	};
 	[[nodiscard]] Stats stats() const;
+	struct MemoryStats {
+		int histories = 0;
+		int messages = 0;
+		int64 messageBytes = 0;
+		int evictions = 0;
+		int diskLoads = 0;
+		int maxHistories = 0;
+		int maxMessages = 0;
+		int64 maxMessageBytes = 0;
+		crl::time idleTimeout = 0;
+	};
+	[[nodiscard]] MemoryStats memoryStats() const;
 	struct StorageStats {
 		int64 bytes = 0;
 		int count = 0;
@@ -185,6 +197,8 @@ private:
 		std::vector<Range> ranges;
 		std::vector<Pending> pending;
 		uint64 generation = 0;
+		crl::time lastUsed = 0;
+		int pendingWrites = 0;
 		int count = 0;
 		bool loaded = false;
 		bool dirty = false;
@@ -197,6 +211,9 @@ private:
 	void restoreListMetadata();
 	void saveIndex();
 	void saveHistories();
+	void touchHistory(HistoryEntry &entry);
+	void pruneMemory();
+	[[nodiscard]] static int64 historyMessageBytes(const HistoryEntry &entry);
 	void restoreHistoryMetadata(HistoryCacheKey key, const HistoryEntry &entry);
 	void loadHistory(
 		HistoryCacheKey key,
@@ -242,6 +259,9 @@ private:
 	std::vector<Fn<void()>> _afterIndex;
 	base::Timer _saveTimer;
 	base::Timer _preloadTimer;
+	base::Timer _memoryTimer;
+	int _memoryEvictions = 0;
+	int _historyDiskLoads = 0;
 	struct PreloadedHistory {
 		MsgId offsetId;
 		MsgId topId;

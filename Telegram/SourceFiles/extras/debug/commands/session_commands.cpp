@@ -313,6 +313,28 @@ using json = nlohmann::json;
 	return Result::Ok(Compact(result));
 }
 
+[[nodiscard]] Result cacheMemoryStats(const QStringList &args) {
+	if (!args.empty()) {
+		return Result::Err(u"usage: cache.memory-stats"_q);
+	}
+	const auto session = ActiveSession();
+	if (!session) {
+		return Result::Err(u"no active session"_q);
+	}
+	const auto stats = session->conversationCache().memoryStats();
+	return Result::Ok(Compact(json{
+		{ "histories", stats.histories },
+		{ "messages", stats.messages },
+		{ "messageBytes", stats.messageBytes },
+		{ "evictions", stats.evictions },
+		{ "diskLoads", stats.diskLoads },
+		{ "maxHistories", stats.maxHistories },
+		{ "maxMessages", stats.maxMessages },
+		{ "maxMessageBytes", stats.maxMessageBytes },
+		{ "idleTimeoutMs", stats.idleTimeout },
+	}));
+}
+
 [[nodiscard]] Result cacheFlush(const QStringList &args) {
 	if (!args.empty()) {
 		return Result::Err(u"usage: cache.flush"_q);
@@ -334,6 +356,7 @@ const HandlerMap &SessionHandlers() {
 		{ u"cache.layout"_q, &cacheLayout },
 		{ u"cache.read"_q, &cacheRead },
 		{ u"cache.flush"_q, &cacheFlush },
+		{ u"cache.memory-stats"_q, &cacheMemoryStats },
 	};
 	return result;
 }

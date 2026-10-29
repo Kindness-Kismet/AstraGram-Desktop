@@ -16,6 +16,7 @@
 #include "history/history_item.h"
 #include "main/main_session.h"
 #include "settings.h"
+#include "base/call_delayed.h"
 
 #include <memory>
 
@@ -84,8 +85,8 @@ public:
 	SimulationCacheCheck(not_null<Main::Session*> session, uint64 job)
 	: _session(base::make_weak(session))
 	, _job(job)
-	, _peerBase(890000000 + job * 10)
-	, _messageBase(3000000 + int(job) * 100)
+	, _peerBase(890000000 + job * 100)
+	, _messageBase(3000000 + int(job) * 1000)
 	, _enabled(session->conversationCache()._enabled) {
 		session->conversationCache()._enabled = true;
 	}
@@ -638,6 +639,96 @@ private:
 			}
 			record(11, unloaded && todoPass && pollPass,
 				{ { "itemMissing", unloaded }, { "todoUpdated", todoPass }, { "pollAnswersUpdated", pollPass } });
+			memoryRetention();
+		});
+	}
+
+	void waitForWrites(Fn<void()> done, int attempts = 0) {
+		const auto &entries = _session->conversationCache()._histories;
+		if (ranges::none_of(entries, [](const auto &pair) {
+			return pair.second.pendingWrites != 0;
+		})) {
+			done();
+			return;
+		}
+		if (attempts == 500) {
+			record(12, false, { { "writeTimeout", true } });
+			finish(false);
+			return;
+		}
+		const auto self = shared_from_this();
+		base::call_delayed(20, _session.get(), [self, done = std::move(done), attempts]() mutable {
+			if (!self->_finished) {
+				self->waitForWrites(std::move(done), attempts + 1);
+			}
+		});
+	}
+
+	void memoryRetention() {
+		const auto peer = user(9);
+		const auto query = latest(peer);
+		const auto first = message(peer, 91);
+		const auto second = message(peer, 92);
+		put(query, { first, second }, 2);
+		read(query, [=, this](std::optional<Slice>) {
+			auto &cache = _session->conversationCache();
+			cache._histories.at(query.key).lastUsed = crl::now() - 180000;
+			cache.pruneMemory();
+			const auto dirtyHeld = cache._histories.contains(query.key);
+			cache.flush();
+			cache.pruneMemory();
+			const auto writesHeld = cache._histories.contains(query.key);
+			record(12, dirtyHeld && writesHeld,
+				{ { "dirtyProtected", dirtyHeld }, { "writesProtected", writesHeld } });
+			waitForWrites([=, this] { memoryReload(query); });
+		});
+	}
+
+	void memoryReload(Query query) {
+		auto &cache = _session->conversationCache();
+		cache.pruneMemory();
+		const auto first = MsgId(_messageBase + 91);
+		const auto second = MsgId(_messageBase + 92);
+		const auto released = !cache._histories.contains(query.key);
+		const auto indexed = cache._historyKeys.contains(query.key)
+			&& cache._nonChannelPeers.contains(first);
+		read(query, [=, this](std::optional<Slice> slice) {
+			const auto restored = describeSlice(slice).ids == std::vector<MsgId>{ second, first };
+			auto &cache = _session->conversationCache();
+			cache.messagesDeleted(query.key.peer, { MTP_int(second.bare) });
+			cache.messageEdited(simulationTextMessage(user(9), _session->userPeerId(),
+				_messageBase + 91, u"回收恢复后的编辑样本"_q));
+			read(query, [=, this](std::optional<Slice> updated) {
+				const auto state = describeSlice(updated);
+				const auto edited = updated && state.ids == std::vector<MsgId>{ first }
+					&& updated->messages.c_messages_messagesSlice().vmessages().v.front()
+						.c_message().vmessage().v == u"回收恢复后的编辑样本"_q.toUtf8();
+				record(13, released && indexed && restored && edited,
+					{ { "released", released }, { "indexPreserved", indexed },
+						{ "restored", restored }, { "updatesPreserved", edited } });
+				memoryBudget(0);
+			});
+		});
+	}
+
+	void memoryBudget(int index) {
+		const auto count = _session->conversationCache().memoryStats().maxHistories + 2;
+		if (index < count) {
+			const auto peer = user(10 + index);
+			const auto query = latest(peer);
+			put(query, { message(peer, 200 + index) }, 1);
+			read(query, [=, this](std::optional<Slice>) { memoryBudget(index + 1); });
+			return;
+		}
+		_session->conversationCache().flush();
+		waitForWrites([=, this] {
+			auto &cache = _session->conversationCache();
+			const auto before = cache.memoryStats();
+			cache.pruneMemory();
+			const auto after = cache.memoryStats();
+			record(14, after.histories <= after.maxHistories && after.evictions > before.evictions,
+				{ { "before", before.histories }, { "after", after.histories },
+					{ "limit", after.maxHistories }, { "evictions", after.evictions - before.evictions } });
 			finish(_passed);
 		});
 	}

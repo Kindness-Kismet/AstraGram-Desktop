@@ -270,6 +270,7 @@ void ConversationCache::loadHistory(
 		Fn<void(HistoryEntry&)> done,
 		Fn<void()> cancelled) {
 	auto &entry = _histories[key];
+	touchHistory(entry);
 	if (entry.loaded) {
 		done(entry);
 		return;
@@ -279,6 +280,7 @@ void ConversationCache::loadHistory(
 		return;
 	}
 	entry.generation = ++_historyGeneration;
+	++_historyDiskLoads;
 	const auto generation = entry.generation;
 	struct LoadedHistory {
 		HistoryEntry entry;
@@ -304,6 +306,7 @@ void ConversationCache::loadHistory(
 			entry.count = result.entry.count;
 			entry.peers = std::move(peers);
 			entry.loaded = true;
+			touchHistory(entry);
 			restoreHistoryMetadata(key, entry);
 #ifdef _DEBUG
 			traceHistory("loaded", { .key = key });
@@ -834,9 +837,17 @@ void ConversationCache::saveHistories() {
 		for (const auto range : entry.ranges) {
 			stream << qint64(range.from.bare) << qint64(range.till.bare);
 		}
+		const auto generation = entry.generation;
+		++entry.pendingWrites;
 		_database->put(storageKey(key), std::move(bytes),
 			onMain<Storage::Cache::Error>(_session, [=](Storage::Cache::Error error) {
+				const auto i = _histories.find(key);
+				if (i == end(_histories) || i->second.generation != generation) {
+					return;
+				}
+				--i->second.pendingWrites;
 				if (error.type != Storage::Cache::Error::Type::None) {
+					i->second.dirty = true;
 					LOG(("Conversation cache: could not save history."));
 				}
 			}));

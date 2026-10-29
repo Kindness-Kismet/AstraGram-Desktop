@@ -74,6 +74,7 @@ ConversationCache::ConversationCache(not_null<Main::Session*> session)
 	cacheSettings()))
 , _saveTimer([=] { flush(); })
 , _preloadTimer([=] { preloadNext(); })
+, _memoryTimer([=] { pruneMemory(); })
 , _preloadAfter(crl::now() + 1500) {
 	_database->open(session->local().cacheKey(), onMain<Storage::Cache::Error>(session, [=](
 			Storage::Cache::Error error) {
@@ -575,6 +576,7 @@ void ConversationCache::disable() {
 	_pendingConfirmedMessages.clear();
 	_saveTimer.cancel();
 	_lifetime.destroy();
+	_memoryTimer.cancel();
 }
 
 bool ConversationCache::hasDialogsSnapshot() const {
