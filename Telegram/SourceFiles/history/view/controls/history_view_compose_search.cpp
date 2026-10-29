@@ -235,6 +235,7 @@ struct List {
 	base::unique_qptr<Ui::RpWidget> container;
 	std::unique_ptr<ListController> controller;
 	PeerListContent *content = nullptr;
+	Ui::ScrollArea *scroll = nullptr;
 };
 
 // 结果列表是浮在查找栏上方的卡片，表面与查找栏一致。
@@ -251,6 +252,8 @@ List CreateList(
 	container->hide();
 	Ui::ApplyChatControlSurface(container, st::windowCardRadius);
 	const auto scroll = Ui::CreateChild<Ui::ScrollArea>(container);
+	list.scroll = scroll;
+	scroll->setObjectName(u"chatBar.search.scroll"_q);
 	scroll->setVerticalBarTopSkip(st::windowCardRadius);
 	scroll->setVerticalBarBottomSkip(st::windowCardRadius);
 
@@ -394,7 +397,8 @@ public:
 		not_null<Window::SessionController*> window,
 		not_null<History*> history,
 		PeerData *from,
-		const QString &query);
+		const QString &query,
+		const ComposeSearchState *state);
 
 	void setInnerFocus();
 	void raiseWithSurface();
@@ -411,6 +415,7 @@ public:
 	void requestSearch(bool cache = true);
 
 	[[nodiscard]] bool searchPending() const;
+	void saveState(ComposeSearchState &state) const;
 	bool handleKeyPress(not_null<QKeyEvent*> e);
 
 	[[nodiscard]] rpl::producer<SearchRequest> searchRequests() const;
@@ -501,7 +506,8 @@ FindBar::FindBar(
 	not_null<Window::SessionController*> window,
 	not_null<History*> history,
 	PeerData *from,
-	const QString &query)
+	const QString &query,
+	const ComposeSearchState *state)
 : Ui::RpWidget(parent)
 , _window(window)
 , _history(history)
@@ -535,8 +541,14 @@ FindBar::FindBar(
 , _close(base::make_unique_q<Ui::IconButton>(
 	this,
 	st::historyComposeSearchClose))
-, _searchTagsSelected(Data::SearchTagsFromQuery(query))
-, _from(from)
+, _searchTagsSelected(state
+	? state->request.tags
+	: Data::SearchTagsFromQuery(query))
+, _from(state ? state->request.from : from)
+, _typeFilter((state && !state->fixedFilter)
+	? state->request.filter
+	: Api::SearchFilter::NoFilter)
+, _fixedFilter(state ? state->fixedFilter : std::nullopt)
 , _searchTimer([=] { requestSearch(); }) {
 	setObjectName(u"chatBar.search"_q);
 
@@ -554,9 +566,13 @@ FindBar::FindBar(
 
 	_field->setObjectName(u"chatBar.search.field"_q);
 	_field->customUpDown(true);
-	if (_searchTagsSelected.empty()) {
-		_field->setText(query);
-		_field->setCursorPosition(query.size());
+	if (state || _searchTagsSelected.empty()) {
+		const auto text = state ? state->request.query : query;
+		_field->setText(text);
+		_field->setCursorPosition(text.size());
+	}
+	if (state) {
+		_lastRequest = state->lastRequest;
 	}
 	_older->setObjectName(u"chatBar.search.older"_q);
 	_newer->setObjectName(u"chatBar.search.newer"_q);
@@ -1018,6 +1034,14 @@ SearchRequest FindBar::currentRequest() const {
 	};
 }
 
+void FindBar::saveState(ComposeSearchState &state) const {
+	state.request = currentRequest();
+	state.request.query = _field->getLastText();
+	state.lastRequest = _lastRequest;
+	state.fixedFilter = _fixedFilter;
+	state.searchPending = _searchTimer.isActive();
+}
+
 bool FindBar::searchPending() const {
 	return _searchTimer.isActive()
 		|| !_lastRequest
@@ -1248,8 +1272,11 @@ public:
 		not_null<History*> history,
 		PeerData *from,
 		const QString &query,
-		ComposeSearch::LocalSource local);
+		ComposeSearch::LocalSource local,
+		std::shared_ptr<ComposeSearchState> state);
 	~Inner();
+
+	[[nodiscard]] std::shared_ptr<ComposeSearchState> saveState() const;
 
 	void hideAnimated();
 	void setInnerFocus();
@@ -1281,7 +1308,7 @@ private:
 	const base::unique_qptr<FindBar> _findBar;
 	const List _list;
 
-	Api::MessagesSearchMerged _apiSearch;
+	const std::shared_ptr<Api::MessagesSearchMerged> _apiSearch;
 	bool _searching = false;
 	bool _autoJump = false;
 	FullMsgId _currentResult;
@@ -1311,11 +1338,13 @@ ComposeSearch::Inner::Inner(
 	not_null<History*> history,
 	PeerData *from,
 	const QString &query,
-	ComposeSearch::LocalSource local)
+	ComposeSearch::LocalSource local,
+	std::shared_ptr<ComposeSearchState> state)
 : _parent(parent)
 , _window(window)
 , _history(history)
-, _findBar(base::make_unique_q<FindBar>(parent, window, history, from, query))
+, _findBar(base::make_unique_q<FindBar>(
+	parent, window, history, from, query, state.get()))
 , _list(
 	CreateList(
 		parent,
@@ -1323,7 +1352,13 @@ ComposeSearch::Inner::Inner(
 		_findBar->keyEvents() | rpl::filter([](not_null<QKeyEvent*> e) {
 			return e->key() == Qt::Key_PageDown || e->key() == Qt::Key_PageUp;
 		})))
-, _apiSearch(history, std::move(local))
+, _apiSearch(state
+	? state->search
+	: std::make_shared<Api::MessagesSearchMerged>(history, std::move(local)))
+, _searching(state && state->searching)
+, _currentResult(state ? state->currentResult : FullMsgId())
+, _currentResultIndex(state ? state->currentResultIndex : -1)
+, _topMsgId(state ? state->request.topMsgId : MsgId())
 , _calendarChat(history) {
 	_findBar->show();
 	_findBar->raiseWithSurface();
@@ -1375,13 +1410,13 @@ ComposeSearch::Inner::Inner(
 		_findBar->setLoading(true);
 		_list.controller->addItems({}, true);
 		_list.controller->setQuery(search.query);
-		_apiSearch.search(search);
+		_apiSearch->search(search);
 	}, _findBar->lifetime());
 
 	// 回车：条件有变或上次失败时立即搜索，否则定位上一条，上档键反向。
 	_findBar->submits(
 	) | rpl::on_next([=](Qt::KeyboardModifiers modifiers) {
-		if (_findBar->searchPending() || _apiSearch.messages().failed) {
+		if (_findBar->searchPending() || _apiSearch->messages().failed) {
 			_findBar->requestSearch();
 		} else {
 			_findBar->navigate(
@@ -1396,19 +1431,19 @@ ComposeSearch::Inner::Inner(
 
 	_findBar->cancelRequests(
 	) | rpl::on_next([=] {
-		if (!_list.container->isHidden()) {
+		if (_listShown.current()) {
 			hideList();
 		} else {
 			hideAnimated();
 		}
 	}, _findBar->lifetime());
 
-	_apiSearch.newFounds(
+	_apiSearch->newFounds(
 	) | rpl::on_next([=] {
 		if (!_searching) {
 			return;
 		}
-		const auto &apiData = _apiSearch.messages();
+		const auto &apiData = _apiSearch->messages();
 		_findBar->setLoading(apiData.totalOnly && !apiData.failed);
 		_findBar->setFailed(apiData.failed);
 		if (!apiData.totalOnly || apiData.failed) {
@@ -1420,12 +1455,12 @@ ComposeSearch::Inner::Inner(
 		_autoJump = false;
 	}, _findBar->lifetime());
 
-	_apiSearch.nextFounds(
+	_apiSearch->nextFounds(
 	) | rpl::on_next([=] {
 		if (!_searching) {
 			return;
 		}
-		const auto &apiData = _apiSearch.messages();
+		const auto &apiData = _apiSearch->messages();
 		_findBar->setLoading(false);
 		if (!apiData.totalOnly || apiData.failed) {
 			_list.controller->addItems(apiData.messages, false);
@@ -1436,12 +1471,12 @@ ComposeSearch::Inner::Inner(
 		}
 	}, _findBar->lifetime());
 
-	_apiSearch.updatedFounds(
+	_apiSearch->updatedFounds(
 	) | rpl::on_next([=] {
 		if (!_searching) {
 			return;
 		}
-		const auto &data = _apiSearch.messages();
+		const auto &data = _apiSearch->messages();
 		const auto &messages = data.messages;
 		const auto selected = ranges::find(messages, _currentResult);
 		const auto keepSelected = selected != end(messages);
@@ -1469,11 +1504,11 @@ ComposeSearch::Inner::Inner(
 		_pendingJump.jumps.events() | rpl::filter(rpl::mappers::_1 >= 0),
 		_findBar->showItemRequests()
 	) | rpl::on_next([=](FindBar::Index index) {
-		const auto &apiData = _apiSearch.messages();
+		const auto &apiData = _apiSearch->messages();
 		const auto &messages = apiData.messages;
 		const auto size = int(messages.size());
 		if (index >= (size - 1) && !apiData.finished) {
-			_apiSearch.searchMore();
+			_apiSearch->searchMore();
 		}
 		if (index >= size || index < 0) {
 			_pendingJump.data = { apiData.nextToken, index };
@@ -1488,7 +1523,7 @@ ComposeSearch::Inner::Inner(
 		}
 		const auto autoJump = _autoJump;
 		const auto weak = base::make_weak(_findBar.get());
-		_activations.fire_copy({ item, _apiSearch.request().query });
+		_activations.fire_copy({ item, _apiSearch->request().query });
 		if (weak && !autoJump) {
 			hideList();
 		}
@@ -1496,7 +1531,7 @@ ComposeSearch::Inner::Inner(
 
 	_list.controller->showItemRequests(
 	) | rpl::on_next([=](const FullMsgId &id) {
-		const auto &messages = _apiSearch.messages().messages;
+		const auto &messages = _apiSearch->messages().messages;
 		const auto it = ranges::find(messages, id);
 		if (it != end(messages)) {
 			_findBar->setCurrent(std::distance(begin(messages), it) + 1);
@@ -1505,9 +1540,9 @@ ComposeSearch::Inner::Inner(
 
 	_list.controller->searchMoreRequests(
 	) | rpl::on_next([=] {
-		const auto &apiData = _apiSearch.messages();
+		const auto &apiData = _apiSearch->messages();
 		if (_searching && !apiData.finished) {
-			_apiSearch.searchMore();
+			_apiSearch->searchMore();
 		}
 	}, _list.container->lifetime());
 
@@ -1535,18 +1570,62 @@ ComposeSearch::Inner::Inner(
 
 	_findBar->showListRequests(
 	) | rpl::on_next([=] {
-		if (_list.container->isHidden()) {
-			showList();
-		} else {
+		if (_listShown.current()) {
 			hideList();
+		} else {
+			showList();
 		}
 	}, _findBar->lifetime());
 
-	if (!query.isEmpty() || from) {
+	if (state && _searching) {
+		const auto &data = _apiSearch->messages();
+		if (state->pendingResultIndex >= 0
+			&& state->pendingResultIndex < int(data.messages.size())) {
+			_currentResultIndex = state->pendingResultIndex;
+			_currentResult = data.messages[_currentResultIndex];
+		} else if (_currentResultIndex < 0 && !data.messages.empty()) {
+			_currentResultIndex = 0;
+			_currentResult = data.messages.front();
+		}
+		if (state->pendingResultIndex >= int(data.messages.size())) {
+			_pendingJump.data = { state->pendingToken, state->pendingResultIndex };
+		}
+		_list.controller->setQuery(_apiSearch->request().query);
+		_list.controller->addItems(data.messages, true);
+		_findBar->setLoading(data.total < 0 || data.totalOnly);
+		_findBar->setFailed(data.failed);
+		_findBar->setTotal(data.total, false);
+		// 恢复计数和列表，不重新定位消息，保留宿主保存的聊天位置。
+		_findBar->setCurrent((_pendingJump.data.index >= 0
+			? _pendingJump.data.index
+			: _currentResultIndex) + 1, false);
+	}
+	if (state && state->listShown) {
+		showList();
+	}
+	if (state) {
+		_list.scroll->scrollToY(state->listScrollTop);
+	}
+	if (state ? state->searchPending : (!query.isEmpty() || from)) {
 		crl::on_main(_findBar.get(), [=] {
 			_findBar->requestSearch();
 		});
 	}
+}
+
+std::shared_ptr<ComposeSearchState> ComposeSearch::Inner::saveState() const {
+	auto result = std::make_shared<ComposeSearchState>();
+	_findBar->saveState(*result);
+	result->search = _apiSearch;
+	result->request.topMsgId = _topMsgId;
+	result->currentResult = _currentResult;
+	result->currentResultIndex = _currentResultIndex;
+	result->pendingResultIndex = _pendingJump.data.index;
+	result->pendingToken = _pendingJump.data.token;
+	result->listScrollTop = _list.scroll->scrollTop();
+	result->listShown = _listShown.current();
+	result->searching = _searching;
+	return result;
 }
 
 void ComposeSearch::Inner::clearResults() {
@@ -1574,20 +1653,20 @@ void ComposeSearch::Inner::updateListGeometry() {
 }
 
 void ComposeSearch::Inner::showList() {
+	_listShown = true;
+	_findBar->setListShown(true);
 	updateListGeometry();
 	_list.container->show();
 	_list.container->raise();
-	_findBar->setListShown(true);
-	_listShown = true;
 }
 
 void ComposeSearch::Inner::hideList() {
-	if (_list.container->isHidden()) {
+	if (!_listShown.current()) {
 		return;
 	}
-	_list.container->hide();
-	_findBar->setListShown(false);
 	_listShown = false;
+	_findBar->setListShown(false);
+	_list.container->hide();
 }
 
 void ComposeSearch::Inner::setInnerFocus() {
@@ -1612,7 +1691,7 @@ void ComposeSearch::Inner::raise() {
 
 void ComposeSearch::Inner::setTopMsgId(MsgId topMsgId) {
 	if (topMsgId) {
-		_apiSearch.disableMigrated();
+		_apiSearch->disableMigrated();
 	}
 	_topMsgId = topMsgId;
 }
@@ -1673,17 +1752,23 @@ ComposeSearch::ComposeSearch(
 	not_null<History*> history,
 	PeerData *from,
 	const QString &query,
-	LocalSource local)
+	LocalSource local,
+	std::shared_ptr<ComposeSearchState> state)
 : _inner(std::make_unique<Inner>(
 	parent,
 	window,
 	history,
 	from,
 	query,
-	std::move(local))) {
+	std::move(local),
+	std::move(state))) {
 }
 
 ComposeSearch::~ComposeSearch() {
+}
+
+std::shared_ptr<ComposeSearchState> ComposeSearch::saveState() const {
+	return _inner->saveState();
 }
 
 void ComposeSearch::hideAnimated() {

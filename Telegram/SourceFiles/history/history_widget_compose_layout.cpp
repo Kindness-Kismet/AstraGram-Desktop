@@ -352,7 +352,22 @@ bool HistoryWidget::searchInChatEmbedded(
 	return true;
 }
 
-void HistoryWidget::switchToSearch(QString query, PeerData *from) {
+std::shared_ptr<HistoryView::ComposeSearchState>
+HistoryWidget::saveSearchState() const {
+	return _composeSearch ? _composeSearch->saveState() : nullptr;
+}
+
+void HistoryWidget::restoreSearchState(
+		std::shared_ptr<HistoryView::ComposeSearchState> state) {
+	if (state) {
+		switchToSearch(QString(), nullptr, std::move(state));
+	}
+}
+
+void HistoryWidget::switchToSearch(
+		QString query,
+		PeerData *from,
+		std::shared_ptr<HistoryView::ComposeSearchState> state) {
 	const auto search = crl::guard(_list, [=] {
 		if (!_peer) {
 			return;
@@ -369,7 +384,9 @@ void HistoryWidget::switchToSearch(QString query, PeerData *from) {
 			controller(),
 			_history,
 			from,
-			query);
+			query,
+			HistoryView::ComposeSearch::LocalSource(),
+			state);
 
 		update();
 		setInnerFocus();

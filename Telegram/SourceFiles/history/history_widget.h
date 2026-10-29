@@ -132,6 +132,7 @@ class Element;
 class PinnedTracker;
 class TranslateBar;
 class ComposeSearch;
+struct ComposeSearchState;
 class SubsectionTabs;
 class PullToNextChannel;
 struct SelectedQuote;
@@ -318,6 +319,10 @@ public:
 		QString query,
 		Dialogs::Key chat,
 		PeerData *searchFrom = nullptr);
+	[[nodiscard]] std::shared_ptr<HistoryView::ComposeSearchState>
+		saveSearchState() const;
+	void restoreSearchState(
+		std::shared_ptr<HistoryView::ComposeSearchState> state);
 
 	void updateNotifyControls();
 
@@ -846,7 +851,10 @@ private:
 	bool kbWasHidden() const;
 	[[nodiscard]] bool forceReplyPending() const;
 
-	void switchToSearch(QString query, PeerData *from);
+	void switchToSearch(
+		QString query,
+		PeerData *from,
+		std::shared_ptr<HistoryView::ComposeSearchState> state = nullptr);
 
 	void validateSubsectionTabs();
 

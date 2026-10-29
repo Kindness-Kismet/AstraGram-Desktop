@@ -32,6 +32,7 @@ namespace HistoryView {
 class Element;
 class TopBarWidget;
 class ComposeSearch;
+struct ComposeSearchState;
 class PinnedMemento;
 class TranslateBar;
 
@@ -47,6 +48,7 @@ public:
 	~PinnedWidget();
 
 	[[nodiscard]] not_null<Data::Thread*> thread() const;
+	[[nodiscard]] std::shared_ptr<ComposeSearchState> saveSearchState() const;
 	Dialogs::RowDescriptor activeChat() const override;
 
 	bool hasTopBarShadow() const override {
@@ -176,7 +178,8 @@ private:
 	void setupClearButton();
 	void setupTranslateBar();
 	void setupShortcuts();
-	void searchInPinned();
+	void searchInPinned(std::shared_ptr<ComposeSearchState> state = nullptr);
+	void updateSearchVisibility();
 
 	void confirmDeleteSelected();
 	void confirmForwardSelected();
@@ -233,6 +236,12 @@ public:
 	[[nodiscard]] UniversalMsgId getHighlightId() const {
 		return _highlightId;
 	}
+	void setSearchState(std::shared_ptr<ComposeSearchState> state) {
+		_searchState = std::move(state);
+	}
+	[[nodiscard]] std::shared_ptr<ComposeSearchState> searchState() const {
+		return _searchState;
+	}
 
 	Data::ForumTopic *topicForRemoveRequests() const override;
 	Data::SavedSublist *sublistForRemoveRequests() const override;
@@ -241,6 +250,7 @@ private:
 	const not_null<Data::Thread*> _thread;
 	const UniversalMsgId _highlightId = 0;
 	ListMemento _list;
+	std::shared_ptr<ComposeSearchState> _searchState;
 
 };
 

@@ -186,11 +186,13 @@ public:
 	StackItemHistory(
 		not_null<History*> history,
 		MsgId msgId,
-		QVector<FullMsgId> replyReturns)
+		QVector<FullMsgId> replyReturns,
+		std::shared_ptr<HistoryView::ComposeSearchState> search)
 	: StackItem(history->peer)
 	, history(history)
 	, msgId(msgId)
-	, replyReturns(replyReturns) {
+	, replyReturns(replyReturns)
+	, search(std::move(search)) {
 	}
 
 	StackItemType type() const override {
@@ -200,6 +202,7 @@ public:
 	not_null<History*> history;
 	MsgId msgId;
 	QVector<FullMsgId> replyReturns;
+	std::shared_ptr<HistoryView::ComposeSearchState> search;
 
 private:
 	rpl::producer<> sectionRemoveRequests() const override {
@@ -1810,7 +1813,8 @@ bool MainWidget::saveSectionInStack(
 		_stack.push_back(std::make_unique<StackItemHistory>(
 			history,
 			_history->msgId(),
-			_history->replyReturns()));
+			_history->replyReturns(),
+			_history->saveSearchState()));
 	} else {
 		// We pretend that we "saved" the chats list state in stack,
 		// so that we do animate a transition from chats list to a section.
@@ -2481,6 +2485,7 @@ bool MainWidget::showBackFromStack(const SectionShow &params) {
 		_history->setReplyReturns(
 			historyItem->peer()->id,
 			std::move(historyItem->replyReturns));
+		_history->restoreSearchState(std::move(historyItem->search));
 	} else if (item->type() == SectionStackItem) {
 		auto sectionItem = static_cast<StackItemSection*>(item.get());
 		showNewSection(

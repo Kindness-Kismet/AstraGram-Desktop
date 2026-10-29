@@ -3131,6 +3131,7 @@ void ChatWidget::updateControlsVisibility() {
 		}
 	});
 	_bottom->updateControlsVisibility();
+	_bottom->setVisible(!_composeSearch);
 	if (_stash) {
 		_stash->updateButton();
 	}
@@ -3150,7 +3151,13 @@ void ChatWidget::updateControlsVisibility() {
 		setKeyboardReplyTo(nullptr);
 		hideKeyboardReplyToExternal();
 	}
-	if (active || choosingTheme) {
+	if (_composeSearch) {
+		_composeControls->hide();
+		_composeSearch->raise();
+		if (_supportAutocomplete) {
+			_supportAutocomplete->hide();
+		}
+	} else if (active || choosingTheme) {
 		if (_supportAutocomplete) {
 			_supportAutocomplete->hide();
 		}
@@ -4163,6 +4170,7 @@ void ChatWidget::saveHistoryScrollState(const ListMemento &state) {
 void ChatWidget::saveState(not_null<ChatMemento*> memento) {
 	memento->setReplies(_replies);
 	memento->setReplyReturns(_cornerButtons.replyReturns());
+	memento->setSearchState(saveSearchState());
 	_inner->saveState(memento->list());
 	saveHistoryScrollState(*memento->list());
 }
@@ -4315,6 +4323,9 @@ void ChatWidget::restoreState(not_null<ChatMemento*> memento) {
 		refreshReplies();
 	}
 	_cornerButtons.setReplyReturns(memento->replyReturns());
+	if (const auto state = memento->searchState()) {
+		showComposeSearch(QString(), nullptr, state);
+	}
 
 	// Custom initial scroll for post comments, from "Discussion started".
 	if (!memento->highlightId()
@@ -4420,7 +4431,7 @@ void ChatWidget::updateControlsGeometry() {
 
 	auto bottom = height();
 	auto floatingCompose = false;
-	const auto bottomHeight = _bottom->contentHeight();
+	const auto bottomHeight = _composeSearch ? 0 : _bottom->contentHeight();
 	if (bottomHeight > 0) {
 		_bottom->setGeometry(0, bottom - bottomHeight, width(), bottomHeight);
 		bottom -= bottomHeight;
@@ -4666,8 +4677,8 @@ void ChatWidget::showFinishedHook() {
 	const auto replaced = _bottom->hasOpenChatButton()
 		|| _bottom->hasAboutHiddenAuthor()
 		|| _bottom->isButtonActive();
-	if (replaced) {
-		if (Ui::InFocusChain(this)) {
+	if (replaced || _composeSearch) {
+		if (!_composeSearch && Ui::InFocusChain(this)) {
 			_inner->setFocus();
 		}
 		_composeControls->hide();
@@ -6252,23 +6263,23 @@ int ChatWidget::composeHeightCurrent() const {
 		: _composeControls->heightCurrent();
 }
 
+std::shared_ptr<ComposeSearchState> ChatWidget::saveSearchState() const {
+	return _composeSearch ? _composeSearch->saveState() : nullptr;
+}
+
 // 普通聊天、话题、评论区与收藏来源共用同一查找栏，搜索期间停用输入区。
-void ChatWidget::showComposeSearch(const QString &query, PeerData *from) {
-	const auto update = [=] {
-		if (_composeSearch) {
-			_composeControls->hide();
-		} else {
-			_composeControls->show();
-		}
-		updateBotKeyboard();
-		updateControlsGeometry();
-	};
+void ChatWidget::showComposeSearch(
+		const QString &query,
+		PeerData *from,
+		std::shared_ptr<ComposeSearchState> state) {
 	_composeSearch = std::make_unique<ComposeSearch>(
 		this,
 		controller(),
 		_history,
 		_sublist ? _sublist->sublistPeer().get() : from,
-		query);
+		query,
+		ComposeSearch::LocalSource(),
+		std::move(state));
 	if (_repliesRootId) {
 		_composeSearch->setTopMsgId(_repliesRootId);
 	}
@@ -6278,7 +6289,7 @@ void ChatWidget::showComposeSearch(const QString &query, PeerData *from) {
 		? Dialogs::Key(_sublist)
 		: Dialogs::Key(_history));
 
-	update();
+	updateControlsVisibility();
 	doSetInnerFocus();
 
 	_composeSearch->heightChanges(
@@ -6287,7 +6298,7 @@ void ChatWidget::showComposeSearch(const QString &query, PeerData *from) {
 	}, _composeSearch->lifetime());
 
 	_composeSearch->listShownValue(
-	) | rpl::skip(1) | rpl::on_next([=](bool shown) {
+	) | rpl::on_next([=](bool shown) {
 		if (shown) {
 			_topControls->hide();
 		} else {
@@ -6308,7 +6319,7 @@ void ChatWidget::showComposeSearch(const QString &query, PeerData *from) {
 	) | rpl::take(1) | rpl::on_next([=] {
 		_composeSearch = nullptr;
 
-		update();
+		updateControlsVisibility();
 		doSetInnerFocus();
 	}, _composeSearch->lifetime());
 }

@@ -89,6 +89,7 @@ class TopBarWidget;
 class ChatMemento;
 class ComposeControls;
 class ComposeSearch;
+struct ComposeSearchState;
 class TopControls;
 class SendActionPainter;
 class StickerToast;
@@ -158,6 +159,7 @@ public:
 		QString query,
 		Dialogs::Key chat,
 		PeerData *searchFrom = nullptr) override;
+	[[nodiscard]] std::shared_ptr<ComposeSearchState> saveSearchState() const;
 
 	bool confirmSendingFiles(const QStringList &files) override;
 	bool confirmSendingFiles(not_null<const QMimeData*> data) override;
@@ -365,7 +367,10 @@ private:
 	void setupComposeStash();
 
 	void searchRequested();
-	void showComposeSearch(const QString &query, PeerData *from);
+	void showComposeSearch(
+		const QString &query,
+		PeerData *from,
+		std::shared_ptr<ComposeSearchState> state = nullptr);
 	[[nodiscard]] int composeHeightCurrent() const;
 	void updatePinnedVisibility();
 
@@ -686,6 +691,12 @@ public:
 	const QVector<FullMsgId> &replyReturns() const {
 		return _replyReturns;
 	}
+	void setSearchState(std::shared_ptr<ComposeSearchState> state) {
+		_searchState = std::move(state);
+	}
+	[[nodiscard]] std::shared_ptr<ComposeSearchState> searchState() const {
+		return _searchState;
+	}
 
 	void setOriginId(FullMsgId id) {
 		_originId = id;
@@ -725,6 +736,7 @@ private:
 	ListMemento _list;
 	std::shared_ptr<Data::RepliesList> _replies;
 	QVector<FullMsgId> _replyReturns;
+	std::shared_ptr<ComposeSearchState> _searchState;
 	FullMsgId _originId;
 	bool _activateChooseForReport = false;
 	bool _sendBotStart = false;

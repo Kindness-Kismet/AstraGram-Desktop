@@ -298,11 +298,15 @@ void PinnedWidget::setupShortcuts() {
 	}, lifetime());
 }
 
-void PinnedWidget::searchInPinned() {
+std::shared_ptr<ComposeSearchState> PinnedWidget::saveSearchState() const {
+	return _composeSearch ? _composeSearch->saveState() : nullptr;
+}
+
+void PinnedWidget::searchInPinned(std::shared_ptr<ComposeSearchState> state) {
 	if (_history->peer->isSelf()) {
 		return;
 	}
-	if (_composeSearch) {
+	if (_composeSearch && !state) {
 		_composeSearch->setInnerFocus();
 		return;
 	}
@@ -310,7 +314,10 @@ void PinnedWidget::searchInPinned() {
 		this,
 		controller(),
 		_history,
-		nullptr);
+		nullptr,
+		QString(),
+		ComposeSearch::LocalSource(),
+		std::move(state));
 	_composeSearch->setSearchFilter(Api::SearchFilter::Pinned);
 	_composeSearch->setCalendarChat(Dialogs::Key(_thread));
 	_composeSearch->setCalendarJumpHandler(crl::guard(this, [=](
@@ -349,18 +356,13 @@ void PinnedWidget::searchInPinned() {
 		_composeSearch->setTopMsgId(topic->rootId());
 	}
 
-	_topBarShadow->hide();
-	_clearButton->hide();
+	updateSearchVisibility();
 	updateControlsGeometry();
 	doSetInnerFocus();
 
 	_composeSearch->listShownValue(
-	) | rpl::skip(1) | rpl::on_next([=](bool shown) {
-		if (shown) {
-			_translateBar->hide();
-		} else {
-			_translateBar->show();
-		}
+	) | rpl::on_next([=] {
+		updateSearchVisibility();
 	}, _composeSearch->lifetime());
 
 	_composeSearch->activations(
@@ -372,8 +374,7 @@ void PinnedWidget::searchInPinned() {
 	) | rpl::take(1) | rpl::on_next([=] {
 		_composeSearch = nullptr;
 
-		_topBarShadow->show();
-		_clearButton->show();
+		updateSearchVisibility();
 		updateControlsGeometry();
 		doSetInnerFocus();
 	}, _composeSearch->lifetime());
@@ -443,6 +444,7 @@ Dialogs::RowDescriptor PinnedWidget::activeChat() const {
 
 QPixmap PinnedWidget::grabForShowAnimation(const Window::SectionSlideParams &params) {
 	_topBar->updateControlsVisibility();
+	updateSearchVisibility();
 	if (params.withTopBarShadow) _topBarShadow->hide();
 	auto result = Window::GrabForAnimation(this);
 	if (params.withTopBarShadow) _topBarShadow->show();
@@ -502,10 +504,14 @@ bool PinnedWidget::showMessage(
 }
 
 void PinnedWidget::saveState(not_null<PinnedMemento*> memento) {
+	memento->setSearchState(saveSearchState());
 	_inner->saveState(memento->list());
 }
 
 void PinnedWidget::restoreState(not_null<PinnedMemento*> memento) {
+	if (const auto state = memento->searchState()) {
+		searchInPinned(state);
+	}
 	_inner->restoreState(memento->list());
 	if (const auto highlight = memento->getHighlightId()) {
 		_inner->showAtPosition(Data::MessagePosition{
@@ -631,8 +637,19 @@ void PinnedWidget::showAnimatedHook(
 void PinnedWidget::showFinishedHook() {
 	_topBar->setAnimatingMode(false);
 	_inner->showFinished();
-	if (!_composeSearch || !_composeSearch->listShown()) {
+	updateSearchVisibility();
+}
+
+void PinnedWidget::updateSearchVisibility() {
+	if (_composeSearch && _composeSearch->listShown()) {
+		_translateBar->hide();
+	} else {
 		_translateBar->show();
+	}
+	_topBarShadow->setVisible(!_composeSearch);
+	_clearButton->setVisible(!_composeSearch);
+	if (_composeSearch) {
+		_composeSearch->raise();
 	}
 }
 

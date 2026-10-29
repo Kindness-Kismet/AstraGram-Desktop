@@ -29,6 +29,22 @@ class History;
 
 namespace HistoryView {
 
+// 导航快照只在当前会话内保存，搜索请求与分页结果随导航栈保留。
+struct ComposeSearchState {
+	std::shared_ptr<Api::MessagesSearchMerged> search;
+	Api::MessagesSearch::Request request;
+	std::optional<Api::MessagesSearch::Request> lastRequest;
+	std::optional<Api::SearchFilter> fixedFilter;
+	FullMsgId currentResult;
+	int currentResultIndex = -1;
+	int pendingResultIndex = -1;
+	QString pendingToken;
+	int listScrollTop = 0;
+	bool listShown = false;
+	bool searching = false;
+	bool searchPending = false;
+};
+
 // 查找栏占用输入区胶囊的位置，宿主需按 height() 预留底部空间。
 class ComposeSearch final {
 public:
@@ -40,8 +56,11 @@ public:
 		not_null<History*> history,
 		PeerData *from = nullptr,
 		const QString &query = QString(),
-		LocalSource local = {});
+		LocalSource local = {},
+		std::shared_ptr<ComposeSearchState> state = nullptr);
 	~ComposeSearch();
+
+	[[nodiscard]] std::shared_ptr<ComposeSearchState> saveState() const;
 
 	void hideAnimated();
 	void setInnerFocus();
