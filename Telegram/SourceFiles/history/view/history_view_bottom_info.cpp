@@ -359,7 +359,10 @@ void BottomInfo::paint(
 			? st->historyRepliesInvertedIcon()
 			: stm->historyRepliesIcon;
 		right -= st::historyViewsWidth;
-		paintIcon(icon, { right, firstLineBottom + st::historyViewsTop });
+		paintIcon(icon, {
+			right,
+			position.y() + (st::msgDateFont->height - icon.height()) / 2,
+		});
 	}
 	if (!ExtrasFeatures::MessageShot::isTakingShot() && (_data.flags & Data::Flag::Sending)
 		&& !(_data.flags & Data::Flag::OutLayout)) {
