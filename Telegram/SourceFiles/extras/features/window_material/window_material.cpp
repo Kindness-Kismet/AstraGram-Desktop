@@ -1,6 +1,7 @@
 #include "extras/features/window_material/window_material.h"
 
 #include "extras/extras_settings.h"
+#include "chat_helpers/tabbed_panel.h"
 #include "extras/features/window_material/platform/window_material_platform.h"
 #include "ui/controls/jump_down_button.h"
 #include "ui/gl/gl_surface.h"
@@ -404,7 +405,8 @@ bool isActive(const QWidget *widget) {
 		if ((dynamic_cast<const Ui::LayerWidget*>(ancestor)
 				&& !dynamic_cast<const Window::MainMenu*>(ancestor))
 			|| (dynamic_cast<const Ui::PopupMenu*>(ancestor)
-				&& !ancestor->isWindow())) {
+				&& !ancestor->isWindow())
+			|| dynamic_cast<const ChatHelpers::TabbedPanel*>(ancestor)) {
 			return false;
 		}
 		if (ancestor == widget->window()) {
