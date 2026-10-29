@@ -1,33 +1,21 @@
-- Adapted to official Telegram Desktop 7.3.3
-- Added native window materials to popup menus, so menus can now follow Mica or Acrylic while keeping their expansion animation and the main window focus
-- Improved submenus, which now meet the parent menu edge without covering its highlighted row
-- Fixed an issue with window-material colors that previously caused some buttons to lose their colors, bubble tails to differ from their bodies and title-button hovers to become hard to see
-- Fixed an issue with Acrylic page transitions that previously caused the background tint to change during animations
-- Improved cache, Premium, Business and Stars settings, which now use consistent cards with aligned controls and smoother scrolling through long lists
-- Fixed an issue with input hints that previously caused phone-number completions, username prefixes and time or color hints to appear at the wrong height
-- Improved chat loading, which now preloads visible conversations and preserves the reading position while cached messages refresh
-- Fixed an issue with offline history that previously caused live messages received before opening a conversation to be missing after restarting offline
-- Improved media previews, which now fade smoothly when photos, albums, documents, links and stickers refresh, including when message views are rebuilt
-- Fixed an issue with clearing large media caches that previously caused excessive memory use
-- Fixed an issue with saved files that previously left outdated download states after files were moved or changed and hid music download controls when only playback caches remained
-- Changed how deleted messages in Saved Messages are handled; they are now deleted normally and no longer enter the deleted-message archive
-- Changed the maximum message width; long incoming and outgoing bubbles now leave 30 additional logical pixels on the opposite side while keeping their original alignment
-- Fixed an issue with default chat backgrounds that previously replaced the original wallpapers and light gradient pattern with neutral gray
+- Improved system-material menus, which now use consistent Mica and Acrylic styles across attachment menus, photo/video viewer actions and playback settings, with smoother transitions and clearer loading text
+- Improved chat bottom controls, which now use consistent floating frosted backgrounds for channel notifications, join buttons, pinned-message actions and admin-log controls
+- Improved icons in settings rows, which now have smoother edges when scaled
+- Fixed an issue with cached history transitions that previously caused old message images, captions and album buttons to overlap scrolling messages
+- Fixed an issue with reconnecting chats that previously caused new messages after the cached history to remain missing until the conversation was scrolled
+- Fixed an issue with cached photos that previously caused recently viewed images and albums to become blurred again when reopening a chat
+- Fixed an issue with in-chat search that previously caused search filters and result positions to be lost when returning to a chat or pinned-message page, with compose controls incorrectly appearing over search
+- Fixed an issue with text copying that previously caused the Copy Text action to be missing over collapsed quotes and photo captions
+- Fixed an issue with the first media viewer opening after startup on Windows that previously caused the main window to flash before the viewer appeared
 
 ---
 
-- 适配了官方 Telegram Desktop 7.3.3
-- 新增了弹出菜单的原生窗口材质，现在菜单可以跟随云母或亚克力效果，同时保留展开动画和主窗口焦点
-- 对多级菜单的位置进行了改善，这使得子菜单会与上级菜单边贴边，不再遮住上级菜单的悬停高亮
-- 修复了关于系统材质配色的错误，该问题曾导致部分按钮失去原色、气泡尾角与主体异色，以及标题按钮的悬停效果不清晰
-- 修复了关于亚克力页面过渡的错误，该问题曾导致背景底色在切换动画中发生变化
-- 对缓存、会员、商业和星星设置页进行了改善，这使得卡片样式与控件对齐更加统一，长列表滚动也更流畅
-- 修复了关于输入提示的错误，该问题曾导致电话号码补全、用户名链接前缀以及时间和颜色提示的显示高度不正确
-- 对聊天加载进行了改善，这使得可见会话会提前加载，缓存消息刷新时也能保持阅读位置
-- 修复了关于离线历史记录的错误，该问题曾导致打开会话前收到的新消息在离线重启后缺失
-- 对媒体预览的更新动画进行了改善，这使得图片、相册、文件、链接和贴纸刷新时会平滑渐变，消息视图重建时也能延续动画
-- 修复了关于清理大型媒体缓存的错误，该问题曾导致内存占用过高
-- 修复了关于已保存文件状态的错误，该问题曾导致文件被移动或修改后下载状态未更新，以及只剩播放缓存时音乐下载按钮不显示
-- 调整了收藏夹消息的删除行为，现在会正常删除消息，不再将它们加入已删除消息留档
-- 调整了消息气泡的最大宽度，现在较长的收发消息会在气泡对侧额外保留 30 个逻辑像素，同时保持原有对齐方式
-- 修复了关于默认聊天背景的错误，该问题曾导致原有壁纸和浅色渐变图案被替换为中性灰
+- 对系统材质菜单进行了改善，这使得附件菜单、图片和视频查看器操作及播放设置的云母、亚克力样式更加统一，过渡更平稳，加载提示更清晰
+- 对对话区底部控件进行了改善，这使得频道通知条、加入按钮、置顶消息操作和管理日志控件采用一致的悬浮磨砂背景
+- 对设置选项的图标进行了改善，这使得图标缩放后的边缘更平滑
+- 修复了关于缓存历史过渡的错误，该问题曾导致旧画面中的图片、说明文字和相册按钮与滚动中的消息重叠
+- 修复了关于聊天重新联网的错误，该问题曾导致缓存历史之后的新消息需要滚动会话才能补齐
+- 修复了关于图片缓存的错误，该问题曾导致重新打开聊天时，近期查看过的图片和相册再次变模糊
+- 修复了关于聊天搜索的错误，该问题曾导致返回聊天或置顶消息页面后搜索条件和结果位置丢失，输入区域还会错误地出现在搜索界面上
+- 修复了关于文字复制的错误，该问题曾导致折叠引用和图片说明的菜单中缺少复制文字选项
+- 修复了关于 Windows 启动后首次打开媒体查看器的错误，该问题曾导致主窗口先闪动，再显示查看器
