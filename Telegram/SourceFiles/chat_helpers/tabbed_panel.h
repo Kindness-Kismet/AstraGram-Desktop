@@ -96,6 +96,9 @@ private:
 
 	void hideFinished();
 	void showStarted();
+	void paintShowFrame(QPainter &p, float64 opacity);
+	void paintMaterialBackground(QPainter &p, QRect rect, float64 opacity);
+	[[nodiscard]] Ui::PanelAnimation::Origin animationOrigin() const;
 
 	bool preventAutoHide() const;
 	void updateContentHeight();

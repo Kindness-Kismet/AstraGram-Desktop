@@ -21,7 +21,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include "extras/features/window_material/window_material.h"
 
+#include <QtGui/QPainterPath>
 
 namespace ChatHelpers {
 namespace {
@@ -146,6 +148,13 @@ TabbedPanel::TabbedPanel(
 
 	hideChildren();
 	hide();
+	ExtrasFeatures::WindowMaterial::changes(
+		this
+	) | rpl::on_next([=] {
+		if (_a_show.animating() || _a_opacity.animating()) {
+			hideFast();
+		}
+	}, lifetime());
 }
 
 not_null<TabbedSelector*> TabbedPanel::selector() const {
@@ -243,17 +252,76 @@ void TabbedPanel::paintEvent(QPaintEvent *e) {
 	if (showAnimating) {
 		Assert(_showAnimation != nullptr);
 		if (auto opacity = _a_opacity.value(_hiding ? 0. : 1.)) {
-			_showAnimation->paintFrame(p, 0, 0, width(), _a_show.value(1.), opacity);
+			paintShowFrame(p, opacity);
 		}
 	} else if (opacityAnimating) {
-		p.setOpacity(_a_opacity.value(_hiding ? 0. : 1.));
+		const auto opacity = _a_opacity.value(_hiding ? 0. : 1.);
+		paintMaterialBackground(p, innerRect(), opacity);
+		p.setOpacity(opacity);
+		if (ExtrasFeatures::WindowMaterial::isActive(this)) {
+			_shadow.paint(p, innerRect(), st::emojiPanRadius);
+		}
 		p.drawPixmap(0, 0, _cache);
 	} else if (_hiding || isHidden()) {
 		hideFinished();
 	} else {
 		if (!_cache.isNull()) _cache = QPixmap();
+		paintMaterialBackground(p, innerRect(), 1.);
 		_shadow.paint(p, innerRect(), st::emojiPanRadius);
 	}
+}
+
+void TabbedPanel::paintShowFrame(QPainter &p, float64 opacity) {
+	if (!ExtrasFeatures::WindowMaterial::isActive(this)) {
+		_showAnimation->paintFrame(p, 0, 0, width(), _a_show.value(1.), opacity);
+		return;
+	}
+	const auto state = _showAnimation->computeState(_a_show.value(1.), opacity);
+	const auto origin = animationOrigin();
+	using Origin = Ui::PanelAnimation::Origin;
+	const auto inner = innerRect();
+	const auto x = (origin == Origin::TopLeft || origin == Origin::BottomLeft)
+		? inner.x() : inner.x() + inner.width() - state.width;
+	const auto y = (origin == Origin::TopLeft || origin == Origin::TopRight)
+		? inner.y() : inner.y() + inner.height() - state.height;
+	const auto frame = QRect(x, y, state.width, state.height);
+	paintMaterialBackground(p, frame, state.opacity);
+	p.save();
+	p.setOpacity(state.opacity);
+	_shadow.paint(p, frame, st::emojiPanRadius);
+	auto clip = QPainterPath();
+	clip.addRoundedRect(frame, st::emojiPanRadius, st::emojiPanRadius);
+	p.setClipPath(clip, Qt::IntersectClip);
+	// 透明内容不能叠加实色遮罩，也不能在上一帧上累积。
+	p.drawPixmap(0, 0, _cache);
+	p.restore();
+}
+
+void TabbedPanel::paintMaterialBackground(
+		QPainter &p,
+		QRect rect,
+		float64 opacity) {
+	if (!ExtrasFeatures::WindowMaterial::isActive(this) || opacity <= 0.) {
+		return;
+	}
+	p.save();
+	p.setRenderHint(QPainter::Antialiasing);
+	p.setOpacity(opacity);
+	p.setPen(Qt::NoPen);
+	// 按进度移除下方内容，再加上同等比例的根部材质，避免首帧直接挖空。
+	p.setCompositionMode(QPainter::CompositionMode_DestinationOut);
+	p.setBrush(Qt::black);
+	p.drawRoundedRect(rect, st::emojiPanRadius, st::emojiPanRadius);
+	p.setCompositionMode(QPainter::CompositionMode_Plus);
+	p.setBrush(ExtrasFeatures::WindowMaterial::rootTintColor(this));
+	p.drawRoundedRect(rect, st::emojiPanRadius, st::emojiPanRadius);
+	p.restore();
+}
+
+Ui::PanelAnimation::Origin TabbedPanel::animationOrigin() const {
+	return _showAnimationOrigin.value_or(_dropDown
+		? Ui::PanelAnimation::Origin::TopRight
+		: Ui::PanelAnimation::Origin::BottomRight);
 }
 
 void TabbedPanel::moveHorizontally() {
@@ -351,7 +419,9 @@ void TabbedPanel::prepareCacheFor(bool hiding) {
 	_hiding = false;
 	showChildren();
 
-	_cache = Ui::GrabWidget(this);
+	_cache = ExtrasFeatures::WindowMaterial::isActive(this)
+		? QPixmap::fromImage(grabForAnimation())
+		: Ui::GrabWidget(this);
 
 	_a_show = base::take(showAnimation);
 	_showAnimation = base::take(showAnimationData);
@@ -377,13 +447,13 @@ void TabbedPanel::startOpacityAnimation(bool hiding) {
 void TabbedPanel::startShowAnimation() {
 	if (!_a_show.animating()) {
 		auto image = grabForAnimation();
+		if (ExtrasFeatures::WindowMaterial::isActive(this)) {
+			_cache = QPixmap::fromImage(image);
+		}
 
-		const auto origin = _showAnimationOrigin.value_or(_dropDown
-			? Ui::PanelAnimation::Origin::TopRight
-			: Ui::PanelAnimation::Origin::BottomRight);
 		_showAnimation = std::make_unique<Ui::PanelAnimation>(
 			_selector->st().showAnimation,
-			origin);
+			animationOrigin());
 		auto inner = rect().marginsRemoved(st::emojiPanMargins);
 		_showAnimation->setFinalImage(
 			std::move(image),

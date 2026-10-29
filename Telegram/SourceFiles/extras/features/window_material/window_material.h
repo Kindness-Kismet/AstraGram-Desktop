@@ -28,7 +28,7 @@ void attachPopup(not_null<Ui::PopupMenu*> menu);
 	const QWidget *widget,
 	QColor opaque,
 	int alpha = 0);
-// 主界面与主菜单共用窗口材质，其余弹窗和浮层保持不透明。
+// 跟随所属窗口的材质状态，未接入材质的弹层保持不透明。
 void watchSurface(not_null<QWidget*> widget);
 // 有效模式或主题变化也会通知，即使生效状态仍为 true。
 [[nodiscard]] rpl::producer<bool> changes(not_null<QWidget*> widget);
