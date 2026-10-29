@@ -75,6 +75,7 @@ void seedSimulationScenarios(not_null<Main::Session*> session);
 
 // 当前活跃会话，无会话时为空；定义在 debug_commands.cpp。
 [[nodiscard]] Main::Session *ActiveSession();
+[[nodiscard]] Main::Session *sessionByIndex(int index);
 [[nodiscard]] PeerData *findPeer(const QString &id);
 [[nodiscard]] HistoryItem *findMessage(const QString &peerId, const QString &messageId);
 [[nodiscard]] HistoryItem *findSessionMessage(not_null<Main::Session*> session, FullMsgId id);

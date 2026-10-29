@@ -1317,6 +1317,8 @@ void Message::animateReaction(Ui::ReactionFlyAnimationArgs &&args) {
 	if (bubble) {
 		// Entry page is always a bubble bottom.
 		auto inner = g;
+		inner.setHeight(inner.height()
+			+ bubbleContentHeightDelta() - bubbleReactionsShift());
 		if (_comments) {
 			inner.setHeight(inner.height() - st::historyCommentsButtonHeight);
 		}
@@ -1348,6 +1350,7 @@ QRect Message::effectIconGeometry() const {
 	const auto media = this->media();
 
 	auto g = countGeometry();
+	g.setHeight(g.height() + bubbleContentHeightDelta() - bubbleReactionsShift());
 	if (g.width() < 1 || isHidden()) {
 		return {};
 	}
@@ -1841,6 +1844,9 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 	if (g.width() < 1) {
 		return;
 	}
+	_lastPaintedBubbleWidth = g.width();
+	_lastPaintedHeight = height();
+	_lastPaintedViewWidth = width();
 
 	const auto item = data();
 	const auto media = this->media();
@@ -2057,10 +2063,21 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 				});
 		}
 
+		const auto contentHeightDelta = bubbleContentHeightDelta();
+		const auto reactionsShift = bubbleReactionsShift();
+		const auto clipContent = _bubbleTransition
+			&& _bubbleTransition->includesContent();
+		if (clipContent) {
+			p.save();
+			p.setClipRect(g, Qt::IntersectClip);
+		}
 		auto inner = g;
 		paintCommentsButton(p, inner, context);
+		// 内容按最终高度排版，气泡扩展时只逐步露出新增区域。
+		inner.setHeight(inner.height() + contentHeightDelta);
 
 		auto trect = inner.marginsRemoved(st::msgPadding);
+		auto mediaClipBottom = inner.top() + inner.height();
 
 		const auto additionalInfoSkip = (mediaDisplayed
 			&& !media->additionalInfoString().isEmpty())
@@ -2074,7 +2091,8 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 			: 0;
 		if (reactionsInBubble) {
 			trect.setHeight(trect.height() - reactionsHeight);
-			const auto reactionsPosition = QPoint(trect.left(), trect.top() + trect.height() + reactionsTop);
+			const auto reactionsPosition = QPoint(trect.left(), trect.top() + trect.height() + reactionsTop - reactionsShift);
+			mediaClipBottom = reactionsPosition.y() - reactionsTop;
 			p.translate(reactionsPosition);
 			prepareCustomEmojiPaint(p, context, *_reactions);
 			_reactions->paint(p, context, g.width(), context.clip.translated(-reactionsPosition));
@@ -2145,6 +2163,11 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 				&& context.highlightPathCache->isEmpty();
 			auto mediaPosition = QPoint(inner.left(), top);
 			_lastMediaPosition = mediaPosition;
+			p.save();
+			if (reactionsShift && reactionsInBubble) {
+				p.setClipRect(QRect(inner.left(), inner.top(), inner.width(),
+					mediaClipBottom - inner.top()), Qt::IntersectClip);
+			}
 			p.translate(mediaPosition);
 			media->draw(p, context.translated(
 				-mediaPosition
@@ -2160,7 +2183,7 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 				&& !context.highlightPathCache->isEmpty()) {
 				context.highlightPathCache->translate(mediaPosition);
 			}
-			p.translate(-mediaPosition);
+			p.restore();
 		};
 		if (mediaDisplayed && _invertMedia) {
 			if (!mediaOnTop) {
@@ -2238,7 +2261,7 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 				context.withSelection(
 					bottomSelected ? FullSelection : TextSelection()),
 				inner.left() + inner.width(),
-				inner.top() + inner.height(),
+				inner.top() + inner.height() - reactionsShift,
 				2 * inner.left() + inner.width(),
 				InfoDisplayType::Default);
 			if (context.reactionInfo && !_reactions) {
@@ -2254,6 +2277,9 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 				p.fillRect(g.left(), g.top() + g.height() - st::historyCommentsButtonHeight - st::lineWidth, g.width(), st::lineWidth, stm->msgDateFg);
 				p.setOpacity(o);
 			}
+		}
+		if (clipContent) {
+			p.restore();
 		}
 		ensureSummarizeButton();
 		if (const auto size = rightActionSize(); size || _summarize) {
@@ -4112,7 +4138,11 @@ TextState Message::textState(
 			AddTextStateOffset(&result, visibleMediaTextLen + visibleTextLen);
 			return result;
 		}
+		const auto contentHeightDelta = bubbleContentHeightDelta();
+		const auto reactionsShift = bubbleReactionsShift();
+		inner.setHeight(inner.height() + contentHeightDelta);
 		auto trect = inner.marginsRemoved(st::msgPadding);
+		auto mediaClipBottom = inner.top() + inner.height();
 		const auto additionalInfoSkip = (mediaDisplayed
 			&& !media->additionalInfoString().isEmpty())
 			? st::msgDateFont->height
@@ -4125,11 +4155,12 @@ TextState Message::textState(
 			: 0;
 		if (reactionsInBubble) {
 			trect.setHeight(trect.height() - reactionsHeight);
-			const auto reactionsPosition = QPoint(trect.left(), trect.top() + trect.height() + reactionsTop);
-			if (_reactions->getState(point - reactionsPosition, &result)) {
+			const auto reactionsPosition = QPoint(trect.left(), trect.top() + trect.height() + reactionsTop - reactionsShift);
+			if (inBubble && _reactions->getState(point - reactionsPosition, &result)) {
 				AddTextStateOffset(&result, visibleMediaTextLen + visibleTextLen);
 				return result;
 			}
+			mediaClipBottom = reactionsPosition.y() - reactionsTop;
 		}
 		if (_viewButton) {
 			const auto belowInfo = _viewButton->belowMessageInfo();
@@ -4137,7 +4168,7 @@ TextState Message::textState(
 				? (reactionsHeight + 2 * st::mediaInBubbleSkip)
 				: bottomInfoHeight();
 			const auto heightMargins = QMargins(0, 0, 0, infoHeight);
-			if (_viewButton->getState(
+			if (inBubble && _viewButton->getState(
 					point,
 					_viewButton->countRect(belowInfo
 						? inner
@@ -4220,7 +4251,7 @@ TextState Message::textState(
 			}
 			const auto bottomInfoResult = bottomInfoTextState(
 				inner.left() + inner.width(),
-				inner.top() + inner.height(),
+				inner.top() + inner.height() - reactionsShift,
 				point,
 				InfoDisplayType::Default);
 			if (bottomInfoResult.link
@@ -4245,7 +4276,8 @@ TextState Message::textState(
 					+ (mediaOnBottom ? 0 : st::mediaInBubbleSkip));
 			}
 			if (point.y() >= mediaTop
-				&& point.y() < mediaTop + mediaHeight) {
+				&& point.y() < mediaTop + mediaHeight
+				&& (!reactionsShift || point.y() < mediaClipBottom)) {
 				result = media->textState(
 					point - QPoint(mediaLeft, mediaTop),
 					request);
@@ -6683,7 +6715,7 @@ bool Message::isCommentsRootView() const {
 		&& !data()->history()->isForum();
 }
 
-QRect Message::countGeometry() const {
+QRect Message::countGeometry(bool finalWidth, int layoutWidth) const {
 	const auto item = data();
 	const auto centeredView = item->isFakeAboutView()
 		|| isCommentsRootView();
@@ -6699,7 +6731,7 @@ QRect Message::countGeometry() const {
 	const auto extraSkip = centeredView
 		? 0
 		: style::ConvertScale(kExtraOppositeMargin);
-	const auto availableWidth = width()
+	const auto availableWidth = (layoutWidth ? layoutWidth : width())
 		- st::msgMargin.left()
 		- (centeredView
 			? st::msgMargin.left()
@@ -6745,7 +6777,7 @@ QRect Message::countGeometry() const {
 			accumulate_min(contentWidth, shrunk);
 		}
 	}
-	if (_bubbleTransition) {
+	if (_bubbleTransition && !finalWidth) {
 		contentWidth = _bubbleTransition->bubbleWidth(contentWidth);
 	}
 	if (contentWidth < availableWidth
@@ -7433,6 +7465,18 @@ int Message::visibleMediaTextLength() const {
 
 QSize Message::performCountCurrentSize(int newWidth) {
 	const auto newHeight = resizeContentGetHeight(newWidth);
+	const auto page = dynamic_cast<WebPage*>(media());
+	const auto pageSize = page && page->isDisplayed() ? page->currentSize() : QSize();
+	const auto reactionsSize = _reactions ? _reactions->currentSize() : QSize();
+	if (pageSize != _lastWebPageSize || reactionsSize != _lastReactionsSize) {
+		const auto moveReactions = (pageSize != _lastWebPageSize)
+			&& !_lastReactionsSize.isEmpty() && !reactionsSize.isEmpty();
+		_lastWebPageSize = pageSize;
+		_lastReactionsSize = reactionsSize;
+		if (newWidth == _lastPaintedViewWidth) {
+			prepareBubbleSizeTransition(moveReactions);
+		}
+	}
 
 	return { newWidth, bubbleTransitionHeight(newWidth, newHeight) };
 }
@@ -7441,7 +7485,8 @@ bool Message::bubbleTransitionAllowed() const {
 	const auto media = this->media();
 	return !isHidden()
 		&& drawBubble()
-		&& !(media && media->isDisplayed())
+		&& (!(media && media->isDisplayed())
+			|| (_bubbleTransition && _bubbleTransition->includesContent()))
 		&& !hasRichPage()
 		&& !Has<TextAppearing>();
 }
@@ -7455,18 +7500,36 @@ void Message::prepareBubbleTransition(Ui::Text::String &&previous) {
 		return;
 	}
 	const auto geometry = countGeometry();
+	const auto includesContent = _bubbleTransition
+		&& _bubbleTransition->includesContent();
+	const auto movesReactions = _bubbleTransition
+		&& _bubbleTransition->movesReactions();
 	_bubbleTransition = std::make_unique<ExtrasUi::BubbleTransition>(
 		height(),
 		geometry.width(),
 		std::move(previous),
 		geometry.width() - st::msgPadding.left() - st::msgPadding.right());
+	if (includesContent) {
+		_bubbleTransition->includeContent(movesReactions);
+	}
 }
 
 void Message::initBubbleTransition(not_null<Message*> was) {
+	_lastPaintedBubbleWidth = was->_lastPaintedBubbleWidth;
+	_lastPaintedHeight = was->_lastPaintedHeight;
+	_lastPaintedViewWidth = was->_lastPaintedViewWidth;
+	_lastWebPageSize = was->_lastWebPageSize;
+	_lastReactionsSize = was->_lastReactionsSize;
 	if (anim::Disabled() || !was->bubbleTransitionAllowed()) {
 		return;
 	}
 	const auto pending = was->_bubbleTransition.get();
+	if (dynamic_cast<WebPage*>(media())
+		|| dynamic_cast<WebPage*>(was->media())
+		|| (pending && pending->includesContent())) {
+		prepareBubbleSizeTransition(pending && pending->movesReactions());
+		return;
+	}
 	if (!pending
 		&& (was->pendingResize() || was->width() < st::msgMinWidth)) {
 		return;
@@ -7504,13 +7567,46 @@ void Message::initBubbleTransition(not_null<Message*> was) {
 		fromWidth - st::msgPadding.left() - st::msgPadding.right());
 }
 
+void Message::prepareBubbleSizeTransition(bool moveReactions) {
+	if (anim::Disabled() || !_lastPaintedHeight
+		|| isHidden() || !drawBubble() || hasRichPage() || Has<TextAppearing>()) {
+		return;
+	}
+	moveReactions = _reactions && (moveReactions
+		|| (_bubbleTransition && _bubbleTransition->movesReactions()));
+	if (_bubbleTransition && !_bubbleTransition->started()) {
+		_bubbleTransition->includeContent(moveReactions);
+		return;
+	}
+	_bubbleTransition = std::make_unique<ExtrasUi::BubbleTransition>(
+		_lastPaintedHeight, _lastPaintedBubbleWidth);
+	_bubbleTransition->includeContent(moveReactions);
+}
+
+int Message::bubbleContentHeightDelta() const {
+	return (_bubbleTransition && _bubbleTransition->started()
+		&& _bubbleTransition->includesContent())
+		? _bubbleTransition->finalHeight() - height()
+		: 0;
+}
+
+int Message::bubbleReactionsShift() const {
+	return (_bubbleTransition && _bubbleTransition->movesReactions())
+		? bubbleContentHeightDelta()
+		: 0;
+}
+
 int Message::bubbleTransitionHeight(int newWidth, int finalHeight) {
 	const auto transition = _bubbleTransition.get();
 	if (!transition) {
 		return finalHeight;
 	}
-	const auto keep = bubbleTransitionAllowed()
-		&& transition->update(newWidth, finalHeight, text(), [=] {
+	const auto keep = bubbleTransitionAllowed() && transition->update(
+		newWidth,
+		finalHeight,
+		countGeometry(true, newWidth).width(),
+		text(),
+		[=] {
 			bubbleTransitionCallback();
 		});
 	if (!keep) {

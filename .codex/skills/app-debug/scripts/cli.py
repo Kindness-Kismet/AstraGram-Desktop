@@ -89,6 +89,8 @@ GENERIC_COMMANDS = {
     'cache.read': '只查询持久历史缓存，不请求服务器；返回异步任务与消息编号、摘要：[会话编号] [起始消息编号] [偏移量] [数量]',
     'cache.flush': '安排保存会话列表与已浏览历史缓存，不修改远端数据',
     'cache.memory-stats': '查询历史协议缓存的常驻规模、容量限制、淘汰和磁盘读取次数',
+    'message.react': '在已授权测试对话切换普通表情回应：<会话编号> <消息编号> <表情> [--account 账号下标]，只表示已提交',
+    'message.preview': '在已授权测试对话编辑链接预览开关，保留正文：<会话编号> <消息编号> <on|off> [--account 账号下标]；异步结果用 job.status 查询',
     'simulation.chat-folders': '在独立模拟配置中加载首个分组、清空分组或等待分组：<single|none|pending>，重启恢复样本',
     'simulation.language': '在独立模拟配置中切换内置翻译，不下载云端语言包：<en|zh-hans>，返回表情页签译文',
     'control.window': '选择控件与截图的目标窗口，不改变系统焦点：[main|窗口标识|#序号]',
@@ -395,6 +397,7 @@ def register_commands(sub) -> None:
     command.add_argument("text", nargs="?", help="消息文本，多个参数以空格拼接")
     command.add_argument("extraText", nargs="*", help=argparse.SUPPRESS)
     command.add_argument("--file", dest="text_file", help="发送 UTF-8 文件内容，保留换行与引号")
+    command.add_argument("--account", type=int, help="使用 session.list 中的账号下标，不切换当前界面")
     command = sub.add_parser("chat.history-stats", help="查询指定消息的存在、隐藏与视图状态，默认收藏夹")
     command.add_argument("msgIds", nargs="+", metavar="MSG_ID")
     command.add_argument("--peer", help="查询指定对话，默认收藏夹")
@@ -439,6 +442,7 @@ def register_commands(sub) -> None:
     mode = command.add_mutually_exclusive_group()
     mode.add_argument("--popup", action="store_true", help="改为截取活动浮动菜单")
     mode.add_argument("--animation", action="store_true", help="通过切页动画的保护接口截图，保存为 PNG")
+    mode.add_argument("--buffer", action="store_true", help="保存已绘制的窗口缓冲，不主动重绘，便于检查动画残影")
     mode.add_argument("--notification", action="store_true", help="改为截取应用自绘通知，合成到底色上保存为 PNG")
     mode.add_argument("--screen", action="store_true", help="改为从屏幕拷贝窗口区域保存为 PNG，包含系统材质；窗口须可见且未被遮挡")
     command.add_argument("--bg", default="#5b6b7f", help="--notification 的底色，格式 #RRGGBB")
@@ -550,13 +554,15 @@ def execute_command(args: argparse.Namespace) -> None:
     if command == "screenshot.take":
         ensure_debug_app()
         SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
-        extension = "png" if (args.notification or args.screen or args.animation) else "jpg"
+        extension = "png" if (args.notification or args.screen or args.animation or args.buffer) else "jpg"
         target = SCREENSHOT_DIR / datetime.now().strftime(f"shot-%Y%m%d-%H%M%S-%f.{extension}")
         suffix = ""
         if args.popup:
             suffix = " popup"
         elif args.animation:
             suffix = " animation"
+        elif args.buffer:
+            suffix = " buffer"
         elif args.screen:
             suffix = " screen"
         elif args.notification:
@@ -683,15 +689,16 @@ def build_server_command(args: argparse.Namespace) -> str:
         return ("chat.list" if args.filter is None
                 else f"chat.list {quote_arg(args.filter)}")
     if command == "message.send":
+        suffix = f" --account {args.account}" if args.account is not None else ""
         if args.text_file is not None:
             if args.text is not None or args.extraText:
                 raise ValueError("Text and --file are mutually exclusive")
             path = Path(args.text_file).resolve()
-            return f"message.send {args.peerId} --file {quote_arg(str(path))}"
+            return f"message.send {args.peerId} --file {quote_arg(str(path))}{suffix}"
         if args.text is None:
             raise ValueError("Provide message text or --file")
         text = " ".join([args.text, *args.extraText])
-        return f"message.send {args.peerId} {quote_arg(text)}"
+        return f"message.send {args.peerId} {quote_arg(text)}{suffix}"
     if command == "chat.history-stats":
         result = "chat.history-stats " + " ".join(args.msgIds)
         return result + (f" --peer {quote_arg(args.peer)}" if args.peer else "")

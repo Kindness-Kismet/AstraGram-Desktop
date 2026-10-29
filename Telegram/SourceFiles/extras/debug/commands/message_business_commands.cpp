@@ -8,6 +8,8 @@
 
 #include "apiwrap.h"
 #include "api/api_common.h"
+#include "api/api_editing.h"
+#include "base/unixtime.h"
 #include "chat_helpers/message_field.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
@@ -17,9 +19,11 @@
 #include "data/data_folder.h"
 #include "data/data_history_messages.h"
 #include "data/data_media_types.h"
+#include "data/data_message_reactions.h"
 #include "data/data_photo.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
+#include "data/data_web_page.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/history_item_components.h"
@@ -28,6 +32,7 @@
 #include "storage/storage_media_prepare.h"
 #include "storage/localimageloader.h"
 #include "ui/chat/attach/attach_prepare.h"
+#include "ui/emoji_config.h"
 #include "ui/text/text_entity.h"
 #include "window/window_session_controller.h"
 
@@ -54,12 +59,23 @@ nlohmann::json describeMessage(not_null<HistoryItem*> item) {
 	const auto document = item->media() ? item->media()->document() : nullptr;
 	const auto photo = item->media() ? item->media()->photo() : nullptr;
 	const auto forwarded = item->Get<HistoryMessageForwarded>();
+	const auto webpage = item->media() ? item->media()->webpage() : nullptr;
+	auto reactions = nlohmann::json::array();
+	for (const auto &reaction : item->reactions()) {
+		reactions.push_back({ { "emoji", reaction.id.emoji().toStdString() },
+			{ "count", reaction.count }, { "my", reaction.my } });
+	}
 	return {
 		{ "peerId", item->history()->peer->id.value },
 		{ "messageId", item->id.bare },
 		{ "senderId", item->from()->id.value },
 		{ "groupId", item->groupId().value },
 		{ "photoId", photo ? photo->id : uint64(0) },
+		{ "reactions", std::move(reactions) },
+		{ "webpage", webpage ? nlohmann::json{
+			{ "id", webpage->id }, { "pendingTill", webpage->pendingTill },
+			{ "failed", bool(webpage->failed) },
+		} : nlohmann::json(nullptr) },
 		{ "forwarded", forwarded ? nlohmann::json{
 			{ "senderId", forwarded->originalSender ? forwarded->originalSender->id.value : uint64(0) },
 			{ "messageId", forwarded->originalId.bare },
@@ -135,6 +151,65 @@ Result members(const QStringList &args) {
 		list.push_back(userInfo(user));
 	}
 	return Result::Ok(Compact(Json{ { "cachedOnly", true }, { "members", std::move(list) } }));
+}
+
+HistoryItem *findAccountMessage(const QStringList &args) {
+	auto session = ActiveSession();
+	if (args.size() == 5) {
+		auto ok = false;
+		const auto index = args[4].toInt(&ok);
+		session = ok ? sessionByIndex(index) : nullptr;
+	}
+	if (!session || isSimulationSession(session)) {
+		return nullptr;
+	}
+	auto peerOk = false;
+	auto messageOk = false;
+	const auto peerId = PeerId(args[0].toULongLong(&peerOk));
+	const auto messageId = MsgId(args[1].toLongLong(&messageOk));
+	return peerOk && messageOk ? session->data().message(peerId, messageId) : nullptr;
+}
+
+Result reactToMessage(const QStringList &args) {
+	if (args.size() != 3 && (args.size() != 5 || args[3] != u"--account"_q)) {
+		return Result::Err(u"usage: message.react <peerId> <messageId> <emoji> [--account index]"_q);
+	}
+	const auto item = findAccountMessage(args);
+	if (!item || !item->canReact() || !Ui::Emoji::Find(args[2])) {
+		return Result::Err(u"message cannot react or emoji not found"_q);
+	}
+	item->toggleReaction(Data::ReactionId{ args[2] }, HistoryReactionSource::Selector);
+	auto reactions = Json::array();
+	for (const auto &reaction : item->reactions()) {
+		reactions.push_back({ { "emoji", reaction.id.emoji().toStdString() },
+			{ "count", reaction.count }, { "my", reaction.my } });
+	}
+	return Result::Ok(Compact(Json{ { "state", "submitted" },
+		{ "reactions", std::move(reactions) } }));
+}
+
+Result setMessagePreview(const QStringList &args) {
+	if ((args.size() != 3 && (args.size() != 5 || args[3] != u"--account"_q))
+		|| (args[2] != u"on"_q && args[2] != u"off"_q)) {
+		return Result::Err(u"usage: message.preview <peerId> <messageId> <on|off> [--account index]"_q);
+	}
+	const auto item = findAccountMessage(args);
+	if (!item || !item->allowsEdit(base::unixtime::now())
+		|| (item->media() && !item->media()->webpage())) {
+		return Result::Err(u"an editable text message is required"_q);
+	}
+	auto webpage = Data::WebPageDraft::FromItem(item);
+	webpage.removed = (args[2] == u"off"_q);
+	const auto id = beginJob("message-preview");
+	item->history()->session().lifetime().add([id] {
+		finishJob(id, false, "session closed");
+	});
+	Api::EditTextMessage(item, item->originalText(), webpage, {},
+		[id](mtpRequestId) { finishJob(id, true, "preview updated"); },
+		[id](const QString &error, mtpRequestId) {
+			finishJob(id, false, error.toStdString());
+		}, false);
+	return jobStarted(id);
 }
 
 Result localMessages(const QStringList &args) {
@@ -668,6 +743,8 @@ const HandlerMap &messageBusinessHandlers() {
 		{ u"chat.members"_q, &members },
 		{ u"chat.draft"_q, &draftInfo },
 		{ u"message.list"_q, &localMessages },
+		{ u"message.react"_q, &reactToMessage },
+		{ u"message.preview"_q, &setMessagePreview },
 		{ u"message.fetch"_q, &fetchMessages },
 		{ u"message.media"_q, &rawMedia },
 		{ u"message.media-file"_q, &saveAltFile },

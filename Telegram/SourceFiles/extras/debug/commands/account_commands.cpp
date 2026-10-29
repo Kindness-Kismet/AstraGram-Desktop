@@ -14,6 +14,16 @@
 #include "main/main_session_settings.h"
 
 namespace ExtrasDebug::Commands {
+
+Main::Session *sessionByIndex(int index) {
+	for (const auto &entry : Core::App().domain().accounts()) {
+		if (entry.index == index) {
+			return entry.account->sessionExists() ? &entry.account->session() : nullptr;
+		}
+	}
+	return nullptr;
+}
+
 namespace {
 
 using Json = nlohmann::json;

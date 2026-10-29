@@ -13,9 +13,15 @@ BubbleTransition::BubbleTransition(
 , _fromWidth(fromWidth) {
 }
 
+BubbleTransition::BubbleTransition(int fromHeight, int fromWidth)
+: BubbleTransition(fromHeight, fromWidth, Ui::Text::String(), 0) {
+	includeContent();
+}
+
 bool BubbleTransition::update(
 		int layoutWidth,
 		int finalHeight,
+		int finalWidth,
 		const Ui::Text::String &newText,
 		Fn<void()> callback) {
 	_toHeight = finalHeight;
@@ -24,10 +30,10 @@ bool BubbleTransition::update(
 	}
 	_started = true;
 	_layoutWidth = layoutWidth;
-	if (_oldText.toString() == newText.toString()) {
+	if (_oldText.isEmpty() || _oldText.toString() == newText.toString()) {
 		_oldText = Ui::Text::String();
-		// 换表情包等原因重建的视图文字和高度都没变，不做过渡。
-		if (_fromHeight == finalHeight) {
+		// 文字和尺寸都没变时，不因视图重建重复播放。
+		if (_fromHeight == finalHeight && _fromWidth == finalWidth) {
 			return false;
 		}
 	}

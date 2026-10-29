@@ -477,10 +477,17 @@ using json = nlohmann::json;
 	return nullptr;
 }
 
-// 真实发送文本，走官方发送链路，auto_space 等钩子均生效。
-// --file 读文件原样发送，命令行参数按空白切分，带不了换行与引号。
-// 仅限本人测试群使用。
-[[nodiscard]] Result SendTextMessage(const QStringList &args) {
+// 真实发送仅限本人测试对话；文件模式保留原文，发送沿官方接口处理。
+[[nodiscard]] Result SendTextMessage(const QStringList &rawArgs) {
+	auto args = rawArgs;
+	auto session = ActiveSession();
+	if (args.size() >= 4 && args[args.size() - 2] == u"--account"_q) {
+		auto ok = false;
+		const auto index = args.back().toInt(&ok);
+		session = ok ? sessionByIndex(index) : nullptr;
+		args.removeLast();
+		args.removeLast();
+	}
 	if (args.size() < 2) {
 		return Result::Err(u"usage: message.send <peerId> <text"
 			u" | --file path>"_q);
@@ -504,7 +511,6 @@ using json = nlohmann::json;
 	if (text.isEmpty()) {
 		return Result::Err(u"text must not be empty"_q);
 	}
-	const auto session = ActiveSession();
 	if (!session || isSimulationSession(session)) {
 		return Result::Err(u"an authenticated session is required"_q);
 	}

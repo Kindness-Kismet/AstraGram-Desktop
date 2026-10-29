@@ -27,6 +27,10 @@ python .claude/skills/app-debug/scripts/cli.py screenshot.take
 主窗口截图抓不到；本模式按通知标识收集可见窗口，按屏幕位置合成到 `--bg` 底色上，保存为 PNG，
 用来检查圆角、透明和阴影。底色缺省 `#5b6b7f`，换成浅色或深色可分别核对亮暗两种背景。
 
+## `screenshot.take --buffer`
+
+保存窗口已经绘制的缓冲，不主动重绘，适合检查残影和动画阶段。仅支持可读取的光栅缓冲；不包含系统材质合成和独立弹窗。
+
 ## `screenshot.take --screen`
 
 从屏幕拷贝选定窗口所在区域，保存为 PNG，包含云母、亚克力等系统材质和窗口阴影，用于核对材质效果。

@@ -29,12 +29,16 @@
 
 ## 消息、成员与编号提及
 
+跨账号操作时，消息编号须从目标账号查询，普通群的编号在两个账号下可能不同。先激活目标账号并加载测试群，再返回观察账号。
+
 | 指令 | 参数 | 结果 |
 |---|---|---|
 | `peer.info` | `<peerId>` | 已知用户或会话资料；不返回手机号、访问密钥。 |
 | `chat.members` | `<peerId> [no-username]` | 已缓存的群成员及是否可提及，不批量请求服务器成员列表。 |
 | `chat.draft` | `<peerId> [topicRootId]` | 已保存的草稿、回复、转发及暂存状态；话题编号取 `simulation.list` 或 `message.inspect`，尚未保存的文字以控件查询为准。 |
 | `message.list` | `<peerId> [limit]` | 当前缓存中的消息，默认 20 条，最多 100 条。 |
+| `message.react` | `<peerId> <messageId> <emoji> [--account index]` | 在已授权测试对话沿正式接口切换普通表情回应，返回本地回应状态；服务器确认异步完成，仅真实账号可用。账号下标取 session.list，不切换当前界面。 |
+| `message.preview` | `<peerId> <messageId> <on\|off> [--account index]` | 在已授权测试对话沿正式编辑接口开关链接预览，保留正文和实体；仅可编辑的文字消息可用，不切换当前界面。返回任务编号，服务器确认或错误用 job.status 查询。 |
 | `message.fetch` | `<peerId> [limit]` | 异步获取指定对话的最近消息；不打开对话，不发送已读回执。 |
 | `message.media` | `<peerId> [limit] [offsetId]` | 异步读取文件附件的原始结构：类型、大小、视频属性、缩略图及全部附带文件；不写入本地消息。 |
 | `message.media-file` | `<peerId> <messageId> <mime> <destination>` | 异步保存附带文件中第一个指定类型的文件，例如缩略图拼图 `application/x-tgstoryboard`；只请求一次，超过 1 MB 直接拒绝。 |

@@ -5,8 +5,10 @@
 #include "core/application.h"
 #include "core/core_screenshot_protection.h"
 
+#include <QBackingStore>
 #include <QDir>
 #include <QFileInfo>
+#include <QImage>
 #include <QPixmap>
 #include <QtGui/QPainter>
 #include <QtGui/QScreen>
@@ -130,6 +132,23 @@ using json = nlohmann::json;
 }
 
 [[nodiscard]] Result ScreenshotTake(const QStringList &args) {
+	if (args.size() == 2 && args[1] == u"buffer"_q) {
+		const auto window = controlWindow();
+		const auto store = window ? window->backingStore() : nullptr;
+		const auto buffer = store ? dynamic_cast<const QImage*>(store->paintDevice()) : nullptr;
+		if (!buffer) {
+			return Result::Err(u"window has no readable raster backing store"_q);
+		}
+		const auto target = QFileInfo(args[0]).absoluteFilePath();
+		QDir().mkpath(QFileInfo(target).absolutePath());
+		if (!buffer->save(target, "PNG")) {
+			return Result::Err(u"cannot write "_q + target);
+		}
+		return Result::Ok(Compact(json{
+			{ "path", target.toStdString() },
+			{ "width", buffer->width() }, { "height", buffer->height() },
+		}));
+	}
 	if (args.size() == 2 && args[1] == u"animation"_q) {
 		const auto window = controlWindow();
 		if (!window || !window->isVisible()) {

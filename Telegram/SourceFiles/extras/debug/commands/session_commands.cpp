@@ -19,6 +19,7 @@
 #include "history/view/media/history_view_media.h"
 #include "history/view/history_view_chat_section.h"
 #include "history/view/history_view_list_widget.h"
+#include "history/view/history_view_message.h"
 #include "ui/widgets/elastic_scroll.h"
 #include "mtproto/mtp_instance.h"
 #include "window/window_session_controller.h"
@@ -275,11 +276,14 @@ using json = nlohmann::json;
 				return;
 			}
 			const auto media = view->media();
+			const auto message = dynamic_cast<HistoryView::Message*>(view.get());
+			const auto bubble = message ? message->debugBubbleGeometry() : QRect();
 			rows.push_back({
 				{ "id", view->data()->id.bare },
 				{ "y", y }, { "top", top },
 				{ "width", view->width() }, { "height", view->height() },
 				{ "out", view->data()->out() },
+				{ "bubble", { bubble.x(), bubble.y(), bubble.width(), bubble.height() } },
 				{ "opacity", legacy
 					? legacy->itemRevealOpacity(view->data())
 					: list->itemRevealOpacity(view) },

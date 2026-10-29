@@ -319,6 +319,10 @@ public:
 	// 文字即将按新数据重建：记下旧尺寸和旧文字，下次排版时平滑过渡。
 	void prepareBubbleTransition(Ui::Text::String &&previous);
 
+#ifdef _DEBUG
+	[[nodiscard]] QRect debugBubbleGeometry() const { return countGeometry(); }
+#endif
+
 private:
 	struct CommentsButton;
 	struct LinkRipple;
@@ -461,7 +465,7 @@ private:
 	[[nodiscard]] auto countRichPageBubbleEdges() const
 	-> Iv::Markdown::MarkdownArticleBubbleEdges;
 	[[nodiscard]] bool richPageInfoRow() const;
-	QRect countGeometry() const;
+	QRect countGeometry(bool finalWidth = false, int layoutWidth = 0) const;
 	[[nodiscard]] Ui::BubbleRounding countMessageRounding() const;
 	[[nodiscard]] Ui::BubbleRounding countBubbleRounding(
 		Ui::BubbleRounding messageRounding) const;
@@ -540,6 +544,9 @@ private:
 
 	[[nodiscard]] bool bubbleTransitionAllowed() const;
 	void initBubbleTransition(not_null<Message*> was);
+	void prepareBubbleSizeTransition(bool moveReactions = false);
+	[[nodiscard]] int bubbleContentHeightDelta() const;
+	[[nodiscard]] int bubbleReactionsShift() const;
 	[[nodiscard]] int bubbleTransitionHeight(int newWidth, int finalHeight);
 	void bubbleTransitionCallback();
 	void paintBubbleTransitionText(
@@ -578,6 +585,11 @@ private:
 	Ui::Animations::Simple _infoWidthAnimation;
 	int _infoWidthFrom = 0;
 	mutable QPoint _lastMediaPosition;
+	mutable int _lastPaintedBubbleWidth = 0;
+	mutable int _lastPaintedHeight = 0;
+	mutable int _lastPaintedViewWidth = 0;
+	QSize _lastWebPageSize;
+	QSize _lastReactionsSize;
 	std::unique_ptr<ExtrasUi::BubbleTransition> _bubbleTransition;
 
 };
