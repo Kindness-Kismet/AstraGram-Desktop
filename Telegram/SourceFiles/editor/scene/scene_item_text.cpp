@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lottie/lottie_icon.h"
 #include "ui/emoji_config.h"
 #include "ui/painter.h"
+#include "ui/style/style_widget_color.h"
 #include "ui/widgets/menu/menu_action.h"
 #include "ui/widgets/popup_menu.h"
 #include "styles/style_editor.h"
@@ -251,7 +252,8 @@ void AlignAction::paintEvent(QPaintEvent *e) {
 	const auto selected = isSelected();
 	paintBackground(p, selected);
 	paintRipple(p, 0, 0);
-	p.setPen(selected ? st().itemFgOver : st().itemFg);
+	p.setPen(Ui::ResolveWidgetColor(this,
+		(selected ? st().itemFgOver : st().itemFg)->c));
 	paintText(p);
 	const auto position = st().itemIconPosition;
 	_icon->paint(p, position.x(), position.y());

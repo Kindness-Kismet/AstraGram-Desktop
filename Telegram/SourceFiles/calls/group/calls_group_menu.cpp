@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/ripple_animation.h"
 #include "ui/layers/generic_box.h"
 #include "ui/painter.h"
+#include "ui/style/style_widget_color.h"
 #include "lang/lang_keys.h"
 #include "base/unixtime.h"
 #include "base/timer_rpl.h"
@@ -162,14 +163,16 @@ void JoinAsAction::paint(Painter &p) {
 	const auto textLeft = padding.left()
 		+ st::groupCallJoinAsPhotoSize
 		+ padding.left();
-	p.setPen(selected ? _st.itemFgOver : _st.itemFg);
+	p.setPen(Ui::ResolveWidgetColor(this,
+		(selected ? _st.itemFgOver : _st.itemFg)->c));
 	_text.drawLeftElided(
 		p,
 		textLeft,
 		st::groupCallJoinAsTextTop,
 		_textWidth,
 		width());
-	p.setPen(selected ? _st.itemFgShortcutOver : _st.itemFgShortcut);
+	p.setPen(Ui::ResolveWidgetColor(this,
+		(selected ? _st.itemFgShortcutOver : _st.itemFgShortcut)->c));
 	_name.drawLeftElided(
 		p,
 		textLeft,
@@ -288,7 +291,8 @@ void RecordingAction::paint(Painter &p) {
 	}
 	const auto smallTop = st::groupCallRecordingTimerPadding.top();
 	const auto textTop = _startAt ? smallTop : _st.itemPadding.top();
-	p.setPen(selected ? _st.itemFgOver : _st.itemFg);
+	p.setPen(Ui::ResolveWidgetColor(this,
+		(selected ? _st.itemFgOver : _st.itemFg)->c));
 	_text.drawLeftElided(
 		p,
 		_st.itemPadding.left(),
@@ -297,7 +301,8 @@ void RecordingAction::paint(Painter &p) {
 		width());
 	if (_startAt) {
 		p.setFont(st::groupCallRecordingTimerFont);
-		p.setPen(selected ? _st.itemFgShortcutOver : _st.itemFgShortcut);
+		p.setPen(Ui::ResolveWidgetColor(this,
+			(selected ? _st.itemFgShortcutOver : _st.itemFgShortcut)->c));
 		p.drawTextLeft(
 			_st.itemPadding.left(),
 			smallTop + _st.itemStyle.font->height,

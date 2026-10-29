@@ -707,10 +707,7 @@ void WhenAction::resolveMinWidth() {
 void WhenAction::paint(Painter &p) {
 	const auto loading = !isEnabled() && _content.participants.empty();
 	const auto selected = isSelected();
-	if (selected && _st.itemBgOver->c.alpha() < 255) {
-		p.fillRect(0, 0, width(), _height, _st.itemBg);
-	}
-	p.fillRect(0, 0, width(), _height, _st.itemBg);
+	Ui::Menu::PaintItemBackground(p, _st, QRect(0, 0, width(), _height), false);
 	const auto &icon = (_content.type == WhoReadType::Edited)
 		? (selected ? st::whenEditedOver : st::whenEdited)
 		: (_content.type == WhoReadType::Original)

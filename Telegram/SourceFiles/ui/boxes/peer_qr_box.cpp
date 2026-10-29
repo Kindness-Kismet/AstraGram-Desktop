@@ -30,6 +30,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/ripple_animation.h"
 #include "ui/layers/generic_box.h"
 #include "ui/layers/show.h"
+#include "ui/style/style_widget_color.h"
 #include "ui/toast/toast.h"
 #include "ui/widgets/menu/menu_item_base.h"
 #include "ui/widgets/buttons.h"
@@ -333,10 +334,7 @@ void AboutAction::handleKeyPress(not_null<QKeyEvent*> e) {
 void AboutAction::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
 	const auto selected = isSelected();
-	if (selected && _st.itemBgOver->c.alpha() < 255) {
-		p.fillRect(0, 0, width(), _height, _st.itemBg);
-	}
-	p.fillRect(0, 0, width(), _height, selected ? _st.itemBgOver : _st.itemBg);
+	Ui::Menu::PaintItemBackground(p, _st, QRect(0, 0, width(), _height), selected);
 	paintRipple(p, 0, 0);
 	if (_icon) {
 		_icon->paint(
@@ -349,7 +347,8 @@ void AboutAction::paintEvent(QPaintEvent *e) {
 	const auto available = width() - padding.left() - padding.right();
 	const auto &font = _st.itemStyle.font;
 	p.setFont(font);
-	p.setPen(selected ? _st.itemFgOver : _st.itemFg);
+	p.setPen(ResolveWidgetColor(this,
+		(selected ? _st.itemFgOver : _st.itemFg)->c));
 	p.drawTextLeft(
 		padding.left(),
 		padding.top(),
@@ -357,7 +356,8 @@ void AboutAction::paintEvent(QPaintEvent *e) {
 		font->elided(_text, available));
 	const auto &aboutFont = st::peerQrMenuAboutFont;
 	p.setFont(aboutFont);
-	p.setPen(selected ? _st.itemFgShortcutOver : _st.itemFgShortcut);
+	p.setPen(ResolveWidgetColor(this,
+		(selected ? _st.itemFgShortcutOver : _st.itemFgShortcut)->c));
 	p.drawTextLeft(
 		padding.left(),
 		padding.top() + font->height,

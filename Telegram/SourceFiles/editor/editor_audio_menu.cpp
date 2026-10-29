@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/animation_value.h"
 #include "ui/effects/cross_line.h"
 #include "ui/paint/arcs.h"
+#include "ui/style/style_widget_color.h"
 #include "ui/widgets/continuous_sliders.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/color_int_conversion.h"
@@ -77,21 +78,22 @@ MenuVolumeItem::MenuVolumeItem(
 	updateSliderColor(volume);
 
 	paintRequest(
-	) | rpl::on_next([=](const QRect &clip) {
+	) | rpl::on_next([=] {
 		auto p = QPainter(this);
 		const auto muteProgress = _crossLineAnimation.value(_muted ? 1. : 0.);
-		p.fillRect(clip, isSelected() ? _st.itemBgOver : _st.itemBg);
+		Ui::Menu::PaintItemBackground(p, _st, rect(), isSelected());
+		const auto unmutedColor = unmuteColor();
 		const auto mutePen = anim::color(
-			unmuteColor(),
+			unmutedColor,
 			muteColor(),
 			muteProgress);
 		_crossLineMute->paint(
 			p,
 			_speakerRect.topLeft(),
 			muteProgress,
-			(muteProgress > 0) ? std::make_optional(mutePen) : std::nullopt);
+			mutePen);
 		p.translate(_arcPosition);
-		_arcs->paint(p);
+		_arcs->paint(p, unmutedColor);
 	}, lifetime());
 
 	_slider->setChangeProgressCallback([=](float64 value) {
@@ -145,11 +147,11 @@ void MenuVolumeItem::applyVolume(float64 value) {
 }
 
 QColor MenuVolumeItem::unmuteColor() const {
-	return (isSelected()
+	return Ui::ResolveWidgetColor(this, (isSelected()
 		? _st.itemFgOver
 		: isEnabled()
 		? _st.itemFg
-		: _st.itemFgDisabled)->c;
+		: _st.itemFgDisabled)->c);
 }
 
 QColor MenuVolumeItem::muteColor() const {

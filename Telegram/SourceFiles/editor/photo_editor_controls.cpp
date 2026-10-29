@@ -16,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/round_checkbox.h"
 #include "ui/image/image_prepare.h"
 #include "ui/qt_object_factory.h"
+#include "ui/style/style_widget_color.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/labels.h"
@@ -180,7 +181,8 @@ void ShapeAction::paintEvent(QPaintEvent *e) {
 	const auto selected = isSelected();
 	paintBackground(p, selected);
 	paintRipple(p, 0, 0);
-	p.setPen(selected ? st().itemFgOver : st().itemFg);
+	p.setPen(Ui::ResolveWidgetColor(this,
+		(selected ? st().itemFgOver : st().itemFg)->c));
 	paintText(p);
 
 	const auto position = st().itemIconPosition;
@@ -274,7 +276,8 @@ void RoundCheckAction::paintEvent(QPaintEvent *e) {
 	const auto selected = isSelected();
 	paintBackground(p, selected);
 	paintRipple(p, 0, 0);
-	p.setPen(selected ? st().itemFgOver : st().itemFg);
+	p.setPen(Ui::ResolveWidgetColor(this,
+		(selected ? st().itemFgOver : st().itemFg)->c));
 	paintText(p);
 
 	const auto &check = st::photoEditorMenuRoundCheck;

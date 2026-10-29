@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/color_int_conversion.h"
 #include "ui/effects/animation_value.h"
 #include "ui/effects/cross_line.h"
+#include "ui/style/style_widget_color.h"
 #include "ui/widgets/continuous_sliders.h"
 #include "ui/rect.h"
 #include "styles/style_calls.h"
@@ -90,7 +91,7 @@ MenuVolumeItem::MenuVolumeItem(
 	setCloudVolume(startVolume);
 
 	paintRequest(
-	) | rpl::on_next([=](const QRect &clip) {
+	) | rpl::on_next([=] {
 		auto p = QPainter(this);
 
 		const auto volume = _localMuted
@@ -102,8 +103,9 @@ MenuVolumeItem::MenuVolumeItem(
 		const auto selected = isSelected();
 		Ui::Menu::PaintItemBackground(p, st, rect(), selected);
 
+		const auto unmutedColor = unmuteColor();
 		const auto mutePen = anim::color(
-			unmuteColor(),
+			unmutedColor,
 			muteColor(),
 			muteProgress);
 
@@ -111,11 +113,11 @@ MenuVolumeItem::MenuVolumeItem(
 			p,
 			_speakerRect.topLeft(),
 			muteProgress,
-			(muteProgress > 0) ? std::make_optional(mutePen) : std::nullopt);
+			mutePen);
 
 		{
 			p.translate(_arcPosition);
-			_arcs->paint(p);
+			_arcs->paint(p, unmutedColor);
 		}
 	}, lifetime());
 
@@ -228,11 +230,11 @@ void MenuVolumeItem::initArcsAnimation() {
 }
 
 QColor MenuVolumeItem::unmuteColor() const {
-	return (isSelected()
+	return Ui::ResolveWidgetColor(this, (isSelected()
 		? _st.itemFgOver
 		: isEnabled()
 		? _st.itemFg
-		: _st.itemFgDisabled)->c;
+		: _st.itemFgDisabled)->c);
 }
 
 QColor MenuVolumeItem::muteColor() const {

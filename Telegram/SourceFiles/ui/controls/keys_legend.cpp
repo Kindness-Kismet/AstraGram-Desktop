@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/painter.h"
 #include "ui/qt_object_factory.h"
 #include "ui/rect.h"
+#include "ui/style/style_widget_color.h"
 #include "ui/text/text.h"
 #include "ui/widgets/menu/menu.h"
 #include "ui/widgets/menu/menu_item_base.h"
@@ -268,7 +269,7 @@ int SectionItem::contentHeight() const {
 
 void SectionItem::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
-	p.fillRect(rect(), _st.itemBg);
+	Ui::Menu::PaintItemBackground(p, _st, rect(), false);
 
 	const auto &padding = _st.itemPadding;
 	const auto textLeft = padding.left()
@@ -276,7 +277,7 @@ void SectionItem::paintEvent(QPaintEvent *e) {
 		+ _legend.textSkip;
 	auto top = padding.top();
 	if (!_title.isEmpty()) {
-		p.setPen(*_legend.titleFg);
+		p.setPen(ResolveWidgetColor(this, (*_legend.titleFg)->c));
 		_title.draw(
 			p,
 			padding.left(),
@@ -300,7 +301,7 @@ void SectionItem::paintEvent(QPaintEvent *e) {
 				_legend);
 			capLeft += cap.width + _legend.capSkip;
 		}
-		p.setPen(*_legend.textFg);
+		p.setPen(ResolveWidgetColor(this, (*_legend.textFg)->c));
 		row.text.draw(
 			p,
 			textLeft,

@@ -43,6 +43,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/attach/attach_prepare.h"
 #include "ui/layers/generic_box.h"
 #include "ui/painter.h"
+#include "ui/style/style_widget_color.h"
 #include "ui/rect.h"
 #include "ui/vertical_list.h"
 #include "ui/text/format_song_name.h"
@@ -147,14 +148,14 @@ int VotersItem::contentHeight() const {
 }
 
 void VotersItem::paint(Painter &p) {
-	p.fillRect(0, 0, width(), _height, _st.itemBg);
+	Ui::Menu::PaintItemBackground(p, _st, QRect(0, 0, width(), _height), false);
 
 	const auto votesText = tr::lng_polls_votes_count(
 		tr::now,
 		lt_count,
 		_votes);
 
-	p.setPen(_st.itemFg);
+	p.setPen(Ui::ResolveWidgetColor(this, _st.itemFg->c));
 	p.setFont(_st.itemStyle.font);
 	const auto &textPadding = st::defaultMenu.itemPadding;
 	const auto textY = _st.itemPadding.top()

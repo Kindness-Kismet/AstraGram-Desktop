@@ -492,7 +492,8 @@ QColor widgetColor(
 		|| dynamic_cast<const Ui::JumpDownButton*>(widget.get())) {
 		return normal;
 	}
-	if (const auto menu = dynamic_cast<const Ui::PopupMenu*>(widget->window())) {
+	const auto menu = dynamic_cast<const Ui::PopupMenu*>(widget->window());
+	if (menu) {
 		// 普通行与分隔区透出同一层材质，悬停和语义色仍由各项绘制。
 		if (role == Ui::WidgetColorRole::Background
 			&& normal == menu->st().menu.itemBg->c) {
@@ -504,6 +505,23 @@ QColor widgetColor(
 	const auto high = std::max({ normal.red(), normal.green(), normal.blue() });
 	if (high - low > 64) {
 		return normal;
+	}
+	if (menu && role == Ui::WidgetColorRole::Text) {
+		// 菜单的固定深色配色随材质切换，主文字与说明文字保持层次。
+		const auto &menuStyle = menu->st().menu;
+		const auto primary = (normal == menuStyle.itemFg->c)
+			|| (normal == menuStyle.itemFgOver->c);
+		const auto secondary = (normal == menuStyle.itemFgDisabled->c)
+			|| (normal == menuStyle.itemFgShortcut->c)
+			|| (normal == menuStyle.itemFgShortcutOver->c)
+			|| (normal == menuStyle.itemFgShortcutDisabled->c);
+		if (primary || secondary) {
+			auto result = primary
+				? st::windowFg->c
+				: secondaryColor(st::windowSubTextFg->c);
+			result.setAlpha(normal.alpha());
+			return result;
+		}
 	}
 	switch (role) {
 	case Ui::WidgetColorRole::Text:
