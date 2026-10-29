@@ -1559,13 +1559,19 @@ void ProxiesBox::setupContent() {
 
 	inner->resizeToWidth(st::boxWideWidth);
 
+	// 关闭后不再调整外壳尺寸，避免子控件销毁时访问已失效的按钮列表。
+	const auto dimensionsLifetime = lifetime().make_state<rpl::lifetime>();
+	boxClosing() | rpl::on_next([=] {
+		dimensionsLifetime->destroy();
+	}, lifetime());
+
 	inner->heightValue(
 	) | rpl::map([=](int height) {
 		return std::min(height, st::boxMaxListHeight);
 	}) | rpl::distinct_until_changed(
 	) | rpl::on_next([=](int height) {
 		setDimensions(st::boxWideWidth, height, true);
-	}, inner->lifetime());
+	}, *dimensionsLifetime);
 }
 
 void ProxiesBox::refreshProxyForCalls() {
@@ -1750,11 +1756,17 @@ void ProxyBox::prepare() {
 	connect(_secret.data(), &Ui::MaskedInputField::submitted, submit);
 
 	refreshButtons();
+	// 编辑弹窗同样需要在关闭时停止由正文高度驱动的尺寸更新。
+	const auto dimensionsLifetime = lifetime().make_state<rpl::lifetime>();
+	boxClosing() | rpl::on_next([=] {
+		dimensionsLifetime->destroy();
+	}, lifetime());
+
 	_content->heightValue() | rpl::on_next([=](int height) {
 		if (!_changingType) {
 			setDimensions(st::proxyEditWidth, std::max(height, _formHeight), true);
 		}
-	}, lifetime());
+	}, *dimensionsLifetime);
 }
 
 void ProxyBox::refreshButtons() {

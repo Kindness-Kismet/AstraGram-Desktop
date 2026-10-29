@@ -7,6 +7,7 @@
 - Fixed an issue with in-chat search that previously caused search filters and result positions to be lost when returning to a chat or pinned-message page, with compose controls incorrectly appearing over search
 - Fixed an issue with text copying that previously caused the Copy Text action to be missing over collapsed quotes and photo captions
 - Fixed an issue with the first media viewer opening after startup on Windows that previously caused the main window to flash before the viewer appeared
+- Fixed an issue with closing proxy settings on the login screen that previously caused the app to crash
 
 ---
 
@@ -19,3 +20,4 @@
 - 修复了关于聊天搜索的错误，该问题曾导致返回聊天或置顶消息页面后搜索条件和结果位置丢失，输入区域还会错误地出现在搜索界面上
 - 修复了关于文字复制的错误，该问题曾导致折叠引用和图片说明的菜单中缺少复制文字选项
 - 修复了关于 Windows 启动后首次打开媒体查看器的错误，该问题曾导致主窗口先闪动，再显示查看器
+- 修复了关于登录页代理设置的错误，该问题曾导致关闭弹窗时应用崩溃
