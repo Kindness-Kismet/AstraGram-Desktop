@@ -22,6 +22,8 @@ constexpr auto kIndexFormat = quint32(1);
 constexpr auto kQueryKey = Storage::Cache::Key{ 0, 1 };
 constexpr auto kSweepInterval = crl::time(60 * 60 * 1000);
 constexpr auto kClearBatchSize = 32;
+// 每个账号只保留最近使用的清晰原图，缩放缓存和播放资源仍随视图释放。
+constexpr auto kDecodedPhotoLimit = 32 * 1024 * 1024;
 
 template <typename Callback>
 [[nodiscard]] auto onMain(not_null<Main::Session*> session, Callback callback) {
@@ -42,6 +44,7 @@ void addUsage(MediaCacheUsage &usage, int64 size) {
 
 MediaCacheManager::MediaCacheManager(not_null<Main::Session*> session)
 : _session(session)
+, _decodedPhotos(kDecodedPhotoLimit)
 , _saveTimer([=] { flush(); })
 , _pruneTimer([=] { prune(); }) {
 	restore();
@@ -142,12 +145,41 @@ void MediaCacheManager::flush() {
 
 void MediaCacheManager::disable() {
 	_disabled = true;
+	_decodedPhotos.clear();
 	_dirty = false;
 	_saveTimer.cancel();
 	_pruneTimer.cancel();
 	_session->local().clearPref(kIndexPref);
 	_session->local().clearPref(kRetentionPref);
 }
+
+DecodedPhoto MediaCacheManager::decodedPhoto(Storage::Cache::Key key) const {
+	const auto photo = _decodedPhotos.object({ key.high, key.low });
+	return photo ? *photo : DecodedPhoto();
+}
+
+void MediaCacheManager::rememberDecodedPhoto(
+		Storage::Cache::Key key,
+		DecodedPhoto photo) {
+	if (_disabled || !key || photo.image.isNull()) {
+		return;
+	}
+	const auto cost = photo.image.sizeInBytes() + photo.bytes.size();
+	_decodedPhotos.insert(
+		{ key.high, key.low },
+		new DecodedPhoto(std::move(photo)),
+		cost);
+}
+
+void MediaCacheManager::forgetDecodedPhoto(Storage::Cache::Key key) {
+	_decodedPhotos.remove({ key.high, key.low });
+}
+
+#ifdef _DEBUG
+MediaCacheUsage MediaCacheManager::decodedPhotoUsage() const {
+	return { _decodedPhotos.totalCost(), int(_decodedPhotos.size()) };
+}
+#endif
 
 std::optional<std::pair<PeerId, MediaCacheChatType>> MediaCacheManager::owner(
 		const Data::FileOrigin &origin) const {
@@ -501,6 +533,9 @@ void MediaCacheManager::clearNextBatch(
 				Storage::Cache::Error error) {
 			if (error.type == Storage::Cache::Error::Type::None) {
 				_entries.erase(key);
+				if (!key.bigFile) {
+					forgetDecodedPhoto(key.storage);
+				}
 				operation->result.freedBytes += size;
 			} else {
 				operation->result.error = error;

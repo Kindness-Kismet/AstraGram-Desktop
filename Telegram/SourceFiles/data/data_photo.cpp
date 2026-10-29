@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_photo.h"
 
+#include "extras/data/media_cache_manager.h"
 #include "data/data_document.h"
 #include "data/data_session.h"
 #include "data/data_reply_preview.h"
@@ -216,6 +217,7 @@ void PhotoData::clearLocalCache() {
 		}
 	}
 	for (const auto &key : keys) {
+		session().mediaCache().forgetDecodedPhoto(key);
 		_owner->cache().remove(key);
 	}
 }

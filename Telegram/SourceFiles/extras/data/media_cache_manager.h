@@ -4,6 +4,8 @@
 #include "data/data_file_origin.h"
 #include "storage/cache/storage_cache_types.h"
 #include <rpl/variable.h>
+#include <QtCore/QCache>
+#include <QtGui/QImage>
 #include <array>
 #include <map>
 
@@ -73,6 +75,11 @@ struct MediaCacheClearResult {
 	Storage::Cache::Error error;
 };
 
+struct DecodedPhoto {
+	QImage image;
+	QByteArray bytes;
+};
+
 class MediaCacheManager final {
 public:
 	explicit MediaCacheManager(not_null<Main::Session*> session);
@@ -103,6 +110,12 @@ public:
 	void prune();
 	void flush();
 	void disable();
+	[[nodiscard]] DecodedPhoto decodedPhoto(Storage::Cache::Key key) const;
+	void rememberDecodedPhoto(Storage::Cache::Key key, DecodedPhoto photo);
+	void forgetDecodedPhoto(Storage::Cache::Key key);
+#ifdef _DEBUG
+	[[nodiscard]] MediaCacheUsage decodedPhotoUsage() const;
+#endif
 
 	[[nodiscard]] rpl::producer<int> retentionValue(MediaCacheChatType type) const;
 	[[nodiscard]] int retentionDays(MediaCacheChatType type) const;
@@ -151,6 +164,7 @@ private:
 
 	const not_null<Main::Session*> _session;
 	std::map<Key, Entry> _entries;
+	QCache<std::pair<uint64, uint64>, DecodedPhoto> _decodedPhotos;
 	std::array<rpl::variable<int>, kMediaCacheChatTypeCount> _retention;
 	base::Timer _saveTimer;
 	base::Timer _pruneTimer;

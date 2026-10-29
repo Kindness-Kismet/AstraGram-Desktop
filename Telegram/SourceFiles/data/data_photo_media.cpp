@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_photo_media.h"
 
+#include "extras/data/media_cache_manager.h"
 #include "data/data_file_origin.h"
 #include "data/data_session.h"
 #include "history/history.h"
@@ -22,6 +23,15 @@ namespace Data {
 
 PhotoMedia::PhotoMedia(not_null<PhotoData*> owner)
 : _owner(owner) {
+	auto cached = _owner->session().mediaCache().decodedPhoto(
+		_owner->location(PhotoSize::Large).file().cacheKey());
+	if (!cached.image.isNull()) {
+		_images[PhotoSizeIndex(PhotoSize::Large)] = PhotoImage{
+			.data = std::make_unique<Image>(std::move(cached.image)),
+			.bytes = std::move(cached.bytes),
+			.goodFor = PhotoSize::Large,
+		};
+	}
 }
 
 // NB! Right now DocumentMedia can outlive Main::Session!
@@ -108,6 +118,11 @@ void PhotoMedia::set(
 			limit,
 			Qt::KeepAspectRatio,
 			Qt::SmoothTransformation);
+	}
+	if (size == PhotoSize::Large && goodFor == PhotoSize::Large) {
+		_owner->session().mediaCache().rememberDecodedPhoto(
+			_owner->location(size).file().cacheKey(),
+			{ image, bytes });
 	}
 	_images[index] = PhotoImage{
 		.data = std::make_unique<Image>(std::move(image)),

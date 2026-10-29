@@ -425,7 +425,11 @@ Result mediaStats(const QStringList &args) {
 				{ "categories", usage(chat.categories) },
 			});
 		}
+		const auto decoded = session->mediaCache().decodedPhotoUsage();
 		finishJob(job, true, {
+			{ "decodedPhotos", {
+				{ "bytes", decoded.bytes }, { "count", decoded.count },
+			} },
 			{ "categories", usage(stats.categories) },
 			{ "unassigned", usage(stats.unassigned) }, { "chats", chats },
 			{ "clearing", session->mediaCache().clearing() },

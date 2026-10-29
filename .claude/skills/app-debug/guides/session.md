@@ -130,7 +130,7 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 
 ## 媒体缓存管理
 
-- `cache.media-stats`：异步查询当前账号分类容量、未归属容量与各聊天大小；结果通过 `job.status` 查询。
+- `cache.media-stats`：异步查询当前账号分类容量、未归属容量与各聊天大小；结果通过 `job.status` 查询，`decodedPhotos` 为清晰原图的内存缓存大小和数量，每个账号上限 32 MiB。
 - `cache.media-clear <all|类别[,类别...]> [peerId]`：异步清理本机缓存；类别为 `images`、`stickers`、`documents`、`avatars`、`other`、`messages`，`all` 只包含媒体。
 - `cache.media-retention <private|groups|channels|stories> [days]`：查询或保存分类型保留天数，可选 0、1、2、7、30；0 表示永久。
 
