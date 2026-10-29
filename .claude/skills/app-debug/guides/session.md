@@ -91,6 +91,7 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 结果序号 `currentIndex` 从 0 开始，`-1` 表示尚未选中；列表滚动区可用 `control.scroll chatBar.search.scroll` 操作。
 
 `chat.pinned <peerId>` 打开该对话的置顶消息页，保留返回路径，不修改置顶状态。
+`chat.admin-log <peerId>` 打开频道或超级群组的管理日志，按当前账号的管理权限加载，不修改群配置。
 
 ## `chat.profile <peerId> [--side]`
 

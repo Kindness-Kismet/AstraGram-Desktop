@@ -85,6 +85,9 @@ public:
 
 	Ui::ChatPaintContext preparePaintContext(QRect clip) const;
 	bool paintBackdrop(Painter &p, const QRect &clip);
+#ifdef _DEBUG
+	void setLocalEventsForDebug(const QVector<MTPChannelAdminLogEvent> &events);
+#endif
 
 	// Set the correct scroll position after being resized.
 	void restoreScrollPosition();

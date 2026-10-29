@@ -19,6 +19,7 @@
 #include "data/data_group_call.h"
 #include "data/data_peer_bot_command.h"
 #include "data/data_replies_list.h"
+#include "data/data_report.h"
 #include "data/data_session.h"
 #include "data/data_saved_messages.h"
 #include "data/data_saved_sublist.h"
@@ -28,11 +29,14 @@
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/admin_log/history_admin_log_section.h"
+#include "history/admin_log/history_admin_log_inner.h"
 #include "history/view/history_view_chat_section.h"
 #include "history/view/history_view_pinned_section.h"
 #include "history/view/history_view_scheduled_section.h"
 #include "main/main_session.h"
+#include "mainwidget.h"
 #include "main/main_session_settings.h"
+#include "crl/crl_on_main.h"
 #include "main/session/send_as_peers.h"
 #include "spellcheck/spellcheck_types.h"
 #include "settings/business/settings_shortcut_messages.h"
@@ -862,6 +866,46 @@ void installScenarioDraft(
 	const auto history = session->data().history(peer);
 	const auto kind = kScenarios[index].kind;
 	const auto way = Window::SectionShow::Way::ClearStack;
+	if (kind == Kind::Group && view != u"join-replies"_q) {
+		peer->asChannel()->removeFlags(
+			ChannelDataFlag::Left | ChannelDataFlag::JoinToWrite);
+	}
+	if (view == u"join-replies"_q) {
+		if (kind != Kind::Group) {
+			return Result::Err(u"join-replies requires the group scenario"_q);
+		}
+		peer->asChannel()->addFlags(
+			ChannelDataFlag::Left | ChannelDataFlag::JoinToWrite);
+		const auto baseId = kFirstMessageId + 100 * index;
+		const auto root = MsgId(baseId + 1);
+		auto ids = std::vector<MsgId>{ root };
+		for (auto i = 0; i != 20; ++i) {
+			const auto id = baseId + 60 + i;
+			session->data().addNewMessage(makeMessage(peer,
+				scenarioPeerId(findScenario(u"private"_q)), id,
+				u"本地讨论区消息 %1：未加入群组的底部按钮覆盖测试。"_q.arg(i + 1),
+				false, false, 0, false, false, false, root), MessageFlags(), NewMessageType::Existing);
+			ids.push_back(MsgId(id));
+		}
+		auto replies = std::make_shared<Data::RepliesList>(history, root);
+		replies->setLocalMessagesForDebug(std::move(ids), MsgId(baseId + 79), 0);
+		auto memento = std::make_shared<HistoryView::ChatMemento>(
+			HistoryView::ChatViewId{ .history = history, .repliesRootId = root });
+		memento->setReplies(std::move(replies));
+		// 成员状态变化会排队关闭现有聊天，随后再打开模拟讨论区。
+		crl::on_main(controller, [=, memento = std::move(memento)] {
+			controller->showSection(memento, way);
+		});
+		return Result::Ok();
+	}
+	if (view == u"report"_q) {
+		controller->showSection(std::make_shared<HistoryView::ChatMemento>(
+			HistoryView::ChatViewId{ .history = history }), way);
+		controller->showChooseReportMessages(peer,
+			Data::ReportInput{ .optionText = u"本地举报选择样本"_q },
+			[](std::vector<MsgId>) {});
+		return Result::Ok();
+	}
 	if (kind == Kind::Slow) {
 		peer->asChannel()->growSlowmodeLastMessage(base::unixtime::now());
 	}
@@ -879,12 +923,43 @@ void installScenarioDraft(
 	}
 	if (view.startsWith(u"source-"_q)) {
 		const auto source = view == u"source-self"_q ? session->userPeerId()
+			: view == u"source-hidden"_q ? PeerData::kSavedHiddenAuthorId
 			: scenarioPeerId(findScenario(view == u"source-private"_q ? u"private"_q : u"channel"_q));
-		controller->showSublist(session->data().savedMessages().sublist(
-			session->data().peer(source)), ShowAtTheEndMsgId, way);
+		const auto sublist = session->data().savedMessages().sublist(
+			session->data().peer(source));
+		if (view == u"source-hidden"_q) {
+			auto ids = std::vector<MsgId>();
+			for (auto i = 0; i != 20; ++i) {
+				const auto id = kFirstMessageId + 5000 + i;
+				session->data().addNewMessage(makeMessage(session->user(),
+					session->userPeerId(), id, u"隐藏来源的本地收藏消息 %1"_q.arg(i + 1),
+					false, false, 0, false, false, false, 0, 0, source),
+					MessageFlags(), NewMessageType::Existing);
+				ids.push_back(MsgId(id));
+			}
+			sublist->setLocalMessagesForDebug(std::move(ids));
+		}
+		controller->showSublist(sublist, ShowAtTheEndMsgId, way);
 		return Result::Ok();
 	}
 	if (view == u"pinned"_q) {
+		if (kind == Kind::Group) {
+			const auto baseId = kFirstMessageId + 100 * index;
+			auto ids = std::vector<MsgId>{ MsgId(baseId), MsgId(baseId + 1) };
+			for (auto i = 0; i != 20; ++i) {
+				const auto id = baseId + 40 + i;
+				session->data().addNewMessage(makeMessage(peer,
+					scenarioPeerId(findScenario(u"private"_q)), id,
+					u"本地置顶消息 %1：滚动时检查底部按钮的背景与留白。\n第二行用于区分消息区域。"_q.arg(i + 1),
+					true, false, 0, false, false, false),
+					MessageFlags(), NewMessageType::Existing);
+				ids.push_back(MsgId(id));
+			}
+			const auto count = int(ids.size());
+			session->storage().add(Storage::SharedMediaAddSlice(
+				peer->id, 0, PeerId(), Storage::SharedMediaType::Pinned,
+				std::move(ids), { 0, ServerMaxMsgId }, count));
+		}
 		const auto thread = (kind == Kind::Topic)
 			? static_cast<Data::Thread*>(peer->forum()->topicFor(kTopicRootId))
 			: history.get();
@@ -896,13 +971,28 @@ void installScenarioDraft(
 		return Result::Ok();
 	}
 	if (view == u"actions"_q) {
-		// 模拟模式拿不到服务器日志，只用于检查分区外框与底部按钮。
 		const auto channel = peer->asChannel();
 		if (!channel || !(channel->hasAdminRights() || channel->amCreator())) {
 			return Result::Err(u"scenario has no recent actions"_q);
 		}
 		controller->showSection(std::make_shared<AdminLog::SectionMemento>(channel), way);
-		return Result::Ok();
+		auto events = QVector<MTPChannelAdminLogEvent>();
+		for (auto i = 40; i > 0; --i) {
+			events.push_back(MTP_channelAdminLogEvent(MTP_long(10000 + i),
+				MTP_int(base::unixtime::now() - 60 * (40 - i)),
+				MTP_long(session->userId().bare),
+				MTP_channelAdminLogEventActionChangeTitle(
+					MTP_string(u"本地群组名称 %1"_q.arg(i - 1)),
+					MTP_string(u"本地群组名称 %1"_q.arg(i)))));
+		}
+		for (const auto widget : controller->content()->findChildren<QWidget*>()) {
+			const auto inner = dynamic_cast<AdminLog::InnerWidget*>(widget);
+			if (inner && inner->channel() == channel) {
+				inner->setLocalEventsForDebug(events);
+				return Result::Ok();
+			}
+		}
+		return Result::Err(u"admin log section was not created"_q);
 	}
 	if (view == u"scheduled"_q) {
 		controller->showSection(std::make_shared<HistoryView::ScheduledMemento>(history), way);
@@ -919,7 +1009,7 @@ void installScenarioDraft(
 
 Result openSimulationSceneImpl(const QStringList &args) {
 	if (args.empty() || !(args.size() % 2)) {
-		return Result::Err(u"usage: simulation.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions|topic-unread|topic-closed|topic-general|topic-pinned|topic-long|topic-french|source-self|source-private|source-channel] [--input keep|empty|reply|edit|forward]"_q);
+		return Result::Err(u"usage: simulation.open <key> [--view main|alternate|scheduled|shortcuts|pinned|actions|report|join-replies|topic-unread|topic-closed|topic-general|topic-pinned|topic-long|topic-french|source-self|source-private|source-channel|source-hidden] [--input keep|empty|reply|edit|forward]"_q);
 	}
 	auto view = u"main"_q;
 	auto input = u"keep"_q;
@@ -933,12 +1023,14 @@ Result openSimulationSceneImpl(const QStringList &args) {
 		}
 	}
 	if (view != u"main"_q && view != u"alternate"_q
+		&& view != u"report"_q && view != u"join-replies"_q
 		&& view != u"scheduled"_q && view != u"shortcuts"_q
 		&& view != u"pinned"_q && view != u"actions"_q
 		&& view != u"topic-unread"_q && view != u"topic-closed"_q
 		&& view != u"topic-general"_q && view != u"topic-pinned"_q
 		&& view != u"topic-long"_q && view != u"topic-french"_q
-		&& view != u"source-self"_q && view != u"source-private"_q && view != u"source-channel"_q) {
+		&& view != u"source-self"_q && view != u"source-private"_q
+		&& view != u"source-channel"_q && view != u"source-hidden"_q) {
 		return Result::Err(u"unknown view"_q);
 	}
 	if (input != u"keep"_q && input != u"empty"_q
@@ -946,6 +1038,7 @@ Result openSimulationSceneImpl(const QStringList &args) {
 		return Result::Err(u"unknown input state"_q);
 	}
 	if ((view == u"scheduled"_q || view == u"shortcuts"_q
+			|| view == u"report"_q || view == u"join-replies"_q
 			|| view == u"pinned"_q || view == u"actions"_q || view.startsWith(u"source-"_q))
 		&& input != u"keep"_q) {
 		return Result::Err(u"input states require main or alternate view"_q);

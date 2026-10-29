@@ -21,6 +21,7 @@
 #include "data/data_user.h"
 #include "data/notify/data_notify_settings.h"
 #include "history/history.h"
+#include "history/admin_log/history_admin_log_section.h"
 #include "history/history_widget.h"
 #include "history/view/controls/history_view_compose_search.h"
 #include "history/view/history_view_chat_section.h"
@@ -605,6 +606,27 @@ using json = nlohmann::json;
 	return Result::Ok();
 }
 
+[[nodiscard]] Result openAdminLog(const QStringList &args) {
+	if (args.size() != 1) {
+		return Result::Err(u"usage: chat.admin-log <peerId>"_q);
+	}
+	const auto session = ActiveSession();
+	const auto controller = session ? session->tryResolveWindow() : nullptr;
+	if (!controller) {
+		return Result::Err(u"no window controller"_q);
+	}
+	auto ok = false;
+	const auto id = args.front().toLongLong(&ok);
+	const auto peer = ok ? ResolvePeer(session, id) : nullptr;
+	const auto channel = peer ? peer->asChannel() : nullptr;
+	if (!channel) {
+		return Result::Err(u"expected a loaded channel or supergroup"_q);
+	}
+	controller->showSection(std::make_shared<AdminLog::SectionMemento>(channel),
+		Window::SectionShow::Way::Forward);
+	return Result::Ok();
+}
+
 [[nodiscard]] Result searchState(const QStringList &args) {
 	if (!args.isEmpty()) {
 		return Result::Err(u"usage: chat.search-state"_q);
@@ -980,6 +1002,7 @@ const HandlerMap &MessageHandlers() {
 		{ u"chat.open"_q, &OpenChat },
 		{ u"chat.search-state"_q, &searchState },
 		{ u"chat.pinned"_q, &openPinned },
+		{ u"chat.admin-log"_q, &openAdminLog },
 		{ u"chat.preview"_q, &previewChat },
 		{ u"chat.calendar"_q, &openChatCalendar },
 		{ u"chat.media"_q, &OpenMedia },

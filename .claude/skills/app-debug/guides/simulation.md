@@ -73,11 +73,14 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 | `alternate` | 另一套聊天组件 |
 | `scheduled` | 计划消息；`saved` 有 30 条可滚动的提醒样本 |
 | `shortcuts` | 快捷回复 `/layout` 的编辑页，18 条可滚动的样本，低于 20 条上限以保留输入框；进入模拟模式时生成，也可从 Telegram Business 页进入 |
-| `pinned` | 含置顶消息的场景 |
-| `actions` | 有管理权限的 `requests`；没有服务器日志，只显示分区外框 |
+| `pinned` | 含置顶消息的场景；`group` 补齐为 22 条本地置顶消息，可验证长列表滚动 |
+| `actions` | 有管理权限的 `requests`；注入 40 条本地管理事件，可验证滚动与底部按钮，不修改群配置 |
+| `report` | 聊天内的举报选择状态；只显示本地选择界面，确认回调不发送举报 |
+| `join-replies` | `group` 的未加入讨论区；注入 20 条本地回复，重新打开普通群视图恢复成员状态 |
 | `topic-unread` / `topic-closed` | `topic` 与 `topic-tabs` 的未读或已关闭话题 |
 | `topic-general` / `topic-pinned` / `topic-long` / `topic-french` | `topic-tabs` 的常规话题、含置顶的话题、超长标题话题、法语话题 |
 | `source-self` / `source-private` / `source-channel` | `saved` 的三个收藏来源 |
+| `source-hidden` | 隐藏来源的收藏说明与 20 条本地收藏消息 |
 
 `--input` 只用于私聊和话题的聊天视图：`keep` 保留草稿，`empty` 清空，`reply` 安装回复草稿，`edit` 安装编辑草稿，`forward` 安装隐藏发送者的固定转发草稿。
 未读话题只有来信，不能安装编辑草稿；已关闭话题只允许保留状态。

@@ -1046,6 +1046,19 @@ void InnerWidget::restoreState(not_null<SectionMemento*> memento) {
 	rebuildDisplayItems();
 }
 
+#ifdef _DEBUG
+void InnerWidget::setLocalEventsForDebug(
+		const QVector<MTPChannelAdminLogEvent> &events) {
+	_newEventsTimer.cancel();
+	_api.request(base::take(_preloadUpRequestId)).cancel();
+	_api.request(base::take(_preloadDownRequestId)).cancel();
+	_api.request(base::take(_newEventsRequestId)).cancel();
+	_upLoaded = _downLoaded = true;
+	clearAfterFilterChange();
+	addEvents(Direction::Up, events);
+}
+#endif
+
 void InnerWidget::preloadMore(Direction direction) {
 	auto &requestId = (direction == Direction::Up) ? _preloadUpRequestId : _preloadDownRequestId;
 	auto &loadedFlag = (direction == Direction::Up) ? _upLoaded : _downLoaded;

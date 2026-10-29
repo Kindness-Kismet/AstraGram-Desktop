@@ -1,6 +1,7 @@
 #ifdef _DEBUG
 #include "extras/debug/commands/commands_internal.h"
 #include "extras/debug/debug_login.h"
+#include "extras/ui/components/floating_surface.h"
 
 #include "core/application.h"
 #include "chat_helpers/stickers_list_footer.h"
@@ -650,6 +651,10 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 [[nodiscard]] Result describeControlValue(QWidget *target) {
 	auto data = json{{"name", target->objectName().toStdString()}, {"text", WidgetText(target).toStdString()},
 		{"enabled", target->isEnabled()}, {"focused", target->hasFocus()}};
+	if (const auto surface = ExtrasUi::FloatingSurface::find(target)) {
+		data["surfaceBackdrop"] = surface->hasBackdrop();
+		data["surfaceWindowMaterial"] = surface->usesWindowMaterial();
+	}
 	if (const auto menu = dynamic_cast<Ui::PopupMenu*>(target)) {
 		auto phase = Ui::PopupMenu::AnimatePhase::Hidden;
 		auto lifetime = rpl::lifetime();

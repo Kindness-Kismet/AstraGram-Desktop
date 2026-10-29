@@ -151,6 +151,7 @@ GENERIC_COMMANDS = {
     "chat.profile": "打开对话资料页：<peerId> [--side]",
     "chat.search-state": "查询当前聊天搜索条件、选中结果、分页和列表位置",
     "chat.pinned": "打开对话的置顶消息页：<peerId>",
+    "chat.admin-log": "打开频道或超级群组的管理日志：<peerId>",
     "action.list": "列出官方快捷动作",
     "action.run": "按绑定按键触发官方快捷动作，应用窗口须在前台：<名称>",
     "control.get": "查询控件当前值、状态与动作：<目标>",
@@ -352,7 +353,7 @@ def register_commands(sub) -> None:
     command.add_argument("key", nargs="?", default="list")
     command = sub.add_parser("simulation.open", help="打开模拟模式自动生成的固定场景")
     command.add_argument("key")
-    command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts", "pinned", "actions", "topic-unread", "topic-closed", "topic-general", "topic-pinned", "topic-long", "topic-french", "source-self", "source-private", "source-channel"), default="main", help="主聊天、计划消息、置顶、管理、话题或收藏来源")
+    command.add_argument("--view", choices=("main", "alternate", "scheduled", "shortcuts", "pinned", "actions", "report", "join-replies", "topic-unread", "topic-closed", "topic-general", "topic-pinned", "topic-long", "topic-french", "source-self", "source-private", "source-channel", "source-hidden"), default="main", help="主聊天、计划消息、置顶、管理、话题或收藏来源")
 
     command.add_argument("--input", choices=("keep", "empty", "reply", "edit", "forward"), default="keep", help="保留、清空、回复、编辑或转发输入状态，仅用于普通私聊和话题")
 
