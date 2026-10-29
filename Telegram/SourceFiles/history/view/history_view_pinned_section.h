@@ -27,6 +27,10 @@ namespace Profile {
 class BackButton;
 } // namespace Profile
 
+namespace ExtrasUi {
+class FloatingSurfaceHost;
+} // namespace ExtrasUi
+
 namespace HistoryView {
 
 class Element;
@@ -202,9 +206,11 @@ private:
 	int _translateBarHeight = 0;
 
 	bool _skipScrollEvent = false;
+	int _bottomSkip = 0;
 	std::unique_ptr<Ui::ElasticScroll> _scroll;
 	std::unique_ptr<Ui::FlatButton> _clearButton;
 	std::unique_ptr<ComposeSearch> _composeSearch;
+	std::unique_ptr<ExtrasUi::FloatingSurfaceHost> _floatingSurfaceHost;
 
 	CornerButtons _cornerButtons;
 

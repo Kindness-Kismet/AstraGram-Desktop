@@ -4482,11 +4482,9 @@ void ChatWidget::updateControlsGeometry() {
 		? std::min(_topControls->pinnedOverlayHeight(),
 			std::max(0, bottom - topControlsTop - 1))
 		: 0;
-	// 输入区浮在列表底部之上，可见区只占用胶囊上方一半留白。
-	const auto composeHeight = (floatingCompose
-		&& !_suggestOptions
-		&& readableHeight > 0)
-		? composeHeightCurrent()
+	// 输入区和底部操作都浮在消息上方，保留胶囊上方一半留白。
+	const auto composeHeight = (!_suggestOptions && readableHeight > 0)
+		? (bottomHeight ? bottomHeight : floatingCompose ? composeHeightCurrent() : 0)
 		: 0;
 	const auto composeOverlap = composeHeight
 		? (composeHeight - st::historyComposeCapsuleMargin / 2)

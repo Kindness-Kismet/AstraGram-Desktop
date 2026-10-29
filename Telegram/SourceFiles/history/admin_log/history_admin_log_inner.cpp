@@ -1808,8 +1808,9 @@ int InnerWidget::resizeGetHeight(int newWidth) {
 	}
 	_itemsWidth = newWidth;
 	_itemsHeight = newHeight;
-	_itemsTop = (_minHeight > _itemsHeight + st::historyPaddingBottom) ? (_minHeight - _itemsHeight - st::historyPaddingBottom) : 0;
-	return _itemsTop + _itemsHeight + st::historyPaddingBottom;
+	const auto bottom = st::historyPaddingBottom + _bottomPadding;
+	_itemsTop = std::max(_minHeight - _itemsHeight - bottom, 0);
+	return _itemsTop + _itemsHeight + bottom;
 }
 
 void InnerWidget::restoreScrollPosition() {
@@ -1912,14 +1913,22 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 	if (_controller->contentOverlapped(this, e)) {
 		return;
 	}
+	auto p = Painter(this);
+	paintContents(p, e->rect());
+}
 
+bool InnerWidget::paintBackdrop(Painter &p, const QRect &clip) {
+	p.save();
+	p.setClipRect(clip, Qt::IntersectClip);
+	paintContents(p, clip);
+	p.restore();
+	return true;
+}
+
+void InnerWidget::paintContents(Painter &p, QRect clip) {
 	const auto guard = gsl::finally([&] {
 		_userpicsCache.clear();
 	});
-
-	Painter p(this);
-
-	auto clip = e->rect();
 	auto context = preparePaintContext(clip);
 	context.highlightPathCache = &_highlightPathCache;
 	if (_items.empty() && _upLoaded && _downLoaded) {

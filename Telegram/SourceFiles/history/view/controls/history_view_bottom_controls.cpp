@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/controls/history_view_bottom_controls.h"
+
+#include "extras/ui/components/chat_surface_button.h"
 #include "ui/chat/floating_bar.h"
 
 #include "apiwrap.h"
@@ -51,11 +53,17 @@ BottomControls::BottomControls(
 	setupButtons();
 	setupOpenChatButton();
 	setupAboutHiddenAuthor();
-	for (const auto widget : std::initializer_list<QWidget*>{
-			_unblock.get(), _botStart.get(), _joinChannel.get(), _joinGroup.get(),
-			_muteUnmute.get(), _reportMessages.get(), _openChatButton.get(),
-			_aboutHiddenAuthor.get() }) {
+	for (const auto &[widget, name] : std::initializer_list<std::pair<QWidget*, QString>>{
+			{ _unblock.get(), u"chatAction.unblock"_q },
+			{ _botStart.get(), u"chatAction.start"_q },
+			{ _joinChannel.get(), u"chatAction.join"_q },
+			{ _joinGroup.get(), u"chatAction.joinGroup"_q },
+			{ _muteUnmute.get(), u"chatAction.notify"_q },
+			{ _reportMessages.get(), u"chatAction.report"_q },
+			{ _openChatButton.get(), u"chatAction.openSource"_q },
+			{ _aboutHiddenAuthor.get(), u"chatAction.hiddenSource"_q } }) {
 		if (widget) {
+			widget->setObjectName(name);
 			Ui::ApplyChatControlSurface(widget, st::historyComposeCapsuleRadius);
 		}
 	}
@@ -234,23 +242,23 @@ rpl::producer<BottomControlsAction> BottomControls::actionRequests() const {
 
 void BottomControls::setupButtons() {
 	if (_mode == BottomControlsMode::History) {
-		_unblock = std::make_unique<Ui::FlatButton>(
+		_unblock = std::make_unique<ExtrasUi::ChatSurfaceButton>(
 			this,
 			tr::lng_unblock_button(tr::now).toUpper(),
 			st::historyUnblock);
-		_botStart = std::make_unique<Ui::FlatButton>(
+		_botStart = std::make_unique<ExtrasUi::ChatSurfaceButton>(
 			this,
 			tr::lng_bot_start(tr::now).toUpper(),
 			st::historyComposeButton);
-		_joinChannel = std::make_unique<Ui::FlatButton>(
+		_joinChannel = std::make_unique<ExtrasUi::ChatSurfaceButton>(
 			this,
 			tr::lng_profile_join_channel(tr::now).toUpper(),
 			st::historyComposeButton);
-		_muteUnmute = std::make_unique<Ui::FlatButton>(
+		_muteUnmute = std::make_unique<ExtrasUi::ChatSurfaceButton>(
 			this,
 			tr::lng_channel_mute(tr::now).toUpper(),
 			st::historyComposeButton);
-		_reportMessages = std::make_unique<Ui::FlatButton>(
+		_reportMessages = std::make_unique<ExtrasUi::ChatSurfaceButton>(
 			this,
 			QString(),
 			st::historyComposeButton);
@@ -284,7 +292,7 @@ void BottomControls::setupButtons() {
 	} else if (_mode == BottomControlsMode::Replies
 		&& _peer
 		&& _peer->isChannel()) {
-		_joinGroup = std::make_unique<Ui::FlatButton>(
+		_joinGroup = std::make_unique<ExtrasUi::ChatSurfaceButton>(
 			this,
 			QString(),
 			st::historyComposeButton);
@@ -375,7 +383,7 @@ void BottomControls::setupOpenChatButton() {
 		_canSendTexts = true;
 		return;
 	}
-	_openChatButton = std::make_unique<Ui::FlatButton>(
+	_openChatButton = std::make_unique<ExtrasUi::ChatSurfaceButton>(
 		this,
 		(_sublist->sublistPeer()->isBroadcast()
 			? tr::lng_saved_open_channel(tr::now)
@@ -406,7 +414,7 @@ void BottomControls::setupAboutHiddenAuthor() {
 		auto p = QPainter(_aboutHiddenAuthor.get());
 		auto rect = _aboutHiddenAuthor->rect();
 
-		p.fillRect(rect, st::historyReplyBg);
+		Ui::PaintChatBar(p, _aboutHiddenAuthor.get(), rect, st::historyReplyBg->c);
 
 		p.setFont(st::normalFont);
 		p.setPen(st::windowSubTextFg);

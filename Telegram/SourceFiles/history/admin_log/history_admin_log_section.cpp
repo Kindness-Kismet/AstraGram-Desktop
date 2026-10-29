@@ -6,6 +6,10 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/admin_log/history_admin_log_section.h"
+
+#include "extras/ui/components/chat_surface_button.h"
+#include "extras/ui/components/floating_surface_host.h"
+#include "history/view/history_view_list_frosted.h"
 #include "window/window_animation_snapshot.h"
 #include "ui/chat/floating_bar.h"
 
@@ -274,10 +278,10 @@ Widget::Widget(
 , _scroll(this, st::historyScroll)
 , _fixedBar(this, controller, channel)
 , _fixedBarShadow(this)
-, _settingsFilter(
+, _settingsFilter(ExtrasUi::CreateChatSurfaceButton(
 	this,
 	tr::lng_menu_settings(tr::now),
-	st::historyComposeButton)
+	st::historyComposeButton))
 , _whatIsThis(_settingsFilter.data(), st::historyAdminLogWhatIsThis)
 , _scrollDown(_scroll, st::historyToDown) {
 	_fixedBar->move(0, 0);
@@ -302,6 +306,7 @@ Widget::Widget(
 	}, lifetime());
 
 	_scroll->setHandleTouch(false);
+	_scroll->setObjectName(u"adminLogScroll"_q);
 	_scroll->lockWheelDirection();
 	_inner = _scroll->setOwnedWidget(
 		object_ptr<InnerWidget>(this, controller, channel));
@@ -335,6 +340,8 @@ Widget::Widget(
 	_scroll->scrolls() | rpl::on_next([=] {
 		onScroll();
 	}, lifetime());
+	_scroll->lower();
+	setupFrostedBackground();
 
 	// 说明按钮挂在设置按钮内部，随胶囊表面一起裁切。
 	_settingsFilter->setObjectName(u"chatAction.adminLogSettings"_q);
@@ -424,7 +431,7 @@ void Widget::updateScrollDownPosition() {
 		_scrollDownShown.value(_scrollDownIsShown ? 1. : 0.));
 	_scrollDown->moveToRight(
 		st::historyToDownPosition.x(),
-		_scroll->height() - top);
+		_scroll->height() - top - _bottomSkip);
 	const auto shouldBeHidden
 		= !_scrollDownIsShown && !_scrollDownShown.animating();
 	if (shouldBeHidden != _scrollDown->isHidden()) {
@@ -561,6 +568,44 @@ auto Widget::createIdentityMemento()
 	return std::make_shared<SectionMemento>(channel());
 }
 
+Widget::~Widget() = default;
+
+void Widget::setupFrostedBackground() {
+	const auto paintBackground = HistoryView::SectionFrostedBackground(
+		this, [=] { return _inner->theme().get(); });
+	_floatingSurfaceHost = std::make_unique<ExtrasUi::FloatingSurfaceHost>(
+		this, [=](Painter &p, QRect area) {
+			if (_scroll->isHidden() || !paintBackground(p, area)) {
+				return false;
+			}
+			const auto position = _inner->mapTo(this, QPoint());
+			const auto clip = area.intersected(_scroll->geometry());
+			if (clip.isEmpty()) {
+				return true;
+			}
+			p.translate(position);
+			return _inner->paintBackdrop(p, clip.translated(-position));
+		});
+	const auto host = _floatingSurfaceHost.get();
+	paintRequest() | rpl::on_next([=](QRect clip) {
+		host->invalidate(clip);
+	}, host->lifetime());
+	_inner->paintRequest() | rpl::on_next([=](QRect clip) {
+		host->invalidate(clip.translated(_inner->mapTo(this, QPoint())));
+	}, host->lifetime());
+	_scroll->scrolls() | rpl::on_next([=] {
+		host->invalidate();
+	}, host->lifetime());
+	controller()->chatStyle()->paletteChanged() | rpl::on_next([=] {
+		host->clear();
+	}, host->lifetime());
+	shownValue() | rpl::on_next([=](bool shown) {
+		if (shown) {
+			host->invalidate();
+		}
+	}, host->lifetime());
+}
+
 void Widget::saveState(not_null<SectionMemento*> memento) {
 	memento->setScrollTop(_scroll->scrollTop());
 	_inner->saveState(memento);
@@ -589,20 +634,25 @@ void Widget::resizeEvent(QResizeEvent *e) {
 
 	const auto margin = st::historyComposeCapsuleMargin;
 	const auto bottom = height() - _settingsFilter->height() - 2 * margin;
-	const auto scrollHeight = bottom - _fixedBar->height();
+	_bottomSkip = _settingsFilter->height() + 2 * margin - margin / 2;
+	const auto paddingChanged = _inner->setBottomPadding(_bottomSkip);
+	const auto scrollHeight = std::max(0, height() - _fixedBar->height());
 	const auto scrollSize = QSize(contentWidth, scrollHeight);
-	if (_scroll->size() != scrollSize) {
+	if (_scroll->size() != scrollSize || paddingChanged) {
 		_scroll->resize(scrollSize);
 		_inner->resizeToWidth(scrollSize.width(), _scroll->height());
 		_inner->restoreScrollPosition();
 	}
+	_scroll->setBarBottomInset(_bottomSkip);
 
 	if (!_scroll->isHidden()) {
 		if (delta) {
 			_scroll->scrollToY(newScrollTop);
 		}
 		auto scrollTop = _scroll->scrollTop();
-		_inner->setVisibleTopBottom(scrollTop, scrollTop + _scroll->height());
+		_inner->setVisibleTopBottom(
+			scrollTop,
+			scrollTop + _scroll->height() - _bottomSkip);
 	}
 	_settingsFilter->setGeometry(myrtlrect(
 		margin,
@@ -636,7 +686,9 @@ void Widget::paintEvent(QPaintEvent *e) {
 
 void Widget::onScroll() {
 	int scrollTop = _scroll->scrollTop();
-	_inner->setVisibleTopBottom(scrollTop, scrollTop + _scroll->height());
+	_inner->setVisibleTopBottom(
+		scrollTop,
+		scrollTop + _scroll->height() - _bottomSkip);
 	updateScrollDownVisibility();
 }
 

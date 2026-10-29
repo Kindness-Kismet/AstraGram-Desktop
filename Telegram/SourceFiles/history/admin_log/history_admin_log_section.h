@@ -27,6 +27,10 @@ namespace Profile {
 class BackButton;
 } // namespace Profile
 
+namespace ExtrasUi {
+class FloatingSurfaceHost;
+} // namespace ExtrasUi
+
 namespace AdminLog {
 
 class FixedBar;
@@ -39,6 +43,7 @@ public:
 		QWidget *parent,
 		not_null<Window::SessionController*> controller,
 		not_null<ChannelData*> channel);
+	~Widget();
 
 	not_null<ChannelData*> channel() const;
 	Dialogs::RowDescriptor activeChat() const override;
@@ -80,6 +85,7 @@ private:
 	void saveState(not_null<SectionMemento*> memento);
 	void restoreState(not_null<SectionMemento*> memento);
 	void setupShortcuts();
+	void setupFrostedBackground();
 	void setupSwipeReply();
 	void setupScrollDownButton();
 	void scrollDownClicked();
@@ -95,6 +101,8 @@ private:
 	object_ptr<Ui::FlatButton> _settingsFilter;
 	object_ptr<Ui::IconButton> _whatIsThis;
 	object_ptr<Ui::JumpDownButton> _scrollDown;
+	std::unique_ptr<ExtrasUi::FloatingSurfaceHost> _floatingSurfaceHost;
+	int _bottomSkip = 0;
 	Ui::Animations::Simple _scrollDownShown;
 	Ui::Animations::Simple _scrollToAnimation;
 	bool _scrollDownIsShown = false;

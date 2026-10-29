@@ -84,6 +84,7 @@ public:
 	}
 
 	Ui::ChatPaintContext preparePaintContext(QRect clip) const;
+	bool paintBackdrop(Painter &p, const QRect &clip);
 
 	// Set the correct scroll position after being resized.
 	void restoreScrollPosition();
@@ -91,6 +92,9 @@ public:
 	void resizeToWidth(int newWidth, int minHeight) {
 		_minHeight = minHeight;
 		return RpWidget::resizeToWidth(newWidth);
+	}
+	bool setBottomPadding(int padding) {
+		return std::exchange(_bottomPadding, padding) != padding;
 	}
 
 	void saveState(not_null<SectionMemento*> memento);
@@ -191,6 +195,7 @@ protected:
 		int visibleBottom) override;
 
 	void paintEvent(QPaintEvent *e) override;
+	void paintContents(Painter &p, QRect clip);
 	void keyPressEvent(QKeyEvent *e) override;
 	void mousePressEvent(QMouseEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;
@@ -415,6 +420,7 @@ private:
 	int _itemsHeight = 0;
 
 	int _minHeight = 0;
+	int _bottomPadding = 0;
 	int _visibleTop = 0;
 	int _visibleBottom = 0;
 	Element *_visibleTopItem = nullptr;

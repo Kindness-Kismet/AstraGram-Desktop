@@ -9,6 +9,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_animation_snapshot.h"
 #include "ui/chat/floating_bar.h"
 
+#include "extras/ui/components/chat_surface_button.h"
+#include "extras/ui/components/floating_surface_host.h"
+#include "history/view/history_view_list_frosted.h"
+
 #include "history/view/history_view_top_bar_widget.h"
 #include "history/view/history_view_translate_bar.h"
 #include "history/view/history_view_list_widget.h"
@@ -122,7 +126,7 @@ PinnedWidget::PinnedWidget(
 , _scroll(std::make_unique<Ui::ElasticScroll>(
 	this,
 	controller->chatStyle()->value(lifetime(), st::historyScroll)))
-, _clearButton(std::make_unique<Ui::FlatButton>(
+, _clearButton(std::make_unique<ExtrasUi::ChatSurfaceButton>(
 	this,
 	QString(),
 	st::historyComposeButton))
@@ -192,6 +196,7 @@ PinnedWidget::PinnedWidget(
 	}, lifetime());
 
 	_scroll->setHandleTouch(false);
+	_scroll->setObjectName(u"pinnedScroll"_q);
 	_inner = _scroll->setOwnedWidget(object_ptr<ListWidget>(
 		this,
 		&controller->session(),
@@ -209,6 +214,17 @@ PinnedWidget::PinnedWidget(
 	) | rpl::on_next([=] {
 		onScroll();
 	}, lifetime());
+	_scroll->lower();
+	_floatingSurfaceHost = SetupListFrostedBackground({
+		.root = this,
+		.scroll = _scroll.get(),
+		.list = _inner.data(),
+		.scrolls = _scroll->scrolls(),
+		.paletteChanged = controller->chatStyle()->paletteChanged(),
+		.paintBackground = SectionFrostedBackground(this, [=] {
+			return _theme.get();
+		}),
+	});
 
 	_inner->scrollKeyEvents(
 	) | rpl::on_next([=](not_null<QKeyEvent*> e) {
@@ -359,6 +375,11 @@ void PinnedWidget::searchInPinned(std::shared_ptr<ComposeSearchState> state) {
 	updateSearchVisibility();
 	updateControlsGeometry();
 	doSetInnerFocus();
+
+	_composeSearch->heightChanges(
+	) | rpl::on_next([=] {
+		updateControlsGeometry();
+	}, _composeSearch->lifetime());
 
 	_composeSearch->listShownValue(
 	) | rpl::on_next([=] {
@@ -568,7 +589,6 @@ void PinnedWidget::updateControlsGeometry() {
 	// 顶栏已是浮动卡片，分隔线高度置 0；多处直接调用 show，不能只靠隐藏。
 	_topBarShadow->resize(contentWidth, 0);
 
-	// 与主聊天的底部动作一致：按钮四周留胶囊边距，列表止于按钮上方的边距。
 	const auto margin = st::historyComposeCapsuleMargin;
 	const auto innerWidth = std::max(contentWidth - 2 * margin, 0);
 	const auto bottom = height() - _clearButton->height() - 2 * margin;
@@ -579,15 +599,20 @@ void PinnedWidget::updateControlsGeometry() {
 	_translateBar->move(margin, top + bars.add(_translateBarHeight));
 	_translateBar->resizeToWidth(innerWidth);
 	top += bars.height();
-	const auto scrollHeight = bottom - top;
+	_bottomSkip = (_composeSearch
+		? _composeSearch->height()
+		: _clearButton->height()) + 2 * margin - margin / 2;
+	const auto paddingChanged = _inner->setBottomPadding(_bottomSkip);
+	const auto scrollHeight = std::max(0, height() - top);
 	const auto scrollSize = QSize(contentWidth, scrollHeight);
-	if (_scroll->size() != scrollSize) {
+	if (_scroll->size() != scrollSize || paddingChanged) {
 		_skipScrollEvent = true;
 		_scroll->resize(scrollSize);
 		_inner->resizeToWidth(scrollSize.width(), _scroll->height());
 		_skipScrollEvent = false;
 	}
 	_scroll->move(0, top);
+	_scroll->setBarBottomInset(_bottomSkip);
 	if (!_scroll->isHidden()) {
 		if (newScrollTop) {
 			_scroll->scrollToY(*newScrollTop);
@@ -595,6 +620,7 @@ void PinnedWidget::updateControlsGeometry() {
 		updateInnerVisibleArea();
 	}
 
+	_cornerButtons.setBottomSkip(_bottomSkip);
 	_cornerButtons.updatePositions();
 }
 
@@ -621,7 +647,9 @@ void PinnedWidget::onScroll() {
 
 void PinnedWidget::updateInnerVisibleArea() {
 	const auto scrollTop = _scroll->scrollTop();
-	_inner->setVisibleTopBottom(scrollTop, scrollTop + _scroll->height());
+	_inner->setVisibleTopBottom(
+		scrollTop,
+		scrollTop + _scroll->height() - _bottomSkip);
 	_cornerButtons.updateJumpDownVisibility();
 	_cornerButtons.updateUnreadThingsVisibility();
 }
