@@ -849,6 +849,8 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 		const auto radialOpacity = opacity * radialRevealed;
 		const auto innerSize = st::msgFileLayout.thumbSize;
 		auto inner = QRect(rthumb.x() + (rthumb.width() - innerSize) / 2, rthumb.y() + (rthumb.height() - innerSize) / 2, innerSize, innerSize);
+		const auto transfer = _animation && _animation->radial.animating()
+			&& (!streamedForWaiting || _data->uploading()) && !cornerDownload;
 		p.setPen(Qt::NoPen);
 		if (context.selected()) {
 			p.setBrush(st->msgDateImgBgSelected());
@@ -860,11 +862,11 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 				(_data->loading() || _data->uploading()) ? _cancell : _savel);
 			p.setBrush(over ? st->msgDateImgBgOver() : st->msgDateImgBg());
 		}
+		const auto colors = Ui::MediaButtonPalette(
+			sti->historyFileThumbRadialFg->c, p.brush().color(), true);
 		p.setOpacity(radialOpacity * p.opacity());
-
-		{
-			PainterHighQualityEnabler hq(p);
-			p.drawEllipse(inner);
+		if (!transfer) {
+			Ui::PaintMediaButtonSurface(p, inner, colors);
 		}
 
 		p.setOpacity(radialOpacity);
@@ -878,7 +880,11 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 			}
 			Unexpected("Action in Gif::draw.");
 		}();
-		if (ttlCovered && !radial && !_data->loading()) {
+		if (transfer) {
+			_animation->radial.paint(p, inner, colors,
+				_data->loading() || _data->uploading(),
+				ClickHandler::showAsActive(_cancell));
+		} else if (ttlCovered && !radial && !_data->loading()) {
 			paintTtlFire(p, inner);
 			paintTtlCountdown(
 				p,
@@ -902,7 +908,7 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 					width(),
 					sti->historyFileThumbRadialFg,
 					st::msgFileRadialLine);
-			} else if (!cornerDownload) {
+			} else if (!cornerDownload && !transfer) {
 				_animation->radial.draw(
 					p,
 					rinner,
@@ -918,10 +924,8 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 	}
 	if (displayMute && !ExtrasFeatures::MessageShot::isTakingShot()) {
 		auto muteRect = style::rtlrect(rthumb.x() + (rthumb.width() - st::historyVideoMessageMuteSize) / 2, rthumb.y() + st::msgDateImgDelta, st::historyVideoMessageMuteSize, st::historyVideoMessageMuteSize, width());
-		p.setPen(Qt::NoPen);
-		p.setBrush(sti->msgDateImgBg);
-		PainterHighQualityEnabler hq(p);
-		p.drawEllipse(muteRect);
+		Ui::PaintMediaButtonSurface(p, muteRect, Ui::MediaButtonPalette(
+			sti->historyFileThumbRadialFg->c, sti->msgDateImgBg->c, true));
 		sti->historyVideoMessageMute.paintInCenter(p, muteRect);
 	}
 
@@ -1389,14 +1393,16 @@ void Gif::drawCornerStatus(
 	if (cornerDownload && !ExtrasFeatures::MessageShot::isTakingShot()) {
 		const auto downloadTextTop = statusY + st::normalFont->height + (2 * (statusH - 2 * st::normalFont->height) / 3) - padding.y();
 		p.drawTextLeft(statusX + addLeft, downloadTextTop, width(), _downloadSize, statusW - 2 * padding.x());
-		const auto inner = QRect(statusX + padding.y() - padding.x(), statusY, st::historyVideoDownloadSize, st::historyVideoDownloadSize);
-		const auto &icon = _data->loading()
-			? sti->historyVideoCancel
-			: sti->historyVideoDownload;
-		icon.paintInCenter(p, inner);
+		const auto inner = VideoCornerDownloadRect(position);
+		const auto colors = Ui::MediaButtonPalette(
+			sti->historyFileThumbRadialFg->c, sti->msgDateImgBg->c, true);
 		if (radial) {
-			QRect rinner(inner.marginsRemoved(QMargins(st::historyVideoRadialLine, st::historyVideoRadialLine, st::historyVideoRadialLine, st::historyVideoRadialLine)));
-			_animation->radial.draw(p, rinner, st::historyVideoRadialLine, sti->historyFileThumbRadialFg);
+			_animation->radial.paint(p, inner, colors, _data->loading(),
+				ClickHandler::showAsActive(_cancell));
+		} else {
+			Ui::PaintMediaButtonSurface(p, inner, colors,
+				ClickHandler::showAsActive(_savel));
+			sti->historyVideoDownload.paintInCenter(p, inner);
 		}
 	} else if (cornerMute) {
 		sti->historyVideoMessageMute.paint(p, statusX - padding.x() - padding.y() + statusW - addRight, statusY - padding.y() + (statusH - st::historyVideoMessageMute.height()) / 2, width());
@@ -1411,7 +1417,10 @@ TextState Gif::cornerStatusTextState(
 	if (!needCornerStatusDisplay() || !downloadInCorner() || dataLoaded()) {
 		return result;
 	}
-	if (VideoCornerDownloadRect(position).contains(point)) {
+	const auto inner = VideoCornerDownloadRect(position);
+	if (_data->loading()
+		? Ui::MediaCancelBadgeContains(inner, point)
+		: inner.contains(point)) {
 		result.link = _data->loading() ? _cancell : _savel;
 	}
 	return result;
@@ -1566,6 +1575,10 @@ TextState Gif::textState(QPoint point, StateRequest request) const {
 		if (const auto state = cornerStatusTextState(point, request, QPoint()); state.link) {
 			return state;
 		}
+		if (_data->loading() && downloadInCorner() && needCornerStatusDisplay()
+			&& VideoCornerDownloadRect(QPoint()).contains(point)) {
+			return result;
+		}
 	}
 	if (QRect(usex + paintx, painty, usew, painth).contains(point)) {
 		ensureDataMediaCreated();
@@ -1581,6 +1594,12 @@ TextState Gif::textState(QPoint point, StateRequest request) const {
 			result.link = _seekl;
 		} else {
 			result.link = currentVideoLink(true);
+			const auto size = st::msgFileLayout.thumbSize;
+			const auto button = QRect(usex + paintx + (usew - size) / 2,
+				painty + (painth - size) / 2, size, size);
+			if (result.link == _cancell && !Ui::MediaCancelBadgeContains(button, point)) {
+				result.link = nullptr;
+			}
 		}
 	}
 	const auto checkBottomInfo = !inWebPage
@@ -1950,6 +1969,8 @@ void Gif::drawGrouped(
 			: 1.;
 		const auto radialOpacity = opacity * radialRevealed;
 		const auto radialSize = st::historyGroupRadialSize;
+		const auto transfer = _animation && _animation->radial.animating()
+			&& (!streamedForWaiting || _data->uploading()) && !separateDownload;
 		const auto inner = QRect(
 			geometry.x() + (geometry.width() - radialSize) / 2,
 			geometry.y() + (geometry.height() - radialSize) / 2,
@@ -1966,11 +1987,11 @@ void Gif::drawGrouped(
 				(_data->loading() || _data->uploading()) ? _cancell : _savel);
 			p.setBrush(over ? st->msgDateImgBgOver() : st->msgDateImgBg());
 		}
+		const auto colors = Ui::MediaButtonPalette(
+			sti->historyFileThumbRadialFg->c, p.brush().color(), true);
 		p.setOpacity(radialOpacity * p.opacity());
-
-		{
-			PainterHighQualityEnabler hq(p);
-			p.drawEllipse(inner);
+		if (!transfer) {
+			Ui::PaintMediaButtonSurface(p, inner, colors);
 		}
 
 		p.setOpacity(radialOpacity);
@@ -1990,7 +2011,11 @@ void Gif::drawGrouped(
 		const auto previous = _data->waitingForAlbum()
 			? &sti->historyFileThumbCancel
 			: nullptr;
-		if (icon) {
+		if (transfer) {
+			_animation->radial.paint(p, inner, colors,
+				_data->loading() || _data->uploading(),
+				ClickHandler::showAsActive(_cancell));
+		} else if (icon) {
 			if (previous && radialOpacity > 0. && radialOpacity < 1.) {
 				PaintInterpolatedIcon(p, *icon, *previous, radialOpacity, inner);
 			} else {
@@ -1998,7 +2023,7 @@ void Gif::drawGrouped(
 			}
 		}
 		p.setOpacity(radialRevealed);
-		if (radial) {
+		if (radial && !transfer) {
 			const auto line = st::historyGroupRadialLine;
 			const auto rinner = inner.marginsRemoved({ line, line, line, line });
 			if (streamedForWaiting && !_data->uploading()) {
@@ -2045,11 +2070,22 @@ TextState Gif::getStateGrouped(
 	if (downloadState.link) {
 		return downloadState;
 	}
+	if (fullFeatured && _data->loading() && downloadInCorner()
+		&& needCornerStatusDisplay()
+		&& VideoCornerDownloadRect(geometry.topLeft()).contains(point)) {
+		return downloadState;
+	}
 	ensureDataMediaCreated();
 
 	auto link = (_spoiler && !_spoiler->revealed)
 		? (_sensitiveSpoiler ? spoilerTagLink() : _spoiler->link)
 		: currentVideoLink(fullFeatured);
+	const auto size = st::historyGroupRadialSize;
+	const auto button = QRect(geometry.x() + (geometry.width() - size) / 2,
+		geometry.y() + (geometry.height() - size) / 2, size, size);
+	if (link == _cancell && !Ui::MediaCancelBadgeContains(button, point)) {
+		link = nullptr;
+	}
 	return TextState(_parent, std::move(link));
 }
 

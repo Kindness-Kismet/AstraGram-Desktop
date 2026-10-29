@@ -1,6 +1,7 @@
 #include "extras/ui/controls/download_header_button.h"
 
 #include "ui/painter.h"
+#include "ui/controls/media_button.h"
 #include "styles/style_extras_styles.h"
 #include "styles/style_widgets.h"
 
@@ -99,17 +100,21 @@ void DownloadHeaderButton::paintIcon(QPainter &p, crl::time now) {
 		size);
 	const auto scale = size / kSize;
 	const auto color = st::windowActiveTextFg->c;
-	auto pen = QPen(color, 2.);
+	auto pen = QPen(color, 1.7);
 	pen.setCapStyle(Qt::RoundCap);
 	pen.setJoinStyle(Qt::RoundJoin);
 
 	p.save();
 	p.translate(iconRect.topLeft());
 	p.scale(scale, scale);
+	const auto center = QPointF(kSize / 2., kSize / 2.);
+	Ui::PaintMediaButtonSurface(p, QRectF(
+		center.x() - kRingRadius,
+		center.y() - kRingRadius,
+		2 * kRingRadius,
+		2 * kRingRadius), Ui::MediaButtonPalette(color, st::windowBg->c));
 	p.setPen(pen);
 	p.setBrush(Qt::NoBrush);
-	const auto center = QPointF(kSize / 2., kSize / 2.);
-	p.drawEllipse(center, kRingRadius, kRingRadius);
 	if (_done) {
 		// 对勾两段按总长度依次画出。
 		const auto a = QPointF(8.2, 12.3);

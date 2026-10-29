@@ -290,23 +290,19 @@ void ThemeDocument::draw(Painter &p, const PaintContext &context) const {
 				p.setBrush(over ? st->msgDateImgBgOver() : st->msgDateImgBg());
 			}
 
+			const auto colors = Ui::MediaButtonPalette(
+				sti->historyFileThumbRadialFg->c, p.brush().color(), true);
+			p.save();
 			p.setOpacity(radialOpacity * p.opacity());
-
-			{
-				PainterHighQualityEnabler hq(p);
-				p.drawEllipse(inner);
-			}
-
-			p.setOpacity(radialOpacity);
-			const auto &icon = (radial || _data->loading())
-				? sti->historyFileThumbCancel
-				: sti->historyFileThumbDownload;
-			icon.paintInCenter(p, inner);
-			p.setOpacity(1);
 			if (radial) {
-				QRect rinner(inner.marginsRemoved(QMargins(st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine)));
-				_animation->radial.draw(p, rinner, st::msgFileRadialLine, sti->historyFileThumbRadialFg);
+				_animation->radial.paint(p, inner, colors,
+					_data->loading() || _data->uploading(),
+					ClickHandler::showAsActive(_cancell));
+			} else {
+				Ui::PaintMediaButtonSurface(p, inner, colors);
+				sti->historyFileThumbDownload.paintInCenter(p, inner);
 			}
+			p.restore();
 		}
 	}
 }
@@ -446,6 +442,11 @@ TextState ThemeDocument::textState(QPoint point, StateRequest request) const {
 			result.link = _cancell;
 		} else {
 			result.link = _openl;
+		}
+		const auto size = st::msgFileLayout.thumbSize;
+		const auto button = QRect((paintw - size) / 2, (painth - size) / 2, size, size);
+		if (result.link == _cancell && !Ui::MediaCancelBadgeContains(button, point)) {
+			result.link = nullptr;
 		}
 	}
 	return result;

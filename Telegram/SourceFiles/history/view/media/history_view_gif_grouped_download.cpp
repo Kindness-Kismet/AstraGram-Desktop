@@ -81,9 +81,15 @@ void Gif::drawSmallGroupDownload(
 	const auto sti = context.imageStyle();
 	const auto hq = PainterHighQualityEnabler(p);
 	p.save();
-	p.setPen(Qt::NoPen);
-	p.setBrush(sti->msgDateImgBg);
-	p.drawEllipse(inner);
+	const auto colors = Ui::MediaButtonPalette(
+		sti->historyFileThumbRadialFg->c, sti->msgDateImgBg->c, true);
+	const auto hovered = ClickHandler::showAsActive(
+		_data->loading() ? _cancell : _savel);
+	if (_animation && _animation->radial.animating()) {
+		_animation->radial.paintFill(p, inner, colors, hovered);
+	} else {
+		Ui::PaintMediaButtonSurface(p, inner, colors, hovered);
+	}
 	const auto &icon = _data->loading()
 		? sti->historyVideoCancel
 		: sti->historyVideoDownload;
@@ -99,13 +105,6 @@ void Gif::drawSmallGroupDownload(
 		icon.width(),
 		icon.height()));
 	p.restore();
-	if (_animation && _animation->radial.animating()) {
-		_animation->radial.draw(
-			p,
-			inner.marginsRemoved(QMargins(line, line, line, line)),
-			line,
-			sti->historyFileThumbRadialFg);
-	}
 	p.restore();
 }
 

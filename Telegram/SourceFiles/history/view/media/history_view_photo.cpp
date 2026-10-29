@@ -528,17 +528,20 @@ void Photo::draw(Painter &p, const PaintContext &context) const {
 			1.;
 		const auto innerSize = st::msgFileLayout.thumbSize;
 		QRect inner(rthumb.x() + (rthumb.width() - innerSize) / 2, rthumb.y() + (rthumb.height() - innerSize) / 2, innerSize, innerSize);
+		const auto colors = Ui::MediaButtonPalette(
+			sti->historyFileThumbRadialFg->c, p.brush().color(), true);
 
 		p.setOpacity(radialOpacity * p.opacity());
 
-		{
-			PainterHighQualityEnabler hq(p);
-			p.drawEllipse(inner);
+		if (!radial) {
+			Ui::PaintMediaButtonSurface(p, inner, colors);
 		}
 
 		p.setOpacity(radialOpacity);
-		if (radial || _data->loading()) {
-			sti->historyFileThumbCancel.paintInCenter(p, inner);
+		if (radial) {
+			_animation->radial.paint(p, inner, colors,
+				_data->loading() || _data->uploading(),
+				ClickHandler::showAsActive(_cancell));
 		} else if (ttlCovered) {
 			paintTtlFire(p, inner);
 			PaintTtlSingleViewBadge(p, inner, _realParent, context);
@@ -546,10 +549,7 @@ void Photo::draw(Painter &p, const PaintContext &context) const {
 			sti->historyFileThumbDownload.paintInCenter(p, inner);
 		}
 		p.setOpacity(1);
-		if (radial) {
-			QRect rinner(inner.marginsRemoved(QMargins(st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine)));
-			_animation->radial.draw(p, rinner, st::msgFileRadialLine, sti->historyFileThumbRadialFg);
-		} else if (ttlCovered && !_data->loading()) {
+		if (!radial && ttlCovered && !_data->loading()) {
 			paintTtlCountdown(
 				p,
 				inner,
@@ -894,6 +894,12 @@ TextState Photo::textState(QPoint point, StateRequest request) const {
 			: _data->loading()
 			? _cancell
 			: _savel;
+		const auto buttonSize = st::msgFileLayout.thumbSize;
+		const auto button = QRect((paintw - buttonSize) / 2,
+			(painth - buttonSize) / 2, buttonSize, buttonSize);
+		if (result.link == _cancell && !Ui::MediaCancelBadgeContains(button, point)) {
+			result.link = nullptr;
+		}
 		if (_enlarge && result.link == _openl) {
 			const auto rect = _enlarge->rect(width());
 			const auto over = rect.contains(point);
@@ -1020,11 +1026,11 @@ void Photo::drawGrouped(
 			p.setBrush(over ? st->msgDateImgBgOver() : st->msgDateImgBg());
 		}
 
+		const auto colors = Ui::MediaButtonPalette(
+			sti->historyFileThumbRadialFg->c, p.brush().color(), true);
 		p.setOpacity(backOpacity * p.opacity());
-
-		{
-			PainterHighQualityEnabler hq(p);
-			p.drawEllipse(inner);
+		if (!radial) {
+			Ui::PaintMediaButtonSurface(p, inner, colors);
 		}
 
 		const auto &icon = _data->waitingForAlbum()
@@ -1040,7 +1046,11 @@ void Photo::drawGrouped(
 			&& !radial
 			&& !_data->loading()
 			&& !_data->waitingForAlbum();
-		if (ttlIdle) {
+		if (radial) {
+			_animation->radial.paint(p, inner, colors,
+				_data->loading() || _data->uploading(),
+				ClickHandler::showAsActive(_cancell));
+		} else if (ttlIdle) {
 			paintTtlFire(p, inner);
 			PaintTtlSingleViewBadge(p, inner, _realParent, context);
 		} else if (previous && radialOpacity > 0. && radialOpacity < 1.) {
@@ -1049,11 +1059,7 @@ void Photo::drawGrouped(
 			icon.paintInCenter(p, inner);
 		}
 		p.setOpacity(1);
-		if (radial) {
-			const auto line = st::historyGroupRadialLine;
-			const auto rinner = inner.marginsRemoved({ line, line, line, line });
-			_animation->radial.draw(p, rinner, line, sti->historyFileThumbRadialFg);
-		} else if (ttlIdle) {
+		if (ttlIdle) {
 			paintTtlCountdown(
 				p,
 				inner,
@@ -1092,6 +1098,12 @@ TextState Photo::getStateGrouped(
 		: _data->loading()
 		? _cancell
 		: _savel;
+	const auto size = st::historyGroupRadialSize;
+	const auto button = QRect(geometry.x() + (geometry.width() - size) / 2,
+		geometry.y() + (geometry.height() - size) / 2, size, size);
+	if (link == _cancell && !Ui::MediaCancelBadgeContains(button, point)) {
+		link = nullptr;
+	}
 	return TextState(_parent, std::move(link));
 }
 

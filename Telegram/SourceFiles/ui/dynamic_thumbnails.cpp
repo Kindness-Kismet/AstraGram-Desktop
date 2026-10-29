@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/dynamic_thumbnails.h"
+#include "ui/controls/file_preview.h"
 
 #include "data/data_changes.h"
 #include "data/data_cloud_file.h"
@@ -960,69 +961,11 @@ QImage DocumentFilePreviewThumbnail::prepareGenericImage(int size) {
 	result.fill(Qt::transparent);
 	result.setDevicePixelRatio(ratio);
 
-	const auto radius = size / 6;
-	const auto foldSize = size / 4;
-
 	auto p = QPainter(&result);
-	auto hq = PainterHighQualityEnabler(p);
-	p.setPen(Qt::NoPen);
-
-	// Rounded rect with top-right corner cut for fold.
-	auto path = QPainterPath();
-	path.moveTo(radius, 0);
-	path.lineTo(size - foldSize, 0);
-	path.lineTo(size, foldSize);
-	path.lineTo(size, size - radius);
-	path.arcTo(
-		size - 2 * radius,
-		size - 2 * radius,
-		2 * radius,
-		2 * radius,
-		0,
-		-90);
-	path.lineTo(radius, size);
-	path.arcTo(0, size - 2 * radius, 2 * radius, 2 * radius, 270, -90);
-	path.lineTo(0, radius);
-	path.arcTo(0, 0, 2 * radius, 2 * radius, 180, -90);
-	path.closeSubpath();
-
-	p.setBrush(_generic.color);
-	p.drawPath(path);
-
-	// Fold triangle.
-	auto fold = QPainterPath();
-	fold.moveTo(size - foldSize, 0);
-	fold.lineTo(size, foldSize);
-	fold.lineTo(size - foldSize, foldSize);
-	fold.closeSubpath();
-	p.setBrush(_generic.dark);
-	p.drawPath(fold);
-
-	if (!_generic.ext.isEmpty()) {
-		// Reference: overview uses 18px font in a 70px square.
-		const auto refSize = st::overviewFileLayout.fileThumbSize;
-		const auto fontSize = std::max(
-			size * st::overviewFileExtFont->f.pixelSize() / refSize,
-			8);
-		const auto font = style::font(
-			fontSize,
-			st::overviewFileExtFont->flags(),
-			st::overviewFileExtFont->family());
-		const auto padding = size * st::overviewFileExtPadding / refSize;
-		const auto maxw = size - padding * 2;
-		auto ext = _generic.ext;
-		auto extw = font->width(ext);
-		if (extw > maxw) {
-			ext = font->elided(ext, maxw, Qt::ElideMiddle);
-			extw = font->width(ext);
-		}
-		p.setFont(font);
-		p.setPen(st::overviewFileExtFg);
-		p.drawText(
-			(size - extw) / 2,
-			(size - font->height) / 2 + font->ascent,
-			ext);
-	}
+	const auto rect = QRectF(0, 0, size, size);
+	const auto colors = FilePreviewPalette(_generic, st::windowBg->c);
+	PaintFilePreviewSurface(p, rect, colors);
+	PaintFilePreviewContent(p, rect, _generic, colors);
 	p.end();
 	return result;
 }

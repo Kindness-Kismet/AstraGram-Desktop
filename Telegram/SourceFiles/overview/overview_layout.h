@@ -12,7 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/clip/media_clip_reader.h"
 #include "core/click_handler_types.h"
 #include "ui/effects/animations.h"
-#include "ui/effects/radial_animation.h"
+#include "ui/controls/media_button.h"
 
 class Image;
 
@@ -162,7 +162,7 @@ protected:
 		return false;
 	}
 
-	mutable std::unique_ptr<Ui::RadialAnimation> _radial;
+	mutable std::unique_ptr<Ui::MediaProgressAnimation> _radial;
 	Ui::Animations::Simple _a_iconOver;
 
 };
@@ -481,7 +481,7 @@ private:
 
 	[[nodiscard]] bool songLayout() const;
 	void ensureDataMediaCreated() const;
-	void paintThumbnail(Painter &p, QRect rthumb, bool wthumb, bool withExt);
+	void paintThumbnail(Painter &p, QRect rthumb, bool wthumb);
 	[[nodiscard]] auto externalLoading() const
 	-> std::optional<DocumentExternalLoading>;
 	[[nodiscard]] bool activeLoading() const;
@@ -500,9 +500,8 @@ private:
 	QPixmap _thumb;
 
 	Ui::Text::String _name;
-	QString _date, _ext;
+	QString _date;
 	int _datew = 0;
-	int _extw = 0;
 	int _thumbw = 0;
 
 	bool withThumb() const;

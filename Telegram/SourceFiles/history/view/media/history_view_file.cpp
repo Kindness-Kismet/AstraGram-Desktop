@@ -92,7 +92,8 @@ void File::radialAnimationCallback(crl::time now) const {
 		return _animation->radial.update(
 			dataProgress(),
 			dataFinished(),
-			now);
+			now,
+			dataLoaded());
 	}();
 	if (!anim::Disabled() || updated) {
 		repaint();

@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/random.h"
 #include "lang/lang_keys.h"
+#include "layout/layout_document_generic_preview.h"
 #include "lottie/lottie_icon.h"
 #include "storage/localstorage.h"
 #include "main/main_session.h"
@@ -28,6 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/format_song_document_name.h"
 #include "ui/text/text_utilities.h"
 #include "ui/chat/chat_style.h"
+#include "ui/controls/file_preview.h"
 #include "ui/effects/voice_once_particles.h"
 #include "ui/paint/blobs.h"
 #include "ui/painter.h"
@@ -345,7 +347,15 @@ Document::Document(
 	not_null<HistoryItem*> realParent,
 	not_null<DocumentData*> document)
 : File(parent, realParent)
-, _data(document) {
+, _data(document)
+, _filePreview((!document->isVoiceMessage()
+	&& !document->isAudioFile()
+	&& !document->isVideoFile()
+	&& !document->isVideoMessage()
+	&& !document->isAnimation())
+	? std::make_unique<::Layout::DocumentGenericPreview>(
+		::Layout::DocumentGenericPreview::Create(document))
+	: nullptr) {
 	const auto isRound = _data->isVideoMessage();
 	if (isRound) {
 		const auto &entry = _data->session().api().transcribes().entry(
@@ -529,7 +539,10 @@ void Document::draw(
 		- topMinus;
 	const auto rthumb = style::rtlrect(st.padding.left(), st.padding.top() - topMinus, st.thumbSize, st.thumbSize, width);
 	const auto innerSize = st::msgFileLayout.thumbSize;
-	const auto inner = QRect(rthumb.x() + (rthumb.width() - innerSize) / 2, rthumb.y() + (rthumb.height() - innerSize) / 2, innerSize, innerSize);
+	const auto filePreview = _filePreview && !thumbed;
+	const auto inner = filePreview
+		? Ui::FilePreviewButtonRect(rthumb)
+		: QRect(rthumb.x() + (rthumb.width() - innerSize) / 2, rthumb.y() + (rthumb.height() - innerSize) / 2, innerSize, innerSize);
 	const auto radialOpacity = radial ? _animation->radial.opacity() : 1.;
 	if (thumbed) {
 		const auto rounding = thumbRounding(mode, outsideRounding);
@@ -544,34 +557,23 @@ void Document::draw(
 				|| (!loaded && !_data->loading())
 				|| _data->waitingForAlbum())) {
 			const auto backOpacity = (loaded && !_data->uploading()) ? radialOpacity : 1.;
-			p.setPen(Qt::NoPen);
-			p.setBrush(sti->msgDateImgBg);
+			const auto colors = Ui::MediaButtonPalette(
+				sti->historyFileThumbRadialFg->c, sti->msgDateImgBg->c, true);
+			p.save();
 			p.setOpacity(backOpacity * p.opacity());
-
-			{
-				PainterHighQualityEnabler hq(p);
-				p.drawEllipse(inner);
-			}
-
-			const auto &icon = _data->waitingForAlbum()
-				? sti->historyFileThumbWaiting
-				: (radial || _data->loading())
-				? sti->historyFileThumbCancel
-				: sti->historyFileThumbDownload;
-			const auto previous = _data->waitingForAlbum()
-				? &sti->historyFileThumbCancel
-				: nullptr;
-			p.setOpacity(backOpacity);
-			if (previous && radialOpacity > 0. && radialOpacity < 1.) {
-				PaintInterpolatedIcon(p, icon, *previous, radialOpacity, inner);
+			if (radial) {
+				_animation->radial.paint(p, inner, colors,
+					_data->loading() || _data->uploading(),
+					ClickHandler::showAsActive(_cancell));
 			} else {
+				Ui::PaintMediaButtonSurface(p, inner, colors,
+					ClickHandler::showAsActive(_savel));
+				const auto &icon = _data->waitingForAlbum()
+					? sti->historyFileThumbWaiting
+					: sti->historyFileThumbDownload;
 				icon.paintInCenter(p, inner);
 			}
-			p.setOpacity(1.);
-			if (radial) {
-				QRect rinner(inner.marginsRemoved(QMargins(st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine)));
-				_animation->radial.draw(p, rinner, st::msgFileRadialLine, sti->historyFileThumbRadialFg);
-			}
+			p.restore();
 		}
 
 		if (_data->status != FileUploadFailed && !mediaEditor) {
@@ -587,6 +589,15 @@ void Document::draw(
 		}
 	} else {
 		p.setPen(Qt::NoPen);
+		const auto styledButton = !_drawTtl && !_transcribedRound && !mediaEditor;
+		const auto buttonColors = filePreview
+			? Ui::FilePreviewPalette(*_filePreview, stm->msgBg->c)
+			: Ui::MediaButtonPalette(
+			_data->isSongWithCover()
+				? sti->historyFileThumbRadialFg->c
+				: stm->msgFileThumbLinkFg->c,
+			_data->isSongWithCover() ? sti->msgDateImgBg->c : stm->msgBg->c,
+			_data->isSongWithCover());
 
 		const auto hasTtlBadge = _parent->data()->media()
 			&& _parent->data()->media()->ttlSeconds()
@@ -620,7 +631,7 @@ void Document::draw(
 						}
 					}
 				}
-			} else {
+			} else if (!styledButton && !filePreview) {
 				auto hq = PainterHighQualityEnabler(p);
 				p.setBrush(stm->msgFileBg);
 				p.drawEllipse(inner);
@@ -666,7 +677,36 @@ void Document::draw(
 
 		const auto paintContent = [&](QPainter &q) {
 			constexpr auto kPenWidth = 1.5;
-			if (_drawTtl) {
+			if (filePreview) {
+				Ui::PaintFilePreviewSurface(q, rthumb, buttonColors);
+				const auto contentOpacity = (loaded || mediaEditor) && !_data->uploading()
+					? (radial ? 1. - radialOpacity : 1.)
+					: 0.;
+				if (radial) {
+					q.save();
+					q.setOpacity(q.opacity() * (1. - contentOpacity));
+					_animation->radial.paint(q, inner, buttonColors,
+						_data->loading() || _data->uploading(),
+						ClickHandler::showAsActive(_cancell));
+					q.restore();
+				} else if (contentOpacity == 0.) {
+					Ui::PaintMediaButtonSurface(q, inner, buttonColors,
+						ClickHandler::showAsActive(_savel));
+					icon.paintInCenter(q, inner, buttonColors.foreground);
+				}
+				Ui::PaintFilePreviewContent(q, rthumb, *_filePreview,
+					buttonColors, contentOpacity);
+			} else if (styledButton) {
+				if (radial && !cornerDownload) {
+					_animation->radial.paint(q, inner, buttonColors,
+						_data->loading() || _data->uploading(),
+						ClickHandler::showAsActive(_cancell), &icon);
+				} else {
+					Ui::PaintMediaButtonSurface(q, inner, buttonColors,
+						ClickHandler::showAsActive(loaded || _dataMedia->canBePlayed() ? _openl : _savel));
+					icon.paintInCenter(q, inner, buttonColors.foreground);
+				}
+			} else if (_drawTtl) {
 				_drawTtl(q, inner, context.st->historyFileInIconFg()->c);
 
 				const auto voice = Get<HistoryDocumentVoice>();
@@ -693,7 +733,7 @@ void Document::draw(
 				icon.paintInCenter(q, inner);
 			}
 
-			if (radial && !cornerDownload && !mediaEditor) {
+			if (radial && !cornerDownload && !mediaEditor && !styledButton) {
 				QRect rinner(inner.marginsRemoved(QMargins(st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine)));
 				_animation->radial.draw(q, rinner, st::msgFileRadialLine, stm->historyFileRadialFg);
 			}
@@ -712,7 +752,7 @@ void Document::draw(
 				stm->historyVoiceMessageTTL.paintInCenter(q, ttlRect);
 			}
 		};
-		if (_data->isSongWithCover() || !usesBubblePattern(context)) {
+		if (styledButton || _data->isSongWithCover() || !usesBubblePattern(context)) {
 			paintContent(p);
 		} else {
 			Ui::PaintPatternBubblePart(
@@ -1015,50 +1055,21 @@ void Document::drawCornerDownload(
 	const auto shift = st::historyAudioDownloadShift;
 	const auto size = st::historyAudioDownloadSize;
 	const auto inner = style::rtlrect(st.padding.left() + shift, st.padding.top() - topMinus + shift, size, size, width());
-	const auto bubblePattern = usesBubblePattern(context);
-	if (bubblePattern) {
-		p.setPen(Qt::NoPen);
+	const auto colors = Ui::MediaButtonPalette(
+		stm->msgFileThumbLinkFg->c, stm->msgBg->c);
+	p.save();
+	const auto hovered = ClickHandler::showAsActive(
+		_data->loading() ? _cancell : _savel);
+	if (_animation && _animation->radial.animating()) {
+		_animation->radial.paintFill(p, inner, colors, hovered);
 	} else {
-		auto pen = stm->msgBg->p;
-		pen.setWidth(st::lineWidth);
-		p.setPen(pen);
-	}
-	p.setBrush(stm->msgFileBg);
-	{
-		PainterHighQualityEnabler hq(p);
-		p.drawEllipse(inner);
+		Ui::PaintMediaButtonSurface(p, inner, colors, hovered);
 	}
 	const auto &icon = _data->loading()
 		? stm->historyAudioCancel
 		: stm->historyAudioDownload;
-	const auto paintContent = [&](QPainter &q) {
-		if (bubblePattern) {
-			auto hq = PainterHighQualityEnabler(q);
-			auto pen = stm->msgBg->p;
-			pen.setWidth(st::lineWidth);
-			q.setPen(pen);
-			q.setBrush(Qt::NoBrush);
-			q.drawEllipse(inner);
-		}
-		icon.paintInCenter(q, inner);
-		if (_animation && _animation->radial.animating()) {
-			const auto rinner = inner.marginsRemoved(QMargins(st::historyAudioRadialLine, st::historyAudioRadialLine, st::historyAudioRadialLine, st::historyAudioRadialLine));
-			_animation->radial.draw(q, rinner, st::historyAudioRadialLine, stm->historyFileRadialFg);
-		}
-	};
-	if (bubblePattern) {
-		const auto add = st::lineWidth * 2;
-		const auto target = inner.marginsAdded({ add, add, add, add });
-		Ui::PaintPatternBubblePart(
-			p,
-			context.viewport,
-			context.bubblesPattern->pixmap,
-			target,
-			paintContent,
-			_cornerDownloadCache);
-	} else {
-		paintContent(p);
-	}
+	icon.paintInCenter(p, inner, colors.foreground);
+	p.restore();
 }
 
 TextState Document::cornerDownloadTextState(
@@ -1124,7 +1135,9 @@ TextState Document::textState(
 		- topMinus;
 	const auto rthumb = style::rtlrect(st.padding.left(), st.padding.top() - topMinus, st.thumbSize, st.thumbSize, width);
 	const auto innerSize = st::msgFileLayout.thumbSize;
-	const auto inner = QRect(rthumb.x() + (rthumb.width() - innerSize) / 2, rthumb.y() + (rthumb.height() - innerSize) / 2, innerSize, innerSize);
+	const auto inner = _filePreview && !thumbed
+		? Ui::FilePreviewButtonRect(rthumb)
+		: QRect(rthumb.x() + (rthumb.width() - innerSize) / 2, rthumb.y() + (rthumb.height() - innerSize) / 2, innerSize, innerSize);
 
 	const auto filenameMoused = style::rtlrect(
 		nameleft,
@@ -1134,7 +1147,8 @@ TextState Document::textState(
 		width).contains(point);
 	_tooltipFilename.setMoused(filenameMoused);
 	if (const auto thumbed = Get<HistoryDocumentThumbed>()) {
-		if ((_data->loading() || _data->uploading()) && rthumb.contains(point)) {
+		if ((_data->loading() || _data->uploading())
+			&& Ui::MediaCancelBadgeContains(inner, point)) {
 			result.link = _cancell;
 			return result;
 		}
@@ -1153,12 +1167,21 @@ TextState Document::textState(
 		if (const auto state = cornerDownloadTextState(point, request, mode); state.link) {
 			return state;
 		}
-		if ((_data->loading() || _data->uploading()) && inner.contains(point) && !downloadInCorner()) {
+		if ((_data->loading() || _data->uploading())
+			&& !downloadInCorner()
+			&& (_drawTtl || _transcribedRound
+				? inner.contains(point)
+				: Ui::MediaCancelBadgeContains(inner, point))) {
 			result.link = _cancell;
 			return result;
 		}
 	}
 
+	if ((_data->loading() || _data->uploading())
+		&& !downloadInCorner()
+		&& inner.contains(point)) {
+		return result;
+	}
 	const auto voice = Get<HistoryDocumentVoice>();
 	auto transcribeLength = 0;
 	auto transcribeHeight = 0;

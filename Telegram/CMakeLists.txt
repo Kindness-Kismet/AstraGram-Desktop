@@ -2503,6 +2503,10 @@ PRIVATE
     ui/controls/custom_emoji_toast_icon.h
     ui/controls/emoji_button_factory.cpp
     ui/controls/emoji_button_factory.h
+    ui/controls/file_preview.cpp
+    ui/controls/file_preview.h
+    ui/controls/media_button.cpp
+    ui/controls/media_button.h
     ui/controls/keys_legend.cpp
     ui/controls/keys_legend.h
     ui/controls/location_picker.cpp

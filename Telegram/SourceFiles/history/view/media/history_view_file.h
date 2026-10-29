@@ -9,7 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "history/view/media/history_view_media.h"
 #include "ui/effects/animations.h"
-#include "ui/effects/radial_animation.h"
+#include "ui/controls/media_button.h"
 
 class FileClickHandler;
 
@@ -109,7 +109,7 @@ protected:
 		}
 
 		Ui::Animations::Simple a_thumbOver;
-		Ui::RadialAnimation radial;
+		Ui::MediaProgressAnimation radial;
 	};
 	mutable std::unique_ptr<AnimationData> _animation;
 
