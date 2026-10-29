@@ -948,7 +948,7 @@ QImage DocumentFilePreviewThumbnail::prepareThumbImage(int size) {
 		Qt::SmoothTransformation);
 	result = Images::Round(
 		std::move(result),
-		ImageRoundRadius::Small);
+		Images::CornersMask(qRound(FilePreviewRadius(QRectF(0, 0, size, size)))));
 	result.setDevicePixelRatio(ratio);
 	return result;
 }

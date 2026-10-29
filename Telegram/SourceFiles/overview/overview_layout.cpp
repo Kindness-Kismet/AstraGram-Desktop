@@ -1535,9 +1535,7 @@ void Document::paint(Painter &p, const QRect &clip, TextSelection selection, con
 				Ui::PaintFilePreviewSurface(p, rthumb, previewColors);
 			}
 			if (selected) {
-				const auto radius = wthumb
-					? st::roundRadiusSmall
-					: Ui::FilePreviewRadius(rthumb);
+				const auto radius = Ui::FilePreviewRadius(rthumb);
 				p.setPen(Qt::NoPen);
 				p.setBrush(st::defaultTextPalette.selectOverlay);
 				p.drawRoundedRect(
@@ -1637,12 +1635,11 @@ void Document::paintThumbnail(
 		if (thumbnail || blurred) {
 			if (_thumb.isNull() || (thumbnail && !_thumbLoaded)) {
 				_thumbLoaded = (thumbnail != nullptr);
-				const auto options = Images::Option::RoundSmall
-					| (_thumbLoaded
-						? Images::Option()
-						: Images::Option::Blur);
+				const auto options = _thumbLoaded
+					? Images::Option()
+					: Images::Option::Blur;
 				const auto image = thumbnail ? thumbnail : blurred;
-				_thumb = image->pixNoCache(
+				const auto prepared = image->pixNoCache(
 					_thumbw * style::DevicePixelRatio(),
 					{
 						.options = options,
@@ -1650,15 +1647,19 @@ void Document::paintThumbnail(
 							_st.fileThumbSize,
 							_st.fileThumbSize),
 					});
+				_thumb = Images::PixmapFast(Images::Round(
+					prepared.toImage(),
+					Images::CornersMask(qRound(Ui::FilePreviewRadius(rthumb)))));
 			}
 			p.drawPixmap(rthumb.topLeft(), _thumb);
 		} else {
 			p.setPen(Qt::NoPen);
 			p.setBrush(st::overviewFileThumbBg);
+			const auto radius = Ui::FilePreviewRadius(rthumb);
 			p.drawRoundedRect(
 				rthumb,
-				st::roundRadiusSmall,
-				st::roundRadiusSmall);
+				radius,
+				radius);
 		}
 	} else {
 		const auto colors = Ui::FilePreviewPalette(_generic, st::windowBg->c);
