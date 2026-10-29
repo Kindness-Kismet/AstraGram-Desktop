@@ -21,6 +21,10 @@
 #include "data/data_user.h"
 #include "data/notify/data_notify_settings.h"
 #include "history/history.h"
+#include "history/history_widget.h"
+#include "history/view/controls/history_view_compose_search.h"
+#include "history/view/history_view_chat_section.h"
+#include "history/view/history_view_pinned_section.h"
 #include "history/history_item.h"
 #include "history/history_item_text.h"
 #include "history/view/history_view_element.h"
@@ -30,6 +34,7 @@
 #include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
+#include "mainwidget.h"
 #include "platform/platform_notifications_manager.h"
 #ifdef Q_OS_WIN
 #include "platform/win/windows_toast_activator.h"
@@ -580,6 +585,76 @@ using json = nlohmann::json;
 	}));
 }
 
+[[nodiscard]] Result openPinned(const QStringList &args) {
+	if (args.size() != 1) {
+		return Result::Err(u"usage: chat.pinned <peerId>"_q);
+	}
+	const auto session = ActiveSession();
+	const auto controller = session ? session->tryResolveWindow() : nullptr;
+	if (!controller) {
+		return Result::Err(u"no window controller"_q);
+	}
+	auto ok = false;
+	const auto id = args.front().toLongLong(&ok);
+	const auto peer = ok ? ResolvePeer(session, id) : nullptr;
+	if (!peer) {
+		return Result::Err(u"peer not found, run chat.list first"_q);
+	}
+	controller->showSection(std::make_shared<HistoryView::PinnedMemento>(
+		session->data().history(peer)), Window::SectionShow::Way::Forward);
+	return Result::Ok();
+}
+
+[[nodiscard]] Result searchState(const QStringList &args) {
+	if (!args.isEmpty()) {
+		return Result::Err(u"usage: chat.search-state"_q);
+	}
+	const auto session = ActiveSession();
+	const auto controller = session ? session->tryResolveWindow() : nullptr;
+	if (!controller) {
+		return Result::Err(u"no window controller"_q);
+	}
+	auto state = std::shared_ptr<HistoryView::ComposeSearchState>();
+	for (const auto widget : controller->content()->findChildren<QWidget*>()) {
+		if (!widget->isVisible()) {
+			continue;
+		}
+		if (const auto history = dynamic_cast<HistoryWidget*>(widget)) {
+			state = history->saveSearchState();
+		} else if (const auto chat = dynamic_cast<HistoryView::ChatWidget*>(widget)) {
+			state = chat->saveSearchState();
+		} else if (const auto pinned = dynamic_cast<HistoryView::PinnedWidget*>(widget)) {
+			state = pinned->saveSearchState();
+		}
+		if (state) {
+			break;
+		}
+	}
+	if (!state) {
+		return Result::Ok(Compact(json{ { "shown", false } }));
+	}
+	const auto &found = state->search->messages();
+	return Result::Ok(Compact(json{
+		{ "shown", true },
+		{ "query", state->request.query.toStdString() },
+		{ "from", state->request.from ? state->request.from->id.value : 0 },
+		{ "filter", int(state->request.filter) },
+		{ "tagCount", state->request.tags.size() },
+		{ "topMsgId", state->request.topMsgId.bare },
+		{ "currentPeer", state->currentResult.peer.value },
+		{ "currentMsgId", state->currentResult.msg.bare },
+		{ "currentIndex", state->currentResultIndex },
+		{ "listShown", state->listShown },
+		{ "listScrollTop", state->listScrollTop },
+		{ "searching", state->searching },
+		{ "searchPending", state->searchPending },
+		{ "loaded", found.messages.size() },
+		{ "total", found.total },
+		{ "finished", found.finished },
+		{ "failed", found.failed },
+	}));
+}
+
 [[nodiscard]] Result previewChat(const QStringList &args) {
 	if (args.size() != 1) {
 		return Result::Err(u"usage: chat.preview <peerId>"_q);
@@ -903,6 +978,8 @@ const HandlerMap &MessageHandlers() {
 		{ u"chat.list"_q, &Chats },
 		{ u"message.send"_q, &SendTextMessage },
 		{ u"chat.open"_q, &OpenChat },
+		{ u"chat.search-state"_q, &searchState },
+		{ u"chat.pinned"_q, &openPinned },
 		{ u"chat.preview"_q, &previewChat },
 		{ u"chat.calendar"_q, &openChatCalendar },
 		{ u"chat.media"_q, &OpenMedia },

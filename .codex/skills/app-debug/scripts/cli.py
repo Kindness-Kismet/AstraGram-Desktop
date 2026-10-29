@@ -149,6 +149,8 @@ GENERIC_COMMANDS = {
     "page.current": "查询当前页面、设置区宽窄布局与窗口布局",
     "chat.folder": "列出或切换聊天文件夹：[编号|all]",
     "chat.profile": "打开对话资料页：<peerId> [--side]",
+    "chat.search-state": "查询当前聊天搜索条件、选中结果、分页和列表位置",
+    "chat.pinned": "打开对话的置顶消息页：<peerId>",
     "action.list": "列出官方快捷动作",
     "action.run": "按绑定按键触发官方快捷动作，应用窗口须在前台：<名称>",
     "control.get": "查询控件当前值、状态与动作：<目标>",
