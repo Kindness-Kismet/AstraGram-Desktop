@@ -113,6 +113,7 @@ GENERIC_COMMANDS = {
     'downloads.cancel': '取消指定附件下载：<会话编号> <消息编号>',
     'simulation.download': '构造本地文件下载：<路径> <loading|done>，不支持音视频',
     'simulation.download-progress': '推进模拟下载进度或完成：<会话编号> <消息编号> <字节数|done>',
+    'simulation.media-upload': '在独立模拟配置定格媒体上传进度：<会话编号> <消息编号> <0..100|done>，不上传',
     'peer.info': '查询已知会话或用户资料，不返回访问密钥：<会话编号>',
     'chat.members': '列出已缓存的群成员：<会话编号> [no-username]',
     'chat.draft': '查询草稿、回复、转发和暂存状态，不切换聊天：<会话编号> [话题根消息编号]',

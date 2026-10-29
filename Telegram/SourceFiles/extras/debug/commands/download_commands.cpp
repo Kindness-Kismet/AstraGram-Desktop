@@ -9,6 +9,7 @@
 #include "core/mime_type.h"
 #include "data/data_document.h"
 #include "data/data_document_media.h"
+#include "data/data_photo.h"
 #include "data/data_download_manager.h"
 #include "data/data_file_origin.h"
 #include "data/data_session.h"
@@ -18,6 +19,7 @@
 #include "info/downloads/info_downloads_provider.h"
 #include "main/main_session.h"
 #include "main/main_account.h"
+#include "settings.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -289,6 +291,56 @@ Result progressDownload(const QStringList &args) {
 	return Result::Ok();
 }
 
+Result simulationMediaUpload(const QStringList &args) {
+	if (args.size() != 3) {
+		return Result::Err(u"usage: simulation.media-upload <peerId> <messageId> <0..100|done>"_q);
+	}
+	const auto session = ActiveSession();
+	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	const auto item = findMessage(args[0], args[1]);
+	const auto media = item ? item->media() : nullptr;
+	const auto document = media ? media->document() : nullptr;
+	const auto photo = media ? media->photo() : nullptr;
+	if (!document && !photo) {
+		return Result::Err(u"message has no photo or document"_q);
+	}
+	const auto done = args[2] == u"done"_q;
+	auto ok = false;
+	const auto percent = args[2].toInt(&ok);
+	if (!done && (!ok || percent < 0 || percent > 100)) {
+		return Result::Err(u"progress must be within 0..100"_q);
+	}
+	const auto total = document ? document->size : int64(100);
+	if (total <= 0) {
+		return Result::Err(u"fixture has no known size"_q);
+	}
+	// 只改变本地样本的上传呈现，不创建上传任务或向服务器发送数据。
+	auto &upload = document ? document->uploadingData : photo->uploadingData;
+	if (done) {
+		upload.reset();
+	} else {
+		if (!upload) {
+			upload = std::make_unique<Data::UploadState>(total);
+		}
+		upload->size = total;
+		upload->offset = (total * percent + 99) / 100;
+	}
+	if (document) {
+		session->data().notifyDocumentLayoutChanged(document);
+	} else {
+		session->data().notifyPhotoLayoutChanged(photo);
+	}
+	session->data().requestItemRepaint(item);
+	return Result::Ok(Compact(Json{
+		{ "uploading", !done },
+		{ "percent", done ? 100 : int(upload->offset * 100 / total) },
+		{ "ready", done ? total : upload->offset },
+		{ "total", total },
+	}));
+}
+
 } // namespace
 
 const HandlerMap &downloadHandlers() {
@@ -298,6 +350,7 @@ const HandlerMap &downloadHandlers() {
 		{ u"downloads.cancel"_q, &cancelDownload },
 		{ u"simulation.download"_q, &simulationDownload },
 		{ u"simulation.download-progress"_q, &progressDownload },
+		{ u"simulation.media-upload"_q, &simulationMediaUpload },
 	};
 	return handlers;
 }

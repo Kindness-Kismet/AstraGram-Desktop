@@ -137,6 +137,9 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 `simulation.download-progress <peerId> <messageId> <bytes|done>` 推进模拟进度。
 这类事件用于检查下载列表、分类和进度，真实下载验证见[业务指令](business.md)。
 
+`simulation.media-upload <peerId> <messageId> <0..100|done>` 只在独立模拟配置中，给已有图片或文件设置本地上传进度；相册逐项设置。
+复用正式媒体进度和布局通知，不创建上传任务；`done` 清除上传状态，恢复样本原来的本地加载状态。配合 `anim.speed` 和截图观察过渡；不能作为真实上传成功的证据。
+
 ## 验证入口
 
 `simulation.cache-history-check` 仅在独立模拟配置中运行固定历史缓存检查，先用 `app.start --profile cache-history-check + simulation.enter` 进入。
