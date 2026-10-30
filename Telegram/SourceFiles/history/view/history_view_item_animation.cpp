@@ -3,36 +3,49 @@
 #include "history/view/history_view_element.h"
 #include "ui/chat/chat_style.h"
 #include "ui/chat/message_bubble.h"
+#include "ui/effects/premium_3d_support.h"
 #include "ui/painter.h"
 
 namespace HistoryView {
 
+crl::time ItemRevealDuration(int height) {
+	const auto extra = std::max(0., height * 100. / style::Scale() - 64.);
+	return 240 + std::min(40, int(extra * .18));
+}
+
+int ItemRevealDisplacement(int height) {
+	return std::min(style::ConvertScale(42),
+		style::ConvertScale(22) + int(height * .28));
+}
+
 float64 ItemExpansionProgress(float64 progress) {
-	return anim::sineInOut(1., std::clamp(
-		progress * kItemRevealDuration / kItemExpandDuration, 0., 1.));
+	return Ui::Premium::CubicBezier(.22, .72, .3, 1., progress);
 }
 
 float64 ItemRevealOpacity(float64 progress) {
-	return anim::sineInOut(1., std::clamp(
-		(progress * kItemRevealDuration - kItemExpandDuration)
-			/ kItemFadeDuration, 0., 1.));
+	const auto time = std::clamp(progress / .7, 0., 1.);
+	return time * time * (3. - 2. * time);
 }
 
-void PaintFadingItem(
+void PaintItemReveal(
 		Painter &p,
-		not_null<Element*> view,
-		const Ui::ChatPaintContext &context,
-		float64 opacity) {
+		QRect bounds,
+		QRect clip,
+		ItemRevealState state,
+		int bottom,
+		Fn<void(Painter&, int)> paint) {
+	const auto opacity = ItemRevealOpacity(state.progress);
 	if (opacity <= 0.) {
 		return;
 	}
-	if (opacity >= 1.) {
-		view->draw(p, context);
+	if (state.progress >= 1.) {
+		paint(p, 0);
 		return;
 	}
-	const auto padding = Ui::BubbleShadowPadding();
-	const auto area = context.clip.intersected(
-		QRect(0, -padding, view->width(), view->height() + 2 * padding));
+	const auto shift = int(std::round(state.shift));
+	const auto edge = bottom - shift;
+	const auto fade = style::ConvertScale(10);
+	const auto area = clip.translated(0, -shift).intersected(bounds);
 	if (area.isEmpty()) {
 		return;
 	}
@@ -41,15 +54,34 @@ void PaintFadingItem(
 	image.setDevicePixelRatio(ratio);
 	image.fill(Qt::transparent);
 	{
-		// 整条消息统一混合，内部控件的透明度不能提前露出边框或文字。
 		auto painter = Painter(&image);
 		painter.translate(-area.topLeft());
-		view->draw(painter, context);
+		paint(painter, shift);
+		painter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+		auto gradient = QLinearGradient(0, edge - fade, 0, edge);
+		gradient.setColorAt(0., Qt::black);
+		gradient.setColorAt(1., Qt::transparent);
+		painter.fillRect(area, gradient);
 	}
 	p.save();
 	p.setOpacity(p.opacity() * opacity);
-	p.drawImage(area.topLeft(), image);
+	p.drawImage(area.topLeft() + QPoint(0, shift), image);
 	p.restore();
+}
+
+void PaintRevealingItem(
+		Painter &p,
+		not_null<Element*> view,
+		const Ui::ChatPaintContext &context,
+		ItemRevealState state,
+		int bottom) {
+	const auto padding = Ui::BubbleShadowPadding();
+	PaintItemReveal(p,
+		QRect(0, -padding, view->width(), view->height() + 2 * padding),
+		context.clip, state, bottom, [&](Painter &painter, int shift) {
+			// 始终绘制原视图，渐显和上沿遮罩不重建媒体播放器。
+			view->draw(painter, context.translated(0, -shift));
+		});
 }
 
 } // namespace HistoryView

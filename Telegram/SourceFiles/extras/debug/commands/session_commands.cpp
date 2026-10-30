@@ -17,9 +17,12 @@
 #include "history/history_item.h"
 #include "history/history_inner_widget.h"
 #include "history/view/media/history_view_media.h"
+#include "history/view/media/history_view_media_unwrapped.h"
+#include "history/view/media/history_view_sticker.h"
 #include "history/view/history_view_chat_section.h"
 #include "history/view/history_view_list_widget.h"
 #include "history/view/history_view_message.h"
+#include "history/view/history_view_item_animation.h"
 #include "ui/widgets/elastic_scroll.h"
 #include "mtproto/mtp_instance.h"
 #include "window/window_session_controller.h"
@@ -276,11 +279,23 @@ using json = nlohmann::json;
 				return;
 			}
 			const auto media = view->media();
+			const auto unwrapped = dynamic_cast<HistoryView::UnwrappedMedia*>(media);
+			const auto sticker = unwrapped
+				? dynamic_cast<const HistoryView::Sticker*>(unwrapped->debugContent())
+				: nullptr;
 			const auto message = dynamic_cast<HistoryView::Message*>(view.get());
 			const auto bubble = message ? message->debugBubbleGeometry() : QRect();
+			const auto reveal = legacy
+				? legacy->itemRevealState(view->data())
+				: list->itemRevealState(view);
 			rows.push_back({
 				{ "id", view->data()->id.bare },
 				{ "y", y }, { "top", top },
+				{ "revealProgress", reveal.progress },
+				{ "revealShift", reveal.shift },
+				{ "visualY", y + reveal.shift },
+				{ "stickerFrame", sticker ? sticker->frameIndex().value_or(-1) : -1 },
+				{ "stickerFrames", sticker ? sticker->framesCount().value_or(-1) : -1 },
 				{ "width", view->width() }, { "height", view->height() },
 				{ "out", view->data()->out() },
 				{ "bubble", { bubble.x(), bubble.y(), bubble.width(), bubble.height() } },

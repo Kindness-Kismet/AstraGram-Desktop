@@ -12,16 +12,27 @@ namespace HistoryView {
 
 class Element;
 
-inline constexpr auto kItemExpandDuration = crl::time(220);
-inline constexpr auto kItemFadeDuration = crl::time(160);
-inline constexpr auto kItemRevealDuration = kItemExpandDuration + kItemFadeDuration;
+struct ItemRevealState {
+	float64 progress = 1.;
+	float64 shift = 0.;
+};
 
+[[nodiscard]] crl::time ItemRevealDuration(int height);
+[[nodiscard]] int ItemRevealDisplacement(int height);
 [[nodiscard]] float64 ItemExpansionProgress(float64 progress);
 [[nodiscard]] float64 ItemRevealOpacity(float64 progress);
-void PaintFadingItem(
+void PaintItemReveal(
+	Painter &p,
+	QRect bounds,
+	QRect clip,
+	ItemRevealState state,
+	int bottom,
+	Fn<void(Painter&, int)> paint);
+void PaintRevealingItem(
 	Painter &p,
 	not_null<Element*> view,
 	const Ui::ChatPaintContext &context,
-	float64 opacity);
+	ItemRevealState state,
+	int bottom);
 
 } // namespace HistoryView

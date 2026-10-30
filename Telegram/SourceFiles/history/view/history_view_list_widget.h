@@ -75,6 +75,8 @@ struct SectionShow;
 
 namespace HistoryView {
 
+struct ItemRevealState;
+
 class AboutView;
 struct TextState;
 struct StateRequest;
@@ -213,6 +215,8 @@ public:
 		FullMsgId context) = 0;
 	virtual void listCancelUploadLayer(not_null<HistoryItem*> item) = 0;
 	virtual bool listAnimationsPaused() = 0;
+	virtual int listMessageEnterInset() { return 0; }
+	virtual int listMessageEnterShift() { return 0; }
 	virtual Ui::ChatPaintContext listPreparePaintContext(
 		Ui::ChatPaintContextArgs &&args) = 0;
 	virtual bool listMarkingContentRead() = 0;
@@ -328,6 +332,7 @@ class ListWidget final
 	, public Ui::AbstractTooltipShower {
 public:
 	[[nodiscard]] float64 itemRevealOpacity(not_null<Element*> view) const;
+	[[nodiscard]] ItemRevealState itemRevealState(not_null<Element*> view) const;
 	ListWidget(
 		QWidget *parent,
 		not_null<Main::Session*> session,
@@ -672,6 +677,7 @@ private:
 	struct ItemRevealAnimation {
 		Ui::Animations::Simple animation;
 		int startHeight = 0;
+		int displacement = 0;
 	};
 	enum class Direction {
 		Up,

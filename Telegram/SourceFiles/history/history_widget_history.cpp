@@ -1498,7 +1498,9 @@ void HistoryWidget::updateHistoryGeometry(
 		newScrollTop = countInitialScrollTop();
 		_historyInited = true;
 		stopScrollAnimation();
-	} else if (wasAtBottom && !loadedDown && !_history->unreadBar()) {
+	} else if (wasAtBottom
+		&& (!loadedDown || !_itemRevealAnimations.empty())
+		&& !_history->unreadBar()) {
 		newScrollTop = countAutomaticScrollTop();
 	} else {
 		newScrollTop = std::min(
@@ -1535,6 +1537,8 @@ void HistoryWidget::updateHistoryGeometry(
 
 void HistoryWidget::revealItemsCallback() {
 	auto height = 0;
+	// 位移会超出消息原来的排版区域，整个可见区一并刷新。
+	_list->update();
 	if (!_historyInited) {
 		_itemRevealAnimations.clear();
 	}
@@ -1592,10 +1596,11 @@ void HistoryWidget::startItemRevealAnimations() {
 		}
 		auto &animation = _itemRevealAnimations[item];
 		animation.startHeight = view->height();
+		animation.displacement = HistoryView::ItemRevealDisplacement(view->height());
 		_itemsRevealHeight += animation.startHeight;
 		animation.animation.start(
 			[=] { revealItemsCallback(); },
-			0., 1., HistoryView::kItemRevealDuration);
+			0., 1., HistoryView::ItemRevealDuration(view->height()));
 		if (item->out() || _history->peer->isSelf()) {
 			_list->theme()->rotateComplexGradientBackground();
 		}

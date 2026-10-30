@@ -1653,6 +1653,7 @@ PRIVATE
     history/history_widget_compose_layout.cpp
     history/history_widget_drafts.cpp
     history/history_widget_history.cpp
+    history/history_widget_item_animation.cpp
     history/history_widget_interaction.cpp
     history/history_widget_internal.h
     history/history_widget_navigation.cpp

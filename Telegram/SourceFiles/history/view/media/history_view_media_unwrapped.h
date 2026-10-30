@@ -76,6 +76,11 @@ public:
 	void draw(Painter &p, const PaintContext &context) const override;
 	void continueImageTransition(const Media &previous) override;
 	void continuePlayback(UnwrappedMedia &previous);
+#ifdef _DEBUG
+	[[nodiscard]] const Content *debugContent() const {
+		return _content.get();
+	}
+#endif
 	PointState pointState(QPoint point) const override;
 	TextState textState(QPoint point, StateRequest request) const override;
 

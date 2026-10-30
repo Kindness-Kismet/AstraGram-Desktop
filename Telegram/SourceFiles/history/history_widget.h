@@ -121,6 +121,8 @@ struct FileChosen;
 } // namespace ChatHelpers
 
 namespace HistoryView {
+
+struct ItemRevealState;
 class StickerToast;
 class PaidReactionToast;
 class SelfForwardsTagger;
@@ -165,6 +167,10 @@ class HistoryWidget final
 	, private HistoryView::CornerButtonsDelegate {
 public:
 	[[nodiscard]] float64 itemRevealOpacity(not_null<HistoryItem*> item) const;
+	[[nodiscard]] HistoryView::ItemRevealState itemRevealState(not_null<HistoryItem*> item) const;
+	[[nodiscard]] QRect itemRevealClip(QRect clip) const;
+	void paintRevealingItem(Painter &p, not_null<HistoryView::Element*> view,
+		const Ui::ChatPaintContext &context) const;
 	using FieldHistoryAction = Ui::InputField::HistoryAction;
 	using RecordLock = HistoryView::Controls::RecordLock;
 	using VoiceRecordBar = HistoryView::Controls::VoiceRecordBar;
@@ -413,6 +419,7 @@ private:
 	struct ItemRevealAnimation {
 		Ui::Animations::Simple animation;
 		int startHeight = 0;
+		int displacement = 0;
 	};
 	enum class TextUpdateEvent {
 		SaveDraft = (1 << 0),
