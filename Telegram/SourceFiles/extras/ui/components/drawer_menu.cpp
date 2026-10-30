@@ -68,6 +68,43 @@ private:
 	QRect _bounds;
 };
 
+class DrawerIcon final : public Ui::RpWidget {
+public:
+	DrawerIcon(QWidget *parent, not_null<const style::icon*> icon)
+	: RpWidget(parent)
+	, _icon(icon) {
+		setAttribute(Qt::WA_TransparentForMouseEvents);
+		resize(st::menuIconSettings.size());
+	}
+
+private:
+	void paintEvent(QPaintEvent *event) override {
+		const auto color = st::windowFg->c;
+		const auto ratio = style::DevicePixelRatio();
+		if (_image.isNull() || _color != color || _image.devicePixelRatio() != ratio) {
+			_color = color;
+			const auto reference = opaqueBounds(st::menuIconSettings.instance(Qt::white));
+			const auto original = opaqueBounds(_icon->instance(Qt::white));
+			const auto extent = std::max(reference.width(), reference.height());
+			const auto scale = qRound(style::Scale() * double(extent)
+				/ std::max(original.width(), original.height()));
+			const auto rendered = _icon->instance(color, scale);
+			_image = rendered.copy(opaqueBounds(rendered));
+		}
+		// 在最终尺寸直接栅格化，只按整像素居中，避免位图二次缩放。
+		const auto pixelSize = size() * ratio;
+		const auto position = QPoint(
+			(pixelSize.width() - _image.width()) / 2,
+			(pixelSize.height() - _image.height()) / 2);
+		auto painter = QPainter(this);
+		painter.drawImage(QPointF(position) / ratio, _image);
+	}
+
+	const not_null<const style::icon*> _icon;
+	QColor _color;
+	QImage _image;
+};
+
 class DrawerReorder final : public QObject {
 public:
 	explicit DrawerReorder(not_null<Ui::VerticalLayout*> layout)
@@ -255,16 +292,10 @@ void fitDrawerIcon(not_null<QWidget*> icon) {
 void addDrawerIcon(
 		not_null<Ui::AbstractButton*> button,
 		not_null<const style::icon*> icon) {
-	const auto widget = Ui::CreateChild<Ui::RpWidget>(button);
-	widget->setAttribute(Qt::WA_TransparentForMouseEvents);
-	fitDrawerIcon(widget);
+	const auto widget = Ui::CreateChild<DrawerIcon>(button, icon);
 	button->sizeValue() | rpl::on_next([=](QSize size) {
 		widget->moveToLeft(st::mainMenuButton.iconLeft,
 			(size.height() - widget->height()) / 2, size.width());
-	}, widget->lifetime());
-	widget->paintRequest() | rpl::on_next([=] {
-		auto painter = QPainter(widget);
-		icon->paint(painter, 0, 0, widget->width(), st::windowFg->c);
 	}, widget->lifetime());
 	widget->show();
 }
