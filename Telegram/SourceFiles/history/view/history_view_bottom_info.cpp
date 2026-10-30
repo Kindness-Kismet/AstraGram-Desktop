@@ -361,7 +361,8 @@ void BottomInfo::paint(
 		right -= st::historyViewsWidth;
 		paintIcon(icon, {
 			right,
-			position.y() + (st::msgDateFont->height - icon.height()) / 2,
+			position.y() + (st::msgDateFont->height - icon.height()) / 2
+				+ style::ConvertScale(1),
 		});
 	}
 	if (!ExtrasFeatures::MessageShot::isTakingShot() && (_data.flags & Data::Flag::Sending)
