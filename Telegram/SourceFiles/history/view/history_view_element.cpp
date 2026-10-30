@@ -1835,6 +1835,19 @@ void Element::refreshMedia(Element *replacing) {
 		_media = nullptr;
 		return;
 	}
+	const auto setEmojiMedia = [&](
+			std::unique_ptr<UnwrappedMedia::Content> content) {
+		auto updated = std::make_unique<UnwrappedMedia>(
+			this,
+			std::move(content));
+		const auto previous = dynamic_cast<UnwrappedMedia*>(_media
+			? _media.get()
+			: replacing ? replacing->media() : nullptr);
+		if (previous) {
+			updated->continuePlayback(*previous);
+		}
+		_media = std::move(updated);
+	};
 	if (const auto media = item->media()) {
 		const auto previous = _media ? _media.get()
 			: replacing ? replacing->media() : nullptr;
@@ -1870,9 +1883,7 @@ void Element::refreshMedia(Element *replacing) {
 	} else if (isOnlyCustomEmoji()
 		&& Core::App().settings().largeEmoji()
 		&& !item->isSponsored()) {
-		_media = std::make_unique<UnwrappedMedia>(
-			this,
-			std::make_unique<CustomEmoji>(this, onlyCustomEmoji()));
+		setEmojiMedia(std::make_unique<CustomEmoji>(this, onlyCustomEmoji()));
 	} else if (isIsolatedEmoji()
 		&& Core::App().settings().largeEmoji()
 		&& !item->isSponsored()) {
@@ -1884,16 +1895,12 @@ void Element::refreshMedia(Element *replacing) {
 				this,
 				sticker.document,
 				skipPremiumEffect,
-				replacing,
+				nullptr,
 				sticker.replacements);
 			content->setEmojiSticker();
-			_media = std::make_unique<UnwrappedMedia>(
-				this,
-				std::move(content));
+			setEmojiMedia(std::move(content));
 		} else {
-			_media = std::make_unique<UnwrappedMedia>(
-				this,
-				std::make_unique<LargeEmoji>(this, emoji));
+			setEmojiMedia(std::make_unique<LargeEmoji>(this, emoji));
 		}
 	} else if (const auto nfr = item->Get<HistoryServiceNoForwardsRequest>()
 		; nfr && (!nfr->expired || nfr->actionTaken)) {
@@ -3224,6 +3231,8 @@ void Element::itemTextUpdated() {
 	_text = Ui::Text::String(st::msgMinWidth);
 	invalidateTextSizeCache();
 	if (_media && !data()->media()) {
+		// 先恢复正文的表情分类，确认发送时才能保留相同表情的播放状态。
+		validateText();
 		refreshMedia(nullptr);
 	}
 }

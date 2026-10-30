@@ -357,6 +357,26 @@ void Sticker::stickerClearLoopPlayed() {
 	_premiumEffectSkipped = false;
 }
 
+void Sticker::continuePlayback(Content &previous) {
+	const auto sticker = dynamic_cast<Sticker*>(&previous);
+	if (!sticker
+		|| sticker->_data != _data
+		|| sticker->_replacements != _replacements
+		|| sticker->_sensitiveBlurred != _sensitiveBlurred
+		|| sticker->_emojiSticker != _emojiSticker
+		|| sticker->_customEmojiPart != _customEmojiPart) {
+		return;
+	}
+	_oncePlayed = sticker->_oncePlayed;
+	_frameIndex = sticker->_frameIndex;
+	_framesCount = sticker->_framesCount;
+	continueImageTransition(previous);
+	if (sticker->_player) {
+		_player = std::move(sticker->_player);
+		playerCreated();
+	}
+}
+
 void Sticker::paintAnimationFrame(
 		Painter &p,
 		const PaintContext &context,

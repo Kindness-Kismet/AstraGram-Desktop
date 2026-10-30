@@ -42,6 +42,8 @@ public:
 		}
 		virtual void stickerClearLoopPlayed() {
 		}
+		virtual void continuePlayback(Content &previous) {
+		}
 		virtual std::unique_ptr<StickerPlayer> stickerTakePlayer(
 			not_null<DocumentData*> data,
 			const Lottie::ColorReplacements *replacements);
@@ -73,6 +75,7 @@ public:
 
 	void draw(Painter &p, const PaintContext &context) const override;
 	void continueImageTransition(const Media &previous) override;
+	void continuePlayback(UnwrappedMedia &previous);
 	PointState pointState(QPoint point) const override;
 	TextState textState(QPoint point, StateRequest request) const override;
 

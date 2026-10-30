@@ -57,6 +57,7 @@ public:
 
 	bool hasHeavyPart() const override;
 	void unloadHeavyPart() override;
+	void continuePlayback(Content &previous) override;
 
 private:
 	void paintElement(

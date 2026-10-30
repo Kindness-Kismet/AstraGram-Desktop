@@ -306,6 +306,27 @@ bool CustomEmoji::alwaysShowOutTimestamp() {
 	return (_lines.size() == 1) && _lines.back().size() > 3;
 }
 
+void CustomEmoji::continuePlayback(Content &previous) {
+	const auto emoji = dynamic_cast<CustomEmoji*>(&previous);
+	if (!emoji || emoji->_singleSize != _singleSize) {
+		return;
+	}
+	const auto rows = std::min(_lines.size(), emoji->_lines.size());
+	for (auto row = size_t(0); row != rows; ++row) {
+		auto &line = _lines[row];
+		auto &oldLine = emoji->_lines[row];
+		const auto columns = std::min(line.size(), oldLine.size());
+		for (auto column = size_t(0); column != columns; ++column) {
+			const auto current = std::get_if<StickerPtr>(&line[column]);
+			const auto old = std::get_if<StickerPtr>(&oldLine[column]);
+			if (!current || !old) {
+				continue;
+			}
+			(*current)->continuePlayback(**old);
+		}
+	}
+}
+
 bool CustomEmoji::hasHeavyPart() const {
 	return _hasHeavyPart;
 }

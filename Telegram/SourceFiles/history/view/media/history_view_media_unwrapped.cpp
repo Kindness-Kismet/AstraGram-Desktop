@@ -60,6 +60,10 @@ void UnwrappedMedia::continueImageTransition(const Media &previous) {
 	}
 }
 
+void UnwrappedMedia::continuePlayback(UnwrappedMedia &previous) {
+	_content->continuePlayback(*previous._content);
+}
+
 QSize UnwrappedMedia::countOptimalSize() {
 	_content->refreshLink();
 	const auto optimal = _content->countOptimalSize();

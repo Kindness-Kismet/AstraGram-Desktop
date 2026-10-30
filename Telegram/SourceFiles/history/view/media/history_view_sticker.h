@@ -55,6 +55,7 @@ public:
 	[[nodiscard]] bool stoppedOnLastFrame() const;
 	DocumentData *document() override;
 	void stickerClearLoopPlayed() override;
+	void continuePlayback(Content &previous) override;
 	std::unique_ptr<StickerPlayer> stickerTakePlayer(
 		not_null<DocumentData*> data,
 		const Lottie::ColorReplacements *replacements) override;

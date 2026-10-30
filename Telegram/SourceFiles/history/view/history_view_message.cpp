@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_message.h"
+#include "history/view/media/history_view_media_unwrapped.h"
 
 #include "extras/features/message_locate/message_locate.h"
 
@@ -670,6 +671,15 @@ Message::Message(
 	}
 	if (const auto was = dynamic_cast<Message*>(replacing)) {
 		initBubbleTransition(was);
+	}
+	const auto previous = dynamic_cast<UnwrappedMedia*>(
+		replacing ? replacing->media() : nullptr);
+	if (previous && !data->media()) {
+		// 文字排版后才能构造大表情，旧视图销毁前接回它的播放状态。
+		validateText();
+		if (const auto current = dynamic_cast<UnwrappedMedia*>(media())) {
+			current->continuePlayback(*previous);
+		}
 	}
 }
 
