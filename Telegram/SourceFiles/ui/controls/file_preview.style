@@ -1,0 +1,11 @@
+using "ui/basic.style";
+
+filePreviewApplication: icon {{ "file_types/application", windowFg }};
+filePreviewLibrary: icon {{ "file_types/library", windowFg }};
+filePreviewCode: icon {{ "file_types/code", windowFg }};
+filePreviewArchive: icon {{ "file_types/archive", windowFg }};
+filePreviewSpreadsheet: icon {{ "file_types/spreadsheet", windowFg }};
+filePreviewImage: icon {{ "file_types/image", windowFg }};
+filePreviewDocument: icon {{ "file_types/document", windowFg }};
+mediaCancelBadgeIcon: icon {{ "media_controls/cancel", windowFg }};
+mediaProgressCheckIcon: icon {{ "media_controls/check", windowFg }};

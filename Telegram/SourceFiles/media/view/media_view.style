@@ -142,31 +142,11 @@ mediaviewPollVotersUserpics: GroupCallUserpics {
 mediaviewPollVotersPadding: margins(12px, 0px, 14px, 0px);
 mediaviewPollVotersSpacing: 6px;
 
-mediaviewFileRed: icon {
-	{ size(25px, 25px), mediaviewFileBg },
-	{ "mediaview/file_corner", mediaviewFileRedCornerFg },
-};
-mediaviewFileYellow: icon {
-	{ size(25px, 25px), mediaviewFileBg },
-	{ "mediaview/file_corner", mediaviewFileYellowCornerFg },
-};
-mediaviewFileGreen: icon {
-	{ size(25px, 25px), mediaviewFileBg },
-	{ "mediaview/file_corner", mediaviewFileGreenCornerFg },
-};
-mediaviewFileBlue: icon {
-	{ size(25px, 25px), mediaviewFileBg },
-	{ "mediaview/file_corner", mediaviewFileBlueCornerFg },
-};
-
 mediaviewFilePadding: 18px;
 mediaviewFileSize: size(340px, 116px);
 mediaviewFileNameTop: 4px;
 mediaviewFileNameFont: font(semibold 14px);
 mediaviewFileSizeTop: 29px;
-mediaviewFileExtTop: 35px;
-mediaviewFileExtFont: font(semibold 18px);
-mediaviewFileExtPadding: 10px;
 mediaviewFileLinksTop: 57px;
 mediaviewFileIconSize: 80px;
 

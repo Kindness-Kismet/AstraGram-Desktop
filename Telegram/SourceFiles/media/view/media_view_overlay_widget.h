@@ -861,10 +861,8 @@ private:
 	QString _callLinkSlug;
 	MsgId _callJoinMessageId;
 
-	const style::icon *_docIcon = nullptr;
-	style::color _docIconColor;
-	QString _docName, _docSize, _docExt;
-	int _docNameWidth = 0, _docSizeWidth = 0, _docExtWidth = 0;
+	QString _docName, _docSize;
+	int _docNameWidth = 0, _docSizeWidth = 0;
 	QRect _docRect, _docIconRect;
 	QImage _docRectImage;
 	int _docThumbx = 0, _docThumby = 0, _docThumbw = 0;

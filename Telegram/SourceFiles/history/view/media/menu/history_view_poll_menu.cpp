@@ -30,6 +30,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/media/history_view_document.h"
 #include "lang/lang_keys.h"
 #include "layout/layout_document_generic_preview.h"
+#include "ui/controls/file_preview.h"
 #include "lottie/lottie_icon.h"
 #include "main/main_session.h"
 #include "poll/poll_media_upload.h"
@@ -428,17 +429,6 @@ void ShowPollDocumentPreview(
 
 	const auto docGeneric = Layout::DocumentGenericPreview::Create(
 		document);
-	const auto docIcon = docGeneric.icon();
-	const auto docIconColor = docGeneric.color;
-	const auto docExt = [&] {
-		auto ext = docGeneric.ext;
-		const auto maxW = st::mediaviewFileIconSize
-			- st::mediaviewFileExtPadding * 2;
-		if (st::mediaviewFileExtFont->width(ext) > maxW) {
-			ext = st::mediaviewFileExtFont->elided(ext, maxW, Qt::ElideMiddle);
-		}
-		return ext;
-	}();
 
 	const auto maxTextW = st::mediaviewFileSize.width()
 		- st::mediaviewFileIconSize
@@ -509,37 +499,16 @@ void ShowPollDocumentPreview(
 					st::songCoverOverlayFg,
 					media,
 					iconRect);
-			if (!coverDrawn) {
-				p.setPen(Qt::NoPen);
-				p.fillRect(iconRect, docIconColor);
-				if (docIcon) {
-					docIcon->paint(
-						p,
-						iconRect.x()
-							+ (iconRect.width() - docIcon->width()),
-						iconRect.y(),
-						preview->width());
-				}
-				if (!docExt.isEmpty()) {
-					p.setPen(st::activeButtonFg);
-					p.setFont(st::mediaviewFileExtFont);
-					const auto extW
-						= st::mediaviewFileExtFont->width(docExt);
-					p.drawText(
-						iconRect.x()
-							+ (iconRect.width() - extW) / 2,
-						iconRect.y()
-							+ st::mediaviewFileExtTop
-							+ st::mediaviewFileExtFont->ascent,
-						docExt);
-				}
-			}
 			if (isSong && !coverDrawn) {
-				auto hq = PainterHighQualityEnabler(p);
-				p.setPen(Qt::NoPen);
-				p.setBrush(st::msgFileInBg);
-				p.drawEllipse(iconRect);
-				st::historyFileInPlay.paintInCenter(p, iconRect);
+				const auto colors = Ui::MediaButtonPalette(
+					st::msgFileInBg->c, st::windowBg->c);
+				const auto inner = Ui::FilePreviewButtonRect(iconRect);
+				Ui::PaintMediaButtonSurface(p, inner, colors);
+				st::historyFileInPlay.paintInCenter(p, inner, colors.foreground);
+			} else if (!coverDrawn) {
+				const auto colors = Ui::FilePreviewPalette(docGeneric, st::windowBg->c);
+				Ui::PaintFilePreviewSurface(p, iconRect, colors);
+				Ui::PaintFilePreviewContent(p, iconRect, docGeneric, colors);
 			}
 
 			const auto textX = outer.x() + 2 * padding + iconSize;

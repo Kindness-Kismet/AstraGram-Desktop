@@ -30,6 +30,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/format_values.h"
 #include "ui/cached_round_corners.h"
 #include "ui/painter.h"
+#include "layout/layout_document_generic_preview.h"
+#include "ui/controls/file_preview.h"
 #include "main/main_session.h"
 #include "lang/lang_keys.h"
 #include "styles/style_chat_style.h"
@@ -226,15 +228,6 @@ void Gif::paint(Painter &p, const QRect &clip, const PaintContext *context) cons
 		|| _gif.isBad()
 		|| (!_gif && !loaded && !loading && !preview.usingThumbnail())) {
 		auto radialOpacity = (radial && loaded) ? _animation->radial.opacity() : 1.;
-		if (_animation && _animation->_a_over.animating()) {
-			auto over = _animation->_a_over.value(1.);
-			p.fillRect(r, anim::brush(st::msgDateImgBg, st::msgDateImgBgOver, over));
-		} else {
-			auto over = (_state & StateFlag::Over);
-			p.fillRect(r, over ? st::msgDateImgBgOver : st::msgDateImgBg);
-		}
-		p.setOpacity(radialOpacity * p.opacity());
-
 		p.setOpacity(radialOpacity);
 		auto icon = [&] {
 			if (radial || loading) {
@@ -250,7 +243,10 @@ void Gif::paint(Painter &p, const QRect &clip, const PaintContext *context) cons
 			(r.height() - size) / 2,
 			size,
 			size);
-		icon->paintInCenter(p, inner);
+		const auto colors = Ui::MediaButtonPalette(
+			st::historyFileThumbRadialFg->c, st::msgDateImgBg->c, true);
+		Ui::PaintMediaButtonSurface(p, inner, colors, bool(_state & StateFlag::Over));
+		icon->paintInCenter(p, inner, colors.foreground);
 		if (radial) {
 			p.setOpacity(1);
 			QRect rinner(inner.marginsRemoved(QMargins(st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine)));
@@ -1023,24 +1019,20 @@ void File::paint(Painter &p, const QRect &clip, const PaintContext *context) con
 			st::songCoverOverlayFg,
 			_documentMedia,
 			inner);
-	if (!coverDrawn) {
-		PainterHighQualityEnabler hq(p);
-		if (isThumbAnimation()) {
-			const auto over = _animation->a_thumbOver.value(1.);
-			p.setBrush(
-				anim::brush(st::msgFileInBg, st::msgFileInBgOver, over));
-		} else {
-			const auto over = ClickHandler::showAsActive(_document->loading()
-				? _cancel
-				: _open);
-			p.setBrush(over ? st::msgFileInBgOver : st::msgFileInBg);
-		}
-		p.drawEllipse(inner);
-	}
-
+	const auto audio = _document->isVoiceMessage() || _document->isAudioFile();
+	const auto preview = ::Layout::DocumentGenericPreview::Create(_document);
+	const auto colors = !audio
+		? Ui::FilePreviewPalette(preview, st::windowBg->c)
+		: Ui::MediaButtonPalette(coverDrawn
+			? st::historyFileThumbRadialFg->c : st::msgFileInBg->c,
+			coverDrawn ? st::msgDateImgBg->c : st::windowBg->c, coverDrawn);
+	const auto hovered = ClickHandler::showAsActive(
+		_document->loading() ? _cancel : _open);
+	Ui::PaintMediaButtonSurface(p, inner, colors, hovered);
 	if (radial) {
-		auto radialCircle = inner.marginsRemoved(QMargins(st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine));
-		_animation->radial.draw(p, radialCircle, st::msgFileRadialLine, st::historyFileInRadialFg);
+		const auto line = st::msgFileRadialLine;
+		Ui::PaintMediaProgressArc(p, inner.marginsRemoved(QMargins(line, line, line, line)),
+			_animation->radial, line, colors.foreground);
 	}
 
 	const auto icon = [&] {
@@ -1058,7 +1050,13 @@ void File::paint(Painter &p, const QRect &clip, const PaintContext *context) con
 		}
 		return &st::historyFileInDocument;
 	}();
-	icon->paintInCenter(p, inner);
+	if (!audio && !radial && !_document->loading() && _documentMedia->loaded()) {
+		Ui::PaintFilePreviewContent(p, inner, preview, colors);
+	} else {
+		const auto &action = !audio && !radial && !_document->loading()
+			? st::historyFileInDownload : *icon;
+		action.paintInCenter(p, inner, colors.foreground);
+	}
 
 	int titleTop = st::inlineRowMargin + st::inlineRowFileNameTop;
 	int descriptionTop = st::inlineRowMargin + st::inlineRowFileDescriptionTop;
@@ -1830,13 +1828,15 @@ void Game::paint(Painter &p, const QRect &clip, const PaintContext *context) con
 	}
 
 	if (radial) {
-		p.fillRect(rthumb, st::msgDateImgBg);
-		QRect inner((st::inlineThumbSize - st::inlineRadialSize) / 2, (st::inlineThumbSize - st::inlineRadialSize) / 2, st::inlineRadialSize, st::inlineRadialSize);
-		if (radial) {
-			p.setOpacity(1);
-			QRect rinner(inner.marginsRemoved(QMargins(st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine, st::msgFileRadialLine)));
-			_radial->draw(p, rinner, st::msgFileRadialLine, st::historyFileThumbRadialFg);
-		}
+		const auto size = st::inlineRadialSize;
+		const auto inner = QRect(
+			rthumb.x() + (rthumb.width() - size) / 2,
+			rthumb.y() + (rthumb.height() - size) / 2, size, size);
+		Ui::PaintMediaButtonSurface(p, inner, Ui::MediaButtonPalette(
+			st::historyFileThumbRadialFg->c, st::msgDateImgBg->c, true));
+		const auto line = st::msgFileRadialLine;
+		_radial->draw(p, inner.marginsRemoved(QMargins(line, line, line, line)),
+			line, st::historyFileThumbRadialFg);
 	}
 
 	p.setPen(st::inlineTitleFg);

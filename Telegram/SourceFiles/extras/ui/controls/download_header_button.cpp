@@ -3,6 +3,7 @@
 #include "ui/painter.h"
 #include "ui/controls/media_button.h"
 #include "styles/style_extras_styles.h"
+#include "styles/style_chat_style.h"
 #include "styles/style_widgets.h"
 
 #include <QtGui/QPainterPath>
@@ -100,9 +101,7 @@ void DownloadHeaderButton::paintIcon(QPainter &p, crl::time now) {
 		size);
 	const auto scale = size / kSize;
 	const auto color = st::windowActiveTextFg->c;
-	auto pen = QPen(color, 1.7);
-	pen.setCapStyle(Qt::RoundCap);
-	pen.setJoinStyle(Qt::RoundJoin);
+	const auto colors = Ui::MediaButtonPalette(color, st::windowBg->c);
 
 	p.save();
 	p.translate(iconRect.topLeft());
@@ -112,21 +111,11 @@ void DownloadHeaderButton::paintIcon(QPainter &p, crl::time now) {
 		center.x() - kRingRadius,
 		center.y() - kRingRadius,
 		2 * kRingRadius,
-		2 * kRingRadius), Ui::MediaButtonPalette(color, st::windowBg->c));
-	p.setPen(pen);
+		2 * kRingRadius), colors);
 	p.setBrush(Qt::NoBrush);
 	if (_done) {
-		// 对勾两段按总长度依次画出。
-		const auto a = QPointF(8.2, 12.3);
-		const auto b = QPointF(10.8, 14.9);
-		const auto c = QPointF(15.8, 9.7);
-		const auto first = QLineF(a, b).length();
-		const auto second = QLineF(b, c).length();
-		const auto drawn = _check.value(1.) * (first + second);
-		p.drawLine(a, a + (b - a) * std::min(drawn / first, 1.));
-		if (drawn > first) {
-			p.drawLine(b, b + (c - b) * ((drawn - first) / second));
-		}
+		Ui::PaintMediaCheck(p, QRectF(2, 2, 20, 20),
+			colors.foreground, _check.value(1.));
 	} else {
 		const auto [offset, opacity] = _loop.animating()
 			? dropState(((now - _loopStarted) % kDropPeriod)
@@ -137,13 +126,8 @@ void DownloadHeaderButton::paintIcon(QPainter &p, crl::time now) {
 		p.setClipPath(clip);
 		p.setOpacity(opacity);
 		p.translate(0., offset);
-		p.drawLine(QPointF(12., 7.), QPointF(12., 16.2));
-		const QPointF chevron[] = {
-			{ 8.5, 12.7 },
-			{ 12., 16.2 },
-			{ 15.5, 12.7 },
-		};
-		p.drawPolyline(chevron, 3);
+		Ui::PaintMediaIcon(p, QRectF(2, 2, 20, 20),
+			st::historyFileInDownload, colors.foreground);
 	}
 	p.restore();
 
