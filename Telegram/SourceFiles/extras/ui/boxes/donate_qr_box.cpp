@@ -5,6 +5,7 @@
 #include "styles/style_boxes.h"
 #include "styles/style_intro.h"
 #include "styles/style_layers.h"
+#include "styles/style_widgets.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
 #include "ui/rp_widget.h"
@@ -85,22 +86,15 @@ void fillDonateQrBox(
 		address.toUtf8(),
 		iconResourcePath,
 		st::introQrPixel,
-		downTo).scaled(
-		Size(qrMaxSize * style::DevicePixelRatio()),
-		Qt::IgnoreAspectRatio,
-		Qt::SmoothTransformation);
-	qrWidget->resize(qrMaxSize, qrMaxSize);
+		downTo);
 
 	qrWidget->paintRequest(
 	) | rpl::on_next([=](QRect) {
 		QPainter p(qrWidget);
 		PainterHighQualityEnabler hq(p);
 
-		const auto size = qrImage.size() / style::DevicePixelRatio();
-		const auto rect = Rect(
-			(qrWidget->width() - size.width()) / 2,
-			(qrWidget->height() - size.height()) / 2,
-			size);
+		const auto side = std::min(qrWidget->width(), qrWidget->height());
+		const auto rect = QRect((qrWidget->width() - side) / 2, 0, side, side);
 
 		QPainterPath path;
 		path.addRoundedRect(rect, st::roundRadiusLarge, st::roundRadiusLarge);
@@ -122,7 +116,15 @@ void fillDonateQrBox(
 		box->verticalLayout(),
 		rpl::single(address),
 		Fn<base::unique_qptr<Ui::PopupMenu>()>());
-	box->verticalLayout()->add(label->take(), st::boxRowPadding);
+	const auto labelWidget = box->verticalLayout()->add(label->take(), st::boxRowPadding);
+	rpl::combine(
+		qrWidget->widthValue(),
+		box->getDelegate()->contentHeightMaxValue(),
+		labelWidget->heightValue()
+	) | rpl::on_next([=](int width, int height, int labelHeight) {
+		const auto available = height - labelHeight - 4 * st::defaultVerticalListSkip;
+		qrWidget->resize(width, std::max(1, std::min(width, available)));
+	}, qrWidget->lifetime());
 
 	box->addButton(tr::lng_context_copy_link(), [=] {
 		QGuiApplication::clipboard()->setText(address);

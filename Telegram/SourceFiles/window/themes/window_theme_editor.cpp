@@ -416,7 +416,6 @@ Editor::Editor(
 , _listScroll(this, st::boxScroll)
 , _detailsScroll(this, st::boxScroll) {
 	setObjectName(u"theme_creator"_q);
-	setProperty("responsiveBoxWidth", true);
 	_search->setObjectName(u"theme_creator_search"_q);
 	_search->customUpDown(true);
 	_modified->setObjectName(u"theme_creator_modified"_q);

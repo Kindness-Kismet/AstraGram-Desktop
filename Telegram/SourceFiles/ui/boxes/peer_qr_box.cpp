@@ -150,6 +150,7 @@ struct BoxState {
 	base::Timer shareCutoffTimer;
 	FreeCodesState free;
 	AppearanceState appearance;
+	int availableHeight = 0;
 	bool rendering = false;
 };
 
@@ -1652,10 +1653,22 @@ void FillPeerQrBox(
 	const auto relayout = [=] {
 		const auto width = surface->width();
 		const auto skip = st::peerQrButtonSkip;
-		const auto cardWidth = st::peerQrCardWidth;
+		auto cardWidth = std::min(st::peerQrCardWidth, width - 2 * skip);
+		const auto cardTop = skip + close->height() + st::peerQrCardSkip;
+		const auto hasAbout = aboutLabel && !aboutLabel->isHidden();
+		if (hasAbout) {
+			aboutLabel->resizeToWidth(width - 2 * skip);
+		}
+		const auto reservedHeight = cardTop
+			+ (peerBox ? st::peerQrPillSkip + st::peerQrPillHeight : 0)
+			+ (hasAbout ? st::peerQrPillSkip + aboutLabel->height() : 0)
+			+ st::peerQrCardSkip + copy->height() + skip;
+		const auto cardHeight = PeerQrCardHeight(cardWidth, peerBox);
+		const auto available = std::max(1, state->availableHeight - reservedHeight);
+		cardWidth = std::min(cardWidth, int(int64(cardWidth) * available / cardHeight));
 		const auto card = QRect(
 			(width - cardWidth) / 2,
-			skip + close->height() + st::peerQrCardSkip,
+			cardTop,
 			cardWidth,
 			PeerQrCardHeight(cardWidth, peerBox));
 		auto bottom = card.y() + card.height();
@@ -1663,10 +1676,9 @@ void FillPeerQrBox(
 		if (peerBox) {
 			bottom += st::peerQrPillSkip + st::peerQrPillHeight;
 		}
-		if (aboutLabel && !aboutLabel->isHidden()) {
-			aboutLabel->resizeToWidth(cardWidth);
+		if (hasAbout) {
 			aboutLabel->moveToLeft(
-				card.x(),
+				skip,
 				bottom + st::peerQrPillSkip,
 				width);
 			bottom += st::peerQrPillSkip + aboutLabel->height();
@@ -1728,6 +1740,11 @@ void FillPeerQrBox(
 			pill->setPillPosition(width / 2, int(std::round(pillTop)));
 		}
 	};
+	// 卡片先让出标题、说明与工具栏的空间，窗口变矮时同步缩小。
+	box->getDelegate()->contentHeightMaxValue() | rpl::on_next([=](int height) {
+		state->availableHeight = height;
+		relayout();
+	}, box->lifetime());
 	if (titleLabel) {
 		std::move(title) | rpl::on_next([=](const QString &text) {
 			titleLabel->setText(text);
