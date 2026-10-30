@@ -1,23 +1,25 @@
-- Improved system-material menus, which now use consistent Mica and Acrylic styles across attachment menus, photo/video viewer actions and playback settings, with smoother transitions and clearer loading text
-- Improved chat bottom controls, which now use consistent floating frosted backgrounds for channel notifications, join buttons, pinned-message actions and admin-log controls
-- Improved icons in settings rows, which now have smoother edges when scaled
-- Fixed an issue with cached history transitions that previously caused old message images, captions and album buttons to overlap scrolling messages
-- Fixed an issue with reconnecting chats that previously caused new messages after the cached history to remain missing until the conversation was scrolled
-- Fixed an issue with cached photos that previously caused recently viewed images and albums to become blurred again when reopening a chat
-- Fixed an issue with in-chat search that previously caused search filters and result positions to be lost when returning to a chat or pinned-message page, with compose controls incorrectly appearing over search
-- Fixed an issue with text copying that previously caused the Copy Text action to be missing over collapsed quotes and photo captions
-- Fixed an issue with the first media viewer opening after startup on Windows that previously caused the main window to flash before the viewer appeared
-- Fixed an issue with closing proxy settings on the login screen that previously caused the app to crash
+- Changed how new messages appear; they now expand the available space before fading in as a whole in both chat views
+- Improved message bubble transitions, which now resize smoothly when link previews or reactions change while keeping existing reactions aligned
+- Improved media transfer controls, which now show percentage progress, a separate cancel button and a completion checkmark
+- Improved file previews, which now use consistent rounded thumbnails, file-type symbols and extension labels across chats, shared media and downloads
+- Improved video cover previews, which now use the original image dimensions and support photo-viewer zooming, dragging, rotation, browsing, copying and saving, with uploader covers shown in the thumbnail strip
+- Fixed an issue with large emoji playback that previously caused animations to restart before finishing when a sent message was confirmed
+- Improved chat history caching, which now releases unused history data to reduce cache memory use while preserving saved history for offline access
+- Fixed an issue with menus using system materials that previously caused inconsistent row backgrounds and hard-to-read text in some editor and call menus
+- Improved sidebar icons, which now remain sharper when scaled, with a consistent transfer icon across proxy settings entries
+- Fixed an issue with message reply-count arrows that previously caused them to sit too high beside timestamps
+- Changed the reaction expansion button background; it now uses a centered circle
 
 ---
 
-- 对系统材质菜单进行了改善，这使得附件菜单、图片和视频查看器操作及播放设置的云母、亚克力样式更加统一，过渡更平稳，加载提示更清晰
-- 对对话区底部控件进行了改善，这使得频道通知条、加入按钮、置顶消息操作和管理日志控件采用一致的悬浮磨砂背景
-- 对设置选项的图标进行了改善，这使得图标缩放后的边缘更平滑
-- 修复了关于缓存历史过渡的错误，该问题曾导致旧画面中的图片、说明文字和相册按钮与滚动中的消息重叠
-- 修复了关于聊天重新联网的错误，该问题曾导致缓存历史之后的新消息需要滚动会话才能补齐
-- 修复了关于图片缓存的错误，该问题曾导致重新打开聊天时，近期查看过的图片和相册再次变模糊
-- 修复了关于聊天搜索的错误，该问题曾导致返回聊天或置顶消息页面后搜索条件和结果位置丢失，输入区域还会错误地出现在搜索界面上
-- 修复了关于文字复制的错误，该问题曾导致折叠引用和图片说明的菜单中缺少复制文字选项
-- 修复了关于 Windows 启动后首次打开媒体查看器的错误，该问题曾导致主窗口先闪动，再显示查看器
-- 修复了关于登录页代理设置的错误，该问题曾导致关闭弹窗时应用崩溃
+- 调整了新消息的出现方式，现在新旧聊天视图都会先腾出空间，再让整条消息渐显
+- 对消息气泡过渡进行了改善，这使得链接预览或回应变化时气泡能够平滑调整大小，已有回应也能保持对齐
+- 对媒体传输控件进行了改善，这使得传输过程能够显示百分比进度、独立取消按钮和完成对勾
+- 对文件预览进行了改善，这使得聊天、共享媒体和下载列表采用一致的圆角缩略图、文件类型图标和扩展名标签
+- 对视频封面预览进行了改善，这使得封面按原始图片尺寸显示，并支持图片查看器的缩放、拖动、旋转、浏览、复制和保存，缩略图栏也能显示上传者设置的封面
+- 修复了关于大表情播放的错误，该问题曾导致发送确认时动画尚未播完便从头播放
+- 对聊天历史缓存进行了改善，这使得闲置历史数据能够及时释放，减少缓存内存占用，同时保留离线可用的已保存历史
+- 修复了关于系统材质菜单的错误，该问题曾导致部分编辑器和通话菜单的行背景不一致、文字难以辨认
+- 对侧边栏图标进行了改善，这使得图标缩放后更加清晰，代理设置的各个入口也采用了统一的传输图标
+- 修复了关于消息回复计数箭头的错误，该问题曾导致箭头在时间旁边的位置偏高
+- 调整了回应展开按钮的背景，现在使用居中的圆形
