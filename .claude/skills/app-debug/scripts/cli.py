@@ -43,7 +43,7 @@ OFFLINE_START = None
 
 GENERIC_COMMANDS = {
     "anim.check-image-transition": "异步检查图片渐变中途重建的连续性，不改消息或设置",
-    "control.wheel": "在应用内部投递滚轮事件：<目标> <角度增量> [pixel]",
+    "control.wheel": "在应用内部投递滚轮事件：<目标> <角度增量> [pixel] [ctrl]",
     "simulation.profile": "注入并打开资料页八种本地场景：<music|combined|channel-only|long|warning|community|hidden|empty> [--side|--stories|--keep]",
     "simulation.secret": "在独立模拟配置中创建并打开加密对话样本：[1..2000]",
     "simulation.cache-chats": "给已打开的缓存设置页注入本地列表样本：<0..10000>",
@@ -124,7 +124,10 @@ GENERIC_COMMANDS = {
     'peer.resolve': '按用户名解析公开频道或用户，不加入或关注：<用户名>',
     'video.cover': '在媒体查看器中查看视频封面，与右键菜单一致：<会话编号> <消息编号>',
     'media.open': '在媒体查看器中打开消息里的照片或视频，与点击消息一致：<会话编号> <消息编号>',
-    'message.send-file': '直接发送指定附件，不打开文件窗口或修改草稿：<会话编号> <绝对路径> [说明] [--media]',
+    'media.state': '查询媒体查看器当前图片、封面来源、播放、尺寸、缩放、旋转及翻页状态',
+    'media.save-image': '沿图片查看器保存链路保存当前图片或视频封面：<新的绝对路径>',
+    'media.copy-check': '执行图片查看器原生复制并恢复原剪贴板，只返回复制图片的尺寸',
+    'message.send-file': '直接发送指定附件，不打开文件窗口或修改草稿：<会话编号> <绝对路径> [说明] [--media] [--cover 图片路径]',
     'message.send-album': '把 2 至 10 个图片或视频作为相册发送到指定会话：<会话编号> <绝对路径> <绝对路径> [路径...]',
     'mention.resolve': '按正式编号提及逻辑解析用户：<用户编号>',
     'mention.send': '直接发送编号提及并保留草稿：<会话编号> <用户编号> <显示文字> <后续文字>',

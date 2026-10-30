@@ -35,13 +35,15 @@ public:
 		HistoryItem *item,
 		MsgId topicRootId,
 		PeerId monoforumPeerId,
-		bool showDrawButton = false)
+		bool showDrawButton = false,
+		DocumentData *videoCoverDocument = nullptr)
 	: _controller(controller)
 	, _photo(photo)
 	, _item(item)
 	, _topicRootId(topicRootId)
 	, _monoforumPeerId(monoforumPeerId)
-	, _showDrawButton(showDrawButton) {
+	, _showDrawButton(showDrawButton)
+	, _videoCoverDocument(videoCoverDocument) {
 	}
 	OpenRequest(
 		Window::SessionController *controller,
@@ -105,6 +107,9 @@ public:
 
 	[[nodiscard]] PhotoData *photo() const {
 		return _photo;
+	}
+	[[nodiscard]] DocumentData *videoCoverDocument() const {
+		return _videoCoverDocument;
 	}
 
 	[[nodiscard]] HistoryItem *item() const {
@@ -184,6 +189,7 @@ private:
 	bool _continueStreaming = false;
 	crl::time _startTime = 0;
 	bool _showDrawButton = false;
+	DocumentData *_videoCoverDocument = nullptr;
 	QPointer<Ui::RpWidget> _embeddedHost;
 	bool _embeddedHostRequested = false;
 

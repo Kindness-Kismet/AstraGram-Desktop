@@ -215,6 +215,11 @@ public:
 
 	// Media view interface.
 	bool hideMediaView();
+#ifdef _DEBUG
+	[[nodiscard]] Media::View::OverlayWidget *debugMediaView() const {
+		return _mediaView.get();
+	}
+#endif
 
 	[[nodiscard]] QPoint getPointForCallPanelCenter() const;
 	[[nodiscard]] bool isSharingScreen() const;

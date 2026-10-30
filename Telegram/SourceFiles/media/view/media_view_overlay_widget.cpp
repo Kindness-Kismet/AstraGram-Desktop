@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "media/view/media_view_overlay_widget.h"
 
+#include "extras/features/video_cover/video_cover.h"
+
 #include "apiwrap.h"
 #include "api/api_attached_stickers.h"
 #include "api/api_peer_photo.h"
@@ -2717,6 +2719,18 @@ void OverlayWidget::fillContextMenuActions(
 			[=] { toMessage(); },
 			&st::menuIconShowInChat);
 	}
+	if (_message && _document && ExtrasVideoCover::hasCover(_message, _document)) {
+		const auto itemId = _message->fullId();
+		const auto document = _document;
+		addAction(tr::extras_ContextVideoCover(tr::now), [=] {
+			const auto controller = findWindow();
+			const auto item = document->owner().message(itemId);
+			if (!controller || !item) {
+				return;
+			}
+			ExtrasVideoCover::showCover(controller, item, document);
+		}, &st::menuIconPhoto);
+	}
 	if (currentPollAnswer()) {
 		const auto media = _message ? _message->media() : nullptr;
 		const auto poll = media ? media->poll() : nullptr;
@@ -2853,7 +2867,7 @@ void OverlayWidget::fillContextMenuActions(
 	}
 
 	if (const auto overviewType = computeOverviewType()) {
-		const auto text = _document
+		const auto text = (_document || _videoCoverDocument)
 			? tr::lng_mediaview_files_all(tr::now)
 			: tr::lng_mediaview_photos_all(tr::now);
 		addAction(
@@ -2987,7 +3001,9 @@ auto OverlayWidget::computeOverviewType() const
 		if (const auto overviewType = SharedMediaOverviewType(*mediaType)) {
 			return overviewType;
 		} else if (mediaType == SharedMediaType::PhotoVideo) {
-			if (_photo) {
+			if (_videoCoverDocument) {
+				return SharedMediaOverviewType(SharedMediaType::Video);
+			} else if (_photo) {
 				return SharedMediaOverviewType(SharedMediaType::Photo);
 			} else if (_document) {
 				return SharedMediaOverviewType(SharedMediaType::Video);
@@ -3520,6 +3536,7 @@ void OverlayWidget::clearSession() {
 	_from = nullptr;
 	_fromName = QString();
 	assignMediaPointer(nullptr);
+	_viewingVideoCovers = false;
 	_fullScreenVideo = false;
 	_caption.clear();
 	_sharedMedia = nullptr;
@@ -3539,6 +3556,7 @@ OverlayWidget::~OverlayWidget() {
 }
 
 void OverlayWidget::assignMediaPointer(DocumentData *document) {
+	_videoCoverDocument = nullptr;
 	_savePhotoVideoWhenLoaded = SavePhotoVideo::None;
 	_flip = {};
 	_photo = nullptr;
@@ -4643,7 +4661,9 @@ void OverlayWidget::handleUserPhotosUpdate(UserPhotosSlice &&update) {
 
 auto OverlayWidget::instantViewMediaKey() const
 -> std::optional<InstantViewItem> {
-	if (_photo) {
+	if (_videoCoverDocument) {
+		return InstantViewItem(_videoCoverDocument);
+	} else if (_photo) {
 		return InstantViewItem(_photo);
 	} else if (_document) {
 		return InstantViewItem(_document);
@@ -4689,33 +4709,37 @@ void OverlayWidget::validateInstantViewMedia() {
 }
 
 std::optional<OverlayWidget::CollageKey> OverlayWidget::collageKey() const {
+	const auto photo = _videoCoverDocument ? nullptr : _photo;
+	const auto document = _videoCoverDocument
+		? _videoCoverDocument
+		: _document;
 	if (_message) {
 		if (const auto media = _message->media()) {
 			if (const auto page = media->webpage()) {
 				for (const auto &item : page->collage.items) {
-					if (item == _photo || item == _document) {
+					if (item == photo || item == document) {
 						return item;
 					}
 				}
 			} else if (const auto invoice = media->invoice()) {
 				for (const auto &item : invoice->extendedMedia) {
-					if (_photo && item->photo() == _photo) {
-						return _photo;
-					} else if (_document && item->document() == _document) {
-						return _document;
+					if (photo && item->photo() == photo) {
+						return photo;
+					} else if (document && item->document() == document) {
+						return document;
 					}
 				}
 			} else if (const auto poll = media->poll()) {
-				if (_photo
+				if (photo
 					&& IsPollAnswerMediaItem(
 						poll,
-						WebPageCollage::Item(_photo))) {
-					return _photo;
-				} else if (_document
+						WebPageCollage::Item(photo))) {
+					return photo;
+				} else if (document
 					&& IsPollAnswerMediaItem(
 						poll,
-						WebPageCollage::Item(_document))) {
-					return _document;
+						WebPageCollage::Item(document))) {
+					return document;
 				}
 			}
 		}
@@ -4818,8 +4842,8 @@ void OverlayWidget::refreshCaption() {
 		} else if (_message) {
 			if (const auto caption = InstantViewMediaCaption(
 					_message,
-					_photo,
-					_document)) {
+					_videoCoverDocument ? nullptr : _photo,
+					_videoCoverDocument ? _videoCoverDocument : _document)) {
 				return *caption;
 			}
 			if (const auto media = _message->media()) {
@@ -4832,7 +4856,9 @@ void OverlayWidget::refreshCaption() {
 					}
 					return TextWithEntities();
 				} else if (const auto poll = media->poll()) {
-					const auto current = _photo
+					const auto current = _videoCoverDocument
+						? WebPageCollage::Item(_videoCoverDocument)
+						: _photo
 						? WebPageCollage::Item(_photo)
 						: WebPageCollage::Item(_document);
 					for (const auto &answer : poll->answers) {
@@ -5210,7 +5236,9 @@ void OverlayWidget::show(OpenRequest request) {
 		finishHideAnimation();
 	}
 	if (!request.continueStreaming() && !request.startTime() && !_reShow) {
-		if (_message && (_message == contextItem)) {
+		if (_message
+			&& (_message == contextItem)
+			&& (_videoCoverDocument == request.videoCoverDocument())) {
 			return close();
 		} else if (_user && (_user == contextPeer)) {
 			if ((_photo && (_photo == photo))
@@ -5237,6 +5265,8 @@ void OverlayWidget::show(OpenRequest request) {
 			return;
 		}
 		setSession(&photo->session());
+		_videoCoverDocument = request.videoCoverDocument();
+		_viewingVideoCovers = (_videoCoverDocument != nullptr);
 
 		if (story) {
 			setContext(StoriesContext{
@@ -5269,6 +5299,7 @@ void OverlayWidget::show(OpenRequest request) {
 			: story
 			? &story->session()
 			: &call->session());
+		_viewingVideoCovers = false;
 
 		if (story) {
 			setContext(StoriesContext{
@@ -5342,7 +5373,7 @@ void OverlayWidget::displayPhoto(
 	refreshMediaViewer();
 
 	_staticContent = QImage();
-	if (!_stories && _photo->videoCanBePlayed()) {
+	if (!_stories && !_viewingVideoCovers && _photo->videoCanBePlayed()) {
 		initStreaming();
 	}
 
@@ -8691,7 +8722,8 @@ OverlayWidget::Entity OverlayWidget::entityForInstantViewMedia(int index) const 
 		return { v::null, nullptr };
 	}
 	if (const auto document = std::get_if<DocumentData*>(&items[index])) {
-		return { *document, _message, _topicRootId, _monoforumPeerId };
+		return entityForVideoCover({
+			*document, _message, _topicRootId, _monoforumPeerId });
 	} else if (const auto photo = std::get_if<PhotoData*>(&items[index])) {
 		return { *photo, _message, _topicRootId, _monoforumPeerId };
 	}
@@ -8707,7 +8739,8 @@ OverlayWidget::Entity OverlayWidget::entityForCollage(int index) const {
 		return { v::null, nullptr };
 	}
 	if (const auto document = std::get_if<DocumentData*>(&items[index])) {
-		return { *document, _message, _topicRootId, _monoforumPeerId };
+		return entityForVideoCover({
+			*document, _message, _topicRootId, _monoforumPeerId });
 	} else if (const auto photo = std::get_if<PhotoData*>(&items[index])) {
 		return { *photo, _message, _topicRootId, _monoforumPeerId };
 	}
@@ -8722,7 +8755,8 @@ OverlayWidget::Entity OverlayWidget::entityForItemId(const FullMsgId &itemId) co
 			if (const auto photo = media->photo()) {
 				return { photo, item, _topicRootId, _monoforumPeerId };
 			} else if (const auto document = media->document()) {
-				return { document, item, _topicRootId, _monoforumPeerId };
+				return entityForVideoCover({
+					document, item, _topicRootId, _monoforumPeerId });
 			}
 		}
 		return { v::null, item, _topicRootId, _monoforumPeerId };
@@ -8914,11 +8948,34 @@ bool OverlayWidget::moveToNext(int delta) {
 		return false;
 	}
 	auto newIndex = *_index + delta;
-	return moveToEntity(entityByIndex(newIndex), delta);
+	auto entity = entityByIndex(newIndex);
+	// 没有封面的视频不进入空白页，继续沿原媒体顺序查找。
+	while (_viewingVideoCovers && entity.item && v::is_null(entity.data)) {
+		newIndex += delta;
+		entity = entityByIndex(newIndex);
+	}
+	return moveToEntity(entity, delta);
+}
+
+OverlayWidget::Entity OverlayWidget::entityForVideoCover(Entity entity) const {
+	const auto document = std::get_if<not_null<DocumentData*>>(&entity.data);
+	if (!_viewingVideoCovers
+		|| !document
+		|| !(*document)->isVideoFile()
+		|| !entity.item) {
+		return entity;
+	}
+	if (!ExtrasVideoCover::hasCover(entity.item, *document)) {
+		entity.data = v::null;
+		return entity;
+	}
+	entity.videoCoverDocument = document->get();
+	entity.data = ExtrasVideoCover::photoForCover(entity.item, *document);
+	return entity;
 }
 
 bool OverlayWidget::moveToEntity(const Entity &entity, int preloadDelta) {
-	if (v::is_null(entity.data) && !entity.item) {
+	if (v::is_null(entity.data) && (!entity.item || _viewingVideoCovers)) {
 		return false;
 	}
 	if (const auto item = entity.item) {
@@ -8934,6 +8991,7 @@ bool OverlayWidget::moveToEntity(const Entity &entity, int preloadDelta) {
 	}
 	clearStreaming();
 	_streamingStartPaused = false;
+	_videoCoverDocument = entity.videoCoverDocument;
 	if (auto photo = std::get_if<not_null<PhotoData*>>(&entity.data)) {
 		displayPhoto(*photo);
 	} else if (auto document = std::get_if<not_null<DocumentData*>>(&entity.data)) {
@@ -10176,7 +10234,9 @@ void OverlayWidget::findCurrent() {
 			: std::nullopt;
 		_fullCount = _userPhotosData->fullCount();
 	} else if (_collageData) {
-		const auto item = _photo ? WebPageCollage::Item(_photo) : _document;
+		const auto item = _videoCoverDocument
+			? WebPageCollage::Item(_videoCoverDocument)
+			: _photo ? WebPageCollage::Item(_photo) : _document;
 		const auto &items = _collageData->items;
 		const auto i = ranges::find(items, item);
 		_index = (i != end(items))

@@ -140,6 +140,12 @@ public:
 
 	void clearSession();
 
+#ifdef _DEBUG
+	[[nodiscard]] QString debugState() const;
+	[[nodiscard]] bool debugSaveImage(const QString &path);
+	[[nodiscard]] QSize debugCopyImage();
+#endif
+
 	// ClickHandlerHost interface
 	void clickHandlerActiveChanged(const ClickHandlerPtr &p, bool active) override;
 	void clickHandlerPressedChanged(const ClickHandlerPtr &p, bool pressed) override;
@@ -190,6 +196,7 @@ private:
 		HistoryItem *item = nullptr;
 		MsgId topicRootId = 0;
 		PeerId monoforumPeerId = 0;
+		DocumentData *videoCoverDocument = nullptr;
 	};
 	using InstantViewItem = std::variant<PhotoData*, DocumentData*>;
 	using InstantViewItems = std::vector<InstantViewItem>;
@@ -409,6 +416,7 @@ private:
 	[[nodiscard]] Entity entityForCollage(int index) const;
 	[[nodiscard]] Entity entityByIndex(int index) const;
 	[[nodiscard]] Entity entityForItemId(const FullMsgId &itemId) const;
+	[[nodiscard]] Entity entityForVideoCover(Entity entity) const;
 	bool moveToEntity(const Entity &entity, int preloadDelta = 0);
 
 	void setContext(std::variant<
@@ -737,6 +745,8 @@ private:
 	DocumentData *_document = nullptr;
 	DocumentData *_chosenQuality = nullptr;
 	PhotoData *_videoCover = nullptr;
+	DocumentData *_videoCoverDocument = nullptr;
+	bool _viewingVideoCovers = false;
 	Media::VideoQuality _quality;
 	QString _documentLoadingTo;
 	std::shared_ptr<Data::PhotoMedia> _photoMedia;

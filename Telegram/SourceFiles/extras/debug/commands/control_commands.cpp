@@ -51,6 +51,7 @@ namespace {
 using json = nlohmann::json;
 
 QPointer<QWidget> selectedWindow;
+QPointer<QWidget> pressedMouseReceiver;
 
 // ---- UI 探查与合成交互 ----
 
@@ -589,9 +590,12 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 }
 
 [[nodiscard]] Result controlWheel(const QStringList &args) {
-	if (args.size() < 2 || args.size() > 3
-		|| (args.size() == 3 && args[2] != u"pixel"_q)) {
-		return Result::Err(u"usage: control.wheel <target> <delta> [pixel]"_q);
+	const auto options = args.mid(2);
+	if (args.size() < 2 || args.size() > 4
+		|| ranges::any_of(options, [](const QString &option) {
+			return option != u"pixel"_q && option != u"ctrl"_q;
+		})) {
+		return Result::Err(u"usage: control.wheel <target> <delta> [pixel] [ctrl]"_q);
 	}
 	const auto target = findControl(args.front());
 	auto ok = false;
@@ -599,18 +603,28 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	if (!target || !target->isVisible() || !ok) {
 		return Result::Err(u"visible target and integer delta required"_q);
 	}
-	const auto pixel = args.size() == 3;
-	const auto local = QPointF(target->rect().center());
+	const auto pixel = options.contains(u"pixel"_q);
+	const auto modifiers = options.contains(u"ctrl"_q)
+		? Qt::ControlModifier
+		: Qt::NoModifier;
+	const auto global = target->mapToGlobal(target->rect().center());
+	const auto root = target->window();
+	const auto child = root->childAt(root->mapFromGlobal(global));
+	const auto receiver = child ? child : target;
+	if (receiver != target && !target->isAncestorOf(receiver)) {
+		return Result::Err(u"control is covered at the requested point"_q);
+	}
+	const auto local = QPointF(receiver->mapFromGlobal(global));
 	const auto touchpad = QPointingDevice(u"Debug touchpad"_q, 0,
 		QInputDevice::DeviceType::TouchPad, QPointingDevice::PointerType::Finger,
 		QInputDevice::Capability::Position | QInputDevice::Capability::PixelScroll, 1, 0);
-	auto event = QWheelEvent(local, target->mapToGlobal(local.toPoint()),
+	auto event = QWheelEvent(local, global,
 		pixel ? QPoint(0, delta) : QPoint(), pixel ? QPoint() : QPoint(0, delta),
-		Qt::NoButton, Qt::NoModifier, pixel ? Qt::ScrollUpdate : Qt::NoScrollPhase, false,
+		Qt::NoButton, modifiers, pixel ? Qt::ScrollUpdate : Qt::NoScrollPhase, false,
 		Qt::MouseEventSynthesizedByApplication,
 		pixel ? &touchpad : QPointingDevice::primaryPointingDevice());
 	event.setTimestamp(crl::now());
-	QApplication::sendEvent(target, &event);
+	QApplication::sendEvent(receiver, &event);
 	return Result::Ok(Compact(json{ { "accepted", event.isAccepted() } }));
 }
 
@@ -829,15 +843,16 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	auto yOk = false;
 	const auto point = QPoint(args[1].toInt(&xOk), args[2].toInt(&yOk));
 	const auto mode = args.size() == 4 ? args[3] : u"left"_q;
-	if (!xOk || !yOk || (mode != u"move"_q && !target->rect().contains(point))) return Result::Err(u"expected coordinates inside the control"_q);
+	const auto dragging = (mode == u"move"_q || mode == u"release"_q);
+	if (!xOk || !yOk || (!dragging && !target->rect().contains(point))) return Result::Err(u"expected coordinates inside the control"_q);
 	const auto modes = QStringList{ u"left"_q, u"right"_q, u"double"_q, u"press"_q, u"move"_q, u"release"_q };
 	if (!modes.contains(mode)) return Result::Err(u"unknown mouse action"_q);
 	const auto global = target->mapToGlobal(point);
 	const auto root = target->window();
 	auto receiver = QPointer<QWidget>(root->childAt(root->mapFromGlobal(global)));
 	if (!receiver) receiver = root;
-	// 拖动与松开投递给原控件，拖动坐标允许越过边界，沿用真实鼠标捕获语义。
-	if (mode == u"release"_q || mode == u"move"_q) receiver = target;
+	// 拖动与松开沿用按下时的接收控件，坐标允许越过边界。
+	if (dragging) receiver = pressedMouseReceiver ? pressedMouseReceiver : target;
 	if (receiver != target && !target->isAncestorOf(receiver)) return Result::Err(u"control is covered at the requested point"_q);
 	const auto local = receiver->mapFromGlobal(global);
 	const auto button = mode == u"right"_q ? Qt::RightButton : Qt::LeftButton;
@@ -851,9 +866,11 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 		sendIfAlive(receiver, QMouseEvent(QEvent::MouseButtonPress, local, global, button, button, Qt::NoModifier));
 	}
 	if (mode == u"press"_q) {
+		pressedMouseReceiver = receiver;
 		return Result::Ok();
 	}
 	sendIfAlive(receiver, QMouseEvent(QEvent::MouseButtonRelease, local, global, button, Qt::NoButton, Qt::NoModifier));
+	pressedMouseReceiver = nullptr;
 	if (mode == u"double"_q) {
 		sendIfAlive(receiver, QMouseEvent(QEvent::MouseButtonDblClick, local, global, button, button, Qt::NoModifier));
 		sendIfAlive(receiver, QMouseEvent(QEvent::MouseButtonRelease, local, global, button, Qt::NoButton, Qt::NoModifier));

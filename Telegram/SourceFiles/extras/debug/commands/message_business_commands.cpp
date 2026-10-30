@@ -11,6 +11,7 @@
 #include "api/api_editing.h"
 #include "base/unixtime.h"
 #include "chat_helpers/message_field.h"
+#include "core/application.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
 #include "data/data_compose_stash.h"
@@ -29,6 +30,7 @@
 #include "history/history_item_components.h"
 #include "history/view/history_view_element.h"
 #include "main/main_session.h"
+#include "media/view/media_view_overlay_widget.h"
 #include "storage/storage_media_prepare.h"
 #include "storage/localimageloader.h"
 #include "ui/chat/attach/attach_prepare.h"
@@ -561,7 +563,8 @@ Result sendAttachments(
 		QStringList filenames,
 		QString caption,
 		bool asMedia,
-		bool album) {
+		bool album,
+		QString coverFilename = {}) {
 	const auto session = &peer->session();
 	if (isSimulationSession(session)) return Result::Err(u"an authenticated session is required"_q);
 	for (auto &filename : filenames) {
@@ -571,6 +574,15 @@ Result sendAttachments(
 		}
 		filename = path.absoluteFilePath();
 	}
+	if (!coverFilename.isEmpty()) {
+		const auto path = QFileInfo(coverFilename);
+		if (!asMedia || album || filenames.size() != 1
+			|| !path.isAbsolute() || !path.isFile()
+			|| !(peer->isSelf() || peer->isBot() || peer->isBroadcast())) {
+			return Result::Err(u"cover requires one video sent as media to Saved Messages, a bot, or a channel"_q);
+		}
+		coverFilename = path.absoluteFilePath();
+	}
 	const auto id = beginJob("file-send");
 	const auto weak = base::make_weak(session);
 	const auto premium = session->premium();
@@ -578,7 +590,10 @@ Result sendAttachments(
 	session->lifetime().add([id] { finishJob(id, false, "session closed"); });
 	crl::async([=] {
 		auto list = Storage::PrepareMediaList(filenames, 320, premium);
-		crl::on_main([=, list = std::move(list)]() mutable {
+		auto cover = coverFilename.isEmpty()
+			? Ui::PreparedList()
+			: Storage::PrepareMediaList(QStringList{ coverFilename }, 320, premium);
+		crl::on_main([=, list = std::move(list), cover = std::move(cover)]() mutable {
 			if (!weak) return;
 			if (list.error != Ui::PreparedList::Error::None
 				|| list.files.size() != filenames.size()
@@ -588,6 +603,17 @@ Result sendAttachments(
 				finishJob(id, false, "could not prepare the attachment");
 				return;
 			}
+			if (!coverFilename.isEmpty()) {
+				if (cover.error != Ui::PreparedList::Error::None
+					|| cover.files.size() != 1
+					|| cover.files.front().type != Ui::PreparedFile::Type::Photo
+					|| !list.files.front().isVideoFile()) {
+					finishJob(id, false, "could not prepare the video cover");
+					return;
+				}
+				list.files.front().videoCover = std::make_unique<Ui::PreparedFile>(
+					std::move(cover.files.front()));
+			}
 			list.files.front().caption = { caption };
 			auto action = Api::SendAction(weak->data().history(peerId));
 			action.clearDraft = false;
@@ -596,7 +622,8 @@ Result sendAttachments(
 				album ? std::make_shared<SendingAlbum>() : nullptr, action);
 			finishJob(id, true, Json{ { "state", "submitted" }, { "peerId", peerId.value },
 				{ "filename", QFileInfo(filenames.front()).fileName().toStdString() },
-				{ "count", filenames.size() }, { "album", album }, { "media", asMedia } });
+				{ "count", filenames.size() }, { "album", album }, { "media", asMedia },
+				{ "cover", !coverFilename.isEmpty() } });
 		});
 	});
 	return jobStarted(id);
@@ -606,12 +633,21 @@ Result sendAttachments(
 Result sendFile(const QStringList &arguments) {
 	auto args = arguments;
 	const auto asMedia = (args.removeAll(u"--media"_q) > 0);
+	auto coverFilename = QString();
+	const auto coverIndex = args.indexOf(u"--cover"_q);
+	if (coverIndex >= 0) {
+		if (coverIndex + 1 >= args.size() || args[coverIndex + 1].isEmpty()) {
+			return Result::Err(u"expected a file path after --cover"_q);
+		}
+		coverFilename = args.takeAt(coverIndex + 1);
+		args.removeAt(coverIndex);
+	}
 	if (args.size() < 2 || args.size() > 3) {
-		return Result::Err(u"usage: message.send-file <peerId> <path> [caption] [--media]"_q);
+		return Result::Err(u"usage: message.send-file <peerId> <path> [caption] [--media] [--cover path]"_q);
 	}
 	const auto peer = findPeer(args[0]);
 	if (!peer) return Result::Err(u"peer not found"_q);
-	return sendAttachments(peer, { args[1] }, args.value(2), asMedia, false);
+	return sendAttachments(peer, { args[1] }, args.value(2), asMedia, false, coverFilename);
 }
 
 Result sendAlbum(const QStringList &args) {
@@ -667,6 +703,46 @@ Result openMedia(const QStringList &args) {
 		controller->openDocument(document, true, context);
 	}
 	return Result::Ok(Compact(Json{ { "type", photo ? "photo" : "document" } }));
+}
+
+Result mediaState(const QStringList &args) {
+	if (!args.isEmpty()) {
+		return Result::Err(u"usage: media.state"_q);
+	}
+	const auto viewer = Core::App().debugMediaView();
+	if (!viewer) {
+		return Result::Err(u"media viewer is not initialized"_q);
+	}
+	return Result::Ok(viewer->debugState());
+}
+
+Result saveMediaImage(const QStringList &args) {
+	if (args.size() != 1 || !QFileInfo(args[0]).isAbsolute()) {
+		return Result::Err(u"usage: media.save-image <newAbsolutePath>"_q);
+	}
+	if (QFileInfo::exists(args[0])) {
+		return Result::Err(u"destination already exists"_q);
+	}
+	const auto viewer = Core::App().debugMediaView();
+	if (!viewer || !viewer->debugSaveImage(args[0])) {
+		return Result::Err(u"image is unavailable, restricted, or could not be saved"_q);
+	}
+	return Result::Ok(Compact(Json{ { "saved", true }, { "path", args[0].toStdString() } }));
+}
+
+Result checkCopyImage(const QStringList &args) {
+	if (!args.isEmpty()) {
+		return Result::Err(u"usage: media.copy-check"_q);
+	}
+	const auto viewer = Core::App().debugMediaView();
+	const auto size = viewer ? viewer->debugCopyImage() : QSize();
+	if (size.isEmpty()) {
+		return Result::Err(u"image is unavailable, restricted, or could not be copied"_q);
+	}
+	return Result::Ok(Compact(Json{
+		{ "copied", true }, { "imageSize", Json{ size.width(), size.height() } },
+		{ "clipboardRestored", true },
+	}));
 }
 
 Result openMessageShot(const QStringList &args) {
@@ -753,6 +829,9 @@ const HandlerMap &messageBusinessHandlers() {
 		{ u"message.send-album"_q, &sendAlbum },
 		{ u"video.cover"_q, &openVideoCover },
 		{ u"media.open"_q, &openMedia },
+		{ u"media.state"_q, &mediaState },
+		{ u"media.save-image"_q, &saveMediaImage },
+		{ u"media.copy-check"_q, &checkCopyImage },
 		{ u"message.shot"_q, &openMessageShot },
 		{ u"simulation.remove-message"_q, &removeSimulationMessage },
 		{ u"simulation.archive"_q, &archiveSimulationChat },

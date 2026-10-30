@@ -596,6 +596,7 @@ public:
 		MsgId topicRootId;
 		PeerId monoforumPeerId;
 		bool showDrawButton = false;
+		DocumentData *videoCoverDocument = nullptr;
 	};
 	void openPhoto(
 		not_null<PhotoData*> photo,

@@ -154,6 +154,7 @@ set(extras_files
         extras/ui/secret_chat_attachments.cpp
         extras/ui/secret_chat_attachments.h
         extras/debug/commands/secret_chat_commands.cpp
+        extras/debug/media_viewer_debug.cpp
         extras/features/mention_by_id/mention_by_id.cpp
         extras/features/mention_by_id/mention_by_id.h
         extras/features/community_channel/community_channel.cpp

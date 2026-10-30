@@ -3522,7 +3522,8 @@ void SessionController::openPhoto(
 		MessageContext message,
 		const Data::StoriesContext *stories) {
 	const auto item = session().data().message(message.id);
-	if (openSharedStory(item) || openFakeItemStory(message.id, stories)) {
+	if (!message.videoCoverDocument
+		&& (openSharedStory(item) || openFakeItemStory(message.id, stories))) {
 		return;
 	}
 	const auto origin = item
@@ -3537,7 +3538,8 @@ void SessionController::openPhoto(
 		item,
 		message.topicRootId,
 		message.monoforumPeerId,
-		message.showDrawButton));
+		message.showDrawButton,
+		message.videoCoverDocument));
 }
 
 void SessionController::openPhoto(

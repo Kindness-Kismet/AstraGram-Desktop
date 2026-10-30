@@ -1058,6 +1058,15 @@ auto GroupThumbs::createThumb(Key key, not_null<PhotoData*> photo)
 
 auto GroupThumbs::createThumb(Key key, not_null<DocumentData*> document)
 -> std::unique_ptr<Thumb> {
+	const auto messageId = std::get_if<FullMsgId>(&key);
+	const auto itemId = messageId
+		? messageId
+		: std::get_if<FullMsgId>(&_context);
+	const auto item = itemId ? _session->data().message(*itemId) : nullptr;
+	const auto cover = item ? LookupVideoCover(document, item) : nullptr;
+	if (cover) {
+		return createThumb(key, cover);
+	}
 	const auto weak = base::make_weak(this);
 	const auto origin = ComputeFileOrigin(key, _context);
 	return std::make_unique<Thumb>(key, _compact, document, origin, [=] {
