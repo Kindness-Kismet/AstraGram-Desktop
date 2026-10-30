@@ -1535,17 +1535,23 @@ void Document::paint(Painter &p, const QRect &clip, TextSelection selection, con
 				Ui::PaintFilePreviewSurface(p, rthumb, previewColors);
 			}
 			if (selected) {
-				const auto radius = Ui::FilePreviewRadius(rthumb);
+				auto hq = PainterHighQualityEnabler(p);
 				p.setPen(Qt::NoPen);
 				p.setBrush(st::defaultTextPalette.selectOverlay);
-				p.drawRoundedRect(
-					rthumb,
-					radius,
-					radius);
+				if (wthumb) {
+					const auto radius = Ui::FilePreviewRadius(rthumb);
+					p.drawRoundedRect(rthumb, radius, radius);
+				} else {
+					p.drawEllipse(Ui::FilePreviewButtonRect(rthumb));
+				}
 			}
 
 			if (radial || (!loaded && !activeLoading())) {
-				QRect inner(rthumb.x() + (rthumb.width() - _st.songThumbSize) / 2, rthumb.y() + (rthumb.height() - _st.songThumbSize) / 2, _st.songThumbSize, _st.songThumbSize);
+				const auto inner = wthumb
+					? QRect(rthumb.x() + (rthumb.width() - _st.songThumbSize) / 2,
+						rthumb.y() + (rthumb.height() - _st.songThumbSize) / 2,
+						_st.songThumbSize, _st.songThumbSize)
+					: Ui::FilePreviewButtonRect(rthumb);
 				if (clip.intersects(Ui::MediaButtonPaintRect(inner))) {
 					auto radialOpacity = (radial && loaded && !_data->uploading()) ? _radial->opacity() : 1;
 					const auto over = ClickHandler::showAsActive(activeLoading()
@@ -1806,8 +1812,10 @@ TextState Document::getState(
 				? _openl
 				: _savel;
 			const auto size = _st.songThumbSize;
-			const auto button = QRect(rthumb.x() + (rthumb.width() - size) / 2,
-				rthumb.y() + (rthumb.height() - size) / 2, size, size);
+			const auto button = withThumb()
+				? QRect(rthumb.x() + (rthumb.width() - size) / 2,
+					rthumb.y() + (rthumb.height() - size) / 2, size, size)
+				: Ui::FilePreviewButtonRect(rthumb);
 			if (link == _cancell && !Ui::MediaCancelBadgeContains(button, point)) {
 				link = nullptr;
 			}

@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/spoiler_mess.h"
 #include "ui/image/image_prepare.h"
 #include "ui/painter.h"
+#include "ui/controls/media_button.h"
 #include "ui/power_saving.h"
 #include "ui/ui_utility.h"
 #include "styles/style_boxes.h"
@@ -261,16 +262,10 @@ void AbstractSingleMediaPreview::paintEvent(QPaintEvent *e) {
 			_previewTop + (_previewHeight - innerSize) / 2,
 			innerSize,
 			innerSize);
-		p.setPen(Qt::NoPen);
-		p.setBrush(st::msgDateImgBg);
-
-		{
-			PainterHighQualityEnabler hq(p);
-			p.drawEllipse(inner);
-		}
-
-		auto icon = &st::historyFileInPlay;
-		icon->paintInCenter(p, inner);
+		const auto colors = Ui::MediaButtonPalette(
+			st::historyFileThumbIconFg->c, st::msgDateImgBg->c, true);
+		Ui::PaintMediaButtonSurface(p, inner, colors);
+		st::historyFileThumbPlay.paintInCenter(p, inner, colors.foreground);
 	}
 	if (_canShowHighQualityBadge && _sendWay.sendLargePhotos()) {
 		PaintHighQualityBadge(
