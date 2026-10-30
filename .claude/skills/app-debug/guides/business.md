@@ -49,6 +49,7 @@
 | `media.copy-check` | 空 | 执行图片查看器原生复制，查询复制图片尺寸后恢复原剪贴板；不保留测试复制内容，并遵守原消息复制限制。 |
 | `peer.resolve` | `<username>` | 异步按用户名解析公开频道或用户，返回会话编号；不加入、不关注。 |
 | `message.inspect` | `<peerId> <messageId>` | 原有消息状态，以及发送者、提及实体、附件名、类型、大小和下载状态。 |
+| `message.send-sticker` | `<peerId> <documentId> [--account index]` | 在已授权测试对话沿正式链路发送已加载的贴纸；可指定后台账号，不清除草稿。返回已提交，服务器结果用 `message.list` 查询。 |
 | `message.send-file` | `<peerId> <absolutePath> [caption] [--media] [--cover imagePath]` | 后台准备单个文件并沿官方附件发送链路提交，不打开附件预览、不清除草稿；默认按文件发送，`--media` 对应“压缩”；`--cover` 为单个视频指定封面，只支持收藏夹、机器人或频道，并沿原附件准备与上传流程处理。 |
 | `message.send-album` | `<peerId> <absolutePath> <absolutePath> [path...]` | 把 2 至 10 个图片或视频沿官方相册发送链路提交，不清除草稿；返回任务编号，须通过 `message.fetch` 核对共同的 `groupId` 和全部消息编号。真实发送仍只限已授权的测试会话。 |
 | `mention.resolve` | `<userId>` | 与编号提及弹窗共用解析逻辑，返回异步任务，不插入输入框。 |
