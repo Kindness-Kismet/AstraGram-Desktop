@@ -24,12 +24,29 @@ bool BubbleTransition::update(
 		int finalWidth,
 		const Ui::Text::String &newText,
 		Fn<void()> callback) {
-	_toHeight = finalHeight;
 	if (_started) {
-		return (layoutWidth == _layoutWidth) && _progress.animating();
+		if (layoutWidth != _layoutWidth) {
+			return false;
+		}
+		if (_oldText.isEmpty()
+			&& (_toHeight != finalHeight || _toWidth != finalWidth)) {
+			// 后续回应数据改变目标时，从当前显示尺寸继续过渡。
+			_fromHeight = height();
+			_fromWidth = bubbleWidth();
+			_toHeight = finalHeight;
+			_toWidth = finalWidth;
+			_progress.jumpTo(0.);
+			_progress.animateTo(1., std::move(callback));
+		} else if (!_oldText.isEmpty()) {
+			_toHeight = finalHeight;
+			_toWidth = finalWidth;
+		}
+		return _progress.animating();
 	}
 	_started = true;
 	_layoutWidth = layoutWidth;
+	_toHeight = finalHeight;
+	_toWidth = finalWidth;
 	if (_oldText.isEmpty() || _oldText.toString() == newText.toString()) {
 		_oldText = Ui::Text::String();
 		// 文字和尺寸都没变时，不因视图重建重复播放。
@@ -53,8 +70,8 @@ int BubbleTransition::height() const {
 	return anim::interpolate(_fromHeight, _toHeight, progress());
 }
 
-int BubbleTransition::bubbleWidth(int finalWidth) const {
-	return anim::interpolate(_fromWidth, finalWidth, progress());
+int BubbleTransition::bubbleWidth() const {
+	return anim::interpolate(_fromWidth, _toWidth, progress());
 }
 
 const Ui::Text::String *BubbleTransition::oldText() const {
