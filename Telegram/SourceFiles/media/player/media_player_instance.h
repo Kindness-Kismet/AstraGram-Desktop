@@ -162,6 +162,7 @@ public:
 
 	[[nodiscard]] bool nextAvailable(AudioMsgId::Type type) const;
 	[[nodiscard]] bool previousAvailable(AudioMsgId::Type type) const;
+	[[nodiscard]] std::vector<AudioMsgId> playlist(AudioMsgId::Type type) const;
 
 	struct Switch {
 		AudioMsgId from;

@@ -114,9 +114,11 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 
 ## 补充消息和下载
 
-`simulation.music [path [protected|cancelled]]` 仅在独立模拟配置中，用不超过 64 MB 的本地音频作为分块来源，沿正式流式播放器播放；省略参数查询最近样本的缓存、保存路径及分块请求次数。
+`simulation.music [path [protected|cancelled|voice|round]]` 仅在独立模拟配置中，用不超过 64 MB 的本地音频作为分块来源，沿正式流式播放器播放；省略参数查询最近样本的缓存、保存路径及分块请求次数。
 样本使用本地消息编号并加入对应聊天，使用返回的 `peerId` 和 `messageId` 调用 `chat.open`，可验证下载角标及离线重启后的下载记录。
 样本不联网，播放器取得的完整缓存仍走正式文件保存及下载登记；先把 `core.downloadPath` 指向验证附件目录，路径末尾保留 `/`。`protected` 使用内容保护群，`cancelled` 先启动再取消下载。
+指定 `voice` 或 `round` 可验证语音和圆视频，文件应分别为有效的音频或圆视频；同类样本进入本地播放列表。
+
 默认注入 90 × 90 预览缩略图，内嵌封面由解码器读取。`player.cover [new-png-path]` 查询可保存的原始尺寸；只有独立模拟配置允许写入新文件，不覆盖已有文件。
 
 `simulation.remove-message <peerId> <messageId>` 销毁指定模拟消息，用于验证弹窗和延迟回调在消息消失后的行为；不发网络请求，不操作真实账号。

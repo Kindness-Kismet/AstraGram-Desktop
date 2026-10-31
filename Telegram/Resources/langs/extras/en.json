@@ -599,6 +599,7 @@
   "ConfirmationRound": "Do you want to send this round video?",
   "Update": "Update AstraGram",
   "MusicExpand": "Expand player",
+  "MusicMinimize": "Minimize to floating icon",
   "MusicCollapse": "Collapse",
   "MusicSaveCover": "Save cover",
   "MusicSaveFailed": "Could not save the cover. Please choose another location.",

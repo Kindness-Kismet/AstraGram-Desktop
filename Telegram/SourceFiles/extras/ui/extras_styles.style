@@ -13,91 +13,30 @@ extrasMediaVideo: icon {{ "chat/input_video", windowSubTextFg }};
 // 自定义图标叠加绘制时替换按钮原图标。
 extrasEmptyIcon: icon {};
 
-extrasMusicPlay: IconButton(mediaPlayerRepeatButton) {
-	icon: icon {{ "player/player_play", mediaPlayerActiveFg }};
-	width: 48px;
-	height: 44px;
-	iconPosition: point(12px, 10px);
-	rippleAreaPosition: point(4px, 2px);
-	rippleAreaSize: 40px;
-}
-extrasMusicPrevious: IconButton(mediaPlayerPreviousButton) {
-	icon: icon {{ "player/player_backward", mediaPlayerActiveFg }};
-	width: 40px;
-	height: 44px;
-	iconPosition: point(8px, 10px);
-	rippleAreaPosition: point(0px, 2px);
-	rippleAreaSize: 40px;
-}
-extrasMusicNext: IconButton(extrasMusicPrevious) {
-	icon: icon {{ "player/player_forward", mediaPlayerActiveFg }};
-}
-extrasMusicRepeat: IconButton(mediaPlayerRepeatButton) {
-	icon: icon {{ "player/player_repeat", mediaPlayerActiveFg }};
-	width: 36px;
-	height: 44px;
-	iconPosition: point(6px, 10px);
-	rippleAreaPosition: point(0px, 4px);
-	rippleAreaSize: 36px;
-}
-
 extrasMusicFloatingSize: 44px;
-extrasMusicFloatingShadow: 4px;
 extrasMusicFloatingMargin: 16px;
 extrasMusicFloatingGap: 12px;
-extrasMusicCompactWidth: 340px;
-extrasMusicCompactHeight: 286px;
-extrasMusicCompactPadding: 18px;
-extrasMusicCompactCover: 62px;
-extrasMusicCompactTitle: font(15px semibold);
+extrasMusicCompactTitle: font(19px semibold);
+extrasMusicMiniTitle: font(13px semibold);
+extrasMusicArtist: font(13px);
+extrasMusicQueueTitle: font(12px semibold);
 extrasMusicCompactSmall: font(11px);
 extrasMusicCompactSource: LinkButton(defaultLinkButton) {
-	font: font(11px);
-	overFont: font(11px);
+	font: font(12px);
+	overFont: font(12px);
 	color: windowSubTextFg;
 	overColor: windowActiveTextFg;
 }
-extrasMusicCompactDropdown: InnerDropdown(defaultInnerDropdown) {
-	showDuration: 160;
-	scroll: ScrollArea(defaultSolidScroll) {
-		barHidden: true;
-	}
-	scrollPadding: margins(0px, 0px, 0px, 0px);
+extrasMusicProgress: MediaSlider(defaultContinuousSlider) {
+	activeFg: windowActiveTextFg;
+	inactiveFg: windowBgOver;
+	activeFgOver: windowActiveTextFg;
+	inactiveFgOver: windowBgOver;
+	activeFgDisabled: windowBgOver;
+	receivedTillFg: windowBgOver;
+	width: 6px;
+	seekSize: size(10px, 10px);
 }
-extrasMusicCompactButton: IconButton(mediaPlayerRepeatButton) {
-	icon: icon {};
-	width: 30px;
-	height: 30px;
-	iconPosition: point(3px, 3px);
-	rippleAreaPosition: point(1px, 1px);
-	rippleAreaSize: 28px;
-}
-extrasMusicCompactSave: IconButton(extrasMusicCompactButton) {
-	icon: icon {{ "menu/download", menuIconFg }};
-	iconOver: icon {{ "menu/download", menuIconFgOver }};
-}
-extrasMusicCompactCollapse: IconButton(extrasMusicCompactButton) {
-	icon: icon {{ "player/player_collapse", menuIconFg }};
-	iconOver: icon {{ "player/player_collapse", menuIconFgOver }};
-}
-extrasMusicCompactClose: IconButton(extrasMusicCompactButton) {
-	icon: icon {{ "player/panel_close", menuIconFg }};
-	iconOver: icon {{ "player/panel_close", menuIconFgOver }};
-}
-extrasMusicCompactQueue: IconButton(extrasMusicCompactButton) {
-	icon: icon {{ "player/player_queue", menuIconFg }};
-	iconOver: icon {{ "player/player_queue", menuIconFgOver }};
-}
-extrasMusicCompactPlay: IconButton(extrasMusicPlay) {
-	width: 44px;
-	height: 44px;
-	icon: icon {{ "player/player_play", windowFgActive }};
-	iconPosition: point(10px, 10px);
-	rippleAreaPosition: point(0px, 0px);
-	rippleAreaSize: 44px;
-}
-extrasMusicCompactPause: icon {{ "player/player_pause", windowFgActive }};
-extrasMusicCompactCancel: icon {{ "player/panel_close", windowFgActive }};
 
 recentStickersLimitPadding: margins(22px, 4px, 22px, 8px);
 imageViewPadding: margins(22px, 10px, 22px, 10px);

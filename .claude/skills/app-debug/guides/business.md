@@ -86,6 +86,7 @@
 - `settings.export <newAbsolutePath> <all|official|custom|account>`：异步导出指定范围，目标不得已存在。
 - `settings.inspect-import <path> <scope>`：读取并验证文件，返回可应用数量、跳过项、缺失路径及重启项，不修改设置。
 - `settings.import <path> <scope>`：验证通过后应用，使用 `job.status` 检查 `saved` 与错误；失败不伪称保存成功。
+- `player.open <peerId> <messageId>`：播放已加载的音乐、语音或圆视频消息，保留话题上下文；拒绝阅后即焚媒体。发出请求后用 `player.state` 检查真实播放进度。
 - `player.control <play|pause|toggle|stop> [song|voice]`：直接控制已有活动媒体；没有当前媒体时报错，不自动选择历史文件。
 
 设置迁移共用正式功能的导出、校验及保存代码。导入以指令执行时的账号为目标，异步期间账号销毁则失败。

@@ -1430,6 +1430,46 @@ rpl::producer<OrderMode> Instance::orderChanges(
 		: rpl::never<OrderMode>();
 }
 
+std::vector<AudioMsgId> Instance::playlist(AudioMsgId::Type type) const {
+	auto result = std::vector<AudioMsgId>();
+	const auto data = getData(type);
+	if (!data || !data->current) {
+		return result;
+	}
+	if (data->playlistSlice && data->history) {
+		for (auto i = 0; i != data->playlistSlice->size(); ++i) {
+			const auto id = (*data->playlistSlice)[i];
+			const auto item = data->history->owner().message(id);
+			if (!item || !item->media() || item->media()->ttlSeconds()) {
+				continue;
+			}
+			if (const auto document = item->media()->document()) {
+				const auto track = AudioMsgId(document, id);
+				if (track.type() == type) {
+					result.push_back(track);
+				}
+			}
+			for (const auto document : ItemPlaylistTracks(item, type)) {
+				result.emplace_back(document, id);
+			}
+		}
+	}
+	// 本地文件和未加载完列表的曲目也保留当前播放项。
+	const auto current = ranges::find_if(result, [&](const AudioMsgId &track) {
+		return track.audio() == data->current.audio()
+			&& track.contextId() == data->current.contextId();
+	});
+	if (current == end(result)) {
+		result.push_back(data->current);
+	} else {
+		*current = data->current;
+	}
+	if (order(data) == OrderMode::Reverse) {
+		ranges::reverse(result);
+	}
+	return result;
+}
+
 TrackState Instance::getState(AudioMsgId::Type type) const {
 	if (const auto data = getData(type)) {
 		if (data->streamed) {

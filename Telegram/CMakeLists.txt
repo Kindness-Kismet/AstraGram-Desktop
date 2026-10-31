@@ -358,6 +358,10 @@ set(extras_files
         extras/features/music_player/music_player_floating.h
         extras/features/music_player/music_player_panel.cpp
         extras/features/music_player/music_player_panel.h
+        extras/features/music_player/music_player_widgets.cpp
+        extras/features/music_player/music_player_widgets.h
+        extras/features/music_player/music_player_queue.cpp
+        extras/features/music_player/music_player_queue.h
         extras/features/media_viewer/viewer_host.cpp
         extras/features/media_viewer/viewer_host.h
         extras/features/media_viewer/viewer_layout.cpp

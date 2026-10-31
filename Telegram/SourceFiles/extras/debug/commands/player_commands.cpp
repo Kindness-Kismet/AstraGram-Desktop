@@ -6,6 +6,8 @@
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "data/data_document.h"
+#include "data/data_media_types.h"
+#include "history/history_item.h"
 #include "media/audio/media_audio.h"
 #include "media/player/media_player_instance.h"
 #include "settings.h"
@@ -14,6 +16,21 @@
 
 namespace ExtrasDebug::Commands {
 namespace {
+
+Result openPlayer(const QStringList &args) {
+	if (args.size() != 2) {
+		return Result::Err(u"usage: player.open <peerId> <messageId>"_q);
+	}
+	const auto item = findMessage(args[0], args[1]);
+	const auto media = item ? item->media() : nullptr;
+	const auto document = media ? media->document() : nullptr;
+	if (!document || media->ttlSeconds()
+		|| (!document->isAudioFile() && !document->isVoiceMessage() && !document->isVideoMessage())) {
+		return Result::Err(u"expected a loaded music, voice or round video message without a self-destruct timer"_q);
+	}
+	Media::Player::instance()->play(AudioMsgId(document, item->fullId()));
+	return Result::Ok();
+}
 
 Result playerCover(const QStringList &args) {
 	if (args.size() > 1) {
@@ -70,6 +87,11 @@ Result playerState(const QStringList &args) {
 	const auto state = player->getState(type);
 	const auto current = player->current(type);
 	const auto document = current.audio();
+	auto playlist = nlohmann::json::array();
+	for (const auto &track : player->playlist(type)) {
+		playlist.push_back({ { "messageId", track.contextId().msg.bare },
+			{ "documentId", track.audio()->id } });
+	}
 	return Result::Ok(Compact(nlohmann::json{
 		{ "type", type == AudioMsgId::Type::Song ? "song" : "voice" },
 		{ "video", document && document->isVideoMessage() },
@@ -81,6 +103,13 @@ Result playerState(const QStringList &args) {
 		{ "length", state.length },
 		{ "frequency", state.frequency },
 		{ "repeat", int(Core::App().settings().playerRepeatMode()) },
+		{ "order", int(Core::App().settings().playerOrderMode()) },
+		{ "speed", type == AudioMsgId::Type::Song ? Core::App().settings().audioPlaybackSpeed()
+			: Core::App().settings().voicePlaybackSpeed() },
+		{ "volume", Core::App().settings().songVolume() },
+		{ "previousAvailable", player->previousAvailable(type) },
+		{ "nextAvailable", player->nextAvailable(type) },
+		{ "playlist", std::move(playlist) },
 		{ "filename", document ? document->filename().toStdString() : "" },
 	}));
 }
@@ -90,6 +119,7 @@ Result playerState(const QStringList &args) {
 const HandlerMap &playerHandlers() {
 	static const auto handlers = HandlerMap{
 		{ u"player.control"_q, &controlPlayer },
+		{ u"player.open"_q, &openPlayer },
 		{ u"player.cover"_q, &playerCover },
 		{ u"player.state"_q, &playerState },
 	};

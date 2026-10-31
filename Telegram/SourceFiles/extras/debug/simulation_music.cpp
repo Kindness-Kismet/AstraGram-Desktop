@@ -8,11 +8,14 @@
 #include "data/data_document.h"
 #include "data/data_document_media.h"
 #include "data/data_file_origin.h"
+#include "data/data_peer.h"
 #include "data/data_session.h"
 #include "data/data_streaming.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "main/main_session.h"
+#include "storage/storage_facade.h"
+#include "storage/storage_shared_media.h"
 #include "media/player/media_player_instance.h"
 #include "media/streaming/media_streaming_document.h"
 #include "media/streaming/media_streaming_loader_local.h"
@@ -94,8 +97,9 @@ Result simulateMusic(const QStringList &args) {
 		MusicState = session->lifetime().make_state<State>();
 	}
 	if (args.size() > 2 || (args.size() == 2
-		&& args[1] != u"protected"_q && args[1] != u"cancelled"_q)) {
-		return Result::Err(u"usage: simulation.music [path [protected|cancelled]]"_q);
+		&& args[1] != u"protected"_q && args[1] != u"cancelled"_q
+		&& args[1] != u"voice"_q && args[1] != u"round"_q)) {
+		return Result::Err(u"usage: simulation.music [path [protected|cancelled|voice|round]]"_q);
 	}
 	if (!args.empty()) {
 		const auto file = QFileInfo(args[0]);
@@ -104,25 +108,36 @@ Result simulateMusic(const QStringList &args) {
 		}
 		const auto index = int(MusicState->entries.size());
 		const auto id = DocumentId(9700050000ULL + index);
-		const auto messageId = session->data().nextLocalMessageId();
+		const auto messageId = 2950000 + index;
+		const auto voice = args.contains(u"voice"_q);
+		const auto round = args.contains(u"round"_q);
 		using Flag = MTPDdocumentAttributeAudio::Flag;
+		auto attributes = QVector<MTPDocumentAttribute>{
+			MTP_documentAttributeFilename(MTP_string(file.fileName())),
+		};
+		if (round) {
+			attributes.push_back(MTP_documentAttributeVideo(
+				MTP_flags(MTPDdocumentAttributeVideo::Flag::f_round_message
+					| MTPDdocumentAttributeVideo::Flag::f_supports_streaming),
+				MTP_double(12.), MTP_int(320), MTP_int(320), MTPint(), MTPdouble(), MTPstring()));
+		} else {
+			attributes.push_back(MTP_documentAttributeAudio(
+				MTP_flags(voice ? Flag::f_voice : Flag::f_title | Flag::f_performer),
+				MTP_int(12), MTP_string(file.completeBaseName()), MTP_string("本地音乐演示"), MTPstring()));
+		}
 		const auto mtp = MTP_document(MTP_flags(0), MTP_long(id), MTP_long(1),
-			MTP_bytes(), MTP_int(base::unixtime::now()), MTP_string("audio/mpeg"),
+			MTP_bytes(), MTP_int(base::unixtime::now()), MTP_string(round ? "video/mp4" : voice ? "audio/ogg" : "audio/mpeg"),
 			MTP_long(file.size()), MTPVector<MTPPhotoSize>(), MTPVector<MTPVideoSize>(),
-			MTP_int(1), MTP_vector<MTPDocumentAttribute>({
-				MTP_documentAttributeFilename(MTP_string(file.fileName())),
-				MTP_documentAttributeAudio(MTP_flags(Flag::f_title | Flag::f_performer),
-					MTP_int(12), MTP_string("原始封面样本"), MTP_string("本地测试"), MTPstring()),
-			}));
+			MTP_int(1), MTP_vector<MTPDocumentAttribute>(attributes));
 		const auto document = session->data().processDocument(mtp);
 		const auto peer = simulationPeer(session, args.contains(u"protected"_q)
 			? u"protected-group"_q : u"saved"_q);
-		const auto item = session->data().history(peer)->addNewLocalMessage({
-			.id = messageId,
-			.flags = MessageFlag::Outgoing,
-			.from = session->userPeerId(),
-			.date = base::unixtime::now(),
-		}, document, TextWithEntities{ u"本地音乐播放样本"_q });
+		const auto item = session->data().addNewMessage(
+			simulationMediaMessage(peer, session->userPeerId(), messageId, u"本地播放样本"_q,
+				MTP_messageMediaDocument(MTP_flags(MTPDmessageMediaDocument::Flag::f_document),
+					mtp, MTPVector<MTPDocument>(), MTPPhoto(), MTPint(), MTPint())),
+			MessageFlags(), NewMessageType::Existing);
+		Expects(item != nullptr);
 		auto &media = *session->lifetime().make_state<std::shared_ptr<Data::DocumentMedia>>(
 			document->createMediaView());
 		auto thumbnail = QImage(90, 90, QImage::Format_RGB32);
@@ -143,6 +158,17 @@ Result simulateMusic(const QStringList &args) {
 			Ensures(document->cancelled());
 		}
 		MusicState->last = id;
+		auto ids = std::vector<MsgId>();
+		for (const auto &[entryId, existing] : MusicState->entries) {
+			const auto media = session->data().document(entryId);
+			if (existing.message.peer == peer->id && media->isAudioFile() == document->isAudioFile()) {
+				ids.push_back(existing.message.msg);
+			}
+		}
+		const auto count = int(ids.size());
+		session->storage().add(Storage::SharedMediaAddSlice(peer->id, MsgId(), PeerId(),
+			document->isAudioFile() ? Storage::SharedMediaType::MusicFile : Storage::SharedMediaType::RoundVoiceFile,
+			std::move(ids), { 0, ServerMaxMsgId }, count));
 		Media::Player::instance()->play(AudioMsgId(document, item->fullId()));
 	}
 	if (!MusicState->last) {

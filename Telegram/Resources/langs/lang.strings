@@ -9487,6 +9487,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SearchInChatList" = "Results list";
 
 "extras_MusicExpand" = "Expand player";
+"extras_MusicMinimize" = "Minimize to floating icon";
 "extras_MusicCollapse" = "Collapse";
 "extras_MusicSaveCover" = "Save cover";
 "extras_MusicSaveFailed" = "Could not save the cover. Please choose another location.";

@@ -127,3 +127,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.enter
 播放、暂停、切换和停止使用 `player.control`；跳转、倍速、收起和关闭仍通过播放器控件操作。`player.state` 中的 `type` 与 `video` 可核对当前类型。
 
 `app.start`、`app.ensure`、`app.restart` 支持 `--background`，新启动时进入托盘，不主动显示窗口。已有实例保持原状；这不改变单实例规则，也不会操作系统鼠标。
+
+音乐播放器使用独立顶层窗口 `music.window`。点击 `music.floating` 展开迷你条，`music.expand` 或迷你封面展开完整面板，`music.collapse` 收回迷你条，`music.close` 收回图标且保留播放。
+`control.window music.window` 选择播放器后可操作控件与截图；主窗口失焦不收起播放器。`music.playlist` 展开内置列表，曲目标识为 `music.track.<下标>`。
+`music.download` 保存当前曲目，完整面板的封面可保存原图。`player.state` 还返回倍速、音量、顺序、上下首可用性和已加载播放列表；列表不代表整个会话的全部音乐。
