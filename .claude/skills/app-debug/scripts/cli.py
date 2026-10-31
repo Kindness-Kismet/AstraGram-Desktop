@@ -42,6 +42,7 @@ BACKGROUND_START = False
 OFFLINE_START = None
 
 GENERIC_COMMANDS = {
+    "anim.sample-media-progress": "采样正式下载控件从零到完成的连续帧：<新建 PNG 绝对路径>；不修改账号和缓存",
     "anim.check-image-transition": "异步检查图片渐变中途重建的连续性，不改消息或设置",
     "control.wheel": "在应用内部投递滚轮事件：<目标> <角度增量> [pixel] [ctrl]",
     "simulation.profile": "注入并打开资料页八种本地场景：<music|combined|channel-only|long|warning|community|hidden|empty> [--side|--stories|--keep]",

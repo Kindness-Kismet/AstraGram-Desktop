@@ -2,8 +2,11 @@
 #include "extras/debug/commands/commands_internal.h"
 
 #include "ui/effects/animation_value.h"
+#include "ui/controls/media_button.h"
 #include "extras/ui/components/image_transition.h"
 
+#include <QtCore/QDir>
+#include <QtCore/QFileInfo>
 #include <QtCore/QTimer>
 #include <QtGui/QPainter>
 #include <QtWidgets/QWidget>
@@ -76,6 +79,73 @@ using json = nlohmann::json;
 	return jobStarted(id);
 }
 
+// 直接采样正式进度控件的瞬间完成，不改账号下载或文件缓存。
+[[nodiscard]] Result sampleMediaProgress(const QStringList &args) {
+	if (args.size() != 1) {
+		return Result::Err(u"usage: anim.sample-media-progress <newPngPath>"_q);
+	}
+	const auto path = QFileInfo(args.front());
+	if (!path.isAbsolute() || path.exists() || !path.dir().exists()) {
+		return Result::Err(u"destination must be a new absolute path in an existing directory"_q);
+	}
+	if (anim::Disabled() || anim::DurationMultiplier() != 1.) {
+		return Result::Err(u"normal-speed enabled animations are required"_q);
+	}
+	const auto window = controlWindow();
+	if (!window) {
+		return Result::Err(u"no selected window"_q);
+	}
+	struct Probe final : QObject {
+		Probe(QWidget *parent, QString destination)
+		: QObject(parent)
+		, path(std::move(destination))
+		, animation([=](crl::time now) {
+			animation.update(1., true, now, true);
+		}) {
+			sheet.fill(Qt::white);
+		}
+		~Probe() {
+			finishJob(id, false, "sampling ended before completion");
+		}
+		void capture(int index) {
+			auto painter = QPainter(&sheet);
+			const auto x = index * 100;
+			animation.paint(painter, QRectF(x + 20, 10, 60, 60),
+				Ui::MediaButtonPalette(QColor(55, 125, 75), Qt::white), false);
+			painter.setPen(Qt::black);
+			painter.drawText(QRect(x, 80, 100, 30), Qt::AlignCenter,
+				QString::number(crl::now() - started) + u" ms"_q);
+		}
+		const uint64 id = beginJob("media-progress-sample");
+		const crl::time started = crl::now();
+		const QString path;
+		QImage sheet = QImage(900, 115, QImage::Format_ARGB32_Premultiplied);
+		Ui::MediaProgressAnimation animation;
+		int captured = 1;
+	};
+	const auto probe = new Probe(window, path.absoluteFilePath());
+	probe->animation.start(0.);
+	probe->capture(0);
+	probe->animation.update(1., true, crl::now(), true);
+	const auto times = std::array{ 80, 160, 240, 400, 520, 720, 1000, 1400 };
+	for (auto i = 0; i != times.size(); ++i) {
+		QTimer::singleShot(times[i], Qt::PreciseTimer, probe, [=] {
+			probe->capture(i + 1);
+			if (++probe->captured != times.size() + 1) {
+				return;
+			}
+			const auto saved = probe->sheet.save(probe->path, "PNG");
+			finishJob(probe->id, saved, json{
+				{ "path", probe->path.toStdString() },
+				{ "frames", 9 },
+				{ "elapsedMs", crl::now() - probe->started },
+			});
+			probe->deleteLater();
+		});
+	}
+	return jobStarted(probe->id);
+}
+
 // 下限避免界面长时间停在动画中途，上限避免过渡短到只剩一两帧。
 constexpr auto kMinSpeed = 0.01;
 constexpr auto kMaxSpeed = 10.;
@@ -114,6 +184,7 @@ constexpr auto kMaxSpeed = 10.;
 const HandlerMap &animHandlers() {
 	static const auto result = HandlerMap{
 		{ u"anim.check-image-transition"_q, &checkImageTransition },
+		{ u"anim.sample-media-progress"_q, &sampleMediaProgress },
 		{ u"anim.speed"_q, &animSpeed },
 	};
 	return result;

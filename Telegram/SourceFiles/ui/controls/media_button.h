@@ -92,8 +92,7 @@ private:
 	float64 _target = 0.;
 	crl::time _changedAt = 0;
 	crl::time _completedAt = 0;
-	crl::time _numberAt = 0;
-	int _percent = 0;
+	crl::time _progressDuration = 0;
 	float64 _durationMultiplier = 1.;
 };
 

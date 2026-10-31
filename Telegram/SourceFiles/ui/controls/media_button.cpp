@@ -13,7 +13,7 @@ namespace Ui {
 namespace {
 
 constexpr auto kProgressDuration = crl::time(160);
-constexpr auto kNumberInterval = crl::time(240);
+constexpr auto kProgressJumpDuration = crl::time(480);
 constexpr auto kCompleteNumberHold = crl::time(350);
 constexpr auto kCheckDuration = crl::time(220);
 constexpr auto kCompleteHold = crl::time(800);
@@ -218,9 +218,9 @@ QRect MediaButtonPaintRect(QRect inner) {
 void MediaProgressAnimation::start(float64 progress) {
 	_durationMultiplier = anim::DurationMultiplier();
 	_from = _target = std::clamp(progress, 0., 1.);
-	_changedAt = _numberAt = crl::now();
+	_changedAt = crl::now();
 	_completedAt = 0;
-	_percent = DisplayPercent(_target);
+	_progressDuration = kProgressDuration;
 	_radial.start(_target);
 }
 
@@ -228,7 +228,7 @@ float64 MediaProgressAnimation::progressAt(crl::time now) const {
 	const auto ratio = anim::Disabled()
 		? 1.
 		: std::clamp((now - _changedAt)
-			/ (kProgressDuration * _durationMultiplier), 0., 1.);
+			/ (_progressDuration * _durationMultiplier), 0., 1.);
 	return _from + (_target - _from) * anim::easeOutCubic(1., ratio);
 }
 
@@ -243,18 +243,15 @@ bool MediaProgressAnimation::update(
 		_from = progress < _target ? progress : progressAt(now);
 		_target = progress;
 		_changedAt = now;
+		_progressDuration = kProgressDuration + crl::time(
+			(kProgressJumpDuration - kProgressDuration) * (_target - _from));
 	}
 	if (!finished) {
 		_completedAt = 0;
 	} else if (loaded && !_completedAt) {
-		_completedAt = now;
-	}
-	const auto percent = DisplayPercent(progress);
-	if ((percent != _percent)
-		&& (anim::Disabled() || percent == 0 || percent == 100
-			|| now - _numberAt >= kNumberInterval)) {
-		_percent = percent;
-		_numberAt = now;
+		// 等填充和数字一起到达 100%，再开始完成提示，不延迟文件可用状态。
+		_completedAt = anim::Disabled() ? now : std::max(now,
+			_changedAt + crl::time(_progressDuration * _durationMultiplier));
 	}
 	const auto hold = _completedAt
 		&& !anim::Disabled()
@@ -321,7 +318,7 @@ void MediaProgressAnimation::paint(
 		font.setPixelSize(int(std::round(13. * scale)));
 		p.setFont(font);
 		p.setPen(colors.foreground);
-		const auto number = QString::number(_percent);
+		const auto number = QString::number(DisplayPercent(progressAt(crl::now())));
 		const auto metrics = QFontMetricsF(font);
 		const auto numberWidth = metrics.horizontalAdvance(number);
 		auto small = font;
