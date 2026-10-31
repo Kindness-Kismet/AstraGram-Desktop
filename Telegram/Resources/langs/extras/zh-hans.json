@@ -761,7 +761,7 @@
   "MusicExpand": "展开播放器",
   "MusicMinimize": "收起为悬浮图标",
   "MusicCollapse": "收起",
-  "MusicSaveCover": "保存封面",
+  "MusicSaveCover": "下载封面",
   "MusicSaveFailed": "封面保存失败，请换个位置重试。",
   "MusicProgress": "播放进度",
   "MusicRepeatOff": "关闭循环",

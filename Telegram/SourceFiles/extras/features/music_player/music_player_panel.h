@@ -10,6 +10,7 @@ class LinkButton;
 class MediaSlider;
 class ScrollArea;
 class BoxShadow;
+class PopupMenu;
 } // namespace Ui
 
 namespace Media::Player { struct TrackState; }
@@ -23,6 +24,7 @@ class PlayerButton;
 class PlayerQueue;
 class PlayerProgress;
 class Waveform;
+class CoverButton;
 
 class CompactPanel final : public Ui::RpWidget {
 public:
@@ -41,6 +43,7 @@ protected:
 	void mouseMoveEvent(QMouseEvent *event) override;
 	void mouseReleaseEvent(QMouseEvent *event) override;
 	void keyPressEvent(QKeyEvent *event) override;
+	void contextMenuEvent(QContextMenuEvent *event) override;
 
 private:
 	void refreshTrack();
@@ -49,17 +52,19 @@ private:
 	void refreshOrder();
 	void refreshSpeed();
 	void refreshPlaylist();
+	void refreshCover();
 	void seek(float64 progress, bool finished);
 	void cancelSeek(bool resume);
 	void showSource();
 	void saveCover();
-	void download();
 	void setExpanded(bool expanded);
 	void togglePlaylist();
 	void updateSize();
 	void constrainToScreen();
 	[[nodiscard]] QRect cardRect() const;
 	[[nodiscard]] QRect coverRect() const;
+	[[nodiscard]] int fullHeight() const;
+	[[nodiscard]] int playlistHeight() const;
 
 	const not_null<Window::SessionController*> _controller;
 	AudioMsgId::Type _type;
@@ -80,9 +85,11 @@ private:
 	bool _positioned = false;
 	QPoint _dragOffset;
 	int _queueHeight = 0;
+	int _coverSide = 0;
 	Ui::Animations::Simple _queueAnimation;
 
 	object_ptr<PlayerButton> _save;
+	object_ptr<CoverButton> _coverButton;
 	object_ptr<PlayerButton> _collapse;
 	object_ptr<PlayerButton> _close;
 	object_ptr<PlayerButton> _expand;
@@ -102,6 +109,7 @@ private:
 	Waveform *_wave = nullptr;
 	std::unique_ptr<Media::View::PlaybackProgress> _playback;
 	std::unique_ptr<Ui::BoxShadow> _shadow;
+	std::unique_ptr<Ui::PopupMenu> _coverMenu;
 	rpl::event_stream<> _collapseRequests;
 };
 

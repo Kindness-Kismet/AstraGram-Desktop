@@ -1,6 +1,7 @@
 #include "extras/features/music_player/music_player_queue.h"
 
 #include "extras/features/music_player/music_player_widgets.h"
+#include "extras/ui/utils/extras_tooltip.h"
 #include "data/data_document.h"
 #include "data/data_document_media.h"
 #include "data/data_file_origin.h"
@@ -9,6 +10,7 @@
 #include "media/audio/media_audio.h"
 #include "media/player/media_player_instance.h"
 #include "styles/style_extras_styles.h"
+#include "styles/style_chat.h"
 #include "ui/image/image.h"
 #include "ui/painter.h"
 #include "ui/text/format_values.h"
@@ -38,7 +40,7 @@ public:
 		) | rpl::on_next([=] { update(); }, lifetime());
 		setObjectName(u"music.track."_q + QString::number(index));
 		setAccessibleName(_title + u" · "_q + _artist);
-		setToolTip(_title + u"\n"_q + _artist);
+		ExtrasUi::installTooltip(this, [=] { return _title + u"\n"_q + _artist; }, st::topBarTooltip);
 		setFocusPolicy(Qt::StrongFocus);
 		setIsListItem(true);
 		_wave->setGeometry(style::ConvertScale(10), style::ConvertScale(19),
@@ -74,7 +76,8 @@ protected:
 				QString::number(_index + 1).rightJustified(2, '0'));
 		}
 		const auto image = _media->thumbnail();
-		paintCover(p, QRect(s(40), s(11), s(32), s(32)), image ? image->original() : QImage());
+		_cover.paint(p, QRect(s(40), s(11), s(32), s(32)),
+			image ? image->original() : QImage(), false, false, 6);
 		const auto available = width() - s(146);
 		p.setPen(_current ? accentColor() : st::windowFg->c);
 		p.setFont(st::extrasMusicQueueTitle);
@@ -94,6 +97,7 @@ private:
 	QString _artist;
 	QString _duration;
 	bool _current = false;
+	CoverPainter _cover;
 };
 
 PlayerQueue::PlayerQueue(QWidget *parent) : RpWidget(parent) {

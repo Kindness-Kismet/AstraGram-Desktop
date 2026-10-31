@@ -2,6 +2,7 @@
 
 #include "extras/features/music_player/music_player_panel.h"
 #include "extras/features/music_player/music_player_widgets.h"
+#include "extras/ui/utils/extras_tooltip.h"
 #include "crl/crl_on_main.h"
 #include "core/application.h"
 #include "data/data_document.h"
@@ -12,9 +13,9 @@
 #include "media/audio/media_audio.h"
 #include "media/player/media_player_instance.h"
 #include "styles/style_extras_styles.h"
+#include "styles/style_chat.h"
 #include "ui/painter.h"
 #include "ui/widgets/shadow.h"
-#include "ui/widgets/tooltip.h"
 #include "window/window_session_controller.h"
 
 #include <QtCore/QCoreApplication>
@@ -26,7 +27,7 @@ constexpr auto kSong = AudioMsgId::Type::Song;
 
 } // namespace
 
-class FloatingButton final : public Ui::AbstractButton, public Ui::AbstractTooltipShower {
+class FloatingButton final : public Ui::AbstractButton {
 public:
 	explicit FloatingButton(QWidget *parent)
 	: AbstractButton(parent)
@@ -41,6 +42,10 @@ public:
 		setObjectName(u"music.floating"_q);
 		setAccessibleName(tr::extras_MusicExpand(tr::now));
 		setFocusPolicy(Qt::StrongFocus);
+		ExtrasUi::installTooltip(this, [=] {
+			return _title + u"\n"_q + (_playing
+				? tr::extras_MusicPlaying(tr::now) : tr::extras_MusicPaused(tr::now));
+		}, st::topBarTooltip);
 	}
 
 	void setTrack(QString title, bool playing) {
@@ -50,26 +55,7 @@ public:
 		update();
 	}
 
-	QString tooltipText() const override {
-		return _title + u"\n"_q + (_playing
-			? tr::extras_MusicPlaying(tr::now) : tr::extras_MusicPaused(tr::now));
-	}
-	QPoint tooltipPos() const override { return mapToGlobal(rect().center()); }
-	bool tooltipWindowActive() const override { return window()->isActiveWindow(); }
-
 protected:
-	void hideEvent(QHideEvent *event) override {
-		Ui::Tooltip::Hide();
-		AbstractButton::hideEvent(event);
-	}
-	void enterEventHook(QEnterEvent *event) override {
-		AbstractButton::enterEventHook(event);
-		Ui::Tooltip::Show(700, this);
-	}
-	void leaveEventHook(QEvent *event) override {
-		Ui::Tooltip::Hide();
-		AbstractButton::leaveEventHook(event);
-	}
 	void paintEvent(QPaintEvent *event) override {
 		auto p = Painter(this);
 		auto hq = PainterHighQualityEnabler(p);

@@ -4,6 +4,8 @@
 #include "ui/abstract_button.h"
 #include "ui/widgets/continuous_sliders.h"
 
+#include <array>
+
 namespace Extras::MusicPlayer {
 
 [[nodiscard]] QColor accentColor();
@@ -60,9 +62,51 @@ protected:
 
 private:
 	bool _mini = false;
+	std::array<QImage, 4> _miniCorners;
 };
 
-void paintCover(QPainter &p, const QRect &rect, const QImage &image,
-	bool video = false, bool voice = false);
+class CoverPainter final {
+public:
+	void paint(QPainter &p, const QRect &rect, const QImage &image,
+		bool video = false, bool voice = false, int radius = 10,
+		double zoom = 1., bool dimmed = false, bool gradient = false);
+
+private:
+	QImage _cache;
+	qint64 _imageKey = 0;
+	QColor _background;
+	int _radius = 0;
+	double _zoom = 0.;
+	bool _video = false;
+	bool _voice = false;
+	bool _dimmed = false;
+	bool _gradient = false;
+};
+
+class CoverButton final : public Ui::AbstractButton {
+public:
+	explicit CoverButton(QWidget *parent);
+	void setImage(QImage image, bool video, bool voice);
+	void setPlayback(bool expanded, bool playing);
+	void setLabels(QString mode, QString format);
+
+protected:
+	void paintEvent(QPaintEvent *event) override;
+	void enterEventHook(QEnterEvent *event) override;
+	void leaveEventHook(QEvent *event) override;
+
+private:
+	void animate();
+	CoverPainter _painter;
+	QImage _image;
+	QString _mode;
+	QString _format;
+	Ui::Animations::Simple _animation;
+	double _zoom = 1.;
+	bool _video = false;
+	bool _voice = false;
+	bool _expanded = false;
+	bool _playing = false;
+};
 
 } // namespace Extras::MusicPlayer

@@ -1,8 +1,11 @@
 #include "extras/features/music_player/music_player_widgets.h"
+#include "extras/ui/utils/extras_tooltip.h"
 
 #include "styles/style_extras_styles.h"
+#include "styles/style_chat.h"
 #include "ui/painter.h"
 #include "ui/effects/animations.h"
+#include "ui/image/image_prepare.h"
 
 #include <QtGui/QPainterPath>
 #include <array>
@@ -27,6 +30,7 @@ PlayerButton::PlayerButton(QWidget *parent, PlayerIcon icon,
 , _icon(icon) {
 	setObjectName(name);
 	setLabel(label);
+	ExtrasUi::installTooltip(this, [=] { return accessibleName(); }, st::topBarTooltip);
 	setFocusPolicy(Qt::StrongFocus);
 	resize(style::ConvertScale(30), style::ConvertScale(30));
 }
@@ -53,7 +57,6 @@ void PlayerButton::setPrimary(bool primary) {
 
 void PlayerButton::setLabel(const QString &label) {
 	setAccessibleName(label);
-	setToolTip(label);
 }
 
 void PlayerButton::paintEvent(QPaintEvent *event) {
@@ -62,7 +65,7 @@ void PlayerButton::paintEvent(QPaintEvent *event) {
 	if (isDisabled()) {
 		p.setOpacity(0.35);
 	}
-	p.translate(rect().center() + QPointF(0.5, 0.5));
+	p.translate(QRectF(rect()).center());
 	if (isDown()) {
 		p.scale(0.95, 0.95);
 	}
@@ -79,12 +82,20 @@ void PlayerButton::paintEvent(QPaintEvent *event) {
 		: (_active || isOver() || _icon == PlayerIcon::Previous || _icon == PlayerIcon::Next)
 		? accentColor() : st::windowSubTextFg->c;
 	p.setPen(foreground);
-	if (!_text.isEmpty()) {
+	if (!_text.isEmpty() && _icon == PlayerIcon::None) {
 		p.setFont(st::extrasMusicCompactSmall);
 		p.drawText(bounds, Qt::AlignCenter, _text);
 		return;
 	}
-	const auto side = style::ConvertScale(_primary ? 24 : 19);
+	if (!_text.isEmpty()) {
+		p.setFont(st::extrasMusicCompactSmall);
+		p.drawText(bounds.adjusted(width() / 2., 0, -style::ConvertScale(5), 0),
+			Qt::AlignCenter, _text);
+		p.translate(-style::ConvertScale(10), 0);
+	}
+	const auto side = _primary
+		? style::ConvertScale(height() >= style::ConvertScale(56) ? 28 : 16)
+		: style::ConvertScale(19);
 	p.scale(side / 24., side / 24.);
 	p.translate(-12, -12);
 	p.setPen(QPen(foreground, 1.9, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
@@ -231,12 +242,16 @@ void PlayerProgress::paintEvent(QPaintEvent *event) {
 		MediaSlider::paintEvent(event);
 		return;
 	}
-	auto p = QPainter(this);
+	const auto ratio = style::DevicePixelRatio();
+	const auto radius = style::ConvertScale(10);
+	if (_miniCorners[0].width() != radius * ratio) {
+		_miniCorners = Images::CornersMask(radius);
+	}
+	auto buffer = QImage(size() * ratio, QImage::Format_ARGB32_Premultiplied);
+	buffer.setDevicePixelRatio(ratio);
+	buffer.fill(Qt::transparent);
+	auto p = QPainter(&buffer);
 	p.setRenderHint(QPainter::Antialiasing);
-	auto clip = QPainterPath();
-	clip.addRoundedRect(QRectF(0, height() - style::ConvertScale(66),
-		width(), style::ConvertScale(66)), style::ConvertScale(10), style::ConvertScale(10));
-	p.setClipPath(clip);
 	const auto over = getCurrentOverFactor();
 	const auto thickness = style::ConvertScale(5) + style::ConvertScale(2) * over;
 	const auto track = QRectF(0, height() - thickness, width(), thickness);
@@ -250,25 +265,129 @@ void PlayerProgress::paintEvent(QPaintEvent *event) {
 		const auto radius = style::ConvertScale(5);
 		p.drawEllipse(QPointF(progress, track.center().y()), radius, radius);
 	}
+	p.end();
+	buffer = Images::Round(std::move(buffer), _miniCorners,
+		RectPart::BottomLeft | RectPart::BottomRight);
+	QPainter(this).drawImage(QPoint(), buffer);
 }
 
-void paintCover(QPainter &p, const QRect &rect, const QImage &image,
-		bool video, bool voice) {
-	p.save();
-	auto clip = QPainterPath();
-	clip.addRoundedRect(rect, style::ConvertScale(10), style::ConvertScale(10));
-	p.setClipPath(clip);
-	p.fillRect(rect, softColor());
-	if (image.isNull()) {
-		(video ? st::extrasMediaVideo : voice ? st::extrasMediaVoice
-			: st::extrasMusicPlaceholder).paintInCenter(p, rect);
-	} else {
-		const auto fitted = image.size().scaled(rect.size(), Qt::KeepAspectRatioByExpanding);
-		p.setRenderHint(QPainter::SmoothPixmapTransform);
-		p.drawImage(QRect(rect.center() - QPoint(fitted.width() / 2,
-			fitted.height() / 2), fitted), image);
+void CoverPainter::paint(QPainter &p, const QRect &rect, const QImage &image,
+		bool video, bool voice, int radius, double zoom, bool dimmed, bool gradient) {
+	const auto ratio = style::DevicePixelRatio();
+	const auto size = rect.size() * ratio;
+	const auto background = st::windowBgOver->c;
+	if (_cache.size() != size || _cache.devicePixelRatio() != ratio
+		|| _imageKey != image.cacheKey() || _background != background
+		|| _radius != radius || _zoom != zoom || _video != video || _voice != voice
+		|| _dimmed != dimmed || _gradient != gradient) {
+		_imageKey = image.cacheKey();
+		_background = background;
+		_radius = radius;
+		_zoom = zoom;
+		_video = video;
+		_voice = voice;
+		_dimmed = dimmed;
+		_gradient = gradient;
+		_cache = QImage(size, QImage::Format_ARGB32_Premultiplied);
+		_cache.setDevicePixelRatio(ratio);
+		_cache.fill(background);
+		{
+			auto painter = QPainter(&_cache);
+			auto hq = PainterHighQualityEnabler(painter);
+			const auto bounds = QRect(QPoint(), rect.size());
+			if (image.isNull()) {
+				(video ? st::extrasMediaVideo : voice ? st::extrasMediaVoice
+					: st::extrasMusicPlaceholder).paintInCenter(painter, bounds);
+			} else {
+				const auto fitted = QSizeF(image.size()).scaled(QSizeF(rect.size()),
+					Qt::KeepAspectRatioByExpanding) * zoom;
+				painter.setOpacity(dimmed ? 0.9 : 1.);
+				painter.drawImage(QRectF(QRectF(bounds).center()
+					- QPointF(fitted.width() / 2., fitted.height() / 2.), fitted), image);
+				painter.setOpacity(1.);
+			}
+			if (gradient) {
+				auto shade = QLinearGradient(0, 0, 0, rect.height());
+				shade.setColorAt(0.45, Qt::transparent);
+				shade.setColorAt(1., QColor(15, 23, 42, 72));
+				painter.fillRect(bounds, shade);
+			}
+		}
+		// 复用图片库的透明遮罩，让缩略图和大封面都保留平滑边缘。
+		const auto masks = Images::CornersMask(style::ConvertScale(radius));
+		_cache = Images::Round(std::move(_cache), masks);
 	}
-	p.restore();
+	p.drawImage(rect.topLeft(), _cache);
+}
+
+CoverButton::CoverButton(QWidget *parent) : AbstractButton(parent) {
+	setObjectName(u"music.cover"_q);
+	setFocusPolicy(Qt::StrongFocus);
+	ExtrasUi::installTooltip(this, [=] { return accessibleName(); }, st::topBarTooltip);
+}
+
+void CoverButton::setImage(QImage image, bool video, bool voice) {
+	_image = std::move(image);
+	_video = video;
+	_voice = voice;
+	update();
+}
+
+void CoverButton::setPlayback(bool expanded, bool playing) {
+	if (_expanded == expanded && _playing == playing) { return; }
+	_expanded = expanded;
+	_playing = playing;
+	animate();
+}
+
+void CoverButton::setLabels(QString mode, QString format) {
+	_mode = std::move(mode);
+	_format = std::move(format);
+	update();
+}
+
+void CoverButton::animate() {
+	// 始终铺满圆角区域，暂停缩回原尺寸，避免露出图片内沿的直角。
+	const auto to = _expanded ? (isOver() ? 1.06 : _playing ? 1.03 : 1.)
+		: isOver() ? 1.05 : 1.;
+	const auto from = _animation.value(_zoom);
+	_zoom = to;
+	_animation.start([=] { update(); }, from, to,
+		anim::Disabled() ? 0 : 700, anim::sineInOut);
+}
+
+void CoverButton::paintEvent(QPaintEvent *event) {
+	auto p = Painter(this);
+	auto hq = PainterHighQualityEnabler(p);
+	_painter.paint(p, rect(), _image, _video, _voice, 10,
+		_animation.value(_zoom), _expanded && !_playing, _expanded);
+	if (!_expanded) { return; }
+	p.setFont(st::extrasMusicCompactSmall);
+	const auto badge = [&](const QString &text, bool right) {
+		if (text.isEmpty()) { return; }
+		const auto w = st::extrasMusicCompactSmall->width(text) + style::ConvertScale(16);
+		const auto h = style::ConvertScale(22);
+		const auto margin = style::ConvertScale(12);
+		const auto bounds = QRect(right ? width() - w - margin : margin,
+			height() - h - margin, w, h);
+		p.setPen(Qt::NoPen);
+		p.setBrush(right ? accentColor() : QColor(0, 0, 0, 102));
+		p.drawRoundedRect(bounds, style::ConvertScale(6), style::ConvertScale(6));
+		p.setPen(Qt::white);
+		p.drawText(bounds, Qt::AlignCenter, text);
+	};
+	badge(_mode, false);
+	badge(_format, true);
+}
+
+void CoverButton::enterEventHook(QEnterEvent *event) {
+	AbstractButton::enterEventHook(event);
+	animate();
+}
+
+void CoverButton::leaveEventHook(QEvent *event) {
+	AbstractButton::leaveEventHook(event);
+	animate();
 }
 
 } // namespace Extras::MusicPlayer

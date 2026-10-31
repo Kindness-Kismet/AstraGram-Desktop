@@ -16,9 +16,9 @@ extrasEmptyIcon: icon {};
 extrasMusicFloatingSize: 44px;
 extrasMusicFloatingMargin: 16px;
 extrasMusicFloatingGap: 12px;
-extrasMusicCompactTitle: font(19px semibold);
+extrasMusicCompactTitle: font(20px semibold);
 extrasMusicMiniTitle: font(13px semibold);
-extrasMusicArtist: font(13px);
+extrasMusicArtist: font(13px semibold);
 extrasMusicQueueTitle: font(12px semibold);
 extrasMusicCompactSmall: font(11px);
 extrasMusicCompactSource: LinkButton(defaultLinkButton) {
@@ -34,7 +34,7 @@ extrasMusicProgress: MediaSlider(defaultContinuousSlider) {
 	inactiveFgOver: windowBgOver;
 	activeFgDisabled: windowBgOver;
 	receivedTillFg: windowBgOver;
-	width: 6px;
+	width: 8px;
 	seekSize: size(10px, 10px);
 }
 
