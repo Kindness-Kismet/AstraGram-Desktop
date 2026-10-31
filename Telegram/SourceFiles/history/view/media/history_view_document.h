@@ -13,10 +13,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 struct HistoryDocumentNamed;
 struct HistoryDocumentThumbed;
 
-namespace Layout {
-struct DocumentGenericPreview;
-} // namespace Layout
-
 namespace style {
 struct HistoryFileLayout;
 } // namespace style
@@ -170,7 +166,7 @@ private:
 		LayoutMode mode) const;
 
 	not_null<DocumentData*> _data;
-	const std::unique_ptr<::Layout::DocumentGenericPreview> _filePreview;
+	const bool _genericFile;
 	mutable std::shared_ptr<Data::DocumentMedia> _dataMedia;
 	mutable QImage _iconCache;
 	mutable qint64 _thumbnailSourceKey = 0;
