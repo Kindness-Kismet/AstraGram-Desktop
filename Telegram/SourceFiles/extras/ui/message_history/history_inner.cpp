@@ -1,4 +1,7 @@
 #include "extras/ui/message_history/history_inner.h"
+#include "extras/ui/context_menu/downloaded_file_menu.h"
+#include "ui/widgets/menu/menu_add_action_callback.h"
+#include "ui/widgets/menu/menu_add_action_callback_factory.h"
 
 #include "apiwrap.h"
 #include "mainwidget.h"
@@ -1251,6 +1254,8 @@ void InnerWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					}
 				}
 				if (!lnkDocument->filepath(true).isEmpty()) {
+					ExtrasUi::addDeleteDownloadedFileAction(
+						Ui::Menu::CreateAddActionCallback(_menu), _controller, lnkDocument);
 					_menu->addAction(Platform::IsMac()
 										 ? tr::lng_context_show_in_finder(tr::now)
 										 : tr::lng_context_show_in_folder(tr::now),

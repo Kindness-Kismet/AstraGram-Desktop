@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "media/view/media_view_overlay_widget.h"
+#include "extras/ui/context_menu/downloaded_file_menu.h"
 
 #include "extras/features/video_cover/video_cover.h"
 
@@ -2771,6 +2772,11 @@ void OverlayWidget::fillContextMenuActions(
 			text,
 			[=] { showInFolder(); },
 			&st::menuIconShowInFolder);
+	}
+	if (_document) {
+		if (const auto controller = findWindow()) {
+			ExtrasUi::addDeleteDownloadedFileAction(addAction, controller, _document);
+		}
 	}
 	const auto hasRecognitionSelection = _recognition.hasSelection();
 	if (hasRecognitionSelection) {

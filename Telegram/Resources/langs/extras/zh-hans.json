@@ -862,6 +862,8 @@
   "SimulationCountdown": "消息在 15 秒后删除",
   "SimulationUpdateReady": "更新已就绪",
   "ContextVideoCover": "查看视频封面",
+  "DeleteDownloadedFile": "删除已下载文件",
+  "DeleteDownloadedFileFailed": "无法将文件移入回收站，文件可能正在使用或已不存在。",
   "CacheImages": "图片",
   "CacheStickers": "贴纸与表情",
   "CacheDocuments": "文档",

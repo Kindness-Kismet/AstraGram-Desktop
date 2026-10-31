@@ -1,6 +1,7 @@
 #ifdef _DEBUG
 #include "extras/debug/commands/commands_internal.h"
 #include "extras/debug/debug_login.h"
+#include "extras/features/downloaded_file/downloaded_file.h"
 
 #include "base/timer.h"
 #include "base/random.h"
@@ -62,6 +63,7 @@ Json downloadInfo(not_null<HistoryItem*> item, const QString &path) {
 		{ "filename", document ? document->filename().toStdString() : "" },
 		{ "path", path.toStdString() },
 		{ "size", document ? document->size : 0 },
+		{ "canDelete", document && !ExtrasDownloadedFile::location(document, path).isEmpty() },
 	};
 }
 
@@ -237,6 +239,29 @@ Result cancelDownload(const QStringList &args) {
 	return Result::Ok();
 }
 
+Result deleteDownload(const QStringList &args) {
+	if (args.size() != 2) {
+		return Result::Err(u"usage: downloads.delete <peerId> <messageId>"_q);
+	}
+	const auto item = findMessage(args[0], args[1]);
+	const auto document = item && item->media() ? item->media()->document() : nullptr;
+	if (!document) {
+		return Result::Err(u"message has no document"_q);
+	}
+	const auto file = ExtrasDownloadedFile::location(document);
+	if (file.isEmpty()) {
+		return Result::Err(u"document has no completed local file"_q);
+	}
+	const auto id = beginJob("delete-download");
+	ExtrasDownloadedFile::remove(document, file, [=](bool success) {
+		finishJob(id, success, Json{
+			{ "path", file.name().toStdString() },
+			{ "removed", success },
+		});
+	});
+	return jobStarted(id);
+}
+
 Result simulationDownload(const QStringList &args) {
 	if (args.size() != 2) return Result::Err(u"usage: simulation.download <path> <loading|done>"_q);
 	const auto session = ActiveSession();
@@ -348,6 +373,7 @@ const HandlerMap &downloadHandlers() {
 		{ u"downloads.list"_q, &listDownloads },
 		{ u"downloads.start"_q, &startDownload },
 		{ u"downloads.cancel"_q, &cancelDownload },
+		{ u"downloads.delete"_q, &deleteDownload },
 		{ u"simulation.download"_q, &simulationDownload },
 		{ u"simulation.download-progress"_q, &progressDownload },
 		{ u"simulation.media-upload"_q, &simulationMediaUpload },

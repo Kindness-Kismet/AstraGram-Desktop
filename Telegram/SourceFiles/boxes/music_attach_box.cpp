@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/music_attach_box.h"
+#include "extras/ui/context_menu/downloaded_file_menu.h"
 
 #include "api/api_common.h"
 #include "api/api_sending.h"
@@ -1121,6 +1122,8 @@ void GlobalMusicSearchSection::showContextMenu(
 	} else {
 		const auto filepath = document->filepath(true);
 		if (!filepath.isEmpty()) {
+			ExtrasUi::addDeleteDownloadedFileAction(
+				Ui::Menu::CreateAddActionCallback(_contextMenu), _controller, document);
 			_contextMenu->addAction(
 				(Platform::IsMac()
 					? tr::lng_context_show_in_finder(tr::now)

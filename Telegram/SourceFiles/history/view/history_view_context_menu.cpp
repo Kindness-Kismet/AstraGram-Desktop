@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_context_menu.h"
+#include "extras/ui/context_menu/downloaded_file_menu.h"
 #include "extras/features/secret_chats/secret_chat_dialog.h"
 #include "extras/features/secret_chats/secret_chat_peer.h"
 
@@ -501,6 +502,8 @@ void AddDocumentActions(
 			isFaved ? &st::menuIconUnfave : &st::menuIconFave);
 	}
 	ExtrasUi::AddVideoCoverAction(menu, controller, item, document);
+	ExtrasUi::addDeleteDownloadedFileAction(
+		Ui::Menu::CreateAddActionCallback(menu), controller, document);
 	if (!document->filepath(true).isEmpty()) {
 		menu->addAction(
 			(Platform::IsMac()
