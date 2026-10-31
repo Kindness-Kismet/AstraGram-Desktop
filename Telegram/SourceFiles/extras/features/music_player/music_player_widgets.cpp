@@ -125,6 +125,9 @@ void PlayerButton::paintEvent(QPaintEvent *event) {
 	case PlayerIcon::Collapse:
 		path.moveTo(5, 9); path.lineTo(12, 16); path.lineTo(19, 9);
 		break;
+	case PlayerIcon::Minimize:
+		line(5, 17, 19, 17);
+		break;
 	case PlayerIcon::Cancel:
 	case PlayerIcon::Close:
 		line(6, 6, 18, 18); line(18, 6, 6, 18);

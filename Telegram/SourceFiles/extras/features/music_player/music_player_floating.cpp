@@ -41,7 +41,8 @@ public:
 			margins.top() + (side - waveSize) / 2, waveSize, waveSize);
 		setObjectName(u"music.floating"_q);
 		setAccessibleName(tr::extras_MusicExpand(tr::now));
-		setFocusPolicy(Qt::StrongFocus);
+		// 鼠标点击不保留焦点底色，键盘仍可用 Tab 聚焦入口。
+		setFocusPolicy(Qt::TabFocus);
 		ExtrasUi::installTooltip(this, [=] {
 			return _title + u"\n"_q + (_playing
 				? tr::extras_MusicPlaying(tr::now) : tr::extras_MusicPaused(tr::now));

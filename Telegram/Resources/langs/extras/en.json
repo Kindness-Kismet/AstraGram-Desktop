@@ -612,7 +612,7 @@
   "MusicPlay": "Play",
   "MusicPause": "Pause",
   "MusicOrderDefault": "Forward order",
-  "MusicClose": "Stop and close",
+  "MusicClose": "Pause and close",
   "MusicPlaylist": "Playlist",
   "MusicSource": "Go to message",
   "MusicPlaying": "Now playing",

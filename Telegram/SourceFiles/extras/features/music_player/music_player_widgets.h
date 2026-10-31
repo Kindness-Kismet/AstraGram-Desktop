@@ -12,7 +12,7 @@ namespace Extras::MusicPlayer {
 [[nodiscard]] QColor softColor();
 
 enum class PlayerIcon {
-	None, Play, Pause, Cancel, Previous, Next, Expand, Collapse, Close,
+	None, Play, Pause, Cancel, Previous, Next, Expand, Collapse, Minimize, Close,
 	Download, Repeat, RepeatOne, Order, Reverse, Shuffle, Volume, Muted, Queue,
 };
 

@@ -9504,7 +9504,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_MusicPlay" = "Play";
 "extras_MusicPause" = "Pause";
 "extras_MusicOrderDefault" = "Forward order";
-"extras_MusicClose" = "Stop and close";
+"extras_MusicClose" = "Pause and close";
 "extras_MusicPlaylist" = "Playlist";
 "extras_MusicSource" = "Go to message";
 "extras_MusicPlaying" = "Now playing";

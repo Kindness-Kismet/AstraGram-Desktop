@@ -62,7 +62,8 @@ CompactPanel::CompactPanel(
 , _save(this, PlayerIcon::Download, u"music.download"_q, tr::extras_MusicSaveCover(tr::now))
 , _coverButton(this)
 , _collapse(this, PlayerIcon::Collapse, u"music.collapse"_q, tr::extras_MusicCollapse(tr::now))
-, _close(this, PlayerIcon::Close, u"music.close"_q, tr::extras_MusicMinimize(tr::now))
+, _minimize(this, PlayerIcon::Minimize, u"music.minimize"_q, tr::extras_MusicMinimize(tr::now))
+, _close(this, PlayerIcon::Close, u"music.close"_q, tr::extras_MusicClose(tr::now))
 , _expand(this, PlayerIcon::Expand, u"music.expand"_q, tr::extras_MusicExpand(tr::now))
 , _previous(this, PlayerIcon::Previous, u"music.previous"_q, tr::extras_MusicPrevious(tr::now))
 , _play(this, PlayerIcon::Play, u"music.play"_q, tr::extras_MusicPlay(tr::now))
@@ -113,7 +114,11 @@ CompactPanel::CompactPanel(
 		else { setExpanded(true); }
 	});
 	_collapse->setClickedCallback([=] { setExpanded(false); });
-	_close->setClickedCallback([=] { _collapseRequests.fire({}); });
+	_minimize->setClickedCallback([=] { _collapseRequests.fire({}); });
+	_close->setClickedCallback([=] {
+		instance()->pause(_type);
+		_collapseRequests.fire({});
+	});
 	_expand->setClickedCallback([=] { setExpanded(true); });
 	_previous->setClickedCallback([=] { instance()->previous(_type); });
 	_next->setClickedCallback([=] { instance()->next(_type); });
@@ -466,14 +471,16 @@ void CompactPanel::resizeEvent(QResizeEvent *event) {
 	_scroll->setVisible(_expanded && music && queueHeight > scaled(38));
 	_progress->setMini(!_expanded);
 	if (!_expanded) {
-		place(_previous, 202, 13, 30, 34); place(_play, 234, 12, 36, 36);
-		place(_next, 274, 13, 30, 34); place(_speed, 310, 16, 40, 28);
-		place(_repeat, 352, 16, 28, 28); place(_expand, 386, 16, 28, 28);
+		place(_previous, 170, 13, 30, 34); place(_play, 202, 12, 36, 36);
+		place(_next, 242, 13, 30, 34); place(_speed, 278, 16, 40, 28);
+		place(_repeat, 320, 16, 28, 28); place(_expand, 354, 16, 28, 28);
+		place(_minimize, 386, 16, 28, 28);
 		place(_close, 418, 16, 28, 28); place(_progress, 0, 56, 460, 10);
 		return;
 	}
 	place(_wave, 20, 22, 16, 16);
-	place(_save, 264, 16, 28, 28); place(_collapse, 296, 16, 28, 28); place(_close, 328, 16, 28, 28);
+	place(_save, 232, 16, 28, 28); place(_collapse, 264, 16, 28, 28);
+	place(_minimize, 296, 16, 28, 28); place(_close, 328, 16, 28, 28);
 	const auto belowCover = [&](QWidget *widget, int x, int y, int w, int h) {
 		widget->setGeometry(QRect(top + QPoint(scaled(x), _coverSide + scaled(y)), QSize(scaled(w), scaled(h))));
 	};
@@ -502,13 +509,13 @@ void CompactPanel::paintEvent(QPaintEvent *event) {
 	p.translate(card.topLeft());
 	if (!_expanded) {
 		p.setPen(st::windowFg); p.setFont(st::extrasMusicMiniTitle);
-		p.drawTextLeft(scaled(70), scaled(10), card.width(), st::extrasMusicMiniTitle->elided(_title, scaled(124)));
+		p.drawTextLeft(scaled(70), scaled(10), card.width(), st::extrasMusicMiniTitle->elided(_title, scaled(96)));
 		p.setPen(st::windowSubTextFg); p.setFont(st::extrasMusicCompactSmall);
 		const auto time = _elapsed + u" / "_q + _duration;
-		const auto remaining = scaled(124) - st::extrasMusicCompactSmall->width(time + u" · "_q);
+		const auto remaining = scaled(96) - st::extrasMusicCompactSmall->width(time + u" · "_q);
 		const auto artist = st::extrasMusicCompactSmall->elided(_performer, std::max(0, remaining));
 		p.drawTextLeft(scaled(70), scaled(34), card.width(), artist.isEmpty() ? time : artist + u" · "_q + time);
-		p.fillRect(scaled(306), scaled(21), scaled(1), scaled(20), st::menuSeparatorFg);
+		p.fillRect(scaled(274), scaled(21), scaled(1), scaled(20), st::menuSeparatorFg);
 		return;
 	}
 	p.setPen(st::windowSubTextFg); p.setFont(st::extrasMusicCompactSmall);
@@ -547,6 +554,7 @@ void CompactPanel::paintEvent(QPaintEvent *event) {
 
 void CompactPanel::closeEvent(QCloseEvent *event) {
 	event->ignore();
+	instance()->pause(_type);
 	_collapseRequests.fire({});
 }
 

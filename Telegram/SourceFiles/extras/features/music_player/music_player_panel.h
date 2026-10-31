@@ -91,6 +91,7 @@ private:
 	object_ptr<PlayerButton> _save;
 	object_ptr<CoverButton> _coverButton;
 	object_ptr<PlayerButton> _collapse;
+	object_ptr<PlayerButton> _minimize;
 	object_ptr<PlayerButton> _close;
 	object_ptr<PlayerButton> _expand;
 	object_ptr<PlayerButton> _previous;
