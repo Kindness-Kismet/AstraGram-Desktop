@@ -963,9 +963,7 @@ QImage DocumentFilePreviewThumbnail::prepareGenericImage(int size) {
 
 	auto p = QPainter(&result);
 	const auto rect = QRectF(0, 0, size, size);
-	const auto colors = FilePreviewPalette(_generic, st::windowBg->c);
-	PaintFilePreviewSurface(p, rect, colors);
-	PaintFilePreviewContent(p, rect, _generic, colors);
+	PaintFilePreview(p, rect, _generic);
 	p.end();
 	return result;
 }

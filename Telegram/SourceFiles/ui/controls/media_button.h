@@ -6,6 +6,11 @@
 
 namespace Ui {
 
+enum class MediaButtonShape {
+	Circle,
+	RoundedRect,
+};
+
 struct MediaButtonColors {
 	QColor foreground;
 	QColor background;
@@ -22,7 +27,8 @@ void PaintMediaButtonSurface(
 	QPainter &p,
 	QRectF inner,
 	const MediaButtonColors &colors,
-	bool hovered = false);
+	bool hovered = false,
+	MediaButtonShape shape = MediaButtonShape::Circle);
 void PaintMediaIcon(
 	QPainter &p,
 	QRectF inner,

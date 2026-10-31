@@ -3363,7 +3363,7 @@ QRect OverlayWidget::radialRect() const {
 		return _photoRadialRect;
 	} else if (_document) {
 		if (documentBubbleShown() && !_document->hasThumbnail()) {
-			return Ui::FilePreviewButtonRect(_docIconRect);
+			return _docIconRect;
 		}
 		return QRect(
 			QPoint(
@@ -7392,7 +7392,9 @@ void OverlayWidget::paintRadialLoadingContent(
 		p.setOpacity(opacity);
 		const auto colors = genericFile ? fileColors
 			: Ui::MediaButtonPalette(st::radialFg->c, brush.color(), true);
-		Ui::PaintMediaButtonSurface(p, inner, colors);
+		Ui::PaintMediaButtonSurface(p, inner, colors, false, genericFile
+			? Ui::MediaButtonShape::RoundedRect
+			: Ui::MediaButtonShape::Circle);
 		p.setOpacity(1.);
 	};
 
@@ -7540,12 +7542,10 @@ void OverlayWidget::paintDocumentBubbleContent(
 	if (icon.intersects(clip)) {
 		if (!_document || !_document->hasThumbnail()) {
 			const auto preview = Layout::DocumentGenericPreview::Create(_document);
-			const auto colors = Ui::FilePreviewPalette(preview, st::mediaviewFileBg->c);
-			Ui::PaintFilePreviewSurface(p, icon, colors);
 			const auto radial = _radial.animating();
 			const auto opacity = radial ? _radial.opacity() : 0.;
 			if (!_document || _documentMedia->loaded()) {
-				Ui::PaintFilePreviewContent(p, icon, preview, colors, 1. - opacity);
+				Ui::PaintFilePreview(p, icon, preview, 1. - opacity);
 			}
 		} else if (const auto thumbnail = _documentMedia->thumbnail()) {
 			int32 rf(style::DevicePixelRatio());

@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+class DocumentData;
+
 namespace Layout {
 
 enum class DocumentFileType {

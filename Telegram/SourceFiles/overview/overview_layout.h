@@ -485,6 +485,10 @@ private:
 	[[nodiscard]] auto externalLoading() const
 	-> std::optional<DocumentExternalLoading>;
 	[[nodiscard]] bool activeLoading() const;
+	[[nodiscard]] QString fileStatusText() const;
+	[[nodiscard]] QRect fileActionRect() const;
+	[[nodiscard]] ClickHandlerPtr fileActionLink() const;
+	void paintFileAction(QPainter &p, const ClickHandlerPtr &action);
 
 	not_null<DocumentData*> _data;
 	mutable std::shared_ptr<Data::DocumentMedia> _dataMedia;
@@ -498,10 +502,11 @@ private:
 	bool _thumbLoaded = false;
 	bool _forceFileLayout = false;
 	QPixmap _thumb;
+	Ui::Animations::Simple _fileActionAnimation;
+	std::optional<bool> _fileActionCancelling;
 
 	Ui::Text::String _name;
 	QString _date;
-	int _datew = 0;
 	int _thumbw = 0;
 
 	bool withThumb() const;

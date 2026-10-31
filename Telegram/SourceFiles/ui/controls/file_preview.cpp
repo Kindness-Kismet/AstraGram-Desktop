@@ -1,7 +1,9 @@
 #include "ui/controls/file_preview.h"
 
 #include "layout/layout_document_generic_preview.h"
+#include "ui/color_contrast.h"
 #include "ui/painter.h"
+#include "styles/style_file_preview.h"
 
 #include <algorithm>
 
@@ -10,13 +12,13 @@ namespace {
 
 [[nodiscard]] QColor FileTypeColor(Layout::DocumentFileType type) {
 	switch (type) {
-	case Layout::DocumentFileType::Application: return QColor(0x04, 0x78, 0x57);
-	case Layout::DocumentFileType::Library: return QColor(0xb4, 0x53, 0x09);
-	case Layout::DocumentFileType::Code: return QColor(0x1d, 0x4e, 0xd8);
-	case Layout::DocumentFileType::Archive: return QColor(0x5b, 0x21, 0xb6);
-	case Layout::DocumentFileType::Spreadsheet: return QColor(0x0f, 0x76, 0x6e);
-	case Layout::DocumentFileType::Image: return QColor(0xbe, 0x12, 0x3c);
-	case Layout::DocumentFileType::Document: return QColor(0x33, 0x41, 0x55);
+	case Layout::DocumentFileType::Application: return QColor(0x49, 0x66, 0x53);
+	case Layout::DocumentFileType::Library: return QColor(0x7d, 0x66, 0x53);
+	case Layout::DocumentFileType::Code: return QColor(0x53, 0x64, 0x7a);
+	case Layout::DocumentFileType::Archive: return QColor(0x65, 0x58, 0x78);
+	case Layout::DocumentFileType::Spreadsheet: return QColor(0x45, 0x63, 0x5a);
+	case Layout::DocumentFileType::Image: return QColor(0x81, 0x50, 0x58);
+	case Layout::DocumentFileType::Document: return QColor(0x56, 0x60, 0x71);
 	}
 	Unexpected("File type in FileTypeColor.");
 }
@@ -27,11 +29,21 @@ MediaButtonColors FilePreviewPalette(
 		const Layout::DocumentGenericPreview &preview,
 		QColor background) {
 	const auto color = FileTypeColor(preview.type());
-	return MediaButtonPalette(color, background);
+	const auto dark = CountContrast(background, Qt::white)
+		> CountContrast(background, Qt::black);
+	const auto foreground = dark ? anim::color(color, Qt::white, .65) : color;
+	auto fill = foreground;
+	fill.setAlpha(32);
+	return {
+		.foreground = foreground,
+		.background = anim::color(background, foreground, dark ? .10 : .07),
+		.badge = background,
+		.fill = fill,
+	};
 }
 
 float64 FilePreviewRadius(QRectF rect) {
-	return rect.width() * 13. / 60.;
+	return std::min<float64>(style::ConvertScale(8), rect.width() / 2.);
 }
 
 QRect FilePreviewButtonRect(QRect rect) {
@@ -42,33 +54,22 @@ QRect FilePreviewButtonRect(QRect rect) {
 		size, size);
 }
 
-void PaintFilePreviewSurface(
-		QPainter &p,
-		QRectF rect,
-		const MediaButtonColors &colors) {
-	p.save();
-	PaintMediaButtonSurface(p, FilePreviewButtonRect(rect.toRect()), colors);
-	p.restore();
-}
-
-void PaintFilePreviewContent(
+void PaintFilePreview(
 		QPainter &p,
 		QRectF rect,
 		const Layout::DocumentGenericPreview &preview,
-		const MediaButtonColors &colors,
 		float64 contentOpacity) {
 	if (contentOpacity <= 0.) {
 		return;
 	}
-	const auto button = QRectF(FilePreviewButtonRect(rect.toRect()));
-	const auto size = button.width() * 0.65;
-	const auto inner = QRectF(
-		button.center().x() - size / 2.,
-		button.center().y() - size / 2.,
-		size, size);
+	const auto colors = FilePreviewPalette(preview, st::windowBg->c);
+	const auto size = std::min(rect.width(), rect.height()) * .6;
+	const auto iconRect = QRectF(
+		rect.center() - QPointF(size / 2., size / 2.), QSizeF(size, size));
 	p.save();
 	p.setOpacity(p.opacity() * contentOpacity);
-	PaintMediaIcon(p, inner, *preview.icon(), colors.foreground);
+	PaintMediaButtonSurface(p, rect, colors, false, MediaButtonShape::RoundedRect);
+	PaintMediaIcon(p, iconRect, *preview.icon(), colors.foreground);
 	p.restore();
 }
 

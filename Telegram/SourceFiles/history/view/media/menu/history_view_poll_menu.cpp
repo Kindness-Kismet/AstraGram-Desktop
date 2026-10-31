@@ -506,9 +506,7 @@ void ShowPollDocumentPreview(
 				Ui::PaintMediaButtonSurface(p, inner, colors);
 				st::historyFileInPlay.paintInCenter(p, inner, colors.foreground);
 			} else if (!coverDrawn) {
-				const auto colors = Ui::FilePreviewPalette(docGeneric, st::windowBg->c);
-				Ui::PaintFilePreviewSurface(p, iconRect, colors);
-				Ui::PaintFilePreviewContent(p, iconRect, docGeneric, colors);
+				Ui::PaintFilePreview(p, iconRect, docGeneric);
 			}
 
 			const auto textX = outer.x() + 2 * padding + iconSize;

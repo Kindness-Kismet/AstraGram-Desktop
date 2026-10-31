@@ -67,9 +67,7 @@ QImage GenerateDocumentFilePreview(
 
 	auto p = QPainter(&result);
 	const auto rect = QRect(0, 0, size, size);
-	const auto colors = Ui::FilePreviewPalette(preview, st::boxBg->c);
-	Ui::PaintFilePreviewSurface(p, rect, colors);
-	Ui::PaintFilePreviewContent(p, rect, preview, colors);
+	Ui::PaintFilePreview(p, rect, preview);
 	p.end();
 	return result;
 }

@@ -178,9 +178,7 @@ void AbstractSingleFilePreview::paintEvent(QPaintEvent *e) {
 
 		if (!_data.fileIsAudio) {
 			const auto preview = Layout::DocumentGenericPreview::Create(_data.name);
-			const auto colors = FilePreviewPalette(preview, st::boxBg->c);
-			PaintFilePreviewSurface(p, inner, colors);
-			PaintFilePreviewContent(p, inner, preview, colors);
+			PaintFilePreview(p, inner, preview);
 		} else if (!_data.fileThumb.isNull()) {
 			p.drawPixmap(inner.topLeft(), _data.fileThumb);
 			st::historyFileThumbPlay.paintInCenter(p, inner);

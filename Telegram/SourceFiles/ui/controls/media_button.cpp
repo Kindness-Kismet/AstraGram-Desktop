@@ -100,13 +100,22 @@ void PaintMediaButtonSurface(
 		QPainter &p,
 		QRectF inner,
 		const MediaButtonColors &colors,
-		bool hovered) {
+		bool hovered,
+		MediaButtonShape shape) {
 	auto hq = PainterHighQualityEnabler(p);
 	p.setPen(Qt::NoPen);
 	p.setBrush(hovered
 		? anim::color(colors.background, colors.foreground, 0.1)
 		: colors.background);
-	p.drawEllipse(inner);
+	if (shape == MediaButtonShape::RoundedRect) {
+		const auto radius = style::ConvertScale(8);
+		const auto inset = style::ConvertScaleExact(1.) / 2.;
+		p.setPen(QPen(anim::color(colors.background, colors.foreground, .18), 2 * inset));
+		p.drawRoundedRect(inner.adjusted(inset, inset, -inset, -inset),
+			radius - inset, radius - inset);
+	} else {
+		p.drawEllipse(inner);
+	}
 }
 
 void PaintMediaIcon(
@@ -118,7 +127,7 @@ void PaintMediaIcon(
 	auto hq = PainterHighQualityEnabler(p);
 	p.translate(inner.topLeft());
 	p.scale(inner.width() / icon.width(), inner.height() / icon.height());
-	icon.paintInCenter(p, QRect(0, 0, icon.width(), icon.height()), color);
+	icon.paint(p, 0, 0, icon.width(), color);
 	p.restore();
 }
 

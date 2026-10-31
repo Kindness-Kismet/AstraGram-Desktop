@@ -1028,7 +1028,13 @@ void File::paint(Painter &p, const QRect &clip, const PaintContext *context) con
 			coverDrawn ? st::msgDateImgBg->c : st::windowBg->c, coverDrawn);
 	const auto hovered = ClickHandler::showAsActive(
 		_document->loading() ? _cancel : _open);
-	Ui::PaintMediaButtonSurface(p, inner, colors, hovered);
+	const auto fileReady = !audio && !radial && !_document->loading()
+		&& _documentMedia->loaded();
+	if (!fileReady) {
+		Ui::PaintMediaButtonSurface(p, inner, colors, hovered, audio
+			? Ui::MediaButtonShape::Circle
+			: Ui::MediaButtonShape::RoundedRect);
+	}
 	if (radial) {
 		const auto line = st::msgFileRadialLine;
 		Ui::PaintMediaProgressArc(p, inner.marginsRemoved(QMargins(line, line, line, line)),
@@ -1050,8 +1056,8 @@ void File::paint(Painter &p, const QRect &clip, const PaintContext *context) con
 		}
 		return &st::historyFileInDocument;
 	}();
-	if (!audio && !radial && !_document->loading() && _documentMedia->loaded()) {
-		Ui::PaintFilePreviewContent(p, inner, preview, colors);
+	if (fileReady) {
+		Ui::PaintFilePreview(p, inner, preview);
 	} else {
 		const auto &action = !audio && !radial && !_document->loading()
 			? st::historyFileInDownload : *icon;
