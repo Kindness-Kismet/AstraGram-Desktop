@@ -703,6 +703,7 @@
   "SimulationCountdown": "Delete message after 15 seconds",
   "SimulationUpdateReady": "Update ready",
   "ContextVideoCover": "View Video Cover",
+  "ContextReturnVideo": "Back to Video",
   "DeleteDownloadedFile": "Delete Downloaded File",
   "DeleteDownloadedFileFailed": "Could not move the file to the Recycle Bin. It may be in use or no longer available.",
   "CacheImages": "Images",

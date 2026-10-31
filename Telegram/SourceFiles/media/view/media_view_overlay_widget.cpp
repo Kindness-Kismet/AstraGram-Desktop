@@ -2733,6 +2733,22 @@ void OverlayWidget::fillContextMenuActions(
 			ExtrasVideoCover::showCover(controller, item, document);
 		}, &st::menuIconPhoto);
 	}
+	if (_message && _videoCoverDocument) {
+		const auto itemId = _message->fullId();
+		const auto document = _videoCoverDocument;
+		addAction(tr::extras_ContextReturnVideo(tr::now), [=] {
+			const auto controller = findWindow();
+			const auto item = document->owner().message(itemId);
+			if (!controller || !item) {
+				return;
+			}
+			controller->openDocument(document, true, {
+				.id = itemId,
+				.topicRootId = item->topicRootId(),
+				.monoforumPeerId = item->sublistPeerId(),
+			});
+		}, &st::menuIconRestore);
+	}
 	if (currentPollAnswer()) {
 		const auto media = _message ? _message->media() : nullptr;
 		const auto poll = media ? media->poll() : nullptr;
