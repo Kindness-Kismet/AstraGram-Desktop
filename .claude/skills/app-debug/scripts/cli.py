@@ -111,6 +111,7 @@ GENERIC_COMMANDS = {
     'downloads.list': '查询真实下载列表及分类与搜索交集：[all|archives|music|videos|other] [关键词]',
     'downloads.start': '指定路径保存消息附件，返回异步任务：<会话编号> <消息编号> <新文件绝对路径>',
     'downloads.cancel': '取消指定附件下载：<会话编号> <消息编号>',
+    'downloads.delete': '将已下载文件移入回收站，返回异步任务：<会话编号> <消息编号>',
     'simulation.download': '构造本地文件下载：<路径> <loading|done>，不支持音视频',
     'simulation.download-progress': '推进模拟下载进度或完成：<会话编号> <消息编号> <字节数|done>',
     'simulation.media-upload': '在独立模拟配置定格媒体上传进度：<会话编号> <消息编号> <0..100|done>，不上传',

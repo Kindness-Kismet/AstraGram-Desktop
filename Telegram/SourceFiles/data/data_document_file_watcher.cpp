@@ -63,6 +63,10 @@ void DocumentFileWatcher::watchDownload(const QString &path) {
 	_downloads.insert_or_assign(absolute, location);
 }
 
+void DocumentFileWatcher::checkPath(const QString &path) {
+	changed(QFileInfo(path).absoluteFilePath());
+}
+
 void DocumentFileWatcher::clear() {
 	const auto paths = _watcher.files();
 	if (!paths.empty()) {

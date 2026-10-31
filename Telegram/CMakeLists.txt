@@ -368,6 +368,10 @@ set(extras_files
         extras/features/custom_logo/custom_logo.h
         extras/features/video_cover/video_cover.cpp
         extras/features/video_cover/video_cover.h
+        extras/features/downloaded_file/downloaded_file.cpp
+        extras/features/downloaded_file/downloaded_file.h
+        extras/ui/context_menu/downloaded_file_menu.cpp
+        extras/ui/context_menu/downloaded_file_menu.h
         extras/features/auto_space/auto_space.cpp
         extras/features/auto_space/auto_space.h
         extras/features/emoji_packs/emoji_font.cpp

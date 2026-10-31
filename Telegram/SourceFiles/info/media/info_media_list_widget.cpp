@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/media/info_media_list_widget.h"
+#include "extras/ui/context_menu/downloaded_file_menu.h"
 
 #include "info/global_media/info_global_media_provider.h"
 #include "info/media/info_media_common.h"
@@ -1590,6 +1591,11 @@ void ListWidget::showContextMenu(
 		} else {
 			const auto filepath = _provider->showInFolderPath(item, document);
 			if (!filepath.isEmpty()) {
+				if (overSelected != SelectionState::OverSelectedItems) {
+					ExtrasUi::addDeleteDownloadedFileAction(
+						Ui::Menu::CreateAddActionCallback(_contextMenu),
+						_controller->parentController(), document, filepath);
+				}
 				const auto handler = base::fn_delayed(
 					st::defaultDropdownMenu.menu.ripple.hideDuration,
 					this,
@@ -1709,12 +1715,12 @@ void ListWidget::showContextMenu(
 					&st::menuIconForward);
 			}
 			if (selectionData.canDelete) {
-				if (_controller->isDownloads()) {
+				if (_controller->isDownloads() && !document) {
 					_contextMenu->addAction(
 						tr::lng_context_delete_from_disk(tr::now),
 						crl::guard(this, [=] { deleteItem(globalId); }),
 						&st::menuIconDelete);
-				} else {
+				} else if (!_controller->isDownloads()) {
 					_contextMenu->addAction(Ui::DeleteMessageContextAction(
 						_contextMenu->menu(),
 						crl::guard(this, [=] { deleteItem(globalId); }),

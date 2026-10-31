@@ -10,6 +10,9 @@
 | `downloads.list` | `[all|archives|music|videos|other] [query]` | 当前账号的下载记录、分类、路径、大小、已下载字节及状态，按下载时间倒序。 |
 | `downloads.start` | `<peerId> <messageId> <destination>` | 向新建的绝对路径保存附件，返回 `jobId`；父目录必须存在，不覆盖已有文件。 |
 | `downloads.cancel` | `<peerId> <messageId>` | 取消指定附件的活动下载。 |
+| `downloads.delete` | `<peerId> <messageId>` | 沿右键菜单的业务接口将已下载文件移入回收站，保留消息；返回任务编号，用 `job.status` 查询结果。 |
+
+下载记录的 `canDelete` 表示文件存在且没有正在传输。删除失败时保留文件和记录，不退回永久删除；测试只使用临时样本。
 
 列表使用下载页面的同一个数据提供器，类型与关键词取交集；查询不会改变页面筛选或选择状态。
 `resolved: false` 表示旧下载记录尚未解析完成，此时空列表不是最终结果。只返回当前账号的记录。

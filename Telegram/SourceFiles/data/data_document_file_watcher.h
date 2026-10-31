@@ -17,6 +17,7 @@ public:
 	explicit DocumentFileWatcher(not_null<Session*> owner);
 	void watch(not_null<DocumentData*> document, const QString &path);
 	void watchDownload(const QString &path);
+	void checkPath(const QString &path);
 	void clear();
 	[[nodiscard]] rpl::producer<QString> invalidatedPaths() const;
 

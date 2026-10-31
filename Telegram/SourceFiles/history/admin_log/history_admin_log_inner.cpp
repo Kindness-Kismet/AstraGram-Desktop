@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/admin_log/history_admin_log_inner.h"
+#include "extras/ui/context_menu/downloaded_file_menu.h"
 
 #include "history/history.h"
 #include "history/view/media/history_view_media.h"
@@ -2242,6 +2243,8 @@ void InnerWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					}
 				}
 				if (!lnkDocument->filepath(true).isEmpty()) {
+					ExtrasUi::addDeleteDownloadedFileAction(
+						Ui::Menu::CreateAddActionCallback(_menu), _controller, lnkDocument);
 					_menu->addAction(Platform::IsMac() ? tr::lng_context_show_in_finder(tr::now) : tr::lng_context_show_in_folder(tr::now), [=] {
 						showContextInFolder(lnkDocument);
 					}, &st::menuIconShowInFolder);

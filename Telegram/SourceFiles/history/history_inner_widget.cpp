@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_inner_widget.h"
+#include "extras/ui/context_menu/downloaded_file_menu.h"
 #include "history/view/history_view_item_animation.h"
 
 #include "ui/chat/message_bubble.h"
@@ -3340,6 +3341,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			}
 		}
 		ExtrasUi::AddVideoCoverAction(_menu, controller, item, document);
+		ExtrasUi::addDeleteDownloadedFileAction(
+			Ui::Menu::CreateAddActionCallback(_menu), controller, document);
 		if (!document->filepath(true).isEmpty()) {
 			_menu->addAction(Platform::IsMac() ? tr::lng_context_show_in_finder(tr::now) : tr::lng_context_show_in_folder(tr::now), [=] {
 				showContextInFolder(document);

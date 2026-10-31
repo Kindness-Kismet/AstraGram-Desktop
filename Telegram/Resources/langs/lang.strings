@@ -9740,6 +9740,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SimulationCountdown" = "Delete message after 15 seconds";
 "extras_SimulationUpdateReady" = "Update ready";
 "extras_ContextVideoCover" = "View Video Cover";
+"extras_DeleteDownloadedFile" = "Delete Downloaded File";
+"extras_DeleteDownloadedFileFailed" = "Could not move the file to the Recycle Bin. It may be in use or no longer available.";
 
 "extras_DialogDetailsTitle" = "Details";
 "extras_DialogInfoTitle" = "Information";
