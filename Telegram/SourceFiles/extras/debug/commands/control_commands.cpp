@@ -1,4 +1,5 @@
 #ifdef _DEBUG
+#include "extras/ui/controls/click_feedback.h"
 #include "extras/debug/commands/commands_internal.h"
 #include "extras/debug/debug_login.h"
 #include "extras/ui/components/floating_surface.h"
@@ -692,6 +693,14 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	}
 	if (const auto button = dynamic_cast<Ui::RippleButton*>(target)) {
 		data["forceRippled"] = button->forceRippled();
+	}
+	if (const auto feedback = ExtrasUi::clickFeedbackState(target)) {
+		data["clickFeedback"] = {
+			{ "mode", feedback->spring ? "spring" : "luminance" },
+			{ "scale", feedback->scale },
+			{ "brightness", feedback->brightness },
+			{ "contrast", feedback->contrast },
+		};
 	}
 	// 只报告控件自己设置的光标，未设置时沿用父控件。
 	if (target->testAttribute(Qt::WA_SetCursor)) {

@@ -11,6 +11,7 @@
 `control.get <target>` 查询当前值、类型、文字、启用状态、`focused` 聚焦状态及辅助功能动作。
 浮动卡片另返回 `surfaceBackdrop`、`surfaceWindowMaterial`，分别表示接入聊天磨砂背景源或使用窗口材质。
 按钮还返回 `hovered`、`pressed`；波纹按钮另返回 `forceRippled`，可分别核对鼠标悬停、按下和菜单高亮。
+采用新点击反馈的按钮另返回 `clickFeedback`，包含模式、当前缩放、亮度和对比度；结合按下、松开截图检查微缩放或色彩瞬变。
 可选列表项还会返回 `selected`，可用于核对当前选中的会话分组。
 弹出菜单另返回 `animatePhase`（0 隐藏、1 展开、2 显示、3 收起）、`systemBackdrop`、`windowOpacity`、`windowActive` 和 `focusInside`。
 `acceptsFocus`、`transparentForInput`、`transparentForMouseEvents` 分别表示接受激活、原生输入透明和控件鼠标事件透明；系统命中仍须用真实鼠标验证。

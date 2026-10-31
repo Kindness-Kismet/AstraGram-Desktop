@@ -9,6 +9,7 @@
 #include "extras/debug/debug_server.h"
 #endif
 #include "extras/features/window_material/window_material.h"
+#include "extras/ui/controls/click_feedback.h"
 #include "ui/style/style_widget_color.h"
 #include "features/translator/extras_translator.h"
 #include "lang/lang_keys.h"
@@ -135,6 +136,7 @@ void init() {
 	initLang();
 	initDatabase();
 	initUiSettings();
+	ExtrasUi::initClickFeedback();
 	initIcon();
 	initWorker();
 	initRCManager();

@@ -210,6 +210,8 @@ set(extras_files
         extras/ui/utils/extras_profile_values.h
         extras/ui/utils/extras_tooltip.cpp
         extras/ui/utils/extras_tooltip.h
+        extras/ui/controls/click_feedback.cpp
+        extras/ui/controls/click_feedback.h
         extras/ui/utils/color_cut_quantizer.cpp
         extras/ui/utils/color_cut_quantizer.h
         extras/ui/utils/color_utils.cpp
