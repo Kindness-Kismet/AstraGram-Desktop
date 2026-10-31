@@ -96,15 +96,10 @@ void Gif::drawSmallGroupDownload(
 	const auto line = st::historyGroupDownloadRadialLine;
 	const auto scale = (inner.width() - 4 * line)
 		/ float64(std::max(icon.width(), icon.height()));
-	p.save();
-	p.translate(inner.x() + inner.width() / 2., inner.y() + inner.height() / 2.);
-	p.scale(scale, scale);
-	icon.paintInCenter(p, QRect(
-		-icon.width() / 2,
-		-icon.height() / 2,
-		icon.width(),
-		icon.height()));
-	p.restore();
+	const auto iconSize = QSizeF(icon.width() * scale, icon.height() * scale);
+	Ui::PaintMediaIcon(p, QRectF(
+		QRectF(inner).center() - QPointF(iconSize.width() / 2., iconSize.height() / 2.),
+		iconSize), icon, colors.foreground);
 	p.restore();
 }
 

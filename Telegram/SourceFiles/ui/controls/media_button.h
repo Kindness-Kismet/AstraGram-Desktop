@@ -6,11 +6,15 @@
 
 namespace Ui {
 
+enum class MediaButtonShape {
+	Circle,
+	RoundedRect,
+};
+
 struct MediaButtonColors {
 	QColor foreground;
 	QColor background;
 	QColor badge;
-	QColor border;
 	QColor fill;
 };
 
@@ -23,7 +27,24 @@ void PaintMediaButtonSurface(
 	QPainter &p,
 	QRectF inner,
 	const MediaButtonColors &colors,
-	bool hovered = false);
+	bool hovered = false,
+	MediaButtonShape shape = MediaButtonShape::Circle);
+void PaintMediaIcon(
+	QPainter &p,
+	QRectF inner,
+	const style::icon &icon,
+	QColor color);
+void PaintMediaProgressArc(
+	QPainter &p,
+	QRectF inner,
+	const RadialAnimation &animation,
+	float64 thickness,
+	QColor color);
+void PaintMediaCheck(
+	QPainter &p,
+	QRectF inner,
+	QColor color,
+	float64 progress);
 void PaintMediaCancelBadge(
 	QPainter &p,
 	QRectF inner,

@@ -927,6 +927,7 @@ void MenuBotIcon::validate() {
 
 			_mask = Images::Colored(std::move(_mask), Qt::white);
 		}
+		_image = QImage();
 	}
 	// 颜色可能随窗口材质变化而调色板不变，缓存按实际颜色失效。
 	const auto color = (_color ? *_color : st::menuIconColor)->c;

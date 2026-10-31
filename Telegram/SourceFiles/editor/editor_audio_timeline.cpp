@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "editor/video/video_segment_player.h"
 #include "editor/video/video_timeline_seeker.h"
 #include "media/media_audio_waveform.h"
+#include "ui/controls/media_button.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
@@ -257,13 +258,10 @@ void AudioTimeline::paintTextLine(
 		int centerY,
 		int width) {
 	const auto icon = st::photoEditorAudioTimelineIcon;
-	const auto image = st::photoEditorAudioDiscIcon.instance(
-		st::videoTimelineFg->c);
 	p.setClipRect(x, centerY - height(), width, height() * 2);
-	p.setRenderHint(QPainter::SmoothPixmapTransform);
-	p.drawImage(
+	Ui::PaintMediaIcon(p,
 		QRectF(x, centerY - icon / 2., icon, icon),
-		image);
+		st::photoEditorAudioDiscIcon, st::videoTimelineFg->c);
 	x += icon + st::photoEditorAudioTimelineIconSkip;
 	p.setPen(st::videoTimelineFg);
 	if (!_performer.isEmpty()) {

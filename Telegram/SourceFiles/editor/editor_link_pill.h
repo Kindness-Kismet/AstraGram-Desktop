@@ -43,14 +43,12 @@ public:
 private:
 	[[nodiscard]] QColor background() const;
 	[[nodiscard]] QColor foreground() const;
-	void updateIcon();
 
 	float64 _density = 1.;
 	style::font _font;
 	QString _text;
 	int _textWidth = 0;
 	QSizeF _size;
-	QImage _icon;
 	LinkStyle _style = LinkStyle::Framed;
 
 };

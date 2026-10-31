@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/spoiler_mess.h"
 #include "ui/ui_utility.h"
 #include "ui/painter.h"
+#include "ui/controls/media_button.h"
 #include "ui/power_saving.h"
 #include "styles/style_chat.h"
 #include "styles/style_chat_helpers.h"
@@ -373,13 +374,10 @@ void AlbumThumbnail::paintPlayVideo(QPainter &p, QRect geometry) {
 		geometry.y() + (geometry.height() - innerSize) / 2,
 		innerSize,
 		innerSize);
-	{
-		PainterHighQualityEnabler hq(p);
-		p.setPen(Qt::NoPen);
-		p.setBrush(st::msgDateImgBg);
-		p.drawEllipse(inner);
-	}
-	st::historyFileThumbPlay.paintInCenter(p, inner);
+	const auto colors = Ui::MediaButtonPalette(
+		st::historyFileThumbIconFg->c, st::msgDateImgBg->c, true);
+	Ui::PaintMediaButtonSurface(p, inner, colors);
+	st::historyFileThumbPlay.paintInCenter(p, inner, colors.foreground);
 }
 
 void AlbumThumbnail::prepareCache(QSize size, int shrink) {

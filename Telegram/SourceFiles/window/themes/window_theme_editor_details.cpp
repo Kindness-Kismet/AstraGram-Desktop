@@ -235,7 +235,6 @@ void EditorDetails::chooseReference() {
 	const auto name = _row.name;
 	Ui::show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setTitle(tr::extras_ThemeCreatorReference());
-		box->setProperty("responsiveBoxWidth", true);
 		box->setWidth(st::boxWideWidth);
 		box->addRow(object_ptr<Ui::FlatLabel>(box,
 			tr::extras_ThemeCreatorReferenceNote(), st::boxDividerLabel));

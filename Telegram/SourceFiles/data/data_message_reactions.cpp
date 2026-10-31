@@ -2004,7 +2004,11 @@ void MessageReactions::add(const ReactionId &id, bool addToRecent) {
 		return removed;
 	}), end(_list));
 	const auto peer = history->peer;
-	if (_item->canViewReactions() || peer->isUser()) {
+	// 群聊本地回应的发送身份已知，首次回应也保留头像数据。
+	if (_item->canViewReactions()
+		|| peer->isUser()
+		|| peer->isChat()
+		|| peer->isMegagroup()) {
 		auto &list = _recent[id];
 		const auto from = peer->session().sendAsPeers().resolveChosen(peer);
 		list.insert(begin(list), RecentReaction{

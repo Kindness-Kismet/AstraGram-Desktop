@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_inner_widget.h"
 #include "extras/ui/context_menu/downloaded_file_menu.h"
 #include "history/view/history_view_item_animation.h"
+#include "styles/style_chat_helpers.h"
 
 #include "ui/chat/message_bubble.h"
 
@@ -1538,7 +1539,8 @@ void HistoryInner::paintHistory(
 		bool backdrop) {
 
 	const auto shadowPadding = Ui::BubbleShadowPadding();
-	const auto paintClip = clip.adjusted(0, -shadowPadding, 0, shadowPadding);
+	const auto paintClip = _widget->itemRevealClip(
+		clip.adjusted(0, -shadowPadding, 0, shadowPadding));
 	auto context = preparePaintContext(clip);
 	context.gestureHorizontal = _gestureHorizontal;
 	context.highlightPathCache = &_highlightPathCache;
@@ -1559,8 +1561,7 @@ void HistoryInner::paintHistory(
 			context.fullMessageSelected = selection.fullMessageSelected;
 			context.messageSelection = selection.messageSelection;
 			p.translate(0, top);
-			HistoryView::PaintFadingItem(p, view, context,
-				_widget->itemRevealOpacity(view->data()));
+			_widget->paintRevealingItem(p, view, context);
 			context.translate(0, top);
 			p.translate(0, -top);
 		}
@@ -1757,8 +1758,7 @@ void HistoryInner::paintHistory(
 			context.fullMessageSelected = selection.fullMessageSelected;
 			context.messageSelection = selection.messageSelection;
 			context.highlight = _widget->itemHighlight(view->data());
-			HistoryView::PaintFadingItem(p, view, context,
-				_widget->itemRevealOpacity(view->data()));
+			_widget->paintRevealingItem(p, view, context);
 			processPainted(view, top, height);
 
 			top += height;
@@ -1812,7 +1812,8 @@ void HistoryInner::paintHistory(
 
 			const auto height = view->height();
 			const auto item = view->data();
-			if ((context.clip.y() < height + shadowPadding)
+			if ((context.clip.y() < height + shadowPadding
+					+ std::max(0, int(std::ceil(_widget->itemRevealState(item).shift))))
 				&& (hdrawtop < top + height)
 				&& _widget->itemRevealOpacity(item) > 0.) {
 				context.reactionInfo = backdrop
@@ -1827,8 +1828,7 @@ void HistoryInner::paintHistory(
 				context.fullMessageSelected = selection.fullMessageSelected;
 				context.messageSelection = selection.messageSelection;
 				context.highlight = _widget->itemHighlight(item);
-				HistoryView::PaintFadingItem(p, view, context,
-					_widget->itemRevealOpacity(view->data()));
+				_widget->paintRevealingItem(p, view, context);
 				processPainted(view, top, height);
 			}
 			top += height;
@@ -1851,64 +1851,75 @@ void HistoryInner::paintHistory(
 	}
 
 	enumerateUserpics([&](not_null<Element*> view, int userpicTop) {
+		const auto reveal = _widget->itemRevealState(view->data());
+		if (reveal.progress < 1.) {
+			userpicTop = itemTop(view) + view->height()
+				- view->marginBottom() - st::msgPhotoSize;
+		}
+		const auto visualTop = userpicTop + int(std::round(reveal.shift));
 		// stop the enumeration if the userpic is below the painted rect
-		if (userpicTop >= clip.top() + clip.height()) {
+		if (visualTop >= clip.top() + clip.height()) {
 			return false;
 		}
 
 		// paint the userpic if it intersects the painted rect
-		if (userpicTop + st::msgPhotoSize > clip.top()) {
+		if (visualTop + st::msgPhotoSize > clip.top()) {
 			const auto item = view->data();
-			const auto shift = context.gestureHorizontal.visualTranslationFor(
-				item->id.bare);
-			if (shift) {
-				p.translate(shift, 0);
-				if (!backdrop) {
-					update(QRect(
-						st::historyPhotoLeft + std::min(shift, 0),
-						userpicTop,
-						st::msgPhotoSize + std::abs(shift),
-						st::msgPhotoSize));
-				}
-			}
-			if (const auto from = item->displayFrom()) {
-				Dialogs::Ui::PaintUserpic(
-					p,
-					from,
-					validateVideoUserpic(from),
-					_userpics[from],
-					st::historyPhotoLeft,
-					userpicTop,
-					width(),
-					st::msgPhotoSize,
-					context.paused);
-			} else if (const auto info = item->displayHiddenSenderInfo()) {
-				if (info->customUserpic.empty()) {
-					info->emptyUserpic.paintCircle(
-						p,
-						st::historyPhotoLeft,
-						userpicTop,
-						width(),
-						st::msgPhotoSize);
-				} else {
-					auto &userpic = _hiddenSenderUserpics[item->id];
-					const auto valid = info->paintCustomUserpic(
-						p,
-						userpic,
-						st::historyPhotoLeft,
-						userpicTop,
-						width(),
-						st::msgPhotoSize);
-					if (!valid) {
-						info->customUserpic.load(&session(), item->fullId());
+			HistoryView::PaintItemReveal(p,
+				QRect(0, userpicTop, width(), st::msgPhotoSize),
+				clip, reveal, _visibleAreaBottom + (_widget->composeOverlap() ? st::historyComposeCapsuleMargin / 2 - style::ConvertScale(2) : 0),
+				[&](Painter &p, int) {
+					const auto shift = context.gestureHorizontal.visualTranslationFor(
+						item->id.bare);
+					if (shift) {
+						p.translate(shift, 0);
+						if (!backdrop) {
+							update(QRect(
+								st::historyPhotoLeft + std::min(shift, 0),
+								userpicTop,
+								st::msgPhotoSize + std::abs(shift),
+								st::msgPhotoSize));
+						}
 					}
-				}
-			} else {
-				Unexpected("Corrupt forwarded information in message.");
-			}
-			if (shift) {
-				p.translate(-shift, 0);
-			}
+					if (const auto from = item->displayFrom()) {
+						Dialogs::Ui::PaintUserpic(
+							p,
+							from,
+							validateVideoUserpic(from),
+							_userpics[from],
+							st::historyPhotoLeft,
+							userpicTop,
+							width(),
+							st::msgPhotoSize,
+							context.paused);
+					} else if (const auto info = item->displayHiddenSenderInfo()) {
+						if (info->customUserpic.empty()) {
+							info->emptyUserpic.paintCircle(
+								p,
+								st::historyPhotoLeft,
+								userpicTop,
+								width(),
+								st::msgPhotoSize);
+						} else {
+							auto &userpic = _hiddenSenderUserpics[item->id];
+							const auto valid = info->paintCustomUserpic(
+								p,
+								userpic,
+								st::historyPhotoLeft,
+								userpicTop,
+								width(),
+								st::msgPhotoSize);
+							if (!valid) {
+								info->customUserpic.load(&session(), item->fullId());
+							}
+						}
+					} else {
+						Unexpected("Corrupt forwarded information in message.");
+					}
+					if (shift) {
+						p.translate(-shift, 0);
+					}
+			});
 		}
 		return true;
 	}, _scroll->scrollTop());
@@ -6208,6 +6219,10 @@ int HistoryInner::itemTop(const HistoryItem *item) const {
 
 float64 HistoryInner::itemRevealOpacity(not_null<HistoryItem*> item) const {
 	return _widget->itemRevealOpacity(item);
+}
+
+HistoryView::ItemRevealState HistoryInner::itemRevealState(not_null<HistoryItem*> item) const {
+	return _widget->itemRevealState(item);
 }
 
 int HistoryInner::itemTop(const Element *view) const {

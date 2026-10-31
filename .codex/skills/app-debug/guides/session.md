@@ -5,7 +5,7 @@
 - `cache.memory-stats`：查询历史协议缓存的常驻会话数、消息数、协议字节数、淘汰次数、磁盘读取次数及限制；`messageBytes` 为序列化大小，不是进程堆内存。正在使用、读取或保存的条目受保护，可暂时超过预算；闲置项每 15 秒检查，超过 2 分钟可释放，磁盘缓存保留。
 
 - `cache.state [peerId]`：查询恢复的会话数、缓存命中次数、当前分组、连接状态；指定会话时附带已显示消息范围。
-- `cache.layout <peerId>`：只查询旧、新聊天视图的可见消息编号、纵坐标、尺寸、媒体尺寸、气泡区域 `bubble`（消息内 x、y、宽、高）、出现透明度 `opacity`（0 至 1）、滚动位置、首屏及缓存刷新覆盖动画；不触发排版、重绘或联网。时间为进程单调毫秒，纵坐标相对滚动区，底部可能被悬浮输入区遮挡；隐藏的相册子项不计入。
+- `cache.layout <peerId>`：只查询旧、新聊天视图的可见消息编号、纵坐标、尺寸、媒体尺寸、气泡区域 `bubble`（消息内 x、y、宽、高）、出现透明度 `opacity`（0 至 1）、入场进度 `revealProgress`、位移 `revealShift`、实际纵坐标 `visualY`、贴纸当前帧及总帧数 `stickerFrame` / `stickerFrames`（未加载为 -1）、滚动位置、首屏及缓存刷新覆盖动画；不触发排版、重绘或联网。时间为进程单调毫秒，纵坐标相对滚动区，底部可能被悬浮输入区遮挡；隐藏的相册子项不计入。
 - `messageDataHits` 表示引用原文等单条消息从缓存恢复的次数；`rendered` 记录会话列表首次与最近一次实际绘制的标签和行数。
 - `preloadedPeers` 是已预加载首屏的会话；`preloadQueued`、`preloadActive`、`preloadCacheHits`、`preloadNetworkRequests`、`preloadCancellations` 可验证未点击前的后台加载与取消。
 - 普通会话只预加载当前可见的最多 10 个，启动后延迟调度；先异步读取缓存，后台网络串行，前台历史请求和删除更新优先。话题及收藏来源继续按各自范围加载。

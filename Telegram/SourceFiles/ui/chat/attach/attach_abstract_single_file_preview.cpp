@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/chat/attach/attach_abstract_single_file_preview.h"
 
+#include "layout/layout_document_generic_preview.h"
+#include "ui/controls/file_preview.h"
 #include "ui/image/image_prepare.h"
 #include "ui/painter.h"
 #include "ui/text/text_options.h"
@@ -174,21 +176,17 @@ void AbstractSingleFilePreview::paintEvent(QPaintEvent *e) {
 			style::rtlrect(x, y, st.thumbSize, st.thumbSize, width()));
 		p.setPen(Qt::NoPen);
 
-		if (_data.fileIsAudio && !_data.fileThumb.isNull()) {
+		if (!_data.fileIsAudio) {
+			const auto preview = Layout::DocumentGenericPreview::Create(_data.name);
+			PaintFilePreview(p, inner, preview);
+		} else if (!_data.fileThumb.isNull()) {
 			p.drawPixmap(inner.topLeft(), _data.fileThumb);
+			st::historyFileThumbPlay.paintInCenter(p, inner);
 		} else {
-			p.setBrush(_st.files.iconBg);
-			PainterHighQualityEnabler hq(p);
-			p.drawEllipse(inner);
+			const auto colors = MediaButtonPalette(_st.files.iconBg->c, st::boxBg->c);
+			PaintMediaButtonSurface(p, inner, colors);
+			_st.files.iconPlay.paintInCenter(p, inner, colors.foreground);
 		}
-		const auto &icon = _data.fileIsAudio
-			? (_data.fileThumb.isNull()
-				? _st.files.iconPlay
-				: st::historyFileThumbPlay)
-			: _data.fileIsImage
-			? _st.files.iconImage
-			: _st.files.iconDocument;
-		icon.paintInCenter(p, inner);
 	} else {
 		QRect rthumb(
 			style::rtlrect(x, y, st.thumbSize, st.thumbSize, width()));

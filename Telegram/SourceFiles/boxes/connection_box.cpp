@@ -1698,7 +1698,6 @@ ProxyBox::ProxyBox(
 
 void ProxyBox::prepare() {
 	setTitle(_allowShare ? tr::lng_proxy_edit() : tr::lng_proxy_add());
-	setProperty("responsiveBoxWidth", true);
 
 	connect(_host.data(), &HostInput::changed, [=] {
 		Ui::PostponeCall(_host, [=] {

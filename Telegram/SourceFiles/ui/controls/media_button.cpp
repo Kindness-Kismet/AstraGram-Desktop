@@ -1,9 +1,12 @@
 #include "ui/controls/media_button.h"
 
+#include "ui/color_contrast.h"
 #include "ui/painter.h"
 #include "ui/style/style_core_font.h"
+#include "styles/style_file_preview.h"
 
 #include <QtGui/QPainterPath>
+#include <QtGui/QPainterPathStroker>
 #include <numbers>
 
 namespace Ui {
@@ -18,6 +21,27 @@ constexpr auto kCompleteHold = crl::time(800);
 [[nodiscard]] QColor WithAlpha(QColor color, int alpha) {
 	color.setAlpha(alpha);
 	return color;
+}
+
+[[nodiscard]] QColor ContrastingIconColor(QColor color, QColor background) {
+	if (CountContrast(color, background) >= 4.5) {
+		return color;
+	}
+	const auto black = QColor(Qt::black);
+	const auto white = QColor(Qt::white);
+	const auto target = CountContrast(white, background)
+		> CountContrast(black, background) ? white : black;
+	auto low = 0.;
+	auto high = 1.;
+	for (auto i = 0; i != 8; ++i) {
+		const auto middle = (low + high) / 2.;
+		if (CountContrast(anim::color(color, target, middle), background) < 4.5) {
+			low = middle;
+		} else {
+			high = middle;
+		}
+	}
+	return anim::color(color, target, high);
 }
 
 [[nodiscard]] QRectF BadgeRect(QRectF inner, float64 size = 20.) {
@@ -60,12 +84,15 @@ MediaButtonColors MediaButtonPalette(
 		QColor foreground,
 		QColor background,
 		bool overImage) {
+	const auto circle = overImage
+		? background
+		: ContrastingIconColor(foreground, QColor(Qt::white));
+	const auto symbol = overImage ? foreground : QColor(Qt::white);
 	return {
-		.foreground = foreground,
-		.background = overImage ? background : WithAlpha(foreground, 9),
+		.foreground = symbol,
+		.background = circle,
 		.badge = WithAlpha(background, 255),
-		.border = WithAlpha(foreground, 53),
-		.fill = WithAlpha(foreground, overImage ? 56 : 48),
+		.fill = WithAlpha(symbol, overImage ? 56 : 48),
 	};
 }
 
@@ -73,12 +100,83 @@ void PaintMediaButtonSurface(
 		QPainter &p,
 		QRectF inner,
 		const MediaButtonColors &colors,
-		bool hovered) {
-	const auto line = std::max(1., inner.width() / 44.);
+		bool hovered,
+		MediaButtonShape shape) {
 	auto hq = PainterHighQualityEnabler(p);
-	p.setPen(QPen(hovered ? colors.foreground : colors.border, line));
-	p.setBrush(hovered ? colors.fill : colors.background);
-	p.drawEllipse(inner.adjusted(line / 2., line / 2., -line / 2., -line / 2.));
+	p.setPen(Qt::NoPen);
+	p.setBrush(hovered
+		? anim::color(colors.background, colors.foreground, 0.1)
+		: colors.background);
+	if (shape == MediaButtonShape::RoundedRect) {
+		const auto radius = style::ConvertScale(8);
+		const auto inset = style::ConvertScaleExact(1.) / 2.;
+		p.setPen(QPen(anim::color(colors.background, colors.foreground, .18), 2 * inset));
+		p.drawRoundedRect(inner.adjusted(inset, inset, -inset, -inset),
+			radius - inset, radius - inset);
+	} else {
+		p.drawEllipse(inner);
+	}
+}
+
+void PaintMediaIcon(
+		QPainter &p,
+		QRectF inner,
+		const style::icon &icon,
+		QColor color) {
+	p.save();
+	auto hq = PainterHighQualityEnabler(p);
+	p.translate(inner.topLeft());
+	p.scale(inner.width() / icon.width(), inner.height() / icon.height());
+	icon.paint(p, 0, 0, icon.width(), color);
+	p.restore();
+}
+
+void PaintMediaProgressArc(
+		QPainter &p,
+		QRectF inner,
+		const RadialAnimation &animation,
+		float64 thickness,
+		QColor color) {
+	const auto state = animation.computeState();
+	p.save();
+	auto hq = PainterHighQualityEnabler(p);
+	p.setOpacity(p.opacity() * state.shown);
+	p.setPen(QPen(color, thickness, Qt::SolidLine, Qt::RoundCap));
+	p.setBrush(Qt::NoBrush);
+	p.drawArc(inner, state.arcFrom, state.arcLength);
+	p.restore();
+}
+
+void PaintMediaCheck(
+		QPainter &p,
+		QRectF inner,
+		QColor color,
+		float64 progress) {
+	if (progress <= 0.) {
+		return;
+	}
+	const auto scale = inner.width() / 44.;
+	const auto center = inner.center();
+	const auto a = center + QPointF(-8., 0.) * scale;
+	const auto b = center + QPointF(-2., 6.) * scale;
+	const auto c = center + QPointF(9., -6.) * scale;
+	const auto first = QLineF(a, b).length();
+	const auto second = QLineF(b, c).length();
+	const auto drawn = progress * (first + second);
+	auto visible = QPainterPath();
+	visible.moveTo(a);
+	visible.lineTo(a + (b - a) * std::min(drawn / first, 1.));
+	if (drawn > first) {
+		visible.lineTo(b + (c - b) * ((drawn - first) / second));
+	}
+	auto stroke = QPainterPathStroker();
+	stroke.setWidth(4. * scale);
+	stroke.setCapStyle(Qt::RoundCap);
+	stroke.setJoinStyle(Qt::RoundJoin);
+	p.save();
+	p.setClipPath(stroke.createStroke(visible), Qt::IntersectClip);
+	PaintMediaIcon(p, inner, st::mediaProgressCheckIcon, color);
+	p.restore();
 }
 
 void PaintMediaCancelBadge(
@@ -88,22 +186,23 @@ void PaintMediaCancelBadge(
 		bool hovered) {
 	const auto scale = inner.width() / 44.;
 	const auto badge = BadgeRect(inner);
+	const auto foreground = ContrastingIconColor(
+		CountContrast(colors.foreground, colors.badge)
+			> CountContrast(colors.background, colors.badge)
+			? colors.foreground : colors.background,
+		colors.badge);
 	auto hq = PainterHighQualityEnabler(p);
 	p.setPen(Qt::NoPen);
 	p.setBrush(colors.badge);
 	p.drawEllipse(BadgeRect(inner, 24.));
-	p.setPen(QPen(hovered ? colors.foreground : colors.border, scale));
+	p.setPen(QPen(WithAlpha(foreground, hovered ? 255 : 96), scale));
 	p.drawEllipse(badge);
 	if (hovered) {
 		p.setPen(Qt::NoPen);
-		p.setBrush(colors.fill);
+		p.setBrush(WithAlpha(foreground, 24));
 		p.drawEllipse(badge.adjusted(scale, scale, -scale, -scale));
 	}
-	p.setPen(QPen(colors.foreground, 1.6 * scale, Qt::SolidLine, Qt::RoundCap));
-	const auto center = badge.center();
-	const auto half = 4.2 * scale;
-	p.drawLine(center + QPointF(-half, -half), center + QPointF(half, half));
-	p.drawLine(center + QPointF(-half, half), center + QPointF(half, -half));
+	PaintMediaIcon(p, badge, st::mediaCancelBadgeIcon, foreground);
 }
 
 bool MediaCancelBadgeContains(QRectF inner, QPoint point) {
@@ -212,22 +311,10 @@ void MediaProgressAnimation::paint(
 	paintFill(p, inner, colors);
 	const auto scale = inner.width() / 44.;
 	if (showingCheck()) {
-		auto hq = PainterHighQualityEnabler(p);
-		p.setPen(QPen(colors.foreground, 2. * scale, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-		const auto center = inner.center();
-		const auto a = center + QPointF(-8., 0.) * scale;
-		const auto b = center + QPointF(-2., 6.) * scale;
-		const auto c = center + QPointF(9., -6.) * scale;
-		const auto first = QLineF(a, b).length();
-		const auto second = QLineF(b, c).length();
 		const auto progress = anim::Disabled() ? 1. : std::clamp(
 			((crl::now() - _completedAt) / _durationMultiplier - kCompleteNumberHold)
 				/ kCheckDuration, 0., 1.);
-		const auto drawn = progress * (first + second);
-		p.drawLine(a, a + (b - a) * std::min(drawn / first, 1.));
-		if (drawn > first) {
-			p.drawLine(b, b + (c - b) * ((drawn - first) / second));
-		}
+		PaintMediaCheck(p, inner, colors.foreground, progress);
 	} else {
 		auto font = style::font(13, style::FontFlag::Bold, 0)->f;
 		font.setWeight(QFont::DemiBold);

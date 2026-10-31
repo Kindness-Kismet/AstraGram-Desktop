@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_web_page.h"
 #include "lang/lang_keys.h"
 #include "layout/layout_document_generic_preview.h"
+#include "ui/controls/file_preview.h"
 #include "main/main_session.h"
 #include "platform/platform_file_utilities.h"
 #include "storage/file_upload.h"
@@ -57,9 +58,6 @@ QImage GenerateDocumentFilePreview(
 		const QString &filename,
 		int size) {
 	const auto preview = Layout::DocumentGenericPreview::Create(filename);
-	const auto &color = preview.color;
-	const auto &ext = preview.ext;
-
 	const auto ratio = style::DevicePixelRatio();
 	auto result = QImage(
 		QSize(size, size) * ratio,
@@ -68,38 +66,8 @@ QImage GenerateDocumentFilePreview(
 	result.setDevicePixelRatio(ratio);
 
 	auto p = QPainter(&result);
-	PainterHighQualityEnabler hq(p);
-	p.setPen(Qt::NoPen);
-	p.setBrush(color);
-	p.drawRoundedRect(
-		QRect(0, 0, size, size),
-		st::pollAttachRadius,
-		st::pollAttachRadius);
-
-	if (!ext.isEmpty()) {
-		const auto refSize = st::overviewFileLayout.fileThumbSize;
-		const auto fontSize = std::max(
-			size * st::overviewFileExtFont->f.pixelSize() / refSize,
-			8);
-		const auto font = style::font(
-			fontSize,
-			st::overviewFileExtFont->flags(),
-			st::overviewFileExtFont->family());
-		const auto padding = size * st::overviewFileExtPadding / refSize;
-		const auto maxw = size - padding * 2;
-		auto extStr = ext;
-		auto extw = font->width(extStr);
-		if (extw > maxw) {
-			extStr = font->elided(extStr, maxw, Qt::ElideMiddle);
-			extw = font->width(extStr);
-		}
-		p.setFont(font);
-		p.setPen(st::overviewFileExtFg);
-		p.drawText(
-			(size - extw) / 2,
-			(size - font->height) / 2 + font->ascent,
-			extStr);
-	}
+	const auto rect = QRect(0, 0, size, size);
+	Ui::PaintFilePreview(p, rect, preview);
 	p.end();
 	return result;
 }

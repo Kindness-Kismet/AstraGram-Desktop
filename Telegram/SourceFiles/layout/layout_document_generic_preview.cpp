@@ -8,137 +8,64 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "layout/layout_document_generic_preview.h"
 
 #include "data/data_document.h"
-#include "lang/lang_keys.h"
-#include "styles/style_media_view.h"
+#include "styles/style_file_preview.h"
+
+#include <range/v3/algorithm/contains.hpp>
 
 namespace Layout {
-namespace {
-
-[[nodiscard]] int ColorIndexForName(
-		const QString &name,
-		const QString &mime = QString()) {
-	const auto lastDot = name.lastIndexOf('.');
-	if (name.endsWith(u".doc"_q) ||
-		name.endsWith(u".docx"_q) ||
-		name.endsWith(u".txt"_q) ||
-		name.endsWith(u".psd"_q) ||
-		mime.startsWith(u"text/"_q)) {
-		return 0;
-	} else if (
-		name.endsWith(u".xls"_q) ||
-		name.endsWith(u".xlsx"_q) ||
-		name.endsWith(u".csv"_q)) {
-		return 1;
-	} else if (
-		name.endsWith(u".pdf"_q) ||
-		name.endsWith(u".ppt"_q) ||
-		name.endsWith(u".pptx"_q) ||
-		name.endsWith(u".key"_q)) {
-		return 2;
-	} else if (
-		name.endsWith(u".zip"_q) ||
-		name.endsWith(u".rar"_q) ||
-		name.endsWith(u".ai"_q) ||
-		name.endsWith(u".mp3"_q) ||
-		name.endsWith(u".mov"_q) ||
-		name.endsWith(u".avi"_q)) {
-		return 3;
-	}
-	const auto ch = (lastDot >= 0 && lastDot + 1 < name.size())
-		? name.at(lastDot + 1)
-		: (name.isEmpty()
-			? (mime.isEmpty() ? QChar('0') : mime.at(0))
-			: name.at(0));
-	return (ch.unicode() % 4) & 3;
-}
-
-[[nodiscard]] DocumentGenericPreview BuildFromColorIndex(
-		int colorIndex,
-		const QString &ext) {
-	switch (colorIndex) {
-	case 0: return {
-		.index = colorIndex,
-		.color = st::msgFile1Bg,
-		.dark = st::msgFile1BgDark,
-		.over = st::msgFile1BgOver,
-		.selected = st::msgFile1BgSelected,
-		.ext = ext,
-	};
-	case 1: return {
-		.index = colorIndex,
-		.color = st::msgFile2Bg,
-		.dark = st::msgFile2BgDark,
-		.over = st::msgFile2BgOver,
-		.selected = st::msgFile2BgSelected,
-		.ext = ext,
-	};
-	case 2: return {
-		.index = colorIndex,
-		.color = st::msgFile3Bg,
-		.dark = st::msgFile3BgDark,
-		.over = st::msgFile3BgOver,
-		.selected = st::msgFile3BgSelected,
-		.ext = ext,
-	};
-	case 3: return {
-		.index = colorIndex,
-		.color = st::msgFile4Bg,
-		.dark = st::msgFile4BgDark,
-		.over = st::msgFile4BgOver,
-		.selected = st::msgFile4BgSelected,
-		.ext = ext,
-	};
-	}
-	Unexpected("Color index in BuildFromColorIndex.");
-}
-
-} // namespace
 
 const style::icon *DocumentGenericPreview::icon() const {
-	switch (index) {
-	case 0: return &st::mediaviewFileBlue;
-	case 1: return &st::mediaviewFileGreen;
-	case 2: return &st::mediaviewFileRed;
-	case 3: return &st::mediaviewFileYellow;
+	switch (type()) {
+	case DocumentFileType::Application: return &st::filePreviewApplication;
+	case DocumentFileType::Library: return &st::filePreviewLibrary;
+	case DocumentFileType::Code: return &st::filePreviewCode;
+	case DocumentFileType::Archive: return &st::filePreviewArchive;
+	case DocumentFileType::Spreadsheet: return &st::filePreviewSpreadsheet;
+	case DocumentFileType::Image: return &st::filePreviewImage;
+	case DocumentFileType::Document: return &st::filePreviewDocument;
 	}
-	Unexpected("Color index in DocumentGenericPreview::icon.");
+	Unexpected("File type in DocumentGenericPreview::icon.");
+}
+
+DocumentFileType DocumentGenericPreview::type() const {
+	const auto matches = [&](std::initializer_list<QStringView> extensions) {
+		return ranges::contains(extensions, ext);
+	};
+	if (matches({ u"exe", u"msi", u"apk", u"app", u"appx" })) {
+		return DocumentFileType::Application;
+	}
+	if (matches({ u"so", u"dll", u"dylib" })) {
+		return DocumentFileType::Library;
+	}
+	if (matches({ u"py", u"js", u"ts", u"cpp", u"h", u"c", u"rs",
+			u"json", u"html", u"css", u"xml", u"sh", u"java", u"qml" })) {
+		return DocumentFileType::Code;
+	}
+	if (matches({ u"zip", u"rar", u"7z", u"tar", u"gz", u"xz" })) {
+		return DocumentFileType::Archive;
+	}
+	if (matches({ u"xls", u"xlsx", u"csv" })) {
+		return DocumentFileType::Spreadsheet;
+	}
+	if (matches({ u"png", u"jpg", u"jpeg", u"webp", u"svg", u"bmp" })) {
+		return DocumentFileType::Image;
+	}
+	return DocumentFileType::Document;
 }
 
 DocumentGenericPreview DocumentGenericPreview::Create(
 		DocumentData *document) {
-	const auto name = (document
-		? (document->filename().isEmpty()
-			? (document->sticker()
-				? tr::lng_in_dlg_sticker(tr::now)
-				: u"Unknown File"_q)
-			: document->filename())
-		: tr::lng_message_empty(tr::now)).toLower();
-	const auto mime = document ? document->mimeString() : QString();
-	const auto colorIndex = ColorIndexForName(name, mime);
-	const auto lastDot = name.lastIndexOf('.');
-	const auto ext = document
-		? ((lastDot < 0 || lastDot + 2 > name.size())
-			? name
-			: name.mid(lastDot + 1))
-		: QString();
-
-	return BuildFromColorIndex(colorIndex, ext);
+	return Create(document ? document->filename() : QString());
 }
 
 DocumentGenericPreview DocumentGenericPreview::Create(
 		const QString &filename) {
 	const auto name = filename.toLower();
-	const auto colorIndex = ColorIndexForName(name);
 	const auto lastDot = name.lastIndexOf('.');
 	const auto ext = (lastDot < 0 || lastDot + 2 > name.size())
-		? name
+		? QString()
 		: name.mid(lastDot + 1);
-
-	return BuildFromColorIndex(colorIndex, ext);
+	return { .ext = ext };
 }
-
-// Ui::CachedRoundCorners DocumentCorners(int32 colorIndex) {
-// 	return Ui::CachedRoundCorners(Ui::Doc1Corners + (colorIndex & 3));
-// }
 
 } // namespace Layout

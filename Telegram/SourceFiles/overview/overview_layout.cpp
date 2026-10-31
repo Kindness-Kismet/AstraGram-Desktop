@@ -1363,10 +1363,12 @@ Document::Document(
 , _generic(::Layout::DocumentGenericPreview::Create(_data))
 , _externalLoading(std::move(fields.externalLoading))
 , _forceFileLayout(fields.forceFileLayout)
-, _date(langDateTime(base::unixtime::parse(fields.dateOverride
-	? fields.dateOverride
-	: parent->date())))
-, _datew(st::normalFont->width(_date)) {
+, _date([&] {
+	const auto date = base::unixtime::parse(fields.dateOverride
+		? fields.dateOverride
+		: parent->date());
+	return langDayOfMonth(date.date()) + ' ' + date.time().toString(u"HH:mm"_q);
+}()) {
 	_name.setMarkedText(
 		st::defaultTextStyle,
 		(!_forceFileLayout
@@ -1447,7 +1449,7 @@ void Document::paint(Painter &p, const QRect &clip, TextSelection selection, con
 	const auto showPause = updateStatusText();
 	const auto radial = isRadialAnimation();
 
-	int32 nameleft = 0, nametop = 0, nameright = 0, statustop = 0, datetop = -1;
+	int32 nameleft = 0, nametop = 0, nameright = 0, statustop = 0;
 	const auto wthumb = withThumb();
 
 	const auto isSong = songLayout();
@@ -1519,7 +1521,6 @@ void Document::paint(Painter &p, const QRect &clip, TextSelection selection, con
 		nameleft = _st.fileThumbSize + _st.filePadding.right();
 		nametop = st::linksBorder + _st.fileNameTop;
 		statustop = st::linksBorder + _st.fileStatusTop;
-		datetop = st::linksBorder + _st.fileDateTop;
 
 		QRect border(style::rtlrect(nameleft, 0, _width - nameleft, st::linksBorder, _width));
 		if (!context->skipBorder && clip.intersects(border)) {
@@ -1528,52 +1529,13 @@ void Document::paint(Painter &p, const QRect &clip, TextSelection selection, con
 
 		QRect rthumb(style::rtlrect(0, st::linksBorder + _st.filePadding.top(), _st.fileThumbSize, _st.fileThumbSize, _width));
 		if (clip.intersects(rthumb)) {
-			const auto previewColors = Ui::FilePreviewPalette(_generic, st::windowBg->c);
-			if (wthumb) {
-				paintThumbnail(p, rthumb, true);
-			} else {
-				Ui::PaintFilePreviewSurface(p, rthumb, previewColors);
-			}
+			paintThumbnail(p, rthumb, wthumb);
 			if (selected) {
-				const auto radius = Ui::FilePreviewRadius(rthumb);
+				auto hq = PainterHighQualityEnabler(p);
 				p.setPen(Qt::NoPen);
 				p.setBrush(st::defaultTextPalette.selectOverlay);
-				p.drawRoundedRect(
-					rthumb,
-					radius,
-					radius);
-			}
-
-			if (radial || (!loaded && !activeLoading())) {
-				QRect inner(rthumb.x() + (rthumb.width() - _st.songThumbSize) / 2, rthumb.y() + (rthumb.height() - _st.songThumbSize) / 2, _st.songThumbSize, _st.songThumbSize);
-				if (clip.intersects(Ui::MediaButtonPaintRect(inner))) {
-					auto radialOpacity = (radial && loaded && !_data->uploading()) ? _radial->opacity() : 1;
-					const auto over = ClickHandler::showAsActive(activeLoading()
-						? _cancell
-						: _savel);
-					const auto imageBackground = selected
-						? st::msgDateImgBgSelected->c
-						: anim::color(st::msgDateImgBg, st::msgDateImgBgOver,
-							_a_iconOver.value(over ? 1. : 0.));
-					const auto colors = wthumb
-						? Ui::MediaButtonPalette(st::historyFileThumbRadialFg->c,
-							imageBackground, true)
-						: previewColors;
-					p.save();
-					p.setOpacity(radialOpacity * p.opacity());
-					if (radial) {
-						_radial->paint(p, inner, colors, activeLoading() || _data->uploading(),
-							ClickHandler::showAsActive(_cancell));
-					} else {
-						Ui::PaintMediaButtonSurface(p, inner, colors, ClickHandler::showAsActive(_savel));
-						st::historyFileThumbDownload.paintInCenter(p, inner, colors.foreground);
-					}
-					p.restore();
-				}
-			}
-			if (!wthumb) {
-				Ui::PaintFilePreviewContent(p, rthumb, _generic, previewColors,
-					loaded && !_data->uploading() ? (radial ? 1. - _radial->opacity() : 1.) : 0.);
+				const auto radius = Ui::FilePreviewRadius(rthumb);
+				p.drawRoundedRect(rthumb, radius, radius);
 			}
 		}
 	}
@@ -1586,16 +1548,23 @@ void Document::paint(Painter &p, const QRect &clip, TextSelection selection, con
 	}
 
 	if (clip.intersects(style::rtlrect(nameleft, statustop, availwidth, st::normalFont->height, _width))) {
-		p.setFont(st::normalFont);
-		p.setPen((isSong && selected) ? st::mediaInFgSelected : st::mediaInFg);
-		p.drawTextLeft(nameleft, statustop, _width, _status.text());
-	}
-	if (datetop >= 0 && clip.intersects(style::rtlrect(nameleft, datetop, _datew, st::normalFont->height, _width))) {
-		p.setFont((_msgl && ClickHandler::showAsActive(_msgl))
+		const auto action = isSong ? nullptr : fileActionLink();
+		const auto actionSkip = action
+			? (st::normalFont->height + style::ConvertScale(4))
+			: 0;
+		if (action) {
+			paintFileAction(p, action);
+		} else if (_fileActionCancelling) {
+			_fileActionAnimation.stop();
+			_fileActionCancelling.reset();
+		}
+		p.setFont((!isSong && _msgl && ClickHandler::showAsActive(_msgl))
 			? st::normalFont->underline()
 			: st::normalFont);
-		p.setPen(st::mediaInFg);
-		p.drawTextLeft(nameleft, datetop, _width, _date, _datew);
+		p.setPen((isSong && selected) ? st::mediaInFgSelected : st::mediaInFg);
+		p.drawTextLeft(nameleft + actionSkip, statustop, _width,
+			st::normalFont->elided(isSong ? _status.text() : fileStatusText(),
+				availwidth - actionSkip));
 	}
 
 	const auto checkDelta = (isSong ? _st.songThumbSize : _st.fileThumbSize)
@@ -1612,6 +1581,7 @@ void Document::paint(Painter &p, const QRect &clip, TextSelection selection, con
 
 bool Document::elementsAnimating() const {
 	if (RadialProgressItem::elementsAnimating()
+		|| _fileActionAnimation.animating()
 		|| _name.hasPersistentAnimation()) {
 		return true;
 	}
@@ -1662,9 +1632,7 @@ void Document::paintThumbnail(
 				radius);
 		}
 	} else {
-		const auto colors = Ui::FilePreviewPalette(_generic, st::windowBg->c);
-		Ui::PaintFilePreviewSurface(p, rthumb, colors);
-		Ui::PaintFilePreviewContent(p, rthumb, _generic, colors);
+		Ui::PaintFilePreview(p, rthumb, _generic);
 	}
 }
 
@@ -1790,7 +1758,14 @@ TextState Document::getState(
 		const auto namewidth = std::min(
 			_width - nameleft - nameright,
 			_name.maxWidth());
-		const auto datetop = st::linksBorder + _st.fileDateTop;
+		const auto statustop = st::linksBorder + _st.fileStatusTop;
+		const auto action = fileActionLink();
+		if (action && fileActionRect().contains(point)) {
+			return { parent(), action };
+		}
+		const auto actionSkip = action
+			? (st::normalFont->height + style::ConvertScale(4))
+			: 0;
 
 		const auto rthumb = style::rtlrect(
 			0,
@@ -1800,28 +1775,22 @@ TextState Document::getState(
 			_width);
 
 		if (rthumb.contains(point)) {
-			auto link = (activeLoading() || _data->uploading())
-				? _cancell
+			const auto link = (activeLoading() || _data->uploading())
+				? nullptr
 				: loaded
 				? _openl
 				: _savel;
-			const auto size = _st.songThumbSize;
-			const auto button = QRect(rthumb.x() + (rthumb.width() - size) / 2,
-				rthumb.y() + (rthumb.height() - size) / 2, size, size);
-			if (link == _cancell && !Ui::MediaCancelBadgeContains(button, point)) {
-				link = nullptr;
-			}
 			return { parent(), link };
 		}
 
 		if (_data->status != FileUploadFailed) {
-			auto daterect = style::rtlrect(
-				nameleft,
-				datetop,
-				_datew,
+			const auto statusrect = style::rtlrect(
+				nameleft + actionSkip,
+				statustop,
+				std::min(_width - nameleft - actionSkip, st::normalFont->width(fileStatusText())),
 				st::normalFont->height,
 				_width);
-			if (daterect.contains(point)) {
+			if (statusrect.contains(point)) {
 				return { parent(), _msgl };
 			}
 		}
@@ -1851,7 +1820,7 @@ TextState Document::getState(
 
 bool Document::selectionConsumesClick(QPoint point) const {
 	if (!songLayout()) {
-		return true;
+		return !fileActionLink() || !fileActionRect().contains(point);
 	}
 	if (const auto state = cornerDownloadTextState(point, StateRequest());
 		state.link) {
@@ -1896,6 +1865,61 @@ auto Document::externalLoading() const
 
 bool Document::activeLoading() const {
 	return externalLoading().has_value() || _data->loading();
+}
+
+QString Document::fileStatusText() const {
+	return _status.text() + u" · "_q + _date;
+}
+
+QRect Document::fileActionRect() const {
+	return style::rtlrect(
+		_st.fileThumbSize + _st.filePadding.right(),
+		st::linksBorder + _st.fileStatusTop,
+		st::normalFont->height,
+		st::normalFont->height,
+		_width);
+}
+
+ClickHandlerPtr Document::fileActionLink() const {
+	if (activeLoading() || _data->uploading()) {
+		return _cancell;
+	}
+	return (dataLoaded() || _data->isNull()) ? nullptr : _savel;
+}
+
+void Document::paintFileAction(QPainter &p, const ClickHandlerPtr &action) {
+	const auto cancelling = (action == _cancell);
+	const auto previous = _fileActionAnimation.value(
+		_fileActionCancelling.value_or(cancelling) ? 1. : 0.);
+	if (_fileActionCancelling && *_fileActionCancelling != cancelling) {
+		_fileActionAnimation.start([=] {
+			delegate()->repaintItem(this);
+		}, previous, cancelling ? 1. : 0., st::fadeWrapDuration);
+	}
+	_fileActionCancelling = cancelling;
+	const auto progress = _fileActionAnimation.value(cancelling ? 1. : 0.);
+	const auto rect = QRectF(fileActionRect());
+	const auto metrics = QFontMetricsF(st::normalFont->f);
+	const auto glyphHeight = metrics.capHeight();
+	const auto center = QPointF(rect.center().x(),
+		rect.top() + st::normalFont->ascent - glyphHeight / 2.);
+	const auto opacity = p.opacity();
+	const auto paint = [&](bool cancel, float64 shown) {
+		if (shown <= 0.) {
+			return;
+		}
+		// 去掉矢量画布留白后，符号与文字的大写字高对齐。
+		const auto side = glyphHeight * 24. / (cancel ? 15. : 18.);
+		p.setOpacity(opacity * shown);
+		Ui::PaintMediaIcon(p, QRectF(center - QPointF(side / 2., side / 2.),
+			QSizeF(side, side)),
+			cancel ? st::overviewSmallCancel : st::overviewSmallDownload,
+			st::windowActiveTextFg->c);
+	};
+	p.save();
+	paint(false, 1. - progress);
+	paint(true, progress);
+	p.restore();
 }
 
 float64 Document::dataProgress() const {

@@ -1820,6 +1820,16 @@ int ComposeControls::heightCurrent() const {
 		: _wrap->height()) + 2 * ComposeOuterMargin(_st);
 }
 
+int ComposeControls::messageEnterShrink() const {
+	const auto fieldShrink = _field->getTextWithTags().text.isEmpty()
+		? std::max(0, _field->height() - MessageFieldMinHeight())
+		: 0;
+	const auto headerShrink = _header->isDisplayed()
+		? 0
+		: anim::interpolate(0, _header->height(), _headerReveal.value());
+	return fieldShrink + headerShrink;
+}
+
 int ComposeControls::fieldHeightCurrent() const {
 	return _field->height();
 }

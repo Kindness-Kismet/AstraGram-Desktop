@@ -9,6 +9,7 @@
 #include "apiwrap.h"
 #include "api/api_common.h"
 #include "api/api_editing.h"
+#include "api/api_sending.h"
 #include "base/unixtime.h"
 #include "chat_helpers/message_field.h"
 #include "core/application.h"
@@ -212,6 +213,35 @@ Result setMessagePreview(const QStringList &args) {
 			finishJob(id, false, error.toStdString());
 		}, false);
 	return jobStarted(id);
+}
+
+Result sendSticker(const QStringList &args) {
+	if (args.size() != 2 && (args.size() != 4 || args[2] != u"--account"_q)) {
+		return Result::Err(u"usage: message.send-sticker <peerId> <documentId> [--account index]"_q);
+	}
+	auto session = ActiveSession();
+	if (args.size() == 4) {
+		auto ok = false;
+		const auto index = args[3].toInt(&ok);
+		session = ok ? sessionByIndex(index) : nullptr;
+	}
+	if (!session || isSimulationSession(session)) {
+		return Result::Err(u"an authenticated session is required"_q);
+	}
+	auto peerOk = false;
+	auto documentOk = false;
+	const auto peerId = PeerId(args[0].toULongLong(&peerOk));
+	const auto documentId = args[1].toULongLong(&documentOk);
+	const auto peer = peerOk ? session->data().peerLoaded(peerId) : nullptr;
+	const auto document = documentOk ? session->data().document(documentId).get() : nullptr;
+	if (!peer || !document || !document->sticker() || !document->hasRemoteLocation()) {
+		return Result::Err(u"a loaded peer and sticker document are required"_q);
+	}
+	auto action = Api::SendAction(session->data().history(peer));
+	action.clearDraft = false;
+	Api::SendExistingDocument(Api::MessageToSend(action), document);
+	return Result::Ok(Compact(Json{ { "state", "submitted" },
+		{ "peerId", peerId.value }, { "documentId", documentId } }));
 }
 
 Result localMessages(const QStringList &args) {
@@ -826,6 +856,7 @@ const HandlerMap &messageBusinessHandlers() {
 		{ u"message.media-file"_q, &saveAltFile },
 		{ u"peer.resolve"_q, &resolvePeer },
 		{ u"message.send-file"_q, &sendFile },
+		{ u"message.send-sticker"_q, &sendSticker },
 		{ u"message.send-album"_q, &sendAlbum },
 		{ u"video.cover"_q, &openVideoCover },
 		{ u"media.open"_q, &openMedia },

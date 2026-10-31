@@ -16,7 +16,7 @@ public:
 		int oldTextWidth);
 	BubbleTransition(int fromHeight, int fromWidth);
 
-	// 排版时调用：首次排版开始过渡，宽度变化或过渡结束返回 false。
+	// 排版时调用：首次排版开始过渡，窗口宽度变化或过渡结束返回 false。
 	[[nodiscard]] bool update(
 		int layoutWidth,
 		int finalHeight,
@@ -43,7 +43,7 @@ public:
 		_includesContent = true;
 		_movesReactions = _movesReactions || moveReactions;
 	}
-	[[nodiscard]] int bubbleWidth(int finalWidth) const;
+	[[nodiscard]] int bubbleWidth() const;
 	// 文字没有变化时为空，只过渡尺寸。
 	[[nodiscard]] const Ui::Text::String *oldText() const;
 	[[nodiscard]] int oldTextWidth() const {
@@ -57,6 +57,7 @@ private:
 	int _fromHeight = 0;
 	int _fromWidth = 0;
 	int _toHeight = 0;
+	int _toWidth = 0;
 	int _layoutWidth = 0;
 	bool _started = false;
 	bool _includesContent = false;

@@ -108,6 +108,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
 #include "layout/layout_document_generic_preview.h"
+#include "ui/controls/file_preview.h"
 #include "platform/platform_overlay_widget.h"
 #include "platform/platform_specific.h"
 #include "storage/file_download.h"
@@ -3367,6 +3368,9 @@ QRect OverlayWidget::radialRect() const {
 	if (_photo) {
 		return _photoRadialRect;
 	} else if (_document) {
+		if (documentBubbleShown() && !_document->hasThumbnail()) {
+			return _docIconRect;
+		}
 		return QRect(
 			QPoint(
 				_docIconRect.x() + ((_docIconRect.width() - st::radialSize.width()) / 2),
@@ -5522,17 +5526,6 @@ void OverlayWidget::displayDocument(
 
 	tryStartTextRecognition();
 
-	const auto docGeneric = Layout::DocumentGenericPreview::Create(_document);
-	_docExt = docGeneric.ext;
-	_docIconColor = docGeneric.color;
-	_docIcon = docGeneric.icon();
-
-	int32 extmaxw = (st::mediaviewFileIconSize - st::mediaviewFileExtPadding * 2);
-	_docExtWidth = st::mediaviewFileExtFont->width(_docExt);
-	if (_docExtWidth > extmaxw) {
-		_docExt = st::mediaviewFileExtFont->elided(_docExt, extmaxw, Qt::ElideMiddle);
-		_docExtWidth = st::mediaviewFileExtFont->width(_docExt);
-	}
 	if (documentBubbleShown()) {
 		if (_document && _document->hasThumbnail()) {
 			_document->loadThumbnail(fileOrigin());
@@ -7395,14 +7388,19 @@ void OverlayWidget::paintRadialLoadingContent(
 		st::radialLine,
 		st::radialLine,
 		st::radialLine));
+	const auto genericFile = _document && documentBubbleShown()
+		&& !_document->hasThumbnail();
+	const auto fileColors = genericFile
+		? Ui::FilePreviewPalette(Layout::DocumentGenericPreview::Create(_document),
+			st::mediaviewFileBg->c)
+		: Ui::MediaButtonPalette(st::radialFg->c, st::radialBg->c, true);
 	const auto paintBg = [&](float64 opacity, QBrush brush) {
 		p.setOpacity(opacity);
-		p.setPen(Qt::NoPen);
-		p.setBrush(brush);
-		{
-			PainterHighQualityEnabler hq(p);
-			p.drawEllipse(inner);
-		}
+		const auto colors = genericFile ? fileColors
+			: Ui::MediaButtonPalette(st::radialFg->c, brush.color(), true);
+		Ui::PaintMediaButtonSurface(p, inner, colors, false, genericFile
+			? Ui::MediaButtonShape::RoundedRect
+			: Ui::MediaButtonShape::Circle);
 		p.setOpacity(1.);
 	};
 
@@ -7435,12 +7433,12 @@ void OverlayWidget::paintRadialLoadingContent(
 			return &st::historyFileThumbDownload;
 		}();
 		if (icon) {
-			icon->paintInCenter(p, inner);
+			icon->paintInCenter(p, inner, fileColors.foreground);
 		}
 	}
 	if (radial) {
 		p.setOpacity(1);
-		_radial.draw(p, arc, st::radialLine, st::radialFg);
+		Ui::PaintMediaProgressArc(p, arc, _radial, st::radialLine, fileColors.foreground);
 	}
 }
 
@@ -7549,16 +7547,11 @@ void OverlayWidget::paintDocumentBubbleContent(
 	p.fillRect(outer, st::mediaviewFileBg);
 	if (icon.intersects(clip)) {
 		if (!_document || !_document->hasThumbnail()) {
-			p.fillRect(icon, _docIconColor);
+			const auto preview = Layout::DocumentGenericPreview::Create(_document);
 			const auto radial = _radial.animating();
-			const auto radialOpacity = radial ? _radial.opacity() : 0.;
-			if ((!_document || _documentMedia->loaded()) && (!radial || radialOpacity < 1) && _docIcon) {
-				_docIcon->paint(p, icon.x() + (icon.width() - _docIcon->width()), icon.y(), width());
-				p.setPen(st::mediaviewFileExtFg);
-				p.setFont(st::mediaviewFileExtFont);
-				if (!_docExt.isEmpty()) {
-					p.drawText(icon.x() + (icon.width() - _docExtWidth) / 2, icon.y() + st::mediaviewFileExtTop + st::mediaviewFileExtFont->ascent, _docExt);
-				}
+			const auto opacity = radial ? _radial.opacity() : 0.;
+			if (!_document || _documentMedia->loaded()) {
+				Ui::PaintFilePreview(p, icon, preview, 1. - opacity);
 			}
 		} else if (const auto thumbnail = _documentMedia->thumbnail()) {
 			int32 rf(style::DevicePixelRatio());

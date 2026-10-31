@@ -1360,7 +1360,6 @@ QRect Message::effectIconGeometry() const {
 	const auto media = this->media();
 
 	auto g = countGeometry();
-	g.setHeight(g.height() + bubbleContentHeightDelta() - bubbleReactionsShift());
 	if (g.width() < 1 || isHidden()) {
 		return {};
 	}
@@ -2271,7 +2270,7 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 				context.withSelection(
 					bottomSelected ? FullSelection : TextSelection()),
 				inner.left() + inner.width(),
-				inner.top() + inner.height() - reactionsShift,
+				inner.top() + inner.height() - contentHeightDelta,
 				2 * inner.left() + inner.width(),
 				InfoDisplayType::Default);
 			if (context.reactionInfo && !_reactions) {
@@ -4261,7 +4260,7 @@ TextState Message::textState(
 			}
 			const auto bottomInfoResult = bottomInfoTextState(
 				inner.left() + inner.width(),
-				inner.top() + inner.height() - reactionsShift,
+				inner.top() + inner.height() - contentHeightDelta,
 				point,
 				InfoDisplayType::Default);
 			if (bottomInfoResult.link
@@ -6731,7 +6730,7 @@ QRect Message::countGeometry(bool finalWidth, int layoutWidth) const {
 		|| isCommentsRootView();
 	const auto media = this->media();
 	const auto mediaDisplayed = media && media->isDisplayed();
-	const auto mediaWidth = mediaDisplayed ? media->width() : width();
+	const auto mediaWidth = mediaDisplayed ? media->width() : 0;
 	const auto outbg = hasOutLayout();
 	const auto useMoreSpace = (delegate()->elementChatMode()
 		== ElementChatMode::Narrow);
@@ -6760,14 +6759,14 @@ QRect Message::countGeometry(bool finalWidth, int layoutWidth) const {
 	//	contentLeft += st::msgPhotoSkip - (hmaxwidth - hwidth);
 	}
 	auto effectiveMaxWidth = maxWidth();
-	if (_infoWidthAnimation.animating()) {
+	if (!finalWidth && !_bubbleTransition && _infoWidthAnimation.animating()) {
 		const auto progress = _infoWidthAnimation.value(1.);
 		const auto infoWidthDiff = _bottomInfo.maxWidth() - _infoWidthFrom;
 		effectiveMaxWidth -= int((1. - progress) * infoWidthDiff);
 	}
 	accumulate_min(contentWidth, effectiveMaxWidth);
 	accumulate_min(contentWidth, int(_bubbleWidthLimit));
-	if (mediaWidth < contentWidth) {
+	if (mediaDisplayed && mediaWidth < contentWidth) {
 		const auto textualWidth = bubbleTextualWidth();
 		if (mediaWidth < textualWidth
 			&& (!media || !media->enforceBubbleWidth())) {
@@ -6788,7 +6787,7 @@ QRect Message::countGeometry(bool finalWidth, int layoutWidth) const {
 		}
 	}
 	if (_bubbleTransition && !finalWidth) {
-		contentWidth = _bubbleTransition->bubbleWidth(contentWidth);
+		contentWidth = _bubbleTransition->bubbleWidth();
 	}
 	if (contentWidth < availableWidth
 		&& delegate()->elementChatMode() != ElementChatMode::Wide) {
@@ -7477,7 +7476,10 @@ QSize Message::performCountCurrentSize(int newWidth) {
 	const auto newHeight = resizeContentGetHeight(newWidth);
 	const auto page = dynamic_cast<WebPage*>(media());
 	const auto pageSize = page && page->isDisplayed() ? page->currentSize() : QSize();
-	const auto reactionsSize = _reactions ? _reactions->currentSize() : QSize();
+	// 容器宽度不变时，头像与计数仍可能改变回应的排版宽度。
+	const auto reactionsSize = _reactions
+		? QSize(_reactions->maxWidth(), _reactions->height())
+		: QSize();
 	if (pageSize != _lastWebPageSize || reactionsSize != _lastReactionsSize) {
 		const auto moveReactions = (pageSize != _lastWebPageSize)
 			&& !_lastReactionsSize.isEmpty() && !reactionsSize.isEmpty();
@@ -7514,6 +7516,10 @@ void Message::prepareBubbleTransition(Ui::Text::String &&previous) {
 		&& _bubbleTransition->includesContent();
 	const auto movesReactions = _bubbleTransition
 		&& _bubbleTransition->movesReactions();
+	if (includesContent
+		&& (previous.isEmpty() || previous.toString() == data()->translatedText().text)) {
+		return;
+	}
 	_bubbleTransition = std::make_unique<ExtrasUi::BubbleTransition>(
 		height(),
 		geometry.width(),
@@ -7584,7 +7590,7 @@ void Message::prepareBubbleSizeTransition(bool moveReactions) {
 	}
 	moveReactions = _reactions && (moveReactions
 		|| (_bubbleTransition && _bubbleTransition->movesReactions()));
-	if (_bubbleTransition && !_bubbleTransition->started()) {
+	if (_bubbleTransition) {
 		_bubbleTransition->includeContent(moveReactions);
 		return;
 	}

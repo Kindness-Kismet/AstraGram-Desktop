@@ -9,7 +9,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/random.h"
 #include "lang/lang_keys.h"
-#include "layout/layout_document_generic_preview.h"
 #include "lottie/lottie_icon.h"
 #include "storage/localstorage.h"
 #include "main/main_session.h"
@@ -348,14 +347,11 @@ Document::Document(
 	not_null<DocumentData*> document)
 : File(parent, realParent)
 , _data(document)
-, _filePreview((!document->isVoiceMessage()
+, _genericFile(!document->isVoiceMessage()
 	&& !document->isAudioFile()
 	&& !document->isVideoFile()
 	&& !document->isVideoMessage()
-	&& !document->isAnimation())
-	? std::make_unique<::Layout::DocumentGenericPreview>(
-		::Layout::DocumentGenericPreview::Create(document))
-	: nullptr) {
+	&& !document->isAnimation()) {
 	const auto isRound = _data->isVideoMessage();
 	if (isRound) {
 		const auto &entry = _data->session().api().transcribes().entry(
@@ -539,7 +535,7 @@ void Document::draw(
 		- topMinus;
 	const auto rthumb = style::rtlrect(st.padding.left(), st.padding.top() - topMinus, st.thumbSize, st.thumbSize, width);
 	const auto innerSize = st::msgFileLayout.thumbSize;
-	const auto filePreview = _filePreview && !thumbed;
+	const auto filePreview = _genericFile && !thumbed;
 	const auto inner = filePreview
 		? Ui::FilePreviewButtonRect(rthumb)
 		: QRect(rthumb.x() + (rthumb.width() - innerSize) / 2, rthumb.y() + (rthumb.height() - innerSize) / 2, innerSize, innerSize);
@@ -590,9 +586,7 @@ void Document::draw(
 	} else {
 		p.setPen(Qt::NoPen);
 		const auto styledButton = !_drawTtl && !_transcribedRound && !mediaEditor;
-		const auto buttonColors = filePreview
-			? Ui::FilePreviewPalette(*_filePreview, stm->msgBg->c)
-			: Ui::MediaButtonPalette(
+		const auto buttonColors = Ui::MediaButtonPalette(
 			_data->isSongWithCover()
 				? sti->historyFileThumbRadialFg->c
 				: stm->msgFileThumbLinkFg->c,
@@ -658,12 +652,6 @@ void Document::draw(
 					? (_data->isSongWithCover()
 						? sti->historyFileThumbPlay
 						: stm->historyFilePlay)
-					: _data->isImage()
-					? stm->historyFileImage
-					: _data->filename().endsWith(
-						u".plugin"_q,
-						Qt::CaseInsensitive)
-					? stm->historyFilePlugin
 					: stm->historyFileDocument;
 			} else {
 				return _data->isSongWithCover()
@@ -678,7 +666,7 @@ void Document::draw(
 		const auto paintContent = [&](QPainter &q) {
 			constexpr auto kPenWidth = 1.5;
 			if (filePreview) {
-				Ui::PaintFilePreviewSurface(q, rthumb, buttonColors);
+				Ui::PaintMediaButtonSurface(q, inner, buttonColors);
 				const auto contentOpacity = (loaded || mediaEditor) && !_data->uploading()
 					? (radial ? 1. - radialOpacity : 1.)
 					: 0.;
@@ -694,8 +682,12 @@ void Document::draw(
 						ClickHandler::showAsActive(_savel));
 					icon.paintInCenter(q, inner, buttonColors.foreground);
 				}
-				Ui::PaintFilePreviewContent(q, rthumb, *_filePreview,
-					buttonColors, contentOpacity);
+				if (contentOpacity > 0.) {
+					q.save();
+					q.setOpacity(q.opacity() * contentOpacity);
+					stm->historyFileDocument.paintInCenter(q, inner, buttonColors.foreground);
+					q.restore();
+				}
 			} else if (styledButton) {
 				if (radial && !cornerDownload) {
 					_animation->radial.paint(q, inner, buttonColors,
@@ -1135,7 +1127,7 @@ TextState Document::textState(
 		- topMinus;
 	const auto rthumb = style::rtlrect(st.padding.left(), st.padding.top() - topMinus, st.thumbSize, st.thumbSize, width);
 	const auto innerSize = st::msgFileLayout.thumbSize;
-	const auto inner = _filePreview && !thumbed
+	const auto inner = _genericFile && !thumbed
 		? Ui::FilePreviewButtonRect(rthumb)
 		: QRect(rthumb.x() + (rthumb.width() - innerSize) / 2, rthumb.y() + (rthumb.height() - innerSize) / 2, innerSize, innerSize);
 

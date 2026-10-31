@@ -863,7 +863,9 @@ void ListWidget::refreshRows(const Data::MessagesSlice &old) {
 		&& !old.ids.empty())
 		? ranges::find(_slice.ids, old.ids.back())
 		: end(_slice.ids);
-	const auto addedToEndCount = std::max(
+	const auto addedToEndCount = (old.ids.empty() && scrolledTillEnd && _showFinished)
+		? int(_slice.ids.size())
+		: std::max(
 		int(end(_slice.ids) - addedToEndFrom),
 		1
 	) - 1;
@@ -2815,6 +2817,33 @@ bool ListWidget::setBottomPadding(int padding) {
 	return std::exchange(_bottomPadding, padding) != padding;
 }
 
+ItemRevealState ListWidget::itemRevealState(not_null<Element*> view) const {
+	if (anim::Disabled()) {
+		return {};
+	}
+	if (_itemRevealPending.contains(view)) {
+		return { .progress = 0. };
+	}
+	const auto i = _itemRevealAnimations.find(view);
+	if (i == end(_itemRevealAnimations)) {
+		return {};
+	}
+	const auto progress = i->second.animation.value(1.);
+	const auto top = itemTop(view);
+	auto revealHeight = 0;
+	for (const auto &[other, animation] : _itemRevealAnimations) {
+		if (itemTop(other) <= top) {
+			revealHeight += anim::interpolate(animation.startHeight, 0,
+				ItemExpansionProgress(animation.animation.value(1.)));
+		}
+	}
+	return {
+		.progress = progress,
+		.shift = -revealHeight + _delegate->listMessageEnterShift()
+			+ i->second.displacement * (1. - ItemExpansionProgress(progress)),
+	};
+}
+
 float64 ListWidget::itemRevealOpacity(not_null<Element*> view) const {
 	if (anim::Disabled()) {
 		return 1.;
@@ -2834,12 +2863,13 @@ void ListWidget::startItemRevealAnimations() {
 			if (!_itemRevealAnimations.contains(view)) {
 				auto &animation = _itemRevealAnimations[view];
 				animation.startHeight = height;
+				animation.displacement = ItemRevealDisplacement(height);
 				_itemsRevealHeight += height;
 				animation.animation.start(
 					[=] { revealItemsCallback(); },
 					0.,
 					1.,
-					kItemRevealDuration,
+					ItemRevealDuration(height),
 					anim::linear);
 				if (view->data()->out()) {
 					_delegate->listChatTheme()->rotateComplexGradientBackground();
@@ -2860,6 +2890,7 @@ void ListWidget::showPremiumStickerTooltip(
 
 void ListWidget::revealItemsCallback() {
 	auto revealHeight = 0;
+	update();
 	for (auto i = begin(_itemRevealAnimations)
 		; i != end(_itemRevealAnimations);) {
 		repaintItem(i->first);
@@ -3145,7 +3176,11 @@ void ListWidget::paintList(Painter &p, QRect clip, bool backdrop) {
 		std::min(st::msgMaxWidth / 2, width() / 2));
 
 	const auto shadowPadding = Ui::BubbleShadowPadding();
-	const auto paintClip = clip.adjusted(0, -shadowPadding, 0, shadowPadding);
+	auto paintClip = clip.adjusted(0, -shadowPadding, 0, shadowPadding);
+	for (const auto &[view, animation] : _itemRevealAnimations) {
+		const auto shift = int(std::round(itemRevealState(view).shift));
+		paintClip = paintClip.united(clip.translated(0, -shift));
+	}
 
 	auto collapseGapTotal = 0;
 	for (const auto &gap : collapseGaps()) {
@@ -3233,7 +3268,9 @@ void ListWidget::paintList(Painter &p, QRect clip, bool backdrop) {
 			context.fullMessageSelected = selection.fullMessageSelected;
 			context.messageSelection = selection.messageSelection;
 			context.highlight = _highlighter.state(item);
-			PaintFadingItem(p, view, context, opacity);
+			PaintRevealingItem(p, view, context, itemRevealState(view),
+				context.area.y() + context.area.height()
+					- _delegate->listMessageEnterInset());
 		}
 		if (backdrop || opacity <= 0.) {
 			top += height;
@@ -3344,63 +3381,74 @@ void ListWidget::paintUserpics(
 	}
 	const auto session = &this->session();
 	enumerateUserpics([&](not_null<Element*> view, int userpicTop) {
+		const auto reveal = itemRevealState(view);
+		if (reveal.progress < 1.) {
+			userpicTop = itemTop(view) + view->height()
+				- view->marginBottom() - st::msgPhotoSize;
+		}
+		const auto visualTop = userpicTop + int(std::round(reveal.shift));
 		// stop the enumeration if the userpic is below the painted rect
-		if (userpicTop >= clip.top() + clip.height()) {
+		if (visualTop >= clip.top() + clip.height()) {
 			return false;
 		}
 
 		// paint the userpic if it intersects the painted rect
-		if (userpicTop + st::msgPhotoSize > clip.top()) {
+		if (visualTop + st::msgPhotoSize > clip.top()) {
 			const auto item = view->data();
-			const auto shift = context.gestureHorizontal.visualTranslationFor(
-				item->id.bare);
-			if (shift) {
-				p.translate(shift, 0);
-				update(
-					QRect(
-						st::historyPhotoLeft + std::min(shift, 0),
-						userpicTop,
-						st::msgPhotoSize + std::abs(shift),
-						st::msgPhotoSize));
-			}
-			if (const auto from = view->displayFrom()) {
-				Dialogs::Ui::PaintUserpic(
-					p,
-					from,
-					validateVideoUserpic(from),
-					_userpics[from],
-					st::historyPhotoLeft,
-					userpicTop,
-					view->width(),
-					st::msgPhotoSize,
-					context.paused);
-			} else if (const auto info = item->displayHiddenSenderInfo()) {
-				if (info->customUserpic.empty()) {
-					info->emptyUserpic.paintCircle(
-						p,
-						st::historyPhotoLeft,
-						userpicTop,
-						view->width(),
-						st::msgPhotoSize);
-				} else {
-					auto &userpic = _hiddenSenderUserpics[item->id];
-					const auto valid = info->paintCustomUserpic(
-						p,
-						userpic,
-						st::historyPhotoLeft,
-						userpicTop,
-						view->width(),
-						st::msgPhotoSize);
-					if (!valid) {
-						info->customUserpic.load(session, item->fullId());
+			HistoryView::PaintItemReveal(p,
+				QRect(0, userpicTop, width(), st::msgPhotoSize),
+				clip, reveal, _visibleBottom - _delegate->listMessageEnterInset(),
+				[&](Painter &p, int) {
+					const auto shift = context.gestureHorizontal.visualTranslationFor(
+						item->id.bare);
+					if (shift) {
+						p.translate(shift, 0);
+						update(
+							QRect(
+								st::historyPhotoLeft + std::min(shift, 0),
+								userpicTop,
+								st::msgPhotoSize + std::abs(shift),
+								st::msgPhotoSize));
 					}
-				}
-			} else {
-				Unexpected("Corrupt forwarded information in message.");
-			}
-			if (shift) {
-				p.translate(-shift, 0);
-			}
+					if (const auto from = view->displayFrom()) {
+						Dialogs::Ui::PaintUserpic(
+							p,
+							from,
+							validateVideoUserpic(from),
+							_userpics[from],
+							st::historyPhotoLeft,
+							userpicTop,
+							view->width(),
+							st::msgPhotoSize,
+							context.paused);
+					} else if (const auto info = item->displayHiddenSenderInfo()) {
+						if (info->customUserpic.empty()) {
+							info->emptyUserpic.paintCircle(
+								p,
+								st::historyPhotoLeft,
+								userpicTop,
+								view->width(),
+								st::msgPhotoSize);
+						} else {
+							auto &userpic = _hiddenSenderUserpics[item->id];
+							const auto valid = info->paintCustomUserpic(
+								p,
+								userpic,
+								st::historyPhotoLeft,
+								userpicTop,
+								view->width(),
+								st::msgPhotoSize);
+							if (!valid) {
+								info->customUserpic.load(session, item->fullId());
+							}
+						}
+					} else {
+						Unexpected("Corrupt forwarded information in message.");
+					}
+					if (shift) {
+						p.translate(-shift, 0);
+					}
+			});
 		}
 		return true;
 	}, _visibleTop - _topPadding);

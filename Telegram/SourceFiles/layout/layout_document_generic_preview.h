@@ -7,20 +7,26 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+class DocumentData;
+
 namespace Layout {
+
+enum class DocumentFileType {
+	Application,
+	Library,
+	Code,
+	Archive,
+	Spreadsheet,
+	Image,
+	Document,
+};
 
 struct DocumentGenericPreview final {
 	static DocumentGenericPreview Create(DocumentData *document);
 	static DocumentGenericPreview Create(const QString &filename);
 	const style::icon *icon() const;
-	const int index;
-	const style::color &color;
-	const style::color &dark;
-	const style::color &over;
-	const style::color &selected;
+	[[nodiscard]] DocumentFileType type() const;
 	const QString ext;
 };
-
-// Ui::CachedRoundCorners DocumentCorners(int colorIndex);
 
 } // namespace Layout

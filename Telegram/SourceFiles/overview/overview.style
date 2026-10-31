@@ -40,7 +40,6 @@ OverviewFileLayout {
 	fileThumbSize: pixels;
 	fileNameTop: pixels;
 	fileStatusTop: pixels;
-	fileDateTop: pixels;
 }
 
 overviewCheckPressedSize: 0.8;
@@ -106,11 +105,10 @@ overviewFileLayout: OverviewFileLayout {
 	voiceDownload: overviewVoiceDownload;
 	voiceDownloadSelected: overviewVoiceDownloadSelected;
 
-	filePadding: margins(0px, 3px, 16px, 3px);
-	fileThumbSize: 70px;
-	fileNameTop: 7px;
-	fileStatusTop: 24px;
-	fileDateTop: 49px;
+	filePadding: margins(0px, 6px, 12px, 6px);
+	fileThumbSize: 44px;
+	fileNameTop: 8px;
+	fileStatusTop: 28px;
 }
 
 linksMaxWidth: 520px;

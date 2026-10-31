@@ -4578,6 +4578,16 @@ void ChatWidget::scrollToCurrentVoiceMessage(
 	_inner->scrollToCurrentVoiceMessage(fromId, toId);
 }
 
+int ChatWidget::listMessageEnterInset() {
+	return _composeOverlap
+		? style::ConvertScale(2) - st::historyComposeCapsuleMargin / 2
+		: 0;
+}
+
+int ChatWidget::listMessageEnterShift() {
+	return _composeControls->messageEnterShrink();
+}
+
 void ChatWidget::updateInnerVisibleArea() {
 	if (!_inner->animatedScrolling()) {
 		checkReplyReturns();

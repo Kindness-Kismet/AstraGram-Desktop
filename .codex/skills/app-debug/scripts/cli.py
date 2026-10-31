@@ -89,6 +89,7 @@ GENERIC_COMMANDS = {
     'cache.read': '只查询持久历史缓存，不请求服务器；返回异步任务与消息编号、摘要：[会话编号] [起始消息编号] [偏移量] [数量]',
     'cache.flush': '安排保存会话列表与已浏览历史缓存，不修改远端数据',
     'cache.memory-stats': '查询历史协议缓存的常驻规模、容量限制、淘汰和磁盘读取次数',
+    'message.send-sticker': '在已授权测试对话发送已加载贴纸：<会话编号> <文档编号> [--account 账号下标]；返回已提交，消息结果用 message.list 查询',
     'message.react': '在已授权测试对话切换普通表情回应：<会话编号> <消息编号> <表情> [--account 账号下标]，只表示已提交',
     'message.preview': '在已授权测试对话编辑链接预览开关，保留正文：<会话编号> <消息编号> <on|off> [--account 账号下标]；异步结果用 job.status 查询',
     'simulation.chat-folders': '在独立模拟配置中加载首个分组、清空分组或等待分组：<single|none|pending>，重启恢复样本',

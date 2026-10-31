@@ -197,6 +197,7 @@ public:
 	[[nodiscard]] rpl::producer<int> height() const;
 	[[nodiscard]] int heightCurrent() const;
 	[[nodiscard]] int fieldHeightCurrent() const;
+	[[nodiscard]] int messageEnterShrink() const;
 	[[nodiscard]] bool fieldHeaderShownCurrent() const;
 	void setFieldMaxHeight(int height);
 

@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/audio/media_audio.h"
 #include "media/player/media_player_instance.h"
 #include "platform/win/tray_win.h"
+#include "ui/controls/media_button.h"
 #include "ui/ui_utility.h"
 #include "styles/style_window.h"
 
@@ -67,26 +68,15 @@ int(__stdcall *GetSystemMetricsForDpi)(
 		const style::icon &icon,
 		QColor color,
 		int size) {
-	auto source = icon.instance(color, 100, true);
-	const auto full = std::max(source.width(), source.height());
-	if (full > 0 && full != size) {
-		source = icon.instance(color, size * 100 / full, true);
-	}
-	auto scaled = (source.width() == size && source.height() == size)
-		? std::move(source)
-		: source.scaled(
-			size,
-			size,
-			Qt::KeepAspectRatio,
-			Qt::SmoothTransformation);
+	const auto scaled = QSizeF(icon.size()).scaled(
+		QSizeF(size, size), Qt::KeepAspectRatio);
 	auto result = QImage(size, size, QImage::Format_ARGB32_Premultiplied);
 	result.fill(Qt::transparent);
 	{
 		auto p = QPainter(&result);
-		p.drawImage(
-			(size - scaled.width()) / 2,
-			(size - scaled.height()) / 2,
-			scaled);
+		Ui::PaintMediaIcon(p, QRectF(
+			QPointF((size - scaled.width()) / 2., (size - scaled.height()) / 2.),
+			scaled), icon, color);
 	}
 	return qt_pixmapToWinHICON(Ui::PixmapFromImage(std::move(result)));
 }

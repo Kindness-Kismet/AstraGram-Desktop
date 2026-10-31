@@ -190,7 +190,7 @@ def compile_target(environment: dict[str, str], cmake_config: str, jobs: int, ta
     for project in recover_failed_compilations(
         CMAKE_OUT_DIR, cmake_config, BUILD_DIR / "build-recovery"
     ):
-        print(f"  Recompile after unsuccessful build: {project}", flush=True)
+        print(f"  Retry incomplete compiler records: {project}", flush=True)
     command = [
         cmake_executable(environment),
         "--build",
