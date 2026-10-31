@@ -117,7 +117,7 @@ CompactPanel::CompactPanel(
 	_minimize->setClickedCallback([=] { _collapseRequests.fire({}); });
 	_close->setClickedCallback([=] {
 		instance()->pause(_type);
-		_collapseRequests.fire({});
+		_closeRequests.fire_copy(_track);
 	});
 	_expand->setClickedCallback([=] { setExpanded(true); });
 	_previous->setClickedCallback([=] { instance()->previous(_type); });
@@ -421,6 +421,7 @@ void CompactPanel::showSource() {
 }
 
 rpl::producer<> CompactPanel::collapseRequests() const { return _collapseRequests.events(); }
+rpl::producer<AudioMsgId> CompactPanel::closeRequests() const { return _closeRequests.events(); }
 
 void CompactPanel::saveCover() {
 	const auto cover = _cover->originalImage();
@@ -555,7 +556,7 @@ void CompactPanel::paintEvent(QPaintEvent *event) {
 void CompactPanel::closeEvent(QCloseEvent *event) {
 	event->ignore();
 	instance()->pause(_type);
-	_collapseRequests.fire({});
+	_closeRequests.fire_copy(_track);
 }
 
 void CompactPanel::mousePressEvent(QMouseEvent *event) {

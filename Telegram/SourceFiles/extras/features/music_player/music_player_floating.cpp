@@ -122,10 +122,14 @@ void FloatingPlayer::refresh() {
 	const auto current = instance()->current(_type);
 	const auto document = current.audio();
 	const auto state = instance()->getState(_type);
+	if (_closedTrack && (current != _closedTrack || ShowPauseIcon(state.state))) {
+		_closedTrack = AudioMsgId();
+	}
 	const auto item = document ? document->owner().message(current.contextId()) : nullptr;
 	const auto expiring = item && item->media() && item->media()->ttlSeconds();
 	_active = document && !expiring && !Core::App().passcodeLocked()
-		&& state.id == current && !IsStoppedOrStopping(state.state);
+		&& state.id == current && !IsStoppedOrStopping(state.state)
+		&& current != _closedTrack;
 	if (!_active) {
 		_button->hide();
 		collapse();
@@ -147,6 +151,11 @@ void FloatingPlayer::toggle() {
 		_panel = std::make_unique<CompactPanel>(_controller, _type);
 		_panel->collapseRequests(
 		) | rpl::on_next([=] { collapse(); }, _panel->lifetime());
+		_panel->closeRequests(
+		) | rpl::on_next([=](const AudioMsgId &track) {
+			_closedTrack = track;
+			refresh();
+		}, _panel->lifetime());
 	}
 	_panel->showMini(_button->mapToGlobal(QPoint(_button->width(), -st::extrasMusicFloatingGap)));
 }
