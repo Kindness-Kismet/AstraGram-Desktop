@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "editor/editor_link_pill.h"
 
+#include "ui/controls/media_button.h"
 #include "ui/painter.h"
 #include "styles/style_editor.h"
 
@@ -58,7 +59,6 @@ LinkPill::LinkPill(const LinkPreview &link, float64 density, int maxWidth)
 		fixed + _textWidth,
 		(kPaddingTop + kPaddingBottom) * _density
 			+ std::max(kIconSize * _density, float64(_font->height)));
-	updateIcon();
 }
 
 QSizeF LinkPill::size() const {
@@ -71,7 +71,6 @@ LinkStyle LinkPill::style() const {
 
 void LinkPill::setStyle(LinkStyle style) {
 	_style = style;
-	updateIcon();
 }
 
 QColor LinkPill::background() const {
@@ -96,12 +95,6 @@ float64 LinkPill::DensityFor(int canvasWidth) {
 	return canvasWidth / kDpPerWidth;
 }
 
-void LinkPill::updateIcon() {
-	_icon = st::photoEditorLinkPillIcon.instance(
-		foreground(),
-		style::kScaleMax);
-}
-
 void LinkPill::paint(QPainter &p, QPointF origin, float64 scale) const {
 	p.save();
 	auto hq = PainterHighQualityEnabler(p);
@@ -120,7 +113,7 @@ void LinkPill::paint(QPainter &p, QPointF origin, float64 scale) const {
 		(pill.height() - iconSide) / 2.,
 		iconSide,
 		iconSide);
-	p.drawImage(icon, _icon);
+	Ui::PaintMediaIcon(p, icon, st::photoEditorLinkPillIcon, foreground());
 
 	p.setFont(_font);
 	p.setPen(foreground());

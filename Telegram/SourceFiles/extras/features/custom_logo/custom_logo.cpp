@@ -23,7 +23,7 @@ constexpr auto kStoredSide = 256;
 	return cWorkingDir() + u"tdata/"_q + name;
 }
 
-// 大图解码时直接缩到边长 kReadSide 以内，裁边后仍有足够分辨率。
+// 矢量图按裁边所需尺寸生成，大位图在解码时限制尺寸。
 [[nodiscard]] QImage readImage(const QString &path) {
 	auto reader = QImageReader(path);
 	reader.setAutoTransform(true);
@@ -31,7 +31,9 @@ constexpr auto kStoredSide = 256;
 	if (qint64(size.width()) * size.height() > Images::kReadMaxArea) {
 		return QImage();
 	}
-	if (size.width() > kReadSide || size.height() > kReadSide) {
+	const auto format = reader.format();
+	if (format == "svg" || format == "svgz"
+		|| size.width() > kReadSide || size.height() > kReadSide) {
 		reader.setScaledSize(
 			size.scaled(kReadSide, kReadSide, Qt::KeepAspectRatio));
 	}
