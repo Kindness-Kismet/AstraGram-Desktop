@@ -1,11 +1,11 @@
 AppVersion         7003003
-AppUpdateVersion   70300304
+AppUpdateVersion   70300305
 AppStorageReadVersion 7003003
 AppVersionStrMajor 7.3
 AppVersionStrOfficial 7.3.3
-AppVersionStrSmall 7.3.3.4
-AppVersionStrFile  7.3.3.4
-AppVersionStr      7.3.3.4
+AppVersionStrSmall 7.3.3.5
+AppVersionStrFile  7.3.3.5
+AppVersionStr      7.3.3.5
 BetaChannel        0
 AlphaVersion       0
-AppVersionOriginal 7.3.3.4
+AppVersionOriginal 7.3.3.5

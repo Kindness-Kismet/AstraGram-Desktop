@@ -1,25 +1,31 @@
-- Changed how new messages appear; they now expand the available space before fading in as a whole in both chat views
-- Improved message bubble transitions, which now resize smoothly when link previews or reactions change while keeping existing reactions aligned
-- Improved media transfer controls, which now show percentage progress, a separate cancel button and a completion checkmark
-- Improved file previews, which now use consistent rounded thumbnails, file-type symbols and extension labels across chats, shared media and downloads
-- Improved video cover previews, which now use the original image dimensions and support photo-viewer zooming, dragging, rotation, browsing, copying and saving, with uploader covers shown in the thumbnail strip
-- Fixed an issue with large emoji playback that previously caused animations to restart before finishing when a sent message was confirmed
-- Improved chat history caching, which now releases unused history data to reduce cache memory use while preserving saved history for offline access
-- Fixed an issue with menus using system materials that previously caused inconsistent row backgrounds and hard-to-read text in some editor and call menus
-- Improved sidebar icons, which now remain sharper when scaled, with a consistent transfer icon across proxy settings entries
+- Improved the music player, which now offers a draggable standalone window with mini and large-cover views, separate minimize and close actions, and a collapsed-by-default playlist whose scrollbar fades out when idle
+- Improved file lists, which now show compact two-line metadata, softly colored rounded previews, and separate download and cancel buttons beside the file size
+- Improved file and media control icons, which now stay sharp when scaled and use consistent symbols for download and ready states
+- Improved media download progress, which now keeps percentages and progress rings moving smoothly together before showing completion at 100 percent
+- Added a local deletion action for downloaded attachments, so you can now move files to the recycle bin from their context menus while keeping the messages available for downloading again
+- Improved new-message transitions, which now move and fade messages, avatars and timestamps together in both chat views without position jumps above the translucent input area
+- Fixed an issue with reaction transitions that previously caused message bubbles to resize twice or timestamps to disappear while reaction layouts changed
+- Fixed an issue with small-window dialogs that previously caused confirmation controls, descriptions or QR codes to extend beyond the available space
+- Changed how dialog buttons and settings controls respond to presses; they now use spring scaling or brightness changes instead of ripple effects
+- Added a return-to-video action to video cover previews, so you can now resume viewing the video directly from the cover's context menu
+- Fixed an issue with empty chat search that previously caused repeated Backspace presses to move focus out of the search field
+- Fixed an issue with long chat lists that previously caused scrollbars to appear when switching folders without scrolling
 - Fixed an issue with message reply-count arrows that previously caused them to sit too high beside timestamps
-- Changed the reaction expansion button background; it now uses a centered circle
+- Fixed an issue with background request retries that previously caused an invalid request to be sent repeatedly and generate large amounts of error logs
 
 ---
 
-- 调整了新消息的出现方式，现在新旧聊天视图都会先腾出空间，再让整条消息渐显
-- 对消息气泡过渡进行了改善，这使得链接预览或回应变化时气泡能够平滑调整大小，已有回应也能保持对齐
-- 对媒体传输控件进行了改善，这使得传输过程能够显示百分比进度、独立取消按钮和完成对勾
-- 对文件预览进行了改善，这使得聊天、共享媒体和下载列表采用一致的圆角缩略图、文件类型图标和扩展名标签
-- 对视频封面预览进行了改善，这使得封面按原始图片尺寸显示，并支持图片查看器的缩放、拖动、旋转、浏览、复制和保存，缩略图栏也能显示上传者设置的封面
-- 修复了关于大表情播放的错误，该问题曾导致发送确认时动画尚未播完便从头播放
-- 对聊天历史缓存进行了改善，这使得闲置历史数据能够及时释放，减少缓存内存占用，同时保留离线可用的已保存历史
-- 修复了关于系统材质菜单的错误，该问题曾导致部分编辑器和通话菜单的行背景不一致、文字难以辨认
-- 对侧边栏图标进行了改善，这使得图标缩放后更加清晰，代理设置的各个入口也采用了统一的传输图标
+- 对音乐播放器进行了改善，这使得播放器提供可拖动的独立窗口、迷你条和大封面视图，区分最小化与关闭操作，播放列表默认收起且滚动条静置后淡出
+- 对文件列表进行了改善，这使得列表采用紧凑的两行信息、淡色圆角预览，并在文件大小旁显示独立的下载和取消按钮
+- 对文件和媒体控件图标进行了改善，这使得图标缩放后保持清晰，下载与就绪状态采用统一的符号
+- 对媒体下载进度进行了改善，这使得百分比和进度圆环同步平滑变化，达到百分之百后再显示完成提示
+- 新增了已下载附件的本地删除入口，现在可以从右键菜单将文件移到回收站，保留聊天消息并按需重新下载
+- 对新消息过渡进行了改善，这使得新旧聊天视图中的消息、头像和时间同步移动与渐显，避免半透明输入区上方出现位置跳变
+- 修复了关于回应过渡的错误，该问题曾导致回应布局变化时消息气泡二次调整大小或时间消失
+- 修复了关于小窗口弹窗的错误，该问题曾导致确认按钮、说明文字或二维码超出可用空间
+- 调整了弹窗按钮和设置控件的点击反馈，现在使用弹性缩放或明暗变化替代水波纹
+- 新增了视频封面预览的返回视频入口，现在可以从封面右键菜单直接回到视频
+- 修复了关于空聊天搜索框的错误，该问题曾导致连续按退格键后焦点离开搜索框
+- 修复了关于长对话列表的错误，该问题曾导致切换分组时未进行滚动也显示滚动条
 - 修复了关于消息回复计数箭头的错误，该问题曾导致箭头在时间旁边的位置偏高
-- 调整了回应展开按钮的背景，现在使用居中的圆形
+- 修复了关于后台请求重试的错误，该问题曾导致同一个无效请求被反复发送并产生大量错误日志
