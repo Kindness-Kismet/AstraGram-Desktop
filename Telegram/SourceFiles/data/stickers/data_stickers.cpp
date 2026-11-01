@@ -661,7 +661,8 @@ void Stickers::requestSetToPushFaved(
 void Stickers::removeFromRecentSet(not_null<DocumentData*> document) {
 	RemoveFromSet(setsRef(), document, CloudRecentSetId);
 	session().local().writeRecentStickers();
-	notifyRecentUpdated(StickersType::Stickers);
+	// 主动移除立即重排，不能等鼠标离开最近列表。
+	notifyUpdated(StickersType::Stickers);
 }
 
 void Stickers::setIsNotFaved(not_null<DocumentData*> document) {
