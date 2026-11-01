@@ -2779,12 +2779,17 @@ void Widget::switchToChatsFilter(FilterId id) {
 
 void Widget::hideChatsFilterScrollBar() {
 	Ui::SendPendingMoveResizeEvents(_scroll);
+	Ui::ElasticScrollBar *bar = nullptr;
 	for (const auto child : _scroll->children()) {
-		if (const auto bar = dynamic_cast<Ui::ElasticScrollBar*>(child)) {
-			bar->toggle(false, anim::type::instant);
-			return;
+		if (const auto found = dynamic_cast<Ui::ElasticScrollBar*>(child)) {
+			bar = found;
+			break;
 		}
 	}
+	if (!bar) {
+		return;
+	}
+	bar->toggle(false, anim::type::instant);
 }
 
 QPixmap Widget::grabForChatsFilterSlide() {

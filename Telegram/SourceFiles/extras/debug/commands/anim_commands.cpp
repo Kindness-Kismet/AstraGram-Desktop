@@ -98,52 +98,52 @@ using json = nlohmann::json;
 	struct Probe final : QObject {
 		Probe(QWidget *parent, QString destination)
 		: QObject(parent)
-		, path(std::move(destination))
-		, animation([=](crl::time now) {
-			animation.update(1., true, now, true);
+		, _path(std::move(destination))
+		, _animation([=](crl::time now) {
+			_animation.update(1., true, now, true);
 		}) {
-			sheet.fill(Qt::white);
+			_sheet.fill(Qt::white);
 		}
 		~Probe() {
-			finishJob(id, false, "sampling ended before completion");
+			finishJob(_id, false, "sampling ended before completion");
 		}
 		void capture(int index) {
-			auto painter = QPainter(&sheet);
+			auto painter = QPainter(&_sheet);
 			const auto x = index * 100;
-			animation.paint(painter, QRectF(x + 20, 10, 60, 60),
+			_animation.paint(painter, QRectF(x + 20, 10, 60, 60),
 				Ui::MediaButtonPalette(QColor(55, 125, 75), Qt::white), false);
 			painter.setPen(Qt::black);
 			painter.drawText(QRect(x, 80, 100, 30), Qt::AlignCenter,
-				QString::number(crl::now() - started) + u" ms"_q);
+				QString::number(crl::now() - _started) + u" ms"_q);
 		}
-		const uint64 id = beginJob("media-progress-sample");
-		const crl::time started = crl::now();
-		const QString path;
-		QImage sheet = QImage(900, 115, QImage::Format_ARGB32_Premultiplied);
-		Ui::MediaProgressAnimation animation;
-		int captured = 1;
+		const uint64 _id = beginJob("media-progress-sample");
+		const crl::time _started = crl::now();
+		const QString _path;
+		QImage _sheet = QImage(900, 115, QImage::Format_ARGB32_Premultiplied);
+		Ui::MediaProgressAnimation _animation;
+		int _captured = 1;
 	};
 	const auto probe = new Probe(window, path.absoluteFilePath());
-	probe->animation.start(0.);
+	probe->_animation.start(0.);
 	probe->capture(0);
-	probe->animation.update(1., true, crl::now(), true);
+	probe->_animation.update(1., true, crl::now(), true);
 	const auto times = std::array{ 80, 160, 240, 400, 520, 720, 1000, 1400 };
 	for (auto i = 0; i != times.size(); ++i) {
 		QTimer::singleShot(times[i], Qt::PreciseTimer, probe, [=] {
 			probe->capture(i + 1);
-			if (++probe->captured != times.size() + 1) {
+			if (++probe->_captured != times.size() + 1) {
 				return;
 			}
-			const auto saved = probe->sheet.save(probe->path, "PNG");
-			finishJob(probe->id, saved, json{
-				{ "path", probe->path.toStdString() },
+			const auto saved = probe->_sheet.save(probe->_path, "PNG");
+			finishJob(probe->_id, saved, json{
+				{ "path", probe->_path.toStdString() },
 				{ "frames", 9 },
-				{ "elapsedMs", crl::now() - probe->started },
+				{ "elapsedMs", crl::now() - probe->_started },
 			});
 			probe->deleteLater();
 		});
 	}
-	return jobStarted(probe->id);
+	return jobStarted(probe->_id);
 }
 
 // 下限避免界面长时间停在动画中途，上限避免过渡短到只剩一两帧。
