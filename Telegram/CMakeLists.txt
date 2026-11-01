@@ -181,7 +181,6 @@ set(extras_files
         extras/extras_infra.h
         extras/utils/extras_mapper.cpp
         extras/utils/extras_mapper.h
-        extras/utils/qt_key_modifiers_extended.h
         extras/utils/telegram_helpers.cpp
         extras/utils/telegram_helpers.h
         extras/utils/windows_utils.cpp

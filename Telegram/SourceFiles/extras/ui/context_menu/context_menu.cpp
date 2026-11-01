@@ -15,14 +15,15 @@
 #include "extras/ui/message_history/history_section.h"
 #include "extras/ui/settings/filters/edit_filter.h"
 #include "extras/ui/settings/filters/settings_filters_list.h"
-#include "extras/utils/qt_key_modifiers_extended.h"
 #include "extras/utils/telegram_helpers.h"
 #include "base/call_delayed.h"
 #include "base/random.h"
+#include "base/qt/qt_key_modifiers.h"
 #include "base/unixtime.h"
 #include "core/mime_type.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
+#include "data/data_chat_participant_status.h"
 #include "data/data_forum_topic.h"
 #include "data/data_search_controller.h"
 #include "data/data_session.h"
@@ -244,9 +245,33 @@ Fn<void()> DeleteMyMessagesHandler(not_null<Window::SessionController*> controll
 
 }
 
-bool ShouldShowContextMenuItem(ContextMenuVisibility state) {
-	return state == ContextMenuVisibility::Visible
-		|| (state == ContextMenuVisibility::VisibleWithModifier && base::IsExtendedContextMenuModifierPressed());
+Ui::PopupMenu *contextMenuTarget(
+		ContextMenuVisibility state,
+		not_null<Ui::PopupMenu*> menu) {
+	if (state == ContextMenuVisibility::Hidden) {
+		return nullptr;
+	}
+	if (state == ContextMenuVisibility::Visible
+		|| menu->objectName() == u"extras.contextMenuMore"_q) {
+		return menu.get();
+	}
+	for (const auto action : menu->actions()) {
+		if (action->objectName() == u"extras.contextMenuMore"_q) {
+			return menu->ensureSubmenu(action, menu->st()).get();
+		}
+	}
+	Ui::PopupMenu *submenu = nullptr;
+	const auto add = Ui::Menu::CreateAddActionCallback(menu);
+	const auto action = add(Window::PeerMenuCallback::Args{
+		.text = tr::lng_profile_action_short_more(tr::now),
+		.icon = &st::extrasMoreMenuIcon,
+		.fillSubmenu = [&](not_null<Ui::PopupMenu*> more) {
+			submenu = more.get();
+			more->setObjectName(u"extras.contextMenuMore"_q);
+		},
+	});
+	action->setObjectName(u"extras.contextMenuMore"_q);
+	return submenu;
 }
 
 void AddExtrasActions(PeerData *peerData,
@@ -520,10 +545,6 @@ void AddHistoryAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 
 void AddUserMessagesAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 	const auto &settings = ExtrasSettings::getInstance();
-	if (!ShouldShowContextMenuItem(settings.showUserMessagesInContextMenu())) {
-		return;
-	}
-
 	if (!item->isHistoryEntry()) {
 		return;
 	}
@@ -531,6 +552,11 @@ void AddUserMessagesAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 	if (!item->history()->peer->isChat() && !item->history()->peer->isMegagroup()) {
 		return;
 	}
+	const auto target = contextMenuTarget(settings.showUserMessagesInContextMenu(), menu);
+	if (!target) {
+		return;
+	}
+	menu = target;
 	menu->addAction(
 		tr::extras_UserMessagesMenuText(tr::now),
 		[=]
@@ -552,13 +578,14 @@ void AddUserMessagesAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 
 void AddMessageDetailsAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 	const auto &settings = ExtrasSettings::getInstance();
-	if (!ShouldShowContextMenuItem(settings.showMessageDetailsInContextMenu())) {
-		return;
-	}
-
 	if (item->isLocal()) {
 		return;
 	}
+	const auto target = contextMenuTarget(settings.showMessageDetailsInContextMenu(), menu);
+	if (!target) {
+		return;
+	}
+	menu = target;
 
 	const auto view = item->mainView();
 	const auto forwarded = item->Get<HistoryMessageForwarded>();
@@ -763,9 +790,6 @@ void AddRepeatMessageAction(
 	HistoryView::Context context
 ) {
 	const auto &settings = ExtrasSettings::getInstance();
-	if (!ShouldShowContextMenuItem(settings.showRepeatMessageInContextMenu())) {
-		return;
-	}
 	if (!item || !item->isHistoryEntry() || item->isService() || item->isLocal() || item->id <= 0) {
 		return;
 	}
@@ -776,19 +800,18 @@ void AddRepeatMessageAction(
 		return;
 	}
 
-	if (peer->amRestricted(ChatRestriction::SendOther) || peer->amRestricted(ChatRestriction::SendStickers)) {
+	const auto thread = item->topic()
+		? static_cast<Data::Thread*>(item->topic())
+		: history.get();
+	// 复读只检查原消息需要的发送权限，贴纸限制不影响普通文字。
+	if (!Data::CanSend(thread, item->requiredSendRight(), false)) {
 		return;
 	}
-
-	if (const auto megagroup = peer->asMegagroup()) {
-		if (!megagroup->amIn()) return;
-	} else if (const auto chat = peer->asChat()) {
-		if (!chat->amIn()) return;
-	}
-
-	if (const auto topic = item->topic(); topic && topic->closed()) {
+	const auto target = contextMenuTarget(settings.showRepeatMessageInContextMenu(), menu);
+	if (!target) {
 		return;
 	}
+	menu = target;
 
 	const auto itemId = item->fullId();
 
@@ -1008,13 +1031,18 @@ void AddCreateFilterAction(not_null<Ui::PopupMenu*> menu,
 						   HistoryItem *item,
 						   const QString &selectedText) {
 	const auto &settings = ExtrasSettings::getInstance();
-	if (!ShouldShowContextMenuItem(settings.showAddFilterInContextMenu()) || !settings.filtersEnabled()) {
+	if (!settings.filtersEnabled()) {
 		return;
 	}
 
 	if (!item || selectedText.isEmpty()) {
 		return;
 	}
+	const auto target = contextMenuTarget(settings.showAddFilterInContextMenu(), menu);
+	if (!target) {
+		return;
+	}
+	menu = target;
 
 	menu->addAction(
 		tr::extras_RegexFilterQuickAdd(tr::now),

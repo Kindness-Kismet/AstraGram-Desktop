@@ -9175,10 +9175,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_HideShareButton" = "Hide Side \"Share\" Button";
 "extras_ChatFoldersHeader" = "Chat Folders";
 "extras_SettingsContextMenuTitle" = "Choose when to show the item";
-"extras_SettingsContextMenuDescription" = "Extended menu items will be displayed if you hold CTRL or SHIFT while right-clicking on the message.";
+"extras_SettingsContextMenuDescription" = "Items placed in More can be found in the More submenu when you right-click a message. Some items are only available in groups.";
 "extras_SettingsContextMenuItemHidden" = "Hidden";
 "extras_SettingsContextMenuItemShown" = "Shown";
-"extras_SettingsContextMenuItemExtended" = "Extended Menu";
+"extras_SettingsContextMenuItemMore" = "As a submenu of More";
 "extras_SettingsContextMenuReactionsPanel" = "Reactions Panel";
 "extras_SettingsContextMenuViewsPanel" = "Views Panel";
 "extras_ContextMenuElementsHeader" = "Context Menu Elements";

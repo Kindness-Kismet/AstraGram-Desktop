@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/labels.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/widgets/popup_menu.h"
+#include "ui/widgets/menu/menu_multiline_action.h"
 #include "ui/widgets/shadow.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/text/text_custom_emoji.h"
@@ -44,7 +45,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/ui/context_menu/context_menu.h"
 #include "extras/extras_settings.h"
 #include "extras/features/window_material/window_material.h"
-#include "extras/utils/qt_key_modifiers_extended.h"
 
 
 namespace HistoryView::Reactions {
@@ -1347,7 +1347,7 @@ AttachSelectorResult AttachSelectorToMenu(
 		TextWithEntities about,
 		IconFactory iconFactory) {
 	const auto &settings = ExtrasSettings::getInstance();
-	if (!ExtrasUi::ShouldShowContextMenuItem(settings.showReactionsPanelInContextMenu())) {
+	if (settings.showReactionsPanelInContextMenu() == ContextMenuVisibility::Hidden) {
 		return AttachSelectorResult::Skipped;
 	}
 
@@ -1358,24 +1358,38 @@ AttachSelectorResult AttachSelectorToMenu(
 		return AttachSelectorResult::Skipped;
 	}
 
+	const auto reactions = Data::LookupPossibleReactions(item, true);
+	if (reactions.recent.empty()) {
+		return AttachSelectorResult::Skipped;
+	}
+	const auto target = ExtrasUi::contextMenuTarget(settings.showReactionsPanelInContextMenu(), menu);
+	if (target != menu) {
+		auto label = base::make_unique_q<Ui::Menu::MultilineAction>(
+			target->menu(),
+			target->st().menu,
+			st::historyHasCustomEmoji,
+			st::historyHasCustomEmojiPosition,
+			TextWithEntities{ tr::extras_SettingsContextMenuReactionsPanel(tr::now) });
+		label->setAttribute(Qt::WA_TransparentForMouseEvents);
+		target->insertAction(0, std::move(label));
+	}
 	const auto result = AttachSelectorToMenu(
-		menu,
+		target,
 		desiredPosition,
 		st::reactPanelEmojiPan,
 		controller->uiShow(),
-		Data::LookupPossibleReactions(item, true),
+		reactions,
 		std::move(about),
 		std::move(iconFactory));
 	if (!result) {
 		return result.error();
 	}
 	const auto selector = *result;
+	selector->setObjectName(u"extras.contextMenuReactions"_q);
 	const auto itemId = item->fullId();
 
 	selector->chosen() | rpl::on_next([=](ChosenReaction reaction) {
-		if (!base::IsExtendedContextMenuModifierPressed()) {
-			menu->hideMenu();
-		}
+		menu->hideMenu();
 		reaction.context = itemId;
 		chosen(std::move(reaction));
 	}, selector->lifetime());
@@ -1394,7 +1408,9 @@ AttachSelectorResult AttachSelectorToMenu(
 		}
 	});
 
-	return AttachSelectorResult::Attached;
+	return (settings.showReactionsPanelInContextMenu() == ContextMenuVisibility::VisibleInMoreMenu)
+		? AttachSelectorResult::Skipped
+		: AttachSelectorResult::Attached;
 }
 
 auto AttachSelectorToMenu(
@@ -1407,11 +1423,6 @@ auto AttachSelectorToMenu(
 	IconFactory iconFactory,
 	Fn<bool()> paused)
 -> base::expected<not_null<Selector*>, AttachSelectorResult> {
-	const auto &settings = ExtrasSettings::getInstance();
-	if (!ExtrasUi::ShouldShowContextMenuItem(settings.showReactionsPanelInContextMenu())) {
-		return base::make_unexpected(AttachSelectorResult::Skipped);
-	}
-
 	if (reactions.recent.empty()) {
 		return base::make_unexpected(AttachSelectorResult::Skipped);
 	}

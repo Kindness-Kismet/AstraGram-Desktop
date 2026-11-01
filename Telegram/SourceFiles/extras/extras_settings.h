@@ -47,7 +47,7 @@ enum class ChannelBottomButton {
 enum class ContextMenuVisibility {
 	Hidden = 0,
 	Visible = 1,
-	VisibleWithModifier = 2,
+	VisibleInMoreMenu = 2,
 };
 
 enum class TranslationProvider {
@@ -78,7 +78,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ChannelBottomButton, {
 NLOHMANN_JSON_SERIALIZE_ENUM(ContextMenuVisibility, {
 	{ContextMenuVisibility::Hidden, 0},
 	{ContextMenuVisibility::Visible, 1},
-	{ContextMenuVisibility::VisibleWithModifier, 2},
+	{ContextMenuVisibility::VisibleInMoreMenu, 2},
 })
 
 NLOHMANN_JSON_SERIALIZE_ENUM(TranslationProvider, {
@@ -805,8 +805,8 @@ private:
 	rpl::variable<bool> _unlimitedRecentStickers = false;
 	rpl::variable<ContextMenuVisibility> _showReactionsPanelInContextMenu = ContextMenuVisibility::Visible;
 	rpl::variable<ContextMenuVisibility> _showViewsPanelInContextMenu = ContextMenuVisibility::Visible;
-	rpl::variable<ContextMenuVisibility> _showUserMessagesInContextMenu = ContextMenuVisibility::VisibleWithModifier;
-	rpl::variable<ContextMenuVisibility> _showMessageDetailsInContextMenu = ContextMenuVisibility::VisibleWithModifier;
+	rpl::variable<ContextMenuVisibility> _showUserMessagesInContextMenu = ContextMenuVisibility::VisibleInMoreMenu;
+	rpl::variable<ContextMenuVisibility> _showMessageDetailsInContextMenu = ContextMenuVisibility::VisibleInMoreMenu;
 	rpl::variable<ContextMenuVisibility> _showRepeatMessageInContextMenu = ContextMenuVisibility::Hidden;
 	rpl::variable<ContextMenuVisibility> _showAddFilterInContextMenu = ContextMenuVisibility::Visible;
 	rpl::variable<bool> _showAttachButtonInMessageField = true;

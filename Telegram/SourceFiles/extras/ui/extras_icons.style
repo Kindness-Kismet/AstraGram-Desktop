@@ -14,6 +14,7 @@ extrasEditsHistoryIcon: icon {{ "extras/edits_history", menuIconColor }};
 extrasStreamerModeMenuIcon: icon {{ "extras/streamer", menuIconColor }};
 extrasToBeginningMenuIcon: icon {{ "extras/to_beginning", menuIconColor }};
 extrasRepeatMenuIcon: icon {{ "extras/repeat", menuIconColor }};
+extrasMoreMenuIcon: icon {{ "profile/profile_more", menuIconColor }};
 extrasContactsMutualIcon: icon {{ "extras/contacts_mutual", contactsStatusFg }};
 extrasContactsMutualIconOver: icon {{ "extras/contacts_mutual", contactsStatusFgOver }};
 extrasWalletBotIcon: icon {{ "extras/wallet_bot", menuIconColor }};

@@ -2044,6 +2044,13 @@ void FillContextMenuItems(
 		}, &st::menuIconTranslate);
 	}
 
+	if (request.overSelection) {
+		ExtrasUi::AddCreateFilterAction(
+			result,
+			list->controller(),
+			item,
+			list->getSelectedText().rich.text);
+	}
 	AddTopMessageActions(result, request, list);
 	if (lnkPhoto && request.selectedItems.empty()) {
 		AddPhotoActions(result, lnkPhoto, item, list);
@@ -2711,9 +2718,11 @@ void AddWhoReactedAction(
 		not_null<Window::SessionController*> controller,
 		bool separateInfoDetails) {
 	const auto &settings = ExtrasSettings::getInstance();
-	if (!ExtrasUi::ShouldShowContextMenuItem(settings.showViewsPanelInContextMenu())) {
+	const auto target = ExtrasUi::contextMenuTarget(settings.showViewsPanelInContextMenu(), menu);
+	if (!target) {
 		return;
 	}
+	menu = target;
 
 	const auto whoReadIds = std::make_shared<Api::WhoReadList>();
 	const auto weak = base::make_weak(menu.get());

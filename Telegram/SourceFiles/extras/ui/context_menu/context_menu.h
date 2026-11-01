@@ -8,16 +8,14 @@
 #include "window/window_session_controller.h"
 
 namespace HistoryView {
-	enum class Context : char;
-}
-
-namespace HistoryView {
 enum class Context : char;
 }
 
 namespace ExtrasUi {
 
-bool ShouldShowContextMenuItem(ContextMenuVisibility state);
+[[nodiscard]] Ui::PopupMenu *contextMenuTarget(
+	ContextMenuVisibility state,
+	not_null<Ui::PopupMenu*> menu);
 
 void AddExtrasActions(PeerData *peerData,
 							   Data::Thread *thread,

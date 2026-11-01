@@ -370,7 +370,7 @@ void BuildContextMenuElements(SectionBuilder &builder, ExtrasSectionBuilder &ext
 	const auto options = std::vector{
 		tr::extras_SettingsContextMenuItemHidden(tr::now),
 		tr::extras_SettingsContextMenuItemShown(tr::now),
-		tr::extras_SettingsContextMenuItemExtended(tr::now),
+		tr::extras_SettingsContextMenuItemMore(tr::now),
 	};
 
 	extras.addChooseButton({
