@@ -21,7 +21,7 @@ extrasMusicMiniTitle: font(13px semibold);
 extrasMusicArtist: font(13px semibold);
 extrasMusicQueueTitle: font(12px semibold);
 extrasMusicCompactSmall: font(11px);
-extrasMusicQueueScroll: ScrollArea(defaultSolidScroll) {
+extrasMusicQueueScroll: ScrollArea(defaultScrollArea) {
 	round: 3px;
 	width: 12px;
 	deltax: 3px;

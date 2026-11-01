@@ -131,3 +131,4 @@ python .codex/skills/app-debug/scripts/cli.py simulation.enter
 音乐播放器使用独立顶层窗口 `music.window`。点击 `music.floating` 展开迷你条，`music.expand` 或迷你封面展开完整面板，`music.collapse` 收回迷你条，`music.close` 暂停并隐藏入口，`music.minimize` 收起窗口并继续播放。
 `control.window music.window` 选择播放器后可操作控件与截图；主窗口失焦不收起播放器。完整面板默认收起播放列表，`music.playlist` 切换展开或收起，曲目标识为 `music.track.<下标>`。
 `music.download` 保存当前曲目的封面原图；附件下载使用 `downloads.start`。`player.state` 还返回倍速、音量、顺序、上下首可用性和已加载播放列表；列表不代表整个会话的全部音乐。
+播放器列表滚动结束约 1 秒后淡出滚动条，鼠标停留在滚动条上时保持可见。

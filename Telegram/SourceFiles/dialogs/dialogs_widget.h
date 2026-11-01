@@ -232,6 +232,7 @@ private:
 	void setupMainMenuToggle();
 	void setupMoreChatsBar();
 	void switchToChatsFilter(FilterId id);
+	void hideChatsFilterScrollBar();
 	[[nodiscard]] QPixmap grabForChatsFilterSlide();
 	void startChatsFilterSlide(
 		QPixmap wasCache,

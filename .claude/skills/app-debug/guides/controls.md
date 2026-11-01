@@ -34,7 +34,7 @@
 
 读取普通或弹性滚动区的位置；传入整数时滚动到该位置，用于历史消息、设置页和菜单。
 先用 `control.list @scroll` 找到滚动区，再用默认模式的 `#序号` 定位；页面变化后重新列举。
-返回 `top`、`maximum` 和 `height`。主聊天滚动区名称为 `historyScroll`。
+返回 `top`、`maximum` 和 `height`。主聊天滚动区为 `historyScroll`，对话列表为 `dialogsScroll`，播放器列表为 `music.queueScroll`。
 
 `control.wheel <目标> <增量> [pixel] [ctrl]` 在应用内部投递滚轮事件；普通滚轮一格为 120，负值向下。
 `pixel` 使用像素增量与触控板更新阶段；结合多次 `control.scroll` 查询验证位置变化，不移动系统鼠标。

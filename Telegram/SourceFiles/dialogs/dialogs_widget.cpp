@@ -462,6 +462,7 @@ Widget::Widget(
 		_chatsFilterSlideCanvas = nullptr;
 	}, lifetime());
 	using OverscrollType = Ui::ElasticScroll::OverscrollType;
+	_scroll->setObjectName(u"dialogsScroll"_q);
 	_scroll->setOverscrollTypes(
 		_stories ? OverscrollType::Virtual : OverscrollType::Real,
 		OverscrollType::Real);
@@ -2728,13 +2729,21 @@ void Widget::switchToChatsFilter(FilterId id) {
 		}
 	}
 	const auto was = _inner->filterId();
+	const auto changed = (was != id);
+	const auto hideScrollBar = gsl::finally([&] {
+		if (!changed) {
+			return;
+		}
+		hideChatsFilterScrollBar();
+		Ui::PostponeCall(this, [=] { hideChatsFilterScrollBar(); });
+	});
 	const auto initialized = _chatsFilterInitialized;
 	const auto &filters = session().data().chatsFilters();
 	_chatsFilterInitialized = filters.loaded()
 		&& (initialized || id == filters.defaultId());
 	const auto animated = initialized
 		&& _chatsFilterInitialized
-		&& (was != id)
+		&& changed
 		&& !isHidden()
 		&& !_showAnimation;
 	if (!animated) {
@@ -2768,7 +2777,19 @@ void Widget::switchToChatsFilter(FilterId id) {
 	}
 }
 
+void Widget::hideChatsFilterScrollBar() {
+	Ui::SendPendingMoveResizeEvents(_scroll);
+	for (const auto child : _scroll->children()) {
+		if (const auto bar = dynamic_cast<Ui::ElasticScrollBar*>(child)) {
+			bar->toggle(false, anim::type::instant);
+			return;
+		}
+	}
+}
+
 QPixmap Widget::grabForChatsFilterSlide() {
+	// 分组切换只更新滚动范围，过渡截图不带滚动条。
+	hideChatsFilterScrollBar();
 	const auto hidden = _scrollToTop->isHidden();
 	if (!hidden) {
 		_scrollToTop->hide();
