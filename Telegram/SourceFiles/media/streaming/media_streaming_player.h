@@ -61,6 +61,8 @@ public:
 
 	[[nodiscard]] rpl::producer<Update, Error> updates() const;
 	[[nodiscard]] rpl::producer<bool> fullInCache() const;
+	[[nodiscard]] rpl::producer<int64> cachedBytesValue() const;
+	[[nodiscard]] int64 cachedBytes() const;
 	[[nodiscard]] rpl::producer<QImage> coverValue() const;
 
 	[[nodiscard]] int64 fileSize() const;
@@ -108,6 +110,7 @@ private:
 	void fileError(Error error) override;
 	void fileWaitingForData() override;
 	void fileFullInCache(bool fullInCache) override;
+	void fileCacheProgress(int64 bytes) override;
 	void fileCover(QImage cover) override;
 	bool fileProcessPackets(
 		base::flat_map<int, std::vector<FFmpeg::Packet>> &packets) override;
@@ -207,6 +210,7 @@ private:
 	base::Timer _renderFrameTimer;
 	rpl::event_stream<Update, Error> _updates;
 	rpl::event_stream<bool> _fullInCache;
+	rpl::variable<int64> _cachedBytes = 0;
 	rpl::variable<QImage> _cover;
 	std::optional<bool> _fullInCacheSinceStart;
 

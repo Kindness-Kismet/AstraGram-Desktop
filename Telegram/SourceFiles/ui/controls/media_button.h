@@ -34,6 +34,12 @@ void PaintMediaIcon(
 	QRectF inner,
 	const style::icon &icon,
 	QColor color);
+void PaintMediaButtonProgress(
+	QPainter &p,
+	QRectF inner,
+	const MediaButtonColors &colors,
+	float64 progress,
+	bool hovered = false);
 void PaintMediaProgressArc(
 	QPainter &p,
 	QRectF inner,

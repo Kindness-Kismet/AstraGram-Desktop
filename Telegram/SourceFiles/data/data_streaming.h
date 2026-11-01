@@ -55,6 +55,7 @@ public:
 
 	void keepAlive(not_null<DocumentData*> document);
 	void keepAlive(not_null<PhotoData*> photo);
+	[[nodiscard]] int64 cachedBytes(not_null<DocumentData*> document) const;
 
 private:
 	void clearKeptAlive();

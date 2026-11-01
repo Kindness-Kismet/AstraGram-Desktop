@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/media/history_view_document.h"
 
+#include "extras/features/music_player/music_player_download.h"
+
 #include "base/random.h"
 #include "lang/lang_keys.h"
 #include "lottie/lottie_icon.h"
@@ -419,7 +421,8 @@ Document::~Document() {
 
 float64 Document::dataProgress() const {
 	ensureDataMediaCreated();
-	return _dataMedia->progress();
+	return _data->uploading() ? _dataMedia->progress()
+		: std::max(_dataMedia->progress(), Extras::MusicPlayer::trackDownloadProgress(_data));
 }
 
 bool Document::dataFinished() const {
@@ -1033,7 +1036,7 @@ void Document::drawCornerDownload(
 		Painter &p,
 		const PaintContext &context,
 		LayoutMode mode) const {
-	if (!_data->filepath().isEmpty()
+	if (dataLoaded() || _data->loadedInMediaCache()
 		|| !downloadInCorner()
 		|| ExtrasFeatures::MessageShot::isTakingShot()) {
 		return;
@@ -1055,7 +1058,8 @@ void Document::drawCornerDownload(
 	if (_animation && _animation->radial.animating()) {
 		_animation->radial.paintFill(p, inner, colors, hovered);
 	} else {
-		Ui::PaintMediaButtonSurface(p, inner, colors, hovered);
+		Ui::PaintMediaButtonProgress(p, inner, colors,
+			Extras::MusicPlayer::trackDownloadProgress(_data), hovered);
 	}
 	const auto &icon = _data->loading()
 		? stm->historyAudioCancel
@@ -1069,7 +1073,7 @@ TextState Document::cornerDownloadTextState(
 		StateRequest request,
 		LayoutMode mode) const {
 	auto result = TextState(_parent);
-	if (!_data->filepath().isEmpty()
+	if (dataLoaded() || _data->loadedInMediaCache()
 		|| !downloadInCorner()) {
 		return result;
 	}

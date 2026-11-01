@@ -277,13 +277,22 @@ void MediaProgressAnimation::paintFill(
 		QRectF inner,
 		const MediaButtonColors &colors,
 		bool hovered) const {
+	PaintMediaButtonProgress(p, inner, colors, progressAt(crl::now()), hovered);
+}
+
+void PaintMediaButtonProgress(
+		QPainter &p,
+		QRectF inner,
+		const MediaButtonColors &colors,
+		float64 progress,
+		bool hovered) {
 	p.save();
 	auto hq = PainterHighQualityEnabler(p);
 	PaintMediaButtonSurface(p, inner, colors, hovered);
 	auto clip = QPainterPath();
 	clip.addEllipse(inner);
 	p.setClipPath(clip, Qt::IntersectClip);
-	const auto filled = inner.height() * FillHeight(progressAt(crl::now()));
+	const auto filled = inner.height() * FillHeight(progress);
 	p.fillRect(QRectF(
 		inner.left(), inner.bottom() - filled, inner.width(), filled), colors.fill);
 	p.restore();

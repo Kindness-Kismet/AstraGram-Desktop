@@ -43,6 +43,11 @@ Document::Document(
 	) | rpl::on_next([=](bool fullInCache) {
 		_document->setLoadedInMediaCache(fullInCache);
 	}, _player.lifetime());
+	if (_document->isAudioFile()) {
+		_player.cachedBytesValue() | rpl::skip(1) | rpl::on_next([=] {
+			_document->owner().requestDocumentViewRepaint(_document);
+		}, _player.lifetime());
+	}
 }
 
 Document::Document(

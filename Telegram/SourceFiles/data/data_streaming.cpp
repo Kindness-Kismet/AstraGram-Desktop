@@ -89,6 +89,16 @@ Streaming::Streaming(not_null<Session*> owner)
 
 Streaming::~Streaming() = default;
 
+int64 Streaming::cachedBytes(not_null<DocumentData*> document) const {
+	const auto i = _fileDocuments.find(document);
+	if (i != end(_fileDocuments)) {
+		if (const auto streamed = i->second.lock()) {
+			return streamed->player().cachedBytes();
+		}
+	}
+	return 0;
+}
+
 template <typename Data>
 [[nodiscard]] std::shared_ptr<Streaming::Reader> Streaming::sharedReader(
 		base::flat_map<not_null<Data*>, std::weak_ptr<Reader>> &readers,

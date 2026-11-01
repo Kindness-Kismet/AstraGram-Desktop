@@ -7,6 +7,8 @@
 #include "core/core_settings.h"
 #include "data/data_document.h"
 #include "data/data_media_types.h"
+#include "data/data_streaming.h"
+#include "data/data_session.h"
 #include "history/history_item.h"
 #include "media/audio/media_audio.h"
 #include "media/player/media_player_instance.h"
@@ -111,6 +113,12 @@ Result playerState(const QStringList &args) {
 		{ "nextAvailable", player->nextAvailable(type) },
 		{ "playlist", std::move(playlist) },
 		{ "filename", document ? document->filename().toStdString() : "" },
+		{ "fileSize", document ? document->size : 0 },
+		{ "cachedBytes", document ? document->owner().streaming().cachedBytes(document) : 0 },
+		{ "fullInCache", document && document->loadedInMediaCache() },
+		{ "hasLocalFile", document && !document->filepath().isEmpty() },
+		{ "downloading", document && document->loading() },
+		{ "downloadedBytes", document ? document->loadOffset() : 0 },
 	}));
 }
 

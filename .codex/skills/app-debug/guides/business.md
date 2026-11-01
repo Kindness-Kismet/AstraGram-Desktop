@@ -94,6 +94,8 @@
 设置迁移共用正式功能的导出、校验及保存代码。导入以指令执行时的账号为目标，异步期间账号销毁则失败。
 播放控制只验证业务动作，不代表空格键、输入法或焦点行为已通过验证。
 
+`player.state` 另返回文件总字节数 `fileSize`、已取得的独立流式分块字节数 `cachedBytes`、完整流缓存 `fullInCache`、本地文件 `hasLocalFile`，以及普通下载的 `downloading`、`downloadedBytes`。流式分块包含从缓存读取的部分，跳转播放位置不会把跳过的内容计入进度；完整缓存不等于已经保存文件。
+
 ## 异步任务
 
 返回 `jobId` 后通过 `job.status <id>` 查询 `running`、`succeeded` 或 `failed`。

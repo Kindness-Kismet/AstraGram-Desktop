@@ -342,7 +342,8 @@ auto Reader::Slice::offsetsFromLoader(uint32 from, uint32 till) const
 }
 
 Reader::Slices::Slices(uint32 size, bool useCache)
-: _size(size) {
+: _cachedParts((uint64(size) + kPartSize - 1) / kPartSize)
+, _size(size) {
 	Expects(size > 0);
 
 	if (useCache) {
@@ -396,6 +397,21 @@ int Reader::Slices::headerSize() const {
 
 bool Reader::Slices::fullInCache() const {
 	return _fullInCache;
+}
+
+int64 Reader::Slices::cachedBytes() const {
+	return _cachedBytes;
+}
+
+void Reader::Slices::countCachedPart(uint32 offset, int size) {
+	const auto index = offset / kPartSize;
+	Expects(index < _cachedParts.size());
+	if (_cachedParts[index]) {
+		return;
+	}
+	// 头部与数据切片可能重复持有同一分块，进度只计一次。
+	_cachedParts[index] = true;
+	_cachedBytes += size;
 }
 
 int Reader::Slices::requestSliceSizesCount() const {
@@ -457,6 +473,10 @@ void Reader::Slices::processCacheResult(int sliceNumber, PartsMap &&result) {
 		// We could've already unloaded this slice using LRU _usedSlices.
 		return;
 	}
+	const auto base = sliceNumber ? (sliceNumber - 1) * kInSlice : 0;
+	for (const auto &[offset, bytes] : result) {
+		countCachedPart(base + offset, bytes.size());
+	}
 	slice.processCacheData(std::move(result));
 	checkSliceFullLoaded(sliceNumber);
 	if (!sliceNumber) {
@@ -481,6 +501,11 @@ void Reader::Slices::processCachedSizes(const std::vector<int> &sizes) {
 			? kInSlice
 			: (_size - (sliceNumber - 1) * kInSlice);
 		const auto loaded = (sizes[i] == sliceSize);
+		if (loaded) {
+			for (auto offset = 0; offset < sliceSize; offset += kPartSize) {
+				countCachedPart(i * kInSlice + offset, std::min<int>(kPartSize, sliceSize - offset));
+			}
+		}
 
 		if (_data[i].flags & Flag::FullInCache) {
 			++loadedCount;
@@ -532,6 +557,7 @@ void Reader::Slices::processPart(
 		uint32 offset,
 		QByteArray &&bytes) {
 	Expects(isFullInHeader() || (offset / kInSlice < _data.size()));
+	countCachedPart(offset, bytes.size());
 
 	if (isFullInHeader()) {
 		_header.addPart(offset, bytes);
@@ -1249,6 +1275,10 @@ int Reader::headerSize() const {
 
 bool Reader::fullInCache() const {
 	return _slices.fullInCache();
+}
+
+int64 Reader::cachedBytes() const {
+	return _slices.cachedBytes();
 }
 
 Reader::FillState Reader::fill(

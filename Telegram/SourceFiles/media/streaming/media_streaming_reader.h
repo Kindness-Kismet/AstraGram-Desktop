@@ -62,6 +62,7 @@ public:
 	void headerDone();
 	[[nodiscard]] int headerSize() const;
 	[[nodiscard]] bool fullInCache() const;
+	[[nodiscard]] int64 cachedBytes() const;
 
 	// Thread safe.
 	void startSleep(not_null<crl::semaphore*> wake);
@@ -155,6 +156,7 @@ private:
 		void headerDone(bool fromCache);
 		[[nodiscard]] int headerSize() const;
 		[[nodiscard]] bool fullInCache() const;
+		[[nodiscard]] int64 cachedBytes() const;
 		[[nodiscard]] bool headerWontBeFilled() const;
 		[[nodiscard]] bool headerModeUnknown() const;
 		[[nodiscard]] bool isFullInHeader() const;
@@ -198,8 +200,11 @@ private:
 		void unloadSlice(Slice &slice) const;
 		void checkSliceFullLoaded(int sliceNumber);
 		[[nodiscard]] bool checkFullInCache() const;
+		void countCachedPart(uint32 offset, int size);
 
 		std::vector<Slice> _data;
+		std::vector<bool> _cachedParts;
+		int64 _cachedBytes = 0;
 		Slice _header;
 		std::deque<int> _usedSlices;
 		uint32 _size = 0;

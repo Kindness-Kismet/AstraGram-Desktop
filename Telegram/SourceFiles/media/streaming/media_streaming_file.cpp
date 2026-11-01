@@ -372,6 +372,11 @@ void File::Context::start(StartOptions options) {
 void File::Context::sendFullInCache(bool force) {
 	const auto started = _fullInCache.has_value();
 	if (force || started) {
+		const auto bytes = _reader->cachedBytes();
+		if (_cachedBytes != bytes) {
+			_cachedBytes = bytes;
+			_delegate->fileCacheProgress(bytes);
+		}
 		const auto nowFullInCache = _reader->fullInCache();
 		if (!started || *_fullInCache != nowFullInCache) {
 			_fullInCache = nowFullInCache;

@@ -29,6 +29,7 @@ public:
 	virtual void fileError(Error error) = 0;
 	virtual void fileWaitingForData() = 0;
 	virtual void fileFullInCache(bool fullInCache) = 0;
+	virtual void fileCacheProgress(int64 bytes) = 0;
 	virtual void fileCover(QImage cover) = 0;
 
 	virtual void fileProcessEndOfFile() = 0;

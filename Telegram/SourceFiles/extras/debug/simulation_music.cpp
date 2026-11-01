@@ -182,6 +182,7 @@ Result simulateMusic(const QStringList &args) {
 		{ "sourceRequests", entry.source->requests },
 		{ "sourceRequestsAtFull", entry.source->requestsAtFull },
 		{ "fullInCache", document->loadedInMediaCache() },
+		{ "cachedBytes", session->data().streaming().cachedBytes(document) },
 		{ "loading", document->loading() }, { "cancelled", document->cancelled() },
 		{ "path", document->filepath(true).toStdString() },
 	}));

@@ -346,6 +346,12 @@ void Player::fileFullInCache(bool fullInCache) {
 	});
 }
 
+void Player::fileCacheProgress(int64 bytes) {
+	crl::on_main(&_sessionGuard, [=] {
+		_cachedBytes = bytes;
+	});
+}
+
 void Player::fileWaitingForData() {
 	if (_waitingForData) {
 		return;
@@ -903,6 +909,14 @@ rpl::producer<Update, Error> Player::updates() const {
 
 rpl::producer<bool> Player::fullInCache() const {
 	return _fullInCache.events();
+}
+
+rpl::producer<int64> Player::cachedBytesValue() const {
+	return _cachedBytes.value();
+}
+
+int64 Player::cachedBytes() const {
+	return _cachedBytes.current();
 }
 
 rpl::producer<QImage> Player::coverValue() const {

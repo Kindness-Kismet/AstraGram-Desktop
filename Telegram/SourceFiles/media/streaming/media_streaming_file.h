@@ -109,6 +109,7 @@ private:
 		bool _failed = false;
 		bool _readTillEnd = false;
 		std::optional<bool> _fullInCache;
+		int64 _cachedBytes = -1;
 		crl::semaphore _semaphore;
 		std::atomic<bool> _interrupted = false;
 

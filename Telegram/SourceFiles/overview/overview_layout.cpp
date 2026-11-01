@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "overview/overview_layout.h"
 
+#include "extras/features/music_player/music_player_download.h"
+
 #include "overview/overview_checkbox.h"
 #include "overview/overview_layout_delegate.h"
 #include "core/application.h"
@@ -1671,7 +1673,8 @@ void Document::drawCornerDownload(QPainter &p, bool selected, const PaintContext
 	if (_radial && _radial->animating()) {
 		_radial->paintFill(p, inner, colors, hovered);
 	} else {
-		Ui::PaintMediaButtonSurface(p, inner, colors, hovered);
+		Ui::PaintMediaButtonProgress(p, inner, colors,
+			Extras::MusicPlayer::trackDownloadProgress(_data), hovered);
 	}
 	const auto icon = [&] {
 		if (_data->loading()) {
@@ -1932,7 +1935,8 @@ float64 Document::dataProgress() const {
 			: 0.;
 	}
 	ensureDataMediaCreated();
-	return _dataMedia->progress();
+	return _data->uploading() ? _dataMedia->progress()
+		: std::max(_dataMedia->progress(), Extras::MusicPlayer::trackDownloadProgress(_data));
 }
 
 bool Document::dataFinished() const {
