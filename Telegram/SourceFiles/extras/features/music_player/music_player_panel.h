@@ -81,7 +81,7 @@ private:
 	bool _seeking = false;
 	bool _resumeAfterSeeking = false;
 	bool _expanded = false;
-	bool _queueOpen = true;
+	bool _queueOpen = false;
 	bool _dragging = false;
 	bool _positioned = false;
 	QPoint _dragOffset;

@@ -128,6 +128,6 @@ python .codex/skills/app-debug/scripts/cli.py simulation.enter
 
 `app.start`、`app.ensure`、`app.restart` 支持 `--background`，新启动时进入托盘，不主动显示窗口。已有实例保持原状；这不改变单实例规则，也不会操作系统鼠标。
 
-音乐播放器使用独立顶层窗口 `music.window`。点击 `music.floating` 展开迷你条，`music.expand` 或迷你封面展开完整面板，`music.collapse` 收回迷你条，`music.close` 收回图标且保留播放。
-`control.window music.window` 选择播放器后可操作控件与截图；主窗口失焦不收起播放器。`music.playlist` 展开内置列表，曲目标识为 `music.track.<下标>`。
-`music.download` 保存当前曲目，完整面板的封面可保存原图。`player.state` 还返回倍速、音量、顺序、上下首可用性和已加载播放列表；列表不代表整个会话的全部音乐。
+音乐播放器使用独立顶层窗口 `music.window`。点击 `music.floating` 展开迷你条，`music.expand` 或迷你封面展开完整面板，`music.collapse` 收回迷你条，`music.close` 暂停并隐藏入口，`music.minimize` 收起窗口并继续播放。
+`control.window music.window` 选择播放器后可操作控件与截图；主窗口失焦不收起播放器。完整面板默认收起播放列表，`music.playlist` 切换展开或收起，曲目标识为 `music.track.<下标>`。
+`music.download` 保存当前曲目的封面原图；附件下载使用 `downloads.start`。`player.state` 还返回倍速、音量、顺序、上下首可用性和已加载播放列表；列表不代表整个会话的全部音乐。

@@ -76,7 +76,7 @@ CompactPanel::CompactPanel(
 , _source(this, QString(), st::extrasMusicCompactSource)
 , _progress(this)
 , _volumeSlider(this, st::extrasMusicProgress)
-, _scroll(this, st::mediaPlayerScroll)
+, _scroll(this, st::extrasMusicQueueScroll)
 , _wave(new Waveform(this))
 , _playback(std::make_unique<Media::View::PlaybackProgress>())
 , _shadow(std::make_unique<Ui::BoxShadow>(st::defaultPopupMenu.shadow)) {
@@ -388,6 +388,9 @@ void CompactPanel::togglePlaylist() {
 		updateSize();
 		constrainToScreen();
 	}, from, to, anim::Disabled() ? 0 : 240, anim::sineInOut);
+	if (_queueOpen) {
+		_scroll->scrollToY(_queue->currentTop());
+	}
 }
 
 void CompactPanel::updateSize() {
@@ -494,7 +497,7 @@ void CompactPanel::resizeEvent(QResizeEvent *event) {
 	belowCover(_volume, 20, 288, 32, 32); belowCover(_volumeSlider, 62, 295, 134, 18);
 	belowCover(_speed, 246, 288, 42, 32); belowCover(_playlist, 294, 288, 62, 32);
 	_scroll->setGeometry(top.x() + scaled(8), top.y() + fullHeight() + scaled(38),
-		scaled(360), std::max(0, queueHeight - scaled(38) - scaled(6)));
+		scaled(368), std::max(0, queueHeight - scaled(38) - scaled(6)));
 	_queue->resize(_scroll->width(), _queue->height());
 }
 

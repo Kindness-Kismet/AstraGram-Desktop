@@ -135,7 +135,8 @@ int PlayerQueue::currentTop() const {
 void PlayerQueue::resizeEvent(QResizeEvent *event) {
 	RpWidget::resizeEvent(event);
 	for (auto i = 0; i != int(_rows.size()); ++i) {
-		_rows[i]->setGeometry(0, i * style::ConvertScale(58), width(), style::ConvertScale(54));
+		_rows[i]->setGeometry(0, i * style::ConvertScale(58),
+			width() - style::ConvertScale(8), style::ConvertScale(54));
 	}
 }
 
