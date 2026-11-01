@@ -1,9 +1,42 @@
 #include "extras/extras_lang.h"
 
 #include "lang/lang_instance.h"
+#include "lang_auto_counts.h"
 
 #include <QFile>
 #include <QJsonParseError>
+#include <QRegularExpression>
+
+namespace ExtrasLang {
+
+QByteArray normalizeChatTranslation(
+		const QString &languageId,
+		const QByteArray &key,
+		const QByteArray &value) {
+	if (!languageId.startsWith(u"zh-hans"_q)
+		&& !languageId.startsWith(u"zh-cn"_q)) {
+		return value;
+	}
+	auto text = QString::fromUtf8(value);
+	if (!text.contains(u"对话"_q)) {
+		return value;
+	}
+	const auto index = Lang::GetKeyIndex(QLatin1String(key));
+	if (index == Lang::kKeysCount) {
+		return value;
+	}
+	static const auto chatTerms = QRegularExpression(
+		u"\\b(chats?|conversations?)\\b"_q,
+		QRegularExpression::CaseInsensitiveOption);
+	if (!chatTerms.match(Lang::GetOriginalValue(index)).hasMatch()) {
+		return value;
+	}
+	// 只统一聊天术语，保留对话框名称和翻译占位符。
+	static const auto translatedTerm = QRegularExpression(u"对话(?!框)"_q);
+	return text.replace(translatedTerm, u"聊天"_q).toUtf8();
+}
+
+} // namespace ExtrasLang
 
 // 系统语言 id 到内置语言包文件名的归一
 std::map<QString, QString> langMapping = {

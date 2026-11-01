@@ -70,19 +70,11 @@ void ShowMatchCodesBox(
 		const QStringList &codes,
 		Fn<void(QString)> callback,
 		bool isApp) {
+	box->setTitle(tr::lng_url_auth_match_code_title());
 	box->setWidth(st::boxWidth);
 	box->setStyle(st::urlAuthBox);
 
 	const auto content = box->verticalLayout();
-
-	Ui::AddSkip(content);
-	content->add(
-		object_ptr<Ui::FlatLabel>(
-			content,
-			tr::lng_url_auth_match_code_title(),
-			st::urlAuthCodesTitle),
-		st::boxRowPadding,
-		style::al_top);
 
 	Ui::AddSkip(content);
 	Ui::AddSkip(content);
@@ -397,6 +389,7 @@ void Show(
 		const QString &selfName,
 		const QString &botName,
 		Fn<void(Result)> callback) {
+	box->setTitle(tr::lng_url_auth_login_title(lt_domain, rpl::single(domain)));
 	box->setWidth(st::boxWidth);
 
 	box->addRow(

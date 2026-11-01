@@ -83,11 +83,13 @@ crl::time DeleteMessagesBox::layerAnimationDuration() const {
 	return kDeleteMessagesBoxAnimationDuration;
 }
 
-// 清空、删除或退出对话按操作命名，删除消息沿用通用确认标题。
+// 标题跟随删除范围，避免消息删除与整段历史混淆。
 rpl::producer<QString> DeleteMessagesBox::prepareTitle() const {
 	const auto peer = _wipeHistoryPeer;
 	if (!peer) {
-		return tr::extras_DialogConfirmTitle();
+		return (_ids.size() == 1)
+			? tr::lng_delete_title_message_one()
+			: tr::lng_delete_title_message_many(lt_count, rpl::single(float64(_ids.size())));
 	}
 	if (peer->isSecretChat()) {
 		return _wipeHistoryJustClear ? tr::extras_SecretChatClear() : tr::extras_SecretChatDestroy();
@@ -96,7 +98,7 @@ rpl::producer<QString> DeleteMessagesBox::prepareTitle() const {
 		return tr::lng_profile_clear_history();
 	}
 	if (peer->isUser()) {
-		return tr::lng_profile_delete_conversation();
+		return tr::extras_DialogDeleteHistoryTitle();
 	}
 	return (peer->isChannel() && !peer->isMegagroup())
 		? tr::lng_profile_leave_channel()
@@ -187,7 +189,7 @@ void DeleteMessagesBox::prepare() {
 			_revoke.create(
 				this,
 				revoke->checkbox,
-				false,
+				peer->isUser(),
 				st::defaultBoxCheckbox);
 			appendDetails(std::move(revoke->description));
 			if (!peer->isUser() && !_wipeHistoryJustClear) {

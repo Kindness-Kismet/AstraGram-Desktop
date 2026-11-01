@@ -423,6 +423,7 @@ void TranslateBox(
 		MsgId msgId,
 		TextWithEntities text,
 		bool hasCopyRestriction) {
+	box->setTitle(tr::lng_context_translate());
 	struct State {
 		State(not_null<Main::Session*> session)
 		: provider(CreateTranslateProvider(session)) {

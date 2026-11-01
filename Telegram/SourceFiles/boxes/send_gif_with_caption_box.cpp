@@ -506,6 +506,7 @@ void CaptionBox(
 		const SendMenu::Details &details,
 		Fn<void(Api::SendOptions, TextWithTags)> done,
 		Fn<void(TextWithTags)> cancelled = nullptr) {
+	box->setTitle(tr::lng_photo_caption());
 	const auto window = Core::App().findWindow(box);
 	const auto controller = window ? window->sessionController() : nullptr;
 	if (!controller) {

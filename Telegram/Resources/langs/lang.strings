@@ -9746,6 +9746,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DeleteDownloadedFileFailed" = "Could not move the file to the Recycle Bin. It may be in use or no longer available.";
 
 "extras_DialogDetailsTitle" = "Details";
+"extras_DialogDeleteHistoryTitle" = "Delete chat history";
+"extras_DialogClearCallsTitle" = "Clear call history";
+"extras_DialogDeviceTitle" = "Device details";
+"extras_DialogWebsiteTitle" = "Website login details";
+"extras_DialogEditMediaTitle" = "Edit media";
+"extras_DialogSendFilesTitle" = "Send attachments";
+"extras_DialogCountriesTitle" = "Select countries";
+"extras_DialogTimeTitle" = "Select time";
 "extras_DialogInfoTitle" = "Information";
 "extras_DialogConfirmTitle" = "Confirm action";
 "extras_SecretChatDestroy" = "Destroy Encrypted Chat";

@@ -111,6 +111,7 @@ void InfoBox(
 		not_null<Ui::GenericBox*> box,
 		const EntryData &data,
 		Fn<void(uint64)> terminate) {
+	box->setTitle(tr::extras_DialogWebsiteTitle());
 	box->setWidth(st::boxWideWidth);
 
 	const auto shown = box->lifetime().make_state<rpl::event_stream<>>();

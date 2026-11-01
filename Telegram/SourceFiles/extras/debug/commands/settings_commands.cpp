@@ -11,6 +11,8 @@
 #include "window/notifications_manager.h"
 #include "settings/settings_experimental.h"
 #include "base/options.h"
+#include "lang/lang_instance.h"
+#include "lang_auto_counts.h"
 
 namespace ExtrasDebug::Commands {
 namespace {
@@ -61,6 +63,26 @@ Result settingsGet(const QStringList &args) {
 Result settingsSet(const QStringList &args) {
 	if (args.size() != 2) return Result::Err(u"usage: settings.set <key> <value>"_q);
 	return setSetting(args[0], args[1]);
+}
+
+Result languageGet(const QStringList &args) {
+	if (args.size() != 1) {
+		return Result::Err(u"usage: language.get <key>"_q);
+	}
+	const auto key = args.front().toUtf8();
+	const auto index = Lang::GetKeyIndex(QLatin1String(key));
+	if (index == Lang::kKeysCount) {
+		return Result::Err(u"unknown language key"_q);
+	}
+	const auto &language = Lang::GetInstance();
+	return Result::Ok(Compact(Json{
+		{ "languageId", language.id() },
+		{ "baseId", language.baseId() },
+		{ "key", args.front() },
+		{ "value", language.getValue(index) },
+		{ "raw", language.getNonDefaultValue(key) },
+		{ "original", Lang::GetOriginalValue(index) },
+	}));
 }
 
 Result settingsSchema(const QStringList &args) {
@@ -233,6 +255,7 @@ const HandlerMap &SettingsHandlers() {
 		{u"settings.schema"_q, &settingsSchema},
 		{u"settings.get"_q, &settingsGet},
 		{u"settings.set"_q, &settingsSet},
+		{u"language.get"_q, &languageGet},
 		{u"theme.reset-background"_q, &resetBackground},
 		{u"theme.set"_q, &setTheme},
 	};

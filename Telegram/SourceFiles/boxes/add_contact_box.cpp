@@ -1028,6 +1028,7 @@ SetupChannelBox::SetupChannelBox(
 }
 
 void SetupChannelBox::prepare() {
+	setTitle(tr::lng_manage_peer_channel_type());
 	_aboutPublicHeight = _aboutPublic.countHeight(_aboutPublicWidth);
 
 	if (_channel->inviteLink().isEmpty()) {

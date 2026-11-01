@@ -349,6 +349,7 @@ void AddTitleGroupCallRecordingBox(
 void StopGroupCallRecordingBox(
 		not_null<Ui::GenericBox*> box,
 		Fn<void(QString)> done) {
+	box->setTitle(tr::lng_group_call_recording_stop());
 	box->addRow(
 		object_ptr<Ui::FlatLabel>(
 			box.get(),

@@ -740,6 +740,7 @@ std::unique_ptr<PeerListRow> BoxController::createRow(
 void ClearCallsBox(
 		not_null<Ui::GenericBox*> box,
 		not_null<::Window::SessionController*> window) {
+	box->setTitle(tr::extras_DialogClearCallsTitle());
 	const auto weak = base::make_weak(box);
 	box->addRow(
 		object_ptr<Ui::FlatLabel>(

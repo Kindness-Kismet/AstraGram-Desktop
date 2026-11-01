@@ -59,6 +59,7 @@ void SelectCountriesBox(
 		Fn<void(std::vector<QString>)> doneCallback,
 		Fn<bool(int)> checkErrorCallback,
 		Countries::Naming naming) {
+	box->setTitle(tr::extras_DialogCountriesTitle());
 	struct State final {
 		std::vector<QString> resultList;
 	};

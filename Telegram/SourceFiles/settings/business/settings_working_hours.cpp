@@ -134,6 +134,7 @@ void EditTimeBox(
 		TimeId value,
 		Fn<void(TimeId)> save) {
 	Expects(low <= high);
+	box->setTitle(tr::extras_DialogTimeTitle());
 
 	const auto content = box->addRow(object_ptr<Ui::FixedHeightWidget>(
 		box,

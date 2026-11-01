@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/boxes/confirm_box.h"
 #include "lang/lang_file_parser.h"
 #include "lang/lang_tag.h" // kTextCommandLangTag.
+#include "extras/extras_lang.h"
 #include "base/platform/base_platform_info.h"
 #include "base/qthelp_regex.h"
 
@@ -729,8 +730,12 @@ QString Instance::getNonDefaultValue(const QByteArray &key) const {
 }
 
 void Instance::applyValue(const QByteArray &key, const QByteArray &value) {
-	_nonDefaultValues[key] = value;
-	ParseKeyValue(key, value, [&](ushort key, QString &&value) {
+	const auto normalized = ExtrasLang::normalizeChatTranslation(
+		isCustom() && _base ? _base->id() : _id,
+		key,
+		value);
+	_nonDefaultValues[key] = normalized;
+	ParseKeyValue(key, normalized, [&](ushort key, QString &&value) {
 		_nonDefaultSet[key] = 1;
 		if (!_derived) {
 			_values[key] = std::move(value);

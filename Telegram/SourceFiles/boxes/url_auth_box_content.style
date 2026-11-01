@@ -19,12 +19,6 @@ urlAuthBoxTitle: FlatLabel(boxTitle) {
 	maxHeight: 0px;
 	align: align(top);
 }
-urlAuthCodesTitle: FlatLabel(defaultPeerListAbout) {
-	textFg: boxTitleFg;
-	style: TextStyle(defaultTextStyle) {
-		font: boxTitleFont;
-	}
-}
 urlAuthCheckboxAbout: FlatLabel(defaultPeerListAbout) {
 	style: TextStyle(boxTextStyle) {
 		font: font(12px);

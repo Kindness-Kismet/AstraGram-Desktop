@@ -197,6 +197,7 @@ void ConfirmSubscriptionBox(
 		not_null<Main::Session*> session,
 		const QString &hash,
 		const MTPDchatInvite *data) {
+	box->setTitle(tr::lng_channel_invite_subscription_title());
 	box->setWidth(st::boxWideWidth);
 	const auto amount = data->vsubscription_pricing()->data().vamount().v;
 	const auto formId = data->vsubscription_form_id()->v;

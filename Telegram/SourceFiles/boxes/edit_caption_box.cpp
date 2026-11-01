@@ -405,6 +405,7 @@ void EditCaptionBox::showFinished() {
 }
 
 void EditCaptionBox::prepare() {
+	setTitle(tr::extras_DialogEditMediaTitle());
 	const auto button = addButton(tr::lng_settings_save(), [=] { save(); });
 	addButton(tr::lng_cancel(), [=] { closeBox(); });
 

@@ -141,6 +141,7 @@ GENERIC_COMMANDS = {
 
     "session.thread-settings": "查询或修改话题与子会话配置：<会话编号> <话题编号> <子会话编号> [键 值]",
     "control.mouse": "在应用控件内部点击、打开菜单或分开按下松开：<目标> <横坐标> <纵坐标> [left|right|double|press|move|release]",
+    "language.get": "查询当前语言包的文案与原文：<翻译键>",
     "crash.log": "读取当前调试配置的崩溃日志",
     "iv.open-file": "打开本地文章预览：<文件路径>",
     "iv.open-media-sample": "在独立模拟模式打开本地媒体文章：<图片一> <图片二> <视频>",

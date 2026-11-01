@@ -405,6 +405,7 @@ void SessionInfoBox(
 		not_null<Ui::GenericBox*> box,
 		const EntryData &data,
 		Fn<void(uint64)> terminate) {
+	box->setTitle(tr::extras_DialogDeviceTitle());
 	box->setWidth(st::boxWideWidth);
 
 	const auto shown = box->lifetime().make_state<rpl::event_stream<>>();

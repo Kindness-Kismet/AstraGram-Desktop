@@ -36,7 +36,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lottie/lottie_icon.h"
 #include "main/main_session.h"
 #include "ui/boxes/confirm_box.h"
-#include "ui/controls/userpic_button.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/effects/toggle_arrow.h"
 #include "ui/layers/generic_box.h"
@@ -1618,37 +1617,15 @@ void DeleteChatBox(
 		Fn<void(Fn<void()> leave)> leaveAsCreator) {
 	const auto container = box->verticalLayout();
 
-	const auto userpicPeer = peer->userpicPaintingPeer();
 	const auto maybeUser = peer->asUser();
 	const auto isBot = maybeUser && maybeUser->isBot();
-
-	Ui::AddSkip(container);
-	Ui::AddSkip(container);
+	box->setTitle(maybeUser
+		? tr::extras_DialogDeleteHistoryTitle()
+		: (peer->isChannel() && !peer->isMegagroup())
+		? tr::lng_profile_leave_channel()
+		: tr::lng_profile_leave_group());
 
 	SafeSubmitOnEnter(box);
-
-	const auto userpic = Ui::CreateChild<Ui::UserpicButton>(
-		container,
-		userpicPeer,
-		st::mainMenuUserpic,
-		peer->userpicShape());
-	userpic->showSavedMessagesOnSelf(true);
-	Ui::IconWithTitle(
-		container,
-		userpic,
-		Ui::CreateChild<Ui::FlatLabel>(
-			container,
-			peer->isSelf()
-				? tr::lng_saved_messages(tr::bold)
-				: maybeUser
-				? tr::lng_profile_delete_conversation(tr::bold)
-				: rpl::single(
-					tr::bold(userpicPeer->name())
-				) | rpl::type_erased,
-			box->getDelegate()->style().title));
-
-	Ui::AddSkip(container);
-	Ui::AddSkip(container);
 
 	box->addRow(
 		object_ptr<Ui::FlatLabel>(
@@ -1682,9 +1659,19 @@ void DeleteChatBox(
 					: tr::lng_delete_for_everyone_check(
 						tr::now,
 						tr::marked),
-				false,
+				maybeUser != nullptr,
 				st::defaultBoxCheckbox));
 	}();
+	if (!maybeUser && maybeCheckbox) {
+		box->setTitle(maybeCheckbox->checkedValue() | rpl::map([=](bool checked) {
+			const auto isChannel = peer->isChannel() && !peer->isMegagroup();
+			return checked
+				? (isChannel ? tr::lng_profile_delete_channel() : tr::lng_profile_delete_group())
+				: isChannel
+				? tr::lng_profile_leave_channel()
+				: tr::lng_profile_leave_group();
+		}) | rpl::flatten_latest());
+	}
 
 	const auto maybeBotCheckbox = [&]() -> Ui::Checkbox* {
 		if (!isBot) {
@@ -1776,25 +1763,8 @@ void DeleteSublistBox(
 	const auto weak = base::make_weak(sublist.get());
 	const auto peer = sublist->sublistPeer();
 
-	Ui::AddSkip(container);
-	Ui::AddSkip(container);
-
+	box->setTitle(tr::extras_DialogDeleteHistoryTitle());
 	SafeSubmitOnEnter(box);
-
-	const auto userpic = Ui::CreateChild<Ui::UserpicButton>(
-		container,
-		peer,
-		st::mainMenuUserpic);
-	Ui::IconWithTitle(
-		container,
-		userpic,
-		Ui::CreateChild<Ui::FlatLabel>(
-			container,
-			tr::lng_profile_delete_conversation(tr::bold),
-			box->getDelegate()->style().title));
-
-	Ui::AddSkip(container);
-	Ui::AddSkip(container);
 
 	box->addRow(
 		object_ptr<Ui::FlatLabel>(

@@ -49,6 +49,7 @@ namespace {
 void PinMessageBox(
 		not_null<Ui::GenericBox*> box,
 		not_null<HistoryItem*> item) {
+	box->setTitle(tr::lng_context_pin_msg());
 	struct State {
 		base::weak_qptr<Ui::Checkbox> pinForPeer;
 		base::weak_qptr<Ui::Checkbox> notify;

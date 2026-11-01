@@ -54,6 +54,7 @@ MaxInviteBox::MaxInviteBox(QWidget*, not_null<ChannelData*> channel)
 }
 
 void MaxInviteBox::prepare() {
+	setTitle(tr::lng_create_invite_link_title());
 	setMouseTracking(true);
 
 	addButton(tr::lng_box_ok(), [=] { closeBox(); });

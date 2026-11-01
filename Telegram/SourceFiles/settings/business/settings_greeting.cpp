@@ -76,6 +76,7 @@ void EditPeriodBox(
 		not_null<Ui::GenericBox*> box,
 		int days,
 		Fn<void(int)> save) {
+	box->setTitle(tr::lng_greeting_period_title());
 	auto values = std::vector{ 7, 14, 21, 28 };
 	if (!ranges::contains(values, days)) {
 		values.push_back(days);

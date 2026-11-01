@@ -940,6 +940,7 @@ void SendFilesBox::enqueueNextPrepare() {
 }
 
 void SendFilesBox::prepare() {
+	setTitle(tr::extras_DialogSendFilesTitle());
 	initSendWay();
 	setupCaption();
 	setupSendWayControls();
