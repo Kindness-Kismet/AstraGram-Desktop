@@ -309,7 +309,7 @@ def print_command_help(subparsers) -> None:
 
 
 def key_name(value: str) -> str:
-    names = ("escape", "up", "down", "left", "right", "enter", "tab", "space")
+    names = ("escape", "backspace", "up", "down", "left", "right", "enter", "tab", "space")
     if value in names or (value.isascii() and value.isdigit() and len(value) <= 16):
         return value
     raise argparse.ArgumentTypeError(f"unsupported key: {value}")
@@ -475,7 +475,7 @@ def register_commands(sub) -> None:
     command.add_argument("state", choices=("on", "off"), help="开启或关闭完整点击圆")
     command = sub.add_parser("control.key", help="向控件合成按键，用于菜单导航、关闭和验证码输入")
     command.add_argument("target", help="控件名称、#序号或 @menu")
-    command.add_argument("key", type=key_name, help="escape、up、down、left、right、enter、tab、space，或最多 16 位数字")
+    command.add_argument("key", type=key_name, help="escape、backspace、up、down、left、right、enter、tab、space，或最多 16 位数字")
     command = sub.add_parser("control.shortcut", help="向指定控件内已注册的快捷键投递事件，不操作系统键盘")
     command.add_argument("target", help="控件名称或 #序号")
     command.add_argument("sequence", help="快捷键组合，如 Ctrl+K")

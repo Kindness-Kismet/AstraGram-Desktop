@@ -427,6 +427,7 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	}
 	static const auto keys = QMap<QString, Qt::Key>{
 		{ u"escape"_q, Qt::Key_Escape },
+		{ u"backspace"_q, Qt::Key_Backspace },
 		{ u"up"_q, Qt::Key_Up },
 		{ u"down"_q, Qt::Key_Down },
 		{ u"left"_q, Qt::Key_Left },
