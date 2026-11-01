@@ -373,7 +373,9 @@ void Manager::update(const MTPUpdate &update) {
 }
 
 void Manager::Private::acknowledge() {
-	if (ackRequest || state->qts <= acknowledgedQts) return;
+	if (ackRequest || state->qts <= acknowledgedQts || state->qts == rejectedQts) {
+		return;
+	}
 	const auto qts = state->qts;
 	const auto weak = base::make_weak(owner.get());
 	ackRequest = owner->request(MTPmessages_ReceivedQueue(MTP_int(qts)))
@@ -383,7 +385,16 @@ void Manager::Private::acknowledge() {
 				manager->_private->acknowledgedQts = qts;
 				manager->_private->acknowledge();
 			}
-		}).fail([weak] { if (weak) weak.get()->_private->ackRequest = 0; }).send();
+		}).fail([weak, qts](const MTP::Error &error) {
+			if (const auto manager = weak.get()) {
+				auto &p = *manager->_private;
+				p.ackRequest = 0;
+				// 无效的队列位置只在收到新位置后重试，不把拒绝记成确认成功。
+				if (error.type() == u"MAX_QTS_INVALID"_q) {
+					p.rejectedQts = qts;
+				}
+			}
+		}).send();
 }
 
 } // namespace Extras::SecretChats

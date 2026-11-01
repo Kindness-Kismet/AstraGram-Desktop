@@ -237,7 +237,8 @@ struct Manager::Private {
 	mtpRequestId dhRequest = 0;
 	QVector<Fn<void(int, QByteArray, QByteArray, int, QString)>> dhCallbacks;
 	mtpRequestId ackRequest = 0;
-	int acknowledgedQts = -1;
+	int acknowledgedQts = 0;
+	int rejectedQts = -1;
 	qint64 wallStarted = 0;
 	crl::time monotonicStarted = 0;
 };
