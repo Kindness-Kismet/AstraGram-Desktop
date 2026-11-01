@@ -127,8 +127,11 @@ void FloatingPlayer::refresh() {
 	}
 	const auto item = document ? document->owner().message(current.contextId()) : nullptr;
 	const auto expiring = item && item->media() && item->media()->ttlSeconds();
+	// 跳转会重建播放实例，窗口可见性只比较文件与消息身份。
+	const auto sameTrack = state.id.audio() == current.audio()
+		&& state.id.contextId() == current.contextId();
 	_active = document && !expiring && !Core::App().passcodeLocked()
-		&& state.id == current && !IsStoppedOrStopping(state.state)
+		&& sameTrack && !IsStoppedOrStopping(state.state)
 		&& current != _closedTrack;
 	if (!_active) {
 		_button->hide();
