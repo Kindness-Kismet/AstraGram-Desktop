@@ -5179,7 +5179,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		&& !_giftToUser->isHidden();
 	const auto leftPadding = ComposeOuterMargin(_st)
 		? st::historyComposeCapsulePadding
-		: ((_attachToggle && settings.showAttachButtonInMessageField()) || showSendAs)
+		: (_replaceMedia || (_attachToggle && settings.showAttachButtonInMessageField()) || showSendAs)
 		? _st.padding.left()
 		: _st.fieldLeft;
 	const auto rightPadding = ComposeOuterMargin(_st)
@@ -5193,7 +5193,9 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		- (_botMenu
 			? (st::historyBotMenuSkip + _botMenu->width())
 			: 0)
-		- ((_attachToggle && settings.showAttachButtonInMessageField())
+		- (_replaceMedia
+			? _replaceMedia->width()
+			: (_attachToggle && settings.showAttachButtonInMessageField())
 			? _attachToggle->width()
 			: 0)
 		- (showSendAs ? _sendAs->width() : 0)
@@ -5255,8 +5257,8 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 	}
 	if (_replaceMedia) {
 		_replaceMedia->moveToLeft(left, buttonsTop);
-	}
-	if (_attachToggle && settings.showAttachButtonInMessageField()) {
+		left += _replaceMedia->width();
+	} else if (_attachToggle && settings.showAttachButtonInMessageField()) {
 		// 附件圆与胶囊左侧圆弧同心，专用圆角样式沿用自身布局。
 		const auto attachLeft = ComposeOuterMargin(_st)
 			? (left + (_st.send.inner.height - _attachToggle->width()) / 2
@@ -6138,6 +6140,7 @@ bool ComposeControls::updateReplaceMediaButton() {
 	_replaceMedia = std::make_unique<Ui::IconButton>(
 		_wrap.get(),
 		_canReplaceMedia ? st::historyReplaceMedia : st::historyAddMedia);
+	_replaceMedia->setObjectName(u"compose.replaceMedia"_q);
 	_replaceMedia->setAccessibleName(_canReplaceMedia
 		? tr::lng_attach_replace(tr::now)
 		: tr::lng_attach(tr::now));

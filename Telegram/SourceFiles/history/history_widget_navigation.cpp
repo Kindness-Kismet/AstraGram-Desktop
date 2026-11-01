@@ -978,6 +978,7 @@ bool HistoryWidget::updateReplaceMediaButton() {
 	_replaceMedia.create(
 		this,
 		_canReplaceMedia ? st::historyReplaceMedia : st::historyAddMedia);
+	_replaceMedia->setObjectName(u"compose.replaceMedia"_q);
 	_replaceMedia->setAccessibleName(_canReplaceMedia
 		? tr::lng_attach_replace(tr::now)
 		: tr::lng_attach(tr::now));

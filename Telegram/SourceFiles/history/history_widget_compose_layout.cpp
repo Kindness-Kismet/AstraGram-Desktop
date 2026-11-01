@@ -859,8 +859,8 @@ void HistoryWidget::moveFieldControls() {
 	}
 	if (_replaceMedia) {
 		_replaceMedia->moveToLeft(left, buttonsBottom);
-	}
-	if (settings.showAttachButtonInMessageField()) {
+		left += _replaceMedia->width();
+	} else if (settings.showAttachButtonInMessageField()) {
 		// 附件圆与胶囊左侧圆弧同心，输入框保留原有占位。
 		const auto attachLeft = left
 			+ (st::historySendSize.height() - _attachToggle->width()) / 2
@@ -977,7 +977,9 @@ void HistoryWidget::updateFieldSize() {
 
 	const auto kbShowShown = _history && !_kbShown && _keyboard->hasMarkup();
 	auto fieldWidth = width()
-		- (settings.showAttachButtonInMessageField() ? _attachToggle->width() : 0)
+		- (_replaceMedia
+			? _replaceMedia->width()
+			: settings.showAttachButtonInMessageField() ? _attachToggle->width() : 0)
 		- 2 * (st::historyComposeCapsuleMargin + st::historyComposeCapsulePadding)
 		- _send->width()
 		- ((settings.showEmojiButtonInMessageField()

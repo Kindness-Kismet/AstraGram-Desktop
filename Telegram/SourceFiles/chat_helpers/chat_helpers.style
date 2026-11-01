@@ -1420,18 +1420,18 @@ historyMessagesTTL: IconButtonWithText {
 	font: font(10px semibold);
 }
 historyReplaceMedia: IconButton(historyAttach) {
-	icon: icon {{ "chat/input_replace", windowBgActive }};
-	iconOver: icon {{ "chat/input_replace", windowBgActive }};
+	width: 36px;
+	icon: icon {{ "chat/input_replace-20x20", windowBgActive }};
+	iconOver: icon {{ "chat/input_replace-20x20", windowBgActive }};
+	rippleAreaPosition: point(4px, 9px);
+	rippleAreaSize: 28px;
 	ripple: RippleAnimation(defaultRippleAnimation) {
 		color: lightButtonBgOver;
 	}
 }
-historyAddMedia: IconButton(historyAttach) {
-	icon: icon {{ "chat/input_attach", windowBgActive }};
-	iconOver: icon {{ "chat/input_attach", windowBgActive }};
-	ripple: RippleAnimation(defaultRippleAnimation) {
-		color: lightButtonBgOver;
-	}
+historyAddMedia: IconButton(historyReplaceMedia) {
+	icon: icon {{ "chat/input_attach-20x20", windowBgActive }};
+	iconOver: icon {{ "chat/input_attach-20x20", windowBgActive }};
 }
 
 historyAttachEmojiActive: icon {{ "chat/input_smile_face", windowBgActive }};
