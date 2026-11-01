@@ -379,7 +379,11 @@ void CoverButton::paintEvent(QPaintEvent *event) {
 		p.setPen(Qt::white);
 		p.drawText(bounds, Qt::AlignCenter, text);
 	};
-	badge(_mode, false);
+	const auto labelsWidth = st::extrasMusicCompactSmall->width(_mode)
+		+ st::extrasMusicCompactSmall->width(_format) + style::ConvertScale(68);
+	if (_format.isEmpty() || labelsWidth <= width()) {
+		badge(_mode, false);
+	}
 	badge(_format, true);
 }
 

@@ -2,7 +2,6 @@
 
 #include "data/data_audio_msg_id.h"
 #include "ui/rp_widget.h"
-#include "ui/effects/animations.h"
 #include "base/object_ptr.h"
 
 namespace Ui {
@@ -43,6 +42,7 @@ protected:
 	void mousePressEvent(QMouseEvent *event) override;
 	void mouseMoveEvent(QMouseEvent *event) override;
 	void mouseReleaseEvent(QMouseEvent *event) override;
+	void leaveEventHook(QEvent *event) override;
 	void keyPressEvent(QKeyEvent *event) override;
 	void contextMenuEvent(QContextMenuEvent *event) override;
 
@@ -61,11 +61,12 @@ private:
 	void setExpanded(bool expanded);
 	void togglePlaylist();
 	void updateSize();
+	void layoutContents();
 	void constrainToScreen();
+	[[nodiscard]] QRect screenBounds() const;
+	[[nodiscard]] Qt::Edges resizeEdges(QPoint point) const;
 	[[nodiscard]] QRect cardRect() const;
 	[[nodiscard]] QRect coverRect() const;
-	[[nodiscard]] int fullHeight() const;
-	[[nodiscard]] int playlistHeight() const;
 
 	const not_null<Window::SessionController*> _controller;
 	AudioMsgId::Type _type;
@@ -85,9 +86,14 @@ private:
 	bool _dragging = false;
 	bool _positioned = false;
 	QPoint _dragOffset;
-	int _queueHeight = 0;
-	int _coverSide = 0;
-	Ui::Animations::Simple _queueAnimation;
+	Qt::Edges _resizeEdges;
+	QPoint _resizeOrigin;
+	QRect _resizeGeometry;
+	QSize _expandedSize;
+	QRect _playerRect;
+	QRect _queueRect;
+	QRect _coverRect;
+	int _controlsTop = 0;
 
 	object_ptr<PlayerButton> _save;
 	object_ptr<CoverButton> _coverButton;

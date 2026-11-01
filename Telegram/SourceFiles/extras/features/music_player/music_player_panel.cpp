@@ -14,6 +14,7 @@
 #include "history/history_item.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
+#include "mainwindow.h"
 #include "media/audio/media_audio.h"
 #include "media/player/media_player_instance.h"
 #include "media/view/media_view_playback_progress.h"
@@ -46,7 +47,8 @@ namespace {
 
 using namespace Media::Player;
 constexpr auto kSong = AudioMsgId::Type::Song;
-constexpr auto kFullBaseHeight = 334;
+constexpr auto kHeaderHeight = 48;
+constexpr auto kControlsHeight = 240;
 
 int scaled(int value) { return style::ConvertScale(value); }
 
@@ -309,13 +311,7 @@ void CompactPanel::refreshPlaylist() {
 	_playlist->setLabel(tr::extras_MusicPlaylist(tr::now) + u" · "_q + QString::number(_queue->count()));
 	_playlist->setText(QString::number(_queue->count()));
 	_playlist->setActive(_queueOpen);
-	const auto target = playlistHeight();
-	if (!_queueAnimation.animating() && target != _queueHeight) {
-		_queueHeight = target;
-		updateSize();
-	}
-	QResizeEvent resized(size(), size());
-	resizeEvent(&resized);
+	layoutContents();
 }
 
 void CompactPanel::seek(float64 progress, bool finished) {
@@ -346,7 +342,8 @@ void CompactPanel::cancelSeek(bool resume) {
 void CompactPanel::dismiss() {
 	cancelSeek(true);
 	_dragging = false;
-	_queueAnimation.stop();
+	_resizeEdges = {};
+	unsetCursor();
 	hide();
 }
 
@@ -363,10 +360,8 @@ void CompactPanel::showMini(QPoint anchor) {
 
 void CompactPanel::setExpanded(bool expanded) {
 	cancelSeek(true);
-	_queueAnimation.stop();
 	const auto bottomRight = geometry().bottomRight();
 	_expanded = expanded;
-	_queueHeight = playlistHeight();
 	refreshCover();
 	updateSize();
 	if (_positioned) {
@@ -381,13 +376,8 @@ void CompactPanel::setExpanded(bool expanded) {
 void CompactPanel::togglePlaylist() {
 	_queueOpen = !_queueOpen;
 	_playlist->setActive(_queueOpen);
-	const auto from = _queueHeight;
-	const auto to = playlistHeight();
-	_queueAnimation.start([=] {
-		_queueHeight = qRound(_queueAnimation.value(to));
-		updateSize();
-		constrainToScreen();
-	}, from, to, anim::Disabled() ? 0 : 240, anim::sineInOut);
+	layoutContents();
+	update();
 	if (_queueOpen) {
 		_scroll->scrollToY(_queue->currentTop());
 	}
@@ -395,23 +385,34 @@ void CompactPanel::togglePlaylist() {
 
 void CompactPanel::updateSize() {
 	const auto margins = _shadow->extend();
-	const auto screen = QGuiApplication::screenAt(geometry().center());
-	const auto available = (screen ? screen : QGuiApplication::primaryScreen())->availableGeometry().height()
-		- margins.top() - margins.bottom();
-	// 优先保留控制区和一行列表，小屏幕只缩小封面并滚动列表。
-	_coverSide = std::clamp(available - scaled(kFullBaseHeight)
-		- std::min(playlistHeight(), scaled(96)), scaled(80), scaled(336));
-	const auto queue = std::min(_queueHeight, std::max(0, available - fullHeight()));
-	setFixedSize(scaled(_expanded ? 376 : 460) + margins.left() + margins.right(),
-		(_expanded ? fullHeight() + queue : scaled(66)) + margins.top() + margins.bottom());
-	QResizeEvent resized(size(), size());
-	resizeEvent(&resized);
+	const auto shadow = QSize(margins.left() + margins.right(), margins.top() + margins.bottom());
+	if (!_expanded) {
+		setFixedSize(QSize(scaled(460), scaled(66)) + shadow);
+		layoutContents();
+		update();
+		return;
+	}
+	const auto bounds = screenBounds();
+	const auto minimum = (QSize(scaled(340), scaled(480)) + shadow).boundedTo(bounds.size());
+	const auto requested = _expandedSize.isEmpty()
+		? QSize(scaled(376) + shadow.width(), std::min(scaled(560) + shadow.height(),
+			_controller->window().widget()->height() - scaled(24)))
+		: _expandedSize;
+	setMinimumSize(0, 0);
+	setMaximumSize(bounds.size());
+	setMinimumSize(minimum);
+	resize(requested.expandedTo(minimum).boundedTo(bounds.size()));
+	layoutContents();
 	update();
 }
 
-void CompactPanel::constrainToScreen() {
+QRect CompactPanel::screenBounds() const {
 	const auto screen = QGuiApplication::screenAt(geometry().center());
-	const auto bounds = (screen ? screen : QGuiApplication::primaryScreen())->availableGeometry();
+	return (screen ? screen : QGuiApplication::primaryScreen())->availableGeometry();
+}
+
+void CompactPanel::constrainToScreen() {
+	const auto bounds = screenBounds();
 	move(std::clamp(x(), bounds.left(), std::max(bounds.left(), bounds.right() + 1 - width())),
 		std::clamp(y(), bounds.top(), std::max(bounds.top(), bounds.bottom() + 1 - height())));
 }
@@ -440,25 +441,42 @@ void CompactPanel::saveCover() {
 QRect CompactPanel::cardRect() const { return rect().marginsRemoved(_shadow->extend()); }
 
 QRect CompactPanel::coverRect() const {
-	const auto top = cardRect().topLeft();
-	return _expanded ? QRect(top + QPoint((scaled(376) - _coverSide) / 2, scaled(58)), QSize(_coverSide, _coverSide))
-		: QRect(top + QPoint(scaled(14), scaled(8)), QSize(scaled(44), scaled(44)));
-}
-
-int CompactPanel::fullHeight() const { return _coverSide + scaled(kFullBaseHeight); }
-
-int CompactPanel::playlistHeight() const {
-	return _expanded && _type == kSong && _queueOpen
-		? scaled(44) + std::min(scaled(200), _queue->height()) : 0;
+	return _coverRect.translated(cardRect().topLeft());
 }
 
 void CompactPanel::resizeEvent(QResizeEvent *event) {
 	RpWidget::resizeEvent(event);
+	if (_expanded) {
+		_expandedSize = size();
+	}
+	layoutContents();
+}
+
+void CompactPanel::layoutContents() {
 	const auto music = _type == kSong;
-	const auto top = cardRect().topLeft();
-	const auto place = [&](QWidget *widget, int x, int y, int w, int h) {
-		widget->setGeometry(QRect(top + QPoint(scaled(x), scaled(y)), QSize(scaled(w), scaled(h))));
-	};
+	const auto card = cardRect();
+	const auto top = card.topLeft();
+	_playerRect = QRect(QPoint(), card.size());
+	_queueRect = {};
+	if (_expanded && music && _queueOpen) {
+		// 宽窗口把列表放右侧；窄窗口在固定外框内分配封面与列表空间。
+		if (card.width() >= scaled(680)) {
+			const auto playerWidth = std::min(scaled(500), card.width() * 56 / 100);
+			_playerRect.setWidth(playerWidth);
+			_queueRect = QRect(playerWidth, 0, card.width() - playerWidth, card.height());
+		} else {
+			const auto remaining = card.height() - scaled(kHeaderHeight + kControlsHeight);
+			const auto queueHeight = std::clamp(remaining / 2, scaled(100), scaled(260));
+			_playerRect.setHeight(card.height() - queueHeight);
+			_queueRect = QRect(0, _playerRect.height(), card.width(), queueHeight);
+		}
+	}
+	_controlsTop = _playerRect.height() - scaled(kControlsHeight);
+	const auto coverHeight = std::max(0, _controlsTop - scaled(kHeaderHeight));
+	const auto side = std::max(0, std::min(_playerRect.width() - scaled(40), coverHeight));
+	_coverRect = _expanded
+		? QRect((_playerRect.width() - side) / 2, scaled(kHeaderHeight) + (coverHeight - side) / 2, side, side)
+		: QRect(scaled(14), scaled(8), scaled(44), scaled(44));
 	_save->setVisible(_expanded && music);
 	_coverButton->setGeometry(coverRect());
 	_collapse->setVisible(_expanded);
@@ -471,34 +489,44 @@ void CompactPanel::resizeEvent(QResizeEvent *event) {
 	_playlist->setVisible(_expanded && music);
 	_source->setVisible(_expanded && !_sourceName.isEmpty());
 	_speed->setVisible(_track.changeablePlaybackSpeed() && Media::Audio::SupportsSpeedControl());
-	const auto queueHeight = cardRect().height() - fullHeight();
-	_scroll->setVisible(_expanded && music && queueHeight > scaled(38));
+	_scroll->setVisible(!_queueRect.isEmpty());
 	_progress->setMini(!_expanded);
+	const auto place = [&](QWidget *widget, int x, int y, int w, int h) {
+		widget->setGeometry(QRect(top + QPoint(x, y), QSize(scaled(w), scaled(h))));
+	};
 	if (!_expanded) {
-		place(_previous, 170, 13, 30, 34); place(_play, 202, 12, 36, 36);
-		place(_next, 242, 13, 30, 34); place(_speed, 278, 16, 40, 28);
-		place(_repeat, 320, 16, 28, 28); place(_expand, 354, 16, 28, 28);
-		place(_minimize, 386, 16, 28, 28);
-		place(_close, 418, 16, 28, 28); place(_progress, 0, 56, 460, 10);
+		place(_previous, scaled(170), scaled(13), 30, 34); place(_play, scaled(202), scaled(12), 36, 36);
+		place(_next, scaled(242), scaled(13), 30, 34); place(_speed, scaled(278), scaled(16), 40, 28);
+		place(_repeat, scaled(320), scaled(16), 28, 28); place(_expand, scaled(354), scaled(16), 28, 28);
+		place(_minimize, scaled(386), scaled(16), 28, 28);
+		place(_close, scaled(418), scaled(16), 28, 28); place(_progress, 0, scaled(56), 460, 10);
 		return;
 	}
-	place(_wave, 20, 22, 16, 16);
-	place(_save, 232, 16, 28, 28); place(_collapse, 264, 16, 28, 28);
-	place(_minimize, 296, 16, 28, 28); place(_close, 328, 16, 28, 28);
-	const auto belowCover = [&](QWidget *widget, int x, int y, int w, int h) {
-		widget->setGeometry(QRect(top + QPoint(scaled(x), _coverSide + scaled(y)), QSize(scaled(w), scaled(h))));
+	const auto width = _playerRect.width();
+	place(_wave, scaled(20), scaled(16), 16, 16);
+	place(_save, width - scaled(144), scaled(10), 28, 28);
+	place(_collapse, width - scaled(112), scaled(10), 28, 28);
+	place(_minimize, width - scaled(80), scaled(10), 28, 28);
+	place(_close, width - scaled(48), scaled(10), 28, 28);
+	const auto controls = [&](QWidget *widget, int x, int y, int w, int h) {
+		place(widget, x, _controlsTop + scaled(y), w, h);
 	};
-	_source->setText(st::extrasMusicCompactSource.font->elided(_sourceName, scaled(294)));
-	_source->move(top + QPoint(scaled(20), _coverSide + scaled(126)));
-	belowCover(_progress, 20, 151, 336, 18);
-	belowCover(_play, 160, 204, 56, 56);
-	belowCover(_previous, 104, 214, 36, 36); belowCover(_next, 236, 214, 36, 36);
-	belowCover(_order, 20, 214, 36, 36); belowCover(_repeat, 320, 214, 36, 36);
-	belowCover(_volume, 20, 288, 32, 32); belowCover(_volumeSlider, 62, 295, 134, 18);
-	belowCover(_speed, 246, 288, 42, 32); belowCover(_playlist, 294, 288, 62, 32);
-	_scroll->setGeometry(top.x() + scaled(8), top.y() + fullHeight() + scaled(38),
-		scaled(368), std::max(0, queueHeight - scaled(38) - scaled(6)));
-	_queue->resize(_scroll->width(), _queue->height());
+	_source->setText(st::extrasMusicCompactSource.font->elided(_sourceName, width - scaled(40)));
+	_source->move(top + QPoint(scaled(20), _controlsTop + scaled(58)));
+	_progress->setGeometry(top.x() + scaled(20), top.y() + _controlsTop + scaled(82), width - scaled(40), scaled(18));
+	controls(_play, (width - scaled(48)) / 2, 134, 48, 48);
+	controls(_previous, width / 2 - scaled(80), 140, 36, 36);
+	controls(_next, width / 2 + scaled(44), 140, 36, 36);
+	controls(_order, scaled(20), 140, 36, 36);
+	controls(_repeat, width - scaled(56), 140, 36, 36);
+	controls(_volume, scaled(16), 201, 28, 28);
+	_volumeSlider->setGeometry(top.x() + scaled(52), top.y() + _controlsTop + scaled(206), width - scaled(196), scaled(18));
+	controls(_speed, width - scaled(122), 199, 42, 32);
+	controls(_playlist, width - scaled(72), 199, 56, 32);
+	if (!_queueRect.isEmpty()) {
+		_scroll->setGeometry(_queueRect.adjusted(scaled(8), scaled(38), -scaled(8), -scaled(6)).translated(top));
+		_queue->resize(_scroll->width(), _queue->height());
+	}
 }
 
 void CompactPanel::paintEvent(QPaintEvent *event) {
@@ -523,37 +551,44 @@ void CompactPanel::paintEvent(QPaintEvent *event) {
 		return;
 	}
 	p.setPen(st::windowSubTextFg); p.setFont(st::extrasMusicCompactSmall);
-	p.drawTextLeft(scaled(44), scaled(23), card.width(), _playing ? tr::extras_MusicPlaying(tr::now) : tr::extras_MusicPaused(tr::now));
+	const auto width = _playerRect.width();
+	const auto textWidth = width - scaled(40);
+	p.drawTextLeft(scaled(44), scaled(17), width, st::extrasMusicCompactSmall->elided(
+		_playing ? tr::extras_MusicPlaying(tr::now) : tr::extras_MusicPaused(tr::now), width - scaled(196)));
 	p.setPen(st::windowFg); p.setFont(st::extrasMusicCompactTitle);
-	p.drawTextLeft(scaled(20), _coverSide + scaled(74), card.width(),
-		st::extrasMusicCompactTitle->elided(_title, scaled(336)));
+	p.drawTextLeft(scaled(20), _controlsTop + scaled(8), width,
+		st::extrasMusicCompactTitle->elided(_title, textWidth));
 	p.setPen(accentColor()); p.setFont(st::extrasMusicArtist);
-	p.drawTextLeft(scaled(20), _coverSide + scaled(105), card.width(), st::extrasMusicArtist->elided(_performer, scaled(336)));
+	p.drawTextLeft(scaled(20), _controlsTop + scaled(36), width, st::extrasMusicArtist->elided(_performer, textWidth));
 	p.setFont(st::extrasMusicCompactSmall);
 	p.setPen(st::windowSubTextFg);
-	p.drawTextLeft(scaled(20), _coverSide + scaled(177), card.width(), _elapsed);
-	p.drawTextRight(scaled(20), _coverSide + scaled(177), card.width(), _duration);
+	p.drawTextLeft(scaled(20), _controlsTop + scaled(104), width, _elapsed);
+	p.drawTextRight(scaled(20), _controlsTop + scaled(104), width, _duration);
 	p.save();
-	p.setClipRect(0, _coverSide + scaled(276), card.width(), scaled(58));
+	p.setClipRect(0, _controlsTop + scaled(194), width, scaled(46));
 	p.setPen(Qt::NoPen);
 	p.setBrush(anim::color(st::windowBg->c, st::windowBgOver->c, 0.3));
 	p.drawRoundedRect(QRect(QPoint(), card.size()), scaled(10), scaled(10));
 	p.restore();
-	p.fillRect(0, _coverSide + scaled(276), card.width(), scaled(1), st::menuSeparatorFg);
+	p.fillRect(0, _controlsTop + scaled(194), width, scaled(1), st::menuSeparatorFg);
 	if (_speed->isVisible()) {
 		p.setPen(QPen(st::menuSeparatorFg, scaled(1))); p.setBrush(st::windowBg);
 		p.drawRoundedRect(QRectF(_speed->geometry().translated(-card.topLeft())).adjusted(0.5, 0.5, -0.5, -0.5), scaled(10), scaled(10));
 	}
 	if (_type != kSong) {
 		p.setPen(st::windowSubTextFg);
-		p.drawTextLeft(scaled(20), _coverSide + scaled(298), card.width(), tr::extras_MediaSpeed(tr::now));
+		p.drawTextLeft(scaled(20), _controlsTop + scaled(210), width, tr::extras_MediaSpeed(tr::now));
 	}
-	if (card.height() <= fullHeight()) { return; }
-	p.fillRect(0, fullHeight(), card.width(), scaled(1), st::menuSeparatorFg);
+	if (_queueRect.isEmpty()) { return; }
+	p.fillRect(_queueRect.x(), _queueRect.y(),
+		_queueRect.x() ? scaled(1) : _queueRect.width(),
+		_queueRect.x() ? _queueRect.height() : scaled(1), st::menuSeparatorFg);
+	p.translate(_queueRect.topLeft());
 	p.setFont(st::extrasMusicQueueTitle); p.setPen(st::windowFg);
-	p.drawTextLeft(scaled(20), fullHeight() + scaled(12), card.width(), tr::extras_MusicPlaylist(tr::now));
+	p.drawTextLeft(scaled(20), scaled(12), _queueRect.width(), tr::extras_MusicPlaylist(tr::now));
 	p.setFont(st::extrasMusicCompactSmall); p.setPen(st::windowSubTextFg);
-	p.drawTextRight(scaled(20), fullHeight() + scaled(12), card.width(), _repeat->accessibleName());
+	p.drawTextRight(scaled(20), scaled(12), _queueRect.width(),
+		st::extrasMusicCompactSmall->elided(_repeat->accessibleName(), _queueRect.width() / 2 - scaled(20)));
 }
 
 void CompactPanel::closeEvent(QCloseEvent *event) {
@@ -564,6 +599,12 @@ void CompactPanel::closeEvent(QCloseEvent *event) {
 
 void CompactPanel::mousePressEvent(QMouseEvent *event) {
 	if (event->button() != Qt::LeftButton) { return; }
+	_resizeEdges = resizeEdges(event->pos());
+	if (_resizeEdges) {
+		_resizeOrigin = event->globalPosition().toPoint();
+		_resizeGeometry = geometry();
+		return;
+	}
 	if (cardRect().contains(event->pos())) {
 		_dragging = true;
 		_dragOffset = event->globalPosition().toPoint() - pos();
@@ -572,10 +613,60 @@ void CompactPanel::mousePressEvent(QMouseEvent *event) {
 }
 
 void CompactPanel::mouseMoveEvent(QMouseEvent *event) {
+	if (_resizeEdges) {
+		const auto delta = event->globalPosition().toPoint() - _resizeOrigin;
+		const auto bounds = screenBounds();
+		auto rect = _resizeGeometry;
+		if (_resizeEdges & Qt::LeftEdge) {
+			rect.setLeft(std::clamp(rect.left() + delta.x(), bounds.left(), rect.right() + 1 - minimumWidth()));
+		}
+		if (_resizeEdges & Qt::RightEdge) {
+			rect.setRight(std::clamp(rect.right() + delta.x(), rect.left() + minimumWidth() - 1, bounds.right()));
+		}
+		if (_resizeEdges & Qt::TopEdge) {
+			rect.setTop(std::clamp(rect.top() + delta.y(), bounds.top(), rect.bottom() + 1 - minimumHeight()));
+		}
+		if (_resizeEdges & Qt::BottomEdge) {
+			rect.setBottom(std::clamp(rect.bottom() + delta.y(), rect.top() + minimumHeight() - 1, bounds.bottom()));
+		}
+		setGeometry(rect);
+		return;
+	}
 	if (_dragging) {
 		move(event->globalPosition().toPoint() - _dragOffset);
 		return;
 	}
+	const auto edges = resizeEdges(event->pos());
+	const auto horizontal = edges & (Qt::LeftEdge | Qt::RightEdge);
+	const auto vertical = edges & (Qt::TopEdge | Qt::BottomEdge);
+	if (horizontal && vertical) {
+		setCursor((edges == (Qt::LeftEdge | Qt::TopEdge) || edges == (Qt::RightEdge | Qt::BottomEdge))
+			? Qt::SizeFDiagCursor : Qt::SizeBDiagCursor);
+	} else if (horizontal || vertical) {
+		setCursor(horizontal ? Qt::SizeHorCursor : Qt::SizeVerCursor);
+	} else {
+		unsetCursor();
+	}
+}
+
+Qt::Edges CompactPanel::resizeEdges(QPoint point) const {
+	if (!_expanded) { return {}; }
+	const auto card = cardRect();
+	const auto corner = scaled(12);
+	const auto nearX = point.x() < card.left() + corner || point.x() > card.right() - corner;
+	const auto nearY = point.y() < card.top() + corner || point.y() > card.bottom() - corner;
+	const auto grip = (nearX && nearY) ? corner : scaled(5);
+	auto result = Qt::Edges();
+	if (point.x() < card.left() + grip) { result |= Qt::LeftEdge; }
+	if (point.x() > card.right() - grip) { result |= Qt::RightEdge; }
+	if (point.y() < card.top() + grip) { result |= Qt::TopEdge; }
+	if (point.y() > card.bottom() - grip) { result |= Qt::BottomEdge; }
+	return result;
+}
+
+void CompactPanel::leaveEventHook(QEvent *event) {
+	RpWidget::leaveEventHook(event);
+	if (!_resizeEdges && !_dragging) { unsetCursor(); }
 }
 
 void CompactPanel::contextMenuEvent(QContextMenuEvent *event) {
@@ -586,7 +677,10 @@ void CompactPanel::contextMenuEvent(QContextMenuEvent *event) {
 }
 
 void CompactPanel::mouseReleaseEvent(QMouseEvent *event) {
-	if (event->button() == Qt::LeftButton && _dragging) {
+	if (event->button() != Qt::LeftButton) { return; }
+	_resizeEdges = {};
+	unsetCursor();
+	if (_dragging) {
 		_dragging = false;
 		updateSize();
 		constrainToScreen();
