@@ -61,8 +61,12 @@ public:
 	void setupIntro(
 		Intro::EnterPoint point,
 		Main::Account *accountBeforeIntro,
-		QPixmap oldContentCache);
-	void setupMain(MsgId singlePeerShowAtMsgId, QPixmap oldContentCache);
+		QPixmap oldContentCache,
+		bool protectScreenshot);
+	void setupMain(
+		MsgId singlePeerShowAtMsgId,
+		QPixmap oldContentCache,
+		bool protectScreenshot);
 
 	void showSettings();
 

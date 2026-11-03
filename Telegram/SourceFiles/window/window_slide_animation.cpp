@@ -19,9 +19,16 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Window {
 
 CrossFadeArgs InPlaceCrossFade(int duration) {
+	auto result = FullWidthCrossFade(true);
+	result.duration = duration ? duration : result.duration;
+	return result;
+}
+
+CrossFadeArgs FullWidthCrossFade(bool inPlace) {
 	return {
+		.shift = inPlace ? 0 : st::extrasSectionCrossFadeShift,
 		.overlay = true,
-		.duration = duration ? duration : st::extrasInPlaceFadeDuration,
+		.duration = inPlace ? st::extrasInPlaceFadeDuration : 0,
 	};
 }
 
@@ -163,6 +170,14 @@ void SlideAnimation::paintCrossFade(QPainter &p) const {
 	const auto &now = slideLeft ? _cacheUnder : _cacheOver;
 	const auto shown = progress();
 	const auto shift = slideLeft ? args.shift : -args.shift;
+	if (args.overlay && now.isNull()) {
+		p.save();
+		p.setCompositionMode(QPainter::CompositionMode_Source);
+		p.setOpacity(1. - shown);
+		p.drawPixmap(anim::interpolate(0, shift, shown), 0, was);
+		p.restore();
+		return;
+	}
 	const auto ratio = style::DevicePixelRatio();
 	const auto frameSize = was.size().expandedTo(now.size());
 	if (_crossFadeFrame.size() != frameSize) {
@@ -272,6 +287,11 @@ void SlideAnimation::setPixmaps(
 	_cacheOver = newContentCache;
 }
 
+void SlideAnimation::setLiveUnderlay(const QPixmap &oldContentCache) {
+	Expects(_crossFade && _crossFade->overlay);
+	setPixmaps(oldContentCache, QPixmap());
+}
+
 void SlideAnimation::setTopBarShadow(bool enabled) {
 	_topBarShadowEnabled = enabled;
 }
@@ -282,6 +302,18 @@ void SlideAnimation::setWithFade(bool withFade) {
 
 void SlideAnimation::setCrossFade(CrossFadeArgs args) {
 	_crossFade = std::move(args);
+}
+
+void SlideAnimation::setScreenshotProtection(
+		rpl::lifetime protection,
+		not_null<QWidget*> window) {
+	_screenshotProtection = std::move(protection);
+	_protectedWindow = window.get();
+}
+
+rpl::lifetime SlideAnimation::takeScreenshotProtection() {
+	_protectedWindow = nullptr;
+	return std::move(_screenshotProtection);
 }
 
 void SlideAnimation::setRepaintCallback(RepaintCallback &&callback) {
@@ -324,6 +356,11 @@ void SlideAnimation::animationCallback() {
 		onstack();
 	}
 	if (!_animation.animating()) {
+		// 先把最后一帧提交到窗口，再解除旧画面的截图保护。
+		if (_protectedWindow) {
+			_protectedWindow->repaint();
+		}
+		_screenshotProtection.destroy();
 		if (const auto onstack = _finishedCallback) {
 			onstack();
 		}

@@ -11,5 +11,6 @@ void bindWidgetWindow(
 void inheritWidgetWindow(not_null<QWidget*> widget);
 void inheritWidgetWindow(not_null<QWidget*> widget, not_null<QWidget*> owner);
 void refreshWidgetWindow(not_null<QWidget*> widget);
+[[nodiscard]] bool isWidgetWindowExcluded(not_null<QWidget*> widget);
 
 } // namespace ExtrasFeatures::StreamerMode

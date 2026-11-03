@@ -9,6 +9,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "ui/effects/animations.h"
 
+#include <QtCore/QPointer>
+
 namespace Ui {
 class RpWidget;
 } // namespace Ui
@@ -34,6 +36,9 @@ struct CrossFadeArgs {
 
 // 与对话区切换一致的原地淡化，duration 为 0 时沿用 st::extrasInPlaceFadeDuration。
 [[nodiscard]] CrossFadeArgs InPlaceCrossFade(int duration = 0);
+
+// 整页切换沿用设置页的时长和平移，原地切换保留较短的淡化。
+[[nodiscard]] CrossFadeArgs FullWidthCrossFade(bool inPlace = false);
 
 // 在 parent 的 geometry 区域把旧画面原地交叉淡化到新画面。
 void ShowCrossFadeAnimation(
@@ -63,9 +68,15 @@ public:
 	void setPixmaps(
 		const QPixmap &oldContentCache,
 		const QPixmap &newContentCache);
+	// 新页面在画布下实时绘制，缓存只保留淡出的旧画面。
+	void setLiveUnderlay(const QPixmap &oldContentCache);
 	void setTopBarShadow(bool enabled);
 	void setWithFade(bool withFade);
 	void setCrossFade(CrossFadeArgs args);
+	void setScreenshotProtection(
+		rpl::lifetime protection,
+		not_null<QWidget*> window);
+	[[nodiscard]] rpl::lifetime takeScreenshotProtection();
 
 	using RepaintCallback = Fn<void()>;
 	void setRepaintCallback(RepaintCallback &&callback);
@@ -95,6 +106,8 @@ private:
 
 	RepaintCallback _repaintCallback;
 	FinishedCallback _finishedCallback;
+	rpl::lifetime _screenshotProtection;
+	QPointer<QWidget> _protectedWindow;
 
 };
 

@@ -123,7 +123,10 @@ public:
 
 	void returnTabbedSelector();
 
-	void showAnimated(QPixmap oldContentCache, bool back = false);
+	void showAnimated(
+		QPixmap oldContentCache,
+		bool back = false,
+		bool protectScreenshot = false);
 
 	void activate();
 	void handleStartFiles(QStringList paths);

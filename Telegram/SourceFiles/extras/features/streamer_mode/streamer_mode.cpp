@@ -130,10 +130,14 @@ void refreshWidgetWindow(not_null<QWidget*> widget) {
 		|| window->testAttribute(Qt::WA_DontShowOnScreen)) {
 		return;
 	}
-	Platform::SetWindowCaptureExcluded(window,
-		window->property(kHiddenProperty).toBool()
-			|| window->property("ExtrasContentScreenshotProtected").toBool()
-			|| Core::App().screenshotProtection().active(window));
+	Platform::SetWindowCaptureExcluded(window, isWidgetWindowExcluded(window));
+}
+
+bool isWidgetWindowExcluded(not_null<QWidget*> widget) {
+	const auto window = widget->window();
+	return window->property(kHiddenProperty).toBool()
+		|| window->property("ExtrasContentScreenshotProtected").toBool()
+		|| Core::App().screenshotProtection().active(window);
 }
 
 } // namespace ExtrasFeatures::StreamerMode

@@ -1945,11 +1945,7 @@ Fn<void()> MainWidget::prepareFullWidthAnimation(
 				oldContentCache,
 				grabFullWidthAnimationContent(),
 				direction,
-				{
-					.shift = params.inPlaceFade ? 0 : st::extrasSectionCrossFadeShift,
-					.overlay = true,
-					.duration = params.inPlaceFade ? st::extrasInPlaceFadeDuration : 0,
-				});
+				Window::FullWidthCrossFade(params.inPlaceFade));
 		} else {
 			// 离开全宽页面时旧画面淡出，底下保持实时绘制，
 			// 对话页重新加载的贴纸与图片随之淡入，不会定格成占位色块。
@@ -2594,34 +2590,71 @@ void MainWidget::checkActivation() {
 	}
 }
 
-void MainWidget::showAnimated(QPixmap oldContentCache, bool back) {
+void MainWidget::showAnimated(
+		QPixmap oldContentCache,
+		bool back,
+		bool protectScreenshot) {
 	_showAnimation = nullptr;
 
 	showAll();
-	floatPlayerHideAll();
-	auto newContentCache = Core::App().screenshotProtection().grabForAnimation(this);
-	hideAll();
-	floatPlayerShowVisible();
+	const auto body = _controller->widget()->bodyWidget();
+
+	// 画布归动画所有，提前结束时也清除；分类栏和主区域共用内容区坐标。
+	const auto canvas = std::make_shared<base::unique_qptr<Ui::RpWidget>>(
+		std::in_place,
+		body);
+	const auto raw = canvas->get();
+	raw->setObjectName(u"section-slide-overlay"_q);
+	body->sizeValue() | rpl::on_next([=](QSize size) {
+		raw->setGeometry(QRect(QPoint(), size));
+	}, raw->lifetime());
+	raw->paintRequest() | rpl::on_next([=] {
+		if (_showAnimation) {
+			auto p = QPainter(raw);
+			_showAnimation->paintContents(p);
+		}
+	}, lifetime());
 
 	_showAnimation = std::make_unique<Window::SlideAnimation>();
 	_showAnimation->setDirection(back
 		? Window::SlideDirection::FromLeft
 		: Window::SlideDirection::FromRight);
-	_showAnimation->setCrossFade(Window::InPlaceCrossFade());
-	_showAnimation->setRepaintCallback([=] { update(); });
-	_showAnimation->setFinishedCallback([=] { showFinished(); });
-	_showAnimation->setPixmaps(oldContentCache, newContentCache);
+	_showAnimation->setCrossFade(Window::FullWidthCrossFade());
+	if (protectScreenshot) {
+		_showAnimation->setScreenshotProtection(
+			Core::App().screenshotProtection().protectTransition(window()),
+			window());
+	}
+	_showAnimation->setRepaintCallback([=] {
+		raw->raise();
+		raw->update();
+		_controller->widget()->fixOrder();
+	});
+	_showAnimation->setFinishedCallback([=] {
+		(*canvas)->hide();
+		showFinished();
+	});
+	_showAnimation->setLiveUnderlay(oldContentCache);
+	raw->show();
 	_showAnimation->start();
 
 	show();
 }
 
 void MainWidget::showFinished() {
+	const auto protectedTransition = _showAnimation
+		&& Core::App().screenshotProtection().active(window());
+	auto protection = _showAnimation
+		? _showAnimation->takeScreenshotProtection()
+		: rpl::lifetime();
 	_showAnimation = nullptr;
 
 	showAll();
 	activate();
 	Extras::CommunityChannel::maybeShowInvite(controller());
+	if (protectedTransition) {
+		window()->repaint();
+	}
 }
 
 void MainWidget::paintEvent(QPaintEvent *e) {
@@ -2631,9 +2664,6 @@ void MainWidget::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 	p.fillRect(e->rect(), ExtrasFeatures::WindowMaterial::surfaceColor(
 		this, Window::ShellBackgroundColor(this)));
-	if (_showAnimation) {
-		_showAnimation->paintContents(p);
-	}
 }
 
 std::vector<QRect> MainWidget::cardRects() const {

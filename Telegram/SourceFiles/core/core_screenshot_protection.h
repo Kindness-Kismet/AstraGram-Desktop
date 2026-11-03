@@ -35,6 +35,9 @@ public:
 		rpl::producer<bool> active,
 		rpl::lifetime &lifetime);
 
+	// 旧画面仍在显示时保留窗口保护，不改变新页面的动画缓存。
+	[[nodiscard]] rpl::lifetime protectTransition(not_null<QWidget*> window);
+
 	[[nodiscard]] bool active(not_null<QWidget*> window) const;
 	[[nodiscard]] rpl::producer<bool> activeValue(
 		not_null<QWidget*> window) const;
@@ -49,12 +52,14 @@ private:
 		QPointer<QWidget> window;
 		QPointer<QWidget> animationRedaction;
 		bool active = false;
+		bool redactAnimation = true;
 	};
 	void addReason(
 		not_null<QWidget*> window,
 		rpl::producer<bool> active,
 		rpl::lifetime &lifetime,
-		QWidget *animationRedaction = nullptr);
+		QWidget *animationRedaction = nullptr,
+		bool redactAnimation = true);
 	void refresh(not_null<QWidget*> window, bool force = false);
 
 	struct Applied {

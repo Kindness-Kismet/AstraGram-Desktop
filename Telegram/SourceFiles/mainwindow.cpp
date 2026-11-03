@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "mainwindow.h"
 #include "extras/features/community_channel/community_channel.h"
+#include "extras/features/streamer_mode/streamer_mode.h"
 #include "extras/features/window_material/window_material.h"
 #include "extras/ui/components/window_appearance.h"
 
@@ -232,6 +233,11 @@ void MainWindow::preventOrInvoke(Fn<void()> callback) {
 void MainWindow::setupPasscodeLock() {
 	auto animated = (_main || _intro);
 	auto oldContentCache = animated ? grabForSlideAnimation() : QPixmap();
+	const auto protectScreenshot
+		= ExtrasFeatures::StreamerMode::isWidgetWindowExcluded(this);
+	auto protection = protectScreenshot
+		? Core::App().screenshotProtection().protectTransition(this)
+		: rpl::lifetime();
 	_passcodeLock.create(bodyWidget(), &controller());
 	updateControlsGeometry();
 
@@ -243,7 +249,7 @@ void MainWindow::setupPasscodeLock() {
 		_intro->hide();
 	}
 	if (animated) {
-		_passcodeLock->showAnimated(std::move(oldContentCache));
+		_passcodeLock->showAnimated(std::move(oldContentCache), protectScreenshot);
 	} else {
 		_passcodeLock->showFinished();
 		setInnerFocus();
@@ -256,6 +262,11 @@ void MainWindow::setupPasscodeLock() {
 void MainWindow::setupSetupEmailLock() {
 	auto animated = (_main || _intro || _passcodeLock);
 	auto oldContentCache = animated ? grabForSlideAnimation() : QPixmap();
+	const auto protectScreenshot
+		= ExtrasFeatures::StreamerMode::isWidgetWindowExcluded(this);
+	auto protection = protectScreenshot
+		? Core::App().screenshotProtection().protectTransition(this)
+		: rpl::lifetime();
 	_setupEmailLock.create(bodyWidget(), &controller());
 	updateControlsGeometry();
 
@@ -270,7 +281,7 @@ void MainWindow::setupSetupEmailLock() {
 		_passcodeLock->hide();
 	}
 	if (animated) {
-		_setupEmailLock->showAnimated(std::move(oldContentCache));
+		_setupEmailLock->showAnimated(std::move(oldContentCache), protectScreenshot);
 	} else {
 		_setupEmailLock->showFinished();
 		setInnerFocus();
@@ -287,19 +298,24 @@ void MainWindow::clearSetupEmailLock() {
 	}
 
 	auto oldContentCache = grabForSlideAnimation();
+	const auto protectScreenshot
+		= ExtrasFeatures::StreamerMode::isWidgetWindowExcluded(this);
+	auto protection = protectScreenshot
+		? Core::App().screenshotProtection().protectTransition(this)
+		: rpl::lifetime();
 	_setupEmailLock.destroy();
 	if (_passcodeLock) {
 		_passcodeLock->show();
 		updateControlsGeometry();
-		_passcodeLock->showAnimated(std::move(oldContentCache));
+		_passcodeLock->showAnimated(std::move(oldContentCache), protectScreenshot);
 	} else if (_intro) {
 		_intro->show();
 		updateControlsGeometry();
-		_intro->showAnimated(std::move(oldContentCache), true);
+		_intro->showAnimated(std::move(oldContentCache), true, protectScreenshot);
 	} else if (_main) {
 		_main->show();
 		updateControlsGeometry();
-		_main->showAnimated(std::move(oldContentCache), true);
+		_main->showAnimated(std::move(oldContentCache), true, protectScreenshot);
 	}
 }
 
@@ -311,19 +327,24 @@ void MainWindow::clearPasscodeLock() {
 	}
 
 	auto oldContentCache = grabForSlideAnimation();
+	const auto protectScreenshot
+		= ExtrasFeatures::StreamerMode::isWidgetWindowExcluded(this);
+	auto protection = protectScreenshot
+		? Core::App().screenshotProtection().protectTransition(this)
+		: rpl::lifetime();
 	_passcodeLock.destroy();
 	if (_setupEmailLock) {
 		_setupEmailLock->show();
 		updateControlsGeometry();
-		_setupEmailLock->showAnimated(std::move(oldContentCache));
+		_setupEmailLock->showAnimated(std::move(oldContentCache), protectScreenshot);
 	} else if (_intro) {
 		_intro->show();
 		updateControlsGeometry();
-		_intro->showAnimated(std::move(oldContentCache), true);
+		_intro->showAnimated(std::move(oldContentCache), true, protectScreenshot);
 	} else if (_main) {
 		_main->show();
 		updateControlsGeometry();
-		_main->showAnimated(std::move(oldContentCache), true);
+		_main->showAnimated(std::move(oldContentCache), true, protectScreenshot);
 		Core::App().checkStartUrls();
 	}
 }
@@ -331,7 +352,8 @@ void MainWindow::clearPasscodeLock() {
 void MainWindow::setupIntro(
 		Intro::EnterPoint point,
 		Main::Account *accountBeforeIntro,
-		QPixmap oldContentCache) {
+		QPixmap oldContentCache,
+		bool protectScreenshot) {
 	auto animated = (_main || _passcodeLock || _setupEmailLock);
 
 	destroyLayer();
@@ -357,7 +379,10 @@ void MainWindow::setupIntro(
 		_intro->show();
 		updateControlsGeometry();
 		if (animated) {
-			_intro->showAnimated(std::move(oldContentCache));
+			_intro->showAnimated(
+				std::move(oldContentCache),
+				false,
+				protectScreenshot);
 		} else {
 			setInnerFocus();
 		}
@@ -367,24 +392,15 @@ void MainWindow::setupIntro(
 
 void MainWindow::setupMain(
 		MsgId singlePeerShowAtMsgId,
-		QPixmap oldContentCache) {
+		QPixmap oldContentCache,
+		bool protectScreenshot) {
 	Expects(account().sessionExists());
 
-	const auto animated = _intro
+	const auto animated = _main
+		|| _intro
 		|| (_passcodeLock && !Core::App().passcodeLocked())
 		|| _setupEmailLock;
-	const auto weakAnimatedLayer = (_main
-			&& _layer
-			&& !_passcodeLock
-			&& !_setupEmailLock)
-		? base::make_weak(_layer.get())
-		: nullptr;
-	if (weakAnimatedLayer) {
-		Assert(!animated);
-		_layer->hideAllAnimatedPrepare();
-	} else {
-		destroyLayer();
-	}
+	destroyLayer();
 	auto created = object_ptr<MainWidget>(bodyWidget(), sessionController());
 	clearWidgets();
 	_main = std::move(created);
@@ -393,22 +409,26 @@ void MainWindow::setupMain(
 	_main->controller()->showByInitialId(
 		Window::SectionShow::Way::ClearStack,
 		singlePeerShowAtMsgId);
+	// 首屏尺寸由首次显示确定，后续切换先完成分类栏布局再保存画面。
+	if (animated) {
+		_main->controller()->updateFiltersLayout();
+	}
 	if (_passcodeLock || _setupEmailLock) {
 		_main->hide();
 	} else {
 		_main->show();
 		updateControlsGeometry();
 		if (animated) {
-			_main->showAnimated(std::move(oldContentCache));
+			_main->showAnimated(
+				std::move(oldContentCache),
+				false,
+				protectScreenshot);
 		} else {
 			_main->activate();
 		}
 		Core::App().checkStartUrls();
 	}
 	fixOrder();
-	if (const auto strong = weakAnimatedLayer.get()) {
-		strong->hideAllAnimatedRun();
-	}
 }
 
 void MainWindow::showSettings() {

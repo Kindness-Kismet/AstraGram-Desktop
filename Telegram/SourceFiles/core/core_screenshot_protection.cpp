@@ -41,7 +41,8 @@ void ScreenshotProtection::addReason(
 		not_null<QWidget*> window,
 		rpl::producer<bool> active,
 		rpl::lifetime &lifetime,
-		QWidget *animationRedaction) {
+		QWidget *animationRedaction,
+		bool redactAnimation) {
 	Expects(window->isWindow());
 	Expects(!animationRedaction || animationRedaction->window() == window);
 	const auto weakWindow = QPointer<QWidget>(window.get());
@@ -49,6 +50,7 @@ void ScreenshotProtection::addReason(
 	_reasons.emplace(id, Reason{
 		.window = weakWindow,
 		.animationRedaction = animationRedaction,
+		.redactAnimation = redactAnimation,
 	});
 	std::move(
 		active
@@ -73,6 +75,13 @@ void ScreenshotProtection::addReason(
 	}));
 }
 
+rpl::lifetime ScreenshotProtection::protectTransition(
+		not_null<QWidget*> window) {
+	auto lifetime = rpl::lifetime();
+	addReason(window, rpl::single(true), lifetime, nullptr, false);
+	return lifetime;
+}
+
 bool ScreenshotProtection::active(not_null<QWidget*> window) const {
 	return ranges::any_of(_reasons, [&](const auto &reason) {
 		return reason.second.active
@@ -93,7 +102,12 @@ rpl::producer<bool> ScreenshotProtection::activeValue(
 QPixmap ScreenshotProtection::grabForAnimation(
 		not_null<QWidget*> widget,
 		QRect rect) const {
-	if (!active(widget->window())) {
+	const auto redact = ranges::any_of(_reasons, [&](const auto &reason) {
+		return reason.second.active
+			&& reason.second.redactAnimation
+			&& reason.second.window == widget->window();
+	});
+	if (!redact) {
 		return Window::GrabForAnimation(widget, rect);
 	}
 	Ui::SendPendingMoveResizeEvents(widget);
@@ -108,7 +122,9 @@ QPixmap ScreenshotProtection::grabForAnimation(
 	auto visible = QRegion(rect);
 	auto redactions = std::vector<std::pair<QWidget*, QRect>>();
 	for (const auto &[id, reason] : _reasons) {
-		if (!reason.active || reason.window != widget->window()) {
+		if (!reason.active
+			|| !reason.redactAnimation
+			|| reason.window != widget->window()) {
 			continue;
 		}
 		const auto target = reason.animationRedaction.data();

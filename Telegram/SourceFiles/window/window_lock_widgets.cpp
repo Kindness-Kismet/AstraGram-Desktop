@@ -16,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/storage_domain.h"
 #include "mainwindow.h"
 #include "core/application.h"
+#include "core/core_screenshot_protection.h"
 #include "api/api_text_entities.h"
 #include "ui/text/text.h"
 #include "ui/widgets/buttons.h"
@@ -80,7 +81,7 @@ void LockWidget::setInnerFocus() {
 	setFocus();
 }
 
-void LockWidget::showAnimated(QPixmap oldContentCache) {
+void LockWidget::showAnimated(QPixmap oldContentCache, bool protectScreenshot) {
 	_showAnimation = nullptr;
 
 	showChildren();
@@ -89,7 +90,13 @@ void LockWidget::showAnimated(QPixmap oldContentCache) {
 	hideChildren();
 
 	_showAnimation = std::make_unique<Window::SlideAnimation>();
-	_showAnimation->setCrossFade(Window::InPlaceCrossFade());
+	_showAnimation->setCrossFade(Window::FullWidthCrossFade());
+	if (protectScreenshot) {
+		const auto widget = _window->widget();
+		_showAnimation->setScreenshotProtection(
+			Core::App().screenshotProtection().protectTransition(widget),
+			widget);
+	}
 	_showAnimation->setRepaintCallback([=] { update(); });
 	_showAnimation->setFinishedCallback([=] { showFinished(); });
 	_showAnimation->setPixmaps(oldContentCache, newContentCache);

@@ -270,6 +270,7 @@ private:
 	void setup();
 
 	[[nodiscard]] not_null<Ui::SlideWrap<Ui::SettingsButton>*> setupAdd();
+	void scheduleRebuild();
 	void rebuild();
 
 	const not_null<Window::SessionController*> _controller;
@@ -285,6 +286,7 @@ private:
 	base::unique_qptr<Ui::PopupMenu> _contextMenu;
 	std::unique_ptr<Ui::VerticalLayoutReorder> _reorder;
 	int _reordering = 0;
+	bool _rebuildPending = false;
 
 	rpl::event_stream<> _closeRequests;
 
@@ -1068,7 +1070,7 @@ void AccountsList::setup() {
 				}, _outer->lifetime());
 			}
 		}
-		rebuild();
+		scheduleRebuild();
 	}, _outer->lifetime());
 
 	Core::App().domain().maxAccountsChanges(
@@ -1154,6 +1156,22 @@ not_null<Ui::SlideWrap<Ui::SettingsButton>*> AccountsList::setupAdd() {
 	}, button->lifetime());
 
 	return result;
+}
+
+void AccountsList::scheduleRebuild() {
+	// 首屏立即布局，列表增删等账号操作完成后再刷新，保留过渡的起始画面。
+	if (!_reorder) {
+		rebuild();
+		return;
+	}
+	if (_rebuildPending) {
+		return;
+	}
+	_rebuildPending = true;
+	Ui::PostponeCall(_outer, [=] {
+		_rebuildPending = false;
+		rebuild();
+	});
 }
 
 void AccountsList::rebuild() {

@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_updates.h"
 #include "core/application.h"
+#include "core/core_screenshot_protection.h"
 #include "core/click_handler_types.h"
 #include "export/export_manager.h"
 #include "ui/platform/ui_platform_window.h"
@@ -182,7 +183,17 @@ void Controller::showAccount(
 
 	_id.account->sessionValue(
 	) | rpl::on_next([=](Main::Session *session) {
+		// 旧控件和保护规则仍有效时保存画面，随后更新窗口归属。
+		auto oldContentCache = _widget.grabForSlideAnimation();
+		const auto protectScreenshot
+			= ExtrasFeatures::StreamerMode::isWidgetWindowExcluded(widget());
+		auto transitionProtection = protectScreenshot
+			? Core::App().screenshotProtection().protectTransition(widget())
+			: rpl::lifetime();
 		const auto was = base::take(_sessionController);
+		if (was) {
+			was->setFiltersMenuSuppressed(true);
+		}
 		_sessionController = session
 			? std::make_unique<SessionController>(session, this)
 			: nullptr;
@@ -192,18 +203,13 @@ void Controller::showAccount(
 			_sessionController ? _sessionController->lifetime() : _accountLifetime);
 		_sessionControllerValue = _sessionController.get();
 
-		// 跨账号切换不展示旧账号截图，避免沿用新账号的捕获权限。
-		auto oldContentCache = (prevAccount == account)
-			? _widget.grabForSlideAnimation()
-			: QPixmap();
 		_widget.updateWindowIcon();
 		if (session) {
 			setupSideBar();
-			setupMain(singlePeerShowAtMsgId, std::move(oldContentCache));
-			// 首次显示前窗口尺寸未定，由 firstShow 决定文件夹布局。
-			if (_firstShown) {
-				_sessionController->updateFiltersLayout();
-			}
+			setupMain(
+				singlePeerShowAtMsgId,
+				std::move(oldContentCache),
+				protectScreenshot);
 
 			session->updates().isIdleValue(
 			) | rpl::filter([=](bool idle) {
@@ -230,7 +236,8 @@ void Controller::showAccount(
 			sideBarChanged();
 			setupIntro(
 				accountBeforeIntro.get(),
-				std::move(oldContentCache));
+				std::move(oldContentCache),
+				protectScreenshot);
 			_widget.updateGlobalMenu();
 		}
 
@@ -410,19 +417,25 @@ void Controller::clearSetupEmailLock() {
 
 void Controller::setupIntro(
 		Main::Account *accountBeforeIntro,
-		QPixmap oldContentCache) {
+		QPixmap oldContentCache,
+		bool protectScreenshot) {
 	_widget.setupIntro(
 		Intro::EnterPoint::Qr,
 		accountBeforeIntro,
-		std::move(oldContentCache));
+		std::move(oldContentCache),
+		protectScreenshot);
 }
 
 void Controller::setupMain(
 		MsgId singlePeerShowAtMsgId,
-		QPixmap oldContentCache) {
+		QPixmap oldContentCache,
+		bool protectScreenshot) {
 	Expects(_sessionController != nullptr);
 
-	_widget.setupMain(singlePeerShowAtMsgId, std::move(oldContentCache));
+	_widget.setupMain(
+		singlePeerShowAtMsgId,
+		std::move(oldContentCache),
+		protectScreenshot);
 
 	if (const auto id = Ui::Emoji::NeedToSwitchBackToId()) {
 		Ui::Emoji::LoadAndSwitchTo(&_sessionController->session(), id);

@@ -111,7 +111,10 @@ public:
 		Main::Account *accountBeforeIntro);
 	~Widget();
 
-	void showAnimated(QPixmap oldContentCache, bool back = false);
+	void showAnimated(
+		QPixmap oldContentCache,
+		bool back = false,
+		bool protectScreenshot = false);
 
 	void setInnerFocus();
 

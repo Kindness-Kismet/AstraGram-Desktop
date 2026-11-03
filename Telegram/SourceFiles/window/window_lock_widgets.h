@@ -59,7 +59,7 @@ public:
 
 	virtual void setInnerFocus();
 
-	void showAnimated(QPixmap oldContentCache);
+	void showAnimated(QPixmap oldContentCache, bool protectScreenshot);
 	void showFinished();
 
 protected:

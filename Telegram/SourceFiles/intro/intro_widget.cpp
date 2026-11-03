@@ -36,6 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/abstract_box.h"
 #include "core/update_checker.h"
 #include "core/application.h"
+#include "core/core_screenshot_protection.h"
 #include "mtproto/mtproto_dc_options.h"
 #include "window/window_slide_animation.h"
 #include "window/window_connecting_widget.h"
@@ -793,7 +794,10 @@ void Widget::hideControls() {
 	_back->hide(anim::type::instant);
 }
 
-void Widget::showAnimated(QPixmap oldContentCache, bool back) {
+void Widget::showAnimated(
+		QPixmap oldContentCache,
+		bool back,
+		bool protectScreenshot) {
 	_showAnimation = nullptr;
 
 	showControls();
@@ -806,7 +810,12 @@ void Widget::showAnimated(QPixmap oldContentCache, bool back) {
 	_showAnimation->setDirection(back
 		? Window::SlideDirection::FromLeft
 		: Window::SlideDirection::FromRight);
-	_showAnimation->setCrossFade(Window::InPlaceCrossFade());
+	_showAnimation->setCrossFade(Window::FullWidthCrossFade());
+	if (protectScreenshot) {
+		_showAnimation->setScreenshotProtection(
+			Core::App().screenshotProtection().protectTransition(window()),
+			window());
+	}
 	_showAnimation->setRepaintCallback([=] { update(); });
 	_showAnimation->setFinishedCallback([=] { showFinished(); });
 	_showAnimation->setPixmaps(oldContentCache, newContentCache);
