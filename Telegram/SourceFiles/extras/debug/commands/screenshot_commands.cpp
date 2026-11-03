@@ -9,6 +9,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QImage>
+#include <QImageWriter>
 #include <QPixmap>
 #include <QtGui/QPainter>
 #include <QtGui/QScreen>
@@ -22,6 +23,33 @@ namespace ExtrasDebug::Commands {
 namespace {
 
 using json = nlohmann::json;
+
+[[nodiscard]] Result saveScreenshot(
+		const QImage &image,
+		const QString &path,
+		json result = json::object()) {
+	const auto file = QFileInfo(path);
+	const auto format = file.suffix().toLower();
+	if (format != u"webp"_q && format != u"png"_q) {
+		return Result::Err(u"screenshot path must end in .webp or .png"_q);
+	}
+	const auto target = file.absoluteFilePath();
+	QDir().mkpath(file.absolutePath());
+	auto writer = QImageWriter(target, format.toLatin1());
+	if (format == u"png"_q) {
+		// Qt 以 0 至 100 表示压缩力度，最大无损压缩保留全部像素。
+		writer.setCompression(100);
+	} else {
+		writer.setQuality(40);
+	}
+	if (!writer.write(image)) {
+		return Result::Err(u"cannot write "_q + target);
+	}
+	result["path"] = target.toStdString();
+	result["width"] = image.width();
+	result["height"] = image.height();
+	return Result::Ok(Compact(result));
+}
 
 #ifdef Q_OS_WIN
 // 中心与四角内侧共五个点，任一点命中其他顶层窗口即视为被遮挡。
@@ -80,17 +108,9 @@ using json = nlohmann::json;
 				widget->grab());
 		}
 	}
-	const auto target = QFileInfo(path).absoluteFilePath();
-	QDir().mkpath(QFileInfo(target).absolutePath());
-	if (!image.save(target, "PNG")) {
-		return Result::Err(u"cannot write "_q + target);
-	}
-	return Result::Ok(Compact(json{
-		{ "path", target.toStdString() },
-		{ "width", image.width() },
-		{ "height", image.height() },
+	return saveScreenshot(image, path, json{
 		{ "count", int(shown.size()) },
-	}));
+	});
 }
 
 // 从屏幕拷贝选定窗口的区域，包含系统材质等合成效果；窗口须可见且未被遮挡。
@@ -114,24 +134,16 @@ using json = nlohmann::json;
 	if (image.isNull()) {
 		return Result::Err(u"screen grab returned an empty image"_q);
 	}
-	const auto target = QFileInfo(path).absoluteFilePath();
-	QDir().mkpath(QFileInfo(target).absolutePath());
-	if (!image.save(target, "PNG")) {
-		return Result::Err(u"cannot write "_q + target);
-	}
 	auto result = json{
-		{ "path", target.toStdString() },
-		{ "width", image.width() },
-		{ "height", image.height() },
 		{ "active", window->isActiveWindow() },
 	};
 #ifdef Q_OS_WIN
 	result["covered"] = screenCovered(window);
 #endif // Q_OS_WIN
-	return Result::Ok(Compact(result));
+	return saveScreenshot(image.toImage(), path, std::move(result));
 }
 
-[[nodiscard]] Result ScreenshotTake(const QStringList &args) {
+[[nodiscard]] Result screenshotTake(const QStringList &args) {
 	if (args.size() == 2 && args[1] == u"buffer"_q) {
 		const auto window = controlWindow();
 		const auto store = window ? window->backingStore() : nullptr;
@@ -139,15 +151,7 @@ using json = nlohmann::json;
 		if (!buffer) {
 			return Result::Err(u"window has no readable raster backing store"_q);
 		}
-		const auto target = QFileInfo(args[0]).absoluteFilePath();
-		QDir().mkpath(QFileInfo(target).absolutePath());
-		if (!buffer->save(target, "PNG")) {
-			return Result::Err(u"cannot write "_q + target);
-		}
-		return Result::Ok(Compact(json{
-			{ "path", target.toStdString() },
-			{ "width", buffer->width() }, { "height", buffer->height() },
-		}));
+		return saveScreenshot(*buffer, args[0]);
 	}
 	if (args.size() == 2 && args[1] == u"animation"_q) {
 		const auto window = controlWindow();
@@ -155,15 +159,9 @@ using json = nlohmann::json;
 			return Result::Err(u"no visible window"_q);
 		}
 		const auto image = Core::App().screenshotProtection().grabForAnimation(window);
-		const auto target = QFileInfo(args[0]).absoluteFilePath();
-		QDir().mkpath(QFileInfo(target).absolutePath());
-		if (!image.save(target, "PNG")) {
-			return Result::Err(u"cannot write "_q + target);
-		}
-		return Result::Ok(Compact(json{
-			{ "path", target.toStdString() },
+		return saveScreenshot(image.toImage(), args[0], json{
 			{ "protected", Core::App().screenshotProtection().active(window) },
-		}));
+		});
 	}
 	if (args.size() == 2 && args[1] == u"screen"_q) {
 		return screenshotScreen(args[0]);
@@ -176,7 +174,7 @@ using json = nlohmann::json;
 	}
 	if (args.size() != 1
 		&& (args.size() != 2 || args[1] != u"popup"_q)) {
-		return Result::Err(u"usage: screenshot.take <path> [popup|screen|notification [#rrggbb]]"_q);
+		return Result::Err(u"usage: screenshot.take <path.webp|path.png> [popup|screen|buffer|animation|notification [#rrggbb]]"_q);
 	}
 	const auto popup = (args.size() == 2);
 	const auto window = controlWindow();
@@ -194,16 +192,7 @@ using json = nlohmann::json;
 	if (image.isNull()) {
 		return Result::Err(u"grab returned an empty image"_q);
 	}
-	const auto target = QFileInfo(args.front()).absoluteFilePath();
-	QDir().mkpath(QFileInfo(target).absolutePath());
-	if (!image.save(target, "JPG", 80)) {
-		return Result::Err(u"cannot write "_q + target);
-	}
-	return Result::Ok(Compact(json{
-		{ "path", target.toStdString() },
-		{ "width", image.width() },
-		{ "height", image.height() },
-	}));
+	return saveScreenshot(image.toImage(), args.front());
 }
 
 } // namespace
@@ -221,7 +210,7 @@ std::vector<not_null<QWidget*>> notificationWindows() {
 
 const HandlerMap &ScreenshotHandlers() {
 	static const auto result = HandlerMap{
-		{ u"screenshot.take"_q, &ScreenshotTake },
+		{ u"screenshot.take"_q, &screenshotTake },
 	};
 	return result;
 }

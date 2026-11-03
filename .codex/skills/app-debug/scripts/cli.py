@@ -447,14 +447,15 @@ def register_commands(sub) -> None:
 
     sub.add_parser("storage.stats", help="读保存开关与数据库文件大小")
 
-    command = sub.add_parser("screenshot.take", help="截图当前活动窗口到 build/screenshots/")
+    command = sub.add_parser("screenshot.take", help="截图到 build/screenshots/，默认 WebP 质量 40")
     mode = command.add_mutually_exclusive_group()
     mode.add_argument("--popup", action="store_true", help="改为截取活动浮动菜单")
-    mode.add_argument("--animation", action="store_true", help="通过切页动画的保护接口截图，保存为 PNG")
+    mode.add_argument("--animation", action="store_true", help="通过切页动画的保护接口截图")
     mode.add_argument("--buffer", action="store_true", help="保存已绘制的窗口缓冲，不主动重绘，便于检查动画残影")
-    mode.add_argument("--notification", action="store_true", help="改为截取应用自绘通知，合成到底色上保存为 PNG")
-    mode.add_argument("--screen", action="store_true", help="改为从屏幕拷贝窗口区域保存为 PNG，包含系统材质；窗口须可见且未被遮挡")
+    mode.add_argument("--notification", action="store_true", help="改为截取应用自绘通知，合成到底色上")
+    mode.add_argument("--screen", action="store_true", help="改为从屏幕拷贝窗口区域，包含系统材质；窗口须可见且未被遮挡")
     command.add_argument("--bg", default="#5b6b7f", help="--notification 的底色，格式 #RRGGBB")
+    command.add_argument("--high-quality", action="store_true", help="保存原尺寸无损 PNG，仅供用户查看，助手默认不查看")
 
     command = sub.add_parser("control.list", help="列出活动窗口的控件树：标识、类名、几何、可见性")
     command.add_argument("filter", nargs="?", help="子串过滤，匹配 objectName/类名/accessibleName/文本")
@@ -563,7 +564,7 @@ def execute_command(args: argparse.Namespace) -> None:
     if command == "screenshot.take":
         ensure_debug_app()
         SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
-        extension = "png" if (args.notification or args.screen or args.animation or args.buffer) else "jpg"
+        extension = "png" if args.high_quality else "webp"
         target = SCREENSHOT_DIR / datetime.now().strftime(f"shot-%Y%m%d-%H%M%S-%f.{extension}")
         suffix = ""
         if args.popup:

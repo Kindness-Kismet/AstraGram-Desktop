@@ -1,16 +1,16 @@
 # 截图
 
-`screenshot.take --animation` 使用切页动画的截图保护接口，保存为 PNG；加密正文区域只保留背景，周边界面正常保留。
+`screenshot.take --animation` 使用切页动画的截图保护接口；加密正文区域只保留背景，周边界面正常保留。
 返回 `protected` 表示当前窗口是否启用截图保护，也可通过 `app.info` 的 `screenshotProtected` 查询。
 
 ## `screenshot.take`
 
-截取当前选定窗口并保存为 JPG（质量 80）。CLI 自动生成路径 `build/screenshots/shot-<时间戳>.jpg`，
+截取当前选定窗口并保存为 WebP（质量 40，保留原尺寸）。CLI 自动生成路径 `build/screenshots/shot-<时间戳>.webp`，
 时间戳包含微秒，连续截图不会因同秒命名而覆盖；不接受路径参数。
 
 ```bash
 python .claude/skills/app-debug/scripts/cli.py screenshot.take
-# {"height":938,"path":"<repo>/build/screenshots/shot-20260901-190750-123456.jpg","width":1200}
+# {"height":938,"path":"<repo>/build/screenshots/shot-20260901-190750-123456.webp","width":1200}
 ```
 
 **前提**：必须有可见窗口。默认使用主窗口，`control.window <窗口标识>` 可选择其他顶层窗口；关闭目标后恢复主窗口。
@@ -21,10 +21,22 @@ python .claude/skills/app-debug/scripts/cli.py screenshot.take
 消息气泡等自绘内容不在控件树里，验证这类视觉效果只能靠截图，配合
 `control.list` / `control.click` 做前置导航。
 
+## `screenshot.take --high-quality`
+
+用户要求高质量、高清或原图时使用，保存为原尺寸无损 PNG，路径为 `build/screenshots/shot-<时间戳>.png`。
+PNG 保留全部像素，压缩级别只影响文件体积；本选项可与下列任一截图模式组合，截图范围和保护规则相同。
+
+```bash
+python .codex/skills/app-debug/scripts/cli.py screenshot.take --high-quality
+```
+
+高清图片仅供用户查看，回复中提供文件链接。助手默认查看普通 WebP 截图，不调用读图工具查看高清 PNG，
+也不将高清图片转换、裁切或缩小后查看；需要继续观察界面时，另截普通质量图片。
+
 ## `screenshot.take --notification [--bg #RRGGBB]`
 
 截取应用自绘通知（`core.nativeNotifications` 为 `false` 时出现的那种）。它们是独立的透明顶层窗口，
-主窗口截图抓不到；本模式按通知标识收集可见窗口，按屏幕位置合成到 `--bg` 底色上，保存为 PNG，
+主窗口截图抓不到；本模式按通知标识收集可见窗口，按屏幕位置合成到 `--bg` 底色上，
 用来检查圆角、透明和阴影。底色缺省 `#5b6b7f`，换成浅色或深色可分别核对亮暗两种背景。
 
 ## `screenshot.take --buffer`
@@ -33,7 +45,7 @@ python .claude/skills/app-debug/scripts/cli.py screenshot.take
 
 ## `screenshot.take --screen`
 
-从屏幕拷贝选定窗口所在区域，保存为 PNG，包含云母、亚克力等系统材质和窗口阴影，用于核对材质效果。
+从屏幕拷贝选定窗口所在区域，包含云母、亚克力等系统材质和窗口阴影，用于核对材质效果。
 拷贝的是屏幕上实际显示的像素：窗口必须可见，被其他窗口遮挡的部分会一并截入。Windows 上返回的 `covered` 为 true 时截图不可信；`active` 表示窗口是否处于激活状态，
 失焦时材质颜色会变化。本模式不会抢占焦点或置顶窗口，需要时请用户把窗口切到前台。
 
