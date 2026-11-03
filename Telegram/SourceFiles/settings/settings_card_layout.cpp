@@ -43,11 +43,8 @@ protected:
 		auto source = QPixmap(visible.size() * ratio);
 		source.setDevicePixelRatio(ratio);
 		source.fill(Qt::transparent);
-		{
-			auto painter = QPainter(&source);
-			painter.translate(-offset);
-			_widget->render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
-		}
+		// 由源区域定位绘制，保证嵌套效果的系统裁剪与画笔坐标一致。
+		_widget->render(&source, QPoint(), visible, QWidget::DrawChildren);
 		const auto rect = QRect(-offset, _widget->size());
 		if (_mask.size() != source.size()
 			|| _mask.devicePixelRatio() != ratio
