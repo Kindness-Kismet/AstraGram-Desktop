@@ -150,7 +150,6 @@ mainMenuButton: SettingsButton(defaultSettingsButton) {
 	iconLeft: 20px;
 }
 mainMenuAddAccountButton: SettingsButton(mainMenuButton) {
-	textBg: mainMenuBg;
 	padding: margins(60px, 11px, 24px, 9px);
 	toggleSkip: 24px;
 	iconLeft: 24px;
