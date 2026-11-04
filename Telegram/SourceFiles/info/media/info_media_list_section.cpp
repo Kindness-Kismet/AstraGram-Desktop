@@ -422,11 +422,7 @@ void ListSection::paintItem(
 	_galleryTile.fill(Qt::transparent);
 	{
 		auto q = Painter(&_galleryTile);
-		auto localContext = *context;
-		// 安全边距让图片角点完整落在卡片圆角以内。
-		localContext.mediaInset = int(std::ceil(
-			st::infoMediaGalleryRadius * (1. - std::sqrt(0.5))));
-		item->paint(q, QRect(QPoint(), rect.size()), selection, &localContext);
+		item->paint(q, QRect(QPoint(), rect.size()), selection, context);
 	}
 	_galleryTile = Images::Round(std::move(_galleryTile), _galleryCorners);
 	p.drawImage(rect.topLeft(), _galleryTile);

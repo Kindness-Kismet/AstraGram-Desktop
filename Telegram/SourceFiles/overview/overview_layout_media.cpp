@@ -43,47 +43,6 @@ constexpr auto kStoryRatio = 1.46;
 	return ValidFrameSize(document->dimensions, kMaxInlineArea);
 }
 
-[[nodiscard]] QSize FitMediaSize(QSize original, QSize outer, int inset) {
-	const auto available = QSize(
-		std::max(outer.width() - 2 * inset, 1),
-		std::max(outer.height() - 2 * inset, 1));
-	if (original.isEmpty()) {
-		return available;
-	}
-	return original.scaled(available, Qt::KeepAspectRatio).expandedTo({ 1, 1 });
-}
-
-[[nodiscard]] QImage FitMediaFrame(
-		QImage image,
-		QSize outer,
-		int inset,
-		int ratio,
-		bool blur = false) {
-	const auto size = FitMediaSize(image.size(), outer * ratio, inset * ratio);
-	const auto blurFirst = blur
-		&& (int64(image.width()) * image.height()
-			<= int64(size.width()) * size.height());
-	if (blurFirst) {
-		image = Images::Blur(std::move(image));
-	}
-	image = image.scaled(size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-	if (blur && !blurFirst) {
-		image = Images::Blur(std::move(image));
-	}
-	image.setDevicePixelRatio(1.);
-	auto result = QImage(outer * ratio, QImage::Format_ARGB32_Premultiplied);
-	result.fill(Qt::transparent);
-	{
-		auto painter = QPainter(&result);
-		painter.drawImage(
-			QPoint((result.width() - size.width()) / 2,
-				(result.height() - size.height()) / 2),
-			image);
-	}
-	result.setDevicePixelRatio(ratio);
-	return result;
-}
-
 [[nodiscard]] QImage CropMediaFrame(QImage image, int width, int height) {
 	const auto ratio = style::DevicePixelRatio();
 	width *= ratio;
@@ -222,33 +181,38 @@ int32 Photo::resizeGetHeight(int32 width) {
 
 void Photo::paint(Painter &p, const QRect &clip, TextSelection selection, const PaintContext *context) {
 	const auto selected = (selection == FullSelection);
-	const auto inset = _story ? 0 : context->mediaInset;
-	const auto size = QSize(_width, _height) * style::DevicePixelRatio();
-	if (_cacheSize != size || _mediaInset != inset) {
-		_cacheSize = size;
-		_mediaInset = inset;
-		++_goodRequestId;
-		_goodLoaded = false;
-		_goodRequested = false;
-		_pix = QImage();
-	}
-	if (!_goodLoaded) {
+	const auto widthChanged = (_pix.width()
+		!= (_width * style::DevicePixelRatio()));
+	if (!_goodLoaded || widthChanged) {
 		ensureDataMediaCreated();
-		if (!_spoiler) {
-			requestGoodPix();
-		}
-		if (_pix.isNull()) {
-			const auto small = _spoiler
-				? nullptr
-				: _dataMedia->image(Data::PhotoSize::Small);
-			if (const auto image = small ? small : _dataMedia->thumbnailInline()) {
-				setPixFrom(image);
+		const auto good = !_spoiler
+			&& (_dataMedia->loaded()
+				|| _dataMedia->image(Data::PhotoSize::Thumbnail));
+		if ((good && !_goodLoaded) || widthChanged) {
+			if (widthChanged) {
+				_goodLoaded = false;
+				_goodRequested = false;
+				_pix = QImage();
+			}
+			if (good) {
+				requestGoodPix();
+			}
+			if (_pix.isNull()) {
+				if (const auto small = _spoiler
+					? nullptr
+					: _dataMedia->image(Data::PhotoSize::Small)) {
+					setPixFrom(small);
+				} else if (const auto blurred
+					= _dataMedia->thumbnailInline()) {
+					setPixFrom(blurred);
+				}
 			}
 		}
 	}
 
-	p.fillRect(0, 0, _width, _height, st::overviewPhotoBg);
-	if (!_pix.isNull()) {
+	if (_pix.isNull()) {
+		p.fillRect(0, 0, _width, _height, st::overviewPhotoBg);
+	} else {
 		p.drawImage(0, 0, _pix);
 	}
 
@@ -312,15 +276,10 @@ void Photo::requestGoodPix() {
 
 	const auto width = _width;
 	const auto height = _height;
-	const auto inset = _mediaInset;
-	const auto ratio = style::DevicePixelRatio();
-	const auto story = _story;
 	const auto id = ++_goodRequestId;
 	const auto weak = base::make_weak(this);
 	crl::async([=, original = image->original()]() mutable {
-		auto result = story
-			? CropMediaFrame(std::move(original), width, height)
-			: FitMediaFrame(std::move(original), { width, height }, inset, ratio);
+		auto result = CropMediaFrame(std::move(original), width, height);
 		crl::on_main(weak, [=, result = std::move(result)]() mutable {
 			weak->goodPixReady(std::move(result), id);
 		});
@@ -340,23 +299,25 @@ void Photo::goodPixReady(QImage image, uint32 id) {
 void Photo::setPixFrom(not_null<Image*> image) {
 	Expects(_width > 0 && _height > 0);
 
-	if (_story) {
-		auto imageData = image->original();
-		const auto pixels = _cacheSize.width() * int64(_cacheSize.height());
-		const auto blurFirst = imageData.width() * int64(imageData.height()) <= pixels;
-		if (blurFirst) {
-			imageData = Images::Blur(std::move(imageData));
-		}
-		imageData = CropMediaFrame(std::move(imageData), _width, _height);
-		_pix = blurFirst ? std::move(imageData) : Images::Blur(std::move(imageData));
-	} else {
-		_pix = FitMediaFrame(
-			image->original(),
-			{ _width, _height },
-			_mediaInset,
-			style::DevicePixelRatio(),
-			true);
+	auto img = image->original();
+
+	// Blur allocates and detaches by the source pixel count, and 'image'
+	// can be a full size photo, because image(PhotoSize::Small) falls back
+	// to a larger size when no small one is available. So blur whichever of
+	// the source and the result has fewer pixels: a huge photo is scaled
+	// down first, while a small inline thumbnail is still blurred before it
+	// is upscaled, which keeps the placeholder looking the way it did.
+	const auto ratio = style::DevicePixelRatio();
+	const auto blurAfterCrop = (img.width() * img.height())
+		> ((_width * ratio) * (_height * ratio));
+	if (!_goodLoaded && !blurAfterCrop) {
+		img = Images::Blur(std::move(img));
 	}
+	img = CropMediaFrame(std::move(img), _width, _height);
+	if (!_goodLoaded && blurAfterCrop) {
+		img = Images::Blur(std::move(img));
+	}
+	_pix = std::move(img);
 
 	// In case we have inline thumbnail we can unload all images and we still
 	// won't get a blank image in the media viewer when the photo is opened.
@@ -831,11 +792,40 @@ int32 Gif::resizeGetHeight(int32 width) {
 }
 
 QSize Gif::countFrameSize() const {
-	const auto ready = _gif && _gif->ready();
-	const auto original = ready
-		? QSize(_gif->width(), _gif->height())
-		: QSize(contentWidth(), contentHeight());
-	return FitMediaSize(original, { _width, st::inlineMediaHeight }, _mediaInset);
+	const auto animating = (_gif && _gif->ready());
+	auto framew = animating ? _gif->width() : contentWidth();
+	auto frameh = animating ? _gif->height() : contentHeight();
+	const auto height = st::inlineMediaHeight;
+	const auto maxSize = st::maxStickerSize;
+	if (framew <= 0 || frameh <= 0) {
+		framew = contentWidth();
+		frameh = contentHeight();
+	}
+	if (framew <= 0 || frameh <= 0) {
+		return { _width, height };
+	}
+	if (framew * height > frameh * _width) {
+		if (framew < maxSize || frameh > height) {
+			if (frameh > height || (framew * height / frameh) <= maxSize) {
+				framew = framew * height / frameh;
+				frameh = height;
+			} else {
+				frameh = int32(frameh * maxSize) / framew;
+				framew = maxSize;
+			}
+		}
+	} else {
+		if (frameh < maxSize || framew > _width) {
+			if (framew > _width || (frameh * _width / framew) <= maxSize) {
+				frameh = frameh * _width / framew;
+				framew = _width;
+			} else {
+				framew = int32(framew * maxSize) / frameh;
+				frameh = maxSize;
+			}
+		}
+	}
+	return QSize(framew, frameh);
 }
 
 void Gif::clipCallback(Media::Clip::Notification notification) {
@@ -853,7 +843,7 @@ void Gif::clipCallback(Media::Clip::Notification notification) {
 				} else {
 					_gif->start({
 						.frame = countFrameSize(),
-						.keepAlpha = true,
+						.outer = { _width, st::inlineMediaHeight },
 					});
 				}
 			} else if (_gif->autoPausedGif()
@@ -890,29 +880,35 @@ void Gif::maybeClearSensitiveSpoiler() {
 	}
 }
 
-void Gif::validateThumbnail(Image *image, QSize frame, bool good) {
-	if (!image) {
+void Gif::validateThumbnail(
+		Image *image,
+		QSize size,
+		QSize frame,
+		bool good) {
+	if (!image || (_thumbGood && !good)) {
 		return;
-	}
-	if (_thumb.size() != frame * style::DevicePixelRatio()) {
-		_thumb = QImage();
-		_thumbGood = false;
-	}
-	if ((_thumbGood && !good) || (!_thumb.isNull() && (_thumbGood || !good))) {
+	} else if ((_thumb.size() == size * style::DevicePixelRatio())
+		&& (_thumbGood || !good)) {
 		return;
 	}
 	_thumbGood = good;
 	_thumb = image->pixNoCache(
 		frame * style::DevicePixelRatio(),
-		{ .options = good ? Images::Option() : Images::Option::Blur }).toImage();
+		{
+			.options = (good ? Images::Option() : Images::Option::Blur),
+			.outer = size,
+		}).toImage();
 }
 
-void Gif::prepareThumbnail(QSize frame) {
+void Gif::prepareThumbnail(QSize size, QSize frame) {
+	const auto document = _data;
+	Assert(document != nullptr);
+
 	ensureDataMediaCreated();
 	if (!_spoiler) {
-		validateThumbnail(_dataMedia->thumbnail(), frame, true);
+		validateThumbnail(_dataMedia->thumbnail(), size, frame, true);
 	}
-	validateThumbnail(_dataMedia->thumbnailInline(), frame, false);
+	validateThumbnail(_dataMedia->thumbnailInline(), size, frame, false);
 }
 
 void Gif::paint(
@@ -920,7 +916,6 @@ void Gif::paint(
 		const QRect &clip,
 		TextSelection selection,
 		const PaintContext *context) {
-	_mediaInset = context->mediaInset;
 	const auto document = _data;
 	ensureDataMediaCreated();
 	const auto preview = Data::VideoPreviewState(_dataMedia.get());
@@ -953,21 +948,22 @@ void Gif::paint(
 
 	const auto frame = countFrameSize();
 	const auto r = QRect(0, 0, _width, st::inlineMediaHeight);
-	p.fillRect(r, st::overviewPhotoBg);
-	const auto position = QPoint((r.width() - frame.width()) / 2,
-		(r.height() - frame.height()) / 2);
 	if (animating) {
 		const auto pixmap = _gif->current({
 			.frame = frame,
-			.keepAlpha = true,
+			.outer = r.size(),
 		}, context->paused ? 0 : context->ms);
-		_thumb = pixmap;
-		_thumbGood = true;
-		p.drawImage(position, pixmap);
+		if (_thumb.isNull()) {
+			_thumb = pixmap;
+			_thumbGood = true;
+		}
+		p.drawImage(r.topLeft(), pixmap);
 	} else {
-		prepareThumbnail(frame);
-		if (!_thumb.isNull()) {
-			p.drawImage(position, _thumb);
+		prepareThumbnail(r.size(), frame);
+		if (_thumb.isNull()) {
+			p.fillRect(r, st::overviewPhotoBg);
+		} else {
+			p.drawImage(r.topLeft(), _thumb);
 		}
 	}
 
