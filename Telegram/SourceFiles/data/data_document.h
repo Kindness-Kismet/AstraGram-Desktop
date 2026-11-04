@@ -159,7 +159,8 @@ public:
 		Data::FileOrigin origin,
 		const QString &toFile,
 		LoadFromCloudSetting fromCloud = LoadFromCloudOrLocal,
-		bool autoLoading = false);
+		bool autoLoading = false,
+		bool reuseExisting = false);
 	void cancel();
 	[[nodiscard]] bool cancelled() const;
 	void resetCancelled();

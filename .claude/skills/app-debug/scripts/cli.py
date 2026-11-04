@@ -112,6 +112,8 @@ GENERIC_COMMANDS = {
     'player.cover': '查询当前音乐可保存的原始封面尺寸，独立模拟配置可保存：[新 PNG 路径]',
     'simulation.music': '用本地音频模拟远端分块播放并查询状态：[路径 [protected|cancelled|voice|round]]',
     'downloads.list': '查询真实下载列表及分类与搜索交集：[all|archives|music|videos|other] [关键词]',
+    'downloads.save': '沿普通下载入口保存或复用文件：<会话编号> <消息编号>',
+    'downloads.location': '校验并查询附件的实际本地文件：<会话编号> <消息编号>',
     'downloads.start': '指定路径保存消息附件，返回异步任务：<会话编号> <消息编号> <新文件绝对路径>',
     'downloads.cancel': '取消指定附件下载：<会话编号> <消息编号>',
     'downloads.delete': '将已下载文件移入回收站，返回异步任务：<会话编号> <消息编号>',

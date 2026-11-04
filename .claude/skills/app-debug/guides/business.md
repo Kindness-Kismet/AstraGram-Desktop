@@ -10,6 +10,8 @@
 | 指令 | 参数 | 结果 |
 |---|---|---|
 | `downloads.list` | `[all|archives|music|videos|other] [query]` | 当前账号的下载记录、分类、路径、大小、已下载字节及状态，按下载时间倒序。 |
+| `downloads.save` | `<peerId> <messageId>` | 沿普通下载入口保存或复用已有文件；要求已关闭路径询问，返回已提交。用 `downloads.location` 查询最终路径、下载中与失败状态。 |
+| `downloads.location` | `<peerId> <messageId>` | 校验实际文件，必要时查询同配置内的跨账号共享索引；返回文档编号、路径与大小，不启动下载。 |
 | `downloads.start` | `<peerId> <messageId> <destination>` | 向新建的绝对路径保存附件，返回 `jobId`；父目录必须存在，不覆盖已有文件。 |
 | `downloads.cancel` | `<peerId> <messageId>` | 取消指定附件的活动下载。 |
 | `downloads.delete` | `<peerId> <messageId>` | 沿右键菜单的业务接口将已下载文件移入回收站，保留消息；返回任务编号，用 `job.status` 查询结果。 |
@@ -26,7 +28,7 @@
 色块右上角数量已应用关键词，过窄时隐藏；标签放不下时整行缩小字号和间距，搜索栏的“下载”标签页可用于验证。
 切换分类保留关键词并清除多选。`downloads.list` 仍独立查询业务数据。
 
-下载任务通过 `job.status` 查看最终成功、失败或取消。已有本地内容在后台复制，成功后仍登记下载记录。
+下载任务通过 `job.status` 查看最终成功、失败或取消。已有本地内容沿正式保存接口复制，成功后仍登记下载记录。
 同一消息另存后列表按最新记录显示，不增加重复行。禁止借此绕过媒体禁止保存的限制。
 取消不承诺删除已写入的部分文件，重试应选择新路径。
 

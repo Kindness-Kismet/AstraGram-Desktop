@@ -13,6 +13,7 @@
 #include "data/data_photo.h"
 #include "data/data_download_manager.h"
 #include "data/data_file_origin.h"
+#include "data/data_file_click_handler.h"
 #include "data/data_session.h"
 #include "history/history.h"
 #include "history/history_item.h"
@@ -26,7 +27,6 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QPointer>
 
 namespace ExtrasDebug::Commands {
 namespace {
@@ -133,43 +133,14 @@ public:
 	}
 
 	uint64 start() {
-		const auto media = _document->createMediaView();
-		if (media->loaded(true)) {
-			const auto bytes = media->bytes();
-			const auto source = _document->filepath(true);
-			const auto path = _path;
-			const auto guard = QPointer<DownloadJob>(this);
-			crl::async([=] {
-				auto saved = false;
-				if (bytes.isEmpty()) {
-					saved = QFile::copy(source, path);
-				} else {
-					auto file = QFile(path);
-					saved = file.open(QIODevice::WriteOnly | QIODevice::NewOnly)
-						&& file.write(bytes) == bytes.size() && file.flush();
-				}
-				crl::on_main([=] {
-					if (!guard || guard->_finished) return;
-					if (!saved) {
-						guard->finish(false, "could not save file");
-						return;
-					}
-					const auto item = findSessionMessage(guard->_session, guard->_itemId);
-					if (!item) {
-						guard->finish(false, "message no longer exists");
-						return;
-					}
-					auto &manager = Core::App().downloadManager();
-					manager.addLoaded({ item, guard->_document }, path,
-						manager.computeNextStartDate());
-					guard->finish(true, downloadInfo(item, path));
-				});
-			});
-			return _id;
-		}
 		_document->save(_itemId, _path);
 		const auto item = findSessionMessage(_session, _itemId);
-		Core::App().downloadManager().addLoading({ item, _document });
+		auto &manager = Core::App().downloadManager();
+		if (_document->loading()) {
+			manager.addLoading({ item, _document });
+		} else if (_document->filepath(true) == _path) {
+			manager.addLoaded({ item, _document }, _path, manager.computeNextStartDate());
+		}
 		_timer.setCallback([this] { check(); });
 		_timer.callEach(100);
 		return _id;
@@ -237,6 +208,47 @@ Result cancelDownload(const QStringList &args) {
 	if (!document || !document->loading()) return Result::Err(u"document is not downloading"_q);
 	document->cancel();
 	return Result::Ok();
+}
+
+Result fileLocation(const QStringList &args) {
+	if (args.size() != 2) {
+		return Result::Err(u"usage: downloads.location <peerId> <messageId>"_q);
+	}
+	const auto item = findMessage(args[0], args[1]);
+	const auto document = item && item->media() ? item->media()->document() : nullptr;
+	if (!document) {
+		return Result::Err(u"message has no document"_q);
+	}
+	const auto file = document->location(true);
+	return Result::Ok(Compact(Json{
+		{ "documentId", document->id },
+		{ "path", file.name().toStdString() },
+		{ "size", file.size },
+		{ "hasLocalFile", !file.isEmpty() },
+		{ "downloading", document->loading() },
+		{ "failed", document->status == FileDownloadFailed },
+	}));
+}
+
+Result saveDownload(const QStringList &args) {
+	if (args.size() != 2) {
+		return Result::Err(u"usage: downloads.save <peerId> <messageId>"_q);
+	}
+	const auto item = findMessage(args[0], args[1]);
+	const auto document = item && item->media() ? item->media()->document() : nullptr;
+	if (!document) {
+		return Result::Err(u"message has no document"_q);
+	}
+	if (!item->allowsMediaDownloadControls() || document->forbidsFileSave()
+		|| HistoryView::ItemHasTtl(item)) {
+		return Result::Err(u"saving this document is restricted"_q);
+	}
+	if (!Core::App().canSaveFileWithoutAskingForPath()) {
+		return Result::Err(u"saving without a file dialog is disabled"_q);
+	}
+	DocumentSaveClickHandler::SaveAndTrack(
+		item->fullId(), document, DocumentSaveClickHandler::Mode::ToFile);
+	return Result::Ok(Compact(Json{ { "state", "submitted" } }));
 }
 
 Result deleteDownload(const QStringList &args) {
@@ -372,6 +384,8 @@ const HandlerMap &downloadHandlers() {
 	static const auto handlers = HandlerMap{
 		{ u"downloads.list"_q, &listDownloads },
 		{ u"downloads.start"_q, &startDownload },
+		{ u"downloads.save"_q, &saveDownload },
+		{ u"downloads.location"_q, &fileLocation },
 		{ u"downloads.cancel"_q, &cancelDownload },
 		{ u"downloads.delete"_q, &deleteDownload },
 		{ u"simulation.download"_q, &simulationDownload },

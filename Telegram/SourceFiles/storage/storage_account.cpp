@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "storage/storage_account.h"
+#include "extras/data/download_file_index.h"
+#include "main/main_domain.h"
 
 #include "storage/localstorage.h"
 #include "storage/storage_domain.h"
@@ -1048,6 +1050,19 @@ void Account::readLocations() {
 			}
 		}
 	}
+	if (!CheckStreamStatus(locations.stream)) {
+		return;
+	}
+	auto &shared = _owner->domain().local().downloadFileIndex(_localKey);
+	for (auto i = _fileLocations.cbegin(); i != _fileLocations.cend(); ++i) {
+		shared.remember(i.key(), i.value());
+	}
+	for (auto i = _fileLocationAliases.cbegin(); i != _fileLocationAliases.cend(); ++i) {
+		const auto files = _fileLocations.equal_range(i.value());
+		for (auto j = files.first; j != files.second; ++j) {
+			shared.remember(i.key(), j.value());
+		}
+	}
 }
 
 void Account::updateDownloads(
@@ -1839,6 +1854,7 @@ void Account::writeFileLocation(MediaKey location, const Core::FileLocation &loc
 	if (local.fname.isEmpty()) {
 		return;
 	}
+	_owner->domain().local().downloadFileIndex(_localKey).remember(location, local);
 	if (!local.inMediaCache()) {
 		const auto aliasIt = _fileLocationAliases.constFind(location);
 		if (aliasIt != _fileLocationAliases.cend()) {
@@ -1889,6 +1905,7 @@ void Account::removeFileLocation(MediaKey location) {
 }
 
 Core::FileLocation Account::readFileLocation(MediaKey location) {
+	const auto sharedKey = location;
 	const auto aliasIt = _fileLocationAliases.constFind(location);
 	if (aliasIt != _fileLocationAliases.cend()) {
 		location = aliasIt.value();
@@ -1901,9 +1918,14 @@ Core::FileLocation Account::readFileLocation(MediaKey location) {
 			writeLocationsDelayed();
 			continue;
 		}
+		if (i.value().inMediaCache()) {
+			const auto shared = _owner->domain().local().downloadFileIndex(
+				_localKey).lookup(sharedKey);
+			return shared.isEmpty() ? i.value() : shared;
+		}
 		return i.value();
 	}
-	return Core::FileLocation();
+	return _owner->domain().local().downloadFileIndex(_localKey).lookup(sharedKey);
 }
 
 EncryptionKey Account::cacheKey() const {

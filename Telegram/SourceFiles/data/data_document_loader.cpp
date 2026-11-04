@@ -17,6 +17,34 @@
 #include "boxes/abstract_box.h"
 
 #include <QtCore/QFile>
+#include <QtCore/QSaveFile>
+
+namespace {
+
+[[nodiscard]] bool CopyDocumentFile(
+		const Core::FileLocation &location,
+		const QString &destination) {
+	if (!location.accessEnable()) {
+		return false;
+	}
+	const auto access = gsl::finally([&] { location.accessDisable(); });
+	auto source = QFile(location.name());
+	auto output = QSaveFile(destination);
+	if (!location.check() || !source.open(QIODevice::ReadOnly)
+		|| !output.open(QIODevice::WriteOnly)) {
+		return false;
+	}
+	auto buffer = QByteArray(1024 * 1024, Qt::Uninitialized);
+	while (!source.atEnd()) {
+		const auto read = source.read(buffer.data(), buffer.size());
+		if (read <= 0 || output.write(buffer.constData(), read) != read) {
+			return false;
+		}
+	}
+	return location.check() && output.commit();
+}
+
+} // namespace
 
 void DocumentData::setLocalSource(LocalSource source) {
 	Expects(source.download != nullptr && source.valid != nullptr);
@@ -266,7 +294,8 @@ void DocumentData::save(
 		Data::FileOrigin origin,
 		const QString &toFile,
 		LoadFromCloudSetting fromCloud,
-		bool autoLoading) {
+		bool autoLoading,
+		bool reuseExisting) {
 	if (hasLocalSource()) {
 		if (fromCloud != LoadFromLocalOnly || _localSource->media->loaded()) {
 			saveLocalSource(toFile, autoLoading);
@@ -274,29 +303,29 @@ void DocumentData::save(
 		return;
 	}
 	session().mediaCache().trackDocument(this, origin);
-	if (const auto media = activeMediaView(); media && media->loaded(true)) {
-		const auto &l = location(true);
-		if (!toFile.isEmpty()) {
-			if (!media->bytes().isEmpty()) {
-				QFile f(toFile);
-				if (f.open(QIODevice::WriteOnly)) {
-					f.write(media->bytes());
-					f.close();
-				}
-
-				setLocation(Core::FileLocation(toFile));
-				session().local().writeFileLocation(
-					mediaKey(),
-					Core::FileLocation(toFile));
-			} else if (l.accessEnable()) {
-				const auto &alreadyName = l.name();
-				if (alreadyName != toFile) {
-					QFile(toFile).remove();
-					QFile(alreadyName).copy(toFile);
-				}
-				l.accessDisable();
-			}
+	if (const auto media = createMediaView(); media->loaded(true)) {
+		const auto local = location(true);
+		if (toFile.isEmpty() || local.name() == toFile
+			|| ((autoLoading || reuseExisting) && !local.isEmpty())) {
+			return;
 		}
+		auto saved = false;
+		if (const auto bytes = media->bytes(); !bytes.isEmpty()) {
+			auto file = QSaveFile(toFile);
+			saved = file.open(QIODevice::WriteOnly)
+				&& file.write(bytes) == bytes.size() && file.commit();
+		} else {
+			saved = CopyDocumentFile(local, toFile);
+		}
+		if (!saved) {
+			status = FileDownloadFailed;
+			_owner->documentLoadFail(this, false);
+			return;
+		}
+		setLocation(Core::FileLocation(toFile));
+		session().local().writeFileLocation(mediaKey(), _location);
+		status = FileReady;
+		resetCancelled();
 		return;
 	}
 
@@ -364,6 +393,7 @@ void DocumentData::save(
 		handleLoaderUpdates();
 	}
 	if (loading()) {
+		_loader->setReuseExistingFile(autoLoading || reuseExisting);
 		_loader->start();
 	}
 }

@@ -145,6 +145,7 @@ void Domain::finish() {
 	_accountToActivate = -1;
 	_active.reset(nullptr);
 	base::take(_accounts);
+	_local->flushDownloadFileIndex();
 }
 
 void Domain::suggestExportIfNeeded() {

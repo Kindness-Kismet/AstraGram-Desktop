@@ -1250,9 +1250,7 @@ void DocumentData::setLocation(const Core::FileLocation &loc) {
 }
 
 QString DocumentData::filepath(bool check) const {
-	return (check && _location.name().isEmpty())
-		? QString()
-		: location(check).name();
+	return location(check).name();
 }
 
 bool DocumentData::saveFromData() {

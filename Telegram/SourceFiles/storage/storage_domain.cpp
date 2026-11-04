@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "core/version.h"
 #include "extras/data/extras_database.h"
+#include "extras/data/download_file_index.h"
 #include "storage/details/storage_file_utilities.h"
 #include "storage/serialize_common.h"
 #include "mtproto/mtproto_config.h"
@@ -894,6 +895,7 @@ bool Domain::removeWalletKeyring() {
 }
 
 void Domain::startFromScratch() {
+	_downloadFileIndex.reset();
 	if (!removeWalletKeyring()) {
 		LOG(("Wallet Error: could not remove the discarded device keyring."));
 	}
@@ -904,6 +906,20 @@ void Domain::startFromScratch() {
 	startWithSingleAccount(
 		QByteArray(),
 		std::make_unique<Main::Account>(_owner, _dataName, 0));
+}
+
+Extras::DownloadFileIndex &Domain::downloadFileIndex(const MTP::AuthKeyPtr &key) {
+	if (!_downloadFileIndex) {
+		_downloadFileIndex = std::make_unique<Extras::DownloadFileIndex>(
+			u"downloads_"_q + _dataName, BaseGlobalPath(), key);
+	}
+	return *_downloadFileIndex;
+}
+
+void Domain::flushDownloadFileIndex() {
+	if (_downloadFileIndex) {
+		_downloadFileIndex->flush();
+	}
 }
 
 std::unique_ptr<PasscodeWrap> Domain::wrapToOpen() const {

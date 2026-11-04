@@ -428,6 +428,8 @@ set(extras_files
         extras/data/sticker_set_cache.h
         extras/data/media_cache_index.cpp
         extras/data/media_cache_index.h
+        extras/data/download_file_index.cpp
+        extras/data/download_file_index.h
         extras/data/media_cache_manager.cpp
         extras/data/media_cache_manager.h
         extras/debug/commands/cache_commands.cpp

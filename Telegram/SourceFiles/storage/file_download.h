@@ -106,6 +106,9 @@ public:
 	}
 
 	bool setFileName(const QString &filename); // set filename for loaders to cache
+	void setReuseExistingFile(bool enabled) {
+		_reuseExistingFile = enabled;
+	}
 	void permitLoadFromCloud();
 	void increaseLoadSize(int64 size, bool autoLoading);
 
@@ -159,6 +162,7 @@ protected:
 
 	bool writeResultPart(int64 offset, bytes::const_span buffer);
 	bool finalizeResult();
+	[[nodiscard]] bool reuseCompletedFile();
 	[[nodiscard]] QByteArray readLoadedPartBack(int64 offset, int size);
 
 	const not_null<Main::Session*> _session;
@@ -172,6 +176,7 @@ protected:
 	QString _filename;
 	QFile _file;
 	bool _fileIsOpen = false;
+	bool _reuseExistingFile = false;
 
 	LoadToCacheSetting _toCache;
 	LoadFromCloudSetting _fromCloud;

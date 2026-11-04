@@ -18,6 +18,10 @@ class Account;
 class Domain;
 } // namespace Main
 
+namespace Extras {
+class DownloadFileIndex;
+} // namespace Extras
+
 namespace Storage {
 
 struct PasscodeWrap;
@@ -133,6 +137,9 @@ public:
 		std::unique_ptr<MTP::Config> config);
 	void writeAccounts();
 	void startFromScratch();
+	[[nodiscard]] Extras::DownloadFileIndex &downloadFileIndex(
+		const MTP::AuthKeyPtr &key);
+	void flushDownloadFileIndex();
 
 	[[nodiscard]] WalletEngineValue readWalletKeyring() const;
 	[[nodiscard]] bool writeWalletKeyring(const QByteArray &bytes) const;
@@ -219,6 +226,7 @@ private:
 	const QString _dataName;
 
 	MTP::AuthKeyPtr _localKey;
+	std::unique_ptr<Extras::DownloadFileIndex> _downloadFileIndex;
 	std::unique_ptr<KeyData> _keyData;
 	quint64 _verificationNonce = 0;
 	int _oldVersion = 0;

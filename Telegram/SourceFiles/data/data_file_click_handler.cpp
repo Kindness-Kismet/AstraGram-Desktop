@@ -117,7 +117,8 @@ void DocumentSaveClickHandler::Save(
 			filename,
 			filedir);
 		if (!savename.isEmpty()) {
-			data->save(origin, savename);
+			data->save(origin, savename, LoadFromCloudOrLocal, false,
+				mode != Mode::ToNewFile && Core::App().canSaveFileWithoutAskingForPath());
 			if (started) {
 				started();
 			}

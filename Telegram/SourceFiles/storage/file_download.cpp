@@ -444,10 +444,38 @@ QByteArray FileLoader::readLoadedPartBack(int64 offset, int size) {
 		: QByteArray();
 }
 
+bool FileLoader::reuseCompletedFile() {
+	if (!_reuseExistingFile || _filename.isEmpty() || _loadSize != _fullSize) {
+		return false;
+	}
+	const auto key = fileLocationKey();
+	const auto completed = key
+		? _session->local().readFileLocation(*key)
+		: Core::FileLocation();
+	if (completed.isEmpty() || completed.inMediaCache()
+		|| completed.size != _fullSize || completed.name() == _filename) {
+		return false;
+	}
+	if (_fileIsOpen) {
+		_file.close();
+		_fileIsOpen = false;
+		// 仅清理本次自动下载创建的副本，明确另存的目标不进入此分支。
+		if (!_file.remove()) {
+			LOG(("Download: could not discard duplicate file."));
+			Platform::File::PostprocessDownloaded(QFileInfo(_file).absoluteFilePath());
+			return false;
+		}
+	}
+	_filename = completed.name();
+	_file.setFileName(_filename);
+	return true;
+}
+
 bool FileLoader::finalizeResult() {
 	Expects(!_finished);
 
-	if (!_filename.isEmpty() && (_toCache == LoadToCacheAsWell)) {
+	const auto reused = reuseCompletedFile();
+	if (!reused && !_filename.isEmpty() && (_toCache == LoadToCacheAsWell)) {
 		if (!_fileIsOpen) {
 			_fileIsOpen = _file.open(QIODevice::WriteOnly);
 		}
@@ -465,14 +493,12 @@ bool FileLoader::finalizeResult() {
 		Platform::File::PostprocessDownloaded(
 			QFileInfo(_file).absoluteFilePath());
 	}
-	if (_localStatus == LocalStatus::NotFound) {
+	if (!_filename.isEmpty() && _loadSize == _fullSize) {
 		if (const auto key = fileLocationKey()) {
-			if (!_filename.isEmpty()) {
-				_session->local().writeFileLocation(
-					*key,
-					Core::FileLocation(_filename));
-			}
+			_session->local().writeFileLocation(*key, Core::FileLocation(_filename));
 		}
+	}
+	if (_localStatus == LocalStatus::NotFound) {
 		const auto key = cacheKey();
 		if ((_toCache == LoadToCacheAsWell)
 			&& (_data.size() <= Storage::kMaxFileInMemory)
