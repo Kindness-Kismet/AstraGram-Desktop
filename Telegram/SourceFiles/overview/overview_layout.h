@@ -42,6 +42,7 @@ public:
 	: PaintContextBase(ms, selecting)
 	, paused(paused) {
 	}
+	int mediaInset = 0;
 	bool skipBorder = false;
 	bool paused = false;
 
@@ -243,6 +244,8 @@ private:
 	std::unique_ptr<Ui::SpoilerAnimation> _spoiler;
 
 	uint32 _goodRequestId = 0;
+	QSize _cacheSize;
+	int _mediaInset = 0;
 	QImage _pix;
 	QImage _hiddenBgCache;
 	bool _goodLoaded : 1 = false;
@@ -297,10 +300,9 @@ private:
 
 	void validateThumbnail(
 		Image *image,
-		QSize size,
 		QSize frame,
 		bool good);
-	void prepareThumbnail(QSize size, QSize frame);
+	void prepareThumbnail(QSize frame);
 
 	void update();
 
@@ -317,6 +319,7 @@ private:
 	std::unique_ptr<Ui::SpoilerAnimation> _spoiler;
 
 	QImage _thumb;
+	int _mediaInset = 0;
 	bool _thumbGood = false;
 	bool _sensitiveSpoiler = false;
 	bool _inlineOverCap = false;

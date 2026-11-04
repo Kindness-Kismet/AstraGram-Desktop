@@ -2152,6 +2152,7 @@ PRIVATE
     overview/overview_checkbox.cpp
     overview/overview_checkbox.h
     overview/overview_layout.cpp
+    overview/overview_layout_media.cpp
     overview/overview_layout.h
     overview/overview_layout_delegate.h
     poll/poll_link_box.cpp
