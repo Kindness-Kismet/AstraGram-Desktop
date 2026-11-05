@@ -38,11 +38,14 @@ void PaintItemReveal(
 	if (opacity <= 0.) {
 		return;
 	}
+	const auto shift = int(std::round(state.shift));
 	if (state.progress >= 1.) {
-		paint(p, 0);
+		p.save();
+		p.translate(0, shift);
+		paint(p, shift);
+		p.restore();
 		return;
 	}
-	const auto shift = int(std::round(state.shift));
 	const auto edge = bottom - shift;
 	const auto fade = style::ConvertScale(10);
 	const auto area = clip.translated(0, -shift).intersected(bounds);

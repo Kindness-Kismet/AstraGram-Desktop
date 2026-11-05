@@ -766,7 +766,7 @@ private:
 	void repaintItem(const Element *view, QRect rect);
 	void resizeItem(not_null<Element*> view);
 	void refreshItem(not_null<const Element*> view);
-	void viewHeightAdjusted(not_null<Element*> view);
+	void viewHeightAdjusted(not_null<Element*> view, int delta);
 	void showItemHighlight(not_null<HistoryItem*> item);
 	void itemRemoved(not_null<const HistoryItem*> item);
 	QPoint mapPointToItem(QPoint point, const Element *view) const;
@@ -948,7 +948,7 @@ private:
 	// Method has "bool (*Method)(not_null<Element*> view, int itemtop, int itembottom)" signature
 	// if it returns false the enumeration stops immediately.
 	template <EnumItemsDirection direction, typename Method>
-	void enumerateItems(Method method, int visibleTop);
+	void enumerateItems(Method method, int visibleTop, int extraBottom = 0);
 
 	// This function finds all userpics on the left that are displayed and calls template method
 	// for each found userpic (from the top to the bottom) using enumerateItems() method.
@@ -956,7 +956,7 @@ private:
 	// Method has "bool (*Method)(not_null<Element*> view, int userpicTop)" signature
 	// if it returns false the enumeration stops immediately.
 	template <typename Method>
-	void enumerateUserpics(Method method, int visibleTop);
+	void enumerateUserpics(Method method, int visibleTop, bool painting = false);
 
 	// This function finds all date elements that are displayed and calls template method
 	// for each found date element (from the bottom to the top) using enumerateItems() method.

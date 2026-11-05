@@ -295,14 +295,15 @@ ListWidget::MouseState::MouseState(
 }
 
 template <ListWidget::EnumItemsDirection direction, typename Method>
-void ListWidget::enumerateItems(Method method, int visibleTop) {
+void ListWidget::enumerateItems(Method method, int visibleTop, int extraBottom) {
 	constexpr auto TopToBottom = (direction == EnumItemsDirection::TopToBottom);
+	const auto visibleBottom = _visibleBottom + extraBottom;
 
 	// No displayed messages in this history.
 	if (_items.empty()) {
 		return;
 	}
-	if (_visibleBottom <= _itemsTop || _itemsTop + _itemsHeight <= visibleTop) {
+	if (visibleBottom <= _itemsTop || _itemsTop + _itemsHeight <= visibleTop) {
 		return;
 	}
 
@@ -324,7 +325,7 @@ void ListWidget::enumerateItems(Method method, int visibleTop) {
 		: std::upper_bound(
 			beginning,
 			ending,
-			_visibleBottom,
+			visibleBottom,
 			[this](int bottom, auto &elem) {
 				return this->itemTop(elem) + elem->height() >= bottom;
 			});
@@ -378,7 +379,7 @@ void ListWidget::enumerateItems(Method method, int visibleTop) {
 				continue;
 			}
 		} else {
-			if (itemtop >= _visibleBottom) {
+			if (itemtop >= visibleBottom) {
 				if (from == beginning) {
 					break;
 				}
@@ -393,7 +394,7 @@ void ListWidget::enumerateItems(Method method, int visibleTop) {
 
 		// Skip all the items that are below / above the visible area.
 		if (TopToBottom) {
-			if (itembottom >= _visibleBottom) {
+			if (itembottom >= visibleBottom) {
 				return;
 			}
 		} else {
@@ -416,7 +417,7 @@ void ListWidget::enumerateItems(Method method, int visibleTop) {
 }
 
 template <typename Method>
-void ListWidget::enumerateUserpics(Method method, int visibleTop) {
+void ListWidget::enumerateUserpics(Method method, int visibleTop, bool painting) {
 	// Find and remember the top of an attached messages pack
 	// -1 means we didn't find an attached to next message yet.
 	int lowestAttachedItemTop = -1;
@@ -426,6 +427,11 @@ void ListWidget::enumerateUserpics(Method method, int visibleTop) {
 		if (view->data()->isService()) {
 			return true;
 		}
+		const auto shift = painting
+			? int(std::round(itemRevealState(view).shift))
+			: 0;
+		itemtop += shift;
+		itembottom += shift;
 
 		if (lowestAttachedItemTop < 0 && view->isAttachedToNext()) {
 			lowestAttachedItemTop = itemtop + view->marginTop();
@@ -453,7 +459,7 @@ void ListWidget::enumerateUserpics(Method method, int visibleTop) {
 
 			// Call the template callback function that was passed
 			// and return if it finished everything it needed.
-			if (!method(view, userpicBottom - st::msgPhotoSize)) {
+			if (!method(view, userpicBottom - st::msgPhotoSize - shift)) {
 				return false;
 			}
 		}
@@ -467,7 +473,7 @@ void ListWidget::enumerateUserpics(Method method, int visibleTop) {
 	};
 
 	enumerateItems<EnumItemsDirection::TopToBottom>(
-		userpicCallback, visibleTop);
+		userpicCallback, visibleTop, painting ? _itemsRevealHeight : 0);
 }
 
 template <typename Method>
@@ -700,7 +706,7 @@ ListWidget::ListWidget(
 	_session->data().viewHeightAdjusted(
 	) | rpl::on_next([this](Data::Session::ViewHeightAdjusted data) {
 		if (data.view->delegate() == this) {
-			viewHeightAdjusted(data.view);
+			viewHeightAdjusted(data.view, data.delta);
 		}
 	}, lifetime());
 	_session->data().itemViewRefreshRequest(
@@ -977,6 +983,10 @@ void ListWidget::refreshRows(const Data::MessagesSlice &old) {
 		int(end(_slice.ids) - addedToEndFrom),
 		1
 	) - 1;
+	const auto revealNewItems = !_inverted
+		&& (_slice.skippedAfter == 0)
+		&& ((old.skippedAfter == 0 && !old.ids.empty())
+			|| (old.ids.empty() && scrolledTillEnd && _showFinished));
 
 	auto shiftAnchor = (HistoryItem*)nullptr;
 	auto shiftAnchorBottom = 0;
@@ -999,19 +1009,35 @@ void ListWidget::refreshRows(const Data::MessagesSlice &old) {
 	_items.reserve(_slice.ids.size());
 	std::swap(_views, _viewsCapacity);
 	auto nearestIndex = -1;
+	auto seenPreviousItem = false;
 	const auto pushItem = [&](const FullMsgId &fullId) {
-		if (const auto item = session().data().message(fullId)) {
-			if (_slice.nearestToAround == fullId) {
-				nearestIndex = int(_items.size());
-			}
-			const auto view = enforceViewForItem(item, _viewsCapacity);
-			_items.push_back(view);
-			if (destroyingBarElement == view) {
-				destroyingBarElement = nullptr;
-			}
-			if (clearingOverElement == view) {
-				clearingOverElement = nullptr;
-			}
+		const auto item = session().data().message(fullId);
+		if (!item) {
+			return;
+		}
+		if (_slice.nearestToAround == fullId) {
+			nearestIndex = int(_items.size());
+		}
+		const auto existed = _viewsCapacity.contains(item);
+		seenPreviousItem = seenPreviousItem || existed;
+		const auto view = enforceViewForItem(item, _viewsCapacity);
+		_items.push_back(view);
+		if (destroyingBarElement == view) {
+			destroyingBarElement = nullptr;
+		}
+		if (clearingOverElement == view) {
+			clearingOverElement = nullptr;
+		}
+		// 换号或重排仍是原消息，补载的前段历史不播放入场。
+		if (!revealNewItems
+			|| existed
+			|| (!seenPreviousItem && old.skippedBefore != 0 && !item->isSending())) {
+			return;
+		}
+		const auto streamed = item->history()->streamedDraftsIfExists();
+		if (!item->isSponsored()
+			&& (!streamed || !streamed->hasFor(item))) {
+			_itemRevealPending.emplace(view);
 		}
 	};
 	if (_inverted) {
@@ -1025,17 +1051,6 @@ void ListWidget::refreshRows(const Data::MessagesSlice &old) {
 	}
 	if (_translateTracker) {
 		_translateTracker->addBunchFrom(_items);
-	}
-	const auto revealCount = _inverted
-		? 0
-		: std::min(addedToEndCount, int(_items.size()));
-	for (auto e = end(_items), i = e - revealCount; i != e; ++i) {
-		const auto item = (*i)->data();
-		const auto streamed = item->history()->streamedDraftsIfExists();
-		if (!item->isSponsored()
-			&& (!streamed || !streamed->hasFor(item))) {
-			_itemRevealPending.emplace(*i);
-		}
 	}
 	updateAroundPositionFromNearest(nearestIndex);
 
@@ -2999,10 +3014,8 @@ ItemRevealState ListWidget::itemRevealState(not_null<Element*> view) const {
 		return { .progress = 0. };
 	}
 	const auto i = _itemRevealAnimations.find(view);
-	if (i == end(_itemRevealAnimations)) {
-		return {};
-	}
-	const auto progress = i->second.animation.value(1.);
+	const auto revealing = (i != end(_itemRevealAnimations));
+	const auto progress = revealing ? i->second.animation.value(1.) : 1.;
 	const auto top = itemTop(view);
 	auto revealHeight = 0;
 	for (const auto &[other, animation] : _itemRevealAnimations) {
@@ -3010,6 +3023,10 @@ ItemRevealState ListWidget::itemRevealState(not_null<Element*> view) const {
 			revealHeight += anim::interpolate(animation.startHeight, 0,
 				ItemExpansionProgress(animation.animation.value(1.)));
 		}
+	}
+	// 前方新消息尚未展开的高度，同样要从旧消息的位置中扣除。
+	if (!revealing) {
+		return { .shift = -float64(revealHeight) };
 	}
 	return {
 		.progress = progress,
@@ -3516,6 +3533,7 @@ void ListWidget::paintList(Painter &p, QRect clip, bool backdrop) {
 
 	const auto shadowPadding = Ui::BubbleShadowPadding();
 	auto paintClip = clip.adjusted(0, -shadowPadding, 0, shadowPadding);
+	paintClip = paintClip.united(paintClip.translated(0, _itemsRevealHeight));
 	for (const auto &[view, animation] : _itemRevealAnimations) {
 		const auto shift = int(std::round(itemRevealState(view).shift));
 		paintClip = paintClip.united(clip.translated(0, -shift));
@@ -3730,7 +3748,7 @@ void ListWidget::paintUserpics(
 		const auto visualTop = userpicTop + int(std::round(reveal.shift));
 		// stop the enumeration if the userpic is below the painted rect
 		if (visualTop >= clip.top() + clip.height()) {
-			return false;
+			return _itemsRevealHeight > 0;
 		}
 
 		// paint the userpic if it intersects the painted rect
@@ -3792,7 +3810,7 @@ void ListWidget::paintUserpics(
 			});
 		}
 		return true;
-	}, _visibleTop - _topPadding);
+	}, _visibleTop - _topPadding, true);
 }
 
 ListWidget::VideoUserpic *ListWidget::validateVideoUserpic(
@@ -6262,17 +6280,12 @@ void ListWidget::refreshAttachmentsFromTill(int from, int till) {
 	}
 }
 
-void ListWidget::viewHeightAdjusted(not_null<Element*> view) {
+void ListWidget::viewHeightAdjusted(not_null<Element*> view, int delta) {
 	const auto i = ranges::find(_items, view);
 	if (i == end(_items)) {
 		return;
 	}
 	auto next = i + 1;
-	const auto was = (next != end(_items))
-		? (*next)->y()
-		: _itemsHeight;
-	const auto now = view->y() + view->height();
-	const auto delta = now - was;
 	for (; next != end(_items); ++next) {
 		(*next)->setY((*next)->y() + delta);
 	}

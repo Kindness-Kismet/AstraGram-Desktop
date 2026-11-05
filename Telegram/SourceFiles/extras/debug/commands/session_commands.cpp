@@ -275,7 +275,11 @@ using json = nlohmann::json;
 				return;
 			}
 			const auto y = top - scroll->scrollTop();
-			if (y + view->height() <= 0 || y >= scroll->height()) {
+			const auto reveal = legacy
+				? legacy->itemRevealState(view->data())
+				: list->itemRevealState(view);
+			const auto visualY = y + reveal.shift;
+			if (visualY + view->height() <= 0 || visualY >= scroll->height()) {
 				return;
 			}
 			const auto media = view->media();
@@ -285,15 +289,12 @@ using json = nlohmann::json;
 				: nullptr;
 			const auto message = dynamic_cast<HistoryView::Message*>(view.get());
 			const auto bubble = message ? message->debugBubbleGeometry() : QRect();
-			const auto reveal = legacy
-				? legacy->itemRevealState(view->data())
-				: list->itemRevealState(view);
 			rows.push_back({
 				{ "id", view->data()->id.bare },
 				{ "y", y }, { "top", top },
 				{ "revealProgress", reveal.progress },
 				{ "revealShift", reveal.shift },
-				{ "visualY", y + reveal.shift },
+				{ "visualY", visualY },
 				{ "stickerFrame", sticker ? sticker->frameIndex().value_or(-1) : -1 },
 				{ "stickerFrames", sticker ? sticker->framesCount().value_or(-1) : -1 },
 				{ "width", view->width() }, { "height", view->height() },

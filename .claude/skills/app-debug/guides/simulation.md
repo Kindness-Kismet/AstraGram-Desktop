@@ -146,6 +146,19 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 
 ## 验证入口
 
+`simulation.message-order` 仅在独立模拟配置分步构造并发消息，固定使用 `group` 场景；不发送或自动确认消息。
+先执行 `prepare <我方类型> <对方类型> <before|same|after>`，类型支持 `text`、`long`、`sticker`，分别为短文字、十二行文字、内存静态贴纸。
+最后一项控制我方本地时间相对来信早一秒、同秒或晚一秒；我方正式编号始终比来信大。返回 `peerId` 后用 `chat.open` 打开，并滚到最底部。
+
+- `local`：创建我方负编号待发送消息。
+- `incoming`：插入对方正式编号消息；可以在 `local` 前后调用。
+- `confirm`：沿正式确认链路换号并更新历史索引，保证复用同一个消息对象；需要先有 `local`。
+- `state`：查询两条消息是否存在、日期、发送状态及临时到正式编号的映射，不输出内存地址。
+
+各步骤之间用 `cache.layout <peerId>` 连续采样，按需用 `anim.speed` 放慢。`before` 下先执行 `local`、`incoming`，等入场结束后 `confirm`，
+可稳定构造我方从来信上方换到下方的场景；验证同一消息换号后透明度不归零。`same` 下先 `local` 再 `incoming`，可验证来信插到旧气泡前方时位置连续。
+再次 `prepare` 保留已有消息；上一轮创建了我方消息时必须先确认。重启模拟配置清除样本，验证后恢复动画速度及原开发配置。
+
 `simulation.cache-history-check` 仅在独立模拟配置中运行固定历史缓存检查，先用 `app.start --profile cache-history-check + simulation.enter` 进入。
 返回异步任务编号，用 `job.status <编号>` 查看完成结果；覆盖摘要删除、未知末条、请求乱序、话题与收藏来源隔离、发送确认、加载中的动态更新与选择保留。
 同时覆盖未加载消息的反应、扩展媒体资料、待办追加与完成、开放投票答案增删；扩展媒体使用本地协议样本，不执行交易。
