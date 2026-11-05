@@ -1,31 +1,29 @@
-- Improved the music player, which now offers a draggable standalone window with mini and large-cover views, separate minimize and close actions, and a collapsed-by-default playlist whose scrollbar fades out when idle
-- Improved file lists, which now show compact two-line metadata, softly colored rounded previews, and separate download and cancel buttons beside the file size
-- Improved file and media control icons, which now stay sharp when scaled and use consistent symbols for download and ready states
-- Improved media download progress, which now keeps percentages and progress rings moving smoothly together before showing completion at 100 percent
-- Added a local deletion action for downloaded attachments, so you can now move files to the recycle bin from their context menus while keeping the messages available for downloading again
-- Improved new-message transitions, which now move and fade messages, avatars and timestamps together in both chat views without position jumps above the translucent input area
-- Fixed an issue with reaction transitions that previously caused message bubbles to resize twice or timestamps to disappear while reaction layouts changed
-- Fixed an issue with small-window dialogs that previously caused confirmation controls, descriptions or QR codes to extend beyond the available space
-- Changed how dialog buttons and settings controls respond to presses; they now use spring scaling or brightness changes instead of ripple effects
-- Added a return-to-video action to video cover previews, so you can now resume viewing the video directly from the cover's context menu
-- Fixed an issue with empty chat search that previously caused repeated Backspace presses to move focus out of the search field
-- Fixed an issue with long chat lists that previously caused scrollbars to appear when switching folders without scrolling
-- Fixed an issue with message reply-count arrows that previously caused them to sit too high beside timestamps
-- Fixed an issue with background request retries that previously caused an invalid request to be sent repeatedly and generate large amounts of error logs
+- Adapted to official Telegram Desktop 7.3.5
+- Improved global search, which now supports keyword searches in channel, app, photo, video and voice-message categories and preserves the query when switching categories
+- Improved the expanded music player, which now supports resizing, remembers its size across view changes, adapts playlist placement to window width, and stays open when seeking
+- Added temporary playback speed controls, so you can now hold the speed button for double-speed playback and drag horizontally to adjust it before releasing to restore your saved speed
+- Improved attachment downloads, which now reuse completed files across accounts and avoid duplicate copies during concurrent downloads of the same attachment
+- Improved music download indicators, which now follow streaming-cache progress and disappear when the full track is cached
+- Added a More submenu for message actions, so you can now place extended actions in an explicit submenu instead of revealing them with modifier keys
+- Changed how private-chat history deletion works; it now selects deletion for both participants by default
+- Fixed an issue with recent stickers that previously caused removed stickers to remain visible until the pointer left the panel
+- Improved compose controls, which now use smaller, consistent media icons and keep edit controls properly spaced when the attachment button is hidden
+- Fixed an issue with account menus and account or lock-screen transitions that previously caused dark rectangular press backgrounds, blank frames or folder jumps
+- Fixed an issue with settings and Premium pages that previously caused nested controls to be clipped incorrectly after scrolling
+- Improved Simplified Chinese translations, which now cover more gift, playback, notification and wallet text and use consistent chat terminology
 
 ---
 
-- 对音乐播放器进行了改善，这使得播放器提供可拖动的独立窗口、迷你条和大封面视图，区分最小化与关闭操作，播放列表默认收起且滚动条静置后淡出
-- 对文件列表进行了改善，这使得列表采用紧凑的两行信息、淡色圆角预览，并在文件大小旁显示独立的下载和取消按钮
-- 对文件和媒体控件图标进行了改善，这使得图标缩放后保持清晰，下载与就绪状态采用统一的符号
-- 对媒体下载进度进行了改善，这使得百分比和进度圆环同步平滑变化，达到百分之百后再显示完成提示
-- 新增了已下载附件的本地删除入口，现在可以从右键菜单将文件移到回收站，保留聊天消息并按需重新下载
-- 对新消息过渡进行了改善，这使得新旧聊天视图中的消息、头像和时间同步移动与渐显，避免半透明输入区上方出现位置跳变
-- 修复了关于回应过渡的错误，该问题曾导致回应布局变化时消息气泡二次调整大小或时间消失
-- 修复了关于小窗口弹窗的错误，该问题曾导致确认按钮、说明文字或二维码超出可用空间
-- 调整了弹窗按钮和设置控件的点击反馈，现在使用弹性缩放或明暗变化替代水波纹
-- 新增了视频封面预览的返回视频入口，现在可以从封面右键菜单直接回到视频
-- 修复了关于空聊天搜索框的错误，该问题曾导致连续按退格键后焦点离开搜索框
-- 修复了关于长对话列表的错误，该问题曾导致切换分组时未进行滚动也显示滚动条
-- 修复了关于消息回复计数箭头的错误，该问题曾导致箭头在时间旁边的位置偏高
-- 修复了关于后台请求重试的错误，该问题曾导致同一个无效请求被反复发送并产生大量错误日志
+- 适配了官方 Telegram Desktop 7.3.5
+- 对全局搜索进行了改善，这使得频道、应用、图片、视频和语音分类支持按关键词查询，并在切换分类时保留关键词
+- 对大封面播放器进行了改善，这使得窗口可调整大小并记住尺寸，播放列表随窗口宽度切换布局，拖动进度时保持展开
+- 新增了临时播放调速操作，现在可以长按倍速按钮以两倍速播放，横向拖动调整速度，松开后恢复保存的倍速
+- 对附件下载进行了改善，这使得不同账号可以复用已下载文件，同时下载同一附件时避免产生重复副本
+- 对音乐下载指示进行了改善，这使得进度跟随在线播放缓存变化，整首音乐缓存完成后隐藏下载指示
+- 新增了消息“更多”子菜单，现在可以将扩展操作放入明确的子菜单，无需按住修饰键显示
+- 调整了私聊清空记录的行为，现在默认勾选同时为双方删除
+- 修复了关于最近使用贴纸的错误，该问题曾导致移除的贴纸必须等鼠标离开面板后才消失
+- 对输入区控件进行了改善，这使得媒体图标更小且风格统一，隐藏附件按钮后编辑控件仍保留正确间距
+- 修复了关于账号菜单、账号切换和锁屏过渡的错误，该问题曾导致按压背景出现深色矩形、过渡出现空白帧或分组跳动
+- 修复了关于设置和会员页面的错误，该问题曾导致滚动后嵌套控件被错误裁剪
+- 对简体中文翻译进行了改善，这使得礼物、播放提示、通知和钱包等文案更加完整，聊天相关用词保持一致
