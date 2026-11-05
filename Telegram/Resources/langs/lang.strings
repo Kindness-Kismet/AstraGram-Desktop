@@ -9421,7 +9421,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_DebugListPromoTitle" = "Sample promotion";
 "extras_DebugListPromoAbout" = "Local sample for checking multiline text and window materials.";
 "extras_DebugListNone" = "Normal chat list";
-"extras_DebugListBirthdaySetup" = "Add birthday";
 "extras_DebugListBirthdayContact" = "Birthday: one contact";
 "extras_DebugListBirthdayContacts" = "Birthday: multiple contacts";
 "extras_DebugListUserpic" = "Set profile photo";

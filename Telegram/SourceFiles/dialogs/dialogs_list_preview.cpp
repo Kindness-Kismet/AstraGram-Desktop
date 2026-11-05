@@ -99,7 +99,7 @@ void Widget::setListPreview(Preview preview) {
 	if (_frozenAccountBar) {
 		_frozenAccountBar->setClickedCallback(action);
 	}
-	if (preview >= Preview::BirthdaySetup && preview <= Preview::AuthMultiple) {
+	if (preview >= Preview::BirthdayContact && preview <= Preview::AuthMultiple) {
 		installListPreviewSuggestion(preview);
 	} else if (preview == Preview::Stack) {
 		installListPreviewSuggestion(Preview::BirthdayContact);

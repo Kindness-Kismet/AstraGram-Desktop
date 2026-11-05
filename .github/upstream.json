@@ -40,6 +40,7 @@
     "Telegram/Resources/icons/fast_to_original.svg": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。",
     "Telegram/SourceFiles/ui/controls/download_bar.cpp": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。",
     "Telegram/SourceFiles/ui/controls/download_bar.h": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。",
+    "Telegram/SourceFiles/dialogs/suggestions/suggestion_birthday_setup.cpp": "已移除聊天列表中的添加生日提示，生日资料设置与联系人生日提示继续保留。",
     "Telegram/SourceFiles/test/": "已移除官方内置测试运行器，使用 extras/debug 的独立调试与模拟场景，不再同步。",
     "Telegram/SourceFiles/platform/platform_file_utilities.cpp": "官方测试运行器的系统启动拦截包装已移除，平台接口直接调用各系统实现。",
     "Telegram/SourceFiles/settings/sections/settings_premium_common.h": "会员与商业设置继续使用本地卡片，不引入官方摘要分组控件。",

@@ -97,7 +97,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 
 | 类型 | 键名 |
 |---|---|
-| 生日、头像 | `birthday-setup`、`birthday-contact`、`birthday-contacts`、`userpic` |
+| 生日、头像 | `birthday-contact`、`birthday-contacts`、`userpic` |
 | 会员、星币 | `premium-annual`、`premium-upgrade`、`premium-restore`、`premium-grace`、`credits` |
 | 推广、拍卖 | `custom`、`auction`、`auction-outbid` |
 | 登录、社区 | `auth`、`auth-multiple`、`community-requests`、`community-add` |

@@ -12,7 +12,6 @@ namespace ExtrasDebug {
 std::vector<DialogsPreviewEntry> dialogsPreviewEntries() {
 	return {
 		{ DialogsPreview::None, "none", tr::extras_DebugListNone(tr::now) },
-		{ DialogsPreview::BirthdaySetup, "birthday-setup", tr::extras_DebugListBirthdaySetup(tr::now) },
 		{ DialogsPreview::BirthdayContact, "birthday-contact", tr::extras_DebugListBirthdayContact(tr::now) },
 		{ DialogsPreview::BirthdayContacts, "birthday-contacts", tr::extras_DebugListBirthdayContacts(tr::now) },
 		{ DialogsPreview::Userpic, "userpic", tr::extras_DebugListUserpic(tr::now) },

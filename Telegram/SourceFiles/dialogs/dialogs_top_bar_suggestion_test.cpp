@@ -77,11 +77,6 @@ void fillSuggestion(
 	content->setHideCallback(std::move(hide));
 	content->setClickedCallback(action);
 	switch (preview) {
-	case Preview::BirthdaySetup:
-		content->setContent(
-			tr::lng_dialogs_suggestions_birthday_title(tr::now, tr::bold),
-			tr::lng_dialogs_suggestions_birthday_about(tr::now, tr::marked));
-		break;
 	case Preview::BirthdayContact:
 	case Preview::BirthdayContacts: {
 		const auto multiple = (preview == Preview::BirthdayContacts);

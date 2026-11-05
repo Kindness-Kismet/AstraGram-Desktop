@@ -17,8 +17,7 @@ namespace ExtrasDebug {
 
 enum class DialogsPreview {
 	None,
-	BirthdaySetup,
-	BirthdayContact,
+	BirthdayContact = 2,
 	BirthdayContacts,
 	Userpic,
 	PremiumAnnual,

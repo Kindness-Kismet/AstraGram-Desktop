@@ -12,7 +12,6 @@ namespace Dialogs::TopBarSuggestions {
 std::vector<Spec> AllSpecs() {
 	auto result = std::vector<Spec>();
 	result.push_back(MakeBirthdayContactsSpec());
-	result.push_back(MakeBirthdaySetupSpec());
 	result.push_back(MakeCustomPromoSpec());
 	result.push_back(MakeGiftAuctionsSpec());
 	result.push_back(MakeLowCreditsSubsSpec());
