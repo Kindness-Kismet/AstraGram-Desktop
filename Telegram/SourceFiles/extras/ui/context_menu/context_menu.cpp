@@ -784,144 +784,196 @@ void AddMessageDetailsAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 	});
 }
 
-void AddRepeatMessageAction(
-	not_null<Ui::PopupMenu*> menu,
-	HistoryItem *item,
-	HistoryView::Context context
-) {
-	const auto &settings = ExtrasSettings::getInstance();
-	if (!item || !item->isHistoryEntry() || item->isService() || item->isLocal() || item->id <= 0) {
-		return;
-	}
+namespace {
 
+bool canRepeatMessage(HistoryItem *item) {
+	if (!item || !item->isHistoryEntry() || item->isService()
+		|| item->isLocal() || item->id <= 0) {
+		return false;
+	}
 	const auto history = item->history();
 	const auto peer = history->peer;
-	if (!peer->isUser() && !peer->isChat() && !peer->isMegagroup() && !peer->isGigagroup()) {
-		return;
+	if (!peer->isUser() && !peer->isChat()
+		&& !peer->isMegagroup() && !peer->isGigagroup()) {
+		return false;
 	}
-
 	const auto thread = item->topic()
 		? static_cast<Data::Thread*>(item->topic())
 		: history.get();
-	// 复读只检查原消息需要的发送权限，贴纸限制不影响普通文字。
-	if (!Data::CanSend(thread, item->requiredSendRight(), false)) {
-		return;
-	}
-	const auto target = contextMenuTarget(settings.showRepeatMessageInContextMenu(), menu);
-	if (!target) {
-		return;
-	}
-	menu = target;
+	return Data::CanSend(thread, item->requiredSendRight(), false);
+}
 
+bool canRepeatMessageWithoutQuote(not_null<HistoryItem*> item) {
+	if (!canRepeatMessage(item)) {
+		return false;
+	}
+	const auto history = item->history();
+	if (item->richPage()) {
+		return history->session().premium()
+			&& history->peer->allowsForwarding()
+			&& !history->peer->isExtrasNoForwards()
+			&& !item->isExtrasNoForwards();
+	}
+	const auto media = item->media();
+	return (!media || media->webpage())
+		? !item->originalText().text.isEmpty()
+		: (media->photo() || media->document());
+}
+
+} // namespace
+
+void AddRepeatMessageAction(
+		not_null<Ui::PopupMenu*> menu,
+		HistoryItem *item,
+		HistoryView::Context context,
+		bool asGroup) {
+	if (!canRepeatMessage(item)) {
+		return;
+	}
+	const auto &settings = ExtrasSettings::getInstance();
+	const auto history = item->history();
+	const auto peer = history->peer;
 	const auto itemId = item->fullId();
+	const auto repeat = [=](
+			not_null<HistoryItem*> currentItem,
+			bool forceNoQuote) {
+		const auto session = &history->session();
+		const auto itemId = currentItem->fullId();
 
-	menu->addAction(
-		tr::extras_RepeatMessage(tr::now),
-		[=] {
-			const auto session = &history->session();
-			const auto currentItem = history->owner().message(itemId);
-			if (!currentItem) {
-				return;
+		const auto shiftPressed = base::IsShiftPressed();
+		const auto inRepliesView = (context == HistoryView::Context::Replies);
+		const auto replyTo = currentItem->replyTo();
+		const auto hasReply = (replyTo.messageId.msg != 0);
+		const auto preserveReply = inRepliesView ? hasReply : (hasReply && shiftPressed);
+
+		const auto sendAs = (peer->isUser() || peer->isChat() || history->peer->isMonoforum())
+			? nullptr
+			: session->sendAsPeers().resolveChosen(peer).get();
+
+		const auto noForwards = !history->peer->allowsForwarding()
+			|| history->peer->isExtrasNoForwards()
+			|| currentItem->isExtrasNoForwards();
+		const auto useNoQuote = forceNoQuote || shiftPressed
+			|| (inRepliesView && !history->peer->isForum())
+			|| noForwards;
+
+		auto action = Api::SendAction(
+			history,
+			Api::SendOptions{ .sendAs = sendAs });
+		if (history->peer->amMonoforumAdmin()) {
+			action.replyTo.monoforumPeerId = currentItem->sublistPeerId();
+		}
+		action.clearDraft = false;
+
+		applyGhostScheduling(session, action.options);
+
+		if (currentItem->topic()) {
+			action.replyTo.topicRootId = currentItem->topicRootId();
+		}
+
+		if (preserveReply) {
+			action.replyTo.messageId = replyTo.messageId;
+		}
+
+		if (!useNoQuote) {
+			const auto forwardDraft = Data::ForwardDraft{
+				.ids = MessageIdsList{ itemId },
+				.options = Data::ForwardOptions::PreserveInfo,
+			};
+			auto resolvedDraft = history->resolveForwardDraft(forwardDraft);
+
+			if (ExtrasForward::isFullExtrasForwardNeeded(currentItem)) {
+				crl::async([=]
+				{
+					ExtrasForward::forwardMessages(session, action, false, resolvedDraft);
+				});
+			} else if (ExtrasForward::isExtrasForwardNeeded(currentItem)) {
+				crl::async([=]
+				{
+					ExtrasForward::intelligentForward(session, action, resolvedDraft);
+				});
+			} else {
+				session->api().forwardMessages(std::move(resolvedDraft), action, [] {});
 			}
+			return;
+		}
 
-			const auto shiftPressed = base::IsShiftPressed();
-			const auto inRepliesView = (context == HistoryView::Context::Replies);
-			const auto replyTo = currentItem->replyTo();
-			const auto hasReply = (replyTo.messageId.msg != 0);
-			const auto preserveReply = inRepliesView ? hasReply : (hasReply && shiftPressed);
-
-			const auto sendAs = (peer->isUser() || peer->isChat() || history->peer->isMonoforum())
-				? nullptr
-				: session->sendAsPeers().resolveChosen(peer).get();
-
-			const auto noForwards = !history->peer->allowsForwarding()
-				|| history->peer->isExtrasNoForwards()
-				|| currentItem->isExtrasNoForwards();
-			const auto useNoQuote = shiftPressed
-				|| (inRepliesView && !history->peer->isForum())
-				|| noForwards;
-
-			auto action = Api::SendAction(
-				history,
-				Api::SendOptions{ .sendAs = sendAs });
-			if (history->peer->amMonoforumAdmin()) {
-				action.replyTo.monoforumPeerId = currentItem->sublistPeerId();
-			}
-			action.clearDraft = false;
-
-			applyGhostScheduling(session, action.options);
-
-			if (currentItem->topic()) {
-				action.replyTo.topicRootId = currentItem->topicRootId();
-			}
-
+		if (currentItem->richPage() && session->premium() && !noForwards) {
 			if (preserveReply) {
-				action.replyTo.messageId = replyTo.messageId;
-			}
-
-			if (!useNoQuote) {
-				const auto forwardDraft = Data::ForwardDraft{
-					.ids = MessageIdsList{ itemId },
-					.options = Data::ForwardOptions::PreserveInfo,
-				};
-				auto resolvedDraft = history->resolveForwardDraft(forwardDraft);
-
-				if (ExtrasForward::isFullExtrasForwardNeeded(currentItem)) {
-					crl::async([=]
-					{
-						ExtrasForward::forwardMessages(session, action, false, resolvedDraft);
-					});
-				} else if (ExtrasForward::isExtrasForwardNeeded(currentItem)) {
-					crl::async([=]
-					{
-						ExtrasForward::intelligentForward(session, action, resolvedDraft);
-					});
-				} else {
-					session->api().forwardMessages(std::move(resolvedDraft), action, [] {});
-				}
+				crl::async([=] {
+					ExtrasForward::forwardRichMessage(session, itemId, action);
+				});
 				return;
 			}
+			const auto forwardDraft = Data::ForwardDraft{
+				.ids = MessageIdsList{ itemId },
+				.options = Data::ForwardOptions::NoSenderNames,
+			};
+			auto resolvedDraft = history->resolveForwardDraft(forwardDraft);
+			session->api().forwardMessages(
+				std::move(resolvedDraft),
+				action,
+				[] {});
+			return;
+		}
 
-			if (currentItem->richPage() && session->premium() && !noForwards) {
-				if (preserveReply) {
-					crl::async([=] {
-						ExtrasForward::forwardRichMessage(session, itemId, action);
-					});
-					return;
-				}
-				const auto forwardDraft = Data::ForwardDraft{
-					.ids = MessageIdsList{ itemId },
-					.options = Data::ForwardOptions::NoSenderNames,
-				};
-				auto resolvedDraft = history->resolveForwardDraft(forwardDraft);
-				session->api().forwardMessages(
-					std::move(resolvedDraft),
-					action,
-					[] {});
-				return;
-			}
+		// 其余情况按原文与原媒体重新发送一条消息。
+		auto message = ApiWrap::MessageToSend(action);
+		if (!currentItem->originalText().text.isEmpty()) {
+			message.textWithTags = {
+				currentItem->originalText().text,
+				TextUtilities::ConvertEntitiesToTextTags(
+					currentItem->originalText().entities),
+			};
+		}
+		const auto media = currentItem->media();
+		if (!media || media->webpage()) {
+			session->api().sendMessage(std::move(message));
+			return;
+		}
+		if (const auto photo = media->photo()) {
+			Api::SendExistingPhoto(std::move(message), photo);
+		} else if (const auto document = media->document()) {
+			Api::SendExistingDocument(std::move(message), document);
+		}
+	};
 
-			// 其余情况按原文与原媒体重新发送一条消息。
-			auto message = ApiWrap::MessageToSend(action);
-			if (!currentItem->originalText().text.isEmpty()) {
-				message.textWithTags = {
-					currentItem->originalText().text,
-					TextUtilities::ConvertEntitiesToTextTags(
-						currentItem->originalText().entities),
-				};
+	if (const auto target = contextMenuTarget(
+			settings.showRepeatMessageInContextMenu(), menu)) {
+		target->addAction(tr::extras_RepeatMessage(tr::now), [=] {
+			const auto current = history->owner().message(itemId);
+			if (canRepeatMessage(current)) {
+				repeat(current, false);
 			}
-			const auto media = currentItem->media();
-			if (!media) {
-				session->api().sendMessage(std::move(message));
-				return;
+		}, &st::extrasRepeatMenuIcon);
+	}
+
+	if (settings.showRepeatMessageNoQuoteInContextMenu() == ContextMenuVisibility::Hidden) {
+		return;
+	}
+	const auto ids = asGroup
+		? history->owner().itemOrItsGroup(item)
+		: MessageIdsList{ itemId };
+	const auto resolveCopies = [=] {
+		auto items = history->owner().idsToItems(ids);
+		if (items.size() != ids.size()
+			|| !ranges::all_of(items, canRepeatMessageWithoutQuote)) {
+			return HistoryItemsList();
+		}
+		return items;
+	};
+	if (resolveCopies().empty()) {
+		return;
+	}
+	if (const auto target = contextMenuTarget(
+			settings.showRepeatMessageNoQuoteInContextMenu(), menu)) {
+		target->addAction(tr::extras_RepeatMessageNoQuote(tr::now), [=] {
+			// 点击时重新检查整组，避免消息删除或权限变化后只发送半组。
+			for (const auto current : resolveCopies()) {
+				repeat(current, true);
 			}
-			if (const auto photo = media->photo()) {
-				Api::SendExistingPhoto(std::move(message), photo);
-			} else if (const auto document = media->document()) {
-				Api::SendExistingDocument(std::move(message), document);
-			}
-		},
-		&st::extrasRepeatMenuIcon);
+		}, &st::extrasRepeatMenuIcon);
+	}
 }
 
 void AddReadUntilAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {

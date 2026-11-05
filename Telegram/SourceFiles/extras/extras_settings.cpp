@@ -583,6 +583,7 @@ void ExtrasSettings::validate() {
 	validateEnum(_showUserMessagesInContextMenu, defaults._showUserMessagesInContextMenu);
 	validateEnum(_showMessageDetailsInContextMenu, defaults._showMessageDetailsInContextMenu);
 	validateEnum(_showRepeatMessageInContextMenu, defaults._showRepeatMessageInContextMenu);
+	validateEnum(_showRepeatMessageNoQuoteInContextMenu, defaults._showRepeatMessageNoQuoteInContextMenu);
 	validateEnum(_showAddFilterInContextMenu, defaults._showAddFilterInContextMenu);
 
 	validateEnum(_translationProvider, defaults._translationProvider, 3);
@@ -1014,6 +1015,12 @@ void ExtrasSettings::setShowMessageDetailsInContextMenu(ContextMenuVisibility va
 void ExtrasSettings::setShowRepeatMessageInContextMenu(ContextMenuVisibility val) {
 	if (_showRepeatMessageInContextMenu.current() == val) return;
 	_showRepeatMessageInContextMenu = val;
+	save();
+}
+
+void ExtrasSettings::setShowRepeatMessageNoQuoteInContextMenu(ContextMenuVisibility val) {
+	if (_showRepeatMessageNoQuoteInContextMenu.current() == val) return;
+	_showRepeatMessageNoQuoteInContextMenu = val;
 	save();
 }
 
@@ -1510,6 +1517,7 @@ void to_json(nlohmann::json &j, const ExtrasSettings &s) {
 		{"showUserMessagesInContextMenu", s._showUserMessagesInContextMenu.current()},
 		{"showMessageDetailsInContextMenu", s._showMessageDetailsInContextMenu.current()},
 		{"showRepeatMessageInContextMenu", s._showRepeatMessageInContextMenu.current()},
+		{"showRepeatMessageNoQuoteInContextMenu", s._showRepeatMessageNoQuoteInContextMenu.current()},
 		{"showAddFilterInContextMenu", s._showAddFilterInContextMenu.current()},
 		{"showAttachButtonInMessageField", s._showAttachButtonInMessageField.current()},
 		{"showSendAsButtonInMessageField", s._showSendAsButtonInMessageField.current()},
@@ -1684,6 +1692,7 @@ void from_json(const nlohmann::json &j, ExtrasSettings &s) {
 	s._showUserMessagesInContextMenu = j.value("showUserMessagesInContextMenu", defaults._showUserMessagesInContextMenu.current());
 	s._showMessageDetailsInContextMenu = j.value("showMessageDetailsInContextMenu", defaults._showMessageDetailsInContextMenu.current());
 	s._showRepeatMessageInContextMenu = j.value("showRepeatMessageInContextMenu", defaults._showRepeatMessageInContextMenu.current());
+	s._showRepeatMessageNoQuoteInContextMenu = j.value("showRepeatMessageNoQuoteInContextMenu", defaults._showRepeatMessageNoQuoteInContextMenu.current());
 	s._showAddFilterInContextMenu = j.value("showAddFilterInContextMenu", defaults._showAddFilterInContextMenu.current());
 	s._showAttachButtonInMessageField = j.value("showAttachButtonInMessageField", defaults._showAttachButtonInMessageField.current());
 	s._showSendAsButtonInMessageField = j.value("showSendAsButtonInMessageField", defaults._showSendAsButtonInMessageField.current());

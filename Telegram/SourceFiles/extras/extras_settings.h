@@ -358,6 +358,7 @@ public:
 	[[nodiscard]] ContextMenuVisibility showUserMessagesInContextMenu() const { return _showUserMessagesInContextMenu.current(); }
 	[[nodiscard]] ContextMenuVisibility showMessageDetailsInContextMenu() const { return _showMessageDetailsInContextMenu.current(); }
 	[[nodiscard]] ContextMenuVisibility showRepeatMessageInContextMenu() const { return _showRepeatMessageInContextMenu.current(); }
+	[[nodiscard]] ContextMenuVisibility showRepeatMessageNoQuoteInContextMenu() const { return _showRepeatMessageNoQuoteInContextMenu.current(); }
 	[[nodiscard]] ContextMenuVisibility showAddFilterInContextMenu() const { return _showAddFilterInContextMenu.current(); }
 	[[nodiscard]] bool showAttachButtonInMessageField() const { return _showAttachButtonInMessageField.current(); }
 	[[nodiscard]] bool showSendAsButtonInMessageField() const { return _showSendAsButtonInMessageField.current(); }
@@ -481,6 +482,7 @@ public:
 	void setShowUserMessagesInContextMenu(ContextMenuVisibility val);
 	void setShowMessageDetailsInContextMenu(ContextMenuVisibility val);
 	void setShowRepeatMessageInContextMenu(ContextMenuVisibility val);
+	void setShowRepeatMessageNoQuoteInContextMenu(ContextMenuVisibility val);
 	void setShowAddFilterInContextMenu(ContextMenuVisibility val);
 	void setShowAttachButtonInMessageField(bool val);
 	void setShowSendAsButtonInMessageField(bool val);
@@ -638,6 +640,8 @@ public:
 	[[nodiscard]] rpl::producer<ContextMenuVisibility> showMessageDetailsInContextMenuChanges() const { return _showMessageDetailsInContextMenu.changes(); }
 	[[nodiscard]] rpl::producer<ContextMenuVisibility> showRepeatMessageInContextMenuValue() const { return _showRepeatMessageInContextMenu.value(); }
 	[[nodiscard]] rpl::producer<ContextMenuVisibility> showRepeatMessageInContextMenuChanges() const { return _showRepeatMessageInContextMenu.changes(); }
+	[[nodiscard]] rpl::producer<ContextMenuVisibility> showRepeatMessageNoQuoteInContextMenuValue() const { return _showRepeatMessageNoQuoteInContextMenu.value(); }
+	[[nodiscard]] rpl::producer<ContextMenuVisibility> showRepeatMessageNoQuoteInContextMenuChanges() const { return _showRepeatMessageNoQuoteInContextMenu.changes(); }
 	[[nodiscard]] rpl::producer<ContextMenuVisibility> showAddFilterInContextMenuValue() const { return _showAddFilterInContextMenu.value(); }
 	[[nodiscard]] rpl::producer<ContextMenuVisibility> showAddFilterInContextMenuChanges() const { return _showAddFilterInContextMenu.changes(); }
 	[[nodiscard]] rpl::producer<bool> showAttachButtonInMessageFieldValue() const { return _showAttachButtonInMessageField.value(); }
@@ -808,6 +812,7 @@ private:
 	rpl::variable<ContextMenuVisibility> _showUserMessagesInContextMenu = ContextMenuVisibility::VisibleInMoreMenu;
 	rpl::variable<ContextMenuVisibility> _showMessageDetailsInContextMenu = ContextMenuVisibility::VisibleInMoreMenu;
 	rpl::variable<ContextMenuVisibility> _showRepeatMessageInContextMenu = ContextMenuVisibility::Hidden;
+	rpl::variable<ContextMenuVisibility> _showRepeatMessageNoQuoteInContextMenu = ContextMenuVisibility::Hidden;
 	rpl::variable<ContextMenuVisibility> _showAddFilterInContextMenu = ContextMenuVisibility::Visible;
 	rpl::variable<bool> _showAttachButtonInMessageField = true;
 	rpl::variable<bool> _showSendAsButtonInMessageField = true;

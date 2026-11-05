@@ -251,6 +251,8 @@ Fields customFields() {
 		&S::showMessageDetailsInContextMenu, &S::setShowMessageDetailsInContextMenu, 0, 2);
 	addField(fields, "showRepeatMessageInContextMenu", settings,
 		&S::showRepeatMessageInContextMenu, &S::setShowRepeatMessageInContextMenu, 0, 2);
+	addField(fields, "showRepeatMessageNoQuoteInContextMenu", settings,
+		&S::showRepeatMessageNoQuoteInContextMenu, &S::setShowRepeatMessageNoQuoteInContextMenu, 0, 2);
 	addField(fields, "showAddFilterInContextMenu", settings,
 		&S::showAddFilterInContextMenu, &S::setShowAddFilterInContextMenu, 0, 2);
 	addField(fields, "showAttachButtonInMessageField", settings,

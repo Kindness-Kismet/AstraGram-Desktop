@@ -4096,7 +4096,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				ExtrasUi::AddRepeatMessageAction(
 					_menu,
 					item,
-					HistoryView::Context::History);
+					HistoryView::Context::History,
+					true);
 
 				if (HistoryView::CanAddOfferToMessage(item)) {
 					_menu->addAction(tr::lng_context_add_offer(tr::now), [=] {

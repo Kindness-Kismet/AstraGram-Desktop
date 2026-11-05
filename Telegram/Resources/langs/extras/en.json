@@ -590,6 +590,7 @@
   "SearchByIDResults": "Found by ID",
   "ContextCopyCallbackData": "Copy Callback Data",
   "RepeatMessage": "Repeat Message",
+  "RepeatMessageNoQuote": "Repeat Without Quote",
   "RegisterURLScheme": "Register URL Scheme",
   "PluginVersion_PC": "Version",
   "PluginNoDescription_PC": "No description provided.",
