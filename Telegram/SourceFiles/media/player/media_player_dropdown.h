@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+#include "base/timer.h"
 #include "media/media_common.h"
 #include "ui/rp_widget.h"
 
@@ -53,7 +54,7 @@ public:
 	void setShowOnHover(bool enabled);
 
 protected:
-	void showMenu();
+	virtual void showMenu();
 	[[nodiscard]] bool usesPopupMenu() const;
 
 private:
@@ -114,21 +115,38 @@ public:
 	[[nodiscard]] rpl::producer<float64> realtimeValue() const;
 	void reloadFromLookup();
 	void setQualities(std::vector<VideoQuality> qualities);
+	void setApplySpeed(Fn<void(float64)> apply);
+	void setClickCallback(Fn<void()> callback);
 
 private:
 	void fillMenu(not_null<Ui::Menu::Menu*> menu) override;
+	void showMenu() override;
 
 	[[nodiscard]] float64 speed() const;
 	[[nodiscard]] bool isDefault() const;
-	[[nodiscard]] float64 lastNonDefaultSpeed() const;
 	void toggleDefault();
 	void setSpeed(float64 newSpeed);
 	void setQuality(VideoQuality quality);
 	void save();
 
+	void handleSpeedBoostEvent(not_null<QEvent*> e);
+	void startSpeedBoost();
+	void stopSpeedBoost();
+	void commitSpeedBoost();
+
 	const style::MediaSpeedButton &_st;
 	Fn<float64(bool lastNonDefault)> _lookup;
 	Fn<void(float64)> _change;
+	Fn<void(float64)> _applySpeed;
+	Fn<void()> _clickCallback;
+	base::Timer _speedBoostTimer;
+	base::Timer _speedBoostSettleTimer;
+	QPoint _speedBoostLastPosition;
+	crl::time _speedBoostLastCommit = 0;
+	float64 _speedBoostSpeed = kSpedUpDefault;
+	float64 _speedBoostAppliedSpeed = kSpedUpDefault;
+	bool _speedBoostActive = false;
+	bool _speedBoostConsumedClick = false;
 	float64 _speed = kSpedUpDefault;
 	bool _isDefault = true;
 	rpl::event_stream<float64> _speedChanged;

@@ -51,6 +51,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Core {
 namespace {
 
+constexpr auto kLocalClientBufferLimit = 1024 * 1024;
+
 base::options::toggle OptionDeadlockDetector({
 	.id = kOptionDeadlockDetector,
 	.name = "Deadlock Detector",
@@ -274,6 +276,10 @@ int Sandbox::stopRunningInstance() {
 		LOG(("Cleanup: connect error %1.").arg(_localSocket.error()));
 		return 1;
 	}
+	if (!Platform::LocalSocketPeerAllowed(_localSocket.socketDescriptor())) {
+		LOG(("Cleanup: untrusted socket peer."));
+		return 1;
+	}
 	_localSocket.write("CMD:quit;");
 	if (!_localSocket.waitForBytesWritten(int(kCleanupIpcTimeout))) {
 		LOG(("Cleanup: could not send the quit command."));
@@ -417,6 +423,12 @@ bool Sandbox::event(QEvent *e) {
 }
 
 void Sandbox::socketConnected() {
+	if (!Platform::LocalSocketPeerAllowed(_localSocket.socketDescriptor())) {
+		LOG(("Socket %1 has an untrusted peer, quitting..."
+			).arg(_localServerName));
+		_localSocket.disconnectFromServer();
+		return Quit();
+	}
 	LOG(("Socket connected, this is not the first application instance, sending show command..."));
 	_secondInstance = true;
 
@@ -588,6 +600,13 @@ void Sandbox::socketDisconnected() {
 void Sandbox::newInstanceConnected() {
 	DEBUG_LOG(("Sandbox Info: new local socket connected"));
 	for (auto client = _localServer.nextPendingConnection(); client; client = _localServer.nextPendingConnection()) {
+		if (!Platform::LocalSocketPeerAllowed(client->socketDescriptor())) {
+			LOG(("Sandbox Warning: local socket client of another user "
+				"rejected."));
+			client->close();
+			client->deleteLater();
+			continue;
+		}
 		_localClients.push_back(LocalClient{ .socket = client });
 		connect(
 			client,
@@ -627,6 +646,12 @@ void Sandbox::readClients() {
 			continue;
 		}
 		client->buffer.append(socket->readAll());
+		if (client->buffer.size() > kLocalClientBufferLimit) {
+			LOG(("Sandbox Error: local socket client buffer overflow."));
+			client->buffer.clear();
+			socket->abort(); // emits disconnected, so client is gone now
+			continue;
+		}
 		if (client->buffer.size()) {
 			QString cmds(QString::fromLatin1(client->buffer));
 			int32 from = 0, l = cmds.length();
@@ -845,6 +870,10 @@ bool Sandbox::notify(QObject *receiver, QEvent *e) {
 	if (e->type() == QEvent::UpdateRequest) {
 		const auto weak = QPointer<QObject>(receiver);
 		_widgetUpdateRequests.fire({});
+		// WHY: main queue tasks drained above entered from the event loop at
+		// this level, else paint events below would run postponed calls
+		// right after themselves, while Qt still uses the painted widget.
+		checkForEmptyLoopNestingLevel();
 		if (!weak) {
 			return true;
 		}

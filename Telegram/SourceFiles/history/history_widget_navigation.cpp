@@ -338,7 +338,7 @@ void HistoryWidget::showHistory(
 				if (const auto &info = user->botInfo) {
 					if (startBot || clearMaybeSendStart()) {
 						if (startBot && wasState.key) {
-							info->inlineReturnTo = wasState;
+							info->setInlineReturnTo(wasState);
 						}
 						sendBotStartCommand();
 						_history->clearLocalDraft(MsgId(), PeerId());
@@ -447,6 +447,10 @@ void HistoryWidget::showHistory(
 		) | rpl::on_next([=] {
 			updateControlsGeometry();
 		}, _contactStatus->bar().lifetime());
+		const auto settingsPeer = _peer->migrateToOrMe();
+		if (!settingsPeer->barSettings()) {
+			session().api().requestPeerSettings(settingsPeer);
+		}
 
 		refreshGiftToChannelShown();
 		refreshDirectMessageShown();
@@ -544,7 +548,6 @@ void HistoryWidget::showHistory(
 				sticker,
 				Api::MessageToSend(prepareSendAction({})));
 		}, _list->lifetime());
-		_list->show();
 
 		if (const auto channel = _peer->asChannel()) {
 			channel->updateFull();
@@ -612,7 +615,7 @@ void HistoryWidget::showHistory(
 				if (startBot
 					|| (!_history->isEmpty() && clearMaybeSendStart())) {
 					if (startBot && wasState.key) {
-						info->inlineReturnTo = wasState;
+						info->setInlineReturnTo(wasState);
 					}
 					sendBotStartCommand();
 				}
@@ -722,9 +725,11 @@ void HistoryWidget::setHistory(History *history) {
 		const auto wasMigrated = base::take(_migrated);
 		unloadHeavyViewParts(wasHistory);
 		unloadHeavyViewParts(wasMigrated);
-		if (const auto wasCreatingBotTopic = base::take(_creatingBotTopic)) {
-			wasCreatingBotTopic->forum()->discardCreatingId(
-				wasCreatingBotTopic->rootId());
+		if (const auto wasCreatingBotTopic = base::take(_creatingBotTopic).get()) {
+			if (wasCreatingBotTopic->creating()) {
+				wasCreatingBotTopic->forum()->discardCreatingId(
+					wasCreatingBotTopic->rootId());
+			}
 		}
 	}
 	if (history) {

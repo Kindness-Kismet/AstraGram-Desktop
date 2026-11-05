@@ -691,6 +691,8 @@ private:
 	rpl::lifetime _sessionLifetime;
 	rpl::lifetime _threadFieldVisibleLifetime;
 	rpl::lifetime _uploaderSubscriptions;
+	// 先结束录音状态订阅，再析构回调访问的成员。
+	rpl::lifetime _recordingStateLifetime;
 
 };
 

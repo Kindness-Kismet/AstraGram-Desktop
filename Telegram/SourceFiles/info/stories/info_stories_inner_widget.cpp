@@ -10,7 +10,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "boxes/share_box.h"
 #include "data/data_peer.h"
-#include "data/data_saved_music.h"
 #include "data/data_session.h"
 #include "data/data_stories.h"
 #include "data/data_user.h"
@@ -529,7 +528,6 @@ base::weak_qptr<Ui::RpWidget> InnerWidget::createPinnedToTop(
 		});
 	content->backRequest(
 	) | rpl::start_to_stream(_backClicks, content->lifetime());
-	_topBarColor = content->edgeColor();
 	return base::make_weak(not_null<Ui::RpWidget*>{ content });
 }
 

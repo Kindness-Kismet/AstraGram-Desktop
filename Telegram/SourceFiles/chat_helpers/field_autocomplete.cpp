@@ -46,7 +46,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/widgets/tooltip.h"
-#include "ui/wrap/padding_wrap.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
 #include "ui/ui_utility.h"
@@ -117,6 +116,7 @@ public:
 		FieldAutocomplete::ChooseMethod method,
 		int index,
 		Api::SendOptions options = {}) const;
+	void startPressDragSelect();
 
 	void setSendMenuDetails(Fn<SendMenu::Details()> &&callback);
 	void rowsUpdated();
@@ -188,6 +188,7 @@ private:
 	bool _mouseSelection = false;
 	bool _overDelete = false;
 	bool _previewShown = false;
+	bool _dragSelect = false;
 
 	const std::unique_ptr<Ui::PathShiftGradient> _pathGradient;
 	StickerPremiumMark _premiumMark;
@@ -851,23 +852,6 @@ void FieldAutocomplete::rowsUpdated(
 	_inner->rowsUpdated();
 }
 
-void FieldAutocomplete::createEphemeralHint(QRect rect) {
-	const auto parent = parentWidget();
-	_ephemeralHint = base::make_unique_q<Ui::ImportantTooltip>(
-		parent,
-		object_ptr<Ui::PaddingWrap<Ui::FlatLabel>>(
-			parent,
-			Ui::MakeNiceTooltipLabel(
-				parent,
-				tr::lng_ephemeral_command_tooltip(Ui::Text::WithEntities),
-				st::dialogsStoriesTooltipMaxWidth,
-				st::ttlMediaImportantTooltipLabel),
-			st::defaultImportantTooltip.padding),
-		st::dialogsStoriesTooltip);
-	_ephemeralHint->pointAt(rect, RectPart::Top);
-	_ephemeralHint->toggleAnimated(true);
-}
-
 void FieldAutocomplete::ephemeralIconHovered(QRect iconRect) {
 	const auto parent = parentWidget();
 	if (iconRect.isEmpty() || !parent || isHidden() || _hiding) {
@@ -880,26 +864,6 @@ void FieldAutocomplete::ephemeralIconHovered(QRect iconRect) {
 		_ephemeralHint->toggleAnimated(true);
 	} else {
 		_ephemeralHintTimer.callOnce(kEphemeralHintHoverDelay);
-	}
-}
-
-void FieldAutocomplete::showPendingEphemeralHint() {
-	if (_ephemeralHintRect.isEmpty() || isHidden() || _hiding) {
-		return;
-	}
-	if (_ephemeralHint) {
-		_ephemeralHint->pointAt(_ephemeralHintRect, RectPart::Top);
-		_ephemeralHint->toggleAnimated(true);
-	} else {
-		createEphemeralHint(_ephemeralHintRect);
-	}
-}
-
-void FieldAutocomplete::hideEphemeralHint() {
-	_ephemeralHintRect = QRect();
-	_ephemeralHintTimer.cancel();
-	if (_ephemeralHint) {
-		_ephemeralHint->toggleAnimated(false);
 	}
 }
 
@@ -1046,6 +1010,12 @@ int FieldAutocomplete::innerBottom() const {
 
 bool FieldAutocomplete::chooseSelected(ChooseMethod method) const {
 	return _inner->chooseSelected(method);
+}
+
+void FieldAutocomplete::startPressDragSelect() {
+	if (_inner && !_inner->isHidden()) {
+		_inner->startPressDragSelect();
+	}
 }
 
 void FieldAutocomplete::setSendMenuDetails(
@@ -1667,12 +1637,32 @@ void FieldAutocomplete::Inner::mousePressEvent(QMouseEvent *e) {
 	}
 }
 
+void FieldAutocomplete::Inner::startPressDragSelect() {
+	if (_dragSelect || isHidden()) {
+		return;
+	}
+	_dragSelect = true;
+	selectByMouse(QCursor::pos());
+	grabMouse();
+}
+
 void FieldAutocomplete::Inner::mouseReleaseEvent(QMouseEvent *e) {
 	_previewTimer.cancel();
 
 	const auto pressed = std::exchange(_down, -1);
 
 	selectByMouse(e->globalPos());
+
+	if (_dragSelect) {
+		_dragSelect = false;
+		if (mouseGrabber() == this) {
+			releaseMouse();
+		}
+		if (_sel >= 0 && _srows->empty()) {
+			chooseSelected(FieldAutocomplete::ChooseMethod::ByClick);
+		}
+		return;
+	}
 
 	if (_previewShown) {
 		_previewShown = false;

@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "base/call_delayed.h"
 #include "base/base_file_utilities.h"
+#include "base/qthelp_regex.h"
 #include "base/qthelp_url.h"
 #include "base/random.h"
 #include "base/timer_rpl.h"
@@ -39,6 +40,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_document_media.h"
 #include "data/data_emoji_statuses.h"
 #include "data/data_file_origin.h"
+#include "data/data_location.h"
 #include "data/data_peer_bot_command.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
@@ -74,6 +76,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/controls/userpic_button.h"
 #include "ui/delayed_activation.h"
 #include "ui/effects/ripple_animation.h"
+#include "ui/image/svg_safety.h"
 #include "ui/painter.h"
 #include "ui/text/text_custom_emoji.h"
 #include "ui/text/text_utilities.h"
@@ -87,6 +90,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/popup_menu.h"
 #include "wallet/wallet_panel.h"
 #include "wallet/wallet_session.h"
+#include "wallet/wallet_ton_connect_link.h"
 #include "wallet/wallet_user_addresses.h"
 #include "webview/webview_dialog.h"
 #include "webview/webview_interface.h"
@@ -113,6 +117,41 @@ namespace {
 constexpr auto kProlongTimeout = 60 * crl::time(1000);
 constexpr auto kRefreshBotsTimeout = 60 * 60 * crl::time(1000);
 constexpr auto kPopularAppBotsLimit = 100;
+
+[[nodiscard]] bool LocalUriRequiresUserAction(
+		not_null<Main::Session*> session,
+		const QString &local) {
+	if (local.startsWith(u"ton://"_q, Qt::CaseInsensitive)
+		|| local.startsWith(u"tonsite://"_q, Qt::CaseInsensitive)) {
+		return true;
+	} else if (!local.startsWith(u"tg://"_q, Qt::CaseInsensitive)) {
+		return false;
+	}
+	using namespace qthelp;
+	const auto options = RegExOption::CaseInsensitive;
+	const auto command = QStringView(local).trimmed().mid(5);
+	if (regex_match(u"^sendgrams/?(\\?.+)?(#|$)"_q, command, options)) {
+		return true;
+	}
+	const auto resolve = regex_match(
+		u"^resolve/?\\?(.+)(#|$)"_q,
+		command,
+		options);
+	if (!resolve) {
+		return false;
+	}
+	const auto params = url_parse_params(
+		resolve->captured(1),
+		UrlParamNameTransform::ToLower);
+	const auto domain = params.value(u"domain"_q);
+	if (params.size() == 1
+		&& Wallet::IsOldWalletBotUsername(session, domain)) {
+		return true;
+	}
+	return !domain.compare(u"sendgrams"_q, Qt::CaseInsensitive)
+		&& Wallet::TonConnectStartParamQuery(
+			params.value(u"startapp"_q)).has_value();
+}
 
 [[nodiscard]] QImage PaintButtonEmojiFrame(
 		Ui::Text::CustomEmoji &emoji,
@@ -916,7 +955,7 @@ void MenuBotIcon::validate() {
 		if (!_media || !_media->loaded()) {
 			return;
 		}
-		auto icon = QSvgRenderer(_media->bytes());
+		auto icon = QSvgRenderer(Images::SanitizeSvg(_media->bytes()));
 		_mask = QImage(wanted, QImage::Format_ARGB32_Premultiplied);
 		_mask.setDevicePixelRatio(style::DevicePixelRatio());
 		_mask.fill(Qt::transparent);
@@ -978,6 +1017,7 @@ WebViewInstance::WebViewInstance(WebViewDescriptor &&descriptor)
 , _session(&descriptor.bot->session())
 , _bot(descriptor.bot)
 , _context(ResolveContext(_bot, std::move(descriptor.context)))
+, _contextThread(_context.dialogsEntryState.key.thread())
 , _button(std::move(descriptor.button))
 , _source(std::move(descriptor.source))
 , _api(&_session->mtp()) {
@@ -1654,7 +1694,7 @@ void WebViewInstance::botDownloadsAction(
 }
 
 bool WebViewInstance::botHandleLocalUri(QString uri, bool keepOpen) {
-	const auto local = Core::TryConvertUrlToLocal(uri);
+	const auto local = Core::TryConvertUrlToLocal(uri).left(8192);
 	if (Core::InternalPassportOrOAuthLink(local)) {
 		return true;
 	} else if (!local.startsWith(u"tg://"_q, Qt::CaseInsensitive)
@@ -1663,25 +1703,32 @@ bool WebViewInstance::botHandleLocalUri(QString uri, bool keepOpen) {
 		&& !local.startsWith(u"ton://"_q, Qt::CaseInsensitive)) {
 		return false;
 	}
-	const auto bot = _bot;
-	const auto context = std::make_shared<WebViewContext>(_context);
-	if (!keepOpen) {
-		botClose();
-	}
-	crl::on_main([=] {
-		if (bot->session().windows().empty()) {
-			Core::App().domain().activate(&bot->session().account());
+	const auto open = crl::guard(this, [=] {
+		const auto bot = _bot;
+		const auto context = std::make_shared<WebViewContext>(_context);
+		if (!keepOpen) {
+			botClose();
 		}
-		const auto window = !bot->session().windows().empty()
-			? bot->session().windows().front().get()
-			: nullptr;
-		context->controller = window;
-		const auto variant = QVariant::fromValue(ClickHandlerContext{
-			.sessionWindow = window,
-			.botWebviewContext = context,
+		crl::on_main([=] {
+			if (bot->session().windows().empty()) {
+				Core::App().domain().activate(&bot->session().account());
+			}
+			const auto window = !bot->session().windows().empty()
+				? bot->session().windows().front().get()
+				: nullptr;
+			context->controller = window;
+			const auto variant = QVariant::fromValue(ClickHandlerContext{
+				.sessionWindow = window,
+				.botWebviewContext = context,
+			});
+			UrlClickHandler::Open(local, variant);
 		});
-		UrlClickHandler::Open(local, variant);
 	});
+	if (LocalUriRequiresUserAction(_session, local)) {
+		_panel->requestOpenLink(uri, open);
+	} else {
+		open();
+	}
 	return true;
 }
 
@@ -1880,7 +1927,7 @@ void WebViewInstance::botSwitchInlineQuery(
 		|| !controller) {
 		return;
 	} else if (!types) {
-		if (_context.dialogsEntryState.key.owningHistory()) {
+		if (_contextThread) {
 			controller->switchInlineQuery(
 				_context.dialogsEntryState,
 				_bot,
@@ -2373,6 +2420,16 @@ void WebViewInstance::botVerifyAge(int age) {
 	}
 }
 
+void WebViewInstance::botOpenTermsOfService() {
+	HiddenUrlClickHandler::OpenTranslated(
+		tr::lng_mini_apps_tos_url,
+		QVariant::fromValue(ClickHandlerContext{
+			.sessionWindow = _context.controller,
+			.show = uiShow(),
+			.peer = _bot,
+		}));
+}
+
 void WebViewInstance::botOpenPrivacyPolicy() {
 	const auto bot = _bot;
 	const auto weak = _context.controller;
@@ -2423,7 +2480,10 @@ void WebViewInstance::botOpenPrivacyPolicy() {
 		}
 	}
 	if (!sendCommand()) {
-		openUrl(tr::lng_profile_bot_privacy_url(tr::now));
+		HiddenUrlClickHandler::OpenTranslatedWithIv(
+			_session,
+			tr::lng_profile_bot_privacy_url,
+			makeOtherContext(false));
 	}
 }
 
@@ -2999,10 +3059,10 @@ void ChooseAndSendLocation(
 	}
 	struct State {
 		SendPaymentHelper sendPayment;
-		Fn<void(Data::InputVenue, Api::SendAction)> send;
+		Fn<void(Data::LocationPoint, Api::SendAction)> send;
 	};
 	const auto state = std::make_shared<State>();
-	state->send = [=](Data::InputVenue venue, Api::SendAction action) {
+	state->send = [=](Data::LocationPoint point, Api::SendAction action) {
 		const auto strong = weak.get();
 		const auto ephemeralReply = session->ephemeralMessages()
 			.isEphemeralBotReply(action.replyTo.messageId);
@@ -3011,7 +3071,7 @@ void ChooseAndSendLocation(
 				if (const auto onstack = state->send) {
 					auto copy = action;
 					copy.options.starsApproved = stars;
-					onstack(venue, copy);
+					onstack(point, copy);
 				}
 			};
 			const auto checked = state->sendPayment.check(
@@ -3025,21 +3085,15 @@ void ChooseAndSendLocation(
 			}
 		}
 		state->send = nullptr;
-		if (venue.justLocation()) {
-			Api::SendLocation(action, venue.lat, venue.lon);
-		} else {
-			Api::SendVenue(action, venue);
-		}
+		Api::SendLocation(action, point.lat(), point.lon());
 	};
-	const auto callback = [=](Data::InputVenue venue) {
-		state->send(venue, action);
+	const auto callback = [=](Data::LocationPoint point, QString) {
+		state->send(point, action);
 	};
 	const auto picker = Ui::LocationPicker::Show({
 		.parent = controller->widget(),
 		.config = config,
 		.chooseLabel = tr::lng_maps_point_send(),
-		.recipient = action.history->peer,
-		.session = session,
 		.callback = crl::guard(session, callback),
 		.quit = [] { Shortcuts::Launch(Shortcuts::Command::Quit); },
 		.storageId = session->local().resolveStorageIdBots(),

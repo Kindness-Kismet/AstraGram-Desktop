@@ -359,34 +359,6 @@ object_ptr<Ui::BoxContent> EditCloudPasswordBox(
 	return result;
 }
 
-void RemoveCloudPassword(not_null<Window::SessionController*> controller) {
-	const auto session = &controller->session();
-	const auto current = session->api().cloudPassword().stateCurrent();
-	Assert(current.has_value());
-
-	if (!current->hasPassword) {
-		session->api().cloudPassword().clearUnconfirmedPassword();
-		return;
-	}
-	auto fields = PasscodeBox::CloudFields::From(*current);
-	fields.turningOff = true;
-	auto box = Box<PasscodeBox>(session, fields);
-
-	rpl::merge(
-		box->newPasswordSet() | rpl::to_empty,
-		box->passwordReloadNeeded()
-	) | rpl::on_next([=] {
-		session->api().cloudPassword().reload();
-	}, box->lifetime());
-
-	box->clearUnconfirmedPassword(
-	) | rpl::on_next([=] {
-		session->api().cloudPassword().clearUnconfirmedPassword();
-	}, box->lifetime());
-
-	controller->show(std::move(box));
-}
-
 object_ptr<Ui::BoxContent> CloudPasswordAppOutdatedBox() {
 	const auto callback = [=](Fn<void()> &&close) {
 		Core::UpdateApplication();

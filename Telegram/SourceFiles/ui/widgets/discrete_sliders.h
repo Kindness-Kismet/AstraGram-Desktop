@@ -48,8 +48,6 @@ public:
 	void setCrossFadeEnabled(bool enabled);
 	void selectSection(int index);
 
-	void setAdditionalContentWidthToSection(int index, int width);
-
 	[[nodiscard]] rpl::producer<int> sectionActivated() const {
 		return _sectionActivated.events();
 	}

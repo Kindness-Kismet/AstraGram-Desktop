@@ -30,7 +30,6 @@ object_ptr<Ui::BoxContent> EditCloudPasswordBox(
 	std::shared_ptr<Ui::Show> show = nullptr);
 object_ptr<Ui::BoxContent> ClearPaymentInfoBox(
 	not_null<::Main::Session*> session);
-void RemoveCloudPassword(not_null<Window::SessionController*> session);
 object_ptr<Ui::BoxContent> CloudPasswordAppOutdatedBox();
 
 not_null<Ui::SettingsButton*> AddPrivacyButton(

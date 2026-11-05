@@ -188,6 +188,7 @@ public:
 	void dependencyItemRemoved(not_null<HistoryItem*> dependency);
 	void dependencyStoryRemoved(not_null<Data::Story*> dependency);
 	void updateDependencyItem();
+	void updateDependentServiceText();
 	[[nodiscard]] bool notificationReady() const;
 	[[nodiscard]] PeerData *specialNotificationPeer() const;
 	void checkStoryForwardInfo();
@@ -202,6 +203,7 @@ public:
 	[[nodiscard]] bool isGuestChatBotMessage() const;
 	[[nodiscard]] UserData *getMessageBot() const;
 	[[nodiscard]] bool hideLinks() const;
+	[[nodiscard]] bool hideInlineKeyboard() const;
 	[[nodiscard]] bool isHistoryEntry() const;
 	[[nodiscard]] bool isAdminLogEntry() const;
 	[[nodiscard]] bool isFromScheduled() const;
@@ -723,6 +725,7 @@ private:
 	void setupForwardedComponent(const CreateConfig &config);
 	void applyInitialEffectWatched();
 
+	[[nodiscard]] MsgId notificationTopicRootId() const;
 	[[nodiscard]] bool generateLocalEntitiesByReply() const;
 	[[nodiscard]] TextWithEntities withLocalEntities(
 		const TextWithEntities &textWithEntities) const;
@@ -756,7 +759,6 @@ private:
 	[[nodiscard]] HistoryServiceDependentData *GetServiceDependentData();
 	[[nodiscard]] auto GetServiceDependentData() const
 		-> const HistoryServiceDependentData *;
-	void updateDependentServiceText();
 	void updateServiceDependent(bool force = false);
 	void setServiceText(PreparedServiceText &&prepared);
 
@@ -861,6 +863,8 @@ private:
 	int _boostsApplied = 0;
 	int _starsPaid = 0;
 	BusinessShortcutId _shortcutId = 0;
+	// 使用服务消息外观的普通消息仍可更新内容。
+	bool _isServiceMessage = false;
 
 	MessageGroupId _groupId = MessageGroupId();
 	EffectId _effectId = 0;

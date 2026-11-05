@@ -79,6 +79,15 @@ void SubsectionTabs::attach(not_null<TopBarWidget*> topBar) {
 void SubsectionTabs::track() {
 	using Event = Data::Session::ChatListEntryRefresh;
 	if (const auto forum = _history->peer->forum()) {
+		forum->topicDestroyed(
+		) | rpl::on_next([=](not_null<Data::ForumTopic*> topic) {
+			if (_active == topic) {
+				_active = _history;
+			}
+			closePanel();
+			scheduleRefresh();
+		}, _lifetime);
+
 		forum->topicsList()->unreadStateChanges(
 		) | rpl::on_next([=] {
 			scheduleRefresh();

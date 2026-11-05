@@ -833,7 +833,21 @@ void HistoryWidget::messagesFailed(const MTP::Error &error, int requestId) {
 		|| error.type() == u"CHANNEL_PUBLIC_GROUP_NA"_q
 		|| error.type() == u"USER_BANNED_IN_CHANNEL"_q) {
 		auto was = _peer;
+		auto hiddenList = QPointer<HistoryInner>();
+		if (requestId && _delayedShowAtRequest == requestId) {
+			_delayedShowAtRequest = 0;
+			if (_list && _list->isHidden()) {
+				hiddenList = _list;
+			}
+		}
 		closeCurrent();
+		if (hiddenList) {
+			crl::on_main(hiddenList, [=] {
+				if (_list == hiddenList) {
+					resumeListReveal();
+				}
+			});
+		}
 		const auto wasAccount = not_null(&was->account());
 		if (const auto primary = Core::App().windowFor(wasAccount)) {
 			primary->showToast(was->isMegagroup()
@@ -857,6 +871,7 @@ void HistoryWidget::messagesFailed(const MTP::Error &error, int requestId) {
 		closeCurrent();
 	} else if (_delayedShowAtRequest == requestId) {
 		_delayedShowAtRequest = 0;
+		resumeListReveal();
 	}
 }
 
@@ -880,6 +895,7 @@ void HistoryWidget::messagesReceived(
 			_firstLoadRequest = 0;
 		} else if (_delayedShowAtRequest == requestId) {
 			_delayedShowAtRequest = 0;
+			resumeListReveal();
 		}
 		return;
 	}

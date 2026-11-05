@@ -21,6 +21,30 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Iv::Editor {
 using namespace StateDetails;
 
+State::LeafPath State::shiftLeafAfterRemovedSelection(
+		const Markdown::PreparedEditSelection &selection,
+		LeafPath leaf) const {
+	if (selection.kind != PreparedEditSelectionKind::Blocks) {
+		return leaf;
+	}
+	const auto range = validateBlockRange(selection.blocks);
+	if (!range || leafWillBeRemoved(leaf, *range)) {
+		return leaf;
+	}
+	auto shifted = leaf.block;
+	for (auto i = range->till; i != range->from;) {
+		--i;
+		if (!ShiftBlockPathAfterRemovedBlock(shifted, BlockPath{
+				.container = range->container,
+				.index = i,
+			})) {
+			return leaf;
+		}
+	}
+	leaf.block = shifted;
+	return leaf;
+}
+
 std::optional<int> State::removeStructuralSelection(
 		const Markdown::PreparedEditSelection &selection,
 		bool forward) {

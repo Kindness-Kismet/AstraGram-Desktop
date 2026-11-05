@@ -1164,4 +1164,20 @@ std::vector<MessageSubItem> ActiveMessageSubItems(
 	return result;
 }
 
+HistoryItem *AccessibilityItemAtIndex(
+		int index,
+		const std::vector<Element*> &elements,
+		int barIndex) {
+	// 未读分隔条不对应消息，列表位移后也不能映射到锚定消息。
+	if (index < 0 || (barIndex >= 0 && index == barIndex)) {
+		return nullptr;
+	}
+	const auto elementIndex = (barIndex >= 0 && index > barIndex)
+		? (index - 1)
+		: index;
+	return (elementIndex < int(elements.size()))
+		? elements[elementIndex]->data().get()
+		: nullptr;
+}
+
 } // namespace HistoryView

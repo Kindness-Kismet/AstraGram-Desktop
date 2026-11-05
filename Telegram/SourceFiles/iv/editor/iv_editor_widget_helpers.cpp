@@ -207,6 +207,38 @@ void RemoveBlockLevelEntities(TextWithEntities *text) {
 	return std::nullopt;
 }
 
+[[nodiscard]] auto CaptureCommittedFieldSelection(
+		const Ui::InputField &field,
+		const State &state,
+		const Widget &widget,
+		int (Widget::*richOffset)(const TextWithEntities &, int) const)
+-> std::optional<CommittedFieldSelectionCapture> {
+	if (field.isHidden()
+		|| (state.activeFieldMode() != State::FieldMode::Rich)) {
+		return std::optional<CommittedFieldSelectionCapture>();
+	}
+	const auto leaf = state.activeLeafPath();
+	if (!leaf) {
+		return std::optional<CommittedFieldSelectionCapture>();
+	}
+	const auto text = ConvertEditorTagsToRichText(
+		field.getTextWithAppliedMarkdown());
+	const auto cursor = field.textCursor();
+	const auto length = int(text.text.size());
+	return std::make_optional(CommittedFieldSelectionCapture{
+		.leaf = *leaf,
+		.text = text,
+		.anchorOffset = std::clamp(
+			(widget.*richOffset)(text, cursor.anchor()),
+			0,
+			length),
+		.cursorOffset = std::clamp(
+			(widget.*richOffset)(text, cursor.position()),
+			0,
+			length),
+	});
+}
+
 [[nodiscard]] std::optional<CommittedFieldSelectionRestore>
 MapCommittedFieldSelectionAfterCommit(
 		const State &state,

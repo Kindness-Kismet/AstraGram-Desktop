@@ -159,6 +159,11 @@ public:
 	void cancelSeeking(AudioMsgId::Type type);
 
 	void updatePlaybackSpeed();
+	void setPlaybackSpeed(float64 speed);
+#ifdef _DEBUG
+	[[nodiscard]] std::optional<float64> playbackSpeedForDebug(
+		AudioMsgId::Type type) const;
+#endif
 
 	[[nodiscard]] bool nextAvailable(AudioMsgId::Type type) const;
 	[[nodiscard]] bool previousAvailable(AudioMsgId::Type type) const;

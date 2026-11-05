@@ -65,6 +65,9 @@ deactivate
 """,
 	"ffmpeg": r"""git clone -b n8.1.3 https://github.com/FFmpeg/FFmpeg.git ffmpeg
 cd ffmpeg
+for %%i in (..\patches\ffmpeg\*.patch) do (
+git apply "%%i" || exit /b 1
+)
 git apply ../patches/ffmpeg.patch
 SET PATH=%THIRDPARTY_DIR%\msys64\usr\bin;%PATH%
 SET CHERE_INVOKING=enabled_from_arguments

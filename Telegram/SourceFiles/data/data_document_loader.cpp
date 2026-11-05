@@ -6,6 +6,7 @@
 #include "data/data_streaming.h"
 #include "extras/data/media_cache_manager.h"
 #include "main/main_session.h"
+#include "platform/platform_file_utilities.h"
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "storage/storage_account.h"
@@ -17,6 +18,7 @@
 #include "boxes/abstract_box.h"
 
 #include <QtCore/QFile>
+#include <QtCore/QFileInfo>
 #include <QtCore/QSaveFile>
 
 namespace {
@@ -116,12 +118,14 @@ void DocumentData::saveLocalSource(const QString &toFile, bool autoLoading) {
 		auto file = QFile(toFile);
 		const auto bytes = local->media->bytes();
 		if (!file.open(QIODevice::WriteOnly)
-			|| file.write(bytes) != bytes.size()) {
+			|| file.write(bytes) != bytes.size()
+			|| !file.flush()) {
 			status = FileDownloadFailed;
 			_owner->documentLoadFail(this, true);
 			return;
 		}
 		file.close();
+		Platform::File::PostprocessDownloaded(QFileInfo(file).absoluteFilePath());
 		setLocation(Core::FileLocation(toFile));
 		return;
 	}
@@ -322,6 +326,7 @@ void DocumentData::save(
 			_owner->documentLoadFail(this, false);
 			return;
 		}
+		Platform::File::PostprocessDownloaded(QFileInfo(toFile).absoluteFilePath());
 		setLocation(Core::FileLocation(toFile));
 		session().local().writeFileLocation(mediaKey(), _location);
 		status = FileReady;
@@ -335,6 +340,10 @@ void DocumentData::save(
 		}
 	}
 	resetCancelled();
+
+	if (!_loader && toFile.isEmpty() && size > Storage::kMaxFileInMemory) {
+		return;
+	}
 
 	if (_loader) {
 		if (fromCloud == LoadFromCloudOrLocal) {
@@ -417,13 +426,18 @@ void DocumentData::handleLoaderUpdates() {
 			}));
 		} else if (error.failureReason == FailureReason::FileWriteFailure) {
 			if (!Core::App().settings().downloadPath().isEmpty()) {
-				Core::App().settings().setDownloadPathBookmark(QByteArray());
-				Core::App().settings().setDownloadPath(QString());
-				Core::App().saveSettingsDelayed();
 				InvokeQueued(qApp, [] {
-					Ui::show(
+					static auto box = base::weak_qptr<Ui::GenericBox>();
+					static auto nextWarningAt = crl::time();
+					const auto now = crl::now();
+					if (box || now < nextWarningAt) {
+						return;
+					}
+					nextWarningAt = now + 60 * crl::time(1000);
+					box = Ui::show(
 						Ui::MakeInformBox(
-							tr::lng_download_path_failed(tr::now)));
+							tr::lng_download_path_failed(tr::now)),
+						Ui::LayerOption::KeepOther);
 				});
 			}
 		}

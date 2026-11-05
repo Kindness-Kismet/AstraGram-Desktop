@@ -26,6 +26,7 @@ namespace Data {
 class ForumTopic;
 class SavedMessages;
 class SavedSublist;
+class Thread;
 struct ReactionId;
 } // namespace Data
 
@@ -44,7 +45,14 @@ struct Tag;
 } // namespace Downloads
 
 class ContentMemento;
+class Memento;
 class WrapWidget;
+
+struct MementoThreadLifetime {
+	Memento *memento = nullptr;
+	Fn<void(not_null<Data::Thread*>)> removeFromWrap;
+	rpl::lifetime lifetime;
+};
 
 class Memento final : public Window::SectionMemento {
 public:
@@ -72,7 +80,10 @@ public:
 		std::shared_ptr<Api::WhoReadList> whoReadIds,
 		FullMsgId contextId,
 		Data::ReactionId selected);
-	explicit Memento(std::vector<std::shared_ptr<ContentMemento>> stack);
+	explicit Memento(
+		std::vector<std::shared_ptr<ContentMemento>> stack,
+		std::vector<std::unique_ptr<MementoThreadLifetime>> threadLifetimes
+			= {});
 
 	object_ptr<Window::SectionWidget> createWidget(
 		QWidget *parent,
@@ -101,6 +112,13 @@ public:
 	}
 
 	static std::shared_ptr<Memento> Default(not_null<PeerData*> peer);
+	static std::shared_ptr<Memento> ProfileWithMediaTab(
+		not_null<PeerData*> peer,
+		Storage::SharedMediaType mediaTab);
+	[[nodiscard]] static std::unique_ptr<MementoThreadLifetime> WatchThread(
+		not_null<Data::Thread*> thread,
+		rpl::producer<> destroyed,
+		Fn<void(not_null<Data::Thread*>)> removeFromWrap = nullptr);
 
 	~Memento();
 
@@ -139,8 +157,14 @@ private:
 		not_null<Data::SavedSublist*> sublist,
 		Section section);
 
+	void removeThread(not_null<Data::Thread*> thread);
+	[[nodiscard]] bool hasDyingContent() const;
+	[[nodiscard]] History *removeDyingContent();
+
 	std::vector<std::shared_ptr<ContentMemento>> _stack;
 	std::optional<SettingsNavigationState> _settingsNavigationState;
+	std::vector<std::unique_ptr<MementoThreadLifetime>> _threadLifetimes;
+	std::vector<base::weak_ptr<Data::Thread>> _prunedThreads;
 	rpl::event_stream<> _removeRequests;
 	rpl::lifetime _lifetime;
 

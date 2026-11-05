@@ -41,12 +41,18 @@
     "Telegram/SourceFiles/ui/controls/download_bar.cpp": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。",
     "Telegram/SourceFiles/ui/controls/download_bar.h": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。",
     "Telegram/SourceFiles/test/": "已移除官方内置测试运行器，使用 extras/debug 的独立调试与模拟场景，不再同步。",
-    "Telegram/SourceFiles/platform/platform_file_utilities.cpp": "官方测试运行器的系统启动拦截包装已移除，平台接口直接调用各系统实现。"
+    "Telegram/SourceFiles/platform/platform_file_utilities.cpp": "官方测试运行器的系统启动拦截包装已移除，平台接口直接调用各系统实现。",
+    "Telegram/SourceFiles/settings/sections/settings_premium_common.h": "会员与商业设置继续使用本地卡片，不引入官方摘要分组控件。",
+    "Telegram/SourceFiles/ui/effects/message_sending_animation_controller.*": "消息入场使用本地展开后淡入，保留聊天列表内的滚动与生命周期修复，不恢复独立飞行控制器。",
+    "Telegram/SourceFiles/ui/effects/message_sending_text_flight.*": "消息入场使用本地展开后淡入，不引入输入框文字飞入气泡的绘制实现。",
+    "Telegram/SourceFiles/ui/effects/message_sending_history.*": "消息展开与位移由 history_view_item_animation 维护，相关逻辑按需适配到本地实现。",
+    "Telegram/SourceFiles/info/profile/info_profile_pills.*": "资料页继续使用本地音乐卡片和独立余额展示，不引入官方合并胶囊布局。"
   },
   "svgReplaced": {
     "Telegram/Resources/icons/**/*.png": "本地已改用同名 svg 图标，样式生成器只读 svg；官方重绘了图形时按需对照更新 svg。"
   },
   "notes": {
+    "Telegram/SourceFiles/core/core_settings.cpp": "保留 ASG1 配置头和本地字段布局。语言迁移不能套官方 Qt 5 阈值：本地 7.3.1 期间已从 Qt 5 切到 Qt 6，缺少明确方案时保留歧义编号。",
     "Telegram/build/prepare/prepare.py": "依赖配方固化在 scripts/build_support/recipes.py、recipes_arm64.py 与 recipes_rust.py，官方改动要对照同步到这些文件，只合并本文件不会影响构建。",
     "Telegram/build/qt_version.py": "两个 Windows 架构都固定用其中的 Qt 6 版本，不再选择 Qt 5；官方改 Qt 6 版本时同步 scripts/build_support/recipes.py 的 QT_VERSION，并确认补丁仓库有对应的 qtbase 补丁目录。",
     "Telegram/SourceFiles/history/view/history_view_subsection_tabs.cpp": "已改写为顶栏话题切换按钮与下拉面板，只保留单一布局；官方对话题标签的行为改动按需移植到 extras/features/topic_switcher，不恢复顶部、左侧、底部标签。",
@@ -54,7 +60,10 @@
     "Telegram/SourceFiles/core/": "已移除官方 test 运行器、-testagent 启动参数及沙箱测试调度接口；同步功能改动时不恢复测试接线，保留本项目 -debugprofile。",
     "Telegram/SourceFiles/platform/": "已移除官方测试运行器的启动拦截及专用崩溃处理；文件接口直接调用各平台实现，独立调试配置继续使用 cDebugProfile。",
     "Telegram/SourceFiles/data/data_document_loader.cpp": "已移除官方 test 目录的下载观测回调，不恢复 test_transfer 引用。",
-    "Telegram/SourceFiles/mtproto/mtp_instance.cpp": "已移除官方 test 目录的重试记录回调，不恢复 test_rpc_retry 引用。"
+    "Telegram/SourceFiles/mtproto/mtp_instance.cpp": "已移除官方 test 目录的重试记录回调，不恢复 test_rpc_retry 引用。",
+    "Telegram/SourceFiles/chat_helpers/spellchecker_locale_ids.h": "本地 7.3.1 期间同时存在 Qt 5、Qt 6 数据，只有明确早于 7.3.1 的 Windows x64 数据才可凭版本判断 Qt 5。",
+    "Telegram/SourceFiles/media/player/media_player_widget.cpp": "旧播放器已由 extras/features/music_player 替代，官方播放行为按需移植到本地播放器，不恢复旧窗口。",
+    "Telegram/SourceFiles/info/saved/info_saved_music_common.cpp": "本地资料音乐卡片仍依赖此文件；官方删除不跟随，调用方全部迁移后再清理。"
   },
   "deferred": {
     "Telegram/SourceFiles/core/update_checker.cpp": "暂缓删除旧格式更新包兼容：本项目发布流程仍以自有签名生成旧格式包，待配套发包流程迁移后再移除；解压与路径校验已采用新版共用实现。"

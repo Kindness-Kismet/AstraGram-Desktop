@@ -39,6 +39,7 @@ struct ThemeParams;
 namespace Window {
 namespace Theme {
 
+inline constexpr auto kThemeFileSizeLimit = 5 * 1024 * 1024;
 inline constexpr auto kThemeSchemeSizeLimit = 1024 * 1024;
 inline constexpr auto kThemeBackgroundSizeLimit = 4 * 1024 * 1024;
 
@@ -215,7 +216,6 @@ public:
 	}
 	[[nodiscard]] std::optional<QColor> colorForFill() const;
 	[[nodiscard]] QImage gradientForFill() const;
-	void recacheGradientForFill(QImage gradient);
 	[[nodiscard]] QImage createCurrentImage() const;
 	[[nodiscard]] bool tile() const;
 	[[nodiscard]] bool tileDay() const;

@@ -25,6 +25,10 @@ namespace Data {
 enum class SetupEmailState;
 } // namespace Data
 
+namespace Core {
+class Settings;
+} // namespace Core
+
 namespace Main {
 
 class SessionSettings final {
@@ -32,7 +36,10 @@ public:
 	SessionSettings();
 
 	[[nodiscard]] QByteArray serialize() const;
-	void addFromSerialized(const QByteArray &serialized);
+	void addFromSerialized(
+		const QByteArray &serialized,
+		int writerVersion,
+		Core::Settings &app);
 
 	void setSupportSwitch(Support::SwitchSettings value) {
 		_supportSwitch = value;

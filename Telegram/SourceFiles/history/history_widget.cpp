@@ -1104,6 +1104,7 @@ HistoryWidget::HistoryWidget(
 		| PeerUpdateFlag::ManagedBot
 		| PeerUpdateFlag::StarsPerMessage
 		| PeerUpdateFlag::GiftSettings
+		| PeerUpdateFlag::BarSettings
 	) | rpl::filter([=](const Data::PeerUpdate &update) {
 		if (update.peer.get() == _peer) {
 			return true;
@@ -1210,6 +1211,9 @@ HistoryWidget::HistoryWidget(
 				}
 			}
 		}
+		if ((flags & PeerUpdateFlag::BarSettings) && _list) {
+			_list->update();
+		}
 	}, lifetime());
 
 	using Type = Data::DefaultNotify;
@@ -1227,6 +1231,8 @@ HistoryWidget::HistoryWidget(
 		return !_showAnimation
 			&& (_history == query.item->history())
 			&& (query.item->mainView() != nullptr)
+			&& _list
+			&& !_list->isHidden()
 			&& isVisible();
 	}) | rpl::on_next([=](
 			const Data::Session::ItemVisibilityQuery &query) {
@@ -1284,15 +1290,16 @@ HistoryWidget::HistoryWidget(
 
 	session().api().sendActions(
 	) | rpl::filter([=](const Api::SendAction &action) {
-		if (_creatingBotTopic
-			&& action.history == _creatingBotTopic->owningHistory()
-			&& action.replyTo.topicRootId == _creatingBotTopic->rootId()) {
+		const auto creating = _creatingBotTopic.get();
+		if (creating
+			&& action.history == creating->owningHistory()
+			&& action.replyTo.topicRootId == creating->rootId()) {
 			// Guard 'this' (the call reads _creatingBotTopic) and re-check
 			// the topic: it may be gone or already handled by another call.
-			const auto weak = base::make_weak(_creatingBotTopic);
+			const auto weak = _creatingBotTopic;
 			Ui::PostponeCall(this, [=] {
 				using namespace HistoryView;
-				const auto topic = base::take(_creatingBotTopic);
+				const auto topic = base::take(_creatingBotTopic).get();
 				if (!topic || topic != weak.get()) {
 					return;
 				}

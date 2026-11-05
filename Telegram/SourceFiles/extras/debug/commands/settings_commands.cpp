@@ -255,6 +255,7 @@ const HandlerMap &SettingsHandlers() {
 		{u"settings.schema"_q, &settingsSchema},
 		{u"settings.get"_q, &settingsGet},
 		{u"settings.set"_q, &settingsSet},
+		{u"settings.verify-serialization"_q, &verifySettingsSerialization},
 		{u"language.get"_q, &languageGet},
 		{u"theme.reset-background"_q, &resetBackground},
 		{u"theme.set"_q, &setTheme},

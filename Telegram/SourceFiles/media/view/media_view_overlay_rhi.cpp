@@ -28,35 +28,6 @@ namespace {
 
 using namespace Ui::GL;
 
-[[nodiscard]] QRectF StoryCropTextureRect(
-		QSizeF imageSize,
-		QSizeF targetSize) {
-	if (imageSize.isEmpty() || targetSize.isEmpty()) {
-		return QRectF(0., 0., 1., 1.);
-	}
-	const auto targetAspect = targetSize.width() / targetSize.height();
-	const auto imageAspect = imageSize.width() / imageSize.height();
-	if (imageAspect > targetAspect) {
-		const auto cropW = imageSize.height() * targetAspect;
-		const auto offset = (imageSize.width() - cropW) / 2.;
-		return QRectF(
-			offset / imageSize.width(),
-			0.,
-			cropW / imageSize.width(),
-			1.);
-	} else if (imageAspect < targetAspect) {
-		const auto cropH = imageSize.width() / targetAspect;
-		const auto offset = (imageSize.height() - cropH) / 2.;
-		return QRectF(
-			0.,
-			offset / imageSize.height(),
-			1.,
-			cropH / imageSize.height());
-	}
-	return QRectF(0., 0., 1., 1.);
-}
-
-
 
 // Vulkan is the only backend with the NDC Y axis pointing down.
 [[nodiscard]] float NdcFlipY(not_null<QRhi*> rhi) {

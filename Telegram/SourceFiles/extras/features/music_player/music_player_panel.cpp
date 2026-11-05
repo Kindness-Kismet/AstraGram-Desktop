@@ -16,6 +16,7 @@
 #include "main/main_session.h"
 #include "mainwindow.h"
 #include "media/audio/media_audio.h"
+#include "media/player/media_player_dropdown.h"
 #include "media/player/media_player_instance.h"
 #include "media/view/media_view_playback_progress.h"
 #include "styles/style_extras_styles.h"
@@ -41,6 +42,7 @@
 #include <QtGui/QScreen>
 #include <QtCore/QFileInfo>
 #include <array>
+#include <cmath>
 
 namespace Extras::MusicPlayer {
 namespace {
@@ -143,18 +145,57 @@ CompactPanel::CompactPanel(
 			? Media::OrderMode::Shuffle : Media::OrderMode::Default);
 		Core::App().saveSettingsDelayed();
 	});
-	_speed->setClickedCallback([=] {
-		auto &settings = Core::App().settings();
-		const auto current = _type == kSong ? settings.audioPlaybackSpeed()
+	const auto lookupSpeed = [=](bool) {
+		const auto &settings = Core::App().settings();
+		return (_type == kSong)
+			? settings.audioPlaybackSpeed()
 			: settings.voicePlaybackSpeed();
+	};
+	const auto changeSpeed = [=](float64 speed) {
+		auto &settings = Core::App().settings();
+		if (_type == kSong) {
+			settings.setAudioPlaybackSpeed(speed);
+		} else {
+			settings.setVoicePlaybackSpeed(speed);
+		}
+		instance()->updatePlaybackSpeed();
+		Core::App().saveSettingsDelayed();
+	};
+	_speedController = std::make_unique<SpeedController>(
+		_speed.data(),
+		st::mediaPlayerSpeedButton,
+		this,
+		[](bool) {},
+		lookupSpeed,
+		changeSpeed);
+	_speedController->setShowOnHover(false);
+	_speedController->setClickCallback([=] {
+		const auto current = lookupSpeed(false);
 		constexpr auto speeds = std::array{ 0.75, 1., 1.25, 1.5, 2. };
 		const auto i = ranges::find_if(speeds, [&](double speed) { return speed > current + 0.01; });
 		const auto next = i == end(speeds) ? speeds.front() : *i;
-		if (_type == kSong) { settings.setAudioPlaybackSpeed(next); }
-		else { settings.setVoicePlaybackSpeed(next); }
-		instance()->updatePlaybackSpeed();
-		Core::App().saveSettingsDelayed();
+		changeSpeed(next);
 	});
+	_speedController->setApplySpeed([=](float64 speed) {
+		if (instance()->getActiveType() == _type) {
+			instance()->setPlaybackSpeed(speed);
+		}
+	});
+	_speedController->realtimeValue(
+	) | rpl::on_next([=](float64 speed) {
+		const auto text = QString::number(std::round(speed * 100.) / 100.)
+			+ u"×"_q;
+		_speed->setText(text);
+		_speed->setActive(speed != 1.);
+		_speed->setLabel(tr::lng_mediaview_playback_speed(
+			tr::now, lt_speed, text));
+	}, lifetime());
+	events() | rpl::on_next([=](not_null<QEvent*> event) {
+		if (event->type() == QEvent::Hide
+			|| event->type() == QEvent::WindowDeactivate) {
+			_speedController->reloadFromLookup();
+		}
+	}, lifetime());
 	_volume->setClickedCallback([] {
 		auto &settings = Core::App().settings();
 		const auto volume = settings.songVolume() > 0. ? 0. : settings.rememberedSongVolume();
@@ -208,6 +249,7 @@ CompactPanel::~CompactPanel() { lifetime().destroy(); }
 void CompactPanel::setPlaybackType(AudioMsgId::Type type) {
 	if (_type == type) { return; }
 	cancelSeek(false);
+	_speedController->reloadFromLookup();
 	_type = type;
 	refreshTrack();
 	updateSize();
@@ -292,11 +334,7 @@ void CompactPanel::refreshOrder() {
 }
 
 void CompactPanel::refreshSpeed() {
-	const auto &settings = Core::App().settings();
-	const auto speed = _type == kSong ? settings.audioPlaybackSpeed() : settings.voicePlaybackSpeed();
-	_speed->setText(QString::number(speed) + u"×"_q);
-	_speed->setActive(speed != 1.);
-	_speed->setLabel(tr::lng_mediaview_playback_speed(tr::now, lt_speed, QString::number(speed) + u"×"_q));
+	_speedController->reloadFromLookup();
 }
 
 void CompactPanel::refreshPlaylist() {

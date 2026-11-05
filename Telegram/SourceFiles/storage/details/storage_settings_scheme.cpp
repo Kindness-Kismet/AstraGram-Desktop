@@ -13,7 +13,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/storage_media_prepare.h"
 #include "core/application.h"
 #include "core/core_settings.h"
+#include "extras/extras_settings.h"
 #include "mtproto/mtproto_config.h"
+#include "ui/gl/gl_detection.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/chat/attach/attach_send_files_way.h"
 #include "ui/power_saving.h"
@@ -90,7 +92,15 @@ bool ReadSetting(
 		stream >> serialized;
 		if (!CheckStreamStatus(stream)) return false;
 
-		Core::App().settings().addFromSerialized(serialized);
+		// 全局设置与渲染状态只在实际存储加载时更新。
+		if (!serialized.isEmpty()) {
+			ExtrasSettings::load();
+		}
+		auto &settings = Core::App().settings();
+		if (settings.addFromSerialized(serialized, version)) {
+			Ui::GL::ForceDisable(settings.disableOpenGL());
+		}
+		psDownloadPathEnableAccess();
 	} break;
 
 	case dbiChatSizeMaxOld: {
@@ -418,7 +428,10 @@ bool ReadSetting(
 		stream >> v;
 		if (!CheckStreamStatus(stream)) return false;
 
-		context.sessionSettings().addFromSerialized(v);
+		context.sessionSettings().addFromSerialized(
+			v,
+			version,
+			Core::App().settings());
 	} break;
 
 	case dbiWorkModeOld: {

@@ -171,7 +171,7 @@ QImage FileLoader::imageData() const {
 }
 
 void FileLoader::readImage() const {
-	const auto buffer = _loadSize
+	const auto buffer = (_loadSize > 0 && _loadSize < _data.size())
 		? QByteArray::fromRawData(_data.data(), _loadSize)
 		: _data;
 	auto read = Images::Read({ .content = buffer });
@@ -474,6 +474,10 @@ bool FileLoader::reuseCompletedFile() {
 bool FileLoader::finalizeResult() {
 	Expects(!_finished);
 
+	if (_skippedBytes != 0) {
+		cancel(FailureReason::OtherFailure);
+		return false;
+	}
 	const auto reused = reuseCompletedFile();
 	if (!reused && !_filename.isEmpty() && (_toCache == LoadToCacheAsWell)) {
 		if (!_fileIsOpen) {

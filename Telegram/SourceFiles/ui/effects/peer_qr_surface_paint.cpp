@@ -366,10 +366,7 @@ void PaintAppearanceGradient(
 	if (request.size.isEmpty() || !request.center.isValid()) {
 		return QImage();
 	}
-	auto result = ComposeColorBackground(request);
-	return request.corners.front().isNull()
-		? result
-		: Images::Round(std::move(result), request.corners);
+	return ComposeColorBackground(request);
 }
 
 [[nodiscard]] float64 FarthestCorner(QPointF center, QSizeF size) {

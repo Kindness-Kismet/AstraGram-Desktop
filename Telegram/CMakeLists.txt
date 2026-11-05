@@ -72,6 +72,8 @@ if (DESKTOP_APP_TEST_APPS OR TDESKTOP_BUILD_UPDATE_TESTS)
         endif()
     endif()
 endif()
+include(cmake/test_iv_editor_table_grid.cmake)
+include(cmake/test_wallet_phrase_shares.cmake)
 
 option(ASTRAGRAM_BUILD_STORAGE_TESTS "Build storage compatibility tests." OFF)
 if (ASTRAGRAM_BUILD_STORAGE_TESTS)
@@ -468,6 +470,7 @@ set(extras_files
         extras/debug/simulation_search.cpp
         extras/debug/simulation_search.h
         extras/debug/commands/settings_commands.cpp
+        extras/debug/commands/settings_serialization_commands.cpp
         extras/debug/commands/settings_registry.h
         extras/debug/commands/settings_extras.cpp
         extras/debug/commands/settings_native.cpp
@@ -917,6 +920,7 @@ PRIVATE
     chat_helpers/field_autocomplete.cpp
     chat_helpers/field_autocomplete_controller.cpp
     chat_helpers/field_autocomplete.h
+    chat_helpers/field_autocomplete_hint.cpp
     chat_helpers/gifs_list_widget.cpp
     chat_helpers/gifs_list_widget.h
     chat_helpers/message_field.cpp
@@ -927,6 +931,8 @@ PRIVATE
     chat_helpers/share_message_phrase_factory.h
     chat_helpers/spellchecker_common.cpp
     chat_helpers/spellchecker_common.h
+    chat_helpers/spellchecker_locale_ids.cpp
+    chat_helpers/spellchecker_locale_ids.h
     chat_helpers/stickers_dice_pack.cpp
     chat_helpers/stickers_dice_pack.h
     chat_helpers/stickers_emoji_pack.cpp
@@ -997,6 +1003,7 @@ PRIVATE
     core/local_url_handlers.h
     core/phone_click_handler.cpp
     core/phone_click_handler.h
+    core/private_temp_directory.h
     core/sandbox.cpp
     core/sandbox.h
     core/shortcuts.cpp
@@ -1396,6 +1403,8 @@ PRIVATE
     history/view/controls/history_view_draft_options.h
     history/view/controls/history_view_forward_panel.cpp
     history/view/controls/history_view_forward_panel.h
+    history/view/controls/history_view_bot_menu_hold.cpp
+    history/view/controls/history_view_bot_menu_hold.h
     history/view/controls/history_view_rich_draft_preview.cpp
     history/view/controls/history_view_rich_draft_preview.h
     history/view/controls/history_view_suggest_options.cpp
@@ -1522,6 +1531,7 @@ PRIVATE
     history/view/history_view_chat_preview.h
     history/view/history_view_chat_section.cpp
     history/view/history_view_chat_section.h
+    history/view/history_view_chat_section_monoforum.cpp
     history/view/history_view_contact_status.cpp
     history/view/history_view_contact_status.h
     history/view/history_view_context_menu.cpp
@@ -1607,6 +1617,8 @@ PRIVATE
     history/view/history_view_summary_header.h
     history/view/history_view_text_helper.cpp
     history/view/history_view_text_helper.h
+    history/view/history_view_touch_scroll.cpp
+    history/view/history_view_touch_scroll.h
     history/view/history_view_transcribe_button.cpp
     history/view/history_view_transcribe_button.h
     history/view/history_view_translate_bar.cpp
@@ -1618,8 +1630,6 @@ PRIVATE
     history/view/history_view_top_bar_controls.cpp
     history/view/history_view_view_button.cpp
     history/view/history_view_view_button.h
-    history/view/history_view_webpage_preview.cpp
-    history/view/history_view_webpage_preview.h
     history/view/history_view_welcome_messages_section.cpp
     history/view/history_view_welcome_messages_section.h
     history/history.cpp
@@ -2210,7 +2220,6 @@ PRIVATE
     platform/linux/tray_linux.h
     platform/linux/update_install_linux.cpp
     platform/linux/update_install_linux.h
-    platform/linux/webauthn_linux.cpp
     platform/mac/file_utilities_mac.mm
     platform/mac/file_utilities_mac.h
     platform/mac/global_menu_mac.h
@@ -2226,6 +2235,8 @@ PRIVATE
     platform/mac/native_event_mac.mm
     platform/mac/notifications_manager_mac.mm
     platform/mac/notifications_manager_mac.h
+    platform/mac/notifications_manager_mac_tokens.mm
+    platform/mac/notifications_manager_mac_tokens.h
     platform/mac/notifications_manager_mac_un.mm
     platform/mac/notifications_manager_mac_un.h
     platform/mac/overlay_widget_mac.h
@@ -2366,7 +2377,6 @@ PRIVATE
     settings/sections/settings_calls.h
     settings/settings_codes.cpp
     settings/settings_codes.h
-    settings/settings_common_session.cpp
     settings/settings_common_session.h
     settings/detailed_settings_button.cpp
     settings/detailed_settings_button.h
@@ -2578,6 +2588,8 @@ PRIVATE
     ui/image/image_location.h
     ui/image/image_location_factory.cpp
     ui/image/image_location_factory.h
+    ui/image/image_opaque_bounds.cpp
+    ui/image/image_opaque_bounds.h
     ui/text/format_song_document_name.cpp
     ui/text/format_song_document_name.h
     ui/widgets/expandable_peer_list.cpp
@@ -2826,11 +2838,14 @@ PRIVATE
     window/session/window_session_media.cpp
     window/window_session_controller.cpp
     window/window_session_controller.h
+    window/window_session_controller_bot_forum.cpp
     window/window_session_controller_contact.cpp
     window/window_session_controller_link_info.h
     window/window_setup_email.cpp
     window/window_setup_email.h
     window/window_shell_color.h
+    window/window_text_drop.cpp
+    window/window_text_drop.h
     window/window_top_bar_wrap.h
     window/window_unlock_passcode_box.cpp
     window/window_unlock_passcode_box.h

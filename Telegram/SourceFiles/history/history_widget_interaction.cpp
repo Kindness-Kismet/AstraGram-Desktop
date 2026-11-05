@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "history/view/controls/history_view_bot_menu_hold.h"
 #include "window/window_animation_snapshot.h"
 
 #include "api/api_compose_with_ai.h"
@@ -906,6 +907,20 @@ bool HistoryWidget::refreshBotMenuButton() {
 			},
 			[=] { updateFieldSize(); },
 			session().data().customEmojiManager().factory());
+		{
+			using namespace HistoryView::Controls;
+			_botMenu->lifetime().make_state<BotMenuHoldTracker>(
+				_botMenu.get(),
+				kBotMenuHoldDuration,
+				[=] {
+					if (!_autocomplete) {
+						return;
+					} else if (_autocomplete->isHidden()) {
+						_autocomplete->showFiltered(_peer, u"/"_q, true);
+					}
+					_autocomplete->startPressDragSelect();
+				});
+		}
 		_botMenuPeer = bot->id;
 		orderWidgets();
 	}

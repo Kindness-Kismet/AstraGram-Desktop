@@ -163,6 +163,7 @@ public:
 
 	bool confirmSendingFiles(const QStringList &files) override;
 	bool confirmSendingFiles(not_null<const QMimeData*> data) override;
+	void insertTextAtCursor(const QString &text) override;
 	bool notify_switchInlineBotButtonReceived(
 		const QString &query,
 		UserData *samePeerBot,
@@ -208,6 +209,7 @@ public:
 		not_null<HistoryItem*> first,
 		not_null<HistoryItem*> second) override;
 	void listSelectionChanged(SelectedItems &&items) override;
+	void listTextSelectionUpdated() override;
 	void listMarkReadTill(not_null<HistoryItem*> item) override;
 	void listItemsAddedToEnd(
 		const std::vector<not_null<Element*>> &items,
@@ -334,6 +336,7 @@ private:
 	void onScroll();
 	void scrollToCurrentVoiceMessage(FullMsgId fromId, FullMsgId toId);
 	void closeCurrent();
+	void topicDestroyed();
 	void sublistDestroyed();
 	void unreadCountUpdated();
 	void updateInnerVisibleArea();
@@ -354,6 +357,8 @@ private:
 		FullMsgId originItemId,
 		const Window::SectionShow &params);
 	void finishSending(const Api::SendOptions &options);
+	void setupSendingLanding();
+	[[nodiscard]] bool showsSendingItem(not_null<HistoryItem*> item) const;
 
 	void setupComposeControls();
 	void setupSwipeReplyAndBack();
@@ -416,6 +421,8 @@ private:
 	[[nodiscard]] MsgId resolveTopicRootId(const FullReplyTo &replyTo) const;
 	[[nodiscard]] MsgId resolvedTopicRootId() const;
 	[[nodiscard]] Data::ForumTopic *resolvedTopic();
+	[[nodiscard]] bool monoforumReplyMissing() const;
+	[[nodiscard]] bool monoforumReplyRequired() const;
 	void refreshCanSendMessages();
 	void refreshResolvedTopicRootState();
 	void setKeyboardReplyTo(HistoryItem *item);
@@ -551,7 +558,7 @@ private:
 	MsgId _repliesKeyboardHiddenId = 0;
 	HistoryItem *_repliesRoot = nullptr;
 	Data::ForumTopic *_topic = nullptr;
-	mutable Data::ForumTopic *_creatingBotTopic = nullptr;
+	mutable base::weak_ptr<Data::ForumTopic> _creatingBotTopic;
 	mutable bool _newTopicDiscarded = false;
 	std::shared_ptr<Data::RepliesList> _replies;
 	rpl::lifetime _repliesLifetime;

@@ -247,7 +247,7 @@ void LoadCloudFile(
 		int downloadFrontPartSize = 0) {
 	session->mediaCache().track(
 		file.location.file().cacheKey(), false, origin, cacheTag);
-	const auto loadSize = downloadFrontPartSize
+	const auto loadSize = (downloadFrontPartSize > 0)
 		? std::min(downloadFrontPartSize, file.byteSize)
 		: file.byteSize;
 	if (file.loader) {
@@ -261,6 +261,13 @@ void LoadCloudFile(
 	} else if ((file.flags & CloudFile::Flag::Failed)
 		|| !file.location.valid()
 		|| (finalCheck && !finalCheck())) {
+		return;
+	}
+	if (file.byteSize < 0 || file.byteSize > Storage::kMaxFileInMemory) {
+		file.flags |= CloudFile::Flag::Failed;
+		if (const auto onstack = fail) {
+			onstack(false);
+		}
 		return;
 	}
 	file.flags &= ~CloudFile::Flag::Cancelled;

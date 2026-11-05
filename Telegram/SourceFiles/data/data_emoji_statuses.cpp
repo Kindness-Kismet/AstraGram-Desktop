@@ -144,10 +144,6 @@ rpl::producer<> EmojiStatuses::defaultUpdates() const {
 	return _defaultUpdated.events();
 }
 
-rpl::producer<> EmojiStatuses::channelDefaultUpdates() const {
-	return _channelDefaultUpdated.events();
-}
-
 rpl::producer<> EmojiStatuses::collectiblesUpdates() const {
 	return _collectiblesUpdated.events();
 }
@@ -379,7 +375,6 @@ void EmojiStatuses::updateChannelDefault(
 		const MTPDaccount_emojiStatuses &data) {
 	_channelDefaultHash = data.vhash().v;
 	_channelDefault = parse(data);
-	_channelDefaultUpdated.fire({});
 }
 
 void EmojiStatuses::updateChannelColored(

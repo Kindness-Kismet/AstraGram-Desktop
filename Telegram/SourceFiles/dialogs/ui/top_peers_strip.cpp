@@ -381,6 +381,9 @@ void TopPeersStrip::stripMouseReleaseEvent(QMouseEvent *e) {
 	_lastMousePosition = e->globalPos();
 	const auto guard = gsl::finally([&] {
 		_mouseDownPosition = std::nullopt;
+
+		// 点击打开聊天可能重入拖动逻辑。
+		_dragging = false;
 	});
 
 	const auto pressed = clearPressed();

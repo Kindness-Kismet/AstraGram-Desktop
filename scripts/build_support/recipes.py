@@ -41,7 +41,7 @@ STAGES: list[Stage] = [
         dependencies=[],
         commands=r"""git clone https://github.com/desktop-app/patches.git
 cd patches
-git checkout a895fef40eaa7d66481cff542c623b039b7ce494
+git checkout a59fc82462fb2987e9f0ee1498e2db694410ae81
 """,
     ),
     Stage(
@@ -331,8 +331,9 @@ copy out\release-static\$X8664\lib\libwebpmux.lib out\release-static\$X8664\lib\
         location="Libraries",
         version="0",
         dependencies=[],
-        commands=r"""git clone -b v0.12.0 --recursive --shallow-submodules https://github.com/libjxl/libjxl.git
+        commands=r"""git clone -b v0.12.0 --recursive https://github.com/libjxl/libjxl.git
 cd libjxl
+git -C third_party/brotli checkout v1.2.1
 SET "cmake_defines=-DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF -DJPEGXL_ENABLE_FUZZERS=OFF -DJPEGXL_ENABLE_DEVTOOLS=OFF -DJPEGXL_ENABLE_TOOLS=OFF -DJPEGXL_ENABLE_DOXYGEN=OFF -DJPEGXL_ENABLE_MANPAGES=OFF -DJPEGXL_ENABLE_EXAMPLES=OFF -DJPEGXL_ENABLE_JNI=OFF -DJPEGXL_ENABLE_SJPEG=OFF -DJPEGXL_ENABLE_OPENEXR=OFF -DJPEGXL_ENABLE_SKCMS=ON -DJPEGXL_ENABLE_VIEWERS=OFF -DJPEGXL_ENABLE_TCMALLOC=OFF -DJPEGXL_ENABLE_PLUGINS=OFF -DJPEGXL_ENABLE_COVERAGE=OFF -DJPEGXL_WARNINGS_AS_ERRORS=OFF"
 cmake . ^
 -DCMAKE_INSTALL_PREFIX=%LIBS_DIR%/local ^
@@ -399,9 +400,12 @@ deactivate
         name="ffmpeg",
         location="Libraries",
         version="0",
-        dependencies=["patches/ffmpeg.patch", "patches/build_ffmpeg_win.sh"],
+        dependencies=["patches/ffmpeg/*.patch", "patches/ffmpeg.patch", "patches/build_ffmpeg_win.sh"],
         commands=r"""git clone -b n8.1.3 https://github.com/FFmpeg/FFmpeg.git ffmpeg
 cd ffmpeg
+for %%i in (..\patches\ffmpeg\*.patch) do (
+git apply "%%i" || exit /b 1
+)
 git apply ../patches/ffmpeg.patch
 SET PATH=%THIRDPARTY_DIR%\msys64\usr\bin;%PATH%
 SET CHERE_INVOKING=enabled_from_arguments
@@ -618,7 +622,7 @@ cmake --install .
         dependencies=[],
         commands=r"""git clone https://github.com/desktop-app/tg_owt.git
 cd tg_owt
-git checkout 07fb35bc33b3e79125a1beab7690e830f183f5d8
+git checkout 020feec5c040fdae2cf752c2c2be62ddde7c236d
 git submodule update --init --recursive
 SET MOZJPEG_PATH=$LIBS_DIR/mozjpeg
 SET OPUS_PATH=$USED_PREFIX/include/opus

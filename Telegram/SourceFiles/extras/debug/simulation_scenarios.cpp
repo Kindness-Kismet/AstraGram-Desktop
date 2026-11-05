@@ -910,11 +910,15 @@ void installScenarioDraft(
 		peer->asChannel()->growSlowmodeLastMessage(base::unixtime::now());
 	}
 	if (const auto root = topicViewRoot(kind, view)) {
+		const auto topic = peer->forum()->topicFor(root);
+		if (!topic) {
+			return Result::Err(u"simulation topic no longer exists; restart simulation to restore it"_q);
+		}
 		// 与在会话列表里点开一致：普通论坛先在左栏展开话题列表，标签论坛直接进入话题。
 		if (kind == Kind::Topic) {
 			controller->showForum(peer->forum(), Window::SectionShow(way).withChildColumn());
 		}
-		controller->showTopic(peer->forum()->topicFor(root), ShowAtTheEndMsgId, way);
+		controller->showTopic(topic, ShowAtTheEndMsgId, way);
 		return Result::Ok();
 	}
 	if (view == u"shortcuts"_q) {
@@ -1152,6 +1156,9 @@ Result listSimulationScenes(const QStringList &args) {
 				auto topics = json::array();
 				for (const auto root : scenarioTopicRoots(kScenarios[findScenario(scene.key)].kind)) {
 					const auto topic = peer->forum()->topicFor(root);
+					if (!topic) {
+						continue;
+					}
 					topics.push_back({ { "rootId", topic->rootId().bare },
 						{ "title", topic->title().toStdString() },
 						{ "unread", topic->replies()->unreadCountCurrent() },

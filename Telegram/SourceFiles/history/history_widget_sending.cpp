@@ -535,18 +535,22 @@ Api::SendAction HistoryWidget::prepareSendAction(
 			if (readyRootId) {
 				result.replyTo.topicRootId = readyRootId;
 			} else {
-				if (!_creatingBotTopic) {
-					_creatingBotTopic = forum->reserveNewBotTopic();
+				const auto existing = _creatingBotTopic.get();
+				const auto topic = existing
+					? existing
+					: forum->reserveNewBotTopic();
+				const auto rootId = topic->rootId();
+				if (!existing) {
+					_creatingBotTopic = topic;
 					auto draft = _history->forwardDraft(MsgId(0), PeerId());
 					if (!draft.ids.empty()) {
 						_history->setForwardDraft(MsgId(0), PeerId(), {});
 						_history->setForwardDraft(
-							_creatingBotTopic->rootId(),
+							rootId,
 							PeerId(),
 							std::move(draft));
 					}
 				}
-				const auto rootId = _creatingBotTopic->rootId();
 				if (!result.replyTo.messageId) {
 					result.replyTo.messageId = FullMsgId(
 						_history->peer->id,

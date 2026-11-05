@@ -370,6 +370,44 @@ struct FoldersState {
 	int reordering = 0;
 };
 
+void SetupFilterRowButton(
+		not_null<Window::SessionController*> controller,
+		not_null<FoldersState*> state,
+		not_null<FilterRowButton*> button,
+		Fn<bool()> showLimitReached,
+		Fn<FilterRow*(not_null<FilterRowButton*>)> find) {
+	button->restoreRequests(
+	) | rpl::on_next([=] {
+		if (state->reordering || showLimitReached()) {
+			return;
+		}
+		button->setRemoved(false);
+		find(button)->removed = false;
+	}, button->lifetime());
+	button->setClickedCallback([=] {
+		const auto found = find(button);
+		if (state->reordering || found->removed) {
+			return;
+		}
+		const auto doneCallback = [=](const Data::ChatFilter &result) {
+			find(button)->filter = result;
+			button->updateData(result);
+		};
+		const auto saveAnd = [=](
+				const Data::ChatFilter &data,
+				Fn<void(Data::ChatFilter)> next) {
+			doneCallback(data);
+			state->save(button, next);
+		};
+		controller->window().show(Box(
+			EditFilterBox,
+			controller,
+			found->filter,
+			crl::guard(button, doneCallback),
+			crl::guard(button, saveAnd)));
+	});
+}
+
 not_null<Ui::VerticalLayout*> SetupFoldersList(
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::VerticalLayout*> container,
@@ -479,39 +517,7 @@ not_null<Ui::VerticalLayout*> SetupFoldersList(
 		) | rpl::on_next([=] {
 			remove(button);
 		}, button->lifetime());
-		button->restoreRequests(
-		) | rpl::on_next([=] {
-			if (state->reordering) {
-				return;
-			}
-			if (showLimitReached()) {
-				return;
-			}
-			button->setRemoved(false);
-			find(button)->removed = false;
-		}, button->lifetime());
-		button->setClickedCallback([=] {
-			const auto found = find(button);
-			if (state->reordering || found->removed) {
-				return;
-			}
-			const auto doneCallback = [=](const Data::ChatFilter &result) {
-				find(button)->filter = result;
-				button->updateData(result);
-			};
-			const auto saveAnd = [=](
-					const Data::ChatFilter &data,
-					Fn<void(Data::ChatFilter)> next) {
-				doneCallback(data);
-				state->save(button, next);
-			};
-			controller->window().show(Box(
-				EditFilterBox,
-				controller,
-				found->filter,
-				crl::guard(button, doneCallback),
-				crl::guard(button, saveAnd)));
-		});
+		SetupFilterRowButton(controller, state, button, showLimitReached, find);
 		state->rows.push_back({ button, filter });
 		state->count = state->rows.size();
 
@@ -890,36 +896,7 @@ void SetupRecommendedSection(
 			row->removed = true;
 			button->setRemoved(true);
 		}, button->lifetime());
-		button->restoreRequests(
-		) | rpl::on_next([=] {
-			if (showLimitReached()) {
-				return;
-			}
-			button->setRemoved(false);
-			find(button)->removed = false;
-		}, button->lifetime());
-		button->setClickedCallback([=] {
-			const auto found = find(button);
-			if (found->removed) {
-				return;
-			}
-			const auto doneCallback = [=](const Data::ChatFilter &result) {
-				find(button)->filter = result;
-				button->updateData(result);
-			};
-			const auto saveAnd = [=](
-					const Data::ChatFilter &data,
-					Fn<void(Data::ChatFilter)> next) {
-				doneCallback(data);
-				state->save(button, next);
-			};
-			controller->window().show(Box(
-				EditFilterBox,
-				controller,
-				found->filter,
-				crl::guard(button, doneCallback),
-				crl::guard(button, saveAnd)));
-		});
+		SetupFilterRowButton(controller, state, button, showLimitReached, find);
 		state->rows.push_back({ button, filter });
 		state->count = state->rows.size();
 

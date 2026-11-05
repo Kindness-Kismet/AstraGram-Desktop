@@ -28,13 +28,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/saved/info_saved_music_widget.h"
 #include "data/data_changes.h"
 #include "data/data_channel.h"
-#include "data/data_document.h"
 #include "data/data_forum_topic.h"
 #include "data/data_peer.h"
 #include "data/data_photo.h"
 #include "data/data_file_origin.h"
 #include "data/data_user.h"
-#include "data/data_saved_music.h"
 #include "data/data_saved_sublist.h"
 #include "extras/ui/components/profile_attachments.h"
 #include "main/main_session.h"
@@ -42,7 +40,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_peer_photo.h"
 #include "lang/lang_keys.h"
 #include "ui/text/custom_emoji_helper.h"
-#include "ui/text/format_song_document_name.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/labels.h"
@@ -480,13 +477,14 @@ bool InnerWidget::hasFlexibleTopBar() const {
 
 base::weak_qptr<Ui::RpWidget> InnerWidget::createPinnedToTop(
 		not_null<Ui::RpWidget*> parent) {
+	const auto shown = _sublist ? _sublist->sublistPeer().get() : _peer.get();
 	const auto content = Ui::CreateChild<TopBar>(
 		parent,
 		TopBar::Descriptor{
 			.controller = _controller->parentController(),
 			.key = _controller->key(),
 			.wrap = _controller->wrapValue(),
-			.peer = _sublist ? _sublist->sublistPeer().get() : nullptr,
+			.peer = _sublist ? shown : nullptr,
 			.backToggles = _backToggles.value(),
 			.showFinished = _showFinished.events(),
 			.customStatus = (_savedMessages
@@ -512,7 +510,6 @@ base::weak_qptr<Ui::RpWidget> InnerWidget::createPinnedToTop(
 				members->setGroupByRole(grouped);
 			}));
 	}
-	_topBarColor = content->edgeColor();
 	_topBar = content;
 	return base::make_weak(not_null<Ui::RpWidget*>{ content });
 }

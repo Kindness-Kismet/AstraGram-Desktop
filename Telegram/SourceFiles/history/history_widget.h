@@ -730,6 +730,19 @@ private:
 	void updateSendRestriction();
 	[[nodiscard]] Data::SendError computeSendRestriction() const;
 	void updateHistoryGeometry(bool initial = false, bool loadedDown = false, const ScrollChange &change = { ScrollChangeNone, 0 });
+	struct ListRevealHold final : base::has_weak_ptr {
+		base::flat_set<not_null<PeerData*>> watched;
+		base::Timer timer;
+		rpl::lifetime lifetime;
+		crl::time deadline = 0;
+		uint64 generation = 0;
+		bool releasePending = false;
+		bool refreshAwaited = false;
+	};
+	[[nodiscard]] bool holdListReveal();
+	void scheduleListReveal(not_null<ListRevealHold*> hold);
+	void finishListReveal(not_null<ListRevealHold*> hold);
+	void resumeListReveal();
 	void updateListSize();
 	void startItemRevealAnimations();
 	void revealItemsCallback();
@@ -952,9 +965,10 @@ private:
 	int _lastTopBarsOverlap = 0;
 	int _lastScrollAreaY = 0;
 	QPointer<HistoryInner> _list;
+	base::weak_ptr<ListRevealHold> _listRevealHold;
 	History *_migrated = nullptr;
 	History *_history = nullptr;
-	mutable Data::ForumTopic *_creatingBotTopic = nullptr;
+	mutable base::weak_ptr<Data::ForumTopic> _creatingBotTopic;
 	rpl::lifetime _historySponsoredPreloading;
 
 	// Initial updateHistoryGeometry() was called.
@@ -1110,5 +1124,7 @@ private:
 	SendPaymentHelper _sendPayment;
 
 	rpl::event_stream<> _cancelRequests;
+	// 先结束录音状态订阅，再析构回调访问的成员。
+	rpl::lifetime _recordingStateLifetime;
 
 };

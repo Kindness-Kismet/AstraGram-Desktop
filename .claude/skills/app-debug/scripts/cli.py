@@ -140,6 +140,7 @@ GENERIC_COMMANDS = {
     'settings.export': '导出指定范围的设置：<新文件绝对路径> <all|official|custom|account>',
     'settings.inspect-import': '检查设置导入结果，不修改设置：<路径> <all|official|custom|account>',
     'settings.import': '应用设置文件并报告保存结果：<路径> <all|official|custom|account>',
+    'settings.verify-serialization': '在独立模拟配置中验证二进制设置迁移，不修改当前设置',
 
     "session.thread-settings": "查询或修改话题与子会话配置：<会话编号> <话题编号> <子会话编号> [键 值]",
     "control.mouse": "在应用控件内部点击、打开菜单或分开按下松开：<目标> <横坐标> <纵坐标> [left|right|double|press|move|release]",
@@ -185,6 +186,7 @@ GENERIC_COMMANDS = {
     "message.inspect": "查询消息正文与删除、过滤、视图状态：<会话编号> <消息编号>",
     "message.shot": "打开消息截图预览：<会话编号> <消息编号>...",
     "simulation.remove-message": "销毁本地模拟消息，验证消息消失后的界面：<会话编号> <消息编号>",
+    "simulation.remove-topic": "删除独立模拟配置中的话题，返回删除前后状态：<会话编号> <话题根消息编号>",
     "simulation.archive": "在模拟模式本地移入或移出归档，验证列表增删：<会话编号> <on|off>",
     "message.translate": "调用消息业务逻辑在原气泡翻译：<会话编号> <消息编号>",
     "message.show-original": "恢复消息原文并取消待处理翻译：<会话编号> <消息编号>",

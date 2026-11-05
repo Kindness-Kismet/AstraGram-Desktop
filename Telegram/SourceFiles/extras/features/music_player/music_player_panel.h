@@ -12,7 +12,10 @@ class BoxShadow;
 class PopupMenu;
 } // namespace Ui
 
-namespace Media::Player { struct TrackState; }
+namespace Media::Player {
+struct TrackState;
+class SpeedController;
+} // namespace Media::Player
 namespace Media::View { class PlaybackProgress; }
 namespace Window { class SessionController; }
 
@@ -116,6 +119,7 @@ private:
 	PlayerQueue *_queue = nullptr;
 	Waveform *_wave = nullptr;
 	std::unique_ptr<Media::View::PlaybackProgress> _playback;
+	std::unique_ptr<Media::Player::SpeedController> _speedController;
 	std::unique_ptr<Ui::BoxShadow> _shadow;
 	std::unique_ptr<Ui::PopupMenu> _coverMenu;
 	rpl::event_stream<> _collapseRequests;

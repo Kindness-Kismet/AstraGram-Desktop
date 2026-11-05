@@ -1188,7 +1188,8 @@ void SavedWindows::waitPeer(
 	const auto maybeRearm = [=] {
 		if (batchResolveDone(session)
 			&& owner->chatsListLoaded(nullptr)
-			&& !batchResolveCovered(session, peerId)) {
+			&& !batchResolveCovered(session, peerId)
+			&& !owner->peerLoaded(peerId)) {
 			rearmBatchResolve(session);
 		}
 	};

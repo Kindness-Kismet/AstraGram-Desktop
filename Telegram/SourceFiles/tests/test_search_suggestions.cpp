@@ -1,5 +1,6 @@
 #include "storage/details/storage_search_suggestions.h"
 
+#include <QtCore/QIODevice>
 #include <QtCore/QMap>
 #include <QtCore/QString>
 

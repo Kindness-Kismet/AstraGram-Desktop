@@ -405,7 +405,13 @@ void Panel::initWindow() {
 				toggleFullScreen();
 			}
 		} else if (type == QEvent::WindowStateChange) {
+			const auto was = static_cast<QWindowStateChangeEvent*>(
+				e.get())->oldState();
 			updateFullScreen();
+			if ((was & Qt::WindowFullScreen)
+				!= (window()->windowState() & Qt::WindowFullScreen)) {
+				updateControlsGeometry();
+			}
 		}
 		return base::EventFilterResult::Continue;
 	}, lifetime());
@@ -1249,7 +1255,8 @@ void Panel::setupVideo(not_null<Viewport*> viewport) {
 			VideoTileTrack{ GroupCall::TrackPointer(track), row },
 			GroupCall::TrackSizeValue(track),
 			std::move(pinned),
-			self);
+			self,
+			_call->shownVideoTracks().contains(endpoint));
 	};
 	for (const auto &[endpoint, track] : _call->activeVideoTracks()) {
 		setupTile(endpoint, track);
@@ -1973,7 +1980,9 @@ QRect Panel::computeTitleRect() const {
 			+ custom));
 	const auto width = widget()->width();
 #ifdef Q_OS_MAC
-	const auto left = st::groupCallTitleLeftMac;
+	const auto left = window()->isFullScreen()
+		? st::groupCallNarrowSkip
+		: st::groupCallTitleLeftMac;
 	return QRect(left, 0, width - remove - left, 28);
 #else // Q_OS_MAC
 	const auto controls = _window->controlsGeometry();

@@ -839,8 +839,22 @@ void HttpChecker::start() {
 	DEBUG_LOG(("Update Info: requesting update state"));
 	auto request = QNetworkRequest(url);
 	request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+	// HTTP/2 后端不遵守接收缓冲区上限。
+	request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
 	_manager = std::make_unique<QNetworkAccessManager>();
 	_reply = _manager->get(request);
+	_reply->setReadBufferSize(kMaxResponseSize);
+	_reply->connect(_reply, &QNetworkReply::readyRead, [=, queued = false]() mutable {
+		if (!_reply
+			|| queued
+			|| _reply->bytesAvailable() < kMaxResponseSize) {
+			return;
+		}
+		queued = true;
+		crl::on_main(this, [=] {
+			gotResponse();
+		});
+	});
 	_reply->connect(_reply, &QNetworkReply::finished, [=] {
 		gotResponse();
 	});
@@ -855,7 +869,11 @@ void HttpChecker::gotResponse() {
 	}
 
 	cSetLastUpdateCheck(base::unixtime::now());
-	const auto response = _reply->readAll();
+	const auto weak = base::make_weak(this);
+	const auto response = _reply->read(kMaxResponseSize);
+	if (!weak) {
+		return;
+	}
 	clearSentRequest();
 
 	if (response.size() >= kMaxResponseSize || !handleResponse(response)) {
@@ -885,15 +903,20 @@ void HttpChecker::clearSentRequest() {
 	reply->disconnect(reply, &QNetworkReply::finished, nullptr, nullptr);
 	reply->disconnect(reply, &QNetworkReply::errorOccurred, nullptr, nullptr);
 	reply->abort();
+	reply->disconnect();
 	reply->deleteLater();
-	_manager = nullptr;
+	_manager.release()->deleteLater();
 }
 
 void HttpChecker::gotFailure(QNetworkReply::NetworkError e) {
 	LOG(("Update Error: "
 		"could not get current version %1").arg(e));
 	if (const auto reply = base::take(_reply)) {
+		reply->disconnect(reply, &QNetworkReply::readyRead, nullptr, nullptr);
+		reply->disconnect(reply, &QNetworkReply::finished, nullptr, nullptr);
+		reply->disconnect(reply, &QNetworkReply::errorOccurred, nullptr, nullptr);
 		reply->deleteLater();
+		_manager.release()->deleteLater();
 	}
 
 	fail();

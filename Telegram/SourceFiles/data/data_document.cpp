@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/player/media_player_instance.h"
 #include "media/streaming/media_streaming_loader_mtproto.h"
 #include "media/streaming/media_streaming_loader_local.h"
+#include "platform/platform_file_utilities.h"
 #include "storage/localstorage.h"
 #include "storage/storage_account.h"
 #include "storage/file_download.h"
@@ -110,6 +111,14 @@ void UpdateStickerSetIdentifier(
 		: attributesQuality;
 }
 
+[[nodiscard]] bool IsBidiControl(QChar ch) {
+	const auto code = ch.unicode();
+	return (code == 0x061C) // ALM, LRM/RLM, LRE..RLO with PDF, LRI..PDI.
+		|| (code == 0x200E || code == 0x200F)
+		|| (code >= 0x202A && code <= 0x202E)
+		|| (code >= 0x2066 && code <= 0x2069);
+}
+
 } // namespace
 
 QString FileNameUnsafe(
@@ -121,7 +130,9 @@ QString FileNameUnsafe(
 		bool savingAs,
 		const QDir &dir) {
 	name = base::FileNameFromUserString(name);
-	if (Core::App().settings().askDownloadPath() || savingAs) {
+	const auto toDirectory = !savingAs && (dir.path() != u"."_q);
+	if (savingAs
+		|| (Core::App().settings().askDownloadPath() && !toDirectory)) {
 		if (!name.isEmpty() && name.at(0) == QChar::fromLatin1('.')) {
 			name = filedialogDefaultName(prefix, name);
 		} else if (dir.path() != u"."_q) {
@@ -175,16 +186,15 @@ QString FileNameUnsafe(
 			return path;
 		}
 	}();
+	if (toDirectory) {
+		path = dir.absolutePath() + '/';
+	}
 	if (path.isEmpty()) return QString();
 	if (name.isEmpty()) name = u".unknown"_q;
 	if (name.at(0) == QChar::fromLatin1('.')) {
 		if (!QDir().exists(path)) QDir().mkpath(path);
 		return filedialogDefaultName(prefix, name, path);
 	}
-	if (dir.path() != u"."_q) {
-		path = dir.absolutePath() + '/';
-	}
-
 	QString nameStart, extension;
 	int32 extPos = name.lastIndexOf('.');
 	if (extPos >= 0) {
@@ -237,8 +247,11 @@ QString DocumentFileNameForSave(
 		bool forceSavingAs,
 		const QString &already,
 		const QDir &dir) {
-	auto alreadySavingFilename = data->loadingFilePath();
-	if (!alreadySavingFilename.isEmpty()) {
+	const auto toDirectory = !forceSavingAs && (dir.path() != u"."_q);
+	const auto alreadySavingFilename = data->loadingFilePath();
+	if (!alreadySavingFilename.isEmpty()
+		&& (!toDirectory
+			|| QFileInfo(alreadySavingFilename).absoluteDir() == dir)) {
 		return alreadySavingFilename;
 	}
 
@@ -941,10 +954,6 @@ bool DocumentData::videoThumbnailLoading() const {
 	return _videoThumbnail.loader != nullptr;
 }
 
-bool DocumentData::videoThumbnailFailed() const {
-	return (_videoThumbnail.flags & Data::CloudFile::Flag::Failed);
-}
-
 void DocumentData::loadVideoThumbnail(Data::FileOrigin origin) {
 	if (hasLocalSource()) {
 		return;
@@ -1116,18 +1125,10 @@ void DocumentData::setFileName(const QString &remoteFileName) {
 	// We don't want LTR/RTL mark/embedding/override/isolate chars
 	// in filenames, because they introduce a security issue, when
 	// an executable "Fil[x]gepj.exe" may look like "Filexe.jpeg".
-	QChar controls[] = {
-		QChar(0x200E), // LTR Mark
-		QChar(0x200F), // RTL Mark
-		QChar(0x202A), // LTR Embedding
-		QChar(0x202B), // RTL Embedding
-		QChar(0x202D), // LTR Override
-		QChar(0x202E), // RTL Override
-		QChar(0x2066), // LTR Isolate
-		QChar(0x2067), // RTL Isolate
-	};
-	for (const auto &ch : controls) {
-		_filename = std::move(_filename).replace(ch, "_");
+	for (auto &ch : _filename) {
+		if (IsBidiControl(ch)) {
+			ch = '_';
+		}
 	}
 	_nameType = Core::DetectNameType(_filename);
 }
@@ -1284,10 +1285,13 @@ bool DocumentData::saveFromDataChecked() {
 	}
 	auto file = QFile(path);
 	if (!file.open(QIODevice::WriteOnly)
-		|| file.write(bytes) != bytes.size()) {
+		|| file.write(bytes) != bytes.size()
+		|| !file.flush()) {
 		return false;
 	}
 	file.close();
+	Platform::File::PostprocessDownloaded(
+		QFileInfo(file).absoluteFilePath());
 	setLocation(Core::FileLocation(path));
 	if (!hasLocalSource()) {
 		session().local().writeFileLocation(mediaKey(), _location);

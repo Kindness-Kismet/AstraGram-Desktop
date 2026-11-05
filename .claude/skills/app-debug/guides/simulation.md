@@ -122,6 +122,8 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 默认注入 90 × 90 预览缩略图，内嵌封面由解码器读取。`player.cover [new-png-path]` 查询可保存的原始尺寸；只有独立模拟配置允许写入新文件，不覆盖已有文件。
 
 `simulation.remove-message <peerId> <messageId>` 销毁指定模拟消息，用于验证弹窗和延迟回调在消息消失后的行为；不发网络请求，不操作真实账号。
+`simulation.remove-topic <peerId> <topicRootId>` 仅在独立模拟配置中删除已有话题，复用正式的本地删除流程，不发删除请求；编号从 `simulation.list` 查询。删除后清单跳过该话题，再次打开返回失败，重启模拟模式后恢复样本。
+返回标题、`wasActive`（删除前是否正在查看），以及 `before`、`after` 中的 `exists`、`deleted`、`listed` 和 `topicsInList`，用于核对当前话题、其他话题及话题面板打开时的删除行为。
 `simulation.archive <peerId> <on|off>` 只在本地把会话移入或移出归档，走正式的列表移入移出流程，用于验证会话列表的增删过渡；不发归档请求。
 
 `simulation.message <text> [--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban]`

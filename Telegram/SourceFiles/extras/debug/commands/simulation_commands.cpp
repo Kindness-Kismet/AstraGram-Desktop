@@ -11,6 +11,8 @@
 #include "boxes/stickers_box.h"
 #include "data/data_chat_filters.h"
 #include "data/data_document.h"
+#include "data/data_forum.h"
+#include "data/data_forum_topic.h"
 #include "data/data_session.h"
 #include "data/components/credits.h"
 #include "data/stickers/data_stickers.h"
@@ -41,6 +43,48 @@ constexpr auto kWalletBalance = int64(123456789000);
 constexpr auto kStickerSetId = uint64(9800000000);
 constexpr auto kEmojiSetId = uint64(9800000100);
 constexpr auto kEmojiSetCount = 3;
+
+Result simulationRemoveTopic(const QStringList &args) {
+	if (args.size() != 2) {
+		return Result::Err(u"usage: simulation.remove-topic <peerId> <topicRootId>"_q);
+	}
+	const auto session = ActiveSession();
+	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	auto ok = false;
+	const auto rootId = MsgId(args[1].toLongLong(&ok));
+	if (!ok || rootId <= 0) {
+		return Result::Err(u"topicRootId must be a positive integer"_q);
+	}
+	const auto peer = findPeer(args[0]);
+	const auto forum = peer ? peer->forum() : nullptr;
+	const auto topic = forum ? forum->topicFor(rootId) : nullptr;
+	if (!topic) {
+		return Result::Err(u"simulation topic not found"_q);
+	}
+	const auto snapshot = [&] {
+		const auto current = forum->topicFor(rootId);
+		return json{
+			{ "exists", current != nullptr },
+			{ "deleted", forum->topicDeleted(rootId) },
+			{ "listed", current && current->inChatList() },
+			{ "topicsInList", forum->topicsList()->indexed()->size() },
+		};
+	};
+	const auto controller = session->tryResolveWindow();
+	auto result = json{
+		{ "peerId", peer->id.value },
+		{ "topicRootId", rootId.bare },
+		{ "title", topic->title().toStdString() },
+		{ "wasActive", controller && controller->activeChatCurrent().topic() == topic },
+		{ "before", snapshot() },
+	};
+	// 删除后重新查询状态，不再访问已销毁的话题对象。
+	forum->applyTopicDeleted(rootId);
+	result["after"] = snapshot();
+	return Result::Ok(Compact(result));
+}
 
 Result simulationSecret(const QStringList &args) {
 	auto ok = false;
@@ -462,6 +506,7 @@ void applyWalletLists(not_null<Main::Session*> session, bool withCollectibles) {
 
 const HandlerMap &simulationHandlers() {
 	static const auto result = HandlerMap{
+		{ u"simulation.remove-topic"_q, &simulationRemoveTopic },
 		{ u"simulation.secret"_q, &simulationSecret },
 		{ u"simulation.profile"_q, &seedProfilePreview },
 		{ u"simulation.music"_q, &simulateMusic },

@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "history/view/history_view_list_widget.h"
 #include "history/view/history_view_item_animation.h"
 #include "window/window_animation_snapshot.h"
 
@@ -837,7 +838,10 @@ QRect HistoryWidget::autocompleteBoundingRect() const {
 }
 
 void HistoryWidget::visibleAreaUpdated() {
-	if (_list && !_firstLoadRequest && !_scroll->isHidden()) {
+	if (_list
+		&& !_list->isHidden()
+		&& !_firstLoadRequest
+		&& !_scroll->isHidden()) {
 		_list->visibleAreaUpdated(
 			visibleScrollTop(),
 			visibleScrollBottom());
@@ -1489,6 +1493,11 @@ void HistoryWidget::updateHistoryGeometry(
 		_updateHistoryGeometryRequired = true;
 		return;
 	}
+	// 同一会话的跳转目标加载完成后才显示列表。
+	if (_list->isHidden() && (_delayedShowAtRequest || holdListReveal())) {
+		_updateHistoryGeometryRequired = true;
+		return;
+	}
 
 	updateListSize();
 	_updateHistoryGeometryRequired = false;
@@ -1515,6 +1524,13 @@ void HistoryWidget::updateHistoryGeometry(
 		}
 	}
 	const auto toY = std::clamp(newScrollTop, 0, _scroll->scrollTopMax());
+	if (_list->isHidden()) {
+		if (const auto hold = _listRevealHold.get()) {
+			hold->timer.cancel();
+			hold->lifetime.destroy();
+		}
+		_list->show();
+	}
 	synteticScrollToY(toY);
 	if (initial && _showAtMsgId) {
 		const auto timestamp = base::take(_showAtMsgParams.videoTimestamp);
@@ -1532,6 +1548,98 @@ void HistoryWidget::updateHistoryGeometry(
 					timestamp);
 			}
 		}
+	}
+}
+
+bool HistoryWidget::holdListReveal() {
+	Expects(_list != nullptr);
+
+	auto hold = _listRevealHold.get();
+	if (hold && hold->releasePending) {
+		return true;
+	}
+	auto waitFor = base::flat_set<not_null<PeerData*>>();
+	auto stale = false;
+	for (const auto history : { _migrated, _history }) {
+		if (!history) {
+			continue;
+		}
+		for (const auto &block : history->blocks) {
+			for (const auto &view : block->messages) {
+				const auto item = view->data();
+				if (const auto peer = HistoryView::FirstRevealWaitPeer(item)) {
+					waitFor.emplace(peer);
+				} else if (item->hasHiddenLinks() && !item->hideLinks()) {
+					stale = true;
+				}
+			}
+		}
+	}
+	if (waitFor.empty() && (!stale || (hold && hold->refreshAwaited))) {
+		return false;
+	} else if (!hold) {
+		hold = _list->lifetime().make_state<ListRevealHold>();
+		hold->timer.setCallback([=] { scheduleListReveal(hold); });
+		_listRevealHold = hold;
+	}
+	const auto now = crl::now();
+	if (!waitFor.empty()) {
+		if (!hold->deadline) {
+			hold->deadline = now + HistoryView::kFirstRevealTimeout;
+		}
+		if (now < hold->deadline) {
+			for (const auto &peer : waitFor) {
+				if (hold->watched.emplace(peer).second) {
+					peer->barSettingsValue(
+					) | rpl::to_empty | rpl::on_next([=] {
+						scheduleListReveal(hold);
+					}, hold->lifetime);
+				}
+			}
+			if (!hold->timer.isActive()) {
+				hold->timer.callOnce(hold->deadline - now);
+			}
+			return true;
+		}
+	}
+	if (stale && !hold->refreshAwaited) {
+		scheduleListReveal(hold);
+		return true;
+	}
+	return false;
+}
+
+void HistoryWidget::scheduleListReveal(not_null<ListRevealHold*> hold) {
+	hold->releasePending = true;
+	const auto generation = ++hold->generation;
+
+	// 设置变化先通知再刷新隐藏链接，两次调度后才可显示列表。
+	crl::on_main(hold, [=] {
+		if (hold->generation != generation) {
+			return;
+		}
+		crl::on_main(hold, [=] {
+			if (hold->generation == generation) {
+				finishListReveal(hold);
+			}
+		});
+	});
+}
+
+void HistoryWidget::finishListReveal(not_null<ListRevealHold*> hold) {
+	hold->releasePending = false;
+	hold->refreshAwaited = true;
+	if (_listRevealHold.get() == hold.get()
+		&& _list
+		&& _list->isHidden()
+		&& !_showAnimation) {
+		doneShow();
+	}
+}
+
+void HistoryWidget::resumeListReveal() {
+	if (_list && _list->isHidden() && !_showAnimation) {
+		doneShow();
 	}
 }
 

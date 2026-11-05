@@ -208,7 +208,6 @@ struct CardFrame {
 };
 
 struct BackgroundRequest {
-	std::array<QImage, 4> corners;
 	QSize size;
 	QColor center;
 	QColor edge;

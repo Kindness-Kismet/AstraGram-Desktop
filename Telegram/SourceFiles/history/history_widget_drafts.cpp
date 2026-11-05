@@ -596,7 +596,7 @@ void HistoryWidget::setInnerFocus() {
 			|| isBlocked()
 			|| !_richDraftPreview->isHidden()
 			|| (!_canSendTexts && !_editMsgId)) {
-			if (_scroll->isHidden()) {
+			if (_scroll->isHidden() || _list->isHidden()) {
 				setFocus();
 			} else {
 				_list->setFocus();
@@ -622,12 +622,12 @@ bool HistoryWidget::notify_switchInlineBotButtonReceived(
 		return true;
 	} else if (const auto bot = _peer ? _peer->asUser() : nullptr) {
 		const auto to = bot->isBot()
-			? bot->botInfo->inlineReturnTo
+			? bot->botInfo->inlineReturnTo()
 			: Dialogs::EntryState();
 		if (!to.key.owningHistory()) {
 			return false;
 		}
-		bot->botInfo->inlineReturnTo = Dialogs::EntryState();
+		bot->botInfo->setInlineReturnTo(Dialogs::EntryState());
 		controller()->switchInlineQuery(to, bot, query);
 		return true;
 	}
@@ -687,11 +687,15 @@ void HistoryWidget::setupShortcuts() {
 				return true;
 			});
 		_preview
-			&& (_previewDrawPreview || _preview->draft().removed)
+			&& (_previewDrawPreview
+				|| _preview->draft().removed
+				|| _preview->disabled())
 			&& request->check(Command::ToggleWebPagePreview, 1)
 			&& request->handle([=] {
 				if (_previewDrawPreview) {
 					_preview->apply({ .removed = true });
+				} else if (_preview->disabled()) {
+					_preview->setDisabled(false);
 				} else {
 					_preview->apply({}, true);
 				}

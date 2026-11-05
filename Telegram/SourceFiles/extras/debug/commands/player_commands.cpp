@@ -89,6 +89,7 @@ Result playerState(const QStringList &args) {
 	const auto state = player->getState(type);
 	const auto current = player->current(type);
 	const auto document = current.audio();
+	const auto effectiveSpeed = player->playbackSpeedForDebug(type);
 	auto playlist = nlohmann::json::array();
 	for (const auto &track : player->playlist(type)) {
 		playlist.push_back({ { "messageId", track.contextId().msg.bare },
@@ -108,6 +109,8 @@ Result playerState(const QStringList &args) {
 		{ "order", int(Core::App().settings().playerOrderMode()) },
 		{ "speed", type == AudioMsgId::Type::Song ? Core::App().settings().audioPlaybackSpeed()
 			: Core::App().settings().voicePlaybackSpeed() },
+		{ "effectiveSpeed", effectiveSpeed
+			? nlohmann::json(*effectiveSpeed) : nlohmann::json(nullptr) },
 		{ "volume", Core::App().settings().songVolume() },
 		{ "previousAvailable", player->previousAvailable(type) },
 		{ "nextAvailable", player->nextAvailable(type) },

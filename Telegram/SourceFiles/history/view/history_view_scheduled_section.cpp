@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_animation_snapshot.h"
 
 #include "history/view/controls/history_view_compose_controls.h"
+#include "history/view/history_view_chat_section.h"
 #include "history/view/history_view_empty_list_bubble.h"
 #include "history/view/history_view_top_bar_widget.h"
 #include "history/view/history_view_schedule_box.h"
@@ -36,10 +37,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/delete_messages_box.h"
 #include "boxes/send_files_box.h"
 #include "boxes/premium_limits_box.h"
+#include "window/window_controller.h"
 #include "window/window_session_controller.h"
 #include "window/window_peer_menu.h"
 #include "base/call_delayed.h"
 #include "base/qt/qt_key_modifiers.h"
+#include "core/application.h"
 #include "core/mime_type.h"
 #include "chat_helpers/tabbed_selector.h"
 #include "main/main_session.h"
@@ -131,6 +134,12 @@ object_ptr<Window::SectionWidget> ScheduledMemento::createWidget(
 	if (column == Window::Column::Third) {
 		return nullptr;
 	}
+	if (_forumTopic
+		&& (_forumTopic->dying() || _forumTopic->creating())) {
+		// 话题销毁时返回导航不能重新创建它，创建中的话题另行处理丢弃事件。
+		auto memento = ChatMemento(ChatViewId{ .history = _history });
+		return memento.createWidget(parent, controller, column, geometry);
+	}
 	auto result = object_ptr<ScheduledWidget>(
 		parent,
 		controller,
@@ -138,6 +147,10 @@ object_ptr<Window::SectionWidget> ScheduledMemento::createWidget(
 		_forumTopic);
 	result->setInternalState(geometry, this);
 	return result;
+}
+
+Data::ForumTopic *ScheduledMemento::topicForRemoveRequests() const {
+	return _forumTopic;
 }
 
 ScheduledWidget::ScheduledWidget(
@@ -189,7 +202,7 @@ ScheduledWidget::ScheduledWidget(
 	if (_forumTopic) {
 		_forumTopic->destroyed(
 		) | rpl::on_next([=] {
-			controller->showBackFromStack();
+			topicDestroyed();
 		}, lifetime());
 	}
 
@@ -290,6 +303,16 @@ ScheduledWidget::ScheduledWidget(
 }
 
 ScheduledWidget::~ScheduledWidget() = default;
+
+void ScheduledWidget::topicDestroyed() {
+	const auto window = &controller()->window();
+	const auto id = controller()->windowId();
+	if (id.chat() == _forumTopic) {
+		Core::App().closeWindow(window);
+		return;
+	}
+	showHistoryAfterThreadDestroyed(_history);
+}
 
 void ScheduledWidget::setupComposeControls() {
 	auto writeRestriction = _forumTopic

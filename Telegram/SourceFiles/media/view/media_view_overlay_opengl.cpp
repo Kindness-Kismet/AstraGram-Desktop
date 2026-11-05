@@ -137,7 +137,9 @@ float hostCorner() {
 	};
 }
 
-[[nodiscard]] QRectF StoryCropTextureRect(
+} // namespace
+
+QRectF OverlayWidget::Renderer::StoryCropTextureRect(
 		QSizeF imageSize,
 		QSizeF targetSize) {
 	if (imageSize.isEmpty() || targetSize.isEmpty()) {
@@ -164,8 +166,6 @@ float hostCorner() {
 	}
 	return QRectF(0., 0., 1., 1.);
 }
-
-} // namespace
 
 OverlayWidget::RendererGL::RendererGL(not_null<OverlayWidget*> owner)
 : _owner(owner) {

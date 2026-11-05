@@ -79,6 +79,13 @@ struct SplitCommittedFieldOffset {
 		const CommittedFieldSelectionCapture &capture,
 		int chunkIndex);
 
+[[nodiscard]] auto CaptureCommittedFieldSelection(
+		const Ui::InputField &field,
+		const State &state,
+		const Widget &widget,
+		int (Widget::*richOffset)(const TextWithEntities &, int) const)
+-> std::optional<CommittedFieldSelectionCapture>;
+
 [[nodiscard]] std::optional<CommittedFieldSelectionRestore>
 MapCommittedFieldSelectionAfterCommit(
 		const State &state,
