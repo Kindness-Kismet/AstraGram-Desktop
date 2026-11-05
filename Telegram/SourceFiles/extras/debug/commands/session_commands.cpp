@@ -289,11 +289,20 @@ using json = nlohmann::json;
 				: nullptr;
 			const auto message = dynamic_cast<HistoryView::Message*>(view.get());
 			const auto bubble = message ? message->debugBubbleGeometry() : QRect();
+			const auto center = bubble.isEmpty()
+				? QPoint(view->width() / 2, view->height() / 2)
+				: bubble.center();
+			const auto visualTop = top + int(std::round(reveal.shift));
+			const auto hit = list
+				? list->lookupItemByVisualPoint(center + QPoint(0, visualTop))
+				: nullptr;
 			rows.push_back({
 				{ "id", view->data()->id.bare },
 				{ "y", y }, { "top", top },
 				{ "revealProgress", reveal.progress },
 				{ "revealShift", reveal.shift },
+				{ "reorderShift", list ? list->debugItemReorderShift(view) : 0. },
+				{ "visualHitId", hit ? hit->data()->id.bare : 0 },
 				{ "visualY", visualY },
 				{ "stickerFrame", sticker ? sticker->frameIndex().value_or(-1) : -1 },
 				{ "stickerFrames", sticker ? sticker->framesCount().value_or(-1) : -1 },

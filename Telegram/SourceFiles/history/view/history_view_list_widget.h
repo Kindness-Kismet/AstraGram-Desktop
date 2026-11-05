@@ -335,7 +335,7 @@ class ListWidget final
 	, public Ui::AbstractTooltipShower {
 public:
 	[[nodiscard]] float64 itemRevealOpacity(not_null<Element*> view) const;
-	[[nodiscard]] ItemRevealState itemRevealState(not_null<Element*> view) const;
+	[[nodiscard]] ItemRevealState itemRevealState(not_null<const Element*> view) const;
 	ListWidget(
 		QWidget *parent,
 		not_null<Main::Session*> session,
@@ -374,6 +374,9 @@ public:
 #ifdef _DEBUG
 	[[nodiscard]] const std::vector<not_null<Element*>> &debugItems() const {
 		return _items;
+	}
+	[[nodiscard]] float64 debugItemReorderShift(not_null<Element*> view) const {
+		return itemReorderShift(view);
 	}
 #endif
 	bool isAbovePosition(Data::MessagePosition position) const;
@@ -454,6 +457,7 @@ public:
 	[[nodiscard]] bool showCopyRestrictionForSelected();
 	[[nodiscard]] bool hasSelectRestriction() const;
 	[[nodiscard]] Element *lookupItemByY(int y) const;
+	[[nodiscard]] Element *lookupItemByVisualPoint(QPoint point) const;
 	[[nodiscard]] not_null<HistoryItem*> lookupItemByPoint(
 		QPoint point,
 		not_null<Element*> view) const;
@@ -688,6 +692,10 @@ private:
 		int startHeight = 0;
 		int displacement = 0;
 	};
+	struct ItemOrderPosition {
+		not_null<HistoryItem*> item;
+		float64 top = 0.;
+	};
 	enum class Direction {
 		Up,
 		Down,
@@ -915,6 +923,12 @@ private:
 	[[nodiscard]] bool scrollingToBottom() const;
 	void startItemRevealAnimations();
 	void revealItemsCallback();
+	[[nodiscard]] std::vector<ItemOrderPosition> captureItemOrder() const;
+	void animateItemReorder(const std::vector<ItemOrderPosition> &previous);
+	void reorderItemsCallback();
+	[[nodiscard]] float64 itemReorderShift(not_null<const Element*> view) const;
+	[[nodiscard]] float64 itemVisualTop(not_null<const Element*> view) const;
+	[[nodiscard]] QRect itemAnimationClip(QRect clip) const;
 	[[nodiscard]] bool keepsBottomForSending() const;
 	void extendSendingLanding(crl::time duration);
 	void checkSendingLanding();
@@ -1000,6 +1014,7 @@ private:
 	base::flat_map<
 		not_null<Element*>,
 		ItemRevealAnimation> _itemRevealAnimations;
+	base::flat_map<not_null<Element*>, Ui::Animations::Simple> _itemReorderAnimations;
 	struct SendingLanding {
 		base::flat_set<not_null<const HistoryItem*>> pending;
 		base::flat_set<not_null<const HistoryItem*>> landed;

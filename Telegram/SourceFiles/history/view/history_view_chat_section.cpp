@@ -1983,7 +1983,7 @@ void ChatWidget::setupSwipeReplyAndBack() {
 		if (_inner->elementInSelectionMode(nullptr).inSelectionMode) {
 			return result;
 		}
-		const auto view = _inner->lookupItemByY(data.cursorPosition.y());
+		const auto view = _inner->lookupItemByVisualPoint(data.cursorPosition);
 		if (!view
 			|| (!view->data()->isRegular()
 				&& (!view->data()->isEphemeral()

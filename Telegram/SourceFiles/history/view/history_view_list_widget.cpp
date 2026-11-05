@@ -427,9 +427,8 @@ void ListWidget::enumerateUserpics(Method method, int visibleTop, bool painting)
 		if (view->data()->isService()) {
 			return true;
 		}
-		const auto shift = painting
-			? int(std::round(itemRevealState(view).shift))
-			: 0;
+		const auto reveal = painting ? itemRevealState(view) : ItemRevealState();
+		const auto shift = int(std::round(reveal.shift));
 		itemtop += shift;
 		itembottom += shift;
 
@@ -459,7 +458,10 @@ void ListWidget::enumerateUserpics(Method method, int visibleTop, bool painting)
 
 			// Call the template callback function that was passed
 			// and return if it finished everything it needed.
-			if (!method(view, userpicBottom - st::msgPhotoSize - shift)) {
+			const auto userpicTop = (reveal.progress < 1.)
+				? itembottom - view->marginBottom() - st::msgPhotoSize
+				: userpicBottom - st::msgPhotoSize;
+			if (!method(view, userpicTop)) {
 				return false;
 			}
 		}
@@ -472,8 +474,10 @@ void ListWidget::enumerateUserpics(Method method, int visibleTop, bool painting)
 		return true;
 	};
 
+	const auto clip = QRect(0, visibleTop, width(), _visibleBottom - visibleTop);
+	const auto expanded = painting ? itemAnimationClip(clip) : clip;
 	enumerateItems<EnumItemsDirection::TopToBottom>(
-		userpicCallback, visibleTop, painting ? _itemsRevealHeight : 0);
+		userpicCallback, expanded.top(), expanded.bottom() + 1 - _visibleBottom);
 }
 
 template <typename Method>
@@ -956,6 +960,7 @@ void ListWidget::scheduleFirstContentRelease(
 
 void ListWidget::refreshRows(const Data::MessagesSlice &old) {
 	Expects(_viewsCapacity.empty());
+	const auto previousOrder = captureItemOrder();
 
 	if (_thanosController) {
 		// Main history drops the view before itemRemoved() fires.
@@ -1112,6 +1117,7 @@ void ListWidget::refreshRows(const Data::MessagesSlice &old) {
 			landInsertedSending();
 		}
 	}
+	animateItemReorder(previousOrder);
 	if (!_itemsRevealHeight) {
 		mouseActionUpdate(QCursor::pos());
 	}
@@ -2486,7 +2492,7 @@ not_null<HistoryItem*> ListWidget::lookupItemByPoint(
 }
 
 bool ListWidget::canConsumeHorizontalScroll(QPoint position, int delta) const {
-	const auto view = lookupItemByY(position.y());
+	const auto view = lookupItemByVisualPoint(position);
 	return view
 		&& view->canConsumeHorizontalScroll(
 			mapPointToItem(position, view),
@@ -2521,7 +2527,7 @@ bool ListWidget::consumeScrollAction(
 	}
 	const auto position = mapFromGlobal(
 		globalPosition.value_or(_mousePosition));
-	const auto view = lookupItemByY(position.y());
+	const auto view = lookupItemByVisualPoint(position);
 	return view
 		&& view->consumeHorizontalScroll(
 			mapPointToItem(position, view),
@@ -3006,13 +3012,14 @@ bool ListWidget::setBottomPadding(int padding) {
 	return std::exchange(_bottomPadding, padding) != padding;
 }
 
-ItemRevealState ListWidget::itemRevealState(not_null<Element*> view) const {
+ItemRevealState ListWidget::itemRevealState(not_null<const Element*> view) const {
 	if (anim::Disabled()) {
 		return {};
 	}
 	if (_itemRevealPending.contains(view)) {
 		return { .progress = 0. };
 	}
+	const auto reorderShift = itemReorderShift(view);
 	const auto i = _itemRevealAnimations.find(view);
 	const auto revealing = (i != end(_itemRevealAnimations));
 	const auto progress = revealing ? i->second.animation.value(1.) : 1.;
@@ -3026,11 +3033,11 @@ ItemRevealState ListWidget::itemRevealState(not_null<Element*> view) const {
 	}
 	// 前方新消息尚未展开的高度，同样要从旧消息的位置中扣除。
 	if (!revealing) {
-		return { .shift = -float64(revealHeight) };
+		return { .shift = reorderShift - revealHeight };
 	}
 	return {
 		.progress = progress,
-		.shift = -revealHeight + _delegate->listMessageEnterShift()
+		.shift = reorderShift - revealHeight + _delegate->listMessageEnterShift()
 			+ i->second.displacement * (1. - ItemExpansionProgress(progress)),
 	};
 }
@@ -3294,6 +3301,9 @@ int ListWidget::resizeGetHeight(int newWidth) {
 	update();
 
 	const auto resizeAllItems = (_itemsWidth != newWidth);
+	if (resizeAllItems) {
+		_itemReorderAnimations.clear();
+	}
 	auto newHeight = 0;
 	for (const auto &view : _items) {
 		view->setY(newHeight);
@@ -3532,12 +3542,8 @@ void ListWidget::paintList(Painter &p, QRect clip, bool backdrop) {
 		std::min(st::msgMaxWidth / 2, width() / 2));
 
 	const auto shadowPadding = Ui::BubbleShadowPadding();
-	auto paintClip = clip.adjusted(0, -shadowPadding, 0, shadowPadding);
-	paintClip = paintClip.united(paintClip.translated(0, _itemsRevealHeight));
-	for (const auto &[view, animation] : _itemRevealAnimations) {
-		const auto shift = int(std::round(itemRevealState(view).shift));
-		paintClip = paintClip.united(clip.translated(0, -shift));
-	}
+	const auto paintClip = itemAnimationClip(
+		clip.adjusted(0, -shadowPadding, 0, shadowPadding));
 
 	auto collapseGapTotal = 0;
 	for (const auto &gap : collapseGaps()) {
@@ -3707,7 +3713,7 @@ void ListWidget::paintList(Painter &p, QRect clip, bool backdrop) {
 		if (_reactionsManager) {
 			_reactionsManager->recordCurrentReactionEffect(
 				item->fullId(),
-				QPoint(0, top));
+				QPoint(0, top + int(std::round(itemRevealState(view).shift))));
 		}
 		top += height;
 		context.translate(0, -height);
@@ -3739,16 +3745,12 @@ void ListWidget::paintUserpics(
 		return;
 	}
 	const auto session = &this->session();
-	enumerateUserpics([&](not_null<Element*> view, int userpicTop) {
+	enumerateUserpics([&](not_null<Element*> view, int visualTop) {
 		const auto reveal = itemRevealState(view);
-		if (reveal.progress < 1.) {
-			userpicTop = itemTop(view) + view->height()
-				- view->marginBottom() - st::msgPhotoSize;
-		}
-		const auto visualTop = userpicTop + int(std::round(reveal.shift));
+		const auto userpicTop = visualTop - int(std::round(reveal.shift));
 		// stop the enumeration if the userpic is below the painted rect
 		if (visualTop >= clip.top() + clip.height()) {
-			return _itemsRevealHeight > 0;
+			return _itemsRevealHeight > 0 || !_itemReorderAnimations.empty();
 		}
 
 		// paint the userpic if it intersects the painted rect
@@ -4647,15 +4649,13 @@ void ListWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 	} else if (linkUserpicPeerId) {
 		_menu = _delegate->listFillSenderUserpicMenu(linkUserpicPeerId);
 		if (_menu) {
-			Window::AddSenderUserpicModerateAction(
-				controller(),
-				[&] {
-					const auto contextY = _visibleTop
-						+ mapFromGlobal(e->globalPos()).y();
-					const auto contextView = strictFindItemByY(contextY);
-					return contextView ? contextView->data().get() : overItem;
-				}(),
-				Ui::Menu::CreateAddActionCallback(_menu.get()));
+			const auto contextView = lookupItemByVisualPoint(mapFromGlobal(e->globalPos()));
+			if (contextView && contextView->data()->from()->id == linkUserpicPeerId) {
+				Window::AddSenderUserpicModerateAction(
+					controller(),
+					contextView->data(),
+					Ui::Menu::CreateAddActionCallback(_menu.get()));
+			}
 			_menu->setForcedOrigin(Ui::PanelAnimation::Origin::BottomLeft);
 			_menu->popup(e->globalPos());
 			e->accept();
@@ -5429,7 +5429,7 @@ Reactions::ButtonParameters ListWidget::reactionButtonParameters(
 	if (!_useCornerReaction) {
 		return {};
 	}
-	const auto top = itemTop(view);
+	const auto top = int(std::round(itemVisualTop(view)));
 	if (top < 0
 		|| !view->data()->canReact()
 		|| _mouseAction == MouseAction::Dragging
@@ -5453,7 +5453,7 @@ ReplyButton::ButtonParameters ListWidget::replyButtonParameters(
 	if (!_useCornerReply) {
 		return {};
 	}
-	const auto top = itemTop(view);
+	const auto top = int(std::round(itemVisualTop(view)));
 	if (top < 0
 		|| _mouseAction == MouseAction::Dragging
 		|| inSelectionMode().inSelectionMode) {
@@ -5651,7 +5651,7 @@ void ListWidget::mouseActionUpdate() {
 		? replyBtnView
 		: aboutView
 		? aboutView
-		: strictFindItemByY(point.y());
+		: lookupItemByVisualPoint(point);
 	const auto item = view ? view->data().get() : nullptr;
 	const auto itemPoint = mapPointToItem(point, view);
 	const auto wasInside = (_overState.pointState != PointState::Outside);
@@ -5839,7 +5839,7 @@ void ListWidget::mouseActionUpdate() {
 					enumerateUserpics([&](not_null<Element*> view, int userpicTop) {
 						// stop enumeration if the userpic is below our point
 						if (userpicTop > point.y()) {
-							return false;
+							return _itemsRevealHeight > 0 || !_itemReorderAnimations.empty();
 						}
 
 						// stop enumeration if we've found a userpic under the cursor
@@ -5849,10 +5849,10 @@ void ListWidget::mouseActionUpdate() {
 							dragStateUserpic = true;
 							_overItemExact = nullptr;
 							lnkhost = view;
-							return false;
+							return !_itemReorderAnimations.empty();
 						}
 						return true;
-					}, _visibleTop - _topPadding);
+					}, _visibleTop - _topPadding, true);
 				}
 			}
 		}
@@ -6176,7 +6176,9 @@ void ListWidget::repaintItem(const Element *view) {
 	}
 	const auto top = itemTop(view);
 	const auto range = view->verticalRepaintRange();
-	update(0, top + range.top, width(), range.height);
+	const auto rect = QRect(0, top + range.top, width(), range.height);
+	const auto shift = int(std::round(itemVisualTop(view) - top));
+	update(rect.united(rect.translated(0, shift)));
 	const auto id = view->data()->fullId();
 	const auto area = _reactionsManager
 		? _reactionsManager->lookupEffectArea(id)
@@ -6194,7 +6196,8 @@ void ListWidget::repaintItem(const Element *view, QRect rect) {
 		return;
 	}
 	const auto top = itemTop(view);
-	update(rect.translated(0, top));
+	const auto visualTop = int(std::round(itemVisualTop(view)));
+	update(rect.translated(0, top).united(rect.translated(0, visualTop)));
 }
 
 void ListWidget::repaintItem(FullMsgId itemId) {
@@ -6388,6 +6391,15 @@ void ListWidget::viewReplaced(not_null<const Element*> was, Element *now) {
 			revealItemsCallback();
 		}
 	}
+	const auto k = _itemReorderAnimations.find(was);
+	if (k != end(_itemReorderAnimations)) {
+		auto animation = std::move(k->second);
+		_itemReorderAnimations.erase(k);
+		if (now) {
+			_itemReorderAnimations.emplace(now, std::move(animation));
+		}
+		update();
+	}
 }
 
 void ListWidget::itemRemoved(not_null<const HistoryItem*> item) {
@@ -6456,7 +6468,7 @@ QPoint ListWidget::mapPointToItem(
 		return QPoint();
 	}
 	return point
-		- QPoint(SelectionViewOffset(this, view), itemTop(view));
+		- QPoint(SelectionViewOffset(this, view), int(std::round(itemVisualTop(view))));
 }
 
 rpl::producer<FullMsgId> ListWidget::editMessageRequested() const {

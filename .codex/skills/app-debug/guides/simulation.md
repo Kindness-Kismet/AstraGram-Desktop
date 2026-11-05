@@ -147,17 +147,23 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 ## 验证入口
 
 `simulation.message-order` 仅在独立模拟配置分步构造并发消息，固定使用 `group` 场景；不发送或自动确认消息。
-先执行 `prepare <我方类型> <对方类型> <before|same|after>`，类型支持 `text`、`long`、`sticker`，分别为短文字、十二行文字、内存静态贴纸。
-最后一项控制我方本地时间相对来信早一秒、同秒或晚一秒；我方正式编号始终比来信大。返回 `peerId` 后用 `chat.open` 打开，并滚到最底部。
+先执行 `prepare <我方类型> <对方类型> <before|same|after> [--with caseId]`，类型支持 `text`、`long`、`sticker`、`photo`、`file`，分别为短文字、十二行文字、内存静态贴纸、图片、文本文件。
+最后一项控制我方本地时间相对来信早一秒、同秒或晚一秒；我方正式编号始终比来信大。返回 `caseId` 和 `peerId`，用 `chat.open` 打开对应会话并滚到最底部。
 
 - `local`：创建我方负编号待发送消息。
 - `incoming`：插入对方正式编号消息；可以在 `local` 前后调用。
 - `confirm`：沿正式确认链路换号并更新历史索引，保证复用同一个消息对象；需要先有 `local`。
 - `state`：查询两条消息是否存在、日期、发送状态及临时到正式编号的映射，不输出内存地址。
 
+以上四项都可附加 `caseId`，例如 `confirm 1`、`state 2`；省略时操作最近一次准备的样本，兼容单组调用。
+可连续 `prepare` 多组再交错插入、确认，已有未确认消息和编号映射会保留到当前模拟会话结束。
+`--with <已有编号>` 仅复用该组的来信时间；新组的本地时间仍由 `before|same|after` 决定，消息与素材编号独立生成。
+
 各步骤之间用 `cache.layout <peerId>` 连续采样，按需用 `anim.speed` 放慢。`before` 下先执行 `local`、`incoming`，等入场结束后 `confirm`，
 可稳定构造我方从来信上方换到下方的场景；验证同一消息换号后透明度不归零。`same` 下先 `local` 再 `incoming`，可验证来信插到旧气泡前方时位置连续。
-再次 `prepare` 保留已有消息；上一轮创建了我方消息时必须先确认。重启模拟配置清除样本，验证后恢复动画速度及原开发配置。
+验证同一气泡连续改目标时，先准备 A，再准备带 `--with A` 的 B，两组均用 `before`；依次插入 A、B 的我方消息和来信。
+等入场结束后确认 A，过渡未结束时再确认 B；B 的我方消息会先被 A 的排序调整带动，再移动到自身确认后的位置。确认时仍保留原消息对象。
+不传 `--with` 时，新组基准时间至少比此前最大值晚三秒，便于区分位置变化。重启模拟配置清除样本，验证后恢复动画速度及原开发配置。
 
 `simulation.cache-history-check` 仅在独立模拟配置中运行固定历史缓存检查，先用 `app.start --profile cache-history-check + simulation.enter` 进入。
 返回异步任务编号，用 `job.status <编号>` 查看完成结果；覆盖摘要删除、未知末条、请求乱序、话题与收藏来源隔离、发送确认、加载中的动态更新与选择保留。

@@ -1570,6 +1570,7 @@ PRIVATE
     history/view/history_view_list_frosted.cpp
     history/view/history_view_list_frosted.h
     history/view/history_view_list_widget.cpp
+    history/view/history_view_list_reorder.cpp
     history/view/history_view_list_widget.h
     history/view/history_view_list_selection.cpp
     history/view/history_view_message.cpp

@@ -543,7 +543,7 @@ void Item::setupHistory() {
 					_inner.data(),
 					_scroll.get(),
 					static_cast<QMouseEvent*>(e.get())->pos());
-				if (const auto view = _inner->lookupItemByY(relative.y())) {
+				if (const auto view = _inner->lookupItemByVisualPoint(relative)) {
 					_actions.fire(ChatPreviewAction{
 						.openItemId = view->data()->fullId(),
 					});
