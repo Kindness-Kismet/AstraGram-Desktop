@@ -135,6 +135,7 @@ void addExtrasSettings(SettingsMap &entries) {
 	addSetting(entries, u"showUserMessagesInContextMenu"_q, [&] { return settings.showUserMessagesInContextMenu(); }, settings, &ExtrasSettings::setShowUserMessagesInContextMenu);
 	addSetting(entries, u"showMessageDetailsInContextMenu"_q, [&] { return settings.showMessageDetailsInContextMenu(); }, settings, &ExtrasSettings::setShowMessageDetailsInContextMenu);
 	addSetting(entries, u"showRepeatMessageInContextMenu"_q, [&] { return settings.showRepeatMessageInContextMenu(); }, settings, &ExtrasSettings::setShowRepeatMessageInContextMenu);
+	addSetting(entries, u"showRepeatMessageNoQuoteInContextMenu"_q, [&] { return settings.showRepeatMessageNoQuoteInContextMenu(); }, settings, &ExtrasSettings::setShowRepeatMessageNoQuoteInContextMenu);
 	addSetting(entries, u"showAddFilterInContextMenu"_q, [&] { return settings.showAddFilterInContextMenu(); }, settings, &ExtrasSettings::setShowAddFilterInContextMenu);
 	addSetting(entries, u"showAttachButtonInMessageField"_q, [&] { return settings.showAttachButtonInMessageField(); }, settings, &ExtrasSettings::setShowAttachButtonInMessageField);
 	addSetting(entries, u"showSendAsButtonInMessageField"_q, [&] { return settings.showSendAsButtonInMessageField(); }, settings, &ExtrasSettings::setShowSendAsButtonInMessageField);

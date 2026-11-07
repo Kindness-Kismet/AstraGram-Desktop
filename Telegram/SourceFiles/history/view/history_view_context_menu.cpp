@@ -1573,9 +1573,10 @@ void AddMessageActions(
 				}));
 		}, &st::menuIconSend);
 	}
-	if (request.item) {
+	if (request.item && request.selectedItems.empty()) {
 		const auto context = request.view ? request.view->context() : Context::History;
-		ExtrasUi::AddRepeatMessageAction(menu, request.item, context);
+		ExtrasUi::AddRepeatMessageAction(
+			menu, request.item, context, request.pointState != PointState::GroupPart);
 	}
 	AddOfferAction(menu, request, list);
 	AddSendNowAction(menu, request, list);

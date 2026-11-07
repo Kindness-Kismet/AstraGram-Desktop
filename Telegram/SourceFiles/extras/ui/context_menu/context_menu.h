@@ -43,7 +43,8 @@ void AddMessageDetailsAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
 void AddRepeatMessageAction(
 	not_null<Ui::PopupMenu*> menu,
 	HistoryItem *item,
-	HistoryView::Context context = HistoryView::Context::History);
+	HistoryView::Context context = HistoryView::Context::History,
+	bool asGroup = false);
 void AddReadUntilAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
 void AddBurnAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
 void AddVideoCoverAction(

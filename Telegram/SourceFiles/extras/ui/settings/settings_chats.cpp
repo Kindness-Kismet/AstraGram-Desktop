@@ -418,6 +418,15 @@ void BuildContextMenuElements(SectionBuilder &builder, ExtrasSectionBuilder &ext
 		.setter = [](int i) { ExtrasSettings::getInstance().setShowRepeatMessageInContextMenu(static_cast<ContextMenuVisibility>(i)); },
 		.icon = { &st::extrasRepeatMenuIcon },
 	});
+	extras.addChooseButton({
+		.id = u"extras/showRepeatMessageNoQuoteInContextMenu"_q,
+		.title = tr::extras_RepeatMessageNoQuote(),
+		.boxTitle = tr::extras_SettingsContextMenuTitle(),
+		.initialSelection = static_cast<int>(settings->showRepeatMessageNoQuoteInContextMenu()),
+		.options = options,
+		.setter = [](int i) { ExtrasSettings::getInstance().setShowRepeatMessageNoQuoteInContextMenu(static_cast<ContextMenuVisibility>(i)); },
+		.icon = { &st::extrasRepeatMenuIcon },
+	});
 	if (settings->filtersEnabled()) {
 		extras.addChooseButton({
 			.id = u"extras/showAddFilterInContextMenu"_q,

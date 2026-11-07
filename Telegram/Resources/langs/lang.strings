@@ -9404,6 +9404,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_SearchByIDResults" = "Found by ID";
 "extras_ContextCopyCallbackData" = "Copy Callback Data";
 "extras_RepeatMessage" = "Repeat Message";
+"extras_RepeatMessageNoQuote" = "Repeat Without Quote";
 "extras_RegisterURLScheme" = "Register URL Scheme";
 "extras_PluginVersion" = "Version";
 "extras_PluginNoDescription" = "No description provided.";
