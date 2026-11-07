@@ -18,6 +18,7 @@
 #include "settings.h"
 #include "base/call_delayed.h"
 
+#include <array>
 #include <memory>
 
 namespace ExtrasDebug::Commands {
@@ -865,7 +866,419 @@ private:
 			record(14, after.histories <= after.maxHistories && after.evictions > before.evictions,
 				{ { "before", before.histories }, { "after", after.histories },
 					{ "limit", after.maxHistories }, { "evictions", after.evictions - before.evictions } });
-			finish(_passed);
+			deletionReadOrdering();
+		});
+	}
+
+	void releaseHistory(Query query, Fn<void(bool)> done) {
+		releaseHistories({ query }, std::move(done));
+	}
+
+	void releaseHistories(std::vector<Query> queries, Fn<void(bool)> done) {
+		auto &cache = _session->conversationCache();
+		for (const auto &query : queries) {
+			cache._histories.at(query.key).lastUsed = crl::now() - 180000;
+		}
+		cache.flush();
+		waitForWrites([self = shared_from_this(), queries, done = std::move(done)] {
+			auto &cache = self->_session->conversationCache();
+			cache.pruneMemory();
+			done(ranges::none_of(queries, [&](const Query &query) {
+				return cache._histories.contains(query.key);
+			}));
+		});
+	}
+
+	void readQueries(std::vector<Query> queries,
+			Fn<void(std::vector<SliceState>)> done,
+			std::vector<SliceState> states = {}) {
+		if (states.size() == queries.size()) {
+			done(std::move(states));
+			return;
+		}
+		const auto query = queries[states.size()];
+		read(query, [self = shared_from_this(), queries = std::move(queries),
+				done = std::move(done), states = std::move(states)](std::optional<Slice> slice) mutable {
+			states.push_back(describeSlice(slice));
+			self->readQueries(std::move(queries), std::move(done), std::move(states));
+		});
+	}
+
+	void deletionReadOrdering() {
+		const auto peer = user(40);
+		const auto query = latest(peer);
+		const auto keep = MsgId(_messageBase + 501);
+		const auto removed = MsgId(_messageBase + 502);
+		put(query, { message(peer, 502), message(peer, 501) }, 2, false);
+		read(query, [=, this](std::optional<Slice>) {
+			releaseHistory(query, [self = shared_from_this(), peer, query, keep, removed](bool released) {
+				const auto observed = std::make_shared<SliceState>();
+				self->read(query, [=](std::optional<Slice> slice) {
+					*observed = describeSlice(slice);
+					self->deliver(peer, query, slice);
+				});
+				// getHistory 先排队磁盘读取，再在磁盘回调返回前提出删除。
+				crl::on_main(self->_session.get(), [=] {
+					auto &cache = self->_session->conversationCache();
+					const auto loading = !cache.debugHistoryInfo(query.key).loaded;
+					cache.messagesDeleted(peer->id, { MTP_int(removed.bare) }, [=] {
+						++self->_deletionDoneCounts[0];
+						const auto &cache = self->_session->conversationCache();
+						const auto &entry = cache._histories.at(query.key);
+						const auto readClean = observed->ids == std::vector<MsgId>{ keep };
+						const auto liveMissing = !self->_session->data().message(peer->id, removed);
+						self->record(17, released && loading && readClean && liveMissing
+							&& entry.loaded && !entry.messages.contains(removed)
+							&& entry.pendingDeletedIds.empty() && self->_deletionDoneCounts[0] == 1,
+							{ { "diskReleased", released }, { "readQueuedBeforeDelete", loading },
+								{ "readExcludedDeleted", readClean }, { "deletedItemNotRestored", liveMissing },
+								{ "doneCount", self->_deletionDoneCounts[0] } });
+						self->deletionDiskReload(query, keep, removed);
+					});
+				});
+			});
+		});
+	}
+
+	void deletionDiskReload(Query query, MsgId keep, MsgId removed) {
+		releaseHistory(query, [self = shared_from_this(), query, keep, removed](bool released) {
+			const auto loads = self->_session->conversationCache().memoryStats().diskLoads;
+			self->read(query, [=](std::optional<Slice> slice) {
+				const auto state = describeSlice(slice);
+				const auto &cache = self->_session->conversationCache();
+				const auto reloaded = cache.memoryStats().diskLoads == loads + 1;
+				self->record(18, released && reloaded && state.ids == std::vector<MsgId>{ keep }
+					&& state.count == 1 && !cache._nonChannelPeers.contains(removed)
+					&& self->_deletionDoneCounts[0] == 1,
+					{ { "diskReleased", released }, { "diskReloaded", reloaded },
+						{ "deletedAbsentOnDisk", state.ids == std::vector<MsgId>{ keep } },
+						{ "doneCount", self->_deletionDoneCounts[0] } });
+				self->deletionWriteOrdering();
+			});
+		});
+	}
+
+	void deletionWriteOrdering() {
+		const auto peer = user(41);
+		const auto query = latest(peer);
+		const auto keep = MsgId(_messageBase + 511);
+		const auto removed = MsgId(_messageBase + 512);
+		put(query, { message(peer, 512), message(peer, 511) }, 2, false);
+		auto &cache = _session->conversationCache();
+		const auto loading = !cache.debugHistoryInfo(query.key).loaded;
+		const auto unindexed = !cache._historyKeys.contains(query.key);
+		cache.messagesDeleted(peer->id, { MTP_int(removed.bare) },
+			[self = shared_from_this(), query, keep, removed, loading, unindexed] {
+				++self->_deletionDoneCounts[1];
+				self->read(query, [=](std::optional<Slice> slice) {
+					const auto &cache = self->_session->conversationCache();
+					const auto &entry = cache._histories.at(query.key);
+					const auto clean = describeSlice(slice).ids == std::vector<MsgId>{ keep };
+					self->record(19, loading && unindexed && clean && entry.pending.empty()
+						&& entry.pendingDeletedIds.empty() && !entry.messages.contains(removed)
+						&& self->_deletionDoneCounts[1] == 1,
+						{ { "putQueuedBeforeDelete", loading }, { "keyNotYetIndexed", unindexed },
+							{ "queuedPutCouldNotRestore", clean },
+							{ "doneCount", self->_deletionDoneCounts[1] } });
+					self->deletionWhileClearing(query, keep);
+				});
+			});
+	}
+
+	void deletionWhileClearing(Query query, MsgId removed) {
+		releaseHistory(query, [self = shared_from_this(), query, removed](bool released) {
+			auto &cache = self->_session->conversationCache();
+			cache.messagesDeleted(query.key.peer, { MTP_int(removed.bare) }, [self] {
+				++self->_deletionDoneCounts[2];
+			});
+			const auto loading = !cache.debugHistoryInfo(query.key).loaded;
+			cache.clearStorage(query.key.peer, [=](Storage::Cache::Error error) {
+				const auto cleared = error.type == Storage::Cache::Error::Type::None;
+				self->read(query, [=](std::optional<Slice> slice) {
+					const auto &cache = self->_session->conversationCache();
+					const auto absent = describeSlice(slice).ids.empty();
+					self->record(20, released && loading && cleared && absent
+						&& !cache._historyKeys.contains(query.key)
+						&& self->_deletionDoneCounts[2] == 1,
+						{ { "diskReleased", released }, { "deletePendingAtClear", loading },
+							{ "storageCleared", cleared }, { "deletedAbsent", absent },
+							{ "doneCount", self->_deletionDoneCounts[2] } });
+					self->participantLookup();
+				});
+			});
+		});
+	}
+
+	void participantLookup() {
+		const auto peer = user(50);
+		const auto sender = user(51)->id;
+		const auto otherSender = user(52)->id;
+		const auto unrelated = user(53);
+		const auto main = latest(peer);
+		auto topic = main;
+		topic.key.topicRootId = MsgId(_messageBase + 610);
+		auto sublist = main;
+		sublist.key.sublistPeer = user(54)->id;
+		const auto other = latest(unrelated);
+		const auto sample = [=, this](not_null<PeerData*> target, PeerId from, int offset) {
+			return simulationTextMessage(target, from, _messageBase + offset, u"缓存发送者筛选样本"_q);
+		};
+		put(main, { sample(peer, otherSender, 612), sample(peer, sender, 611) }, 2, false);
+		put(topic, { sample(peer, otherSender, 614), sample(peer, sender, 613),
+			sample(peer, sender, 611) }, 3, false);
+		put(sublist, { sample(peer, sender, 615), sample(peer, sender, 611) }, 2, false);
+		put(other, { sample(unrelated, sender, 616) }, 1, false);
+		_session->conversationCache().messageReceived(sample(peer, sender, 617), NewMessageType::Last);
+		const auto queries = std::vector<Query>{ main, topic, sublist, other };
+		readQueries(queries, [self = shared_from_this(), queries, sender](std::vector<SliceState>) {
+			self->participantLookupFromDisk(queries, sender);
+		});
+	}
+
+	void participantLookupFromDisk(std::vector<Query> queries, PeerId sender) {
+		releaseHistories(queries, [self = shared_from_this(), queries, sender](bool released) {
+			auto &cache = self->_session->conversationCache();
+			const auto loads = cache.memoryStats().diskLoads;
+			cache.collectMessagesFromParticipant(queries.front().key.peer, sender,
+				[=](QVector<MTPint> ids) {
+					auto found = std::vector<MsgId>();
+					for (const auto id : ids) {
+						found.emplace_back(id.v);
+					}
+					const auto base = self->_messageBase;
+					const auto expected = std::vector<MsgId>{ MsgId(base + 611),
+						MsgId(base + 613), MsgId(base + 615), MsgId(base + 617) };
+					const auto &cache = self->_session->conversationCache();
+					const auto diskLoads = cache.memoryStats().diskLoads - loads;
+					const auto unrelatedUntouched = !cache._histories.contains(queries.back().key);
+					const auto liveMissing = !self->_session->data().message(
+						queries.front().key.peer, MsgId(base + 611));
+					self->record(22, released && found == expected && diskLoads == 3
+						&& unrelatedUntouched && liveMissing,
+						{ { "diskReleased", released }, { "senderIdsExact", found == expected },
+							{ "matchCount", ids.size() }, { "diskLoads", diskLoads },
+							{ "unrelatedHistoryUntouched", unrelatedUntouched }, { "itemMissing", liveMissing } });
+					self->participantDeletion(queries, std::move(ids));
+				});
+		});
+	}
+
+	void participantDeletion(std::vector<Query> queries, QVector<MTPint> ids) {
+		_session->conversationCache().messagesDeleted(queries.front().key.peer, ids,
+			[self = shared_from_this(), queries] {
+				const auto affected = std::vector<Query>(queries.begin(), queries.end() - 1);
+				self->releaseHistories(affected, [=](bool released) {
+					self->readQueries(queries, [=](std::vector<SliceState> states) {
+						const auto base = self->_messageBase;
+						const auto exact = states[0].ids == std::vector<MsgId>{ MsgId(base + 612) }
+							&& states[1].ids == std::vector<MsgId>{ MsgId(base + 614) }
+							&& states[2].ids.empty()
+							&& states[3].ids == std::vector<MsgId>{ MsgId(base + 616) };
+						const auto &cache = self->_session->conversationCache();
+						const auto lastMissing = !cache._lastMessages.contains(queries.front().key.peer);
+						self->record(23, released && exact && lastMissing,
+							{ { "diskReleased", released }, { "onlyParticipantDeleted", exact },
+								{ "lastMessageRemoved", lastMissing } });
+						self->participantPendingPut();
+					});
+				});
+			});
+	}
+
+	void participantPendingPut() {
+		const auto peer = user(55);
+		const auto sender = user(51)->id;
+		const auto query = latest(peer);
+		const auto id = _messageBase + 621;
+		put(query, { simulationTextMessage(peer, sender, id, u"待加载的发送者样本"_q) }, 1, false);
+		auto &cache = _session->conversationCache();
+		const auto unindexed = !cache._historyKeys.contains(query.key);
+		cache.collectMessagesFromParticipant(peer->id, sender,
+			[self = shared_from_this(), query, sender, id, unindexed](QVector<MTPint> ids) {
+				const auto exact = ids.size() == 1 && ids.front().v == id;
+				self->record(24, unindexed && exact,
+					{ { "keyNotYetIndexed", unindexed }, { "pendingPutIncluded", exact } });
+				self->participantWhileClearing(query, sender);
+			});
+	}
+
+	void participantWhileClearing(Query query, PeerId sender) {
+		releaseHistory(query, [self = shared_from_this(), query, sender](bool released) {
+			const auto doneCount = std::make_shared<int>(0);
+			const auto empty = std::make_shared<bool>(false);
+			auto &cache = self->_session->conversationCache();
+			cache.collectMessagesFromParticipant(query.key.peer, sender, [=](QVector<MTPint> ids) {
+				++*doneCount;
+				*empty = ids.empty();
+			});
+			const auto loading = !cache.debugHistoryInfo(query.key).loaded;
+			cache.clearStorage(query.key.peer, [=](Storage::Cache::Error error) {
+				const auto cleared = error.type == Storage::Cache::Error::Type::None;
+				self->read(query, [=](std::optional<Slice>) {
+					self->record(25, released && loading && cleared && *doneCount == 1 && *empty,
+						{ { "diskReleased", released }, { "queryPendingAtClear", loading },
+							{ "storageCleared", cleared }, { "doneCount", *doneCount }, { "resultEmpty", *empty } });
+					self->crossPeerClearing();
+				});
+			});
+		});
+	}
+
+	void crossPeerClearing() {
+		const auto clearPeer = user(56);
+		const auto peer = user(57);
+		const auto sender = user(58)->id;
+		const auto otherSender = user(59)->id;
+		const auto clearQuery = latest(clearPeer);
+		const auto query = latest(peer);
+		auto topic = query;
+		topic.key.topicRootId = MsgId(_messageBase + 630);
+		put(clearQuery, { message(clearPeer, 631) }, 1, false);
+		const auto sample = [=, this](PeerId from, int offset) {
+			return simulationTextMessage(peer, from, _messageBase + offset, u"跨会话缓存清理样本"_q);
+		};
+		put(query, { sample(sender, 635), sample(otherSender, 634),
+			sample(sender, 633), sample(otherSender, 632) }, 4, false);
+		put(topic, { sample(sender, 633) }, 1, false);
+		const auto queries = std::vector<Query>{ clearQuery, query, topic };
+		readQueries(queries, [self = shared_from_this(), queries, sender](std::vector<SliceState>) {
+			self->releaseHistories(queries, [=](bool released) {
+				self->read(queries[1], [=](std::optional<Slice>) {
+					self->crossPeerOperations(queries, sender, released);
+				});
+			});
+		});
+	}
+
+	void crossPeerOperations(std::vector<Query> queries, PeerId sender, bool released) {
+		struct State {
+			std::array<int, 3> doneCounts = {};
+			std::vector<MsgId> senderIds;
+			int pending = 3;
+			bool clearing = false;
+			bool cleared = false;
+			bool changedDuringClear = false;
+			bool savedAtClear = false;
+			bool topicLoading = false;
+		};
+		const auto state = std::make_shared<State>();
+		const auto self = shared_from_this();
+		const auto oneDone = [=] {
+			if (--state->pending != 0) {
+				return;
+			}
+			const auto base = self->_messageBase;
+			const auto expected = std::vector<MsgId>{ MsgId(base + 633), MsgId(base + 635) };
+			self->record(28, released && state->clearing && state->topicLoading && state->senderIds == expected
+				&& state->doneCounts[2] == 1,
+				{ { "diskReleased", released }, { "otherPeerClearing", state->clearing },
+					{ "topicLoading", state->topicLoading },
+					{ "senderIdsExact", state->senderIds == expected }, { "doneCount", state->doneCounts[2] } });
+			self->read(queries[1], [=](std::optional<Slice>) {
+				self->_session->conversationCache()._histories.at(queries[1].key).lastUsed = crl::now() - 180000;
+				self->waitForWrites([=] {
+					auto &cache = self->_session->conversationCache();
+					cache.pruneMemory();
+					const auto deletedSaved = !cache._histories.contains(queries[1].key);
+					self->readQueries(queries, [=](std::vector<SliceState> states) {
+						const auto expected = std::vector<MsgId>{ MsgId(base + 635),
+							MsgId(base + 634), MsgId(base + 633) };
+						const auto exact = states[0].ids.empty() && states[1].ids == expected
+							&& states[2].ids == std::vector<MsgId>{ MsgId(base + 633) };
+						self->record(27, released && state->clearing && state->cleared
+							&& state->changedDuringClear && state->savedAtClear && deletedSaved && exact
+							&& state->doneCounts[0] == 1 && state->doneCounts[1] == 1,
+							{ { "diskReleased", released }, { "otherPeerClearing", state->clearing },
+								{ "storageCleared", state->cleared }, { "deletedSaved", deletedSaved },
+								{ "changedDuringClear", state->changedDuringClear }, { "savedAtClear", state->savedAtClear },
+								{ "otherPeerDeletionExact", exact }, { "doneCount", state->doneCounts[1] } });
+						self->deletionWhileDisabling();
+					});
+				});
+			});
+		};
+		auto &cache = _session->conversationCache();
+		cache.clearStorage(queries[0].key.peer, [=](Storage::Cache::Error error) {
+			++state->doneCounts[0];
+			state->cleared = error.type == Storage::Cache::Error::Type::None;
+			state->savedAtClear = !self->_session->conversationCache()._histories.at(queries[1].key).dirty;
+			oneDone();
+		});
+		state->clearing = cache._storageClearing;
+		cache.messagesDeleted(queries[1].key.peer, { MTP_int(_messageBase + 632) }, [=] {
+			++state->doneCounts[1];
+			oneDone();
+		});
+		const auto &entry = cache._histories.at(queries[1].key);
+		state->changedDuringClear = cache._storageClearing && entry.loaded && entry.dirty
+			&& !entry.messages.contains(MsgId(_messageBase + 632));
+		state->topicLoading = cache._histories.contains(queries[2].key)
+			&& !cache.debugHistoryInfo(queries[2].key).loaded;
+		// 清理期间的 flush 会取消保存定时器，清理完成必须补存另一个会话的删除。
+		cache.flush();
+		cache.collectMessagesFromParticipant(queries[1].key.peer, sender, [=](QVector<MTPint> ids) {
+			++state->doneCounts[2];
+			for (const auto id : ids) {
+				state->senderIds.emplace_back(id.v);
+			}
+			oneDone();
+		});
+	}
+
+	void deletionWhileDisabling() {
+		const auto peer = user(42);
+		const auto query = latest(peer);
+		const auto removed = MsgId(_messageBase + 521);
+		put(query, { message(peer, 521) }, 1, false);
+		read(query, [=, this](std::optional<Slice>) {
+			releaseHistory(query, [self = shared_from_this(), query, removed](bool released) {
+				auto &cache = self->_session->conversationCache();
+				const auto participantCounts = std::make_shared<std::array<int, 2>>();
+				const auto participantEmpty = std::make_shared<std::array<bool, 2>>();
+				cache.collectMessagesFromParticipant(query.key.peer, self->_session->userPeerId(),
+					[=](QVector<MTPint> ids) {
+						++(*participantCounts)[0];
+						(*participantEmpty)[0] = ids.empty();
+					});
+				cache.messagesDeleted(query.key.peer, {}, [self] {
+					++self->_deletionDoneCounts[4];
+				});
+				cache.messagesDeleted(query.key.peer, { MTP_int(removed.bare) }, [self] {
+					++self->_deletionDoneCounts[3];
+				});
+				const auto loading = !cache.debugHistoryInfo(query.key).loaded;
+				self->_disabledCache = true;
+				cache.disable();
+				const auto disabledDone = std::make_shared<int>(0);
+				cache.messagesDeleted(query.key.peer, { MTP_int(removed.bare) }, [=] {
+					++*disabledDone;
+				});
+				cache.collectMessagesFromParticipant(query.key.peer, self->_session->userPeerId(),
+					[=](QVector<MTPint> ids) {
+						++(*participantCounts)[1];
+						(*participantEmpty)[1] = ids.empty();
+					});
+				// 等原来的读取真正返回，验证取消完成后不会再次触发删除完成。
+				cache.loadHistory(query.key, [=](auto &) {
+					crl::on_main(self->_session.get(), [=] {
+						const auto &cache = self->_session->conversationCache();
+						const auto once = ranges::all_of(self->_deletionDoneCounts,
+							[](int count) { return count == 1; });
+						self->record(21, released && loading && once && *disabledDone == 1
+							&& cache._deletionCallbacks.empty(),
+							{ { "diskReleased", released }, { "deletePendingAtDisable", loading },
+								{ "allDoneOnce", once }, { "disabledDoneCount", *disabledDone },
+								{ "emptyDoneCount", self->_deletionDoneCounts[4] },
+								{ "pendingCallbacksReleased", cache._deletionCallbacks.empty() } });
+						const auto participantOnce = (*participantCounts)[0] == 1 && (*participantCounts)[1] == 1;
+						const auto resultsEmpty = (*participantEmpty)[0] && (*participantEmpty)[1];
+						self->record(26, released && loading && participantOnce && resultsEmpty,
+							{ { "queryPendingAtDisable", loading }, { "doneCount", (*participantCounts)[0] },
+								{ "disabledDoneCount", (*participantCounts)[1] }, { "resultsEmpty", resultsEmpty } });
+						self->finish(self->_passed);
+					});
+				});
+			});
 		});
 	}
 
@@ -877,6 +1290,9 @@ private:
 		if (const auto session = _session.get()) {
 			auto &cache = session->conversationCache();
 			cache._enabled = _enabled;
+			if (_enabled && _disabledCache) {
+				cache.restore();
+			}
 			if (!_enabled) {
 				cache._saveTimer.cancel();
 			}
@@ -892,6 +1308,8 @@ private:
 	const int _messageBase;
 	const bool _enabled;
 	Json _results = Json::array();
+	std::array<int, 5> _deletionDoneCounts = {};
+	bool _disabledCache = false;
 	bool _passed = true;
 	mutable bool _queryPass = true;
 	bool _finished = false;

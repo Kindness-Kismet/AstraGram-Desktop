@@ -525,6 +525,9 @@ void processMessageDelete(not_null<HistoryItem*> item) {
 		item->destroy();
 		return;
 	}
+	if (item->isDeleted()) {
+		return;
+	}
 	if (item->ttlDestroyAt() > 0) {
 		item->applyTTL(0);
 	}

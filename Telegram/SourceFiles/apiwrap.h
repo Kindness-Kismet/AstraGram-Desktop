@@ -630,7 +630,9 @@ private:
 
 	void deleteAllFromParticipantSend(
 		not_null<ChannelData*> channel,
-		not_null<PeerData*> from);
+		not_null<PeerData*> from,
+		QVector<MTPint> localIds,
+		Fn<void()> finish);
 	void deleteSublistHistorySend(
 		not_null<ChannelData*> parentChat,
 		not_null<PeerData*> sublistPeer);

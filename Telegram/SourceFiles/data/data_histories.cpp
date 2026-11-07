@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_histories.h"
 
 #include "extras/data/conversation_cache.h"
+#include "extras/features/delete_messages/local_message_deletion.h"
 #include "extras/features/secret_chats/secret_chat_dialog.h"
 #include "extras/features/secret_chats/secret_chat_peer.h"
 
@@ -853,11 +854,15 @@ void Histories::deleteMessages(
 		not_null<History*> history,
 		const QVector<MTPint> &ids,
 		bool revoke) {
+	session().conversationCache().messagesDeleted(history->peer->id, ids);
 	sendRequest(history, RequestType::Delete, [=](Fn<void()> finish) {
 		const auto done = [=](const MTPmessages_AffectedMessages &result) {
-			session().api().applyAffectedMessages(history->peer, result);
-			finish();
-			history->requestChatListMessage();
+			Extras::DeleteMessages::forgetLocalMessages(
+				&session(), history->peer->id, ids, [=] {
+					session().api().applyAffectedMessages(history->peer, result);
+					finish();
+					history->requestChatListMessage();
+				});
 		};
 		if (const auto channel = history->peer->asChannel()) {
 			return session().api().request(MTPchannels_DeleteMessages(
@@ -1058,6 +1063,8 @@ void Histories::deleteMessages(const MessageIdsList &ids, bool revoke) {
 			remove.push_back(item);
 			if (item->isDeleted()) {
 				ExtrasMessages::removeDeletedMessage(item);
+				Extras::DeleteMessages::forgetLocalMessages(
+					&session(), history->peer->id, { MTP_int(itemId.msg) });
 			} else if (item->isRegular()) {
 				idsByPeer[history].push_back(MTP_int(itemId.msg));
 			}

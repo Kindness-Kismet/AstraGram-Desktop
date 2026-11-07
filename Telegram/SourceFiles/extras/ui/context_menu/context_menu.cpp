@@ -7,6 +7,7 @@
 #include "extras/extras_settings.h"
 #include "extras/data/messages_storage.h"
 #include "extras/features/delete_messages/delete_own_messages.h"
+#include "extras/features/delete_messages/local_message_deletion.h"
 #include "extras/features/filters/filters_controller.h"
 #include "extras/features/forward/extras_forward.h"
 #include "extras/features/forward/extras_forward_rich.h"
@@ -25,6 +26,7 @@
 #include "data/data_chat.h"
 #include "data/data_chat_participant_status.h"
 #include "data/data_forum_topic.h"
+#include "data/data_histories.h"
 #include "data/data_search_controller.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
@@ -92,13 +94,17 @@ void DeleteMyMessagesAfterConfirm(not_null<PeerData*> peer) {
 
 	const auto removeNext = std::make_shared<Fn<void(int)>>();
 	const auto requestNext = std::make_shared<Fn<void(MsgId)>>();
+	const auto weakRemove = std::weak_ptr(removeNext);
+	const auto weakRequest = std::weak_ptr(requestNext);
 
-	*removeNext = [=](int index)
+	*removeNext = crl::guard(session, [=](int index)
 	{
 		if (index >= int(collected->size())) {
 			DEBUG_LOG(("Deleted all %1 my messages in this chat").arg(collected->size()));
 			return;
 		}
+		const auto next = weakRemove.lock();
+		Expects(next != nullptr);
 
 		QVector<MTPint> ids;
 		ids.reserve(std::min<int>(100, collected->size() - index));
@@ -107,21 +113,22 @@ void DeleteMyMessagesAfterConfirm(not_null<PeerData*> peer) {
 		}
 
 		const auto batch = index / 100 + 1;
-		const auto done = [=](const MTPmessages_AffectedMessages &result)
+		const auto done = [=](
+				const MTPmessages_AffectedMessages &result,
+				Fn<void()> finish)
 		{
-			session->api().applyAffectedMessages(peer, result);
-			if (peer->isChannel()) {
-				session->data().processMessagesDeleted(peer->id, ids);
-			} else {
-				session->data().processNonChannelMessagesDeleted(ids);
-			}
-			const auto deleted = index + ids.size();
-			DEBUG_LOG(("Deleted batch %1, total deleted %2/%3").arg(batch).arg(deleted).arg(collected->size()));
-			const auto delay = crl::time(500 + base::RandomValue<int>() % 500);
-			base::call_delayed(delay, [=] { (*removeNext)(deleted); });
+			Extras::DeleteMessages::forgetLocalMessages(session, peer->id, ids, [=] {
+				session->api().applyAffectedMessages(peer, result);
+				finish();
+				const auto deleted = index + ids.size();
+				DEBUG_LOG(("Deleted batch %1, total deleted %2/%3").arg(batch).arg(deleted).arg(collected->size()));
+				const auto delay = crl::time(500 + base::RandomValue<int>() % 500);
+				base::call_delayed(delay, session, [=] { (*next)(deleted); });
+			});
 		};
-		const auto fail = [=](const MTP::Error &error)
+		const auto fail = [=](const MTP::Error &error, Fn<void()> finish)
 		{
+			finish();
 			const auto type = error.type();
 			DEBUG_LOG(("Delete batch %1 failed: %2").arg(batch).arg(type));
 
@@ -132,7 +139,7 @@ void DeleteMyMessagesAfterConfirm(not_null<PeerData*> peer) {
 					? type.mid(underscore + 1).toInt()
 					: 0;
 				const auto delay = crl::time(std::max(seconds, 1) * 1000);
-				base::call_delayed(delay, [=] { (*removeNext)(index); });
+				base::call_delayed(delay, session, [=] { (*next)(index); });
 				return;
 			}
 
@@ -141,33 +148,48 @@ void DeleteMyMessagesAfterConfirm(not_null<PeerData*> peer) {
 				|| type == u"MESSAGE_ID_INVALID"_q) {
 				DEBUG_LOG(("Skipping batch %1 (%2 ids)").arg(batch).arg(ids.size()));
 				const auto delay = crl::time(500 + base::RandomValue<int>() % 500);
-				base::call_delayed(delay, [=] { (*removeNext)(index + ids.size()); });
+				base::call_delayed(delay, session, [=] { (*next)(index + ids.size()); });
 				return;
 			}
 
 			DEBUG_LOG(("Stopping deletion, unrecoverable error: %1").arg(type));
 		};
 
-		if (const auto channel = peer->asChannel()) {
-			session->api()
-				.request(MTPchannels_DeleteMessages(channel->inputChannel(), MTP_vector<MTPint>(ids)))
-				.done(done)
-				.fail(fail)
-				.handleFloodErrors()
-				.send();
-		} else {
-			using Flag = MTPmessages_DeleteMessages::Flag;
-			session->api()
-				.request(MTPmessages_DeleteMessages(MTP_flags(Flag::f_revoke), MTP_vector<MTPint>(ids)))
-				.done(done)
-				.fail(fail)
-				.handleFloodErrors()
-				.send();
-		}
-	};
+		Extras::DeleteMessages::forgetLocalMessages(session, peer->id, ids, [=] {
+			const auto history = session->data().history(peer);
+			session->data().histories().sendRequest(
+				history,
+				Data::Histories::RequestType::Delete,
+				[=](Fn<void()> finish) {
+				const auto onDone = [=](const MTPmessages_AffectedMessages &result) {
+					done(result, finish);
+				};
+				const auto onFail = [=](const MTP::Error &error) {
+					fail(error, finish);
+				};
+				if (const auto channel = peer->asChannel()) {
+					return session->api()
+						.request(MTPchannels_DeleteMessages(channel->inputChannel(), MTP_vector<MTPint>(ids)))
+						.done(onDone)
+						.fail(onFail)
+						.handleFloodErrors()
+						.send();
+				}
+				using Flag = MTPmessages_DeleteMessages::Flag;
+				return session->api()
+					.request(MTPmessages_DeleteMessages(MTP_flags(Flag::f_revoke), MTP_vector<MTPint>(ids)))
+					.done(onDone)
+					.fail(onFail)
+					.handleFloodErrors()
+					.send();
+			});
+		});
+	});
 
-	*requestNext = [=](MsgId from)
+	*requestNext = crl::guard(session, [=](MsgId from)
 	{
+		const auto next = weakRequest.lock();
+		Expects(next != nullptr);
 		using Flag = MTPmessages_Search::Flag;
 		auto request = MTPmessages_Search(
 			MTP_flags(Flag::f_from_id),
@@ -207,7 +229,7 @@ void DeleteMyMessagesAfterConfirm(not_null<PeerData*> peer) {
 				}
 				DEBUG_LOG(("Batch found %1 my messages, total %2").arg(batchCount).arg(collected->size()));
 				if (parsed.messageIds.size() == 100 && minId) {
-					(*requestNext)(minId - MsgId(1));
+					(*next)(minId - MsgId(1));
 				} else {
 					DEBUG_LOG(("Found %1 my messages in this chat (SEARCH)").arg(collected->size()));
 					(*removeNext)(0);
@@ -215,7 +237,7 @@ void DeleteMyMessagesAfterConfirm(not_null<PeerData*> peer) {
 			})
 			.fail([=](const MTP::Error &error) { DEBUG_LOG(("History fetch failed: %1").arg(error.type())); })
 			.send();
-	};
+	});
 
 	(*requestNext)(MsgId(0));
 }
