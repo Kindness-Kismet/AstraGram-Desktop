@@ -265,6 +265,7 @@ void PaintRowAvatar(Painter &p, QRect rect, RowAvatar avatar) {
 		.major = HistoryRowLabelText(
 			st::walletRowAmountMajorLabel,
 			amount.major),
+		.address = AddressChips::FromAddress(content.address),
 		.subtitleShown = !content.subtitle.isEmpty(),
 		.chip = content.itemAmount,
 	};
@@ -288,11 +289,13 @@ void PaintRowAvatar(Painter &p, QRect rect, RowAvatar avatar) {
 			text.major.maxWidth() + text.minor.maxWidth()),
 		0);
 	auto result = ComputeHistoryRowLayout({
-		.title = HistoryRowLabelHeight(
-			st::walletRowTitleLabel,
-			text.title,
-			titleWidth,
-			true),
+		.title = (text.address
+			? LabelLineHeight(st::walletRowTitleLabel)
+			: HistoryRowLabelHeight(
+				st::walletRowTitleLabel,
+				text.title,
+				titleWidth,
+				true)),
 		.subtitle = (text.subtitleShown
 			? std::make_optional(HistoryRowLabelHeight(
 				st::walletRowSubtitleLabel,
@@ -343,8 +346,8 @@ void PaintRowAvatar(Painter &p, QRect rect, RowAvatar avatar) {
 	};
 }
 
-void HistoryRowButton::setPaintUnderRipple(Fn<void(Painter&)> paint) {
-	_paintUnderRipple = std::move(paint);
+void HistoryRowButton::addPaintUnderRipple(Fn<void(Painter&)> paint) {
+	_paintUnderRipple.push_back(std::move(paint));
 	update();
 }
 
@@ -352,8 +355,8 @@ void HistoryRowButton::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
 	const auto over = (isOver() || isDown()) && !isDisabled();
 	paintBg(p, e->rect(), over);
-	if (_paintUnderRipple) {
-		_paintUnderRipple(p);
+	for (const auto &paint : _paintUnderRipple) {
+		paint(p);
 	}
 	paintRipple(p, 0, 0);
 	const auto outerw = width();
@@ -510,7 +513,7 @@ void AddHistoryRowChip(
 		PaintHistoryRowChipArtwork(p, chip->width(), *state, media);
 		PaintHistoryRowChipText(p, chip->width(), *state);
 	}, chip->lifetime());
-	button->setPaintUnderRipple([=](Painter &p) {
+	button->addPaintUnderRipple([=](Painter &p) {
 		const auto origin = Ui::MapFrom(button, chip, QPoint());
 		p.translate(origin);
 		PaintHistoryRowChipPlate(p, chip->width(), *state);
@@ -561,13 +564,14 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 			content.pending,
 			content.failed);
 	}
-	const auto title = inner->add(
-		object_ptr<Ui::FlatLabel>(
-			inner,
-			content.title,
-			st::walletRowTitleLabel),
-		{ 0, 0, HistoryRowTitleSkip(major->width() + minor->width()), 0 });
-	title->setBreakEverywhere(true);
+	const auto title = AddHistoryRowTitle(
+		inner,
+		content.title,
+		content.address,
+		LabelLineHeight(st::walletRowTitleLabel),
+		{ 0, 0, HistoryRowTitleSkip(major->width() + minor->width()), 0 },
+		button,
+		[=](auto paint) { button->addPaintUnderRipple(std::move(paint)); });
 	auto subtitle = (Ui::FlatLabel*)nullptr;
 	if (!content.subtitle.isEmpty()) {
 		Ui::AddSkip(inner, st::walletRowSkip);
@@ -666,6 +670,9 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 		const auto kindText = CollectibleRowKindText(item);
 		const auto titleIsKind = !telegram && !peer && !hasCounterparty;
 		const auto statusText = RowStatusSubtitle(item.status);
+		const auto titleAddress = (!peer && domain.isEmpty() && hasCounterparty)
+			? CounterpartyAddress(item)
+			: QString();
 		return {
 			.title = (telegram
 				? tr::lng_wallet_row_telegram(tr::now)
@@ -674,8 +681,9 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 				: !domain.isEmpty()
 				? domain
 				: hasCounterparty
-				? ShortAddressForm(CounterpartyAddress(item))
+				? ShortAddressForm(titleAddress)
 				: kindText),
+			.address = titleAddress,
 			.subtitle = (!statusText.isEmpty()
 				? statusText
 				: titleIsKind
@@ -780,14 +788,16 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 		: item.incoming
 		? tr::lng_wallet_row_deposit(tr::now)
 		: tr::lng_wallet_row_withdrawal(tr::now);
+	const auto titleAddress = (hasCounterparty && domain.isEmpty())
+		? (transfer ? address : CounterpartyAddress(item))
+		: QString();
 	return {
 		.title = (hasCounterparty
 			? (!domain.isEmpty()
 				? domain
-				: ShortAddressForm(transfer
-					? address
-					: CounterpartyAddress(item)))
+				: ShortAddressForm(titleAddress))
 			: kindText),
+		.address = titleAddress,
 		.subtitle = (!statusText.isEmpty()
 			? statusText
 			: hasCounterparty

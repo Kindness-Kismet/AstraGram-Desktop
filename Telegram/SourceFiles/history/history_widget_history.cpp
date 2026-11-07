@@ -317,13 +317,18 @@ void HistoryWidget::animatedScrollToItem(MsgId msgId) {
 		physicalScrollTop(itemTopForHighlight(to->mainView())),
 		0,
 		_scroll->scrollTopMax());
-	animatedScrollToY(scrollTo, to);
+	animatedScrollToY(
+		scrollTo,
+		to,
+		anim::sineInOut,
+		Tgw::ListScroll::Placement(this, to->fullId()));
 }
 
 void HistoryWidget::animatedScrollToY(
 		int scrollTo,
 		HistoryItem *attachTo,
-		anim::transition transition) {
+		anim::transition transition,
+		Fn<std::optional<int>()> placement) {
 	Expects(_history != nullptr);
 
 	const auto toEnd = (scrollTo == ScrollMax);
@@ -333,7 +338,11 @@ void HistoryWidget::animatedScrollToY(
 	if (toEnd) {
 		handlePendingHistoryUpdate();
 	} else if (hasPendingResizedItems()) {
+		const auto was = Tgw::ListScroll::Consumed(this);
 		updateListSize();
+		if (placement && (Tgw::ListScroll::Consumed(this) != was)) {
+			scrollTo = placement().value_or(scrollTo);
+		}
 	}
 	scrollTo = std::clamp(scrollTo, 0, _scroll->scrollTopMax());
 
@@ -372,7 +381,15 @@ void HistoryWidget::animatedScrollToY(
 	const auto relativeFrom = scrollTop - itemTop;
 	const auto relativeTo = scrollTo - itemTop;
 	watchScrollAnimationInput();
-	_scrollToAnimation.start(
+	_scrollToFlight.start(
+		relativeFrom,
+		relativeTo,
+		[=] { return Tgw::ListScroll::Consumed(this); },
+		Tgw::ListScroll::Consumed(this),
+		[=] { return Tgw::ListScroll::Inputs(this); },
+		std::move(placement));
+	_scrollToFlight.animate(
+		&_scrollToAnimation,
 		[=] { scrollToAnimationCallback(itemId, relativeTo, toEnd); },
 		relativeFrom,
 		relativeTo,
@@ -423,7 +440,12 @@ void HistoryWidget::scrollToAnimationCallback(
 		stopScrollAnimation();
 	} else {
 		const auto value = _scrollToAnimation.value(relativeTo);
-		synteticScrollToY(int(base::SafeRound(value)) + itemTop);
+		_scrollToFlight.frame(
+			itemTop,
+			value,
+			_scroll->scrollTop(),
+			!_scrollToAnimation.animating(),
+			[=](int top) { synteticScrollToY(top); });
 	}
 	if (!_scrollToAnimation.animating()) {
 		stopScrollAnimation();
@@ -1499,7 +1521,8 @@ void HistoryWidget::updateHistoryGeometry(
 		return;
 	}
 
-	updateListSize();
+	const auto snapshot = Tgw::ListScroll::Capture(this, wasAtBottom);
+	const auto leaveEnd = updateListSize(&snapshot);
 	_updateHistoryGeometryRequired = false;
 
 	auto newScrollTop = 0;
@@ -1508,6 +1531,7 @@ void HistoryWidget::updateHistoryGeometry(
 		_historyInited = true;
 		stopScrollAnimation();
 	} else if (wasAtBottom
+		&& !leaveEnd
 		&& (!loadedDown || !_itemRevealAnimations.empty())
 		&& !_history->unreadBar()) {
 		newScrollTop = countAutomaticScrollTop();
@@ -1715,9 +1739,12 @@ void HistoryWidget::startItemRevealAnimations() {
 	}
 }
 
-void HistoryWidget::updateListSize() {
+bool HistoryWidget::updateListSize(const Tgw::ScrollSnapshot *restore) {
 	Expects(_list != nullptr);
 
+	const auto direct = restore
+		? Tgw::ScrollSnapshot()
+		: Tgw::ListScroll::CaptureDirect(this);
 	_list->recountHistoryGeometry(!_historyInited);
 	auto washidden = _scroll->isHidden();
 	if (washidden) {
@@ -1730,6 +1757,7 @@ void HistoryWidget::updateListSize() {
 		_scroll->hide();
 	}
 	_updateHistoryGeometryRequired = true;
+	return Tgw::ListScroll::Keep(this, restore ? *restore : direct);
 }
 
 bool HistoryWidget::hasPendingResizedItems() const {

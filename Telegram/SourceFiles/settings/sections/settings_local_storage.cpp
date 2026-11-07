@@ -66,8 +66,8 @@ QString SizeLimitText(int64 limit) {
 	const auto mb = limit / kMegabyte;
 	const auto gb = mb / 1024;
 	return (gb > 0)
-		? (QString::number(gb) + u" GB"_q)
-		: (QString::number(mb) + u" MB"_q);
+		? (QString::number(gb) + ' ' + tr::lng_size_gigabytes(tr::now))
+		: (QString::number(mb) + ' ' + tr::lng_size_megabytes(tr::now));
 }
 
 int64 totalBytes(const Extras::MediaCacheUsageList &categories) {

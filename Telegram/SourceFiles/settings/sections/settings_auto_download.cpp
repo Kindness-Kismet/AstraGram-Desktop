@@ -167,7 +167,7 @@ not_null<int64*> AddSizeLimitSlider(
 			return tr::lng_media_size_up_to(
 				tr::now,
 				lt_size,
-				QString::number(value / kMegabyte) + " MB");
+				QString::number(value / kMegabyte) + ' ' + tr::lng_size_megabytes(tr::now));
 		}),
 		Ui::IsDialogContent(container)
 			? Ui::DialogButtonStyle(container, st::autoDownloadLimitButton)

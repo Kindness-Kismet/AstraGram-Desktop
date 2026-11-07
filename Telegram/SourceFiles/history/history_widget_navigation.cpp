@@ -325,7 +325,15 @@ void HistoryWidget::showHistory(
 					const auto to = countInitialScrollTop();
 					const auto item = getItemFromHistoryOrMigrated(
 						_showAtMsgId);
-					animatedScrollToY(to, item);
+					animatedScrollToY(
+						to,
+						item,
+						anim::sineInOut,
+						(item || (to == ScrollMax))
+							? Tgw::ListScroll::Placement(
+								this,
+								item ? item->fullId() : FullMsgId())
+							: nullptr);
 				} else {
 					historyLoaded();
 				}

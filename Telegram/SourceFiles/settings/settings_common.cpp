@@ -561,6 +561,7 @@ object_ptr<Button> CreateButtonWithIcon(
 	}
 	auto result = object_ptr<RowButton>(parent, std::move(text), rowStyle ? *rowStyle : st);
 	const auto button = result.data();
+	button->setAllowTextLines();
 	if (rowStyle) {
 		button->lifetime().add([rowStyle] {});
 	}
@@ -606,25 +607,41 @@ void CreateRightLabel(
 			button->property("settingsRightLabelSkip").toInt());
 	};
 	const auto placeLabel = [=, &st](QSize size, const QString &title, int rightSkip) {
-		const auto available = centered
-			? std::min(st::settingsCardValueMaxWidth,
-				(size.width() - st.padding.left() - rightSkip) / 2)
-			: size.width() - st.padding.left() - st.padding.right()
-				- st.style.font->width(title) - rightSkip;
-		name->resizeToNaturalWidth(std::max(available, 1));
-		name->moveToRight(rightSkip, centered
-			? (size.height() - name->height()) / 2
-			: st.padding.top());
-		if (centered) {
-			auto padding = st.padding;
-			padding.setRight(rightSkip + name->width() + st::settingsCardTextGap);
-			padding.setBottom(std::max(padding.bottom(),
-				button->property("settingsContentBottomSkip").toInt()));
-			button->setProperty("settingsContentRightSkip", padding.right());
-			button->setPaddingOverride(padding);
+		const auto gap = centered
+			? st::settingsCardTextGap
+			: st.padding.right();
+		const auto full = size.width() - st.padding.left() - rightSkip - gap;
+		const auto natural = name->textMaxWidth();
+		auto widestWord = 0;
+		for (const auto &word : title.split(' ', Qt::SkipEmptyParts)) {
+			widestWord = std::max(widestWord, st.style.font->width(word));
 		}
+		const auto labelMin = std::max(widestWord, full / 3);
+		const auto sideBySide = (st.style.font->width(title) + natural <= full)
+			|| (natural <= full - labelMin);
+		name->resizeToNaturalWidth(sideBySide
+			? natural
+			: std::max(full + gap, 1));
+		auto padding = st.padding;
+		padding.setBottom(std::max(padding.bottom(),
+			button->property("settingsContentBottomSkip").toInt()));
+		if (sideBySide) {
+			padding.setRight(rightSkip + gap + name->width());
+		} else {
+			padding.setRight(rightSkip);
+			padding.setBottom(padding.bottom() + name->height());
+		}
+		button->setProperty("settingsValueBottomSkip", sideBySide ? 0 : name->height());
+		button->setProperty("settingsContentRightSkip", padding.right());
+		button->setPaddingOverride(padding);
+		const auto single = st.padding.top() + st.height + st.padding.bottom();
+		name->moveToRight(rightSkip, sideBySide
+			? (centered
+				? (button->height() - name->height()) / 2
+				: st.padding.top() + (button->height() - single) / 2)
+			: button->height() - st.padding.bottom() - name->height());
 	};
-	// 箭头可能在右值之后添加，属性变化时同步重排，普通设置行保持原间距。
+	// 箭头可能晚于右侧值创建，属性变化时同步计算可用宽度。
 	auto rightSkip = rpl::single(computeRightSkip()) | rpl::then(
 		button->events()
 		| rpl::filter([](not_null<QEvent*> event) {

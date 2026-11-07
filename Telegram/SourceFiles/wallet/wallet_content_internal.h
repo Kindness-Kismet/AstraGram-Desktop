@@ -124,6 +124,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "wallet/wallet_onramp.h"
 #include "wallet/wallet_palette.h"
 #include "wallet/wallet_rates.h"
+#include "wallet/wallet_row_address_chips.h"
 #include "wallet/wallet_send_preparation.h"
 #include "wallet/wallet_sending_effects.h"
 #include "wallet/wallet_session.h"
@@ -736,6 +737,7 @@ enum class RowAvatar {
 
 struct HistoryRowContent {
 	QString title;
+	QString address;
 	QString subtitle;
 	QString date;
 	int64 amountNano = 0;
@@ -858,6 +860,7 @@ struct HistoryRowText {
 	Ui::Text::String date;
 	Ui::Text::String major;
 	Ui::Text::String minor;
+	std::optional<AddressChips> address;
 	bool subtitleShown = false;
 	bool chip = false;
 };
@@ -902,13 +905,13 @@ class HistoryRowButton final : public Ui::SettingsButton {
 public:
 	using Ui::SettingsButton::SettingsButton;
 
-	void setPaintUnderRipple(Fn<void(Painter&)> paint);
+	void addPaintUnderRipple(Fn<void(Painter&)> paint);
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
 
 private:
-	Fn<void(Painter&)> _paintUnderRipple;
+	std::vector<Fn<void(Painter&)>> _paintUnderRipple;
 
 };
 

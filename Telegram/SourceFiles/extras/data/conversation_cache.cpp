@@ -170,6 +170,7 @@ void ConversationCache::restore() {
 	_database->get({ 1, 0 }, onMain<QByteArray>(_session, [=](QByteArray bytes) {
 		QDataStream stream(bytes);
 		if (!bytes.isEmpty() && readHeader(stream, _session->userId())) {
+			auto widgetPeers = base::flat_map<uint64, base::flat_set<PeerId>>();
 			auto count = qint32();
 			stream >> count;
 			for (auto i = 0; i < count && !stream.atEnd(); ++i) {
@@ -187,13 +188,32 @@ void ConversationCache::restore() {
 				stream >> id >> peer;
 				_nonChannelPeers.emplace(MsgId(id), DeserializePeerId(peer));
 			}
+			// 旧索引没有控件区块；已收到的新消息索引与磁盘内容合并。
+			if (!stream.atEnd()) {
+				stream >> count;
+				for (auto i = 0; i < count && !stream.atEnd(); ++i) {
+					auto widget = quint64();
+					auto peer = quint64();
+					stream >> widget >> peer;
+					if (stream.status() == QDataStream::Ok) {
+						widgetPeers[widget].emplace(DeserializePeerId(peer));
+					}
+				}
+			}
 			if (stream.status() != QDataStream::Ok || !stream.atEnd()) {
 				_historyKeys.clear();
 				_nonChannelPeers.clear();
+			} else {
+				for (const auto &[widget, peers] : widgetPeers) {
+					for (const auto peer : peers) {
+						_widgetPeers[widget].emplace(peer);
+					}
+				}
 			}
 		}
 		_indexReady = true;
 		for (const auto &[peer, message] : _lastMessages) {
+			rememberWidgetPeer(message);
 			if (!peerIsChannel(peer)) {
 				_nonChannelPeers[IdFromMessage(message)] = peer;
 			}
@@ -429,10 +449,21 @@ void ConversationCache::saveIndex() {
 	for (const auto &[id, peer] : _nonChannelPeers) {
 		stream << qint64(id.bare) << SerializePeerId(peer);
 	}
+	auto widgetPeers = qint32();
+	for (const auto &[widget, peers] : _widgetPeers) {
+		widgetPeers += qint32(peers.size());
+	}
+	stream << widgetPeers;
+	for (const auto &[widget, peers] : _widgetPeers) {
+		for (const auto peer : peers) {
+			stream << quint64(widget) << SerializePeerId(peer);
+		}
+	}
 	_database->put({ 1, 0 }, std::move(bytes));
 }
 
 void ConversationCache::clear() {
+	_widgetPeers.clear();
 	cancelPreload();
 	_preloadQueries.clear();
 	_preloadedHistories.clear();
@@ -538,6 +569,9 @@ void ConversationCache::clearStorage(
 		}
 		const auto finish = [=](Storage::Cache::Error error) {
 			_storageClearing = false;
+			if (error.type == Storage::Cache::Error::Type::None) {
+				forgetWidgetPeer(peer);
+			}
 			_indexDirty = true;
 			if (_enabled) {
 				saveIndex();

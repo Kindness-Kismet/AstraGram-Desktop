@@ -24,6 +24,19 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 
 ## 固定场景
 
+`simulation.widget [show|state|log|reset]` 在独立模拟配置中展示 HTML 饮水卡片。
+`show` 在内联机器人对话创建本地消息并打开；按钮可增加或撤回杯数、更新进度条、展开小贴士，重复打开保留当前交互状态。
+`reset` 重新生成卡片；样本不发送消息、不请求机器人，状态随模拟会话销毁。
+`state` 查询实际运行状态、载入结果、内容高度和交互可用性；`log` 在运行时返回异步任务编号，用 `job.status` 查看诊断结果，其他状态直接返回现有日志。
+
+```bash
+python .codex/skills/app-debug/scripts/cli.py app.start --profile upstream-741 + simulation.enter + simulation.widget show
+python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screenshot.take
+```
+
+截图前等待 `runtime` 为 `live`、`loaded` 与 `hasContent` 为 `true`。按钮通过聊天列表内的 `control.mouse` 或 `control.pointer` 操作，
+配合截图核对计数、进度和展开高度；卡片是消息自绘内容，不会出现在 Qt 控件树中。
+
 原生会话分组按私聊、群组、频道、机器人、话题、收藏夹、归档排列，尊重“隐藏全部对话”设置。
 `simulation.list` 返回每项的 `key`、`name`、`category`、`categoryName`、`features` 和 `peerId`。
 进入后还返回 `state`，查询实际未读、静音、归档、置顶、草稿、最新消息是否发送中、分类归属、话题状态及收藏来源数量。

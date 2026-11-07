@@ -13,6 +13,7 @@
 #include "styles/style_boxes.h"
 #include "styles/style_settings_local_storage.h"
 
+#include <QtCore/QLocale>
 #include <QtCore/QStorageInfo>
 
 namespace Settings {
@@ -73,9 +74,10 @@ namespace {
 	}
 	const auto tenthGb = size * 10 / kGigabyte;
 	return QString::number(tenthGb / 10)
-		+ '.'
+		+ QLocale().decimalPoint()
 		+ QString::number(tenthGb % 10)
-		+ u" GB"_q;
+		+ ' '
+		+ tr::lng_size_gigabytes(tr::now);
 }
 
 } // namespace
@@ -615,9 +617,7 @@ QPoint CacheCategoryRow::prepareRippleStartPosition() const {
 
 QString CacheCategoryRow::sizeText(
 		const Extras::MediaCacheUsage &data) const {
-	return data.bytes
-		? Ui::FormatSizeText(data.bytes)
-		: tr::lng_local_storage_empty(tr::now);
+	return Ui::FormatSizeText(data.bytes);
 }
 
 } // namespace Settings

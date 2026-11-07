@@ -380,11 +380,24 @@ HistoryWidget::HistoryWidget(
 	}, lifetime());
 
 	_scroll->setHandleTouch(false);
-	ExtrasUi::setupSmoothScroll(_scroll);
+	const auto smoothWheel = ExtrasUi::setupSmoothScroll(_scroll);
 	_scroll->lockWheelDirection();
-	_scroll->setCrossAxisWheelProcess([=](QPoint delta, Qt::ScrollPhase phase) {
+	const auto crossAxis = [=](QPoint delta, Qt::ScrollPhase phase) {
 		return _list && _list->consumeScrollAction(delta, phase);
-	});
+	};
+	_scroll->setCrossAxisWheelProcess(crossAxis);
+	Tgw::ListScroll::WatchInput(
+		_scroll.data(),
+		[=] { Tgw::ListScroll::Input(this); },
+		crossAxis,
+		true,
+		[=](not_null<QWheelEvent*> event) {
+			if (!smoothWheel(event)) {
+				return false;
+			}
+			Tgw::ListScroll::Input(this);
+			return true;
+		});
 	_scroll->scrolls() | rpl::on_next([=] {
 		handleScroll();
 	}, lifetime());
@@ -1228,9 +1241,13 @@ HistoryWidget::HistoryWidget(
 	session().data().itemVisibilityQueries(
 	) | rpl::filter([=](
 			const Data::Session::ItemVisibilityQuery &query) {
+		const auto history = query.item->history();
+		const auto view = query.item->mainView();
 		return !_showAnimation
-			&& (_history == query.item->history())
-			&& (query.item->mainView() != nullptr)
+			&& ((_history == history)
+				|| (query.view && (_migrated == history)))
+			&& (view != nullptr)
+			&& (!query.view || (query.view == view))
 			&& _list
 			&& !_list->isHidden()
 			&& isVisible();

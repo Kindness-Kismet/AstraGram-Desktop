@@ -820,6 +820,7 @@ void SendingHistoryRow::paintTexts(
 		const SendingRowLayout &layout,
 		const SendingRowSettleTarget &target,
 		const SendingRowSettleProgress &progress) {
+	const auto scope = WindowPaletteScope(this);
 	const auto left = st::walletRowPadding.left();
 	const auto draw = [&](
 			const Ui::Text::String &text,
@@ -880,15 +881,21 @@ void SendingHistoryRow::paintTexts(
 		? int(base::SafeRound(layout.textWidth
 			+ (target.textWidth - layout.textWidth) * progress.amount))
 		: layout.textWidth;
-	line(
-		_text.title,
-		_layout.title,
-		settle ? &settle->text.title : nullptr,
-		settle ? settle->layout.title : HistoryRowLine(),
-		settle && (settle->content.title == _content.title),
-		st::walletRowTitleLabel,
-		true,
-		titleWidth);
+	const auto titleHeight = LabelLineHeight(st::walletRowTitleLabel);
+	PaintSendingRowTitle(
+		p,
+		myrtlrect(left, _layout.title.top, titleWidth, titleHeight),
+		_text.address,
+		settle ? &settle->text.address : nullptr,
+		(settle
+			&& (settle->content.title == _content.title)
+			&& (settle->content.address == _content.address)),
+		progress.label,
+		[&](bool next, float64 opacity) {
+			const auto &text = next ? settle->text.title : _text.title;
+			const auto at = next ? settle->layout.title : _layout.title;
+			draw(text, st::walletRowTitleLabel, at, true, titleWidth, opacity);
+		});
 	line(
 		_text.subtitle,
 		_layout.subtitle,

@@ -595,6 +595,12 @@ void ConversationCache::putHistory(
 		|| messages.type() == mtpc_messages_messagesNotModified) {
 		return;
 	}
+	messages.match([](const MTPDmessages_messagesNotModified &) {
+	}, [&](const auto &data) {
+		for (const auto &message : data.vmessages().v) {
+			rememberWidgetPeer(message);
+		}
+	});
 	loadHistory(query.key, [=](HistoryEntry &entry) {
 #ifdef _DEBUG
 		traceHistory("write-before", query, &messages);
@@ -865,6 +871,7 @@ void ConversationCache::messageReceived(
 	if (!_enabled || _restoring || !cacheable(message)) {
 		return;
 	}
+	rememberWidgetPeer(message);
 	const auto id = FullMsgId(PeerFromMessage(message), IdFromMessage(message));
 	if (_pendingConfirmedMessages.remove(id)) {
 		type = NewMessageType::Unread;
@@ -913,6 +920,7 @@ void ConversationCache::messageEdited(const MTPMessage &message) {
 	if (!_enabled || _restoring) {
 		return;
 	}
+	rememberWidgetPeer(message);
 	const auto i = _lastMessages.find(PeerFromMessage(message));
 	if (i != end(_lastMessages) && IdFromMessage(i->second) == IdFromMessage(message)) {
 		i->second = message;
@@ -1039,6 +1047,7 @@ void ConversationCache::historyCleared(PeerId peer) {
 	}
 	_lastMessages.remove(peer);
 	withIndex([=] {
+		forgetWidgetPeer(peer);
 		const auto keys = _historyKeys;
 		for (const auto key : keys) {
 			if (key.peer != peer) {

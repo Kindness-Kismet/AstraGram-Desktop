@@ -204,7 +204,8 @@ Storage::SharedMediaTypesMask Media::sharedMediaTypes() const {
 }
 
 bool Media::allowTextSelectionByHandler(
-		const ClickHandlerPtr &handler) const {
+		const ClickHandlerPtr &handler,
+		bool fromTouch) const {
 	return false;
 }
 

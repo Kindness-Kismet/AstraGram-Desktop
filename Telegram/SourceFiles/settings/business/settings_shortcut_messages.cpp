@@ -49,6 +49,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/storage_account.h"
 #include "storage/storage_media_prepare.h"
 #include "storage/storage_shared_media.h"
+#include "tgw/tgw_scroll.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/chat/attach/attach_send_files_way.h"
 #include "ui/chat/chat_style.h"
@@ -384,6 +385,10 @@ ShortcutMessages::ShortcutMessages(
 		&controller->session(),
 		static_cast<ListDelegate*>(this));
 	_inner->overrideChatMode(ElementChatMode::Default);
+	const auto inner = _inner.data();
+	Tgw::ListScroll::WatchInput(
+		_scroll,
+		crl::guard(inner, [=] { Tgw::ListScroll::Input(inner); }));
 
 	_scroll->sizeValue() | rpl::filter([](QSize size) {
 		return !size.isEmpty();

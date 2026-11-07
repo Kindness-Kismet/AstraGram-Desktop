@@ -72,6 +72,8 @@ public:
 	void extendedMediaUpdated(FullMsgId id, const QVector<MTPMessageExtendedMedia> &media);
 	void pollUpdated(const MTPDupdateMessagePoll &update);
 	void webPageUpdated(const MTPWebPage &page);
+	void widgetDataUpdated(const MTPDupdateMessageWidgetData &update);
+	void widgetPublicDataUpdated(uint64 widgetId, const MTPDmessages_widgetPublicData &data);
 	void messagesDeleted(PeerId peer, const QVector<MTPint> &ids);
 	void historyCleared(PeerId peer);
 	void restoreMessage(PeerId peer, MsgId id, Fn<void(bool)> done);
@@ -222,6 +224,8 @@ private:
 	void withIndex(Fn<void()> done);
 	void applyMessage(const MTPMessage &message, bool isNew);
 	void serviceMessageReceived(const MTPDmessageService &message);
+	void rememberWidgetPeer(const MTPMessage &message);
+	void forgetWidgetPeer(PeerId peer);
 	void updateCachedMessages(
 		PeerId peer,
 		Fn<bool(MTPMessage &)> update);
@@ -256,6 +260,7 @@ private:
 	std::map<HistoryCacheKey, HistoryEntry> _histories;
 	base::flat_set<HistoryCacheKey> _historyKeys;
 	base::flat_map<MsgId, PeerId> _nonChannelPeers;
+	base::flat_map<uint64, base::flat_set<PeerId>> _widgetPeers;
 	std::vector<Fn<void()>> _afterIndex;
 	base::Timer _saveTimer;
 	base::Timer _preloadTimer;

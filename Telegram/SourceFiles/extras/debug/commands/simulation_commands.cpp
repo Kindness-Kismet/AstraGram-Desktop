@@ -6,6 +6,7 @@
 #include "extras/debug/simulation_search.h"
 #include "extras/debug/simulation_profile.h"
 #include "extras/debug/simulation_music.h"
+#include "extras/debug/simulation_widget.h"
 #include "extras/debug/simulation_scenarios.h"
 #include "base/unixtime.h"
 #include "boxes/stickers_box.h"
@@ -510,6 +511,7 @@ const HandlerMap &simulationHandlers() {
 		{ u"simulation.secret"_q, &simulationSecret },
 		{ u"simulation.profile"_q, &seedProfilePreview },
 		{ u"simulation.music"_q, &simulateMusic },
+		{ u"simulation.widget"_q, &simulateWidget },
 		{ u"simulation.cache-chats"_q, &simulationCacheChats },
 		{ u"simulation.cache-usage"_q, &simulationCacheUsage },
 		{ u"simulation.stars"_q, &simulationStars },

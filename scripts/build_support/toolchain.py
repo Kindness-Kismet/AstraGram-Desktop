@@ -2,7 +2,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from build_support.paths import TARGET_CMAKE_ARCH, TARGET_VCVARS_ARCH
+from build_support.paths import ROOT, TARGET_CMAKE_ARCH, TARGET_VCVARS_ARCH
 
 VSWHERE = Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Microsoft Visual Studio" / "Installer" / "vswhere.exe"
 
@@ -86,3 +86,34 @@ def describe_toolset(environment: dict[str, str]) -> str:
     version = environment.get("VCToolsVersion", "Unknown")
     sdk = environment.get("WindowsSDKVersion", "Unknown").rstrip("\\")
     return f"MSVC {version}  SDK {sdk}"
+
+
+def ffmpeg_arm64_environment(environment: dict[str, str]) -> tuple[dict[str, str], str]:
+    """仅为 ARM64 FFmpeg 选择工具集，并返回实际选用的版本标识。"""
+    toolset = _reported_toolset(environment)
+    # 默认 14.51 不受影响，直接使用 vcvars 已报告的实际版本，避免启动探测进程。
+    if toolset.startswith("14.51."):
+        return environment, f"toolset:{toolset}"
+
+    msvc = _upstream_msvc()
+    try:
+        selected, version = msvc.ffmpeg_environment(environment)
+    except RuntimeError as error:
+        raise SystemExit(str(error)) from error
+    # 回退与直接选用同一工具集时共用缓存键；未报告工具集才使用编译器探测值。
+    toolset = _reported_toolset(selected)
+    return selected, f"toolset:{toolset}" if toolset else str(version)
+
+
+def _reported_toolset(environment: dict[str, str]) -> str:
+    return next((value for key, value in environment.items() if key.upper() == "VCTOOLSVERSION"), "").rstrip("\\/")
+
+
+def _upstream_msvc():
+    # 仅在默认工具集之外复用官方版本探测和单阶段回退，保持错误范围一致。
+    from importlib.util import module_from_spec, spec_from_file_location
+
+    spec = spec_from_file_location("upstream_msvc", ROOT / "Telegram/build/prepare/msvc.py")
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module

@@ -40,6 +40,32 @@ MTPMessage replaceMessageParts(
 		field(data.vsummary_from_language()), field(data.vrich_message()));
 }
 
+std::optional<MTPMessageMedia> mergeWidgetState(
+		const MTPDmessageMediaWidget &before,
+		const MTPstring *chatData,
+		const MTPstring *publicData,
+		const MTPlong *publicDataHash) {
+	const auto chatChanged = chatData
+		&& (!before.vchat_data() || before.vchat_data()->v != chatData->v);
+	const auto publicChanged = publicData
+		&& (!before.vpublic_data()
+			|| before.vpublic_data()->v != publicData->v
+			|| before.vpublic_data_hash()->v != publicDataHash->v);
+	if (!chatChanged && !publicChanged) {
+		return std::nullopt;
+	}
+	using Flag = MTPDmessageMediaWidget::Flag;
+	const auto flags = before.vflags().v
+		| (chatData ? Flag::f_chat_data : Flag(0))
+		| (publicData ? Flag::f_public_data : Flag(0));
+	return MTP_messageMediaWidget(
+		MTP_flags(flags), before.vwidth(), before.vheight(), before.vpayload(),
+		publicData ? *publicData : field(before.vpublic_data()),
+		publicDataHash ? *publicDataHash : field(before.vpublic_data_hash()),
+		chatData ? *chatData : field(before.vchat_data()),
+		field(before.vwidget_id()));
+}
+
 MTPPollResults mergePollResults(
 		const MTPPollResults &previous,
 		const MTPPollResults &incoming) {
@@ -362,6 +388,78 @@ void ConversationCache::webPageUpdated(const MTPWebPage &page) {
 			MTP_messageMediaWebPage(before.vflags(), page), nullptr);
 		return true;
 	});
+}
+
+void ConversationCache::widgetDataUpdated(
+		const MTPDupdateMessageWidgetData &update) {
+	const auto id = MsgId(update.vmsg_id().v);
+	const auto hasChat = bool(update.vchat_data());
+	const auto chat = field(update.vchat_data());
+	const auto hasPublic = bool(update.vpublic_data());
+	const auto shared = field(update.vpublic_data());
+	const auto hash = field(update.vpublic_data_hash());
+	updateCachedMessages(peerFromMTP(update.vpeer()), [=](MTPMessage &message) {
+		if (message.type() != mtpc_message || IdFromMessage(message) != id) return false;
+		const auto &data = message.c_message();
+		const auto media = data.vmedia();
+		if (!media || media->type() != mtpc_messageMediaWidget) return false;
+		const auto updated = mergeWidgetState(media->c_messageMediaWidget(),
+			hasChat ? &chat : nullptr, hasPublic ? &shared : nullptr, hasPublic ? &hash : nullptr);
+		if (!updated) return false;
+		message = replaceMessageParts(data, *updated, nullptr);
+		return true;
+	});
+}
+
+void ConversationCache::widgetPublicDataUpdated(
+		uint64 widgetId,
+		const MTPDmessages_widgetPublicData &data) {
+	if (!_enabled || _restoring || _storageClearing) return;
+	const auto shared = data.vdata();
+	const auto hash = data.vhash();
+	const auto update = [=](MTPMessage &message) {
+		if (message.type() != mtpc_message) return false;
+		const auto &data = message.c_message();
+		const auto media = data.vmedia();
+		if (!media || media->type() != mtpc_messageMediaWidget) return false;
+		const auto &before = media->c_messageMediaWidget();
+		if (!before.vwidget_id() || before.vwidget_id()->v != widgetId) return false;
+		const auto updated = mergeWidgetState(before, nullptr, &shared, &hash);
+		if (!updated) return false;
+		message = replaceMessageParts(data, *updated, nullptr);
+		return true;
+	};
+	// 只加载当前账号中出现过此控件的聊天，沿既有队列保持更新顺序。
+	withIndex([=] {
+		const auto i = _widgetPeers.find(widgetId);
+		if (i == end(_widgetPeers)) return;
+		const auto peers = i->second;
+		for (const auto peer : peers) {
+			updateCachedMessages(peer, update);
+		}
+	});
+}
+
+void ConversationCache::rememberWidgetPeer(const MTPMessage &message) {
+	if (message.type() != mtpc_message) return;
+	const auto media = message.c_message().vmedia();
+	if (!media || media->type() != mtpc_messageMediaWidget) return;
+	const auto id = media->c_messageMediaWidget().vwidget_id();
+	if (id && _widgetPeers[id->v].emplace(PeerFromMessage(message)).second) {
+		_indexDirty = true;
+		scheduleSave();
+	}
+}
+
+void ConversationCache::forgetWidgetPeer(PeerId peer) {
+	if (!peer) {
+		_widgetPeers.clear();
+		return;
+	}
+	for (auto i = begin(_widgetPeers); i != end(_widgetPeers);) {
+		i->second.remove(peer);
+		i = i->second.empty() ? _widgetPeers.erase(i) : std::next(i);
+	}
 }
 
 } // namespace Extras

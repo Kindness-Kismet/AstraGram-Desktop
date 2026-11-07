@@ -311,6 +311,8 @@ void AddSectionRowDetails(
 		auto padding = button->st().padding;
 		padding.setRight(std::max(rightSkip,
 			button->property("settingsContentRightSkip").toInt()));
+		padding.setBottom(padding.bottom()
+			+ button->property("settingsValueBottomSkip").toInt());
 		button->setPaddingOverride(padding);
 		arrow->show();
 		arrow->paintRequest() | rpl::on_next([=] {
@@ -369,7 +371,21 @@ void AddSectionRowDetails(
 			st::settingsCardDescriptionTop + height
 				+ st::settingsCardRowInset - padding.top() - st.height));
 		button->setProperty("settingsContentBottomSkip", padding.bottom());
+		padding.setBottom(padding.bottom()
+			+ button->property("settingsValueBottomSkip").toInt());
 		button->setPaddingOverride(padding);
+	}, label->lifetime());
+	rpl::combine(
+		button->sizeValue(),
+		label->heightValue()
+	) | rpl::on_next([=](QSize size, int) {
+		const auto &st = button->st();
+		const auto single = st.padding.top() + st.height
+			+ std::max(st.padding.bottom(),
+				button->property("settingsContentBottomSkip").toInt())
+			+ button->property("settingsValueBottomSkip").toInt();
+		label->moveToLeft(st.padding.left(),
+			st::settingsCardDescriptionTop + std::max(size.height() - single, 0));
 	}, label->lifetime());
 }
 
