@@ -1,29 +1,9 @@
-- Adapted to official Telegram Desktop 7.3.5
-- Improved global search, which now supports keyword searches in channel, app, photo, video and voice-message categories and preserves the query when switching categories
-- Improved the expanded music player, which now supports resizing, remembers its size across view changes, adapts playlist placement to window width, and stays open when seeking
-- Added temporary playback speed controls, so you can now hold the speed button for double-speed playback and drag horizontally to adjust it before releasing to restore your saved speed
-- Improved attachment downloads, which now reuse completed files across accounts and avoid duplicate copies during concurrent downloads of the same attachment
-- Improved music download indicators, which now follow streaming-cache progress and disappear when the full track is cached
-- Added a More submenu for message actions, so you can now place extended actions in an explicit submenu instead of revealing them with modifier keys
-- Changed how private-chat history deletion works; it now selects deletion for both participants by default
-- Fixed an issue with recent stickers that previously caused removed stickers to remain visible until the pointer left the panel
-- Improved compose controls, which now use smaller, consistent media icons and keep edit controls properly spaced when the attachment button is hidden
-- Fixed an issue with account menus and account or lock-screen transitions that previously caused dark rectangular press backgrounds, blank frames or folder jumps
-- Fixed an issue with settings and Premium pages that previously caused nested controls to be clipped incorrectly after scrolling
-- Improved Simplified Chinese translations, which now cover more gift, playback, notification and wallet text and use consistent chat terminology
+- Added a separate Repeat Without Quote action, so you can now resend text and media without sender attribution and configure its menu placement independently
+- Fixed an issue with message confirmation that previously caused messages to replay their reveal animation or jump abruptly when their order changed
+- Removed the birthday setup prompt; the chat list no longer displays the Add Birthday banner
 
 ---
 
-- 适配了官方 Telegram Desktop 7.3.5
-- 对全局搜索进行了改善，这使得频道、应用、图片、视频和语音分类支持按关键词查询，并在切换分类时保留关键词
-- 对大封面播放器进行了改善，这使得窗口可调整大小并记住尺寸，播放列表随窗口宽度切换布局，拖动进度时保持展开
-- 新增了临时播放调速操作，现在可以长按倍速按钮以两倍速播放，横向拖动调整速度，松开后恢复保存的倍速
-- 对附件下载进行了改善，这使得不同账号可以复用已下载文件，同时下载同一附件时避免产生重复副本
-- 对音乐下载指示进行了改善，这使得进度跟随在线播放缓存变化，整首音乐缓存完成后隐藏下载指示
-- 新增了消息“更多”子菜单，现在可以将扩展操作放入明确的子菜单，无需按住修饰键显示
-- 调整了私聊清空记录的行为，现在默认勾选同时为双方删除
-- 修复了关于最近使用贴纸的错误，该问题曾导致移除的贴纸必须等鼠标离开面板后才消失
-- 对输入区控件进行了改善，这使得媒体图标更小且风格统一，隐藏附件按钮后编辑控件仍保留正确间距
-- 修复了关于账号菜单、账号切换和锁屏过渡的错误，该问题曾导致按压背景出现深色矩形、过渡出现空白帧或分组跳动
-- 修复了关于设置和会员页面的错误，该问题曾导致滚动后嵌套控件被错误裁剪
-- 对简体中文翻译进行了改善，这使得礼物、播放提示、通知和钱包等文案更加完整，聊天相关用词保持一致
+- 新增了独立的“无引用复读”操作，现在可以去掉转发来源重新发送文字和媒体，并单独设置菜单位置
+- 修复了关于消息发送确认的错误，该问题曾导致消息重复播放入场动画，或在顺序调整时突然跳动
+- 移除了生日设置提示，聊天列表不再显示“添加生日”横幅
