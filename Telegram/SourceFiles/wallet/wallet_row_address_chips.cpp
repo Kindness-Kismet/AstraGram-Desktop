@@ -9,7 +9,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "wallet/wallet_palette.h"
 
-#include "ui/widgets/labels.h"
+#include "lang/lang_keys.h"
+#include "ui/abstract_button.h"
+#include "ui/effects/animation_value.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "ui/painter.h"
@@ -22,121 +24,77 @@ namespace Wallet {
 namespace {
 
 constexpr auto kChipChars = 4;
-constexpr auto kMiddleChars = kChipChars / 2;
+constexpr auto kMiddleChars = 3;
 constexpr auto kFadedChip = 1;
-constexpr auto kMiddleFadeFull = 0.2;
-constexpr auto kMiddleFadeClear = 0.06;
 
 struct ChipsGeometry {
 	style::font font;
-	QPointF origin;
+	QRect rect;
 	float64 scale = 1.;
-	int plateWidth = 0;
-	int plateHeight = 0;
-	int skip = 0;
+	std::array<int, 3> widths = {};
+	int width = 0;
+	int height = 0;
 };
 
-class AddressChipsLabel final : public Ui::FixedHeightWidget {
+class AddressCopyButton final : public Ui::AbstractButton {
 public:
-	AddressChipsLabel(
+	AddressCopyButton(
 		QWidget *parent,
-		AddressChips chips,
-		QString name,
-		int height);
+		QString address,
+		Fn<void()> repaint)
+	: AbstractButton(parent)
+	, _address(std::move(address))
+	, _repaint(std::move(repaint)) {
+		setObjectName(u"walletAddressCopy"_q);
+		setToolTip(tr::lng_wallet_receive_copy_hint(tr::now));
+	}
 
-	[[nodiscard]] const AddressChips &chips() const;
-
-	QAccessible::Role accessibilityRole() override;
-	QString accessibilityName() override;
+	QString accessibilityName() override {
+		return tr::lng_wallet_receive_copy_hint(tr::now) + ' ' + _address;
+	}
 
 protected:
-	void paintEvent(QPaintEvent *e) override;
+	void onStateChanged(State was, StateChangeSource source) override {
+		update();
+		if (_repaint) {
+			_repaint();
+		}
+	}
 
 private:
-	const AddressChips _chips;
-	const QString _name;
+	const QString _address;
+	const Fn<void()> _repaint;
 
 };
 
-[[nodiscard]] std::optional<ChipsGeometry> ComputeChipsGeometry(
+[[nodiscard]] ChipsGeometry ComputeChipsGeometry(
 		const std::array<QString, 3> &texts,
 		QRect line) {
-	if (line.width() <= 0 || line.height() <= 0) {
-		return std::nullopt;
-	}
-	const auto font = st::walletRowTitleLabel.style.font->monospace();
-	auto textWidth = 0;
-	for (const auto &text : texts) {
-		textWidth = std::max(textWidth, font->width(text));
-	}
-	const auto count = int(texts.size());
-	const auto plateWidth = textWidth + 2 * st::walletRowAddressChipInset;
-	const auto skip = st::walletRowAddressChipSkip;
-	const auto full = count * plateWidth + (count - 1) * skip;
-	const auto scale = std::min(1., line.width() / float64(full));
-	const auto left = style::RightToLeft()
-		? (line.x() + line.width() - full * scale)
-		: float64(line.x());
-	return ChipsGeometry{
+	const auto font = st::walletRowAddressFont->monospace();
+	auto result = ChipsGeometry{
 		.font = font,
-		.origin = QPointF(left, line.y() + line.height() * (1. - scale) / 2.),
-		.scale = scale,
-		.plateWidth = plateWidth,
-		.plateHeight = line.height(),
-		.skip = skip,
+		.height = st::walletRowAddressHeight,
 	};
-}
-
-void ApplyChipsGeometry(QPainter &p, const ChipsGeometry &geometry) {
-	p.translate(geometry.origin);
-	p.scale(geometry.scale, geometry.scale);
-}
-
-[[nodiscard]] int ChipLeft(const ChipsGeometry &geometry, int index) {
-	return index * (geometry.plateWidth + geometry.skip);
-}
-
-[[nodiscard]] QLinearGradient MiddleFade(QColor color, int left, int width) {
-	auto clear = color;
-	clear.setAlpha(0);
-	auto result = QLinearGradient(QPointF(left, 0), QPointF(left + width, 0));
-	result.setStops({
-		{ 0., color },
-		{ kMiddleFadeFull, color },
-		{ 0.5 - kMiddleFadeClear, clear },
-		{ 0.5 + kMiddleFadeClear, clear },
-		{ 1. - kMiddleFadeFull, color },
-		{ 1., color },
+	for (auto i = 0; i != int(texts.size()); ++i) {
+		result.widths[i] = font->width(texts[i]);
+		result.width += result.widths[i];
+	}
+	result.width += 2 * st::walletRowAddressChipInset
+		+ 3 * st::walletRowAddressChipSkip
+		+ st::walletRowAddressCopyIcon.width();
+	result.scale = std::min({
+		1.,
+		std::max(line.width(), 0) / float64(result.width),
+		std::max(line.height(), 0) / float64(result.height),
 	});
+	const auto width = int(base::SafeRound(result.width * result.scale));
+	const auto height = int(base::SafeRound(result.height * result.scale));
+	result.rect = QRect(
+		style::RightToLeft() ? (line.x() + line.width() - width) : line.x(),
+		line.y() + (line.height() - height) / 2,
+		width,
+		height);
 	return result;
-}
-
-AddressChipsLabel::AddressChipsLabel(
-	QWidget *parent,
-	AddressChips chips,
-	QString name,
-	int height)
-: FixedHeightWidget(parent, height)
-, _chips(std::move(chips))
-, _name(std::move(name)) {
-}
-
-const AddressChips &AddressChipsLabel::chips() const {
-	return _chips;
-}
-
-QAccessible::Role AddressChipsLabel::accessibilityRole() {
-	return QAccessible::Role::StaticText;
-}
-
-QString AddressChipsLabel::accessibilityName() {
-	return _name;
-}
-
-void AddressChipsLabel::paintEvent(QPaintEvent *e) {
-	const auto scope = WindowPaletteScope(this);
-	auto p = QPainter(this);
-	_chips.paintTexts(p, rect());
 }
 
 } // namespace
@@ -148,137 +106,104 @@ AddressChips::AddressChips(std::array<QString, 3> texts)
 std::optional<AddressChips> AddressChips::FromAddress(
 		const QString &address) {
 	const auto size = int(address.size());
-	if (size < kChipChars * 3) {
+	if (size < 2 * (kChipChars + kMiddleChars)) {
 		return std::nullopt;
 	}
 	return AddressChips({
 		address.left(kChipChars),
 		(address.mid(kChipChars, kMiddleChars)
+			+ QChar(0x2026)
 			+ address.mid(size - kChipChars - kMiddleChars, kMiddleChars)),
 		address.right(kChipChars),
 	});
 }
 
-void AddressChips::paintPlates(QPainter &p, QRect line) const {
+QRect AddressChips::rect(QRect line) const {
+	return ComputeChipsGeometry(_texts, line).rect;
+}
+
+void AddressChips::paint(QPainter &p, QRect line, bool over) const {
 	const auto geometry = ComputeChipsGeometry(_texts, line);
-	if (!geometry) {
+	if (geometry.rect.isEmpty()) {
 		return;
 	}
+	const auto &font = geometry.font;
+	const auto color = over
+		? st::windowActiveTextFg->c
+		: st::windowSubTextFg->c;
 	const auto radius = st::walletRowAddressChipRadius;
+	const auto baseline = (geometry.height - font->height) / 2 + font->ascent;
 	p.save();
-	ApplyChipsGeometry(p, *geometry);
+	p.translate(geometry.rect.topLeft());
+	p.scale(geometry.scale, geometry.scale);
 	{
 		auto hq = PainterHighQualityEnabler(p);
-		p.setPen(Qt::NoPen);
-		p.setBrush(st::windowBgOver);
-		for (auto i = 0; i != int(_texts.size()); ++i) {
-			p.drawRoundedRect(
-				QRect(
-					ChipLeft(*geometry, i),
-					0,
-					geometry->plateWidth,
-					geometry->plateHeight),
-				radius,
-				radius);
-		}
+		p.setPen(QPen(anim::color(st::windowBgOver, color, 0.15), 1.));
+		p.setBrush(anim::color(
+			st::windowBgOver,
+			over ? st::windowActiveTextFg : st::windowBg,
+			over ? 0.1 : 0.65));
+		p.drawRoundedRect(
+			QRectF(0.5, 0.5, geometry.width - 1., geometry.height - 1.),
+			radius,
+			radius);
 	}
-	p.restore();
-}
-
-void AddressChips::paintTexts(QPainter &p, QRect line) const {
-	const auto geometry = ComputeChipsGeometry(_texts, line);
-	if (!geometry) {
-		return;
-	}
-	const auto &font = geometry->font;
-	const auto color = st::walletRowTitleLabel.textFg->c;
-	const auto baseline = int(base::SafeRound(
-		(geometry->plateHeight + font->metrics().capHeight()) / 2.));
-	p.save();
-	ApplyChipsGeometry(p, *geometry);
 	p.setFont(font);
 	p.setLayoutDirection(Qt::LeftToRight);
+	auto left = st::walletRowAddressChipInset;
 	for (auto i = 0; i != int(_texts.size()); ++i) {
-		const auto &text = _texts[i];
-		const auto width = font->width(text);
-		const auto left = ChipLeft(*geometry, i)
-			+ (geometry->plateWidth - width) / 2;
-		if (i == kFadedChip) {
-			p.setPen(QPen(QBrush(MiddleFade(color, left, width)), 0));
-		} else {
-			p.setPen(color);
-		}
-		p.drawText(left, baseline, text);
+		p.setPen(i == kFadedChip
+			? anim::color(st::windowBgOver, color, 0.65)
+			: color);
+		p.drawText(left, baseline, _texts[i]);
+		left += geometry.widths[i] + st::walletRowAddressChipSkip;
 	}
+	const auto &icon = st::walletRowAddressCopyIcon;
+	icon.paintInCenter(
+		p,
+		QRect(left, 0, icon.width(), geometry.height),
+		color);
 	p.restore();
 }
 
-void AddressChips::paint(QPainter &p, QRect line) const {
-	paintPlates(p, line);
-	paintTexts(p, line);
-}
-
-not_null<Ui::RpWidget*> AddHistoryRowTitle(
-		not_null<Ui::VerticalLayout*> container,
-		const QString &title,
+not_null<Ui::AbstractButton*> CreateAddressCopyButton(
+		not_null<Ui::RpWidget*> parent,
 		const QString &address,
-		int lineHeight,
-		style::margins margins,
-		not_null<QWidget*> button,
-		Fn<void(Fn<void(Painter&)>)> paintUnderRipple) {
-	if (auto chips = AddressChips::FromAddress(address)) {
-		const auto label = container->add(
-			object_ptr<AddressChipsLabel>(
-				container,
-				std::move(*chips),
-				title,
-				lineHeight),
-			margins);
-		paintUnderRipple([=](Painter &p) {
-			const auto scope = WindowPaletteScope(button);
-			label->chips().paintPlates(
-				p,
-				Ui::MapFrom(button, label, label->rect()));
-		});
-		return label;
-	}
-	const auto label = container->add(
-		object_ptr<Ui::FlatLabel>(
-			container,
-			title,
-			st::walletRowTitleLabel),
-		margins);
-	label->setBreakEverywhere(true);
-	return label;
+		Fn<void()> copied,
+		Fn<void()> repaint) {
+	const auto button = Ui::CreateChild<AddressCopyButton>(
+		parent,
+		address,
+		std::move(repaint));
+	button->setClickedCallback(std::move(copied));
+	return button;
 }
 
-void PaintSendingRowTitle(
-		QPainter &p,
-		QRect line,
-		const std::optional<AddressChips> &now,
-		const std::optional<AddressChips> *next,
-		bool same,
-		float64 progress,
-		Fn<void(bool next, float64 opacity)> text) {
-	const auto paint = [&](
-			const std::optional<AddressChips> &chips,
-			bool isNext,
-			float64 opacity) {
-		if (!chips) {
-			text(isNext, opacity);
-		} else if (opacity > 0.) {
-			p.setOpacity(opacity);
-			chips->paint(p, line);
-		}
-	};
-	if (!next) {
-		paint(now, false, 1.);
-	} else if (same) {
-		paint(*next, true, 1.);
-	} else {
-		paint(now, false, 1. - progress);
-		paint(*next, true, progress);
-	}
+not_null<Ui::RpWidget*> AddHistoryRowAddress(
+		not_null<Ui::VerticalLayout*> container,
+		const QString &address,
+		not_null<Ui::RpWidget*> row,
+		Fn<void()> copied) {
+	const auto chips = AddressChips::FromAddress(address);
+	Expects(chips.has_value());
+
+	const auto slot = container->add(object_ptr<Ui::FixedHeightWidget>(
+		container,
+		st::walletRowAddressHeight));
+	const auto button = CreateAddressCopyButton(row, address, std::move(copied));
+	button->paintRequest() | rpl::on_next([=] {
+		const auto scope = WindowPaletteScope(button);
+		auto p = QPainter(button);
+		chips->paint(p, button->rect(), button->isOver() || button->isDown());
+	}, button->lifetime());
+	rpl::combine(
+		slot->geometryValue(),
+		row->geometryValue()
+	) | rpl::on_next([=] {
+		button->setGeometry(Ui::MapFrom(row, slot, chips->rect(slot->rect())));
+		button->raise();
+	}, button->lifetime());
+	return slot;
 }
 
 } // namespace Wallet

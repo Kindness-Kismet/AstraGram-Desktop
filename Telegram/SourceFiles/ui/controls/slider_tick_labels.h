@@ -9,9 +9,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Ui {
 
-// Left edges for labels centered under their ticks, kept inside [0, outer]
-// and at least minGap apart, moving as few labels as needed.
-[[nodiscard]] std::vector<int> LayoutSliderTickLabels(
+struct SliderTickLabelPosition {
+	int left = 0;
+	int row = 0;
+};
+
+// 刻度文字保持在容器内；单行放不下时按刻度位置分行。
+[[nodiscard]] std::vector<SliderTickLabelPosition> LayoutSliderTickLabels(
 	const std::vector<int> &centers,
 	const std::vector<int> &widths,
 	int outer,

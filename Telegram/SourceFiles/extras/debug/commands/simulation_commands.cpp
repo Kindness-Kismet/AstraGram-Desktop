@@ -30,6 +30,7 @@
 #include <QtCore/QElapsedTimer>
 #include <QtWidgets/QApplication>
 #include "wallet/wallet_panel.h"
+#include "wallet/wallet_address.h"
 #include "wallet/wallet_own_card.h"
 #include "wallet/wallet_session.h"
 #include "ui/emoji_config.h"
@@ -438,7 +439,61 @@ Result simulationEmojiPacks(const QStringList &args) {
 		MTPint());
 }
 
-void applyWalletLists(not_null<Main::Session*> session, bool withCollectibles) {
+[[nodiscard]] QVector<MTPWalletTransaction> walletLayoutTransactions(
+		not_null<Main::Session*> session) {
+	const auto contact = session->data().user(UserId(980200001));
+	contact->setName(u"林间来信 · 钱包布局验证用的较长联系人名称"_q, {}, {}, {});
+	contact->setFlags(UserDataFlag::Contact
+		| UserDataFlag::MessageMoneyRestrictionsKnown);
+	contact->setLoadedStatus(PeerData::LoadedStatus::Full);
+	const auto peerAddress = [](int index) {
+		return Wallet::FormatFriendly(
+			u"0:"_q + QString(64, QChar('1' + index)),
+			(index % 2) != 0);
+	};
+	auto result = QVector<MTPWalletTransaction>();
+	const auto add = [&](int index,
+			bool incoming,
+			int64 amount,
+			MTPWalletTransactionPeer peer,
+			bool failed = false) {
+		using Flag = MTPDwalletTransaction::Flag;
+		result.push_back(MTP_walletTransaction(
+			MTP_flags(Flag::f_comment
+				| (incoming ? Flag::f_incoming : Flag())
+				| (failed ? Flag::f_failed : Flag())),
+			MTP_string(QString(64, QChar('1' + index))),
+			MTP_long(amount),
+			MTP_long(incoming ? 0 : 2500000),
+			MTP_int(base::unixtime::now() - index * 3600),
+			std::move(peer),
+			MTP_string(u"本地模拟记录 %1"_q.arg(index + 1)),
+			MTPstring(),
+			MTPwallet_NftItem()));
+	};
+	const auto anonymous = [&](int index) {
+		return MTP_walletTransactionPeerAddress(
+			MTP_flags(0), MTP_string(peerAddress(index)), MTPstring());
+	};
+	add(0, true, 12500000000LL, anonymous(0));
+	add(1, false, 80000000LL, anonymous(1));
+	add(2, true, 987654321123456789LL, MTP_walletTransactionPeerAddress(
+		MTP_flags(MTPDwalletTransactionPeerAddress::Flag::f_domain),
+		MTP_string(peerAddress(2)),
+		MTP_string(u"astragram-layout-preview.ton"_q)));
+	add(3, false, 7654321123456789LL, MTP_walletTransactionPeerUser(
+		MTP_flags(0),
+		MTP_long(peerToUser(contact->id).bare),
+		MTP_string(peerAddress(3)), MTPstring()));
+	add(4, false, 42000000000LL, anonymous(4), true);
+	add(5, true, 1000000000LL, MTP_walletTransactionPeerUnsupported());
+	return result;
+}
+
+void applyWalletLists(
+		not_null<Main::Session*> session,
+		bool withCollectibles,
+		bool withLayout) {
 	auto &wallet = session->wallet();
 	const auto address = u"0:"_q + QString(64, QChar('0'));
 	const auto peerAddress = u"0:"_q + QString(64, QChar('2'));
@@ -457,7 +512,9 @@ void applyWalletLists(not_null<Main::Session*> session, bool withCollectibles) {
 	const auto transactions = MTP_wallet_transactions(
 		MTP_flags(0),
 		MTP_long(kWalletBalance),
-		MTP_vector<MTPWalletTransaction>({ transaction }),
+		MTP_vector<MTPWalletTransaction>(withLayout
+			? walletLayoutTransactions(session)
+			: QVector<MTPWalletTransaction>{ transaction }),
 		MTPstring(),
 		MTP_vector<MTPChat>(),
 		MTP_vector<MTPUser>());
@@ -524,8 +581,9 @@ const HandlerMap &simulationHandlers() {
 			const auto mode = args.isEmpty() ? u"keep"_q : args.front();
 			if (args.size() > 1 || (mode != u"keep"_q && mode != u"missing"_q
 				&& mode != u"ready"_q && mode != u"collectibles"_q
+				&& mode != u"layout"_q
 				&& mode != u"close"_q)) {
-				return Result::Err(u"usage: simulation.wallet [keep|missing|ready|collectibles|close]"_q);
+				return Result::Err(u"usage: simulation.wallet [keep|missing|ready|collectibles|layout|close]"_q);
 			}
 			const auto session = ActiveSession();
 			if (!cDebugProfile() || !session || !isSimulationSession(session)) {
@@ -547,15 +605,33 @@ const HandlerMap &simulationHandlers() {
 						MTP_long(kWalletBalance)));
 				wallet.applyUpdate(MTP_updateWalletState(state).c_updateWalletState());
 				if (mode != u"missing"_q) {
-					applyWalletLists(session, mode == u"collectibles"_q);
+					applyWalletLists(session,
+						mode == u"collectibles"_q,
+						mode == u"layout"_q);
 				}
 			}
 			Wallet::ShowWallet(session)->setObjectName(u"simulation.wallet"_q);
+			auto history = json::array();
+			for (const auto &item : wallet.history()) {
+				history.push_back({
+					{ "id", item.id.toStdString() },
+					{ "incoming", item.incoming },
+					{ "amountNano", item.amountNano },
+					{ "address", item.counterparty.isEmpty()
+						? std::string()
+						: Wallet::FormatFriendly(item.counterparty,
+							item.counterpartyBounceable).toStdString() },
+					{ "counterpartyName", item.counterpartyName.toStdString() },
+					{ "counterpartyPeer", item.counterpartyPeer },
+					{ "failed", item.status == Wallet::TransferItem::Status::Failure },
+				});
+			}
 			return Result::Ok(Compact(json{
 				{ "mode", mode.toStdString() },
 				{ "historyCount", wallet.history().size() },
 				{ "collectibleCount", wallet.collectibles().size() },
 				{ "listsGated", wallet.listsGated() },
+				{ "history", std::move(history) },
 			}));
 		} },
 		{ u"simulation.trigger"_q, [](const QStringList &args) {

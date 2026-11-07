@@ -294,28 +294,28 @@ private:
 	}
 	labels->widthValue() | rpl::on_next([=](int outer) {
 		const auto shift = sliderStyle->seekSize.width() / 2;
-		const auto available = outer - sliderStyle->seekSize.width();
+		const auto available = std::max(outer - sliderStyle->seekSize.width(), 0);
 		auto centers = std::vector<int>();
 		auto widths = std::vector<int>();
+		auto lineHeight = 0;
 		for (auto i = 0; i != state->labels.size(); ++i) {
-			const auto width = state->labels[i]->width();
+			state->labels[i]->resizeToNaturalWidth(std::max(outer, 1));
 			const auto progress = (i / float64(valuesCount - 1));
-			const auto left = int(base::SafeRound(progress * available));
-			centers.push_back(shift + left);
-			widths.push_back(width);
+			centers.push_back(shift + int(base::SafeRound(progress * available)));
+			widths.push_back(state->labels[i]->width());
+			lineHeight = std::max(lineHeight, state->labels[i]->height());
 		}
-		const auto lefts = Ui::LayoutSliderTickLabels(
-			centers,
-			widths,
-			outer,
-			labelStyle->style.font->spacew);
+		const auto positions = Ui::LayoutSliderTickLabels(
+			centers, widths, outer, labelStyle->style.font->spacew);
+		const auto rowSkip = lineHeight + style::ConvertScale(3);
+		auto height = lineHeight;
 		for (auto i = 0; i != state->labels.size(); ++i) {
-			state->labels[i]->moveToLeft(lefts[i], 0, outer);
+			const auto top = positions[i].row * rowSkip;
+			state->labels[i]->moveToLeft(positions[i].left, top, outer);
+			height = std::max(height, top + lineHeight);
 		}
+		labels->resize(outer, height + st::defaultVerticalListSkip);
 	}, slider->lifetime());
-	labels->resize(
-		labels->width(),
-		state->labels.back()->height() + st::defaultVerticalListSkip);
 
 	const auto updatePalette = [=] {
 		const auto disabled = anim::color(

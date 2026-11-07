@@ -158,6 +158,9 @@ void Content::setupContent() {
 	setupProtectRow();
 
 	const auto media = std::make_shared<CollectibleMedia>(&_show->session());
+	const auto copyAddress = [show = _show](const QString &address) {
+		CopyAddressCallback(show, address)();
+	};
 	const auto wrap = column->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			column,
@@ -387,9 +390,10 @@ void Content::setupContent() {
 					listWrap,
 					content,
 					media,
-					click);
+					click,
+					copyAddress);
 			} else {
-				AddHistoryRow(slot, content, click, media);
+				AddHistoryRow(slot, content, click, media, copyAddress);
 			}
 			_sendingRow->content = std::move(content);
 		}
@@ -422,7 +426,7 @@ void Content::setupContent() {
 				.key = std::move(key),
 				.widget = AddHistoryRow(list, content, [=] {
 					ShowWalletTransactionBox(_show, item, media);
-				}, media),
+				}, media, copyAddress),
 			});
 		};
 		auto created = false;
@@ -742,23 +746,9 @@ void Content::setupPinned() {
 		if (ExtrasFeatures::WindowMaterial::isActive(_pinnedBackground)) {
 			return;
 		}
+		const auto scope = WindowPaletteScope(_pinnedBackground);
 		auto p = QPainter(_pinnedBackground);
-		const auto height = _pinnedBackground->height();
-		const auto tabsTop = height - pinnedMin();
-		p.fillRect(
-			0,
-			0,
-			_pinnedBackground->width(),
-			tabsTop,
-			st::windowBgOver);
-		if (tabsTop < height) {
-			p.fillRect(
-				0,
-				tabsTop,
-				_pinnedBackground->width(),
-				height - tabsTop,
-				st::windowBg);
-		}
+		p.fillRect(_pinnedBackground->rect(), st::windowBgOver);
 	}, _pinnedBackground->lifetime());
 
 	const auto forwardWheel = [=](not_null<QEvent*> e) {

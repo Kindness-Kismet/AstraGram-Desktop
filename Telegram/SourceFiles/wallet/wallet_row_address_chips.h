@@ -7,9 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
-class Painter;
-
 namespace Ui {
+class AbstractButton;
 class RpWidget;
 class VerticalLayout;
 } // namespace Ui
@@ -21,9 +20,8 @@ public:
 	[[nodiscard]] static std::optional<AddressChips> FromAddress(
 		const QString &address);
 
-	void paintPlates(QPainter &p, QRect line) const;
-	void paintTexts(QPainter &p, QRect line) const;
-	void paint(QPainter &p, QRect line) const;
+	[[nodiscard]] QRect rect(QRect line) const;
+	void paint(QPainter &p, QRect line, bool over = false) const;
 
 private:
 	explicit AddressChips(std::array<QString, 3> texts);
@@ -32,22 +30,16 @@ private:
 
 };
 
-[[nodiscard]] not_null<Ui::RpWidget*> AddHistoryRowTitle(
-	not_null<Ui::VerticalLayout*> container,
-	const QString &title,
+[[nodiscard]] not_null<Ui::AbstractButton*> CreateAddressCopyButton(
+	not_null<Ui::RpWidget*> parent,
 	const QString &address,
-	int lineHeight,
-	style::margins margins,
-	not_null<QWidget*> button,
-	Fn<void(Fn<void(Painter&)>)> paintUnderRipple);
+	Fn<void()> copied,
+	Fn<void()> repaint = nullptr);
 
-void PaintSendingRowTitle(
-	QPainter &p,
-	QRect line,
-	const std::optional<AddressChips> &now,
-	const std::optional<AddressChips> *next,
-	bool same,
-	float64 progress,
-	Fn<void(bool next, float64 opacity)> text);
+[[nodiscard]] not_null<Ui::RpWidget*> AddHistoryRowAddress(
+	not_null<Ui::VerticalLayout*> container,
+	const QString &address,
+	not_null<Ui::RpWidget*> row,
+	Fn<void()> copied);
 
 } // namespace Wallet

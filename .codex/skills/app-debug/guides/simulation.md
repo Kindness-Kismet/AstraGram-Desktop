@@ -211,8 +211,9 @@ python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screensh
 样本复用内存中的静态图片，文档使用自定义表情属性并沿原生表情包更新通知刷新；重复执行不会重复添加。
 打开 `compose.emoji`，用 `control.set compose.emoji.tabs 0` 切到表情页，再用 `control.list emoji.categories` 定位自绘底栏；通过 `control.mouse` 和 `control.pointer` 检查分类与表情包切换、悬停，状态随模拟会话销毁。
 
-`simulation.wallet [keep|missing|ready|collectibles|close]` 仅在独立模拟配置中打开或关闭钱包窗口。
+`simulation.wallet [keep|missing|ready|collectibles|layout|close]` 仅在独立模拟配置中打开或关闭钱包窗口。
 `missing` 显示未创建状态，`ready` 注入固定公开地址、余额和交易记录，`collectibles` 另加普通藏品与两种配色的礼物，显示标签页和卡片装饰入口。
+`layout` 注入六笔交易：匿名地址收款和转出、域名长金额收款、长姓名联系人转出、失败转出、无地址对方；地址由正式格式化函数生成，返回的 `history` 包含完整地址、方向、金额与失败状态，可核对点击后的复制结果。
 列表沿正式响应处理入口更新；不安装私钥或提交交易，状态随模拟会话销毁。
 打开后用 `control.window simulation.wallet` 选择该窗口，检查结束用 `simulation.wallet close` 关闭并恢复主窗口目标。
 
@@ -222,6 +223,18 @@ python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screensh
 新增搜索样本：`giveaway-countries`、`translate-language`、`official-font`、`dictionary`、`peer-lists`、`share`；只用于模拟模式布局与筛选验证，不执行保存或发送。
 `background-preview` 用内置照片壁纸打开背景预览，无需联网即可检查预览中的日期与服务消息。
 `peer-qr` 为模拟账号设置固定用户名并打开个人二维码面板；`link-qr` 打开带标题和说明的链接二维码，可检查卡片、按钮与配色。
+`settings-layout` 在可缩放弹层中复用设置页的真实行控件，包含长路径、长标题、长说明和短当前值；行标识为 `simulation.settings.download`、`simulation.settings.notifications`、`simulation.settings.language`。
+`permissions` 打开模拟慢速群组的原生权限弹窗，赋予本地群主标记；保存只更新模拟群的权限和慢速间隔，不提交请求。滑块及刻度标识为 `permissions.slowmode.slider`、`permissions.slowmode.ticks`，当前值为 `permissions.slowmode.value`。
+
+设置行的宽窄对照先选回主窗口，再调整窗口尺寸，等待布局完成后截图：
+
+```bash
+python .codex/skills/app-debug/scripts/cli.py control.window main + window.resize 1000 800 + dialog.open settings-layout
+python .codex/skills/app-debug/scripts/cli.py screenshot.take + control.list simulation.settings
+python .codex/skills/app-debug/scripts/cli.py window.resize 430 800
+python .codex/skills/app-debug/scripts/cli.py screenshot.take + control.list settings.row
+python .codex/skills/app-debug/scripts/cli.py dialog.open permissions
+```
 
 先用 `simulation.list`、`message.list/inspect`、`chat.draft` 核对状态，再截图观察布局。
 `message.inspect` 返回实际删除、置顶、引用、话题、评论和 `ttlDestroyAt`；短倒计时到期后再次查询存在状态。

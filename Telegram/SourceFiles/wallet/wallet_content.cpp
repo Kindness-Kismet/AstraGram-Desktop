@@ -69,6 +69,7 @@ not_null<Ui::TableLayout*> AddDetailsTableFrame(
 		st::walletDetailsTable.radius,
 		st::windowBg);
 	wrap->paintRequest() | rpl::on_next([=] {
+		const auto scope = WindowPaletteScope(wrap);
 		auto p = QPainter(wrap);
 		bg->paint(p, wrap->rect());
 	}, wrap->lifetime());

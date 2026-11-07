@@ -294,6 +294,62 @@ void AddCardDescription(
 		st::settingsCardHintPadding);
 }
 
+void LayoutSectionRow(not_null<Ui::SettingsButton*> button) {
+	if (button->property("settingsRowLayingOut").toBool()) {
+		return;
+	}
+	button->setProperty("settingsRowLayingOut", true);
+	const auto &st = button->st();
+	const auto card = button->property("settingsCardRow").toBool();
+	const auto value = static_cast<Ui::FlatLabel*>(button->findChild<QWidget*>(
+		u"settings.row.value"_q, Qt::FindDirectChildrenOnly));
+	const auto description = static_cast<Ui::FlatLabel*>(button->findChild<QWidget*>(
+		u"settings.row.description"_q, Qt::FindDirectChildrenOnly));
+	const auto right = std::max(
+		value ? (card ? st::settingsCardRowInset : st::settingsButtonRightSkip)
+			: st.padding.right(),
+		button->property("settingsRightLabelSkip").toInt());
+	const auto gap = card ? st::settingsCardTextGap : st.padding.right();
+	const auto lineGap = style::ConvertScale(5);
+	const auto available = std::max(button->width() - st.padding.left() - right, 1);
+	const auto valueWidth = value ? value->textMaxWidth() : 0;
+	const auto titleWidth = button->fullTextWidth();
+	const auto inlineValue = valueWidth && (!card || button->width() >= st::settingsCardNarrowWidth)
+		&& valueWidth + gap + std::min(titleWidth, available / 2) <= available;
+	auto padding = st.padding;
+	padding.setRight(right + (inlineValue ? gap + valueWidth : 0));
+	if (value) {
+		value->resizeToNaturalWidth(inlineValue ? valueWidth : available);
+	}
+	const auto descriptionTop = st.padding.top() + st.style.font->height + lineGap;
+	if (description) {
+		description->resizeToWidth(std::max(button->width() - padding.left() - padding.right(), 1));
+		padding.setBottom(std::max(padding.bottom(),
+			descriptionTop + description->height() + st.padding.bottom() - padding.top() - st.height));
+	}
+	const auto valueBelow = valueWidth && !inlineValue;
+	if (valueBelow) {
+		padding.setBottom(padding.bottom() + lineGap + value->height());
+	}
+	// 宽度决定所有留白，尺寸回调只定位；避免说明与右值互相覆盖留白。
+	if (button->property("settingsRowAppliedPadding").value<QMargins>() != padding) {
+		button->setProperty("settingsRowAppliedPadding", QVariant::fromValue(QMargins(padding)));
+		button->setPaddingOverride(padding);
+	}
+	const auto extraTitleHeight = std::max(button->height()
+		- padding.top() - st.height - padding.bottom(), 0);
+	if (description) {
+		description->moveToLeft(padding.left(), descriptionTop + extraTitleHeight);
+	}
+	if (valueBelow) {
+		value->moveToLeft(padding.left(), button->height() - st.padding.bottom() - value->height());
+	} else if (value) {
+		value->moveToRight(right, card ? (button->height() - value->height()) / 2
+			: st.padding.top() + extraTitleHeight / 2);
+	}
+	button->setProperty("settingsRowLayingOut", false);
+}
+
 void AddSectionRowDetails(
 		not_null<Ui::SettingsButton*> button,
 		rpl::producer<QString> description) {
@@ -308,12 +364,7 @@ void AddSectionRowDetails(
 		const auto rightSkip = st::settingsCardRowInset
 			+ arrow->width() + st::settingsCardTextGap;
 		button->setProperty("settingsRightLabelSkip", rightSkip);
-		auto padding = button->st().padding;
-		padding.setRight(std::max(rightSkip,
-			button->property("settingsContentRightSkip").toInt()));
-		padding.setBottom(padding.bottom()
-			+ button->property("settingsValueBottomSkip").toInt());
-		button->setPaddingOverride(padding);
+		LayoutSectionRow(button);
 		arrow->show();
 		arrow->paintRequest() | rpl::on_next([=] {
 			auto p = QPainter(arrow);
@@ -340,52 +391,11 @@ void AddSectionRowDetails(
 	label->setObjectName(u"settings.row.description"_q);
 	label->setAttribute(Qt::WA_TransparentForMouseEvents);
 	label->show();
-	const auto computeRightSkip = [=] {
-		return std::max({
-			button->st().padding.right(),
-			button->property("settingsRightLabelSkip").toInt(),
-			button->property("settingsContentRightSkip").toInt(),
-		});
-	};
-	auto rightSkip = rpl::single(computeRightSkip()) | rpl::then(
-		button->events() | rpl::filter([](not_null<QEvent*> event) {
-			return event->type() == QEvent::DynamicPropertyChange;
-		}) | rpl::map(computeRightSkip)
-	) | rpl::distinct_until_changed();
-	rpl::combine(
-		button->widthValue(),
-		rpl::duplicate(rightSkip)
-	) | rpl::on_next([=](int width, int right) {
-		const auto left = button->st().padding.left();
-		label->resizeToWidth(std::max(width - left - right, 1));
-		label->moveToLeft(left, st::settingsCardDescriptionTop);
-	}, label->lifetime());
-	rpl::combine(
-		label->heightValue(),
-		std::move(rightSkip)
-	) | rpl::on_next([=](int height, int right) {
-		const auto &st = button->st();
-		auto padding = st.padding;
-		padding.setRight(right);
-		padding.setBottom(std::max(padding.bottom(),
-			st::settingsCardDescriptionTop + height
-				+ st::settingsCardRowInset - padding.top() - st.height));
-		button->setProperty("settingsContentBottomSkip", padding.bottom());
-		padding.setBottom(padding.bottom()
-			+ button->property("settingsValueBottomSkip").toInt());
-		button->setPaddingOverride(padding);
-	}, label->lifetime());
 	rpl::combine(
 		button->sizeValue(),
-		label->heightValue()
-	) | rpl::on_next([=](QSize size, int) {
-		const auto &st = button->st();
-		const auto single = st.padding.top() + st.height
-			+ std::max(st.padding.bottom(),
-				button->property("settingsContentBottomSkip").toInt())
-			+ button->property("settingsValueBottomSkip").toInt();
-		label->moveToLeft(st.padding.left(),
-			st::settingsCardDescriptionTop + std::max(size.height() - single, 0));
+		label->sizeValue()
+	) | rpl::on_next([=] {
+		LayoutSectionRow(button);
 	}, label->lifetime());
 }
 

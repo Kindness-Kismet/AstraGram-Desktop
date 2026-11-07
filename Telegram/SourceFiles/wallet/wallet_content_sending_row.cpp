@@ -114,11 +114,13 @@ SendingHistoryRow::SendingHistoryRow(
 	not_null<Ui::RpWidget*> layer,
 	not_null<Ui::RpWidget*> bounds,
 	HistoryRowContent content,
-	std::shared_ptr<CollectibleMedia> media)
+	std::shared_ptr<CollectibleMedia> media,
+	Fn<void(const QString&)> copyAddress)
 : Ui::AbstractButton(parent.get())
 , _layer(layer)
 , _bounds(bounds)
 , _media(std::move(media))
+, _copyAddress(std::move(copyAddress))
 , _shadow(st::walletInfoIslandShadow)
 , _surface(Ui::CreateChild<Ui::RpWidget>(layer.get())) {
 	Expects(_media || !content.itemAmount);
@@ -239,6 +241,7 @@ void SendingHistoryRow::setContent(HistoryRowContent content) {
 		}
 	}
 	accessibilityNameChanged();
+	updateAddressButton();
 	updateRowLayout();
 	_surface->update();
 }
@@ -333,6 +336,7 @@ void SendingHistoryRow::startSettle(
 	_settle->scale = DigitsHeight(st::walletRowAmountMajorLabel.style.font)
 		/ float64(_digitsHeight);
 	accessibilityNameChanged();
+	updateAddressButton();
 	updateRowLayout();
 	startAnimation();
 	_surface->update();
@@ -400,7 +404,11 @@ int SendingHistoryRow::resizeGetHeight(int newWidth) {
 	_amount.setAvailableWidth(int(SendingRowAmountRight(newWidth))
 		- st::walletRowPadding.left()
 		- st::walletSendingRowTextMinWidth);
-	_layout = MeasureHistoryRow(_text, newWidth);
+	const auto amountWidth = _content.itemAmount
+		? -1
+		: (newWidth - st::walletRowPadding.right()
+			- int(SendingRowAmountRight(newWidth) - _amount.size().width()));
+	_layout = MeasureHistoryRow(_text, newWidth, amountWidth);
 	if (_settle) {
 		_settle->layout = MeasureHistoryRow(_settle->text, newWidth);
 	}
@@ -415,6 +423,21 @@ void SendingHistoryRow::updateRowLayout() {
 	if (const auto w = width()) {
 		resizeToWidth(w);
 	}
+}
+
+void SendingHistoryRow::updateAddressButton() {
+	_addressButton = nullptr;
+	const auto &content = _settle ? _settle->content : _content;
+	if (!AddressChips::FromAddress(content.address)) {
+		return;
+	}
+	const auto address = content.address;
+	_addressButton.reset(CreateAddressCopyButton(this, address, [=] {
+		_copyAddress(address);
+	}, [=] {
+		_surface->update();
+	}).get());
+	_addressButton->show();
 }
 
 void SendingHistoryRow::visibleTopBottomUpdated(
@@ -437,6 +460,7 @@ QString SendingHistoryRow::accessibilityName() {
 	for (const auto &text : {
 		content.title,
 		content.subtitle,
+		content.address,
 		content.date,
 		(_content.itemAmount
 			? (_settle ? _settle->text : _text).major.toString()
@@ -488,13 +512,15 @@ SendingRowLayout SendingHistoryRow::layout() const {
 	}
 
 	const auto canvas = SendingRowDiamondCanvas();
+	const auto titleCenter = _layout.title.top
+		+ _layout.title.lines * LabelLineHeight(st::walletRowTitleLabel) / 2.;
 	const auto drawnLeft = SendingRowDiamondLeft(w)
 		+ canvas * kGramDiamondLeft;
 	const auto drawnWidth = canvas * (kGramDiamondRight - kGramDiamondLeft);
 	result.diamond = QPoint(
 		int(base::SafeRound(mirror(drawnLeft, drawnWidth)
 			- canvas * kGramDiamondLeft)),
-		int(base::SafeRound(h / 2.
+		int(base::SafeRound(titleCenter
 			- canvas * (kGramDiamondTop + kGramDiamondBottom) / 2.)));
 
 	const auto amountWidth = _amount.size().width();
@@ -503,11 +529,11 @@ SendingRowLayout SendingHistoryRow::layout() const {
 		* _amount.scale();
 	result.amount = QPointF(
 		mirror(amountLeft, amountWidth),
-		h / 2. - digitsCenter);
-	result.textWidth = std::max(
+		titleCenter - digitsCenter);
+	result.titleWidth = std::max(
 		int(amountLeft) - st::walletRowSkip - padding.left(),
 		0);
-	result.titleWidth = result.textWidth;
+	result.textWidth = _layout.textWidth;
 	return result;
 }
 
@@ -659,6 +685,7 @@ QTransform SendingHistoryRow::surfaceTransform(crl::time now) const {
 }
 
 void SendingHistoryRow::paintSurface() {
+	const auto scope = WindowPaletteScope(this);
 	auto p = Painter(_surface.get());
 	const auto now = crl::now();
 	if (!_started) {
@@ -881,21 +908,15 @@ void SendingHistoryRow::paintTexts(
 		? int(base::SafeRound(layout.textWidth
 			+ (target.textWidth - layout.textWidth) * progress.amount))
 		: layout.textWidth;
-	const auto titleHeight = LabelLineHeight(st::walletRowTitleLabel);
-	PaintSendingRowTitle(
-		p,
-		myrtlrect(left, _layout.title.top, titleWidth, titleHeight),
-		_text.address,
-		settle ? &settle->text.address : nullptr,
-		(settle
-			&& (settle->content.title == _content.title)
-			&& (settle->content.address == _content.address)),
-		progress.label,
-		[&](bool next, float64 opacity) {
-			const auto &text = next ? settle->text.title : _text.title;
-			const auto at = next ? settle->layout.title : _layout.title;
-			draw(text, st::walletRowTitleLabel, at, true, titleWidth, opacity);
-		});
+	line(
+		_text.title,
+		_layout.title,
+		settle ? &settle->text.title : nullptr,
+		settle ? settle->layout.title : HistoryRowLine(),
+		settle && (settle->content.title == _content.title),
+		st::walletRowTitleLabel,
+		true,
+		titleWidth);
 	line(
 		_text.subtitle,
 		_layout.subtitle,
@@ -905,6 +926,34 @@ void SendingHistoryRow::paintTexts(
 		st::walletRowSubtitleLabel,
 		true,
 		textWidth);
+	const auto addressLine = [&](int top) {
+		return myrtlrect(left, top, textWidth, st::walletRowAddressHeight);
+	};
+	const auto addressOver = _addressButton
+		&& (_addressButton->isOver() || _addressButton->isDown());
+	const auto paintAddress = [&](
+			const HistoryRowText &text,
+			const HistoryRowLayout &row,
+			float64 opacity) {
+		if (text.address && opacity > 0.) {
+			p.setOpacity(opacity);
+			text.address->paint(p, addressLine(row.addressTop), addressOver);
+		}
+	};
+	if (!settle) {
+		paintAddress(_text, _layout, 1.);
+	} else if (settle->content.address == _content.address) {
+		paintAddress(settle->text, settle->layout, 1.);
+	} else {
+		paintAddress(_text, _layout, 1. - progress.label);
+		paintAddress(settle->text, settle->layout, progress.label);
+	}
+	if (_addressButton) {
+		const auto &text = settle ? settle->text : _text;
+		const auto &row = settle ? settle->layout : _layout;
+		_addressButton->setGeometry(surfaceTransform(crl::now()).mapRect(
+			text.address->rect(addressLine(row.addressTop))));
+	}
 	line(
 		_text.date,
 		_layout.date,
@@ -1063,13 +1112,15 @@ not_null<SendingHistoryRow*> AddSendingHistoryRow(
 		not_null<Ui::RpWidget*> bounds,
 		const HistoryRowContent &content,
 		std::shared_ptr<CollectibleMedia> media,
-		Fn<void()> clicked) {
+		Fn<void()> clicked,
+		Fn<void(const QString&)> copyAddress) {
 	const auto result = slot->add(object_ptr<SendingHistoryRow>(
 		slot,
 		layer,
 		bounds,
 		content,
-		std::move(media)));
+		std::move(media),
+		std::move(copyAddress)));
 	result->setClickedCallback(std::move(clicked));
 	return result;
 }

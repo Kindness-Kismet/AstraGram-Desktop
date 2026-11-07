@@ -24,12 +24,14 @@
 #include "boxes/passcode_box.h"
 #include "boxes/peer_list_controllers.h"
 #include "boxes/peers/edit_peer_info_box.h"
+#include "boxes/peers/edit_peer_permissions_box.h"
 #include "boxes/peers/prepare_short_info_box.h"
 #include "boxes/premium_preview_box.h"
 #include "boxes/self_destruction_box.h"
 #include "boxes/stickers_box.h"
 #include "chat_helpers/emoji_sets_manager.h"
 #include "data/data_poll.h"
+#include "data/data_channel.h"
 #include "data/data_user.h"
 #include "data/data_wall_paper.h"
 #include "extras/ui/boxes/donate_qr_box.h"
@@ -42,6 +44,8 @@
 #include "main/main_session.h"
 #include "menu/menu_send.h"
 #include "settings.h"
+#include "settings/settings_card_layout.h"
+#include "settings/settings_common.h"
 #include "ui/boxes/calendar_box.h"
 #include "ui/boxes/collectible_info_box.h"
 #include "ui/boxes/confirm_box.h"
@@ -55,11 +59,13 @@
 #include "ui/widgets/option_list.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/fields/input_field.h"
+#include "ui/wrap/vertical_layout.h"
 #include "window/window_lock_widgets.h"
 #include "window/window_peer_menu.h"
 #include "window/window_session_controller.h"
 #include "styles/style_calls.h"
 #include "styles/style_layers.h"
+#include "styles/style_settings.h"
 #include "styles/style_widgets.h"
 
 namespace ExtrasDebug::Commands {
@@ -105,6 +111,41 @@ void darkDemoBox(not_null<Ui::GenericBox*> box) {
 		st::groupCallBoxLabel));
 	box->addButton(tr::lng_settings_save(), [=] { box->closeBox(); });
 	box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
+}
+
+void settingsLayoutDemoBox(not_null<Ui::GenericBox*> box) {
+	box->setTitle(rpl::single(u"设置布局"_q));
+	box->setWidth(880);
+	const auto page = box->addRow(
+		object_ptr<Settings::CardPage>(box), style::margins());
+	const auto group = Settings::AddCardGroup(page->content());
+	// 在可缩放弹层中复用设置页的行样式和窄屏布局。
+	group->setProperty("settingsCardGroup", true);
+	const auto addRow = [&](const QString &name,
+			const QString &title,
+			const QString &value,
+			const QString &description) {
+		const auto button = Settings::AddButtonWithLabel(
+			group,
+			rpl::single(title),
+			rpl::single(value),
+			st::settingsButton);
+		button->setObjectName(name);
+		Settings::AddSectionRowDetails(button, rpl::single(description));
+	};
+	addRow(u"simulation.settings.download"_q,
+		u"下载文件夹"_q,
+		u"D:/Downloads/AstraGram/Shared files/2026/Project documents/"_q,
+		u"保存收到的照片、视频和文件。较长路径应在窄窗口中单独换行，保持完整可读。"_q);
+	addRow(u"simulation.settings.notifications"_q,
+		u"群组与频道消息通知及消息内容预览"_q,
+		u"联系人、已加入的群组与频道"_q,
+		u"按照聊天分类控制通知，并保留每个对话的单独设置。此处使用较长说明观察标题、说明与当前值的间距。"_q);
+	addRow(u"simulation.settings.language"_q,
+		u"界面语言"_q,
+		u"简体中文"_q,
+		u"选择菜单、设置和通知所使用的语言。"_q);
+	box->addButton(tr::lng_close(), [=] { box->closeBox(); });
 }
 
 // 带输入框与复选框的表单，覆盖输入、勾选和长标题截断。
@@ -258,6 +299,21 @@ void lockedDemoBox(not_null<Ui::GenericBox*> box) {
 		} },
 		{ "download-path", "options", [](Controller controller) -> object_ptr<Ui::BoxContent> {
 			return Box<DownloadPathBox>(controller);
+		} },
+		{ "settings-layout", "settings", [](Controller) -> object_ptr<Ui::BoxContent> {
+			return Box(settingsLayoutDemoBox);
+		} },
+		{ "permissions", "options", [](Controller controller) -> object_ptr<Ui::BoxContent> {
+			const auto channel = samplePeer(controller, u"slow"_q)->asChannel();
+			Expects(channel != nullptr);
+			channel->addFlags(ChannelDataFlag::Creator);
+			return Box(ShowEditPeerPermissionsBox,
+				controller,
+				not_null<PeerData*>(channel),
+				[channel](EditPeerPermissionsBoxResult result) {
+					channel->setDefaultRestrictions(result.rights);
+					channel->setSlowmodeSeconds(result.slowmodeSeconds);
+				});
 		} },
 		{ "self-destruction", "options", [](Controller controller) -> object_ptr<Ui::BoxContent> {
 			return Box<SelfDestructionBox>(

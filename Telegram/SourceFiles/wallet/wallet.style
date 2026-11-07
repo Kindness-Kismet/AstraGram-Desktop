@@ -183,6 +183,10 @@ walletRowsTopSkip: 16px;
 walletTransactionsTopSkip: 5px;
 walletAboutBottomSkip: walletRowsTopSkip;
 walletRowPadding: margins(76px, 6px, 20px, 6px);
+walletHistoryRowButton: SettingsButton(defaultSettingsButton) {
+	textBg: windowBgOver;
+	textBgOver: windowBgRipple;
+}
 walletRowIconSize: 46px;
 walletRowIconLeft: 20px;
 walletRowArrowIn: icon{{ "wallet/incoming_arrow", historyPeerUserpicFg }};
@@ -299,9 +303,12 @@ walletRowItemMarkOut: IconEmoji(walletRowItemMarkIn) {
 walletChipTopSkip: 12px;
 walletChipTextSkip: 12px;
 walletChipPadding: margins(0px, 0px, 12px, 0px);
-walletRowAddressChipInset: 4px;
-walletRowAddressChipSkip: 3px;
-walletRowAddressChipRadius: 4px;
+walletRowAddressFont: font(11px);
+walletRowAddressHeight: 25px;
+walletRowAddressChipInset: 7px;
+walletRowAddressChipSkip: 5px;
+walletRowAddressChipRadius: 6px;
+walletRowAddressCopyIcon: icon{{ "inline_button_copy", windowSubTextFg }};
 
 walletDetailsBox: Box(giveawayGiftCodeBox) {
 	bg: windowBgOver;
@@ -322,6 +329,7 @@ walletConflictBox: Box(defaultBox) {
 }
 walletConflictBoxTopSkip: 14px;
 walletDetailsTable: Table(giveawayGiftCodeTable) {
+	headerBg: windowBg;
 }
 walletDetailsFeeLabel: FlatLabel(defaultTableValue) {
 	minWidth: 128px;

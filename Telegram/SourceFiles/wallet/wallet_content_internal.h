@@ -828,6 +828,7 @@ void PaintRowAvatar(Painter &p, QRect rect, RowAvatar avatar);
 struct HistoryRowHeights {
 	int title = 0;
 	std::optional<int> subtitle;
+	int address = 0;
 	int date = 0;
 	int amount = 0;
 };
@@ -840,6 +841,7 @@ struct HistoryRowLine {
 struct HistoryRowLayout {
 	HistoryRowLine title;
 	HistoryRowLine subtitle;
+	int addressTop = 0;
 	HistoryRowLine date;
 	int height = 0;
 	int avatarCenter = 0;
@@ -881,7 +883,8 @@ struct HistoryRowText {
 
 [[nodiscard]] HistoryRowLayout MeasureHistoryRow(
 		const HistoryRowText &text,
-		int width);
+		int width,
+		int amountWidth = -1);
 
 struct RowAmountPlacement {
 	QPoint major;
@@ -950,7 +953,8 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 		not_null<Ui::VerticalLayout*> list,
 		const HistoryRowContent &content,
 		Fn<void()> clicked,
-		std::shared_ptr<CollectibleMedia> media = nullptr);
+		std::shared_ptr<CollectibleMedia> media,
+		Fn<void(const QString&)> copyAddress);
 
 struct SendingRowLayout {
 	QRect pill;
@@ -996,7 +1000,8 @@ public:
 		not_null<Ui::RpWidget*> layer,
 		not_null<Ui::RpWidget*> bounds,
 		HistoryRowContent content,
-		std::shared_ptr<CollectibleMedia> media);
+		std::shared_ptr<CollectibleMedia> media,
+		Fn<void(const QString&)> copyAddress);
 
 	void setContent(HistoryRowContent content);
 	void awaitDiamond();
@@ -1022,6 +1027,7 @@ private:
 
 	[[nodiscard]] const HistoryRowLayout &rowLayout() const;
 	void updateRowLayout();
+	void updateAddressButton();
 	[[nodiscard]] SendingRowLayout layout() const;
 	[[nodiscard]] SendingRowSettleTarget settleTarget() const;
 	[[nodiscard]] crl::time settleDuration() const;
@@ -1067,6 +1073,8 @@ private:
 	const not_null<Ui::RpWidget*> _layer;
 	const not_null<Ui::RpWidget*> _bounds;
 	const std::shared_ptr<CollectibleMedia> _media;
+	const Fn<void(const QString&)> _copyAddress;
+	base::unique_qptr<Ui::AbstractButton> _addressButton;
 	HistoryRowContent _content;
 	HistoryRowText _text;
 	HistoryRowLayout _layout;
@@ -1134,7 +1142,8 @@ not_null<SendingHistoryRow*> AddSendingHistoryRow(
 		not_null<Ui::RpWidget*> bounds,
 		const HistoryRowContent &content,
 		std::shared_ptr<CollectibleMedia> media,
-		Fn<void()> clicked);
+		Fn<void()> clicked,
+		Fn<void(const QString&)> copyAddress);
 
 [[nodiscard]] bool ShowsCollectible(const TransferItem &item);
 
