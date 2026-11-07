@@ -639,7 +639,143 @@ private:
 			}
 			record(11, unloaded && todoPass && pollPass,
 				{ { "itemMissing", unloaded }, { "todoUpdated", todoPass }, { "pollAnswersUpdated", pollPass } });
-			memoryRetention();
+			widgetUpdates();
+		});
+	}
+
+	bool widgetState(
+			const std::optional<Slice> &slice,
+			int id,
+			uint64 widgetId,
+			const QByteArray &chat,
+			const QByteArray &shared,
+			uint64 hash) const {
+		if (!slice || slice->messages.type() != mtpc_messages_messagesSlice) return false;
+		for (const auto &message : slice->messages.c_messages_messagesSlice().vmessages().v) {
+			if (IdFromMessage(message) != MsgId(id) || message.type() != mtpc_message) continue;
+			const auto media = message.c_message().vmedia();
+			if (!media || media->type() != mtpc_messageMediaWidget) return false;
+			const auto &data = media->c_messageMediaWidget();
+			return data.vwidth().v == 390 && data.vheight().v == 0
+				&& data.is_is_copy() && data.vwidget_id() && data.vwidget_id()->v == widgetId
+				&& data.vchat_data() && data.vchat_data()->v == chat
+				&& data.vpublic_data() && data.vpublic_data()->v == shared
+				&& data.vpublic_data_hash() && data.vpublic_data_hash()->v == hash
+				&& data.vpayload().v == widgetPayload();
+		}
+		return false;
+	}
+
+	QByteArray widgetPayload() const {
+		return qCompress(QByteArray("<p>Cache sample</p>"), 9).mid(4);
+	}
+
+	void widgetUpdates() {
+		const auto peer = user(30);
+		const auto other = user(31);
+		const auto query = latest(peer);
+		const auto otherQuery = latest(other);
+		const auto id = _messageBase + 400;
+		const auto widgetId = uint64(id);
+		const auto sample = [&](not_null<PeerData*> peer, int messageId, uint64 widget) {
+			using Flag = MTPDmessageMediaWidget::Flag;
+			return simulationMediaMessage(peer, _session->userPeerId(), messageId, {},
+				MTP_messageMediaWidget(MTP_flags(Flag::f_is_copy | Flag::f_public_data
+					| Flag::f_chat_data | Flag::f_widget_id), MTP_int(390), MTP_int(0),
+					MTP_bytes(widgetPayload()), MTP_bytes("public-before"), MTP_long(10),
+					MTP_bytes("chat-before"), MTP_long(widget)));
+		};
+		put(query, { sample(peer, id + 2, widgetId + 1), sample(peer, id, widgetId) }, 2, false);
+		put(otherQuery, { sample(other, id + 1, widgetId) }, 1, false);
+		auto &cache = _session->conversationCache();
+		const auto pending = !cache.debugHistoryInfo(query.key).loaded;
+		const auto unloaded = !_session->data().message(peer->id, MsgId(id))
+			&& !_session->data().message(other->id, MsgId(id + 1));
+		using Flag = MTPDupdateMessageWidgetData::Flag;
+		const auto apply = [&](MTPDupdateMessageWidgetData::Flags flags,
+				const QByteArray &chat, const QByteArray &shared, uint64 hash) {
+			_session->updates().applyUpdateNoPtsCheck(MTP_updateMessageWidgetData(
+				MTP_flags(flags), peerToMTP(peer->id), MTP_int(id),
+				MTP_bytes(shared), MTP_long(hash), MTP_bytes(chat), MTP_int(0), MTP_int(0)));
+		};
+		apply(Flag::f_chat_data, "chat-after", {}, 0);
+		apply(Flag::f_public_data, {}, "public-message", 11);
+		read(query, [=, this](std::optional<Slice> first) {
+			const auto partial = widgetState(first, id, widgetId, "chat-after", "public-message", 11);
+			_session->updates().applyUpdateNoPtsCheck(MTP_updateMessageWidgetData(
+				MTP_flags(Flag::f_chat_data), peerToMTP(peer->id), MTP_int(id),
+				MTPstring(), MTPlong(), MTP_bytes(QByteArray()), MTP_int(0), MTP_int(0)));
+			read(query, [=, this](std::optional<Slice> cleared) {
+				read(otherQuery, [=, this](std::optional<Slice> otherSlice) {
+					const auto clearedChat = widgetState(cleared, id, widgetId, {}, "public-message", 11);
+					const auto otherMessage = widgetState(otherSlice, id + 1, widgetId,
+						"chat-before", "public-before", 10);
+					const auto otherWidget = widgetState(cleared, id + 2, widgetId + 1,
+						"chat-before", "public-before", 10);
+					record(15, pending && unloaded && partial && clearedChat && otherMessage && otherWidget,
+						{ { "startedWhileLoading", pending }, { "itemMissing", unloaded },
+							{ "partialStatePreserved", partial }, { "emptyChatApplied", clearedChat },
+							{ "otherMessageUnchanged", otherMessage }, { "otherWidgetUnchanged", otherWidget } });
+					widgetUpdatesFromDisk(query, otherQuery, id, widgetId);
+				});
+			});
+		});
+	}
+
+	void widgetUpdatesFromDisk(Query query, Query otherQuery, int id, uint64 widgetId) {
+		const auto unrelated = user(32);
+		const auto unrelatedQuery = latest(unrelated);
+		put(unrelatedQuery, { message(unrelated, 403) }, 1, false);
+		read(unrelatedQuery, [=, this](std::optional<Slice>) {
+			widgetUpdatesAfterSave(query, otherQuery, unrelatedQuery, id, widgetId);
+		});
+	}
+
+	void widgetUpdatesAfterSave(
+			Query query,
+			Query otherQuery,
+			Query unrelatedQuery,
+			int id,
+			uint64 widgetId) {
+		auto &cache = _session->conversationCache();
+		for (const auto key : { query.key, otherQuery.key, unrelatedQuery.key }) {
+			cache._histories.at(key).lastUsed = crl::now() - 180000;
+		}
+		cache.flush();
+		waitForWrites([=, this] {
+			auto &cache = _session->conversationCache();
+			cache.pruneMemory();
+			const auto released = !cache._histories.contains(query.key)
+				&& !cache._histories.contains(otherQuery.key)
+				&& !cache._histories.contains(unrelatedQuery.key);
+			const auto loadsBefore = cache.memoryStats().diskLoads;
+			cache.widgetPublicDataUpdated(widgetId,
+				MTP_messages_widgetPublicData(MTP_long(12), MTP_bytes("public-polled"),
+					MTP_int(30)).c_messages_widgetPublicData());
+			using Flag = MTPDupdateMessageWidgetData::Flag;
+			_session->updates().applyUpdateNoPtsCheck(MTP_updateMessageWidgetData(
+				MTP_flags(Flag::f_chat_data | Flag::f_public_data), peerToMTP(query.key.peer),
+				MTP_int(id), MTP_bytes("public-later"), MTP_long(13),
+				MTP_bytes("chat-later"), MTP_int(0), MTP_int(0)));
+			read(query, [=, this](std::optional<Slice> first) {
+				read(otherQuery, [=, this](std::optional<Slice> second) {
+					const auto firstCopy = widgetState(first, id, widgetId, "chat-later", "public-later", 13);
+					const auto secondCopy = widgetState(second, id + 1, widgetId,
+						"chat-before", "public-polled", 12);
+					const auto otherWidget = widgetState(first, id + 2, widgetId + 1,
+						"chat-before", "public-before", 10);
+					const auto &cache = _session->conversationCache();
+					const auto diskLoads = cache.memoryStats().diskLoads - loadsBefore;
+					const auto unrelatedUntouched = !cache._histories.contains(unrelatedQuery.key);
+					record(16, released && firstCopy && secondCopy && otherWidget
+						&& unrelatedUntouched && diskLoads == 2,
+						{ { "diskOnlyBeforeUpdate", released }, { "firstCopyUpdated", firstCopy },
+							{ "otherChatCopyUpdated", secondCopy }, { "otherWidgetUnchanged", otherWidget },
+							{ "laterUpdatePreserved", firstCopy }, { "unrelatedHistoryUntouched", unrelatedUntouched },
+							{ "diskLoads", diskLoads } });
+					memoryRetention();
+				});
+			});
 		});
 	}
 

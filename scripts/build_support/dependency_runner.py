@@ -12,7 +12,9 @@ from build_support.dependency_cache import (
     write_cache_key,
 )
 from build_support.dependency_env import build_environment
+from build_support.paths import TARGET
 from build_support.recipe import Stage, remove_dir_command, win_fail_on_each
+from build_support.toolchain import ffmpeg_arm64_environment
 
 _COMMAND_FILE = "command.bat"
 
@@ -37,7 +39,11 @@ def run_stages(stages: list[Stage], base_environment: dict[str, str], only: list
         version = f"#{stage.version}" if stage.version != "0" else ""
         prefix = f"[{index}/{total}]({stage.location}/{stage.name}{version})"
 
-        key = compute_cache_key(stage)
+        stage_environment = environment
+        compiler_version = None
+        if TARGET == "winarm64" and stage.name == "ffmpeg":
+            stage_environment, compiler_version = ffmpeg_arm64_environment(environment)
+        key = compute_cache_key(stage, compiler_version)
         # 显式指定阶段时强制重建，否则按缓存键判断
         state = "Forced" if only else check_cache_key(stage, key)
         if state == "Good":
@@ -54,7 +60,7 @@ def run_stages(stages: list[Stage], base_environment: dict[str, str], only: list
         clear_cache_key(stage)
         directory = stage_directory(stage)
         directory.mkdir(parents=True, exist_ok=True)
-        if not _execute(commands, directory, environment):
+        if not _execute(commands, directory, stage_environment):
             raise SystemExit(fail(f"{prefix}: FAILED"))
         write_cache_key(stage, key)
         built += 1

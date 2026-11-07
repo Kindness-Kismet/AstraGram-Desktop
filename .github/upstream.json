@@ -8,7 +8,7 @@
     "svgReplaced：本地已有同名 svg 的 png 图标，官方新增或修改时归入跳过，删除照常列出。",
     "各类规则的键含 * 或 ? 时按通配匹配，* 限一层目录，** 跨任意层；其余键按路径前缀匹配。"
   ],
-  "tdesktop": "7.3.5",
+  "tdesktop": "7.4.1",
   "skip": {
     ".agents/": "官方给 AI 工具的配置，本仓库自己维护一份。",
     ".claude/": "官方给 AI 工具的配置，本仓库自己维护一份。",
@@ -64,7 +64,13 @@
     "Telegram/SourceFiles/mtproto/mtp_instance.cpp": "已移除官方 test 目录的重试记录回调，不恢复 test_rpc_retry 引用。",
     "Telegram/SourceFiles/chat_helpers/spellchecker_locale_ids.h": "本地 7.3.1 期间同时存在 Qt 5、Qt 6 数据，只有明确早于 7.3.1 的 Windows x64 数据才可凭版本判断 Qt 5。",
     "Telegram/SourceFiles/media/player/media_player_widget.cpp": "旧播放器已由 extras/features/music_player 替代，官方播放行为按需移植到本地播放器，不恢复旧窗口。",
-    "Telegram/SourceFiles/info/saved/info_saved_music_common.cpp": "本地资料音乐卡片仍依赖此文件；官方删除不跟随，调用方全部迁移后再清理。"
+    "Telegram/SourceFiles/info/saved/info_saved_music_common.cpp": "本地资料音乐卡片仍依赖此文件；官方删除不跟随，调用方全部迁移后再清理。",
+    "Telegram/SourceFiles/tgw/tgw_runtime.cpp": "不恢复官方 test_widget 接线，模拟入口在 extras/debug/simulation_widget；资源由内置包校验后直接构造，保留退出时的工作线程等待。",
+    "Telegram/SourceFiles/tgw/tgw_resources.cpp": "从内置资源直接构造 SandboxResources，并检查字节码和 BundleStamp；不恢复写入 tdata 后再经异常接口加载。",
+    "Telegram/SourceFiles/tgw/tgw_painter.cpp": "几何、虚线和路径预算已拆到 tgw_painter_geometry.cpp，官方改动按职责分发，保持每个实现文件不超过 2000 行。",
+    "Telegram/SourceFiles/tgw/tgw_scroll_lists.cpp": "滚动锚点使用本地实际可见区及物理坐标转换，保留悬浮输入区、底部留白和发送入场滚动。",
+    "Telegram/SourceFiles/tgw/tgw_touch_lists.cpp": "新列表触摸命中使用本地消息动画位置，不能改回只按逻辑位置查询。",
+    "Telegram/cmake/telegram_options.cmake": "不恢复官方 -testagent、Release 测试运行器及本地化捕获选项，调试继续使用 extras/debug。"
   },
   "deferred": {
     "Telegram/SourceFiles/core/update_checker.cpp": "暂缓删除旧格式更新包兼容：本项目发布流程仍以自有签名生成旧格式包，待配套发包流程迁移后再移除；解压与路径校验已采用新版共用实现。"

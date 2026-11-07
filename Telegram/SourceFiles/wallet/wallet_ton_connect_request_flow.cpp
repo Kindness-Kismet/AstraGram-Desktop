@@ -584,51 +584,16 @@ void TonConnectRequests::Flow::previewed(FeeResult result) {
 		|| _state.current().phase != Phase::Confirm) {
 		return;
 	}
-	auto state = _state.current();
-	state.feeLoading = false;
-	if (result.error == SendError::None && result.prepared) {
-		_prepared = std::move(result.prepared);
-		state.feeNano = result.feeNano;
-		state.emulation = std::move(result.emulation);
-		state.confirmable = true;
-		state.error = QString();
-		_state = std::move(state);
-		return;
-	}
-	_prepared = nullptr;
-	state.emulation = nullptr;
-	state.confirmable = false;
-	if (result.error == SendError::SigningUnavailable
-		&& !_session->wallet().signingReady()) {
-		state.feeLoading = true;
-		state.error = QString();
-		_state = std::move(state);
-		_idleLifetime.destroy();
-		_session->wallet().signingReadyValue(
-		) | rpl::filter([](bool ready) {
-			return ready;
-		}) | rpl::take(1) | rpl::on_next([=](bool) {
+	_prepared = ApplyTonConnectPreview(
+		_session,
+		std::move(result),
+		_state,
+		_idleLifetime,
+		[=] {
 			if (_decision == Decision::None && !stopped()) {
 				preview();
 			}
-		}, _idleLifetime);
-		return;
-	}
-	const auto text = SendErrorText(result.error, TransferMinNanos(_session));
-	state.error = text.isEmpty()
-		? tr::lng_wallet_connect_request_fee_failed(tr::now)
-		: text;
-	_state = std::move(state);
-	if (result.error == SendError::PreviousUnresolved
-		|| result.error == SendError::AlreadySending) {
-		_idleLifetime.destroy();
-		_session->wallet().sendStateValue(
-		) | rpl::skip(1) | rpl::take(1) | rpl::on_next([=](SendState) {
-			if (_decision == Decision::None && !stopped()) {
-				preview();
-			}
-		}, _idleLifetime);
-	}
+		});
 }
 
 void TonConnectRequests::Flow::showSignData() {
@@ -728,9 +693,9 @@ void TonConnectRequests::Flow::sign() {
 		_request.id,
 		_request.signData,
 		domain,
-		crl::guard(this, [=](QByteArray body) {
+		crl::guard(this, [=](TonConnectSignature result) {
 			if (!stopped()) {
-				_response = std::move(body);
+				_response = std::move(result.body);
 				registerKey();
 			}
 		}),

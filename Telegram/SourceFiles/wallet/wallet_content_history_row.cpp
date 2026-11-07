@@ -211,13 +211,20 @@ void PaintRowAvatar(Painter &p, QRect rect, RowAvatar avatar) {
 		};
 		top += *heights.subtitle;
 	}
+	if (heights.address) {
+		top += st::walletRowSkip;
+		result.addressTop = top;
+		top += heights.address;
+	}
 	top += st::walletRowSkip;
 	result.date = {
 		.top = top,
 		.lines = heights.date / LabelLineHeight(st::walletRowDateLabel),
 	};
 	result.height = top + heights.date + padding.bottom();
-	result.avatarCenter = heights.subtitle
+	result.avatarCenter = heights.address
+		? (padding.top() + result.addressTop + heights.address) / 2
+		: heights.subtitle
 		? (padding.top()
 			+ (heights.title + st::walletRowSkip + *heights.subtitle) / 2)
 		: (result.height / 2);
@@ -265,6 +272,7 @@ void PaintRowAvatar(Painter &p, QRect rect, RowAvatar avatar) {
 		.major = HistoryRowLabelText(
 			st::walletRowAmountMajorLabel,
 			amount.major),
+		.address = AddressChips::FromAddress(content.address),
 		.subtitleShown = !content.subtitle.isEmpty(),
 		.chip = content.itemAmount,
 	};
@@ -278,14 +286,17 @@ void PaintRowAvatar(Painter &p, QRect rect, RowAvatar avatar) {
 
 [[nodiscard]] HistoryRowLayout MeasureHistoryRow(
 		const HistoryRowText &text,
-		int width) {
+		int width,
+		int amountWidth) {
 	const auto &padding = st::walletRowPadding;
 	const auto textWidth = std::max(
 		width - padding.left() - padding.right(),
 		0);
 	const auto titleWidth = std::max(
 		textWidth - HistoryRowTitleSkip(
-			text.major.maxWidth() + text.minor.maxWidth()),
+			(amountWidth >= 0)
+				? amountWidth
+				: (text.major.maxWidth() + text.minor.maxWidth())),
 		0);
 	auto result = ComputeHistoryRowLayout({
 		.title = HistoryRowLabelHeight(
@@ -300,6 +311,7 @@ void PaintRowAvatar(Painter &p, QRect rect, RowAvatar avatar) {
 				textWidth,
 				true))
 			: std::nullopt),
+		.address = text.address ? st::walletRowAddressHeight : 0,
 		.date = HistoryRowLabelHeight(
 			st::walletRowDateLabel,
 			text.date,
@@ -343,17 +355,18 @@ void PaintRowAvatar(Painter &p, QRect rect, RowAvatar avatar) {
 	};
 }
 
-void HistoryRowButton::setPaintUnderRipple(Fn<void(Painter&)> paint) {
-	_paintUnderRipple = std::move(paint);
+void HistoryRowButton::addPaintUnderRipple(Fn<void(Painter&)> paint) {
+	_paintUnderRipple.push_back(std::move(paint));
 	update();
 }
 
 void HistoryRowButton::paintEvent(QPaintEvent *e) {
+	const auto scope = WindowPaletteScope(this);
 	auto p = Painter(this);
 	const auto over = (isOver() || isDown()) && !isDisabled();
 	paintBg(p, e->rect(), over);
-	if (_paintUnderRipple) {
-		_paintUnderRipple(p);
+	for (const auto &paint : _paintUnderRipple) {
+		paint(p);
 	}
 	paintRipple(p, 0, 0);
 	const auto outerw = width();
@@ -510,7 +523,7 @@ void AddHistoryRowChip(
 		PaintHistoryRowChipArtwork(p, chip->width(), *state, media);
 		PaintHistoryRowChipText(p, chip->width(), *state);
 	}, chip->lifetime());
-	button->setPaintUnderRipple([=](Painter &p) {
+	button->addPaintUnderRipple([=](Painter &p) {
 		const auto origin = Ui::MapFrom(button, chip, QPoint());
 		p.translate(origin);
 		PaintHistoryRowChipPlate(p, chip->width(), *state);
@@ -529,7 +542,8 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 		not_null<Ui::VerticalLayout*> list,
 		const HistoryRowContent &content,
 		Fn<void()> clicked,
-		std::shared_ptr<CollectibleMedia> media) {
+		std::shared_ptr<CollectibleMedia> media,
+		Fn<void(const QString&)> copyAddress) {
 	const auto wrap = list->add(
 		object_ptr<Ui::PaddingWrap<Ui::VerticalLayout>>(
 			list,
@@ -539,7 +553,8 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 	inner->setAttribute(Qt::WA_TransparentForMouseEvents);
 	const auto button = Ui::CreateChild<HistoryRowButton>(
 		wrap,
-		rpl::single(QString()));
+		rpl::single(QString()),
+		st::walletHistoryRowButton);
 	ExtrasFeatures::WindowMaterial::watchSurface(button);
 	button->setClickedCallback(std::move(clicked));
 	const auto major = Ui::CreateChild<Ui::FlatLabel>(
@@ -562,10 +577,7 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 			content.failed);
 	}
 	const auto title = inner->add(
-		object_ptr<Ui::FlatLabel>(
-			inner,
-			content.title,
-			st::walletRowTitleLabel),
+		object_ptr<Ui::FlatLabel>(inner, content.title, st::walletRowTitleLabel),
 		{ 0, 0, HistoryRowTitleSkip(major->width() + minor->width()), 0 });
 	title->setBreakEverywhere(true);
 	auto subtitle = (Ui::FlatLabel*)nullptr;
@@ -576,6 +588,13 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 			content.subtitle,
 			st::walletRowSubtitleLabel));
 		subtitle->setBreakEverywhere(true);
+	}
+	auto address = (Ui::RpWidget*)nullptr;
+	if (AddressChips::FromAddress(content.address)) {
+		Ui::AddSkip(inner, st::walletRowSkip);
+		address = AddHistoryRowAddress(inner, content.address, wrap, [=] {
+			copyAddress(content.address);
+		}).get();
 	}
 	Ui::AddSkip(inner, st::walletRowSkip);
 	const auto date = inner->add(object_ptr<Ui::FlatLabel>(
@@ -629,6 +648,7 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 			.subtitle = (subtitle
 				? std::make_optional(subtitle->height())
 				: std::nullopt),
+			.address = address ? address->height() : 0,
 			.date = date->height(),
 			.amount = major->height(),
 		});
@@ -666,6 +686,9 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 		const auto kindText = CollectibleRowKindText(item);
 		const auto titleIsKind = !telegram && !peer && !hasCounterparty;
 		const auto statusText = RowStatusSubtitle(item.status);
+		const auto address = hasCounterparty
+			? CounterpartyAddress(item)
+			: QString();
 		return {
 			.title = (telegram
 				? tr::lng_wallet_row_telegram(tr::now)
@@ -674,8 +697,11 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 				: !domain.isEmpty()
 				? domain
 				: hasCounterparty
-				? ShortAddressForm(CounterpartyAddress(item))
+				? (item.incoming
+					? tr::lng_wallet_row_incoming(tr::now)
+					: tr::lng_wallet_row_outgoing(tr::now))
 				: kindText),
+			.address = address,
 			.subtitle = (!statusText.isEmpty()
 				? statusText
 				: titleIsKind
@@ -715,6 +741,7 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 	if (!provider.isEmpty()) {
 		return {
 			.title = provider,
+			.address = address,
 			.subtitle = (!statusText.isEmpty()
 				? statusText
 				: item.incoming
@@ -734,6 +761,7 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 		if (peer) {
 			return {
 				.title = peer->name(),
+				.address = address,
 				.subtitle = (!statusText.isEmpty()
 					? statusText
 					: !domain.isEmpty()
@@ -773,24 +801,28 @@ not_null<Ui::RpWidget*> AddHistoryRow(
 	const auto hasCounterparty = transfer
 		? !address.isEmpty()
 		: !item.counterparty.isEmpty();
-	const auto kindText = collectible
+	const auto kindText = transfer
+		? (item.incoming
+			? tr::lng_wallet_row_incoming(tr::now)
+			: tr::lng_wallet_row_outgoing(tr::now))
+		: collectible
 		? (item.incoming
 			? tr::lng_wallet_row_collectible_in(tr::now)
 			: tr::lng_wallet_row_collectible_out(tr::now))
 		: item.incoming
 		? tr::lng_wallet_row_deposit(tr::now)
 		: tr::lng_wallet_row_withdrawal(tr::now);
+	const auto rowAddress = hasCounterparty
+		? (transfer ? address : CounterpartyAddress(item))
+		: QString();
 	return {
-		.title = (hasCounterparty
-			? (!domain.isEmpty()
-				? domain
-				: ShortAddressForm(transfer
-					? address
-					: CounterpartyAddress(item)))
+		.title = (!domain.isEmpty()
+			? domain
 			: kindText),
+		.address = rowAddress,
 		.subtitle = (!statusText.isEmpty()
 			? statusText
-			: hasCounterparty
+			: !domain.isEmpty()
 			? kindText
 			: QString()),
 		.date = date,

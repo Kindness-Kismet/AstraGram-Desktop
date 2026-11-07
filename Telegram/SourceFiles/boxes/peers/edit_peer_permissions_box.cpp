@@ -16,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_chat.h"
 #include "data/data_session.h"
 #include "ui/boxes/dialog_layout.h"
+#include "ui/controls/slider_tick_labels.h"
 #include "ui/effects/toggle_arrow.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/slide_wrap.h"
@@ -779,45 +780,96 @@ template <typename Flags>
 	};
 }
 
+QString SlowmodeValueText(int seconds) {
+	return !seconds
+		? tr::lng_rights_slowmode_off(tr::now)
+		: (seconds < 60)
+		? tr::lng_seconds_tiny(tr::now, lt_count, seconds)
+		: (seconds < 3600)
+		? tr::lng_minutes_tiny(tr::now, lt_count, seconds / 60)
+		: tr::lng_hours_tiny(tr::now, lt_count, seconds / 3600);
+}
+
+void AddSlowmodeHeader(
+		not_null<Ui::VerticalLayout*> container,
+		rpl::producer<int> seconds) {
+	const auto header = container->add(object_ptr<Ui::RpWidget>(container), st::rightsHeaderMargin);
+	const auto title = Ui::CreateChild<Ui::FlatLabel>(header,
+		tr::lng_rights_slowmode_header(), st::rightsHeaderLabel);
+	const auto value = Ui::CreateChild<Ui::FlatLabel>(header, st::rightsHeaderLabel);
+	value->setObjectName(u"permissions.slowmode.value"_q);
+	const auto layout = [=] {
+		value->resizeToNaturalWidth(header->width());
+		title->resizeToWidth(std::max(header->width() - value->width() - st::settingsCardTextGap, 1));
+		header->resize(header->width(), std::max(title->height(), value->height()));
+		title->moveToLeft(0, 0);
+		value->moveToRight(0, (header->height() - value->height()) / 2);
+	};
+	rpl::combine(
+		std::move(seconds),
+		rpl::single(rpl::empty) | rpl::then(style::PaletteChanged())
+	) | rpl::on_next([=](int seconds, rpl::empty_value) {
+		value->setText(SlowmodeValueText(seconds));
+		value->setTextColorOverride(st::windowActiveTextFg->c);
+		layout();
+	}, header->lifetime());
+	header->widthValue() | rpl::on_next(layout, header->lifetime());
+}
+
 void AddSlowmodeLabels(
-		not_null<Ui::VerticalLayout*> container) {
+		not_null<Ui::VerticalLayout*> container,
+		rpl::producer<int> seconds) {
 	const auto labels = container->add(
-		object_ptr<Ui::FixedHeightWidget>(container, st::normalFont->height),
-		st::slowmodeLabelsMargin);
+		object_ptr<Ui::RpWidget>(container), st::slowmodeLabelsMargin);
+	labels->setObjectName(u"permissions.slowmode.ticks"_q);
+	const auto labelStyle = labels->lifetime().make_state<style::FlatLabel>(st::defaultFlatLabel);
+	labelStyle->style.font = st::slowmodeLabel.font;
+	labelStyle->minWidth = 1;
+	auto list = std::vector<not_null<Ui::FlatLabel*>>();
 	for (auto i = 0; i != kSlowmodeValues; ++i) {
-		const auto seconds = SlowmodeDelayByIndex(i);
-		const auto label = Ui::CreateChild<Ui::LabelSimple>(
-			labels,
-			st::slowmodeLabel,
-			(!seconds
-				? tr::lng_rights_slowmode_off(tr::now)
-				: (seconds < 60)
-				? tr::lng_seconds_tiny(tr::now, lt_count, seconds)
-				: (seconds < 3600)
-				? tr::lng_minutes_tiny(tr::now, lt_count, seconds / 60)
-				: tr::lng_hours_tiny(tr::now, lt_count,seconds / 3600)));
-		rpl::combine(
-			labels->widthValue(),
-			label->widthValue()
-		) | rpl::on_next([=](int outer, int inner) {
-			const auto skip = st::localStorageLimitMargin;
-			const auto size = st::localStorageLimitSlider.seekSize;
-			const auto available = outer
-				- skip.left()
-				- skip.right()
-				- size.width();
+		list.push_back(Ui::CreateChild<Ui::FlatLabel>(
+			labels, SlowmodeValueText(SlowmodeDelayByIndex(i)), *labelStyle));
+	}
+	rpl::combine(
+		std::move(seconds),
+		rpl::single(rpl::empty) | rpl::then(style::PaletteChanged())
+	) | rpl::on_next([=](int seconds, rpl::empty_value) {
+		for (auto i = 0; i != kSlowmodeValues; ++i) {
+			list[i]->setTextColorOverride((seconds == SlowmodeDelayByIndex(i))
+				? st::windowActiveTextFg->c : st::windowSubTextFg->c);
+		}
+	}, labels->lifetime());
+	labels->widthValue() | rpl::on_next([=](int outer) {
+		const auto skip = st::localStorageLimitMargin;
+		const auto size = st::localStorageLimitSlider.seekSize;
+		const auto available = std::max(outer - skip.left() - skip.right() - size.width(), 0);
+		auto centers = std::vector<int>();
+		auto widths = std::vector<int>();
+		auto lineHeight = 0;
+		for (auto i = 0; i != kSlowmodeValues; ++i) {
+			list[i]->resizeToNaturalWidth(std::max(outer, 1));
+			const auto inner = list[i]->width();
 			const auto shift = (i == 0)
 				? -(size.width() / 2)
 				: (i + 1 == kSlowmodeValues)
 				? (size.width() - (size.width() / 2) - inner)
 				: (-inner / 2);
-			const auto left = skip.left()
-				+ (size.width() / 2)
-				+ (i * available) / (kSlowmodeValues - 1)
-				+ shift;
-			label->moveToLeft(left, 0, outer);
-		}, label->lifetime());
-	}
+			centers.push_back(skip.left() + size.width() / 2
+				+ (i * available) / (kSlowmodeValues - 1) + shift + inner / 2);
+			widths.push_back(inner);
+			lineHeight = std::max(lineHeight, list[i]->height());
+		}
+		const auto positions = Ui::LayoutSliderTickLabels(
+			centers, widths, outer, st::slowmodeLabel.font->spacew);
+		const auto rowSkip = lineHeight + style::ConvertScale(3);
+		auto height = lineHeight;
+		for (auto i = 0; i != kSlowmodeValues; ++i) {
+			const auto top = positions[i].row * rowSkip;
+			list[i]->moveToLeft(positions[i].left, top, outer);
+			height = std::max(height, top + lineHeight);
+		}
+		labels->resize(outer, height);
+	}, labels->lifetime());
 }
 
 rpl::producer<int> AddSlowmodeSlider(
@@ -835,18 +887,13 @@ rpl::producer<int> AddSlowmodeSlider(
 	const auto secondsCount = lifetime.make_state<rpl::variable<int>>(
 		channel ? channel->slowmodeSeconds() : 0);
 
-	container->add(
-		object_ptr<Ui::FlatLabel>(
-			container,
-			tr::lng_rights_slowmode_header(),
-			st::rightsHeaderLabel),
-		st::rightsHeaderMargin);
-
-	AddSlowmodeLabels(container);
+	AddSlowmodeHeader(container, secondsCount->value());
+	AddSlowmodeLabels(container, secondsCount->value());
 
 	const auto slider = container->add(
 		object_ptr<Ui::MediaSlider>(container, st::localStorageLimitSlider),
 		st::localStorageLimitMargin);
+	slider->setObjectName(u"permissions.slowmode.slider"_q);
 	slider->resize(st::localStorageLimitSlider.seekSize);
 	slider->setPseudoDiscrete(
 		kSlowmodeValues,

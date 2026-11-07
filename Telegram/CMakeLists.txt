@@ -36,6 +36,10 @@ include(cmake/lib_tgcalls.cmake)
 include(cmake/lib_prisma.cmake)
 include(cmake/lib_fido2.cmake)
 include(cmake/lib_zxcvbn.cmake)
+include(cmake/lib_litehtml.cmake)
+include(cmake/lib_quickjs.cmake)
+include(cmake/lib_widget_renderer.cmake)
+include(cmake/lib_widget_sandbox.cmake)
 include(cmake/td_export.cmake)
 include(cmake/td_gram.cmake)
 include(cmake/td_iv.cmake)
@@ -73,6 +77,7 @@ if (DESKTOP_APP_TEST_APPS OR TDESKTOP_BUILD_UPDATE_TESTS)
     endif()
 endif()
 include(cmake/test_iv_editor_table_grid.cmake)
+include(cmake/test_wallet_card_tint.cmake)
 include(cmake/test_wallet_phrase_shares.cmake)
 
 option(ASTRAGRAM_BUILD_STORAGE_TESTS "Build storage compatibility tests." OFF)
@@ -89,6 +94,10 @@ set_target_properties(Telegram PROPERTIES
 target_link_libraries(Telegram
 PRIVATE
     tdesktop::lib_fido2
+    tdesktop::lib_litehtml
+    tdesktop::lib_quickjs
+    tdesktop::lib_widget_renderer
+    tdesktop::lib_widget_sandbox
     tdesktop::lib_tgcalls
     tdesktop::td_export
     tdesktop::td_gram
@@ -461,6 +470,8 @@ set(extras_files
         extras/debug/dialogs_preview.cpp
         extras/debug/dialogs_preview.h
         extras/debug/simulation_scenarios.cpp
+        extras/debug/simulation_widget.cpp
+        extras/debug/simulation_widget.h
         extras/debug/simulation_scenarios.h
         extras/debug/simulation_profile.cpp
         extras/debug/simulation_profile.h
@@ -1448,6 +1459,8 @@ PRIVATE
     history/view/media/history_view_gram_transfer_layout.cpp
     history/view/media/history_view_gram_transfer_card.cpp
     history/view/media/history_view_gram_transfer.h
+    history/view/media/history_view_html_widget.cpp
+    history/view/media/history_view_html_widget.h
     history/view/media/history_view_invoice.cpp
     history/view/media/history_view_invoice.h
     history/view/media/history_view_large_emoji.cpp
@@ -1501,6 +1514,8 @@ PRIVATE
     history/view/media/history_view_unique_gift.h
     history/view/media/history_view_unsupported_notice.cpp
     history/view/media/history_view_unsupported_notice.h
+    history/view/media/history_view_unsupported_widget.cpp
+    history/view/media/history_view_unsupported_widget.h
     history/view/media/history_view_userpic_suggestion.cpp
     history/view/media/history_view_userpic_suggestion.h
     history/view/media/history_view_video_message_seek.cpp
@@ -1620,6 +1635,7 @@ PRIVATE
     history/view/history_view_text_helper.h
     history/view/history_view_touch_scroll.cpp
     history/view/history_view_touch_scroll.h
+    history/view/history_view_touch_speed.h
     history/view/history_view_transcribe_button.cpp
     history/view/history_view_transcribe_button.h
     history/view/history_view_translate_bar.cpp
@@ -2285,6 +2301,7 @@ PRIVATE
     platform/win/overlay_widget_win.h
     platform/win/specific_win.cpp
     platform/win/specific_win.h
+    platform/win/system_intl_win.cpp
     platform/win/translate_provider_win.h
     platform/win/tray_win.cpp
     platform/win/tray_win.h
@@ -2312,6 +2329,7 @@ PRIVATE
     platform/platform_overlay_widget.cpp
     platform/platform_overlay_widget.h
     platform/platform_specific.h
+    platform/platform_system_intl.h
     platform/platform_translate_provider.h
     platform/platform_tray.h
     platform/platform_webauthn.h
@@ -2504,6 +2522,55 @@ PRIVATE
     support/support_templates.h
     tde2e/tde2e_integration.cpp
     tde2e/tde2e_integration.h
+    tgw/tgw_backend.cpp
+    tgw/tgw_backend.h
+    tgw/tgw_bridge.cpp
+    tgw/tgw_bridge.h
+    tgw/tgw_canvas.cpp
+    tgw/tgw_canvas.h
+    tgw/tgw_cursor.cpp
+    tgw/tgw_cursor.h
+    tgw/tgw_emoji.cpp
+    tgw/tgw_emoji.h
+    tgw/tgw_emoji_images.cpp
+    tgw/tgw_emoji_images.h
+    tgw/tgw_intl.cpp
+    tgw/tgw_intl.h
+    tgw/tgw_log_box.cpp
+    tgw/tgw_log_box.h
+    tgw/tgw_media.cpp
+    tgw/tgw_media.h
+    tgw/tgw_painter.cpp
+    tgw/tgw_painter.h
+    tgw/tgw_painter_filters.cpp
+    tgw/tgw_painter_filters.h
+    tgw/tgw_painter_geometry.cpp
+    tgw/tgw_painter_geometry.h
+    tgw/tgw_renderer.cpp
+    tgw/tgw_renderer.h
+    tgw/tgw_resources.cpp
+    tgw/tgw_resources.h
+    tgw/tgw_runtime.cpp
+    tgw/tgw_runtime.h
+    tgw/tgw_scroll.cpp
+    tgw/tgw_scroll.h
+    tgw/tgw_scroll_lists.cpp
+    tgw/tgw_selection.cpp
+    tgw/tgw_selection.h
+    tgw/tgw_selection_lists.cpp
+    tgw/tgw_state.cpp
+    tgw/tgw_state.h
+    tgw/tgw_storage.cpp
+    tgw/tgw_storage.h
+    tgw/tgw_storage_disk.cpp
+    tgw/tgw_storage_disk.h
+    tgw/tgw_theme.cpp
+    tgw/tgw_theme.h
+    tgw/tgw_touch.cpp
+    tgw/tgw_touch.h
+    tgw/tgw_touch_lists.cpp
+    tgw/tgw_wallet.cpp
+    tgw/tgw_wallet.h
     ui/boxes/dialog_layout.cpp
     ui/boxes/dialog_layout.h
     ui/boxes/edit_invite_link_session.cpp
@@ -2722,6 +2789,8 @@ PRIVATE
     wallet/wallet_phrase_shares.h
     wallet/wallet_rates.cpp
     wallet/wallet_rates.h
+    wallet/wallet_row_address_chips.cpp
+    wallet/wallet_row_address_chips.h
     wallet/wallet_send_preparation.cpp
     wallet/wallet_send_preparation.h
     wallet/wallet_session.cpp
@@ -2756,6 +2825,8 @@ PRIVATE
     wallet/wallet_stream.h
     wallet/wallet_ton_connect.cpp
     wallet/wallet_ton_connect.h
+    wallet/wallet_ton_connect_bot.cpp
+    wallet/wallet_ton_connect_bot.h
     wallet/wallet_ton_connect_box.cpp
     wallet/wallet_ton_connect_box.h
     wallet/wallet_ton_connect_claims.cpp
@@ -2938,6 +3009,7 @@ PRIVATE
     qrc/telegram/picker.qrc
     qrc/telegram/telegram.qrc
     qrc/telegram/sounds.qrc
+    qrc/telegram/tgw.qrc
     winrc/Telegram.rc
     winrc/Telegram.manifest
     langs/lang.strings
@@ -3218,6 +3290,7 @@ if (MSVC)
         /DELAYLOAD:wtsapi32.dll
         /DELAYLOAD:propsys.dll
         /DELAYLOAD:uiautomationcore.dll
+        /DELAYLOAD:icu.dll
     )
     if (QT_VERSION GREATER 6)
         if (NOT build_winarm)

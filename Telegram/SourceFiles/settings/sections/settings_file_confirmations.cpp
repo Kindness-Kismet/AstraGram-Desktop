@@ -82,6 +82,7 @@ not_null<Ui::InputField*> SetupFileConfirmationsContent(
 			? Ui::DialogButtonStyle(ipGroup, st::settingsButtonNoIcon)
 			: st::settingsButtonNoIcon
 	))->toggleOn(rpl::single(settings->ipRevealWarning()));
+	ip->setAllowTextLines();
 	ip->setObjectName(u"privacy/ipRevealWarning"_q);
 	ip->toggledChanges() | rpl::on_next([=](bool enabled) {
 		settings->setIpRevealWarning(enabled);

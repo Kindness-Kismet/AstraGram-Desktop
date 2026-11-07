@@ -725,7 +725,6 @@ private:
 	void addNewProxy();
 	void applyView(View &&view);
 	void setupButtons(int id, not_null<ProxyRow*> button);
-	void refreshProxyForCalls();
 	void refreshProxyRotation();
 	void refreshOptionsSkip();
 	void refreshPasteFromClipboard();
@@ -738,14 +737,12 @@ private:
 	rpl::variable<bool> _listShareable;
 	rpl::variable<int> _rotationTimeout;
 	QPointer<Settings::Button> _tryIPv6;
-	QPointer<Ui::SlideWrap<Settings::Button>> _proxyForCalls;
 	QPointer<Ui::SlideWrap<Settings::Button>> _proxyRotation;
 	QPointer<Ui::SlideWrap<Ui::VerticalLayout>> _proxyRotationOptions;
 	QPointer<Ui::SlideWrap<Settings::Button>> _pasteFromClipboard;
 	QPointer<Ui::SlideWrap<Ui::FixedHeightWidget>> _optionsSkip;
 	object_ptr<Ui::VerticalLayout> _initialWrap;
 	QPointer<Ui::VerticalLayout> _wrap;
-	int _currentProxySupportsCallsId = 0;
 
 	base::flat_map<int, base::unique_qptr<ProxyRow>> _rows;
 
@@ -1489,16 +1486,6 @@ void ProxiesBox::setupContent() {
 			list,
 			object_ptr<Ui::FixedHeightWidget>(list, st::boxMediumSkip)));
 
-	_proxyForCalls = list->add(
-		object_ptr<Ui::SlideWrap<Settings::Button>>(
-			list,
-			Settings::CreateButtonWithIcon(
-				list,
-				tr::lng_proxy_use_for_calls(),
-				Ui::DialogButtonStyle(list, st::settingsButtonNoIcon))));
-	_proxyForCalls->entity()->toggleOn(
-		rpl::single(_settings.useProxyForCalls()));
-
 	_proxyRotation = list->add(
 		object_ptr<Ui::SlideWrap<Settings::Button>>(
 			list,
@@ -1532,10 +1519,6 @@ void ProxiesBox::setupContent() {
 	) | rpl::on_next([=](bool checked) {
 		_controller->setTryIPv6(checked);
 	}, _tryIPv6->lifetime());
-	_proxyForCalls->entity()->toggledChanges(
-	) | rpl::on_next([=](bool checked) {
-		_controller->setProxyForCalls(checked);
-	}, _proxyForCalls->lifetime());
 	_proxyRotation->entity()->toggledChanges(
 	) | rpl::on_next([=](bool checked) {
 		_controller->setProxyRotationEnabled(checked);
@@ -1543,17 +1526,13 @@ void ProxiesBox::setupContent() {
 	}, _proxyRotation->lifetime());
 	_mode.changes(
 	) | rpl::on_next([=] {
-		refreshProxyForCalls();
 		refreshProxyRotation();
 	}, inner->lifetime());
-
-	refreshProxyForCalls();
 	refreshProxyRotation();
 	refreshPasteFromClipboard();
 	listWrap->finishAnimating();
 	_pasteFromClipboard->finishAnimating();
 	_optionsSkip->finishAnimating();
-	_proxyForCalls->finishAnimating();
 	_proxyRotation->finishAnimating();
 	_proxyRotationOptions->finishAnimating();
 
@@ -1574,17 +1553,6 @@ void ProxiesBox::setupContent() {
 	}, *dimensionsLifetime);
 }
 
-void ProxiesBox::refreshProxyForCalls() {
-	if (!_proxyForCalls) {
-		return;
-	}
-	_proxyForCalls->toggle(
-		(_mode.current() == ProxyData::Settings::Enabled
-			&& _currentProxySupportsCallsId != 0),
-		anim::type::normal);
-	refreshOptionsSkip();
-}
-
 void ProxiesBox::refreshProxyRotation() {
 	if (!_proxyRotation || !_proxyRotationOptions) {
 		return;
@@ -1600,11 +1568,11 @@ void ProxiesBox::refreshProxyRotation() {
 }
 
 void ProxiesBox::refreshOptionsSkip() {
-	if (!_optionsSkip || !_proxyForCalls || !_proxyRotation) {
+	if (!_optionsSkip || !_proxyRotation) {
 		return;
 	}
 	_optionsSkip->toggle(
-		_proxyForCalls->toggled() || _proxyRotation->toggled(),
+		_proxyRotation->toggled(),
 		anim::type::normal);
 }
 
@@ -1620,13 +1588,6 @@ void ProxiesBox::addNewProxy() {
 }
 
 void ProxiesBox::applyView(View &&view) {
-	if (view.selected) {
-		_currentProxySupportsCallsId = view.supportsCalls ? view.id : 0;
-	} else if (view.id == _currentProxySupportsCallsId) {
-		_currentProxySupportsCallsId = 0;
-	}
-	refreshProxyForCalls();
-
 	const auto id = view.id;
 	const auto i = _rows.find(id);
 	if (i == _rows.end()) {
@@ -2773,17 +2734,6 @@ bool ProxiesBoxController::setProxySettings(ProxyData::Settings value) {
 	return true;
 }
 
-void ProxiesBoxController::setProxyForCalls(bool enabled) {
-	if (_settings.useProxyForCalls() == enabled) {
-		return;
-	}
-	_settings.setUseProxyForCalls(enabled);
-	if (_settings.isEnabled() && _settings.selected().supportsCalls()) {
-		_settings.connectionTypeChangesNotify();
-	}
-	saveDelayed();
-}
-
 void ProxiesBoxController::setProxyRotationEnabled(bool enabled) {
 	if (_settings.proxyRotationEnabled() == enabled) {
 		return;
@@ -2865,7 +2815,6 @@ void ProxiesBoxController::updateView(const Item &item) {
 		return ItemState::Connecting;
 	}();
 	const auto supportsShare = ProxyDataIsShareable(item.data);
-	const auto supportsCalls = item.data.supportsCalls();
 	_views.fire({
 		item.id,
 		type,
@@ -2877,7 +2826,6 @@ void ProxiesBoxController::updateView(const Item &item) {
 		!deleted && selected && _settings.isEnabled(),
 		deleted,
 		!deleted && supportsShare,
-		supportsCalls,
 		item.data.type == Type::Web,
 		!deleted
 			&& selected

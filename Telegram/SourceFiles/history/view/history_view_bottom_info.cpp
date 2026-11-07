@@ -279,13 +279,17 @@ void BottomInfo::paint(
 	const auto st = context.st;
 	const auto stm = context.messageStyle();
 	const auto inverted = (type != InfoDisplayType::Default);
+	const auto leftToRight = (type == InfoDisplayType::ImageLeftToRight);
 	const auto &iconColor = st->mediaTimestampStyle().foreground();
 	const auto paintIcon = [&](const style::icon &icon, QPoint point) {
+		const auto outer = leftToRight
+			? (2 * point.x() + icon.width())
+			: outerWidth;
 		if (inverted) {
-			icon.paint(p, point, outerWidth, iconColor);
+			icon.paint(p, point, outer, iconColor);
 			return;
 		}
-		icon.paint(p, point, outerWidth);
+		icon.paint(p, point, outer);
 	};
 
 	auto right = position.x() + width();

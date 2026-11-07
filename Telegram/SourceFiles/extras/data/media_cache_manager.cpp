@@ -10,6 +10,7 @@
 #include "main/main_session.h"
 #include "storage/storage_account.h"
 #include "storage/cache/storage_cache_database.h"
+#include "tgw/tgw_storage.h"
 #include "base/unixtime.h"
 #include <QtCore/QDataStream>
 
@@ -594,6 +595,11 @@ bool MediaCacheManager::clear(
 		}
 		const auto messageBytes = snapshot.categories[int(MediaCacheCategory::Messages)].bytes;
 		clearKeys(std::move(keys), [=](MediaCacheClearResult result) {
+			if (!_disabled
+				&& !peer
+				&& (mask & kAllMediaCacheMask) == kAllMediaCacheMask) {
+				Tgw::EraseStorage(&_session->account());
+			}
 			if (_disabled || !(mask & mediaCacheBit(MediaCacheCategory::Messages))) {
 				finishClearing();
 				done(result);

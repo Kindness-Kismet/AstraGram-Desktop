@@ -329,8 +329,6 @@ constexpr auto kTonConnectChallengeAnswerSize = 32;
 [[nodiscard]] GaslessInfo GaslessInfoFromServer(
 		const MTPDupdateWalletGaslessInfo &data);
 
-[[nodiscard]] std::optional<int64> DecimalInt64(const std::string &value);
-
 void FinishHistoryWaiters(std::vector<Fn<void()>> callbacks);
 
 [[nodiscard]] bool SameHistory(
@@ -527,18 +525,6 @@ void FailShareFetch(
 [[nodiscard]] engine::NftTransferIntent CollectibleTransferIntent(
 		const SendArgs &args);
 
-[[nodiscard]] std::optional<TonConnectTransfer> TonConnectTransferFromEngine(
-		const engine::SendRequest &request);
-
-[[nodiscard]] std::vector<TonConnectSignDataField> DecodedCellFields(
-		engine::TonConnectDerivedSession &session,
-		const std::string &schema,
-		const std::string &cell);
-
-[[nodiscard]] TonConnectSignData TonConnectSignDataFromEngine(
-		engine::TonConnectDerivedSession &session,
-		const engine::TonConnectSignDataRequest &request);
-
 [[nodiscard]] int TonConnectProtocolCode(
 		engine::TonConnectRpcErrorCode code);
 
@@ -571,7 +557,8 @@ void FailShareFetch(
 		const engine::SendResult &result,
 		const std::string &operationId,
 		bool rpcStarted,
-		const QByteArray &normal);
+		const QByteArray &normal,
+		const std::optional<TransferReceipt> &receipt);
 
 [[nodiscard]] SubmittedTransferProjection StoredTransferProjection(
 		const TransferItem &item);

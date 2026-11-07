@@ -20,7 +20,9 @@ struct ScrollAnimation {
 
 } // namespace
 
-void setupSmoothScroll(not_null<Ui::ElasticScroll*> scroll, Fn<void()> wheelStarted) {
+Fn<bool(not_null<QWheelEvent*>)> setupSmoothScroll(
+		not_null<Ui::ElasticScroll*> scroll,
+		Fn<void()> wheelStarted) {
 	const auto state = scroll->lifetime().make_state<ScrollAnimation>();
 	ExtrasSettings::getInstance().smoothScrollingValue() | rpl::on_next([=](bool enabled) {
 		state->enabled = enabled;
@@ -28,7 +30,7 @@ void setupSmoothScroll(not_null<Ui::ElasticScroll*> scroll, Fn<void()> wheelStar
 			state->animation.stop();
 		}
 	}, scroll->lifetime());
-	scroll->setCustomWheelProcess([=](not_null<QWheelEvent*> event) {
+	const auto process = [=](not_null<QWheelEvent*> event) {
 		if (wheelStarted) {
 			wheelStarted();
 		}
@@ -64,7 +66,8 @@ void setupSmoothScroll(not_null<Ui::ElasticScroll*> scroll, Fn<void()> wheelStar
 			state->applying = false;
 		}, current, state->target, kWheelDuration, anim::easeOutCubic);
 		return true;
-	});
+	};
+	scroll->setCustomWheelProcess(process);
 	scroll->scrolls() | rpl::on_next([=] {
 		if (!state->applying) {
 			state->animation.stop();
@@ -84,6 +87,7 @@ void setupSmoothScroll(not_null<Ui::ElasticScroll*> scroll, Fn<void()> wheelStar
 			bar->events() | rpl::on_next(interrupt, scroll->lifetime());
 		}
 	}
+	return process;
 }
 
 } // namespace ExtrasUi

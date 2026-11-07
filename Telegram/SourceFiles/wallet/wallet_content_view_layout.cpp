@@ -458,6 +458,7 @@ void Content::setupStrip() {
 		if (ExtrasFeatures::WindowMaterial::isActive(_strip)) {
 			return;
 		}
+		const auto scope = WindowPaletteScope(_strip);
 		auto p = QPainter(_strip);
 		PaintBottomRoundedPlate(p, _strip->rect(), st::windowBgOver);
 	}, _strip->lifetime());
@@ -949,12 +950,9 @@ void Content::paintEvent(QPaintEvent *e) {
 	if (ExtrasFeatures::WindowMaterial::isActive(this)) {
 		return;
 	}
+	const auto scope = WindowPaletteScope(this);
 	auto p = QPainter(this);
-	if (_stripShown) {
-		p.fillRect(0, 0, width(), _strip->y(), st::windowBg);
-		return;
-	}
-	PaintBottomRoundedPlate(p, rect(), st::windowBg);
+	PaintBottomRoundedPlate(p, rect(), st::windowBgOver);
 }
 
 } // namespace ContentDetails

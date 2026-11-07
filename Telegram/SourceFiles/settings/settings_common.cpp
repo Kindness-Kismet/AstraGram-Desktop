@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_widgets.h"
 
 #include <QAction>
+#include <QtCore/QEvent>
 
 namespace Settings {
 namespace {
@@ -561,6 +562,7 @@ object_ptr<Button> CreateButtonWithIcon(
 	}
 	auto result = object_ptr<RowButton>(parent, std::move(text), rowStyle ? *rowStyle : st);
 	const auto button = result.data();
+	button->setAllowTextLines();
 	if (rowStyle) {
 		button->lifetime().add([rowStyle] {});
 	}
@@ -593,6 +595,8 @@ void CreateRightLabel(
 	const auto &st = button->st();
 	const auto centered = button->property("settingsCardRow").toBool();
 	const auto labelStyle = button->lifetime().make_state<style::FlatLabel>(st.rightLabel);
+	labelStyle->minWidth = 1;
+	labelStyle->maxHeight = 0;
 	if (centered) {
 		labelStyle->textFg = st::windowActiveTextFg;
 	}
@@ -600,67 +604,33 @@ void CreateRightLabel(
 		button.get(),
 		*labelStyle);
 	name->show();
-	const auto computeRightSkip = [=] {
-		return std::max(
-			centered ? st::settingsCardRowInset : st::settingsButtonRightSkip,
-			button->property("settingsRightLabelSkip").toInt());
-	};
-	const auto placeLabel = [=, &st](QSize size, const QString &title, int rightSkip) {
-		const auto available = centered
-			? std::min(st::settingsCardValueMaxWidth,
-				(size.width() - st.padding.left() - rightSkip) / 2)
-			: size.width() - st.padding.left() - st.padding.right()
-				- st.style.font->width(title) - rightSkip;
-		name->resizeToNaturalWidth(std::max(available, 1));
-		name->moveToRight(rightSkip, centered
-			? (size.height() - name->height()) / 2
-			: st.padding.top());
-		if (centered) {
-			auto padding = st.padding;
-			padding.setRight(rightSkip + name->width() + st::settingsCardTextGap);
-			padding.setBottom(std::max(padding.bottom(),
-				button->property("settingsContentBottomSkip").toInt()));
-			button->setProperty("settingsContentRightSkip", padding.right());
-			button->setPaddingOverride(padding);
-		}
-	};
-	// 箭头可能在右值之后添加，属性变化时同步重排，普通设置行保持原间距。
-	auto rightSkip = rpl::single(computeRightSkip()) | rpl::then(
-		button->events()
-		| rpl::filter([](not_null<QEvent*> event) {
-			return event->type() == QEvent::DynamicPropertyChange;
-		})
-		| rpl::map(computeRightSkip)
-	) | rpl::distinct_until_changed();
+	name->setObjectName(u"settings.row.value"_q);
+	name->setBreakEverywhere(true);
 	if (v::text::is_plain(label)) {
-		rpl::combine(
-			button->sizeValue(),
-			std::move(buttonText),
-			v::text::take_plain(std::move(label)),
-			std::move(rightSkip)
-		) | rpl::on_next([=](
-				QSize size,
-				const QString &title,
-				const QString &text,
-				int rightSkip) {
+		v::text::take_plain(std::move(label)) | rpl::on_next([=](const QString &text) {
 			name->setText(text);
-			placeLabel(size, title, rightSkip);
+			LayoutSectionRow(button);
 		}, name->lifetime());
 	} else if (v::text::is_marked(label)) {
-		rpl::combine(
-			button->sizeValue(),
-			std::move(buttonText),
-			v::text::take_marked(std::move(label)),
-			std::move(rightSkip)
-		) | rpl::on_next([=](
-				QSize size,
-				const QString &title,
-				const TextWithEntities &text,
-				int rightSkip) {
+		v::text::take_marked(std::move(label)) | rpl::on_next([=](const TextWithEntities &text) {
 			name->setMarkedText(text, context);
-			placeLabel(size, title, rightSkip);
+			LayoutSectionRow(button);
 		}, name->lifetime());
 	}
+	rpl::combine(
+		button->sizeValue(),
+		std::move(buttonText)
+	) | rpl::on_next([=] {
+		LayoutSectionRow(button);
+	}, name->lifetime());
+	// 箭头可以晚于右值创建；布局只监听外部预留宽度。
+	button->events() | rpl::filter([](not_null<QEvent*> event) {
+		return event->type() == QEvent::DynamicPropertyChange
+			&& static_cast<QDynamicPropertyChangeEvent*>(event.get())->propertyName()
+				== "settingsRightLabelSkip";
+	}) | rpl::on_next([=] {
+		LayoutSectionRow(button);
+	}, name->lifetime());
 	name->setAttribute(Qt::WA_TransparentForMouseEvents);
 }
 

@@ -48,6 +48,7 @@ not_null<Ui::FlatLabel*> AddCardSubsectionTitle(
 void AddCardDescription(
 	not_null<Ui::VerticalLayout*> container,
 	rpl::producer<QString> text);
+void LayoutSectionRow(not_null<Ui::SettingsButton*> button);
 void AddSectionRowDetails(
 	not_null<Ui::SettingsButton*> button,
 	rpl::producer<QString> description = nullptr);

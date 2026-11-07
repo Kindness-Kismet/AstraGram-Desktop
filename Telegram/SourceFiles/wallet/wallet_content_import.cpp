@@ -121,8 +121,11 @@ namespace ContentDetails {
 
 	cover->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(cover);
-		p.fillRect(cover->rect(), st::boxBg);
 		auto hq = PainterHighQualityEnabler(p);
+		auto clip = QPainterPath();
+		clip.addRoundedRect(box->rect(), st::boxRadius, st::boxRadius);
+		p.setClipPath(clip);
+		p.fillRect(cover->rect(), st::boxBg);
 		const auto progress = countProgress();
 		const auto opacity = countBodyOpacity(progress);
 		if (opacity > 0.) {

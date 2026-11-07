@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/fields/input_field.h"
 #include "mtproto/sender.h"
 #include "extras/ui/components/smooth_transition.h"
+#include "tgw/tgw_scroll.h"
 
 enum class SendMediaType;
 class MessageLinksParser;
@@ -202,7 +203,7 @@ public:
 	void leaveToChildEvent(QEvent *e, QWidget *child) override;
 
 	bool isItemCompletelyHidden(HistoryItem *item) const;
-	void updateTopBarSelection();
+	void updateTopBarSelection(bool keepFocus = false);
 	void updateTopBarChooseForReport();
 	bool handleDrawToReplyRequest(Data::DrawToReplyRequest request);
 
@@ -743,7 +744,7 @@ private:
 	void scheduleListReveal(not_null<ListRevealHold*> hold);
 	void finishListReveal(not_null<ListRevealHold*> hold);
 	void resumeListReveal();
-	void updateListSize();
+	bool updateListSize(const Tgw::ScrollSnapshot *restore = nullptr);
 	void startItemRevealAnimations();
 	void revealItemsCallback();
 
@@ -807,12 +808,14 @@ private:
 	void setEditMsgId(MsgId msgId);
 
 	friend class HistoryInner;
+	friend class Tgw::ListScroll;
 	HistoryItem *getItemFromHistoryOrMigrated(MsgId genericMsgId) const;
 	void animatedScrollToItem(MsgId msgId);
 	void animatedScrollToY(
 		int scrollTo,
 		HistoryItem *attachTo = nullptr,
-		anim::transition transition = anim::sineInOut);
+		anim::transition transition = anim::sineInOut,
+		Fn<std::optional<int>()> placement = nullptr);
 	void watchScrollAnimationInput();
 	void stopScrollAnimation();
 
@@ -982,6 +985,7 @@ private:
 
 	crl::time _lastUserScrolled = 0;
 	bool _synteticScrollEvent = false;
+	Tgw::ScrollFlight _scrollToFlight;
 	Ui::Animations::Simple _scrollToAnimation;
 	QPointer<Ui::RpWidget> _firstLoadFade;
 	rpl::lifetime _scrollToInputLifetime;

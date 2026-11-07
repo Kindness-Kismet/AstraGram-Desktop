@@ -51,12 +51,6 @@ ResetClientCompletion::~ResetClientCompletion() {
 	};
 }
 
-[[nodiscard]] std::optional<int64> DecimalInt64(const std::string &value) {
-	auto ok = false;
-	const auto result = QString::fromStdString(value).toLongLong(&ok);
-	return ok ? std::make_optional(result) : std::nullopt;
-}
-
 void FinishHistoryWaiters(std::vector<Fn<void()>> callbacks) {
 	for (const auto &callback : callbacks) {
 		callback();
