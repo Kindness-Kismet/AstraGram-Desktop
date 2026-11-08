@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 from build_support import version as versions
 from artifact_provenance import ProvenanceError
 from beta_update_feed import merge_release_map
-from build_provenance import SOURCE_REPOSITORY, SOURCE_WORKFLOW, validate_source
+from build_provenance import SOURCE_ENTRY_WORKFLOWS, SOURCE_REPOSITORY, SOURCE_WORKFLOW, validate_source
 from release_metadata import choose_version, publication_state, release_versions
 from release_update_map import generate_update_map
 
@@ -86,9 +86,10 @@ class VersionTests(unittest.TestCase):
 
 
 class SourceTests(unittest.TestCase):
-    def run_request(self, *, branch="beta", version="7.4.1.1-beta", update=70400101, event="push", sha=SHA):
+    def run_request(self, *, branch="beta", version="7.4.1.1-beta", update=70400101, event="push", sha=SHA, workflow=None):
         run = {"id": 123, "run_attempt": 2, "repository": {"full_name": SOURCE_REPOSITORY},
-               "head_sha": sha, "head_branch": branch, "path": SOURCE_WORKFLOW, "event": event}
+               "head_sha": sha, "head_branch": branch,
+               "path": workflow or SOURCE_ENTRY_WORKFLOWS[branch], "event": event}
         fields = {"AppVersionOriginal": "7.4.1", "AppVersionStrSmall": "7.4.1",
                   "AppVersionStr": "7.4.1", "AppUpdateVersion": "70400100", "BetaChannel": "0"}
         with patch("build_provenance._git_head", return_value=SHA), \
@@ -107,6 +108,16 @@ class SourceTests(unittest.TestCase):
                         {"version": "7.4.2.1-beta", "update": 70400201}):
             with self.subTest(changes=changes), self.assertRaises(ProvenanceError):
                 self.run_request(**changes)
+
+    def test_beta_rejects_stable_or_unrelated_workflow_entries(self):
+        for workflow in (SOURCE_WORKFLOW, ".github/workflows/untrusted.yml"):
+            with self.subTest(workflow=workflow), self.assertRaisesRegex(ProvenanceError, "workflow path"):
+                self.run_request(workflow=workflow)
+
+    def test_stable_rejects_beta_workflow_entry(self):
+        with self.assertRaisesRegex(ProvenanceError, "workflow path"):
+            self.run_request(branch="main", version="7.4.1", update=70400100,
+                             workflow=SOURCE_ENTRY_WORKFLOWS["beta"])
 
 
 class UpdateFeedTests(unittest.TestCase):

@@ -30,8 +30,12 @@ from artifact_provenance import (
 
 
 ALLOWED_SOURCE_EVENTS = {"push"}
-# 正式版和测试版共用入口，tag 由通过来源校验的运行创建。
+# 构建仓库指定共享工作流，来源运行必须属于对应通道的入口。
 SOURCE_WORKFLOW = ".github/workflows/build-release.yml"
+SOURCE_ENTRY_WORKFLOWS = {
+    "main": SOURCE_WORKFLOW,
+    "beta": ".github/workflows/build-beta.yml",
+}
 SOURCE_RUN_API_ATTEMPTS = 4
 SOURCE_RUN_API_TIMEOUT_SECONDS = 15
 MAX_RETRY_DELAY_SECONDS = 30
@@ -235,13 +239,14 @@ def validate_source(
     loader = run_loader or fetch_workflow_run
     run = loader(repository, run_id, run_attempt)
     actual_repository = run.get("repository", {}).get("full_name")
+    branch = "beta" if requested.beta else "main"
     checks = {
         "run id": (run.get("id"), run_id),
         "run attempt": (run.get("run_attempt"), run_attempt),
         "repository": (actual_repository, repository),
         "head SHA": (str(run.get("head_sha", "")).lower(), sha),
-        "head branch": (run.get("head_branch"), "beta" if requested.beta else "main"),
-        "workflow path": (run.get("path"), workflow_path),
+        "head branch": (run.get("head_branch"), branch),
+        "workflow path": (run.get("path"), SOURCE_ENTRY_WORKFLOWS[branch]),
     }
     for label, (actual, expected) in checks.items():
         if actual != expected:

@@ -1,11 +1,16 @@
 name: Build-release
 
-# main 的版本文件变化发正式版，beta 每次推送自动编号并发测试版。
+# 正式版直接触发，测试版由 Build-beta 调用同一套构建和发布步骤。
 on:
   push:
     branches:
       - main
-      - beta
+    paths:
+      - 'Telegram/build/version'
+  workflow_call:
+    secrets:
+      REMOTE_BUILD_TOKEN:
+        required: true
 
 permissions:
   contents: read
