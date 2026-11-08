@@ -2505,6 +2505,8 @@ void ComposeControls::showFinished() {
 		_autocomplete->hideFast();
 	}
 	updateWrappingVisibility();
+	// 输入工具就位后按实际宽度恢复草稿高度，首帧不播放输入动画。
+	_fieldHeight->finish();
 	_aiButton->raise();
 	if (_sendAsFile) {
 		_sendAsFile->raise();
