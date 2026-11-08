@@ -2875,6 +2875,8 @@ PRIVATE
     window/window_animation_snapshot.h
     window/section_layer.cpp
     window/section_layer.h
+    window/section_background.cpp
+    window/section_background.h
     window/section_widget.cpp
     window/section_widget.h
     window/window_adaptive.cpp

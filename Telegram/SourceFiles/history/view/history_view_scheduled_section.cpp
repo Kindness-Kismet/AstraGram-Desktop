@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_scheduled_section.h"
+#include "window/section_background.h"
 #include "window/window_animation_snapshot.h"
 
 #include "history/view/controls/history_view_compose_controls.h"
@@ -1273,7 +1274,7 @@ void ScheduledWidget::paintEvent(QPaintEvent *e) {
 	//_historyDownShown.step(ms);
 
 	const auto clip = e->rect();
-	SectionWidget::PaintBackground(controller(), _theme.get(), this, clip);
+	Window::PaintSectionBackground(this, _theme.get(), this, clip);
 }
 
 void ScheduledWidget::onScroll() {

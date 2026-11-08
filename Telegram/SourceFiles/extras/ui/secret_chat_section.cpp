@@ -39,6 +39,7 @@
 #include "ui/widgets/elastic_scroll.h"
 #include "window/section_memento.h"
 #include "window/section_widget.h"
+#include "window/section_background.h"
 #include "window/window_session_controller.h"
 #include "window/window_peer_menu.h"
 #include "window/window_adaptive.h"
@@ -325,7 +326,7 @@ protected:
 	}
 	void paintEvent(QPaintEvent *event) override {
 		if (animatingShow()) { SectionWidget::paintEvent(event); return; }
-		if (_theme) { SectionWidget::PaintBackground(controller(), _theme.get(), this, event->rect()); }
+		if (_theme) { Window::PaintSectionBackground(this, _theme.get(), this, event->rect()); }
 	}
 	void doSetInnerFocus() override {
 		const auto selected = !_inner->getSelectedText().rich.text.isEmpty()

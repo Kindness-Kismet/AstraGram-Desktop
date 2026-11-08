@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "window/section_background.h"
 
 
 #include "api/api_compose_with_ai.h"
@@ -531,8 +532,8 @@ void HistoryWidget::paintContent(QPaintEvent *e) {
 
 	// 未打开聊天时空白区与会话列表同色，系统材质生效时同样透出材质；打开后才画聊天背景。
 	if (_history) {
-		Window::SectionWidget::PaintBackground(
-			controller(),
+		Window::PaintSectionBackground(
+			this,
 			controller()->currentChatTheme(),
 			_content.data(),
 			e->rect());

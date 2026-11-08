@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_chat_section.h"
 #include "window/section_layer.h"
+#include "window/section_background.h"
 #include "window/window_animation_snapshot.h"
 
 #include "history/admin_log/history_admin_log_section.h"
@@ -4676,8 +4677,7 @@ void ChatWidget::paintContent(QPaintEvent *e) {
 	const auto aboveHeight = _topBar->height();
 	const auto bg = e->rect().intersected(
 		QRect(0, aboveHeight, width(), height() - aboveHeight));
-	SectionWidget::PaintBackground(
-		controller(), _theme.get(), _content.data(), bg);
+	Window::PaintSectionBackground(this, _theme.get(), _content.data(), bg);
 }
 
 void ChatWidget::paintCompose(QPaintEvent *e) {
