@@ -1,12 +1,11 @@
 name: Build-release
 
-# 版本文件变化即发版：构建并校验产物后，在上传前创建标签。
+# main 的版本文件变化发正式版，beta 每次推送自动编号并发测试版。
 on:
   push:
     branches:
       - main
-    paths:
-      - 'Telegram/build/version'
+      - beta
 
 permissions:
   contents: read
@@ -25,36 +24,28 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       appversion: ${{ steps.version.outputs.appversion }}
+      enabled: ${{ steps.version.outputs.enabled }}
+      channel: ${{ steps.version.outputs.channel }}
+      previous: ${{ steps.version.outputs.previous }}
 
     steps:
       - name: Check out repository.
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
 
-      # 先展示本轮版本与说明，后续校验或构建失败时仍能查看。
-      - name: Read version and release notes.
+      - name: Select release metadata.
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
-          version=$(sed -n 's/^AppVersionStrSmall //p' Telegram/build/version)
-          test -n "$version"
-          appversion=$(sed -n 's/^AppUpdateVersion  *//p' Telegram/build/version)
-          test -n "$appversion"
-          test -s .github/CHANGELOG.md
-          {
-            echo "version=${version}"
-            echo "tag=v${version}"
-            echo "appversion=${appversion}"
-          } >> "$GITHUB_OUTPUT"
-          {
-            printf '## AstraGram %s\n\n' "$version"
-            printf 'Update code: %s\n\n' "$appversion"
-            printf 'Source: [%s](%s/%s/commit/%s)\n\n' \
-              "${GITHUB_SHA:0:10}" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
-            printf '### Release notes\n\n'
-            cat .github/CHANGELOG.md
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 .github/scripts/release_metadata.py
+
+      - name: Test release scripts.
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
 
       - name: Validate workflows.
         env:
@@ -75,6 +66,7 @@ jobs:
   windows-x64:
     name: Windows x64 remote build
     needs: validate
+    if: needs.validate.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -130,6 +122,7 @@ jobs:
   windows-arm64:
     name: Windows ARM64 remote build
     needs: validate
+    if: needs.validate.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -185,6 +178,7 @@ jobs:
   linux:
     name: Linux remote build
     needs: validate
+    if: needs.validate.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -239,6 +233,7 @@ jobs:
   macos:
     name: macOS remote build
     needs: validate
+    if: needs.validate.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -294,7 +289,7 @@ jobs:
   publish:
     name: Verify and publish release
     needs: [validate, windows-x64, windows-arm64, linux, macos]
-    if: ${{ !cancelled() && needs.validate.result == 'success' }}
+    if: ${{ !cancelled() && needs.validate.result == 'success' && needs.validate.outputs.enabled == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -305,6 +300,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
 
       # 远程运行结束才有 attempt；失败的运行可能只上传了部分架构，下载失败不中断发布。
       - name: Download Windows x64 artifacts.
@@ -436,9 +432,10 @@ jobs:
       - name: Generate update map.
         env:
           APPVERSION: ${{ needs.validate.outputs.appversion }}
+          CHANNEL: ${{ needs.validate.outputs.channel }}
         run: |
           set -euo pipefail
-          python3 .github/scripts/release_update_map.py release-artifacts "$APPVERSION"
+          python3 .github/scripts/release_update_map.py release-artifacts "$APPVERSION" --channel "$CHANNEL"
 
       - name: List release files.
         run: |
@@ -447,6 +444,8 @@ jobs:
 
       - name: Generate release notes.
         env:
+          CHANNEL: ${{ needs.validate.outputs.channel }}
+          PREVIOUS_TAG: ${{ needs.validate.outputs.previous }}
           RELEASE_DONATION_NOTICE: |-
             Donations are optional and never affect feature access. If AstraGram is useful to you, you can consider supporting the project through Afdian at https://afdian.com/a/KiritoXD under the account KiritoXDone. Contributions help cover daily token maintenance costs and encourage us to keep maintaining the project
 
@@ -456,7 +455,17 @@ jobs:
           {
             printf '%s\n\n' "$RELEASE_DONATION_NOTICE"
             printf '%s\n\n' '---'
-            cat .github/CHANGELOG.md
+            if test "$CHANNEL" = beta; then
+              printf '## Changes / 更新内容\n\n'
+              if test -n "$PREVIOUS_TAG"; then
+                git log --reverse --format='- %s ([%h](https://github.com/Kindness-Kismet/AstraGram-Desktop/commit/%H))' \
+                  "$PREVIOUS_TAG..$GITHUB_SHA"
+              else
+                git log -1 --format='- %s ([%h](https://github.com/Kindness-Kismet/AstraGram-Desktop/commit/%H))' "$GITHUB_SHA"
+              fi
+            else
+              cat .github/CHANGELOG.md
+            fi
           } > "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md"
 
@@ -480,7 +489,15 @@ jobs:
             exit 1
           fi
 
+      - name: Refresh publication state.
+        id: publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: python3 .github/scripts/release_metadata.py --publication-state "$VERSION"
+
       - name: Publish release.
+        id: release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.validate.outputs.tag }}
@@ -488,7 +505,22 @@ jobs:
           name: AstraGram ${{ needs.validate.outputs.version }}
           body_path: ${{ runner.temp }}/release-notes.md
           files: release-artifacts/*
-          draft: false
-          prerelease: false
+          draft: ${{ needs.validate.outputs.channel == 'beta' && steps.publication.outputs.published != 'true' }}
+          prerelease: ${{ needs.validate.outputs.channel == 'beta' }}
           overwrite_files: true
-          make_latest: true
+          make_latest: ${{ steps.publication.outputs.latest }}
+
+      - name: Publish completed beta draft.
+        if: needs.validate.outputs.channel == 'beta'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ steps.release.outputs.id }}
+        run: |
+          set -euo pipefail
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+            -F draft=false -F prerelease=true -f make_latest=false
+
+      - name: Refresh beta update feed.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/beta_update_feed.py

@@ -11,7 +11,7 @@ if __package__ in (None, ""):
 
 from build_support.paths import ROOT, VERSION_FILE
 
-_PATTERN = re.compile(r"^\s*(\d+)\.(\d+)\.(\d+)(?:\.(\d+|beta))?\s*$")
+_PATTERN = re.compile(r"^\s*(\d+)\.(\d+)\.(\d+)(?:\.(\d+|beta))?(-beta)?\s*$")
 _PACKER_VERSION_MAX = 999_999_999
 
 _UPSTREAM_TRACKING = ROOT / ".github" / "upstream.json"
@@ -55,7 +55,8 @@ class Version:
 
     @property
     def text_small(self) -> str:
-        return f"{self.text}.{self.revision}" if self.revision else self.text
+        numeric = f"{self.text}.{self.revision}" if self.revision else self.text
+        return numeric + ("-beta" if self.beta else "")
 
     @property
     def file_version(self) -> str:
@@ -69,9 +70,11 @@ class Version:
 def parse_version(text: str) -> Version:
     match = _PATTERN.fullmatch(text)
     if not match:
-        raise SystemExit(f"Bad version '{text}'. Expected major.minor.patch[.revision|.beta].")
+        raise SystemExit(f"Bad version '{text}'. Expected major.minor.patch[.revision][-beta].")
 
-    raw_major, raw_minor, raw_patch, suffix = match.groups()
+    raw_major, raw_minor, raw_patch, suffix, beta_suffix = match.groups()
+    if suffix == "beta" and beta_suffix:
+        raise SystemExit("Duplicate beta suffix.")
     raw_revision = "0" if suffix in (None, "beta") else suffix
     limits = (
         ("major", raw_major, 99),
@@ -94,7 +97,7 @@ def parse_version(text: str) -> Version:
         minor=values["minor"],
         patch=values["patch"],
         revision=values["revision"],
-        beta=suffix == "beta",
+        beta=suffix == "beta" or bool(beta_suffix),
     )
     if not 1_016 < version.update <= _PACKER_VERSION_MAX:
         raise SystemExit(f"Update version {version.update} is outside Packer range 1017..{_PACKER_VERSION_MAX}.")
@@ -132,12 +135,12 @@ def apply_version(version: Version) -> list[str]:
         (r"(AppStorageReadVersion\s+)\d+", r"\g<1>" + str(version.storage_read)),
         (r"(AppVersionStrMajor\s+)\d[\d\.]*", r"\g<1>" + f"{version.major}.{version.minor}"),
         (r"(AppVersionStrOfficial\s+)\d[\d\.]*", r"\g<1>" + version.text),
-        (r"(AppVersionStrSmall\s+)\d[\d\.]*", r"\g<1>" + version.text_small),
+        (r"(AppVersionStrSmall\s+)\S+", r"\g<1>" + version.text_small),
         (r"(AppVersionStrFile\s+)\d[\d\.]*", r"\g<1>" + version.file_version),
-        (r"(AppVersionStr\s+)\d[\d\.]*", r"\g<1>" + version.text_small),
+        (r"(AppVersionStr\s+)\S+", r"\g<1>" + version.text_small),
         (r"(BetaChannel\s+)\d", r"\g<1>" + ("1" if version.beta else "0")),
         (r"(AlphaVersion\s+)\d+", r"\g<1>0"),
-        (r"(AppVersionOriginal\s+)\d[\d\.beta]*", r"\g<1>" + version.original),
+        (r"(AppVersionOriginal\s+)\S+", r"\g<1>" + version.original),
     ])
 
 
@@ -173,7 +176,7 @@ def main(argv: list[str] | None = None) -> None:
         "version",
         nargs="?",
         metavar="VERSION",
-        help="New version as major.minor.patch[.revision|.beta]; omit to show the current one",
+        help="New version as major.minor.patch[.revision][-beta]; omit to show the current one",
     )
     args = parser.parse_args(argv)
 

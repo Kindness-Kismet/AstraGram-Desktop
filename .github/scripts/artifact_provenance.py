@@ -51,7 +51,7 @@ TARGETS = {
 
 _SHA_PATTERN = re.compile(r"[0-9a-fA-F]{40}")
 _FILE_HASH_PATTERN = re.compile(r"[0-9a-f]{64}")
-_VERSION_PATTERN = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:\.(?:[0-9]+|beta))?")
+_VERSION_PATTERN = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:\.(?:[0-9]+|beta))?(?:-beta)?")
 _REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 
 

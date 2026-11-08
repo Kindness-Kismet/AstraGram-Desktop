@@ -30,8 +30,7 @@ from artifact_provenance import (
 
 
 ALLOWED_SOURCE_EVENTS = {"push"}
-# 发版由推送 main 上的版本文件触发，tag 由该运行自行创建。
-SOURCE_BRANCH = "main"
+# 正式版和测试版共用入口，tag 由通过来源校验的运行创建。
 SOURCE_WORKFLOW = ".github/workflows/build-release.yml"
 SOURCE_RUN_API_ATTEMPTS = 4
 SOURCE_RUN_API_TIMEOUT_SECONDS = 15
@@ -208,11 +207,24 @@ def validate_source(
         raise ProvenanceError("Current checkout HEAD does not match the source SHA")
 
     fields = _read_version_fields(root)
+    sys.path.insert(0, str(root / "scripts"))
+    from build_support.version import parse_version
+
+    requested = parse_version(version)
+    committed = parse_version(fields["AppVersionOriginal"])
+    if requested.text_small != version or requested.update != appupdateversion:
+        raise ProvenanceError("Requested display version and update code do not match")
+    if committed.beta:
+        raise ProvenanceError("The committed version must describe a stable release")
+    if requested.beta and (requested.full != committed.full or requested.revision <= committed.revision):
+        raise ProvenanceError("Beta must advance the revision within the committed official baseline")
+    source_version = committed if requested.beta else requested
     expected_versions = {
-        "AppVersionStrSmall": version,
-        "AppVersionStr": version,
-        "AppVersionOriginal": version,
-        "AppUpdateVersion": str(appupdateversion),
+        "AppVersionStrSmall": source_version.text_small,
+        "AppVersionStr": source_version.text_small,
+        "AppVersionOriginal": source_version.original,
+        "AppUpdateVersion": str(source_version.update),
+        "BetaChannel": "0",
     }
     for name, expected in expected_versions.items():
         if fields.get(name) != expected:
@@ -228,7 +240,7 @@ def validate_source(
         "run attempt": (run.get("run_attempt"), run_attempt),
         "repository": (actual_repository, repository),
         "head SHA": (str(run.get("head_sha", "")).lower(), sha),
-        "head branch": (run.get("head_branch"), SOURCE_BRANCH),
+        "head branch": (run.get("head_branch"), "beta" if requested.beta else "main"),
         "workflow path": (run.get("path"), workflow_path),
     }
     for label, (actual, expected) in checks.items():
@@ -286,6 +298,11 @@ def main() -> None:
                 run_id=args.run_id, run_attempt=args.run_attempt, version=args.version,
                 appupdateversion=args.appupdateversion, workflow_path=args.workflow_path,
             )
+            # 来源核验通过后才修改构建副本，四个构建仓库共用相同入口。
+            if args.version.endswith("-beta"):
+                from build_support.version import apply_version, parse_version
+
+                apply_version(parse_version(args.version))
         elif args.command == "write-artifact-manifest":
             write_artifact_manifest(
                 platform=args.platform, arch=args.arch,

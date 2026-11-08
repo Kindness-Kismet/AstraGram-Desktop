@@ -75,6 +75,12 @@ constexpr auto kMaxResponseSize = 1024 * 1024;
 #endif
 }
 
+[[nodiscard]] QString UpdateHttpPrefix() {
+	return cInstallBetaVersion()
+		? u"https://github.com/Kindness-Kismet/AstraGram-Desktop/releases/download/beta-updates"_q
+		: Local::readAutoupdatePrefix();
+}
+
 // Alpha and canary builds are published far more often than the eight hours
 // a stable build waits, so they ask every ten to fifteen minutes instead.
 constexpr auto kFrequentUpdateDelayConstPart = 600;
@@ -832,7 +838,7 @@ HttpChecker::HttpChecker(bool testing) : Checker(testing) {
 
 void HttpChecker::start() {
 	const auto updaterVersion = Platform::AutoUpdateVersion();
-	const auto path = Local::readAutoupdatePrefix()
+	const auto path = UpdateHttpPrefix()
 		+ qstr("/current")
 		+ (updaterVersion > 1 ? QString::number(updaterVersion) : QString());
 	auto url = QUrl(path);
@@ -971,7 +977,9 @@ std::optional<QString> HttpChecker::parseResponse(
 	return validateLatestUrl(
 		bestAvailableVersion,
 		bestIsAvailableAlpha,
-		Local::readAutoupdatePrefix() + bestLink);
+		bestLink.startsWith(u"https://"_q)
+			? bestLink
+			: UpdateHttpPrefix() + bestLink);
 }
 
 QString HttpChecker::validateLatestUrl(

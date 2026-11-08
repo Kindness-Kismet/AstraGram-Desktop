@@ -6,7 +6,9 @@ import json
 from pathlib import Path
 
 
-def generate_update_map(artifacts: Path, version: int) -> dict:
+def generate_update_map(artifacts: Path, version: int, channel: str = "stable") -> dict:
+    if channel not in ("stable", "beta"):
+        raise ValueError(f"Unsupported update channel: {channel}")
     if not 1_016 < version <= 999_999_999:
         raise ValueError("Update version must be within the range supported by Packer: 1017..999999999")
     prefixes = {
@@ -25,7 +27,7 @@ def generate_update_map(artifacts: Path, version: int) -> dict:
         if not package.stat().st_size:
             raise ValueError(f"Update package is empty: {package.name}")
         result[platform] = {
-            "stable": {
+            channel: {
                 "released": version,
                 "testing": version,
                 "link": f"/{prefix}{{version}}",
@@ -42,8 +44,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("artifacts", type=Path)
     parser.add_argument("version", type=int)
+    parser.add_argument("--channel", choices=("stable", "beta"), default="stable")
     args = parser.parse_args()
-    result = generate_update_map(args.artifacts, args.version)
+    result = generate_update_map(args.artifacts, args.version, args.channel)
     output = json.dumps(result, indent=2) + "\n"
     (args.artifacts / "current6").write_text(output, encoding="utf-8")
     print(output, end="")
