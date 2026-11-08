@@ -50,15 +50,14 @@ jobs:
       - name: Validate workflows.
         env:
           ACTIONLINT_VERSION: 1.7.12
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          base="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
-          curl --fail --location --retry 3 --output "$RUNNER_TEMP/$archive" "$base/$archive"
-          curl --fail --location --retry 3 \
-            --output "$RUNNER_TEMP/actionlint_checksums.txt" \
-            "$base/actionlint_${ACTIONLINT_VERSION}_checksums.txt"
-          grep "  ${archive}$" "$RUNNER_TEMP/actionlint_checksums.txt" \
+          gh release download "v${ACTIONLINT_VERSION}" --repo rhysd/actionlint \
+            --pattern "$archive" --pattern "actionlint_${ACTIONLINT_VERSION}_checksums.txt" \
+            --dir "$RUNNER_TEMP"
+          grep "  ${archive}$" "$RUNNER_TEMP/actionlint_${ACTIONLINT_VERSION}_checksums.txt" \
             | (cd "$RUNNER_TEMP" && sha256sum --check -)
           tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
           "$RUNNER_TEMP/actionlint" -shellcheck= -pyflakes=

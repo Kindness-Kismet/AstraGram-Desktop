@@ -8,7 +8,6 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
-from urllib.request import urlopen
 
 from release_metadata import command, release_versions
 
@@ -47,8 +46,12 @@ def main() -> None:
         asset = next((asset for asset in release["assets"] if asset["name"] == "current6"), None)
         if asset is None:
             continue
-        with urlopen(asset["browser_download_url"], timeout=30) as response:
-            update_map = json.load(response)
+        with tempfile.TemporaryDirectory() as directory:
+            subprocess.run([
+                "gh", "release", "download", release["tag_name"], "--repo", repository,
+                "--pattern", "current6", "--dir", directory,
+            ], check=True)
+            update_map = json.loads((Path(directory) / "current6").read_text(encoding="utf-8"))
         merge_release_map(result, release, update_map, version)
     if not result:
         raise ValueError("No published update packages are available")
