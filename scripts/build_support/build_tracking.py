@@ -22,7 +22,7 @@ def _sources(key: str) -> set[str]:
 
 
 def recover_failed_compilations(output: Path, configuration: str, backups: Path) -> list[Path]:
-    """只作废缺少读写记录的编译命令，保留已成功的编译单元与预编译头。"""
+    """作废不完整的编译记录，保留已成功的编译单元与预编译头。"""
     output = output.resolve()
     recovered = []
     destination = backups / datetime.now().strftime("%Y%m%d-%H%M%S-%f")
@@ -40,7 +40,11 @@ def recover_failed_compilations(output: Path, configuration: str, backups: Path)
                       writes if name.startswith("cl.write.") else None)
             if target is not None:
                 for key, values in _blocks(path):
-                    if values:
+                    # 预编译头加载失败仍会留下读写记录，旧 obj 不能据此视为编译成功。
+                    complete = values and (target is writes or any(
+                        not value.lower().endswith(".pch") for value in values
+                    ))
+                    if complete:
                         target.update(_sources(key))
         complete = reads & writes
         changed = []
