@@ -42,6 +42,7 @@ BACKGROUND_START = False
 OFFLINE_START = None
 
 GENERIC_COMMANDS = {
+    "anim.sample-window": "连续采样已绘制的窗口缓冲，不触发重绘：<新 WebP 绝对路径> <x> <y> <width> <height>；返回异步任务",
     "anim.sample-media-progress": "采样正式下载控件从零到完成的连续帧：<新建 PNG 绝对路径>；不修改账号和缓存",
     "anim.check-image-transition": "异步检查图片渐变中途重建的连续性，不改消息或设置",
     "control.wheel": "在应用内部投递滚轮事件：<目标> <角度增量> [pixel] [ctrl]",
@@ -890,19 +891,21 @@ def debug_app_pids() -> list[int]:
 
 def port_owner_pid() -> int | None:
     if sys.platform == "win32":
-        # netstat 输出窄且不需要 admin，只要解析 127.0.0.1:PORT 那一行的 PID。
+        # 按地址与远端端口识别监听连接，系统报告的状态枚举可能无法解析。
         result = subprocess.run(
-            ["netstat", "-ano", "-p", "TCP"],
+            ["powershell", "-NoProfile", "-Command",
+             f"Get-NetTCPConnection -LocalPort {PORT} -ErrorAction SilentlyContinue | "
+             "Where-Object { $_.LocalAddress -eq '127.0.0.1' "
+             "-and $_.RemoteAddress -eq '0.0.0.0' -and $_.RemotePort -eq 0 } | "
+             "Select-Object -ExpandProperty OwningProcess"],
             text=True,
             errors="replace",
             capture_output=True,
             check=False,
         )
         for line in result.stdout.splitlines():
-            if f"127.0.0.1:{PORT}" in line and "LISTENING" in line:
-                parts = line.split()
-                if len(parts) >= 5 and parts[-1].isdigit():
-                    return int(parts[-1])
+            if line.strip().isdigit():
+                return int(line.strip())
         return None
 
     # POSIX: lsof / ss / netstat，按可用性顺序试探。

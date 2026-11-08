@@ -885,6 +885,7 @@ base::weak_qptr<Ui::RpWidget> ShortcutMessages::createPinnedToBottom(
 		.list = _inner.data(),
 		.scrolls = _scroll->scrolls(),
 		.paletteChanged = _controller->chatStyle()->paletteChanged(),
+		.backgroundPaintRequests = root->paintRequest(),
 		.paintBackground = [=](QPainter &p, QRect area) {
 			Window::SectionWidget::PaintBackground(
 				p,

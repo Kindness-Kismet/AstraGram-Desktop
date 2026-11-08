@@ -518,8 +518,11 @@ bool HistoryWidget::paintShowAnimationFrame() {
 }
 
 void HistoryWidget::paintEvent(QPaintEvent *e) {
-	if (paintShowAnimationFrame()
-		|| controller()->contentOverlapped(this, e)) {
+	paintShowAnimationFrame();
+}
+
+void HistoryWidget::paintContent(QPaintEvent *e) {
+	if (_showAnimation || controller()->contentOverlapped(this, e)) {
 		return;
 	}
 	if (hasPendingResizedItems()) {
@@ -531,14 +534,14 @@ void HistoryWidget::paintEvent(QPaintEvent *e) {
 		Window::SectionWidget::PaintBackground(
 			controller(),
 			controller()->currentChatTheme(),
-			this,
+			_content.data(),
 			e->rect());
 	} else if (!ExtrasFeatures::WindowMaterial::isActive(this)) {
-		QPainter(this).fillRect(e->rect(), st::dialogsBg);
+		QPainter(_content.data()).fillRect(e->rect(), st::dialogsBg);
 	}
 	invalidateFrostedBackground(e->rect());
 
-	Painter p(this);
+	Painter p(_content.data());
 	if (!_list) {
 		const auto w = 0
 			+ st::msgServiceFont->width(tr::lng_willbe_history(tr::now))

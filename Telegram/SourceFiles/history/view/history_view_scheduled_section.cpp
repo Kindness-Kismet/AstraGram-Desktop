@@ -269,6 +269,7 @@ ScheduledWidget::ScheduledWidget(
 		.list = _inner.data(),
 		.scrolls = _scroll->scrolls(),
 		.paletteChanged = controller->chatStyle()->paletteChanged(),
+		.backgroundPaintRequests = paintRequest(),
 		.paintBackground = SectionFrostedBackground(this, [=] {
 			return _theme.get();
 		}),

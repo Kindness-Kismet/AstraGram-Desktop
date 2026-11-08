@@ -182,6 +182,7 @@ public:
 		not_null<Window::SessionController*> controller);
 
 	void historyLoaded();
+	not_null<Ui::RpWidget*> transitionContent() override;
 
 	[[nodiscard]] bool preventsClose(Fn<void()> &&continueCallback) const;
 	[[nodiscard]] bool hasPausedVoiceRecording() const;
@@ -388,6 +389,7 @@ protected:
 	void keyPressEvent(QKeyEvent *e) override;
 	void mousePressEvent(QMouseEvent *e) override;
 	void paintEvent(QPaintEvent *e) override;
+	void paintContent(QPaintEvent *e);
 	void leaveEventHook(QEvent *e) override;
 	void mouseReleaseEvent(QMouseEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;
@@ -884,6 +886,7 @@ private:
 	void checkCharsCount();
 	void checkCharsLimitation();
 
+	object_ptr<Ui::RpWidget> _content;
 	MTP::Sender _api;
 	FullReplyTo _replyTo;
 	Ui::Text::String _replyToName;

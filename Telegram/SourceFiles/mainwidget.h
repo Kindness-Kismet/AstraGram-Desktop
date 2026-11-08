@@ -256,7 +256,8 @@ private:
 	// 第三栏面板被替换前截取旧面板，与对话区切换同样淡出。
 	[[nodiscard]] Fn<void()> prepareThirdSectionFade();
 	[[nodiscard]] Fn<void()> prepareSectionFade(
-		QRect geometry,
+		not_null<Ui::RpWidget*> source,
+		Fn<not_null<Ui::RpWidget*>()> target,
 		base::unique_qptr<Ui::RpWidget> &fade,
 		const QString &name);
 	void handleAdaptiveLayoutUpdate();

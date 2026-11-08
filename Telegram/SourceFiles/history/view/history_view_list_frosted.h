@@ -27,6 +27,7 @@ struct ListFrostedDescriptor {
 	not_null<ListWidget*> list;
 	rpl::producer<> scrolls;
 	rpl::producer<> paletteChanged;
+	rpl::producer<QRect> backgroundPaintRequests;
 	// 在 root 坐标系绘制聊天背景，返回 false 表示暂时不能采样。
 	Fn<bool(QPainter &p, QRect area)> paintBackground;
 };

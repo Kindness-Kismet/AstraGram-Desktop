@@ -2873,6 +2873,8 @@ PRIVATE
     window/section_memento.h
     window/window_animation_snapshot.cpp
     window/window_animation_snapshot.h
+    window/section_layer.cpp
+    window/section_layer.h
     window/section_widget.cpp
     window/section_widget.h
     window/window_adaptive.cpp

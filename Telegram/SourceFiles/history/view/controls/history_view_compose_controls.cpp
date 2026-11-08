@@ -1354,6 +1354,7 @@ ComposeControls::ComposeControls(
 , _saveDraftTimer([=] { saveDraft(); })
 , _saveCloudDraftTimer([=] { saveCloudDraft(); }) {
 	_field->setObjectName(u"messageInput"_q);
+	_wrap->setObjectName(u"chatBar.compose"_q);
 	_tabbedSelectorToggle->setObjectName(u"emojiButton"_q);
 	if (_attachToggle) {
 		_attachToggle->setObjectName(u"attachButton"_q);
