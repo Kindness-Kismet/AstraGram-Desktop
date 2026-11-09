@@ -69,6 +69,10 @@ public:
 		rpl::producer<PeerData*> peerForBackground);
 
 	[[nodiscard]] Main::Session &session() const;
+	// 切换动画只处理页面内容，独立的输入控件留在内容层之外。
+	[[nodiscard]] virtual not_null<Ui::RpWidget*> transitionContent() {
+		return this;
+	}
 	[[nodiscard]] not_null<SessionController*> controller() const {
 		return _controller;
 	}

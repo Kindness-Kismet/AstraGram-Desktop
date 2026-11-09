@@ -20,7 +20,7 @@ from urllib.request import Request, urlopen
 
 _REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _SHA = re.compile(r"^[0-9a-fA-F]{40}$")
-_VERSION = re.compile(r"^[0-9]+(?:\.[0-9]+)+$")
+_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-beta)?$")
 _API_VERSION = "2026-03-10"
 
 

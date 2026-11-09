@@ -1,0 +1,15 @@
+name: Build-beta
+
+on:
+  push:
+    branches:
+      - beta
+
+permissions:
+  contents: write
+
+jobs:
+  beta:
+    name: Beta
+    uses: ./.github/workflows/build-release.yml
+    secrets: inherit

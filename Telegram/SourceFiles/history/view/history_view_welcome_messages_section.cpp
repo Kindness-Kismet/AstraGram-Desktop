@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_welcome_messages_section.h"
+#include "window/section_background.h"
 #include "window/window_animation_snapshot.h"
 
 #include "api/api_sending.h"
@@ -883,7 +884,7 @@ void WelcomeMessagesWidget::paintEvent(QPaintEvent *e) {
 		return;
 	}
 	const auto clip = e->rect();
-	SectionWidget::PaintBackground(controller(), _theme.get(), this, clip);
+	Window::PaintSectionBackground(this, _theme.get(), this, clip);
 }
 
 void WelcomeMessagesWidget::onScroll() {

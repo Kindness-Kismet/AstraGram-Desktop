@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "window/section_layer.h"
 #include "extras/data/conversation_cache.h"
 #include "extras/ui/components/smooth_scroll.h"
 
@@ -244,13 +245,16 @@ HistoryWidget::HistoryWidget(
 	parent,
 	controller,
 	ActivePeerValue(controller))
+, _content(Window::CreateSectionLayer(this, [=](QPaintEvent *e) {
+	paintContent(e);
+}))
 , _api(&controller->session().mtp())
 , _updateEditTimeLeftDisplay([=] { updateField(); })
 , _fieldBarCancel(this, st::historyReplyCancel)
-, _topBars(std::make_unique<Ui::RpWidget>(this))
-, _topBar(this, controller)
+, _topBars(std::make_unique<Ui::RpWidget>(_content.data()))
+, _topBar(_content.data(), controller)
 , _scroll(
-	this,
+	_content.data(),
 	controller->chatStyle()->value(lifetime(), st::historyScroll))
 , _composeSurface(this)
 , _updateHistoryItems([=] { updateHistoryItemsByTimer(); })
@@ -259,7 +263,7 @@ HistoryWidget::HistoryWidget(
 	controller->chatStyle(),
 	static_cast<HistoryView::CornerButtonsDelegate*>(this))
 , _pullToNext(std::make_unique<HistoryView::PullToNextChannel>(
-	this,
+	_content.data(),
 	_scroll.data(),
 	controller))
 , _supportAutocomplete(session().supportMode()
@@ -356,7 +360,8 @@ HistoryWidget::HistoryWidget(
 	[=](not_null<const HistoryView::Element*> view) {
 		return _list && _list->itemTop(view) >= 0;
 	}))
-, _topShadow(this) {
+, _topShadow(_content.data()) {
+	_content->show();
 	setAcceptDrops(true);
 	setVisualTabOrder(true);
 	_field->setObjectName(u"messageInput"_q);
@@ -1388,6 +1393,10 @@ HistoryWidget::HistoryWidget(
 	_botKeyboardHide->setAccessibleName(tr::lng_bot_keyboard_hide(tr::now));
 	_fieldBarCancel->setAccessibleName(tr::lng_cancel(tr::now));
 
+}
+
+not_null<Ui::RpWidget*> HistoryWidget::transitionContent() {
+	return _content.data();
 }
 
 HistoryWidget::~HistoryWidget() {

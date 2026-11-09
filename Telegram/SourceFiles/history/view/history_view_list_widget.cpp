@@ -1255,6 +1255,12 @@ std::optional<int> ListWidget::scrollTopForPosition(
 	if (_visibleTop >= _visibleBottom) {
 		return std::nullopt;
 	} else if (position == Data::MaxMessagePosition) {
+		const auto available = _visibleBottom - _visibleTop;
+		// 末尾摘要不足一屏时继续补载，不能提前完成跳转。
+		if (height() - _topPadding - _bottomPadding <= available
+			&& !(loadedAtTop() && loadedAtBottom())) {
+			return std::nullopt;
+		}
 		if (_inverted) {
 			if (loadedAtTop()) {
 				return 0;
@@ -1536,28 +1542,33 @@ void ListWidget::showAtPosition(
 		}
 	}
 
-	if (showAtUnread) {
-		showAroundPosition(position, [=] {
+	if (!showAtUnread && showAtPositionNow(position, params, done)) {
+		return;
+	}
+	const auto origin = countScrollState().item;
+	showAroundPosition(position, [=] {
+		if (showAtUnread) {
 			clearUnreadBar();
 			checkUnreadBarCreation();
-			return showAtPositionNow(position, params, done);
-		});
-	} else if (!showAtPositionNow(position, params, done)) {
-		const auto targetAbove = isBelowPosition(position);
-		const auto targetBelow = isAbovePosition(position);
-		showAroundPosition(position, [=] {
-			if ((targetAbove || targetBelow)
-				&& (params.animated != anim::type::instant)) {
-				if (const auto to = scrollTopForPosition(position)) {
-					const auto screen = _visibleBottom - _visibleTop;
-					_delegate->listScrollTo(targetAbove
-						? (*to + screen)
-						: (*to - screen));
-				}
-			}
-			return showAtPositionNow(position, params, done);
-		});
-	}
+		}
+		const auto to = scrollTopForPosition(position);
+		if (!to) {
+			return false;
+		}
+		if (origin && !viewForItem(origin.fullId)
+			&& (params.animated != anim::type::instant)) {
+			const auto target = !showAtUnread
+				? position
+				: (_bar.element && !_bar.hidden && _bar.focus)
+				? _bar.element->data()->position()
+				: Data::MaxMessagePosition;
+			const auto above = _inverted ? (target > origin) : (target < origin);
+			const auto screen = _visibleBottom - _visibleTop;
+			// 原视口已不在新切片中，从目标前一屏接续滚动。
+			_delegate->listScrollTo(*to + (above ? screen : -screen));
+		}
+		return showAtPositionNow(position, params, done);
+	});
 }
 
 void ListWidget::clearUnreadBar() {
@@ -1675,10 +1686,14 @@ void ListWidget::restoreScrollState() {
 	} else if (_overrideInitialScroll) {
 		// 动画跳转先恢复当前视口，避免使用过期偏移。
 		applyScrollTopState();
-		if (base::take(_overrideInitialScroll)()) {
+		auto callback = base::take(_overrideInitialScroll);
+		if (callback()) {
 			_scrollTopState = ScrollTopState();
 			_scrollInited = true;
 			return;
+		}
+		if (!_overrideInitialScroll) {
+			_overrideInitialScroll = std::move(callback);
 		}
 	}
 	if (!_scrollTopState.item) {

@@ -42,6 +42,7 @@ BACKGROUND_START = False
 OFFLINE_START = None
 
 GENERIC_COMMANDS = {
+    "anim.sample-window": "连续采样已绘制的窗口缓冲，不触发重绘：<新 WebP 绝对路径> <x> <y> <width> <height>；返回异步任务",
     "anim.sample-media-progress": "采样正式下载控件从零到完成的连续帧：<新建 PNG 绝对路径>；不修改账号和缓存",
     "anim.check-image-transition": "异步检查图片渐变中途重建的连续性，不改消息或设置",
     "control.wheel": "在应用内部投递滚轮事件：<目标> <角度增量> [pixel] [ctrl]",
@@ -93,6 +94,7 @@ GENERIC_COMMANDS = {
     'cache.memory-stats': '查询历史协议缓存的常驻规模、容量限制、淘汰和磁盘读取次数',
     'message.send-sticker': '在已授权测试对话发送已加载贴纸：<会话编号> <文档编号> [--account 账号下标]；返回已提交，消息结果用 message.list 查询',
     'message.react': '在已授权测试对话切换普通表情回应：<会话编号> <消息编号> <表情> [--account 账号下标]，只表示已提交',
+    'message.delete': '在已授权测试对话沿正式路径删除已加载消息：<会话编号> <消息编号>... [--account 账号下标] [--revoke]；返回 submitted 和编号，服务端结果需另行核对',
     'message.preview': '在已授权测试对话编辑链接预览开关，保留正文：<会话编号> <消息编号> <on|off> [--account 账号下标]；异步结果用 job.status 查询',
     'simulation.chat-folders': '在独立模拟配置中加载首个分组、清空分组或等待分组：<single|none|pending>，重启恢复样本',
     'simulation.language': '在独立模拟配置中切换内置翻译，不下载云端语言包：<en|zh-hans>，返回表情页签译文',
@@ -889,19 +891,21 @@ def debug_app_pids() -> list[int]:
 
 def port_owner_pid() -> int | None:
     if sys.platform == "win32":
-        # netstat 输出窄且不需要 admin，只要解析 127.0.0.1:PORT 那一行的 PID。
+        # 按地址与远端端口识别监听连接，系统报告的状态枚举可能无法解析。
         result = subprocess.run(
-            ["netstat", "-ano", "-p", "TCP"],
+            ["powershell", "-NoProfile", "-Command",
+             f"Get-NetTCPConnection -LocalPort {PORT} -ErrorAction SilentlyContinue | "
+             "Where-Object { $_.LocalAddress -eq '127.0.0.1' "
+             "-and $_.RemoteAddress -eq '0.0.0.0' -and $_.RemotePort -eq 0 } | "
+             "Select-Object -ExpandProperty OwningProcess"],
             text=True,
             errors="replace",
             capture_output=True,
             check=False,
         )
         for line in result.stdout.splitlines():
-            if f"127.0.0.1:{PORT}" in line and "LISTENING" in line:
-                parts = line.split()
-                if len(parts) >= 5 and parts[-1].isdigit():
-                    return int(parts[-1])
+            if line.strip().isdigit():
+                return int(line.strip())
         return None
 
     # POSIX: lsof / ss / netstat，按可用性顺序试探。

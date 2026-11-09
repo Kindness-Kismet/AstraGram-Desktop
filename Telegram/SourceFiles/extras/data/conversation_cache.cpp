@@ -574,7 +574,7 @@ void ConversationCache::clearStorage(
 			}
 			_indexDirty = true;
 			if (_enabled) {
-				saveIndex();
+				flush();
 			}
 			done(error);
 		};
@@ -611,6 +611,12 @@ void ConversationCache::disable() {
 	_saveTimer.cancel();
 	_lifetime.destroy();
 	_memoryTimer.cancel();
+	// 停用时释放删除等待；退出中的会话销毁后不再执行调用方逻辑。
+	for (auto &[id, done] : base::take(_deletionCallbacks)) {
+		if (done) {
+			crl::on_main(_session, std::move(done));
+		}
+	}
 }
 
 bool ConversationCache::hasDialogsSnapshot() const {

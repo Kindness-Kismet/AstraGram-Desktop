@@ -43,6 +43,8 @@ function(extras_override_version file)
         @ONLY)
     include_directories("${generated_dir}")
 
+    set(desktop_app_version_int "${app_version}" PARENT_SCOPE)
+    set(desktop_app_version_beta_bool ${beta} PARENT_SCOPE)
     set(desktop_app_version_string "${official}" PARENT_SCOPE)
     set(desktop_app_version_string_small "${display}" PARENT_SCOPE)
     set(desktop_app_version_dot "${file_version}" PARENT_SCOPE)

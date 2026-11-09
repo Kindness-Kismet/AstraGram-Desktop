@@ -398,6 +398,8 @@ set(extras_files
         extras/features/message_shot/message_shot_theme_state.h
         extras/features/delete_messages/delete_own_messages.cpp
         extras/features/delete_messages/delete_own_messages.h
+        extras/features/delete_messages/local_message_deletion.cpp
+        extras/features/delete_messages/local_message_deletion.h
         extras/features/message_selection/selection_range.cpp
         extras/features/message_selection/selection_range.h
         extras/features/forward/extras_forward.cpp
@@ -429,6 +431,7 @@ set(extras_files
         extras/features/filters/filters_utils.cpp
         extras/features/filters/filters_utils.h
         extras/data/conversation_cache.cpp
+        extras/data/conversation_cache_deletion.cpp
         extras/data/conversation_cache.h
         extras/data/conversation_cache_history.cpp
         extras/data/conversation_cache_memory.cpp
@@ -2870,6 +2873,10 @@ PRIVATE
     window/section_memento.h
     window/window_animation_snapshot.cpp
     window/window_animation_snapshot.h
+    window/section_layer.cpp
+    window/section_layer.h
+    window/section_background.cpp
+    window/section_background.h
     window/section_widget.cpp
     window/section_widget.h
     window/window_adaptive.cpp

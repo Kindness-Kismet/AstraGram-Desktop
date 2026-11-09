@@ -21,7 +21,13 @@
 `message.edit-local` 和 `message.delete-local` 仅用于模拟模式，走原生本地事件处理以检查显示状态。
 模拟编辑、删除不写入留档；数据库的加密和迁移通过 `storage.verify-archive` 独立验证。
 
+`message.delete <peerId> <messageId>... [--account <index>] [--revoke]` 用于已授权真实测试对话，
+沿正式删除路径处理已加载且允许删除的消息；`--account` 指定操作账号而不切换当前界面。
+`state: submitted` 表示已提交，服务端结果和留档结果分别核对，完整参数见[会话与消息](session.md)。
+主动删除回归需要检查 `message.inspect`、`cache.read` 的异步结果与 `storage.deleted`，并在正常重启后再次查询。
+对方删除回归改用另一测试账号操作，随后切回观察账号核对留档；保留样本的账号、会话和消息编号，避免同名消息混淆。
+
 `message.inspect <peerId> <messageId>` 查看正文与已删除、过滤、历史和视图状态；同时返回当前显示文字、译文是否显示、是否手动翻译、请求状态和聊天翻译状态。
 `deletedOpacity` 返回主聊天视图的当前透明度，无视图时为空；相册内部各项还会独立处理透明度，需结合截图核对。
 `ephemeral`、`ephemeralId`、`anchoredEphemeral` 分别表示临时消息、临时消息的协议编号、临时替换原消息内容的状态。
-真实编辑／删除和远端同步效果需要另行授权的测试账号，本轮不执行。
+真实编辑、删除和远端同步只在用户已授权的测试账号与对话范围内执行。

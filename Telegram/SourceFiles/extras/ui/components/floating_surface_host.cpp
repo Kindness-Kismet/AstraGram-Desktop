@@ -115,6 +115,11 @@ void FloatingSurfaceHost::paint(
 		QPainter &p,
 		FloatingSurface *surface,
 		QColor tint) {
+	// 首次绘制可能早于区域登记的定时器，先准备当前表面的磨砂采样。
+	if (_areasTimer.isActive()) {
+		_areasTimer.stop();
+		refreshAreas();
+	}
 	const auto area = surface->visibleArea(_root);
 	if (area.isEmpty()) {
 		return;

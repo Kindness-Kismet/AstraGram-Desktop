@@ -74,7 +74,16 @@ public:
 	void webPageUpdated(const MTPWebPage &page);
 	void widgetDataUpdated(const MTPDupdateMessageWidgetData &update);
 	void widgetPublicDataUpdated(uint64 widgetId, const MTPDmessages_widgetPublicData &data);
-	void messagesDeleted(PeerId peer, const QVector<MTPint> &ids);
+	// 当前缓存清理完成后回调；停用或清空视为完成，不等待磁盘写入。
+	void messagesDeleted(
+		PeerId peer,
+		const QVector<MTPint> &ids,
+		Fn<void()> done = nullptr);
+	// 只收集指定会话和发送者的缓存消息；停用或清空时返回空集合。
+	void collectMessagesFromParticipant(
+		PeerId peer,
+		PeerId from,
+		Fn<void(QVector<MTPint>)> done);
 	void historyCleared(PeerId peer);
 	void restoreMessage(PeerId peer, MsgId id, Fn<void(bool)> done);
 
@@ -198,6 +207,7 @@ private:
 		QVector<MTPForumTopic> topics;
 		std::vector<Range> ranges;
 		std::vector<Pending> pending;
+		base::flat_set<MsgId> pendingDeletedIds;
 		uint64 generation = 0;
 		crl::time lastUsed = 0;
 		int pendingWrites = 0;
@@ -229,7 +239,14 @@ private:
 	void updateCachedMessages(
 		PeerId peer,
 		Fn<bool(MTPMessage &)> update);
-	void deleteMessages(HistoryCacheKey key, const QVector<MTPint> &ids);
+	void deleteMessages(
+		HistoryCacheKey key,
+		const QVector<MTPint> &ids,
+		Fn<void()> done);
+	void deleteMessagesFromEntry(
+		HistoryCacheKey key,
+		HistoryEntry &entry,
+		const base::flat_set<MsgId> &ids);
 	void trimHistory(HistoryCacheKey key, HistoryEntry &entry);
 	void restoreMessageFromHistories(
 		std::vector<HistoryCacheKey> keys,
@@ -262,6 +279,8 @@ private:
 	base::flat_map<MsgId, PeerId> _nonChannelPeers;
 	base::flat_map<uint64, base::flat_set<PeerId>> _widgetPeers;
 	std::vector<Fn<void()>> _afterIndex;
+	base::flat_map<uint64, Fn<void()>> _deletionCallbacks;
+	uint64 _deletionRequestId = 0;
 	base::Timer _saveTimer;
 	base::Timer _preloadTimer;
 	base::Timer _memoryTimer;

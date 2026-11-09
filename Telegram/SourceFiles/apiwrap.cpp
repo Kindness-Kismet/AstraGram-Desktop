@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/features/secret_chats/secret_chat_peer.h"
 
 #include "extras/data/conversation_cache.h"
+#include "extras/features/delete_messages/local_message_deletion.h"
 
 #ifdef _DEBUG
 #include "extras/debug/debug_login.h"
@@ -1598,39 +1599,60 @@ void ApiWrap::markContentsRead(not_null<HistoryItem*> item) {
 void ApiWrap::deleteAllFromParticipant(
 		not_null<ChannelData*> channel,
 		not_null<PeerData*> from) {
-	Tgw::ClearParticipantStorage(_session, channel->id, from->id);
-	const auto history = _session->data().historyLoaded(channel);
-	const auto ids = history
-		? history->collectMessagesFromParticipantToDelete(from)
-		: std::vector<MsgId>();
-	auto items = std::vector<not_null<HistoryItem*>>();
-	items.reserve(ids.size());
-	for (const auto &msgId : ids) {
-		if (const auto item = _session->data().message(channel->id, msgId)) {
-			items.push_back(item);
-		}
-	}
-	_session->data().destroyMessagesWithCacheCleanup(items);
-
-	_session->data().sendHistoryChangeNotifications();
-
-	deleteAllFromParticipantSend(channel, from);
+	const auto history = _session->data().history(channel);
+	_session->data().histories().sendRequest(
+		history,
+		Data::Histories::RequestType::Delete,
+		[=](Fn<void()> finish) {
+		// 先登记删除任务，再异步收集缓存，避免旧历史响应写回待删除消息。
+		crl::on_main(_session, [=] {
+			Tgw::ClearParticipantStorage(_session, channel->id, from->id);
+			_session->conversationCache().collectMessagesFromParticipant(
+				channel->id,
+				from->id,
+				[=](QVector<MTPint> cachedIds) {
+				auto combined = base::flat_set<MsgId>();
+				for (const auto id : cachedIds) {
+					combined.emplace(id.v);
+				}
+				for (const auto id : history->collectMessagesFromParticipantToDelete(from)) {
+					combined.emplace(id);
+				}
+				auto localIds = QVector<MTPint>();
+				localIds.reserve(combined.size());
+				for (const auto id : combined) {
+					localIds.push_back(MTP_int(id.bare));
+				}
+				Extras::DeleteMessages::forgetLocalMessages(_session, channel->id, localIds, [=] {
+					deleteAllFromParticipantSend(channel, from, localIds, finish);
+				});
+			});
+		});
+		return mtpRequestId(0);
+	});
 }
 
 void ApiWrap::deleteAllFromParticipantSend(
 		not_null<ChannelData*> channel,
-		not_null<PeerData*> from) {
+		not_null<PeerData*> from,
+		QVector<MTPint> localIds,
+		Fn<void()> finish) {
 	request(MTPchannels_DeleteParticipantHistory(
 		channel->inputChannel(),
 		from->input()
 	)).done([=](const MTPmessages_AffectedHistory &result) {
 		const auto offset = applyAffectedHistory(channel, result);
 		if (offset > 0) {
-			deleteAllFromParticipantSend(channel, from);
-		} else if (const auto history = _session->data().historyLoaded(channel)) {
-			history->requestChatListMessage();
+			deleteAllFromParticipantSend(channel, from, localIds, finish);
+			return;
 		}
-	}).send();
+		Extras::DeleteMessages::forgetLocalMessages(_session, channel->id, localIds, [=] {
+			finish();
+			if (const auto history = _session->data().historyLoaded(channel)) {
+				history->requestChatListMessage();
+			}
+		});
+	}).fail(finish).send();
 }
 
 void ApiWrap::deleteAllReactionsFromParticipant(

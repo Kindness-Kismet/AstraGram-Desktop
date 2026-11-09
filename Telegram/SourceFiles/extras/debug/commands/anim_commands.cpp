@@ -8,6 +8,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
 #include <QtCore/QTimer>
+#include <QtGui/QBackingStore>
 #include <QtGui/QPainter>
 #include <QtWidgets/QWidget>
 
@@ -15,6 +16,108 @@ namespace ExtrasDebug::Commands {
 namespace {
 
 using json = nlohmann::json;
+
+// 连续采样已绘制的窗口缓冲，保留页面切换中的原始帧，不触发额外重绘。
+[[nodiscard]] Result sampleWindow(const QStringList &args) {
+	if (args.size() != 5) {
+		return Result::Err(u"usage: anim.sample-window <newWebpPath> <x> <y> <width> <height>"_q);
+	}
+	const auto window = controlWindow();
+	if (!window || !window->isVisible()) {
+		return Result::Err(u"no visible selected window"_q);
+	}
+	const auto destination = QFileInfo(args[0]);
+	if (!destination.isAbsolute() || destination.exists()
+		|| destination.suffix() != u"webp"_q || !destination.dir().exists()) {
+		return Result::Err(u"destination must be a new absolute WebP path in an existing directory"_q);
+	}
+	auto values = std::array<int, 4>();
+	for (auto i = 0; i != values.size(); ++i) {
+		auto ok = false;
+		values[i] = args[i + 1].toInt(&ok);
+		if (!ok) {
+			return Result::Err(u"sample geometry must contain integers"_q);
+		}
+	}
+	const auto area = QRect(values[0], values[1], values[2], values[3]);
+	if (area.isEmpty() || !window->rect().contains(area)
+		|| area.width() * int64(area.height()) > 100000) {
+		return Result::Err(u"sample area must be inside the window and at most 100000 logical pixels"_q);
+	}
+	const auto store = window->backingStore();
+	if (!store || !dynamic_cast<const QImage*>(store->paintDevice())) {
+		return Result::Err(u"window has no readable raster backing store"_q);
+	}
+	struct Probe final : QObject {
+		Probe(QWidget *window, QRect area, QString path)
+		: QObject(window), _window(window), _area(area), _path(std::move(path)) {
+		}
+		~Probe() {
+			finishJob(_id, false, "sampling ended before completion");
+		}
+		void capture() {
+			const auto buffer = dynamic_cast<const QImage*>(_window->backingStore()->paintDevice());
+			if (!buffer) {
+				return;
+			}
+			const auto ratio = buffer->devicePixelRatio();
+			const auto rect = QRect(QPointF(_area.topLeft() * ratio).toPoint(),
+				QSizeF(_area.size() * ratio).toSize());
+			_frames.push_back(buffer->copy(rect));
+			_frames.back().setDevicePixelRatio(1.);
+			_times.push_back(crl::now() - _started);
+		}
+		const uint64 _id = beginJob("window-frame-sample");
+		const crl::time _started = crl::now();
+		QWidget *const _window;
+		const QRect _area;
+		const QString _path;
+		std::vector<QImage> _frames;
+		std::vector<crl::time> _times;
+	};
+	const auto probe = new Probe(window, area, destination.absoluteFilePath());
+	probe->capture();
+	const auto timer = new QTimer(probe);
+	timer->setTimerType(Qt::PreciseTimer);
+	QObject::connect(timer, &QTimer::timeout, probe, [=] { probe->capture(); });
+	timer->start(16);
+	QTimer::singleShot(1600, probe, [=] {
+		timer->stop();
+		probe->capture();
+		const auto count = int(probe->_frames.size());
+		const auto size = probe->_frames.front().size();
+		auto sheet = QImage(size.width(), (size.height() + 24) * 14,
+			QImage::Format_RGB32);
+		sheet.fill(Qt::black);
+		auto samples = json::array();
+		for (auto i = 0; i != count; ++i) {
+			const auto &frame = probe->_frames[i];
+			auto pixels = json::array();
+			for (auto x = 1; x != 5; ++x) {
+				const auto color = frame.pixelColor(frame.width() * x / 5,
+					frame.height() * 3 / 5);
+				pixels.push_back(json::array({ color.red(), color.green(), color.blue() }));
+			}
+			samples.push_back(json{ { "elapsedMs", probe->_times[i] }, { "pixels", pixels } });
+		}
+		{
+			auto painter = QPainter(&sheet);
+			painter.setPen(Qt::white);
+			for (auto row = 0; row != 14; ++row) {
+				const auto index = row * (count - 1) / 13;
+				const auto y = row * (size.height() + 24);
+				painter.drawText(8, y + 18, QString::number(probe->_times[index]) + u" ms"_q);
+				painter.drawImage(0, y + 24, probe->_frames[index]);
+			}
+		}
+		const auto saved = sheet.save(probe->_path, "WEBP", 40);
+		finishJob(probe->_id, saved, json{
+			{ "path", probe->_path.toStdString() }, { "frames", count }, { "samples", samples },
+		});
+		probe->deleteLater();
+	});
+	return jobStarted(probe->_id);
+}
 
 [[nodiscard]] QColor transitionPixel(
 		ExtrasUi::ImageTransition &transition,
@@ -183,6 +286,7 @@ constexpr auto kMaxSpeed = 10.;
 
 const HandlerMap &animHandlers() {
 	static const auto result = HandlerMap{
+		{ u"anim.sample-window"_q, &sampleWindow },
 		{ u"anim.check-image-transition"_q, &checkImageTransition },
 		{ u"anim.sample-media-progress"_q, &sampleMediaProgress },
 		{ u"anim.speed"_q, &animSpeed },

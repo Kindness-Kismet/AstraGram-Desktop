@@ -130,6 +130,7 @@ public:
 		return _peer;
 	}
 	Dialogs::RowDescriptor activeChat() const override;
+	not_null<Ui::RpWidget*> transitionContent() override;
 	bool preventsClose(Fn<void()> &&continueCallback) const override;
 	bool hasPausedVoiceRecording() const override;
 
@@ -293,6 +294,8 @@ private:
 
 	void resizeEvent(QResizeEvent *e) override;
 	void paintEvent(QPaintEvent *e) override;
+	void paintContent(QPaintEvent *e);
+	void paintCompose(QPaintEvent *e);
 	[[nodiscard]] bool contentOverlapped(const QRect &globalRect) override;
 
 	void showAnimatedHook(
@@ -580,6 +583,8 @@ private:
 	std::shared_ptr<SendActionPainter> _sendAction;
 	std::shared_ptr<Ui::ChatTheme> _theme;
 	QPointer<ListWidget> _inner;
+	object_ptr<Ui::RpWidget> _content;
+	object_ptr<Ui::RpWidget> _composePaint;
 	object_ptr<TopBarWidget> _topBar;
 	object_ptr<Ui::PlainShadow> _topBarShadow;
 	object_ptr<Ui::InnerDropdown> _membersDropdown = { nullptr };

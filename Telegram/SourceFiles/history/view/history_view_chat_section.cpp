@@ -6,6 +6,8 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_chat_section.h"
+#include "window/section_layer.h"
+#include "window/section_background.h"
 #include "window/window_animation_snapshot.h"
 
 #include "history/admin_log/history_admin_log_section.h"
@@ -369,8 +371,14 @@ ChatWidget::ChatWidget(
 		_history,
 		_repliesRootId)
 	: nullptr)
-, _topBar(this, controller)
-, _topBarShadow(this)
+, _content(Window::CreateSectionLayer(this, [=](QPaintEvent *e) {
+	paintContent(e);
+}))
+, _composePaint(Window::CreateSectionLayer(this, [=](QPaintEvent *e) {
+	paintCompose(e);
+}))
+, _topBar(_content.data(), controller)
+, _topBarShadow(_content.data())
 , _membersDropdownShowTimer([=] { showMembersDropdown(); })
 , _paidReactionToast(std::make_unique<HistoryView::PaidReactionToast>(
 	this,
@@ -458,10 +466,10 @@ ChatWidget::ChatWidget(
 			: BottomControlsMode::History),
 	}))
 , _scroll(std::make_unique<Ui::ElasticScroll>(
-	this,
+	_content.data(),
 	controller->chatStyle()->value(lifetime(), st::historyScroll)))
 , _pullToNext(std::make_unique<PullToNextChannel>(
-	this,
+	_content.data(),
 	_scroll.get(),
 	controller,
 	[=] {
@@ -473,6 +481,10 @@ ChatWidget::ChatWidget(
 		_scroll.get(),
 		controller->chatStyle(),
 		static_cast<HistoryView::CornerButtonsDelegate*>(this)) {
+	_content->show();
+	_composePaint->setAttribute(Qt::WA_TransparentForMouseEvents);
+	_composePaint->show();
+
 	controller->chatStyle()->paletteChanged(
 	) | rpl::on_next([=] {
 		_scroll->updateBars();
@@ -558,7 +570,7 @@ ChatWidget::ChatWidget(
 		static_cast<ListDelegate*>(this)));
 	_inner->lower();
 	_topControls = std::make_unique<TopControls>(
-		this,
+		_content.data(),
 		TopControlsDescriptor{
 			.controller = controller,
 			.history = _history.get(),
@@ -621,6 +633,7 @@ ChatWidget::ChatWidget(
 		.list = _inner.data(),
 		.scrolls = _scroll->scrolls(),
 		.paletteChanged = controller->chatStyle()->paletteChanged(),
+		.backgroundPaintRequests = _content->paintRequest(),
 		.paintBackground = SectionFrostedBackground(this, [=] {
 			return _theme.get();
 		}),
@@ -4649,18 +4662,31 @@ bool ChatWidget::contentOverlapped(const QRect &globalRect) {
 void ChatWidget::paintEvent(QPaintEvent *e) {
 	if (animatingShow()) {
 		SectionWidget::paintEvent(e);
-		return;
-	} else if (controller()->contentOverlapped(this, e)) {
+	}
+}
+
+not_null<Ui::RpWidget*> ChatWidget::transitionContent() {
+	return _content.data();
+}
+
+void ChatWidget::paintContent(QPaintEvent *e) {
+	if (animatingShow() || controller()->contentOverlapped(this, e)) {
 		return;
 	}
 
 	const auto aboveHeight = _topBar->height();
 	const auto bg = e->rect().intersected(
 		QRect(0, aboveHeight, width(), height() - aboveHeight));
-	SectionWidget::PaintBackground(controller(), _theme.get(), this, bg);
+	Window::PaintSectionBackground(this, _theme.get(), _content.data(), bg);
+}
+
+void ChatWidget::paintCompose(QPaintEvent *e) {
+	if (animatingShow() || controller()->contentOverlapped(this, e)) {
+		return;
+	}
 
 	if (_suggestOptions && !_bottom->isButtonActive()) {
-		auto p = Painter(this);
+		auto p = Painter(_composePaint.data());
 		const auto backy = _composeControlsTop
 			- st::historyReplyHeight;
 		const auto backh = st::historyReplyHeight;
@@ -4780,6 +4806,8 @@ void ChatWidget::setPinnedVisibility(bool shown) {
 
 void ChatWidget::showAnimatedHook(
 		const Window::SectionSlideParams &params) {
+	_content->hideChildren();
+	_content->show();
 	if (!params.fromBottom) {
 		_topBar->show();
 	}
@@ -4792,6 +4820,7 @@ void ChatWidget::showAnimatedHook(
 }
 
 void ChatWidget::showFinishedHook() {
+	_content->showChildren();
 	_topBar->setAnimatingMode(false);
 	const auto replaced = _bottom->hasOpenChatButton()
 		|| _bottom->hasAboutHiddenAuthor()

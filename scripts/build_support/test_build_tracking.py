@@ -50,6 +50,18 @@ class BuildTrackingTests(unittest.TestCase):
         self.recover()
         self.assertEqual(command.read_text(encoding="utf-16"), "")
 
+    def test_failed_pch_load_with_existing_object_is_retried(self):
+        command = self.write("CL.command.1.tlog",
+                             "^good.cpp\n/Yu\n^failed.cpp\n/Yu\n")
+        self.write("CL.read.1.tlog",
+                   "^good.cpp\nCMAKE_PCH.PCH\ngood.h\n^failed.cpp\nCMAKE_PCH.PCH\n")
+        self.write("CL.write.1.tlog",
+                   "^good.cpp|failed.cpp\ngood.obj\nfailed.obj\n")
+        (self.tracking.parent / "failed.obj").write_bytes(b"old object")
+        self.assertEqual(len(self.recover()), 1)
+        self.assertEqual(command.read_text(encoding="utf-16"), "^good.cpp\n/Yu\n")
+        self.assertEqual((self.tracking.parent / "failed.obj").read_bytes(), b"old object")
+
     def test_other_configuration_is_untouched(self):
         command = self.write("CL.command.1.tlog", "^failed.cpp\n/c\n")
         before = command.read_bytes()

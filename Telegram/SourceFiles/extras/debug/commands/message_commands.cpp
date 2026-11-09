@@ -13,6 +13,7 @@
 #include "data/data_document.h"
 #include "data/data_document_media.h"
 #include "data/data_folder.h"
+#include "data/data_histories.h"
 #include "data/data_msg_id.h"
 #include "data/data_peer.h"
 #include "data/data_session.h"
@@ -535,6 +536,90 @@ using json = nlohmann::json;
 	return Result::Ok(Compact(result));
 }
 
+[[nodiscard]] Result deleteMessages(const QStringList &args) {
+	const auto usage = u"usage: message.delete <peerId> <messageId>... [--account <index>] [--revoke]"_q;
+	if (args.size() < 2) {
+		return Result::Err(usage);
+	}
+	auto session = ActiveSession();
+	auto accountSpecified = false;
+	auto revoke = false;
+	auto messageIds = std::vector<MsgId>();
+	for (auto i = 1; i < args.size(); ++i) {
+		const auto &arg = args[i];
+		if (arg == u"--account"_q) {
+			if (accountSpecified || ++i >= args.size()) {
+				return Result::Err(usage);
+			}
+			auto ok = false;
+			const auto index = args[i].toInt(&ok);
+			if (!ok || index < 0) {
+				return Result::Err(u"expected a non-negative account index"_q);
+			}
+			accountSpecified = true;
+			session = sessionByIndex(index);
+			continue;
+		}
+		if (arg == u"--revoke"_q) {
+			if (revoke) {
+				return Result::Err(usage);
+			}
+			revoke = true;
+			continue;
+		}
+		auto ok = false;
+		const auto id = MsgId(arg.toLongLong(&ok));
+		if (!ok || !id) {
+			return Result::Err(u"expected a non-zero integer messageId"_q);
+		}
+		if (!ranges::contains(messageIds, id)) {
+			messageIds.push_back(id);
+		}
+	}
+	if (messageIds.empty()) {
+		return Result::Err(usage);
+	}
+	if (!session || isSimulationSession(session)) {
+		return Result::Err(u"an authenticated session is required"_q);
+	}
+	auto peerOk = false;
+	const auto peerIdValue = args.front().toLongLong(&peerOk);
+	const auto peer = (peerOk && peerIdValue)
+		? ResolvePeer(session, peerIdValue)
+		: nullptr;
+	if (!peer) {
+		return Result::Err(u"peer not found, run chat.list first"_q);
+	}
+	const auto now = base::unixtime::now();
+	auto ids = MessageIdsList();
+	auto returnedIds = json::array();
+	for (const auto id : messageIds) {
+		const auto item = session->data().message(peer->id, id);
+		if (!item || item->history()->peer != peer) {
+			return Result::Err(u"message %1 is not loaded in the specified peer"_q.arg(id.bare));
+		}
+		if (!item->canDelete()) {
+			return Result::Err(u"message %1 cannot be deleted"_q.arg(id.bare));
+		}
+		// 超级群和频道的删除本来就对所有人有效，不提供单独撤回资格。
+		if (revoke && !item->isDeleted() && !peer->isChannel()
+			&& !item->canDeleteForEveryone(now)) {
+			return Result::Err(u"message %1 cannot be deleted for everyone"_q.arg(id.bare));
+		}
+		ids.push_back(item->fullId());
+		returnedIds.push_back(id.bare);
+	}
+	const auto result = json{
+		{ "state", "submitted" },
+		{ "accountUserId", session->userId().bare },
+		{ "peerId", peer->id.value },
+		{ "ids", std::move(returnedIds) },
+		{ "revoke", revoke },
+	};
+	session->data().histories().deleteMessages(ids, revoke);
+	return Result::Ok(Compact(result));
+}
+
 [[nodiscard]] PeerData *resolveNavigationPeer(
 		not_null<Main::Session*> session,
 		int64 idValue) {
@@ -1005,6 +1090,7 @@ const HandlerMap &MessageHandlers() {
 #endif
 		{ u"chat.list"_q, &Chats },
 		{ u"message.send"_q, &SendTextMessage },
+		{ u"message.delete"_q, &deleteMessages },
 		{ u"chat.open"_q, &OpenChat },
 		{ u"chat.search-state"_q, &searchState },
 		{ u"chat.pinned"_q, &openPinned },
