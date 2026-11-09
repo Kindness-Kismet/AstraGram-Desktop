@@ -616,6 +616,7 @@ void ChatTheme::setBackground(ChatThemeBackground &&background) {
 	_mutableBackground = std::move(background);
 	_backgroundAverage = CountBackgroundAverage(_mutableBackground);
 	_backgroundState = {};
+	_cachedBackgroundRequest = {};
 	_backgroundNext = {};
 	_backgroundFade.stop();
 	if (_cacheBackgroundTimer) {
@@ -625,6 +626,7 @@ void ChatTheme::setBackground(ChatThemeBackground &&background) {
 }
 
 void ChatTheme::updateBackgroundImageFrom(ChatThemeBackground &&background) {
+	_cachedBackgroundRequest = {};
 	_mutableBackground.key = background.key;
 	_mutableBackground.prepared = std::move(background.prepared);
 	_mutableBackground.giftSymbols = std::move(background.giftSymbols);
@@ -728,21 +730,24 @@ const BackgroundState &ChatTheme::backgroundState(QSize area) {
 	if (area.isEmpty()) {
 		return _backgroundState;
 	}
+	// 返回已有缓存尺寸时也更新目标，避免后台结果重新切回过期尺寸。
+	const auto areaChanged = (_cacheBackgroundArea != area);
+	_cacheBackgroundArea = area;
 	if (_backgroundState.now.pixmap.isNull()
 		&& !background().gradientForFill.isNull()) {
 		// We don't support direct painting of patterned gradients.
 		// So we need to sync-generate cache image here.
-		_cacheBackgroundArea = area;
 		setCachedBackground(CacheBackground(cacheBackgroundRequest(area)));
 		_cacheBackgroundTimer->cancel();
 	} else if (_backgroundState.now.area != area) {
-		if (_cacheBackgroundArea != area
+		if (areaChanged
 			|| (!_cacheBackgroundTimer->isActive()
 				&& !_backgroundCachingRequest)) {
-			_cacheBackgroundArea = area;
 			_lastBackgroundAreaChangeTime = crl::now();
 			_cacheBackgroundTimer->callOnce(kCacheBackgroundFastTimeout);
 		}
+	} else {
+		_cacheBackgroundTimer->cancel();
 	}
 	generateNextBackgroundRotation();
 	return _backgroundState;
@@ -750,6 +755,7 @@ const BackgroundState &ChatTheme::backgroundState(QSize area) {
 
 void ChatTheme::clearBackgroundState() {
 	_backgroundState = BackgroundState();
+	_cachedBackgroundRequest = {};
 	_backgroundFade.stop();
 }
 
@@ -842,20 +848,27 @@ void ChatTheme::cacheBackgroundAsync(
 		crl::on_main(weak, [=, result = CacheBackground(request)]() mutable {
 			if (done) {
 				done(std::move(result));
-			} else if (const auto request = cacheBackgroundRequest(
-					_cacheBackgroundArea)) {
-				if (_backgroundCachingRequest != request) {
-					cacheBackgroundAsync(request);
-				} else {
-					_backgroundCachingRequest = {};
-					setCachedBackground(std::move(result));
-				}
+				return;
 			}
+			_backgroundCachingRequest = {};
+			const auto latest = cacheBackgroundRequest(_cacheBackgroundArea);
+			if (!latest) {
+				return;
+			}
+			if (request != latest) {
+				if (_cachedBackgroundRequest != latest
+					|| _backgroundState.now.pixmap.isNull()) {
+					cacheBackgroundAsync(latest);
+				}
+				return;
+			}
+			setCachedBackground(std::move(result));
 		});
 	});
 }
 
 void ChatTheme::setCachedBackground(CacheBackgroundResult &&cached) {
+	_cachedBackgroundRequest = cacheBackgroundRequest(cached.area);
 	_backgroundNext = {};
 
 	if (background().gradientForFill.isNull()

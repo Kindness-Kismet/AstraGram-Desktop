@@ -866,7 +866,41 @@ private:
 			record(14, after.histories <= after.maxHistories && after.evictions > before.evictions,
 				{ { "before", before.histories }, { "after", after.histories },
 					{ "limit", after.maxHistories }, { "evictions", after.evictions - before.evictions } });
-			deletionReadOrdering();
+			messageLinkAnchor();
+		});
+	}
+
+	void messageLinkAnchor() {
+		const auto peer = user(80);
+		const auto query = latest(peer);
+		const auto first = message(peer, 801);
+		const auto second = message(peer, 802);
+		const auto target = message(peer, 803);
+		put(query, { second, first }, 100, false);
+		read(query, [=, this](std::optional<Slice> tail) {
+			const auto staleTail = tail && tail->atBottom;
+			auto jump = query;
+			jump.latest = false;
+			jump.allowNearest = false;
+			jump.offsetId = IdFromMessage(target);
+			jump.addOffset = -jump.limit / 2;
+			read(jump, [=, this](std::optional<Slice> missing) {
+				auto before = jump;
+				before.addOffset = 0;
+				read(before, [=, this](std::optional<Slice> older) {
+					const auto pagination = describeSlice(older).ids
+						== std::vector<MsgId>{ IdFromMessage(second), IdFromMessage(first) };
+					put(jump, { target, second, first }, 100, false);
+					read(jump, [=, this](std::optional<Slice> refreshed) {
+						const auto found = ranges::contains(
+							describeSlice(refreshed).ids, IdFromMessage(target));
+						record(29, staleTail && !missing && pagination && found,
+							{ { "staleTail", staleTail }, { "waitForServer", !missing },
+								{ "paginationPreserved", pagination }, { "targetFoundAfterRefresh", found } });
+						deletionReadOrdering();
+					});
+				});
+			});
 		});
 	}
 
