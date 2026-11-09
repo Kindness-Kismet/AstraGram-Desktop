@@ -499,6 +499,8 @@ void HistoryWidget::hideChildWidgets() {
 		_businessBotStatus->hide();
 	}
 	hideChildren();
+	_content->hideChildren();
+	_content->show();
 }
 
 void HistoryWidget::hideSelectorControlsAnimated() {

@@ -2011,15 +2011,24 @@ Fn<void()> MainWidget::prepareChatSwitchFade(const SectionShow &params) {
 		return nullptr;
 	}
 	const auto source = _mainSection
-		? static_cast<QWidget*>(_mainSection.data())
+		? static_cast<Ui::RpWidget*>(_mainSection.data())
 		: (params.inPlaceFade && isOneColumn() && _history->isHidden() && _dialogs)
-		? static_cast<QWidget*>(_dialogs.get())
-		: static_cast<QWidget*>(_history.get());
+		? static_cast<Ui::RpWidget*>(_dialogs.get())
+		: static_cast<Ui::RpWidget*>(_history.get());
 	if (source->isHidden()) {
 		return nullptr;
 	}
 	return prepareSectionFade(
-		source->geometry(),
+		_mainSection
+			? _mainSection->transitionContent()
+			: (source == _history.get())
+			? _history->transitionContent()
+			: not_null(source),
+		[=] {
+			return _mainSection
+				? _mainSection->transitionContent()
+				: _history->transitionContent();
+		},
 		_chatSwitchFade,
 		u"chat-switch-fade"_q);
 }
@@ -2033,26 +2042,28 @@ Fn<void()> MainWidget::prepareThirdSectionFade() {
 		return nullptr;
 	}
 	return prepareSectionFade(
-		_thirdSection->geometry(),
+		_thirdSection->transitionContent(),
+		[=] { return _thirdSection->transitionContent(); },
 		_thirdSectionFade,
 		u"third-section-fade"_q);
 }
 
 Fn<void()> MainWidget::prepareSectionFade(
-		QRect geometry,
+		not_null<Ui::RpWidget*> source,
+		Fn<not_null<Ui::RpWidget*>()> target,
 		base::unique_qptr<Ui::RpWidget> &fade,
 		const QString &name) {
 	floatPlayerHideAll();
-	// 截取整块区域，连续切换时正在淡出的上一张旧画面也包含在内。
+	// 内容层包含仍在淡出的旧画面，独立输入区始终保持实时绘制。
 	auto cache = Core::App().screenshotProtection().grabForAnimation(
-		this,
-		geometry);
+		source);
 	floatPlayerShowVisible();
 	return [=, &fade, cache = std::move(cache)] {
+		const auto content = target();
 		// 旧画面盖在切换后的实时内容上淡出，过渡中到达的内容同样随之淡入。
 		fade.reset(Window::ShowFadeOutAnimation(
-			this,
-			geometry,
+			content,
+			content->rect(),
 			cache,
 			st::extrasInPlaceFadeDuration).get());
 		fade->setObjectName(name);

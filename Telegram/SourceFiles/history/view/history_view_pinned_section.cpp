@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_pinned_section.h"
+#include "window/section_background.h"
 #include "window/window_animation_snapshot.h"
 #include "ui/chat/floating_bar.h"
 
@@ -270,6 +271,7 @@ PinnedWidget::PinnedWidget(
 		.list = _inner.data(),
 		.scrolls = _scroll->scrolls(),
 		.paletteChanged = controller->chatStyle()->paletteChanged(),
+		.backgroundPaintRequests = paintRequest(),
 		.paintBackground = SectionFrostedBackground(this, [=] {
 			return _theme.get();
 		}),
@@ -744,7 +746,7 @@ void PinnedWidget::paintEvent(QPaintEvent *e) {
 	const auto aboveHeight = _topBar->height();
 	const auto bg = e->rect().intersected(
 		QRect(0, aboveHeight, width(), height() - aboveHeight));
-	SectionWidget::PaintBackground(controller(), _theme.get(), this, bg);
+	Window::PaintSectionBackground(this, _theme.get(), this, bg);
 }
 
 void PinnedWidget::onScroll() {

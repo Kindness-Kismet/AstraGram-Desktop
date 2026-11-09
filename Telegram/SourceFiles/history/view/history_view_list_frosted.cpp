@@ -31,7 +31,7 @@ std::unique_ptr<ExtrasUi::FloatingSurfaceHost> SetupListFrostedBackground(
 			return list->paintBackdrop(p, clip.translated(-position));
 		});
 	const auto host = result.get();
-	root->paintRequest() | rpl::on_next([=](QRect clip) {
+	std::move(descriptor.backgroundPaintRequests) | rpl::on_next([=](QRect clip) {
 		host->invalidate(clip);
 	}, host->lifetime());
 	list->paintRequest() | rpl::on_next([=](QRect clip) {

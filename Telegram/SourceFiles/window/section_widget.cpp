@@ -398,11 +398,6 @@ void SectionWidget::PaintBackground(
 		int fromy,
 		QRect clip,
 		bool paused) {
-	// 只替换主聊天区壁纸，预览和离屏导出保留原背景。
-	if (dynamic_cast<AbstractSectionWidget*>(widget.get())
-		&& ExtrasFeatures::WindowMaterial::isActive(widget.get())) {
-		return;
-	}
 	auto p = QPainter(widget);
 	if (fromy) {
 		p.translate(0, fromy);

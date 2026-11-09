@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "window/section_background.h"
 
 
 #include "api/api_compose_with_ai.h"
@@ -518,8 +519,11 @@ bool HistoryWidget::paintShowAnimationFrame() {
 }
 
 void HistoryWidget::paintEvent(QPaintEvent *e) {
-	if (paintShowAnimationFrame()
-		|| controller()->contentOverlapped(this, e)) {
+	paintShowAnimationFrame();
+}
+
+void HistoryWidget::paintContent(QPaintEvent *e) {
+	if (_showAnimation || controller()->contentOverlapped(this, e)) {
 		return;
 	}
 	if (hasPendingResizedItems()) {
@@ -528,17 +532,17 @@ void HistoryWidget::paintEvent(QPaintEvent *e) {
 
 	// 未打开聊天时空白区与会话列表同色，系统材质生效时同样透出材质；打开后才画聊天背景。
 	if (_history) {
-		Window::SectionWidget::PaintBackground(
-			controller(),
-			controller()->currentChatTheme(),
+		Window::PaintSectionBackground(
 			this,
+			controller()->currentChatTheme(),
+			_content.data(),
 			e->rect());
 	} else if (!ExtrasFeatures::WindowMaterial::isActive(this)) {
-		QPainter(this).fillRect(e->rect(), st::dialogsBg);
+		QPainter(_content.data()).fillRect(e->rect(), st::dialogsBg);
 	}
 	invalidateFrostedBackground(e->rect());
 
-	Painter p(this);
+	Painter p(_content.data());
 	if (!_list) {
 		const auto w = 0
 			+ st::msgServiceFont->width(tr::lng_willbe_history(tr::now))

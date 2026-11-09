@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/admin_log/history_admin_log_section.h"
+#include "window/section_background.h"
 
 #include "extras/ui/components/chat_surface_button.h"
 #include "extras/ui/components/floating_surface_host.h"
@@ -707,7 +708,7 @@ void Widget::paintEvent(QPaintEvent *e) {
 	//_historyDownShown.step(ms);
 
 	const auto clip = e->rect();
-	SectionWidget::PaintBackground(controller(), _inner->theme(), this, clip);
+	Window::PaintSectionBackground(this, _inner->theme(), this, clip);
 }
 
 void Widget::onScroll() {
