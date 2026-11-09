@@ -307,12 +307,16 @@ void ConversationCache::loadHistory(
 			entry.peers = std::move(peers);
 			entry.loaded = true;
 			touchHistory(entry);
+			// 先移除加载期间已删除的消息，元数据和先排队的读取不能恢复它们。
+			const auto deleted = base::take(entry.pendingDeletedIds);
+			deleteMessagesFromEntry(key, entry, deleted);
 			restoreHistoryMetadata(key, entry);
 #ifdef _DEBUG
 			traceHistory("loaded", { .key = key });
 #endif
 			for (auto &callback : base::take(entry.pending)) {
 				callback.done(entry);
+				deleteMessagesFromEntry(key, entry, deleted);
 			}
 		};
 		std::make_shared<PeerRestorer>(
@@ -982,15 +986,32 @@ void ConversationCache::applyMessage(const MTPMessage &message, bool isNew) {
 	});
 }
 
-void ConversationCache::messagesDeleted(PeerId peer, const QVector<MTPint> &ids) {
+void ConversationCache::messagesDeleted(
+		PeerId peer,
+		const QVector<MTPint> &ids,
+		Fn<void()> done) {
+	if (ids.empty() || !_enabled || _restoring) {
+		if (done) {
+			done();
+		}
+		return;
+	}
 	if (_preloading && (!peer || _preloading->key.peer == peer)) {
 		cancelPreload();
 		_preloadTimer.callOnce(250);
 	}
-	if (!_enabled || _restoring) {
-		return;
-	}
+	const auto requestId = ++_deletionRequestId;
+	_deletionCallbacks.emplace(requestId, std::move(done));
+	const auto complete = [=] {
+		if (auto callback = _deletionCallbacks.take(requestId); callback && *callback) {
+			(*callback)();
+		}
+	};
 	withIndex([=] {
+		if (!_enabled || _restoring) {
+			complete();
+			return;
+		}
 		auto byPeer = base::flat_map<PeerId, QVector<MTPint>>();
 		for (const auto id : ids) {
 			const auto i = _nonChannelPeers.find(id.v);
@@ -999,41 +1020,84 @@ void ConversationCache::messagesDeleted(PeerId peer, const QVector<MTPint> &ids)
 				byPeer[target].push_back(id);
 			}
 		}
-		const auto keys = _historyKeys;
+		auto keys = _historyKeys;
+		for (const auto &[key, entry] : _histories) {
+			if (byPeer.contains(key.peer)) {
+				keys.emplace(key);
+			}
+		}
+		const auto clearPreviews = [=] {
+			for (const auto &[target, messages] : byPeer) {
+				if (const auto preview = _previewMessages.find(target);
+					preview != end(_previewMessages)
+					&& ranges::contains(messages, preview->second.bare, &MTPint::v)) {
+					_previewMessages.erase(preview);
+				}
+				const auto last = _lastMessages.find(target);
+				if (last != end(_lastMessages)
+					&& ranges::contains(messages, IdFromMessage(last->second).bare, &MTPint::v)) {
+					_lastMessages.erase(last);
+				}
+			}
+		};
+		clearPreviews();
+		const auto pending = std::make_shared<int>(1);
+		const auto oneDone = [=] {
+			if (!--*pending) {
+				clearPreviews();
+				complete();
+			}
+		};
 		for (const auto &[target, messages] : byPeer) {
-			if (const auto preview = _previewMessages.find(target);
-				preview != end(_previewMessages)
-				&& ranges::contains(messages, preview->second.bare, &MTPint::v)) {
-				_previewMessages.erase(preview);
-			}
-			const auto last = _lastMessages.find(target);
-			if (last != end(_lastMessages) && ranges::contains(messages, IdFromMessage(last->second).bare, &MTPint::v)) {
-				_lastMessages.erase(last);
-			}
 			for (const auto key : keys) {
 				if (key.peer == target) {
-					deleteMessages(key, messages);
+					++*pending;
+					deleteMessages(key, messages, oneDone);
 				}
 			}
 		}
 		scheduleSave();
+		oneDone();
 	});
 }
 
-void ConversationCache::deleteMessages(HistoryCacheKey key, const QVector<MTPint> &ids) {
-	loadHistory(key, [=](HistoryEntry &entry) {
-		for (const auto id : ids) {
-			if (entry.messages.remove(id.v)) {
-				entry.count = std::max(0, entry.count - 1);
-				entry.dirty = true;
-			}
-			if (!peerIsChannel(key.peer)) {
-				_nonChannelPeers.remove(id.v);
-			}
+void ConversationCache::deleteMessages(
+		HistoryCacheKey key,
+		const QVector<MTPint> &ids,
+		Fn<void()> done) {
+	auto removed = base::flat_set<MsgId>();
+	auto &entry = _histories[key];
+	for (const auto id : ids) {
+		removed.emplace(id.v);
+		if (!entry.loaded) {
+			entry.pendingDeletedIds.emplace(id.v);
 		}
-		_indexDirty = true;
-		scheduleSave();
-	});
+	}
+	loadHistory(key, [=](HistoryEntry &entry) {
+		deleteMessagesFromEntry(key, entry, removed);
+		// 等本轮加载回调执行完，再由调用方清理可能重建的内存消息。
+		crl::on_main(_session, done);
+	}, done);
+}
+
+void ConversationCache::deleteMessagesFromEntry(
+		HistoryCacheKey key,
+		HistoryEntry &entry,
+		const base::flat_set<MsgId> &ids) {
+	if (ids.empty()) {
+		return;
+	}
+	for (const auto id : ids) {
+		if (entry.messages.remove(id)) {
+			entry.count = std::max(0, entry.count - 1);
+			entry.dirty = true;
+		}
+		if (!peerIsChannel(key.peer)) {
+			_nonChannelPeers.remove(id);
+		}
+	}
+	_indexDirty = true;
+	scheduleSave();
 }
 
 void ConversationCache::historyCleared(PeerId peer) {
