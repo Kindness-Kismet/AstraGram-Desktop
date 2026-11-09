@@ -512,6 +512,12 @@ std::optional<CachedHistorySlice> ConversationCache::slice(
 			++i;
 		}
 	}
+	// 旧缓存的末尾范围不能证明目标消息不存在，精确定位缺少目标时等待网络。
+	if (!query.latest && !query.allowNearest && query.offsetId
+		&& query.addOffset < 0 && query.addOffset > -query.limit
+		&& !entry.messages.contains(query.offsetId)) {
+		return std::nullopt;
+	}
 	if (!query.key.topicRootId && !query.key.sublistPeer
 		&& !entry.ranges.empty() && !entry.messages.empty()
 		&& entry.ranges.back().till == ServerMaxMsgId) {
