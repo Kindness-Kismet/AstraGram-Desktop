@@ -409,8 +409,8 @@ void MainWindow::setupMain(
 	_main->controller()->showByInitialId(
 		Window::SectionShow::Way::ClearStack,
 		singlePeerShowAtMsgId);
-	// 首屏尺寸由首次显示确定，后续切换先完成分类栏布局再保存画面。
-	if (animated) {
+	// 首次显示后尺寸已确定，密码解锁创建主界面时也要初始化分类栏。
+	if (controller().firstShown()) {
 		_main->controller()->updateFiltersLayout();
 	}
 	if (_passcodeLock || _setupEmailLock) {

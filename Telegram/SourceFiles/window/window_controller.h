@@ -67,6 +67,9 @@ public:
 
 	void firstShow();
 	void finishFirstShow();
+	[[nodiscard]] bool firstShown() const {
+		return _firstShown;
+	}
 
 	void setupPasscodeLock();
 	void clearPasscodeLock();
