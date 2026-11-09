@@ -233,6 +233,7 @@ private:
 	std::optional<QColor> _backgroundAverage;
 	BackgroundState _backgroundState;
 	Animations::Simple _backgroundFade;
+	CacheBackgroundRequest _cachedBackgroundRequest;
 	CacheBackgroundRequest _backgroundCachingRequest;
 	CacheBackgroundRequest _nextCachingRequest;
 	CacheBackgroundResult _backgroundNext;
