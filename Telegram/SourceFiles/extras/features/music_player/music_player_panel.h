@@ -3,6 +3,7 @@
 #include "data/data_audio_msg_id.h"
 #include "ui/rp_widget.h"
 #include "base/object_ptr.h"
+#include "base/unique_qptr.h"
 
 namespace Ui {
 class LinkButton;
@@ -121,7 +122,7 @@ private:
 	std::unique_ptr<Media::View::PlaybackProgress> _playback;
 	std::unique_ptr<Media::Player::SpeedController> _speedController;
 	std::unique_ptr<Ui::BoxShadow> _shadow;
-	std::unique_ptr<Ui::PopupMenu> _coverMenu;
+	base::unique_qptr<Ui::PopupMenu> _coverMenu;
 	rpl::event_stream<> _collapseRequests;
 	rpl::event_stream<AudioMsgId> _closeRequests;
 };

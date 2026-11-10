@@ -709,7 +709,7 @@ void CompactPanel::leaveEventHook(QEvent *event) {
 
 void CompactPanel::contextMenuEvent(QContextMenuEvent *event) {
 	if (!coverRect().contains(event->pos()) || _cover->originalImage().isNull()) { return; }
-	_coverMenu = std::make_unique<Ui::PopupMenu>(this, st::defaultPopupMenu);
+	_coverMenu = base::make_unique_q<Ui::PopupMenu>(this, st::defaultPopupMenu);
 	_coverMenu->addAction(tr::extras_MusicSaveCover(tr::now), [=] { saveCover(); });
 	_coverMenu->popup(event->globalPos());
 }

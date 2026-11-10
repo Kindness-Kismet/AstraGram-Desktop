@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base/timer.h"
+#include "base/unique_qptr.h"
 #include "ui/rp_widget.h"
 #include "media/audio/media_audio_capture_common.h"
 
@@ -71,7 +72,7 @@ private:
 	const std::unique_ptr<Ui::AbstractButton> _pause;
 	const std::unique_ptr<Ui::AbstractButton> _confirm;
 	const std::unique_ptr<Ui::AbstractButton> _play;
-	std::unique_ptr<Ui::PopupMenu> _menu;
+	base::unique_qptr<Ui::PopupMenu> _menu;
 	State _state = State::Recording;
 	Drag _drag = Drag::None;
 	VoiceRecordPreview _preview;

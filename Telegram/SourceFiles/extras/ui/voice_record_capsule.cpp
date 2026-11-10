@@ -364,7 +364,7 @@ bool VoiceRecordCapsule::takeOnce() {
 }
 
 void VoiceRecordCapsule::showMenu(QPoint position) {
-	_menu = std::make_unique<Ui::PopupMenu>(this);
+	_menu = base::make_unique_q<Ui::PopupMenu>(this);
 	const auto action = _menu->addAction(tr::lng_ttl_period_once(tr::now), [=] {
 		_once = !_once;
 		_confirm->update();
