@@ -67,7 +67,7 @@ CompactPanel::CompactPanel(
 , _coverButton(this)
 , _collapse(this, PlayerIcon::Collapse, u"music.collapse"_q, tr::extras_MusicCollapse(tr::now))
 , _minimize(this, PlayerIcon::Minimize, u"music.minimize"_q, tr::extras_MusicMinimize(tr::now))
-, _close(this, PlayerIcon::Close, u"music.close"_q, tr::extras_MusicClose(tr::now))
+, _close(this, PlayerIcon::Close, u"music.close"_q, tr::lng_close(tr::now))
 , _expand(this, PlayerIcon::Expand, u"music.expand"_q, tr::extras_MusicExpand(tr::now))
 , _previous(this, PlayerIcon::Previous, u"music.previous"_q, tr::extras_MusicPrevious(tr::now))
 , _play(this, PlayerIcon::Play, u"music.play"_q, tr::extras_MusicPlay(tr::now))
@@ -119,10 +119,7 @@ CompactPanel::CompactPanel(
 	});
 	_collapse->setClickedCallback([=] { setExpanded(false); });
 	_minimize->setClickedCallback([=] { _collapseRequests.fire({}); });
-	_close->setClickedCallback([=] {
-		instance()->pause(_type);
-		_closeRequests.fire_copy(_track);
-	});
+	_close->setClickedCallback([=] { stopAndClose(); });
 	_expand->setClickedCallback([=] { setExpanded(true); });
 	_previous->setClickedCallback([=] { instance()->previous(_type); });
 	_next->setClickedCallback([=] { instance()->next(_type); });
@@ -385,6 +382,19 @@ void CompactPanel::dismiss() {
 	hide();
 }
 
+void CompactPanel::stopAndClose() {
+	cancelSeek(false);
+	if (_type == AudioMsgId::Type::Voice) {
+		const auto songState = instance()->getState(kSong);
+		if (instance()->current(kSong) == songState.id
+			&& !IsStoppedOrStopping(songState.state)) {
+			instance()->stop(AudioMsgId::Type::Voice);
+			return;
+		}
+	}
+	instance()->stopAndClose();
+}
+
 void CompactPanel::showMini(QPoint anchor) {
 	setExpanded(false);
 	if (!_positioned) {
@@ -463,7 +473,6 @@ void CompactPanel::showSource() {
 }
 
 rpl::producer<> CompactPanel::collapseRequests() const { return _collapseRequests.events(); }
-rpl::producer<AudioMsgId> CompactPanel::closeRequests() const { return _closeRequests.events(); }
 
 void CompactPanel::saveCover() {
 	const auto cover = _cover->originalImage();
@@ -631,8 +640,7 @@ void CompactPanel::paintEvent(QPaintEvent *event) {
 
 void CompactPanel::closeEvent(QCloseEvent *event) {
 	event->ignore();
-	instance()->pause(_type);
-	_closeRequests.fire_copy(_track);
+	stopAndClose();
 }
 
 void CompactPanel::mousePressEvent(QMouseEvent *event) {
