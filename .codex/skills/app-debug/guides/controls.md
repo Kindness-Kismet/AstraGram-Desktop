@@ -10,6 +10,7 @@
 
 `control.get <target>` 查询当前值、类型、文字、启用状态、`focused` 聚焦状态及辅助功能动作。
 浮动卡片另返回 `surfaceBackdrop`、`surfaceWindowMaterial`，分别表示接入聊天磨砂背景源或使用窗口材质。
+输入框另返回 `scrollTop`、`scrollTopMax`、`viewportHeight` 和编辑区内的 `cursorRect`，用于核对扩高过程的滚动与光标可见性。
 按钮还返回 `hovered`、`pressed`；波纹按钮另返回 `forceRippled`，可分别核对鼠标悬停、按下和菜单高亮。
 采用新点击反馈的按钮另返回 `clickFeedback`，包含模式、当前缩放、亮度和对比度；结合按下、松开截图检查微缩放或色彩瞬变。
 可选列表项还会返回 `selected`，可用于核对当前选中的会话分组。

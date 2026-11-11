@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/controls/history_view_compose_ai_tooltip.h"
 
+#include "base/event_filter.h"
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "lang/lang_keys.h"
@@ -36,6 +37,7 @@ ComposeTooltipManager::ComposeTooltipManager(
 			st::defaultImportantTooltip.padding,
 			[=] { hideAndRemember(); }),
 		st::historyRecordTooltip));
+	_tooltip->setObjectName(u"composeTooltip."_q + _prefKey.utf16());
 	_tooltip->toggleFast(false);
 	_button->geometryValue(
 	) | rpl::on_next([=](const QRect &geometry) {
@@ -43,6 +45,28 @@ ComposeTooltipManager::ComposeTooltipManager(
 			updateGeometry();
 		}
 	}, _tooltip->lifetime());
+	const auto container = _button->parentWidget();
+	if (container != parent) {
+		// 输入区移动或隐藏时同步提示，提示本身由完整聊天区域承载。
+		base::install_event_filter(_tooltip.get(), container, [=](not_null<QEvent*> event) {
+			switch (event->type()) {
+			case QEvent::Move:
+			case QEvent::Resize:
+				updateGeometry();
+				break;
+			case QEvent::Show:
+				updateVisibility(_button->isVisible());
+				break;
+			case QEvent::Hide:
+				_shown = false;
+				_tooltip->toggleFast(false);
+				break;
+			default:
+				break;
+			}
+			return base::EventFilterResult::Continue;
+		});
+	}
 }
 
 void ComposeTooltipManager::hideAndRemember() {
@@ -58,6 +82,7 @@ void ComposeTooltipManager::updateVisibility(bool buttonShown) {
 		&& !Core::App().settings().readPref<bool>(_prefKey);
 	if (showTooltip) {
 		updateGeometry();
+		_tooltip->raise();
 	}
 	if ((_shown != showTooltip)
 		|| (showTooltip && _tooltip->isHidden())) {
@@ -70,7 +95,9 @@ void ComposeTooltipManager::updateGeometry() {
 	if (_button->isHidden()) {
 		return;
 	}
-	const auto geometry = _button->geometry();
+	const auto geometry = QRect(
+		_button->mapTo(_tooltip->parentWidget(), QPoint()),
+		_button->size());
 	const auto maxWidth = _widthProvider();
 	const auto countPosition = [=](QSize size) {
 		const auto left = geometry.x()

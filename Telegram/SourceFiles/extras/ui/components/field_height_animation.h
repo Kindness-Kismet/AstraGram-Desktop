@@ -24,7 +24,9 @@ public:
 	void finish();
 
 private:
+	[[nodiscard]] int contentHeight() const;
 	[[nodiscard]] int targetHeight() const;
+	bool keepScrollAtTop();
 	void scheduleRefresh();
 	void refresh();
 	bool apply(int height);

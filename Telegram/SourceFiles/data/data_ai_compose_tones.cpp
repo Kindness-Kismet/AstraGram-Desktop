@@ -26,6 +26,13 @@ AiComposeTones::AiComposeTones(not_null<Main::Session*> session)
 	_refreshTimer.callEach(kRefreshInterval);
 }
 
+#ifdef _DEBUG
+void AiComposeTones::setListForDebug(std::vector<AiComposeTone> tones) {
+	_list = std::move(tones);
+	_updates.fire({});
+}
+#endif // _DEBUG
+
 void AiComposeTones::refresh() {
 	refreshWithHash(_hash);
 }

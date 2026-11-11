@@ -9,7 +9,10 @@
 #include "extras/debug/simulation_widget.h"
 #include "extras/debug/simulation_scenarios.h"
 #include "base/unixtime.h"
+#include "core/application.h"
+#include "core/core_settings.h"
 #include "boxes/stickers_box.h"
+#include "data/data_ai_compose_tones.h"
 #include "data/data_chat_filters.h"
 #include "data/data_document.h"
 #include "data/data_forum.h"
@@ -45,6 +48,36 @@ constexpr auto kWalletBalance = int64(123456789000);
 constexpr auto kStickerSetId = uint64(9800000000);
 constexpr auto kEmojiSetId = uint64(9800000100);
 constexpr auto kEmojiSetCount = 3;
+
+Result simulationComposeAi(const QStringList &args) {
+	if (args.size() > 1
+		|| (!args.empty() && args.front() != u"on"_q && args.front() != u"off"_q)) {
+		return Result::Err(u"usage: simulation.compose-ai [on|off]"_q);
+	}
+	const auto session = ActiveSession();
+	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	auto &tones = session->data().aiComposeTones();
+	if (!args.empty()) {
+		auto list = std::vector<Data::AiComposeTone>();
+		if (args.front() == u"on"_q) {
+			list.push_back({
+				.title = u"模拟润色"_q,
+				.isDefault = true,
+				.defaultType = u"proofread"_q,
+			});
+			Core::App().settings().writePref<bool>("ai_compose_tooltip_hidden"_cs, false);
+			Core::App().settings().writePref<bool>("send_as_file_tooltip_hidden"_cs, false);
+		}
+		tones.setListForDebug(std::move(list));
+	}
+	return Result::Ok(Compact(json{
+		{ "toneCount", tones.list().size() },
+		{ "tooltipDismissed", Core::App().settings().readPref<bool>(
+			"ai_compose_tooltip_hidden"_cs) },
+	}));
+}
 
 Result simulationRemoveTopic(const QStringList &args) {
 	if (args.size() != 2) {
@@ -572,6 +605,7 @@ const HandlerMap &simulationHandlers() {
 		{ u"simulation.cache-chats"_q, &simulationCacheChats },
 		{ u"simulation.cache-usage"_q, &simulationCacheUsage },
 		{ u"simulation.stars"_q, &simulationStars },
+		{ u"simulation.compose-ai"_q, &simulationComposeAi },
 		{ u"simulation.chat-folders"_q, &simulationChatFolders },
 		{ u"simulation.language"_q, &simulationLanguage },
 		{ u"simulation.search"_q, &seedSearchPreview },

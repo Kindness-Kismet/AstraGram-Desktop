@@ -24,6 +24,9 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 
 ## 固定场景
 
+`simulation.compose-ai [on|off]` 查询或注入本地 AI 样式，供输入区按钮与提示气泡验证；仅限独立模拟配置。
+`on` 重置 AI 与发送为文件提示的关闭记录；输入至少 10 个字符后显示 AI 按钮，超过消息长度上限后显示发送为文件按钮。样式只存内存，重启恢复；验证时不点击 AI 处理或发送按钮。
+
 `simulation.widget [show|state|log|reset]` 在独立模拟配置中展示 HTML 饮水卡片。
 `show` 在内联机器人对话创建本地消息并打开；按钮可增加或撤回杯数、更新进度条、展开小贴士，重复打开保留当前交互状态。
 `reset` 重新生成卡片；样本不发送消息、不请求机器人，状态随模拟会话销毁。

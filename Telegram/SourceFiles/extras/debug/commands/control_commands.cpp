@@ -744,8 +744,15 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 			data["contentRects"] = std::move(sections);
 		}
 	} else if (const auto field = dynamic_cast<Ui::InputField*>(target)) {
+		const auto editor = field->rawTextEdit();
+		const auto cursor = editor->cursorRect();
 		data["value"] = field->getLastText().toStdString();
 		data["kind"] = "text";
+		data["focused"] = field->hasFocus();
+		data["scrollTop"] = field->scrollTop().current();
+		data["scrollTopMax"] = field->scrollTopMax();
+		data["viewportHeight"] = editor->viewport()->height();
+		data["cursorRect"] = json{cursor.x(), cursor.y(), cursor.width(), cursor.height()};
 	} else if (const auto line = qobject_cast<QLineEdit*>(target)) {
 		data["value"] = line->text().toStdString();
 		data["kind"] = "text";

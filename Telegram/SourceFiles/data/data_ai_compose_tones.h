@@ -48,6 +48,11 @@ public:
 	[[nodiscard]] const std::vector<AiComposeTone> &list() const;
 	[[nodiscard]] rpl::producer<> updated() const;
 
+#ifdef _DEBUG
+	// 仅由独立模拟配置注入本地样本。
+	void setListForDebug(std::vector<AiComposeTone> tones);
+#endif // _DEBUG
+
 	void create(
 		const QString &title,
 		const QString &prompt,

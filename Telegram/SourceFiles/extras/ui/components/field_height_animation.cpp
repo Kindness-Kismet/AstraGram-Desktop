@@ -8,6 +8,7 @@
 #include <QtGui/QGuiApplication>
 #include <QtGui/QInputMethod>
 #include <QtGui/QTextDocument>
+#include <QtWidgets/QScrollBar>
 #include <QtWidgets/QTextEdit>
 
 namespace ExtrasUi {
@@ -23,15 +24,21 @@ FieldHeightAnimation::FieldHeightAnimation(
 , _maxHeight(maxHeight) {
 	// 关闭输入框自带的自适应高度，由这里统一计算并过渡。
 	_field->setMinHeight(-1);
+	const auto refresh = [weak = base::make_weak(this)] {
+		if (const auto strong = weak.get()) {
+			strong->scheduleRefresh();
+		}
+	};
 	QObject::connect(
 		_field->document()->documentLayout(),
 		&QAbstractTextDocumentLayout::documentSizeChanged,
 		_field.get(),
-		[weak = base::make_weak(this)] {
-			if (const auto strong = weak.get()) {
-				strong->scheduleRefresh();
-			}
-		});
+		refresh);
+	QObject::connect(
+		_field->rawTextEdit()->verticalScrollBar(),
+		&QScrollBar::valueChanged,
+		_field.get(),
+		refresh);
 	const auto target = targetHeight();
 	_height.jumpTo(target);
 	apply(target);
@@ -58,14 +65,27 @@ void FieldHeightAnimation::finish() {
 	}
 }
 
-int FieldHeightAnimation::targetHeight() const {
+int FieldHeightAnimation::contentHeight() const {
 	Ui::SendPendingMoveResizeEvents(_field);
 	// 控件与内部编辑区的高度差即上下边距，与输入框自适应高度的算法一致。
 	const auto margins = _field->height() - _field->rawTextEdit()->height();
-	const auto content = int(std::ceil(_field->document()->size().height()))
+	return int(std::ceil(_field->document()->size().height()))
 		+ margins;
+}
+
+int FieldHeightAnimation::targetHeight() const {
 	const auto max = std::max(_maxHeight, 0);
-	return std::clamp(content, std::min(_minHeight, max), max);
+	return std::clamp(contentHeight(), std::min(_minHeight, max), max);
+}
+
+bool FieldHeightAnimation::keepScrollAtTop() {
+	const auto content = contentHeight();
+	if (content > _maxHeight || content <= _field->height()) {
+		return false;
+	}
+	// 扩高足以容纳全文时，先保持已有行完整，避免 Qt 提前滚向新行。
+	_field->scrollTo(0);
+	return true;
 }
 
 void FieldHeightAnimation::scheduleRefresh() {
@@ -80,6 +100,7 @@ void FieldHeightAnimation::scheduleRefresh() {
 void FieldHeightAnimation::refresh() {
 	_refreshScheduled = false;
 	const auto target = targetHeight();
+	keepScrollAtTop();
 	if (_height.target() == target) {
 		return;
 	}
@@ -88,9 +109,12 @@ void FieldHeightAnimation::refresh() {
 			return;
 		}
 		_changed();
+		const auto growing = keepScrollAtTop();
 		if (_field->hasFocus()) {
-			// 光标所在行始终可见，输入法候选框跟随光标。
-			_field->ensureCursorVisible();
+			if (!growing) {
+				_field->ensureCursorVisible();
+			}
+			// 输入法候选框跟随光标，扩高完成后恢复光标滚动。
 			QGuiApplication::inputMethod()->update(Qt::ImCursorRectangle);
 		}
 	};

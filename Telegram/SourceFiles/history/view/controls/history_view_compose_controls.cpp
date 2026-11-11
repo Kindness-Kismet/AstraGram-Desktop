@@ -4757,11 +4757,11 @@ void ComposeControls::initAiButton() {
 	});
 
 	_aiTooltipManager = std::make_unique<Controls::AiTooltipManager>(
-		_wrap.get(),
+		_parent,
 		_aiButton,
 		tr::lng_ai_compose_tooltip(tr::rich),
 		"ai_compose_tooltip_hidden"_cs,
-		[=] { return _wrap->width(); });
+		[=] { return _parent->width(); });
 }
 
 void ComposeControls::initSendAsFileButton() {
@@ -4779,11 +4779,11 @@ void ComposeControls::initSendAsFileButton() {
 	});
 
 	_sendAsFileTooltipManager = std::make_unique<Controls::AiTooltipManager>(
-		_wrap.get(),
+		_parent,
 		_sendAsFile,
 		tr::lng_send_as_file_tooltip(tr::rich),
 		"send_as_file_tooltip_hidden"_cs,
-		[=] { return _wrap->width(); });
+		[=] { return _parent->width(); });
 }
 
 void ComposeControls::initDiscardRichDraftButton() {
