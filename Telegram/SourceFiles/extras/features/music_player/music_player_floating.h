@@ -37,7 +37,6 @@ private:
 	std::unique_ptr<CompactPanel> _panel;
 	QRect _available;
 	AudioMsgId::Type _type = AudioMsgId::Type::Song;
-	AudioMsgId _closedTrack;
 	bool _active = false;
 	rpl::lifetime _lifetime;
 };

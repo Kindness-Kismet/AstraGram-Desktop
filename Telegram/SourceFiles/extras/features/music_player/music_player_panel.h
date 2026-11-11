@@ -37,7 +37,6 @@ public:
 	void setPlaybackType(AudioMsgId::Type type);
 	void showMini(QPoint anchor);
 	[[nodiscard]] rpl::producer<> collapseRequests() const;
-	[[nodiscard]] rpl::producer<AudioMsgId> closeRequests() const;
 
 protected:
 	void paintEvent(QPaintEvent *event) override;
@@ -60,6 +59,7 @@ private:
 	void refreshCover();
 	void seek(float64 progress, bool finished);
 	void cancelSeek(bool resume);
+	void stopAndClose();
 	void showSource();
 	void saveCover();
 	void setExpanded(bool expanded);
@@ -124,7 +124,6 @@ private:
 	std::unique_ptr<Ui::BoxShadow> _shadow;
 	base::unique_qptr<Ui::PopupMenu> _coverMenu;
 	rpl::event_stream<> _collapseRequests;
-	rpl::event_stream<AudioMsgId> _closeRequests;
 };
 
 } // namespace Extras::MusicPlayer
