@@ -80,6 +80,11 @@ void ComposeTooltipManager::hideAndRemember() {
 void ComposeTooltipManager::updateVisibility(bool buttonShown) {
 	const auto showTooltip = buttonShown
 		&& !Core::App().settings().readPref<bool>(_prefKey);
+	if (!showTooltip && !_shown) {
+		// 切页会统一显示子控件，已关闭的提示需恢复实际隐藏状态。
+		_tooltip->toggleFast(false);
+		return;
+	}
 	if (showTooltip) {
 		updateGeometry();
 		_tooltip->raise();
@@ -111,6 +116,7 @@ void ComposeTooltipManager::updateGeometry() {
 }
 
 void ComposeTooltipManager::raise() {
+	updateVisibility(_button->isVisible());
 	_tooltip->raise();
 }
 
