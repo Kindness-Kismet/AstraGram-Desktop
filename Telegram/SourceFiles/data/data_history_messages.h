@@ -54,7 +54,8 @@ private:
 	not_null<History*> history,
 	MsgId aroundId,
 	int limitBefore,
-	int limitAfter);
+	int limitAfter,
+	bool requireAround);
 
 [[nodiscard]] rpl::producer<SparseIdsMergedSlice> HistoryMergedViewer(
 	not_null<History*> history,

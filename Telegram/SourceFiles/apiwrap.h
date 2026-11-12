@@ -322,10 +322,12 @@ public:
 	[[nodiscard]] bool historyRequestsPending() const {
 		return !_historyRequests.empty();
 	}
+	// 回调在服务器请求结束且索引更新后执行，缓存先返回不算完成。
 	void requestHistory(
 		not_null<History*> history,
 		MsgId messageId,
-		SliceType slice);
+		SliceType slice,
+		Fn<void(bool success)> done = nullptr);
 	void requestSharedMedia(
 		not_null<PeerData*> peer,
 		MsgId topicRootId,
@@ -780,7 +782,7 @@ private:
 			const HistoryRequest&,
 			const HistoryRequest&) = default;
 	};
-	base::flat_set<HistoryRequest> _historyRequests;
+	base::flat_map<HistoryRequest, std::vector<Fn<void(bool)>>> _historyRequests;
 
 	struct GlobalMediaRequest {
 		SharedMediaType mediaType = {};

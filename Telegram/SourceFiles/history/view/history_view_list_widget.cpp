@@ -1542,11 +1542,19 @@ void ListWidget::showAtPosition(
 		}
 	}
 
-	if (!showAtUnread && showAtPositionNow(position, params, done)) {
+	const auto needsTarget = position.fullId.peer
+		&& IsServerMsgId(position.fullId.msg)
+		&& !viewForItem(position.fullId);
+	if (!showAtUnread
+		&& !needsTarget
+		&& showAtPositionNow(position, params, done)) {
 		return;
 	}
 	const auto origin = countScrollState().item;
 	showAroundPosition(position, [=] {
+		if (needsTarget && _refreshingViewer && !viewForItem(position.fullId)) {
+			return false;
+		}
 		if (showAtUnread) {
 			clearUnreadBar();
 			checkUnreadBarCreation();
