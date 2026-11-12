@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_slide_animation.h"
+#include "extras/features/window_material/window_material.h"
 #include "ui/rp_widget.h"
 #include "ui/ui_utility.h"
 #include "ui/painter.h"
@@ -17,6 +18,17 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 
 namespace Window {
+namespace {
+
+[[nodiscard]] QPainter::CompositionMode FrameCompositionMode(QPainter &p) {
+	const auto widget = dynamic_cast<const QWidget*>(p.device());
+	// 普通窗口的透明截图不能清空下层；系统材质保留原有透明度，避免重复叠色。
+	return widget && ExtrasFeatures::WindowMaterial::isActive(widget)
+		? QPainter::CompositionMode_Source
+		: QPainter::CompositionMode_SourceOver;
+}
+
+} // namespace
 
 CrossFadeArgs InPlaceCrossFade(int duration) {
 	auto result = FullWidthCrossFade(true);
@@ -77,9 +89,7 @@ not_null<Ui::RpWidget*> ShowFadeOutAnimation(
 	overlay->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(overlay);
 		const auto opacity = animation->value(0.);
-		// Source 模式带不透明度 o 时结果为 o * 旧画面 + (1 - o) * 底下已绘制的内容，
-		// 材质下的透明像素同样按比例插值；平移露出的部分直接透出底下。
-		p.setCompositionMode(QPainter::CompositionMode_Source);
+		p.setCompositionMode(FrameCompositionMode(p));
 		p.setOpacity(opacity);
 		p.drawPixmap(anim::interpolate(shift, 0, opacity), 0, cache);
 	}, overlay->lifetime());
@@ -102,7 +112,7 @@ void SlideAnimation::paintContents(QPainter &p) const {
 		return;
 	}
 	p.save();
-	p.setCompositionMode(QPainter::CompositionMode_Source);
+	p.setCompositionMode(FrameCompositionMode(p));
 	const auto retina = style::DevicePixelRatio();
 
 	const auto slideLeft = (_direction == SlideDirection::FromLeft);
@@ -145,7 +155,7 @@ void SlideAnimation::paintContents(QPainter &p) const {
 				st::slideFadeOutBg);
 			p.setOpacity(1);
 		}
-		p.setCompositionMode(QPainter::CompositionMode_Source);
+		p.setCompositionMode(FrameCompositionMode(p));
 		p.drawPixmap(
 			QRect(QPoint(coordOver, 0), _cacheOver.size() / retina),
 			_cacheOver,
@@ -172,7 +182,7 @@ void SlideAnimation::paintCrossFade(QPainter &p) const {
 	const auto shift = slideLeft ? args.shift : -args.shift;
 	if (args.overlay && now.isNull()) {
 		p.save();
-		p.setCompositionMode(QPainter::CompositionMode_Source);
+		p.setCompositionMode(FrameCompositionMode(p));
 		p.setOpacity(1. - shown);
 		p.drawPixmap(anim::interpolate(0, shift, shown), 0, was);
 		p.restore();
@@ -264,8 +274,7 @@ void SlideAnimation::paintCrossFadeFrame(QPainter &p) const {
 		p.restore();
 		return;
 	}
-	// 整帧替换下层：材质下画布并不遮挡，底下已是切换后的内容。
-	p.setCompositionMode(QPainter::CompositionMode_Source);
+	p.setCompositionMode(FrameCompositionMode(p));
 	p.drawImage(0, 0, _crossFadeFrame);
 	p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 }
