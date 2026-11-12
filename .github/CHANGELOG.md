@@ -1,27 +1,5 @@
-- Adapted to official Telegram Desktop 7.4.2
-- Improved multi-window layouts, which now remember each window's chat list and side panel widths independently when reopened
-- Added third-party verification badges before message authors' names, so you can now see their verification status directly in chats
-- Improved inline video playback, which now supports 1920 × 1920 videos directly in chats
-- Fixed an issue with newly created topics that previously caused the first message to be missing
-- Fixed an issue with switching chat folders that previously caused two chat lists to appear at once
-- Fixed an issue with message navigation that previously reported unloaded target messages as missing or completed a jump before reaching its target
-- Fixed an issue with dragging chats over the chat list that previously inserted an unwanted t.me link into the message draft
-- Improved article editing, which now preserves the intended cursor position after deleting content and keeps row-spanning cells when removing table rows
-- Fixed an issue with spelling dictionary refreshes that previously kept using old dictionary files
-- Fixed an issue with exiting the app while a story views menu was open that previously caused a crash
-- Fixed an issue with chat-switch animations that previously made their background transparent when window material was disabled
+- Improved in-chat search, which now keeps matches highlighted until the query changes or search closes and expands collapsed quotes containing matches
 
 ---
 
-- 适配了官方 Telegram Desktop 7.4.2
-- 改善了多窗口布局，现在重新打开窗口时会分别恢复各自的聊天列表和侧栏宽度
-- 新增了消息发送者名称前的第三方验证标记，现在可以直接在聊天中查看验证状态
-- 改善了聊天内的视频播放，现在支持直接播放 1920 × 1920 的视频
-- 修复了新建话题首条消息不显示的问题
-- 修复了切换聊天文件夹时两个聊天列表同时显示的问题
-- 修复了跳转消息时将未加载的目标误判为不存在，或尚未定位目标就结束跳转的问题
-- 修复了在聊天列表上拖动聊天时，t.me 链接被误写入消息草稿的问题
-- 改善了文章编辑器的删除操作，现在会保留正确的光标位置，删除表格行时也会保留跨行合并的单元格
-- 修复了刷新拼写词典后仍使用旧词典文件的问题
-- 修复了打开动态浏览记录菜单时退出应用导致崩溃的问题
-- 修复了关闭窗口材质后聊天切换动画背景透明的问题
+- 改善了聊天内搜索，现在匹配文字会持续高亮至修改查询或关闭搜索，并自动展开包含匹配文字的折叠引用

@@ -812,6 +812,7 @@ protected:
 	[[nodiscard]] int textHeightFor(int textWidth) const;
 	[[nodiscard]] int textRealWidth() const { return _textRealWidth; }
 	void validateText();
+	void expandBlockquoteForSearch(const QString &query) const;
 	void invalidateTextSizeCache();
 	void validateTextSkipBlock(bool has, int width, int height);
 	void validateInlineKeyboard(HistoryMessageReplyMarkup *markup);

@@ -387,12 +387,15 @@ public:
 	[[nodiscard]] float64 debugItemReorderShift(not_null<Element*> view) const {
 		return itemReorderShift(view);
 	}
+	[[nodiscard]] Ui::ChatPaintHighlight debugItemHighlight(
+		not_null<Element*> view) const;
 #endif
 	bool isAbovePosition(Data::MessagePosition position) const;
 	bool isBelowPosition(Data::MessagePosition position) const;
 	void highlightMessage(
 		FullMsgId itemId,
 		const MessageHighlightId &highlight);
+	void clearHighlight();
 
 	void showAtPosition(
 		Data::MessagePosition position,

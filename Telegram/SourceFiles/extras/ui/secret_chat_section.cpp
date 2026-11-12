@@ -413,14 +413,18 @@ private:
 		_search->heightChanges() | rpl::on_next([=] { updateGeometry(); }, _search->lifetime());
 		_search->activations() | rpl::on_next([=](HistoryView::ComposeSearch::Activation activation) {
 			auto params = Window::SectionShow(Window::SectionShow::Way::Forward, anim::type::instant);
-			params.highlight = Window::SearchHighlightId(activation.query);
+			params.highlight = Window::SearchHighlightId(activation.query, true);
 			_inner->showAtPosition(activation.item->position(), params);
 		}, _search->lifetime());
 		_search->destroyRequests() | rpl::take(1) | rpl::on_next([=] {
+			_inner->clearHighlight();
 			_search = nullptr;
 			_compose->show();
 			updateGeometry();
 			doSetInnerFocus();
+		}, _search->lifetime());
+		_search->resets() | rpl::on_next([=] {
+			_inner->clearHighlight();
 		}, _search->lifetime());
 		updateGeometry();
 		doSetInnerFocus();

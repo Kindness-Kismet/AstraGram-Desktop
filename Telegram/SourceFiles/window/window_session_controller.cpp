@@ -410,8 +410,11 @@ base::weak_ptr<Data::Thread> ForumThreadClickHandler::resolveThread(
 	return nullptr;
 }
 
-MessageHighlightId SearchHighlightId(const QString &query) {
-	auto result = MessageHighlightId{ .quote = { query } };
+MessageHighlightId SearchHighlightId(const QString &query, bool persistent) {
+	auto result = MessageHighlightId{
+		.quote = { query },
+		.persistent = persistent,
+	};
 	if (!result.quote.empty()) {
 		result.quoteOffset = kSearchQueryOffsetHint;
 	}

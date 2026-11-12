@@ -42,6 +42,9 @@ BACKGROUND_START = False
 OFFLINE_START = None
 
 GENERIC_COMMANDS = {
+    "message.send-formatted": "向已授权测试对话发送整段引用或代码：<peerId> <quote|collapsed-quote|code> <textFile>；保留草稿",
+    "message.forward": "沿正式接口转发已加载的测试消息：<sourcePeerId> <messageId> <destinationPeerId>；保留草稿",
+    "saved.state": "查询指定来源的收藏计数，未知时发起加载：<sourcePeerId>",
     "anim.sample-window": "连续采样已绘制的窗口缓冲，不触发重绘：<新 WebP 绝对路径> <x> <y> <width> <height>；返回异步任务",
     "anim.sample-media-progress": "采样正式下载控件从零到完成的连续帧：<新建 PNG 绝对路径>；不修改账号和缓存",
     "anim.check-image-transition": "异步检查图片渐变中途重建的连续性，不改消息或设置",
@@ -123,6 +126,7 @@ GENERIC_COMMANDS = {
     'downloads.cancel': '取消指定附件下载：<会话编号> <消息编号>',
     'downloads.delete': '将已下载文件移入回收站，返回异步任务：<会话编号> <消息编号>',
     'simulation.download': '构造本地文件下载：<路径> <loading|done>，不支持音视频',
+    'simulation.download-index': '在独立模拟配置验证下载索引：<save|reset|lookup> <文件绝对路径>；reset 清空模拟账号本地记录，lookup 可在重启后查询',
     'simulation.download-progress': '推进模拟下载进度或完成：<会话编号> <消息编号> <字节数|done>',
     'simulation.media-upload': '在独立模拟配置定格媒体上传进度：<会话编号> <消息编号> <0..100|done>，不上传',
     'peer.info': '查询已知会话或用户资料，不返回访问密钥：<会话编号>',
@@ -341,7 +345,8 @@ def register_commands(sub) -> None:
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
     command.add_argument("--background", action="store_true", help="启动时进入托盘，不主动显示窗口")
     command.add_argument("--offline", action="store_true", default=None, help="从启动起禁止连接 Telegram，重启恢复联网")
-    sub.add_parser("app.stop", help="停止 Debug 应用，只认端口 PID 或本仓库 dev 产物路径")
+    command = sub.add_parser("app.stop", help="停止 Debug 应用，只认端口 PID 或本仓库 dev 产物路径")
+    command.add_argument("--force", action="store_true", help="模拟结束任务，跳过正常退出；仍核对进程路径")
     sub.add_parser("app.ping", help="探活，返回 pong")
     sub.add_parser("app.info", help="查询版本、配置目录、会话和窗口状态")
     sub.add_parser("app.check-update", help="触发一次更新检查，结果看 tupdates 目录与日志")
@@ -566,7 +571,7 @@ def execute_command(args: argparse.Namespace) -> None:
         print("Application restarted.")
         return
     if command == "app.stop":
-        stop_debug_app_if_running()
+        stop_debug_app_if_running(force=args.force)
         print("Application stopped.")
         return
 
@@ -811,7 +816,7 @@ def restart_debug_app() -> None:
     ensure_debug_app()
 
 
-def stop_debug_app_if_running() -> None:
+def stop_debug_app_if_running(force: bool = False) -> None:
     pid = port_owner_pid()
     if pid is not None:
         if not is_expected_process(pid):
@@ -819,6 +824,11 @@ def stop_debug_app_if_running() -> None:
                 f"Port {PORT} is owned by unexpected PID {pid}; refusing to stop it.\n"
                 f"Verify the executable path manually: wmic process where \"ProcessId={pid}\" get ExecutablePath"
             )
+        if force:
+            kill_pid(pid)
+            wait_for_port_closed()
+            wait_for_process_exit(pid)
+            return
         try:
             send_command("app.quit")
             wait_for_port_closed()

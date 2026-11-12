@@ -5326,6 +5326,9 @@ TextSelection Message::selectionFromQuote(
 		const auto media = this->media();
 		const auto mediaDisplayed = media && media->isDisplayed();
 		const auto mediaBefore = mediaDisplayed && invertMedia();
+		if (quote.highlight.quoteOffset == kSearchQueryOffsetHint) {
+			expandBlockquoteForSearch(quote.highlight.quote.text);
+		}
 		const auto result = FindSelectionFromQuote(text(), quote);
 		return mediaBefore ? media->unskipSelection(result) : result;
 	} else if (const auto media = this->media()) {

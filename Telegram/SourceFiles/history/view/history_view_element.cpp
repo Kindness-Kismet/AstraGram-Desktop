@@ -3258,6 +3258,33 @@ void Element::blockquoteExpandChanged() {
 	history()->owner().requestViewResize(this);
 }
 
+void Element::expandBlockquoteForSearch(const QString &query) const {
+	if (!text().hasCollapsedBlockquots()) {
+		return;
+	}
+	const auto marked = text().toTextWithEntities();
+	const auto match = FindSearchQueryHighlight(marked.text, query);
+	if (match.empty()) {
+		return;
+	}
+	// 文本里的引用编号同时包含代码块，按排版后的实体顺序定位。
+	auto index = 0;
+	for (const auto &entity : marked.entities) {
+		if (entity.type() != EntityType::Pre
+			&& entity.type() != EntityType::Blockquote) {
+			continue;
+		}
+		++index;
+		if (entity.type() != EntityType::Blockquote
+			|| entity.offset() >= match.to
+			|| entity.offset() + entity.length() <= match.from
+			|| _text.blockquoteExpanded(index)) {
+			continue;
+		}
+		_text.setBlockquoteExpanded(index, true);
+	}
+}
+
 void Element::invalidateTextSizeCache() {
 	_textWidth = 0;
 	_textHeight = 0;

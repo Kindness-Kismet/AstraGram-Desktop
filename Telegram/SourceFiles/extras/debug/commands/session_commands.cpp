@@ -296,6 +296,9 @@ using json = nlohmann::json;
 			const auto hit = list
 				? list->lookupItemByVisualPoint(center + QPoint(0, visualTop))
 				: nullptr;
+			const auto highlight = list
+				? list->debugItemHighlight(view)
+				: Ui::ChatPaintHighlight();
 			rows.push_back({
 				{ "id", view->data()->id.bare },
 				{ "y", y }, { "top", top },
@@ -308,6 +311,11 @@ using json = nlohmann::json;
 				{ "stickerFrames", sticker ? sticker->framesCount().value_or(-1) : -1 },
 				{ "width", view->width() }, { "height", view->height() },
 				{ "out", view->data()->out() },
+				{ "outLayout", view->hasOutLayout() },
+				{ "rightLayout", view->hasRightLayout() },
+				{ "senderId", view->data()->from()->id.value },
+				{ "highlightOpacity", highlight.opacity },
+				{ "highlightRange", { highlight.range.from, highlight.range.to } },
 				{ "bubble", { bubble.x(), bubble.y(), bubble.width(), bubble.height() } },
 				{ "opacity", legacy
 					? legacy->itemRevealOpacity(view->data())

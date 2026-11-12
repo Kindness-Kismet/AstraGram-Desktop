@@ -190,6 +190,7 @@ struct MessageHighlightId {
 	int todoItemId = 0;
 	QByteArray pollOption;
 	std::shared_ptr<const Iv::RichQuote> richQuote;
+	bool persistent = false;
 
 	[[nodiscard]] bool empty() const {
 		return quote.empty()

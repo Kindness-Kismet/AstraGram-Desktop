@@ -6472,16 +6472,21 @@ void ChatWidget::showComposeSearch(
 		auto params = Window::SectionShow(
 			Window::SectionShow::Way::Forward,
 			anim::type::instant);
-		params.highlight = Window::SearchHighlightId(activation.query);
+		params.highlight = Window::SearchHighlightId(activation.query, true);
 		showAtPosition(activation.item->position(), {}, params);
 	}, _composeSearch->lifetime());
 
 	_composeSearch->destroyRequests(
 	) | rpl::take(1) | rpl::on_next([=] {
+		_inner->clearHighlight();
 		_composeSearch = nullptr;
 
 		updateControlsVisibility();
 		doSetInnerFocus();
+	}, _composeSearch->lifetime());
+
+	_composeSearch->resets() | rpl::on_next([=] {
+		_inner->clearHighlight();
 	}, _composeSearch->lifetime());
 }
 

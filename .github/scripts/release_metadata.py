@@ -100,13 +100,16 @@ def main() -> None:
     branch = os.environ["GITHUB_REF_NAME"]
     sha = os.environ["GITHUB_SHA"]
     before = os.environ["BEFORE_SHA"]
-    if branch == "main" and before != "0" * 40:
+    if before == "0" * 40:
+        changed = command("git", "ls-tree", "--name-only", sha, "--", "Telegram/build/version")
+    else:
         changed = command("git", "diff", "--name-only", before, sha, "--", "Telegram/build/version")
-        if not changed:
-            with output.open("a", encoding="utf-8") as stream:
-                stream.write("enabled=false\n")
-            print("No stable version change; release skipped.")
-            return
+    if (branch == "main" and not changed) or (branch == "beta" and changed):
+        with output.open("a", encoding="utf-8") as stream:
+            stream.write("enabled=false\n")
+        print("Version file changed; beta release skipped." if branch == "beta"
+              else "No stable version change; release skipped.")
+        return
 
     published = published_versions()
     tag_lines = command("git", "for-each-ref", "--format=%(refname:strip=2) %(objectname) %(*objectname)", "refs/tags")

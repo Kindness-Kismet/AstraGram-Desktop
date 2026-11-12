@@ -51,8 +51,9 @@ private:
 	public:
 		AnimationManager(ElementHighlighter &parent);
 		[[nodiscard]] bool animating() const;
+		[[nodiscard]] bool persistent() const;
 		[[nodiscard]] Ui::ChatPaintHighlight state() const;
-		void start(bool withTextPart);
+		void start(bool withTextPart, bool persistent);
 		void cancel();
 
 	private:
@@ -60,6 +61,7 @@ private:
 		Ui::Animations::Simple _simple;
 		std::optional<base::Timer> _timer;
 		bool _withTextPart = false;
+		bool _persistent = false;
 
 	};
 
@@ -79,7 +81,7 @@ private:
 	};
 
 	[[nodiscard]] Highlight computeHighlight(const SelectedQuote &quote);
-	void highlight(Highlight data);
+	void highlight(Highlight data, bool persistent = false);
 	void checkNextHighlight();
 	void repaintHighlightedItem(not_null<const Element*> view);
 	void updateMessage();

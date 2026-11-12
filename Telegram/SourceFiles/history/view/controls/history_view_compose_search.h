@@ -83,6 +83,7 @@ public:
 		QString query;
 	};
 	[[nodiscard]] rpl::producer<Activation> activations() const;
+	[[nodiscard]] rpl::producer<> resets() const;
 	[[nodiscard]] rpl::producer<> destroyRequests() const;
 
 	[[nodiscard]] rpl::lifetime &lifetime();

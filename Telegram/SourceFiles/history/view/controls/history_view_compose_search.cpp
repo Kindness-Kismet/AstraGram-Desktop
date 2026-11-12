@@ -1302,6 +1302,7 @@ public:
 	[[nodiscard]] bool listShown() const;
 	[[nodiscard]] rpl::producer<bool> listShownValue() const;
 	[[nodiscard]] rpl::producer<Activation> activations() const;
+	[[nodiscard]] rpl::producer<> resets() const;
 	[[nodiscard]] rpl::producer<> destroyRequests() const;
 	[[nodiscard]] rpl::lifetime &lifetime();
 
@@ -1337,6 +1338,7 @@ private:
 	Fn<void(FullMsgId, Fn<void()>)> _calendarJump;
 
 	rpl::event_stream<Activation> _activations;
+	rpl::event_stream<> _resets;
 	rpl::event_stream<> _destroyRequests;
 
 };
@@ -1411,6 +1413,7 @@ ComposeSearch::Inner::Inner(
 			clearResults();
 			return;
 		}
+		_resets.fire({});
 		_searching = true;
 		_currentResult = {};
 		_currentResultIndex = -1;
@@ -1638,6 +1641,7 @@ std::shared_ptr<ComposeSearchState> ComposeSearch::Inner::saveState() const {
 }
 
 void ComposeSearch::Inner::clearResults() {
+	_resets.fire({});
 	_searching = false;
 	_currentResult = {};
 	_currentResultIndex = -1;
@@ -1748,6 +1752,10 @@ rpl::producer<> ComposeSearch::Inner::destroyRequests() const {
 	return _destroyRequests.events();
 }
 
+rpl::producer<> ComposeSearch::Inner::resets() const {
+	return _resets.events();
+}
+
 rpl::lifetime &ComposeSearch::Inner::lifetime() {
 	return _findBar->lifetime();
 }
@@ -1839,6 +1847,10 @@ rpl::producer<ComposeSearch::Activation> ComposeSearch::activations() const {
 
 rpl::producer<> ComposeSearch::destroyRequests() const {
 	return _inner->destroyRequests();
+}
+
+rpl::producer<> ComposeSearch::resets() const {
+	return _inner->resets();
 }
 
 rpl::lifetime &ComposeSearch::lifetime() {

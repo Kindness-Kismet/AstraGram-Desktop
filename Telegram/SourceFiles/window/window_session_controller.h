@@ -225,7 +225,9 @@ struct SectionShow {
 
 };
 
-[[nodiscard]] MessageHighlightId SearchHighlightId(const QString &query);
+[[nodiscard]] MessageHighlightId SearchHighlightId(
+	const QString &query,
+	bool persistent = false);
 
 class SessionController;
 
