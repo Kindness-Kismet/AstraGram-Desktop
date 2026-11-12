@@ -345,7 +345,8 @@ def register_commands(sub) -> None:
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
     command.add_argument("--background", action="store_true", help="启动时进入托盘，不主动显示窗口")
     command.add_argument("--offline", action="store_true", default=None, help="从启动起禁止连接 Telegram，重启恢复联网")
-    sub.add_parser("app.stop", help="停止 Debug 应用，只认端口 PID 或本仓库 dev 产物路径")
+    command = sub.add_parser("app.stop", help="停止 Debug 应用，只认端口 PID 或本仓库 dev 产物路径")
+    command.add_argument("--force", action="store_true", help="模拟结束任务，跳过正常退出；仍核对进程路径")
     sub.add_parser("app.ping", help="探活，返回 pong")
     sub.add_parser("app.info", help="查询版本、配置目录、会话和窗口状态")
     sub.add_parser("app.check-update", help="触发一次更新检查，结果看 tupdates 目录与日志")
@@ -570,7 +571,7 @@ def execute_command(args: argparse.Namespace) -> None:
         print("Application restarted.")
         return
     if command == "app.stop":
-        stop_debug_app_if_running()
+        stop_debug_app_if_running(force=args.force)
         print("Application stopped.")
         return
 
@@ -815,7 +816,7 @@ def restart_debug_app() -> None:
     ensure_debug_app()
 
 
-def stop_debug_app_if_running() -> None:
+def stop_debug_app_if_running(force: bool = False) -> None:
     pid = port_owner_pid()
     if pid is not None:
         if not is_expected_process(pid):
@@ -823,6 +824,11 @@ def stop_debug_app_if_running() -> None:
                 f"Port {PORT} is owned by unexpected PID {pid}; refusing to stop it.\n"
                 f"Verify the executable path manually: wmic process where \"ProcessId={pid}\" get ExecutablePath"
             )
+        if force:
+            kill_pid(pid)
+            wait_for_port_closed()
+            wait_for_process_exit(pid)
+            return
         try:
             send_command("app.quit")
             wait_for_port_closed()

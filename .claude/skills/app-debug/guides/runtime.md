@@ -98,6 +98,8 @@ python .claude/skills/app-debug/scripts/cli.py app.start
 
 ## 崩溃排查
 
+`app.stop --force` 按原有进程路径校验后直接结束开发版，用于复现“结束任务”后的恢复；默认 `app.stop` 仍先正常退出。
+
 Debug 构建装了未处理异常过滤器：进程崩溃时把异常码与调用栈写进
 工作目录 `crash.log`（工作目录见 `app.info` 的 workingDir）。
 
