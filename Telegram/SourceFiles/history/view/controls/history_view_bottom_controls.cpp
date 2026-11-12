@@ -50,6 +50,7 @@ BottomControls::BottomControls(
 , _topic(descriptor.topic)
 , _sublist(descriptor.sublist)
 , _mode(descriptor.mode) {
+	setObjectName(u"chatBar.actions"_q);
 	setupButtons();
 	setupOpenChatButton();
 	setupAboutHiddenAuthor();
@@ -78,6 +79,14 @@ void BottomControls::setCanSendMessages(bool value) {
 	}
 	_canSendMessages = value;
 	updateControlsVisibility();
+}
+
+void BottomControls::setSearchMode(bool enabled) {
+	if (_searchMode == enabled) {
+		return;
+	}
+	_searchMode = enabled;
+	recomputeContentHeight();
 }
 
 void BottomControls::setTopic(Data::ForumTopic *topic) {
@@ -209,7 +218,7 @@ bool BottomControls::isButtonActive() const {
 }
 
 bool BottomControls::botStartShown() const {
-	return _botStart && !_botStart->isHidden();
+	return _botStart && _botStart->isVisible();
 }
 
 bool BottomControls::canSendTexts() const {
@@ -530,7 +539,8 @@ void BottomControls::recomputeContentHeight() {
 		: isButtonActive()
 		? st::historyComposeButton.height
 		: 0;
-	const auto h = innerHeight
+	// 搜索取代整条底部操作栏，可见性和布局高度使用同一状态。
+	const auto h = (!_searchMode && innerHeight)
 		? innerHeight + 2 * st::historyComposeCapsuleMargin
 		: 0;
 	resize(width(), h);
@@ -596,10 +606,6 @@ bool BottomControls::isMuteUnmute() const {
 
 bool BottomControls::isReportMessages() const {
 	return (_mode == BottomControlsMode::History) && _inReportMode;
-}
-
-bool BottomControls::isChoosingTheme() const {
-	return false;
 }
 
 void BottomControls::resizeEvent(QResizeEvent *e) {

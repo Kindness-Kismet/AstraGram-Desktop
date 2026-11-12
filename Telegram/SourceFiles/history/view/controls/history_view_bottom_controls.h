@@ -62,6 +62,7 @@ public:
 	~BottomControls();
 
 	void setCanSendMessages(bool value);
+	void setSearchMode(bool enabled);
 	void setTopic(Data::ForumTopic *topic);
 	void applyPeerUpdate(Data::PeerUpdate::Flags flags);
 	void updateControlsVisibility();
@@ -107,7 +108,6 @@ private:
 	[[nodiscard]] bool isJoinGroup() const;
 	[[nodiscard]] bool isMuteUnmute() const;
 	[[nodiscard]] bool isReportMessages() const;
-	[[nodiscard]] bool isChoosingTheme() const;
 
 	void resizeEvent(QResizeEvent *e) override;
 
@@ -139,6 +139,7 @@ private:
 
 	bool _canSendMessages = false;
 	bool _canSendTexts = false;
+	bool _searchMode = false;
 	bool _inReportMode = false;
 
 };

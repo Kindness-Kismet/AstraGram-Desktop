@@ -3194,8 +3194,8 @@ void ChatWidget::updateControlsVisibility() {
 			_scroll->scrollToY(_scroll->scrollTopMax());
 		}
 	});
+	_bottom->setSearchMode(_composeSearch != nullptr);
 	_bottom->updateControlsVisibility();
-	_bottom->setVisible(!_composeSearch);
 	if (_stash) {
 		_stash->updateButton();
 	}
@@ -4547,7 +4547,7 @@ void ChatWidget::updateControlsGeometry() {
 
 	auto bottom = height();
 	auto floatingCompose = false;
-	const auto bottomHeight = _composeSearch ? 0 : _bottom->contentHeight();
+	const auto bottomHeight = _bottom->contentHeight();
 	if (bottomHeight > 0) {
 		_bottom->setGeometry(0, bottom - bottomHeight, width(), bottomHeight);
 		bottom -= bottomHeight;
