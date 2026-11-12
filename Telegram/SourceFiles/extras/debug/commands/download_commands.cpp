@@ -22,6 +22,7 @@
 #include "main/main_session.h"
 #include "main/main_account.h"
 #include "settings.h"
+#include "storage/storage_account.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -303,6 +304,35 @@ Result simulationDownload(const QStringList &args) {
 	return Result::Ok(Compact(downloadInfo(item, path.absoluteFilePath())));
 }
 
+Result checkDownloadIndex(const QStringList &args) {
+	if (args.size() != 2) {
+		return Result::Err(u"usage: simulation.download-index <save|reset|lookup> <file>"_q);
+	}
+	const auto session = ActiveSession();
+	if (!session || !cDebugProfile() || !isSimulationSession(session)) {
+		return Result::Err(u"an isolated simulation session is required"_q);
+	}
+	const auto file = QFileInfo(args[1]);
+	if (!file.isAbsolute() || !file.isFile() || file.size() <= 0) {
+		return Result::Err(u"expected an absolute nonempty fixture file"_q);
+	}
+	// 固定编号供重启前后查询同一索引，不构造网络请求。
+	const auto key = mediaKey(DocumentFileLocation, 2, uint64(8100000067));
+	if (args[0] == u"save"_q) {
+		session->local().writeFileLocation(key, Core::FileLocation(file.absoluteFilePath()));
+	} else if (args[0] == u"reset"_q) {
+		session->local().reset();
+	} else if (args[0] != u"lookup"_q) {
+		return Result::Err(u"expected save, reset, or lookup"_q);
+	}
+	const auto found = session->local().readFileLocation(key);
+	return Result::Ok(Compact(Json{
+		{ "found", !found.isEmpty() },
+		{ "matches", found.name() == file.absoluteFilePath() && found.size == file.size() },
+		{ "path", found.name().toStdString() },
+	}));
+}
+
 Result progressDownload(const QStringList &args) {
 	if (args.size() != 3) return Result::Err(u"usage: simulation.download-progress <peerId> <messageId> <bytes|done>"_q);
 	const auto session = ActiveSession();
@@ -389,6 +419,7 @@ const HandlerMap &downloadHandlers() {
 		{ u"downloads.cancel"_q, &cancelDownload },
 		{ u"downloads.delete"_q, &deleteDownload },
 		{ u"simulation.download"_q, &simulationDownload },
+		{ u"simulation.download-index"_q, &checkDownloadIndex },
 		{ u"simulation.download-progress"_q, &progressDownload },
 		{ u"simulation.media-upload"_q, &simulationMediaUpload },
 	};
