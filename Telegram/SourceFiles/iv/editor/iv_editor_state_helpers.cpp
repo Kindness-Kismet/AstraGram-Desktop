@@ -443,6 +443,47 @@ bool SetMediaBlockSpoiler(Block *block, bool enabled) {
 		removedItemIndex);
 }
 
+[[nodiscard]] LeafPath ShiftLeafPathAfterRemovedBlocks(
+		LeafPath leaf,
+		const BlockContainerPath &container,
+		int from,
+		int till) {
+	auto shifted = leaf.block;
+	for (auto i = till; i != from;) {
+		--i;
+		if (!ShiftBlockPathAfterRemovedBlock(shifted, BlockPath{
+				.container = container,
+				.index = i,
+			})) {
+			return leaf;
+		}
+	}
+	leaf.block = shifted;
+	return leaf;
+}
+
+[[nodiscard]] LeafPath ShiftLeafPathAfterRemovedListItems(
+		LeafPath leaf,
+		const BlockPath &list,
+		int from,
+		int till) {
+	if (leaf.block == list && leaf.kind == LeafKind::ListItemText) {
+		if (leaf.listItemIndex >= till) {
+			leaf.listItemIndex -= (till - from);
+		}
+		return leaf;
+	}
+	auto shifted = leaf.block;
+	for (auto i = till; i != from;) {
+		--i;
+		if (!ShiftBlockPathAfterRemovedListItem(shifted, list, i)) {
+			return leaf;
+		}
+	}
+	leaf.block = shifted;
+	return leaf;
+}
+
 [[nodiscard]] std::optional<int> BlockIndexInContainer(
 		const LeafPath &leaf,
 		const BlockContainerPath &container) {

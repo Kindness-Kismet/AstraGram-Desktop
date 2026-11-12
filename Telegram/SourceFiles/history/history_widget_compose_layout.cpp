@@ -192,6 +192,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/notifications_manager.h"
 #include "window/window_adaptive.h"
 #include "window/window_controller.h"
+#include "window/window_columns.h"
 #include "window/window_session_controller.h"
 #include "window/window_slide_animation.h"
 #include "window/window_peer_menu.h"
@@ -579,14 +580,15 @@ bool HistoryWidget::pushTabbedSelectorToThirdSection(
 		const Window::SectionShow &params) {
 	if (!_tabbedPanel) {
 		return true;
-	} else if (!Data::CanSendAnyOf(
+	}
+	if (!Data::CanSendAnyOf(
 			thread,
 			Data::TabbedPanelSendRestrictions())) {
-		Core::App().settings().setTabbedReplacedWithInfo(true);
+		controller()->columns().setTabbedReplacedWithInfo(true);
 		controller()->showPeerInfo(thread, params.withThirdColumn());
 		return false;
 	}
-	Core::App().settings().setTabbedReplacedWithInfo(false);
+	controller()->columns().setTabbedReplacedWithInfo(false);
 	if (controller()->adaptive().isThreeColumn()) {
 		controller()->showSection(
 			std::make_shared<ChatHelpers::TabbedMemento>(),
@@ -644,7 +646,7 @@ void HistoryWidget::toggleTabbedSelectorMode() {
 	if (_tabbedPanel) {
 		if (controller()->canShowThirdSection()
 			&& !controller()->adaptive().isOneColumn()) {
-			Core::App().settings().setTabbedSelectorSectionEnabled(true);
+			controller()->columns().setTabbedSelectorSectionEnabled(true);
 			Core::App().saveSettingsDelayed();
 			pushTabbedSelectorToThirdSection(
 				_history,

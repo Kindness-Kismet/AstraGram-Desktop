@@ -211,7 +211,7 @@ void verifyRejectedCase(
 		{ "spellcheckerEnabled", app.spellcheckerEnabled() },
 		{ "autoDownloadDictionaries", app.autoDownloadDictionaries() },
 		{ "lastSeenWarningSeen", app.lastSeenWarningSeen() },
-		{ "thirdColumnWidth", app.thirdColumnWidth() },
+		{ "thirdColumnWidth", app.windowColumns().thirdColumnWidth },
 		{ "supportChatsTimeSlice", session.supportChatsTimeSlice() },
 		{ "supportFixChatsOrder", session.supportFixChatsOrder() },
 		{ "supportTemplatesAutocomplete", session.supportTemplatesAutocomplete() },

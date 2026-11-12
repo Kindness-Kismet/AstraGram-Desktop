@@ -4927,7 +4927,7 @@ void ApiWrap::sendMessage(
 		Extras::AutoSpace::processText(left);
 	}
 
-	HistoryItem *lastMessage = nullptr;
+	auto lastMessage = (HistoryItem*)nullptr;
 
 	auto &histories = history->owner().histories();
 	const auto messageLengthLimit = Data::PremiumLimits(

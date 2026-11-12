@@ -72,6 +72,7 @@ public:
 	void setLiveUnderlay(const QPixmap &oldContentCache);
 	void setTopBarShadow(bool enabled);
 	void setWithFade(bool withFade);
+	void setDuration(crl::time duration);
 	void setCrossFade(CrossFadeArgs args);
 	void setScreenshotProtection(
 		rpl::lifetime protection,
@@ -98,6 +99,7 @@ private:
 	SlideDirection _direction = SlideDirection::FromRight;
 	bool _topBarShadowEnabled = false;
 	bool _withFade = false;
+	crl::time _duration = 0;
 	std::optional<CrossFadeArgs> _crossFade;
 	mutable QImage _crossFadeFrame;
 

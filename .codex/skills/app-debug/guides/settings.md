@@ -38,6 +38,9 @@
 `settings.set <key> <value>` 修改单个完整键名，返回实际生效值。写入调用原有设置访问器，
 保留通知、缓存更新和保存流程；不会重建已有的隐身模式对象。
 
+`core.dialogsWithChatWidthRatio`、`core.dialogsNoChatWidthRatio` 和第三栏的 `core.tabbedSelectorSectionEnabled`、`core.thirdSectionInfoEnabled`、`core.thirdSectionExtendedBy`、`core.tabbedReplacedWithInfo`、`core.thirdColumnWidth` 对应当前活动聊天窗口的栏位状态。
+验证多窗口时，先用 `control.window` 选择窗口，再执行 `window.activation active`，随后读写这些键；切换栏位开关会同步更新布局。
+
 `hideGroupCalls` 控制频道直播和群语音、视频通话入口，默认关闭；切换后即时刷新顶栏、资料页、通话提示栏、通话列表和会话头像角标，菜单重新打开时同步生效。
 
 布尔值使用 `true/false`，数字、数组和结构体使用 JSON；字符串原样保留，包括首尾空格。

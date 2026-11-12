@@ -41,7 +41,7 @@ STAGES: list[Stage] = [
         dependencies=[],
         commands=r"""git clone https://github.com/desktop-app/patches.git
 cd patches
-git checkout a59fc82462fb2987e9f0ee1498e2db694410ae81
+git checkout e47f8669a2c144e13a2bc828b09abe6bfe89336e
 """,
     ),
     Stage(

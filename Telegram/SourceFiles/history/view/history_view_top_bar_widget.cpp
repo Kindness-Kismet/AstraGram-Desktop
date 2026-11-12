@@ -49,6 +49,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/controls/button_context_menu.h"
 #include "ui/ui_utility.h"
 #include "window/window_adaptive.h"
+#include "window/window_columns.h"
 #include "window/window_session_controller.h"
 #include "window/window_peer_menu.h"
 #include "calls/calls_instance.h"
@@ -314,8 +315,8 @@ TopBarWidget::TopBarWidget(
 	}, lifetime());
 
 	rpl::combine(
-		Core::App().settings().thirdSectionInfoEnabledValue(),
-		Core::App().settings().tabbedReplacedWithInfoValue()
+		_controller->columns().thirdSectionInfoEnabledValue(),
+		_controller->columns().tabbedReplacedWithInfoValue()
 	) | rpl::on_next([=] {
 		updateInfoToggleActive();
 	}, lifetime());
@@ -403,12 +404,12 @@ void TopBarWidget::toggleInfoSection() {
 	}
 	const auto isThreeColumn = _controller->adaptive().isThreeColumn();
 	if (isThreeColumn
-		&& (Core::App().settings().thirdSectionInfoEnabled()
-			|| Core::App().settings().tabbedReplacedWithInfo())) {
+		&& (_controller->columns().thirdSectionInfoEnabled()
+			|| _controller->columns().tabbedReplacedWithInfo())) {
 		_controller->closeThirdSection();
 	} else if (_activeChat.key.peer()) {
 		if (_controller->canShowThirdSection()) {
-			Core::App().settings().setThirdSectionInfoEnabled(true);
+			_controller->columns().setThirdSectionInfoEnabled(true);
 			Core::App().saveSettingsDelayed();
 			if (isThreeColumn) {
 				_controller->showSection(
@@ -1786,8 +1787,8 @@ void TopBarWidget::updateUnreadBadge() {
 
 void TopBarWidget::updateInfoToggleActive() {
 	auto infoThirdActive = _controller->adaptive().isThreeColumn()
-		&& (Core::App().settings().thirdSectionInfoEnabled()
-			|| Core::App().settings().tabbedReplacedWithInfo());
+		&& (_controller->columns().thirdSectionInfoEnabled()
+			|| _controller->columns().tabbedReplacedWithInfo());
 	auto iconOverride = infoThirdActive
 		? &st::topBarInfoActive
 		: nullptr;

@@ -309,6 +309,10 @@ void SlideAnimation::setWithFade(bool withFade) {
 	_withFade = withFade;
 }
 
+void SlideAnimation::setDuration(crl::time duration) {
+	_duration = duration;
+}
+
 void SlideAnimation::setCrossFade(CrossFadeArgs args) {
 	_crossFade = std::move(args);
 }
@@ -348,7 +352,7 @@ void SlideAnimation::start() {
 		? (st::slideDuration * 2)
 		: (_crossFade && _crossFade->duration)
 		? _crossFade->duration
-		: st::slideDuration;
+		: (_duration ? _duration : st::slideDuration);
 	_animation.start(
 		[this] { animationCallback(); },
 		fromLeft ? 1. : 0.,

@@ -3213,7 +3213,7 @@ void InnerWidget::updateSelected() {
 	}
 
 	TextState dragState;
-	ClickHandlerHost *lnkhost = nullptr;
+	auto lnkhost = (ClickHandlerHost*)nullptr;
 	auto dragStateUserpic = false;
 	auto selectingText = _selectedItem
 		&& (view == _mouseActionItem)

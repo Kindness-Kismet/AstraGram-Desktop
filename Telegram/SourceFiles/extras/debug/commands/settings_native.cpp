@@ -12,6 +12,9 @@
 #include "settings.h"
 #include "settings/settings_experimental.h"
 #include "base/options.h"
+#include "window/window_columns.h"
+#include "window/window_controller.h"
+#include "window/window_session_controller.h"
 
 namespace Core {
 void to_json(nlohmann::json &j, const WindowPosition &v) {
@@ -92,8 +95,77 @@ void from_json(const nlohmann::json &j, flat_set<QString> &v) {
 
 namespace ExtrasDebug::Commands {
 
+namespace {
+
+void addWindowColumnSettings(SettingsMap &entries) {
+	const auto window = Core::App().activeWindow();
+	if (!window) {
+		return;
+	}
+	auto &columns = window->columns();
+	const auto addToggle = [&](
+			QString key,
+			bool (Window::Columns::*getter)() const,
+			void (Window::Columns::*setter)(bool)) {
+		entries.emplace(std::move(key), SettingEntry{
+			[&columns, getter] { return Json((columns.*getter)()); },
+			[window, setter](const Json &value) {
+				bool enabled = false;
+				if (const auto error = readSetting(value, enabled); !error.isEmpty()) {
+					return Result::Err(error);
+				}
+				(window->columns().*setter)(enabled);
+				if (const auto controller = window->sessionController()) {
+					controller->updateColumnLayout();
+				}
+				return Result::Ok();
+			},
+		});
+	};
+	addToggle(u"core.tabbedSelectorSectionEnabled"_q,
+		&Window::Columns::tabbedSelectorSectionEnabled,
+		&Window::Columns::setTabbedSelectorSectionEnabled);
+	addToggle(u"core.thirdSectionInfoEnabled"_q,
+		&Window::Columns::thirdSectionInfoEnabled,
+		&Window::Columns::setThirdSectionInfoEnabled);
+	addToggle(u"core.tabbedReplacedWithInfo"_q,
+		&Window::Columns::tabbedReplacedWithInfo,
+		&Window::Columns::setTabbedReplacedWithInfo);
+	addSetting(entries, u"core.thirdSectionExtendedBy"_q,
+		[&columns] { return columns.thirdSectionExtendedBy(); }, columns,
+		&Window::Columns::setThirdSectionExtendedBy);
+	addSetting(entries, u"core.thirdColumnWidth"_q,
+		[&columns] { return columns.thirdColumnWidth(); }, columns,
+		&Window::Columns::setThirdColumnWidth);
+	for (const auto withoutChat : {false, true}) {
+		entries.emplace(withoutChat
+			? u"core.dialogsNoChatWidthRatio"_q
+			: u"core.dialogsWithChatWidthRatio"_q, SettingEntry{
+			[&columns, withoutChat] {
+				return Json(withoutChat
+					? columns.state().dialogsNoChatWidthRatio
+					: columns.state().dialogsWithChatWidthRatio);
+			},
+			[&columns, withoutChat](const Json &value) {
+				double ratio = 0;
+				if (const auto error = readSetting(value, ratio); !error.isEmpty()) {
+					return Result::Err(error);
+				}
+				if (ratio < 0 || ratio > 1) {
+					return Result::Err(u"width ratio must be between 0 and 1"_q);
+				}
+				columns.updateDialogsWidthRatio(ratio, withoutChat);
+				return Result::Ok();
+			},
+		});
+	}
+}
+
+} // namespace
+
 void addCoreSettings(SettingsMap &entries) {
 	auto &settings = Core::App().settings();
+	addWindowColumnSettings(entries);
 	for (const auto option : Settings::experimentalOptionsForDebug()) {
 		entries.emplace(u"experimental."_q + option->id(), SettingEntry{
 			[option] { return std::visit([](const auto &value) { return settingJson(value); }, option->value()); },
@@ -219,14 +291,9 @@ void addCoreSettings(SettingsMap &entries) {
 	addSetting(entries, u"core.rememberedSoundNotifyFromTray"_q, [&] { return settings.rememberedSoundNotifyFromTray(); }, settings, &Core::Settings::setRememberedSoundNotifyFromTray);
 	addSetting(entries, u"core.rememberedFlashBounceNotifyFromTray"_q, [&] { return settings.rememberedFlashBounceNotifyFromTray(); }, settings, &Core::Settings::setRememberedFlashBounceNotifyFromTray);
 	addSetting(entries, u"core.mainMenuAccountsShown"_q, [&] { return settings.mainMenuAccountsShown(); }, settings, &Core::Settings::setMainMenuAccountsShown);
-	addSetting(entries, u"core.tabbedSelectorSectionEnabled"_q, [&] { return settings.tabbedSelectorSectionEnabled(); }, settings, &Core::Settings::setTabbedSelectorSectionEnabled);
-	addSetting(entries, u"core.thirdSectionInfoEnabled"_q, [&] { return settings.thirdSectionInfoEnabled(); }, settings, &Core::Settings::setThirdSectionInfoEnabled);
-	addSetting(entries, u"core.thirdSectionExtendedBy"_q, [&] { return settings.thirdSectionExtendedBy(); }, settings, &Core::Settings::setThirdSectionExtendedBy);
-	addSetting(entries, u"core.tabbedReplacedWithInfo"_q, [&] { return settings.tabbedReplacedWithInfo(); }, settings, &Core::Settings::setTabbedReplacedWithInfo);
 	addSetting(entries, u"core.floatPlayerColumn"_q, [&] { return settings.floatPlayerColumn(); }, settings, &Core::Settings::setFloatPlayerColumn);
 	addSetting(entries, u"core.floatPlayerCorner"_q, [&] { return settings.floatPlayerCorner(); }, settings, &Core::Settings::setFloatPlayerCorner);
 	addSetting(entries, u"core.recordVideoMessages"_q, [&] { return settings.recordVideoMessages(); }, settings, &Core::Settings::setRecordVideoMessages);
-	addSetting(entries, u"core.thirdColumnWidth"_q, [&] { return settings.thirdColumnWidth(); }, settings, &Core::Settings::setThirdColumnWidth);
 	addSetting(entries, u"core.notifyFromAll"_q, [&] { return settings.notifyFromAll(); }, settings, &Core::Settings::setNotifyFromAll);
 	addSetting(entries, u"core.systemDarkMode"_q, [&] { return settings.systemDarkMode(); }, settings, &Core::Settings::setSystemDarkMode);
 	addSetting(entries, u"core.systemDarkModeEnabled"_q, [&] { return settings.systemDarkModeEnabled(); }, settings, &Core::Settings::setSystemDarkModeEnabled);
@@ -272,18 +339,6 @@ void addCoreSettings(SettingsMap &entries) {
 	addSetting(entries, u"core.ignoreBatterySaving"_q,
 		[&] { return settings.ignoreBatterySaving(); }, settings,
 		&Core::Settings::setIgnoreBatterySavingValue);
-	for (const auto withoutChat : {false, true}) {
-		entries.emplace(withoutChat ? u"core.dialogsNoChatWidthRatio"_q : u"core.dialogsWithChatWidthRatio"_q, SettingEntry{
-			[&settings, withoutChat] { return Json(withoutChat ? settings.dialogsNoChatWidthRatio() : settings.dialogsWithChatWidthRatio()); },
-			[&settings, withoutChat](const Json &value) {
-				double ratio = 0;
-				if (const auto error = readSetting(value, ratio); !error.isEmpty()) return Result::Err(error);
-				if (ratio < 0 || ratio > 1) return Result::Err(u"width ratio must be between 0 and 1"_q);
-				settings.updateDialogsWidthRatio(ratio, withoutChat);
-				return Result::Ok();
-			},
-		});
-	}
 	entries.emplace(u"core.themesAccentColors"_q, SettingEntry{
 		[&] { return settingJson(settings.themesAccentColors().serialize()); },
 		[&](const Json &value) {
