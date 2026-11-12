@@ -407,7 +407,7 @@ void HistoryWidget::switchToSearch(
 			const auto item = activation.item;
 			auto params = ::Window::SectionShow(
 				::Window::SectionShow::Way::ClearStack);
-			params.highlight = Window::SearchHighlightId(activation.query);
+			params.highlight = Window::SearchHighlightId(activation.query, true);
 			controller()->showPeerHistory(
 				item->history()->peer->id,
 				params,
@@ -416,10 +416,15 @@ void HistoryWidget::switchToSearch(
 
 		_composeSearch->destroyRequests(
 		) | rpl::take(1) | rpl::on_next([=] {
+			_highlighter.clear();
 			_composeSearch = nullptr;
 
 			update();
 			setInnerFocus();
+		}, _composeSearch->lifetime());
+
+		_composeSearch->resets() | rpl::on_next([=] {
+			_highlighter.clear();
 		}, _composeSearch->lifetime());
 	});
 	if (!preventsClose(search)) {

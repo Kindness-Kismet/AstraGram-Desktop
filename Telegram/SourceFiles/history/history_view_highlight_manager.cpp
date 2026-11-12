@@ -27,6 +27,9 @@ ElementHighlighter::ElementHighlighter(
 }
 
 void ElementHighlighter::enqueue(const SelectedQuote &quote) {
+	if (_animation.persistent()) {
+		return;
+	}
 	const auto data = computeHighlight(quote);
 	if (_queue.empty() && !_animation.animating()) {
 		highlight(data);
@@ -37,7 +40,13 @@ void ElementHighlighter::enqueue(const SelectedQuote &quote) {
 }
 
 void ElementHighlighter::highlight(const SelectedQuote &quote) {
-	highlight(computeHighlight(quote));
+	const auto data = computeHighlight(quote);
+	const auto persistent = quote.highlight.persistent
+		&& ((!data.part.empty() && !IsSubGroupSelection(data.part))
+			|| (data.richPage && data.richTill > data.richFrom));
+	highlight(
+		data,
+		persistent);
 }
 
 void ElementHighlighter::checkNextHighlight() {
@@ -145,7 +154,7 @@ ElementHighlighter::Highlight ElementHighlighter::computeHighlight(
 	};
 }
 
-void ElementHighlighter::highlight(Highlight data) {
+void ElementHighlighter::highlight(Highlight data, bool persistent) {
 	if (const auto item = _data->message(data.itemId)) {
 		if (const auto view = _viewForItem(item)) {
 			if (_highlighted && _highlighted.itemId != data.itemId) {
@@ -160,7 +169,7 @@ void ElementHighlighter::highlight(Highlight data) {
 					|| data.todoListId
 					|| !data.pollOption.isEmpty()
 					|| data.richPage)
-				&& !IsSubGroupSelection(data.part));
+				&& !IsSubGroupSelection(data.part), persistent);
 
 			repaintHighlightedItem(view);
 		}
@@ -192,9 +201,14 @@ void ElementHighlighter::updateMessage() {
 
 void ElementHighlighter::clear() {
 	_animation.cancel();
-	_highlighted = {};
+	const auto was = base::take(_highlighted);
 	_lastHighlightedMessageId = FullMsgId();
 	_queue.clear();
+	if (const auto item = _data->message(was.itemId)) {
+		if (const auto view = _viewForItem(item)) {
+			repaintHighlightedItem(view);
+		}
+	}
 }
 
 ElementHighlighter::AnimationManager::AnimationManager(
@@ -206,10 +220,15 @@ bool ElementHighlighter::AnimationManager::animating() const {
 	return (_timer && _timer->isActive()) || _simple.animating();
 }
 
+bool ElementHighlighter::AnimationManager::persistent() const {
+	return _persistent;
+}
+
 Ui::ChatPaintHighlight ElementHighlighter::AnimationManager::state() const {
-	const auto progress = _timer ? .5 : _simple.value(1.);
+	const auto holding = _persistent || _timer.has_value();
+	const auto progress = holding ? .5 : _simple.value(1.);
 	return {
-		.opacity = _timer ? 1. : std::clamp(
+		.opacity = holding ? 1. : std::clamp(
 			std::min(progress / .12, (1. - progress) / .3), 0., 1.),
 		.collapsion = _withTextPart
 			? std::clamp((progress - .18) / .22, 0., 1.)
@@ -224,9 +243,16 @@ MsgId ElementHighlighter::latestSingleHighlightedMsgId() const {
 		: _lastHighlightedMessageId.msg;
 }
 
-void ElementHighlighter::AnimationManager::start(bool withTextPart) {
+void ElementHighlighter::AnimationManager::start(
+		bool withTextPart,
+		bool persistent) {
 	cancel();
 	_withTextPart = withTextPart;
+	_persistent = persistent;
+	if (persistent) {
+		_parent.updateMessage();
+		return;
+	}
 	const auto finish = [=] {
 		_parent.updateMessage();
 		cancel();
@@ -251,6 +277,7 @@ void ElementHighlighter::AnimationManager::start(bool withTextPart) {
 }
 
 void ElementHighlighter::AnimationManager::cancel() {
+	_persistent = false;
 	_simple.stop();
 	_timer.reset();
 }

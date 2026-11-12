@@ -1499,6 +1499,17 @@ void ListWidget::showAroundPosition(
 	refreshViewer();
 }
 
+void ListWidget::clearHighlight() {
+	_highlighter.clear();
+}
+
+#ifdef _DEBUG
+Ui::ChatPaintHighlight ListWidget::debugItemHighlight(
+		not_null<Element*> view) const {
+	return _highlighter.state(view->data());
+}
+#endif
+
 void ListWidget::overrideInitialScroll(Fn<bool()> callback) {
 	_overrideInitialScroll = std::move(callback);
 }
