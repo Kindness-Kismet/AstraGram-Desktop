@@ -2955,6 +2955,7 @@ PRIVATE
     window/themes/window_themes_generate_name.cpp
     window/themes/window_themes_generate_name.h
     apiwrap.cpp
+    apiwrap_history.cpp
     apiwrap.h
     config.h
     logs.cpp

@@ -21,6 +21,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Data {
 namespace {
 
+struct HistoryViewerState {
+	base::has_weak_ptr guard;
+	bool resolvingAround = false;
+};
+
 struct HistoryMessagesViewerState {
 	std::optional<SparseIdsMergedSlice> sparse;
 	MessagesSlice slice;
@@ -366,7 +371,8 @@ rpl::producer<SparseIdsSlice> HistoryViewer(
 		not_null<History*> history,
 		MsgId aroundId,
 		int limitBefore,
-		int limitAfter) {
+		int limitAfter,
+		bool requireAround) {
 	Expects(IsServerMsgId(aroundId) || (aroundId == 0));
 	Expects((aroundId != 0) || (limitBefore == 0 && limitAfter == 0));
 
@@ -374,6 +380,15 @@ rpl::producer<SparseIdsSlice> HistoryViewer(
 		auto lifetime = rpl::lifetime();
 
 		const auto messages = &history->messages();
+		const auto query = Storage::SparseIdsListQuery(
+			aroundId,
+			limitBefore,
+			limitAfter);
+		const auto snapshot = messages->snapshot(query);
+		const auto state = lifetime.make_state<HistoryViewerState>();
+		state->resolvingAround = requireAround && aroundId
+			&& (aroundId != ServerMaxMsgId - 1)
+			&& !snapshot.messageIds.contains(aroundId);
 
 		auto builder = lifetime.make_state<SparseIdsSliceBuilder>(
 			aroundId,
@@ -382,7 +397,7 @@ rpl::producer<SparseIdsSlice> HistoryViewer(
 		using RequestAroundInfo = SparseIdsSliceBuilder::AroundData;
 		builder->insufficientAround(
 		) | rpl::on_next([=](const RequestAroundInfo &info) {
-			if (!info.aroundId) {
+			if (state->resolvingAround || !info.aroundId) {
 				// Ignore messages-count-only requests, because we perform
 				// them with non-zero limit of messages and end up adding
 				// a broken slice with several last messages from the chat
@@ -396,12 +411,21 @@ rpl::producer<SparseIdsSlice> HistoryViewer(
 		}, lifetime);
 
 		auto pushNextSnapshot = [=] {
-			consumer.put_next(builder->snapshot());
+			if (!state->resolvingAround) {
+				consumer.put_next(builder->snapshot());
+			}
 		};
 
 		using SliceUpdate = Storage::SparseIdsSliceUpdate;
 		messages->sliceUpdated(
 		) | rpl::filter([=](const SliceUpdate &update) {
+			if (state->resolvingAround) {
+				if (!update.messages || !update.messages->contains(aroundId)) {
+					return false;
+				}
+				state->resolvingAround = false;
+				return builder->applyInitial(messages->snapshot(query));
+			}
 			return builder->applyUpdate(update);
 		}) | rpl::on_next(pushNextSnapshot, lifetime);
 
@@ -420,11 +444,23 @@ rpl::producer<SparseIdsSlice> HistoryViewer(
 			return builder->invalidateBottom();
 		}) | rpl::on_next(pushNextSnapshot, lifetime);
 
-		const auto snapshot = messages->snapshot({
-			aroundId,
-			limitBefore,
-			limitAfter,
-		});
+		if (state->resolvingAround) {
+			// 旧列表覆盖目标编号并不代表消息不存在，等目标请求完成再发布。
+			history->session().api().requestHistory(
+				history,
+				aroundId,
+				LoadDirection::Around,
+				crl::guard(&state->guard, [=](bool success) {
+					if (!state->resolvingAround || !success) {
+						return;
+					}
+					state->resolvingAround = false;
+					if (builder->applyInitial(messages->snapshot(query))) {
+						pushNextSnapshot();
+					}
+				}));
+			return lifetime;
+		}
 		if (snapshot.count || !snapshot.messageIds.empty()) {
 			if (builder->applyInitial(snapshot)) {
 				pushNextSnapshot();
@@ -452,7 +488,15 @@ rpl::producer<SparseIdsMergedSlice> HistoryMergedViewer(
 		const auto chosen = (history->peer->id == peerId)
 			? history
 			: history->owner().history(peerId);
-		return HistoryViewer(chosen, simpleKey, limitBefore, limitAfter);
+		const auto requireAround = (universalAroundId > 0)
+			? (chosen == history)
+			: (chosen != history);
+		return HistoryViewer(
+			chosen,
+			simpleKey,
+			limitBefore,
+			limitAfter,
+			requireAround);
 	};
 	const auto peerId = history->peer->id;
 	const auto migratedPeerId = migrateFrom ? migrateFrom->id : PeerId(0);
