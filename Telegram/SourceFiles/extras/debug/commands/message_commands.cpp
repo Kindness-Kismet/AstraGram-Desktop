@@ -17,6 +17,8 @@
 #include "data/data_msg_id.h"
 #include "data/data_peer.h"
 #include "data/data_session.h"
+#include "data/data_saved_messages.h"
+#include "data/data_saved_sublist.h"
 #include "data/data_thread.h"
 #include "data/data_types.h"
 #include "data/data_user.h"
@@ -43,6 +45,7 @@
 #endif
 #include "storage/storage_shared_media.h"
 #include "ui/text/text_entity.h"
+#include "ui/widgets/fields/input_field.h"
 #include "window/window_session_controller.h"
 
 #include "base/unixtime.h"
@@ -534,6 +537,76 @@ using json = nlohmann::json;
 		result["text"] = text.toStdString();
 	}
 	return Result::Ok(Compact(result));
+}
+
+[[nodiscard]] Result sendFormattedMessage(const QStringList &args) {
+	if (args.size() != 3) {
+		return Result::Err(u"usage: message.send-formatted <peerId> <quote|collapsed-quote|code> <textFile>"_q);
+	}
+	const auto peer = findPeer(args[0]);
+	if (!peer || isSimulationSession(&peer->session())) {
+		return Result::Err(u"an authenticated peer is required"_q);
+	}
+	const auto tag = (args[1] == u"quote"_q)
+		? Ui::InputField::kTagBlockquote
+		: (args[1] == u"collapsed-quote"_q)
+		? Ui::InputField::kTagBlockquoteCollapsed
+		: (args[1] == u"code"_q)
+		? Ui::InputField::kTagPre
+		: QString();
+	if (tag.isEmpty()) {
+		return Result::Err(u"unsupported format"_q);
+	}
+	auto file = QFile(args[2]);
+	if (!file.open(QIODevice::ReadOnly)) {
+		return Result::Err(u"cannot read text file"_q);
+	}
+	const auto text = QString::fromUtf8(file.readAll());
+	if (text.isEmpty()) {
+		return Result::Err(u"text must not be empty"_q);
+	}
+	auto action = Api::SendAction(peer->owner().history(peer));
+	action.clearDraft = false;
+	auto message = Api::MessageToSend(action);
+	message.textWithTags = { text, { { 0, int(text.size()), tag } } };
+	peer->session().api().sendMessage(std::move(message));
+	return Result::Ok(Compact(json{ { "state", "submitted" }, { "textLength", text.size() } }));
+}
+
+[[nodiscard]] Result forwardMessage(const QStringList &args) {
+	if (args.size() != 3) {
+		return Result::Err(u"usage: message.forward <sourcePeerId> <messageId> <destinationPeerId>"_q);
+	}
+	const auto item = findMessage(args[0], args[1]);
+	const auto destination = findPeer(args[2]);
+	if (!item || !destination || isSimulationSession(&destination->session())) {
+		return Result::Err(u"an authenticated source message and destination are required"_q);
+	}
+	if (!item->allowsForward()) {
+		return Result::Err(u"message does not allow forwarding"_q);
+	}
+	auto action = Api::SendAction(destination->owner().history(destination));
+	action.clearDraft = false;
+	destination->session().api().forwardMessages(
+		Data::ResolvedForwardDraft{ { item } }, action);
+	return Result::Ok(Compact(json{ { "state", "submitted" } }));
+}
+
+[[nodiscard]] Result savedState(const QStringList &args) {
+	if (args.size() != 1) {
+		return Result::Err(u"usage: saved.state <sourcePeerId>"_q);
+	}
+	const auto peer = findPeer(args[0]);
+	if (!peer) {
+		return Result::Err(u"peer not found"_q);
+	}
+	const auto sublist = peer->owner().savedMessages().sublist(peer);
+	sublist->loadFullCount();
+	const auto count = sublist->fullCount();
+	return Result::Ok(Compact(json{
+		{ "sourcePeerId", peer->id.value },
+		{ "count", count ? json(*count) : json(nullptr) },
+	}));
 }
 
 [[nodiscard]] Result deleteMessages(const QStringList &args) {
@@ -1090,6 +1163,9 @@ const HandlerMap &MessageHandlers() {
 #endif
 		{ u"chat.list"_q, &Chats },
 		{ u"message.send"_q, &SendTextMessage },
+		{ u"message.send-formatted"_q, &sendFormattedMessage },
+		{ u"message.forward"_q, &forwardMessage },
+		{ u"saved.state"_q, &savedState },
 		{ u"message.delete"_q, &deleteMessages },
 		{ u"chat.open"_q, &OpenChat },
 		{ u"chat.search-state"_q, &searchState },

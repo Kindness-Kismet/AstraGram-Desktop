@@ -74,6 +74,10 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 - 返回只表示请求已提交，服务器确认是异步的，验证效果稍等片刻再 `screenshot.take`。
 - 不清除目标对话的草稿，不影响输入框。
 
+`message.send-formatted <peerId> <quote|collapsed-quote|code> <textFile>` 将 UTF-8 文件全文标记为引用、折叠引用或代码，沿正式发送链路提交，保留草稿；用 `message.fetch` 核对服务器确认的正文和实体。
+`message.forward <sourcePeerId> <messageId> <destinationPeerId>` 沿正式接口转发已加载且允许转发的消息，保留草稿；源和目标仍限定为用户授权的测试对话。
+`saved.state <sourcePeerId>` 返回该来源的收藏计数；未知时发起正式加载，返回 `count: null`，稍后再查询。
+
 ## `message.delete <peerId> <messageId>... [--account <index>] [--revoke]`
 
 在已授权测试对话中删除指定消息，复用正式的 `Data::Histories::deleteMessages` 路径。

@@ -42,6 +42,9 @@ BACKGROUND_START = False
 OFFLINE_START = None
 
 GENERIC_COMMANDS = {
+    "message.send-formatted": "向已授权测试对话发送整段引用或代码：<peerId> <quote|collapsed-quote|code> <textFile>；保留草稿",
+    "message.forward": "沿正式接口转发已加载的测试消息：<sourcePeerId> <messageId> <destinationPeerId>；保留草稿",
+    "saved.state": "查询指定来源的收藏计数，未知时发起加载：<sourcePeerId>",
     "anim.sample-window": "连续采样已绘制的窗口缓冲，不触发重绘：<新 WebP 绝对路径> <x> <y> <width> <height>；返回异步任务",
     "anim.sample-media-progress": "采样正式下载控件从零到完成的连续帧：<新建 PNG 绝对路径>；不修改账号和缓存",
     "anim.check-image-transition": "异步检查图片渐变中途重建的连续性，不改消息或设置",
