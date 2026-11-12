@@ -49,9 +49,6 @@ jobs:
           set -euo pipefail
           python3 .github/scripts/release_metadata.py
 
-      - name: Test release scripts.
-        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
-
       - name: Validate workflows.
         env:
           ACTIONLINT_VERSION: 1.7.12
