@@ -9,6 +9,7 @@ permissions:
   contents: write
 
 jobs:
+  # 发布元数据检查会在推送包含版本文件改动时跳过构建和发布。
   beta:
     name: Beta
     uses: ./.github/workflows/build-release.yml
