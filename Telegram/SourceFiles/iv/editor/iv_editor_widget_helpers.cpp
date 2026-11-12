@@ -133,7 +133,7 @@ namespace Iv::Editor::WidgetDetails {
 		&& (e->key() == Qt::Key_Period || e->key() == Qt::Key_Greater);
 }
 
-thread_local Widget *PreservingExternalFieldRestore = nullptr;
+thread_local auto PreservingExternalFieldRestore = (Widget*)nullptr;
 
 void RemoveBlockLevelEntities(TextWithEntities *text) {
 	auto &list = text->entities;

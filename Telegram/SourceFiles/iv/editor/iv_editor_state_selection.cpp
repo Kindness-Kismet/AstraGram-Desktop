@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "iv/editor/iv_editor_state.h"
 #include "iv/editor/iv_editor_page_media.h"
 #include "iv/editor/iv_editor_page_table_grid.h"
+#include "iv/editor/iv_editor_page_table_remove.h"
 #include "iv/editor/iv_editor_text_entities.h"
 #include "iv/markdown/iv_markdown_prepare_serialize.h"
 #include "lang/lang_keys.h"
@@ -31,18 +32,11 @@ State::LeafPath State::shiftLeafAfterRemovedSelection(
 	if (!range || leafWillBeRemoved(leaf, *range)) {
 		return leaf;
 	}
-	auto shifted = leaf.block;
-	for (auto i = range->till; i != range->from;) {
-		--i;
-		if (!ShiftBlockPathAfterRemovedBlock(shifted, BlockPath{
-				.container = range->container,
-				.index = i,
-			})) {
-			return leaf;
-		}
-	}
-	leaf.block = shifted;
-	return leaf;
+	return ShiftLeafPathAfterRemovedBlocks(
+		std::move(leaf),
+		range->container,
+		range->from,
+		range->till);
 }
 
 std::optional<int> State::removeStructuralSelection(
@@ -244,7 +238,7 @@ std::optional<int> State::removeStructuralSelection(
 		if (!range) {
 			return std::nullopt;
 		}
-		const auto plannedFocus = plannedFocusForRange(*range, forward);
+		auto plannedFocus = plannedFocusForRange(*range, forward);
 		const auto blocks = blockContainer(range->container);
 		if (!blocks) {
 			return std::nullopt;
@@ -252,6 +246,13 @@ std::optional<int> State::removeStructuralSelection(
 		blocks->erase(
 			blocks->begin() + range->from,
 			blocks->begin() + range->till);
+		if (plannedFocus) {
+			plannedFocus = ShiftLeafPathAfterRemovedBlocks(
+				*plannedFocus,
+				range->container,
+				range->from,
+				range->till);
+		}
 		return finish([&] {
 			return leafNearBlockRange(*range, forward);
 		}, plannedFocus);
@@ -261,7 +262,7 @@ std::optional<int> State::removeStructuralSelection(
 		if (!range) {
 			return std::nullopt;
 		}
-		const auto plannedFocus = plannedFocusForRange(*range, forward);
+		auto plannedFocus = plannedFocusForRange(*range, forward);
 		const auto owner = block(range->block);
 		if (!owner || owner->kind != BlockKind::List) {
 			return std::nullopt;
@@ -277,9 +278,23 @@ std::optional<int> State::removeStructuralSelection(
 				})) {
 				return std::nullopt;
 			}
+			if (plannedFocus) {
+				plannedFocus = ShiftLeafPathAfterRemovedBlocks(
+					*plannedFocus,
+					removed.container,
+					removed.index,
+					removed.index + 1);
+			}
 			return finish([&] {
 				return focusForRemovedBlock(removed, forward);
 			}, plannedFocus);
+		}
+		if (plannedFocus) {
+			plannedFocus = ShiftLeafPathAfterRemovedListItems(
+				*plannedFocus,
+				range->block,
+				range->from,
+				range->till);
 		}
 		return finish([&] {
 			return leafNearListItemRange(*range, forward);
@@ -295,9 +310,11 @@ std::optional<int> State::removeStructuralSelection(
 		if (!owner || owner->kind != BlockKind::Table) {
 			return std::nullopt;
 		}
-		owner->tableRows.erase(
-			owner->tableRows.begin() + range->from,
-			owner->tableRows.begin() + range->till);
+		EraseTableRowsKeepingSpans(
+			owner,
+			tableRenderLimits(),
+			range->from,
+			range->till);
 		if (owner->tableRows.empty() && RichTextIsEmpty(owner->text)) {
 			const auto removed = range->block;
 			if (!removeTarget({

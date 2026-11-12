@@ -7,6 +7,7 @@
 #include "history/history_widget.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
+#include "window/window_columns.h"
 #include "window/window_session_controller.h"
 #include "styles/style_window.h"
 
@@ -103,7 +104,7 @@ void MainWidget::startThirdSectionAnimation(bool opening) {
 			|| _controller->widget()->isFullScreen()) {
 			return 0;
 		}
-		const auto saved = Core::App().settings().thirdSectionExtendedBy();
+		const auto saved = _controller->columns().thirdSectionExtendedBy();
 		return (saved == -1) ? _thirdColumnWidth : saved;
 	}();
 	const auto toWidth = opening

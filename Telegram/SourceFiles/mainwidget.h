@@ -147,6 +147,7 @@ public:
 	void prepareThirdSectionOpen();
 	bool animateThirdSectionClose(Fn<void()> finished);
 	bool reopenThirdSection();
+	void columnsRestored();
 	bool stackIsEmpty() const;
 	[[nodiscard]] std::vector<Window::SavedChat> chatStackForSave() const;
 	bool showBackFromStack(const SectionShow &params);

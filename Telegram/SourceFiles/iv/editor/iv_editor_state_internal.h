@@ -142,6 +142,18 @@ bool SetMediaBlockSpoiler(Block *block, bool enabled);
 		const BlockPath &list,
 		int removedItemIndex);
 
+[[nodiscard]] LeafPath ShiftLeafPathAfterRemovedBlocks(
+		LeafPath leaf,
+		const BlockContainerPath &container,
+		int from,
+		int till);
+
+[[nodiscard]] LeafPath ShiftLeafPathAfterRemovedListItems(
+		LeafPath leaf,
+		const BlockPath &list,
+		int from,
+		int till);
+
 [[nodiscard]] std::optional<int> BlockIndexInContainer(
 		const LeafPath &leaf,
 		const BlockContainerPath &container);

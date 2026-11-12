@@ -43,7 +43,7 @@ namespace Media {
 namespace Player {
 namespace {
 
-Instance *SingleInstance = nullptr;
+auto SingleInstance = (Instance*)nullptr;
 
 // Preload X message ids before and after current.
 constexpr auto kIdsLimit = 32;
