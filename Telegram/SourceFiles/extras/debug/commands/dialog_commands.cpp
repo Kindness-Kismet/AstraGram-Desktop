@@ -8,6 +8,7 @@
 #include "boxes/background_box.h"
 #include "boxes/background_preview_box.h"
 #include "boxes/connection_box.h"
+#include "boxes/contacts_box.h"
 #include "boxes/create_poll_box.h"
 #include "boxes/delete_messages_box.h"
 #include "boxes/edit_todo_list_box.h"
