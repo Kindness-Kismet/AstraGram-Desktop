@@ -157,6 +157,11 @@ using json = nlohmann::json;
 		const auto history = session->data().history(peer);
 		const auto latest = history->messages().snapshot({ ServerMaxMsgId - 1, 50, 0 });
 		result["history"] = {
+			{ "inboxReadTillKnown", history->inboxReadTillKnown() },
+			{ "inboxReadTillId", history->inboxReadTillId().bare },
+			{ "outboxReadTillId", history->outboxReadTillId().bare },
+			{ "unreadCountKnown", history->unreadCountKnown() },
+			{ "unreadCount", history->unreadCount() },
 			{ "empty", history->isEmpty() },
 			{ "minId", history->minMsgId().bare },
 			{ "maxId", history->maxMsgId().bare },
