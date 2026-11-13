@@ -226,6 +226,20 @@ void ShowChannelsLimitBox(not_null<PeerData*> peer) {
 		: QString::number(seconds);
 }
 
+[[nodiscard]] MessageIdsList SentMessageIds(
+		const MTPUpdates &updates,
+		PeerId peerId) {
+	auto result = MessageIdsList();
+	updates.match([&](const MTPDupdates &data) {
+		for (const auto &update : data.vupdates().v) {
+			update.match([&](const MTPDupdateMessageID &id) {
+				result.push_back(FullMsgId(peerId, id.vid().v));
+			}, [](const auto &) {});
+		}
+	}, [](const auto &) {});
+	return result;
+}
+
 } // namespace
 
 namespace Api {
@@ -299,14 +313,7 @@ void ApiWrap::ProcessRecentSelfForwards(
 		const MTPUpdates &updates,
 		PeerId targetPeerId,
 		PeerId fromPeerId) {
-	auto newIds = MessageIdsList();
-	updates.match([&](const MTPDupdates &data) {
-		for (const auto &update : data.vupdates().v) {
-			update.match([&](const MTPDupdateMessageID &d) {
-				newIds.push_back(FullMsgId(targetPeerId, d.vid().v));
-			}, [](const auto &) {});
-		}
-	}, [](const auto &) {});
+	const auto newIds = SentMessageIds(updates, targetPeerId);
 	if (!newIds.empty()) {
 		session->data().addRecentSelfForwards({
 			.fromPeerId = fromPeerId,
@@ -687,6 +694,9 @@ void ApiWrap::sendMessageFail(
 				topic->setClosed(true);
 			}
 		}
+	}
+	if (itemId) {
+		_session->data().histories().checkReplyTargetSent(itemId, MsgId());
 	}
 }
 
@@ -3997,10 +4007,11 @@ void ApiWrap::finishForwarding(const SendAction &action) {
 	}
 }
 
-void ApiWrap::forwardMessages(
+FullMsgId ApiWrap::forwardMessages(
 		Data::ResolvedForwardDraft &&draft,
 		SendAction action,
-		FnMut<void()> &&successCallback) {
+		FnMut<void()> &&successCallback,
+		Fn<void(const MessageIdsList&)> sentCallback) {
 	Expects(!draft.items.empty());
 
 	applyGhostScheduling(_session, action.options);
@@ -4010,7 +4021,7 @@ void ApiWrap::forwardMessages(
 		crl::async([=] {
 			ExtrasForward::forwardMessages(_session, action, false, draft);
 		});
-		return;
+		return {};
 	}
 
 	const auto extrasIntelligentForwardNeeded = ExtrasForward::isExtrasForwardNeeded(draft.items);
@@ -4018,7 +4029,7 @@ void ApiWrap::forwardMessages(
 		crl::async([=] {
 			ExtrasForward::intelligentForward(_session, action, draft);
 		});
-		return;
+		return {};
 	}
 
 	auto &histories = _session->data().histories();
@@ -4036,7 +4047,7 @@ void ApiWrap::forwardMessages(
 		if (successCallback) {
 			successCallback();
 		}
-		return;
+		return {};
 	}
 	draft.options = HistoryView::Controls::NormalizeForwardOptions(
 		_session,
@@ -4048,7 +4059,10 @@ void ApiWrap::forwardMessages(
 		if (successCallback) {
 			successCallback();
 		}
-		return;
+		if (sentCallback) {
+			sentCallback({});
+		}
+		return {};
 	}
 
 	struct SharedCallback {
@@ -4130,6 +4144,7 @@ void ApiWrap::forwardMessages(
 	auto ids = QVector<MTPint>();
 	auto randomIds = QVector<MTPlong>();
 	auto localIds = std::shared_ptr<base::flat_map<uint64, FullMsgId>>();
+	auto localId = FullMsgId();
 
 	const auto sendAccumulated = [&] {
 		if (ids.isEmpty()) {
@@ -4203,6 +4218,9 @@ void ApiWrap::forwardMessages(
 					_session->api().updates().checkForSentToScheduled(
 						result);
 				}
+				if (sentCallback) {
+					sentCallback(SentMessageIds(result, peer->id));
+				}
 				if (shared && !--shared->requestsLeft) {
 					shared->callback();
 				}
@@ -4216,6 +4234,9 @@ void ApiWrap::forwardMessages(
 				}
 			},
 			[=](const MTP::Error &error, const MTP::Response &) {
+				if (sentCallback) {
+					sentCallback({});
+				}
 				if (idsCopy) {
 					for (const auto &[randomId, itemId] : *idsCopy) {
 						_session->api().sendMessageFail(
@@ -4265,6 +4286,7 @@ void ApiWrap::forwardMessages(
 					localIds = std::make_shared<base::flat_map<uint64, FullMsgId>>();
 				}
 				localIds->emplace(randomId, newId);
+				localId = newId;
 			}
 			const auto newFrom = item->history()->peer;
 			if (forwardFrom != newFrom) {
@@ -4279,6 +4301,7 @@ void ApiWrap::forwardMessages(
 		sendAccumulated();
 	}
 	_session->data().sendHistoryChangeNotifications();
+	return localId;
 }
 
 void ApiWrap::shareContact(

@@ -1047,7 +1047,11 @@ void HistoryWidget::finishAnimating() {
 void HistoryWidget::chooseAttach(
 		std::optional<bool> overrideSendImagesAsPhotos) {
 	if (_editMsgId) {
-		controller()->showToast(tr::lng_edit_caption_attach(tr::now));
+		if (_replaceMedia) {
+			startMediaReplace();
+		} else {
+			controller()->showToast(tr::lng_edit_caption_attach(tr::now));
+		}
 		return;
 	}
 
