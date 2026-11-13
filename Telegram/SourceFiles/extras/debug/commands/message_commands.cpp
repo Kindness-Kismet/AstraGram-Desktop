@@ -8,6 +8,8 @@
 #include "extras/features/secret_chats/secret_chat_dialog.h"
 #include "extras/utils/telegram_helpers.h"
 #include "api/api_common.h"
+#include "api/api_forward_reply.h"
+#include "chat_helpers/compose/compose_show.h"
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "data/data_document.h"
@@ -52,6 +54,7 @@
 
 #include <QBuffer>
 #include <QFile>
+#include <QStringDecoder>
 #include <QImage>
 #include <QtGui/QEnterEvent>
 #include <QtGui/QMouseEvent>
@@ -590,6 +593,73 @@ using json = nlohmann::json;
 	destination->session().api().forwardMessages(
 		Data::ResolvedForwardDraft{ { item } }, action);
 	return Result::Ok(Compact(json{ { "state", "submitted" } }));
+}
+
+[[nodiscard]] Result forwardMessageWithReply(const QStringList &args) {
+	if (args.size() != 4
+		&& (args.size() != 5 || args[3] != u"--file"_q)) {
+		return Result::Err(u"usage: message.forward-reply <sourcePeerId> <messageId> <destinationPeerId> <text | --file path>"_q);
+	}
+	const auto item = findMessage(args[0], args[1]);
+	const auto destination = findPeer(args[2]);
+	if (!item || !destination || isSimulationSession(&destination->session())) {
+		return Result::Err(u"an authenticated source message and destination are required"_q);
+	}
+	if (!IsServerMsgId(item->id)
+		|| !item->allowsForward()
+		|| !Api::CanReplyToForward({ item })) {
+		return Result::Err(u"message does not support forwarding with a reply"_q);
+	}
+	if (destination->starsPerMessageChecked() > 0) {
+		return Result::Err(u"paid destinations are not supported"_q);
+	}
+	auto text = args[3];
+	if (args.size() == 5) {
+		auto file = QFile(args[4]);
+		if (!file.open(QIODevice::ReadOnly)) {
+			return Result::Err(u"cannot read text file"_q);
+		}
+		auto decoder = QStringDecoder(QStringDecoder::Utf8);
+		text = decoder(file.readAll());
+		if (decoder.hasError()) {
+			return Result::Err(u"text file must be valid UTF-8"_q);
+		}
+	}
+	if (text.trimmed().isEmpty()) {
+		return Result::Err(u"reply text must not be empty"_q);
+	}
+	const auto session = &destination->session();
+	const auto controller = session->tryResolveWindow();
+	if (!controller) {
+		return Result::Err(u"no window controller"_q);
+	}
+	const auto sourceId = item->fullId();
+	const auto history = destination->owner().history(destination);
+	auto action = Api::SendAction(history);
+	action.clearDraft = false;
+	auto previous = history->forwardDraft(MsgId(), PeerId());
+	// 正式接口会取走转发草稿；调试发送只临时提供目标，保留用户原草稿。
+	history->setForwardDraft(MsgId(), PeerId(), { .ids = { sourceId } });
+	const auto sent = Api::SendForwardWithReply({
+		.show = controller->uiShow(),
+		.action = action,
+		.text = { text, {} },
+		.checkPayment = [=](int) {
+			return destination->starsPerMessageChecked() == 0;
+		},
+	});
+	history->setForwardDraft(MsgId(), PeerId(), std::move(previous));
+	if (!sent) {
+		return Result::Err(u"forwarding with a reply was rejected"_q);
+	}
+	return Result::Ok(Compact(json{
+		{ "state", "submitted" },
+		{ "accountUserId", session->userId().bare },
+		{ "sourcePeerId", sourceId.peer.value },
+		{ "sourceMessageId", sourceId.msg.bare },
+		{ "destinationPeerId", destination->id.value },
+		{ "textLength", text.size() },
+	}));
 }
 
 [[nodiscard]] Result savedState(const QStringList &args) {
@@ -1165,6 +1235,7 @@ const HandlerMap &MessageHandlers() {
 		{ u"message.send"_q, &SendTextMessage },
 		{ u"message.send-formatted"_q, &sendFormattedMessage },
 		{ u"message.forward"_q, &forwardMessage },
+		{ u"message.forward-reply"_q, &forwardMessageWithReply },
 		{ u"saved.state"_q, &savedState },
 		{ u"message.delete"_q, &deleteMessages },
 		{ u"chat.open"_q, &OpenChat },

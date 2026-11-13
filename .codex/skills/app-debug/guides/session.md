@@ -5,6 +5,7 @@
 - `cache.memory-stats`：查询历史协议缓存的常驻会话数、消息数、协议字节数、淘汰次数、磁盘读取次数及限制；`messageBytes` 为序列化大小，不是进程堆内存。正在使用、读取或保存的条目受保护，可暂时超过预算；闲置项每 15 秒检查，超过 2 分钟可释放，磁盘缓存保留。
 
 - `cache.state [peerId]`：查询恢复的会话数、缓存命中次数、当前分组、连接状态；指定会话时附带已显示消息范围。
+- 其中 `history` 还返回 `inboxReadTillKnown`、`inboxReadTillId`、`outboxReadTillId`、`unreadCountKnown` 和 `unreadCount`。已读编号表示本地已知的接收/发送阅读进度；接收进度和未读数需结合对应的 `Known` 字段判断。
 - `cache.layout <peerId>`：只查询旧、新聊天视图的可见消息编号、纵坐标、尺寸、媒体尺寸、气泡区域 `bubble`（消息内 x、y、宽、高）、出现透明度 `opacity`（0 至 1）、入场进度 `revealProgress`、位移 `revealShift`、实际纵坐标 `visualY`、贴纸当前帧及总帧数 `stickerFrame` / `stickerFrames`（未加载为 -1）、滚动位置、首屏及缓存刷新覆盖动画；不触发排版、重绘或联网。时间为进程单调毫秒，纵坐标相对滚动区，底部可能被悬浮输入区遮挡；隐藏的相册子项不计入。
 - 新列表另返回纯换位偏移 `reorderShift`，它已计入 `revealShift` 和 `visualY`；`visualHitId` 是气泡中心按实际绘制位置命中的消息编号，无气泡时用整行中心。交叉遮挡时可能命中后绘制的另一条消息，旧视图为 0。
 - `senderId`、`outLayout`、`rightLayout` 分别返回发送者及实际气泡方向；新列表的 `highlightOpacity` 和 `highlightRange` 返回当前定位高亮透明度与文字范围。
@@ -76,6 +77,10 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 
 `message.send-formatted <peerId> <quote|collapsed-quote|code> <textFile>` 将 UTF-8 文件全文标记为引用、折叠引用或代码，沿正式发送链路提交，保留草稿；用 `message.fetch` 核对服务器确认的正文和实体。
 `message.forward <sourcePeerId> <messageId> <destinationPeerId>` 沿正式接口转发已加载且允许转发的消息，保留草稿；源和目标仍限定为用户授权的测试对话。
+`message.forward-reply <sourcePeerId> <messageId> <destinationPeerId> <text|--file path>` 复用正式“转发后回复”流程，仅接受当前真实账号已加载且允许转发的单条消息；回复必须为非空文字，文件严格按 UTF-8 阅读。付费目的地直接拒绝，保留目标对话原有文字和转发草稿。返回 `state: submitted` 后，用 `message.fetch` 和 `job.status` 核对两条服务器消息以及回复的 `replyToId`，不把提交当作发送成功。
+
+`message.list` / `message.fetch` 的每条消息另有 `unread`、`sending`、`failed`，分别为当前本地未读、发送中、发送失败状态；查询不发送已读。
+
 `saved.state <sourcePeerId>` 返回该来源的收藏计数；未知时发起正式加载，返回 `count: null`，稍后再查询。
 
 ## `message.delete <peerId> <messageId>... [--account <index>] [--revoke]`

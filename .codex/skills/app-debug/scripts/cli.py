@@ -326,7 +326,9 @@ def key_name(value: str) -> str:
     names = ("escape", "backspace", "up", "down", "left", "right", "enter", "tab", "space")
     if value in names or (value.isascii() and value.isdigit() and len(value) <= 16):
         return value
-    raise argparse.ArgumentTypeError(f"unsupported key: {value}")
+    if value.strip():
+        return value
+    raise argparse.ArgumentTypeError("Provide one key combination, such as Ctrl+O")
 
 
 def register_commands(sub) -> None:
@@ -421,6 +423,12 @@ def register_commands(sub) -> None:
     command.add_argument("extraText", nargs="*", help=argparse.SUPPRESS)
     command.add_argument("--file", dest="text_file", help="发送 UTF-8 文件内容，保留换行与引号")
     command.add_argument("--account", type=int, help="使用 session.list 中的账号下标，不切换当前界面")
+    command = sub.add_parser("message.forward-reply", help="向已授权测试对话转发单条消息并回复文字，保留草稿，拒绝付费目的地")
+    command.add_argument("source_peer")
+    command.add_argument("message_id")
+    command.add_argument("destination_peer")
+    command.add_argument("text", nargs="?", help="回复文字")
+    command.add_argument("--file", dest="text_file", help="UTF-8 回复文本文件")
     command = sub.add_parser("chat.history-stats", help="查询指定消息的存在、隐藏与视图状态，默认收藏夹")
     command.add_argument("msgIds", nargs="+", metavar="MSG_ID")
     command.add_argument("--peer", help="查询指定对话，默认收藏夹")
@@ -491,7 +499,7 @@ def register_commands(sub) -> None:
     command.add_argument("state", choices=("on", "off"), help="开启或关闭完整点击圆")
     command = sub.add_parser("control.key", help="向控件合成按键，用于菜单导航、关闭和验证码输入")
     command.add_argument("target", help="控件名称、#序号或 @menu")
-    command.add_argument("key", type=key_name, help="escape、backspace、up、down、left、right、enter、tab、space，或最多 16 位数字")
+    command.add_argument("key", type=key_name, help="原有导航键、最多 16 位数字，或单个组合，如 Ctrl+O；不接受多步快捷键")
     command = sub.add_parser("control.shortcut", help="向指定控件内已注册的快捷键投递事件，不操作系统键盘")
     command.add_argument("target", help="控件名称或 #序号")
     command.add_argument("sequence", help="快捷键组合，如 Ctrl+K")
@@ -615,7 +623,7 @@ def build_server_command(args: argparse.Namespace) -> str:
     if command in ("control.hover", "control.ripple"):
         return f"{command} {quote_arg(args.target)} {args.state}"
     if command == "control.key":
-        return f"control.key {quote_arg(args.target)} {args.key}"
+        return f"control.key {quote_arg(args.target)} {quote_arg(args.key)}"
     if command == "control.shortcut":
         return f"control.shortcut {quote_arg(args.target)} {quote_arg(args.sequence)}"
     if command == "control.pointer":
@@ -723,6 +731,17 @@ def build_server_command(args: argparse.Namespace) -> str:
             raise ValueError("Provide message text or --file")
         text = " ".join([args.text, *args.extraText])
         return f"message.send {args.peerId} {quote_arg(text)}{suffix}"
+    if command == "message.forward-reply":
+        parts = [command, args.source_peer, args.message_id, args.destination_peer]
+        if args.text_file is not None:
+            if args.text is not None:
+                raise ValueError("Text and --file are mutually exclusive")
+            parts += ["--file", str(Path(args.text_file).resolve())]
+        elif args.text is not None:
+            parts.append(args.text)
+        else:
+            raise ValueError("Provide reply text or --file")
+        return " ".join(map(quote_arg, parts))
     if command == "chat.history-stats":
         result = "chat.history-stats " + " ".join(args.msgIds)
         return result + (f" --peer {quote_arg(args.peer)}" if args.peer else "")

@@ -443,8 +443,14 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 		&& ranges::all_of(args[1], [](QChar ch) {
 			return (ch >= u'0') && (ch <= u'9');
 		});
+	const auto sequence = (key != keys.cend())
+		? QKeySequence(*key)
+		: QKeySequence::fromString(args[1], QKeySequence::PortableText);
+	const auto single = sequence.count() == 1
+		&& sequence[0].key() != Qt::Key_unknown
+		&& sequence[0].key() != Qt::Key(0);
 	const auto target = QPointer<QWidget>(findControl(args[0]));
-	if ((key == keys.cend() && !digits)
+	if ((!single && !digits)
 		|| !target
 		|| !target->isVisible()
 		|| !target->isEnabled()) {
@@ -458,9 +464,14 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 		}
 		return Result::Ok(u"sent"_q);
 	}
-	const auto text = (*key == Qt::Key_Space) ? u" "_q : QString();
-	sendIfAlive(target, QKeyEvent(QEvent::KeyPress, *key, Qt::NoModifier, text));
-	sendIfAlive(target, QKeyEvent(QEvent::KeyRelease, *key, Qt::NoModifier, text));
+	const auto combination = sequence[0];
+	const auto modifiers = combination.keyboardModifiers();
+	const auto text = (combination.key() == Qt::Key_Space
+		&& modifiers == Qt::NoModifier) ? u" "_q : QString();
+	sendIfAlive(target, QKeyEvent(
+		QEvent::KeyPress, combination.key(), modifiers, text));
+	sendIfAlive(target, QKeyEvent(
+		QEvent::KeyRelease, combination.key(), modifiers, text));
 	return Result::Ok(u"sent"_q);
 }
 
