@@ -120,4 +120,13 @@ void ComposeTooltipManager::raise() {
 	_tooltip->raise();
 }
 
+void ComposeTooltipManager::hideFast() {
+	_tooltip->toggleFast(false);
+}
+
+void ComposeTooltipManager::showFinished() {
+	hideFast();
+	updateVisibility(!_button->isHidden());
+}
+
 } // namespace HistoryView::Controls

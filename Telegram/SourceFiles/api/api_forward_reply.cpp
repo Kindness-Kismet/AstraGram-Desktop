@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_chat_participant_status.h"
 #include "data/data_peer.h"
 #include "data/data_session.h"
+#include "extras/features/forward/extras_forward.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/history_item_helpers.h"
@@ -21,7 +22,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Api {
 
 bool CanReplyToForward(const HistoryItemsList &items) {
-	return (items.size() == 1) && !items.front()->isSavedMusicItem();
+	// 特殊转发没有目标消息 ID，无法衔接回复。
+	return (items.size() == 1)
+		&& !items.front()->isSavedMusicItem()
+		&& !ExtrasForward::isFullExtrasForwardNeeded(items.front())
+		&& !ExtrasForward::isExtrasForwardNeeded(items.front());
 }
 
 bool SendForwardWithReply(ForwardReply &&descriptor) {
@@ -44,7 +49,8 @@ bool SendForwardWithReply(ForwardReply &&descriptor) {
 	if (const auto error = GetErrorForSending(peer, request)) {
 		Data::ShowSendErrorToast(descriptor.show, peer, error);
 		return false;
-	} else if (!descriptor.checkPayment(request.messagesCount)) {
+	}
+	if (!descriptor.checkPayment(request.messagesCount)) {
 		return false;
 	}
 	history->setForwardDraft(topicRootId, monoforumPeerId, {});

@@ -213,6 +213,7 @@ Widget::Widget(
 			.chosen = [=](InsertSuggestionCommand command) {
 				applyInsertSuggestion(command);
 			},
+			.lists = [=] { return canInsertListAtCaret(); },
 			.media = static_cast<bool>(_requestMedia),
 			.map = static_cast<bool>(_requestMap),
 		});
