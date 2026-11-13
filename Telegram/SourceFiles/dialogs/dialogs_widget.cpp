@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/qt/qt_key_modifiers.h"
 #include "base/options.h"
 #include "dialogs/ui/chat_search_in.h"
+#include "dialogs/ui/dialogs_bottom_button.h"
 #include "dialogs/ui/dialogs_stories_content.h"
 #include "dialogs/ui/dialogs_stories_list.h"
 #include "dialogs/ui/dialogs_suggestions.h"
@@ -53,7 +54,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/fade_wrap.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
-#include "ui/effects/radial_animation.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/chat/requests_bar.h"
 #include "ui/chat/group_call_bar.h"
@@ -312,109 +312,6 @@ QImage CommunityAddChatNarrowButton::prepareRippleMask() const {
 } // namespace
 
 const char kOptionForumHideChatsList[] = "forum-hide-chats-list";
-
-class Widget::BottomButton : public Ui::RippleButton {
-public:
-	BottomButton(
-		QWidget *parent,
-		const QString &text,
-		const style::FlatButton &st,
-		const style::icon &icon,
-		const style::icon &iconOver);
-
-	void setText(const QString &text);
-
-protected:
-	void paintEvent(QPaintEvent *e) override;
-
-	void onStateChanged(State was, StateChangeSource source) override;
-
-private:
-	void radialAnimationCallback();
-
-	QString _text;
-	const style::FlatButton &_st;
-	const style::icon &_icon;
-	const style::icon &_iconOver;
-	std::unique_ptr<Ui::InfiniteRadialAnimation> _loading;
-
-};
-
-Widget::BottomButton::BottomButton(
-	QWidget *parent,
-	const QString &text,
-	const style::FlatButton &st,
-	const style::icon &icon,
-	const style::icon &iconOver)
-: RippleButton(parent, st.ripple)
-, _text(text)
-, _st(st)
-, _icon(icon)
-, _iconOver(iconOver) {
-	ExtrasFeatures::WindowMaterial::watchSurface(this);
-	resize(st::columnMinimalWidthLeft, _st.height);
-}
-
-void Widget::BottomButton::setText(const QString &text) {
-	_text = text;
-	update();
-}
-
-void Widget::BottomButton::radialAnimationCallback() {
-	if (!anim::Disabled() && width() < st::columnMinimalWidthLeft) {
-		update();
-	}
-}
-
-void Widget::BottomButton::onStateChanged(
-		State was,
-		StateChangeSource source) {
-	RippleButton::onStateChanged(was, source);
-	if ((was & StateFlag::Disabled) != (state() & StateFlag::Disabled)) {
-		_loading = isDisabled()
-			? std::make_unique<Ui::InfiniteRadialAnimation>(
-				[=] { radialAnimationCallback(); },
-				st::dialogsLoadMoreLoading)
-			: nullptr;
-		if (_loading) {
-			_loading->start();
-		}
-	}
-	update();
-}
-
-void Widget::BottomButton::paintEvent(QPaintEvent *e) {
-	auto p = QPainter(this);
-
-	const auto over = isOver() && !isDisabled();
-
-	auto r = QRect(0, height() - _st.height, width(), _st.height);
-
-	p.fillRect(r, over ? _st.overBgColor->c
-		: ExtrasFeatures::WindowMaterial::surfaceColor(this, _st.bgColor->c));
-	if (!isDisabled()) {
-		paintRipple(p, 0, 0);
-	}
-
-	const auto &font = over ? _st.overFont : _st.font;
-	p.setFont(font);
-	p.setRenderHint(QPainter::TextAntialiasing);
-	p.setPen(over ? _st.overColor : _st.color);
-
-	if (width() >= st::columnMinimalWidthLeft) {
-		r.setTop(_st.textTop);
-		p.drawText(r, _text, style::al_top);
-	} else if (isDisabled() && _loading) {
-		_loading->draw(
-			p,
-			QPoint(
-				(width() - st::dialogsLoadMoreLoading.size.width()) / 2,
-				(height() - st::dialogsLoadMoreLoading.size.height()) / 2),
-			width());
-	} else {
-		(over ? _iconOver : _icon).paintInCenter(p, r);
-	}
-}
 
 Widget::Widget(
 	QWidget *parent,

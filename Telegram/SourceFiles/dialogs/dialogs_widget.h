@@ -92,6 +92,7 @@ namespace Dialogs {
 
 extern const char kOptionForumHideChatsList[];
 
+class BottomButton;
 struct RowDescriptor;
 class Row;
 class FakeRow;
@@ -420,7 +421,6 @@ private:
 	InnerWidget *_inner = nullptr;
 	std::unique_ptr<Suggestions> _suggestions;
 	std::vector<std::unique_ptr<Suggestions>> _hidingSuggestions;
-	class BottomButton;
 	object_ptr<BottomButton> _loadMoreChats = { nullptr };
 	std::unique_ptr<Window::ConnectionState> _connecting;
 	std::unique_ptr<Extras::MusicPlayer::FloatingPlayer> _musicPlayer;
