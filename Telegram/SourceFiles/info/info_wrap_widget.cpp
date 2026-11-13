@@ -611,6 +611,7 @@ void WrapWidget::setupTopBarMenuToggle() {
 	} else if (section.type() == Section::Type::Media
 		&& Media::UsesGalleryLayout(_controller.get())) {
 		addMediaTopBarButtons();
+		addTopBarMenuButton();
 	} else if (section.type() == Section::Type::Downloads) {
 		auto &manager = Core::App().downloadManager();
 		rpl::merge(

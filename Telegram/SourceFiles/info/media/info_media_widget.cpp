@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/media/info_media_gallery_header.h"
 #include "info/media/info_media_inner_widget.h"
 #include "info/profile/info_profile_values.h"
+#include "info/media/info_media_voice_filter.h"
 #include "info/info_controller.h"
 #include "data/data_session.h"
 #include "main/main_session.h"
@@ -173,6 +174,18 @@ rpl::producer<SelectedItems> Widget::selectedListValue() const {
 
 void Widget::selectionAction(SelectionAction action) {
 	_inner->selectionAction(action);
+}
+
+void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
+	if (!HasVoiceFilter(controller()->section().mediaType())) {
+		return;
+	}
+	FillVoiceFilterMenu(
+		addAction,
+		controller()->mediaSourceType(),
+		[=](Type sourceType) {
+			controller()->setMediaSourceType(sourceType);
+		});
 }
 
 bool Widget::calendarAvailable() const {

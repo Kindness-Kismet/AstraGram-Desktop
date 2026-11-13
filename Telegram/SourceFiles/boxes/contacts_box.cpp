@@ -22,6 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_separate_id.h"
 #include "window/window_session_controller.h"
 #include "styles/style_boxes.h"
+#include "styles/style_extras_icons.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_widgets.h"
@@ -44,7 +45,51 @@ public:
 		int y,
 		int outerWidth) override;
 
+protected:
+	QSize rightActionSize() const override {
+		return isMutualContact()
+			? QSize(st::extrasContactsMutualIcon.width(), st::extrasContactsMutualIcon.height())
+			: QSize();
+	}
+
+	QMargins rightActionMargins() const override {
+		const auto size = rightActionSize();
+		if (size.isEmpty()) {
+			return QMargins();
+		}
+		const auto right = st::contactsWithStories.item.photoPosition.x();
+		return QMargins(
+			right,
+			(st::contactsWithStories.item.height - size.height()) / 2,
+			right,
+			0);
+	}
+
+	bool rightActionDisabled() const override {
+		return false;
+	}
+
+	void rightActionPaint(
+			Painter &p,
+			int x,
+			int y,
+			int outerWidth,
+			bool selected,
+			bool actionSelected) override {
+		if (!isMutualContact()) {
+			return;
+		}
+		(selected || actionSelected
+			? st::extrasContactsMutualIconOver
+			: st::extrasContactsMutualIcon).paint(p, x, y, outerWidth);
+	}
+
 private:
+	[[nodiscard]] bool isMutualContact() const {
+		const auto user = peer()->asUser();
+		return user && (user->flags() & UserDataFlag::MutualContact);
+	}
+
 	const Fn<bool()> _selecting;
 	Ui::RoundCheckbox _check;
 
@@ -93,6 +138,7 @@ public:
 
 	void rowClicked(not_null<PeerListRow*> row) override;
 	void rowMiddleClicked(not_null<PeerListRow*> row) override;
+	void rowRightActionClicked(not_null<PeerListRow*> row) override;
 	base::unique_qptr<Ui::PopupMenu> rowContextMenu(
 		QWidget *parent,
 		not_null<PeerListRow*> row) override;
@@ -185,6 +231,15 @@ void ContactsListController::rowClicked(not_null<PeerListRow*> row) {
 
 void ContactsListController::rowMiddleClicked(not_null<PeerListRow*> row) {
 	_wheelClicks.fire(row->peer());
+}
+
+void ContactsListController::rowRightActionClicked(
+		not_null<PeerListRow*> row) {
+	if (const auto user = row->peer()->asUser();
+		user && (user->flags() & UserDataFlag::MutualContact)) {
+		delegate()->peerListUiShow()->showToast(
+			tr::extras_MutualContactInfo(tr::now));
+	}
 }
 
 base::unique_qptr<Ui::PopupMenu> ContactsListController::rowContextMenu(
