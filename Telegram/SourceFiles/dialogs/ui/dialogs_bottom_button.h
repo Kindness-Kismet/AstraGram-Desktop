@@ -26,8 +26,7 @@ public:
 		const QString &text,
 		const style::FlatButton &st,
 		const style::icon &icon,
-		const style::icon &iconOver,
-		bool hasTextIcon);
+		const style::icon &iconOver);
 
 	void setText(const QString &text);
 
@@ -43,11 +42,7 @@ private:
 	const style::FlatButton &_st;
 	const style::icon &_icon;
 	const style::icon &_iconOver;
-	const bool _hasTextIcon;
-	bool _quiet = false;
 	std::unique_ptr<Ui::InfiniteRadialAnimation> _loading;
-
-	QImage _textIcon;
 
 };
 
