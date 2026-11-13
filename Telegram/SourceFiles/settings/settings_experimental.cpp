@@ -171,6 +171,61 @@ struct ResolvedReferrer {
 	return QString();
 }
 
+enum class ImportResult {
+	Done,
+	Invalid,
+	Unsupported,
+};
+
+[[nodiscard]] ImportResult ImportOptions(const QString &text) {
+	const auto decoded = DecodeOptionsFromText(text.trimmed());
+	if (!decoded.ok) {
+		return ImportResult::Invalid;
+	}
+	return base::options::deserialize(decoded.json)
+		? ImportResult::Done
+		: ImportResult::Unsupported;
+}
+
+void ImportOptionsBox(
+		not_null<Ui::GenericBox*> box,
+		not_null<Window::Controller*> window,
+		Fn<void()> imported) {
+	box->setTitle(tr::extras_ExperimentalImportTitle());
+
+	const auto field = box->addRow(object_ptr<Ui::InputField>(
+		box,
+		st::defaultInputField,
+		Ui::InputField::Mode::NoNewlines,
+		tr::extras_ExperimentalCode()));
+
+	const auto save = [=] {
+		const auto result = ImportOptions(field->getLastText());
+		if (result == ImportResult::Invalid) {
+			field->showError();
+			box->showToast(tr::extras_ExperimentalInvalidCode(tr::now));
+			return;
+		}
+		if (result == ImportResult::Unsupported) {
+			field->showError();
+			box->showToast(tr::extras_ExperimentalUnsupportedCode(tr::now));
+			return;
+		}
+		imported();
+		box->closeBox();
+		window->showToast(tr::extras_ExperimentalImported(tr::now));
+	};
+	field->submits() | rpl::on_next(save, field->lifetime());
+
+	box->addButton(tr::lng_settings_save(), save);
+	box->addButton(tr::lng_cancel(), [=] {
+		box->closeBox();
+	});
+	box->setFocusCallback([=] {
+		field->setFocusFast();
+	});
+}
+
 void SetupCopyDeepLink(
 		not_null<Window::Controller*> window,
 		not_null<Button*> button,
@@ -669,23 +724,23 @@ void Experimental::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 			});
 		},
 		&st::menuIconCopy);
-	if (!DecodeOptionsFromText(QGuiApplication::clipboard()->text()).ok) {
-		return;
-	}
+	const auto reload = crl::guard(this, [=] {
+		_reloadOptionsRequests.fire({});
+	});
 	addAction(
 		tr::extras_ExperimentalImport(tr::now),
 		[=] {
-			const auto decoded = DecodeOptionsFromText(
+			const auto result = ImportOptions(
 				QGuiApplication::clipboard()->text());
-			if (!decoded.ok) {
-				window->showToast(tr::extras_ExperimentalInvalidCode(tr::now));
+			if (result == ImportResult::Invalid) {
+				window->show(Box(ImportOptionsBox, window, reload));
 				return;
 			}
-			if (!base::options::deserialize(decoded.json)) {
+			if (result == ImportResult::Unsupported) {
 				window->showToast(tr::extras_ExperimentalUnsupportedCode(tr::now));
 				return;
 			}
-			_reloadOptionsRequests.fire({});
+			reload();
 			window->showToast(tr::extras_ExperimentalImported(tr::now));
 		},
 		&st::menuIconImportTheme);

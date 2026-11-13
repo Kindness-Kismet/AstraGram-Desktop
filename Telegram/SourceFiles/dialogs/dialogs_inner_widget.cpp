@@ -96,6 +96,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/multi_select.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/unread_badge.h"
+#include "boxes/contacts_box.h"
 #include "boxes/delete_messages_box.h"
 #include "boxes/filters/edit_filter_box.h"
 #include "boxes/peers/edit_forum_topic_box.h"
@@ -463,16 +464,17 @@ InnerWidget::InnerWidget(
 
 	Ui::ScheduleThanosEffectWarmUp(&session(), lifetime());
 
+	session().settings().archiveCollapsedChanges(
+	) | rpl::on_next([=] {
+		refreshWithArchiveSlide();
+	}, lifetime());
+
 	rpl::merge(
-		session().settings().archiveCollapsedChanges() | rpl::map_to(false),
-		session().data().chatsFilters().changed() | rpl::map_to(true),
-		session().data().chatsFilters().tagsEnabledChanges(
-		) | rpl::map_to(true)
-	) | rpl::on_next([=](bool refreshHeight) {
-		if (refreshHeight) {
-			_chatsFilterTags.clear();
-			_shownList->updateHeights(_narrowRatio);
-		}
+		session().data().chatsFilters().changed(),
+		session().data().chatsFilters().tagsEnabledChanges() | rpl::to_empty
+	) | rpl::on_next([=] {
+		_chatsFilterTags.clear();
+		_shownList->updateHeights(_narrowRatio);
 		refreshWithCollapsedRows();
 	}, lifetime());
 
@@ -545,7 +547,7 @@ InnerWidget::InnerWidget(
 		ExtrasSettings::getInstance().showArchiveInDrawerValue(
 		) | rpl::skip(1) | rpl::to_empty
 	) | rpl::on_next([=] {
-		refresh();
+		refreshWithArchiveSlide();
 	}, lifetime());
 
 	session().changes().historyUpdates(
@@ -805,6 +807,50 @@ int InnerWidget::skipTopHeight() const {
 	return (_skipTopDialog && !_shownList->empty())
 		? _shownList->begin()->get()->height()
 		: 0;
+}
+
+int InnerWidget::archiveBandHeight() const {
+	if (_shownList->empty() || !_shownList->begin()->get()->folder()) {
+		return 0;
+	}
+	return int(_collapsedRows.size()) * st::dialogsImportantBarHeight
+		+ (_skipTopDialog ? 0 : _shownList->begin()->get()->height());
+}
+
+void InnerWidget::refreshWithArchiveSlide() {
+	_archiveSlide.stop();
+	const auto slideAllowed = [&](int band) {
+		return (_state == WidgetState::Default)
+			&& !communityModeShown()
+			&& isVisible()
+			&& (_visibleTop < band);
+	};
+	const auto archive = _shownList->empty()
+		? nullptr
+		: _shownList->begin()->get()->folder();
+	const auto grab = [&](int height) {
+		return GrabArchiveBand(
+			this,
+			height,
+			!_collapsedRows.empty(),
+			*_st,
+			archive ? archive->chatListName() : QString());
+	};
+	const auto from = archiveBandHeight();
+	auto was = slideAllowed(from) ? grab(from) : ArchiveBand();
+	refreshWithCollapsedRows();
+	const auto to = archiveBandHeight();
+	if (from != to && (!was.image.isNull() || slideAllowed(to))) {
+		auto now = (from && to && !was.image.isNull())
+			? grab(to)
+			: ArchiveBand();
+		_archiveSlide.start(
+			from,
+			to,
+			std::move(was),
+			std::move(now),
+			_controller->window().layerShownValue());
+	}
 }
 
 int InnerWidget::collapsedRowsOffset() const {
@@ -1425,9 +1471,15 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		if (communityModeShown()) {
 			p.save();
 		}
+		const auto archiveShift = _archiveSlide.shift();
+		const auto archiveBandTransform = p.transform();
+		if (archiveShift) {
+			p.translate(0, archiveShift);
+			dialogsClip.translate(0, -archiveShift);
+		}
 		const auto collapsedSkip = collapsedRowsOffset();
 		p.translate(0, collapsedSkip);
-		paintCollapsedRows(p, r.translated(0, -collapsedSkip));
+		paintCollapsedRows(p, dialogsClip.translated(0, -collapsedSkip));
 
 		if (communityModeShown() && !_shownList->empty()) {
 			p.translate(0, st::communityBarHeight);
@@ -1557,6 +1609,12 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			}
 		} else {
 			p.fillRect(dialogsClip, currentBg());
+		}
+		if (archiveShift) {
+			const auto transform = p.transform();
+			p.setTransform(archiveBandTransform);
+			_archiveSlide.paintBand(p);
+			p.setTransform(transform);
 		}
 		if (communityModeShown()) {
 			p.restore();
@@ -2983,6 +3041,7 @@ bool InnerWidget::addQuickActionRipple(
 		.sizeOverride = Size(st::dialogsQuickActionSize),
 	});
 	context->action = action;
+	context->label = type;
 	context->icon->jumpTo(context->icon->framesCount() - 1, [=] {
 		const auto size = QSize(
 			st::dialogsQuickActionRippleSize,
@@ -3007,10 +3066,7 @@ bool InnerWidget::addQuickActionRipple(
 							p,
 							Rect(size),
 							context->icon.get(),
-							ResolveQuickDialogLabel(
-								history,
-								action,
-								_filterId));
+							type);
 					}),
 				std::move(updateCallback));
 		}
@@ -7063,6 +7119,7 @@ bool InnerWidget::prepareQuickAction(
 		.sizeOverride = Size(st::dialogsQuickActionSize),
 	});
 	context->action = action;
+	context->label = type;
 	return true;
 }
 

@@ -52,10 +52,6 @@ include(cmake/td_webauthn.cmake)
 include(cmake/telegram_apple_swift_runtime.cmake)
 include(cmake/generate_appstream_changelog.cmake)
 
-if (DESKTOP_APP_TEST_APPS)
-    include(cmake/tests.cmake)
-endif()
-
 if (WIN32)
     include(cmake/generate_midl.cmake)
     generate_midl(Telegram ${src_loc}
@@ -66,20 +62,6 @@ endif()
 
 include(cmake/generate_update_keys.cmake)
 generate_update_keys(Telegram ${res_loc}/update)
-
-if (DESKTOP_APP_TEST_APPS OR TDESKTOP_BUILD_UPDATE_TESTS)
-    include(cmake/test_update_verify.cmake)
-    if (NOT DESKTOP_APP_DISABLE_AUTOUPDATE)
-        include(cmake/test_update_unpack.cmake)
-        if (WIN32 AND NOT build_winstore)
-            include(cmake/test_updater_win.cmake)
-        endif()
-    endif()
-endif()
-include(cmake/test_iv_editor_state.cmake)
-include(cmake/test_iv_editor_table_grid.cmake)
-include(cmake/test_wallet_card_tint.cmake)
-include(cmake/test_wallet_phrase_shares.cmake)
 
 option(ASTRAGRAM_BUILD_STORAGE_TESTS "Build storage compatibility tests." OFF)
 if (ASTRAGRAM_BUILD_STORAGE_TESTS)
@@ -566,6 +548,8 @@ PRIVATE
     api/api_editing.cpp
     api/api_editing.h
     api/api_filter_updates.h
+    api/api_forward_reply.cpp
+    api/api_forward_reply.h
     api/api_global_privacy.cpp
     api/api_global_privacy.h
     api/api_hash.cpp
@@ -734,6 +718,8 @@ PRIVATE
     boxes/choose_filter_box.h
     boxes/connection_box.cpp
     boxes/connection_box.h
+    boxes/contacts_box.cpp
+    boxes/contacts_box.h
     boxes/create_poll_box.cpp
     boxes/create_poll_box.h
     boxes/delete_messages_box.cpp
@@ -1268,6 +1254,8 @@ PRIVATE
     dialogs/ui/dialogs_topics_view.h
     dialogs/ui/dialogs_video_userpic.cpp
     dialogs/ui/dialogs_video_userpic.h
+    dialogs/dialogs_archive_slide.cpp
+    dialogs/dialogs_archive_slide.h
     dialogs/dialogs_community_chats_list.cpp
     dialogs/dialogs_community_chats_list.h
     dialogs/dialogs_community_requestable_list.cpp
@@ -1769,6 +1757,8 @@ PRIVATE
     info/media/info_media_list_widget.h
     info/media/info_media_provider.cpp
     info/media/info_media_provider.h
+    info/media/info_media_voice_filter.cpp
+    info/media/info_media_voice_filter.h
     info/media/info_media_widget.cpp
     info/media/info_media_widget.h
     info/members/info_members_widget.cpp

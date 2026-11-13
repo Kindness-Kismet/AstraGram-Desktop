@@ -69,6 +69,7 @@ ComposeIcons {
 	menuUnmute: icon;
 	menuSchedule: icon;
 	menuWhenOnline: icon;
+	menuReply: icon;
 	menuSpoiler: icon;
 	menuBelow: icon;
 	menuAbove: icon;
@@ -744,6 +745,7 @@ defaultComposeIcons: ComposeIcons {
 	menuUnmute: menuIconUnmute;
 	menuSchedule: menuIconSchedule;
 	menuWhenOnline: menuIconWhenOnline;
+	menuReply: menuIconReply;
 	menuSpoiler: menuIconSpoiler;
 	menuBelow: menuIconBelow;
 	menuAbove: menuIconAbove;

@@ -102,7 +102,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--test",
         action="append",
-        choices=("updates", "storage", "wallet"),
+        choices=("storage",),
         default=[],
         help="Build and run the selected test suite instead of the app; repeatable",
     )

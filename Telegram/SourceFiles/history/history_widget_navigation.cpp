@@ -998,17 +998,21 @@ bool HistoryWidget::updateReplaceMediaButton() {
 	const auto hideDuration = st::historyReplaceMedia.ripple.hideDuration;
 	_replaceMedia->setClickedCallback([=] {
 		base::call_delayed(hideDuration, this, [=] {
-			EditCaptionBox::StartMediaReplace(
-				controller(),
-				{ _history->peer->id, _editMsgId },
-				_field->getTextWithTags(),
-				suggestOptions(),
-				_mediaEditManager.spoilered(),
-				_mediaEditManager.invertCaption(),
-				crl::guard(_list, [=] { cancelEdit(); }));
+			startMediaReplace();
 		});
 	});
 	return true;
+}
+
+void HistoryWidget::startMediaReplace() {
+	EditCaptionBox::StartMediaReplace(
+		controller(),
+		{ _history->peer->id, _editMsgId },
+		_field->getTextWithTags(),
+		suggestOptions(),
+		_mediaEditManager.spoilered(),
+		_mediaEditManager.invertCaption(),
+		crl::guard(_list, [=] { cancelEdit(); }));
 }
 
 void HistoryWidget::updateFieldSubmitSettings() {
