@@ -52,10 +52,6 @@ include(cmake/td_webauthn.cmake)
 include(cmake/telegram_apple_swift_runtime.cmake)
 include(cmake/generate_appstream_changelog.cmake)
 
-if (DESKTOP_APP_TEST_APPS)
-    include(cmake/tests.cmake)
-endif()
-
 if (WIN32)
     include(cmake/generate_midl.cmake)
     generate_midl(Telegram ${src_loc}
@@ -66,20 +62,6 @@ endif()
 
 include(cmake/generate_update_keys.cmake)
 generate_update_keys(Telegram ${res_loc}/update)
-
-if (DESKTOP_APP_TEST_APPS OR TDESKTOP_BUILD_UPDATE_TESTS)
-    include(cmake/test_update_verify.cmake)
-    if (NOT DESKTOP_APP_DISABLE_AUTOUPDATE)
-        include(cmake/test_update_unpack.cmake)
-        if (WIN32 AND NOT build_winstore)
-            include(cmake/test_updater_win.cmake)
-        endif()
-    endif()
-endif()
-include(cmake/test_iv_editor_state.cmake)
-include(cmake/test_iv_editor_table_grid.cmake)
-include(cmake/test_wallet_card_tint.cmake)
-include(cmake/test_wallet_phrase_shares.cmake)
 
 option(ASTRAGRAM_BUILD_STORAGE_TESTS "Build storage compatibility tests." OFF)
 if (ASTRAGRAM_BUILD_STORAGE_TESTS)

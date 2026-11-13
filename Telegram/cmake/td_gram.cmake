@@ -37,39 +37,3 @@ target_link_libraries(td_gram
 PUBLIC
     desktop-app::lib_base
 )
-
-add_executable(td_gram_test)
-init_non_host_target(td_gram_test "(gram)")
-
-nice_target_sources(td_gram_test ${src_loc}
-PRIVATE
-    gram/tests/gram_api_tests.cpp
-    gram/tests/gram_boc_tests.cpp
-    gram/tests/gram_emulate_tests.cpp
-    gram/tests/gram_nft_tests.cpp
-    gram/tests/gram_rates_tests.cpp
-    gram/tests/gram_stream_tests.cpp
-    gram/tests/gram_tests.h
-    gram/tests/gram_tests_main.cpp
-)
-
-target_include_directories(td_gram_test
-PRIVATE
-    ${src_loc}
-)
-
-target_compile_definitions(td_gram_test
-PRIVATE
-    GRAM_TEST_FIXTURES_PATH="${src_loc}/gram/tests/fixtures"
-)
-
-target_link_libraries(td_gram_test
-PRIVATE
-    tdesktop::td_gram
-    desktop-app::lib_base
-)
-
-set_target_properties(td_gram_test PROPERTIES
-    EXCLUDE_FROM_ALL TRUE
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-)

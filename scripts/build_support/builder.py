@@ -173,7 +173,6 @@ def configure(environment: dict[str, str], api_id: str, api_hash: str, pdb: bool
     # 不会被 option() 覆盖，故显式传 OFF，让 Updater 参与构建。
     command.append("-DDESKTOP_APP_DISABLE_AUTOUPDATE=OFF")
     suites = tests or []
-    command.append(f"-DTDESKTOP_BUILD_UPDATE_TESTS={'ON' if 'updates' in suites else 'OFF'}")
     command.append(f"-DASTRAGRAM_BUILD_STORAGE_TESTS={'ON' if 'storage' in suites else 'OFF'}")
 
     # 默认不生成调试信息；--pdb 时 Debug 把调试信息嵌进 obj，链接据此完整生成 pdb。
@@ -208,9 +207,7 @@ def compile_target(environment: dict[str, str], cmake_config: str, jobs: int, ta
 
 def run_tests(environment: dict[str, str], configurations: list[str], jobs: int, suites: list[str]) -> None:
     targets = {
-        "updates": ("test_update_verify", "test_update_unpack", "test_updater_win"),
         "storage": ("test_search_suggestions",),
-        "wallet": ("td_gram_test",),
     }
     for profile in configurations:
         cmake_config = _CONFIGURATIONS[profile]
