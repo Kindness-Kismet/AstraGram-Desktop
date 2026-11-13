@@ -53,6 +53,7 @@
     "Telegram/Resources/icons/**/*.png": "本地已改用同名 svg 图标，样式生成器只读 svg；官方重绘了图形时按需对照更新 svg。"
   },
   "notes": {
+    "Telegram/SourceFiles/iv/editor/iv_editor_widget*": "编辑器实现已按职责拆分；跨文件变量的定义必须使用与 extern 声明一致的显式类型。PreservingExternalFieldRestore 保留 thread_local Widget *，适配后用 GCC 检查声明与定义。",
     "Telegram/SourceFiles/core/core_settings.cpp": "保留 ASG1 配置头和本地字段布局。语言迁移不能套官方 Qt 5 阈值：本地 7.3.1 期间已从 Qt 5 切到 Qt 6，缺少明确方案时保留歧义编号。",
     "Telegram/build/prepare/prepare.py": "依赖配方固化在 scripts/build_support/recipes.py、recipes_arm64.py 与 recipes_rust.py，官方改动要对照同步到这些文件，只合并本文件不会影响构建。",
     "Telegram/build/qt_version.py": "两个 Windows 架构都固定用其中的 Qt 6 版本，不再选择 Qt 5；官方改 Qt 6 版本时同步 scripts/build_support/recipes.py 的 QT_VERSION，并确认补丁仓库有对应的 qtbase 补丁目录。",
