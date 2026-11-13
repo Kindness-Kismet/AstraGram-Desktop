@@ -41,6 +41,7 @@
     "Telegram/SourceFiles/ui/controls/download_bar.cpp": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。",
     "Telegram/SourceFiles/ui/controls/download_bar.h": "会话列表底部下载条已改为顶部下载按钮（extras/ui/controls/download_header_button），下载条已删除，官方改动不跟进。",
     "Telegram/SourceFiles/dialogs/suggestions/suggestion_birthday_setup.cpp": "已移除聊天列表中的添加生日提示，生日资料设置与联系人生日提示继续保留。",
+    "Telegram/SourceFiles/dialogs/dialogs_removed_row_slide.*": "会话移除动画由本地 dialogs_rows_shift 维护，避免同一行重复收缩。",
     "Telegram/SourceFiles/test/": "已移除官方内置测试运行器，使用 extras/debug 的独立调试与模拟场景，不再同步。",
     "Telegram/SourceFiles/**/tests/**": "官方独立测试源码与样例数据不跟进；本项目自维护的存储和字体测试按需保留。",
     "Telegram/cmake/test*.cmake": "官方独立测试构建入口不跟进；本项目自维护的测试入口按需保留。",
@@ -76,6 +77,8 @@
     "Telegram/SourceFiles/tgw/tgw_painter.cpp": "几何、虚线和路径预算已拆到 tgw_painter_geometry.cpp，官方改动按职责分发，保持每个实现文件不超过 2000 行。",
     "Telegram/SourceFiles/tgw/tgw_scroll_lists.cpp": "滚动锚点使用本地实际可见区及物理坐标转换，保留悬浮输入区、底部留白和发送入场滚动。",
     "Telegram/SourceFiles/tgw/tgw_touch_lists.cpp": "新列表触摸命中使用本地消息动画位置，不能改回只按逻辑位置查询。",
+    "Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp": "保留本地 RowsShift 的会话移除动画；官方归档栏展开与收起由 ArchiveSlide 适配，不再叠加 RemovedRowSlide。",
+    "Telegram/SourceFiles/dialogs/ui/dialogs_bottom_button.*": "本地只使用加载更多按钮，保留窗口材质订阅和背景色，不恢复底部安装更新按钮及其图标。",
     "Telegram/cmake/telegram_options.cmake": "不恢复官方 -testagent、Release 测试运行器、本地化捕获及 TDESKTOP_BUILD_UPDATE_TESTS 选项，调试继续使用 extras/debug。"
   },
   "deferred": {

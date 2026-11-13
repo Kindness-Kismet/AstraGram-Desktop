@@ -151,6 +151,7 @@ public:
 	}
 
 	void checkTopicCreated(FullMsgId rootId, MsgId realRoot);
+	void checkReplyTargetSent(FullMsgId localId, MsgId realId);
 	void discardCreatingTopic(not_null<History*> history, MsgId rootId);
 	[[nodiscard]] FullMsgId convertTopicReplyToId(
 		not_null<History*> history,
@@ -265,6 +266,9 @@ private:
 		FullMsgId,
 		std::vector<DelayedByTopicMessage>> _creatingTopics;
 	base::flat_map<FullMsgId, MsgId> _createdTopicIds;
+	base::flat_map<
+		FullMsgId,
+		std::vector<DelayedByTopicMessage>> _delayedByReplyTarget;
 	base::flat_set<mtpRequestId> _creatingTopicRequests;
 
 	base::flat_map<

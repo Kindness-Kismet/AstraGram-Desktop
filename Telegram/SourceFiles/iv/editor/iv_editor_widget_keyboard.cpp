@@ -577,7 +577,7 @@ bool Widget::handleInsertSuggestionsKey(QKeyEvent *e) {
 		|| (modifiers != Qt::NoModifier)
 		|| _field->isHidden()
 		|| (_fieldMode != State::FieldMode::Rich)
-		|| !_state->isActiveTopLevelParagraph()
+		|| !_state->isActiveInsertableParagraph()
 		|| !_field->getLastText().isEmpty()) {
 		return false;
 	}
