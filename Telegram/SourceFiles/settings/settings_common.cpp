@@ -36,9 +36,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Settings {
 namespace {
 
-[[nodiscard]] HighlightArgs MaybeFillFromRipple(
+[[nodiscard]] HighlightArgs ResolveHighlightArgs(
 		not_null<QWidget*> target,
 		HighlightArgs args) {
+	if (args.shape == HighlightShape::Rect
+		&& !args.radius
+		&& IsInCardGroup(target)) {
+		args.radius = st::settingsRowRadius;
+	}
 	if (!args.rippleShape) {
 		return args;
 	}
@@ -98,7 +103,7 @@ HighlightOverlay::HighlightOverlay(
 	HighlightArgs &&args)
 : RpWidget(target->parentWidget())
 , _target(target.get())
-, _args(MaybeFillFromRipple(target, std::move(args)))
+, _args(ResolveHighlightArgs(target, std::move(args)))
 , _color(_args.color ? *_args.color : st::windowBgActive)
 , _phaseTimer([=] { nextPhase(); }) {
 	setAttribute(Qt::WA_TransparentForMouseEvents);
