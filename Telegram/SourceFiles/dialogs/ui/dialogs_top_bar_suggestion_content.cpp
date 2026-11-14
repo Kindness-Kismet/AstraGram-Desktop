@@ -130,9 +130,7 @@ int PaintSuggestionBubbleBackground(
 		pill.width() / 2,
 		pill.height() / 2,
 	});
-	if (windowMaterial) {
-		return radius;
-	}
+	// 浮动提示需要遮住下方滚动内容，窗口材质不能替代卡片背景。
 	PaintPillBackground(p, shadow, pill, radius);
 	return radius;
 }
