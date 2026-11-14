@@ -46,6 +46,9 @@ void BuildUpdateSection(SectionBuilder &builder) {
 	const auto downloading = container
 		? Ui::CreateChild<rpl::event_stream<bool>>(container)
 		: nullptr;
+	const auto updateReady = container
+		? Ui::CreateChild<rpl::variable<bool>>(container, false)
+		: nullptr;
 
 	const auto toggle = builder.addButton({
 		.id = u"main/updates/auto_update"_q,
@@ -80,6 +83,13 @@ void BuildUpdateSection(SectionBuilder &builder) {
 	auto options = (Ui::SlideWrap<Ui::VerticalLayout>*)nullptr;
 	auto install = (Ui::SettingsButton*)nullptr;
 	auto check = (Ui::SettingsButton*)nullptr;
+	auto checkTitle = rpl::producer<QString>(tr::lng_settings_check_now());
+	if (updateReady) {
+		checkTitle = rpl::conditional(
+			updateReady->value(),
+			rpl::single(QString()),
+			tr::lng_settings_check_now());
+	}
 	builder.scope([&] {
 		install = (cAlphaVersion() || Core::BuildIsCanary || KSandbox::isInside())
 			? nullptr
@@ -95,7 +105,7 @@ void BuildUpdateSection(SectionBuilder &builder) {
 		check = builder.addButton({
 			.id = u"main/updates/check_update"_q,
 			.altIds = { u"advanced/check_update"_q },
-			.title = tr::lng_settings_check_now(),
+			.title = std::move(checkTitle),
 			.st = &st::settingsButtonNoIcon,
 			.onClick = [] {
 				Core::UpdateChecker().checkNow();
@@ -111,7 +121,10 @@ void BuildUpdateSection(SectionBuilder &builder) {
 			check,
 			tr::lng_update_telegram(),
 			st::settingsUpdate);
-		update->hide();
+		// 透明更新按钮与检查文字互斥，避免叠字和额外底色。
+		updateReady->value() | rpl::on_next([=](bool ready) {
+			update->setVisible(ready);
+		}, update->lifetime());
 		check->widthValue() | rpl::on_next([=](int width) {
 			update->resizeToWidth(width);
 			update->moveToLeft(0, 0);
@@ -158,7 +171,7 @@ void BuildUpdateSection(SectionBuilder &builder) {
 				break;
 			case State::Ready:
 				texts->fire(tr::lng_settings_update_ready(tr::now));
-				update->show();
+				*updateReady = true;
 				break;
 			default:
 				texts->fire_copy(version);
@@ -226,7 +239,7 @@ void BuildUpdateSection(SectionBuilder &builder) {
 		checker.ready() | rpl::on_next([=] {
 			options->setAttribute(Qt::WA_TransparentForMouseEvents, false);
 			texts->fire(tr::lng_settings_update_ready(tr::now));
-			update->show();
+			*updateReady = true;
 			downloading->fire(false);
 		}, options->lifetime());
 

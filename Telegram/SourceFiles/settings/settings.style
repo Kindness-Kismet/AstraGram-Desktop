@@ -228,7 +228,10 @@ settingsUpdateToggle: SettingsButton(settingsButtonNoIcon) {
 settingsUpdateState: FlatLabel(defaultFlatLabel) {
 	textFg: windowSubTextFg;
 }
-settingsUpdate: SettingsButton(infoMainButton, settingsButtonNoIcon) {
+settingsUpdate: SettingsButton(settingsCardButtonNoIcon) {
+	style: semiboldTextStyle;
+	textFg: lightButtonFg;
+	textFgOver: lightButtonFgOver;
 }
 settingsUpdateStatePosition: point(22px, 29px);
 
