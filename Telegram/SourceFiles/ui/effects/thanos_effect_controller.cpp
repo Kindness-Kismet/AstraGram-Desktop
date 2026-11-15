@@ -209,7 +209,7 @@ void ThanosEffectController::ensureScrollBaseline() {
 }
 
 bool ThanosEffectController::captureView(
-		not_null<const HistoryView::Element*> view,
+		not_null<HistoryView::Element*> view,
 		int viewHeight,
 		int viewTop) {
 	const auto item = view->data();
@@ -227,17 +227,15 @@ bool ThanosEffectController::captureView(
 	const auto visibleTop = _delegate.visibleAreaTop();
 	const auto visibleBottom = _delegate.visibleAreaBottom();
 	const auto visibleHeight = visibleBottom - visibleTop;
-	const auto screenTop = viewTop - visibleTop;
-	if (screenTop + viewHeight <= 0 || screenTop >= visibleHeight) {
-		return false;
-	}
 	auto gapOffset = 0;
 	for (const auto &gap : _renderGaps) {
 		if (gap.absY >= 0 && viewTop >= gap.absY) {
 			gapOffset += gap.height;
 		}
 	}
-	const auto adjustedScreenTop = screenTop + gapOffset;
+	const auto paintShift = _delegate.itemPaintShift(view);
+	const auto renderedTop = viewTop + gapOffset + paintShift;
+	const auto adjustedScreenTop = renderedTop - visibleTop;
 	const auto captureTop = std::clamp(-adjustedScreenTop, 0, viewHeight);
 	const auto captureBottom = std::clamp(
 		visibleHeight - adjustedScreenTop,
@@ -256,15 +254,15 @@ bool ThanosEffectController::captureView(
 	image.fill(Qt::transparent);
 	{
 		Painter p(&image);
-		p.translate(0, -captureTop);
-		auto clip = QRect(0, captureTop, viewWidth, captureHeight);
+		p.translate(0, -captureTop - paintShift);
+		auto clip = QRect(0, captureTop + paintShift, viewWidth, captureHeight);
 		auto context = _delegate.preparePaintContext(clip);
-		const auto renderedTop = viewTop + gapOffset;
-		context.translate(0, -renderedTop);
+		context.translate(0, -viewTop - gapOffset);
 		context.clip = clip;
 		context.skipSelectionCheck = true;
 		context.outbg = view->hasOutLayout();
-		view->draw(p, context);
+		// 沿用当前入场位置、透明度和边缘遮罩，删除时保持画面连续。
+		_delegate.paintItem(p, view, context);
 	}
 
 	const auto topLevel = _delegate.window();
@@ -279,9 +277,10 @@ bool ThanosEffectController::captureView(
 	_thanosEffect->raise();
 
 	const auto scroll = _delegate.scrollWidget();
+	// 裁剪按有效可见区域计算，窗口定位按滚动控件原点计算。
 	const auto globalPos = scroll->mapTo(
 		topLevel,
-		QPoint(0, adjustedScreenTop + captureTop));
+		QPoint(0, renderedTop - _delegate.scrollTop() + captureTop));
 	_thanosEffect->addItem(
 		std::move(image),
 		QRect(globalPos, QSize(viewWidth, captureHeight)));

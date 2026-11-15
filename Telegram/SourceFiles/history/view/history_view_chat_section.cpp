@@ -4507,7 +4507,7 @@ void ChatWidget::restoreState(not_null<ChatMemento*> memento) {
 		&& (memento->list()->aroundPosition() == Data::MaxMessagePosition)
 		&& !memento->list()->scrollTopState().item) {
 		_inner->overrideInitialScroll([=] {
-			listScrollTo(_scroll->scrollTopMax());
+			listScrollTo(ScrollMax);
 			return true;
 		});
 	}

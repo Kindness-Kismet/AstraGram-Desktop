@@ -56,7 +56,7 @@ Windows 的 `nativeBackdrop` 为 1 关闭、2 云母、3 亚克力；`revision` 
 
 `anim.speed` 用来观察过渡动画：`0.1` 放慢十倍，`2` 加快一倍。它缩放全部
 `Ui::Animations::Simple` 动画（页面滑动、弹出菜单、开关、渐隐渐显、点击波纹），
-只影响设置之后启动的动画；加载圈、贴纸、视频这类逐帧播放不受影响。返回 `speed`、
+上述动画只在启动时读取倍率，删除粒子特效实时跟随倍率；加载圈、贴纸、视频这类逐帧播放不受影响。返回 `speed`、
 `durationMultiplier`（时长倍率，即速度的倒数）和 `disabled`；`disabled` 为 true
 表示动画已被关闭，调速不起作用。Debug 版的 Ctrl+F11 / Ctrl+F12 改的是同一个倍率。
 观察结束后用 `anim.speed 1` 恢复。

@@ -5295,6 +5295,9 @@ void HistoryInner::setupThanosEffect() {
 			.itemTop = [=](not_null<const HistoryView::Element*> view) {
 				return itemTop(view);
 			},
+			.itemPaintShift = [=](not_null<const HistoryView::Element*> view) {
+				return int(std::round(itemRevealState(view->data()).shift));
+			},
 			.visibleAreaTop = [=] { return _visibleAreaTop; },
 			.visibleAreaBottom = [=] { return _visibleAreaBottom; },
 			.contentWidth = [=] { return width(); },
@@ -5303,6 +5306,10 @@ void HistoryInner::setupThanosEffect() {
 			},
 			.preparePaintContext = [=](QRect clip) {
 				return preparePaintContext(clip);
+			},
+			.paintItem = [=](Painter &p, not_null<HistoryView::Element*> view,
+					const Ui::ChatPaintContext &context) {
+				_widget->paintRevealingItem(p, view, context);
 			},
 			.window = [=]() -> QWidget* { return window(); },
 			.scrollTop = [=] { return _scroll->scrollTop(); },
