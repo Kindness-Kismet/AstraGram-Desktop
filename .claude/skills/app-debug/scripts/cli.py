@@ -414,6 +414,7 @@ def register_commands(sub) -> None:
     command = sub.add_parser("chat.open", help="打开指定对话并清空导航栈；参数取 chat.list 的 peerId，缺省 Saved Messages")
     command.add_argument("peerId", nargs="?")
     command.add_argument("msgId", nargs="?", help="定位到的消息编号，缺省为对话末尾")
+    command.add_argument("--new-window", action="store_true", help="通过正式入口在独立窗口打开对话")
     command = sub.add_parser("chat.preview", help="打开对话预览并返回是否允许显示")
     command.add_argument("peerId")
     command = sub.add_parser("chat.calendar", help="按消息日期浮标的入口打开日历")
@@ -711,11 +712,11 @@ def build_server_command(args: argparse.Namespace) -> str:
     if command == "notification.click":
         return f"notification.click {args.button}"
     if command == "chat.open":
-        if args.peerId is None:
-            return "chat.open"
-        if args.msgId is None:
-            return f"chat.open {quote_arg(args.peerId)}"
-        return f"chat.open {quote_arg(args.peerId)} {quote_arg(args.msgId)}"
+        parts = ["chat.open"]
+        parts.extend(quote_arg(value) for value in (args.peerId, args.msgId) if value is not None)
+        if args.new_window:
+            parts.append("--new-window")
+        return " ".join(parts)
     if command in ("chat.preview", "chat.calendar"):
         return f"{command} {quote_arg(args.peerId)}"
     if command == "chat.open-archive":

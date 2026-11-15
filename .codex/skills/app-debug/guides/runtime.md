@@ -70,6 +70,9 @@ python .claude/skills/app-debug/scripts/cli.py anim.speed 1
 
 ## 独立窗口
 
+`chat.open [peerId] [msgId] --new-window` 通过正式入口打开独立聊天窗口，缺省打开收藏夹。
+用 `control.list --all` 找到新窗口序号，再用 `control.window #序号` 选中。
+
 `window.resize`、`window.maximize`、`window.activation` 和 `window.close` 操作 `control.window` 选定的窗口，缺省为主窗口。
 状态包含该窗口的 `windowMaterialActive`；`window.close` 保留原有关闭确认，不强制丢弃内容。
 

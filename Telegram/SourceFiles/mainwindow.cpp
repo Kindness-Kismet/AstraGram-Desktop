@@ -152,7 +152,9 @@ MainWindow::MainWindow(not_null<Window::Controller*> controller)
 		Ui::ForceFullRepaint(this);
 	}, lifetime());
 
-	setAttribute(Qt::WA_OpaquePaintEvent);
+	// 透明画布不能走跳过不透明子控件的重绘路径，否则清空区域无法补画。
+	setAttribute(Qt::WA_OpaquePaintEvent,
+		!testAttribute(Qt::WA_TranslucentBackground));
 	ExtrasFeatures::WindowMaterial::watchSurface(this);
 }
 

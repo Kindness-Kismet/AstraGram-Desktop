@@ -96,10 +96,11 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 - 返回 `state: submitted`、`accountUserId`、`peerId`、`ids` 和 `revoke`，只表示正式删除流程已提交，不能据此认定服务端删除成功。
 - 核对实际结果时检查目标账号的消息、持久缓存和留档，再正常重启复查；对方删除的测试用另一账号下标执行。留档查询只读取当前账号，必要时先用 `session.activate` 切换查询账号。
 
-## `chat.open [peerId] [msgId]`
+## `chat.open [peerId] [msgId] [--new-window]`
 
 打开指定对话并清空导航栈；参数取 `chat.list` 输出的 peerId，缺省 self（Saved Messages）。配合 `screenshot.take` 做 UI 观测，
 免去找列表项点击的不稳定。`msgId` 定位到指定消息，支持服务端编号和加密消息的本地编号，缺省为对话末尾；目标尚未加载时走首次加载流程。
+加 `--new-window` 通过正式入口打开独立聊天窗口；用 `control.list --all` 查询顶层窗口序号，再用 `control.window #序号` 选择调试目标。
 
 ## `chat.preview <peerId>` / `chat.calendar <peerId>`
 
