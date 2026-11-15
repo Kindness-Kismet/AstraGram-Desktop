@@ -73,6 +73,7 @@ namespace {
 			&Commands::WindowHandlers(),
 			&Commands::NavigationHandlers(),
 			&Commands::FilterHandlers(),
+			&Commands::chatFilterHandlers(),
 			&Commands::FeatureHandlers(),
 			&Commands::AccountHandlers(),
 			&Commands::playerHandlers(),

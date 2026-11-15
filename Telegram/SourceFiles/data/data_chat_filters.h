@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/flags.h"
 #include "base/timer.h"
+#include "extras/features/chat_filters/local_rules.h"
 
 class History;
 
@@ -77,6 +78,8 @@ public:
 		bool chatlist,
 		bool hasMyLinks) const;
 	[[nodiscard]] ChatFilter withoutAlways(not_null<History*>) const;
+	[[nodiscard]] ChatFilter withLocalRules(ChatFilterLocalRules rules) const;
+	[[nodiscard]] const ChatFilterLocalRules &localRules() const;
 
 	[[nodiscard]] static ChatFilter FromTL(
 		const MTPDialogFilter &data,
@@ -109,6 +112,7 @@ private:
 	std::vector<not_null<History*>> _pinned;
 	base::flat_set<not_null<History*>> _never;
 	Flags _flags;
+	ChatFilterLocalRules _localRules;
 
 };
 
@@ -118,7 +122,8 @@ inline bool operator==(const ChatFilter &a, const ChatFilter &b) {
 		&& (a.colorIndex() == b.colorIndex())
 		&& (a.flags() == b.flags())
 		&& (a.always() == b.always())
-		&& (a.never() == b.never());
+		&& (a.never() == b.never())
+		&& (a.localRules() == b.localRules());
 }
 
 inline bool operator!=(const ChatFilter &a, const ChatFilter &b) {
@@ -162,6 +167,8 @@ public:
 	void reload();
 	void apply(const MTPUpdate &update);
 	void set(ChatFilter filter);
+	void setLocalRules(FilterId id, ChatFilterLocalRules rules);
+	[[nodiscard]] ChatFilterLocalRules localRules(FilterId id) const;
 	void remove(FilterId id);
 	void moveAllToFront();
 	[[nodiscard]] const std::vector<ChatFilter> &list() const;
@@ -236,6 +243,7 @@ private:
 	bool applyChange(ChatFilter &filter, ChatFilter &&updated);
 	void applyInsert(ChatFilter filter, int position);
 	void applyRemove(int position);
+	void saveLocalRules();
 
 	void checkLoadMoreChatsLists();
 	void loadMoreChatsList(FilterId id);
@@ -243,6 +251,7 @@ private:
 	const not_null<Session*> _owner;
 
 	std::vector<ChatFilter> _list;
+	ExtrasChatFilters::RulesById _localRules;
 	base::flat_map<FilterId, std::unique_ptr<Dialogs::MainList>> _chatsLists;
 	rpl::event_stream<> _listChanged;
 	rpl::event_stream<FilterId> _isChatlistChanged;

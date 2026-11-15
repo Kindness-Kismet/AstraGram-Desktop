@@ -238,6 +238,7 @@ void History::itemRemoved(not_null<HistoryItem*> item) {
 				setLastMessage(last);
 			}
 		}
+		owner().chatsFilters().refreshHistory(this);
 	}
 	checkChatListMessageRemoved(item);
 	itemVanished(item);
@@ -3229,6 +3230,7 @@ void History::setLastMessage(HistoryItem *item) {
 			setFakeChatListMessage();
 		}
 	}
+	owner().chatsFilters().refreshHistory(this);
 }
 
 void History::refreshChatListMessage() {

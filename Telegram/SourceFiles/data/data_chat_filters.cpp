@@ -9,10 +9,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_text_entities.h"
 #include "history/history.h"
+#include "history/history_item.h"
 #include "data/data_peer.h"
 #include "data/data_user.h"
 #include "data/data_chat.h"
 #include "data/data_channel.h"
+#include "data/data_changes.h"
 #include "data/data_session.h"
 #include "data/data_folder.h"
 #include "data/data_histories.h"
@@ -22,6 +24,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/ui_utility.h"
 #include "ui/chat/more_chats_bar.h"
 #include "main/main_session.h"
+#include "main/main_session_settings.h"
+#include "storage/storage_account.h"
 #include "main/main_app_config.h"
 #include "apiwrap.h"
 
@@ -229,6 +233,16 @@ ChatFilter ChatFilter::withoutAlways(not_null<History*> history) const {
 	return result;
 }
 
+ChatFilter ChatFilter::withLocalRules(ChatFilterLocalRules rules) const {
+	auto result = *this;
+	result._localRules = std::move(rules);
+	return result;
+}
+
+const ChatFilterLocalRules &ChatFilter::localRules() const {
+	return _localRules;
+}
+
 MTPDialogFilter ChatFilter::tl(FilterId replaceId) const {
 	auto always = _always;
 	auto pinned = QVector<MTPInputPeer>();
@@ -363,20 +377,27 @@ bool ChatFilter::contains(
 			Unexpected("Peer type in ChatFilter::contains.");
 		}
 	}();
-	if (_never.contains(history)) {
+	if (_never.contains(history)
+		|| ExtrasChatFilters::matchesHistory(_localRules.exclude, history)) {
+		return false;
+	}
+	if (_always.contains(history)) {
+		return true;
+	}
+	const auto includedByRule = ExtrasChatFilters::matchesHistory(
+		_localRules.include, history);
+	if (!_localRules.include.empty() && !includedByRule) {
 		return false;
 	}
 	const auto channel = history->peer->asChannel();
 	if (channel && channel->isCommunity()) {
-		// A community never matches a filter by chat type (it is neither a
-		// group nor a channel); it can only be included explicitly by id.
-		return _always.contains(history);
+		// 社区只通过显式聊天或本地规则加入分组。
+		return includedByRule;
 	}
 	const auto state = (_flags & (Flag::NoMuted | Flag::NoRead))
 		? history->chatListBadgesState()
 		: Dialogs::BadgesState();
-	return false
-		|| ((_flags & flag)
+	return ((_flags & flag)
 			&& (!(_flags & Flag::NoMuted)
 				|| !history->muted()
 				|| (state.mention
@@ -387,15 +408,36 @@ bool ChatFilter::contains(
 				|| state.mention
 				|| (!ignoreFakeUnread && history->fakeUnreadWhileOpened()))
 			&& (!(_flags & Flag::NoArchived)
-				|| (history->folderKnown() && !history->folder())))
-		|| _always.contains(history);
+				|| (history->folderKnown() && !history->folder())));
 }
 
 ChatFilters::ChatFilters(not_null<Session*> owner)
 : _owner(owner)
 , _moreChatsTimer([=] { checkLoadMoreChatsLists(); }) {
+	_localRules = ExtrasChatFilters::deserializeRules(
+		owner->session().settings().chatFilterLocalRules());
 	_list.emplace_back();
 	crl::on_main(&owner->session(), [=] { load(); });
+	using PeerFlag = PeerUpdate::Flag;
+	owner->session().changes().peerUpdates(
+		PeerFlag::Name | PeerFlag::Username | PeerFlag::PhoneNumber
+	) | rpl::on_next([=](const PeerUpdate &update) {
+		if (_localRules.empty()) {
+			return;
+		}
+		if (const auto history = _owner->historyLoaded(update.peer)) {
+			refreshHistory(history);
+		}
+	}, _lifetime);
+	owner->session().changes().messageUpdates(
+		MessageUpdate::Flag::Edited | MessageUpdate::Flag::DialogRowRefresh
+		| MessageUpdate::Flag::NewAdded | MessageUpdate::Flag::NewMaybeAdded
+	) | rpl::on_next([=](const MessageUpdate &update) {
+		const auto history = update.item->history();
+		if (!_localRules.empty() && history->lastMessage() == update.item) {
+			refreshHistory(history);
+		}
+	}, _lifetime);
 
 	ExtrasSettings::getInstance().hideAllChatsFolderChanges()
 	| rpl::on_next([=](bool hide) {
@@ -536,6 +578,7 @@ void ChatFilters::received(const QVector<MTPDialogFilter> &list) {
 	auto changed = false;
 	for (const auto &filter : list) {
 		auto parsed = ChatFilter::FromTL(filter, _owner);
+		parsed = parsed.withLocalRules(localRules(parsed.id()));
 		if (settings.hideAllChatsFolder() && parsed.id() == 0 && list.size() > 1) {
 			continue;
 		}
@@ -709,6 +752,7 @@ void ChatFilters::set(ChatFilter filter) {
 	if (!filter.id()) {
 		return;
 	}
+	filter = filter.withLocalRules(localRules(filter.id()));
 	const auto i = ranges::find(_list, filter.id(), &ChatFilter::id);
 	if (i == end(_list)) {
 		applyInsert(std::move(filter), _list.size());
@@ -716,6 +760,34 @@ void ChatFilters::set(ChatFilter filter) {
 	} else if (applyChange(*i, std::move(filter))) {
 		_listChanged.fire({});
 	}
+}
+
+void ChatFilters::setLocalRules(FilterId id, ChatFilterLocalRules rules) {
+	Expects(id > 0);
+	if (localRules(id) == rules) {
+		return;
+	}
+	if (rules.empty()) {
+		_localRules.erase(id);
+	} else {
+		_localRules[id] = rules;
+	}
+	saveLocalRules();
+	const auto i = ranges::find(_list, id, &ChatFilter::id);
+	if (i != end(_list)) {
+		set(i->withLocalRules(std::move(rules)));
+	}
+}
+
+ChatFilterLocalRules ChatFilters::localRules(FilterId id) const {
+	const auto i = _localRules.find(id);
+	return (i == end(_localRules)) ? ChatFilterLocalRules() : i->second;
+}
+
+void ChatFilters::saveLocalRules() {
+	_owner->session().settings().setChatFilterLocalRules(
+		ExtrasChatFilters::serializeRules(_localRules));
+	_owner->session().local().writeSessionSettings();
 }
 
 void ChatFilters::applyInsert(ChatFilter filter, int position) {
@@ -757,6 +829,9 @@ void ChatFilters::applyRemove(int position) {
 	const auto i = begin(_list) + position;
 	auto filter = std::move(*i);
 	_list.erase(i);
+	if (_localRules.remove(filter.id())) {
+		saveLocalRules();
+	}
 	applyChange(filter, ChatFilter(filter.id(), {}, {}, {}, {}, {}, {}, {}));
 }
 
@@ -770,7 +845,8 @@ bool ChatFilters::applyChange(ChatFilter &filter, ChatFilter &&updated) {
 	const auto rulesMask = Flag() | Flag::RulesMask;
 	const auto rulesChanged = exceptionsChanged
 		|| ((filter.flags() & rulesMask) != (updated.flags() & rulesMask))
-		|| (filter.never() != updated.never());
+		|| (filter.never() != updated.never())
+		|| (filter.localRules() != updated.localRules());
 	const auto pinnedChanged = (filter.pinned() != updated.pinned());
 	const auto chatlistChanged = (filter.chatlist() != updated.chatlist())
 		|| (filter.hasMyLinks() != updated.hasMyLinks());

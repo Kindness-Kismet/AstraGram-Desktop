@@ -209,6 +209,13 @@ public:
 	[[nodiscard]] auto extraFavoriteReactions() const
 	-> const std::vector<Data::ReactionId> &;
 
+	void setChatFilterLocalRules(QByteArray data) {
+		_chatFilterLocalRules = std::move(data);
+	}
+	[[nodiscard]] const QByteArray &chatFilterLocalRules() const {
+		return _chatFilterLocalRules.current();
+	}
+
 private:
 	static constexpr auto kDefaultSupportChatsLimitSlice = 7 * 24 * 60 * 60;
 	static constexpr auto kPhotoEditorHintMaxShowsCount = 5;
@@ -263,6 +270,7 @@ private:
 	rpl::variable<bool> _phoneNumberHidden = false;
 
 	std::vector<Data::ReactionId> _extraFavoriteReactions;
+	rpl::variable<QByteArray> _chatFilterLocalRules;
 
 };
 

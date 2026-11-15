@@ -38,6 +38,7 @@ using HandlerMap = std::map<QString, Handler>;
 [[nodiscard]] const HandlerMap &WindowHandlers();
 [[nodiscard]] const HandlerMap &NavigationHandlers();
 [[nodiscard]] const HandlerMap &FilterHandlers();
+[[nodiscard]] const HandlerMap &chatFilterHandlers();
 [[nodiscard]] const HandlerMap &FeatureHandlers();
 [[nodiscard]] const HandlerMap &AccountHandlers();
 [[nodiscard]] const HandlerMap &playerHandlers();

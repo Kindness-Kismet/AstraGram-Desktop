@@ -85,6 +85,9 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 
 ## `message.delete <peerId> <messageId>... [--account <index>] [--revoke]`
 
+`message.edit <peerId> <messageId> <text> [--account <index>]` 沿正式编辑接口修改已授权测试对话中的纯文本，保留原有草稿和网页预览设置。要求消息已加载、可编辑且新文字非空；返回任务编号，用 `job.status` 和接收账号的消息核对结果。
+
+
 在已授权测试对话中删除指定消息，复用正式的 `Data::Histories::deleteMessages` 路径。
 `--account` 取 `session.list` 中的账号下标，保持当前界面和账号设置不变。
 所有消息必须已经加载、属于指定对话且允许删除；任一项校验失败时整批不提交，重复编号只处理一次。
@@ -124,6 +127,18 @@ peerId 是内部 64 位标识（高位带类型掩码，不是客户端里的 -1
 窗口不够宽时仍为弹层。
 
 ## `chat.folder [id|all]`
+
+聊天分组的本地匹配另用 `chat-filter.*` 查询和操作：
+
+- `chat-filter.list` 返回编号、标题、类型条件、显式包含／排除、本地规则和实际行数。
+- `chat-filter.rules <id> [<include> <exclude>]` 查询或修改本地规则，空字符串清空对应方向；按账号存进已有加密设置。
+- `chat-filter.check <id> <peerId>` 返回规则命中、最终 `contains`、实际 `inChatList`、最新消息编号和时间。
+- `chat-filter.save <JSON>` 沿官方接口创建或更新测试分组，字段为 `id`（0 或省略时分配）、`title`、`flags`（0 至 255）、`always`／`never`（已加载会话编号数组）、`include`／`exclude`（规则字符串）。
+- `chat-filter.remove <id>` 沿官方接口删除测试分组；save／remove 返回任务编号，用 `job.status` 核对服务器成功后再验收。
+- `chat-filter.edit <id>` 打开原生编辑弹窗；`chat-filter.reload` 发起官方重新加载，随后用 list／check 核对规则和成员。
+
+真实账号的 save／remove 只用于已授权的测试分组，验证后删除临时分组，恢复原规则和选中标签。
+
 
 不带参数时列出聊天文件夹的编号、名称和当前选中项；带编号切换到该文件夹，`all` 切换到全部聊天。
 

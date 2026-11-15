@@ -96,6 +96,7 @@ QByteArray SessionSettings::serialize() const {
 		size += sizeof(quint64) + Serialize::stringSize(id.emoji());
 	}
 	size += sizeof(qint32); // _stashHintShowsCount
+	size += Serialize::bytearraySize(_chatFilterLocalRules.current());
 
 	auto result = QByteArray();
 	result.reserve(size);
@@ -189,6 +190,7 @@ QByteArray SessionSettings::serialize() const {
 			stream << quint64(id.custom()) << id.emoji();
 		}
 		stream << qint32(_stashHintShowsCount);
+		stream << _chatFilterLocalRules.current();
 	}
 
 	Ensures(result.size() == size);
@@ -754,6 +756,10 @@ void SessionSettings::addFromSerialized(
 	if (!stream.atEnd()) {
 		stream >> stashHintShowsCount;
 	}
+	auto chatFilterLocalRules = QByteArray();
+	if (!stream.atEnd()) {
+		stream >> chatFilterLocalRules;
+	}
 	if (stream.status() != QDataStream::Ok) {
 		LOG(("App Error: "
 			"Bad data for SessionSettings::addFromSerialized()"));
@@ -777,6 +783,7 @@ void SessionSettings::addFromSerialized(
 	case ChatHelpers::SelectorTab::Gifs: _selectorTab = uncheckedTab; break;
 	}
 	_groupStickersSectionHidden = std::move(groupStickersSectionHidden);
+	_chatFilterLocalRules = std::move(chatFilterLocalRules);
 	_groupEmojiSectionHidden = std::move(groupEmojiSectionHidden);
 	auto uncheckedSupportSwitch = static_cast<Support::SwitchSettings>(
 		supportSwitch);

@@ -133,7 +133,7 @@ Data::ChatFilter ChangedFilter(
 		filter.flags(),
 		std::move(always),
 		pinned,
-		std::move(never));
+		std::move(never)).withLocalRules(filter.localRules());
 	const auto in = result.contains(history);
 	if (in == add) {
 		return result;
@@ -153,7 +153,7 @@ Data::ChatFilter ChangedFilter(
 		filter.flags(),
 		std::move(always),
 		std::move(pinned),
-		std::move(never));
+		std::move(never)).withLocalRules(filter.localRules());
 }
 
 void ChangeFilterById(
@@ -220,7 +220,7 @@ bool ChooseFilterValidator::canAdd() const {
 		return false;
 	}
 	for (const auto &filter : _history->owner().chatsFilters().list()) {
-		if (filter.id() && !filter.contains(_history)) {
+		if (filter.id() && canAdd(filter.id())) {
 			return true;
 		}
 	}
@@ -236,7 +236,8 @@ bool ChooseFilterValidator::canAdd(FilterId filterId) const {
 	const auto list = _history->owner().chatsFilters().list();
 	const auto i = ranges::find(list, filterId, &Data::ChatFilter::id);
 	if (i != end(list)) {
-		return !i->contains(_history);
+		return !i->contains(_history)
+			&& !ExtrasChatFilters::matchesHistory(i->localRules().exclude, _history);
 	}
 	return false;
 }
@@ -310,7 +311,7 @@ void FillChooseFilterMenu(
 				*contains ? &st::mediaPlayerMenuCheck : nullptr);
 			raw->action()->setEnabled(*contains
 				? validator.canRemove(id)
-				: validator.canAdd());
+				: validator.canAdd(id));
 		};
 		item->setActionTriggered([=] {
 			const auto toAdd = !*contains;
@@ -323,7 +324,7 @@ void FillChooseFilterMenu(
 					r.count,
 					toAdd));
 				return;
-			} else if (toAdd ? validator.canAdd() : validator.canRemove(id)) {
+			} else if (toAdd ? validator.canAdd(id) : validator.canRemove(id)) {
 				*suppressClose = true;
 				if (toAdd) {
 					validator.add(id);
@@ -349,7 +350,7 @@ void FillChooseFilterMenu(
 		const auto action = menu->addAction(std::move(item));
 		action->setEnabled(*contains
 			? validator.canRemove(id)
-			: validator.canAdd());
+			: validator.canAdd(id));
 	}
 
 	const auto limit = [session = &controller->session()] {
@@ -385,6 +386,9 @@ void FillChooseFilterMenu(
 					MTP_int(updated.id()),
 					updated.tl()
 				)).done([=] {
+					session->data().chatsFilters().setLocalRules(
+						updated.id(), updated.localRules());
+					session->data().chatsFilters().set(updated);
 					if (next) {
 						next(updated);
 					}
