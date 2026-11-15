@@ -24,9 +24,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "main/main_app_config.h"
 #include "apiwrap.h"
+#include "core/application.h"
 
 // AyuGram includes
 #include "extras/extras_settings.h"
+#include <QtCore/QFile>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
+#include <QtCore/QStringList>
 
 
 namespace Data {
@@ -42,7 +48,108 @@ constexpr auto kLoadExceptionsPerRequest = 100;
 		* crl::time(1000);
 }
 
+
+[[nodiscard]] QString FoldRuleToken(const QString &text) {
+	auto result = QString();
+	result.reserve(text.size());
+	for (const auto &ch : text) {
+		if (ch.isLetterOrNumber()) {
+			result.append(ch.toLower());
+		}
+	}
+	return result;
+}
+
+[[nodiscard]] bool RuleMatchesHistory(
+		const ChatFilterRule &rule,
+		not_null<History*> history) {
+	const auto &folded = rule.folded;
+	if (folded.size() < 2) {
+		return false;
+	}
+	const auto peer = history->peer;
+	if (FoldRuleToken(peer->name()).contains(folded)) {
+		return true;
+	}
+	const auto username = peer->username();
+	if (!username.isEmpty() && FoldRuleToken(username).contains(folded)) {
+		return true;
+	}
+	if (const auto user = peer->asUser()) {
+		const auto &phone = user->phone();
+		if (!phone.isEmpty() && FoldRuleToken(phone).contains(folded)) {
+			return true;
+		}
+	}
+	// A name or a number written in the chat itself, so that a stranger
+	// advertising "+852 7 073 1518" in a message is matched by that number.
+	if (folded.size() < 4) {
+		return false;
+	}
+	const auto last = history->lastMessage();
+	if (!last) {
+		return false;
+	}
+	const auto &text = last->originalText().text;
+	return text.contains(rule.raw, Qt::CaseInsensitive)
+		|| FoldRuleToken(text).contains(folded);
+}
+
+[[nodiscard]] bool RulesMatchHistory(
+		const std::vector<ChatFilterRule> &rules,
+		not_null<History*> history) {
+	return ranges::any_of(rules, [&](const ChatFilterRule &rule) {
+		return RuleMatchesHistory(rule, history);
+	});
+}
+
+[[nodiscard]] QString LocalRulesPath() {
+	return cWorkingDir() + u"tdata/chat_filters_local_rules.json"_q;
+}
+
 } // namespace
+
+ChatFilterRule ChatFilterRule::FromToken(QString token) {
+	auto folded = FoldRuleToken(token);
+	return ChatFilterRule{ std::move(token), std::move(folded) };
+}
+
+std::vector<ChatFilterRule> ParseChatFilterRules(const QString &text) {
+	auto result = std::vector<ChatFilterRule>();
+	auto current = QString();
+	const auto flush = [&] {
+		auto value = current.trimmed();
+		current = QString();
+		if (value.isEmpty()) {
+			return;
+		}
+		auto rule = ChatFilterRule::FromToken(std::move(value));
+		if (rule.folded.isEmpty() || ranges::contains(result, rule)) {
+			return;
+		}
+		result.push_back(std::move(rule));
+	};
+	for (const auto &ch : text) {
+		if (ch == u',' || ch == u';' || ch == u'，' || ch == u'；'
+			|| ch == u'\n' || ch == u'\r') {
+			flush();
+		} else {
+			current.append(ch);
+		}
+	}
+	flush();
+	return result;
+}
+
+QString ChatFilterRulesToText(const std::vector<ChatFilterRule> &rules) {
+	auto result = QStringList();
+	result.reserve(rules.size());
+	for (const auto &rule : rules) {
+		result.push_back(rule.raw);
+	}
+	return result.join(u", "_q);
+}
+
 
 TextWithEntities ForceCustomEmojiStatic(TextWithEntities text) {
 	for (auto &entity : text.entities) {
@@ -229,6 +336,17 @@ ChatFilter ChatFilter::withoutAlways(not_null<History*> history) const {
 	return result;
 }
 
+ChatFilter ChatFilter::withLocalRules(ChatFilterLocalRules rules) const {
+	auto result = *this;
+	result._localRules = std::move(rules);
+	return result;
+}
+
+const ChatFilterLocalRules &ChatFilter::localRules() const {
+	return _localRules;
+}
+
+
 MTPDialogFilter ChatFilter::tl(FilterId replaceId) const {
 	auto always = _always;
 	auto pinned = QVector<MTPInputPeer>();
@@ -366,11 +484,17 @@ bool ChatFilter::contains(
 	if (_never.contains(history)) {
 		return false;
 	}
+	if (!_localRules.exclude.empty()
+		&& RulesMatchHistory(_localRules.exclude, history)) {
+		return false;
+	}
 	const auto channel = history->peer->asChannel();
 	if (channel && channel->isCommunity()) {
 		// A community never matches a filter by chat type (it is neither a
 		// group nor a channel); it can only be included explicitly by id.
-		return _always.contains(history);
+		return _always.contains(history)
+			|| (!_localRules.include.empty()
+				&& RulesMatchHistory(_localRules.include, history));
 	}
 	const auto state = (_flags & (Flag::NoMuted | Flag::NoRead))
 		? history->chatListBadgesState()
@@ -388,13 +512,16 @@ bool ChatFilter::contains(
 				|| (!ignoreFakeUnread && history->fakeUnreadWhileOpened()))
 			&& (!(_flags & Flag::NoArchived)
 				|| (history->folderKnown() && !history->folder())))
-		|| _always.contains(history);
+		|| _always.contains(history)
+		|| (!_localRules.include.empty()
+			&& RulesMatchHistory(_localRules.include, history));
 }
 
 ChatFilters::ChatFilters(not_null<Session*> owner)
 : _owner(owner)
 , _moreChatsTimer([=] { checkLoadMoreChatsLists(); }) {
 	_list.emplace_back();
+	loadLocalRules();
 	crl::on_main(&owner->session(), [=] { load(); });
 
 	ExtrasSettings::getInstance().hideAllChatsFolderChanges()
@@ -709,6 +836,10 @@ void ChatFilters::set(ChatFilter filter) {
 	if (!filter.id()) {
 		return;
 	}
+	if (!filter.localRules().empty()) {
+		_localRules[filter.id()] = filter.localRules();
+		saveLocalRules();
+	}
 	const auto i = ranges::find(_list, filter.id(), &ChatFilter::id);
 	if (i == end(_list)) {
 		applyInsert(std::move(filter), _list.size());
@@ -718,8 +849,70 @@ void ChatFilters::set(ChatFilter filter) {
 	}
 }
 
+void ChatFilters::setLocalRules(FilterId id, ChatFilterLocalRules rules) {
+	if (!id) {
+		_pendingLocalRules = std::move(rules);
+		return;
+	}
+	if (rules.empty()) {
+		_localRules.erase(id);
+	} else {
+		_localRules[id] = rules;
+	}
+	saveLocalRules();
+
+	const auto i = ranges::find(_list, id, &ChatFilter::id);
+	if (i == end(_list) || i->localRules() == rules) {
+		return;
+	}
+	*i = i->withLocalRules(std::move(rules));
+	refreshLocalRules(id);
+	_listChanged.fire({});
+}
+
+ChatFilterLocalRules ChatFilters::localRules(FilterId id) const {
+	const auto i = _localRules.find(id);
+	return (i != end(_localRules)) ? i->second : ChatFilterLocalRules();
+}
+
+void ChatFilters::refreshLocalRules(FilterId id) {
+	const auto i = ranges::find(_list, id, &ChatFilter::id);
+	if (i == end(_list)) {
+		return;
+	}
+	const auto filter = *i;
+	const auto filterList = chatsList(id);
+	const auto feed = [&](not_null<const Dialogs::MainList*> list) {
+		auto histories = std::vector<not_null<History*>>();
+		for (const auto &entry : *list->indexed()) {
+			if (const auto history = entry.history()) {
+				histories.push_back(history);
+			}
+		}
+		for (const auto history : histories) {
+			if (filter.contains(history)) {
+				if (!history->inChatList(id)) {
+					history->addToChatList(id, filterList);
+				}
+			} else if (history->inChatList(id)) {
+				history->removeFromChatList(id, filterList);
+			}
+		}
+	};
+	feed(_owner->chatsList());
+	if (const auto folder = _owner->folderLoaded(Data::Folder::kId)) {
+		feed(folder->chatsList());
+	}
+}
+
+
 void ChatFilters::applyInsert(ChatFilter filter, int position) {
 	Expects(position >= 0 && position <= _list.size());
+
+	if (filter.id() && !_pendingLocalRules.empty()) {
+		_localRules[filter.id()] = base::take(_pendingLocalRules);
+		saveLocalRules();
+	}
 
 	_list.insert(
 		begin(_list) + position,
@@ -756,11 +949,18 @@ void ChatFilters::applyRemove(int position) {
 	// list mid-iteration and crashes (see also PinnedList::setPinned).
 	const auto i = begin(_list) + position;
 	auto filter = std::move(*i);
+	if (_localRules.find(filter.id()) != end(_localRules)) {
+		_localRules.erase(filter.id());
+		saveLocalRules();
+	}
 	_list.erase(i);
 	applyChange(filter, ChatFilter(filter.id(), {}, {}, {}, {}, {}, {}, {}));
 }
 
 bool ChatFilters::applyChange(ChatFilter &filter, ChatFilter &&updated) {
+	if (updated.id()) {
+		updated = updated.withLocalRules(localRules(updated.id()));
+	}
 	Expects(filter.id() == updated.id());
 
 	using Flag = ChatFilter::Flag;
@@ -1212,6 +1412,78 @@ void ChatFilters::checkLoadMoreChatsLists() {
 	for (const auto &[id, entry] : _moreChatsData) {
 		loadMoreChatsList(id);
 	}
+}
+
+void ChatFilters::loadLocalRules() {
+	auto file = QFile(LocalRulesPath());
+	if (!file.open(QIODevice::ReadOnly)) {
+		return;
+	}
+	const auto document = QJsonDocument::fromJson(file.readAll());
+	if (!document.isObject()) {
+		return;
+	}
+	const auto account = document.object().value(
+		QString::number(_owner->session().userId().bare)).toObject();
+	const auto parse = [](const QJsonArray &array) {
+		auto result = std::vector<ChatFilterRule>();
+		for (const auto &value : array) {
+			const auto raw = value.toString();
+			if (raw.isEmpty()) {
+				continue;
+			}
+			auto rule = ChatFilterRule::FromToken(raw);
+			if (!rule.folded.isEmpty()) {
+				result.push_back(std::move(rule));
+			}
+		}
+		return result;
+	};
+	for (auto i = account.begin(); i != account.end(); ++i) {
+		const auto object = i.value().toObject();
+		auto rules = ChatFilterLocalRules();
+		rules.include = parse(object.value(u"include"_q).toArray());
+		rules.exclude = parse(object.value(u"exclude"_q).toArray());
+		if (!rules.empty()) {
+			_localRules[FilterId(i.key().toInt())] = std::move(rules);
+		}
+	}
+}
+
+void ChatFilters::saveLocalRules() {
+	const auto write = [](const std::vector<ChatFilterRule> &rules) {
+		auto result = QJsonArray();
+		for (const auto &rule : rules) {
+			result.append(rule.raw);
+		}
+		return result;
+	};
+	auto filters = QJsonObject();
+	for (const auto &[id, rules] : _localRules) {
+		auto object = QJsonObject();
+		object.insert(u"include"_q, write(rules.include));
+		object.insert(u"exclude"_q, write(rules.exclude));
+		filters.insert(QString::number(id), object);
+	}
+
+	auto document = QJsonObject();
+	auto existing = QFile(LocalRulesPath());
+	if (existing.open(QIODevice::ReadOnly)) {
+		const auto parsed = QJsonDocument::fromJson(existing.readAll());
+		if (parsed.isObject()) {
+			document = parsed.object();
+		}
+		existing.close();
+	}
+	document.insert(
+		QString::number(_owner->session().userId().bare),
+		filters);
+
+	auto file = QFile(LocalRulesPath());
+	if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+		return;
+	}
+	file.write(QJsonDocument(document).toJson(QJsonDocument::Indented));
 }
 
 bool CanRemoveFromChatFilter(

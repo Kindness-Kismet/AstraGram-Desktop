@@ -745,6 +745,41 @@ void EditFilterBox(
 	});
 
 	Ui::AddSkip(content, st::boxMediumSkip);
+	Ui::AddSubsectionTitle(
+		content,
+		rpl::single(u"名字 / 号码匹配（仅本地）"_q));
+	const auto includeLocal = content->add(
+		object_ptr<Ui::InputField>(
+			box,
+			st::windowFilterNameInput,
+			Ui::InputField::Mode::SingleLine,
+			rpl::single(u"包含：名字或号码，用逗号分隔"_q)),
+		st::windowFilterNameInputPadding);
+	const auto excludeLocal = content->add(
+		object_ptr<Ui::InputField>(
+			box,
+			st::windowFilterNameInput,
+			Ui::InputField::Mode::SingleLine,
+			rpl::single(u"排除：名字或号码，用逗号分隔"_q)),
+		st::windowFilterNameInputPadding);
+	includeLocal->setText(
+		Data::ChatFilterRulesToText(filter.localRules().include));
+	excludeLocal->setText(
+		Data::ChatFilterRulesToText(filter.localRules().exclude));
+	const auto pushLocalRules = [=] {
+		auto rules = data->current().localRules();
+		rules.include = Data::ParseChatFilterRules(
+			includeLocal->getLastText());
+		rules.exclude = Data::ParseChatFilterRules(
+			excludeLocal->getLastText());
+		*data = data->current().withLocalRules(std::move(rules));
+	};
+	includeLocal->changes(
+	) | rpl::on_next(pushLocalRules, includeLocal->lifetime());
+	excludeLocal->changes(
+	) | rpl::on_next(pushLocalRules, excludeLocal->lifetime());
+
+	Ui::AddSkip(content, st::boxMediumSkip);
 	Ui::AddSubsectionTitle(content, tr::lng_filters_include());
 
 	const auto includeAdd = AddButtonWithIcon(
@@ -981,15 +1016,19 @@ void EditFilterBox(
 		const auto staticTitle = !title.entities.isEmpty()
 			&& state->staticTitle.current();
 		const auto rules = data->current();
+		const auto hasLocal = !rules.localRules().empty();
 		if (Ui::ComputeFieldCharacterCount(name) > kMaxFilterTitleLength
 			|| title.empty()) {
 			name->showError();
 			box->scrollToY(0);
 			return {};
-		} else if (!(rules.flags() & kTypes) && rules.always().empty()) {
+		} else if (!hasLocal
+			&& !(rules.flags() & kTypes)
+			&& rules.always().empty()) {
 			window->window().showToast(tr::lng_filters_empty(tr::now));
 			return {};
-		} else if ((rules.flags() == (kTypes | Flag::NoArchived))
+		} else if (!hasLocal
+			&& (rules.flags() == (kTypes | Flag::NoArchived))
 			&& rules.always().empty()
 			&& rules.never().empty()) {
 			window->window().showToast(tr::lng_filters_default(tr::now));
@@ -1123,6 +1162,9 @@ void EditFilterBox(
 	const auto save = [=] {
 		if (const auto result = collect()) {
 			box->closeBox();
+			owner->chatsFilters().setLocalRules(
+				result->id(),
+				result->localRules());
 			doneCallback(*result);
 		}
 	};
@@ -1149,6 +1191,10 @@ void EditExistingFilter(
 	}
 	const auto doneCallback = [=](const Data::ChatFilter &result) {
 		Expects(id == result.id());
+
+	session->data().chatsFilters().setLocalRules(
+		result.id(),
+		result.localRules());
 
 		const auto tl = result.tl();
 		session->data().chatsFilters().apply(MTP_updateDialogFilter(

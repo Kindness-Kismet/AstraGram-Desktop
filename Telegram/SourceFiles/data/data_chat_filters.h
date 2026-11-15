@@ -34,6 +34,39 @@ struct ChatFilterTitle {
 	}
 };
 
+// A local-only matching rule: it never goes to the server, it is kept in the
+// local settings and is applied on top of the server-side filter rules.
+// A rule matches a chat by its name, its username, its phone number or by a
+// number / name written in the last message of that chat.
+struct ChatFilterRule {
+	QString raw;
+	QString folded;
+
+	[[nodiscard]] static ChatFilterRule FromToken(QString token);
+
+	friend inline bool operator==(
+		const ChatFilterRule &a,
+		const ChatFilterRule &b) = default;
+};
+
+struct ChatFilterLocalRules {
+	std::vector<ChatFilterRule> include;
+	std::vector<ChatFilterRule> exclude;
+
+	[[nodiscard]] bool empty() const {
+		return include.empty() && exclude.empty();
+	}
+
+	friend inline bool operator==(
+		const ChatFilterLocalRules &a,
+		const ChatFilterLocalRules &b) = default;
+};
+
+[[nodiscard]] std::vector<ChatFilterRule> ParseChatFilterRules(
+	const QString &text);
+[[nodiscard]] QString ChatFilterRulesToText(
+	const std::vector<ChatFilterRule> &rules);
+
 [[nodiscard]] TextWithEntities ForceCustomEmojiStatic(TextWithEntities text);
 
 class ChatFilter final {
@@ -78,6 +111,11 @@ public:
 		bool hasMyLinks) const;
 	[[nodiscard]] ChatFilter withoutAlways(not_null<History*>) const;
 
+	// Local-only rules, applied on top of the server-side filter rules.
+	[[nodiscard]] ChatFilter withLocalRules(
+		ChatFilterLocalRules rules) const;
+	[[nodiscard]] const ChatFilterLocalRules &localRules() const;
+
 	[[nodiscard]] static ChatFilter FromTL(
 		const MTPDialogFilter &data,
 		not_null<Session*> owner);
@@ -109,6 +147,8 @@ private:
 	std::vector<not_null<History*>> _pinned;
 	base::flat_set<not_null<History*>> _never;
 	Flags _flags;
+	ChatFilterLocalRules _localRules;
+	ChatFilterLocalRules _pendingLocalRules;
 
 };
 
@@ -118,7 +158,8 @@ inline bool operator==(const ChatFilter &a, const ChatFilter &b) {
 		&& (a.colorIndex() == b.colorIndex())
 		&& (a.flags() == b.flags())
 		&& (a.always() == b.always())
-		&& (a.never() == b.never());
+		&& (a.never() == b.never())
+		&& (a.localRules() == b.localRules());
 }
 
 inline bool operator!=(const ChatFilter &a, const ChatFilter &b) {
@@ -162,6 +203,9 @@ public:
 	void reload();
 	void apply(const MTPUpdate &update);
 	void set(ChatFilter filter);
+
+	void setLocalRules(FilterId id, ChatFilterLocalRules rules);
+	[[nodiscard]] ChatFilterLocalRules localRules(FilterId id) const;
 	void remove(FilterId id);
 	void moveAllToFront();
 	[[nodiscard]] const std::vector<ChatFilter> &list() const;
@@ -237,12 +281,17 @@ private:
 	void applyInsert(ChatFilter filter, int position);
 	void applyRemove(int position);
 
+	void loadLocalRules();
+	void saveLocalRules();
+	void refreshLocalRules(FilterId id);
+
 	void checkLoadMoreChatsLists();
 	void loadMoreChatsList(FilterId id);
 
 	const not_null<Session*> _owner;
 
 	std::vector<ChatFilter> _list;
+	base::flat_map<FilterId, ChatFilterLocalRules> _localRules;
 	base::flat_map<FilterId, std::unique_ptr<Dialogs::MainList>> _chatsLists;
 	rpl::event_stream<> _listChanged;
 	rpl::event_stream<FilterId> _isChatlistChanged;
