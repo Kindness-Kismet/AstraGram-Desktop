@@ -1,11 +1,17 @@
-- Adapted to official Telegram Desktop 7.4.3
-- Added a reply option when forwarding a message, so you can now send your text as a reply to the forwarded message
-- Added contact and proxy multi-selection, so you can now delete contacts in bulk and share or delete multiple proxies
-- Added voice and video message filters, so you can now browse them separately in shared media
+- Added local matching rules for chat folders, so you can now include or exclude chats by name, username, phone number or latest message
+- Fixed an issue with window focus changes that previously caused large parts of a window to become transparent
+- Fixed an issue with message deletion animations that previously caused messages near the bottom of a chat to shift or disappear from the wrong position
+- Fixed an issue with floating chat list suggestions that previously caused scrolled chat rows to show through their backgrounds when window materials were enabled
+- Fixed an issue with update settings that previously caused the update action and check-for-updates text to overlap
+- Improved settings highlights, which now follow the rounded corners of their card rows
+- Improved message context menus, which now align date, edit and read-time rows with other menu items
 
 ---
 
-- 适配了官方 Telegram Desktop 7.4.3
-- 新增了转发后回复选项，现在可以将输入的文字作为对转发消息的回复发送
-- 新增了联系人和代理多选，现在可以批量删除联系人，以及批量分享或删除代理
-- 新增了语音和圆视频消息筛选，现在可以在共享媒体中分别查看
+- 新增了聊天分组本地匹配规则，现在可以按聊天名称、用户名、手机号或最新消息设置包含和排除规则
+- 修复了窗口切换焦点后大面积透明的问题
+- 修复了聊天底部消息删除动画偏移、消失位置不正确的问题
+- 修复了启用窗口材质后，会话列表滚动内容透过浮动提示背景的问题
+- 修复了更新设置中更新按钮与检查更新文字重叠的问题
+- 改善了设置项高亮效果，使圆角与所在卡片行保持一致
+- 改善了消息右键菜单，使日期、编辑时间和已读时间与其他菜单项对齐
