@@ -1,4 +1,8 @@
 {
+  "ChatFilterLocalRules": "按名字或号码匹配（本地规则）",
+  "ChatFilterLocalInclude": "包含匹配的聊天",
+  "ChatFilterLocalExclude": "排除匹配的聊天",
+  "ChatFilterLocalAbout": "用逗号、分号或换行分隔，忽略空格、标点和大小写。名字、用户名、号码至少 2 个字母、汉字或数字；正文至少 4 个。包含规则筛选所选类型，手动添加的聊天仍保留，排除优先。未选类型或聊天时自动选中全部普通类型。规则仅保存在本设备的当前账号。",
   "ProfileMusic": "个人音乐",
   "ProfilePersonalChannel": "个人频道",
   "ProfileCommunity": "所属社区",

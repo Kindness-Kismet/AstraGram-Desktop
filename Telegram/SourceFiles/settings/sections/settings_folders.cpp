@@ -715,6 +715,7 @@ not_null<Ui::VerticalLayout*> SetupFoldersList(
 
 		auto order = std::vector<FilterId>();
 		auto updates = std::vector<MTPUpdate>();
+		auto localRules = ExtrasChatFilters::RulesById();
 		auto addRequests = std::vector<MTPmessages_UpdateDialogFilter>();
 		auto removeRequests = std::vector<MTPmessages_UpdateDialogFilter>();
 		auto removeChatlistRequests = std::vector<MTPchatlists_LeaveChatlist>();
@@ -746,6 +747,9 @@ not_null<Ui::VerticalLayout*> SetupFoldersList(
 			const auto tl = removed
 				? MTPDialogFilter()
 				: row.filter.tl(newId);
+			if (!removed) {
+				localRules.emplace(newId, row.filter.localRules());
+			}
 			const auto removeChatlistWithChats = removed
 				&& row.filter.chatlist()
 				&& !row.removePeers.empty();
@@ -810,6 +814,7 @@ not_null<Ui::VerticalLayout*> SetupFoldersList(
 			updated,
 			order = std::move(order),
 			updates = std::move(updates),
+			localRules = std::move(localRules),
 			addRequests = std::move(addRequests),
 			removeRequests = std::move(removeRequests),
 			removeChatlistRequests = std::move(removeChatlistRequests)
@@ -825,6 +830,9 @@ not_null<Ui::VerticalLayout*> SetupFoldersList(
 					next(updated);
 				}
 			};
+			for (const auto &[id, rules] : localRules) {
+				filters->setLocalRules(id, rules);
+			}
 			for (const auto &update : updates) {
 				filters->apply(update);
 			}

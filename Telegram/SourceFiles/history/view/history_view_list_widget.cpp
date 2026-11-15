@@ -6326,12 +6326,21 @@ void ListWidget::setupThanosEffect() {
 			.itemTop = [=](not_null<const HistoryView::Element*> view) {
 				return itemTop(view);
 			},
+			.itemPaintShift = [=](not_null<const HistoryView::Element*> view) {
+				return int(std::round(itemRevealState(view).shift));
+			},
 			.visibleAreaTop = [=] { return _visibleTop; },
 			.visibleAreaBottom = [=] { return _visibleBottom; },
 			.contentWidth = [=] { return width(); },
 			.contentHeight = [=] { return _itemsHeight; },
 			.preparePaintContext = [=](QRect clip) {
 				return preparePaintContext(clip);
+			},
+			.paintItem = [=](Painter &p, not_null<Element*> view,
+					const Ui::ChatPaintContext &context) {
+				PaintRevealingItem(p, view, context, itemRevealState(view),
+					context.area.y() + context.area.height()
+						- _delegate->listMessageEnterInset());
 			},
 			.window = [=]() -> QWidget* { return window(); },
 			.scrollTop = [=] { return scroll->scrollTop(); },
@@ -6340,7 +6349,8 @@ void ListWidget::setupThanosEffect() {
 				return scroll;
 			},
 			.scrollToY = [=](int y) {
-				_delegate->listScrollTo(y);
+				// 删除动画保存滚动区坐标，恢复前补回顶部遮挡，避免重复扣除。
+				_delegate->listScrollTo(y + _topPadding);
 			},
 			.collapseGapsUpdated = [=] { collapseGapsUpdated(); },
 		},

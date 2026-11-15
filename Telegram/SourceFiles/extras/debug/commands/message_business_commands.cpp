@@ -194,6 +194,27 @@ Result reactToMessage(const QStringList &args) {
 		{ "reactions", std::move(reactions) } }));
 }
 
+Result editMessageText(const QStringList &args) {
+	if (args.size() != 3 && (args.size() != 5 || args[3] != u"--account"_q)) {
+		return Result::Err(u"usage: message.edit <peerId> <messageId> <text> [--account index]"_q);
+	}
+	const auto item = findAccountMessage(args);
+	if (!item || !item->allowsEdit(base::unixtime::now()) || args[2].trimmed().isEmpty()
+		|| (item->media() && !item->media()->webpage())) {
+		return Result::Err(u"an editable text message and nonempty text are required"_q);
+	}
+	const auto job = beginJob("message-edit");
+	item->history()->session().lifetime().add([job] {
+		finishJob(job, false, "session closed");
+	});
+	Api::EditTextMessage(item, TextWithEntities{ args[2] }, Data::WebPageDraft::FromItem(item), {},
+		[job](mtpRequestId) { finishJob(job, true, "text updated"); },
+		[job](const QString &error, mtpRequestId) {
+			finishJob(job, false, error.toStdString());
+		}, false);
+	return jobStarted(job);
+}
+
 Result setMessagePreview(const QStringList &args) {
 	if ((args.size() != 3 && (args.size() != 5 || args[3] != u"--account"_q))
 		|| (args[2] != u"on"_q && args[2] != u"off"_q)) {
@@ -854,6 +875,7 @@ const HandlerMap &messageBusinessHandlers() {
 		{ u"message.list"_q, &localMessages },
 		{ u"message.react"_q, &reactToMessage },
 		{ u"message.preview"_q, &setMessagePreview },
+		{ u"message.edit"_q, &editMessageText },
 		{ u"message.fetch"_q, &fetchMessages },
 		{ u"message.media"_q, &rawMedia },
 		{ u"message.media-file"_q, &saveAltFile },

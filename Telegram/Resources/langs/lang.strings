@@ -9256,6 +9256,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_FiltersExportClipboard" = "Copy to Clipboard";
 "extras_FiltersExportURL" = "Publish on dpaste.com";
 "extras_FiltersToastFailPublish" = "Failed to publish filters.";
+"extras_ChatFilterLocalRules" = "Local name and number rules";
+"extras_ChatFilterLocalInclude" = "Include matching chats";
+"extras_ChatFilterLocalExclude" = "Exclude matching chats";
+"extras_ChatFilterLocalAbout" = "Separate rules with commas, semicolons or new lines. Match names, usernames and phone numbers from 2 letters or digits, or the latest message from 4. Spaces, punctuation and case are ignored. Include rules narrow the selected chat types; manually added chats stay included. Exclusion takes priority. Without selected types or chats, all regular chat types are selected automatically. Rules are saved only for this account on this device.";
 "extras_FiltersToastFailFetch" = "Failed to fetch filters.";
 "extras_FiltersToastFailImport" = "Failed to import filters.";
 "extras_FiltersToastFailNoChanges" = "Filters are the same as current.";

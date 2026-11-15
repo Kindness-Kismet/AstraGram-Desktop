@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_premium_limits.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
+#include "extras/ui/boxes/chat_filter_rules.h"
 #include "history/history.h"
 #include "info/userpic/info_userpic_color_circle_button.h"
 #include "lang/lang_keys.h"
@@ -103,7 +104,7 @@ not_null<FilterChatsPreview*> SetupChatsPreview(
 			(rules.flags() & ~flag),
 			rules.always(),
 			rules.pinned(),
-			rules.never());
+			rules.never()).withLocalRules(rules.localRules());
 		updateDefaultTitle(computed);
 		*data = std::move(computed);
 	}, preview->lifetime());
@@ -125,7 +126,7 @@ not_null<FilterChatsPreview*> SetupChatsPreview(
 			rules.flags(),
 			std::move(always),
 			std::move(pinned),
-			std::move(never));
+			std::move(never)).withLocalRules(rules.localRules());
 		updateDefaultTitle(computed);
 		*data = std::move(computed);
 	}, preview->lifetime());
@@ -193,7 +194,8 @@ void EditExceptions(
 					| rawController->chosenOptions()),
 				include ? std::move(changed) : std::move(removeFrom),
 				std::move(pinned),
-				include ? std::move(removeFrom) : std::move(changed));
+				include ? std::move(removeFrom) : std::move(changed)
+			).withLocalRules(rules.localRules());
 			updateDefaultTitle(computed);
 			*data = computed;
 			refresh();
@@ -428,7 +430,7 @@ void CreateIconSelector(
 			rules.flags(),
 			rules.always(),
 			rules.pinned(),
-			rules.never());
+			rules.never()).withLocalRules(rules.localRules());
 	}, panel->lifetime());
 
 	const auto updatePanelGeometry = [=] {
@@ -743,6 +745,13 @@ void EditFilterBox(
 	box->setFocusCallback([=] {
 		name->setFocusFast();
 	});
+	name->setObjectName(u"chatFilter.name"_q);
+	const auto collectLocalRules = ExtrasChatFilters::setupRulesFields(
+		content,
+		filter.localRules(),
+		[=](Data::ChatFilterLocalRules rules) {
+			*data = data->current().withLocalRules(std::move(rules));
+		});
 
 	Ui::AddSkip(content, st::boxMediumSkip);
 	Ui::AddSubsectionTitle(content, tr::lng_filters_include());
@@ -980,16 +989,19 @@ void EditFilterBox(
 		auto title = state->title.current();
 		const auto staticTitle = !title.entities.isEmpty()
 			&& state->staticTitle.current();
-		const auto rules = data->current();
+		const auto rules = data->current().withLocalRules(collectLocalRules());
+		const auto hasLocal = !rules.localRules().empty();
 		if (Ui::ComputeFieldCharacterCount(name) > kMaxFilterTitleLength
 			|| title.empty()) {
 			name->showError();
 			box->scrollToY(0);
 			return {};
-		} else if (!(rules.flags() & kTypes) && rules.always().empty()) {
+		}
+		if (!hasLocal && !(rules.flags() & kTypes) && rules.always().empty()) {
 			window->window().showToast(tr::lng_filters_empty(tr::now));
 			return {};
-		} else if ((rules.flags() == (kTypes | Flag::NoArchived))
+		}
+		if (!hasLocal && (rules.flags() == (kTypes | Flag::NoArchived))
 			&& rules.always().empty()
 			&& rules.never().empty()) {
 			window->window().showToast(tr::lng_filters_default(tr::now));
@@ -999,9 +1011,22 @@ void EditFilterBox(
 		const auto colorIndex = (rawColorIndex >= kNoTag
 			? std::nullopt
 			: std::make_optional(rawColorIndex));
-		return rules.withTitle(
+		auto result = rules.withTitle(
 			{ std::move(title), staticTitle }
 		).withColorIndex(colorIndex);
+		if (hasLocal && !(rules.flags() & kTypes) && rules.always().empty()) {
+			// 服务器拒绝空包含条件，本机再用规则筛选全部聊天类型。
+			result = Data::ChatFilter(
+				result.id(),
+				result.title(),
+				result.iconEmoji(),
+				result.colorIndex(),
+				result.flags() | kTypes,
+				result.always(),
+				result.pinned(),
+				result.never()).withLocalRules(result.localRules());
+		}
+		return result;
 	};
 
 	Ui::AddSubsectionTitle(
@@ -1149,6 +1174,7 @@ void EditExistingFilter(
 	}
 	const auto doneCallback = [=](const Data::ChatFilter &result) {
 		Expects(id == result.id());
+		session->data().chatsFilters().setLocalRules(id, result.localRules());
 
 		const auto tl = result.tl();
 		session->data().chatsFilters().apply(MTP_updateDialogFilter(

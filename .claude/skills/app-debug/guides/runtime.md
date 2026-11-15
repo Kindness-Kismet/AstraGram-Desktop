@@ -56,7 +56,7 @@ Windows 的 `nativeBackdrop` 为 1 关闭、2 云母、3 亚克力；`revision` 
 
 `anim.speed` 用来观察过渡动画：`0.1` 放慢十倍，`2` 加快一倍。它缩放全部
 `Ui::Animations::Simple` 动画（页面滑动、弹出菜单、开关、渐隐渐显、点击波纹），
-只影响设置之后启动的动画；加载圈、贴纸、视频这类逐帧播放不受影响。返回 `speed`、
+上述动画只在启动时读取倍率，删除粒子特效实时跟随倍率；加载圈、贴纸、视频这类逐帧播放不受影响。返回 `speed`、
 `durationMultiplier`（时长倍率，即速度的倒数）和 `disabled`；`disabled` 为 true
 表示动画已被关闭，调速不起作用。Debug 版的 Ctrl+F11 / Ctrl+F12 改的是同一个倍率。
 观察结束后用 `anim.speed 1` 恢复。
@@ -69,6 +69,9 @@ python .claude/skills/app-debug/scripts/cli.py anim.speed 1
 `player.state [song|voice]` 查询指定类型或当前活动媒体的 `messageId`、播放状态 `playing`、位置 `position`、长度 `length`、时间单位 `frequency` 和循环模式 `repeat`（0 关闭、1 单曲、2 列表）。连续采样可验证自然结束后的重播，业务控制使用 `player.control`；键盘与焦点检查才使用界面。
 
 ## 独立窗口
+
+`chat.open [peerId] [msgId] --new-window` 通过正式入口打开独立聊天窗口，缺省打开收藏夹。
+用 `control.list --all` 找到新窗口序号，再用 `control.window #序号` 选中。
 
 `window.resize`、`window.maximize`、`window.activation` 和 `window.close` 操作 `control.window` 选定的窗口，缺省为主窗口。
 状态包含该窗口的 `windowMaterialActive`；`window.close` 保留原有关闭确认，不强制丢弃内容。

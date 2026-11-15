@@ -49,6 +49,7 @@
 #include "ui/text/text_entity.h"
 #include "ui/widgets/fields/input_field.h"
 #include "window/window_session_controller.h"
+#include "window/window_separate_id.h"
 
 #include "base/unixtime.h"
 
@@ -776,9 +777,11 @@ using json = nlohmann::json;
 
 // 打开对话并清空导航栈；参数取 chat.list 输出的 peerId，
 // 不指定会话时打开收藏夹。
-[[nodiscard]] Result OpenChat(const QStringList &args) {
+[[nodiscard]] Result OpenChat(const QStringList &arguments) {
+	auto args = arguments;
+	const auto separate = args.removeOne(u"--new-window"_q);
 	if (args.size() > 2) {
-		return Result::Err(u"usage: chat.open [peerId] [msgId]"_q);
+		return Result::Err(u"usage: chat.open [peerId] [msgId] [--new-window]"_q);
 	}
 	auto idValue = int64(0);
 	if (!args.isEmpty()) {
@@ -809,10 +812,18 @@ using json = nlohmann::json;
 	if (!peer) {
 		return Result::Err(u"peer not found, run chat.list first"_q);
 	}
-	controller->showPeerHistory(
-		peer,
-		Window::SectionShow::Way::ClearStack,
-		msgId);
+	if (separate) {
+		controller->showInNewWindow(Window::SeparateId(
+			peer->isForum() && !peer->useSubsectionTabs()
+				? Window::SeparateType::Forum
+				: Window::SeparateType::Chat,
+			session->data().history(peer)), msgId);
+	} else {
+		controller->showPeerHistory(
+			peer,
+			Window::SectionShow::Way::ClearStack,
+			msgId);
+	}
 	return Result::Ok(Compact(json{
 		{ "peerId", peer->id.value },
 		{ "name", peer->name().toStdString() },

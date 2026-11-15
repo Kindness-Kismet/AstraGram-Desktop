@@ -1,4 +1,8 @@
 {
+  "ChatFilterLocalRules": "Local name and number rules",
+  "ChatFilterLocalInclude": "Include matching chats",
+  "ChatFilterLocalExclude": "Exclude matching chats",
+  "ChatFilterLocalAbout": "Separate rules with commas, semicolons or new lines. Match names, usernames and phone numbers from 2 letters or digits, or the latest message from 4. Spaces, punctuation and case are ignored. Include rules narrow the selected chat types; manually added chats stay included. Exclusion takes priority. Without selected types or chats, all regular chat types are selected automatically. Rules are saved only for this account on this device.",
   "ProfileMusic": "Profile Music",
   "ProfilePersonalChannel": "Personal Channel",
   "ProfileCommunity": "Community",

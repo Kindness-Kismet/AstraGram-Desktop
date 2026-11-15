@@ -413,6 +413,10 @@ set(extras_files
         extras/features/filters/filters_cache_controller.h
         extras/features/filters/filters_utils.cpp
         extras/features/filters/filters_utils.h
+        extras/features/chat_filters/local_rules.cpp
+        extras/features/chat_filters/local_rules.h
+        extras/ui/boxes/chat_filter_rules.cpp
+        extras/ui/boxes/chat_filter_rules.h
         extras/data/conversation_cache.cpp
         extras/data/conversation_cache_deletion.cpp
         extras/data/conversation_cache.h
@@ -450,6 +454,7 @@ set(extras_files
         extras/debug/commands/commands_internal.h
         extras/debug/commands/app_commands.cpp
         extras/debug/commands/session_commands.cpp
+        extras/debug/commands/chat_filter_commands.cpp
         extras/debug/commands/simulation_commands.cpp
         extras/debug/commands/simulation_cache_checks.cpp
         extras/debug/commands/simulation_message_order.cpp

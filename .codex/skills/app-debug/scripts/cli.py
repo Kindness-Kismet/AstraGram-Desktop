@@ -133,6 +133,7 @@ GENERIC_COMMANDS = {
     'chat.members': '列出已缓存的群成员：<会话编号> [no-username]',
     'chat.draft': '查询草稿、回复、转发和暂存状态，不切换聊天：<会话编号> [话题根消息编号]',
     'message.list': '查询已缓存的消息及附件、实体：<会话编号> [条数]',
+    'message.edit': '在已授权测试对话沿正式路径编辑纯文本，不修改草稿：<会话编号> <消息编号> <文字> [--account 账号下标]；异步结果用 job.status 核对',
     'message.fetch': '异步获取聊天消息，不切换界面或发送已读：<会话编号> [条数]',
     'message.media': '读取服务器返回的文件附件原始结构，含各档清晰度：<会话编号> [条数] [起始消息编号]',
     'message.media-file': '按类型保存消息附带的小文件（不超过 1 MB）：<会话编号> <消息编号> <类型> <新文件绝对路径>',
@@ -172,6 +173,13 @@ GENERIC_COMMANDS = {
     "page.sections": "列出可直接打开的设置页与子页键名",
     "page.current": "查询当前页面、设置区宽窄布局与窗口布局",
     "chat.folder": "列出或切换聊天文件夹：[编号|all]",
+    "chat-filter.list": "查询聊天分组的服务器条件、本地规则和实际行数",
+    "chat-filter.rules": "查询或修改已保存分组的本地规则：<编号> [<包含规则> <排除规则>]",
+    "chat-filter.check": "查询某聊天的本地命中、最终包含与实际成员状态：<分组编号> <会话编号>",
+    "chat-filter.save": "在已授权测试账号创建或更新分组：<JSON>，支持 id、title、flags、always、never、include、exclude；异步结果用 job.status 核对",
+    "chat-filter.remove": "在已授权测试账号删除分组：<编号>；异步结果用 job.status 核对",
+    "chat-filter.edit": "打开原生聊天分组编辑弹窗：<编号>",
+    "chat-filter.reload": "通过官方接口重新加载聊天分组，随后核对本地规则是否保留",
     "chat.profile": "打开对话资料页：<peerId> [--side]",
     "chat.search-state": "查询当前聊天搜索条件、选中结果、分页和列表位置",
     "chat.pinned": "打开对话的置顶消息页：<peerId>",
@@ -406,6 +414,7 @@ def register_commands(sub) -> None:
     command = sub.add_parser("chat.open", help="打开指定对话并清空导航栈；参数取 chat.list 的 peerId，缺省 Saved Messages")
     command.add_argument("peerId", nargs="?")
     command.add_argument("msgId", nargs="?", help="定位到的消息编号，缺省为对话末尾")
+    command.add_argument("--new-window", action="store_true", help="通过正式入口在独立窗口打开对话")
     command = sub.add_parser("chat.preview", help="打开对话预览并返回是否允许显示")
     command.add_argument("peerId")
     command = sub.add_parser("chat.calendar", help="按消息日期浮标的入口打开日历")
@@ -703,11 +712,11 @@ def build_server_command(args: argparse.Namespace) -> str:
     if command == "notification.click":
         return f"notification.click {args.button}"
     if command == "chat.open":
-        if args.peerId is None:
-            return "chat.open"
-        if args.msgId is None:
-            return f"chat.open {quote_arg(args.peerId)}"
-        return f"chat.open {quote_arg(args.peerId)} {quote_arg(args.msgId)}"
+        parts = ["chat.open"]
+        parts.extend(quote_arg(value) for value in (args.peerId, args.msgId) if value is not None)
+        if args.new_window:
+            parts.append("--new-window")
+        return " ".join(parts)
     if command in ("chat.preview", "chat.calendar"):
         return f"{command} {quote_arg(args.peerId)}"
     if command == "chat.open-archive":

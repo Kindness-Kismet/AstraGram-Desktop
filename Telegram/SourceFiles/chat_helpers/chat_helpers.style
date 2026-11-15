@@ -325,8 +325,8 @@ defaultWhoRead: WhoRead {
 whenReadStyle: TextStyle(defaultTextStyle) {
 	font: font(12px);
 }
-whenReadPadding: margins(34px, 3px, 17px, 4px);
-whenReadIconPosition: point(8px, 0px);
+whenReadPadding: margins(54px, 3px, 17px, 4px);
+whenReadIconPosition: point(15px, 0px);
 whenReadSkip: 3px;
 whenReadShowPadding: margins(6px, 0px, 6px, 2px);
 whoSentItem: Menu(defaultMenu) {

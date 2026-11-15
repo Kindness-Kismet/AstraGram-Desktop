@@ -25,6 +25,7 @@ class Element;
 } // namespace HistoryView
 
 class HistoryItem;
+class Painter;
 
 namespace Ui {
 
@@ -45,11 +46,13 @@ public:
 	struct Delegate {
 		Fn<HistoryView::Element*(not_null<const HistoryItem*>)> viewForItem;
 		Fn<int(not_null<const HistoryView::Element*>)> itemTop;
+		Fn<int(not_null<const HistoryView::Element*>)> itemPaintShift;
 		Fn<int()> visibleAreaTop;
 		Fn<int()> visibleAreaBottom;
 		Fn<int()> contentWidth;
 		Fn<int()> contentHeight;
 		Fn<ChatPaintContext(QRect)> preparePaintContext;
+		Fn<void(Painter&, not_null<HistoryView::Element*>, const ChatPaintContext&)> paintItem;
 		Fn<QWidget*()> window;
 		Fn<int()> scrollTop;
 		Fn<int()> scrollTopMax;
@@ -103,7 +106,7 @@ private:
 	void captureItemsBatch(
 		const std::vector<not_null<HistoryItem*>> &items);
 	[[nodiscard]] bool captureView(
-		not_null<const HistoryView::Element*> view,
+		not_null<HistoryView::Element*> view,
 		int viewHeight,
 		int viewTop);
 	void notePendingRemoval(int height, int top, int dateHeight);

@@ -449,12 +449,15 @@ void activateButton(not_null<Ui::AbstractButton*> button) {
 	const auto single = sequence.count() == 1
 		&& sequence[0].key() != Qt::Key_unknown
 		&& sequence[0].key() != Qt::Key(0);
-	const auto target = QPointer<QWidget>(findControl(args[0]));
+	auto target = QPointer<QWidget>(findControl(args[0]));
 	if ((!single && !digits)
 		|| !target
 		|| !target->isVisible()
 		|| !target->isEnabled()) {
 		return Result::Err(u"expected a visible enabled control and a supported key"_q);
+	}
+	if (const auto field = dynamic_cast<Ui::InputField*>(target.data())) {
+		target = field->rawTextEdit().get();
 	}
 	if (digits) {
 		for (const auto ch : args[1]) {
