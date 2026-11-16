@@ -285,6 +285,7 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 - 推送 Git 提交、分支或标签到远端时，阅读 git-push skill。
 - 查看或更新版本号、整理发布日志或准备发布版本时，阅读 version-bump skill。
 - 准备、创建、更新、描述或审查 PR 时，阅读 pull-request skill。
+- 回应或回复 Git issue 时，阅读 issue-reply skill。
 - 审查隐私性或检查本机独特路径时，阅读 privacy-review skill。
 - 调试应用、验证功能、操作页面或控件，以及启动、停止、重启开发版或截图时，阅读 app-debug skill。
 - 检查 Telegram Desktop 官方版本、比较上游改动、同步适配或登记已适配版本时，阅读 upstream-sync skill。
