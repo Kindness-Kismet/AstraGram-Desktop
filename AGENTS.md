@@ -281,16 +281,14 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 
 ## 技能使用
 
-`.codex/skills/` 为技能主源，`.claude/skills/` 为内容一致的镜像；修改后同步并核对文件集合与字节一致。`.pi/settings.json` 引用 `.codex/skills/`。技能使用仓库相对路径，具体操作流程、脚本入口和指南由对应技能维护。`CLAUDE.md` 只有一行 `@AGENTS.md`，项目规范统一维护在本文件。
-
-- 创建、修改或整理提交时，阅读 commit skill；助手自行执行 `git commit`（含 `--amend`）及操作配套构建仓库时同样适用。
-- 推送 Git 提交、分支或标签到远端时，阅读 git-push skill；主仓库、fork 子模块和配套构建仓库均适用。
-- 用户要求查看或升级版本号、整理更新说明、准备发布版本时，阅读 version-bump skill。
+- 提交要求阅读 commit skill。
+- 推送 Git 提交、分支或标签到远端时，阅读 git-push skill。
+- 查看或更新版本号、整理发布日志或准备发布版本时，阅读 version-bump skill。
 - 准备、创建、更新、描述或审查 PR 时，阅读 pull-request skill。
-- 用户要求推送前路径审查、本机路径检查或对应范围的隐私审查时，阅读 privacy-review skill。
+- 审查隐私性或检查本机独特路径时，阅读 privacy-review skill。
 - 调试应用、验证功能、操作页面或控件，以及启动、停止、重启开发版或截图时，阅读 app-debug skill。
-- 检查官方 Telegram Desktop 正式版或测试版、比较上游改动、同步适配或登记已适配版本时，阅读 upstream-sync skill。
-- 用户指定 worktree、多人或多个助手并行开发、要求隔离推进或合入 worktree 成果时，阅读 worktree skill。
+- 检查 Telegram Desktop 官方版本、比较上游改动、同步适配或登记已适配版本时，阅读 upstream-sync skill。
+- 使用 worktree、多人或多个助手并行开发、隔离推进或合入 worktree 成果时，阅读 worktree skill。
 
 ---
 
