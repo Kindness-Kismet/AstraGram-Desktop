@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "core/core_settings_proxy.h"
 
+#include "base/algorithm.h"
 #include "base/platform/base_platform_info.h"
 #include "storage/serialize_common.h"
 
@@ -375,6 +376,17 @@ void SettingsProxy::insertToList(int index, MTP::ProxyData value) {
 	_list.insert(begin(_list) + index, std::move(value));
 }
 
+void SettingsProxy::reorderInList(int oldIndex, int newIndex) {
+	Expects(oldIndex >= 0 && oldIndex < int(_list.size()));
+	Expects(newIndex >= 0 && newIndex < int(_list.size()));
+
+	base::reorder(_list, oldIndex, newIndex);
+	// 轮换偏好跟随原代理，不能因列表位置变化指向另一条线路。
+	for (auto &index : _proxyRotationPreferredIndices) {
+		index = base::reorder_index(index, oldIndex, newIndex);
+	}
+}
+
 bool SettingsProxy::removeFromList(const MTP::ProxyData &value) {
 	const auto i = ranges::find(_list, value);
 	if (i == end(_list)) {
@@ -382,17 +394,18 @@ bool SettingsProxy::removeFromList(const MTP::ProxyData &value) {
 	}
 	const auto index = int(i - begin(_list));
 	_list.erase(i);
-	for (auto &existing : _proxyRotationPreferredIndices) {
-		if (existing > index) {
-			--existing;
-		}
-	}
+	// 先移除被删代理的偏好，再移动其后索引，避免误删相邻代理。
 	_proxyRotationPreferredIndices.erase(
 		std::remove(
 			begin(_proxyRotationPreferredIndices),
 			end(_proxyRotationPreferredIndices),
 			index),
 		end(_proxyRotationPreferredIndices));
+	for (auto &existing : _proxyRotationPreferredIndices) {
+		if (existing > index) {
+			--existing;
+		}
+	}
 	return true;
 }
 

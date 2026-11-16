@@ -625,6 +625,7 @@
   "OnePlayTTL": "仅可播放一次",
   "UserMessagesMenuText": "该用户的消息",
   "ChatPreview": "预览聊天",
+  "ProxyReorder": "调整代理顺序",
   "ReadUntilMenuText": "标记已读至此处",
   "BoxActionReset": "重置",
   "ClearDeletedMessagesText": "您确定要清除此聊天中所有已删除的消息？",

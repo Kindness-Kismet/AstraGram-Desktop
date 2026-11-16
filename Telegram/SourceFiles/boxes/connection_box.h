@@ -84,6 +84,7 @@ public:
 	void deleteItems();
 	void deleteItems(const base::flat_set<int> &ids);
 	void restoreItem(int id);
+	void reorderItems(int oldPosition, int newPosition);
 	void shareItem(int id, bool qr);
 	void shareItems();
 	void shareItems(const base::flat_set<int> &ids);

@@ -9328,6 +9328,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "extras_OnePlayTTL" = "one play";
 "extras_UserMessagesMenuText" = "User Messages";
 "extras_ChatPreview" = "Preview chat";
+"extras_ProxyReorder" = "Reorder proxies";
 "extras_ReadUntilMenuText" = "Read Message";
 "extras_BoxActionReset" = "Reset";
 "extras_ClearDeletedMessagesText" = "Are you sure you want to clear all deleted messages in this chat?";
