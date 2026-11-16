@@ -225,6 +225,7 @@ void Process(const TextWithEntities &text) {
 - 工作线程需要访问主线程对象时，用 `dispatchToMainThread`（`extras/utils/telegram_helpers.h`）
 - 不要在工作线程调用 `ExtrasSettings::getInstance()` 或 `Core::App()`
 - Qt 对象有线程归属：`QTcpServer` 在主线程创建，信号槽就在主线程回调，无需额外调度；跨线程信号要显式指定 `Qt::QueuedConnection`
+- 长期持有的 QObject 必须挂在会随 `aboutToQuit` 销毁的父对象上，或在 `QCoreApplication::aboutToQuit` 时清理；静态对象不得存活到 QApplication 析构之后。
 
 ### 错误处理与日志
 
@@ -278,105 +279,44 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 
 ---
 
-## AI 助手技能
+## 技能使用
 
-`.claude/skills/` 与 `.codex/skills/` 内容完全相同，分别供不同的 AI 工具读取，修改时两边同步。技能内容只写仓库相对路径，不写本机绝对路径。`CLAUDE.md` 只有一行 `@AGENTS.md`，规范只维护本文件这一份。
+`.codex/skills/` 为技能主源，`.claude/skills/` 为内容一致的镜像；修改后同步并核对文件集合与字节一致。`.pi/settings.json` 引用 `.codex/skills/`。技能使用仓库相对路径，具体操作流程、脚本入口和指南由对应技能维护。`CLAUDE.md` 只有一行 `@AGENTS.md`，项目规范统一维护在本文件。
 
----
-
-## 调试（app-debug skill）
-
-Debug 构建会在 `ExtrasInfra::init()` 里启动 `QTcpServer`，监听 `127.0.0.1:20100`。服务端指令通过 `app.help` 查询，命令行工具另有应用生命周期指令：
-
-| 指令 | 说明 |
-|---|---|
-| `app.ping` / `app.info` / `app.help` | 探活、应用信息、指令清单 |
-| `app.quit` | 走 `Core::Quit()` 正常退出（`app.stop` 内部先用它） |
-| `crash.log` | 读取崩溃日志 |
-| `simulation.enter [userId]` | 构造本地模拟模式绕过登录并自动生成固定场景，默认 999999999 |
-| `simulation.list` / `simulation.open <key>` | 查询七类固定场景和实际状态，打开话题、收藏来源或其他视图 |
-| `simulation.trigger [list|key]` / `simulation.clear` | 触发生日、更新、下载等临时提示，或清除列表提示 |
-| `simulation.message <text> [--peer <peerId>] [--from <userId>] [--blocked] [--shadow-ban]` | 往模拟模式插入本地文本消息（缺省 Saved Messages），用于验证渲染与隐藏逻辑 |
-| `chat.list [filter]` | 列出会话的 peerId 与名称，供 message.send / chat.open 定位目标 |
-| `message.send <peerId> <text\|--file path>` | 真实发送文本到指定对话（`--file` 按 UTF-8 读文件原样发送），走官方发送链路，仅发往自己掌控的测试对话 |
-| `chat.open [peerId]` | 打开指定聊天，缺省为 Saved Messages |
-| `chat.media <peerId> <type> [--side]` | 直接打开共享媒体分类，默认弹层，`--side` 放进侧栏 |
-| `chat.history-stats <msgId>...` | 查询收藏夹中指定消息的存在、隐藏与视图状态 |
-| `theme.set <dark|light>` | 切换暗色或浅色主题 |
-| `theme.reset-background` | 重置聊天背景 |
-| `anim.speed [速度]` | 临时调整过渡动画速度（0.01 至 10，0.1 为放慢十倍），只存内存，重启恢复 |
-| `settings.keys` / `settings.dump` | 设置键名清单、全量 JSON 导出 |
-| `settings.get <key>` / `settings.set <key> <value>` | 读写单个设置 |
-| `page.list [filter]` / `page.open <id>` | 查询官方与定制设置索引，按编号打开设置页 |
-| `ghost.status` | 隐身模式状态（需要已登录） |
-| `storage.stats` | 留档数据库的路径与大小 |
-| `screenshot.take` | 截取活动窗口，保存到 `build/screenshots/` |
-| `control.list [filter] [--all]` | 列出控件树（objectName、类名、几何、可见性） |
-| `control.click <objectName \| #序号>` | 进程内合成点击，按真实事件路径投递 |
-| `filter.*` / `storage.*` / `text.process` / `action.*` / `control.get\|set` 等 | 过滤、留档、文本处理、官方快捷动作与控件值，完整清单见技能指南 |
-
-命令行工具封装（另含本地实现的 `app.start` / `app.restart` / `app.stop`）：
-
-```bash
-python .claude/skills/app-debug/scripts/cli.py app.info
-python .claude/skills/app-debug/scripts/cli.py settings.set streamerMode true
-```
-
-- 绕过登录：登录页的“模拟模式”按钮（仅 `_DEBUG` 构建可见），每次进入自动生成固定场景
-- 自动测试用独立配置：`app.start --profile <名称>`，数据在 `build/debug-profiles/`，跳过链接协议注册等系统集成
-- 服务端代码全部在 `#ifdef _DEBUG` 内，Release 二进制里不存在
-- 指令在主线程同步执行，耗时指令会导致界面暂时无响应
-- `app.stop` 按可执行文件绝对路径校验进程，不按进程名结束进程，避免误杀正式安装版
-- **长期持有的 QObject 必须挂在会随 `aboutToQuit` 销毁的父对象上**，或者自行连接 `QCoreApplication::aboutToQuit` 清理。文件级静态 `unique_ptr<QObject>` 会存活到 QApplication 析构之后，触发 Debug 运行库的中止弹窗（曾修复过一次：`dcae424b40`）
-- 界面验证需要看截图内容时，用支持读图的模型直接查看 `screenshot.take` 的输出
-
-详见 `.claude/skills/app-debug/SKILL.md`。
-
-### Debug 设置页
-
-Settings → AstraGram Preferences → Debug，可见条件是 `#ifdef _DEBUG` 或 `Logs::DebugEnabled()`。实现在 `extras/ui/settings/settings_debug.{h,cpp}`。
+- 创建、修改或整理提交时，阅读 commit skill；助手自行执行 `git commit`（含 `--amend`）及操作配套构建仓库时同样适用。
+- 推送 Git 提交、分支或标签到远端时，阅读 git-push skill；主仓库、fork 子模块和配套构建仓库均适用。
+- 用户要求查看或升级版本号、整理更新说明、准备发布版本时，阅读 version-bump skill。
+- 准备、创建、更新、描述或审查 PR 时，阅读 pull-request skill。
+- 用户要求推送前路径审查、本机路径检查或对应范围的隐私审查时，阅读 privacy-review skill。
+- 调试应用、验证功能、操作页面或控件，以及启动、停止、重启开发版或截图时，阅读 app-debug skill。
+- 检查官方 Telegram Desktop 正式版或测试版、比较上游改动、同步适配或登记已适配版本时，阅读 upstream-sync skill。
+- 用户指定 worktree、多人或多个助手并行开发、要求隔离推进或合入 worktree 成果时，阅读 worktree skill。
 
 ---
 
-## upstream-sync skill
+## 调试架构
 
-同步官方 Telegram Desktop 最新 tag，包含正式版与测试版。`.github/upstream.json` 只登记已适配的官方版本号，子模块基线取官方该版本记录的子模块指针，本地定制用 git diff 计算：
-
-```bash
-python .codex/skills/upstream-sync/scripts/upstream.py check              # 官方有没有更新的 tag，包含测试版
-python .codex/skills/upstream-sync/scripts/upstream.py report             # 生成各仓库的改动报告，保存在 build/upstream-sync/
-python .codex/skills/upstream-sync/scripts/upstream.py done <官方版本>     # 适配并编译通过后登记
-```
-
-- 按版本号选取最新官方 tag，正式版与测试版一同参与比较；不跟进 tag 之间的开发分支提交
-- 保持 main 主线与现有发版方式，上游 beta 不强制本项目增加 beta 后缀；适配使用临时功能分支
-- 官方标签放在 `refs/upstream-tags/`，不和本仓库同名的发布标签混在一起
-- 报告按“需要合并 / 直接采用 / 官方新增 / 官方删除 / 已与目标一致 / 按 skip 跳过”分类，需要合并的文件已预演三方合并
-- `upstream.json` 里 `skip` 是长期不跟进的路径，`notes` 是跟进时要注意的路径，`deferred` 是暂缓、以后要补的改动
-- `svgReplaced` 登记已改用同名 svg 的 png 图标：官方新增或修改这些 png 时归入跳过，删除照常列出
-- 规则键含 `*` 或 `?` 时按通配匹配，`*` 限一层目录，`**` 跨任意层；其余键按路径前缀匹配
-- `lib_ui` 是 fork 的子模块：改动先推到 fork 仓库，再在主仓库更新子模块指针，两步都要做
-- `cmake` 是官方子模块，定制由 `scripts/build_support/cmake_patch.py` 构建时动态 patch，`git status` 里 `modified: cmake (modified content)` 是预期状态；报告会检查补丁锚点在官方新版里是否还在
+- 调试服务端位于 [extras/debug](Telegram/SourceFiles/extras/debug/)，在 `ExtrasInfra::init()` 中启动 `QTcpServer`，监听 `127.0.0.1:20100`。
+- 服务端与模拟模式仅在 `_DEBUG` 下编译，指令在主线程同步执行。
+- Debug 设置页位于 [settings_debug.cpp](Telegram/SourceFiles/extras/ui/settings/settings_debug.cpp)，入口为 Settings → AstraGram Preferences → Debug，可见条件是 `#ifdef _DEBUG` 或 `Logs::DebugEnabled()`。
 
 ---
 
-## 并行开发（worktree skill）
+## 上游配置
 
-- 目录 `build/worktrees/<名称>/`，记录 `build/worktrees/<名称>.md`；只用 `git worktree add` / `git worktree remove` 创建和移除
-- worktree 里不完整编译、不运行
-- 在主仓库工作时，用户提到有人或其他助手在写别的功能，先阅读 `build/worktrees/*.md`，只合并状态为“已完成”的任务，合并后完整编译和运行验证，再移除 worktree
+[.github/upstream.json](.github/upstream.json) 保存已适配的官方 tag 版本与同步规则；子模块基线由官方该版本的指针确定，本地定制通过 Git 差异计算。官方标签使用 `refs/upstream-tags/`，与本项目发布标签分开。
+
+官方 `cmake` 子模块的定制由 [cmake_patch.py](scripts/build_support/cmake_patch.py) 在构建时应用，工作区出现 `modified: cmake (modified content)` 属于预期状态。
 
 ---
 
 ## Git 协作
 
-- 功能分支命名 `feature/<name>` / `fix/<name>`
-- 多人或多个助手并行开发时走 worktree 技能，不在主仓库来回切换分支
-- **原子提交**：一个提交只做一件事
-- **逐个路径添加**：只 `git add` 具体路径，提交前用 `git diff --cached` 确认内容都属于本次改动（工作区经常有子模块指针变动和临时文件）
-- 执行 `git commit`（含 `--amend`）前，应用当前客户端的 `commit` 技能；助手自行决定提交、操作配套构建仓库时同样适用。
-- 提交标题和正文使用英文，中文回复与中文注释规范不适用于提交信息。标题一句祈使句，不超过 70 字符；正文说明原因、最终行为和验证结果。
-- 不要强制推送已公开的分支
+- 功能分支命名 `feature/<name>` / `fix/<name>`。
+- 并行开发使用独立 worktree，主仓库负责合并与完整验证。
+- 每次提交对应一个完整逻辑目标，关联实现、配置和文档一起提交，独立目标分开提交。
+- 独立修改完成且必要验证通过后及时创建本地提交，依赖尚未完成的关联改动保留到同一目标完成。
+- 不要强制推送已公开的分支。
 
 ---
 
@@ -386,7 +326,7 @@ python .codex/skills/upstream-sync/scripts/upstream.py done <官方版本>     #
 2. **`value()` 与 `current()`**：前者返回数据流用于订阅，后者返回引用用于一次性读取。不要在 lambda 里捕获 `current()` 返回的引用。
 3. **`not_null<T*>`**：GSL 类型，不能隐式转换成 `T*`，需要调用 `.get()`。不要让它指向栈上对象之后返回。
 4. **配置与构建**：`build.py` 自己处理配置步骤；改 `CMakeLists.txt` 会自动重新配置，不需要删除 build 目录。
-5. **静态持有 QObject**：任何静态或全局的 QObject 都无法安全存活到 QApplication 析构之后，在析构阶段操作 Qt 对象是未定义行为。见调试章节最后一条。
+5. **静态持有 QObject**：任何静态或全局的 QObject 都无法安全存活到 QApplication 析构之后，在析构阶段操作 Qt 对象是未定义行为。见“线程”章节。
 6. **字符串字面量拼接**：`"(" kPattern ")"` 这种写法要求 `kPattern` 是宏，`constexpr` 变量不能参与字面量拼接。同理 `QStringLiteral` 本身是宏，参数里不能拼接标识符，这种场合改用 `QLatin1String`。
 
 ---
@@ -417,10 +357,3 @@ python .codex/skills/upstream-sync/scripts/upstream.py done <官方版本>     #
 - [ ] 优先用卫语句，`return` 后不接 `else`，嵌套不超过两层，没有过度防御？
 - [ ] 注释是中文、不超过两行、不用行话？
 - [ ] 改了 lib_ui 等 fork 子模块，已推到 fork 仓库再更新指针？
-- [ ] 提交前 `git diff --cached` 确认内容都属于本次改动？
-
----
-
-## 上游与社区
-
-- 官方 tag（包含测试版）的检查、改动报告与登记统一走 `upstream-sync` skill

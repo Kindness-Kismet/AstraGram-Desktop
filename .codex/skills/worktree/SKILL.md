@@ -69,7 +69,7 @@ description: 在 build/worktrees/ 下用 git worktree 隔离推进任务，用�
 8. 在记录中写明合并提交、编译和验证结果，状态改为“已合并”。
 9. 在主仓库根目录执行 `git worktree remove build/worktrees/<名称>`（不加 `--force`），再 `git branch -d <分支>`。当前 shell 不能停在要移除的目录里，否则 Windows 会拒绝删除。
 
-推送照常：先说明内容，等用户确认。
+需要推送时，阅读同级 [git-push skill](../git-push/SKILL.md)，核对实际范围、目标与授权次数。
 
 ## 记录模板
 

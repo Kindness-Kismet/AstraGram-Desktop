@@ -61,7 +61,7 @@ python .codex/skills/upstream-sync/scripts/upstream.py report --base 7.2.7 --to 
   标注“可能已按职责拆分”的文件，要把官方改动手动分发到本地拆分后的文件；
   标注了 `notes` 的文件按说明处理，例如 `prepare.py` 的改动要同步到 `scripts/build_support/recipes.py`。
 - **fork 子模块**：与官方历史相通，在子模块里 `git merge` 官方目标提交，编译通过后推送到 fork，
-  再在主仓库 `git add <子模块路径>`。推送前向用户确认。
+  再在主仓库 `git add <子模块路径>`。各仓库的实际推送统一按同级 [git-push skill](../git-push/SKILL.md) 核对范围与授权次数。
 
   | 子模块 | fork 分支 |
   |---|---|

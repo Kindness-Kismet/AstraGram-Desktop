@@ -91,3 +91,4 @@ python scripts/build_support/version.py
 
 显示当前版本。发布工作流把 `.github/CHANGELOG.md` 原样作为发布正文，提交前对照上面的格式自查。
 推送到 `main` 且版本文件有变化时，发布工作流会自动打标签、构建并公开发布。
+需要推送版本提交时，阅读同级 [git-push skill](../git-push/SKILL.md)，将发布影响纳入实际推送范围并核对授权次数。
