@@ -22,8 +22,8 @@ namespace Window {
 namespace {
 
 [[nodiscard]] QPainter::CompositionMode FrameCompositionMode(QPainter &p) {
-	// Windows 整帧替换，避免底层内容参与透明材质叠色。
-	if (Platform::IsWindows()) {
+	// Windows 11 整帧替换，避免底层内容参与透明材质叠色。
+	if (Platform::IsWindows11OrGreater()) {
 		return QPainter::CompositionMode_Source;
 	}
 	const auto widget = dynamic_cast<const QWidget*>(p.device());
