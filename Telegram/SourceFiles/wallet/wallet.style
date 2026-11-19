@@ -130,24 +130,14 @@ walletCardViewDimDay: 0.07;
 walletCardViewDimNight: 0.25;
 walletIslandMargin: margins(20px, 0px, 20px, 0px);
 walletHeaderBottomSkip: 12px;
-// Left 22px and the vertical 10/8 are settingsButtonNoIcon's own values, so
-// the row stays 38px tall. Right 50px is walletBuyRowPadding's existing
-// allowance for the same st::backButton chevron - SettingsButton::paintText
-// elides at width - padding.left - padding.right, so 22px would let the
-// text run under the arrow. Both backgrounds are transparent because the
-// island paints the pill behind every entry.
+// 保留原行高，右侧留出箭头宽度；透明背景由卡片统一绘制。
 walletIslandRow: SettingsButton(settingsButtonNoIcon) {
 	textBg: transparent;
 	textBgOver: transparent;
 	padding: margins(22px, 10px, 50px, 8px);
 }
-// The Gram Earnings entry carries its sentence in a FlatLabel, so its width
-// limit is a WRAP width, not walletIslandRow's conservative 50px elision
-// allowance: AddRowChevron's st::backButton is 40px wide, inset 5px by
-// settingsPremiumArrowShift and centring a 16px icon, so the chevron's icon
-// box begins 33px from the row's right edge. minWidth is the wrap
-// measurement's own floor - a zero one makes Ui::Text::String measure every
-// string as one line, which walletBuyRowSubtitle below explains in full.
+// 最小宽度不能为零，否则文本测量会按单行计算并裁掉换行内容。
+// 右侧按箭头实际位置预留 33px，供长说明换行。
 walletIslandRowLabel: FlatLabel(defaultFlatLabel) {
 	minWidth: 80px;
 	style: boxTextStyle;
@@ -676,7 +666,6 @@ walletCollectibleCommentField: InputField(walletCommentField) {
 }
 
 walletReceiveTitleHeight: boxTitleHeight;
-walletReceiveTitleLeft: 60px;
 walletReceiveCloseIconActive: icon {{ "box_button_close", activeButtonSecondaryFg }};
 walletReceiveCloseIconActiveOver: icon {{ "box_button_close", activeButtonSecondaryFgOver }};
 walletReceivePlateMargin: margins(0px, 18px, 0px, 0px);
@@ -702,46 +691,6 @@ walletReceiveBuyButton: RoundButton(defaultLightButton) {
 	style: semiboldTextStyle;
 }
 walletReceiveBuyMargin: margins(16px, 16px, 16px, 12px);
-
-walletBuySubsectionPadding: margins(22px, 19px, 22px, 10px);
-walletBuySectionBottomSkip: 12px;
-walletBuyRow: SettingsButton(settingsButtonNoIcon) {
-	iconLeft: 22px;
-}
-walletBuyRowPadding: margins(62px, 6px, 50px, 8px);
-walletBuyRowSkip: 2px;
-walletBuyRowTitle: FlatLabel(defaultFlatLabel) {
-	textFg: windowBoldFg;
-	style: boxTextStyle;
-}
-walletBuyRowSubtitle: FlatLabel(defaultFlatLabel) {
-	// Ui::FlatLabel builds its Ui::Text::String with a minimal resize width
-	// of kQFixedMax when minWidth is zero, and Ui::Text::String::countSize
-	// then clamps every measurement to that. A subtitle wider than this
-	// column would be measured as one line and painted wrapped, so every
-	// line but the first would be clipped away. Keep this at or below
-	// boxWideWidth minus the horizontal walletBuyRowPadding.
-	minWidth: 200px;
-	textFg: windowSubTextFg;
-	style: boxTextStyle;
-}
-walletBuyIconSize: size(24px, 24px);
-walletBuyBankCardIcon: icon {
-	{ walletBuyIconSize, transparent },
-	{ "wallet/bank_card", settingsIconFg, point(4px, 7px) },
-};
-walletBuyCryptoIcon: icon {
-	{ walletBuyIconSize, transparent },
-	{ "wallet/cryptocurrency", settingsIconFg, point(6px, 4px) },
-};
-walletBuyP2pIcon: icon {
-	{ walletBuyIconSize, transparent },
-	{ "wallet/p2p_market", settingsIconFg, point(3px, 3px) },
-};
-walletBuyWaltIcon: icon {
-	{ walletBuyIconSize, transparent },
-	{ "wallet/walt", settingsIconFg, point(2px, 2px) },
-};
 
 walletHowLottieSize: 52px;
 walletHowLottieMargin: margins(24px, 24px, 24px, 12px);
