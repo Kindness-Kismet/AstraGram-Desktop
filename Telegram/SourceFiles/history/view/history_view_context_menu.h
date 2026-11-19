@@ -127,8 +127,7 @@ void AddWhoReactedAction(
 	not_null<Ui::PopupMenu*> menu,
 	not_null<QWidget*> context,
 	not_null<HistoryItem*> item,
-	not_null<Window::SessionController*> controller,
-	bool separateInfoDetails = true);
+	not_null<Window::SessionController*> controller);
 [[nodiscard]] int AddContextMenuAnchorInfo(
 	not_null<Ui::PopupMenu*> menu,
 	not_null<QWidget*> context,

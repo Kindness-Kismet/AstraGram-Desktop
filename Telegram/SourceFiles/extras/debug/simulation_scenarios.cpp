@@ -97,7 +97,7 @@ constexpr auto kScenarios = std::array{
 	Scenario{ "deleted-account", u"私聊 · 已注销", Kind::DeletedAccount, Category::Private, "deleted-account" },
 	Scenario{ "business", u"私聊 · 商业联系人", Kind::Business, Category::Private, "business" },
 	Scenario{ "paid", u"私聊 · 付费消息", Kind::Paid, Category::Private, "paid" },
-	Scenario{ "group", u"群组 · 讨论与置顶", Kind::Group, Category::Groups, "pinned,reply,edited,deleted,ttl,photo,album,file,contact,poll,sticker,active-call" },
+	Scenario{ "group", u"群组 · 讨论与置顶", Kind::Group, Category::Groups, "pinned,reply,edited,deleted,ttl,photo,album,file,contact,poll,sticker,active-call,reactions" },
 	Scenario{ "restricted", u"群组 · 发送限制", Kind::Restricted, Category::Groups, "restricted" },
 	Scenario{ "requests", u"群组 · 管理与申请", Kind::Requests, Category::Groups, "requests,pinned,video-chat" },
 	Scenario{ "slow", u"群组 · 慢速模式", Kind::Slow, Category::Groups, "slowmode" },
@@ -565,6 +565,18 @@ void fillHistory(not_null<Main::Session*> session, not_null<PeerData*> peer, int
 	});
 	history->addNewerSlice(messages);
 	history->addNewerSlice({});
+	if (kind == Kind::Group) {
+		const MTPMessageReactions reactions = MTP_messageReactions(
+			MTP_flags(MTPDmessageReactions::Flag::f_can_see_list),
+			MTP_vector<MTPReactionCount>({ MTP_reactionCount(
+				MTP_flags(0), MTPint(),
+				MTP_reactionEmoji(MTP_string("\xf0\x9f\x91\x8d")), MTP_int(1)) }),
+			MTPVector<MTPMessagePeerReaction>(), MTPVector<MTPMessageReactor>());
+		for (const auto offset : { 2, 8 }) {
+			session->data().message(peer->id, MsgId(baseId + offset))
+				->updateReactions(&reactions);
+		}
+	}
 	if (rich) {
 		session->data().message(peer->id, MsgId(baseId + 3))->setDeleted();
 		session->data().message(peer->id, MsgId(baseId + 4))->applyTTL(base::unixtime::now() + 86400);
