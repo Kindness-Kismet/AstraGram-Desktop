@@ -462,6 +462,7 @@ set(extras_files
         extras/debug/dialogs_preview.h
         extras/debug/simulation_scenarios.cpp
         extras/debug/simulation_widget.cpp
+        extras/debug/simulation_widget_checks.cpp
         extras/debug/simulation_widget.h
         extras/debug/simulation_scenarios.h
         extras/debug/simulation_profile.cpp

@@ -22,6 +22,7 @@
 #include "window/window_session_controller.h"
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QFile>
 #include <QtCore/QTimer>
 
 namespace ExtrasDebug::Commands {
@@ -170,7 +171,10 @@ render();
 	};
 }
 
-[[nodiscard]] Result showSample(not_null<Main::Session*> session, bool reset) {
+[[nodiscard]] Result showSample(
+		not_null<Main::Session*> session,
+		bool reset,
+		QByteArray html = {}) {
 	const auto peer = simulationPeer(session, u"inline-bot"_q);
 	if (!peer || !session->tryResolveWindow()) {
 		return Result::Err(u"simulation peer or window not found"_q);
@@ -181,7 +185,9 @@ render();
 		item = nullptr;
 	}
 	if (!item) {
-		const auto html = widgetHtml();
+		if (html.isEmpty()) {
+			html = widgetHtml();
+		}
 		// qCompress 的长度头不属于协议的 zlib 数据。
 		const auto payload = qCompress(html, 9).mid(4);
 		if (Tgw::UnpackPayload(payload) != html) {
@@ -209,13 +215,29 @@ render();
 
 Result simulateWidget(const QStringList &args) {
 	const auto mode = args.empty() ? u"show"_q : args.front();
-	if (args.size() > 1 || (mode != u"show"_q && mode != u"state"_q
-		&& mode != u"log"_q && mode != u"reset"_q)) {
-		return Result::Err(u"usage: simulation.widget [show|state|log|reset]"_q);
+	if ((mode == u"load"_q && args.size() != 2)
+		|| (mode != u"load"_q && (args.size() > 1
+			|| (mode != u"show"_q && mode != u"state"_q
+				&& mode != u"log"_q && mode != u"reset"_q
+				&& mode != u"verify"_q)))) {
+		return Result::Err(u"usage: simulation.widget [show|state|log|reset|verify|load <htmlPath>]"_q);
 	}
 	const auto session = ActiveSession();
 	if (!cDebugProfile() || !session || !isSimulationSession(session)) {
 		return Result::Err(u"an isolated simulation profile is required"_q);
+	}
+	if (mode == u"load"_q) {
+		constexpr auto kMaxSampleBytes = 1024 * 1024;
+		auto file = QFile(args[1]);
+		if (!file.open(QIODevice::ReadOnly)) {
+			return Result::Err(u"could not open the HTML file"_q);
+		}
+		const auto html = file.read(kMaxSampleBytes + 1);
+		if (file.error() != QFileDevice::NoError
+			|| html.isEmpty() || html.size() > kMaxSampleBytes) {
+			return Result::Err(u"HTML file must contain 1..1048576 bytes"_q);
+		}
+		return showSample(session, true, html);
 	}
 	if (mode == u"show"_q || mode == u"reset"_q) {
 		return showSample(session, mode == u"reset"_q);
@@ -223,6 +245,9 @@ Result simulateWidget(const QStringList &args) {
 	const auto item = sampleItem(session);
 	if (!item) {
 		return Result::Err(u"open the sample with simulation.widget show first"_q);
+	}
+	if (mode == u"verify"_q) {
+		return verifyWidget(item);
 	}
 	if (mode == u"state"_q) {
 		return Result::Ok(Compact(sampleState(item)));
