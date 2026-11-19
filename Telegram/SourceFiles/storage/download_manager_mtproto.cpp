@@ -19,7 +19,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Storage {
 namespace {
 
-constexpr auto kKillSessionTimeout = 15 * crl::time(1000);
+// 保留短暂停留期间的下载连接，切换聊天后可直接复用。
+constexpr auto kKillSessionTimeout = 60 * crl::time(1000);
 constexpr auto kStartWaitedInSession = 4 * kDownloadPartSize;
 constexpr auto kMaxWaitedInSession = 16 * kDownloadPartSize;
 constexpr auto kStartSessionsCount = 1;
