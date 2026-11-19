@@ -59,9 +59,6 @@ public:
 	void setSimulationPeers(SendAsKey key, std::vector<SendAsPeer> peers);
 #endif
 
-	[[nodiscard]] const std::vector<not_null<PeerData*>> &paidReactionList(
-		not_null<PeerData*> peer) const;
-
 	// If !list(peer).empty() then the result will be from that list.
 	[[nodiscard]] not_null<PeerData*> resolveChosen(
 		not_null<PeerData*> peer) const;

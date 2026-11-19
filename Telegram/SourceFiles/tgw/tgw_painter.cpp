@@ -29,6 +29,7 @@ constexpr auto kFilterPassWork = int64(4096);
 constexpr auto kMaxFilterScratch = int64(64 * 1024 * 1024);
 constexpr auto kPixelBytes = 4;
 constexpr auto kDeviceMargin = float64(1 << 20);
+constexpr auto kMaxGroupStretch = float64(1 << 20);
 constexpr auto kMaxMaskBlur = 24.;
 constexpr auto kMaxMaskPixels = float64(1 << 20);
 constexpr auto kMaskMargin = 2;
@@ -44,6 +45,8 @@ constexpr auto kClippedShadowWork = int64(8);
 constexpr auto kContourReach = 1024.;
 constexpr auto kContourCellWork = int64(128);
 constexpr auto kShallowContourCells = 3.;
+constexpr auto kMaxColorGlyphBytes = int64(64 * 1024 * 1024);
+constexpr auto kColorGlyphBytes = 48.;
 
 struct ShadowSource {
 	QRectF box;
@@ -156,6 +159,10 @@ private:
 		int64 pixelWork,
 		int64 maskPixels);
 	[[nodiscard]] bool drawBackdrop(const twlite::Command &command);
+	[[nodiscard]] bool admitColorGlyphs(
+		const QString &text,
+		const std::vector<EmojiCell> &cells,
+		float64 side);
 	void pushHidden();
 	void popGroup();
 	void popFilter();
@@ -186,6 +193,7 @@ private:
 	int64 _maxFilterWork = 0;
 	int64 _filterWork = 0;
 	int64 _shadowWork = kMaxShadowWork;
+	int64 _colorGlyphBytes = kMaxColorGlyphBytes;
 	int _hidden = 0;
 	bool _pathClips = false;
 	bool _refused = false;
@@ -287,7 +295,9 @@ private:
 		return std::nullopt;
 	}
 	const auto result = matrix * parent;
-	return (Finite(result) && result.isInvertible())
+	return (Finite(result)
+		&& result.isInvertible()
+		&& (MaxStretch(result) <= kMaxGroupStretch))
 		? std::make_optional(result)
 		: std::nullopt;
 }
@@ -959,6 +969,12 @@ void Executor::drawText(const twlite::Command &command) {
 		command.text.data(),
 		int(command.text.size()));
 	const auto cells = FindEmojiCells(text);
+	const auto side = font->font.pixelSize()
+		* font->scale
+		* MaxStretch(p.combinedTransform());
+	if (!admitColorGlyphs(text, cells, side)) {
+		return;
+	}
 	p.save();
 	p.translate(baseline);
 	if (font->scale != 1.) {
@@ -1475,6 +1491,35 @@ bool Executor::chargeShadow(
 			kMaxShadowWork));
 	}
 	_shadowWork -= work;
+	return true;
+}
+
+// Qt 会按设备尺寸缓存彩色字形，裁剪不能限制这部分内存。
+bool Executor::admitColorGlyphs(
+		const QString &text,
+		const std::vector<EmojiCell> &cells,
+		float64 side) {
+	auto count = int64();
+	auto from = 0;
+	const auto add = [&](int till) {
+		count += ColorGlyphCandidates(
+			QStringView(text).mid(from, till - from));
+	};
+	for (const auto &cell : cells) {
+		if (cell.emoji) {
+			add(cell.from);
+			from = cell.till;
+		}
+	}
+	add(int(text.size()));
+	if (!count) {
+		return true;
+	}
+	const auto bytes = kColorGlyphBytes * side * side * count;
+	if (!(bytes <= float64(_colorGlyphBytes))) {
+		return false;
+	}
+	_colorGlyphBytes -= int64(std::ceil(bytes));
 	return true;
 }
 
