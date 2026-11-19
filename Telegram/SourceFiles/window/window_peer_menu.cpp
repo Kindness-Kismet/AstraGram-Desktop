@@ -322,6 +322,7 @@ private:
 	void addInfo();
 	void addStoryArchive();
 	void addNewWindow(bool addSeparator = true);
+	void addChatPreview();
 	void addUngroup();
 	void addToggleFolder();
 	void addToggleUnreadMark();
@@ -825,6 +826,33 @@ void Filler::addNewWindow(bool addSeparator) {
 	if (addSeparator) {
 		AddSeparatorAndShiftUp(_addAction);
 	}
+}
+
+void Filler::addChatPreview() {
+	if (!_thread || _peer->isSecretChat()) {
+		return;
+	}
+	const auto channel = _peer->asChannel();
+	if (channel && channel->isCommunity()) {
+		return;
+	}
+	const auto controller = base::make_weak(_controller);
+	const auto thread = base::make_weak(_thread);
+	_addAction(tr::extras_ChatPreview(tr::now), [=] {
+		const auto position = QCursor::pos();
+		Ui::PreventDelayedActivation();
+		if (const auto menu = Ui::PopupMenu::Active()) {
+			menu->hideMenu(true);
+		}
+		// 先关闭原菜单，再打开预览，避免原菜单恢复焦点时关闭新弹窗。
+		crl::on_main([=] {
+			const auto strong = controller.get();
+			const auto target = thread.get();
+			if (strong && target) {
+				strong->showChatPreview({ target, {} }, nullptr, nullptr, position);
+			}
+		});
+	}, &st::menuIconShowInChat);
 }
 
 void Filler::addUngroup() {
@@ -1974,9 +2002,12 @@ void Filler::fillContextMenuActions() {
 	const auto channel = history ? history->peer->asChannel() : nullptr;
 	if (channel && !channel->amIn() && !history->inChatList()) {
 		addNewWindow(false);
+		addChatPreview();
 		return;
 	}
-	addNewWindow();
+	addNewWindow(false);
+	addChatPreview();
+	AddSeparatorAndShiftUp(_addAction);
 	addUngroup();
 	addHidePromotion();
 	addToggleArchive();
@@ -2185,6 +2216,7 @@ void Filler::fillArchiveActions() {
 
 void Filler::fillSavedSublistActions() {
 	addNewWindow(false);
+	addChatPreview();
 	addTogglePin();
 }
 

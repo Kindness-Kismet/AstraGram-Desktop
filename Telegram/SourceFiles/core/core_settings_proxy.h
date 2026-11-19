@@ -64,6 +64,7 @@ public:
 	void setList(std::vector<MTP::ProxyData> value);
 	void addToList(MTP::ProxyData value);
 	void insertToList(int index, MTP::ProxyData value);
+	void reorderInList(int oldIndex, int newIndex);
 	[[nodiscard]] bool removeFromList(const MTP::ProxyData &value);
 	[[nodiscard]] bool replaceInList(
 		const MTP::ProxyData &was,

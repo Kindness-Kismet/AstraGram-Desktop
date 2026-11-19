@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/connection_box.h"
 
+#include "base/algorithm.h"
 #include "base/call_delayed.h"
 #include "base/qt/qt_key_modifiers.h"
 #include "base/qthelp_regex.h"
@@ -52,6 +53,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/table_layout.h"
 #include "ui/wrap/vertical_layout.h"
+#include "ui/wrap/vertical_layout_reorder.h"
 #include "ui/vertical_list.h"
 #include "ui/ui_utility.h"
 #include "boxes/abstract_box.h" // Ui::show().
@@ -629,6 +631,27 @@ void Base64UrlInput::correctValue(
 	setCorrectedText(now, nowCursor, newText, newPos);
 }
 
+class ProxyReorderHandle final : public Ui::RpWidget {
+public:
+	explicit ProxyReorderHandle(QWidget *parent) : RpWidget(parent) {
+		setCursor(style::cur_sizeall);
+		setAccessibleName(tr::extras_ProxyReorder(tr::now));
+		resize(st::topBarMenuToggle.width, st::topBarMenuToggle.height);
+	}
+
+private:
+	void paintEvent(QPaintEvent *e) override {
+		auto p = Painter(this);
+		st::menuIconReorder.paintInCenter(p, rect());
+	}
+
+	// 拖动柄独占按下事件，避免冒泡到代理行后切换连接。
+	void mousePressEvent(QMouseEvent *e) override {
+		e->accept();
+	}
+
+};
+
 class ProxyRow : public Ui::AbstractButton {
 public:
 	using View = ProxiesBoxController::ItemView;
@@ -639,6 +662,7 @@ public:
 	void updateFields(View &&view);
 	void setChosen(bool selecting, bool chosen, anim::type animated);
 	[[nodiscard]] bool deleted() const;
+	[[nodiscard]] not_null<Ui::RpWidget*> reorderHandle() const;
 
 	rpl::producer<> chooseClicks() const;
 	rpl::producer<> deleteClicks() const;
@@ -677,6 +701,7 @@ private:
 
 	Ui::Text::String _title;
 	object_ptr<Ui::IconButton> _menuToggle;
+	object_ptr<ProxyReorderHandle> _reorderHandle;
 	rpl::event_stream<> _chooseClicks;
 	rpl::event_stream<> _deleteClicks;
 	rpl::event_stream<> _restoreClicks;
@@ -738,6 +763,8 @@ protected:
 
 private:
 	void setupContent();
+	void setupReorder();
+	void cancelReorder();
 	void setupTopButton();
 	void setupUseProxy(not_null<Ui::VerticalLayout*> container);
 	void setupRotation(not_null<Ui::VerticalLayout*> container);
@@ -780,6 +807,8 @@ private:
 	QPointer<Ui::VerticalLayout> _wrap;
 
 	base::flat_map<int, base::unique_qptr<ProxyRow>> _rows;
+	std::unique_ptr<Ui::VerticalLayoutReorder> _reorder;
+	bool _reordering = false;
 	struct Press {
 		int id = 0;
 		bool selection = false;
@@ -870,12 +899,14 @@ private:
 ProxyRow::ProxyRow(QWidget *parent, View &&view)
 : AbstractButton(parent)
 , _menuToggle(this, st::topBarMenuToggle)
+, _reorderHandle(this)
 , _check(st::proxyRowCheck, [=] { update(); }) {
 	setupControls(std::move(view));
 }
 
 void ProxyRow::setChosen(bool selecting, bool chosen, anim::type animated) {
 	_check.setChecked(chosen, animated);
+	_reorderHandle->setVisible(!selecting && !_view.deleted);
 	if (_selecting != selecting) {
 		_selecting = selecting;
 		if (_selecting) {
@@ -898,6 +929,10 @@ void ProxyRow::setChosen(bool selecting, bool chosen, anim::type animated) {
 
 bool ProxyRow::deleted() const {
 	return _view.deleted;
+}
+
+not_null<Ui::RpWidget*> ProxyRow::reorderHandle() const {
+	return _reorderHandle.data();
 }
 
 rpl::producer<> ProxyRow::chooseClicks() const {
@@ -955,6 +990,8 @@ void ProxyRow::updateFields(View &&view) {
 			st::defaultRadio.duration);
 	}
 	_view = std::move(view);
+	_reorderHandle->setVisible(!_selecting && !_view.deleted);
+	_reorderHandle->setObjectName(u"proxy.reorder.%1"_q.arg(_view.id));
 	// 端口用链接色绘制，与主机名区分；类型移到状态行。
 	auto title = TextWithEntities().append(_view.host);
 	if (!_view.web) {
@@ -1015,6 +1052,11 @@ int ProxyRow::resizeGetHeight(int newWidth) {
 		(result - _menuToggle->height()) / 2,
 		newWidth);
 	right += _menuToggle->width();
+	_reorderHandle->moveToRight(
+		right,
+		(result - _reorderHandle->height()) / 2,
+		newWidth);
+	right += _reorderHandle->width();
 	_skipRight = right;
 	_skipLeft = st::proxyRowPadding.left()
 		+ st::proxyRowCheckSkip;
@@ -1427,7 +1469,10 @@ ProxiesBox::ProxiesBox(
 }
 
 void ProxiesBox::keyPressEvent(QKeyEvent *e) {
-	if (e->key() == Qt::Key_Escape && _selecting) {
+	if (e->key() == Qt::Key_Escape && _reordering) {
+		cancelReorder();
+		_reorder->start();
+	} else if (e->key() == Qt::Key_Escape && _selecting) {
 		clearChosen();
 	} else if (e->key() == Qt::Key_Copy
 		|| (e->key() == Qt::Key_C && e->modifiers() == Qt::ControlModifier)) {
@@ -1632,6 +1677,7 @@ void ProxiesBox::setupContent() {
 	}, system->lifetime());
 
 	_wrap = list->add(std::move(_initialWrap));
+	setupReorder();
 
 	const auto add = Settings::AddButtonWithIcon(
 		list,
@@ -1726,6 +1772,37 @@ void ProxiesBox::setupContent() {
 	}, *dimensionsLifetime);
 }
 
+void ProxiesBox::setupReorder() {
+	auto scroll = (Ui::ScrollArea*)nullptr;
+	for (auto parent = _wrap->parentWidget(); parent; parent = parent->parentWidget()) {
+		if ((scroll = dynamic_cast<Ui::ScrollArea*>(parent))) {
+			break;
+		}
+	}
+	Expects(scroll != nullptr);
+	_reorder = std::make_unique<Ui::VerticalLayoutReorder>(_wrap.data(), scroll);
+	_reorder->setMouseEventProxy([=](int index) {
+		return static_cast<ProxyRow*>(_wrap->widgetAt(index).get())->reorderHandle();
+	});
+	_reorder->updates(
+	) | rpl::on_next([=](const Ui::VerticalLayoutReorder::Single &update) {
+		using State = Ui::VerticalLayoutReorder::State;
+		_reordering = (update.state == State::Started);
+		if (_reordering) {
+			cancelPress();
+		} else if (update.state == State::Applied) {
+			_controller->reorderItems(update.oldPosition, update.newPosition);
+		}
+	}, lifetime());
+	_reorder->start();
+}
+
+void ProxiesBox::cancelReorder() {
+	_reorder->cancel();
+	// 取消后同时停止边缘滚动，避免回调访问已清空的拖动项。
+	_reorder->finishReordering();
+}
+
 void ProxiesBox::refreshProxyRotation() {
 	if (!_proxyRotation || !_proxyRotationOptions) {
 		return;
@@ -1763,6 +1840,12 @@ void ProxiesBox::addNewProxy() {
 void ProxiesBox::applyView(View &&view) {
 	const auto id = view.id;
 	const auto i = _rows.find(id);
+	const auto reorderChanged = (i == end(_rows))
+		|| view.host.isEmpty()
+		|| (i->second->deleted() != view.deleted);
+	if (_reorder && reorderChanged) {
+		cancelReorder();
+	}
 	if (view.deleted || view.host.isEmpty()) {
 		if (_anchorId == id) {
 			_anchorId = 0;
@@ -1794,6 +1877,9 @@ void ProxiesBox::applyView(View &&view) {
 		_rows.erase(i);
 	} else {
 		i->second->updateFields(std::move(view));
+	}
+	if (_reorder && reorderChanged) {
+		_reorder->start();
 	}
 	refreshProxyRotation();
 	refreshPasteFromClipboard();
@@ -2915,6 +3001,27 @@ void ProxiesBoxController::deleteItems(const base::flat_set<int> &ids) {
 
 void ProxiesBoxController::restoreItem(int id) {
 	setDeleted(id, false);
+}
+
+void ProxiesBoxController::reorderItems(int oldPosition, int newPosition) {
+	const auto count = int(_list.size());
+	Expects(oldPosition >= 0 && oldPosition < count);
+	Expects(newPosition >= 0 && newPosition < count);
+	if (oldPosition == newPosition) {
+		return;
+	}
+	// 界面按存储顺序倒序展示，删除后的撤销占位仍参与界面排序。
+	const auto from = count - 1 - oldPosition;
+	const auto to = count - 1 - newPosition;
+	Expects(!_list[from].deleted);
+	const auto oldIndex = _settings.indexInList(_list[from].data);
+	base::reorder(_list, from, to);
+	const auto newIndex = int(std::count_if(
+		begin(_list),
+		begin(_list) + to,
+		[](const Item &item) { return !item.deleted; }));
+	_settings.reorderInList(oldIndex, newIndex);
+	saveDelayed();
 }
 
 void ProxiesBoxController::shareItem(int id, bool qr) {

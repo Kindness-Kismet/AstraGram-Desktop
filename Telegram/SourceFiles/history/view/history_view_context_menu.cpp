@@ -1978,8 +1978,7 @@ void FillContextMenuItems(
 				result,
 				list,
 				item,
-				list->controller(),
-				false);
+				list->controller());
 		} else {
 			MaybeAddWhenEditedForwardedAction(
 				result,
@@ -2730,8 +2729,7 @@ void AddWhoReactedAction(
 		not_null<Ui::PopupMenu*> menu,
 		not_null<QWidget*> context,
 		not_null<HistoryItem*> item,
-		not_null<Window::SessionController*> controller,
-		bool separateInfoDetails) {
+		not_null<Window::SessionController*> controller) {
 	const auto &settings = ExtrasSettings::getInstance();
 	const auto target = ExtrasUi::contextMenuTarget(settings.showViewsPanelInContextMenu(), menu);
 	if (!target) {
@@ -2793,9 +2791,6 @@ void AddWhoReactedAction(
 						whoReadIds)));
 		}
 	};
-	//if (!menu->empty()) {
-	//	menu->addSeparator(&st::expandedMenuSeparator);
-	//}
 	if (item->history()->peer->isUser()) {
 		AddWhenEditedForwardedAuthorActionHelper(
 			menu,
@@ -2820,7 +2815,7 @@ void AddWhoReactedAction(
 			item,
 			nullptr,
 			controller,
-			separateInfoDetails);
+			true);
 	}
 }
 

@@ -3235,8 +3235,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 						_menu,
 						this,
 						leaderOrSelf,
-						_controller,
-						false);
+						_controller);
 				} else {
 					HistoryView::MaybeAddWhenEditedForwardedAction(
 						_menu,

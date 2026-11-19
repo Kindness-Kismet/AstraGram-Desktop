@@ -55,7 +55,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screensh
 | 私聊 | `business` | 商业机器人管理提示 |
 | 私聊 | `paid` | 付费消息提示 |
 | 私聊 | `sending` | 停在发送中的文字和图片，气泡、图片角标与对话列表显示时钟 |
-| 群组 | `group` | 讨论、置顶和消息状态，图片、相册、文件、联系人、投票、静态贴纸 |
+| 群组 | `group` | 讨论、置顶和消息状态，图片、相册、文件、联系人、投票、静态贴纸；已编辑和转发消息带本地表情回应，可检查菜单分隔线 |
 | 群组 | `restricted` | 发送限制 |
 | 群组 | `requests` | 管理权限、加入申请、置顶和视频聊天管理菜单 |
 | 群组 | `slow` | 慢速模式；每次打开刷新倒计时 |

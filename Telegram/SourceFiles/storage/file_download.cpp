@@ -301,7 +301,7 @@ void FileLoader::loadLocal(const Storage::Cache::Key &key) {
 		if (!value.isEmpty()) {
 			crl::on_main(record);
 		}
-		if (readImage && !value.startsWith("partial:")) {
+		if (readImage && !value.isEmpty() && !value.startsWith("partial:")) {
 			crl::async([
 				value = std::move(value),
 				done = std::move(callback)

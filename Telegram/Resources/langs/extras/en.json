@@ -513,6 +513,8 @@
   "OneViewTTL": "one view",
   "OnePlayTTL": "one play",
   "UserMessagesMenuText": "User Messages",
+  "ChatPreview": "Preview chat",
+  "ProxyReorder": "Reorder proxies",
   "ReadUntilMenuText": "Read Message",
   "BoxActionReset": "Reset",
   "ClearDeletedMessagesText": "Are you sure you want to clear all deleted messages in this chat?",
