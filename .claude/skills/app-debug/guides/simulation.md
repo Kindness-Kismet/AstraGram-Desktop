@@ -27,10 +27,14 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 `simulation.compose-ai [on|off]` 查询或注入本地 AI 样式，供输入区按钮与提示气泡验证；仅限独立模拟配置。
 `on` 重置 AI 与发送为文件提示的关闭记录；输入至少 10 个字符后显示 AI 按钮，超过消息长度上限后显示发送为文件按钮。样式只存内存，重启恢复；验证时不点击 AI 处理或发送按钮。
 
-`simulation.widget [show|state|log|reset]` 在独立模拟配置中展示 HTML 饮水卡片。
+`simulation.widget [show|state|log|reset|verify|load <htmlPath>]` 在独立模拟配置中展示 HTML 饮水卡片。
 `show` 在内联机器人对话创建本地消息并打开；按钮可增加或撤回杯数、更新进度条、展开小贴士，重复打开保留当前交互状态。
 `reset` 重新生成卡片；样本不发送消息、不请求机器人，状态随模拟会话销毁。
 `state` 查询实际运行状态、载入结果、内容高度和交互可用性；`log` 在运行时返回异步任务编号，用 `job.status` 查看诊断结果，其他状态直接返回现有日志。
+`load <htmlPath>` 读取 1 字节至 1 MiB 的本地 HTML，替换当前样本并沿正式小组件流程加载；只在独立模拟配置可用，测试 HTML 放在任务附件目录。
+`verify` 在已创建样本上调用正式图像、绘制与存储接口，返回异步任务；用 `job.status` 核对每项 `passed` 和测量结果。
+覆盖有效与非法 PNG 位深、分组放大上限、单次及同帧累计彩色字形预算、local/session 存储 4096 字节接受与 4097 字节拒绝；结束时恢复原存储值。
+验证前等待样本加载完成，期间不操作卡片；该入口不加载官方测试源码或测试运行器。
 
 ```bash
 python .codex/skills/app-debug/scripts/cli.py app.start --profile upstream-741 + simulation.enter + simulation.widget show
