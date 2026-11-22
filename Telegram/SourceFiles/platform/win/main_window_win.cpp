@@ -29,6 +29,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/themes/window_theme.h"
 #include "window/window_controller.h"
 #include "history/history.h"
+#ifdef _DEBUG
+#include "extras/debug/window_focus.h"
+#endif
 
 #include <QtWidgets/QStyleFactory>
 #include <QtWidgets/QApplication>
@@ -584,6 +587,9 @@ bool MainWindow::nativeEvent(
 				imeCompositionStartReceived();
 			});
 		}
+#ifdef _DEBUG
+		ExtrasDebug::WindowFocus::adjustWindowPosition(message);
+#endif
 	}
 	return false;
 }

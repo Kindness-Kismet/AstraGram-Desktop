@@ -451,6 +451,8 @@ set(extras_files
         extras/debug/debug_login.h
         extras/debug/debug_server.cpp
         extras/debug/debug_server.h
+        extras/debug/window_focus.cpp
+        extras/debug/window_focus.h
         extras/debug/commands/commands_internal.h
         extras/debug/commands/app_commands.cpp
         extras/debug/commands/session_commands.cpp

@@ -137,12 +137,14 @@
 !/.claude/skills/**/
 !/.claude/skills/*/SKILL.md
 !/.claude/skills/*/guides/*.md
+!/.claude/skills/*/guides/**/*.md
 !/.claude/skills/*/scripts/**/*.py
 !/.codex/
 !/.codex/skills/
 !/.codex/skills/**/
 !/.codex/skills/*/SKILL.md
 !/.codex/skills/*/guides/*.md
+!/.codex/skills/*/guides/**/*.md
 !/.codex/skills/*/scripts/**/*.py
 !/.pi/
 !/.pi/settings.json

@@ -602,6 +602,7 @@ void Launcher::processArguments() {
 #ifdef _DEBUG
 		{ "-debugprofile"   , KeyFormat::NoValues },
 		{ "-debugoffline"   , KeyFormat::NoValues },
+		{ "--no-focus"      , KeyFormat::NoValues },
 #endif
 		{ Platform::kUntranslocatedArgument, KeyFormat::NoValues },
 		{ "-key"            , KeyFormat::OneValue },
@@ -653,6 +654,7 @@ void Launcher::processArguments() {
 #ifdef _DEBUG
 	gDebugProfile = parseResult.contains("-debugprofile");
 	gDebugOffline = parseResult.contains("-debugoffline");
+	gDebugNoFocus = parseResult.contains("--no-focus");
 	gDebugMode = gDebugMode || gDebugProfile;
 #endif
 	gKeyFile = parseResult

@@ -296,6 +296,7 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 ## 调试架构
 
 - 调试服务端位于 [extras/debug](Telegram/SourceFiles/extras/debug/)，在 `ExtrasInfra::init()` 中启动 `QTcpServer`，监听 `127.0.0.1:20100`。
+- 调试启动默认使用 `app.start --no-focus`；运行中用 `--focus-mode focus|no-focus` 切换，窗口动作继承当前模式。
 - 服务端与模拟模式仅在 `_DEBUG` 下编译，指令在主线程同步执行。
 - Debug 设置页位于 [settings_debug.cpp](Telegram/SourceFiles/extras/ui/settings/settings_debug.cpp)，入口为 Settings → AstraGram Preferences → Debug，可见条件是 `#ifdef _DEBUG` 或 `Logs::DebugEnabled()`。
 

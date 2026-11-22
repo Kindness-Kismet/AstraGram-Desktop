@@ -83,6 +83,7 @@ DeclareSetting(bool, DebugMode);
 #ifdef _DEBUG
 DeclareSetting(bool, DebugProfile);
 DeclareReadSetting(bool, DebugOffline);
+DeclareReadSetting(bool, DebugNoFocus);
 #endif
 DeclareSetting(bool, Quit);
 DeclareSetting(bool, Ghost);

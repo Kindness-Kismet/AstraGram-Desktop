@@ -13,6 +13,7 @@
 | `window.resize` | `[width height]` | 报告窗口尺寸与最大化状态；给出尺寸时按逻辑像素调整窗口。 |
 | `window.material` | `[x y]` | 查询生效模式、状态修订号、根部混色与 Windows 原生材质编号；可选坐标采样现有绘制缓冲，不触发截图、重绘或系统输入。 |
 | `window.maximize` | `true\|false` | 最大化或还原窗口。 |
+| `window.focus-mode` | `[focus\|no-focus]` | 查询或切换当前实例的调试焦点策略，省略参数时只报告 `focus_mode`。 |
 | `window.activation` | `active\|inactive` | 只切换 Qt 内部的焦点窗口与应用激活状态，系统前台不变。 |
 | `window.tray` | `hide\|show` | 调用真实托盘流程，隐藏或恢复最近活动的主窗口。 |
 | `anim.speed` | `[speed]` | 查询或临时调整过渡动画速度，范围 0.01 至 10，1 为正常；只存内存，重启恢复。 |
@@ -24,7 +25,8 @@
 `app.start`、`app.ensure`、`app.restart` 支持 `--offline`，从启动起禁止 Telegram 连接和连接配置下载，用于验证离线恢复。
 `app.info` 的 `offline` 表示该开关是否生效。开关只在开发版有效、不保存到设置；不带该参数重启即可恢复联网，不影响系统网络。
 
-`app.info` 返回字段：`version` / `versionCode` / `configuration` / `workingDir` / `debugLogs` / `hasSession` / `hasWindow` / `simulationMode` / `userId`（已登录时）。
+`app.info` 返回字段：`version` / `versionCode` / `configuration` / `workingDir` / `debugLogs` / `hasSession` / `hasWindow` / `simulationMode` / `focus_mode` / `userId`（已登录时）。
+`focus_mode` 取值为 `focus` 或 `no-focus`，由启动参数或运行中切换决定。
 口令状态另含 `passcodeLocked`、`hasPasscode` 和 `appLockEnabled`，分别表示当前已锁定、设置了口令和启用了应用锁。
 `windowMaterialActive` 表示主窗口的材质实际生效状态，可与 `windowMaterial` 设置对照；截图不包含系统合成的桌面背景。
 
@@ -37,7 +39,8 @@
 `window.resize` 与 `window.maximize` 用来把窗口摆到指定状态，验证依赖窗口
 宽度的行为（宽屏布局、栏位折叠）。尺寸是 Qt 逻辑像素，与 `control.list` 的几何同一
 坐标系；最大化状态下 `resize` 不生效，指令会先还原窗口再设尺寸。
-这两条指令显示窗口时不请求激活；返回的 `visible`、`active` 分别表示可见和活动状态。
+窗口动作沿用当前 `focus_mode`：`no-focus` 下不请求系统焦点，`focus` 下按应用正常行为显示。
+返回的 `visible`、`active` 分别表示可见和活动状态，`focus_mode` 为执行后的实际模式。
 
 ```bash
 python .claude/skills/app-debug/scripts/cli.py window.resize 1300 900 + screenshot.take
@@ -49,9 +52,12 @@ Windows 的 `nativeBackdrop` 为 1 关闭、2 云母、3 亚克力；`revision` 
 坐标使用选定窗口内的逻辑像素；采样来自上一帧已绘制的缓冲，切换后需让事件循环继续运行，不包含系统合成后的桌面。
 
 `window.activation` 用来验证依赖“应用在前台”的逻辑（已读、阅读时长统计、暂停与恢复）。
-它注入 Qt 的窗口激活事件，用户真正点击或切走窗口时会被系统事件覆盖；返回的 `applicationActive` 为应用级激活状态。
+它只注入 Qt 的窗口激活事件，不改变系统前台；用户真正点击或切走窗口时会被系统事件覆盖。
+返回的 `applicationActive` 为应用级激活状态。需要真实系统焦点时使用 `focus_mode`，
+`window.activation` 不能代替前台验收。
 
-`window.tray hide` 要求托盘已启用；`window.tray show` 会显示并激活窗口。
+`window.tray hide` 要求托盘已启用；`window.tray show` 按当前 `focus_mode` 恢复窗口，
+`no-focus` 下显示但不激活，`focus` 下按托盘正常流程激活。
 验证关闭到托盘时先用 `window.close`，再用 `window.tray show` 恢复，检查原对话、滚动位置和草稿是否保留。
 
 `anim.speed` 用来观察过渡动画：`0.1` 放慢十倍，`2` 加快一倍。它缩放全部
@@ -88,14 +94,39 @@ python .claude/skills/app-debug/scripts/cli.py anim.speed 1
 
 | 指令 | 参数 | 作用 |
 |---|---|---|
-| `app.start` | 空 | 检查 Debug 应用是否运行，未运行时启动并等待端口就绪（最多 60 秒）；已在运行则保持不动。 |
-| `app.restart` | 空 | 无论是否在运行都先停止再启动已有开发版产物，等到端口就绪。 |
-| `app.stop` | 空 | 校验端口 PID 的可执行文件路径必须匹配本仓库 `build/AstraGram-v*-win-x64-dev/AstraGram.exe`，再让应用自行退出；失败才回落到强制结束。端口未建立时只枚举路径匹配同一形态的进程。 |
+| `app.start` | `[--profile <名称>] [--background] [--offline] [--no-focus]` | 检查 Debug 应用是否运行，未运行时启动并等待端口就绪（最多 60 秒）；已在运行则保持不动。`--no-focus` 只作用于新启动的实例。 |
+| `app.restart` | 同上 | 无论是否在运行都先停止再启动已有开发版产物，等到端口就绪。 |
+| `app.stop` | `[--force]` | 校验端口 PID 的可执行文件路径必须匹配本仓库 `build/AstraGram-v*-win-x64-dev/AstraGram.exe`，再让应用自行退出；失败才回落到强制结束。端口未建立时只枚举路径匹配同一形态的进程。 |
+
+`app.start --focus-mode <focus|no-focus>` 只切换已运行实例，不创建新进程；目标不存在时
+直接报错。交互与非交互调用都不要把它当作启动参数。
 
 ```bash
-python .claude/skills/app-debug/scripts/cli.py app.start
-# 应用已就绪。
+python .claude/skills/app-debug/scripts/cli.py app.start --no-focus
+# Application is ready.
 ```
+
+## PC 焦点模式
+
+- 不带焦点参数启动 Debug 产物时按应用正常行为显示并聚焦，初始模式为 `focus`。
+- 调试技能启动新实例时使用 `app.start --no-focus`；`app.restart --no-focus` 同理，`--no-focus` 不改变已有实例模式。
+- 运行中用 `window.focus-mode no-focus|focus` 或窗口动作的 `--focus-mode` 切换；省略与重连沿用实例当前模式。
+- `--no-focus` 与 `--focus-mode` 同一段互斥；`--focus-mode` 只允许作用于已运行实例，目标不存在时报错且不启动进程。
+- 切换到 `focus` 只更新策略，不主动激活窗口；后续窗口动作按新模式执行。
+- `app.info` 与窗口指令返回 `focus_mode`；手动启动且未切换的实例返回 `focus`。
+- `no-focus` 下显示、还原、最大化、调整尺寸和托盘恢复都不改变系统前台，窗口保持在前台窗口后面的层级。
+- `window.activation` 只改应用内部焦点，与 `focus_mode` 是两套能力；需要真实系统焦点时切换 `focus` 并取得用户明确同意。
+
+```bash
+python .codex/skills/app-debug/scripts/cli.py app.start --no-focus
+python .codex/skills/app-debug/scripts/cli.py window.maximize true
+python .codex/skills/app-debug/scripts/cli.py window.tray hide + window.tray show --focus-mode no-focus
+python .codex/skills/app-debug/scripts/cli.py window.focus-mode no-focus
+python .codex/skills/app-debug/scripts/cli.py app.start --focus-mode no-focus
+```
+
+平台相关的显示、层级与原生状态核对见 [Windows 焦点](focus/windows.md) 和
+[Qt 焦点](focus/qt.md)。
 
 单条指令的读超时是 180 秒，长操作不会被 CLI 提前中断。PID 路径不匹配时直接报错拒绝操作，不会错误结束正式安装版。
 
@@ -120,7 +151,7 @@ cat build/AstraGram-v*-win-x64-dev/crash.log                   # 读调用栈定
 
 ```bash
 python .codex/skills/app-debug/scripts/cli.py app.stop
-python .codex/skills/app-debug/scripts/cli.py app.start --profile simulation
+python .codex/skills/app-debug/scripts/cli.py app.start --no-focus --profile simulation
 python .codex/skills/app-debug/scripts/cli.py simulation.enter
 ```
 
@@ -128,7 +159,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.enter
 
 配置名允许 1 至 48 个小写字母、数字、下划线或连字符，首位为字母或数字。
 端口已有进程时，CLI 核对可执行路径和工作目录；目录不符会报告并停止执行。
-恢复原配置：先 `app.stop`，再 `app.start --profile default`。
+恢复原配置：先 `app.stop`，再 `app.start --no-focus --profile default`。
 
 播放、暂停、切换和停止使用 `player.control`；跳转、倍速、收起和关闭仍通过播放器控件操作。`player.state` 中的 `type` 与 `video` 可核对当前类型。
 

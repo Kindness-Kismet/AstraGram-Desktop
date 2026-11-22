@@ -66,6 +66,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "extras/ui/extras_logo.h"
+#ifdef _DEBUG
+#include "extras/debug/window_focus.h"
+#endif
 
 
 namespace Window {
@@ -625,7 +628,17 @@ void MainWindow::handleVisibleChanged(bool visible) {
 	if (visible) {
 		if (_maximizedBeforeHide) {
 			DEBUG_LOG(("Window Pos: Window was maximized before hidding, setting maximized."));
+#ifdef _DEBUG
+			if (ExtrasDebug::WindowFocus::backgroundRequest()) {
+				if (!isMaximized()) {
+					ExtrasDebug::WindowFocus::maximizeWithoutActivating(this);
+				}
+			} else {
+				setWindowState(Qt::WindowMaximized);
+			}
+#else
 			setWindowState(Qt::WindowMaximized);
+#endif
 		}
 	} else {
 		_maximizedBeforeHide = positionMaximized();
@@ -649,6 +662,18 @@ void MainWindow::quitFromTray() {
 
 void MainWindow::activate() {
 	bool wasHidden = !isVisible();
+#ifdef _DEBUG
+	if (ExtrasDebug::WindowFocus::backgroundRequest()) {
+		ExtrasDebug::WindowFocus::showWithoutActivating(this, isMaximized());
+		controller().updateIsActiveFocus();
+		if (wasHidden) {
+			if (const auto session = sessionController()) {
+				session->content()->windowShown();
+			}
+		}
+		return;
+	}
+#endif
 	setWindowState(windowState() & ~Qt::WindowMinimized);
 	setVisible(true);
 	Platform::ActivateThisProcess();
@@ -820,6 +845,9 @@ QRect MainWindow::countInitialGeometry(WindowPosition position) {
 }
 
 void MainWindow::firstShow() {
+#ifdef _DEBUG
+	const auto focusGuard = ExtrasDebug::WindowFocus::LaunchGuard(this);
+#endif
 	updateMinimumSize();
 	const auto position = initialPosition();
 	_ownPosition.maximized = position.maximized ? 1 : 0;

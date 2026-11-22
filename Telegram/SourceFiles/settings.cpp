@@ -41,6 +41,7 @@ bool gDebugMode = false;
 #ifdef _DEBUG
 bool gDebugProfile = false;
 bool gDebugOffline = false;
+bool gDebugNoFocus = false;
 #endif
 
 uint32 gConnectionsInSession = 1;

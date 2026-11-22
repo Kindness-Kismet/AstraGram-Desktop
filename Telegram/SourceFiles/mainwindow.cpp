@@ -10,6 +10,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "extras/features/streamer_mode/streamer_mode.h"
 #include "extras/features/window_material/window_material.h"
 #include "extras/ui/components/window_appearance.h"
+#ifdef _DEBUG
+#include "extras/debug/window_focus.h"
+#endif
 
 #include "data/data_document.h"
 #include "data/data_session.h"
@@ -170,7 +173,15 @@ void MainWindow::applyInitialWorkMode() {
 	if (controller().isPrimary()) {
 		if (positionMaximized()) {
 			DEBUG_LOG(("Window Pos: First show, setting maximized."));
+#ifdef _DEBUG
+			if (ExtrasDebug::WindowFocus::noFocusLaunch()) {
+				ExtrasDebug::WindowFocus::maximizeWithoutActivating(this);
+			} else {
+				setWindowState(Qt::WindowMaximized);
+			}
+#else
 			setWindowState(Qt::WindowMaximized);
+#endif
 		}
 		if (cStartInTray()
 			|| (cLaunchMode() == LaunchModeAutoStart

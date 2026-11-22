@@ -1,6 +1,7 @@
 #ifdef _DEBUG
 #include "extras/debug/commands/commands_internal.h"
 #include "extras/debug/debug_login.h"
+#include "extras/debug/window_focus.h"
 #include "extras/features/window_material/window_material.h"
 
 #include "core/application.h"
@@ -34,6 +35,7 @@ using json = nlohmann::json;
 		{ "isolatedDebug", cDebugProfile() },
 		{ "offline", cDebugOffline() },
 		{ "hasWindow", window != nullptr },
+		{ "focus_mode", ExtrasDebug::WindowFocus::modeName().toStdString() },
 		{ "screenshotProtected", window
 			&& Core::App().screenshotProtection().active(window->widget()) },
 		{ "windowMaterialActive", window

@@ -104,7 +104,7 @@
 另覆盖旧账号格式的词典编号迁移、歧义版本、截断不应用，以及应用和账号设置分别保存后重载。
 账号格式没有稳定语言尾部；校验向账号解析器传入局部应用设置，当前账号格式重载须保留这些应用设置。
 返回总 `passed` 和逐项 `actual`、`expected`、`roundTrip` 或 `unchanged`，任一不符即失败。
-先 `app.start --profile settings-check + simulation.enter`，再执行命令；已有实例先按运行控制指南正常退出。
+先 `app.start --no-focus --profile settings-check + simulation.enter`，再执行命令；已有实例先按运行控制指南正常退出。
 JSON 导入导出不经过二进制解析，不能替代这项验收。
 
 `player.state` 另返回文件总字节数 `fileSize`、已取得的独立流式分块字节数 `cachedBytes`、完整流缓存 `fullInCache`、本地文件 `hasLocalFile`，以及普通下载的 `downloading`、`downloadedBytes`。流式分块包含从缓存读取的部分，跳转播放位置不会把跳过的内容计入进度；完整缓存不等于已经保存文件。

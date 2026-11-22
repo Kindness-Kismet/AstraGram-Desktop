@@ -14,9 +14,14 @@ description: 调试、测试和控制 AstraGram 开发版。用于模拟模式�
 在项目根目录运行：
 
 ```bash
-python .codex/skills/app-debug/scripts/cli.py app.start
+python .codex/skills/app-debug/scripts/cli.py app.start --no-focus
 python .codex/skills/app-debug/scripts/cli.py settings.get streamerMode + screenshot.take
+python .codex/skills/app-debug/scripts/cli.py window.focus-mode no-focus
 ```
+
+调试启动统一显式传入 `--no-focus`，新实例显示但不取得系统焦点；窗口命令沿用实例当前的
+`focus_mode`，需要时用 `--focus-mode` 在当次动作前切换。手动启动 Debug 产物仍按应用
+正常行为聚焦。`window.focus-mode` 查询或切换已运行实例，不启动新进程。
 
 用 `+` 串联指令，按顺序执行；整体参数解析成功后才开始操作，执行失败时停在当前步骤。
 同一应用的所有调试调用保持串行，CLI 用 `build/app-debug-cli.lock` 排队。
@@ -28,6 +33,9 @@ python .codex/skills/app-debug/scripts/cli.py settings.get streamerMode + screen
 - 设置和业务状态：用 `settings.*`、`ghost.status`、`storage.stats` 查询。
 - 下载、附件、编号提及、设置迁移和播放优先使用[业务指令](guides/business.md)，不通过点击代替已有业务入口。
 - 业务验证不接管系统鼠标或键盘，不抢占用户正在使用的其他应用；开发版仍按原有单实例方式运行。
+- 焦点：`no-focus` 下启动和窗口操作保持后台层级，不改变用户前台；`window.activation` 只模拟应用内部焦点，不代表系统前台。
+- 切换焦点策略不激活窗口；目标实例未运行时 `--focus-mode` 直接报错，不拉起进程。
+- 确需让窗口取得系统前台时先取得明确同意，再显式使用 `--focus-mode focus` 或可聚焦的启动方式。
 - 官方页面先用 `page.list` 查询真实索引，再用 `page.open` 定位；控件值用 `control.get/set`。
 - 实际业务动作使用 `action.list/run` 或原生界面的控件和菜单，异步任务用 `job.status` 查询结果。
 - 布局和颜色：导航到目标界面，截取图片并直接查看内容；控件树用于核对几何和可见性。
@@ -52,6 +60,7 @@ OpenGL 区域可能缺失。消息气泡等自绘内容主要通过图片观察�
 | 任务 | 指南 |
 |---|---|
 | 应用启动、停止、版本、更新、窗口、崩溃 | [运行控制](guides/runtime.md) |
+| 窗口焦点、后台显示与运行中切换 | [Windows 焦点](guides/focus/windows.md)、[Qt 焦点](guides/focus/qt.md) |
 | 消息、通知、打开聊天 | [会话与消息](guides/session.md) |
 | 指定账号的加密握手、加密文字、构造附件、已读、删除与恢复 | [加密对话](guides/secret_chats.md) |
 | 模拟模式、固定分类、话题、收藏来源、临时提示、样本注入、对话框样本 | [模拟模式](guides/simulation.md) |
@@ -70,13 +79,13 @@ OpenGL 区域可能缺失。消息气泡等自绘内容主要通过图片观察�
 
 进入方式、固定场景清单和临时触发统一见[模拟模式](guides/simulation.md)。
 
-需要隔离测试数据时使用独立配置：先 `app.stop`，再 `app.start --profile simulation + simulation.enter`，仍串行运行原开发版。
+需要隔离测试数据时使用独立配置：先 `app.stop`，再 `app.start --no-focus --profile simulation + simulation.enter`，仍串行运行原开发版。
 数据保存在 `build/debug-profiles/simulation/`，CLI 会记住配置，后续调用无需重复指定。
 独立配置使用 `-debugprofile`，跳过链接协议注册，并禁用原生通知及其注册表操作。
 配置名限 1 至 48 个小写字母、数字、下划线或连字符，首位为字母或数字；`default` 表示原默认目录。
 
 CLI 会核对已有进程的可执行文件路径和工作目录。恢复原调试配置时先退出应用，
-再 `app.start --profile default`。验证其它工作树时用 `AYUGRAM_DEBUG_ROOT` 指定根目录。
+再 `app.start --no-focus --profile default`。验证其它工作树时用 `AYUGRAM_DEBUG_ROOT` 指定根目录。
 
 停止应用统一使用 `app.stop`：先请求正常退出，必要时仅结束经路径校验的本仓库调试进程。
 端口被其它应用占用时保留现场并报告路径、进程编号和错误。正式安装版有独立数据与进程。
@@ -102,3 +111,4 @@ CLI 会核对已有进程的可执行文件路径和工作目录。恢复原调�
 6. 订阅绑定控件生命周期，长期持有的 Qt 对象随应用退出清理。
 7. 遍历 JSON 的 `items()` 前把 JSON 存入具名变量，确保代理引用有效。
 8. 命令错误信息统一使用英文；界面文案使用翻译键，内部控件标识保持固定。
+9. 修改窗口显示、焦点或后台层级时，同步更新运行与焦点指南，保持 `--no-focus`、`--focus-mode` 和 `focus_mode` 返回值一致。

@@ -13,7 +13,7 @@
 固定场景按原生会话标签分类；使用 `simulation.open` 定位，使用 `simulation.trigger` 触发临时提示。
 
 ```bash
-python .codex/skills/app-debug/scripts/cli.py app.start --profile simulation + simulation.enter
+python .codex/skills/app-debug/scripts/cli.py app.start --no-focus --profile simulation + simulation.enter
 python .codex/skills/app-debug/scripts/cli.py simulation.list
 python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot.take
 ```
@@ -37,7 +37,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 验证前等待样本加载完成，期间不操作卡片；该入口不加载官方测试源码或测试运行器。
 
 ```bash
-python .codex/skills/app-debug/scripts/cli.py app.start --profile upstream-741 + simulation.enter + simulation.widget show
+python .codex/skills/app-debug/scripts/cli.py app.start --no-focus --profile upstream-741 + simulation.enter + simulation.widget show
 python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screenshot.take
 ```
 
@@ -185,7 +185,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screensh
 等入场结束后确认 A，过渡未结束时再确认 B；B 的我方消息会先被 A 的排序调整带动，再移动到自身确认后的位置。确认时仍保留原消息对象。
 不传 `--with` 时，新组基准时间至少比此前最大值晚三秒，便于区分位置变化。重启模拟配置清除样本，验证后恢复动画速度及原开发配置。
 
-`simulation.cache-history-check` 仅在独立模拟配置中运行固定历史缓存检查，先用 `app.start --profile cache-history-check + simulation.enter` 进入。
+`simulation.cache-history-check` 仅在独立模拟配置中运行固定历史缓存检查，先用 `app.start --no-focus --profile cache-history-check + simulation.enter` 进入。
 返回异步任务编号，用 `job.status <编号>` 查看完成结果；覆盖摘要删除、未知末条、请求乱序、话题与收藏来源隔离、发送确认、加载中的动态更新与选择保留。
 同时覆盖未加载消息的反应、扩展媒体资料、待办追加与完成、开放投票答案增删；扩展媒体使用本地协议样本，不执行交易。
 历史内存检查覆盖未保存和写入中保护、闲置回收、磁盘恢复后的编辑删除，以及超出会话数量预算时的淘汰。
