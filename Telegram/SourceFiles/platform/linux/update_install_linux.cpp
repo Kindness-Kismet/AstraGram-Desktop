@@ -13,10 +13,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/update_keys.h"
 #include "core/update_unpack.h"
 #include "core/update_verify.h"
+#include "config.h"
 
 #ifndef TDESKTOP_DISABLE_AUTOUPDATE
 #include "mtproto/dedicated_file_loader.h"
 #include <glib/glib.hpp>
+#include <openssl/conf.h>
 #endif // !TDESKTOP_DISABLE_AUTOUPDATE
 
 #include <QtCore/QCryptographicHash>
@@ -30,12 +32,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/wait.h>
+#include <elf.h>
 
 #include <algorithm>
 #include <array>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
 #include <memory>
@@ -640,7 +644,7 @@ const QString &PrivateDirectory::path() const {
 		}
 		const auto relative = prefix + name;
 		if (prefix.isEmpty()) {
-			const auto reserved = { "Telegram", "Updater", "ready", "tdata" };
+			const auto reserved = { "AstraGram", "Updater", "ready", "tdata" };
 			for (const auto word : reserved) {
 				if (AsciiLower(name) == AsciiLower(word) && name != word) {
 					return Fail(error, "A staged name aliases a reserved filename.");
@@ -654,7 +658,7 @@ const QString &PrivateDirectory::path() const {
 		const auto skipped = relative == "ready"
 			|| relative == "tdata"
 			|| relative.startsWith("tdata/");
-		const auto target = (relative == "Telegram") ? executableName : relative;
+		const auto target = (relative == "AstraGram") ? executableName : relative;
 		if (!skipped) {
 			const auto key = AsciiLower(target);
 			if (destinations.contains(key)) {
@@ -663,7 +667,7 @@ const QString &PrivateDirectory::path() const {
 			destinations.insert(key);
 		}
 		if (S_ISDIR(info.st_mode)) {
-			if (relative == "Telegram" || relative == "Updater"
+			if (relative == "AstraGram" || relative == "Updater"
 				|| relative == "ready") {
 				return Fail(error, "A required staged file is a directory.");
 			}
@@ -683,7 +687,7 @@ const QString &PrivateDirectory::path() const {
 		if (!TrustedFile(info)
 			|| info.st_size < 0
 			|| (mode != 0644 && mode != 0755)
-			|| ((relative == "Telegram" || relative == "Updater")
+			|| ((relative == "AstraGram" || relative == "Updater")
 				&& mode != 0755)) {
 			return Fail(error, "A staged file has an unsafe type, owner or mode.");
 		} else if (skipped) {
@@ -968,7 +972,37 @@ const QString &PrivateDirectory::path() const {
 	return relayed;
 }
 
+[[nodiscard]] bool MatchingUpdateExecutable(int directory, const char *name) {
+	const auto file = FileDescriptor(openat(directory, name,
+		O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK));
+	struct stat info = {};
+	if (!file || fstat(file.get(), &info) || !TrustedExecutable(info)) {
+		return false;
+	}
+	auto header = Elf64_Ehdr();
+	auto count = ssize_t(0);
+	do {
+		count = pread(file.get(), &header, sizeof(header), 0);
+	} while (count < 0 && errno == EINTR);
+#if defined Q_PROCESSOR_ARM_64
+	constexpr auto machine = EM_AARCH64;
+#else // Q_PROCESSOR_ARM_64
+	constexpr auto machine = EM_X86_64;
+#endif // !Q_PROCESSOR_ARM_64
+	// 旧签名格式没有架构字段，覆盖安装文件前校验实际二进制。
+	return count == ssize_t(sizeof(header))
+		&& !memcmp(header.e_ident, ELFMAG, SELFMAG)
+		&& header.e_ident[EI_CLASS] == ELFCLASS64
+		&& header.e_ident[EI_DATA] == ELFDATA2LSB
+		&& header.e_ident[EI_VERSION] == EV_CURRENT
+		&& header.e_version == EV_CURRENT
+		&& (header.e_type == ET_EXEC || header.e_type == ET_DYN)
+		&& header.e_machine == machine;
+}
+
 [[nodiscard]] int InstallUpdate(const QString &packagePath, bool beta) {
+	// 提权进程只使用内置密码配置，不加载调用方环境指定的模块。
+	OPENSSL_no_config();
 	auto error = QString();
 	const auto installation = OpenInstallation(error);
 	if (!installation) {
@@ -980,9 +1014,16 @@ const QString &PrivateDirectory::path() const {
 		return ReportError(error);
 	}
 	ReportProgress("Verifying the update package.");
-	auto verified = VerifyPackage(*bytes, beta, error);
+	const auto oldFormat = !Core::Updates::IsV2UpdateFile(*bytes);
+	auto legacy = oldFormat
+		? Core::Updates::VerifyLegacyUpdate(
+			*bytes, QByteArray(UpdatesPublicKey), AppUpdateVersion, &error)
+		: std::optional<Core::Updates::LegacyUpdate>();
+	auto verified = oldFormat
+		? std::optional<Core::Updates::VerifiedUpdate>()
+		: VerifyPackage(*bytes, beta, error);
 	bytes.reset();
-	if (!verified) {
+	if (oldFormat ? !legacy : !verified) {
 		return ReportError(error);
 	}
 	const auto previousMask = umask(022);
@@ -992,8 +1033,13 @@ const QString &PrivateDirectory::path() const {
 		return ReportError(error);
 	}
 	ReportProgress("Extracting the authenticated package into private staging.");
-	const auto version = verified->envelope.version;
-	auto uncompressed = Core::Updates::DecompressUpdatePayload(*verified, &error);
+	const auto version = legacy
+		? Core::Updates::MakeUpdateVersion(legacy->version, 0)
+		: verified->envelope.version;
+	auto uncompressed = legacy
+		? std::make_optional(std::move(legacy->uncompressed))
+		: Core::Updates::DecompressUpdatePayload(*verified, &error);
+	legacy.reset();
 	verified.reset();
 	if (!uncompressed) {
 		return ReportError(error);
@@ -1011,12 +1057,10 @@ const QString &PrivateDirectory::path() const {
 	if (!staged) {
 		return ReportError(error);
 	}
-	for (const auto required : { "Telegram", "Updater" }) {
-		struct stat info = {};
-		if (fstatat(staged.get(), required, &info, AT_SYMLINK_NOFOLLOW)
-			|| !TrustedExecutable(info)) {
-			return ReportError(u"The package requires exact top-level Telegram "
-				u"and Updater executables."_q);
+	for (const auto required : { "AstraGram", "Updater" }) {
+		if (!MatchingUpdateExecutable(staged.get(), required)) {
+			return ReportError(u"The package requires exact top-level AstraGram "
+				u"and Updater executables matching this architecture."_q);
 		}
 	}
 	ReportProgress("Checking authenticated files and installation destinations.");
@@ -1182,7 +1226,11 @@ std::optional<QString> ValidateProtectedUpdate(
 		return std::nullopt;
 	}
 #ifndef TDESKTOP_DISABLE_AUTOUPDATE
-	if (!VerifyPackage(bytes, beta, error)) {
+	const auto verified = Core::Updates::IsV2UpdateFile(bytes)
+		? VerifyPackage(bytes, beta, error).has_value()
+		: Core::Updates::VerifyLegacyUpdate(
+			bytes, QByteArray(UpdatesPublicKey), AppUpdateVersion, &error).has_value();
+	if (!verified) {
 		return std::nullopt;
 	}
 	const auto installation = OpenInstallation(error);

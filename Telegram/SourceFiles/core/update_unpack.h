@@ -16,6 +16,18 @@ namespace Core::Updates {
 
 struct VerifiedUpdate;
 
+struct LegacyUpdate {
+	quint32 version = 0;
+	QByteArray uncompressed;
+};
+
+// 普通更新与提权安装共用验签，调用方只传应用内置公钥。
+[[nodiscard]] std::optional<LegacyUpdate> VerifyLegacyUpdate(
+	const QByteArray &bytes,
+	const QByteArray &publicKey,
+	quint32 currentVersion,
+	QString *error = nullptr);
+
 [[nodiscard]] std::optional<QByteArray> DecompressUpdatePayload(
 	const VerifiedUpdate &verified,
 	QString *error = nullptr);

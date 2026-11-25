@@ -2334,6 +2334,8 @@ PRIVATE
     platform/mac/specific_mac.h
     platform/mac/specific_mac_p.mm
     platform/mac/specific_mac_p.h
+    platform/mac/update_install_mac.mm
+    platform/mac/update_install_mac.h
     platform/mac/translate_provider_mac.h
     platform/mac/translate_provider_mac.mm
     platform/mac/tray_mac.h
@@ -2386,6 +2388,8 @@ PRIVATE
     platform/win/translate_provider_win.h
     platform/win/tray_win.cpp
     platform/win/tray_win.h
+    platform/win/update_install_win.cpp
+    platform/win/update_install_win.h
     platform/win/wallet_protection_win.cpp
     platform/win/wallet_protection_win.h
     platform/win/webauthn_win.cpp

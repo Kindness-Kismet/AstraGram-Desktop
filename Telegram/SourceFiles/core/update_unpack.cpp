@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "core/update_verify.h"
 
+#include <QtCore/QCryptographicHash>
 #include <QtCore/QDataStream>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
@@ -20,6 +21,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <memory>
 
 #ifndef TDESKTOP_DISABLE_AUTOUPDATE
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
+
 #if defined Q_OS_WIN && !defined TDESKTOP_USE_PACKAGED
 #include <LzmaLib.h>
 #else // Q_OS_WIN && !TDESKTOP_USE_PACKAGED
@@ -179,6 +183,63 @@ std::optional<QByteArray> DecompressAuthenticatedPayload(
 	}
 #endif // Q_OS_WIN && !TDESKTOP_USE_PACKAGED
 	return result;
+#else // !TDESKTOP_DISABLE_AUTOUPDATE
+	SetError(error, "Automatic updates are disabled.");
+	return std::nullopt;
+#endif // TDESKTOP_DISABLE_AUTOUPDATE
+}
+
+std::optional<LegacyUpdate> VerifyLegacyUpdate(
+		const QByteArray &bytes,
+		const QByteArray &publicKey,
+		quint32 currentVersion,
+		QString *error) {
+#ifndef TDESKTOP_DISABLE_AUTOUPDATE
+	const auto bio = std::unique_ptr<BIO, decltype(&BIO_free)>(
+		BIO_new_mem_buf(publicKey.constData(), int(publicKey.size())),
+		&BIO_free);
+	const auto key = std::unique_ptr<RSA, decltype(&RSA_free)>(
+		bio ? PEM_read_bio_RSAPublicKey(bio.get(), nullptr, nullptr, nullptr) : nullptr,
+		&RSA_free);
+	if (!key) {
+		SetError(error, "Could not read the legacy update public key.");
+		return std::nullopt;
+	}
+	const auto signatureSize = RSA_size(key.get());
+	constexpr auto kDigestSize = 20;
+	if (bytes.size() <= signatureSize + kDigestSize
+		|| bytes.size() > kMaxPayloadSize) {
+		SetError(error, "Invalid legacy update size.");
+		return std::nullopt;
+	}
+	const auto payload = bytes.mid(signatureSize + kDigestSize);
+	const auto digest = QCryptographicHash::hash(payload, QCryptographicHash::Sha1);
+	if (digest != bytes.mid(signatureSize, kDigestSize)
+		|| RSA_verify(
+			NID_sha1,
+			reinterpret_cast<const uchar*>(digest.constData()),
+			kDigestSize,
+			reinterpret_cast<const uchar*>(bytes.constData()),
+			signatureSize,
+			key.get()) != 1) {
+		SetError(error, "Invalid legacy update signature.");
+		return std::nullopt;
+	}
+	auto uncompressed = DecompressAuthenticatedPayload(payload, error);
+	if (!uncompressed) {
+		return std::nullopt;
+	}
+	auto stream = QDataStream(*uncompressed);
+	stream.setVersion(QDataStream::Qt_5_1);
+	auto version = quint32(0);
+	stream >> version;
+	if (stream.status() != QDataStream::Ok
+		|| version == 0x7FFFFFFF
+		|| version <= currentVersion) {
+		SetError(error, "Invalid legacy update version.");
+		return std::nullopt;
+	}
+	return LegacyUpdate{ version, std::move(*uncompressed) };
 #else // !TDESKTOP_DISABLE_AUTOUPDATE
 	SetError(error, "Automatic updates are disabled.");
 	return std::nullopt;
