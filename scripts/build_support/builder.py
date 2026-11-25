@@ -16,11 +16,13 @@ from build_support.paths import (
     DEBUG_SYMBOLS,
     LIBRARIES_ARCH_DIR,
     PRODUCT_BINARIES,
+    REQUIRED_BINARIES,
     ROOT,
     TARGET,
     TARGET_CMAKE_ARCH,
     TARGET_SPECIAL_TARGET,
     TARGET_SUFFIX,
+    THIRD_PARTY_DIR,
     VENV_PYTHON,
     NUGET_EXE,
 )
@@ -51,9 +53,21 @@ def clean_output_dir(profile: str) -> int:
     """删除产物目录里的运行残留，只保留构建产物，返回删除项数。"""
     directory = output_dir(profile)
     wanted = set(PRODUCT_BINARIES + (DEBUG_SYMBOLS if profile == "dev" else ()))
+    parents = {
+        parent.as_posix()
+        for name in wanted
+        for parent in Path(name).parents
+        if parent != Path(".")
+    }
+    pending = list(directory.iterdir())
     removed = 0
-    for entry in directory.iterdir():
-        if entry.name in wanted:
+    while pending:
+        entry = pending.pop()
+        relative = entry.relative_to(directory).as_posix()
+        if relative in wanted:
+            continue
+        if entry.is_dir() and relative in parents:
+            pending.extend(entry.iterdir())
             continue
         if entry.is_dir():
             shutil.rmtree(entry)
@@ -65,6 +79,9 @@ def clean_output_dir(profile: str) -> int:
 
 def zip_output(profile: str) -> Path:
     directory = output_dir(profile)
+    for name in REQUIRED_BINARIES:
+        if not (directory / name).is_file():
+            raise SystemExit(f"Required product missing: {directory / name}")
     # release 是发布产物不带后缀，dev 本地调试用带 -dev 区分
     version = parse_version(read_current_version()).original
     suffix = "" if profile == "release" else f"-{profile}"
@@ -85,6 +102,7 @@ def build(configurations: list[str], api_id: str, api_hash: str, reconfigure: bo
     environment = msvc_environment()
     # cmake/external/qt 靠 %QT% 定位 Qt-<版本> 目录，缺失会直接 FATAL_ERROR
     environment["QT"] = qt_version(TARGET)
+    environment["CARGO_BUILD_JOBS"] = str(jobs)
 
     if not LIBRARIES_ARCH_DIR.is_dir():
         raise SystemExit(f"Dependencies missing at {LIBRARIES_ARCH_DIR}. Run scripts/prebuild.py first.")
@@ -163,6 +181,9 @@ def configure(environment: dict[str, str], api_id: str, api_hash: str, pdb: bool
         f"-D{LIBS_LOC_OPTION}={LIBRARIES_ARCH_DIR.as_posix()}",
         f"-D{PYTHON_OPTION}={VENV_PYTHON.as_posix()}",
         f"-DNUGET_EXE={NUGET_EXE.as_posix()}",
+        f"-DQSB_EXECUTABLE={(LIBRARIES_ARCH_DIR / f'Qt-{qt_version(TARGET)}' / 'bin/qsb.exe').as_posix()}",
+        f"-DASTRAGRAM_RUST_TOOLCHAIN_ROOT={(THIRD_PARTY_DIR / 'rust').as_posix()}",
+        f"-DTDESKTOP_CARGO={(THIRD_PARTY_DIR / 'rust/cargo/bin/cargo.exe').as_posix()}",
     ]
 
     # 发布构建必需：官方构建才带 Updater 与更新检查，且该标记受版本控制，
@@ -294,6 +315,9 @@ def release_target(path: Path) -> None:
 
 def collect(cmake_config: str, profile: str, pdb: bool) -> list[tuple[str, object]]:
     source_dir = CMAKE_OUT_DIR / cmake_config
+    for name in REQUIRED_BINARIES:
+        if not (source_dir / name).is_file():
+            raise SystemExit(f"Required product missing: {source_dir / name}")
     destination = output_dir(profile)
     destination.mkdir(parents=True, exist_ok=True)
 
@@ -314,6 +338,7 @@ def collect(cmake_config: str, profile: str, pdb: bool) -> list[tuple[str, objec
             print(warn(f"  {name} not produced, skipped"), flush=True)
             continue
         target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
         print(f"  {name:<14} {format_bytes(target.stat().st_size)}", flush=True)
         collected.append((profile, target))
