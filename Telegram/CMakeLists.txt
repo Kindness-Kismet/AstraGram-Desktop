@@ -499,6 +499,7 @@ set(extras_files
         extras/debug/commands/window_commands.cpp
         extras/debug/commands/anim_commands.cpp
         extras/debug/commands/editor_commands.cpp
+        extras/debug/commands/story_commands.cpp
         extras/debug/commands/theme_editor_commands.cpp
         extras/debug/commands/iv_commands.cpp
         extras/debug/commands/dialog_commands.cpp

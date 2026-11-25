@@ -87,6 +87,15 @@
 裁剪、音量和删除通过原有控件操作，查询命令本身不修改编辑内容。
 `editor.video-state` 查询可见视频时间线的裁剪起止、封面、播放位置与缩放；时间单位均为毫秒。
 
+## 故事编辑与草稿
+
+`stories.open-file <path>` 在当前已登录账号中打开本地图片或视频的故事编辑器。
+`stories.open-draft <id>` 恢复该账号已有的本地故事草稿；两者保留正式发布权限检查，需要联网，返回 `requested` 后通过控件与截图确认实际打开。
+`stories.drafts` 返回本地草稿编号、说明文字、素材是否存在、图层数量、裁剪与音轨状态；查询不发布故事。
+
+仅在已授权账号操作，先保存原草稿清单。编辑器关闭时使用 Save Draft / Keep Draft 保存，Discard / Delete Draft 丢弃；保存媒体文件按钮不等于保存草稿。
+验收结束后只删除本次创建的草稿，保留原有草稿；发布故事需要单独的业务授权。
+
 ## 设置迁移与播放
 
 - `settings.export <newAbsolutePath> <all|official|custom|account>`：异步导出指定范围，目标不得已存在。
