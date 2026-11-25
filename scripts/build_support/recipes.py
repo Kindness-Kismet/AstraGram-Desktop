@@ -12,7 +12,7 @@ from build_support import qt_text_caret_patch
 from build_support.paths import ROOT
 
 # Qt 版本决定补丁目录与产物前缀，随上游 qt_version 的 Qt 6 分支同步
-QT_VERSION = "6.11.2"
+QT_VERSION = "6.12.0"
 
 # venv 绑定创建它的解释器，Python 版本变动必须重建，故版本号在运行时填入
 PYTHON_VERSION_PLACEHOLDER = "__PYTHON_VERSION__"
@@ -41,7 +41,7 @@ STAGES: list[Stage] = [
         dependencies=[],
         commands=r"""git clone https://github.com/desktop-app/patches.git
 cd patches
-git checkout 23d349a3ff09dbc1fa8127ce39ba9223de0edf21
+git checkout 8a28b8433af70771c3d101c776ad837a94bd47ec
 """,
     ),
     Stage(
@@ -233,9 +233,10 @@ echo cl %%%%%%** >> cpp.bat
         name="dav1d",
         location="Libraries",
         version="0",
-        dependencies=["python/Scripts/activate.bat"],
+        dependencies=["patches/dav1d.patch", "python/Scripts/activate.bat"],
         commands=r"""git clone -b 1.5.4 https://code.videolan.org/videolan/dav1d.git
 cd dav1d
+git apply ../patches/dav1d.patch
 SET "TARGET=x86_64"
 SET "DAV1D_ASM_DISABLE="
 set FILE=cross-file.txt
@@ -401,8 +402,9 @@ deactivate
         location="Libraries",
         version="0",
         dependencies=["patches/ffmpeg/*.patch", "patches/ffmpeg.patch", "patches/build_ffmpeg_win.sh"],
-        commands=r"""git clone -b n8.1.3 https://github.com/FFmpeg/FFmpeg.git ffmpeg
+        commands=r"""git clone -b release/8.1 https://github.com/FFmpeg/FFmpeg.git ffmpeg
 cd ffmpeg
+git checkout e22a4510c982b048945052bd6a503475014b7ba0
 for %%i in (..\patches\ffmpeg\*.patch) do (
 git apply "%%i" || exit /b 1
 )
@@ -492,7 +494,7 @@ ninja -C out/Debug%FolderPostfix% common crash_generation_client exception_handl
 ninja -C out/Release%FolderPostfix% common crash_generation_client exception_handler
 cd tools\windows\dump_syms
 gyp dump_syms.gyp --format=msvs
-msbuild -m dump_syms.vcxproj /property:Configuration=Release /property:Platform="x64" %ToolsetProp%
+if not "%SKIP_DUMPSYMS%"=="1" msbuild -m dump_syms.vcxproj /property:Configuration=Release /property:Platform="x64" %ToolsetProp%
 deactivate
 """,
     ),
@@ -501,7 +503,7 @@ deactivate
         location="Libraries",
         commands=r"""git clone https://github.com/desktop-app/qt6_windows7_patches.git qt6_windows7
 cd qt6_windows7
-git checkout 9ce1ffe051161a22f7e78f715b042c773f868e59
+git checkout fd8d5035b25bce04b849b6f87818ad3a2ba66c7d
 """,
     ),
     Stage(
@@ -559,8 +561,6 @@ SET CONFIGURATIONS=-debug-and-release
 if exist "%LIBS_DIR%\Qt-%QT%" rmdir /Q /S "%LIBS_DIR%\Qt-%QT%"
 if exist "%LIBS_DIR%\Qt-%QT%" exit /b 1
 SET MOZJPEG_DIR=%LIBS_DIR%\mozjpeg
-SET OPENSSL_DIR=%LIBS_DIR%\openssl3
-SET OPENSSL_LIBS_DIR=%OPENSSL_DIR%\out
 SET ZLIB_LIBS_DIR=%LIBS_DIR%\zlib
 SET WEBP_DIR=%LIBS_DIR%\libwebp
 SET LCMS2_DIR=%LIBS_DIR%\liblcms2
@@ -573,7 +573,7 @@ configure -prefix "%LIBS_DIR%\Qt-%QT%" ^
 -static ^
 -static-runtime ^
 -feature-c++20 ^
--openssl linked ^
+-no-openssl ^
 -system-webp ^
 -system-zlib ^
 -system-libjpeg ^
@@ -582,12 +582,6 @@ __QT_ANGLE_FEATURES__
 -D ZLIB_WINAPI ^
 -- ^
 __QT_ANGLE_FLAGS__
--D OPENSSL_FOUND=1 ^
--D OPENSSL_INCLUDE_DIR="%OPENSSL_DIR%\include" ^
--D LIB_EAY_DEBUG="%OPENSSL_LIBS_DIR%.dbg\libcrypto.lib" ^
--D SSL_EAY_DEBUG="%OPENSSL_LIBS_DIR%.dbg\libssl.lib" ^
--D LIB_EAY_RELEASE="%OPENSSL_LIBS_DIR%\libcrypto.lib" ^
--D SSL_EAY_RELEASE="%OPENSSL_LIBS_DIR%\libssl.lib" ^
 -D JPEG_FOUND=1 ^
 -D JPEG_INCLUDE_DIR="%MOZJPEG_DIR%" ^
 -D JPEG_LIBRARY_DEBUG="%MOZJPEG_DIR%\Debug\jpeg-static.lib" ^
@@ -622,7 +616,7 @@ cmake --install .
         dependencies=[],
         commands=r"""git clone https://github.com/desktop-app/tg_owt.git
 cd tg_owt
-git checkout 020feec5c040fdae2cf752c2c2be62ddde7c236d
+git checkout a9d098a8f126dff818889d56f4241d7d2aaac9c1
 git submodule update --init --recursive
 SET MOZJPEG_PATH=$LIBS_DIR/mozjpeg
 SET OPUS_PATH=$USED_PREFIX/include/opus
@@ -631,22 +625,6 @@ SET LIBVPX_PATH=$USED_PREFIX/include
 SET OPENH264_PATH=$USED_PREFIX/include
 SET FFMPEG_PATH=$LIBS_DIR/ffmpeg
 cmake -B out         -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"         -DTG_OWT_BUILD_AUDIO_BACKENDS=OFF         -DTG_OWT_SPECIAL_TARGET=$SPECIAL_TARGET         -DTG_OWT_LIBJPEG_INCLUDE_PATH=$MOZJPEG_PATH         -DTG_OWT_OPENSSL_INCLUDE_PATH=$OPENSSL_PATH         -DTG_OWT_OPUS_INCLUDE_PATH=$OPUS_PATH         -DTG_OWT_LIBVPX_INCLUDE_PATH=$LIBVPX_PATH         -DTG_OWT_OPENH264_INCLUDE_PATH=$OPENH264_PATH         -DTG_OWT_FFMPEG_INCLUDE_PATH=$FFMPEG_PATH
-cmake --build out --config Debug
-cmake --build out --config Release
-""",
-    ),
-    Stage(
-        name="ada",
-        location="Libraries",
-        version="0",
-        dependencies=[],
-        commands=r"""git clone -b v3.2.9 https://github.com/ada-url/ada.git
-cd ada
-cmake -B out . ^
--D ADA_TESTING=OFF ^
--D ADA_TOOLS=OFF ^
--D ADA_INCLUDE_URL_PATTERN=OFF ^
--D CMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"
 cmake --build out --config Debug
 cmake --build out --config Release
 """,

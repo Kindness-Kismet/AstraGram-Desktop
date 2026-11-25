@@ -11,7 +11,7 @@ RUST_STAGES = [
     Stage(
         name="tlottie",
         location="Libraries",
-        version="2",
+        version="3",
         commands=r"""git clone https://github.com/dkaraush/tlottie.git
 cd tlottie
 git checkout """ + TLOTTIE_REVISION + "\n",
@@ -19,7 +19,7 @@ git checkout """ + TLOTTIE_REVISION + "\n",
     Stage(
         name="wallet-engine",
         location="Libraries",
-        version="2",
+        version="3",
         dependencies=["patches/wallet-engine.patch"],
         commands=r"""SET "GIT_LFS_SKIP_SMUDGE=1"
 git clone https://github.com/i582/wallet-engine.git
@@ -31,7 +31,7 @@ git apply ../patches/wallet-engine.patch
     Stage(
         name="tdesktop_rust",
         location="Libraries",
-        version=f"2.{TLOTTIE_REVISION}.{WALLET_ENGINE_REVISION}",
+        version=f"3.{TLOTTIE_REVISION}.{WALLET_ENGINE_REVISION}",
         dependencies=["patches/wallet-engine.patch"],
         commands=r"""SET "RUSTUP_HOME=%THIRDPARTY_DIR%\rust\rustup"
 SET "CARGO_HOME=%THIRDPARTY_DIR%\rust\cargo"
