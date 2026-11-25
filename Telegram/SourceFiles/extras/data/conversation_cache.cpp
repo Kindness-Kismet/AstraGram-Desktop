@@ -358,6 +358,7 @@ void ConversationCache::saveDialogs() {
 	using Flag = MTPDmessages_dialogFilters::Flag;
 	stream << serializePeers(peers)
 		<< encode(MTPmessages_Dialogs(MTP_messages_dialogs(
+			MTP_flags(0), MTP_vector<MTPForumTopic>(),
 			MTP_vector<MTPDialog>(dialogs),
 			MTP_vector<MTPMessage>(messages),
 			MTP_vector<MTPChat>(), MTP_vector<MTPUser>())))

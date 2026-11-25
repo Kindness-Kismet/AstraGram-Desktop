@@ -716,6 +716,18 @@ void Session::retireSubmission() {
 	if (retired->rpcStarted) {
 		_transferMessages->dropSending(retired->draft);
 	}
+	if (const auto served = retired->served) {
+		const auto error = !served->rpcStarted
+			? SendError::Failed
+			: served->receipt
+			? SendError::None
+			: served->serverError
+			? retired->refusal.value_or(SendError::Failed)
+			: SendError::SubmissionUnknown;
+		crl::on_main(_session, [=] {
+			SettleServed(*served, error);
+		});
+	}
 }
 
 void Session::clearSubmittedTransfers() {

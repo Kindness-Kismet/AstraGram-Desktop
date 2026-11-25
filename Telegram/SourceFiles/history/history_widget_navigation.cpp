@@ -487,11 +487,11 @@ void HistoryWidget::showHistory(
 	initFieldAutocomplete();
 
 	if (_peer) {
-		_unblock->setText(((_peer->isUser()
+		_unblock->setText(Ui::Text::Upper((_peer->isUser()
 			&& _peer->asUser()->isBot()
 			&& !_peer->asUser()->isSupport())
 				? tr::lng_restart_button(tr::now)
-				: tr::lng_unblock_button(tr::now)).toUpper());
+				: tr::lng_unblock_button(tr::now)));
 	}
 
 	_nonEmptySelection = false;
@@ -1027,9 +1027,9 @@ void HistoryWidget::updateNotifyControls() {
 		return;
 	}
 
-	_muteUnmute->setText((_history->muted()
+	_muteUnmute->setText(Ui::Text::Upper(_history->muted()
 		? tr::lng_channel_unmute(tr::now)
-		: tr::lng_channel_mute(tr::now)).toUpper());
+		: tr::lng_channel_mute(tr::now)));
 	if (!session().data().notifySettings().silentPostsUnknown(_peer)) {
 		if (_silent) {
 			_silent->setChecked(

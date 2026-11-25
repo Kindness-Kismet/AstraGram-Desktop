@@ -41,6 +41,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "wallet/wallet_rates.h"
 #include "wallet/wallet_session_deposit.h"
 #include "wallet/wallet_session_gift_moves.h"
+#include "wallet/wallet_session_onchain_gifts.h"
+#include "wallet/wallet_session_served.h"
 #include "wallet/wallet_session_waits.h"
 #include "wallet/wallet_stream.h"
 #include "wallet/wallet_ton_connect.h"
@@ -158,6 +160,7 @@ struct PreparedSend {
 	int generation = 0;
 	std::optional<quint32> privateEpoch;
 	std::shared_ptr<wallet_engine::WalletClient> client;
+	std::shared_ptr<const ServedPreparation> served;
 	bool tonConnect = false;
 };
 
@@ -174,6 +177,7 @@ struct Session::PreviewRequest {
 	std::string operationId;
 	Fn<void(FeeResult)> done;
 	std::shared_ptr<const wallet_engine::SendRequest> tonConnect;
+	std::shared_ptr<const ServedPreparation> served;
 	bool feeOnly = false;
 };
 
@@ -189,6 +193,7 @@ struct Session::PreviewState : base::has_weak_ptr {
 		std::shared_ptr<const wallet_engine::SendIntent> intent;
 		std::shared_ptr<const wallet_engine::NftTransferIntent> nft;
 		FeeResult result;
+		std::optional<int64> servedBalance;
 		Stage stage = Stage::Encrypting;
 		bool finished = false;
 		bool cancelIssued = false;

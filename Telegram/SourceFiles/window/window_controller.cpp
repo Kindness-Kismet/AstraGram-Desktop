@@ -28,6 +28,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/emoji_config.h"
 #include "chat_helpers/emoji_sets_manager.h"
 #include "window/window_columns.h"
+#include "window/window_logout_box.h"
 #include "window/window_session_controller.h"
 #include "window/themes/window_theme.h"
 #include "window/themes/window_theme_editor_box.h"
@@ -609,6 +610,15 @@ QString LogoutConfirmationText(Main::Account *account) {
 		append(Wallet::WalletLossWarning(loss));
 	}
 	return result;
+}
+
+void Controller::showLogoutOptions() {
+	if (const auto controller = sessionController();
+		controller && !Core::App().passcodeLocked()) {
+		ShowLogoutOptions(this, &controller->session());
+	} else {
+		showLogoutConfirmation();
+	}
 }
 
 void Controller::showLogoutConfirmation() {

@@ -99,6 +99,7 @@ using TouchScreenDevice = QPointer<const QPointingDevice>;
 #endif // Qt >= 6.0.0
 
 struct CoverCardState {
+	bool onSale = false;
 	bool onCard = false;
 	bool source = false;
 	bool allowed = false;
@@ -194,6 +195,7 @@ private:
 	[[nodiscard]] std::vector<Ui::UniqueGiftCoverAction> coverActions(
 		not_null<Ui::GenericBox*> box,
 		const QString &address);
+	void coverTransferPressed(const QString &address);
 	void coverColorPressed(
 		not_null<Ui::GenericBox*> box,
 		const QString &address);

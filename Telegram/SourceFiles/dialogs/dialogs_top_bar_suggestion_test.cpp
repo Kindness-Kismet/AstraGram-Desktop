@@ -187,7 +187,11 @@ void Widget::installListPreviewSuggestion(Preview preview) {
 		}
 		const auto wrap = CreateUnconfirmedAuthContent(
 			this, rpl::single(std::move(auths)),
-			[=](bool) { action(); hide(); }, _childListShown.value());
+			[=](bool, Fn<void()> finish) {
+				finish();
+				action();
+				hide();
+			}, _childListShown.value());
 		_prepareTopBarSnapshot.events() | rpl::on_next([=] {
 			wrap->prepareCollapseSnapshot();
 		}, wrap->lifetime());

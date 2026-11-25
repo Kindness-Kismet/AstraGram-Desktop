@@ -12,6 +12,7 @@ infoProfileLabeledUsernamePadding: margins(23px, 9px, 20px, 7px);
 infoProfileLabeledButtonQrRightSkip: 0px;
 infoIconInformation: icon {{ "info/info_information", infoIconFg }};
 infoIconAddMember: icon {{ "info/info_add_member", infoIconFg }};
+infoIconInviteToBot: icon {{ "info/info_add_member", lightButtonFg }};
 infoIconEmojiStatusAccess: icon {{ "info/info_emoji_status_access", infoIconFg }};
 infoIconShare: icon {{ "info/info_share", infoIconFg }};
 infoIconEdit: icon {{ "info/info_edit", infoIconFg }};
@@ -27,6 +28,10 @@ infoOpenAppMargin: margins(16px, 12px, 16px, 12px);
 infoMainButtonAttention: SettingsButton(infoMainButton) {
 	textFg: attentionButtonFg;
 	textFgOver: attentionButtonFgOver;
+}
+infoInviteToBotButton: SettingsButton(infoSharedMediaButton) {
+	textFg: lightButtonFg;
+	textFgOver: lightButtonFgOver;
 }
 infoBlockButtonSkip: 8px;
 infoSharedMediaCountButton: SettingsCountButton(managePeerButton) {

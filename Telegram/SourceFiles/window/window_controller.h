@@ -79,6 +79,7 @@ public:
 	void setupSetupEmailLock();
 	void clearSetupEmailLock();
 
+	void showLogoutOptions();
 	void showLogoutConfirmation();
 	void showPasscodeClearFailed(Fn<bool()> retry);
 

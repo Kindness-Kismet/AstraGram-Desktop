@@ -30,6 +30,7 @@ public:
 	void setMinGridSize(int value);
 	// 画廊样式：两侧留白、格子留缝并裁圆角，分组标题改为次要小字。
 	void setGallery(bool gallery);
+	void setMaxGridColumns(int value);
 	void resizeToWidth(int newWidth);
 	[[nodiscard]] int height() const;
 
@@ -104,6 +105,7 @@ private:
 	int _top = 0;
 	int _height = 0;
 	int _minGridSize = 0;
+	int _maxGridColumns = 0;
 	bool _canReorder = false;
 	bool _gallery = false;
 

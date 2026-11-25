@@ -437,6 +437,8 @@ Result simulationEmojiPacks(const QStringList &args) {
 	const auto rarity = MTP_starGiftAttributeRarity(MTP_int(100));
 	return MTP_starGiftUnique(
 		MTP_flags(MTPDstarGiftUnique::Flag::f_gift_address),
+		MTPlong(),
+		MTPint(),
 		MTP_long(980100 + index),
 		MTP_long(980100),
 		MTP_string(u"模拟星星"_q),

@@ -596,6 +596,7 @@ void HistoryWidget::sendVoice(const VoiceToSend &data) {
 		data.waveform,
 		data.duration,
 		data.video,
+		data.videoSource,
 		action);
 	_voiceRecordBar->clearListenState();
 }

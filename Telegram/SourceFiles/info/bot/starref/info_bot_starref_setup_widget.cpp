@@ -306,7 +306,7 @@ private:
 			lineHeight = std::max(lineHeight, state->labels[i]->height());
 		}
 		const auto positions = Ui::LayoutSliderTickLabels(
-			centers, widths, outer, labelStyle->style.font->spacew);
+			centers, widths, outer, 3 * labelStyle->style.font->spacew);
 		const auto rowSkip = lineHeight + style::ConvertScale(3);
 		auto height = lineHeight;
 		for (auto i = 0; i != state->labels.size(); ++i) {

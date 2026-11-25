@@ -322,6 +322,7 @@ bool HistoryTransferHidden(const TransferItem &item, int64 minNanos) {
 	const auto transfer = (item.kind == Kind::Transfer)
 		|| (item.kind == Kind::PeerTransfer);
 	return transfer
+		&& (item.onchainGift == TransferOnchainGift::None)
 		&& TransferMagnitudeBelowMinimum(item.amountNano, minNanos);
 }
 

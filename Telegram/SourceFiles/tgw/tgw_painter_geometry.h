@@ -34,7 +34,6 @@ struct Corners {
 		const Corners &) = default;
 };
 
-[[nodiscard]] QString PaintLimit(const QString &what, int64 max);
 [[nodiscard]] QSize DeviceSize(const QPainter &painter);
 [[nodiscard]] QRectF VisibleRect(QPainter &painter);
 [[nodiscard]] float64 MaxStretch(const QTransform &transform);
@@ -42,7 +41,11 @@ struct Corners {
 [[nodiscard]] QColor ToColor(twlite::Color color);
 [[nodiscard]] bool FiniteRect(const twlite::Rect &rect);
 [[nodiscard]] QRectF ToRect(const twlite::Rect &rect);
-[[nodiscard]] QPen StrokePen(twlite::Color color, float width);
+[[nodiscard]] QPen StrokePen(twlite::Color color, float64 width);
+[[nodiscard]] float64 ReachableStrokeWidth(
+	const QRectF &rect,
+	float64 width,
+	const QRectF &reach);
 [[nodiscard]] std::optional<Corners> NormalizedCorners(
 	const QRectF &rect,
 	const twlite::Radii &radii);

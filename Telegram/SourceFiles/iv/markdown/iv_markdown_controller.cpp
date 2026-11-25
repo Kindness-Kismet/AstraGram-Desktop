@@ -1122,6 +1122,13 @@ void Controller::createPreview() {
 
 	_preview->show();
 	updateHistoryButtons();
+	MarkdownPreviewSearchSourcesChanges(
+		_preview.get()
+	) | rpl::on_next([=] {
+		if (_search) {
+			_search->refresh();
+		}
+	}, _preview->lifetime());
 	if (_search) {
 		_search->refresh();
 	}

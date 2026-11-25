@@ -13,12 +13,12 @@ std::vector<SliderTickLabelPosition> LayoutSliderTickLabels(
 		const std::vector<int> &centers,
 		const std::vector<int> &widths,
 		int outer,
-		int minGap) {
+		int gap) {
 	Expects(centers.size() == widths.size());
 
 	const auto count = int(centers.size());
 	auto result = std::vector<SliderTickLabelPosition>(count);
-	auto total = std::max(count - 1, 0) * minGap;
+	auto total = 0;
 	for (auto i = 0; i != count; ++i) {
 		result[i].left = std::clamp(
 			centers[i] - widths[i] / 2,
@@ -31,7 +31,7 @@ std::vector<SliderTickLabelPosition> LayoutSliderTickLabels(
 		for (auto i = 0; i != count; ++i) {
 			auto &position = result[i];
 			while (position.row < int(rowEnds.size())
-				&& position.left < rowEnds[position.row] + minGap) {
+				&& position.left < rowEnds[position.row] + gap) {
 				++position.row;
 			}
 			if (position.row == int(rowEnds.size())) {
@@ -41,10 +41,13 @@ std::vector<SliderTickLabelPosition> LayoutSliderTickLabels(
 		}
 		return result;
 	}
+	if (count > 1) {
+		gap = std::min(gap, (outer - total) / (count - 1));
+	}
 	for (auto i = 1; i < count; ++i) {
 		result[i].left = std::max(
 			result[i].left,
-			result[i - 1].left + widths[i - 1] + minGap);
+			result[i - 1].left + widths[i - 1] + gap);
 	}
 	if (count > 0) {
 		result[count - 1].left = std::min(
@@ -54,7 +57,7 @@ std::vector<SliderTickLabelPosition> LayoutSliderTickLabels(
 	for (auto i = count - 1; i > 0; --i) {
 		result[i - 1].left = std::min(
 			result[i - 1].left,
-			result[i].left - minGap - widths[i - 1]);
+			result[i].left - gap - widths[i - 1]);
 	}
 	for (auto &position : result) {
 		position.left = std::max(position.left, 0);

@@ -1084,7 +1084,7 @@ bool FindBar::handleKeyPress(not_null<QKeyEvent*> e) {
 			return navigate(-1);
 		}
 	}
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 	if (e->key() == Qt::Key_G && modifiers.testFlag(Qt::ControlModifier)) {
 		return navigate(modifiers.testFlag(Qt::ShiftModifier) ? -1 : 1);
 	}

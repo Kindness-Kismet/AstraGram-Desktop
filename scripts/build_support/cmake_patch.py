@@ -23,7 +23,7 @@ _HAS_DEBUG_INFO = "$<BOOL:$<GENEX_EVAL:$<TARGET_PROPERTY:MSVC_DEBUG_INFORMATION_
 
 # VS 2026 已移除 FASTLINK：Debug 带调试信息时生成完整 pdb，否则不生成。
 _WINDOWS_DEBUG_MARKER = f"$<IF:{_HAS_DEBUG_INFO},/DEBUG:FULL,/DEBUG:NONE>"
-_WINDOWS_DEBUG_ORIGINAL = ">>>:/DEBUG:FASTLINK>"
+_WINDOWS_DEBUG_ORIGINAL = ">>>:/DEBUG:$<IF:$<VERSION_LESS:${MSVC_VERSION},1950>,FASTLINK,FULL>>"
 _WINDOWS_DEBUG_PATCHED = f">>>:{_WINDOWS_DEBUG_MARKER}>"
 
 # 增量链接只追加不回收，pdb 会无上限膨胀；故仅不带调试信息的 Debug 增量链接。
@@ -42,25 +42,16 @@ _WINDOWS_TRIM_PATCHED = f"""        /Zc:__cplusplus
     )
 """
 
-# 官方用 /wd4996 压 OpenSSL 3 的弃用标记，会随链接传给全部使用方，Qt 的弃用警告也被关掉；
-# MSVC 下改用 OpenSSL 自带开关，只关它自己的标记。
-_OPENSSL_DEPRECATED_MARKER = "OPENSSL_SUPPRESS_DEPRECATED"
-_OPENSSL_DEPRECATED_ORIGINAL = """target_compile_options(external_openssl_common
+# 与 webauthn 源码中的空定义一致，避免同名宏的重复定义警告。
+_OPENSSL_DEPRECATED_MARKER = "OPENSSL_SUPPRESS_DEPRECATED="
+_OPENSSL_DEPRECATED_ORIGINAL = """target_compile_definitions(external_openssl_common
 INTERFACE
-    $<IF:$<BOOL:${MSVC}>,/wd4996,-Wno-deprecated-declarations>
+    OPENSSL_SUPPRESS_DEPRECATED
 )"""
-# 定义为空，与 webauthn 源码里的同名 #define 一致，避免重复定义警告。
-_OPENSSL_DEPRECATED_PATCHED = f"""if (MSVC)
-    target_compile_definitions(external_openssl_common
-    INTERFACE
-        {_OPENSSL_DEPRECATED_MARKER}=
-    )
-else()
-    target_compile_options(external_openssl_common
-    INTERFACE
-        -Wno-deprecated-declarations
-    )
-endif()"""
+_OPENSSL_DEPRECATED_PATCHED = f"""target_compile_definitions(external_openssl_common
+INTERFACE
+    {_OPENSSL_DEPRECATED_MARKER}
+)"""
 
 
 _VARIABLES_ORIGINAL = """if (build_win64)

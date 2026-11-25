@@ -1044,7 +1044,7 @@ uint64 CustomEmojiManager::coloredSetId() const {
 	return _coloredSetId;
 }
 
-[[nodiscard]] QString CustomEmojiManager::peerUserpicEmojiData(
+QString CustomEmojiManager::peerUserpicEmojiData(
 		not_null<PeerData*> peer,
 		QMargins padding,
 		bool respectSavedRepliesEtc) {

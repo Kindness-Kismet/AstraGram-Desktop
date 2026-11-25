@@ -13,6 +13,7 @@ namespace ContentDetails {
 		const TransferItem &a,
 		const TransferItem &b) {
 	return (ShowsCollectible(a) == ShowsCollectible(b))
+		&& (a.onchainGift == b.onchainGift)
 		&& (a.collectible == b.collectible)
 		&& (a.collectibleRecord == b.collectibleRecord)
 		&& (a.amountNano == b.amountNano)
@@ -81,7 +82,9 @@ void ShowNetworkFeesAbout(
 	}));
 }
 
-[[nodiscard]] TextWithEntities GramMark(
+} // namespace ContentDetails
+
+TextWithEntities GramMark(
 		Ui::Text::CustomEmojiHelper &helper,
 		const style::font &font) {
 	auto descriptor = Ui::Text::PaletteDependentEmoji{
@@ -101,6 +104,22 @@ void ShowNetworkFeesAbout(
 	descriptor.margin = QMargins(0, marginTop, 0, 0);
 	return helper.paletteDependent(std::move(descriptor));
 }
+
+TextWithEntities GramValueText(
+		const TextWithEntities &mark,
+		int64 amountNano,
+		const FiatRate &rate,
+		int fiatDecimals) {
+	auto result = mark;
+	result.append(QChar(' '));
+	result.append(Ui::FormatTonAmount(amountNano).full);
+	result.append(QChar(' '));
+	result.append(Ui::Text::Colorized(
+		FormatFiat(amountNano, rate, fiatDecimals, true)));
+	return result;
+}
+
+namespace ContentDetails {
 
 void AddPendingFeeTableRow(
 		not_null<Ui::TableLayout*> table,
@@ -151,13 +170,7 @@ void AddFeeTableRow(
 		});
 	} else {
 		value = FiatRateValue(session) | rpl::map([=](const FiatRate &rate) {
-			auto result = diamond;
-			result.append(QChar(' '));
-			result.append(Ui::FormatTonAmount(feeNano).full);
-			result.append(QChar(' '));
-			result.append(Ui::Text::Colorized(
-				FormatFiat(feeNano, rate, kFeeFiatDecimals, true)));
-			return result;
+			return GramValueText(diamond, feeNano, rate, kFeeFiatDecimals);
 		});
 	}
 	const auto label = Ui::CreateChild<Ui::FlatLabel>(

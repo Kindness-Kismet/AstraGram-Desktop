@@ -117,7 +117,8 @@ private:
 		const MTPVector<MTPUser> &users,
 		const MTPVector<MTPChat> &chats,
 		const MTPVector<MTPMessage> &msgs,
-		const MTPVector<MTPUpdate> &other);
+		const MTPVector<MTPUpdate> &other,
+		const MTPVector<MTPForumTopic> *topics);
 	void stateDone(const MTPupdates_State &state);
 	void checkpointSecretRecovery();
 	void updateSecretRefreshTimer();
@@ -130,7 +131,12 @@ private:
 		not_null<ChannelData*> channel,
 		const MTP::Error &error);
 	void failDifferenceStartTimerFor(ChannelData *channel);
-	void feedChannelDifference(const MTPDupdates_channelDifference &data);
+	void feedChannelDifference(
+		not_null<ChannelData*> channel,
+		const MTPDupdates_channelDifference &data);
+	void applyChannelTopMessageHint(
+		not_null<ChannelData*> channel,
+		const MTPDupdateChannelTooLong &data);
 
 	void mtpUpdateReceived(const MTPUpdates &updates);
 	void mtpNewSessionCreated();

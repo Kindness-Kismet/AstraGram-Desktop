@@ -411,6 +411,7 @@ std::optional<TransferItem> Session::sendingTransaction(
 	const auto candidate = [&](const TransferItem &item) {
 		return !item.incoming
 			&& item.kind != TransferItem::Kind::KeyChange
+			&& item.onchainGift == result.onchainGift
 			&& !item.id.isEmpty()
 			&& item.walletIdentity == result.walletIdentity
 			&& same(item)

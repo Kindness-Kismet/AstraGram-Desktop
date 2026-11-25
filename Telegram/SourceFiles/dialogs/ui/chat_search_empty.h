@@ -9,6 +9,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "ui/rp_widget.h"
 
+namespace Ui {
+class FlatLabel;
+} // namespace Ui
+
 namespace Dialogs {
 
 enum class SearchEmptyIcon {
@@ -31,9 +35,17 @@ public:
 		return _handlerActivated.events();
 	}
 
+protected:
+	int resizeGetHeight(int newWidth) override;
+
 private:
 	void setup(Icon icon, rpl::producer<TextWithEntities> text);
+	[[nodiscard]] int fullHeight() const;
 
+	Ui::FlatLabel *_label = nullptr;
+	Ui::RpWidget *_graphic = nullptr;
+	int _minimalHeight = 0;
+	bool _measuring = false;
 	rpl::event_stream<ClickHandlerPtr> _handlerActivated;
 
 };

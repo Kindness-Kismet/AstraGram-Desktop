@@ -286,6 +286,8 @@ private:
 	void smtcNext() override;
 	void smtcPrevious() override;
 	void smtcSeek(crl::time position) override;
+	void smtcSetVolume(float64 volume) override;
+	void smtcSetSpeed(float64 speed) override;
 
 	void playbackPauseResume();
 	void playbackToggleFullScreen();
@@ -742,6 +744,7 @@ private:
 	base::weak_ptr<Window::Controller> _openedFrom;
 	Main::Session *_session = nullptr;
 	rpl::lifetime _sessionLifetime;
+	rpl::lifetime _screenshotProtectionLifetime;
 	PhotoData *_photo = nullptr;
 	DocumentData *_document = nullptr;
 	DocumentData *_chosenQuality = nullptr;
@@ -784,6 +787,8 @@ private:
 	bool _shareVisible = false;
 	bool _rotateVisible = false;
 	bool _drawButtonEnabled = true;
+	Data::FileOrigin _openFileOrigin;
+	std::shared_ptr<const StandaloneGallery> _gallery;
 	bool _drawVisible = false;
 	bool _recognizeVisible = false;
 	bool _headerHasLink = false;

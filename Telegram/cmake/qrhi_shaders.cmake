@@ -7,10 +7,6 @@ if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
     return()
 endif()
 
-if (QT_VERSION_MAJOR LESS 6)
-    return()
-endif()
-
 find_program(QSB_EXECUTABLE qsb
     HINTS
         "${QT_DIR}/../../../libexec"
@@ -65,7 +61,7 @@ foreach(_src ${_shader_sources})
             --msl 12
             -o ${_qsb}
             ${_src}
-        DEPENDS ${_src}
+        DEPENDS ${_src} ${QSB_EXECUTABLE}
         COMMENT "QSB: ${_name}"
         VERBATIM)
     list(APPEND _qsb_outputs ${_qsb})

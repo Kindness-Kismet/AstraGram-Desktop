@@ -121,6 +121,8 @@ Photo::Photo(
 	MediaOptions options)
 : ItemBase(delegate, parent)
 , _data(photo)
+, _aspectRatio(options.aspectRatio)
+, _origin(std::move(options.origin))
 , _spoiler((options.spoiler || parent->isMediaSensitive())
 	? std::make_unique<Ui::SpoilerAnimation>([=] {
 		delegate->repaintItem(this);
@@ -147,7 +149,8 @@ Photo::Photo(
 	if (_data->inlineThumbnailBytes().isEmpty()
 		&& (_data->hasExact(Data::PhotoSize::Small)
 			|| _data->hasExact(Data::PhotoSize::Thumbnail))) {
-		_data->load(Data::PhotoSize::Small, parent->fullId());
+		const auto origin = _origin ? *_origin : parent->fullId();
+		_data->load(Data::PhotoSize::Small, origin);
 	}
 }
 
@@ -165,16 +168,20 @@ ClickHandlerPtr Photo::makeOpenPhotoHandler() {
 
 void Photo::initDimensions() {
 	_maxw = 2 * st::overviewPhotoMinSize;
-	_minh = _story ? int(base::SafeRound(_maxw * kStoryRatio)) : _maxw;
+	const auto ratio = _aspectRatio
+		? _aspectRatio
+		: (_story ? kStoryRatio : 1.);
+	_minh = int(base::SafeRound(_maxw * ratio));
 }
 
 int32 Photo::resizeGetHeight(int32 width) {
-	width = std::min(width, _maxw);
+	width = _aspectRatio ? width : std::min(width, _maxw);
 	if (_width != width) {
 		_width = width;
-		_height = _story
-			? int(base::SafeRound(_width * kStoryRatio))
-			: _width;
+		const auto ratio = _aspectRatio
+			? _aspectRatio
+			: (_story ? kStoryRatio : 1.);
+		_height = int(base::SafeRound(_width * ratio));
 	}
 	return _height;
 }
@@ -333,10 +340,11 @@ void Photo::ensureDataMediaCreated() const {
 		return;
 	}
 	_dataMedia = _data->createMediaView();
+	const auto origin = _origin ? *_origin : parent()->fullId();
 	if (_data->inlineThumbnailBytes().isEmpty()) {
-		_dataMedia->wanted(Data::PhotoSize::Small, parent()->fullId());
+		_dataMedia->wanted(Data::PhotoSize::Small, origin);
 	}
-	_dataMedia->wanted(Data::PhotoSize::Thumbnail, parent()->fullId());
+	_dataMedia->wanted(Data::PhotoSize::Thumbnail, origin);
 	delegate()->registerHeavyItem(this);
 }
 
@@ -387,6 +395,8 @@ Video::Video(
 : RadialProgressItem(delegate, parent)
 , _data(video)
 , _videoCover(LookupVideoCover(video, parent))
+, _aspectRatio(options.aspectRatio)
+, _origin(std::move(options.origin))
 , _duration(Ui::FormatDurationText(_data->duration() / 1000))
 , _durationw(st::normalFont->width(_duration))
 , _spoiler((options.spoiler || parent->isMediaSensitive())
@@ -414,12 +424,13 @@ Video::Video(
 			setDocumentLinks(_data);
 		}));
 	}
+	const auto origin = _origin ? *_origin : parent->fullId();
 	if (!_videoCover) {
-		_data->loadThumbnail(parent->fullId());
+		_data->loadThumbnail(origin);
 	} else if (_videoCover->inlineThumbnailBytes().isEmpty()
 		&& (_videoCover->hasExact(Data::PhotoSize::Small)
 			|| _videoCover->hasExact(Data::PhotoSize::Thumbnail))) {
-		_videoCover->load(Data::PhotoSize::Small, parent->fullId());
+		_videoCover->load(Data::PhotoSize::Small, origin);
 	}
 }
 
@@ -427,16 +438,20 @@ Video::~Video() = default;
 
 void Video::initDimensions() {
 	_maxw = 2 * st::overviewPhotoMinSize;
-	_minh = _story ? int(base::SafeRound(_maxw * kStoryRatio)) : _maxw;
+	const auto ratio = _aspectRatio
+		? _aspectRatio
+		: (_story ? kStoryRatio : 1.);
+	_minh = int(base::SafeRound(_maxw * ratio));
 }
 
 int32 Video::resizeGetHeight(int32 width) {
-	width = std::min(width, _maxw);
+	width = _aspectRatio ? width : std::min(width, _maxw);
 	if (_width != width) {
 		_width = width;
-		_height = _story
-			? int(base::SafeRound(_width * kStoryRatio))
-			: _width;
+		const auto ratio = _aspectRatio
+			? _aspectRatio
+			: (_story ? kStoryRatio : 1.);
+		_height = int(base::SafeRound(_width * ratio));
 	}
 	return _height;
 }
@@ -628,12 +643,13 @@ void Video::ensureDataMediaCreated() const {
 		return;
 	}
 	_dataMedia = _data->createMediaView();
+	const auto origin = _origin ? *_origin : parent()->fullId();
 	if (_videoCover) {
 		_videoCoverMedia = _videoCover->createMediaView();
-		_videoCover->load(Data::PhotoSize::Large, parent()->fullId());
+		_videoCover->load(Data::PhotoSize::Large, origin);
 	} else {
 		_dataMedia->goodThumbnailWanted();
-		_dataMedia->thumbnailWanted(parent()->fullId());
+		_dataMedia->thumbnailWanted(origin);
 	}
 	delegate()->registerHeavyItem(this);
 }
@@ -693,7 +709,7 @@ TextState Video::getState(
 		StateRequest request) const {
 	if (hasPoint(point)) {
 		ensureDataMediaCreated();
-		auto link = _sensitiveSpoiler
+		auto link = (_sensitiveSpoiler || _origin)
 			? _openl
 			: (_data->loading() || _data->uploading())
 			? _cancell

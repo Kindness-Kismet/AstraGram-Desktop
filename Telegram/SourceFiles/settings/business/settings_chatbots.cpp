@@ -81,9 +81,15 @@ public:
 private:
 	[[nodiscard]] bool shouldConfirmLeaveWithoutAddedBot() const;
 	void setupContent();
+	void applyCloudSettings(
+		const Data::ChatbotsSettings &settings,
+		not_null<Ui::RoundButton*> loading);
+	void applySettings(const Data::ChatbotsSettings &settings);
 	void refreshDetails();
 	void save();
 
+	Data::ChatbotsSettings _cloudSettings;
+	bool _ready = false;
 
 	Ui::VerticalLayout *_detailsWrap = nullptr;
 	Ui::VerticalLayout *_permissionsWrap = nullptr;
@@ -583,7 +589,32 @@ Chatbots::Chatbots(
 	QWidget *parent,
 	not_null<Window::SessionController*> controller)
 : Section(parent, controller) {
-	setupContent();
+	const auto chatbots = &controller->session().data().chatbots();
+	const auto loading = Ui::CreateChild<Ui::RoundButton>(
+		this,
+		tr::lng_contacts_loading(),
+		st::settingsChatbotsAddButton);
+	loading->setDisabled(true);
+	sizeValue() | rpl::on_next([=](QSize size) {
+		loading->move(
+			(size.width() - loading->width()) / 2,
+			st::settingsPrivacySkip);
+	}, loading->lifetime());
+	loading->setClickedCallback([=] {
+		loading->setDisabled(true);
+		loading->setText(tr::lng_contacts_loading());
+		chatbots->preload();
+	});
+	chatbots->loadFailed() | rpl::on_next([=] {
+		if (!_ready) {
+			loading->setText(tr::lng_bot_download_retry());
+			loading->setDisabled(false);
+		}
+	}, lifetime());
+	chatbots->value() | rpl::on_next([=](const auto &settings) {
+		applyCloudSettings(settings, loading);
+	}, lifetime());
+	chatbots->preload();
 }
 
 Chatbots::~Chatbots() {
@@ -593,7 +624,7 @@ Chatbots::~Chatbots() {
 }
 
 bool Chatbots::shouldConfirmLeaveWithoutAddedBot() const {
-	if (!_chooserVisible.current() || _committedBot.current()) {
+	if (!_ready || !_chooserVisible.current() || _committedBot.current()) {
 		return false;
 	}
 	const auto parsed = ParseUsernameQuery(_usernameValue.current());
@@ -628,12 +659,13 @@ rpl::producer<QString> Chatbots::title() {
 }
 
 void Chatbots::setInnerFocus() {
-	if (_chooserVisible.current()) {
+	if (_ready && _chooserVisible.current()) {
 		_usernameWrap->entity()->setFocus();
 	} else {
 		AbstractSection::setInnerFocus();
 	}
 }
+
 
 void Chatbots::setupContent() {
 	using namespace rpl::mappers;
@@ -811,6 +843,7 @@ void Chatbots::refreshDetails() {
 	auto permissions = CreateEditChatbotPermissions(
 		content,
 		_permissions.current());
+	const auto permissionsWidget = permissions.widget.data();
 	content->add(std::move(permissions.widget));
 	_resolvePermissions = permissions.value;
 
@@ -844,13 +877,44 @@ void Chatbots::refreshDetails() {
 			warn(tr::lng_chatbots_warning_username_text);
 		}
 		_permissions = now;
-	}, lifetime());
+	}, permissionsWidget->lifetime());
 
 
 	_permissionsWrap->resizeToWidth(_detailsWrap->width());
 }
 
+void Chatbots::applyCloudSettings(
+		const Data::ChatbotsSettings &settings,
+		not_null<Ui::RoundButton*> loading) {
+	if (!controller()->session().data().chatbots().loaded()) {
+		return;
+	}
+	if (!_ready) {
+		loading->hide();
+		_cloudSettings = settings;
+		_ready = true;
+		setupContent();
+	} else if (settings != _cloudSettings) {
+		_cloudSettings = settings;
+		applySettings(settings);
+	}
+}
+
+void Chatbots::applySettings(const Data::ChatbotsSettings &settings) {
+	_recipients = Data::BusinessRecipients::MakeValid(settings.recipients);
+	_permissions = settings.permissions;
+	_committedRecipients = _recipients.current();
+	_committedPermissions = _permissions.current();
+	_committedBot = settings.bot;
+	_chooserVisible = !settings.bot;
+	_usernameWrap->toggle(!settings.bot, anim::type::instant);
+	refreshDetails();
+}
+
 void Chatbots::save() {
+	if (!_ready) {
+		return;
+	}
 	const auto show = controller()->uiShow();
 	const auto fail = [=](QString error) {
 		if (error == u"BUSINESS_RECIPIENTS_EMPTY"_q) {

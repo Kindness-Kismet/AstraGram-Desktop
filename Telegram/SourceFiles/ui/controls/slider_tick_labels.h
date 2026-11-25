@@ -19,6 +19,6 @@ struct SliderTickLabelPosition {
 	const std::vector<int> &centers,
 	const std::vector<int> &widths,
 	int outer,
-	int minGap);
+	int gap);
 
 } // namespace Ui

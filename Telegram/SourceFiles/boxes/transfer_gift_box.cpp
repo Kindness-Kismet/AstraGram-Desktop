@@ -76,8 +76,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace {
 
-using namespace GiftTransfer;
-
 constexpr auto kPlateGroupsPerLine = 4;
 constexpr auto kMovedToWalletToastDuration = 5 * crl::time(1000);
 constexpr auto kGiftMoveKeepOnProfilePref = "gift_move_keep_on_profile"_cs;
@@ -191,25 +189,13 @@ void ExportOnBlockchain(
 }
 
 [[nodiscard]] rpl::producer<TextWithEntities> CollectiblesPathText() {
-	const auto prefixed = [](not_null<const style::IconEmoji*> emoji) {
-		return rpl::map([=](const QString &text) {
-			return Ui::Text::IconEmoji(emoji).append(' ').append(text);
-		});
-	};
-	const auto arrow = Ui::Text::IconEmoji(&st::giftMoveToWalletArrowEmoji);
-	return tr::lng_gift_transfer_to_wallet_path_icons(
-		lt_menu,
-		rpl::single(Ui::Text::IconEmoji(&st::giftMoveToWalletMenuEmoji)),
-		lt_arrow,
-		rpl::single(arrow),
-		lt_money,
-		tr::lng_wallet_menu() | prefixed(&st::giftMoveToWalletMoneyEmoji),
-		lt_arrow_next,
-		rpl::single(arrow),
-		lt_collectibles,
-		tr::lng_wallet_rows_collectibles(
-		) | prefixed(&st::giftMoveToWalletCollectiblesEmoji),
-		tr::marked);
+	return rpl::single(
+		rpl::empty
+	) | rpl::then(
+		Lang::Updated()
+	) | rpl::map([] {
+		return WalletCollectiblesPath();
+	});
 }
 
 void MoveToWalletBox(
@@ -902,6 +888,7 @@ void BuyResaleGift(
 		*completed = true;
 		if (result == Payments::CheckoutResult::Paid) {
 			purchase.gift->starsForResale = 0;
+			purchase.gift->nanoTonForResale = 0;
 		}
 		done(result);
 		if (result == Payments::CheckoutResult::Paid) {
@@ -943,32 +930,10 @@ void BuyResaleGift(
 		if (failure) {
 			paymentDone(*failure, nullptr);
 		} else if (price != was) {
-			const auto cost = price.ton()
-				? Ui::Text::IconEmoji(&st::tonIconEmoji).append(
-					Lang::FormatCreditsAmountDecimal(price))
-				: Ui::Text::IconEmoji(&st::starIconEmoji).append(
-					Lang::FormatCountDecimal(price.whole()));
-			const auto cancelled = [=](Fn<void()> close) {
-				close();
+			const auto cancelled = [=] {
 				paymentDone(Payments::CheckoutResult::Cancelled, nullptr);
 			};
-			show->show(Ui::MakeConfirmBox({
-				.text = tr::lng_gift_buy_price_change_text(
-					tr::now,
-					lt_price,
-					Ui::Text::Wrapped(cost, EntityType::Bold),
-					tr::marked),
-				.confirmed = [=](Fn<void()> close) {
-					close();
-					submit();
-				},
-				.cancelled = cancelled,
-				.confirmText = tr::lng_gift_buy_resale_button(
-					lt_cost,
-					rpl::single(cost),
-					tr::marked),
-				.title = tr::lng_gift_buy_price_change_title(),
-			}));
+			show->show(MakeResaleGiftPriceChangeBox(price, submit, cancelled));
 		} else {
 			submit();
 		}
@@ -993,15 +958,18 @@ base::weak_qptr<Ui::GenericBox> ShowBuyResaleGiftConfirm(
 		});
 		const auto gift = state->purchase.gift;
 		const auto to = state->purchase.recipient;
+		const auto choice = !gift->onlyAcceptTon
+			&& (gift->starsForResale > 0)
+			&& (gift->nanoTonForResale > 0);
 
-		if (gift->onlyAcceptTon) {
+		if (!choice && initiallyTon) {
 			box->addRow(
 				object_ptr<Ui::FlatLabel>(
 					box,
 					tr::lng_gift_buy_resale_only_ton(tr::rich),
 					st::resaleConfirmTonOnly),
 				st::boxRowPadding + st::resaleConfirmTonOnlyMargin);
-		} else {
+		} else if (choice) {
 			const auto tabs = box->addRow(
 				object_ptr<Ui::SubTabs>(
 					box,
@@ -1072,18 +1040,19 @@ base::weak_qptr<Ui::GenericBox> ShowBuyResaleGiftConfirm(
 			BuyResaleGift(show, std::move(selected), done);
 		};
 
-		auto price = state->ton.value() | rpl::map([=](bool ton) {
+		auto price = rpl::combine(
+			state->ton.value(),
+			rpl::single(rpl::empty) | rpl::then(Lang::Updated())
+		) | rpl::map([=](bool ton, rpl::empty_value) {
 			return ton
-				? tr::lng_action_gift_for_ton(
-					lt_count_decimal,
-					rpl::single(gift->nanoTonForResale
-						/ float64(Ui::kNanosInOne)),
-					tr::bold)
+				? tr::bold(Data::FormatGiftGramAmountWithUnit(
+					gift->nanoTonForResale))
 				: tr::lng_action_gift_for_stars(
+					tr::now,
 					lt_count_decimal,
-					rpl::single(gift->starsForResale * 1.),
+					gift->starsForResale * 1.,
 					tr::bold);
-		}) | rpl::flatten_latest();
+		});
 		Ui::ConfirmBox(box, {
 			.text = to->isSelf()
 				? tr::lng_gift_buy_resale_confirm_self(
@@ -1108,6 +1077,37 @@ base::weak_qptr<Ui::GenericBox> ShowBuyResaleGiftConfirm(
 
 } // namespace
 
+object_ptr<Ui::GenericBox> MakeResaleGiftPriceChangeBox(
+		CreditsAmount price,
+		Fn<void()> confirmed,
+		Fn<void()> cancelled) {
+	const auto cost = price.ton()
+		? Data::FormatGiftResaleTon(
+			price.whole() * Ui::kNanosInOne + price.nano())
+		: Ui::Text::IconEmoji(&st::starIconEmoji).append(
+			Lang::FormatCountDecimal(price.whole()));
+	return Ui::MakeConfirmBox({
+		.text = tr::lng_gift_buy_price_change_text(
+			tr::now,
+			lt_price,
+			Ui::Text::Wrapped(cost, EntityType::Bold),
+			tr::marked),
+		.confirmed = [=](Fn<void()> close) {
+			close();
+			confirmed();
+		},
+		.cancelled = [=](Fn<void()> close) {
+			close();
+			cancelled();
+		},
+		.confirmText = tr::lng_gift_buy_resale_button(
+			lt_cost,
+			rpl::single(cost),
+			tr::marked),
+		.title = tr::lng_gift_buy_price_change_title(),
+	});
+}
+
 void PaintGiftMoveUserpic(
 		Painter &p,
 		int x,
@@ -1130,29 +1130,23 @@ void PaintGiftMoveUserpic(
 	icon.paintInCenter(p, QRect(x, y, size, size));
 }
 
-void ShowGiftMovedToast(
+void ShowToastWithAction(
 		std::shared_ptr<Ui::Show> show,
-		not_null<DocumentData*> sticker,
-		TextWithEntities text,
-		Fn<void()> view) {
+		Ui::Toast::Config &&config,
+		rpl::producer<QString> action,
+		Fn<void()> callback) {
 	const auto &st = st::historyPremiumToast;
 	const auto &viewSt = st::historyPremiumViewSet;
-	const auto label = tr::lng_gift_transfer_to_wallet_view(tr::now);
-	const auto side = Ui::Emoji::GetCustomSizeLarge();
-	const auto rightSkip = viewSt.style.font->width(label)
-		- viewSt.width
-		- st.padding.right();
-	const auto weak = show->showToast(Ui::Toast::Config{
-		.text = std::move(text),
-		.iconContent = Ui::MakeCustomEmojiToastIcon(
-			&sticker->session(),
-			sticker->id,
-			QSize(side, side)),
-		.padding = rpl::single(QMargins(0, 0, rightSkip, 0)),
-		.st = &st,
-		.acceptinput = true,
-		.duration = kMovedToWalletToastDuration,
+	const auto font = viewSt.style.font;
+	const auto skip = viewSt.width + st.padding.right();
+	config.padding = rpl::duplicate(
+		action
+	) | rpl::map([=](const QString &label) {
+		return QMargins(0, 0, font->width(label) - skip, 0);
 	});
+	config.st = &st;
+	config.acceptinput = true;
+	const auto weak = show->showToast(std::move(config));
 	const auto strong = weak.get();
 	if (!strong) {
 		return;
@@ -1160,14 +1154,14 @@ void ShowGiftMovedToast(
 	const auto widget = strong->widget();
 	const auto button = Ui::CreateChild<Ui::RoundButton>(
 		widget.get(),
-		tr::lng_gift_transfer_to_wallet_view(),
+		std::move(action),
 		viewSt);
 	button->show();
 	button->setClickedCallback([=] {
 		if (const auto strong = weak.get()) {
 			strong->hideAnimated();
 		}
-		view();
+		callback();
 	});
 	rpl::combine(
 		widget->sizeValue(),
@@ -1178,6 +1172,52 @@ void ShowGiftMovedToast(
 			(outer.height() - inner.height()) / 2,
 			outer.width());
 	}, widget->lifetime());
+}
+
+void ShowGiftMovedToast(
+		std::shared_ptr<Ui::Show> show,
+		not_null<DocumentData*> sticker,
+		TextWithEntities text,
+		Fn<void()> view) {
+	const auto side = Ui::Emoji::GetCustomSizeLarge();
+	ShowToastWithAction(
+		std::move(show),
+		Ui::Toast::Config{
+			.text = std::move(text),
+			.iconContent = Ui::MakeCustomEmojiToastIcon(
+				&sticker->session(),
+				sticker->id,
+				QSize(side, side)),
+			.duration = kMovedToWalletToastDuration,
+		},
+		tr::lng_gift_transfer_to_wallet_view(),
+		std::move(view));
+}
+
+TextWithEntities WalletCollectiblesPath() {
+	const auto prefixed = [](
+			not_null<const style::IconEmoji*> emoji,
+			const QString &text) {
+		return Ui::Text::IconEmoji(emoji).append(' ').append(text);
+	};
+	const auto arrow = Ui::Text::IconEmoji(&st::giftMoveToWalletArrowEmoji);
+	return tr::lng_gift_transfer_to_wallet_path_icons(
+		tr::now,
+		lt_menu,
+		Ui::Text::IconEmoji(&st::giftMoveToWalletMenuEmoji),
+		lt_arrow,
+		arrow,
+		lt_money,
+		prefixed(
+			&st::giftMoveToWalletMoneyEmoji,
+			tr::lng_wallet_menu(tr::now)),
+		lt_arrow_next,
+		arrow,
+		lt_collectibles,
+		prefixed(
+			&st::giftMoveToWalletCollectiblesEmoji,
+			tr::lng_wallet_rows_collectibles(tr::now)),
+		tr::marked);
 }
 
 void ShowTransferToBox(
@@ -1552,25 +1592,29 @@ void SetPeerTheme(
 		true);
 }
 
-void ShowBuyResaleGiftBox(
+bool CanBuyResaleGiftByInvoice(const Data::UniqueGift &gift) {
+	return !Data::UniqueGiftOnchainPurchase(gift)
+		&& !(gift.fixedSale && !gift.onchainSale);
+}
+
+void ShowResaleGiftComposer(
 		std::shared_ptr<ChatHelpers::Show> show,
 		std::shared_ptr<Data::UniqueGift> gift,
-		bool forceTon,
 		not_null<PeerData*> to,
-		Fn<void(bool ok)> closeParentBox) {
-	const auto attempt = std::make_shared<ResaleGiftAttemptState>();
+		TextWithEntities cost,
+		Fn<base::weak_qptr<Ui::GenericBox>(
+			not_null<Ui::GenericBox*> composer,
+			ResaleGiftMessage message)> confirm) {
 	show->show(Box([=](not_null<Ui::GenericBox*> box) {
 		struct State {
 			rpl::variable<TextWithEntities> message;
 			rpl::variable<bool> hideName;
 			rpl::variable<bool> messageAllowed;
-			std::shared_ptr<ResaleGiftAttemptState> attempt;
 			bool confirmationOpen = false;
 		};
 		const auto state = box->lifetime().make_state<State>();
 		state->hideName = to->isSelf();
 		state->messageAllowed = Ui::StarGiftMessageAllowedValue(to);
-		state->attempt = attempt;
 
 		box->setStyle(st::giftBox);
 		box->setWidth(st::boxWideWidth);
@@ -1581,10 +1625,6 @@ void ShowBuyResaleGiftBox(
 		});
 
 		const auto container = box->verticalLayout();
-		const auto initiallyTon = gift->onlyAcceptTon || forceTon;
-		const auto initialCost = initiallyTon
-			? Data::FormatGiftResaleTon(*gift)
-			: Data::FormatGiftResaleStars(*gift);
 		auto message = rpl::combine(
 			state->message.value(),
 			tr::lng_gift_send_message_preview(),
@@ -1606,7 +1646,7 @@ void ShowBuyResaleGiftBox(
 			container,
 			to,
 			gift,
-			initialCost,
+			cost,
 			std::move(message)));
 
 		const auto messageWrap = container->add(
@@ -1664,30 +1704,18 @@ void ShowBuyResaleGiftBox(
 					rpl::single(to->shortName()))));
 
 		const auto button = box->addButton(rpl::single(QString()), [=] {
-			if (state->confirmationOpen || state->attempt->inFlight) {
+			if (state->confirmationOpen) {
 				return;
 			}
 			state->confirmationOpen = true;
-			const auto finish = crl::guard(box, [=](bool ok) {
-				closeParentBox(ok);
-				box->closeBox();
-			});
-			const auto confirmation = ShowBuyResaleGiftConfirm(
-				show,
-				ResaleGiftPurchase{
-					.slug = gift->slug,
-					.recipient = to,
-					.gift = gift,
-					.message = state->messageAllowed.current()
+			const auto confirmation = confirm(
+				box,
+				ResaleGiftMessage{
+					.text = (state->messageAllowed.current()
 						? state->message.current()
-						: tr::marked(),
+						: tr::marked()),
 					.hideName = state->hideName.current(),
-					.currency = initiallyTon
-						? CreditsType::Ton
-						: CreditsType::Stars,
-				},
-				state->attempt,
-				finish);
+				});
 			if (const auto strong = confirmation.get()) {
 				strong->boxClosing() | rpl::on_next(crl::guard(box, [=] {
 					state->confirmationOpen = false;
@@ -1698,9 +1726,51 @@ void ShowBuyResaleGiftBox(
 		});
 		button->setText(tr::lng_gift_buy_resale_button(
 			lt_cost,
-			rpl::single(initialCost),
+			rpl::single(cost),
 			tr::marked));
 	}));
+}
+
+void ShowBuyResaleGiftBox(
+		std::shared_ptr<ChatHelpers::Show> show,
+		std::shared_ptr<Data::UniqueGift> gift,
+		bool forceTon,
+		not_null<PeerData*> to,
+		Fn<void(bool ok)> closeParentBox) {
+	if (!CanBuyResaleGiftByInvoice(*gift)) {
+		return;
+	}
+	const auto attempt = std::make_shared<ResaleGiftAttemptState>();
+	const auto ton = Data::UniqueGiftResaleBuyTon(*gift, forceTon);
+	ShowResaleGiftComposer(
+		show,
+		gift,
+		to,
+		(ton
+			? Data::FormatGiftResaleTon(*gift)
+			: Data::FormatGiftResaleStars(*gift)),
+		[=](not_null<Ui::GenericBox*> box, ResaleGiftMessage message)
+		-> base::weak_qptr<Ui::GenericBox> {
+			if (attempt->inFlight) {
+				return nullptr;
+			}
+			const auto finish = crl::guard(box, [=](bool ok) {
+				closeParentBox(ok);
+				box->closeBox();
+			});
+			return ShowBuyResaleGiftConfirm(
+				show,
+				ResaleGiftPurchase{
+					.slug = gift->slug,
+					.recipient = to,
+					.gift = gift,
+					.message = std::move(message.text),
+					.hideName = message.hideName,
+					.currency = ton ? CreditsType::Ton : CreditsType::Stars,
+				},
+				attempt,
+				finish);
+		});
 }
 
 bool ShowResaleGiftLater(

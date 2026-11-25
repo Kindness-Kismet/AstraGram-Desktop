@@ -108,6 +108,8 @@ void FailShareFetch(
 		return SendError::AlreadySending;
 	} catch (const engine::wallet_client_error::InvalidSendRequest &) {
 		return SendError::InvalidRequest;
+	} catch (const engine::wallet_client_error::UnsupportedSendMode &) {
+		return SendError::UnsupportedSendMode;
 	} catch (const engine::wallet_client_error
 			::EncryptedCommentUnavailable &) {
 		return SendError::CommentEncryptionUnavailable;

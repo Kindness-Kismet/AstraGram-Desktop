@@ -253,7 +253,9 @@ if (APPLE)
     )
 endif()
 
-if (NOT MSVC)
+if (MSVC)
+    target_compile_options(lib_tgcalls PRIVATE /wd4996)
+else()
     target_compile_options_if_exists(lib_tgcalls
     PRIVATE
         -Wno-deprecated-volatile
@@ -261,11 +263,6 @@ if (NOT MSVC)
         -Wno-deprecated-declarations
         -Wno-unqualified-std-cast-call
         -Wno-unused-function
-    )
-else()
-    target_compile_options(lib_tgcalls
-    PRIVATE
-        /wd4996
     )
 endif()
 

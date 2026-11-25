@@ -166,6 +166,46 @@ void Session::estimateTonConnect(
 	enqueuePreview(std::move(request));
 }
 
+void Session::estimateServed(
+		uint64 owner,
+		const ServedOperation &operation,
+		Fn<void(FeeResult)> done) {
+	if (!_preview || !_preview->owners.contains(owner)) {
+		return;
+	}
+	done = LoggedFeeDone(std::move(done));
+	ensureLoaded();
+	const auto i = _preview->owners.find(owner);
+	if (i == end(_preview->owners)) {
+		return;
+	}
+	const auto identity = transferWalletIdentity();
+	const auto client = _engine->client();
+	const auto estimate = PrepareServed(
+		operation,
+		_presence.current(),
+		identity,
+		(identity
+			&& !_clientStopping
+			&& previewClientMatches(*identity, client)));
+	if (!estimate.served) {
+		cancelFeeEstimate(owner);
+		done({ .error = estimate.error });
+		return;
+	}
+	enqueuePreview(PreviewRequest{
+		.identity = identity,
+		.owner = owner,
+		.revision = ++i->second,
+		.generation = _networkGeneration,
+		.client = client,
+		.args = estimate.served->args,
+		.operationId = NewRecordId(),
+		.done = std::move(done),
+		.served = estimate.served,
+	});
+}
+
 void Session::cancelFeeEstimate(uint64 owner) {
 	if (!_preview) {
 		return;
@@ -346,20 +386,33 @@ void Session::settleDeferredDecrypts() {
 SendError Session::previewError(const PreviewRequest &request) {
 	const auto terms = gaslessTerms();
 	const auto ordinary = !request.tonConnect
+		&& !request.served
 		&& request.args.collectible.isEmpty();
+	const auto servedRefusal = request.served
+		? ServedEstimateRefusal(
+			_presence.current(),
+			transferWalletIdentity().has_value(),
+			(request.identity
+				&& !_clientStopping
+				&& previewClientMatches(*request.identity, request.client)))
+		: SendError::None;
 	if (!previewCurrent(request)) {
 		return SendError::QuoteExpired;
 	} else if (request.privateEpoch
 		&& (*request.privateEpoch != vault().clearEpoch()
 			|| !ReadAuthorized(*this, request.auth))) {
 		return SendError::Locked;
+	} else if (servedRefusal != SendError::None) {
+		return servedRefusal;
 	} else if (request.generation != _networkGeneration
 		|| !request.identity
 		|| !transferWalletIdentityCurrent(*request.identity)) {
 		return SendError::Failed;
 	} else if (_presence.current() != Presence::Ready
 		|| request.identity->publicKey.size() != kCustodyPublicKeySize
-		|| (!request.tonConnect && request.args.amountNano <= 0)
+		|| (!request.tonConnect
+			&& !request.served
+			&& request.args.amountNano <= 0)
 		|| request.args.destination.isEmpty()) {
 		return SendError::InvalidRequest;
 	} else if (ordinary
@@ -487,15 +540,22 @@ void Session::previewPrepared(uint64 flight, engine::SendMessageBody body) {
 		return;
 	}
 	const auto tonConnect = active.request.tonConnect;
-	active.intent = tonConnect
+	const auto served = active.request.served;
+	active.intent = served
+		? served->intent
+		: tonConnect
 		? std::make_shared<const engine::SendIntent>(tonConnect->intent)
 		: std::make_shared<const engine::SendIntent>(
 			IntentFromArgs(active.request.args, std::move(body)));
 	active.stage = PreviewState::Flight::Stage::Previewing;
+	if (served) {
+		active.servedBalance = _balanceNano.current();
+	}
 	const auto client = active.request.client;
 	const auto deposit = !active.request.args.payload.isEmpty();
 	const auto item = active.request.args.collectible;
-	const auto paired = !tonConnect
+	const auto paired = !served
+		&& !tonConnect
 		&& !deposit
 		&& active.request.terms.eligible(
 			active.request.args.amountNano,
@@ -505,13 +565,17 @@ void Session::previewPrepared(uint64 flight, engine::SendMessageBody body) {
 		: QString();
 	const auto total = active.request.args.amountNano;
 	auto request = engine::SendPreviewRequest{ .intent = *active.intent };
-	_engine->run([client, tonConnect, request = std::move(request)] {
-		return tonConnect
+	_engine->run([client, tonConnect, served, request = std::move(request)] {
+		return served
+			? PreviewServed(*client, *served)
+			: tonConnect
 			? client->preview_ton_connect(*tonConnect)
 			: client->preview_send(request);
 	}, [=, this](engine::SendPreview preview) {
 		const auto fee = DecimalInt64(preview.emulation.wallet_fees_nanograms);
-		auto result = deposit
+		auto result = served
+			? ServedFeeResult(preview, *served, _balanceNano.current())
+			: deposit
 			? GiftDepositFee(preview.emulation, item)
 			: (fee && *fee >= 0)
 			? FeeResult{ .feeNano = *fee }
@@ -535,6 +599,9 @@ void Session::previewPrepared(uint64 flight, engine::SendMessageBody body) {
 			.error = (deposit && GiftDepositRejected(error))
 				? SendError::CollectibleRejected
 				: SendErrorFrom(error),
+			.shortfallFeeNano = served
+				? ServedShortfallFee(error)
+				: std::nullopt,
 		});
 	});
 }
@@ -628,6 +695,12 @@ void Session::settlePreview() {
 			return;
 		} else if (error != SendError::None) {
 			flight.result = FeeResult{ .error = error };
+		} else if (flight.servedBalance
+			&& *flight.servedBalance != _balanceNano.current()) {
+			const auto i = _preview->owners.find(flight.request.owner);
+			flight.request.revision = ++i->second;
+			enqueuePreview(std::move(flight.request));
+			return;
 		} else if (flight.result.error == SendError::None
 			&& flight.intent
 			&& !flight.cancelIssued
@@ -650,6 +723,7 @@ void Session::settlePreview() {
 					.generation = flight.request.generation,
 					.privateEpoch = flight.request.privateEpoch,
 					.client = flight.request.client,
+					.served = flight.request.served,
 					.tonConnect = (flight.request.tonConnect != nullptr),
 				});
 		} else if (flight.result.error == SendError::None) {

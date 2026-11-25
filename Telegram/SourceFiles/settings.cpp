@@ -31,7 +31,7 @@ bool gSendToMenu = false;
 bool gAutoUpdate = false;
 LaunchMode gLaunchMode = LaunchModeNormal;
 bool gSeenTrayTooltip = false;
-bool gRestartingUpdate = false, gRestarting = false, gRestartingToSettings = false, gWriteProtected = false;
+bool gRestartingUpdate = false, gRestarting = false, gRestartingToSettings = false;
 bool gQuit = false;
 bool gGhost = false;
 int32 gLastUpdateCheck = 0;

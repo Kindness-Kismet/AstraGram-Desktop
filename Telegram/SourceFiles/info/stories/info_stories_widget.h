@@ -95,6 +95,7 @@ private:
 	QPointer<Ui::SlideWrap<Ui::RpWidget>> _pinnedToBottom;
 	rpl::variable<bool> _emptyAlbumShown;
 	bool _shown = false;
+	bool _bottomNear = false;
 	std::unique_ptr<FlexibleScrollHelper> _flexibleScrollHelper;
 
 };
