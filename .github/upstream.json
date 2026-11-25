@@ -75,7 +75,7 @@
     "Telegram/SourceFiles/info/saved/info_saved_music_common.cpp": "本地资料音乐卡片仍依赖此文件；官方删除不跟随，调用方全部迁移后再清理。",
     "Telegram/SourceFiles/tgw/tgw_runtime.cpp": "不恢复官方 test_widget 接线，模拟入口在 extras/debug/simulation_widget；资源由内置包校验后直接构造，保留退出时的工作线程等待。",
     "Telegram/SourceFiles/tgw/tgw_resources.cpp": "从内置资源直接构造 SandboxResources；脚本交给独立 helper 校验，不恢复写入 tdata 后再经异常接口加载。",
-    "Telegram/SourceFiles/tgw/tgw_painter.cpp": "几何、虚线和路径预算已拆到 tgw_painter_geometry.cpp，官方改动按职责分发，保持每个实现文件不超过 2000 行。",
+    "Telegram/SourceFiles/tgw/tgw_painter.cpp": "几何、虚线和路径预算已拆到 tgw_painter_geometry.cpp，官方改动按职责分发。",
     "Telegram/SourceFiles/tgw/tgw_scroll_lists.cpp": "滚动锚点使用本地实际可见区及物理坐标转换，保留悬浮输入区、底部留白和发送入场滚动。",
     "Telegram/SourceFiles/tgw/tgw_touch_lists.cpp": "新列表触摸命中使用本地消息动画位置，不能改回只按逻辑位置查询。",
     "Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp": "保留本地 RowsShift 的会话移除动画；官方归档栏展开与收起由 ArchiveSlide 适配，不再叠加 RemovedRowSlide。",

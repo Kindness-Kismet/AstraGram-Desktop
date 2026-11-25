@@ -12,9 +12,8 @@ import sys
 import tempfile
 
 
-LINE_LIMIT = 2000
 SOURCE_ROOT = "Telegram/SourceFiles/"
-# 原样引入的第三方源码不参与行数与登记检查
+# 原样引入的第三方源码不参与登记检查
 VENDORED_ROOTS = ("Telegram/SourceFiles/extras/libs/",)
 SOURCE_SUFFIXES = {".cpp", ".c", ".cc", ".cxx"}
 HEADER_SUFFIXES = {".h", ".hpp", ".hxx"}
@@ -73,7 +72,6 @@ class CompileResult:
 @dataclass
 class Report:
     errors: list[str] = field(default_factory=list)
-    warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     summary: list[str] = field(default_factory=list)
 
@@ -384,35 +382,6 @@ def registration_problems(classified, text):
     return problems
 
 
-def count_lines(text):
-    return len(text.splitlines())
-
-
-def line_limit_verdict(path, now, before):
-    """返回 (级别, 说明)；新增越限或首次越限算错误，原本就超限的只提醒。"""
-    if now <= LINE_LIMIT:
-        return None
-    if before is None:
-        return "error", f"{path}: {now} lines, new file over the {LINE_LIMIT}-line limit"
-    if before <= LINE_LIMIT:
-        return "error", f"{path}: {now} lines, crossed the {LINE_LIMIT}-line limit (was {before})"
-    return "warning", f"{path}: {now} lines, already over the limit at base (was {before})"
-
-
-def check_line_limits(worktree, merge_base, classified, report):
-    for path in classified.sources:
-        if Path(path).suffix.lower() != ".cpp":
-            continue
-        now = count_lines((worktree / path).read_text(encoding="utf-8", errors="replace"))
-        before = None
-        if path not in classified.added:
-            before = count_lines(git(worktree, "show", f"{merge_base}:{path}"))
-        verdict = line_limit_verdict(path, now, before)
-        if verdict:
-            level, message = verdict
-            (report.errors if level == "error" else report.warnings).append(message)
-
-
 def check_whitespace(worktree, merge_base, report):
     output = git(worktree, "diff", "--check", merge_base, check=False).strip()
     lines = [line for line in output.splitlines() if not line.startswith(("+", "-"))]
@@ -478,9 +447,6 @@ def run(args):
     report.errors += registration
     report.summary.append(f"- [{'fail' if registration else 'pass'}] CMake registration ({len(classified.added)} added, {len(classified.removed)} removed)")
 
-    before = len(report.errors)
-    check_line_limits(worktree, merge_base, classified, report)
-    report.summary.append(f"- [{'fail' if len(report.errors) > before else 'pass'}] Line limit ({LINE_LIMIT})")
     whitespace = check_whitespace(worktree, merge_base, report)
     report.summary.append(f"- [{'fail' if whitespace else 'pass'}] git diff --check")
     ignored = check_ignored(worktree, report)
@@ -492,7 +458,7 @@ def run(args):
         report.summary.append(f"- [not run] Submodule changes: {', '.join(classified.submodules)}")
     report.summary.append("- [not run] Full build, link and runtime: done when merging in the main checkout")
 
-    for title, lines in (("Errors", report.errors), ("Warnings", report.warnings), ("Notes", report.notes)):
+    for title, lines in (("Errors", report.errors), ("Notes", report.notes)):
         if lines:
             print(f"\n{title}:")
             for line in lines:

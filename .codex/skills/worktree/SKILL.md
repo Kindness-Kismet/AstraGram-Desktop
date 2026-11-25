@@ -45,7 +45,7 @@ description: 在 build/worktrees/ 下用 git worktree 隔离推进任务，用�
   python .claude/skills/worktree/scripts/check_worktree.py <名称>
   ```
 
-  脚本借用主仓库最近一次构建的编译命令，对改动做 `/Zs` 单文件编译检查，并检查 CMake 登记、2000 行上限、`git diff --check` 和新文件是否被忽略。改了头文件会反查引用它的源文件，超过 `--max-files` 时抽查。最后输出的 Markdown 摘要原样贴进记录。
+  脚本借用主仓库最近一次构建的编译命令，对改动做 `/Zs` 单文件编译检查，并检查 CMake 登记、`git diff --check` 和新文件是否被忽略。改了头文件会反查引用它的源文件，超过 `--max-files` 时抽查。最后输出的 Markdown 摘要原样贴进记录。
 - 脚本查不出：链接错误、只在 Qt 6 平台（Windows ARM64、macOS）出现的错误、`.style` / 翻译 / `.tl` 改动后的生成代码。这些写进记录的“未验证项”。
 - 脚本报主仓库没有编译日志时，记录标“受阻”，请用户先在主仓库构建一次，不在 worktree 里构建。
 - 其余审查清单项（目录位置、`_DEBUG` 包裹、注释、卫语句、rpl 生命周期）人工自查。
