@@ -572,7 +572,7 @@ Result listDialogs(const QStringList &args) {
 	list.push_back({ { "key", "premium-preview" }, { "kind", "custom" } });
 	list.push_back({ { "key", "premium-feature" }, { "kind", "custom" } });
 	for (const auto key : { "story-discard", "story-delete", "story-discard-edit" }) {
-		list.push_back({ { "key", key }, { "kind", "overlay" } });
+		list.push_back({ { "key", key }, { "kind", "menu" } });
 	}
 	return Result::Ok(Compact(json{ { "dialogs", list } }));
 }
@@ -593,7 +593,7 @@ Result openDialog(const QStringList &args) {
 		|| key == u"story-discard-edit"_q) {
 		showStoryPrompt(controller, key);
 		return Result::Ok(Compact(json{
-			{ "key", key.toStdString() }, { "kind", "overlay" },
+			{ "key", key.toStdString() }, { "kind", "menu" },
 		}));
 	}
 	if (key == u"premium-preview"_q || key == u"premium-feature"_q) {
