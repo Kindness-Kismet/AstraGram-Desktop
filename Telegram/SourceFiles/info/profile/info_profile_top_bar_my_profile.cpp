@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_top_bar.h"
 
+#include "extras/extras_settings.h"
+
 #include "info/profile/info_profile_top_bar_action_button.h"
 #include "lang/lang_keys.h"
 #include "media/stories/media_stories_post.h"
@@ -47,7 +49,8 @@ void TopBar::setupMyProfileActions(
 	)->setClickedCallback(std::move(choosePhoto));
 
 	const auto peer = _peer;
-	if (::Media::Stories::CanPostStory(peer)) {
+	if (!ExtrasSettings::getInstance().disableStories()
+		&& ::Media::Stories::CanPostStory(peer)) {
 		const auto story = add(
 			tr::lng_story_add_button(),
 			st::infoProfileTopBarActionStory);

@@ -1091,7 +1091,8 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 	const auto sublist = _key.sublist();
 	_actionMenuIcons.clear();
 	const auto canAddStory = [=] {
-		return !topic
+		return !ExtrasSettings::getInstance().disableStories()
+			&& !topic
 			&& !sublist
 			&& channel
 			&& channel->amIn()
