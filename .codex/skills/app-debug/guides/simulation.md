@@ -233,6 +233,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screensh
 样本覆盖确认、表单、选项、列表、选择器、深色、不可关闭和自绘顶部等布局。公共外壳的控件标识为 `dialog.shell`、`dialog.title` 和 `dialog.close`，
 配合 `control.list dialog.` 与截图检查标题、关闭按钮和底部按钮。保存类按钮仍走原有业务路径，模拟模式下联网请求不会成功，不作为业务结果的证据。
 新增搜索样本：`giveaway-countries`、`translate-language`、`official-font`、`dictionary`、`peer-lists`、`share`；只用于模拟模式布局与筛选验证，不执行保存或发送。
+`story-discard`、`story-delete`、`story-discard-edit` 复用动态编辑器的正式退出确认弹层，分别显示新草稿、已有草稿和不可保存草稿的动作；保存与删除按钮仅关闭模拟背景，不读写草稿或调用发布接口，取消后用 `dialog.close` 退出背景。
 `background-preview` 用内置照片壁纸打开背景预览，无需联网即可检查预览中的日期与服务消息。
 `peer-qr` 为模拟账号设置固定用户名并打开个人二维码面板；`link-qr` 打开带标题和说明的链接二维码，可检查卡片、按钮与配色。
 `settings-layout` 在可缩放弹层中复用设置页的真实行控件，包含长路径、长标题、长说明和短当前值；行标识为 `simulation.settings.download`、`simulation.settings.notifications`、`simulation.settings.language`。
