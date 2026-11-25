@@ -51,7 +51,7 @@ Debug 临时样式与模式不写入普通窗口配置。
 
 ## 框架接入
 
-Qt 6.11.2 的实际接入、`WA_ShowWithoutActivating` 的生效范围和运行中属性设置见
+Qt 的实际接入、`WA_ShowWithoutActivating` 的生效范围和运行中属性设置见
 [Qt 焦点](qt.md)。原生消息处理后继续 Qt 状态通知，避免回调再次激活、置前或重复请求窗口状态。
 
 ## 验收

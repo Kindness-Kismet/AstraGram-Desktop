@@ -14,7 +14,7 @@ AstraGram 是 Telegram Desktop 的 fork，前身是 AyuGram Desktop。本文档�
 - **文本处理**：中英文之间自动加空格、过滤异常组合字符
 - **界面定制**：宽消息倍率、头像圆角、开关样式等
 
-技术栈：C++20、Qt 6.11.2（静态编译，源码见 prebuild 的 `qt_6.11.2` 阶段，最低支持 Windows 10）、rpl 响应式库、CMake 3.16+、nlohmann::json。
+技术栈：C++20、Qt 6.12.0（静态编译，源码见 prebuild 的 `qt_6.12.0` 阶段，最低支持 Windows 10）、rpl 响应式库、CMake 3.16+、nlohmann::json。
 
 ---
 
@@ -249,8 +249,8 @@ void Process(const TextWithEntities &text) {
 
 ```bash
 python scripts/prebuild.py            # 全量预编译，产物在 build/tmp
-python scripts/prebuild.py --list     # 36 个阶段清单（qt_6.11.2、tg_angle、openssl3、ffmpeg、tg_owt 等）
-python scripts/prebuild.py --stage openssl3 --stage qt_6.11.2   # 只跑指定阶段，可重复指定
+python scripts/prebuild.py --list     # 35 个阶段清单（qt_6.12.0、tg_angle、openssl3、ffmpeg、tg_owt 等）
+python scripts/prebuild.py --stage openssl3 --stage qt_6.12.0   # 只跑指定阶段，可重复指定
 python scripts/prebuild.py --clean    # 清空依赖缓存
 ```
 
@@ -271,6 +271,7 @@ python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
 
 - 默认 12 并发，无需传 `--jobs`。用户指定后，本次会话后续构建沿用 `--jobs N`（1 至 128），直到用户更改或会话结束；不修改脚本默认值。
 - 产物在带版本号的目录：`build/AstraGram-v<版本>-win-x64-release|dev/`（版本号读取 `Telegram/build/version`）
+- Windows 产物包含 `AstraGram.exe`、`Updater.exe` 和 `modules/<架构>/TelegramWidgetHelper.exe`；x64 另带 `modules/x64/d3d/d3dcompiler_47.dll`，压缩包与更新包保留模块目录。
 - 脚本自己完成配置和构建两步，**不要手动执行 cmake**
 - 收集产物前会自动停止占用目标可执行文件的进程（按绝对路径匹配，不按进程名）
 - 默认不生成调试信息和 pdb；`--pdb` 只作用于 Debug：调试信息嵌进 obj、关闭增量链接，每次重写 pdb，避免增量链接让 pdb 只增不减

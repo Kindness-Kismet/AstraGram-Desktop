@@ -1,6 +1,6 @@
 # Qt Debug 焦点
 
-本项目使用 Qt 6.11.2 Widgets 与自绘标题栏（`WS_POPUP` 普通顶层窗口）。Windows 的显示、
+本项目使用 Qt Widgets 与自绘标题栏（`WS_POPUP` 普通顶层窗口）。Windows 的显示、
 层级和状态规则见 [Windows 焦点](windows.md)；本文记录 Qt 侧的实际接入。
 
 ## 焦点策略
