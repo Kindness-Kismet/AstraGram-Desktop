@@ -525,10 +525,65 @@ Result simulationEmojiPacks(const QStringList &args) {
 	return result;
 }
 
+[[nodiscard]] QVector<MTPWalletTransaction> walletOnchainTransactions() {
+	const auto offer = MTP_string(u"0:"_q + QString(64, QChar('7')));
+	const auto peer = MTP_string(u"0:"_q + QString(64, QChar('8')));
+	const auto price = MTP_long(12000000000LL);
+	const auto fee = MTP_long(2500000);
+	const auto actions = QVector<MTPWalletOnchainGiftAction>{
+		MTP_walletOnchainGiftActionBuy(),
+		MTP_walletOnchainGiftActionChangePrice(MTP_flags(0), MTPlong(), price),
+		MTP_walletOnchainGiftActionDelist(),
+		MTP_walletOnchainGiftActionChangePrice(MTP_flags(
+			MTPDwalletOnchainGiftActionChangePrice::Flag::f_old_price),
+			MTP_long(10000000000LL), price),
+		MTP_walletOnchainGiftActionOfferCreate(MTP_flags(
+			MTPDwalletOnchainGiftActionOfferCreate::Flag::f_counterparty_address
+				| MTPDwalletOnchainGiftActionOfferCreate::Flag::f_expires_at),
+			offer, peer, price, MTP_long(12002500000LL), fee,
+			MTP_int(base::unixtime::now() + 86400)),
+		MTP_walletOnchainGiftActionOfferAccept(MTP_flags(
+			MTPDwalletOnchainGiftActionOfferAccept::Flag::f_buyer),
+			offer, peer, price, fee),
+		MTP_walletOnchainGiftActionOfferAccept(MTP_flags(0), offer, peer, price, fee),
+		MTP_walletOnchainGiftActionOfferCancel(MTP_flags(
+			MTPDwalletOnchainGiftActionOfferCancel::Flag::f_counterparty_address
+				| MTPDwalletOnchainGiftActionOfferCancel::Flag::f_price
+				| MTPDwalletOnchainGiftActionOfferCancel::Flag::f_fine),
+			offer, peer, price, MTP_long(11997500000LL), fee),
+		MTP_walletOnchainGiftActionOfferDecline(MTP_flags(
+			MTPDwalletOnchainGiftActionOfferDecline::Flag::f_counterparty_address
+				| MTPDwalletOnchainGiftActionOfferDecline::Flag::f_price),
+			offer, peer, price, price),
+		MTP_walletOnchainGiftActionOfferExpire(MTP_flags(
+			MTPDwalletOnchainGiftActionOfferExpire::Flag::f_counterparty_address
+				| MTPDwalletOnchainGiftActionOfferExpire::Flag::f_price),
+			offer, peer, price, price),
+	};
+	auto result = QVector<MTPWalletTransaction>();
+	for (auto index = 0; index != actions.size(); ++index) {
+		const auto incoming = index >= 6;
+		const auto amount = index == 1 || index == 2 || index == 3
+			? int64(0)
+			: int64(12000000000LL);
+		using Flag = MTPDwalletTransaction::Flag;
+		result.push_back(MTP_walletTransaction(
+			MTP_flags(incoming ? Flag::f_incoming : Flag()),
+			MTP_string(QString::number(100 + index, 16).rightJustified(64, QChar('0'))),
+			MTP_long(amount),
+			MTP_long(index == 2 ? 0 : 2500000),
+			MTP_int(base::unixtime::now() - index * 60),
+			MTP_walletTransactionPeerOnchainGift(actions[index]),
+			MTPstring(), MTPstring(), MTPwallet_NftItem()));
+	}
+	return result;
+}
+
 void applyWalletLists(
 		not_null<Main::Session*> session,
 		bool withCollectibles,
-		bool withLayout) {
+		bool withLayout,
+		bool withOnchain) {
 	auto &wallet = session->wallet();
 	const auto address = u"0:"_q + QString(64, QChar('0'));
 	const auto peerAddress = u"0:"_q + QString(64, QChar('2'));
@@ -547,7 +602,9 @@ void applyWalletLists(
 	const auto transactions = MTP_wallet_transactions(
 		MTP_flags(0),
 		MTP_long(kWalletBalance),
-		MTP_vector<MTPWalletTransaction>(withLayout
+		MTP_vector<MTPWalletTransaction>(withOnchain
+			? walletOnchainTransactions()
+			: withLayout
 			? walletLayoutTransactions(session)
 			: QVector<MTPWalletTransaction>{ transaction }),
 		MTPstring(),
@@ -617,9 +674,9 @@ const HandlerMap &simulationHandlers() {
 			const auto mode = args.isEmpty() ? u"keep"_q : args.front();
 			if (args.size() > 1 || (mode != u"keep"_q && mode != u"missing"_q
 				&& mode != u"ready"_q && mode != u"collectibles"_q
-				&& mode != u"layout"_q
+				&& mode != u"layout"_q && mode != u"onchain"_q
 				&& mode != u"close"_q)) {
-				return Result::Err(u"usage: simulation.wallet [keep|missing|ready|collectibles|layout|close]"_q);
+				return Result::Err(u"usage: simulation.wallet [keep|missing|ready|collectibles|layout|onchain|close]"_q);
 			}
 			const auto session = ActiveSession();
 			if (!cDebugProfile() || !session || !isSimulationSession(session)) {
@@ -632,18 +689,18 @@ const HandlerMap &simulationHandlers() {
 			auto &wallet = session->wallet();
 			wallet.ensureLoaded();
 			if (mode != u"keep"_q) {
-				const auto state = (mode == u"missing"_q)
-					? MTPWalletState(MTP_walletStateEmpty(MTP_flags(0)))
-					: MTPWalletState(MTP_walletState(
+				wallet.applyUpdate(MTP_updateWalletState(
+					MTP_walletStateEmpty(MTP_flags(0))).c_updateWalletState());
+				if (mode != u"missing"_q) {
+					wallet.applyUpdate(MTP_updateWalletState(MTP_walletState(
 						MTP_flags(0),
 						MTP_string(u"0:"_q + QString(64, QChar('0'))),
 						MTP_bytes(QByteArray(32, char(1))),
-						MTP_long(kWalletBalance)));
-				wallet.applyUpdate(MTP_updateWalletState(state).c_updateWalletState());
-				if (mode != u"missing"_q) {
+						MTP_long(kWalletBalance))).c_updateWalletState());
 					applyWalletLists(session,
 						mode == u"collectibles"_q,
-						mode == u"layout"_q);
+						mode == u"layout"_q,
+						mode == u"onchain"_q);
 				}
 			}
 			Wallet::ShowWallet(session)->setObjectName(u"simulation.wallet"_q);
@@ -660,6 +717,12 @@ const HandlerMap &simulationHandlers() {
 					{ "counterpartyName", item.counterpartyName.toStdString() },
 					{ "counterpartyPeer", item.counterpartyPeer },
 					{ "failed", item.status == Wallet::TransferItem::Status::Failure },
+					{ "onchainAction", int(item.onchainGift) },
+					{ "priceNano", item.onchainOffer.priceNano
+						? json(*item.onchainOffer.priceNano) : json(nullptr) },
+					{ "refundNano", item.onchainOffer.refundNano
+						? json(*item.onchainOffer.refundNano) : json(nullptr) },
+					{ "feeNano", item.feeNano ? json(*item.feeNano) : json(nullptr) },
 				});
 			}
 			return Result::Ok(Compact(json{

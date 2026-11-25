@@ -222,10 +222,11 @@ python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screensh
 样本复用内存中的静态图片，文档使用自定义表情属性并沿原生表情包更新通知刷新；重复执行不会重复添加。
 打开 `compose.emoji`，用 `control.set compose.emoji.tabs 0` 切到表情页，再用 `control.list emoji.categories` 定位自绘底栏；通过 `control.mouse` 和 `control.pointer` 检查分类与表情包切换、悬停，状态随模拟会话销毁。
 
-`simulation.wallet [keep|missing|ready|collectibles|layout|close]` 仅在独立模拟配置中打开或关闭钱包窗口。
+`simulation.wallet [keep|missing|ready|collectibles|layout|onchain|close]` 仅在独立模拟配置中打开或关闭钱包窗口。
 `missing` 显示未创建状态，`ready` 注入固定公开地址、余额和交易记录，`collectibles` 另加普通藏品与两种配色的礼物，显示标签页和卡片装饰入口。
 `layout` 注入六笔交易：匿名地址收款和转出、域名长金额收款、长姓名联系人转出、失败转出、无地址对方；地址由正式格式化函数生成，返回的 `history` 包含完整地址、方向、金额与失败状态，可核对点击后的复制结果。
-列表沿正式响应处理入口更新；不安装私钥或提交交易，状态随模拟会话销毁。
+`onchain` 注入十种链上礼物记录：购买、上架、下架、改价、发出报价、买方及卖方成交、取消、拒绝和到期。返回的 `onchainAction` 依次为 1 至 10，并包含实际解析的 `priceNano`、`refundNano` 和 `feeNano`；样本覆盖无礼物封面、零金额和零手续费的展示。
+固定场景先清空模拟钱包状态，再沿正式响应处理入口注入列表；不安装私钥或提交交易，状态随模拟会话销毁。
 打开后用 `control.window simulation.wallet` 选择该窗口，检查结束用 `simulation.wallet close` 关闭并恢复主窗口目标。
 
 `dialog.list` 列出对话框样本的键名与布局类别；`dialog.open <key>` 仅在独立模拟配置中关闭现有图层后无动画打开样本，`dialog.close` 关闭全部图层。
