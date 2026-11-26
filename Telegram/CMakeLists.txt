@@ -3361,7 +3361,11 @@ set(entitlement_sources
 target_sources(Telegram PRIVATE ${entitlement_sources})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Telegram PREFIX Resources FILES ${entitlement_sources})
 
-target_include_directories(Telegram PRIVATE ${src_loc})
+target_include_directories(Telegram
+PRIVATE
+    ${src_loc}
+    "${extras_version_include_dir}"
+)
 
 target_compile_definitions(Telegram
 PRIVATE
