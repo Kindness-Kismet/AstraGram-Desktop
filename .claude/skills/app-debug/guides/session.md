@@ -8,6 +8,7 @@
 - 其中 `history` 还返回 `inboxReadTillKnown`、`inboxReadTillId`、`outboxReadTillId`、`unreadCountKnown` 和 `unreadCount`。已读编号表示本地已知的接收/发送阅读进度；接收进度和未读数需结合对应的 `Known` 字段判断。
 - `cache.layout <peerId>`：只查询旧、新聊天视图的可见消息编号、纵坐标、尺寸、媒体尺寸、气泡区域 `bubble`（消息内 x、y、宽、高）、出现透明度 `opacity`（0 至 1）、入场进度 `revealProgress`、位移 `revealShift`、实际纵坐标 `visualY`、贴纸当前帧及总帧数 `stickerFrame` / `stickerFrames`（未加载为 -1）、滚动位置、首屏及缓存刷新覆盖动画；不触发排版、重绘或联网。时间为进程单调毫秒，纵坐标相对滚动区，底部可能被悬浮输入区遮挡；隐藏的相册子项不计入。
 - 新列表另返回纯换位偏移 `reorderShift`，它已计入 `revealShift` 和 `visualY`；`visualHitId` 是气泡中心按实际绘制位置命中的消息编号，无气泡时用整行中心。交叉遮挡时可能命中后绘制的另一条消息，旧视图为 0。
+- 新列表的 `animationEvents` 保留最近 256 个切片、滚动、入场启动、取消与缓存淡出事件，包含进程单调时间和滚动区域；只用于定位动画状态变化。
 - `senderId`、`outLayout`、`rightLayout` 分别返回发送者及实际气泡方向；新列表的 `highlightOpacity` 和 `highlightRange` 返回当前定位高亮透明度与文字范围。
 - `messageDataHits` 表示引用原文等单条消息从缓存恢复的次数；`rendered` 记录会话列表首次与最近一次实际绘制的标签和行数。
 - `preloadedPeers` 是已预加载首屏的会话；`preloadQueued`、`preloadActive`、`preloadCacheHits`、`preloadNetworkRequests`、`preloadCancellations` 可验证未点击前的后台加载与取消。

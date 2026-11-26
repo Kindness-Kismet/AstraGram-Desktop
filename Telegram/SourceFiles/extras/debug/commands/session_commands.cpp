@@ -336,6 +336,11 @@ using json = nlohmann::json;
 				}
 			}
 		} else {
+			auto events = json::array();
+			for (const auto &event : list->debugAnimationEvents()) {
+				events.push_back(event.toStdString());
+			}
+			result["animationEvents"] = std::move(events);
 			for (const auto view : list->debugItems()) {
 				append(view, list->itemTop(view));
 			}

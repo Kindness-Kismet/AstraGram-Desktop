@@ -783,6 +783,7 @@ const HandlerMap &simulationHandlers() {
 		} },
 		{ u"simulation.list"_q, &listSimulationScenes },
 		{ u"simulation.message-order"_q, &simulationMessageOrder },
+		{ u"simulation.history-jump"_q, &simulationHistoryJump },
 		{ u"simulation.open"_q, &openSimulationScene },
 	};
 	return result;

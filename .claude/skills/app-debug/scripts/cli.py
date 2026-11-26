@@ -86,6 +86,7 @@ GENERIC_COMMANDS = {
     'message.cache-vote': '仅在当前真实账号收藏投票：<消息编号> <答案下标>',
     'message.cache-play': '播放当前真实账号收藏中的语音、圆视频或音乐：<消息编号>，通过 player.state 核对实际播放',
     'simulation.cache-history-check': '在独立模拟配置中验证固定历史缓存边界，返回异步任务；不请求网络或清全缓存',
+    'simulation.history-jump': '在独立模拟配置中分步构造内存历史缺口：prepare <新增条数 1..500> 返回样本状态；deliver <尾部条数 1..500> 交付历史，incoming 插入实时来信，state 查询编号',
     'simulation.message-order': '在独立模拟配置分步复现并发消息换号与排序：prepare <text|long|sticker|photo|file> <text|long|sticker|photo|file> <before|same|after> [--with caseId] 返回 caseId；--with 共享已有样本的来信时间，local、incoming、confirm、state 可附 caseId，省略时操作最近一组',
     'theme.editor.open': '在独立模拟配置中打开原生主题创建器',
     'theme.editor.state': '查询当前主题创建器的尺寸、选中颜色和修改状态',
