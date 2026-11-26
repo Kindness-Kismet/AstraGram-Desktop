@@ -1,6 +1,5 @@
 import glob
 import hashlib
-import os
 import re
 import subprocess
 from pathlib import Path
@@ -32,12 +31,12 @@ def installed_prefix(stage_name: str) -> str | None:
     return None
 
 
-def compute_cache_key(stage: Stage, compiler_version: str | None = None) -> str:
+def compute_cache_key(stage: Stage, compiler_version: str) -> str:
     libraries_key, third_party_key = environment_keys()
     env_key = third_party_key if stage.location == "ThirdParty" else libraries_key
 
     objects = [env_key, stage.location, stage.name, stage.version, stage.commands]
-    if compiler_version is not None:
+    if stage.location == "Libraries":
         objects.append(f"MSVC={compiler_version}")
     for pattern in stage.dependencies:
         matches = glob.glob(str(LIBRARIES_ARCH_DIR / pattern))

@@ -171,8 +171,8 @@ commands below.
 **Prerequisites**
 
 - Visual Studio 2026 (Community is fine) with the **Desktop development with
-  C++** workload — that brings the v145 toolset (MSVC 14.51), ATL/MFC headers
-  and a bundled CMake. Older Visual Studio versions will not work.
+  C++** workload, including the v145 toolset (MSVC 14.52.37025 or later),
+  ATL/MFC headers and CMake.
 - Windows 10 SDK 10.0.26100.0 or later (tick it in the installer if missing).
 - [Python](https://www.python.org/downloads/) 3.10+ and
   [Git](https://git-scm.com/download/win).
@@ -201,8 +201,8 @@ output directory first.
 
 Worth knowing:
 
-- Dependencies only need rebuilding when submodule pointers or
-  `Telegram/build/version` change. Day-to-day edits just run `build.py`.
+- `prebuild.py` rebuilds dependencies when their recipes or toolchain inputs
+  change. Day-to-day edits just run `build.py`.
 - Builds use the public test API credentials by default. Pass
   `--api-id` / `--api-hash` to use your own.
 - The build defaults to 12 parallel jobs and accepts `--jobs 1` through

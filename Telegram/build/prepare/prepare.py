@@ -2,13 +2,13 @@ import os, sys, pprint, re, json, pathlib, hashlib, subprocess, glob, tempfile, 
 
 executePath = os.getcwd()
 sys.dont_write_bytecode = True
+os.environ['PYTHONDONTWRITEBYTECODE'] = '1'
 scriptPath = os.path.dirname(os.path.realpath(__file__))
 libjxlPatch = os.path.join(scriptPath, 'patches', 'libjxl-macos-universal.patch')
 qtMacPacPatch = os.path.join(scriptPath, 'patches', 'qt-macos-pac-cleanup.patch')
 sys.path.append(scriptPath + '/..')
 import qt_version
 import build_mac
-import msvc
 
 def finish(code):
     global executePath
@@ -179,6 +179,9 @@ for key in environment:
     environmentKeyString += part
     if not key in ignoreInCacheForThirdParty:
         envForThirdPartyKeyString += part
+if win:
+    toolsetVersion = os.environ.get('VCToolsVersion', '').rstrip('\\/')
+    environmentKeyString += 'MSVC=' + toolsetVersion + ';'
 if mac:
     environmentKeyString += subprocess.check_output(
         [macCompiler, '--version'], text=True)
@@ -242,8 +245,6 @@ def computeCacheKey(stage):
         stage['version'],
         stage['commands']
     ]
-    if winarm and stage['name'] == 'ffmpeg':
-        objects.append('MSVC=' + str(stage['msvc_version']))
     for pattern in stage['dependencies']:
         pathlist = glob.glob(os.path.join(libsDir, pattern))
         items = [pattern]
@@ -438,6 +439,9 @@ class _GetchWindows:
 getch = _Getch()
 
 def runStages():
+    if win and (not re.fullmatch(r'\d+(?:\.\d+){2,3}', toolsetVersion)
+            or tuple(map(int, toolsetVersion.split('.'))) < (14, 52, 37025)):
+        error('MSVC 14.52.37025 or newer is required to build dependencies.')
     onlyStages = []
     rebuildStale = False
     for arg in sys.argv[1:]:
@@ -462,12 +466,6 @@ def runStages():
     for stage in stages:
         if len(onlyStages) > 0 and not stage['name'] in onlyStages:
             continue
-        stageEnvironment = modifiedEnv
-        if winarm and stage['name'] == 'ffmpeg':
-            try:
-                stageEnvironment, stage['msvc_version'] = msvc.ffmpeg_environment(modifiedEnv)
-            except RuntimeError as exception:
-                error(str(exception))
         index = index + 1
         version = ('#' + str(stage['version'])) if (stage['version'] != '0') else ''
         prefix = '[' + str(index) + '/' + str(count) + '](' + stage['location'] + '/' + stage['name'] + version + ')'
@@ -513,7 +511,7 @@ def runStages():
         clearCacheKey(stage)
         print('BUILDING:')
         os.chdir(stage['directory'])
-        if not run(commands, stageEnvironment):
+        if not run(commands, modifiedEnv):
             print(prefix + ': FAILED')
             finish(1)
         writeCacheKey(stage)
