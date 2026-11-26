@@ -59,6 +59,7 @@
   },
   "notes": {
     "Telegram/CMakeLists.txt": "保留本项目自维护的测试入口，不恢复官方 tests.cmake、更新、编辑器和钱包测试入口。",
+    "Telegram/cmake/telegram_widget_helper.cmake": "版本文件的 CMAKE_CONFIGURE_DEPENDS 由根目录 extras_override_version 统一登记；不再用含 ../ 的路径重复登记，避免 Ninja 生成同名规则。",
     "Telegram/cmake/td_gram.cmake": "保留钱包业务库，不恢复 td_gram_test 与 gram/tests 的源码、样例数据登记。",
     "Telegram/cmake/td_iv.cmake": "保留即时预览业务库，不恢复 td_iv_article_test 与 iv/markdown/tests 的源码登记。",
     "Telegram/SourceFiles/iv/editor/iv_editor_widget*": "编辑器实现已按职责拆分；跨文件变量的定义必须使用与 extern 声明一致的显式类型。PreservingExternalFieldRestore 保留 thread_local Widget *，适配后用 GCC 检查声明与定义。",

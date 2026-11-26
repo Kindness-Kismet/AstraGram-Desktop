@@ -51,8 +51,6 @@ target_compile_definitions(TelegramWidgetHelper
 PRIVATE
     TDESKTOP_APP_VERSION=${desktop_app_version_int}
 )
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_LIST_DIR}/../build/version")
 
 target_link_libraries(TelegramWidgetHelper
 PRIVATE
