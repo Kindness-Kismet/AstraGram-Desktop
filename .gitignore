@@ -114,6 +114,7 @@
 !/scripts/**/
 !/scripts/**/*.py
 !/scripts/**/*.sh
+!/scripts/build_support/patches/*.diff
 !/lib/
 !/lib/xdg/
 !/lib/xdg/*.desktop
