@@ -12,6 +12,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/base_platform_file_utilities.h"
 #include "platform/win/update_install_win.h"
 
+#ifdef _DEBUG
+#include "extras/debug/window_focus.h"
+#endif
+
 #include <QtCore/QDateTime>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
@@ -24,6 +28,15 @@ namespace Platform {
 namespace {
 
 constexpr auto kMaxUpdateLogBytes = 1024 * 1024;
+
+[[nodiscard]] int LaunchShowCommand() {
+#ifdef _DEBUG
+	if (ExtrasDebug::WindowFocus::noFocus()) {
+		return SW_SHOWNOACTIVATE;
+	}
+#endif
+	return SW_SHOWNORMAL;
+}
 
 void WriteUpdateLog(const QString &installLogPath, const QString &status) {
 	auto content = QByteArray();
@@ -109,9 +122,22 @@ bool Launcher::launchUpdater(UpdaterLaunch action) {
 		: (cExeDir() + u"Updater.exe"_q);
 
 	auto argumentsList = QStringList();
+	auto passWorkingDir = customWorkingDir();
 	const auto pushArgument = [&](const QString &argument) {
 		argumentsList.push_back(argument.trimmed());
 	};
+#ifdef _DEBUG
+	if (cDebugProfile()) {
+		pushArgument(u"-debugprofile"_q);
+		passWorkingDir = true;
+	}
+	if (cDebugOffline()) {
+		pushArgument(u"-debugoffline"_q);
+	}
+	if (ExtrasDebug::WindowFocus::noFocus()) {
+		pushArgument(u"--no-focus"_q);
+	}
+#endif
 	if (cLaunchMode() == LaunchModeAutoStart) {
 		pushArgument(u"-autostart"_q);
 	}
@@ -121,7 +147,7 @@ bool Launcher::launchUpdater(UpdaterLaunch action) {
 	if (cStartInTray()) {
 		pushArgument(u"-startintray"_q);
 	}
-	if (customWorkingDir()) {
+	if (passWorkingDir) {
 		pushArgument(u"-workdir"_q);
 		pushArgument('"' + cWorkingDir() + '"');
 	}
@@ -188,7 +214,7 @@ bool Launcher::installProtectedUpdate() {
 	info.lpFile = nativeExecutable.c_str();
 	info.lpParameters = nativeParameters.c_str();
 	info.lpDirectory = nativeDirectory.c_str();
-	info.nShow = SW_SHOWNORMAL;
+	info.nShow = LaunchShowCommand();
 	auto installed = false;
 	auto status = QString();
 	auto installLogPath = UpdateInstallLogPath(cExeDir());
@@ -246,7 +272,7 @@ bool Launcher::launch(
 		nativeBinaryPath.c_str(),
 		arguments.toStdWString().c_str(),
 		nativeWorkingDir.empty() ? nullptr : nativeWorkingDir.c_str(),
-		SW_SHOWNORMAL);
+		LaunchShowCommand());
 	if (int64(result) <= 32) {
 		DEBUG_LOG(("Application Error: failed to execute %1, working directory: '%2', result: %3"
 			).arg(binaryPath

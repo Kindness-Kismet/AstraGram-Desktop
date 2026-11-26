@@ -390,17 +390,19 @@ void ReportProgress(const char *message) {
 	if (!held) {
 		return std::nullopt;
 	}
-	const auto target = Core::Updates::TargetFromPlatformKey(
-		AutoUpdateKey().toLatin1());
-	if (!target) {
-		error = u"This platform has no supported update target."_q;
-		return std::nullopt;
-	}
+	const auto target = Core::Updates::Target{
+		Core::Updates::Os::Linux,
+#if defined Q_PROCESSOR_ARM_64
+		Core::Updates::Arch::Arm,
+#else // Q_PROCESSOR_ARM_64
+		Core::Updates::Arch::X64,
+#endif // !Q_PROCESSOR_ARM_64
+	};
 	return Core::Updates::VerifyUpdate(
 		bytes,
 		Core::BuildUpdateChannel,
 		AppBetaVersion || beta,
-		*target,
+		target,
 		Core::RunningUpdateVersion(),
 		held,
 		root,
@@ -989,7 +991,7 @@ const QString &PrivateDirectory::path() const {
 #else // Q_PROCESSOR_ARM_64
 	constexpr auto machine = EM_X86_64;
 #endif // !Q_PROCESSOR_ARM_64
-	// 旧签名格式没有架构字段，覆盖安装文件前校验实际二进制。
+	// 覆盖安装文件前确认实际二进制与本机架构一致。
 	return count == ssize_t(sizeof(header))
 		&& !memcmp(header.e_ident, ELFMAG, SELFMAG)
 		&& header.e_ident[EI_CLASS] == ELFCLASS64
@@ -1014,16 +1016,9 @@ const QString &PrivateDirectory::path() const {
 		return ReportError(error);
 	}
 	ReportProgress("Verifying the update package.");
-	const auto oldFormat = !Core::Updates::IsV2UpdateFile(*bytes);
-	auto legacy = oldFormat
-		? Core::Updates::VerifyLegacyUpdate(
-			*bytes, QByteArray(UpdatesPublicKey), AppUpdateVersion, &error)
-		: std::optional<Core::Updates::LegacyUpdate>();
-	auto verified = oldFormat
-		? std::optional<Core::Updates::VerifiedUpdate>()
-		: VerifyPackage(*bytes, beta, error);
+	auto verified = VerifyPackage(*bytes, beta, error);
 	bytes.reset();
-	if (oldFormat ? !legacy : !verified) {
+	if (!verified) {
 		return ReportError(error);
 	}
 	const auto previousMask = umask(022);
@@ -1033,13 +1028,8 @@ const QString &PrivateDirectory::path() const {
 		return ReportError(error);
 	}
 	ReportProgress("Extracting the authenticated package into private staging.");
-	const auto version = legacy
-		? Core::Updates::MakeUpdateVersion(legacy->version, 0)
-		: verified->envelope.version;
-	auto uncompressed = legacy
-		? std::make_optional(std::move(legacy->uncompressed))
-		: Core::Updates::DecompressUpdatePayload(*verified, &error);
-	legacy.reset();
+	const auto version = verified->envelope.version;
+	auto uncompressed = Core::Updates::DecompressUpdatePayload(*verified, &error);
 	verified.reset();
 	if (!uncompressed) {
 		return ReportError(error);
@@ -1226,11 +1216,7 @@ std::optional<QString> ValidateProtectedUpdate(
 		return std::nullopt;
 	}
 #ifndef TDESKTOP_DISABLE_AUTOUPDATE
-	const auto verified = Core::Updates::IsV2UpdateFile(bytes)
-		? VerifyPackage(bytes, beta, error).has_value()
-		: Core::Updates::VerifyLegacyUpdate(
-			bytes, QByteArray(UpdatesPublicKey), AppUpdateVersion, &error).has_value();
-	if (!verified) {
+	if (!VerifyPackage(bytes, beta, error)) {
 		return std::nullopt;
 	}
 	const auto installation = OpenInstallation(error);

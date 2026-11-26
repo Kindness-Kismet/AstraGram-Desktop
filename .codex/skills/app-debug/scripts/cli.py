@@ -368,8 +368,10 @@ def register_commands(sub) -> None:
     command.add_argument("--force", action="store_true", help="模拟结束任务，跳过正常退出；仍核对进程路径")
     sub.add_parser("app.ping", help="探活，返回 pong")
     sub.add_parser("app.info", help="查询版本、配置目录、会话和窗口状态")
-    sub.add_parser("app.check-update", help="触发一次更新检查，结果看 tupdates 目录与日志")
-    sub.add_parser("app.update-info", help="查询更新源前缀：文件内容与内存里解析出的地址")
+    command = sub.add_parser("app.check-update", help="触发更新检查；独立离线配置可指定回环 HTTP 更新源")
+    command.add_argument("prefix", nargs="?", help="本地 HTTP 前缀，例如 http://127.0.0.1:20101")
+    sub.add_parser("app.update-info", help="查询更新源、下载状态、字节数和已验签版本")
+    sub.add_parser("app.install-update", help="在独立离线配置中沿正式重启路径安装已验签更新")
     sub.add_parser("app.help", help="列出服务端已注册的全部指令名")
     command = sub.add_parser("player.state", help="查询当前媒体的播放状态")
     command.add_argument("kind", nargs="?", choices=("song", "voice"))
@@ -650,7 +652,7 @@ def build_server_command(args: argparse.Namespace) -> str:
     command = args.command
     if command in GENERIC_COMMANDS:
         return " ".join([command, *map(quote_arg, args.params)])
-    if command in ("settings.keys", "settings.dump"):
+    if command in ("settings.keys", "settings.dump", "app.check-update"):
         return command + (" " + quote_arg(args.prefix) if args.prefix is not None else "")
     if command == "player.state":
         return command + (" " + args.kind if args.kind else "")
@@ -1025,8 +1027,11 @@ def port_owner_pid() -> int | None:
 def is_expected_process(pid: int) -> bool:
     if sys.platform == "win32":
         result = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", f"(Get-Process -Id {pid} -ErrorAction Ignore).Path"],
+            ["powershell", "-NoProfile", "-Command",
+             "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); "
+             f"(Get-Process -Id {pid} -ErrorAction Ignore).Path"],
             text=True,
+            encoding="utf-8",
             errors="replace",
             capture_output=True,
             check=False,

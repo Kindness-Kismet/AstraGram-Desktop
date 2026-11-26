@@ -537,16 +537,9 @@ bool RemoveStaging(const QString &path) {
 		return fail(error);
 	}
 	log.write(u"Update install: verifying the update package."_q);
-	const auto oldFormat = !Core::Updates::IsV2UpdateFile(*bytes);
-	auto legacy = oldFormat
-		? Core::Updates::VerifyLegacyUpdate(
-			*bytes, QByteArray(UpdatesPublicKey), AppUpdateVersion, &error)
-		: std::optional<Core::Updates::LegacyUpdate>();
-	auto verified = oldFormat
-		? std::optional<Core::Updates::VerifiedUpdate>()
-		: VerifyPackage(*bytes, beta, error);
+	auto verified = VerifyPackage(*bytes, beta, error);
 	bytes.reset();
-	if (oldFormat ? !legacy : !verified) {
+	if (!verified) {
 		return fail(error);
 	}
 	const auto temp = staging + u"/temp"_q;
@@ -561,16 +554,11 @@ bool RemoveStaging(const QString &path) {
 		}
 	});
 	log.write(u"Update install: extracting the package into staging."_q);
-	const auto version = legacy
-		? Core::Updates::MakeUpdateVersion(legacy->version, 0)
-		: verified->envelope.version;
-	const auto canary = verified
-		&& ((verified->envelope.channel == Core::Updates::Channel::CanaryPublic)
-			|| (verified->envelope.channel == Core::Updates::Channel::CanaryPrivate));
-	auto uncompressed = legacy
-		? std::make_optional(std::move(legacy->uncompressed))
-		: Core::Updates::DecompressUpdatePayload(*verified, &error);
-	legacy.reset();
+	const auto version = verified->envelope.version;
+	const auto canary
+		= (verified->envelope.channel == Core::Updates::Channel::CanaryPublic)
+		|| (verified->envelope.channel == Core::Updates::Channel::CanaryPrivate);
+	auto uncompressed = Core::Updates::DecompressUpdatePayload(*verified, &error);
 	verified.reset();
 	if (!uncompressed) {
 		return fail(error);
@@ -735,10 +723,6 @@ bool ValidateProtectedUpdate(
 #ifndef TDESKTOP_DISABLE_AUTOUPDATE
 	if (!ProtectedModeSupported(error)) {
 		return false;
-	}
-	if (!Core::Updates::IsV2UpdateFile(bytes)) {
-		return Core::Updates::VerifyLegacyUpdate(
-			bytes, QByteArray(UpdatesPublicKey), AppUpdateVersion, &error).has_value();
 	}
 	return VerifyPackage(bytes, beta, error).has_value();
 #else // !TDESKTOP_DISABLE_AUTOUPDATE

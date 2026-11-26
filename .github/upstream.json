@@ -27,6 +27,7 @@
     "README.md": "本仓库自己维护。",
     "changelog.txt": "已删除，发布说明写在 .github/CHANGELOG.md。",
     "Telegram/Resources/uwp/": "不发布微软商店包，目录已删除。",
+    "Telegram/Resources/update/": "使用 AstraGram 自有 V2 根公钥和签名清单，不引入官方发布密钥。",
     "Telegram/build/version": "本应用版本号的唯一来源，由 version-bump 维护。",
     "Telegram/SourceFiles/core/version.h": "版本数值改为从 Telegram/build/version 生成，官方每次发版都会改这里。",
     "Telegram/Resources/winrc/Telegram.rc": "版本数值改为从 Telegram/build/version 生成，官方每次发版都会改这里。",
@@ -61,6 +62,8 @@
     "Telegram/cmake/td_gram.cmake": "保留钱包业务库，不恢复 td_gram_test 与 gram/tests 的源码、样例数据登记。",
     "Telegram/cmake/td_iv.cmake": "保留即时预览业务库，不恢复 td_iv_article_test 与 iv/markdown/tests 的源码登记。",
     "Telegram/SourceFiles/iv/editor/iv_editor_widget*": "编辑器实现已按职责拆分；跨文件变量的定义必须使用与 extern 声明一致的显式类型。PreservingExternalFieldRestore 保留 thread_local Widget *，适配后用 GCC 检查声明与定义。",
+    "Telegram/SourceFiles/_other/packer.cpp": "仅生成 V2 更新包，私钥在签名时从外部文件读取；不恢复旧 RSA/SHA1 包和 alpha 签名分支。",
+    "Telegram/SourceFiles/core/update_checker.cpp": "仅接受 V2 更新包和 current6 清单，保留自有更新源、原包重验及 Debug 独立配置的本地验收入口。",
     "Telegram/SourceFiles/core/core_settings.cpp": "保留 ASG1 配置头和本地字段布局。语言迁移不能套官方 Qt 5 阈值：本地 7.3.1 期间已从 Qt 5 切到 Qt 6，缺少明确方案时保留歧义编号。",
     "Telegram/build/prepare/prepare.py": "依赖配方固化在 scripts/build_support/recipes.py、recipes_arm64.py 与 recipes_rust.py，官方改动要对照同步到这些文件，只合并本文件不会影响构建。",
     "Telegram/build/qt_version.py": "两个 Windows 架构都固定用其中的 Qt 6 版本，不再选择 Qt 5；官方改 Qt 6 版本时同步 scripts/build_support/recipes.py 的 QT_VERSION，并确认补丁仓库有对应的 qtbase 补丁目录。",
@@ -82,7 +85,5 @@
     "Telegram/SourceFiles/dialogs/ui/dialogs_bottom_button.*": "本地只使用加载更多按钮，保留窗口材质订阅和背景色，不恢复底部安装更新按钮及其图标。",
     "Telegram/cmake/telegram_options.cmake": "不恢复官方 -testagent、Release 测试运行器、本地化捕获及 TDESKTOP_BUILD_UPDATE_TESTS 选项，调试继续使用 extras/debug。"
   },
-  "deferred": {
-    "Telegram/SourceFiles/core/update_checker.cpp": "暂缓删除旧格式更新包兼容：本项目发布流程仍以自有签名生成旧格式包，待配套发包流程迁移后再移除；解压与路径校验已采用新版共用实现。"
-  }
+  "deferred": {}
 }

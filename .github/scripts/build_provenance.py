@@ -3,11 +3,17 @@
 
 from __future__ import annotations
 
+import sys
+
+sys.dont_write_bytecode = True
+
+import os
+
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 import argparse
 import json
-import os
 import subprocess
-import sys
 import time
 import urllib.error
 import urllib.parse
@@ -271,7 +277,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     write = commands.add_parser("write-artifact-manifest", help="生成目标产物来源清单")
     write.add_argument("--platform", choices=("windows", "linux", "macos"), required=True)
-    write.add_argument("--arch", choices=("x64", "arm64", "universal"), required=True)
+    write.add_argument("--arch", choices=("x64", "arm64"), required=True)
     for name in (
         "source-repository", "source-ref", "source-sha", "builder-repository", "version",
     ):

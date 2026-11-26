@@ -34,6 +34,7 @@ AstraGram 是 Telegram Desktop 的 fork，前身为 AyuGram Desktop，在上游�
 |---|---|
 | [应用配置](Telegram/SourceFiles/config.h)、[构建路径](scripts/build_support/paths.py) | 应用身份、稳定产物名、目标架构、输出路径和共享路径定位 |
 | [版本源](Telegram/build/version)、[更新日志](.github/CHANGELOG.md) | 应用唯一发布版本与公开变更说明 |
+| [更新信任根](Telegram/Resources/update)、[签名管理](scripts/update_signing.py)、[更新打包](scripts/package_update.py) | V2 公钥与根签名清单；私钥在打包时从外部读取，CI 使用 `UPDATE_SIGNING_KEY` |
 | [工具链](scripts/build_support/toolchain.py)、[依赖配方](scripts/build_support/recipes.py) | MSVC/CMake 工具链、Qt 等依赖版本及缓存输入 |
 | [产品构建](scripts/build_support/builder.py)、[CMake 清单](Telegram/CMakeLists.txt) | 编译参数、并发、生成器、源码与产物消费者 |
 | [源码检查](scripts/build_support/source_policy.py) | 自有代码范围、第三方及生成物边界、文件行数检查；风格规则由 code-style 维护 |
@@ -123,6 +124,9 @@ AstraGram 是 Telegram Desktop 的 fork，前身为 AyuGram Desktop，在上游�
 | 只读检查技能一致性 | `python scripts/build_support/sync_skills.py --check`；核对文件集合与字节，排除 Python 缓存，无需 SDK、编译器或应用 |
 | 查看调试命令 | `python .codex/skills/app-debug/scripts/cli.py --help`；具体命令使用 `<命令> --help`，实际任务步骤查 app-debug |
 | 调用调试命令 | `python .codex/skills/app-debug/scripts/cli.py <命令> [参数]`；用独立 `+` 串联命令，示例：`app.start --no-focus --offline --profile simulation + simulation.enter` |
+| 生成 V2 更新签名材料 | `python scripts/update_signing.py init --private-dir <忽略的私钥目录>`；生成独立 Ed25519 根与发布密钥，并更新内置公钥清单；已有私钥拒绝覆盖 |
+| 签署变更后的密钥清单 | `python scripts/update_signing.py sign-manifest --private-dir <私钥目录>`；校验根公钥匹配后签名原始 manifest；先递增清单版本，根私钥仅离线保存 |
+| 生成签名更新包 | `python scripts/package_update.py --packer <原生Packer> --platform windows --arch x64 --input-dir <产物目录> --output-dir <输出目录> --path AstraGram.exe --path Updater.exe --path modules --private-key <发布私钥>`；平台支持 `windows/linux/macos`，架构支持 `x64/arm64`；默认从版本文件读通道和更新码，本地验收可用 `--version`、`--channel` 覆盖；CI 从 `UPDATE_SIGNING_KEY` 取发布私钥 |
 | 查看或修改应用版本 | `python scripts/build_support/version.py` 查询当前值；传 `<官方版本>[.<修订号>]` 修改版本文件，执行条件按 version-bump |
 | 检查官方版本 | `python .codex/skills/upstream-sync/scripts/upstream.py check`；包含正式和测试 tag |
 | 生成上游报告 | `python .codex/skills/upstream-sync/scripts/upstream.py report`；`--to <版本>` 指定目标，`--base <版本>` 指定比较基线 |

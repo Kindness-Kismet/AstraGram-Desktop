@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
+import sys
+
+sys.dont_write_bytecode = True
+
+import os
+
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 import hashlib
 import json
 import re
 from pathlib import Path
+
+from release_update_map import update_link
 
 
 SOURCE_REPOSITORY = "Kindness-Kismet/AstraGram-Desktop"
@@ -14,38 +24,32 @@ TARGETS = {
     "windows-x64": {
         "repository": "Kindness-Net/AstraGram-Desktop-Windows-Build",
         "archive_platform": "win",
-        "updater_prefixes": ("tx64upd",),
+        "update_platform": "win64",
     },
     "windows-arm64": {
         "repository": "Kindness-Net/AstraGram-Desktop-Windows-ARM64-Build",
         "archive_platform": "win",
-        "updater_prefixes": ("tarm64upd",),
+        "update_platform": "winarm",
     },
     "linux-x64": {
         "repository": "Kindness-Net/AstraGram-Desktop-Linux-Build",
         "archive_platform": "linux",
-        "updater_prefixes": ("tlinuxupd",),
+        "update_platform": "linux",
     },
     "linux-arm64": {
         "repository": "Kindness-Net/AstraGram-Desktop-Linux-Build",
         "archive_platform": "linux",
-        "updater_prefixes": ("tlinuxarmupd",),
+        "update_platform": "linuxarm",
     },
     "macos-x64": {
         "repository": "Kindness-Net/AstraGram-Desktop-macOS-Build",
         "archive_platform": "macos",
-        "updater_prefixes": ("tmacupd",),
+        "update_platform": "mac",
     },
     "macos-arm64": {
         "repository": "Kindness-Net/AstraGram-Desktop-macOS-Build",
         "archive_platform": "macos",
-        "updater_prefixes": ("tarmacupd",),
-    },
-    # 兼容旧版 Universal builder 的来源清单；新 Release 不再声明这个目标。
-    "macos-universal": {
-        "repository": "Kindness-Net/AstraGram-Desktop-macOS-Build",
-        "archive_platform": "macos",
-        "updater_prefixes": ("tmacupd", "tarmacupd"),
+        "update_platform": "armac",
     },
 }
 
@@ -105,9 +109,11 @@ def _target_key(platform: str, arch: str) -> str:
 
 def _expected_filenames(platform: str, arch: str, version: str, appupdateversion: int) -> set[str]:
     target = TARGETS[_target_key(platform, arch)]
+    channel = "beta" if version.endswith(("-beta", ".beta")) else "stable"
+    update = update_link(target["update_platform"], channel).removeprefix("/")
     return {
         f"AstraGram-v{version}-{target['archive_platform']}-{arch}.zip",
-        *(f"{prefix}{appupdateversion}" for prefix in target["updater_prefixes"]),
+        update.format(version=appupdateversion),
     }
 
 
@@ -295,7 +301,7 @@ def _manifest_paths(all_files: list[Path]) -> dict[str, Path]:
         if not path.name.startswith("provenance-") or not path.name.endswith(".json"):
             continue
         match = re.fullmatch(
-            r"provenance-(windows|linux|macos)-(x64|arm64|universal)\.json",
+            r"provenance-(windows|linux|macos)-(x64|arm64)\.json",
             path.name,
         )
         if not match:

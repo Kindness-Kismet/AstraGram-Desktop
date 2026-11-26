@@ -62,15 +62,18 @@ private:
 bool checkReadyUpdate();
 // 已下载就绪的更新版本整数，读不到或为测试通道时返回 0。
 [[nodiscard]] uint64 ReadyUpdateVersion();
-#if defined Q_OS_MACOS || defined Q_OS_WIN
 enum class ReadyUpdateInstall {
 	Failed,
 	Unpacked,
 	Protected,
 };
 [[nodiscard]] ReadyUpdateInstall prepareReadyUpdate();
-#endif // Q_OS_MACOS || Q_OS_WIN
 void UpdateApplication();
-QString countAlphaVersionSignature(uint64 version);
+
+#ifdef _DEBUG
+// 本地验收只允许独立离线配置使用回环更新源。
+[[nodiscard]] bool SetDebugUpdatePrefix(const QString &prefix);
+[[nodiscard]] QString DebugUpdatePrefix();
+#endif // _DEBUG
 
 } // namespace Core
