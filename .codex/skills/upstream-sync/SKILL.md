@@ -27,12 +27,7 @@ description: "同步官方 Telegram Desktop 最新 tag，包含稳定版与测�
 
 ## 检查与报告
 
-```bash
-python .codex/skills/upstream-sync/scripts/upstream.py check                          # 官方有没有更新的 tag，包含测试版
-python .codex/skills/upstream-sync/scripts/upstream.py report                         # 从已登记版本到官方最新 tag
-python .codex/skills/upstream-sync/scripts/upstream.py report --to 7.2.10             # 固定目标，正式版和测试版均可
-python .codex/skills/upstream-sync/scripts/upstream.py report --base 7.2.7 --to 7.2.9 # 指定基线，用于演练或复查
-```
+脚本调用、目标版本与报告基线参数见根 [AGENTS 的工程入口](../../../AGENTS.md#工程入口)。先检查官方 tag，再按实际范围生成报告；目标同时包含正式版与测试版。
 
 报告按**已提交的 HEAD** 计算，工作区未提交的改动不计入；同步过程中分批提交后重新生成，
 “已与目标一致”会随之增加，可以当作进度。报告保存在 `build/upstream-sync/<基线>-<目标>/`：
@@ -61,7 +56,7 @@ python .codex/skills/upstream-sync/scripts/upstream.py report --base 7.2.7 --to 
   标注“可能已按职责拆分”的文件，要把官方改动手动分发到本地拆分后的文件；
   标注了 `notes` 的文件按说明处理，例如 `prepare.py` 的改动要同步到 `scripts/build_support/recipes.py`。
 - **fork 子模块**：与官方历史相通，在子模块里 `git merge` 官方目标提交，编译通过后推送到 fork，
-  再在主仓库 `git add <子模块路径>`。各仓库的实际推送统一按同级 [git-push skill](../git-push/SKILL.md) 核对范围与授权次数。
+  编译验证完成并确认 fork 远端可取得合并提交后，再更新主仓库子模块指针。
 
   | 子模块 | fork 分支 |
   |---|---|
@@ -76,22 +71,16 @@ python .codex/skills/upstream-sync/scripts/upstream.py report --base 7.2.7 --to 
 本机子模块没有登记在 `.git/config`，`git submodule update` 用不了；子模块目录的所有者也和当前用户不同。
 手动操作子模块时每条命令都加 `-c safe.directory='*'`，不要改全局 git 配置，报告里给出的命令已经带上。
 
-子模块指针或依赖配方有变化时，先运行 `python scripts/prebuild.py`，再编译验证。
+子模块指针或依赖配方变化时，按根 AGENTS 的准备与构建入口验证受影响部分；已用相同依赖完成的有效构建结果直接继承。
 暂时不跟进的改动写进 `deferred`（路径与原因），之后每次报告都会列出，补上后删除。
 
 ## 登记
 
-适配完成且编译验证通过后：
-
-```bash
-python .codex/skills/upstream-sync/scripts/upstream.py done <已适配的官方版本>
-```
+适配完成且编译验证通过后，使用根 AGENTS 的上游登记入口写入已适配的官方版本。
 
 `done` 会检查每个子模块已提交的指针等于或包含官方该版本的指针，不满足时拒绝登记；只能往更新的版本登记。
-随后用 version-bump 准备 `<官方版本>[.<修订号>]`，按原有 main 发布流程处理。
-更新说明写明所适配的 Telegram Desktop 版本；不要把上游 beta 标记复制成我们的版本后缀或发布通道。
+官方基线登记与应用发版分别执行；只有用户要求准备发布时才处理应用发布版本和更新说明。
 
-## 提交
+## 完成核对
 
-按 commit skill 逐个路径暂存，标题用英文。建议拆成：tdesktop 的适配（改动多时按领域拆开）、
-每个子模块指针的更新、`done` 登记、版本发布，各自单独提交。
+核对官方目标、合并后的定制行为、实际编译结果和子模块远端可取性，登记成功后确认配置中的基线。未跟进项保留到 `deferred`，不把应用版本发布状态混入适配结果。

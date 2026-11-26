@@ -12,10 +12,10 @@
 进入时自动构造 30 个会话、15 个话题和 3 个收藏来源，无需下载素材。
 固定场景按原生会话标签分类；使用 `simulation.open` 定位，使用 `simulation.trigger` 触发临时提示。
 
-```bash
-python .codex/skills/app-debug/scripts/cli.py app.start --no-focus --profile simulation + simulation.enter
-python .codex/skills/app-debug/scripts/cli.py simulation.list
-python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot.take
+```text
+app.start --no-focus --profile simulation + simulation.enter
+simulation.list
+simulation.open group + screenshot.take
 ```
 
 `app.info` 的 `simulationMode: true` 确认身份。已有真实会话时拒绝进入；已在模拟模式中再次调用保持现场。
@@ -36,9 +36,9 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 覆盖有效与非法 PNG 位深、分组放大上限、单次及同帧累计彩色字形预算、local/session 存储 4096 字节接受与 4097 字节拒绝；结束时恢复原存储值。
 验证前等待样本加载完成，期间不操作卡片；该入口不加载官方测试源码或测试运行器。
 
-```bash
-python .codex/skills/app-debug/scripts/cli.py app.start --no-focus --profile upstream-741 + simulation.enter + simulation.widget show
-python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screenshot.take
+```text
+app.start --no-focus --profile upstream-741 + simulation.enter + simulation.widget show
+simulation.widget state + screenshot.take
 ```
 
 截图前等待 `runtime` 为 `live`、`loaded` 与 `hasContent` 为 `true`。按钮通过聊天列表内的 `control.mouse` 或 `control.pointer` 操作，
@@ -241,12 +241,12 @@ python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screensh
 
 设置行的宽窄对照先选回主窗口，再调整窗口尺寸，等待布局完成后截图：
 
-```bash
-python .codex/skills/app-debug/scripts/cli.py control.window main + window.resize 1000 800 + dialog.open settings-layout
-python .codex/skills/app-debug/scripts/cli.py screenshot.take + control.list simulation.settings
-python .codex/skills/app-debug/scripts/cli.py window.resize 430 800
-python .codex/skills/app-debug/scripts/cli.py screenshot.take + control.list settings.row
-python .codex/skills/app-debug/scripts/cli.py dialog.open permissions
+```text
+control.window main + window.resize 1000 800 + dialog.open settings-layout
+screenshot.take + control.list simulation.settings
+window.resize 430 800
+screenshot.take + control.list settings.row
+dialog.open permissions
 ```
 
 先用 `simulation.list`、`message.list/inspect`、`chat.draft` 核对状态，再截图观察布局。

@@ -19,11 +19,11 @@
 没有键名的流程页在 `sectionClass` 给出页面类型。
 验证两种布局时先用 `window.resize` 调整窗口：
 
-```bash
-python .codex/skills/app-debug/scripts/cli.py page.list
-python .codex/skills/app-debug/scripts/cli.py page.open settings + control.list
-python .codex/skills/app-debug/scripts/cli.py window.resize 570 900 + page.open business-greeting + page.current
-python .codex/skills/app-debug/scripts/cli.py control.get '<控件编号或名称>'
+```text
+page.list
+page.open settings + control.list
+window.resize 570 900 + page.open business-greeting + page.current
+control.get '<控件编号或名称>'
 ```
 
 通知、隐私、账号资料、安全、设备、下载与存储、代理、聊天文件夹、商业功能、快捷回复、

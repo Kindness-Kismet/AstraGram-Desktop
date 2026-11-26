@@ -1,5 +1,7 @@
 # 控件树与合成交互
 
+脚本入口见根 AGENTS，示例表示传给该入口的命令参数。
+
 `control.window [main|objectName|#序号]` 查询或选择控件与截图的目标顶层窗口，不改变系统焦点。
 默认目标为主窗口；例如 `control.window simulation.wallet` 选择模拟钱包，关闭该窗口后自动恢复主窗口。
 图片和视频查看器用 `control.window media.viewer` 选择，内容区标识为 `media.viewerBody`。
@@ -57,9 +59,9 @@
 按控件内坐标命中子控件并合成进入、移动事件，依次通知经过的父控件，用于观察消息按钮及菜单悬停。
 不移动系统鼠标、不按下按钮；省略坐标时清除上一次合成悬停。真实鼠标操作可能覆盖这个状态。
 
-```bash
-python .codex/skills/app-debug/scripts/cli.py control.pointer historyScroll 160 240
-python .codex/skills/app-debug/scripts/cli.py control.pointer historyScroll
+```text
+control.pointer historyScroll 160 240
+control.pointer historyScroll
 ```
 
 ## `control.key <目标> <导航键|数字串|单个按键组合>`
@@ -90,8 +92,8 @@ control.drop-files <目标> <本地文件路径>... 仅限本进程模拟模式�
 聊天输入框的行数变化带 250 毫秒高度过渡，`height` 是修改瞬间的高度；最终高度等过渡结束后用 `control.list` 核对，
 需要观察过渡中间帧时先用 `anim.speed` 放慢。
 
-```bash
-python .claude/skills/app-debug/scripts/cli.py control.input messageInput --file build/compose-test.txt
+```text
+control.input messageInput --file build/compose-test.txt
 ```
 
 ## `control.list [filter] [--all]`
@@ -100,11 +102,10 @@ python .claude/skills/app-debug/scripts/cli.py control.input messageInput --file
 objectName（`name`）、accessibleName（`accessible`）、文本（`text`）、相对父级与全局几何
 （`rect` / `globalRect`）、`visible` / `enabled`。
 
-```bash
-python .claude/skills/app-debug/scripts/cli.py control.list
-python .claude/skills/app-debug/scripts/cli.py control.list sendButton
-python .claude/skills/app-debug/scripts/cli.py control.list --all
-# {"total":386,"shown":386,"truncated":false,"widgets":[{"index":0,"depth":0,...}]}
+```text
+control.list
+control.list sendButton
+control.list --all
 ```
 
 - 过滤参数是子串匹配（objectName / 类名 / accessibleName / 文本），只影响展示；
@@ -121,15 +122,18 @@ id 即 objectName，如 `extras/quick/autoSpaceSending`、`extras/cat/ghost`）�
 
 聊天顶栏的通话按钮为 `chat.call`、`chat.videoCall`、`chat.groupCall`，分别对应语音、视频和群视频聊天。
 
+## `control.fonts [filter]`
+
+查询当前可见设置卡片的标签、行按钮和勾选框文字，过滤器按文字不区分大小写匹配。返回 `items`，每项包含 `kind`、`text`、`px`、`bold`、`left`、`top`、`card`；字号与坐标换算到 100% 样式比例，位置相对页面内容区。
+
 ## `control.click <objectName | #序号> [--all]`
 
 点击控件。按钮直接执行控件动作，不经过系统输入和命中测试；其余控件在中心做命中测试，
 沿 Enter → Press → Release → Leave 顺序投递鼠标事件。不依赖窗口前台与真实光标。
 
-```bash
-python .claude/skills/app-debug/scripts/cli.py control.click mainMenuButton
-python .claude/skills/app-debug/scripts/cli.py control.click "#42"
-# {"class":"Ui::IconButton","name":"mainMenuButton","receiver":"...","point":[44,66],"handled":true}
+```text
+control.click mainMenuButton
+control.click "#42"
 ```
 
 - 寻址：objectName（先活动窗口，再全部顶层）或 `#序号`（对应默认 `control.list` 的

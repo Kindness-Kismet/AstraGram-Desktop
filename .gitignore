@@ -183,8 +183,11 @@
 !/Telegram/ThirdParty/libprisma/
 !/Telegram/ThirdParty/lz4/
 !/Telegram/ThirdParty/nimf/
+!/Telegram/ThirdParty/nova-safe/
 !/Telegram/ThirdParty/range-v3/
 !/Telegram/ThirdParty/tgcalls/
+!/Telegram/ThirdParty/twidget/
+!/Telegram/ThirdParty/widget-sandbox/
 !/Telegram/ThirdParty/xdg-desktop-portal/
 !/Telegram/ThirdParty/xxHash/
 !/Telegram/ThirdParty/zxcvbn/

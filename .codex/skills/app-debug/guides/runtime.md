@@ -1,5 +1,13 @@
 # 运行控制与观察
 
+脚本入口、帮助和命令串联的调用形式见根 [AGENTS](../../../../AGENTS.md#工程入口)。下列示例是传给调试入口的命令参数。
+
+## 调试现场恢复
+
+先按根规范恢复任务记录，再核对源码根、当前 Debug 产物、`build/app-debug-profile.json` 中记住的配置、实际工作目录与端口占用进程。已有运行作业沿用原句柄查询终态，不因等待超时重启应用。
+
+独立 profile 与账号、临时设置和待清理草稿记录在当前阶段文件。先核对当前授权，再恢复必要操作；同一实例的全部调用串行执行。构建替换产物期间不调用自动启动入口。
+
 ## 服务端指令
 
 | 指令 | 参数 | 作用 |
@@ -42,9 +50,9 @@
 窗口动作沿用当前 `focus_mode`：`no-focus` 下不请求系统焦点，`focus` 下按应用正常行为显示。
 返回的 `visible`、`active` 分别表示可见和活动状态，`focus_mode` 为执行后的实际模式。
 
-```bash
-python .claude/skills/app-debug/scripts/cli.py window.resize 1300 900 + screenshot.take
-python .claude/skills/app-debug/scripts/cli.py window.maximize true + screenshot.take
+```text
+window.resize 1300 900 + screenshot.take
+window.maximize true + screenshot.take
 ```
 
 `window.material` 的 `mode` 为 0 关闭、1 云母、2 亚克力、3 模糊；`rootTint` 和 `pixel` 均按红、绿、蓝、透明度返回 0 至 255。
@@ -67,9 +75,9 @@ Windows 的 `nativeBackdrop` 为 1 关闭、2 云母、3 亚克力；`revision` 
 表示动画已被关闭，调速不起作用。Debug 版的 Ctrl+F11 / Ctrl+F12 改的是同一个倍率。
 观察结束后用 `anim.speed 1` 恢复。
 
-```bash
-python .claude/skills/app-debug/scripts/cli.py anim.speed 0.1 + chat.open-archive + screenshot.take
-python .claude/skills/app-debug/scripts/cli.py anim.speed 1
+```text
+anim.speed 0.1 + chat.open-archive + screenshot.take
+anim.speed 1
 ```
 
 `player.state [song|voice]` 查询指定类型或当前活动媒体的 `messageId`、播放状态 `playing`、位置 `position`、长度 `length`、时间单位 `frequency` 和循环模式 `repeat`（0 关闭、1 单曲、2 列表）。连续采样可验证自然结束后的重播，业务控制使用 `player.control`；键盘与焦点检查才使用界面。
@@ -95,15 +103,15 @@ python .claude/skills/app-debug/scripts/cli.py anim.speed 1
 | 指令 | 参数 | 作用 |
 |---|---|---|
 | `app.start` | `[--profile <名称>] [--background] [--offline] [--no-focus]` | 检查 Debug 应用是否运行，未运行时启动并等待端口就绪（最多 60 秒）；已在运行则保持不动。`--no-focus` 只作用于新启动的实例。 |
+| `app.ensure` | 同 `app.start` | 确保目标开发版就绪；已有实例经路径与配置核对后复用。 |
 | `app.restart` | 同上 | 无论是否在运行都先停止再启动已有开发版产物，等到端口就绪。 |
 | `app.stop` | `[--force]` | 校验端口 PID 的可执行文件路径必须匹配本仓库 `build/AstraGram-v*-win-x64-dev/AstraGram.exe`，再让应用自行退出；失败才回落到强制结束。端口未建立时只枚举路径匹配同一形态的进程。 |
 
 `app.start --focus-mode <focus|no-focus>` 只切换已运行实例，不创建新进程；目标不存在时
 直接报错。交互与非交互调用都不要把它当作启动参数。
 
-```bash
-python .claude/skills/app-debug/scripts/cli.py app.start --no-focus
-# Application is ready.
+```text
+app.start --no-focus
 ```
 
 ## PC 焦点模式
@@ -117,12 +125,12 @@ python .claude/skills/app-debug/scripts/cli.py app.start --no-focus
 - `no-focus` 下显示、还原、最大化、调整尺寸和托盘恢复都不改变系统前台，窗口保持在前台窗口后面的层级。
 - `window.activation` 只改应用内部焦点，与 `focus_mode` 是两套能力；需要真实系统焦点时切换 `focus` 并取得用户明确同意。
 
-```bash
-python .codex/skills/app-debug/scripts/cli.py app.start --no-focus
-python .codex/skills/app-debug/scripts/cli.py window.maximize true
-python .codex/skills/app-debug/scripts/cli.py window.tray hide + window.tray show --focus-mode no-focus
-python .codex/skills/app-debug/scripts/cli.py window.focus-mode no-focus
-python .codex/skills/app-debug/scripts/cli.py app.start --focus-mode no-focus
+```text
+app.start --no-focus
+window.maximize true
+window.tray hide + window.tray show --focus-mode no-focus
+window.focus-mode no-focus
+app.start --focus-mode no-focus
 ```
 
 平台相关的显示、层级与原生状态核对见 [Windows 焦点](focus/windows.md) 和
@@ -137,10 +145,7 @@ python .codex/skills/app-debug/scripts/cli.py app.start --focus-mode no-focus
 Debug 构建装了未处理异常过滤器：进程崩溃时把异常码与调用栈写进
 工作目录 `crash.log`（工作目录见 `app.info` 的 workingDir）。
 
-```bash
-python .claude/skills/app-debug/scripts/cli.py page.open extras   # 复现操作
-cat build/AstraGram-v*-win-x64-dev/crash.log                   # 读调用栈定位
-```
+运行中使用 `crash.log` 读取日志；进程已崩溃时直接读取已记录 `workingDir` 下的 `crash.log`，避免通过查询命令重新启动应用，也不按版本通配符猜测日志位置。
 
 本程序缺少匹配的 PDB 时，调用栈仅显示模块内偏移，无法定位函数名与行号。
 
@@ -149,10 +154,10 @@ cat build/AstraGram-v*-win-x64-dev/crash.log                   # 读调用栈定
 先退出当前调试应用，再选择独立配置。CLI 会记住选择，后续无需重复指定；
 数据保存至 `build/debug-profiles/simulation/`。
 
-```bash
-python .codex/skills/app-debug/scripts/cli.py app.stop
-python .codex/skills/app-debug/scripts/cli.py app.start --no-focus --profile simulation
-python .codex/skills/app-debug/scripts/cli.py simulation.enter
+```text
+app.stop
+app.start --no-focus --profile simulation
+simulation.enter
 ```
 
 独立配置使用 `-debugprofile`，`app.info` 应显示 `isolatedDebug: true`；外部链接正常打开。

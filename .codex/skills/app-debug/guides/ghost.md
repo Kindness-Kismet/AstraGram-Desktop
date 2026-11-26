@@ -12,9 +12,8 @@
   - `suggestGhostModeBeforeViewingStory` — 查看 Story 前提示
   - 五个 `*Locked` 只读锁位
 
-```bash
-python .claude/skills/app-debug/scripts/cli.py ghost.status
-# 返回账号编号和该账号的设置对象。
+```text
+ghost.status
 ```
 
 **前提**：必须已登录（`hasSession: true`），否则返回 `ERR no active session`。

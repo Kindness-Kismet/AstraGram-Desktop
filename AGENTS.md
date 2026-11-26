@@ -1,358 +1,135 @@
-# AstraGram — 项目规范与架构
+# AstraGram 项目约定
 
-AstraGram 是 Telegram Desktop 的 fork，前身是 AyuGram Desktop。本文档面向协作者和 AI 助手，说明项目结构、编码规范和构建流程。内容以本代码库的实际状态为准。
+## 项目结构与架构
 
----
+AstraGram 是 Telegram Desktop 的 fork，前身为 AyuGram Desktop，在上游能力上增加隐身模式、消息留档、正则过滤、文本处理和界面定制。采用 C++20、Qt、rpl、CMake 与 nlohmann::json，保留现有模块和按职责拆分的源码布局。
 
-## 项目定位
-
-在 Telegram Desktop 之上叠加五类定制能力：
-
-- **隐身模式**：控制已读回执、在线状态、输入状态的发送时机
-- **消息留档**：把已删除消息与编辑历史保存在本地
-- **正则过滤**：按正则表达式隐藏消息（含隐藏已拉黑用户的消息）
-- **文本处理**：中英文之间自动加空格、过滤异常组合字符
-- **界面定制**：宽消息倍率、头像圆角、开关样式等
-
-技术栈：C++20、Qt 6.12.0（静态编译，源码见 prebuild 的 `qt_6.12.0` 阶段，最低支持 Windows 10）、rpl 响应式库、CMake 3.16+、nlohmann::json。
-
----
-
-## 上游项目结构
-
-改代码前先确认文件应该放在哪里。本节说明各目录的职责划分。
-
-### 仓库骨架
-
-```
-AyuGramDesktop/
-├── Telegram/                # 全部产品源码
-│   ├── SourceFiles/         # 主源码（41 个顶层目录，见下）
-│   ├── CMakeLists.txt       # 源文件在此逐个登记（extras/ 同样逐文件列出）
-│   ├── cmake/               # 平台与依赖的 CMake 模块
-│   ├── codegen/             # 样式、emoji、TL scheme 的代码生成器
-│   ├── Resources/           # 图标、音频、翻译等资源
-│   ├── ThirdParty/          # 外部工具（msys2、gyp 等，由 prebuild 安装）
-│   ├── lib_ui/              # 界面基础库（fork 的子模块，本仓库有改动）
-│   ├── lib_tl/              # TL scheme 解析（fork 的子模块，改过 codegen）
-│   ├── lib_base / lib_crl / lib_rpl / lib_storage / ...  # 其余 desktop-app 子模块，一般不改
-│   └── 其余文件             # 均为上游原样
-├── scripts/                 # prebuild.py / build.py（见构建章节）
-├── .github/scripts/         # 只在云端运行的发版与缓存脚本，构建仓库按此路径调用
-└── .github/upstream.json    # 已适配的官方 tag 版本号与同步跳过规则
-```
-
-**子模块约定**：`lib_ui`、`lib_tl`、`codegen` 是 fork，改动先推到 fork 仓库，再更新主仓库的子模块指针；`cmake` 用官方子模块，定制由构建脚本打补丁。其余 `lib_*` 视为只读依赖。
-
-### SourceFiles 分层
-
-按职责分四层理解（目录名沿用 tdesktop 原名）：
-
-**进程与生命周期**
-
-| 目录 | 职责 |
+| 位置 | 职责与边界 |
 |---|---|
-| `main` | Account / Session / Domain 生命周期，多账号 |
-| `core` | `Core::App()` 全局单例，启动与退出流程，沙箱与更新调度 |
-| `platform` | Windows / macOS / Linux 的平台差异（通知、托盘、字体） |
-| `_other` | 打包、更新器、开机自启等安装周边 |
+| `Telegram/SourceFiles/main`、`core`、`platform`、`_other` | 账号与会话生命周期、应用入口、平台适配、打包与更新 |
+| `mtproto`、`api`、`data`、`storage`、`tde2e` | 协议、请求封装、内存数据、本地持久化与端到端加密；UI 和会话数据由主线程持有 |
+| `window`、`history`、`dialogs`、`chat_helpers` | 窗口与导航、消息列表、会话列表及输入辅助；`HistoryItem` 数据与消息视图分离 |
+| `media`、`editor`、`iv`、`overview`、`layout` | 媒体播放与查看、编辑、即时预览和媒体布局 |
+| `boxes`、`info`、`settings`、`calls` 等领域目录 | 通用弹窗、资料、官方设置、通话及各自业务 |
+| `ui`、`lang`、`tests` | 应用层控件、语言消费和已有测试；基础控件位于 `Telegram/lib_ui` |
+| `Telegram/SourceFiles/extras/features/<功能>` | 定制业务功能；界面放 `extras/ui`，持久化放 `extras/data`，转换与共用工具放 `extras/utils` |
+| `Telegram/SourceFiles/extras/debug` | Debug 调试服务和模拟数据；命令按领域放 `commands`，仅在 `_DEBUG` 编译 |
+| `Telegram/CMakeLists.txt` | 逐文件登记主应用源码，定制文件登记到 `extras_files`；拆分与新增文件同步维护此清单 |
+| `scripts`、`scripts/build_support` | 准备与构建入口、共享工具链、缓存、产物及工程检查；不反向依赖技能执行脚本 |
+| `.github/scripts`、`.github/workflows` | 云端构建、打包和发布编排 |
 
-**数据层**
+上表未写前缀的源码目录均位于 `Telegram/SourceFiles/`。新增功能沿现有状态持有方和依赖方向实现，不为目录形式迁移架构。
 
-| 目录 | 职责 |
+- `lib_ui`、`lib_tl`、`codegen` 是 fork 子模块；其余 `lib_*` 通常作为只读依赖。`cmake` 使用官方子模块，定制由构建补丁维护。
+- `extras/extras_ui_settings.h` 由 `Telegram/lib_ui/extras/` 提供，主应用和生成样式共同使用；保留样式生成器固定的包含路径。
+- UI、`Data::Session`、`History`、`PeerData` 由主线程持有；工作线程经 `extras/utils/telegram_helpers.h` 的 `dispatchToMainThread` 访问，不直接调用 `ExtrasSettings::getInstance()` 或 `Core::App()`。
+- 调试服务在主线程创建 `QTcpServer`，监听 `127.0.0.1:20100`，同步处理命令；服务和模拟模式受 `_DEBUG` 编译边界约束。
+- 应用实例身份按当前用户与 Debug / Release 类型区分，同一身份单实例；普通重复启动转交给已有实例。数据目录另有占用保护，具体实现见 `core/sandbox.cpp`。
+- 主窗口支持独立聊天等子窗口，关闭与常驻遵循托盘、`workMode`、`closeBehavior` 和平台策略；窗口位置、尺寸和最大化状态沿用 `Core::Settings` 的保存恢复。
+- 并行任务明确各自编辑范围，共享文件、Git 索引、构建产物和调试实例由单一负责人协调。
+
+## 配置来源
+
+| 来源 | 管理内容 |
 |---|---|
-| `mtproto` | MTProto 协议：数据中心列表、加密连接、授权状态 |
-| `api` | 主动请求的语义化封装（`ApiWrap` 一族），调用 MTProto 但不处理协议细节 |
-| `data` | 内存数据仓库：`PeerData` / `UserData` / `HistoryItem` / `Session`，全部在主线程 |
-| `storage` | 本地持久化：缓存、数据库、加密的 tdata |
-| `tde2e` | 端到端加密库 |
+| [应用配置](Telegram/SourceFiles/config.h)、[构建路径](scripts/build_support/paths.py) | 应用身份、稳定产物名、目标架构、输出路径和共享路径定位 |
+| [版本源](Telegram/build/version)、[更新日志](.github/CHANGELOG.md) | 应用唯一发布版本与公开变更说明 |
+| [工具链](scripts/build_support/toolchain.py)、[依赖配方](scripts/build_support/recipes.py) | MSVC/CMake 工具链、Qt 等依赖版本及缓存输入 |
+| [产品构建](scripts/build_support/builder.py)、[CMake 清单](Telegram/CMakeLists.txt) | 编译参数、并发、生成器、源码与产物消费者 |
+| [源码检查](scripts/build_support/source_policy.py) | 自有代码范围、第三方及生成物边界、文件行数检查；风格规则由 code-style 维护 |
+| [官方设置](Telegram/SourceFiles/core/core_settings.h)、[定制设置](Telegram/SourceFiles/extras/extras_settings.h) | 状态模型与序列化，定制设置界面位于 `extras/ui/settings/` |
+| [主窗口](Telegram/SourceFiles/window/main_window.cpp)、[界面基础库](Telegram/lib_ui/ui) | 窗口规格、状态持久化、标题栏与基础控件；主题样式由各模块 `.style` 和基础库维护 |
+| [启动与运行目录](Telegram/SourceFiles/core/launcher.cpp)、[实例管理](Telegram/SourceFiles/core/sandbox.cpp) | 工作目录、`tdata`、日志、实例锁与退出协调 |
+| [语言键及英文默认值](Telegram/Resources/langs/lang.strings)、[内置翻译](Telegram/Resources/langs/extras) | 官方与定制语言来源，保留当前语言包体系 |
+| [语言生成](Telegram/cmake/td_lang.cmake)、[内置资源注册](Telegram/Resources/qrc/extras/extras.qrc)、[语言覆盖](Telegram/SourceFiles/extras/extras_lang.cpp) | 翻译生成、资源消费者和内置语言选择 |
+| [调试入口](Telegram/SourceFiles/extras/debug)、[Debug 设置页](Telegram/SourceFiles/extras/ui/settings/settings_debug.cpp) | 开发版服务、命令注册、模拟能力及调试页面 |
+| [上游登记](.github/upstream.json)、[构建补丁](scripts/build_support/cmake_patch.py) | 已适配官方基线、同步规则与官方 CMake 定制；标签保存在 `refs/upstream-tags/` |
+| [Git 白名单](.gitignore)、[Pi 配置](.pi/settings.json)、[技能同步](scripts/build_support/sync_skills.py) | 共享文件范围、技能发现和镜像同步基线 |
 
-**聊天界面层**
+## 任务连续性与验证
 
-| 目录 | 职责 |
-|---|---|
-| `window` | 主窗口、会话导航、窗口控制器 |
-| `history` | 消息列表渲染：气泡，`HistoryItem`（数据）与 `Element`（视图）分离 |
-| `dialogs` | 左侧会话列表 |
-| `chat_helpers` | 输入框、剪贴板、机器人交互辅助 |
-| `media` | 媒体查看器与播放器（view / player 子目录） |
-| `overview` | 聊天内媒体总览标签页 |
-| `layout` | 媒体网格布局基类（overview / photo 共用） |
-| `editor` | 图片与视频编辑 |
-| `iv` | 即时预览页面 |
-| `boxes` | 通用弹窗（editors / pickers / confirm） |
-| `info` | 右侧信息面板（个人资料 / 媒体 / 管理员） |
-| `calls` | 通话 |
-| `settings` | 官方设置页 |
-| `intro` | 登录引导 |
-| `profile` / `statistics` / `payments` / `passport` / `export` / `support` / `poll` / `inline_bots` / `webauthn` | 各自独立的领域功能 |
-
-**支撑层**
-
-| 目录 | 职责 |
-|---|---|
-| `ui` | 通用控件与样式应用层（基础控件在 lib_ui） |
-| `lang` | 翻译加载（`tr::lng_*`） |
-| `countries` / `ffmpeg` / `menu` / `codegen` / `tests` | 国家码、FFmpeg 封装、菜单、内嵌生成、独立单元测试 |
-
-### extras/ 定制层
-
-定制代码集中在 `Telegram/SourceFiles/extras/`：
-
-```
-extras/
-├── extras_infra.cpp              # 初始化入口（翻译/数据库/界面/工作线程/翻译器/调试服务端）
-├── extras_settings.{h,cpp}       # 全部设置项（rpl::variable + JSON 序列化）
-├── extras_state.{h,cpp}          # 跨组件的运行时状态
-├── data/                      # SQLite 留档库与上层封装
-├── features/                  # 业务功能，一个功能一个子目录
-│   ├── auto_space/            # 中英文之间自动加空格
-│   ├── filters/               # 正则过滤与隐藏（含幽灵拉黑名单）
-│   ├── forward/ message_shot/ streamer_mode/ translator/
-├── debug/                     # 调试服务端（仅 _DEBUG 编译），commands/ 一个领域一个文件
-├── ui/                        # extras 的控件与设置页
-├── utils/                     # Session / Peer 转换、远程配置
-└── libs/sqlite/               # 内嵌 SQLite
-```
-
-**改动位置对照表**：
-
-| 要做的事 | 放在哪里 | 附加要求 |
-|---|---|---|
-| 新增定制功能 | `extras/features/<名称>/`，并在 `Telegram/CMakeLists.txt` 的 `extras_files` 逐文件添加 | — |
-| 新增设置项 | `extras_settings.{h,cpp}`：成员、`to_json`、`from_json` 三处同步 | — |
-| 设置项的界面 | `extras/ui/settings/`，入口注册在 `settings_main.cpp` | — |
-| 需要持久化的数据 | `extras/data/` | — |
-| 新增调试指令 | `extras/debug/commands/<领域>_commands.cpp` + CMake 登记 | 必须包在 `#ifdef _DEBUG` 里 |
-| 修改上游行为（渲染、菜单等） | 直接改上游文件 | — |
-| 界面基础控件改动 | `Telegram/lib_ui/` | 先推 fork 仓库，再更新主仓库子模块指针 |
-
----
-
-## 编码规范
-
-### 文件职责
-
-- 按职责组织与拆分源码，不使用编号分片或互相包含实现文件。
-- 拆分前记录职责、依赖与验证方案，保持对外接口和行为，同步更新构建清单。
-- 本次拆分只修改主仓库，不修改子仓库；自动生成文件和原样引入的第三方库源码不作业务拆分。
-
-### 命名
-
-| 元素 | 规则 | 上游实例 |
-|---|---|---|
-| 局部变量 | 小驼峰，优先 `const auto` | `dataName`、`phone`、`flags` |
-| 成员变量 | 小驼峰加 `_` 前缀 | `_lastseen`、`_peerGiftsCount` |
-| 常量 | `k` 前缀加大驼峰 | `kWideIdsTag` |
-| 类与结构体 | 大驼峰 | `HistoryItem` |
-| 函数 | 小驼峰（extras 代码必须遵守；上游风格混杂，不做统一改造） | `processUser` |
-| 命名空间 | 大驼峰或匿名 | `ExtrasInfra`、`namespace { ... }` |
-| 文件名 | 小写加下划线，前缀与所属领域一致 | `data_user.cpp`、`history_item.cpp` |
-
-### 本地方案与过程记录
-
-- 按需生成，不把写文档作为每次任务的固定步骤。提交说明和最终回复足以说明的普通修改，不另写方案或过程记录。
-- 用户要求方案，或需要保留实现路线的取舍、迁移步骤、跨阶段依赖时，才在 `build/docs/<任务标识>.md` 保存方案；同一任务只维护一份。
-- 需要保留复现依据、验收结果或交接进度时，过程记录保存在 `build/record/<任务标识>-<阶段号>.md`，不另建总结、复核、收尾等重复文档。
-- worktree 任务的记录按 worktree 技能保存在 `build/worktrees/<名称>.md`，不另建 `build/record` 记录。
-- 任务标识采用 `YYYYMMDD-主题`，日期取任务开始日；同一任务跨天、跨会话继续沿用。阶段号从 `1` 连续递增，例如 `20261007-设置迁移-1.md`、`20261007-设置迁移-2.md`。
-- 一个阶段对应 **1 个可独立验收的目标、至少 1 项可复核的验收条件**。开始记录时写清目标和条件；全部条件通过，或明确终止并记录原因后，进入下一个目标才增加阶段号。
-- 同一目标下的重试、审查修正、补编和暂停后继续都更新原阶段。新增需求能独立验收时列为后续阶段；未完成或终止的阶段标明状态，不写成已通过。
-- 记录顶部固定写明任务目标、阶段状态（进行中 / 受阻 / 已完成 / 已终止）、更新时间、分支与提交号、未提交改动摘要、下一步具体动作；没有的项写“无”。结论变化、暂停或交接前更新。
-- 验收项逐项标记未执行、通过或失败，并附证据路径。关键决定、用户约束和未完成事项只保留当前有效内容；涉及测试账号、临时设置或备份时，写清现场及恢复要求。
-- 接手时先阅读同一任务阶段号数值最大的记录，再核对当前分支、提交和工作区差异；确认记录后的改动是否影响已有验收，按需回溯方案和旧阶段，不凭文件编号推断完成状态。
-- 每份阶段记录最多 **200 行，含空行**。超过上限先合并重复内容，不按时间、消息轮数或文档长度增加阶段号。
-- 临时脚本和验证附件放在 `build/record/<任务标识>-<阶段号>/`。工具已有固定输出位置的日志、截图保留原位置，记录中引用路径，不复制原始输出或完整对话。
-
-### 注释
-
-- 简体中文，说清意图即可，不使用行话和缩略语
-- **最多两行**，一行能说清就写一行
-- 只写意图、约束、边界条件，不复述代码本身在做什么
-- 单行注释用 `//`，函数注释写在声明或定义上方
-
-```cpp
-// 构造本地模拟模式绕过登录，不写入磁盘，重启后消失。
-[[nodiscard]] Result enterSimulationMode(const QStringList &args);
-```
-
-### 优先使用卫语句
-
-先排除异常情况提前返回，正常流程靠左对齐，避免深层嵌套。上游代码普遍是这个形态：
-
-```cpp
-// 正确
-void Process(const TextWithEntities &text) {
-	if (text.empty()) {
-		return;
-	}
-	const auto entity = text.entities.front();
-	// ...正常逻辑，无嵌套
-}
-
-// 错误：把正常流程包进 else
-void Process(const TextWithEntities &text) {
-	if (!text.empty()) {
-		const auto entity = text.entities.front();
-		// ...正常逻辑多包了一层
-	}
-}
-```
-
-- 分支以 `return`、`continue`、`break` 结尾时，后面不接 `else`，下一个判断直接左对齐
-- 循环里先用 `continue` 跳过不相关的项；查找类逻辑先找到目标，再在循环外处理
-- 同一个函数既能查询又能修改时，先处理只查询的情况并返回，修改流程不包在 `if` 里
-- 分支里还有校验、嵌套超过两层时，把分支抽成返回 `Result` 或 `std::optional` 的小函数
-- 二选一的对称分支（显示或隐藏、新建或更新）保留 `if/else`，不为了套卫语句强行改写
-
-### 不要过度防御
-
-- 上游核心代码（`data_session.cpp`、`history.cpp` 等）完全没有 `try/catch`——**异常不是这个项目的错误处理方式**，不要引入
-- 用 `Expects()` / `Ensures()`（GSL）表达契约，上游大量使用；前置条件由调用方保证时，被调方断言即可，不需要双向判空
-- 只在真正可能失败的地方校验；写任何兜底分支前先确认这个分支现实中会走到
-- 本地无法处理的错误交给上层（返回空值或错误码），不要直接忽略
-
-### 响应式（rpl）
-
-- 所有设置项都是 `rpl::variable<T>`：一次性读取用 `current()`（返回引用），订阅变化用 `value()`（返回数据流）
-- 界面订阅必须绑定 `lifetime()`，不允许裸 lambda 捕获 `this` 而不做生命周期保护
-- 写入设置直接赋值即可触发通知，不要赋值之后再手动发一次
-
-### 线程
-
-- 所有界面操作以及 `Data::Session`、`History`、`PeerData` 的访问都在主线程
-- 工作线程需要访问主线程对象时，用 `dispatchToMainThread`（`extras/utils/telegram_helpers.h`）
-- 不要在工作线程调用 `ExtrasSettings::getInstance()` 或 `Core::App()`
-- Qt 对象有线程归属：`QTcpServer` 在主线程创建，信号槽就在主线程回调，无需额外调度；跨线程信号要显式指定 `Qt::QueuedConnection`
-- 长期持有的 QObject 必须挂在会随 `aboutToQuit` 销毁的父对象上，或在 `QCoreApplication::aboutToQuit` 时清理；静态对象不得存活到 QApplication 析构之后。
-
-### 错误处理与日志
-
-- 失败用返回值表达：`std::optional<T>` 或 `Result { bool ok; QString payload; }`
-- 唯一允许的 `try/catch`：调试服务端的 `Execute()` 包住 handler，避免异常终止监听
-- 日志用 `LOG(("Category: message %1").arg(value))`，不要用 `qDebug()`
-- 内部错误返回、调试日志和脚本诊断信息使用英文；界面文案继续使用翻译键。
-
----
-
-## 构建
-
-### 环境
-
-- Windows：MSVC v145（Visual Studio 2026，工具集 14.51）、Windows SDK 10.0.26100.0
-- macOS：Xcode 14+；Linux：GCC 11+ 或 Clang 15+
-
-工具链版本集中在 `scripts/build_support/toolchain.py`（`TOOLSET_VERSION` / `CMAKE_TOOLSET` / `CMAKE_GENERATOR`），换 Visual Studio 版本只改这里。
-
-### prebuild（第三方依赖预编译）
-
-```bash
-python scripts/prebuild.py            # 全量预编译，产物在 build/tmp
-python scripts/prebuild.py --list     # 35 个阶段清单（qt_6.12.0、tg_angle、openssl3、ffmpeg、tg_owt 等）
-python scripts/prebuild.py --stage openssl3 --stage qt_6.12.0   # 只跑指定阶段，可重复指定
-python scripts/prebuild.py --clean    # 清空依赖缓存
-```
-
-- **只在依赖变化时需要跑**（首次构建、子模块指针更新、`build/version` 变更），日常改代码不需要
-- 自动探测 MSVC 环境，进度输出强制 UTF-8，避免 cp936 控制台报错
-- 阶段的定义（含注释）参与缓存键计算，改注释也会导致该阶段重新编译
-
-### build（产品构建）
-
-```bash
-python scripts/build.py               # Release，默认
-python scripts/build.py --dev         # Debug
-python scripts/build.py --dev --pdb   # Debug，并重新生成完整的 AstraGram.pdb
-python scripts/build.py --all         # 两个配置都构建
-python scripts/build.py --reconfigure # 丢弃 CMake 缓存重新配置
-python scripts/build.py --api-id <id> --api-hash <hash>   # 覆盖 API 凭据
-```
-
-- 默认 12 并发，无需传 `--jobs`。用户指定后，本次会话后续构建沿用 `--jobs N`（1 至 128），直到用户更改或会话结束；不修改脚本默认值。
-- 产物在带版本号的目录：`build/AstraGram-v<版本>-win-x64-release|dev/`（版本号读取 `Telegram/build/version`）
-- Windows 产物包含 `AstraGram.exe`、`Updater.exe` 和 `modules/<架构>/TelegramWidgetHelper.exe`；x64 另带 `modules/x64/d3d/d3dcompiler_47.dll`，压缩包与更新包保留模块目录。
-- 脚本自己完成配置和构建两步，**不要手动执行 cmake**
-- 收集产物前会自动停止占用目标可执行文件的进程（按绝对路径匹配，不按进程名）
-- 默认不生成调试信息和 pdb；`--pdb` 只作用于 Debug：调试信息嵌进 obj、关闭增量链接，每次重写 pdb，避免增量链接让 pdb 只增不减
-- 加上或去掉 `--pdb` 会改变全部编译参数，触发全量重编，只在需要符号时使用
-- 设置环境变量 `AYUGRAM_CCACHE=<ccache.exe 路径>` 后经 ccache 编译（云端 Windows 构建使用）；开启后每次都要重新编译全部文件（大多直接命中缓存），不适合本地增量构建
-
----
+- 默认不新增或修改测试代码，只有用户明确要求编写测试时才执行；必要验证采用构建、已有测试或应用调试。
+- 已完成且明确通过的验证作为后续工作的有效依据。新任务、切换 Bug 或新一轮修改本身不触发重查、重测或重复分析。
+- 执行验证前先查已有记录，只分析本次改动及实际依赖关系。优先验证最小受影响功能；独立功能分别保留结果，公共接口、共享模块或集成流程受到影响时才扩大对应范围。
+- 仅在改动影响原验证覆盖的行为，相关接口、依赖或共享状态变化，环境或构建配置使原结果失效，出现质疑原结果的新证据，或用户明确要求时，重新执行对应验证。同一文件、模块或项目不构成重跑依据。
+- 未受影响的通过项直接继承；完成后只汇报本次修改和实际执行的验证。已完成的工作作为后续基础，验证范围由实际影响决定。
 
 ## 技能使用
 
-- 提交要求阅读 commit skill。
-- 推送 Git 提交、分支或标签到远端时，阅读 git-push skill。
-- 查看或更新版本号、整理发布日志或准备发布版本时，阅读 version-bump skill。
-- 准备、创建、更新、描述或审查 PR 时，阅读 pull-request skill。
-- 回应或回复 Git issue 时，阅读 issue-reply skill。
-- 审查隐私性或检查本机独特路径时，阅读 privacy-review skill。
-- 调试应用、验证功能、操作页面或控件，以及启动、停止、重启开发版或截图时，阅读 app-debug skill。
-- 检查 Telegram Desktop 官方版本、比较上游改动、同步适配或登记已适配版本时，阅读 upstream-sync skill。
-- 使用 worktree、多人或多个助手并行开发、隔离推进或合入 worktree 成果时，阅读 worktree skill。
+`.codex/skills` 为主源，`.claude/skills` 为镜像，两者均由 Git 追踪，不创建修改前技能备份。Pi 只引用 `../.codex/skills`，Claude 通过单行 `CLAUDE.md` 读取本文件。首次修改技能前，在两侧一致时先执行一次同步建立本地基线；每批主源修改后立即同步并只读检查，关联改动一起提交。镜像独立修改先归入主源，再同步。
 
----
+| 场景 | 阅读技能 |
+|---|---|
+| 编写、修改、重构或审查代码 | [code-style](.codex/skills/code-style/SKILL.md) |
+| 新增、翻译或审查界面文案、翻译键和语言资源 | [translation](.codex/skills/translation/SKILL.md) |
+| 独立修改完成且必要验证通过后及时创建本地提交，或整理、修改提交 | [commit](.codex/skills/commit/SKILL.md) |
+| 推送提交、分支或标签 | [git-push](.codex/skills/git-push/SKILL.md) |
+| 查看或更新版本、整理更新日志、准备发布 | [version-bump](.codex/skills/version-bump/SKILL.md) |
+| 回应或回复 Git issue | [issue-reply](.codex/skills/issue-reply/SKILL.md) |
+| 准备、创建、更新、描述或审查 PR | [pull-request](.codex/skills/pull-request/SKILL.md) |
+| 审查隐私性或本机独特路径 | [privacy-review](.codex/skills/privacy-review/SKILL.md) |
+| 业务逻辑变化或补充调试指令；应用调试、功能验证、切页、控件操作、启停与截图 | [app-debug](.codex/skills/app-debug/SKILL.md) |
+| 检查官方版本、比较改动、同步适配或登记上游基线 | [upstream-sync](.codex/skills/upstream-sync/SKILL.md) |
 
-## 调试架构
+专项规则与完整操作步骤由技能维护；脚本入口、用途和调用方式统一保存在下方“工程入口”。
 
-- 调试服务端位于 [extras/debug](Telegram/SourceFiles/extras/debug/)，在 `ExtrasInfra::init()` 中启动 `QTcpServer`，监听 `127.0.0.1:20100`。
-- 调试启动默认使用 `app.start --no-focus`；运行中用 `--focus-mode focus|no-focus` 切换，窗口动作继承当前模式。
-- 服务端与模拟模式仅在 `_DEBUG` 下编译，指令在主线程同步执行。
-- Debug 设置页位于 [settings_debug.cpp](Telegram/SourceFiles/extras/ui/settings/settings_debug.cpp)，入口为 Settings → AstraGram Preferences → Debug，可见条件是 `#ifdef _DEBUG` 或 `Logs::DebugEnabled()`。
+## 方案与记录
 
----
+按复现、验收和交接需要创建方案与记录；普通修改用提交与回复说明，完整工具输出保存在附件中。`build/` 整体不入库；构建清理保留 `build/docs/`、`build/record/` 和需要保留的验证证据。
 
-## 上游配置
+### 命名与阶段
 
-[.github/upstream.json](.github/upstream.json) 保存已适配的官方 tag 版本与同步规则；子模块基线由官方该版本的指针确定，本地定制通过 Git 差异计算。官方标签使用 `refs/upstream-tags/`，与本项目发布标签分开。
+- 方案保存为 `build/docs/YYYYMMDD-简体中文标题.md`，同一任务维护一份。
+- 记录保存为 `build/record/YYYYMMDD-简体中文标题-序号.md`，附件放在同名目录；文件首行使用与文件名一致的 H1 标题，不含 `.md` 后缀。
+- 日期取任务开始日，标题用简体中文概括目标，跨天和跨会话保持相同日期与标题。
+- 同一日期和标题下，序号从 1 连续递增。每个序号对应一个独立探索或实施目标，至少包含一项可复核的验收条件。
+- 同一目标的重试、修正、补编和恢复继续更新原文件；切换到独立目标时才增加序号，保留前一阶段的实际完成或受阻状态。
+- 每个阶段记录最多 300 行，含空行；超过时合并重复内容，将完整工具输出保存为附件，不按篇幅另开阶段。
 
-官方 `cmake` 子模块的定制由 [cmake_patch.py](scripts/build_support/cmake_patch.py) 在构建时应用，工作区出现 `modified: cmake (modified content)` 属于预期状态。
+### 内容与证据
 
----
+- 顶部写任务目标、本阶段目标、状态、更新时间、分支与提交、未提交改动、下一步；没有的项写“无”。
+- 状态为进行中、受阻、已完成、已终止；对应验收条件全部通过后标记已完成，终止时说明原因。
+- 验收项逐项标记未执行、通过或失败，附证据路径或失败原因；截图和日志有固定输出位置时引用原位置。
+- 用户约束和决定只保留当前有效内容；存在跨阶段依赖时，维护唯一覆盖清单或索引、已通过门槛和剩余项。
+- 本地要求、私人环境与对话过程保存在本地记录，公开提交和 PR 聚焦实现与相关验证。
+- 记录正在运行的作业及句柄、当前执行者、临时设置、测试数据、备份和恢复要求；结论变化、暂停或交接前更新。
 
-## Git 协作
+### 恢复
 
-- 功能分支命名 `feature/<name>` / `fix/<name>`。
-- 并行开发使用独立 worktree，主仓库负责合并与完整验证。
-- 每次提交对应一个完整逻辑目标，关联实现、配置和文档一起提交，独立目标分开提交。
-- 独立修改完成且必要验证通过后及时创建本地提交，依赖尚未完成的关联改动保留到同一目标完成。
-- 不要强制推送已公开的分支。
+1. 按开始日与中文标题定位任务，先阅读该任务最大数值序号的记录。
+2. 核对记录状态、证据、当前分支、提交和工作区差异，判断后续改动是否影响已有验收。
+3. 核对原作业句柄、应用或设备的真实状态，按依赖继续剩余工作；需要时回溯方案和旧阶段。等待超时后沿用原作业句柄确认终态。
 
----
+## 工程入口
 
-## 常见问题
+以下命令以仓库根目录为工作目录；从其他目录调用时，将脚本参数写为该仓库脚本的实际路径，脚本自行定位项目。普通 Python 调用即可。
 
-1. **nlohmann::json 临时对象**：`for (const auto &[k, v] : SettingsJson().items())` 会产生悬空引用，range-for 的生命周期延长不覆盖 `items()` 返回的代理对象。先把结果存进具名变量再调用 `.items()`。
-2. **`value()` 与 `current()`**：前者返回数据流用于订阅，后者返回引用用于一次性读取。不要在 lambda 里捕获 `current()` 返回的引用。
-3. **`not_null<T*>`**：GSL 类型，不能隐式转换成 `T*`，需要调用 `.get()`。不要让它指向栈上对象之后返回。
-4. **配置与构建**：`build.py` 自己处理配置步骤；改 `CMakeLists.txt` 会自动重新配置，不需要删除 build 目录。
-5. **静态持有 QObject**：任何静态或全局的 QObject 都无法安全存活到 QApplication 析构之后，在析构阶段操作 Qt 对象是未定义行为。见“线程”章节。
-6. **字符串字面量拼接**：`"(" kPattern ")"` 这种写法要求 `kPattern` 是宏，`constexpr` 变量不能参与字面量拼接。同理 `QStringLiteral` 本身是宏，参数里不能拼接标识符，这种场合改用 `QLatin1String`。
+| 操作 | 命令与作用 |
+|---|---|
+| 查看准备入口帮助 | `python scripts/prebuild.py --help` |
+| 列出依赖阶段 | `python scripts/prebuild.py --list` |
+| 准备依赖 | `python scripts/prebuild.py`；指定阶段用 `--stage <名称>`，可重复；仅首次构建或依赖输入变化时执行 |
+| 全量代码行数检查 | `python scripts/prebuild.py --check-code-style`；离线只读，包含未跟踪和被忽略的自有源码，排除第三方与生成物；超限返回非零 |
+| 指定改动的代码检查 | `python scripts/prebuild.py --check-code-style <仓库相对文件或目录> ...`；用于本次代码修改与提交前验证 |
+| 查看构建入口帮助 | `python scripts/build.py --help` |
+| 构建 Debug | `python scripts/build.py --dev` |
+| 构建 Release | `python scripts/build.py`；当前入口默认 Release，`--all` 构建两种配置 |
+| 指定构建并发 | 在构建命令后加 `--jobs N`，默认 12，实际范围以帮助和 `builder.py` 为准；用户覆盖值在本次会话后续构建中继续显式传入，新会话恢复默认 |
+| 调试符号与重新配置 | Debug 需要完整符号时加 `--pdb`；改变该选项触发全量重编。`--reconfigure` 重新配置，日常 CMake 清单变化由脚本自动处理 |
+| 运行已有存储测试 | `python scripts/build.py --dev --test storage`；按受影响范围选择 |
+| 打包产物 | 构建命令加 `--pack`；`--clean-pack` 清理目标产物目录的运行残留后打包 |
+| 同步技能镜像 | `python scripts/build_support/sync_skills.py --sync`；以 `build/skill-sync.json` 为基线，镜像独立变化时报错；主源删除的镜像文件保留到 `build/skill-sync-removed/` |
+| 只读检查技能一致性 | `python scripts/build_support/sync_skills.py --check`；核对文件集合与字节，排除 Python 缓存，无需 SDK、编译器或应用 |
+| 查看调试命令 | `python .codex/skills/app-debug/scripts/cli.py --help`；具体命令使用 `<命令> --help`，实际任务步骤查 app-debug |
+| 调用调试命令 | `python .codex/skills/app-debug/scripts/cli.py <命令> [参数]`；用独立 `+` 串联命令，示例：`app.start --no-focus --offline --profile simulation + simulation.enter` |
+| 查看或修改应用版本 | `python scripts/build_support/version.py` 查询当前值；传 `<官方版本>[.<修订号>]` 修改版本文件，执行条件按 version-bump |
+| 检查官方版本 | `python .codex/skills/upstream-sync/scripts/upstream.py check`；包含正式和测试 tag |
+| 生成上游报告 | `python .codex/skills/upstream-sync/scripts/upstream.py report`；`--to <版本>` 指定目标，`--base <版本>` 指定比较基线 |
+| 登记已适配版本 | `python .codex/skills/upstream-sync/scripts/upstream.py done <版本>`；前置与登记后检查按 upstream-sync |
+| 路径审查 | `python .codex/skills/privacy-review/scripts/scan_commits.py`；默认审查 `origin/main..main`，子仓库或明确范围用 `--repo <路径> --base <引用> --head <引用>`；候选判断按 privacy-review |
+| 查看专项脚本帮助 | 上游与路径审查入口均支持 `--help`，先查实际参数再执行 |
 
----
+构建入口管理配置与编译，不手动运行 CMake。依赖配方的内容参与缓存键；产物由版本源和目标架构派生到根 `build/`。Windows 包含主程序、更新器和 `modules/<架构>/TelegramWidgetHelper.exe`，x64 另有图形模块，收集及打包以 `paths.py` 为准。`AYUGRAM_CCACHE` 用于显式选择 ccache，会改变增量构建方式。
 
-## 禁止事项
-
-1. Release 构建里保留调试代码——调试服务端、模拟模式全部要在 `#ifdef _DEBUG` 内
-2. 按进程名结束 `AstraGram.exe`——应按可执行文件绝对路径或端口占用 PID 校验
-3. 在主线程调用阻塞接口——`ExtrasSync::*Sync` 系列会运行事件循环等待 MTProto 响应，导致界面无响应
-4. 在 `Telegram/lib_ui/` 之外引用 `extras/extras_ui_settings.h`——codegen 硬编码了该 include 路径（`codegen/style/generator.cpp:676`）
-5. 提交 `build/`、`tdata/`、`.user` 文件
-6. 只在本地提交 fork 依赖（`lib_ui` / `lib_tl` 等）的改动就更新主仓库指针——子模块提交必须先推到 fork 仓库
-7. 用异常做错误处理——见"不要过度防御"
-
----
-
-## 审查清单
-
-改代码前自查：
-
-- [ ] 新代码放在正确的目录？（见"改动位置对照表"）
-- [ ] 新文件登记进 `Telegram/CMakeLists.txt` 的 `extras_files`？
-- [ ] 调试代码包在 `#ifdef _DEBUG` 内？
-- [ ] 新设置项在 `extras_settings` 的成员、`to_json`、`from_json` 三处同步？
-- [ ] rpl 订阅绑定了 `lifetime()`？
-- [ ] 跨线程调用走了 `dispatchToMainThread`？
-- [ ] 优先用卫语句，`return` 后不接 `else`，嵌套不超过两层，没有过度防御？
-- [ ] 注释是中文、不超过两行、不用行话？
-- [ ] 改了 lib_ui 等 fork 子模块，已推到 fork 仓库再更新指针？
+调试 CLI 的 `AYUGRAM_DEBUG_ROOT` 可显式选择目标源码根；它仍核对实际可执行路径和数据目录。`--profile` 选择独立调试数据，焦点、停止和现场恢复规则由 app-debug 维护。

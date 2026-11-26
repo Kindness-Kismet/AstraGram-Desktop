@@ -47,12 +47,12 @@
 二进制设置使用 Base64 字符串。字段不存在、类型不匹配和非法枚举返回英文错误。
 嵌套对象先用 `settings.keys` 找到叶子键；代理等自身为结构体的键接受完整 JSON 对象。
 
-```bash
-python .codex/skills/app-debug/scripts/cli.py settings.set ghost.sendReadMessages false
-python .codex/skills/app-debug/scripts/cli.py settings.set messageShotSettings.showDate true
-python .codex/skills/app-debug/scripts/cli.py settings.set shadowBanIds '[123456789]'
-python .codex/skills/app-debug/scripts/cli.py settings.get core.songVolume
-python .codex/skills/app-debug/scripts/cli.py settings.keys session.autoDownload
+```text
+settings.set ghost.sendReadMessages false
+settings.set messageShotSettings.showDate true
+settings.set shadowBanIds '[123456789]'
+settings.get core.songVolume
+settings.keys session.autoDownload
 ```
 
 自动下载 source：0 私聊、1 群组、2 频道；type：0 图片、1 视频自动播放、2 语音、

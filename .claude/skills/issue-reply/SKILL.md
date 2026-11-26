@@ -32,5 +32,3 @@ description: 为 AstraGram 检索、准备并发布 Git issue 回复。用户要
 ## 完成与维护
 
 核对实际发布状态及返回的回复 URL，确认回复对应目标仓库和 issue，并报告实际结果。
-
-`.codex/skills` 为主源，修改后同步到 `.claude/skills`，检查文件集合与字节一致；已有镜像存在独立改动时先核对差异。
