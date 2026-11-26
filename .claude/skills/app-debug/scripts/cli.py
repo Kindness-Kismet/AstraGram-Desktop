@@ -40,6 +40,7 @@ PROFILE_FILE = ROOT / "build" / "app-debug-profile.json"
 PROFILE_OVERRIDE = None
 BACKGROUND_START = False
 OFFLINE_START = None
+LAUNCH_NO_FOCUS = False
 
 GENERIC_COMMANDS = {
     "message.send-formatted": "向已授权测试对话发送整段引用或代码：<peerId> <quote|collapsed-quote|code> <textFile>；保留草稿",
@@ -103,11 +104,14 @@ GENERIC_COMMANDS = {
     'simulation.chat-folders': '在独立模拟配置中加载首个分组、清空分组或等待分组：<single|none|pending>，重启恢复样本',
     'simulation.language': '在独立模拟配置中切换内置翻译，不下载云端语言包：<en|zh-hans>，返回表情页签译文',
     'control.window': '选择控件与截图的目标窗口，不改变系统焦点：[main|窗口标识|#序号]',
+    'stories.open-file': '在已授权账号沿正式发布权限检查打开本地故事素材：<路径>，返回 requested 后观察编辑器',
+    'stories.open-draft': '在已授权账号沿正式权限检查恢复故事草稿：<id>，返回 requested 后观察编辑器',
+    'stories.drafts': '查询当前账号本地故事草稿的编号、说明、图层及裁剪状态',
     'editor.video-state': '查询独立模拟配置中视频时间线的裁剪起止、封面与播放位置',
     'editor.state': '查询独立模拟配置中编辑器的图层数量、音轨裁剪与音量',
     'editor.add-file': '在独立模拟配置中沿编辑器粘贴链路添加本地媒体：<路径>',
     'editor.open': '在独立模拟配置中对图片消息打开绘图编辑器：<peerId> <msgId>',
-    'simulation.wallet': '在独立模拟配置中打开钱包及固定公开状态，不安装私钥或提交交易：[keep|missing|ready|collectibles|layout|close]；layout 覆盖地址、域名、联系人、失败与长金额',
+    'simulation.wallet': '在独立模拟配置中打开钱包及固定公开状态，不安装私钥或提交交易：[keep|missing|ready|collectibles|layout|onchain|close]；layout 覆盖地址与长金额，onchain 覆盖十种链上礼物交易记录',
     'simulation.widget': '在独立模拟配置中展示 HTML 卡片：[show|state|log|reset|verify|load <htmlPath>]；load 限 1 MiB，log 和 verify 返回异步任务',
     'simulation.stickers': '在独立模拟配置中设置热门贴纸徽标计数，首次创建三类本地贴纸包：<0..9999> [open]，open 打开管理弹窗',
     'simulation.search': '为搜索分类注入本地联系人、频道、应用和六类媒体样本：<fixture-directory>',
@@ -347,14 +351,19 @@ def register_commands(sub) -> None:
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
     command.add_argument("--background", action="store_true", help="启动时进入托盘，不主动显示窗口")
     command.add_argument("--offline", action="store_true", default=None, help="从启动起禁止连接 Telegram，重启恢复联网")
+    focus = command.add_mutually_exclusive_group()
+    focus.add_argument("--no-focus", action="store_true", help="新启动时显示窗口但不取得系统焦点")
+    focus.add_argument("--focus-mode", choices=("focus", "no-focus"), help="只切换已运行实例的调试焦点策略，不启动新进程")
     command = sub.add_parser("app.ensure", help="app.start 的等价写法")
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
     command.add_argument("--background", action="store_true", help="启动时进入托盘，不主动显示窗口")
     command.add_argument("--offline", action="store_true", default=None, help="从启动起禁止连接 Telegram，重启恢复联网")
+    command.add_argument("--no-focus", action="store_true", help="新启动时显示窗口但不取得系统焦点")
     command = sub.add_parser("app.restart", help="先停止再启动 Debug 应用，重新编译后用它启动新产物")
     command.add_argument("--profile", help="选择并记住独立调试配置，default 使用原默认目录")
     command.add_argument("--background", action="store_true", help="启动时进入托盘，不主动显示窗口")
     command.add_argument("--offline", action="store_true", default=None, help="从启动起禁止连接 Telegram，重启恢复联网")
+    command.add_argument("--no-focus", action="store_true", help="重新启动后显示窗口但不取得系统焦点")
     command = sub.add_parser("app.stop", help="停止 Debug 应用，只认端口 PID 或本仓库 dev 产物路径")
     command.add_argument("--force", action="store_true", help="模拟结束任务，跳过正常退出；仍核对进程路径")
     sub.add_parser("app.ping", help="探活，返回 pong")
@@ -443,14 +452,19 @@ def register_commands(sub) -> None:
     command.add_argument("--peer", help="查询指定对话，默认收藏夹")
     command = sub.add_parser("window.resize", help="读或设窗口尺寸（Qt 逻辑像素）；最大化的窗口先还原再设尺寸")
     command.add_argument("size", nargs="*", type=int, metavar="WIDTH HEIGHT", help="省略则只报告当前尺寸，给出时须成对")
+    command.add_argument("--focus-mode", choices=("focus", "no-focus"), help="本次动作前切换已运行实例的调试焦点策略")
     command = sub.add_parser("window.material", help="查询材质状态与绘制缓冲像素，不触发截图或重绘")
     command.add_argument("point", nargs="*", type=int, metavar="X Y")
     command = sub.add_parser("window.maximize", help="最大化或还原窗口")
     command.add_argument("maximized", choices=["true", "false"], help="true 最大化，false 还原")
+    command.add_argument("--focus-mode", choices=("focus", "no-focus"), help="本次动作前切换已运行实例的调试焦点策略")
     command = sub.add_parser("window.activation", help="只切换 Qt 内部的焦点窗口与应用激活状态，不抢系统前台")
     command.add_argument("state", choices=["active", "inactive"])
     command = sub.add_parser("window.tray", help="通过真实托盘流程隐藏或恢复最近活动的主窗口")
     command.add_argument("action", choices=["hide", "show"])
+    command.add_argument("--focus-mode", choices=("focus", "no-focus"), help="本次动作前切换已运行实例的调试焦点策略")
+    command = sub.add_parser("window.focus-mode", help="查询或切换运行中实例的焦点策略，不启动新进程")
+    command.add_argument("mode", nargs="?", choices=("focus", "no-focus"), help="省略时只报告当前模式")
     command = sub.add_parser("anim.speed", help="查询或临时调整过渡动画速度：0.1 放慢十倍，2 加快一倍，1 恢复；不保存")
     command.add_argument("speed", nargs="?", type=float, help="0.01 至 10，省略则只报告当前速度")
 
@@ -538,7 +552,12 @@ def main() -> int:
     # 先整体解析所有分段，拼写错误不会让前几条已经生效。
     try:
         segments = [parser.parse_args(segment) for segment in split_command_segments(argv)]
-    except SystemExit:
+    except SystemExit as exception:
+        # 逐指令帮助与参数错误共用 SystemExit，只有帮助应返回 0。
+        if exception.code == 0:
+            return 0
+        if isinstance(exception.code, str) and exception.code:
+            print(exception.code, file=sys.stderr)
         return 2
 
     for args in segments:
@@ -563,12 +582,14 @@ def split_command_segments(argv: list[str]) -> list[list[str]]:
 
 
 def execute_command(args: argparse.Namespace) -> None:
-    global PROFILE_OVERRIDE, BACKGROUND_START, OFFLINE_START
+    global PROFILE_OVERRIDE, BACKGROUND_START, OFFLINE_START, LAUNCH_NO_FOCUS
     command = args.command
     if hasattr(args, "background"):
         BACKGROUND_START = args.background
     if hasattr(args, "offline"):
         OFFLINE_START = args.offline
+    if hasattr(args, "no_focus"):
+        LAUNCH_NO_FOCUS = args.no_focus
     profile = getattr(args, "profile", None)
     if profile is not None:
         PROFILE_OVERRIDE = "" if profile == "default" else profile
@@ -576,6 +597,9 @@ def execute_command(args: argparse.Namespace) -> None:
 
     # 生命周期指令由 CLI 自己完成，不进服务端。
     if command in ("app.start", "app.ensure"):
+        if args.focus_mode is not None:
+            switch_focus_mode(args.focus_mode)
+            return
         ensure_debug_app()
         if profile is not None:
             PROFILE_FILE.write_text(json.dumps({"profile": PROFILE_OVERRIDE}), encoding="utf-8")
@@ -591,6 +615,11 @@ def execute_command(args: argparse.Namespace) -> None:
         stop_debug_app_if_running(force=args.force)
         print("Application stopped.")
         return
+
+    # --focus-mode 只调整已运行实例，不因参数错误而拉起新进程。
+    if getattr(args, "focus_mode", None) is not None:
+        if verify_running_debug_app() is None:
+            raise RuntimeError("The application is not running; --focus-mode does not start it. Start it with app.start first.")
 
     if command == "screenshot.take":
         ensure_debug_app()
@@ -755,21 +784,24 @@ def build_server_command(args: argparse.Namespace) -> str:
         result = "chat.history-stats " + " ".join(args.msgIds)
         return result + (f" --peer {quote_arg(args.peer)}" if args.peer else "")
     if command == "window.resize":
-        if not args.size:
-            return "window.resize"
-        if len(args.size) != 2:
+        width_height = " ".join(map(str, args.size))
+        if args.size and len(args.size) != 2:
             raise ValueError("window.resize requires both width and height")
-        return f"window.resize {args.size[0]} {args.size[1]}"
+        return ("window.resize"
+                + (f" {width_height}" if args.size else "")
+                + focus_mode_suffix(args))
     if command == "window.material":
         if len(args.point) not in (0, 2):
             raise ValueError("window.material requires both x and y")
         return "window.material" + (" " + " ".join(map(str, args.point)) if args.point else "")
     if command == "window.maximize":
-        return f"window.maximize {args.maximized}"
+        return f"window.maximize {args.maximized}{focus_mode_suffix(args)}"
     if command == "window.activation":
         return f"window.activation {args.state}"
     if command == "window.tray":
-        return f"window.tray {args.action}"
+        return f"window.tray {args.action}{focus_mode_suffix(args)}"
+    if command == "window.focus-mode":
+        return command + (f" {args.mode}" if args.mode else "")
     if command == "anim.speed":
         return ("anim.speed" if args.speed is None
                 else f"anim.speed {args.speed}")
@@ -797,18 +829,36 @@ def quote_arg(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+def focus_mode_suffix(args: argparse.Namespace) -> str:
+    mode = getattr(args, "focus_mode", None)
+    return f" --focus-mode {mode}" if mode is not None else ""
+
+
+def verify_running_debug_app() -> dict | None:
+    if (pid := port_owner_pid()) is None:
+        return None
+    if not is_expected_process(pid):
+        raise RuntimeError(f"Port {PORT} belongs to another application with PID {pid}")
+    info = json.loads(send_command("app.info"))
+    actual = Path(info["workingDir"]).resolve()
+    if actual != working_dir().resolve():
+        raise RuntimeError(f"Current data directory is {actual}; expected {working_dir()}. Stop the current debug application with app.stop first.")
+    if actual != debug_dir().resolve() and not info.get("isolatedDebug"):
+        raise RuntimeError("Test isolation is not enabled for this profile. Rebuild and restart the debug application.")
+    return info
+
+
+def switch_focus_mode(mode: str) -> None:
+    if verify_running_debug_app() is None:
+        raise RuntimeError("The application is not running; --focus-mode does not start it. Start it with app.start first.")
+    print(send_command(f"window.focus-mode {mode}"))
+
+
 def ensure_debug_app() -> None:
-    if (pid := port_owner_pid()) is not None:
-        if not is_expected_process(pid):
-            raise RuntimeError(f"Port {PORT} belongs to another application with PID {pid}")
-        info = json.loads(send_command("app.info"))
+    info = verify_running_debug_app()
+    if info is not None:
         if OFFLINE_START and not info.get("offline"):
             raise RuntimeError("The application is already online. Use app.restart --offline to test an offline startup.")
-        actual = Path(info["workingDir"]).resolve()
-        if actual != working_dir().resolve():
-            raise RuntimeError(f"Current data directory is {actual}; expected {working_dir()}. Stop the current debug application with app.stop first.")
-        if actual != debug_dir().resolve() and not info.get("isolatedDebug"):
-            raise RuntimeError("Test isolation is not enabled for this profile. Rebuild and restart the debug application.")
         return
     if not app_exe().is_file():
         raise SystemExit(
@@ -828,6 +878,8 @@ def launch_app() -> None:
         command.append("-startintray")
     if OFFLINE_START:
         command.append("-debugoffline")
+    if LAUNCH_NO_FOCUS:
+        command.append("--no-focus")
     if directory.resolve() != debug_dir().resolve():
         command.append("-debugprofile")
     if sys.platform == "win32":

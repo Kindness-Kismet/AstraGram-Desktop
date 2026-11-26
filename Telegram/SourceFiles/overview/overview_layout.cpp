@@ -307,7 +307,8 @@ Voice::Voice(
 	not_null<Delegate*> delegate,
 	not_null<HistoryItem*> parent,
 	not_null<DocumentData*> voice,
-	const style::OverviewFileLayout &st)
+	const style::OverviewFileLayout &st,
+	bool globalSearch)
 : RadialProgressItem(delegate, parent)
 , _data(voice)
 , _namel(std::make_shared<DocumentOpenClickHandler>(
@@ -316,13 +317,17 @@ Voice::Voice(
 		delegate->openDocument(_data, id);
 	}),
 	parent->fullId()))
-, _st(st) {
+, _st(st)
+, _globalSearch(globalSearch) {
 	AddComponents(Info::Bit());
 
 	setDocumentLinks(_data);
 	_data->loadThumbnail(parent->fullId());
 
 	updateName();
+	if (_globalSearch) {
+		watchSearchName();
+	}
 	const auto dateText = tr::link(
 		langDateTime(base::unixtime::parse(parent->date()))); // Link 1.
 	_details.setMarkedText(
@@ -354,8 +359,8 @@ void Voice::paint(Painter &p, const QRect &clip, TextSelection selection, const 
 		}
 	}
 	const auto showPause = updateStatusText();
-	const auto nameVersion = parent()->fromOriginal()->nameVersion();
-	if (_nameVersion < nameVersion) {
+	if (!_globalSearch
+		&& _nameVersion < parent()->fromOriginal()->nameVersion()) {
 		updateName();
 	}
 	const auto radial = isRadialAnimation();
@@ -430,9 +435,25 @@ void Voice::paint(Painter &p, const QRect &clip, TextSelection selection, const 
 		}
 	}
 
-	if (clip.intersects(style::rtlrect(nameleft, nametop, namewidth, st::semiboldFont->height, _width))) {
+	const auto nameRect = style::rtlrect(
+		nameleft,
+		nametop,
+		namewidth,
+		st::semiboldFont->height,
+		_width);
+	if (clip.intersects(nameRect)) {
 		p.setPen(st::historyFileNameInFg);
-		_name.drawLeftElided(p, nameleft, nametop, namewidth, _width);
+		_name.draw(
+			p,
+			Ui::Text::PaintContext{
+				.position = nameRect.topLeft(),
+				.availableWidth = namewidth,
+				.palette = &p.textPalette(),
+				.paused = p.inactive()
+					|| (context && context->paused),
+				.pausedEmoji = On(PowerSaving::kEmojiChat),
+				.elisionLines = 1,
+			});
 	}
 
 	if (clip.intersects(style::rtlrect(nameleft, statustop, namewidth, st::normalFont->height, _width))) {
@@ -591,7 +612,9 @@ bool Voice::iconAnimated() const {
 }
 
 void Voice::updateName() {
-	if (parent()->Has<HistoryMessageForwarded>()) {
+	if (_globalSearch) {
+		updateSearchName();
+	} else if (parent()->Has<HistoryMessageForwarded>()) {
 		const auto info = parent()->originalHiddenSenderInfo();
 		const auto name = info
 			? tr::lng_forwarded(tr::now, lt_user, info->nameText().toString())

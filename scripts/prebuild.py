@@ -38,6 +38,20 @@ def main() -> None:
             print(f"  {stage.name:<18} {stage.location}{version}")
         return
 
+    if args.check_code_style is not None:
+        from build_support.source_policy import check_sources
+
+        try:
+            result = check_sources(Path(__file__).resolve().parents[1], args.check_code_style)
+        except ValueError as error:
+            raise SystemExit(f"Invalid source selection: {error}") from error
+        except OSError as error:
+            raise SystemExit(
+                f"Source check failed: {type(error).__name__}; errno={error.errno}; "
+                f"winerror={getattr(error, 'winerror', None)}; filename={error.filename}"
+            ) from error
+        raise SystemExit(result)
+
     environment = msvc_environment()
 
     print(header("Current environment"))
@@ -74,10 +88,19 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help=STAGE_HELP,
     )
-    parser.add_argument("--list", action="store_true", help="List available stages and exit")
+    inspection = parser.add_mutually_exclusive_group()
+    inspection.add_argument("--list", action="store_true", help="List available stages and exit")
+    inspection.add_argument(
+        "--check-code-style", nargs="*", metavar="PATH",
+        help="Check the owned-code line limit without preparing dependencies;\n"
+        "check all source inputs when no repository-relative paths are given",
+    )
     parser.add_argument("--verbose", action="store_true", help="Print the commands of every stage before running")
     parser.add_argument("--clean", action="store_true", help="Remove build/tmp dependencies before preparing")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.check_code_style is not None and (args.stages or args.clean or args.verbose):
+        parser.error("--check-code-style cannot be combined with dependency preparation options")
+    return args
 
 
 def clean_dependencies() -> None:

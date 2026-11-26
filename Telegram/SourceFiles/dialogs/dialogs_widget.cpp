@@ -26,6 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "dialogs/ui/chat_search_in.h"
 #include "dialogs/ui/dialogs_bottom_button.h"
 #include "dialogs/ui/dialogs_stories_content.h"
+#include "media/stories/media_stories_post.h"
 #include "dialogs/ui/dialogs_stories_list.h"
 #include "dialogs/ui/dialogs_suggestions.h"
 #include "dialogs/ui/dialogs_top_bar_suggestion_content.h"
@@ -49,6 +50,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/layers/generic_box.h"
 #include "ui/widgets/chat_filters_tabs_strip.h"
 #include "ui/widgets/elastic_scroll.h"
+#include "ui/widgets/popup_menu.h"
+#include "ui/widgets/shadow.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/wrap/fade_wrap.h"
@@ -58,6 +61,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/requests_bar.h"
 #include "ui/chat/group_call_bar.h"
 #include "ui/chat/more_chats_bar.h"
+#include "ui/controls/button_context_menu.h"
 #include "ui/controls/jump_down_button.h"
 #include "ui/controls/swipe_handler.h"
 #include "ui/painter.h"
@@ -68,6 +72,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mainwindow.h"
 #include "mainwidget.h"
 #include "main/main_domain.h"
+#include "main/main_app_config.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
 #include "api/api_authorizations.h"
@@ -75,6 +80,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "chat_helpers/message_field.h"
 #include "core/application.h"
+#include "core/click_handler_types.h"
 #include "core/update_checker.h"
 #include "core/version.h"
 #include "core/shortcuts.h"
@@ -113,6 +119,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_extras_styles.h"
 #include "styles/style_info.h"
 #include "styles/style_td_common.h"
+#include "styles/style_menu_icons.h"
 #include "styles/style_window.h"
 
 #include <QtCore/QMimeData>
@@ -348,6 +355,9 @@ Widget::Widget(
 	_searchControls,
 	object_ptr<Ui::IconButton>(this, st::dialogsLock))
 , _downloadsButton(this, st::dialogsDownloadsButton)
+, _addStory(
+	_searchControls,
+	object_ptr<Ui::IconButton>(this, st::dialogsAddStory))
 , _chatsFilterForTopBarSuggestion(controller->activeChatsFilterCurrent())
 , _scroll(this)
 , _scrollToTop(_scroll, st::dialogsToUp)
@@ -422,6 +432,7 @@ Widget::Widget(
 	_scrollToTop->raise();
 	_lockUnlock->toggle(false, anim::type::instant);
 	_downloadsButton->hide();
+	_addStory->toggle(false, anim::type::instant);
 
 	_inner->updated(
 	) | rpl::on_next([=] {
@@ -653,7 +664,7 @@ Widget::Widget(
 	rpl::single(rpl::empty) | rpl::then(
 		session().domain().local().localPasscodeChanged()
 	) | rpl::on_next([=] {
-		updateLockUnlockVisibility();
+		updateTopBarActionsVisibility(anim::type::instant);
 	}, lifetime());
 	const auto lockUnlock = _lockUnlock->entity();
 	lockUnlock->setAccessibleName(tr::lng_shortcuts_lock(tr::now));
@@ -673,11 +684,11 @@ Widget::Widget(
 	});
 	_cancelSearch->shownValue(
 	) | rpl::on_next([=] {
-		updateLockUnlockPosition();
+		updateTopBarActionsPosition();
 	}, lifetime());
 	_lockUnlock->shownValue(
 	) | rpl::on_next([=] {
-		updateLockUnlockPosition();
+		updateTopBarActionsPosition();
 	}, lifetime());
 	rpl::merge(
 		ExtrasSettings::getInstance().showDownloadsButtonInHeaderValue(
@@ -686,11 +697,31 @@ Widget::Widget(
 	) | rpl::on_next([=] {
 		updateHeaderButtons();
 	}, lifetime());
+	auto fillPasscodeMenu = [=](not_null<Ui::PopupMenu*> menu) {
+		auto openPasscodeSettings = [=] {
+			auto context = ClickHandlerContext{
+				.sessionWindow = base::make_weak(controller),
+			};
+			Core::App().openLocalUrl(
+				u"tg://settings/privacy?"
+				u"highlight=security/passcode"_q,
+				QVariant::fromValue(std::move(context)));
+		};
+		menu->addAction(
+			tr::lng_settings_passcode_title(tr::now),
+			std::move(openPasscodeSettings),
+			&st::menuIconLock);
+	};
+	Ui::SetupButtonContextMenu(
+		lockUnlock,
+		&st::popupMenuWithIcons,
+		std::move(fillPasscodeMenu));
 
 	setupMainMenuToggle();
 	setupShortcuts();
 	if (_stories) {
 		setupStories();
+		setupAddStory();
 	}
 
 	_searchForNarrowLayout->setAccessibleName(tr::lng_dlg_filter(tr::now));
@@ -1783,18 +1814,34 @@ void Widget::setupStories() {
 					+ st::dialogsRowHeight))) {
 			storiesToggleExplicitExpand(false);
 		}
-		updateLockUnlockPosition();
+		updateTopBarActionsPosition();
 	}, lifetime());
 
 	_stories->collapsedGeometryChanged(
 	) | rpl::on_next([=] {
-		updateLockUnlockPosition();
+		updateTopBarActionsPosition();
 		updateStoriesTitleShown();
 	}, lifetime());
 
 	_stories->clicks(
 	) | rpl::on_next([=](uint64 id) {
-		controller()->openPeerStories(PeerId(int64(id)), currentSource());
+		const auto peerId = PeerId(int64(id));
+		const auto peer = session().data().peer(peerId);
+		if (Media::Stories::CanPostStory(peer)
+			&& peer->isSelf()
+			&& !session().data().stories().source(peerId)) {
+			Media::Stories::PostStory(controller(), peer);
+		} else {
+			controller()->openPeerStories(peerId, currentSource());
+		}
+	}, lifetime());
+
+	_stories->addStoryClicks(
+	) | rpl::on_next([=](uint64 id) {
+		const auto peer = session().data().peer(PeerId(int64(id)));
+		if (Media::Stories::CanPostStory(peer)) {
+			Media::Stories::PostStory(controller(), peer);
+		}
 	}, lifetime());
 
 	_stories->showMenuRequests(
@@ -1828,8 +1875,54 @@ void Widget::setupStories() {
 	}, lifetime());
 
 	_stories->widthValue() | rpl::on_next([=] {
-		updateLockUnlockPosition();
+		updateTopBarActionsPosition();
 	}, lifetime());
+}
+
+void Widget::setupAddStory() {
+	const auto button = _addStory->entity();
+	button->setAccessibleName(tr::lng_story_add_button(tr::now));
+	button->setClickedCallback([=] {
+		const auto self = session().user();
+		if (Media::Stories::CanPostStory(self)) {
+			Media::Stories::PostStory(controller(), self);
+		}
+	});
+	Ui::SetupButtonContextMenu(
+		button,
+		&st::popupMenuWithIcons,
+		[=](not_null<Ui::PopupMenu*> menu) {
+			menu->addAction(
+				tr::lng_translate_menu_hide(tr::now),
+				[=] {
+					Stories::SetAddStoryButtonHidden(
+						true);
+					updateTopBarActionsVisibility(
+						anim::type::normal);
+				},
+				&st::menuIconStealth);
+			menu->setForcedOrigin(
+				Ui::PanelAnimation::Origin::TopRight);
+		},
+		[=](not_null<Ui::PopupMenu*> menu) {
+			const auto extend
+				= Ui::BoxShadow::ExtendFor(menu->st().shadow);
+			const auto skip = st::dialogsAddStoryMenuSkip;
+			const auto anchor = QPoint(
+				button->width() + extend.right(),
+				button->height() + skip);
+			return Ui::PopupMenu::ConstrainToParentScreen(
+				menu,
+				button->mapToGlobal(anchor));
+		});
+
+	rpl::merge(
+		session().data().stories().sourcesChanged(
+			Data::StorySourcesList::NotHidden),
+		session().appConfig().refreshed()
+	) | rpl::on_next([=] {
+		updateTopBarActionsVisibility(anim::type::normal);
+	}, _addStory->lifetime());
 }
 
 void Widget::storiesToggleExplicitExpand(bool expand) {
@@ -1944,8 +2037,16 @@ void Widget::fullSearchRefreshOn(rpl::producer<> events) {
 
 void Widget::updateControlsVisibility(bool fast) {
 	updateLoadMoreChatsVisibility();
+	if (_suggestions) {
+		_suggestions->setVisible(!_showAnimation);
+	}
+	for (const auto &suggestions : _hidingSuggestions) {
+		suggestions->setVisible(!_showAnimation);
+	}
 	_scroll->setVisible(!suggestionsCoverList() && _hidingSuggestions.empty());
-	updateStoriesVisibility();
+	updateStoriesVisibility(fast
+		? anim::type::instant
+		: anim::type::normal);
 	if (((_openedFolder && !_archiveSearchShown)
 		|| _openedForum
 		|| _openedCommunity)
@@ -1981,9 +2082,6 @@ void Widget::updateControlsVisibility(bool fast) {
 			_forumReportBar->show();
 		}
 	} else {
-		updateLockUnlockVisibility(fast
-			? anim::type::instant
-			: anim::type::normal);
 		updateJumpToDateVisibility(fast);
 		updateSearchFromVisibility(fast);
 	}
@@ -2000,11 +2098,12 @@ void Widget::updateControlsVisibility(bool fast) {
 	if (_childList && _searchHasFocus) {
 		setInnerFocus();
 	}
-	updateLockUnlockPosition();
+	updateTopBarActionsPosition();
 }
 
-void Widget::updateLockUnlockPosition() {
-	const auto stories = (_stories && !_stories->isHidden())
+void Widget::updateTopBarActionsPosition() {
+	const auto stories
+		= (_stories && !_stories->empty() && !_stories->isHidden())
 		? _stories->collapsedGeometryCurrent()
 		: Stories::List::CollapsedGeometry();
 	const auto simple = _search->x() + _search->width();
@@ -2016,6 +2115,12 @@ void Widget::updateLockUnlockPosition() {
 			right - _lockUnlock->width(),
 			st::dialogsFilterPadding.y());
 	}
+	const auto storyRight = session().domain().local().hasLocalPasscode()
+		? right - _lockUnlock->width()
+		: simple;
+	_addStory->move(
+		storyRight - st::dialogsAddStoryRight - _addStory->width(),
+		_search->y() + (_search->height() - _addStory->height()) / 2);
 	const auto margin = int(_chooseFromUser->width()
 		* _chooseFromUser->shownProgress())
 		+ int(_chooseSearchType->width()
@@ -2174,7 +2279,9 @@ void Widget::updateSuggestions(anim::type animated) {
 	const auto suggest = (searchActive() || _searchSuggestionsLocked)
 		&& !_openedFolder
 		&& !_searchState.inChat;
-	if (anim::Disabled() || !session().data().chatsListLoaded()) {
+	if (_showAnimation
+		|| anim::Disabled()
+		|| !session().data().chatsListLoaded()) {
 		animated = anim::type::instant;
 	}
 	if (!suggest && _suggestions) {
@@ -2301,6 +2408,9 @@ void Widget::updateSuggestions(anim::type animated) {
 		_suggestions->show(
 			tabsOnly ? anim::type::instant : animated,
 			[=] { stopWidthAnimation(); });
+		if (_showAnimation) {
+			_suggestions->setVisible(false);
+		}
 		if (!tabsOnly) {
 			_scroll->hide();
 		}
@@ -3035,7 +3145,7 @@ void Widget::scrollToDefault(bool verytop) {
 		anim::sineInOut);
 }
 
-[[nodiscard]] QPixmap Widget::grabNonNarrowScrollFrame() {
+QPixmap Widget::grabNonNarrowScrollFrame() {
 	auto scrollGeometry = _scroll->geometry();
 	const auto top = _searchControls->y() + _searchControls->height();
 	const auto skip = scrollGeometry.y() - top;
@@ -3115,8 +3225,8 @@ void Widget::stopWidthAnimation() {
 	update();
 }
 
-void Widget::updateStoriesVisibility() {
-	updateLockUnlockVisibility(anim::type::normal);
+void Widget::updateStoriesVisibility(anim::type animated) {
+	updateTopBarActionsVisibility(animated);
 	if (!_stories) {
 		return;
 	}
@@ -3128,21 +3238,15 @@ void Widget::updateStoriesVisibility() {
 	}
 
 	const auto widthAnimation = !_widthAnimationCache.isNull();
-	const auto suggestionsAnimation = widthAnimation
-		&& !_openedFolder
-		&& (!_suggestions || !_hidingSuggestions.empty());
-	const auto hiddenAnimated = _searchHasFocus
-		|| _searchSuggestionsLocked
-		|| !_searchState.query.isEmpty()
-		|| _searchState.inChat
-		|| suggestionsAnimation
+	const auto hiddenAnimated = searchHidesTopBarContent()
 		|| _archiveSearchShown;
 	const auto pulledDown = _scroll->position().overscroll
 		< -st::dialogsFilterSkip;
 	const auto hiddenInstant = _showAnimation
 		|| _openedForum
 		|| _openedCommunity
-		|| (widthAnimation && !suggestionsAnimation)
+		|| showingSuggestionsDuringWidthAnimation()
+		|| (widthAnimation && _openedFolder)
 		|| _childList
 		|| _stories->empty()
 		|| (pulledDown && hiddenAnimated);
@@ -3170,7 +3274,7 @@ void Widget::updateStoriesVisibility() {
 		if (_aboveScrollAdded > 0 && _updateScrollGeometryCached) {
 			_updateScrollGeometryCached();
 		}
-		updateLockUnlockPosition();
+		updateTopBarActionsPosition();
 	}
 	updateStoriesTitleShown();
 }
@@ -3230,6 +3334,12 @@ void Widget::startSlideAnimation(
 		QPixmap newContentCache,
 		Window::SlideDirection direction,
 		std::optional<Window::CrossFadeArgs> crossFade) {
+	if (_suggestions) {
+		_suggestions->setVisible(false);
+	}
+	for (const auto &suggestions : _hidingSuggestions) {
+		suggestions->setVisible(false);
+	}
 	_scroll->hide();
 	if (_stories) {
 		_stories->setToggledHidden(true, false);
@@ -3715,6 +3825,8 @@ void Widget::searchTopics() {
 		MTP_flags(MTPmessages_GetForumTopics::Flag::f_q),
 		_openedForum->peer()->input(),
 		MTP_string(_topicSearchQuery),
+		MTPlong(), // icon_emoji_id
+		MTPBool(), // closed
 		MTP_int(_topicSearchOffsetDate),
 		MTP_int(_topicSearchOffsetId),
 		MTP_int(_topicSearchOffsetTopicId),
@@ -4048,6 +4160,10 @@ void Widget::dragMoveEvent(QDragMoveEvent *e) {
 		const auto thread = suggestionsCoverList()
 			? _suggestions->updateFromParentDrag(global)
 			: _inner->updateFromParentDrag(global);
+		if (_stories) {
+			_stories->dragLeft();
+		}
+		addStoryDragLeft();
 		e->setDropAction(thread ? Qt::CopyAction : Qt::IgnoreAction);
 	} else {
 		if (_dragForward) {
@@ -4057,9 +4173,59 @@ void Widget::dragMoveEvent(QDragMoveEvent *e) {
 			_suggestions->dragLeft();
 		}
 		_inner->dragLeft();
-		e->setDropAction(Qt::IgnoreAction);
+		const auto stories = updateStoriesDrag(e);
+		const auto addStory = updateAddStoryDrag(e);
+		if (!stories && !addStory) {
+			e->setDropAction(Qt::IgnoreAction);
+		}
 	}
 	e->accept();
+}
+
+bool Widget::updateStoriesDrag(not_null<QDragMoveEvent*> e) {
+	if (!_stories || _stories->isHidden()) {
+		return false;
+	}
+	const auto peer = session().data().peer(session().userPeerId());
+	if (!Media::Stories::CanPostStory(peer)) {
+		return false;
+	}
+	if (!_stories->geometry().contains(e->pos())) {
+		_stories->dragLeft();
+		return false;
+	}
+	if (!Storage::IsAcceptableStoryDragState(
+			Storage::ComputeMimeDataState(e->mimeData()))) {
+		_stories->dragLeft();
+		return false;
+	}
+	_stories->updateFromParentDrag(mapToGlobal(e->pos()));
+	e->setDropAction(Qt::CopyAction);
+	return true;
+}
+
+bool Widget::addStoryDragAccepted(not_null<QDropEvent*> e) const {
+	return _addStory->toggled()
+		&& !_addStory->isHidden()
+		&& _addStory->geometry().translated(
+			_searchControls->pos()).contains(e->pos())
+		&& Media::Stories::CanPostStory(session().user())
+		&& Storage::IsAcceptableStoryDragState(
+			Storage::ComputeMimeDataState(e->mimeData()));
+}
+
+bool Widget::updateAddStoryDrag(not_null<QDragMoveEvent*> e) {
+	if (!addStoryDragAccepted(e)) {
+		addStoryDragLeft();
+		return false;
+	}
+	_addStory->entity()->setForceRippled(true);
+	e->setDropAction(Qt::CopyAction);
+	return true;
+}
+
+void Widget::addStoryDragLeft() {
+	_addStory->entity()->setForceRippled(false);
 }
 
 void Widget::dragLeaveEvent(QDragLeaveEvent *e) {
@@ -4072,6 +4238,10 @@ void Widget::dragLeaveEvent(QDragLeaveEvent *e) {
 		_suggestions->dragLeft();
 	}
 	_inner->dragLeft();
+	if (_stories) {
+		_stories->dragLeft();
+	}
+	addStoryDragLeft();
 	e->accept();
 }
 
@@ -4090,7 +4260,19 @@ void Widget::dropEvent(QDropEvent *e) {
 	using namespace Storage;
 
 	_chooseByDragTimer.cancel();
-	if (_scroll->geometry().contains(e->pos())) {
+	const auto addStory = addStoryDragAccepted(e);
+	addStoryDragLeft();
+	if (addStory) {
+		e->setDropAction(Qt::CopyAction);
+		e->accept();
+		Media::Stories::PostStoryWithMimeData(
+			controller(),
+			session().user(),
+			e->mimeData());
+	} else if (_scroll->geometry().contains(e->pos())) {
+		if (_stories) {
+			_stories->dragLeft();
+		}
 		const auto globalPosition = mapToGlobal(e->pos());
 		const auto thread = suggestionsCoverList()
 			? _suggestions->updateFromParentDrag(globalPosition)
@@ -4113,6 +4295,25 @@ void Widget::dropEvent(QDropEvent *e) {
 			controller()->widget()->raise();
 			controller()->widget()->activateWindow();
 		}
+	} else if (_stories && !_stories->isHidden()
+		&& _stories->geometry().contains(e->pos())) {
+		const auto id = _stories->finishDropAt(mapToGlobal(e->pos()));
+		const auto peer = id
+			? session().data().peer(PeerId(int64(id))).get()
+			: nullptr;
+		if (peer
+			&& Media::Stories::CanPostStory(peer)
+			&& Storage::IsAcceptableStoryDragState(
+				Storage::ComputeMimeDataState(e->mimeData()))) {
+			e->setDropAction(Qt::CopyAction);
+			e->accept();
+			Media::Stories::PostStoryWithMimeData(
+				controller(),
+				peer,
+				e->mimeData());
+			return;
+		}
+		e->setDropAction(Qt::IgnoreAction);
 	}
 }
 
@@ -4519,7 +4720,6 @@ bool Widget::applySearchState(SearchState state) {
 	}
 	_searchWithPostsPreview = computeSearchWithPostsPreview();
 	if (queryChanged) {
-		updateLockUnlockVisibility(anim::type::normal);
 		updateLoadMoreChatsVisibility();
 	}
 	if (inChatChanged) {
@@ -4532,7 +4732,7 @@ bool Widget::applySearchState(SearchState state) {
 	}
 	updateJumpToDateVisibility();
 	updateSearchFromVisibility();
-	updateLockUnlockPosition();
+	updateTopBarActionsPosition();
 
 	const auto searchCleared = state.query.isEmpty()
 		&& !state.fromPeer
@@ -4824,41 +5024,55 @@ void Widget::resizeEvent(QResizeEvent *e) {
 	}
 }
 
-void Widget::updateLockUnlockVisibility(anim::type animated) {
+bool Widget::showingSuggestionsDuringWidthAnimation() const {
+	return !_widthAnimationCache.isNull()
+		&& _suggestions
+		&& _hidingSuggestions.empty();
+}
+
+bool Widget::searchHidesTopBarContent() const {
+	return _searchHasFocus
+		|| _searchSuggestionsLocked
+		|| !_searchState.query.isEmpty()
+		|| _searchState.inChat;
+}
+
+void Widget::updateTopBarActionsVisibility(anim::type animated) {
 	if (_showAnimation) {
 		return;
 	}
-	const auto widthAnimation = !_widthAnimationCache.isNull();
-	const auto suggestionsAnimation = widthAnimation
-		&& (!_suggestions || !_hidingSuggestions.empty());
-	// Show verified locking; the layout path only reads the cache.
-	const auto hiddenInstant = _showAnimation
-		|| _openedForum
-		|| (widthAnimation && !suggestionsAnimation)
-		|| _childList
+	const auto hiddenInstant = _openedForum
+		|| showingSuggestionsDuringWidthAnimation()
+		|| _childList;
+	const auto hiddenAnimated = searchHidesTopBarContent()
+		|| _archiveSearchShown;
+	const auto hasStories = _stories && !_stories->empty();
+	const auto lockHiddenInstant = hiddenInstant
 		|| !session().domain().local().hasLocalPasscode()
-		|| (_stories
-			&& !_stories->empty()
-			&& _scroll->position().overscroll < -st::dialogsFilterSkip);
-	const auto hiddenAnimated = _searchHasFocus
-		|| _searchSuggestionsLocked
-		|| !_searchState.query.isEmpty()
-		|| _searchState.inChat
-		|| suggestionsAnimation;
-	const auto hidden = hiddenInstant || hiddenAnimated;
-	const auto changed = (_lockUnlock->toggled() == hidden);
+		|| (hasStories
+			&& _scroll->position().overscroll
+				< -st::dialogsFilterSkip);
+	const auto storyHiddenInstant = hiddenInstant
+		|| ExtrasSettings::getInstance().disableStories()
+		|| !_stories
+		|| hasStories
+		|| !session().data().stories().sourcesKnown(
+			Data::StorySourcesList::NotHidden)
+		|| !Media::Stories::CanPostStory(session().user())
+		|| Stories::AddStoryButtonHidden();
+	const auto lockWaitsForSuggestions = storyHiddenInstant
+		&& !hasStories
+		&& !_widthAnimationCache.isNull();
+
 	_lockUnlock->toggle(
-		!hidden,
-		hiddenInstant ? anim::type::instant : animated);
-	if (changed) {
-		if (!hidden) {
-			updateLockUnlockPosition();
-		}
-		updateControlsGeometry();
-	}
-	if (!changed) {
-		updateLockUnlockPosition();
-	}
+		!lockHiddenInstant
+			&& !hiddenAnimated
+			&& !lockWaitsForSuggestions,
+		lockHiddenInstant ? anim::type::instant : animated);
+	_addStory->toggle(
+		!storyHiddenInstant && !hiddenAnimated,
+		storyHiddenInstant ? anim::type::instant : animated);
+	updateTopBarActionsPosition();
 }
 
 void Widget::updateLoadMoreChatsVisibility() {
@@ -5037,7 +5251,7 @@ void Widget::updateControlsGeometry() {
 			st::lineWidth);
 	}
 
-	updateLockUnlockPosition();
+	updateTopBarActionsPosition();
 
 	auto bottomSkip = 0;
 	const auto putBottomButton = [&](auto &button) {

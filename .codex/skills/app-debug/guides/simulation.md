@@ -12,10 +12,10 @@
 进入时自动构造 30 个会话、15 个话题和 3 个收藏来源，无需下载素材。
 固定场景按原生会话标签分类；使用 `simulation.open` 定位，使用 `simulation.trigger` 触发临时提示。
 
-```bash
-python .codex/skills/app-debug/scripts/cli.py app.start --profile simulation + simulation.enter
-python .codex/skills/app-debug/scripts/cli.py simulation.list
-python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot.take
+```text
+app.start --no-focus --profile simulation + simulation.enter
+simulation.list
+simulation.open group + screenshot.take
 ```
 
 `app.info` 的 `simulationMode: true` 确认身份。已有真实会话时拒绝进入；已在模拟模式中再次调用保持现场。
@@ -36,9 +36,9 @@ python .codex/skills/app-debug/scripts/cli.py simulation.open group + screenshot
 覆盖有效与非法 PNG 位深、分组放大上限、单次及同帧累计彩色字形预算、local/session 存储 4096 字节接受与 4097 字节拒绝；结束时恢复原存储值。
 验证前等待样本加载完成，期间不操作卡片；该入口不加载官方测试源码或测试运行器。
 
-```bash
-python .codex/skills/app-debug/scripts/cli.py app.start --profile upstream-741 + simulation.enter + simulation.widget show
-python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screenshot.take
+```text
+app.start --no-focus --profile upstream-741 + simulation.enter + simulation.widget show
+simulation.widget state + screenshot.take
 ```
 
 截图前等待 `runtime` 为 `live`、`loaded` 与 `hasContent` 为 `true`。按钮通过聊天列表内的 `control.mouse` 或 `control.pointer` 操作，
@@ -185,7 +185,7 @@ python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screensh
 等入场结束后确认 A，过渡未结束时再确认 B；B 的我方消息会先被 A 的排序调整带动，再移动到自身确认后的位置。确认时仍保留原消息对象。
 不传 `--with` 时，新组基准时间至少比此前最大值晚三秒，便于区分位置变化。重启模拟配置清除样本，验证后恢复动画速度及原开发配置。
 
-`simulation.cache-history-check` 仅在独立模拟配置中运行固定历史缓存检查，先用 `app.start --profile cache-history-check + simulation.enter` 进入。
+`simulation.cache-history-check` 仅在独立模拟配置中运行固定历史缓存检查，先用 `app.start --no-focus --profile cache-history-check + simulation.enter` 进入。
 返回异步任务编号，用 `job.status <编号>` 查看完成结果；覆盖摘要删除、未知末条、请求乱序、话题与收藏来源隔离、发送确认、加载中的动态更新与选择保留。
 同时覆盖未加载消息的反应、扩展媒体资料、待办追加与完成、开放投票答案增删；扩展媒体使用本地协议样本，不执行交易。
 历史内存检查覆盖未保存和写入中保护、闲置回收、磁盘恢复后的编辑删除，以及超出会话数量预算时的淘汰。
@@ -222,16 +222,18 @@ python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screensh
 样本复用内存中的静态图片，文档使用自定义表情属性并沿原生表情包更新通知刷新；重复执行不会重复添加。
 打开 `compose.emoji`，用 `control.set compose.emoji.tabs 0` 切到表情页，再用 `control.list emoji.categories` 定位自绘底栏；通过 `control.mouse` 和 `control.pointer` 检查分类与表情包切换、悬停，状态随模拟会话销毁。
 
-`simulation.wallet [keep|missing|ready|collectibles|layout|close]` 仅在独立模拟配置中打开或关闭钱包窗口。
+`simulation.wallet [keep|missing|ready|collectibles|layout|onchain|close]` 仅在独立模拟配置中打开或关闭钱包窗口。
 `missing` 显示未创建状态，`ready` 注入固定公开地址、余额和交易记录，`collectibles` 另加普通藏品与两种配色的礼物，显示标签页和卡片装饰入口。
 `layout` 注入六笔交易：匿名地址收款和转出、域名长金额收款、长姓名联系人转出、失败转出、无地址对方；地址由正式格式化函数生成，返回的 `history` 包含完整地址、方向、金额与失败状态，可核对点击后的复制结果。
-列表沿正式响应处理入口更新；不安装私钥或提交交易，状态随模拟会话销毁。
+`onchain` 注入十种链上礼物记录：购买、上架、下架、改价、发出报价、买方及卖方成交、取消、拒绝和到期。返回的 `onchainAction` 依次为 1 至 10，并包含实际解析的 `priceNano`、`refundNano` 和 `feeNano`；样本覆盖无礼物封面、零金额和零手续费的展示。
+固定场景先清空模拟钱包状态，再沿正式响应处理入口注入列表；不安装私钥或提交交易，状态随模拟会话销毁。
 打开后用 `control.window simulation.wallet` 选择该窗口，检查结束用 `simulation.wallet close` 关闭并恢复主窗口目标。
 
 `dialog.list` 列出对话框样本的键名与布局类别；`dialog.open <key>` 仅在独立模拟配置中关闭现有图层后无动画打开样本，`dialog.close` 关闭全部图层。
 样本覆盖确认、表单、选项、列表、选择器、深色、不可关闭和自绘顶部等布局。公共外壳的控件标识为 `dialog.shell`、`dialog.title` 和 `dialog.close`，
 配合 `control.list dialog.` 与截图检查标题、关闭按钮和底部按钮。保存类按钮仍走原有业务路径，模拟模式下联网请求不会成功，不作为业务结果的证据。
 新增搜索样本：`giveaway-countries`、`translate-language`、`official-font`、`dictionary`、`peer-lists`、`share`；只用于模拟模式布局与筛选验证，不执行保存或发送。
+`story-discard`、`story-delete`、`story-discard-edit` 复用动态编辑器的正式退出确认菜单，分别显示新草稿、已有草稿和不可保存草稿的动作；保存与删除按钮仅关闭模拟背景，不读写草稿或调用发布接口，取消后用 `dialog.close` 退出背景。
 `background-preview` 用内置照片壁纸打开背景预览，无需联网即可检查预览中的日期与服务消息。
 `peer-qr` 为模拟账号设置固定用户名并打开个人二维码面板；`link-qr` 打开带标题和说明的链接二维码，可检查卡片、按钮与配色。
 `settings-layout` 在可缩放弹层中复用设置页的真实行控件，包含长路径、长标题、长说明和短当前值；行标识为 `simulation.settings.download`、`simulation.settings.notifications`、`simulation.settings.language`。
@@ -239,12 +241,12 @@ python .codex/skills/app-debug/scripts/cli.py simulation.widget state + screensh
 
 设置行的宽窄对照先选回主窗口，再调整窗口尺寸，等待布局完成后截图：
 
-```bash
-python .codex/skills/app-debug/scripts/cli.py control.window main + window.resize 1000 800 + dialog.open settings-layout
-python .codex/skills/app-debug/scripts/cli.py screenshot.take + control.list simulation.settings
-python .codex/skills/app-debug/scripts/cli.py window.resize 430 800
-python .codex/skills/app-debug/scripts/cli.py screenshot.take + control.list settings.row
-python .codex/skills/app-debug/scripts/cli.py dialog.open permissions
+```text
+control.window main + window.resize 1000 800 + dialog.open settings-layout
+screenshot.take + control.list simulation.settings
+window.resize 430 800
+screenshot.take + control.list settings.row
+dialog.open permissions
 ```
 
 先用 `simulation.list`、`message.list/inspect`、`chat.draft` 核对状态，再截图观察布局。

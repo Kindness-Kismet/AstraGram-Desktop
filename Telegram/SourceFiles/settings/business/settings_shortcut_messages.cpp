@@ -276,6 +276,7 @@ private:
 	std::unique_ptr<ComposeControls> _composeControls;
 	std::unique_ptr<ExtrasUi::FloatingSurfaceHost> _floatingSurfaceHost;
 	int _composeOverlap = 0;
+	QPointer<SendFilesBox> _sendFilesBox;
 	rpl::event_stream<> _showBackRequests;
 	bool _skipScrollEvent = false;
 	// 打开或发送后保持在底部，用户滚离底部后失效。
@@ -448,7 +449,16 @@ ShortcutMessages::ShortcutMessages(
 	}, lifetime());
 }
 
-ShortcutMessages::~ShortcutMessages() = default;
+ShortcutMessages::~ShortcutMessages() {
+	// The Info host may already be half deleted, so don't restore the text.
+	if (const auto box = _sendFilesBox.data()) {
+		box->setCancelledCallback(nullptr);
+		box->closeBox();
+	}
+	if (_composeControls) {
+		_composeControls->closeSendAsFileBox(false);
+	}
+}
 
 void ShortcutMessages::refreshEmptyText() {
 	const auto &shortcut = _shortcut.current();
@@ -1267,6 +1277,7 @@ void ShortcutMessages::sendVoice(ComposeControls::VoiceToSend &&data) {
 		data.waveform,
 		data.duration,
 		data.video,
+		data.videoSource,
 		std::move(action));
 
 	_composeControls->cancelReplyMessage();
@@ -1424,6 +1435,7 @@ bool ShortcutMessages::confirmSendingFiles(
 		Api::SendType::Normal,
 		SendMenu::Details(),
 		[=](const TextWithTags &text) { _composeControls->setText(text); });
+	_sendFilesBox = box.data();
 
 	box->setConfirmedCallback(crl::guard(this, [=](
 			std::shared_ptr<Ui::PreparedBundle> bundle,

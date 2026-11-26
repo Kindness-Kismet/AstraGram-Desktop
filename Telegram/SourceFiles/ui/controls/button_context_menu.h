@@ -19,6 +19,7 @@ class RippleButton;
 void SetupButtonContextMenu(
 	not_null<RippleButton*> button,
 	not_null<const style::PopupMenu*> st,
-	Fn<void(not_null<PopupMenu*>)> fill);
+	Fn<void(not_null<PopupMenu*>)> fill,
+	Fn<QPoint(not_null<PopupMenu*>)> position = nullptr);
 
 } // namespace Ui

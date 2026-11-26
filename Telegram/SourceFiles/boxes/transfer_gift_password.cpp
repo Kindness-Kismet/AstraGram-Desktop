@@ -18,7 +18,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/layers/show.h"
 #include "window/window_session_controller.h"
 
-namespace GiftTransfer {
 namespace {
 
 constexpr auto kTmpPasswordPeriod = 10 * TimeId(60);
@@ -78,6 +77,7 @@ private:
 [[nodiscard]] bool TmpPasswordRefused(const QString &type) {
 	const auto refusals = std::array{
 		u"TMP_PASSWORD_INVALID"_q,
+		u"TMP_PASSWORD_REQUIRED"_q,
 		u"PASSWORD_HASH_INVALID"_q,
 		u"SRP_PASSWORD_CHANGED"_q,
 	};
@@ -130,7 +130,7 @@ void GiftPasswordFlow::waitForState() {
 	_waiting = true;
 	base::call_delayed(
 		kPasswordStateTimeout,
-		_confirmation.get(),
+		_handedOff ? _box.get() : _confirmation.get(),
 		[self = shared_from_this()] { self->stateTimeout(); });
 	session->api().cloudPassword().reload([weak = weak_from_this()](
 			std::optional<Core::CloudPasswordState> state) {
@@ -233,7 +233,7 @@ void GiftPasswordFlow::requestTmpPassword(
 		const Core::CloudPasswordResult &check,
 		base::weak_qptr<PasscodeBox> box) {
 	const auto session = _session.get();
-	if (!session || !canPrompt() || _issuing || _sending || _done) {
+	if (!session || !canPrompt() || _waiting || _issuing || _sending || _done) {
 		return;
 	}
 	_issuing = true;
@@ -317,10 +317,16 @@ void GiftPasswordFlow::giftFailed(
 	if (refused && session) {
 		session->dropTmpPassword(tmpPassword);
 	}
+	const auto reask = refused
+		&& (stored || type.startsWith(u"TMP_PASSWORD_"_q));
 	if (_abandoned) {
 		return;
 	}
-	if (refused && stored && canPrompt()) {
+	if (_step.closeOnFail && MTP::IgnoreError(error)) {
+		fail(error);
+		return;
+	}
+	if (reask && canPrompt()) {
 		waitForState();
 	} else if (!canPrompt() || !showPrePasswordBox(type)) {
 		fail(error);
@@ -328,6 +334,12 @@ void GiftPasswordFlow::giftFailed(
 }
 
 void GiftPasswordFlow::fail(const MTP::Error &error) {
+	if (_step.closeOnFail) {
+		_done = true;
+		if (const auto strong = _box.get()) {
+			strong->closeBox();
+		}
+	}
 	if (_show->valid()) {
 		_step.failed(error);
 	}
@@ -345,5 +357,3 @@ void RequestWithGiftPassword(
 		std::move(step));
 	flow->start();
 }
-
-} // namespace GiftTransfer

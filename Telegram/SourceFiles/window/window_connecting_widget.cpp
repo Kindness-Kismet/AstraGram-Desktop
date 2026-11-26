@@ -267,7 +267,9 @@ void ConnectionState::createWidget() {
 	_widget->setLayout(_currentLayout);
 	_widget->setVisible(!_forceHidden);
 
-	updateWidth();
+	_parent->widthValue() | rpl::on_next([=] {
+		updateWidth();
+	}, _widget->lifetime());
 
 	rpl::combine(
 		visibility(),
@@ -500,7 +502,9 @@ void ConnectionState::updateWidth() {
 		st::connectingMargin
 	);
 	if (_widget) {
-		_widget->resize(desired.size());
+		const auto minimal = desired.width() - int(current);
+		const auto limit = std::max(_parent->width(), minimal);
+		_widget->resize(std::min(desired.width(), limit), desired.height());
 		_widget->update();
 	}
 	refreshProgressVisibility();
@@ -634,6 +638,7 @@ void ConnectionState::Widget::setLayout(const Layout &layout) {
 	_currentLayout = layout;
 	_proxyIcon->setToggled(_currentLayout.proxyEnabled);
 	refreshRetryLink(_currentLayout.hasRetry);
+	updateRetryGeometry();
 	setAccessibleName(_currentLayout.text);
 }
 

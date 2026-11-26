@@ -9,6 +9,8 @@
 #include "main/main_session.h"
 #include "tgw/tgw_backend.h"
 #include "tgw/tgw_painter.h"
+#include "tgw/tgw_render_thread.h"
+#include "tgw/tgw_renderer_work.h"
 #include "tgw/tgw_storage.h"
 #include "twidget/sdk_policy.h"
 
@@ -43,7 +45,7 @@ void appendUInt32(QByteArray &bytes, uint32 value) {
 }
 
 [[nodiscard]] bool loadsImage(const QByteArray &png) {
-	auto backend = Tgw::QtBackend({});
+	auto backend = Tgw::QtBackend({}, {}, {}, {}, {});
 	auto width = float();
 	auto height = float();
 	return backend.load_image(1,
@@ -77,7 +79,8 @@ void appendUInt32(QByteArray &bytes, uint32 value) {
 		{ .kind = twlite::Cmd::FillRect,
 			.rect = { 48, 48, 8, 8 }, .color = { 0, 255, 0, 255 } },
 	};
-	return Tgw::PaintFrame(commands, Tgw::QtBackend({}), QSize(64, 64), 1.);
+	auto backend = Tgw::QtBackend({}, {}, {}, {}, {});
+	return Tgw::PaintFrame(commands, backend, QSize(64, 64), 1.);
 }
 
 [[nodiscard]] Tgw::PaintedFrame glyphFrame(
@@ -85,7 +88,8 @@ void appendUInt32(QByteArray &bytes, uint32 value) {
 		int count,
 		QSize size,
 		float step = 0.) {
-	auto backend = Tgw::QtBackend({});
+	// 固定彩色字体，确保预算检查覆盖实际彩色字形栅格。
+	auto backend = Tgw::QtBackend({}, {}, u"Segoe UI Emoji"_q, {}, {});
 	auto metrics = twlite::FontMetrics();
 	const auto font = backend.create_font(
 		"Segoe UI Emoji", pixels, 400, false, {}, metrics);
@@ -116,19 +120,25 @@ public:
 	}
 
 	[[nodiscard]] Result start() {
-		checkImages();
-		checkPainting();
-		if (!_host.id) {
-			record("storage-host", false);
-			finish();
-			return jobStarted(_job);
-		}
-		commit(twidget::WidgetStorage{ .local = _accepted, .session = _accepted });
-		crl::on_main([self = shared_from_this()] { self->checkAccepted(); });
+		Tgw::PostToRenderThread([self = shared_from_this()] {
+			self->checkImages();
+			self->checkPainting();
+			crl::on_main([self] { self->checkStorage(); });
+		});
 		return jobStarted(_job);
 	}
 
 private:
+	void checkStorage() {
+		if (!_host.id) {
+			record("storage-host", false);
+			finish();
+			return;
+		}
+		commit(twidget::WidgetStorage{ .local = _accepted, .session = _accepted });
+		crl::on_main([self = shared_from_this()] { self->checkAccepted(); });
+	}
+
 	void record(const char *name, bool passed, Json details = Json::object()) {
 		_passed &= passed;
 		_checks.push_back({ { "name", name }, { "passed", passed },

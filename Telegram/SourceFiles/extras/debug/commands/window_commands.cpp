@@ -1,6 +1,7 @@
 #ifdef _DEBUG
 #include "extras/debug/commands/commands_internal.h"
 
+#include "extras/debug/window_focus.h"
 #include "extras/features/window_material/window_material.h"
 
 #include "core/application.h"
@@ -8,9 +9,12 @@
 
 #include <QGuiApplication>
 #include <QBackingStore>
+#include <QEventLoop>
 #include <QImage>
 #include <QWindow>
 #include <qpa/qwindowsysteminterface.h>
+
+#include <memory>
 
 #ifdef Q_OS_WIN
 #include <Windows.h>
@@ -30,21 +34,37 @@ using json = nlohmann::json;
 		{ "maximized", window->isMaximized() },
 		{ "visible", window->isVisible() },
 		{ "active", window->isActiveWindow() },
+		{ "focus_mode", ExtrasDebug::WindowFocus::modeName().toStdString() },
 		{ "windowMaterialActive", ExtrasFeatures::WindowMaterial::isActive(window) },
 		{ "applicationActive",
 			QGuiApplication::applicationState() == Qt::ApplicationActive },
 	};
 }
 
-void showWithoutActivating(not_null<QWidget*> window, bool maximized) {
-	const auto previous = window->testAttribute(Qt::WA_ShowWithoutActivating);
-	window->setAttribute(Qt::WA_ShowWithoutActivating);
-	if (maximized) {
-		window->showMaximized();
-	} else {
-		window->showNormal();
+// 窗口状态变化先送到 Qt，再返回调用方看到的结果。
+void flushWindowState() {
+	QWindowSystemInterface::flushWindowSystemEvents(
+		QEventLoop::ExcludeUserInputEvents);
+}
+
+// 窗口动作可选先切换本实例的焦点策略，再按新模式执行。
+[[nodiscard]] bool takeFocusMode(QStringList &args, Result *error) {
+	const auto index = args.indexOf(u"--focus-mode"_q);
+	if (index < 0) {
+		return true;
 	}
-	window->setAttribute(Qt::WA_ShowWithoutActivating, previous);
+	if (index + 1 >= args.size()) {
+		*error = Result::Err(u"missing value for --focus-mode"_q);
+		return false;
+	}
+	const auto value = args[index + 1];
+	args.removeAt(index + 1);
+	args.removeAt(index);
+	if (!ExtrasDebug::WindowFocus::setModeFromText(value)) {
+		*error = Result::Err(u"expected focus or no-focus"_q);
+		return false;
+	}
+	return true;
 }
 
 // 直接查询已提交的绘制缓冲，不触发截图或重绘，保留动画当前帧。
@@ -94,7 +114,12 @@ void showWithoutActivating(not_null<QWidget*> window, bool maximized) {
 }
 
 // 无参报告当前尺寸，有参按逻辑像素调整。
-[[nodiscard]] Result WindowSize(const QStringList &args) {
+[[nodiscard]] Result WindowSize(const QStringList &rawArgs) {
+	auto args = rawArgs;
+	auto error = Result();
+	if (!takeFocusMode(args, &error)) {
+		return error;
+	}
 	if (args.size() != 0 && args.size() != 2) {
 		return Result::Err(u"usage: window.resize [<width> <height>]"_q);
 	}
@@ -116,13 +141,23 @@ void showWithoutActivating(not_null<QWidget*> window, bool maximized) {
 	}
 	// 最大化状态下 resize 不生效，先还原。
 	if (window->isMaximized()) {
-		showWithoutActivating(window, false);
+		if (ExtrasDebug::WindowFocus::noFocus()) {
+			ExtrasDebug::WindowFocus::showWithoutActivating(window, false);
+		} else {
+			window->showNormal();
+		}
 	}
 	window->resize(width, height);
+	flushWindowState();
 	return Result::Ok(Compact(WindowState(window)));
 }
 
-[[nodiscard]] Result WindowMaximize(const QStringList &args) {
+[[nodiscard]] Result WindowMaximize(const QStringList &rawArgs) {
+	auto args = rawArgs;
+	auto error = Result();
+	if (!takeFocusMode(args, &error)) {
+		return error;
+	}
 	if (args.size() != 1) {
 		return Result::Err(u"usage: window.maximize <true|false>"_q);
 	}
@@ -134,7 +169,15 @@ void showWithoutActivating(not_null<QWidget*> window, bool maximized) {
 	if (!window) {
 		return Result::Err(u"no active window"_q);
 	}
-	showWithoutActivating(window, text == u"true"_q);
+	const auto maximized = (text == u"true"_q);
+	if (ExtrasDebug::WindowFocus::noFocus()) {
+		ExtrasDebug::WindowFocus::showWithoutActivating(window, maximized);
+	} else if (maximized) {
+		window->showMaximized();
+	} else {
+		window->showNormal();
+	}
+	flushWindowState();
 	return Result::Ok(Compact(WindowState(window)));
 }
 
@@ -169,7 +212,12 @@ void showWithoutActivating(not_null<QWidget*> window, bool maximized) {
 		: Result::Err(u"window close was rejected"_q);
 }
 
-[[nodiscard]] Result windowTray(const QStringList &args) {
+[[nodiscard]] Result windowTray(const QStringList &rawArgs) {
+	auto args = rawArgs;
+	auto error = Result();
+	if (!takeFocusMode(args, &error)) {
+		return error;
+	}
 	const auto action = args.size() == 1 ? args.front() : QString();
 	if (action != u"hide"_q && action != u"show"_q) {
 		return Result::Err(u"usage: window.tray <hide|show>"_q);
@@ -184,9 +232,28 @@ void showWithoutActivating(not_null<QWidget*> window, bool maximized) {
 			return Result::Err(u"window could not minimize to tray"_q);
 		}
 	} else {
+		auto background = std::unique_ptr<ExtrasDebug::WindowFocus::BackgroundScope>();
+		if (ExtrasDebug::WindowFocus::noFocus()) {
+			background = std::make_unique<
+				ExtrasDebug::WindowFocus::BackgroundScope>();
+		}
 		window->showFromTray();
 	}
+	flushWindowState();
 	return Result::Ok(Compact(WindowState(window)));
+}
+
+[[nodiscard]] Result focusMode(const QStringList &args) {
+	if (args.size() > 1) {
+		return Result::Err(u"usage: window.focus-mode [focus|no-focus]"_q);
+	}
+	if (!args.isEmpty()
+		&& !ExtrasDebug::WindowFocus::setModeFromText(args.front())) {
+		return Result::Err(u"expected focus or no-focus"_q);
+	}
+	return Result::Ok(Compact(json{
+		{ "focus_mode", ExtrasDebug::WindowFocus::modeName().toStdString() },
+	}));
 }
 
 } // namespace
@@ -199,6 +266,7 @@ const HandlerMap &WindowHandlers() {
 		{ u"window.activation"_q, &windowActivation },
 		{ u"window.close"_q, &closeWindow },
 		{ u"window.tray"_q, &windowTray },
+		{ u"window.focus-mode"_q, &focusMode },
 	};
 	return result;
 }

@@ -284,22 +284,22 @@ HistoryWidget::HistoryWidget(
 	st::historyDiscardRichDraftButton))
 , _unblock(ExtrasUi::CreateChatSurfaceButton(
 	this,
-	tr::lng_unblock_button(tr::now).toUpper(),
+	tr::lng_unblock_button(tr::now, tr::upper),
 	st::historyUnblock))
 , _botStart(ExtrasUi::CreateChatSurfaceButton(
 	this,
-	tr::lng_bot_start(tr::now).toUpper(),
+	tr::lng_bot_start(tr::now, tr::upper),
 	st::historyComposeButton))
 , _joinChannel(ExtrasUi::CreateChatSurfaceButton(
 	this,
-	tr::lng_profile_join_channel(tr::now).toUpper(),
+	tr::lng_profile_join_channel(tr::now, tr::upper),
 	st::historyComposeButton))
 , _muteUnmute(ExtrasUi::CreateChatSurfaceButton(
 	this,
-	tr::lng_channel_mute(tr::now).toUpper(),
+	tr::lng_channel_mute(tr::now, tr::upper),
 	st::historyComposeButton))
 , _discuss(ExtrasUi::CreateChatSurfaceButton(this,
-	tr::extras_ChannelBottomButtonDiscuss(tr::now).toUpper(),
+	Ui::Text::Upper(tr::extras_ChannelBottomButtonDiscuss(tr::now)),
 	st::historyComposeButton))
 , _reportMessages(ExtrasUi::CreateChatSurfaceButton(
 	this, QString(), st::historyComposeButton))
@@ -539,14 +539,14 @@ HistoryWidget::HistoryWidget(
 		updateExpandButtonVisibility();
 		updateSendButtonType();
 	}, lifetime());
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 	// Removed an ability to insert text from the menu bar
 	// when the field is hidden.
 	_field->shownValue(
 	) | rpl::on_next([=](bool shown) {
 		_field->setEnabled(shown);
 	}, _field->lifetime());
-#endif // Q_OS_MAC
+#endif // Q_OS_MACOS
 	controller->widget()->shownValue(
 	) | rpl::skip(1) | rpl::on_next([=] {
 		windowIsVisibleChanged();

@@ -39,9 +39,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/windows_toast_activator.h"
 #endif
 
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 #include "platform/mac/global_menu_mac.h"
-#endif // Q_OS_MAC
+#endif // Q_OS_MACOS
 
 #include <QtCore/QLockFile>
 #include <QtCore/QStandardPaths>
@@ -138,9 +138,9 @@ bool Sandbox::QuitOnStartRequested = false;
 Sandbox::Sandbox(int &argc, char **argv)
 : QApplication(argc, argv)
 , _mainThreadId(QThread::currentThreadId()) {
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 	Platform::CreateGlobalMenu();
-#endif // Q_OS_MAC
+#endif // Q_OS_MACOS
 }
 
 int Sandbox::start() {
@@ -400,9 +400,9 @@ void Sandbox::setupScreenScale() {
 }
 
 Sandbox::~Sandbox() {
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 	Platform::DestroyGlobalMenu();
-#endif // Q_OS_MAC
+#endif // Q_OS_MACOS
 }
 
 bool Sandbox::event(QEvent *e) {

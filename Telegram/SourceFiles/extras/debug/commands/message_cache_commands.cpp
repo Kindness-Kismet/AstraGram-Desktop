@@ -112,7 +112,7 @@ Result sample(const QStringList &args) {
 			return Result::Err(u"expected a file up to 5 MB and duration in milliseconds"_q);
 		}
 		session->api().sendVoiceMessage(file.readAll(), {}, duration,
-			type == u"round"_q, action);
+			type == u"round"_q, nullptr, action);
 		return Result::Ok(Compact(Json{ { "state", "submitted" } }));
 	}
 	if (type == u"document"_q && args.size() == 3) {

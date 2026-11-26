@@ -24,7 +24,8 @@ Session::Session(not_null<Main::Session*> session)
 , _gaslessTimer([=] { refreshGaslessInfo(); })
 , _decryptRetryTimer([=] { settleDeferredDecrypts(); })
 , _walletAvailable(session->appConfig().walletAvailable())
-, _transferMinNanos(TransferMinNanos(session)) {
+, _transferMinNanos(TransferMinNanos(session))
+, _servedClaims(std::make_unique<ServedClaims>()) {
 	vault().protectionChanges() | rpl::on_next([=] {
 		updateDeviceCustodyState(true);
 	}, _lifetime);

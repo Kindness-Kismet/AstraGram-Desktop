@@ -348,6 +348,9 @@ void FinishHistoryWaiters(std::vector<Fn<void()>> callbacks) {
 	case SendError::CollectibleRejected: return u"CollectibleRejected"_q;
 	case SendError::Silent: return u"Silent"_q;
 	case SendError::SubmissionUnknown: return u"SubmissionUnknown"_q;
+	case SendError::NoWallet: return u"NoWallet"_q;
+	case SendError::WalletNotReady: return u"WalletNotReady"_q;
+	case SendError::UnsupportedSendMode: return u"UnsupportedSendMode"_q;
 	}
 	return u"Unknown"_q;
 }

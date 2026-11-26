@@ -221,8 +221,7 @@ void SendingHistoryRow::setContent(HistoryRowContent content) {
 			TrackHistoryRowChip(
 				&_chip,
 				_media,
-				_content.collectible,
-				_content.collectibleRecord,
+				_content,
 				[=] { _surface->update(); },
 				_chipLifetime);
 		}

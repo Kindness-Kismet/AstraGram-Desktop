@@ -22,7 +22,7 @@ ninja -C out/Debug%FolderPostfix% common crash_generation_client exception_handl
 ninja -C out/Release%FolderPostfix% common crash_generation_client exception_handler
 cd tools\windows\dump_syms
 gyp dump_syms.gyp --format=msvs
-msbuild -m dump_syms.vcxproj /property:Configuration=Release /property:Platform="x64" %ToolsetProp%
+if not "%SKIP_DUMPSYMS%"=="1" msbuild -m dump_syms.vcxproj /property:Configuration=Release /property:Platform="x64" %ToolsetProp%
 deactivate
 """,
 	"libvpx": r"""git clone https://github.com/webmproject/libvpx.git
@@ -37,6 +37,7 @@ bash --login ../patches/build_libvpx_win.sh
 """,
 	"dav1d": r"""git clone -b 1.5.4 https://code.videolan.org/videolan/dav1d.git
 cd dav1d
+git apply ../patches/dav1d.patch
 SET "TARGET=aarch64"
 SET "DAV1D_ASM_DISABLE="
 SET "PATH=%LIBS_DIR%\gas-preprocessor;%PATH%"
@@ -63,8 +64,9 @@ meson install -C builddir-release
 copy %LIBS_DIR%\local\lib\libdav1d.a %LIBS_DIR%\local\lib\dav1d.lib
 deactivate
 """,
-	"ffmpeg": r"""git clone -b n8.1.3 https://github.com/FFmpeg/FFmpeg.git ffmpeg
+	"ffmpeg": r"""git clone -b release/8.1 https://github.com/FFmpeg/FFmpeg.git ffmpeg
 cd ffmpeg
+git checkout e22a4510c982b048945052bd6a503475014b7ba0
 for %%i in (..\patches\ffmpeg\*.patch) do (
 git apply "%%i" || exit /b 1
 )

@@ -250,7 +250,7 @@ directory, so only what changed is recompiled.
 
 ### macOS
 
-Dependencies are built natively (Qt 6.11.2, Release) into `Libraries/` next to
+Dependencies are built natively (Qt 6.12.0, Release) into `Libraries/` next to
 the checkout.
 
 **Prerequisites**: Xcode 14+, [Homebrew](https://brew.sh), Python 3 (from

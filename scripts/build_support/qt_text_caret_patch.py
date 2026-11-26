@@ -11,7 +11,16 @@ _ANCHOR = (
     "    QPainter::CompositionMode origCompositionMode = p->compositionMode();\n"
 )
 _RASTER_OP = (
-    "    if (p->paintEngine()->hasFeature(QPaintEngine::RasterOpModes))\n"
+    "    // Raster ops are bitwise and break the premultiplied-alpha invariant when\n"
+    "    // the target has an alpha channel (e.g. QGraphicsEffect's offscreen buffer,\n"
+    "    // or a translucent top-level backing store), making the cursor vanish or\n"
+    "    // punch an opaque hole. Fall back to SourceOver with the pen color in that\n"
+    "    // case (QTBUG-109173).\n"
+    "    QPaintDevice *targetDevice = p->paintEngine()->paintDevice();\n"
+    "    const bool targetHasAlphaChannel = targetDevice\n"
+    "            && targetDevice->devType() == QInternal::Image\n"
+    "            && static_cast<QImage *>(targetDevice)->hasAlphaChannel();\n"
+    "    if (!targetHasAlphaChannel && p->paintEngine()->hasFeature(QPaintEngine::RasterOpModes))\n"
     "        p->setCompositionMode(QPainter::RasterOp_NotDestination);\n"
 )
 # 调用方绘制光标前已把画笔设为文字色，去掉反色后直接按画笔填充。

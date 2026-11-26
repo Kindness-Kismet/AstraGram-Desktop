@@ -121,6 +121,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "wallet/wallet_gift_move_presentation.h"
 #include "wallet/wallet_key_protection.h"
 #include "wallet/wallet_move_to_gifts.h"
+#include "wallet/wallet_onchain_gift_presentation.h"
 #include "wallet/wallet_onramp.h"
 #include "wallet/wallet_palette.h"
 #include "wallet/wallet_rates.h"
@@ -747,6 +748,7 @@ struct HistoryRowContent {
 	RowAvatar avatar = RowAvatar::Out;
 	PeerData *peer = nullptr;
 	bool itemAmount = false;
+	TransferOnchainGift onchainGift = TransferOnchainGift::None;
 	QString collectible;
 	std::optional<CollectibleRecord> collectibleRecord;
 
@@ -937,8 +939,7 @@ void PaintHistoryRowChipText(
 void TrackHistoryRowChip(
 		not_null<HistoryRowChipState*> state,
 		std::shared_ptr<CollectibleMedia> media,
-		QString address,
-		const std::optional<CollectibleRecord> &record,
+		const HistoryRowContent &content,
 		Fn<void()> repaint,
 		rpl::lifetime &lifetime);
 
@@ -946,8 +947,7 @@ void AddHistoryRowChip(
 		not_null<Ui::VerticalLayout*> inner,
 		not_null<HistoryRowButton*> button,
 		std::shared_ptr<CollectibleMedia> media,
-		QString address,
-		const std::optional<CollectibleRecord> &record);
+		const HistoryRowContent &content);
 
 not_null<Ui::RpWidget*> AddHistoryRow(
 		not_null<Ui::VerticalLayout*> list,
@@ -1228,10 +1228,6 @@ void ShowNetworkFeesAbout(
 		std::shared_ptr<Ui::Show> show,
 		not_null<Main::Session*> session);
 
-[[nodiscard]] TextWithEntities GramMark(
-		Ui::Text::CustomEmojiHelper &helper,
-		const style::font &font);
-
 // A transaction a message named is served after the box is already open, so
 // the fee row exists from the first frame and says what it is waiting for.
 enum class DetailsFee {
@@ -1351,10 +1347,6 @@ void WalletReceiveBox(
 		not_null<Main::Session*> session,
 		const QString &address);
 
-void ShowWalletReceiveBox(
-		not_null<Main::Session*> session,
-		std::shared_ptr<Ui::Show> show);
-
 void AddWalletFeaturesBody(
 		not_null<Ui::GenericBox*> box,
 		rpl::producer<QString> title,
@@ -1368,8 +1360,6 @@ void WalletHowItWorksBox(
 
 [[nodiscard]] Ui::LayerStackWidget *BoxLayerStack(
 		not_null<Ui::GenericBox*> box);
-
-void CloseByOutsideClick(not_null<Ui::GenericBox*> box);
 
 void WalletFirstGramsBox(
 		not_null<Ui::GenericBox*> box,

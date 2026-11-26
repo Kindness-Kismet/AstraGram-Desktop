@@ -87,10 +87,7 @@ void ChatsFiltersTabs::setTabsMode(ChatsFiltersTabsMode mode) {
 }
 
 void ChatsFiltersTabs::setSectionIcons(
-		std::vector<const style::internal::Icon*> icons) {
-	if (_sectionIcons == icons) {
-		return;
-	}
+		std::vector<SectionIcon> icons) {
 	_sectionIcons = std::move(icons);
 	if (_tabsMode != ChatsFiltersTabsMode::TextOnly) {
 		updateSectionsContentWidths();
@@ -105,7 +102,7 @@ auto ChatsFiltersTabs::sectionIcon(int index) const
 		|| index < 0
 		|| index >= int(_sectionIcons.size()))
 		? nullptr
-		: _sectionIcons[index];
+		: _sectionIcons[index].fallback;
 }
 
 int ChatsFiltersTabs::iconExtraWidth(
@@ -267,11 +264,12 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 		}
 		const auto labelLeft = shiftedLeft
 			+ (section.width - section.contentWidth) / 2;
+		const auto fontHeight = _st.labelStyle.font->height;
 		const auto rect = myrtlrect(
 			labelLeft,
 			labelTop,
 			section.contentWidth,
-			_st.labelStyle.font->height);
+			fontHeight);
 		if (rect.intersects(clip)) {
 			const auto locked = (_lockedFrom && (index >= _lockedFrom));
 			if (locked) {
@@ -288,13 +286,15 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 				_st.labelFg->c, active);
 			p.setPen(foreground);
 			if (icon) {
-				icon->paint(
-					p,
-					labelLeft,
-					labelTop
-						+ (_st.labelStyle.font->height - icon->height()) / 2,
-					width(),
-					foreground);
+				const auto size = icon->size();
+				const auto top = labelTop + (fontHeight - size.height()) / 2;
+				const auto pos = QPoint(labelLeft, top);
+				const auto &entry = _sectionIcons[index];
+				const auto &paintEmoji = entry.paintEmoji;
+				const auto rect = myrtlrect(QRect(pos, size));
+				if (!paintEmoji || !paintEmoji(p, rect, foreground)) {
+					icon->paint(p, pos, width(), foreground);
+				}
 			}
 			if (labelWidth > 0) {
 				section.label.draw(p, {

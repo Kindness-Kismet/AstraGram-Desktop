@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_messages.h"
 
 class History;
+class SendFilesBox;
 enum class SendMediaType;
 struct SendingAlbum;
 
@@ -305,6 +306,7 @@ private:
 	std::unique_ptr<ComposeControls> _composeControls;
 	std::unique_ptr<ExtrasUi::FloatingSurfaceHost> _floatingSurfaceHost;
 	int _composeOverlap = 0;
+	QPointer<SendFilesBox> _sendFilesBox;
 	bool _skipScrollEvent = false;
 
 	Data::MessagePosition _processingVideoPosition;

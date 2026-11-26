@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_actions.h"
+#include "boxes/peers/invite_to_bot_box.h"
 #include "extras/features/window_material/window_material.h"
 
 #include "api/api_blocked_peers.h"
@@ -1262,6 +1263,7 @@ private:
 	void addBotVerify();
 	void addMainApp(not_null<UserData*> user);
 	[[nodiscard]] Section makeBotPermissions(not_null<UserData*> user);
+	[[nodiscard]] Section makeInviteToBot(not_null<UserData*> bot);
 	void addManagedBotFooter(not_null<UserData*> managerUser);
 	[[nodiscard]] Section makeReportOrDeleteReaction();
 	[[nodiscard]] Section makeViewChannel(not_null<ChannelData*> channel);
@@ -2446,6 +2448,33 @@ Section DetailsFiller::makeTopicsList(not_null<Data::Forum*> forum) {
 	};
 }
 
+Section DetailsFiller::makeInviteToBot(not_null<UserData*> bot) {
+	const auto parent = _stack->layout();
+	auto wrap = object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+		parent,
+		object_ptr<Ui::VerticalLayout>(parent));
+	const auto raw = wrap.data();
+	AddActionButton(
+		raw->entity(),
+		tr::lng_profile_invite_to_bot(),
+		rpl::single(true),
+		[=, show = _controller->uiShow()] {
+			ShowInviteToBotBox(show, bot);
+		},
+		&st::infoIconInviteToBot,
+		st::infoInviteToBotButton);
+	raw->toggleOn(bot->session().changes().peerFlagsValue(
+		bot,
+		Data::PeerUpdate::Flag::ManagedBot
+	) | rpl::map([=] {
+		return CanInviteToBot(bot);
+	}) | rpl::distinct_until_changed());
+	return Section{
+		.widget = std::move(wrap),
+		.shown = raw->toggledValue(),
+	};
+}
+
 void DetailsFiller::buildSections() {
 	Expects(!_topic || !_topic->creating());
 
@@ -2458,7 +2487,12 @@ void DetailsFiller::buildSections() {
 			if (info->hasMainApp) {
 				addMainApp(user);
 			}
+			if (!_topic && !_sublist) {
+				_stack->addPlainSeparator();
+				_stack->add(makeInviteToBot(user));
+			}
 			if (info->canManageEmojiStatus) {
+				_stack->addPlainSeparator();
 				_stack->add(makeBotPermissions(user));
 			}
 			if (const auto id = user->botManagerId()) {

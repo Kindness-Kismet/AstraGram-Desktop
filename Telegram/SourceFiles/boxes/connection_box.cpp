@@ -2359,6 +2359,19 @@ void ProxyBox::setupSocketAddress(const ProxyData &data) {
 		rpl::single(u"443"_q),
 		data.port ? QString::number(data.port) : QString(),
 		65535);
+	{
+		// The field is at least as wide as its placeholder.
+		const auto &st = st::connectionPortInputField;
+		const auto placeholder = st.placeholderFont->width(
+			tr::lng_connection_port_ph(tr::now))
+			+ st.textMargins.left()
+			+ st.textMargins.right()
+			+ st.placeholderMargins.left()
+			+ st.placeholderMargins.right();
+		if (placeholder > _port->width()) {
+			_port->resize(placeholder, _port->height());
+		}
+	}
 	address->widthValue(
 	) | rpl::on_next([=](int width) {
 		_port->resize(style::ConvertScale(width < style::ConvertScale(400) ? 84 : 96), _port->height());

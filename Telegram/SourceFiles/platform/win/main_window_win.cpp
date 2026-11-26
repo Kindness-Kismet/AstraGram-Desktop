@@ -16,7 +16,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 #include "mainwindow.h"
 #include "main/main_session.h"
-#include "base/algorithm.h"
 #include "base/crc32hash.h"
 #include "base/platform/win/base_windows_wrl.h"
 #include "base/platform/base_platform_info.h"
@@ -29,6 +28,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/themes/window_theme.h"
 #include "window/window_controller.h"
 #include "history/history.h"
+#ifdef _DEBUG
+#include "extras/debug/window_focus.h"
+#endif
 
 #include <QtWidgets/QStyleFactory>
 #include <QtWidgets/QApplication>
@@ -584,6 +586,9 @@ bool MainWindow::nativeEvent(
 				imeCompositionStartReceived();
 			});
 		}
+#ifdef _DEBUG
+		ExtrasDebug::WindowFocus::adjustWindowPosition(message);
+#endif
 	}
 	return false;
 }
@@ -767,21 +772,6 @@ QString ScreenDisplayLabel(const QScreen *screen) {
 	}
 
 	return name;
-}
-
-QRect ScreenAvailableGeometry(const QScreen *screen) {
-	if (!screen) {
-		return QRect();
-	}
-	auto result = screen->availableGeometry();
-	const auto geometry = screen->geometry();
-	const auto ratio = screen->devicePixelRatio();
-	if (ratio > 0.) {
-		result.moveTopLeft(geometry.topLeft() + QPoint(
-			int(base::SafeRound((result.x() - geometry.x()) / ratio)),
-			int(base::SafeRound((result.y() - geometry.y()) / ratio))));
-	}
-	return result;
 }
 
 } // namespace Platform

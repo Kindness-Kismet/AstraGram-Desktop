@@ -52,7 +52,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QLocale>
 
 #include "extras/extras_settings.h"
-#include <ada.h>
 
 namespace {
 
@@ -73,10 +72,9 @@ constexpr auto kReminderSetToastDuration = 4 * crl::time(1000);
 [[nodiscard]] QString DisplayUrlWithUnicodeHost(const QUrl &url) {
 	const auto result = url.toDisplayString();
 	const auto shown = url.host();
-	const auto ace = url.host(QUrl::FullyEncoded).toStdString();
-	const auto unicode = ada::idna::to_unicode(ace);
-	const auto host = QString::fromStdString(unicode);
-	if (host == shown || ada::idna::to_ascii(unicode) != ace) {
+	const auto ace = url.host(QUrl::FullyEncoded).toLatin1();
+	const auto host = QUrl::fromAce(ace, QUrl::IgnoreIDNWhitelist);
+	if (host == shown || QUrl::toAce(host) != ace) {
 		return result;
 	}
 	const auto authority = result.indexOf(u"://"_q);

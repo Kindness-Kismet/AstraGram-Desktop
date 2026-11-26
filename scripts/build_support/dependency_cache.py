@@ -56,7 +56,8 @@ def compute_cache_key(stage: Stage, compiler_version: str | None = None) -> str:
 def check_cache_key(stage: Stage, key: str) -> str:
     """返回 Good / Stale / NotFound。"""
     directory = stage_directory(stage)
-    if not (directory / stage.name).exists():
+    output = directory / (installed_prefix(stage.name) or stage.name)
+    if not output.exists():
         return "NotFound"
 
     path = key_path(stage)

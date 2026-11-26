@@ -343,8 +343,10 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 		if (drawMsgText) {
 			if (hasPreview) {
 				if (preview) {
-					const auto overEdit = _photoEditMedia
-						? _inPhotoEditOver.value(_inPhotoEdit ? 1. : 0.)
+					const auto overEdit
+						= canEditMediaPreview()
+						? _inMediaEditOver.value(
+							float64(_inMediaEdit))
 						: 0.;
 					auto to = QRect(
 						replyLeft,
@@ -368,12 +370,11 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 							Ui::DefaultImageSpoiler().frame(
 								_replySpoiler->index(now, pausedSpoiler)));
 					}
-					if (overEdit > 0.) {
-						p.setOpacity(overEdit);
-						p.fillRect(to, st::historyEditMediaBg);
-						st::historyEditMedia.paintInCenter(p, to);
-						p.setOpacity(1.);
-					}
+					using HistoryView::MediaEditManager;
+					MediaEditManager::PaintPreviewHover(
+						p,
+						to,
+						overEdit);
 					_mediaEditManager.paintCoverUpload(p, to);
 				}
 				replyLeft += st::historyReplyPreview + st::msgReplyBarSkip;

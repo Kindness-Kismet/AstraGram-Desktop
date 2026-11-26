@@ -723,7 +723,8 @@ void seedScenario(not_null<Main::Session*> session, int index) {
 				MTPint(), MTPstring(), MTPint(),
 				MTP_long(peerToUser(scenarioPeerId(findScenario(u"bot"_q))).bare),
 				MTP_string("https://example.com/"), MTP_long(5),
-				MTPstring(), MTPstring(), MTPint(), MTPint()));
+				MTPstring(), MTPstring(), MTPint(), MTPint(),
+				MTPlong(), MTPlong()));
 			if (kind == Kind::Paid) {
 				user->setStarsPerMessage(5);
 			}

@@ -914,7 +914,7 @@ void Options::fixAfterErase() {
 
 	const auto last = _list.end() - 1;
 	(*last)->setPlaceholder();
-	(*last)->showAddIcon(true);
+	(*last)->showAddIcon(!full());
 	if (last != begin(_list)) {
 		(*(last - 1))->setPlaceholder();
 		(*(last - 1))->showAddIcon(false);
@@ -980,7 +980,7 @@ void Options::insertOption(
 	initOptionField(raw->field());
 
 	if (isAppend) {
-		raw->showAddIcon(true);
+		raw->showAddIcon(!full());
 	}
 	raw->show(animated);
 	restartReorder();
@@ -1116,6 +1116,7 @@ void Options::validateState() {
 	_hasCorrect = ranges::any_of(_list, &Option::isCorrect);
 
 	const auto lastEmpty = !_list.empty() && _list.back()->isEmpty();
+	restartReorder();
 	_usedCount = _list.size() - (lastEmpty ? 1 : 0);
 }
 
@@ -2574,7 +2575,7 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 			.chooseLabel = tr::lng_maps_point_send(),
 			.callback = crl::guard(this, [=](
 					Data::LocationPoint point,
-					QString) {
+					Core::GeoAddress) {
 				applyGeo(point.lat(), point.lon());
 			}),
 			.quit = [] { Shortcuts::Launch(Shortcuts::Command::Quit); },

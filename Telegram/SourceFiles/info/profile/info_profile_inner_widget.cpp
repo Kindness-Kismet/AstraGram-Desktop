@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_inner_widget.h"
+#include "info/profile/info_profile_bot_media_previews.h"
 
 #include "info/info_controller.h"
 #include "info/info_memento.h"
@@ -148,7 +149,8 @@ object_ptr<Ui::RpWidget> InnerWidget::setupContent(
 	}
 
 	const auto thirdColumn = (_controller->wrap() == Wrap::Side);
-	const auto tabs = UseProfileMediaTabs() && !thirdColumn;
+	const auto bot = (_topic || _sublist) ? nullptr : _peer->asBot();
+	const auto tabs = bot || (UseProfileMediaTabs() && !thirdColumn);
 	auto sharedTracker = Ui::MultiSlideTracker();
 	if (!tabs) {
 		auto sharedMediaWidget = SetupSharedMediaClassic(
@@ -177,6 +179,9 @@ object_ptr<Ui::RpWidget> InnerWidget::setupContent(
 			? _sublist->sublistPeer()->id
 			: PeerId();
 		auto tabs = std::vector<MediaTabDescriptor>();
+		if (bot) {
+			tabs.push_back(MakeBotMediaPreviewsTab(bot));
+		}
 		const auto countValue = [&](Storage::SharedMediaType type) {
 			return SharedMediaCountValue(
 				_peer,

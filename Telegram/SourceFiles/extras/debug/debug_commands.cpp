@@ -83,6 +83,7 @@ namespace {
 			&Commands::transferHandlers(),
 			&Commands::animHandlers(),
 			&Commands::editorHandlers(),
+			&Commands::storyHandlers(),
 			&Commands::themeEditorHandlers(),
 			&Commands::ivHandlers(),
 			&Commands::dialogHandlers(),

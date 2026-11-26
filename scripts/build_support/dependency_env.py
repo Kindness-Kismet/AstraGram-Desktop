@@ -58,6 +58,8 @@ def build_environment(base: dict[str, str]) -> dict[str, str]:
     environment.update(variables)
     # qt 配方用 %QT% 拼产物目录，上游同样只放进环境而不计入缓存键
     environment["QT"] = qt_version(TARGET)
+    # Python 3.15 默认 UTF-8，Meson 与 gyp 仍须按系统编码读取本地化工具输出。
+    environment["PYTHONUTF8"] = "0"
     # dav1d 的 arm64 补丁靠 git revert 落提交，没有身份会直接失败
     environment.update({
         "GIT_AUTHOR_NAME": "AyuGram Build",

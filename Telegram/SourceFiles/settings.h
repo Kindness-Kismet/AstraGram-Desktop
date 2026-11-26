@@ -75,7 +75,6 @@ DeclareSetting(bool, SeenTrayTooltip);
 DeclareSetting(bool, RestartingUpdate);
 DeclareSetting(bool, Restarting);
 DeclareSetting(bool, RestartingToSettings);
-DeclareSetting(bool, WriteProtected);
 DeclareSetting(int32, LastUpdateCheck);
 DeclareSetting(bool, NoStartUpdate);
 DeclareSetting(bool, StartToSettings);
@@ -83,6 +82,7 @@ DeclareSetting(bool, DebugMode);
 #ifdef _DEBUG
 DeclareSetting(bool, DebugProfile);
 DeclareReadSetting(bool, DebugOffline);
+DeclareReadSetting(bool, DebugNoFocus);
 #endif
 DeclareSetting(bool, Quit);
 DeclareSetting(bool, Ghost);

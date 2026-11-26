@@ -181,6 +181,7 @@ struct GramTransferAction {
 	QString transactionId;
 	QString comment;
 	QString failReason;
+	QString provider;
 	bool outgoing = false;
 	bool encrypted = false;
 	bool failed = false;
@@ -551,6 +552,7 @@ void PaintRibbonBand(
 
 [[nodiscard]] QString ReadableIdentity(
 		not_null<HistoryItem*> item,
+		const QString &provider,
 		bool hasAddress);
 
 [[nodiscard]] QStringList AddressLines(

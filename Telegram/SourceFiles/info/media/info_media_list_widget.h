@@ -81,7 +81,8 @@ class ListWidget final
 public:
 	ListWidget(
 		QWidget *parent,
-		not_null<AbstractController*> controller);
+		not_null<AbstractController*> controller,
+		std::unique_ptr<ListProvider> provider = nullptr);
 	~ListWidget();
 
 	Main::Session &session() const;
@@ -105,6 +106,12 @@ public:
 	void setDownloadsTypeFilter(Downloads::TypeFilter filter);
 	[[nodiscard]] Downloads::TypeCounts downloadsTypeCounts() const;
 	void setSelectOnClick(bool enabled);
+	void selectItem(not_null<HistoryItem*> item);
+	void selectAll();
+	using ContextMenuFactory = Fn<void(
+		not_null<Ui::PopupMenu*>,
+		not_null<HistoryItem*>)>;
+	void setContextMenuFactory(ContextMenuFactory factory);
 	void setSelectedLimit(int limit);
 	// 共享媒体页专用：画廊排版，以及点击即选的选择模式。
 	void setGalleryLayout(bool enabled);
@@ -467,6 +474,7 @@ private:
 	int _activeShiftAnimations = 0;
 	Ui::Animations::Simple _returnAnimation;
 	ReorderDescriptor _reorderDescriptor;
+	ContextMenuFactory _contextMenuFactory;
 	bool _inDragArea = false;
 
 };

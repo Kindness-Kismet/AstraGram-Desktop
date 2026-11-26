@@ -15,6 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/ui_utility.h"
 #include "ui/painter.h"
 #include "ui/dynamic_image.h"
+#include "ui/text/text_utilities.h"
 #include "lang/lang_keys.h"
 #include "base/flat_map.h"
 #include "base/flat_set.h"
@@ -1095,7 +1096,7 @@ CalendarBox::Title::Title(
 	_context->monthValue(
 	) | rpl::on_next([=](QDate month) {
 		_year->setText(QString::number(month.year()));
-		_month->setText(Lang::Month(month.month())(tr::now));
+		_month->setText(Text::Capitalized(Lang::Month(month.month())(tr::now)));
 		relayout();
 	}, lifetime());
 
@@ -1235,7 +1236,7 @@ void CalendarBox::Title::showMonthsMenu() {
 		if (clampMonth(date) != date) {
 			continue;
 		}
-		items.emplace_back(Lang::Month(month)(tr::now), date);
+		items.emplace_back(Text::Capitalized(Lang::Month(month)(tr::now)), date);
 	}
 	showMenu(_month, std::move(items));
 }

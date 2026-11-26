@@ -8,9 +8,8 @@
 截取当前选定窗口并保存为 WebP（质量 40，保留原尺寸）。CLI 自动生成路径 `build/screenshots/shot-<时间戳>.webp`，
 时间戳包含微秒，连续截图不会因同秒命名而覆盖；不接受路径参数。
 
-```bash
-python .claude/skills/app-debug/scripts/cli.py screenshot.take
-# {"height":938,"path":"<repo>/build/screenshots/shot-20260901-190750-123456.webp","width":1200}
+```text
+screenshot.take
 ```
 
 **前提**：必须有可见窗口。默认使用主窗口，`control.window <窗口标识>` 可选择其他顶层窗口；关闭目标后恢复主窗口。
@@ -26,8 +25,8 @@ python .claude/skills/app-debug/scripts/cli.py screenshot.take
 用户要求高质量、高清或原图时使用，保存为原尺寸无损 PNG，路径为 `build/screenshots/shot-<时间戳>.png`。
 PNG 保留全部像素，压缩级别只影响文件体积；本选项可与下列任一截图模式组合，截图范围和保护规则相同。
 
-```bash
-python .codex/skills/app-debug/scripts/cli.py screenshot.take --high-quality
+```text
+screenshot.take --high-quality
 ```
 
 高清图片仅供用户查看，回复中提供文件链接。助手默认查看普通 WebP 截图，不调用读图工具查看高清 PNG，

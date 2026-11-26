@@ -43,6 +43,8 @@
 #include "history/view/history_view_schedule_box.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
+#include "mainwidget.h"
+#include "media/stories/media_stories_discard_prompt.h"
 #include "menu/menu_send.h"
 #include "settings.h"
 #include "settings/settings_card_layout.h"
@@ -56,6 +58,7 @@
 #include "ui/dynamic_thumbnails.h"
 #include "ui/image/image.h"
 #include "ui/layers/generic_box.h"
+#include "ui/painter.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/option_list.h"
 #include "ui/widgets/labels.h"
@@ -527,6 +530,36 @@ void lockedDemoBox(not_null<Ui::GenericBox*> box) {
 	return session->tryResolveWindow();
 }
 
+void closeStoryPrompt(Controller controller) {
+	if (const auto preview = controller->content()->findChild<Ui::RpWidget*>(
+			u"simulation.storyPrompt"_q)) {
+		delete preview;
+	}
+}
+
+void showStoryPrompt(Controller controller, const QString &key) {
+	const auto parent = controller->content();
+	const auto preview = Ui::CreateChild<Ui::RpWidget>(parent);
+	preview->setObjectName(u"simulation.storyPrompt"_q);
+	parent->sizeValue() | rpl::on_next([=](QSize size) {
+		preview->setGeometry(QRect(QPoint(), size));
+	}, preview->lifetime());
+	preview->paintRequest() | rpl::on_next([=] {
+		auto p = QPainter(preview);
+		p.fillRect(preview->rect(), QColor(20, 20, 20));
+	}, preview->lifetime());
+	preview->show();
+	preview->raise();
+	// 只复用正式确认控件，回调仅关闭模拟背景，不读写草稿或调用发布接口。
+	const auto close = crl::guard(preview, [=] { preview->deleteLater(); });
+	Media::Stories::ShowDiscardStoryPrompt(preview, {
+		.draft = (key == u"story-delete"_q),
+		.allowDraft = (key != u"story-discard-edit"_q),
+		.discard = close,
+		.saveDraft = close,
+	});
+}
+
 Result listDialogs(const QStringList &args) {
 	if (!args.isEmpty()) {
 		return Result::Err(u"usage: dialog.list"_q);
@@ -538,6 +571,9 @@ Result listDialogs(const QStringList &args) {
 	// 会员预览需要独立入口：列表版与封面翻页版各一个。
 	list.push_back({ { "key", "premium-preview" }, { "kind", "custom" } });
 	list.push_back({ { "key", "premium-feature" }, { "kind", "custom" } });
+	for (const auto key : { "story-discard", "story-delete", "story-discard-edit" }) {
+		list.push_back({ { "key", key }, { "kind", "menu" } });
+	}
 	return Result::Ok(Compact(json{ { "dialogs", list } }));
 }
 
@@ -550,7 +586,16 @@ Result openDialog(const QStringList &args) {
 		return Result::Err(u"an isolated simulation profile with a window is required"_q);
 	}
 	const auto &key = args.front();
+	closeStoryPrompt(controller);
 	controller->hideLayer(anim::type::instant);
+	if (key == u"story-discard"_q
+		|| key == u"story-delete"_q
+		|| key == u"story-discard-edit"_q) {
+		showStoryPrompt(controller, key);
+		return Result::Ok(Compact(json{
+			{ "key", key.toStdString() }, { "kind", "menu" },
+		}));
+	}
 	if (key == u"premium-preview"_q || key == u"premium-feature"_q) {
 		ShowPremiumPreviewBox(
 			controller,
@@ -581,6 +626,7 @@ Result closeDialogs(const QStringList &args) {
 	if (!controller) {
 		return Result::Err(u"an isolated simulation profile with a window is required"_q);
 	}
+	closeStoryPrompt(controller);
 	controller->hideLayer(anim::type::instant);
 	return Result::Ok();
 }

@@ -44,8 +44,12 @@ VERSION_FILE = ROOT / "Telegram" / "build" / "version"
 DEFAULT_API_ID = "2040"
 DEFAULT_API_HASH = "b18441a1ff607e10a989891a5462e627"
 
-# 构建产物，Updater 缺失不视为失败
-PRODUCT_BINARIES = ("AstraGram.exe", "Updater.exe")
+# 辅助程序与图形模块必须随主程序分发。
+WIDGET_HELPER_BINARY = f"modules/{TARGET_SUFFIX}/TelegramWidgetHelper.exe"
+PRODUCT_BINARIES = ("AstraGram.exe", "Updater.exe", WIDGET_HELPER_BINARY) + (
+    ("modules/x64/d3d/d3dcompiler_47.dll",) if TARGET == "win64" else ()
+)
+REQUIRED_BINARIES = PRODUCT_BINARIES
 
 # 仅带 --pdb 构建 Debug 时生成与收集
 DEBUG_SYMBOLS = ("AstraGram.pdb",)

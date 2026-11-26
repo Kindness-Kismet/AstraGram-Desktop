@@ -176,12 +176,6 @@ private:
 
 };
 
-[[nodiscard]] QString PaintLimit(const QString &what, int64 max) {
-	return u"Paint limit exceeded: %1 (max %2)"_q.arg(
-		what,
-		QString::number(max));
-}
-
 [[nodiscard]] QSize DeviceSize(const QPainter &painter) {
 	const auto device = painter.device();
 	return QSize(device->width(), device->height());
@@ -241,13 +235,42 @@ private:
 		: QRectF();
 }
 
-[[nodiscard]] QPen StrokePen(twlite::Color color, float width) {
+[[nodiscard]] QPen StrokePen(twlite::Color color, float64 width) {
 	return QPen(
 		ToColor(color),
 		width,
 		Qt::SolidLine,
 		Qt::FlatCap,
 		Qt::MiterJoin);
+}
+
+[[nodiscard]] float64 ReachableStrokeWidth(
+		const QRectF &rect,
+		float64 width,
+		const QRectF &reach) {
+	if (rect.isEmpty() || reach.isEmpty() || !std::isfinite(width)) {
+		return width;
+	}
+	const auto distance = [&](QPointF corner) {
+		return std::hypot(
+			std::max({
+				rect.left() - corner.x(),
+				corner.x() - rect.right(),
+				0.,
+			}),
+			std::max({
+				rect.top() - corner.y(),
+				corner.y() - rect.bottom(),
+				0.,
+			}));
+	};
+	const auto farthest = std::max({
+		distance(reach.topLeft()),
+		distance(reach.topRight()),
+		distance(reach.bottomRight()),
+		distance(reach.bottomLeft()),
+	}) + std::hypot(rect.width(), rect.height());
+	return std::min(width, 2. * farthest);
 }
 
 [[nodiscard]] float64 OverlapFactor(float64 length, float64 sum) {

@@ -37,6 +37,8 @@ void AddDetailsTable(
 			tr::lng_wallet_row_key_change(tr::marked));
 	} else if (ShowsGiftMove(item)) {
 		AddGiftMoveDetailsRows(table, item);
+	} else if (ShowsOnchainGift(item)) {
+		AddOnchainGiftDetailsRows(table, box->uiShow(), session, item);
 	} else if (peer) {
 		AddPeerCounterpartyRows(box, table, show, peer, item);
 	} else if (!item.counterparty.isEmpty()) {
@@ -71,14 +73,16 @@ void AddDetailsTable(
 	}
 	const auto pending
 		= (item.status == TransferItem::Status::Pending);
-	// An incoming transfer was paid for by whoever sent it, and what the
-	// wallet spends to receive one is a few nanograms, so the row is left
-	// out entirely and nothing is waited for on its behalf.
-	if (!item.incoming) {
+	const auto onchain = ShowsOnchainGift(item);
+	// An incoming transfer was paid for by whoever sent it and costs a few
+	// nanograms to receive, so no fee row is shown or waited for; an on-chain
+	// gift action is the wallet's own, so its fee is shown, even a zero one.
+	if (!item.incoming || onchain) {
 		if (fee != DetailsFee::Known) {
 			AddPendingFeeTableRow(table, fee);
 		} else if (!pending
-			&& (item.gasless || (item.feeNano && *item.feeNano > 0))) {
+			&& (item.gasless
+				|| (item.feeNano && (*item.feeNano > 0 || onchain)))) {
 			AddFeeTableRow(table, box->uiShow(), session, item);
 		}
 	}
@@ -605,6 +609,8 @@ void WalletReceiveBox(
 	}, buy->lifetime());
 }
 
+} // namespace ContentDetails
+
 void ShowWalletReceiveBox(
 		not_null<Main::Session*> session,
 		std::shared_ptr<Ui::Show> show) {
@@ -616,6 +622,8 @@ void ShowWalletReceiveBox(
 	show->showBox(Box(WalletReceiveBox, session, address));
 }
 
+namespace ContentDetails {
+
 [[nodiscard]] Ui::LayerStackWidget *BoxLayerStack(
 		not_null<Ui::GenericBox*> box) {
 	auto stack = (Ui::LayerStackWidget*)nullptr;
@@ -625,6 +633,8 @@ void ShowWalletReceiveBox(
 	}
 	return stack;
 }
+
+} // namespace ContentDetails
 
 void CloseByOutsideClick(not_null<Ui::GenericBox*> box) {
 	const auto layer = box->parentWidget();
@@ -643,6 +653,8 @@ void CloseByOutsideClick(not_null<Ui::GenericBox*> box) {
 		return base::EventFilterResult::Cancel;
 	});
 }
+
+namespace ContentDetails {
 
 void AddWalletFeaturesBody(
 		not_null<Ui::GenericBox*> box,
@@ -1012,7 +1024,9 @@ void WalletTransactionBox(
 		const auto headerBottomSkip = HasDetailsComment(state->item)
 			? (st::walletDetailsAmountBottomSkip / 2)
 			: st::walletDetailsAmountBottomSkip;
-		if (ShowsCollectible(state->item)) {
+		const auto onchain = ShowsOnchainGift(state->item);
+		const auto collectible = ShowsCollectible(state->item);
+		if (collectible) {
 			if (!state->media) {
 				state->media = std::make_shared<CollectibleMedia>(session);
 			}
@@ -1022,8 +1036,15 @@ void WalletTransactionBox(
 				session,
 				state->media,
 				state->item,
-				headerBottomSkip);
-		} else {
+				onchain ? 0 : headerBottomSkip);
+		}
+		if (onchain) {
+			const auto skip = (state->item.amountNano != 0)
+				? st::walletDetailsOnchainAmountSkip
+				: headerBottomSkip;
+			AddOnchainGiftPill(header, state->item, skip);
+		}
+		if (onchain ? (state->item.amountNano != 0) : !collectible) {
 			AddDetailsAmountHeader(
 				header,
 				state->item,

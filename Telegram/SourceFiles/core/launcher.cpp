@@ -87,12 +87,12 @@ FilteredCommandLineArguments::FilteredCommandLineArguments(
 	pushArgument((OptionFreeType.value() || OptionHighDpiDownscale.value())
 		? "windows:fontengine=freetype"
 		: "windows:fontengine=gdi");
-#elif defined Q_OS_MAC
+#elif defined Q_OS_MACOS
 	if (OptionFreeType.value() || OptionHighDpiDownscale.value()) {
 		pushArgument("-platform");
 		pushArgument("cocoa:fontengine=freetype");
 	}
-#endif // Q_OS_WIN || Q_OS_MAC
+#endif // Q_OS_WIN || Q_OS_MACOS
 
 	pushArgument(nullptr);
 }
@@ -128,7 +128,7 @@ void ComputeDebugMode() {
 	auto file = QFile(debugModeSettingPath);
 	if (file.exists() && file.open(QIODevice::ReadOnly)) {
 		Logs::SetDebugEnabled(file.read(1) != "0");
-#if defined _DEBUG && !defined Q_OS_MAC
+#if defined _DEBUG && !defined Q_OS_MACOS
 	} else {
 		Logs::SetDebugEnabled(true);
 #endif
@@ -602,6 +602,7 @@ void Launcher::processArguments() {
 #ifdef _DEBUG
 		{ "-debugprofile"   , KeyFormat::NoValues },
 		{ "-debugoffline"   , KeyFormat::NoValues },
+		{ "--no-focus"      , KeyFormat::NoValues },
 #endif
 		{ Platform::kUntranslocatedArgument, KeyFormat::NoValues },
 		{ "-key"            , KeyFormat::OneValue },
@@ -653,6 +654,7 @@ void Launcher::processArguments() {
 #ifdef _DEBUG
 	gDebugProfile = parseResult.contains("-debugprofile");
 	gDebugOffline = parseResult.contains("-debugoffline");
+	gDebugNoFocus = parseResult.contains("--no-focus");
 	gDebugMode = gDebugMode || gDebugProfile;
 #endif
 	gKeyFile = parseResult

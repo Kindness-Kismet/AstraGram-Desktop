@@ -257,7 +257,10 @@ void SetupCopyDeepLink(
 		not_null<Ui::VerticalLayout*> container,
 		const QString &name,
 		const QString &description,
-		const style::SettingsButton &st) {
+		bool relevant) {
+	const auto &st = relevant
+		? st::settingsButtonNoIcon
+		: st::settingsOptionDisabled;
 	if (description.isEmpty()) {
 		return container->add(CreateButtonWithIcon(
 			container,
@@ -279,7 +282,9 @@ void SetupCopyDeepLink(
 		object_ptr<Ui::FlatLabel>(
 			container,
 			name,
-			st::settingsExperimentalTitle),
+			(relevant
+				? st::settingsExperimentalTitle
+				: st::settingsExperimentalTitleDisabled)),
 		titlePadding);
 	const auto about = container->add(
 		object_ptr<Ui::FlatLabel>(
@@ -342,9 +347,7 @@ void AddOption(
 		inner,
 		name,
 		description,
-		(!referrer.isEmpty() || option.relevant())
-			? st::settingsButtonNoIcon
-			: st::settingsOptionDisabled);
+		(!referrer.isEmpty() || option.relevant()));
 	button->setObjectName(u"experimental/"_q + option.id());
 	if (!referrer.isEmpty()) {
 		button->addClickHandler([=] {

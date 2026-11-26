@@ -40,6 +40,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_scheduled_section.h"
 #include "history/view/history_view_subsection_tabs.h"
 #include "media/player/media_player_instance.h"
+#include "media/stories/media_stories_post.h"
 #include "media/view/media_view_open_common.h"
 #include "data/components/gift_auctions.h"
 #include "data/components/recent_peers.h"
@@ -481,6 +482,12 @@ void SessionNavigation::showPeerByLink(const PeerByLinkInfo &info) {
 			showPeerByLinkResolved(channel, info);
 		});
 	}
+}
+
+void SessionNavigation::showPeerByLink(not_null<PeerData*> peer) {
+	Core::App().hideMediaView();
+	cancelContactTokenResolve();
+	showPeerByLinkResolved(peer, PeerByLinkInfo{});
 }
 
 void SessionNavigation::fullInfoLoadedHook(not_null<PeerData*> peer) {
@@ -1783,6 +1790,7 @@ SessionController::SessionController(
 		crl::on_main(base::make_weak(this), [=] {
 			Theme::CheckChatThemeWallPaper(this);
 		});
+		Media::Stories::SetupStoryPostToasts(this);
 	}
 	style::PaletteChanged(
 	) | rpl::on_next([=] {
@@ -2237,9 +2245,18 @@ void SessionController::activateFirstChatsFilter() {
 		return;
 	}
 	_filtersActivated = true;
-
-	// 分组加载后统一选择默认项，不依赖标签栏是否显示。
-	setActiveChatsFilter(session().data().chatsFilters().defaultId());
+	const auto id = session().data().chatsFilters().defaultId();
+	const auto main = widget()->sessionContent();
+	if (main && !main->isMainSectionShown()) {
+		setActiveChatsFilter(
+			id,
+			SectionShow(
+				SectionShow::Way::ClearStack,
+				anim::type::normal,
+				anim::activation::background));
+	} else {
+		setActiveChatsFilter(id);
+	}
 }
 
 bool SessionController::uniqueChatsInSearchResults(
@@ -3243,14 +3260,15 @@ void SessionController::showCalendar(ShowCalendarDescriptor &&descriptor) {
 	const auto searchCalendarResult = [&]() -> SearchCalendarResult {
 		using Factory = Fn<void(QDate, Ui::CalendarImageSetter)>;
 		using CustomJump = Fn<void(const QDate &, Fn<void()>)>;
+		const auto hasMediaFilter = descriptor.mediaPhoto || descriptor.mediaVideo;
 		if (history->peer->isSecretChat()
-			|| (!descriptor.mediaPhoto && !descriptor.mediaVideo)) {
+			|| (!hasMediaFilter && (topic || sublist))) {
 			return {};
 		}
 		const auto search = std::make_shared<Api::SearchCalendarController>(
 			&session(),
 			history->peer->id,
-			(descriptor.mediaPhoto && descriptor.mediaVideo)
+			(!hasMediaFilter || (descriptor.mediaPhoto && descriptor.mediaVideo))
 				? Storage::SharedMediaType::PhotoVideo
 				: descriptor.mediaPhoto
 				? Storage::SharedMediaType::Photo
@@ -3267,7 +3285,7 @@ void SessionController::showCalendar(ShowCalendarDescriptor &&descriptor) {
 				});
 		};
 		auto customJump = CustomJump(nullptr);
-		if (const auto performJump = descriptor.customJump) {
+		if (hasMediaFilter && performJump) {
 			customJump = [=](const QDate &d, Fn<void()> close) {
 				const auto date = base::unixtime::serialize(
 					QDateTime(d, QTime()));

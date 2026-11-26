@@ -153,6 +153,8 @@ void SetDirectedAmount(
 				result.kind = TransferItem::Kind::Onramp;
 				result.provider = provider;
 			}
+		}, [&](const MTPDwalletTransactionPeerOnchainGift &data) {
+			ReadOnchainGiftAction(result, data.vaction());
 		}, [](const MTPDwalletTransactionPeerUnsupported &) {
 			// Nothing is written, because the defaults are the row: a
 			// Kind::Transfer with no counterparty renders through

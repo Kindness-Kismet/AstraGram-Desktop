@@ -658,7 +658,7 @@ std::unique_ptr<Media::BaseLayout> Provider::createLayout(
 	case Type::RoundVoiceFile:
 	case Type::Link:
 	case Type::RoundFile:
-		return Media::CreateLayout(delegate, item, type);
+		return Media::CreateLayout(delegate, item, type, true);
 	}
 	Unexpected("Type in ListWidget::createLayout()");
 }

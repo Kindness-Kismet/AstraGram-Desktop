@@ -413,7 +413,7 @@ private:
 	};
 	struct ScrollChange {
 		ScrollChangeType type;
-		int value;
+		int value = 0;
 	};
 	struct ChooseMessagesForReport {
 		Data::ReportInput reportInput;
@@ -553,6 +553,7 @@ private:
 	void showFinished();
 	void updateOverStates(QPoint pos);
 	void clearOverStates();
+	[[nodiscard]] bool canEditMediaPreview() const;
 	void chooseAttach(std::optional<bool> overrideSendImagesAsPhotos = {});
 	void sendButtonClicked();
 	void stopStreamedDraft();
@@ -1062,10 +1063,10 @@ private:
 	using CharactersLimitLabel = HistoryView::Controls::CharactersLimitLabel;
 	base::unique_qptr<CharactersLimitLabel> _charsLimitation;
 	QString _sendRestrictionKey;
-	Ui::Animations::Simple _inPhotoEditOver;
+	Ui::Animations::Simple _inMediaEditOver;
 	ExtrasUi::SmoothTransition _composeHeader;
 	bool _inDetails = false;
-	bool _inPhotoEdit = false;
+	bool _inMediaEdit = false;
 	bool _inClickable = false;
 
 	bool _kbShown = false;

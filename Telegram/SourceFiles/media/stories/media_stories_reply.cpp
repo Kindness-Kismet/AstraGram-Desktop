@@ -360,6 +360,7 @@ void ReplyArea::sendVoice(const VoiceToSend &data) {
 		data.waveform,
 		data.duration,
 		data.video,
+		data.videoSource,
 		std::move(action));
 
 	_controls->clearListenState();
