@@ -25,7 +25,6 @@ _REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _SHA = re.compile(r"^[0-9a-fA-F]{40}$")
 _VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-beta)?$")
 _API_VERSION = "2026-03-10"
-_RUN_VISIBILITY_RETRY_DELAYS_SECONDS = (1, 2, 4, 8, 15)
 
 
 class RemoteBuildError(RuntimeError):
@@ -40,8 +39,8 @@ class TransientGitHubApiError(RemoteBuildError):
     """表示只适合由幂等读取操作短暂重试的 GitHub API 故障。"""
 
 
-class _GitHubApiNotFoundError(RemoteBuildError):
-    """表示 GitHub API 返回 HTTP 404。"""
+class RemoteRunNotFoundError(RemoteBuildError):
+    """表示查询远程工作流运行时返回 404，在刚 dispatch 后可能属于短暂同步延迟。"""
 
 
 @dataclass(frozen=True)
@@ -108,10 +107,14 @@ class GitHubApi:
                 body = response.read()
         except HTTPError as error:
             message = error.read().decode("utf-8", errors="replace")[:1000]
-            error_type: type[RemoteBuildError]
+            headers = error.headers
+            is_rate_limit = error.code == 403 and headers is not None and (
+                bool(headers.get("Retry-After"))
+                or headers.get("X-RateLimit-Remaining") == "0"
+            )
             if error.code == 404:
-                error_type = _GitHubApiNotFoundError
-            elif 500 <= error.code < 600:
+                error_type: type[RemoteBuildError] = RemoteRunNotFoundError
+            elif error.code == 429 or is_rate_limit or 500 <= error.code < 600:
                 error_type = TransientGitHubApiError
             else:
                 error_type = RemoteBuildError
@@ -273,33 +276,6 @@ def parse_run_details(
     )
 
 
-def _get_dispatched_run(
-    api: GitHubApi,
-    repository: str,
-    run_id: int,
-    *,
-    deadline: float,
-    sleep: Callable[[float], None],
-    monotonic: Callable[[], float],
-) -> dict[str, object]:
-    """等待刚调度的运行在 GitHub API 中可查询。"""
-    retry_delays = iter(_RUN_VISIBILITY_RETRY_DELAYS_SECONDS)
-    while True:
-        try:
-            return api.get_run(repository, run_id)
-        except _GitHubApiNotFoundError:
-            delay = next(retry_delays, None)
-            if delay is None or monotonic() + delay >= deadline:
-                raise
-            print(
-                f"GET returned HTTP 404 for newly dispatched {repository} run {run_id}; "
-                f"retrying in {delay}s",
-                file=sys.stderr,
-                flush=True,
-            )
-            sleep(delay)
-
-
 def run_remote_build(
     api: GitHubApi,
     *,
@@ -309,6 +285,7 @@ def run_remote_build(
     inputs: Mapping[str, str],
     timeout_seconds: float,
     poll_interval_seconds: float,
+    not_found_grace_seconds: float = 120,
     sleep: Callable[[float], None] = time.sleep,
     monotonic: Callable[[], float] = time.monotonic,
     on_dispatched: Callable[[str, int, str], None] | None = None,
@@ -316,9 +293,12 @@ def run_remote_build(
     """等待精确 dispatch 的终态，并在异常退出时尽力取消同一运行。"""
     if timeout_seconds <= 0 or poll_interval_seconds <= 0:
         raise ValueError("Timeout and polling interval must be greater than zero")
+    if not_found_grace_seconds < 0:
+        raise ValueError("Not-found grace window must not be negative")
     deadline = monotonic() + timeout_seconds
     run_id: int | None = None
     terminal = False
+    run_seen = False
     last_state: tuple[int, str] | None = None
     highest_attempt = 0
     try:
@@ -328,23 +308,39 @@ def run_remote_build(
         if on_dispatched is not None:
             on_dispatched(repository, run_id, run_url)
 
+        # 刚 dispatch 返回的 run_id 在 GitHub REST API 上可能短暂 404，需在宽限期内退避重试。
+        not_found_deadline = min(deadline, monotonic() + not_found_grace_seconds)
+        not_found_attempt = 0
         while True:
             remaining = deadline - monotonic()
             if remaining <= 0:
                 raise RemoteBuildError(
                     f"Timed out waiting for remote build: {timeout_seconds:g}s; {run_url}"
                 )
-            if last_state is None:
-                payload = _get_dispatched_run(
-                    api,
-                    repository,
-                    run_id,
-                    deadline=deadline,
-                    sleep=sleep,
-                    monotonic=monotonic,
-                )
-            else:
+            try:
                 payload = api.get_run(repository, run_id)
+            except RemoteRunNotFoundError:
+                now = monotonic()
+                remaining_total = deadline - now
+                remaining_grace = not_found_deadline - now
+                if not run_seen and remaining_total > 0 and remaining_grace > 0:
+                    not_found_attempt += 1
+                    delay = min(
+                        float(2 ** (not_found_attempt - 1)),
+                        poll_interval_seconds,
+                        remaining_grace,
+                        remaining_total,
+                    )
+                    print(
+                        f"{repository} run {run_id} not yet visible (HTTP 404); "
+                        f"retrying in {delay:g}s",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    sleep(delay)
+                    continue
+                raise
+
             details = parse_run_details(
                 payload,
                 repository=repository,
@@ -352,6 +348,7 @@ def run_remote_build(
                 ref=ref,
                 run_id=run_id,
             )
+            run_seen = True
             if details.run_attempt < highest_attempt:
                 raise RemoteBuildError("Remote run_attempt decreased")
             highest_attempt = details.run_attempt
