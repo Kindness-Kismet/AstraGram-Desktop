@@ -18,10 +18,14 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
 _REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _SHA = re.compile(r"^[0-9a-fA-F]{40}$")
 _VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-beta)?$")
 _API_VERSION = "2026-03-10"
+_RUN_VISIBILITY_RETRY_DELAYS_SECONDS = (1, 2, 4, 8, 15)
 
 
 class RemoteBuildError(RuntimeError):
@@ -34,6 +38,10 @@ class RemoteBuildInterrupted(RemoteBuildError):
 
 class TransientGitHubApiError(RemoteBuildError):
     """表示只适合由幂等读取操作短暂重试的 GitHub API 故障。"""
+
+
+class _GitHubApiNotFoundError(RemoteBuildError):
+    """表示 GitHub API 返回 HTTP 404。"""
 
 
 @dataclass(frozen=True)
@@ -100,11 +108,13 @@ class GitHubApi:
                 body = response.read()
         except HTTPError as error:
             message = error.read().decode("utf-8", errors="replace")[:1000]
-            error_type = (
-                TransientGitHubApiError
-                if 500 <= error.code < 600
-                else RemoteBuildError
-            )
+            error_type: type[RemoteBuildError]
+            if error.code == 404:
+                error_type = _GitHubApiNotFoundError
+            elif 500 <= error.code < 600:
+                error_type = TransientGitHubApiError
+            else:
+                error_type = RemoteBuildError
             raise error_type(
                 f"GitHub API {method} {path} returned HTTP {error.code}: {message}"
             ) from error
@@ -263,6 +273,33 @@ def parse_run_details(
     )
 
 
+def _get_dispatched_run(
+    api: GitHubApi,
+    repository: str,
+    run_id: int,
+    *,
+    deadline: float,
+    sleep: Callable[[float], None],
+    monotonic: Callable[[], float],
+) -> dict[str, object]:
+    """等待刚调度的运行在 GitHub API 中可查询。"""
+    retry_delays = iter(_RUN_VISIBILITY_RETRY_DELAYS_SECONDS)
+    while True:
+        try:
+            return api.get_run(repository, run_id)
+        except _GitHubApiNotFoundError:
+            delay = next(retry_delays, None)
+            if delay is None or monotonic() + delay >= deadline:
+                raise
+            print(
+                f"GET returned HTTP 404 for newly dispatched {repository} run {run_id}; "
+                f"retrying in {delay}s",
+                file=sys.stderr,
+                flush=True,
+            )
+            sleep(delay)
+
+
 def run_remote_build(
     api: GitHubApi,
     *,
@@ -297,8 +334,19 @@ def run_remote_build(
                 raise RemoteBuildError(
                     f"Timed out waiting for remote build: {timeout_seconds:g}s; {run_url}"
                 )
+            if last_state is None:
+                payload = _get_dispatched_run(
+                    api,
+                    repository,
+                    run_id,
+                    deadline=deadline,
+                    sleep=sleep,
+                    monotonic=monotonic,
+                )
+            else:
+                payload = api.get_run(repository, run_id)
             details = parse_run_details(
-                api.get_run(repository, run_id),
+                payload,
                 repository=repository,
                 workflow=workflow,
                 ref=ref,
