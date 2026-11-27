@@ -130,7 +130,7 @@ Linux 和 macOS 使用下方各自的构建命令。
 
 **环境要求**
 
-- Visual Studio 2026，社区版即可，安装“使用 C++ 的桌面开发”工作负载，包含 v145 工具集（MSVC 14.51）、ATL/MFC 头文件和 CMake；旧版 Visual Studio 不适用。
+- Visual Studio 2026，社区版即可，安装“使用 C++ 的桌面开发”工作负载，包含 v145 工具集（MSVC 14.52.37025 或更新版本）、ATL/MFC 头文件和 CMake。
 - Windows 10 SDK 10.0.26100.0 或更新版本。
 - [Python](https://www.python.org/downloads/) 3.10+ 和 [Git](https://git-scm.com/download/win)。
 - 约 60 GB 可用空间，其中依赖约占 10 GB，其余用于编译中间文件和产物。
@@ -153,7 +153,7 @@ python scripts/build.py --jobs 8
 添加 `--pack` 可生成仅包含可执行文件的 `build/AstraGram-v<版本>-win-x64.zip`；
 `--clean-pack` 会先清理产物目录里的运行数据，例如账号数据和日志。
 
-- 依赖仅在子模块指针或 `Telegram/build/version` 变化时需要重建，日常改代码只需运行 `build.py`。
+- 工具集或依赖配方变化后运行 `prebuild.py` 更新依赖，日常改代码只需运行 `build.py`。
 - 默认使用公开测试 API 凭据，可通过 `--api-id` 和 `--api-hash` 指定自己的凭据。
 - 默认使用 32 路并发，`--jobs` 支持 1～128。内存占用受源码、其他程序和可用提交内存影响，可按实际情况降低并发。
 - `cmake` 使用上游 `desktop-app/cmake_helpers` 子模块，定制补丁由 `scripts/build_support/cmake_patch.py` 在配置时应用；该子模块显示内容已修改是预期情况。

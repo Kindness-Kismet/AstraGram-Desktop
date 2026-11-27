@@ -1,4 +1,3 @@
-// ccache:disable - 此文件包含签名密钥，禁止进入共享编译缓存。
 /*
 This file is part of Telegram Desktop,
 the official desktop application for the Telegram messaging service.
@@ -12,13 +11,23 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtCore/QDateTime>
 
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+
+#include <cstring>
+#include <iostream>
+#include <map>
+#include <memory>
 #include <optional>
 #include <utility>
 #include <vector>
 
-bool BetaChannel = false;
-quint64 AlphaVersion = 0;
-bool OnlyAlphaKey = false;
+using std::cout;
+
+namespace {
+
+using Core::Updates::Channel;
 
 std::optional<Core::Updates::Channel> V2Channel;
 quint32 V2Counter = 0;
@@ -29,49 +38,6 @@ QString V2SigningInputFile;
 QString V2UnsignedFile;
 std::vector<std::pair<QString, QString>> V2EmbedSignatures;
 Core::Updates::Target V2Target;
-
-const char *PublicKey = "\
------BEGIN RSA PUBLIC KEY-----\n\
-MIIBCgKCAQEA2zWY7Txno6HPAYpLBVYB2tCPzMFa8pxfwFcJPXbUv/g+T7LWbLtZ\n\
-0jR7JpzLb635HDtL1Az/Wn5LLJx+wsQ4VPxT4gUBwO1krb0pluccav/CnEBl9gwT\n\
-uTbkPUDa4rcwUcXtcQhQzdechEaqCceHBhA1fjsJOZFb1Vh1gvoQHRpKWOzZ11Pm\n\
-JJHHQCiGHjmdZuOAkU1/sTN+RXcVrqt0W3kkoN20PhzzBaDEKc3kge0v9ss3tPhP\n\
-4Pd9TDBM9aCcju1u2EbETq9LzpssbEBhuUFYocOOj0KDiz0RKJCy6AvUXreH42Ej\n\
-EL+jcroKQqzLcjgc7wTXTAW+aPhHmvgAswIDAQAB\n\
------END RSA PUBLIC KEY-----\
-";
-
-const char *PublicBetaKey = "\
------BEGIN RSA PUBLIC KEY-----\n\
-MIGJAoGBALWu9GGs0HED7KG7BM73CFZ6o0xufKBRQsdnq3lwA8nFQEvmdu+g/I1j\n\
-0LQ+0IQO7GW4jAgzF/4+soPDb6uHQeNFrlVx1JS9DZGhhjZ5rf65yg11nTCIHZCG\n\
-w/CVnbwQOw0g5GBwwFV3r0uTTvy44xx8XXxk+Qknu4eBCsmrAFNnAgMBAAE=\n\
------END RSA PUBLIC KEY-----\
-";
-
-#ifndef PACKER_DISABLE_PRIVATE
-extern const char *PrivateKey;
-extern const char *PrivateBetaKey;
-
-// AyuGram includes：签名密钥由打包机的本地 packer_private.h 提供
-extern const char *AlphaPrivateKey;
-#include "packer_private.h" // RSA PRIVATE KEYS for update signing
-#else // PACKER_DISABLE_PRIVATE
-// V2 packing needs no DesktopPrivate keys: the empty stubs make the v1
-// path fail with a clear error instead of signing with a wrong key.
-const char *PrivateKey = "";
-const char *PrivateBetaKey = "";
-static const char *AlphaPrivateKey = "";
-#endif // PACKER_DISABLE_PRIVATE
-
-QString countAlphaVersionSignature(quint64 version);
-
-// sha1 hash
-typedef unsigned char uchar;
-typedef unsigned int uint32;
-typedef signed int int32;
-
-namespace{
 
 struct BIODeleter {
 	void operator()(BIO *value) {
@@ -84,105 +50,6 @@ inline auto makeBIO(const void *buf, int len) {
 		BIO_new_mem_buf(buf, len),
 	};
 }
-
-// 签名长度由私钥位数决定，不写死 1024 位（128 字节）。
-[[nodiscard]] int32 PackerSignatureLength() {
-	const auto bio = makeBIO(
-		const_cast<char*>(
-			(BetaChannel || AlphaVersion)
-				? PrivateBetaKey
-				: PrivateKey),
-		-1);
-	const auto key = PEM_read_bio_RSAPrivateKey(bio.get(), 0, 0, 0);
-	if (!key) {
-		return 0;
-	}
-	const auto result = int32(RSA_size(key));
-	RSA_free(key);
-	return result;
-}
-
-inline uint32 sha1Shift(uint32 v, uint32 shift) {
-	return ((v << shift) | (v >> (32 - shift)));
-}
-
-void sha1PartHash(uint32 *sha, uint32 *temp) {
-	uint32 a = sha[0], b = sha[1], c = sha[2], d = sha[3], e = sha[4], round = 0;
-
-#define _shiftswap(f, v) { \
-		uint32 t = sha1Shift(a, 5) + (f) + e + v + temp[round]; \
-		e = d; \
-		d = c; \
-		c = sha1Shift(b, 30); \
-		b = a; \
-		a = t; \
-		++round; \
-	}
-
-#define _shiftshiftswap(f, v) { \
-		temp[round] = sha1Shift((temp[round - 3] ^ temp[round - 8] ^ temp[round - 14] ^ temp[round - 16]), 1); \
-		_shiftswap(f, v) \
-	}
-
-	while (round < 16) _shiftswap((b & c) | (~b & d), 0x5a827999)
-	while (round < 20) _shiftshiftswap((b & c) | (~b & d), 0x5a827999)
-	while (round < 40) _shiftshiftswap(b ^ c ^ d, 0x6ed9eba1)
-	while (round < 60) _shiftshiftswap((b & c) | (b & d) | (c & d), 0x8f1bbcdc)
-	while (round < 80) _shiftshiftswap(b ^ c ^ d, 0xca62c1d6)
-
-#undef _shiftshiftswap
-#undef _shiftswap
-
-	sha[0] += a;
-	sha[1] += b;
-	sha[2] += c;
-	sha[3] += d;
-	sha[4] += e;
-}
-
-} // namespace
-
-int32 *hashSha1(const void *data, uint32 len, void *dest) {
-	const uchar *buf = (const uchar *)data;
-
-	uint32 temp[80], block = 0, end;
-	uint32 sha[5] = {0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0};
-	for (end = block + 64; block + 64 <= len; end = block + 64) {
-		for (uint32 i = 0; block < end; block += 4) {
-			temp[i++] = (uint32) buf[block + 3]
-					| (((uint32) buf[block + 2]) << 8)
-					| (((uint32) buf[block + 1]) << 16)
-					| (((uint32) buf[block]) << 24);
-		}
-		sha1PartHash(sha, temp);
-	}
-
-	end = len - block;
-	memset(temp, 0, sizeof(uint32) * 16);
-	uint32 last = 0;
-	for (; last < end; ++last) {
-		temp[last >> 2] |= (uint32)buf[last + block] << ((3 - (last & 0x03)) << 3);
-	}
-	temp[last >> 2] |= 0x80 << ((3 - (last & 3)) << 3);
-	if (end >= 56) {
-		sha1PartHash(sha, temp);
-		memset(temp, 0, sizeof(uint32) * 16);
-	}
-	temp[15] = len << 3;
-	sha1PartHash(sha, temp);
-
-	uchar *sha1To = (uchar*)dest;
-
-	for (int32 i = 19; i >= 0; --i) {
-		sha1To[i] = (sha[i >> 2] >> (((3 - i) & 0x03) << 3)) & 0xFF;
-	}
-
-	return (int32*)sha1To;
-}
-
-namespace {
-
-using Core::Updates::Channel;
 
 void AppendLeU32(QByteArray &to, quint32 value) {
 	const char bytes[4] = {
@@ -208,8 +75,7 @@ void AppendLeU64(QByteArray &to, quint64 value) {
 	return file.readAll();
 }
 
-// td-update-{os}-{arch}-{base}[-beta|-canary-{counter}[-private]], the same
-// suffix the installers and portable archives carry after their version.
+// 文件名后缀与发布通道保持一致。
 [[nodiscard]] QString V2NameSuffix(Channel channel, quint32 counter) {
 	switch (channel) {
 	case Channel::Stable: return QString();
@@ -237,8 +103,7 @@ struct V2Keys {
 	Core::Updates::Manifest manifest;
 };
 
-// The manifest root signature is verified before anything gets embedded,
-// this is the build-time tripwire against packing with broken key files.
+// 嵌入前验证根签名，确保打包使用已授权的发布密钥。
 [[nodiscard]] std::optional<V2Keys> LoadV2Keys() {
 	const auto rootPem = ReadFile(V2KeysLoc + "/root-public.pem");
 	const auto manifest = ReadFile(V2KeysLoc + "/manifest.min.json");
@@ -260,10 +125,7 @@ struct V2Keys {
 	return V2Keys{ rootPem, std::move(*parsed) };
 }
 
-// The build-time expiry watchdog: the client never rejects an expired
-// manifest (revocation is the kill switch), so this is the only place
-// the approaching dates are surfaced, ahead of the moment a channel key
-// expires and packing starts failing verification.
+// 客户端不按 manifest 到期时间拒绝更新；临近过期的发布密钥由打包阶段提示。
 void ReportExpiry(const Core::Updates::Manifest &manifest, Channel channel) {
 	constexpr auto kWarnDays = 90;
 	const auto now = QDateTime::currentSecsSinceEpoch();
@@ -324,9 +186,7 @@ void ReportExpiry(const Core::Updates::Manifest &manifest, Channel channel) {
 		AppendLeU32(result, quint32(keyId.size()));
 		result.append(keyId);
 
-		// ES256 signatures are stored as raw r||s (64 bytes) exactly as
-		// Azure Key Vault produces them, the client converts r||s to DER
-		// at verify time. The envelope never contains DER.
+		// ES256 签名使用原始 r||s 格式，客户端在验证时转换为 DER。
 		AppendLeU32(result, quint32(signature.size()));
 		result.append(signature);
 	}
@@ -370,8 +230,7 @@ void ReportExpiry(const Core::Updates::Manifest &manifest, Channel channel) {
 	return result;
 }
 
-// Runs the exact client verification over the finished file, so a package
-// that would be rejected by clients can never leave the build machine.
+// 成品使用正式客户端验证路径回验，通过后才能写出。
 [[nodiscard]] bool VerifyPackedV2(
 		const QByteArray &fileBytes,
 		const V2Keys &keys,
@@ -381,9 +240,9 @@ void ReportExpiry(const Core::Updates::Manifest &manifest, Channel channel) {
 	const auto verified = Core::Updates::VerifyUpdate(
 		fileBytes,
 		channel,
-		true, // betaSet
+		true,
 		target,
-		0, // runningVersion
+		0,
 		keys.manifest,
 		keys.rootPublicKeyPem,
 		QDateTime::currentSecsSinceEpoch(),
@@ -507,7 +366,8 @@ int EmbedV2Signatures() {
 	} else if (!envelope->signatures.empty()) {
 		cout << "The unsigned update already has signatures!\n";
 		return -1;
-	} else if (V2Channel && *V2Channel != envelope->channel) {
+	}
+	if (*V2Channel != envelope->channel) {
 		cout << "The -channel param does not match the unsigned update!\n";
 		return -1;
 	}
@@ -522,8 +382,7 @@ int EmbedV2Signatures() {
 		signatures.push_back({ keyId.toUtf8(), signature });
 	}
 
-	// Multi-group channels (stable/beta are 2-of-2) combine an external
-	// cloud signature with the local Ed25519 key in one embed pass.
+	// 支持外部签名与本地 Ed25519 签名共同满足 manifest 的授权组。
 	if (!V2LocalKeyFile.isEmpty()) {
 		if (V2LocalKeyId.isEmpty()) {
 			cout << "The -local-key param requires -local-key-id!\n";
@@ -569,190 +428,175 @@ int EmbedV2Signatures() {
 	return 0;
 }
 
-} // namespace
-
-QString AlphaSignature;
-
-int writeAlphaKey() {
-	if (!AlphaVersion) {
-		return 0;
+bool ParseSignatureArguments(int &index, int argc, char *argv[]) {
+	const auto count = V2EmbedSignatures.size();
+	while (index + 1 < argc && argv[index + 1][0] != '-') {
+		const auto entry = QString::fromLocal8Bit(argv[++index]);
+		const auto colon = entry.indexOf(':');
+		if (colon <= 0 || colon == entry.size() - 1) {
+			cout << "Bad -embed-signatures entry, expected id:sigfile!\n";
+			return false;
+		}
+		V2EmbedSignatures.push_back({
+			entry.left(colon),
+			entry.mid(colon + 1),
+		});
 	}
-	QString keyName(QString("talpha_%1_key").arg(AlphaVersion));
-	QFile key(keyName);
-	if (!key.open(QIODevice::WriteOnly)) {
-		cout << "Can't open '" << keyName.toUtf8().constData() << "' for write..\n";
-		return -1;
+	if (V2EmbedSignatures.size() == count) {
+		cout << "No -embed-signatures entries passed!\n";
+		return false;
 	}
-	key.write(AlphaSignature.toUtf8());
-	key.close();
-	return 0;
+	return true;
 }
 
-int main(int argc, char *argv[])
-{
-	QString workDir;
+} // namespace
 
+int main(int argc, char *argv[]) {
 	QString remove;
+	QString target;
+	QString architecture;
 	int version = 0;
-	[[maybe_unused]] bool targetwin64 = false;
-	[[maybe_unused]] bool targetwinarm = false;
-	[[maybe_unused]] bool targetarmac = false;
 	QFileInfoList files;
-	for (int i = 0; i < argc; ++i) {
-		if (string("-path") == argv[i] && i + 1 < argc) {
-			QString path = workDir + QString(argv[i + 1]);
-			QFileInfo info(path);
+	const auto textOptions = std::map<QString, QString*>{
+		{ "-target", &target },
+		{ "-arch", &architecture },
+		{ "-keys-loc", &V2KeysLoc },
+		{ "-local-key", &V2LocalKeyFile },
+		{ "-local-key-id", &V2LocalKeyId },
+		{ "-emit-signing-input", &V2SigningInputFile },
+		{ "-unsigned", &V2UnsignedFile },
+	};
+	for (auto i = 1; i < argc; ++i) {
+		const auto option = QString::fromLocal8Bit(argv[i]);
+		if (option == "-embed-signatures") {
+			if (!ParseSignatureArguments(i, argc, argv)) {
+				return -1;
+			}
+			continue;
+		}
+		if (i + 1 >= argc) {
+			cout << "Missing value for " << option.toUtf8().constData() << "!\n";
+			return -1;
+		}
+		const auto value = QString::fromLocal8Bit(argv[++i]);
+		if (const auto entry = textOptions.find(option); entry != textOptions.end()) {
+			*entry->second = value;
+			continue;
+		}
+		if (option == "-path") {
+			const auto info = QFileInfo(value);
 			files.push_back(info);
-			if (remove.isEmpty()) remove = info.canonicalPath() + "/";
-		} else if (string("-target") == argv[i] && i + 1 < argc) {
-			targetwin64 = (string("win64") == argv[i + 1]);
-			targetwinarm = (string("winarm") == argv[i + 1]);
-		} else if (string("-arch") == argv[i] && i + 1 < argc) {
-			targetarmac = (string("arm64") == argv[i + 1]);
-			if (!targetarmac && string("x86_64") != argv[i + 1]) {
-				cout << "Bad -arch param value passed: " << argv[i + 1] << "\n";
-				return -1;
+			if (remove.isEmpty()) {
+				remove = info.canonicalPath() + "/";
 			}
-		} else if (string("-version") == argv[i] && i + 1 < argc) {
-			version = QString(argv[i + 1]).toInt();
-		} else if (string("-beta") == argv[i]) {
-			BetaChannel = true;
-		} else if (string("-channel") == argv[i] && i + 1 < argc) {
-			V2Channel = Core::Updates::ChannelFromName(argv[i + 1]);
+			continue;
+		}
+		if (option == "-version") {
+			version = value.toInt();
+			continue;
+		}
+		if (option == "-channel") {
+			V2Channel = Core::Updates::ChannelFromName(value.toLatin1());
 			if (!V2Channel) {
-				cout << "Bad -channel param value passed: " << argv[i + 1] << "\n";
+				cout << "Bad -channel param value!\n";
 				return -1;
 			}
-		} else if (string("-counter") == argv[i] && i + 1 < argc) {
-			V2Counter = QString(argv[i + 1]).toUInt();
-		} else if (string("-keys-loc") == argv[i] && i + 1 < argc) {
-			V2KeysLoc = QString(argv[i + 1]);
-		} else if (string("-local-key") == argv[i] && i + 1 < argc) {
-			V2LocalKeyFile = QString(argv[i + 1]);
-		} else if (string("-local-key-id") == argv[i] && i + 1 < argc) {
-			V2LocalKeyId = QString(argv[i + 1]);
-		} else if (string("-emit-signing-input") == argv[i] && i + 1 < argc) {
-			V2SigningInputFile = QString(argv[i + 1]);
-		} else if (string("-unsigned") == argv[i] && i + 1 < argc) {
-			V2UnsignedFile = QString(argv[i + 1]);
-		} else if (string("-embed-signatures") == argv[i]) {
-			while (i + 1 < argc && argv[i + 1][0] != '-') {
-				const auto entry = QString(argv[++i]);
-				const auto colon = entry.indexOf(':');
-				if (colon <= 0 || colon == entry.size() - 1) {
-					cout << "Bad -embed-signatures entry, expected id:sigfile: " << entry.toUtf8().constData() << "\n";
-					return -1;
-				}
-				V2EmbedSignatures.push_back({
-					entry.left(colon),
-					entry.mid(colon + 1),
-				});
-			}
-			if (V2EmbedSignatures.empty()) {
-				cout << "No -embed-signatures entries passed!\n";
-				return -1;
-			}
-		} else if (string("-alphakey") == argv[i]) {
-			OnlyAlphaKey = true;
-		} else if (string("-alpha") == argv[i] && i + 1 < argc) {
-			AlphaVersion = QString(argv[i + 1]).toULongLong();
-			if (AlphaVersion > version * 1000ULL && AlphaVersion < (version + 1) * 1000ULL) {
-				BetaChannel = false;
-				AlphaSignature = countAlphaVersionSignature(AlphaVersion);
-				if (AlphaSignature.isEmpty()) {
-					return -1;
-				}
-			} else {
-				cout << "Bad -alpha param value passed, should be for the same version: " << version << ", alpha: " << AlphaVersion << "\n";
-				return -1;
-			}
+			continue;
 		}
+		if (option == "-counter") {
+			auto valid = false;
+			V2Counter = value.toUInt(&valid);
+			if (!valid) {
+				cout << "Bad -counter param value!\n";
+				return -1;
+			}
+			continue;
+		}
+		cout << "Unknown parameter: " << option.toUtf8().constData() << "\n";
+		return -1;
 	}
-	if (OnlyAlphaKey) {
-		return writeAlphaKey();
+	if (!V2Channel || V2KeysLoc.isEmpty()) {
+		cout << "The -channel and -keys-loc params are required!\n";
+		return -1;
 	}
-
-	{
-		using Core::Updates::Os;
-		using Core::Updates::Arch;
-#ifdef Q_OS_WIN
-		V2Target.os = Os::Windows;
-		V2Target.arch = targetwinarm
-			? Arch::Arm
-			: targetwin64
-			? Arch::X64
-			: Arch::X86;
-#elif defined Q_OS_MACOS
-		V2Target.os = Os::Mac;
-		V2Target.arch = targetarmac ? Arch::Arm : Arch::X64;
-#else
-		V2Target.os = Os::Linux;
-#ifdef Q_PROCESSOR_ARM_64
-		V2Target.arch = Arch::Arm;
-#else
-		V2Target.arch = Arch::X64;
-#endif
-#endif
+	if (V2LocalKeyFile.isEmpty() != V2LocalKeyId.isEmpty()) {
+		cout << "The -local-key and -local-key-id params must be used together!\n";
+		return -1;
 	}
-
 	if (!V2UnsignedFile.isEmpty()) {
-		return EmbedV2Signatures();
-	} else if (V2Channel) {
-		const auto canary = (*V2Channel == Channel::CanaryPublic)
-			|| (*V2Channel == Channel::CanaryPrivate);
-		if (AlphaVersion || BetaChannel) {
-			cout << "The -channel param cannot be combined with -alpha or -beta!\n";
-			return -1;
-		} else if (V2KeysLoc.isEmpty()) {
-			cout << "The -keys-loc param is required for -channel packing!\n";
-			return -1;
-		} else if (canary != (V2Counter > 0)) {
-			cout << "Canary channels require a positive -counter, others require none!\n";
-			return -1;
-		} else if (!V2EmbedSignatures.empty()) {
-			cout << "The -embed-signatures param requires -unsigned!\n";
-			return -1;
-		} else if (V2SigningInputFile.isEmpty()
-			&& (V2LocalKeyFile.isEmpty() || V2LocalKeyId.isEmpty())) {
-			cout << "Either -emit-signing-input or -local-key with -local-key-id is required!\n";
+		if (!V2SigningInputFile.isEmpty()) {
+			cout << "The -unsigned and -emit-signing-input params are mutually exclusive!\n";
 			return -1;
 		}
-	} else if (V2Counter
-		|| !V2KeysLoc.isEmpty()
-		|| !V2LocalKeyFile.isEmpty()
-		|| !V2SigningInputFile.isEmpty()
-		|| !V2EmbedSignatures.empty()) {
-		cout << "The v2 params require the -channel param!\n";
+		return EmbedV2Signatures();
+	}
+	const auto canary = (*V2Channel == Channel::CanaryPublic)
+		|| (*V2Channel == Channel::CanaryPrivate);
+	if (canary != (V2Counter > 0)) {
+		cout << "Canary channels require a positive -counter, others require none!\n";
+		return -1;
+	}
+	if (!V2EmbedSignatures.empty()) {
+		cout << "The -embed-signatures param requires -unsigned!\n";
+		return -1;
+	}
+	if (V2SigningInputFile.isEmpty() == V2LocalKeyFile.isEmpty()) {
+		cout << "Use either -emit-signing-input or -local-key with -local-key-id!\n";
+		return -1;
+	}
+	if (files.isEmpty() || remove.isEmpty() || version <= 1016 || version > 999999999) {
+		cout << "Usage: Packer -path {file|dir} [-path ...] -version {AppUpdateVersion}\n";
+		cout << "  -channel {stable|beta|canary-public|canary-private} -keys-loc {dir}\n";
+		cout << "  -local-key {pem} -local-key-id {id} for Ed25519 signing, or\n";
+		cout << "  -emit-signing-input {file}, then -unsigned {file} -embed-signatures {id}:{sigfile} ...\n";
+		cout << "  Canary channels require -counter {n}. Windows requires -target {win64|winarm}.\n";
+		cout << "  macOS requires -arch {x86_64|arm64}. Linux uses its native architecture.\n";
 		return -1;
 	}
 
-	if (files.isEmpty() || remove.isEmpty() || version <= 1016 || version > 999999999) {
+	using Core::Updates::Os;
+	using Core::Updates::Arch;
 #ifdef Q_OS_WIN
-		cout << "Usage: Packer.exe -path {file} -version {version} OR Packer.exe -path {dir} -version {version}\n";
-#elif defined Q_OS_MACOS
-		cout << "Usage: Packer.app -path {file} -version {version} OR Packer.app -path {dir} -version {version}\n";
-#else
-		cout << "Usage: Packer -path {file} -version {version} OR Packer -path {dir} -version {version}\n";
-#endif
-		cout << "V2 envelopes: add -channel {stable|beta|canary-public|canary-private} -keys-loc {dir}\n";
-		cout << "  with -local-key {pem} -local-key-id {id} for one-pass Ed25519 signing, or\n";
-		cout << "  with -emit-signing-input {file} and later -unsigned {file} -embed-signatures {id}:{sigfile} ...\n";
-		cout << "  (canary channels also require -counter {n})\n";
+	if ((target != "win64" && target != "winarm") || !architecture.isEmpty()) {
+		cout << "Windows requires -target win64 or winarm, without -arch!\n";
 		return -1;
 	}
+	V2Target = { Os::Windows, target == "winarm" ? Arch::Arm : Arch::X64 };
+#else
+	if (!target.isEmpty()) {
+		cout << "The -target param is only supported on Windows!\n";
+		return -1;
+	}
+#ifdef Q_OS_MACOS
+	if (architecture != "x86_64" && architecture != "arm64") {
+		cout << "macOS requires -arch x86_64 or arm64!\n";
+		return -1;
+	}
+	V2Target = { Os::Mac, architecture == "arm64" ? Arch::Arm : Arch::X64 };
+#else
+#ifdef Q_PROCESSOR_ARM_64
+	V2Target = { Os::Linux, Arch::Arm };
+	const auto nativeArch = QString("arm64");
+#else
+	V2Target = { Os::Linux, Arch::X64 };
+	const auto nativeArch = QString("x86_64");
+#endif
+	if (!architecture.isEmpty() && architecture != nativeArch) {
+		cout << "The -arch param must match the native Linux Packer architecture!\n";
+		return -1;
+	}
+#endif
+#endif
 
 	bool hasDirs = true;
 	while (hasDirs) {
 		hasDirs = false;
 		for (QFileInfoList::iterator i = files.begin(); i != files.end(); ++i) {
 			QFileInfo info(*i);
-			QString fullPath = info.canonicalFilePath();
 			if (info.isDir()) {
 				hasDirs = true;
 				files.erase(i);
 				QDir d = QDir(info.absoluteFilePath());
-				QString fullDir = d.canonicalPath();
-				QStringList entries = d.entryList(QDir::Files | QDir::Dirs | QDir::NoSymLinks | QDir::NoDotAndDotDot);
 				files.append(d.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoSymLinks | QDir::NoDotAndDotDot));
 				break;
 			} else if (!info.isReadable()) {
@@ -780,12 +624,7 @@ int main(int argc, char *argv[])
 		QDataStream stream(&buffer);
 		stream.setVersion(QDataStream::Qt_5_1);
 
-		if (AlphaVersion) {
-			stream << quint32(0x7FFFFFFF);
-			stream << quint64(AlphaVersion);
-		} else {
-			stream << quint32(version);
-		}
+		stream << quint32(version);
 
 		stream << quint32(files.size());
 		cout << "Found " << files.size() << " file" << (files.size() == 1 ? "" : "s") << "..\n";
@@ -812,18 +651,19 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	int32 resultSize = result.size();
+	if (result.size() <= 0 || result.size() > 1024 * 1024 * 1024) {
+		cout << "Uncompressed payload size must be within 1..1073741824 bytes!\n";
+		return -1;
+	}
+	const auto resultSize = qint32(result.size());
 	cout << "Compression start, size: " << resultSize << "\n";
 
 	QByteArray compressed, resultCheck;
-#if defined Q_OS_WIN && !defined PACKER_USE_PACKAGED // use Lzma SDK for win
-	const int32 hSigLen = PackerSignatureLength(), hShaLen = 20, hPropsLen = LZMA_PROPS_SIZE, hOriginalSizeLen = sizeof(int32), hSize = hSigLen + hShaLen + hPropsLen + hOriginalSizeLen; // header
-	if (hSigLen <= 0) {
-		cout << "Could not determine the signature length!\n";
-		return -1;
-	}
-
-	compressed.resize(hSize + resultSize + 1024 * 1024); // rsa signature + sha1 + lzma props + max compressed size
+#if defined Q_OS_WIN && !defined PACKER_USE_PACKAGED
+	constexpr auto hPropsLen = LZMA_PROPS_SIZE;
+	constexpr auto hOriginalSizeLen = sizeof(qint32);
+	constexpr auto hSize = hPropsLen + hOriginalSizeLen;
+	compressed.resize(hSize + resultSize + 1024 * 1024);
 
 	size_t compressedLen = compressed.size() - hSize;
 	size_t outPropsSize = LZMA_PROPS_SIZE;
@@ -831,21 +671,21 @@ int main(int argc, char *argv[])
 	size_t *_destLen = &compressedLen;
 	const uchar *_src = (const uchar*)(result.constData());
 	size_t _srcLen = result.size();
-	uchar *_outProps = (uchar*)(compressed.data() + hSigLen + hShaLen);
+	uchar *_outProps = (uchar*)(compressed.data());
 	int res = LzmaCompress(_dest, _destLen, _src, _srcLen, _outProps, &outPropsSize, 9, 64 * 1024 * 1024, 4, 0, 2, 273, 2);
 	if (res != SZ_OK) {
 		cout << "Error in compression: " << res << "\n";
 		return -1;
 	}
 	compressed.resize(int(hSize + compressedLen));
-	memcpy(compressed.data() + hSigLen + hShaLen + hPropsLen, &resultSize, hOriginalSizeLen);
+	memcpy(compressed.data() + hPropsLen, &resultSize, hOriginalSizeLen);
 
 	cout << "Compressed to size: " << compressedLen << "\n";
 
 	cout << "Checking uncompressed..\n";
 
-	int32 resultCheckLen;
-	memcpy(&resultCheckLen, compressed.constData() + hSigLen + hShaLen + hPropsLen, hOriginalSizeLen);
+	qint32 resultCheckLen;
+	memcpy(&resultCheckLen, compressed.constData() + hPropsLen, hOriginalSizeLen);
 	if (resultCheckLen <= 0 || resultCheckLen > 1024 * 1024 * 1024) {
 		cout << "Bad result len: " << resultCheckLen << "\n";
 		return -1;
@@ -854,7 +694,7 @@ int main(int argc, char *argv[])
 
 	size_t resultLen = resultCheck.size();
 	SizeT srcLen = compressedLen;
-	int uncompressRes = LzmaUncompress((uchar*)resultCheck.data(), &resultLen, (const uchar*)(compressed.constData() + hSize), &srcLen, (const uchar*)(compressed.constData() + hSigLen + hShaLen), LZMA_PROPS_SIZE);
+	int uncompressRes = LzmaUncompress((uchar*)resultCheck.data(), &resultLen, (const uchar*)(compressed.constData() + hSize), &srcLen, (const uchar*)(compressed.constData()), LZMA_PROPS_SIZE);
 	if (uncompressRes != SZ_OK) {
 		cout << "Uncompress failed: " << uncompressRes << "\n";
 		return -1;
@@ -863,14 +703,10 @@ int main(int argc, char *argv[])
 		cout << "Uncompress bad size: " << resultLen << ", was: " << result.size() << "\n";
 		return -1;
 	}
-#else // use liblzma for others
-	const int32 hSigLen = PackerSignatureLength(), hShaLen = 20, hPropsLen = 0, hOriginalSizeLen = sizeof(int32), hSize = hSigLen + hShaLen + hOriginalSizeLen; // header
-	if (hSigLen <= 0) {
-		cout << "Could not determine the signature length!\n";
-		return -1;
-	}
-
-	compressed.resize(hSize + resultSize + 1024 * 1024); // rsa signature + sha1 + lzma props + max compressed size
+#else
+	constexpr auto hOriginalSizeLen = sizeof(qint32);
+	constexpr auto hSize = hOriginalSizeLen;
+	compressed.resize(hSize + resultSize + 1024 * 1024);
 
 	size_t compressedLen = compressed.size() - hSize;
 
@@ -910,14 +746,14 @@ int main(int argc, char *argv[])
 	}
 
 	compressed.resize(int(hSize + compressedLen));
-	memcpy(compressed.data() + hSigLen + hShaLen, &resultSize, hOriginalSizeLen);
+	memcpy(compressed.data(), &resultSize, hOriginalSizeLen);
 
 	cout << "Compressed to size: " << compressedLen << "\n";
 
 	cout << "Checking uncompressed..\n";
 
-	int32 resultCheckLen;
-	memcpy(&resultCheckLen, compressed.constData() + hSigLen + hShaLen, hOriginalSizeLen);
+	qint32 resultCheckLen;
+	memcpy(&resultCheckLen, compressed.constData(), hOriginalSizeLen);
 	if (resultCheckLen <= 0 || resultCheckLen > 1024 * 1024 * 1024) {
 		cout << "Bad result len: " << resultCheckLen << "\n";
 		return -1;
@@ -975,148 +811,7 @@ int main(int argc, char *argv[])
 		cout << "Data differ :(\n";
 		return -1;
 	}
-	/**/
 	result = resultCheck = QByteArray();
 
-	if (V2Channel) {
-		// The payload keeps the exact v1 layout after its signature and
-		// hash prefix ([lzma props on Windows,] original size, compressed
-		// bytes), so clients decompress it with the unchanged v1 code.
-		return WriteV2Update(
-			compressed.mid(hSigLen + hShaLen),
-			quint32(version));
-	}
-
-	cout << "Counting SHA1 hash..\n";
-
-	uchar sha1Buffer[20];
-	memcpy(compressed.data() + hSigLen, hashSha1(compressed.constData() + hSigLen + hShaLen, uint32(compressedLen + hPropsLen + hOriginalSizeLen), sha1Buffer), hShaLen); // count sha1
-
-	uint32 siglen = 0;
-
-	cout << "Signing..\n";
-	RSA *prKey = [] {
-		const auto bio = makeBIO(
-			const_cast<char*>(
-				(BetaChannel || AlphaVersion)
-					? PrivateBetaKey
-					: PrivateKey),
-			-1);
-		return PEM_read_bio_RSAPrivateKey(bio.get(), 0, 0, 0);
-	}();
-	if (!prKey) {
-		cout << "Could not read RSA private key!\n";
-		return -1;
-	}
-	if (RSA_size(prKey) != hSigLen) {
-		cout << "Bad private key, size: " << RSA_size(prKey) << "\n";
-		RSA_free(prKey);
-		return -1;
-	}
-	if (RSA_sign(NID_sha1, (const uchar*)(compressed.constData() + hSigLen), hShaLen, (uchar*)(compressed.data()), &siglen, prKey) != 1) { // count signature
-		cout << "Signing failed!\n";
-		RSA_free(prKey);
-		return -1;
-	}
-	RSA_free(prKey);
-
-	if (siglen != hSigLen) {
-		cout << "Bad signature length: " << siglen << "\n";
-		return -1;
-	}
-
-	cout << "Checking signature..\n";
-	RSA *pbKey = [] {
-		const auto bio = makeBIO(
-			const_cast<char*>(
-				(BetaChannel || AlphaVersion)
-					? PublicBetaKey
-					: PublicKey),
-			-1);
-		return PEM_read_bio_RSAPublicKey(bio.get(), 0, 0, 0);
-	}();
-	if (!pbKey) {
-		cout << "Could not read RSA public key!\n";
-		return -1;
-	}
-	if (RSA_verify(NID_sha1, (const uchar*)(compressed.constData() + hSigLen), hShaLen, (const uchar*)(compressed.constData()), siglen, pbKey) != 1) { // verify signature
-		RSA_free(pbKey);
-		cout << "Signature verification failed!\n";
-		return -1;
-	}
-	cout << "Signature verified!\n";
-	RSA_free(pbKey);
-#ifdef Q_OS_WIN
-	QString outName((targetwinarm ? QString("tarm64upd%1") : targetwin64 ? QString("tx64upd%1") : QString("tupdate%1")).arg(AlphaVersion ? AlphaVersion : version));
-#elif defined Q_OS_MACOS
-	QString outName((targetarmac ? QString("tarmacupd%1") : QString("tmacupd%1")).arg(AlphaVersion ? AlphaVersion : version));
-#elif defined Q_PROCESSOR_ARM_64
-	QString outName(QString("tlinuxarmupd%1").arg(AlphaVersion ? AlphaVersion : version));
-#else
-	QString outName(QString("tlinuxupd%1").arg(AlphaVersion ? AlphaVersion : version));
-#endif
-	if (AlphaVersion) {
-		outName += "_" + AlphaSignature;
-	}
-	QFile out(outName);
-	if (!out.open(QIODevice::WriteOnly)) {
-		cout << "Can't open '" << outName.toUtf8().constData() << "' for write..\n";
-		return -1;
-	}
-	out.write(compressed);
-	out.close();
-
-	cout << "Update file '" << outName.toUtf8().constData() << "' written successfully!\n";
-
-	return writeAlphaKey();
-}
-
-QString countAlphaVersionSignature(quint64 version) { // duplicated in autoupdater.cpp
-	QByteArray cAlphaPrivateKey(AlphaPrivateKey);
-	if (cAlphaPrivateKey.isEmpty()) {
-		cout << "Error: Trying to count alpha version signature without alpha private key!\n";
-		return QString();
-	}
-
-	QByteArray signedData = (QLatin1String("TelegramBeta_") + QString::number(version, 16).toLower()).toUtf8();
-
-	static const int32 shaSize = 20, keySize = 128;
-
-	uchar sha1Buffer[shaSize];
-	hashSha1(signedData.constData(), signedData.size(), sha1Buffer); // count sha1
-
-	uint32 siglen = 0;
-
-	RSA *prKey = [&] {
-		const auto bio = makeBIO(
-			const_cast<char*>(cAlphaPrivateKey.constData()),
-			-1);
-		return PEM_read_bio_RSAPrivateKey(bio.get(), 0, 0, 0);
-	}();
-	if (!prKey) {
-		cout << "Error: Could not read alpha private key!\n";
-		return QString();
-	}
-	if (RSA_size(prKey) != keySize) {
-		cout << "Error: Bad alpha private key size: " << RSA_size(prKey) << "\n";
-		RSA_free(prKey);
-		return QString();
-	}
-	QByteArray signature;
-	signature.resize(keySize);
-	if (RSA_sign(NID_sha1, (const uchar*)(sha1Buffer), shaSize, (uchar*)(signature.data()), &siglen, prKey) != 1) { // count signature
-		cout << "Error: Counting alpha version signature failed!\n";
-		RSA_free(prKey);
-		return QString();
-	}
-	RSA_free(prKey);
-
-	if (siglen != keySize) {
-		cout << "Error: Bad alpha version signature length: " << siglen << "\n";
-		return QString();
-	}
-
-	signature = signature.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-	signature = signature.replace('-', '8').replace('_', 'B');
-	return QString::fromUtf8(signature.mid(19, 32));
+	return WriteV2Update(compressed, quint32(version));
 }

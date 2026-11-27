@@ -28,6 +28,7 @@ using HandlerMap = std::map<QString, Handler>;
 [[nodiscard]] const HandlerMap &simulationHandlers();
 [[nodiscard]] const HandlerMap &simulationCacheHandlers();
 [[nodiscard]] Result simulationMessageOrder(const QStringList &args);
+[[nodiscard]] Result simulationHistoryJump(const QStringList &args);
 [[nodiscard]] const HandlerMap &SettingsHandlers();
 [[nodiscard]] Result verifySettingsSerialization(const QStringList &args);
 [[nodiscard]] const HandlerMap &GhostHandlers();

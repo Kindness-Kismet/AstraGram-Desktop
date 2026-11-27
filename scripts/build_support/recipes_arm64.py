@@ -3,6 +3,7 @@
 由上游 prepare.py 的 winarm 作用域求值得到（win64 自检 21/32 阶段逐字一致）。
 """
 
+from build_support.paths import ROOT
 from build_support.recipe import Stage
 
 OVERRIDES: dict[str, str] = {
@@ -35,9 +36,10 @@ SET MSYS2_PATH_TYPE=inherit
 SET "TOOLCHAIN=arm64-win64-vs17-v145"
 bash --login ../patches/build_libvpx_win.sh
 """,
-	"dav1d": r"""git clone -b 1.5.4 https://code.videolan.org/videolan/dav1d.git
+	"dav1d": rf"""git clone -b 1.5.4 https://code.videolan.org/videolan/dav1d.git
 cd dav1d
 git apply ../patches/dav1d.patch
+git apply "{ROOT}/scripts/build_support/patches/dav1d_msvc.diff"
 SET "TARGET=aarch64"
 SET "DAV1D_ASM_DISABLE="
 SET "PATH=%LIBS_DIR%\gas-preprocessor;%PATH%"

@@ -13,6 +13,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/base_platform_file_utilities.h"
 #include "base/platform/mac/base_utilities_mac.h"
 
+#ifdef _DEBUG
+#include "extras/debug/window_focus.h"
+#endif
+
 #include <Cocoa/Cocoa.h>
 #include <CoreFoundation/CFURL.h>
 #include <sys/sysctl.h>
@@ -40,6 +44,22 @@ bool Launcher::launchUpdater(UpdaterLaunch action) {
 	}
 	@autoreleasepool {
 
+	auto passWorkingDir = customWorkingDir();
+#ifdef _DEBUG
+	NSMutableArray *debugArguments = [NSMutableArray array];
+	if (cDebugProfile()) {
+		[debugArguments addObject:@"-debugprofile"];
+		passWorkingDir = true;
+	}
+	if (cDebugOffline()) {
+		[debugArguments addObject:@"-debugoffline"];
+	}
+	const auto noFocus = ExtrasDebug::WindowFocus::noFocus();
+	if (noFocus) {
+		[debugArguments addObject:@"--no-focus"];
+	}
+#endif
+
 	if (action == UpdaterLaunch::JustRelaunch) {
 #ifdef OS_MAC_STORE
 		const auto updaterDisabled = true;
@@ -49,8 +69,26 @@ bool Launcher::launchUpdater(UpdaterLaunch action) {
 		if (updaterDisabled) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-			NSDictionary *conf = [NSDictionary dictionaryWithObject:[NSArray array] forKey:NSWorkspaceLaunchConfigurationArguments];
-			[[NSWorkspace sharedWorkspace] launchApplicationAtURL:[NSURL fileURLWithPath:Q2NSString(cExeDir() + cExeName())] options:NSWorkspaceLaunchAsync | NSWorkspaceLaunchNewInstance configuration:conf error:0];
+			NSMutableArray *args = [NSMutableArray array];
+			auto options = NSWorkspaceLaunchAsync | NSWorkspaceLaunchNewInstance;
+#ifdef _DEBUG
+			[args addObjectsFromArray:debugArguments];
+			if (cDebugProfile()) {
+				[args addObject:@"-workdir"];
+				[args addObject:Q2NSString(cWorkingDir())];
+			}
+			if (noFocus) {
+				options |= NSWorkspaceLaunchWithoutActivation;
+			}
+#endif
+			NSDictionary *conf = [NSDictionary
+				dictionaryWithObject:args
+				forKey:NSWorkspaceLaunchConfigurationArguments];
+			[[NSWorkspace sharedWorkspace]
+				launchApplicationAtURL:[NSURL fileURLWithPath:Q2NSString(cExeDir() + cExeName())]
+				options:options
+				configuration:conf
+				error:0];
 #pragma clang diagnostic pop
 			return true;
 		}
@@ -72,12 +110,15 @@ bool Launcher::launchUpdater(UpdaterLaunch action) {
 		if (action == UpdaterLaunch::JustRelaunch) [args addObject:@"-noupdate"];
 		if (cLaunchMode() == LaunchModeAutoStart) [args addObject:@"-autostart"];
 		if (Logs::DebugEnabled()) [args addObject:@"-debug"];
+#ifdef _DEBUG
+		[args addObjectsFromArray:debugArguments];
+#endif
 		if (cStartInTray()) [args addObject:@"-startintray"];
 		if (cDataFile() != u"data"_q) {
 			[args addObject:@"-key"];
 			[args addObject:Q2NSString(cDataFile())];
 		}
-		if (customWorkingDir()) {
+		if (passWorkingDir) {
 			[args addObject:@"-workdir_custom"];
 		}
 

@@ -51,8 +51,6 @@ target_compile_definitions(TelegramWidgetHelper
 PRIVATE
     TDESKTOP_APP_VERSION=${desktop_app_version_int}
 )
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_LIST_DIR}/../build/version")
 
 target_link_libraries(TelegramWidgetHelper
 PRIVATE
@@ -188,12 +186,13 @@ elseif (APPLE)
     add_dependencies(TelegramWidgetHelper_bundle TelegramWidgetHelper)
     add_dependencies(Telegram TelegramWidgetHelper_bundle)
 else()
+    option(ASTRAGRAM_LINUX_BUNDLE_WIDGET_HELPER "Bundle the Linux widget helper next to the application." OFF)
     set(widget_helper_folder TelegramHelpers)
     set(widget_helper_pinned ON)
     if (DESKTOP_APP_USE_PACKAGED)
         include(GNUInstallDirs)
         set(widget_helper_destination "${CMAKE_INSTALL_BINDIR}/TelegramHelpers")
-        if (NOT DESKTOP_APP_SPECIAL_TARGET)
+        if (NOT DESKTOP_APP_SPECIAL_TARGET AND NOT ASTRAGRAM_LINUX_BUNDLE_WIDGET_HELPER)
             file(RELATIVE_PATH widget_helper_folder
                 "${CMAKE_INSTALL_FULL_BINDIR}"
                 "${CMAKE_INSTALL_FULL_LIBEXECDIR}/TelegramDesktop")

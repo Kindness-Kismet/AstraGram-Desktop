@@ -86,6 +86,7 @@ GENERIC_COMMANDS = {
     'message.cache-vote': '仅在当前真实账号收藏投票：<消息编号> <答案下标>',
     'message.cache-play': '播放当前真实账号收藏中的语音、圆视频或音乐：<消息编号>，通过 player.state 核对实际播放',
     'simulation.cache-history-check': '在独立模拟配置中验证固定历史缓存边界，返回异步任务；不请求网络或清全缓存',
+    'simulation.history-jump': '在独立模拟配置中分步构造内存历史缺口：prepare <新增条数 1..500> 返回样本状态；deliver <尾部条数 1..500> 交付历史，incoming 插入实时来信，state 查询编号',
     'simulation.message-order': '在独立模拟配置分步复现并发消息换号与排序：prepare <text|long|sticker|photo|file> <text|long|sticker|photo|file> <before|same|after> [--with caseId] 返回 caseId；--with 共享已有样本的来信时间，local、incoming、confirm、state 可附 caseId，省略时操作最近一组',
     'theme.editor.open': '在独立模拟配置中打开原生主题创建器',
     'theme.editor.state': '查询当前主题创建器的尺寸、选中颜色和修改状态',
@@ -368,8 +369,10 @@ def register_commands(sub) -> None:
     command.add_argument("--force", action="store_true", help="模拟结束任务，跳过正常退出；仍核对进程路径")
     sub.add_parser("app.ping", help="探活，返回 pong")
     sub.add_parser("app.info", help="查询版本、配置目录、会话和窗口状态")
-    sub.add_parser("app.check-update", help="触发一次更新检查，结果看 tupdates 目录与日志")
-    sub.add_parser("app.update-info", help="查询更新源前缀：文件内容与内存里解析出的地址")
+    command = sub.add_parser("app.check-update", help="触发更新检查；独立离线配置可指定回环 HTTP 更新源")
+    command.add_argument("prefix", nargs="?", help="本地 HTTP 前缀，例如 http://127.0.0.1:20101")
+    sub.add_parser("app.update-info", help="查询更新源、下载状态、字节数和已验签版本")
+    sub.add_parser("app.install-update", help="在独立离线配置中沿正式重启路径安装已验签更新")
     sub.add_parser("app.help", help="列出服务端已注册的全部指令名")
     command = sub.add_parser("player.state", help="查询当前媒体的播放状态")
     command.add_argument("kind", nargs="?", choices=("song", "voice"))
@@ -650,7 +653,7 @@ def build_server_command(args: argparse.Namespace) -> str:
     command = args.command
     if command in GENERIC_COMMANDS:
         return " ".join([command, *map(quote_arg, args.params)])
-    if command in ("settings.keys", "settings.dump"):
+    if command in ("settings.keys", "settings.dump", "app.check-update"):
         return command + (" " + quote_arg(args.prefix) if args.prefix is not None else "")
     if command == "player.state":
         return command + (" " + args.kind if args.kind else "")
@@ -1025,8 +1028,11 @@ def port_owner_pid() -> int | None:
 def is_expected_process(pid: int) -> bool:
     if sys.platform == "win32":
         result = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", f"(Get-Process -Id {pid} -ErrorAction Ignore).Path"],
+            ["powershell", "-NoProfile", "-Command",
+             "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); "
+             f"(Get-Process -Id {pid} -ErrorAction Ignore).Path"],
             text=True,
+            encoding="utf-8",
             errors="replace",
             capture_output=True,
             check=False,

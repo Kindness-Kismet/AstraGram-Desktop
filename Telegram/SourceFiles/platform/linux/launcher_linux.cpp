@@ -12,6 +12,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/linux/update_install_linux.h"
 #include "webview/platform/linux/webview_linux_webkitgtk.h"
 
+#ifdef _DEBUG
+#include "extras/debug/window_focus.h"
+#endif
+
 #include <QtCore/QDateTime>
 #include <QtCore/QFile>
 #include <glib/glib.hpp>
@@ -148,11 +152,14 @@ bool Launcher::launchUpdater(UpdaterLaunch action) {
 	if (action == UpdaterLaunch::PerformUpdate) {
 		_updating = true;
 		if (!justRelaunch) {
-			if (!Core::checkReadyUpdate()) {
+			switch (Core::prepareReadyUpdate()) {
+			case Core::ReadyUpdateInstall::Failed:
 				ReportLaunchError(u"The pending update is no longer ready."_q);
 				return relaunchAfterUpdate(false);
-			} else if (ReadyUpdatePackagePresent(cWorkingDir())) {
+			case Core::ReadyUpdateInstall::Protected:
 				return installProtectedUpdate();
+			case Core::ReadyUpdateInstall::Unpacked:
+				break;
 			}
 		}
 	}
@@ -182,6 +189,19 @@ bool Launcher::launchUpdater(UpdaterLaunch action) {
 	}
 
 	if (justRelaunch) {
+		auto passWorkingDir = customWorkingDir();
+#ifdef _DEBUG
+		if (cDebugProfile()) {
+			argumentsList.push_back("-debugprofile");
+			passWorkingDir = true;
+		}
+		if (cDebugOffline()) {
+			argumentsList.push_back("-debugoffline");
+		}
+		if (ExtrasDebug::WindowFocus::noFocus()) {
+			argumentsList.push_back("--no-focus");
+		}
+#endif
 		if (cLaunchMode() == LaunchModeAutoStart) {
 			argumentsList.push_back("-autostart");
 		}
@@ -198,7 +218,7 @@ bool Launcher::launchUpdater(UpdaterLaunch action) {
 		if (!_updating) {
 			argumentsList.push_back("-tosettings");
 		}
-		if (customWorkingDir()) {
+		if (passWorkingDir) {
 			argumentsList.push_back("-workdir");
 			argumentsList.push_back(cWorkingDir().toStdString());
 		}

@@ -1,9 +1,37 @@
 #!/usr/bin/env python3
-"""按实际产出的更新包生成各架构的更新清单。"""
+"""按实际产出的 TDUP v2 更新包生成各架构的更新清单。"""
+
+from __future__ import annotations
+
+import sys
+
+sys.dont_write_bytecode = True
+
+import os
+
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 import argparse
 import json
 from pathlib import Path
+
+
+UPDATE_TARGETS = {
+    "win64": ("win", "x64"),
+    "winarm": ("win", "arm"),
+    "linux": ("linux", "x64"),
+    "linuxarm": ("linux", "arm"),
+    "mac": ("mac", "x64"),
+    "armac": ("mac", "arm"),
+}
+
+
+def update_link(platform: str, channel: str) -> str:
+    if channel not in ("stable", "beta"):
+        raise ValueError(f"Unsupported update channel: {channel}")
+    system, arch = UPDATE_TARGETS[platform]
+    suffix = "-beta" if channel == "beta" else ""
+    return f"/td-update-{system}-{arch}-{{version}}{suffix}"
 
 
 def generate_update_map(artifacts: Path, version: int, channel: str = "stable") -> dict:
@@ -11,17 +39,10 @@ def generate_update_map(artifacts: Path, version: int, channel: str = "stable") 
         raise ValueError(f"Unsupported update channel: {channel}")
     if not 1_016 < version <= 999_999_999:
         raise ValueError("Update version must be within the range supported by Packer: 1017..999999999")
-    prefixes = {
-        "win64": "tx64upd",
-        "winarm": "tarm64upd",
-        "linux": "tlinuxupd",
-        "linuxarm": "tlinuxarmupd",
-        "mac": "tmacupd",
-        "armac": "tarmacupd",
-    }
     result = {}
-    for platform, prefix in prefixes.items():
-        package = artifacts / f"{prefix}{version}"
+    for platform in UPDATE_TARGETS:
+        link = update_link(platform, channel)
+        package = artifacts / link.removeprefix("/").format(version=version)
         if not package.is_file():
             continue
         if not package.stat().st_size:
@@ -30,13 +51,13 @@ def generate_update_map(artifacts: Path, version: int, channel: str = "stable") 
             channel: {
                 "released": version,
                 "testing": version,
-                "link": f"/{prefix}{{version}}",
+                "link": link,
             },
         }
 
     # 每个键只登记本架构的更新包；缺席平台的客户端本次不提示更新。
     if not result:
-        raise ValueError("No update packages found")
+        raise ValueError("No TDUP v2 update packages found")
     return result
 
 

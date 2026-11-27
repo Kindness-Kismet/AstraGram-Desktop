@@ -663,6 +663,9 @@ ListWidget::ListWidget(
 				return;
 			}
 			finishCacheRefreshFade();
+#ifdef _DEBUG
+			debugTraceAnimation(u"cache-fade"_q);
+#endif
 			_cacheRefreshFade = Window::ShowFadeOutAnimation(scroll->parentWidget(), scroll->geometry(),
 				Window::GrabForAnimation(scroll), st::extrasInPlaceFadeDuration
 			).get();
@@ -1022,6 +1025,16 @@ void ListWidget::refreshRows(const Data::MessagesSlice &old) {
 		&& (_slice.skippedAfter == 0)
 		&& ((old.skippedAfter == 0 && !old.ids.empty())
 			|| (old.ids.empty() && scrolledTillEnd && _showFinished));
+#ifdef _DEBUG
+	debugTraceAnimation(u"slice %1:%2:%3 -> %4:%5:%6 reveal=%7"_q
+		.arg(old.ids.size())
+		.arg(old.skippedBefore.value_or(-1))
+		.arg(old.skippedAfter.value_or(-1))
+		.arg(_slice.ids.size())
+		.arg(_slice.skippedBefore.value_or(-1))
+		.arg(_slice.skippedAfter.value_or(-1))
+		.arg(revealNewItems));
+#endif
 
 	auto shiftAnchor = (HistoryItem*)nullptr;
 	auto shiftAnchorBottom = 0;
@@ -1073,6 +1086,9 @@ void ListWidget::refreshRows(const Data::MessagesSlice &old) {
 		if (!item->isSponsored()
 			&& (!streamed || !streamed->hasFor(item))) {
 			_itemRevealPending.emplace(view);
+#ifdef _DEBUG
+			debugTraceAnimation(u"reveal-pending %1"_q.arg(item->id.bare));
+#endif
 		}
 	};
 	if (_inverted) {
@@ -1321,6 +1337,10 @@ void ListWidget::scrollTo(
 		AnimatedScroll type,
 		Fn<std::optional<int>()> placement,
 		crl::time duration) {
+#ifdef _DEBUG
+	debugTraceAnimation(u"scroll-to %1 delta=%2 target=%3"_q
+		.arg(scrollTop).arg(delta).arg(attachPosition.fullId.msg.bare));
+#endif
 	_scrollToAnimation.stop();
 	// 滚动时撤掉固定截图，避免旧画面与移动中的消息重叠。
 	finishCacheRefreshFade();
@@ -1505,6 +1525,15 @@ void ListWidget::clearHighlight() {
 }
 
 #ifdef _DEBUG
+void ListWidget::debugTraceAnimation(const QString &event) {
+	if (_debugAnimationEvents.size() == 256) {
+		_debugAnimationEvents.erase(_debugAnimationEvents.begin());
+	}
+	_debugAnimationEvents.push_back(u"%1 %2 top=%3 bottom=%4 height=%5"_q
+		.arg(crl::now()).arg(event).arg(_visibleTop)
+		.arg(_visibleBottom).arg(height()));
+}
+
 Ui::ChatPaintHighlight ListWidget::debugItemHighlight(
 		not_null<Element*> view) const {
 	return _highlighter.state(view->data());
@@ -3339,6 +3368,10 @@ void ListWidget::startItemRevealAnimations() {
 			if (!_itemRevealAnimations.contains(view)) {
 				auto &animation = _itemRevealAnimations[view];
 				animation.startHeight = height;
+#ifdef _DEBUG
+				debugTraceAnimation(u"reveal-start %1"_q
+					.arg(view->data()->id.bare));
+#endif
 				animation.displacement = ItemRevealDisplacement(height);
 				_itemsRevealHeight += height;
 				animation.animation.start(
@@ -3384,6 +3417,10 @@ void ListWidget::revealItemsCallback() {
 		updateVisibleTopItem();
 		if (_visibleTopItem) {
 			// We're not at the bottom.
+#ifdef _DEBUG
+			debugTraceAnimation(u"reveal-cancel %1"_q
+				.arg(_itemRevealAnimations.size()));
+#endif
 			revealHeight = 0;
 			_itemRevealAnimations.clear();
 		}
@@ -6583,6 +6620,10 @@ void ListWidget::viewReplaced(not_null<const Element*> was, Element *now) {
 	}
 	const auto j = _itemRevealAnimations.find(was);
 	if (j != end(_itemRevealAnimations)) {
+#ifdef _DEBUG
+		debugTraceAnimation(u"reveal-replace %1 keep=%2"_q
+			.arg(was->data()->id.bare).arg(now != nullptr));
+#endif
 		auto data = std::move(j->second);
 		_itemRevealAnimations.erase(j);
 		if (now) {

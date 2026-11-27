@@ -39,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QFileSystemWatcher>
+#include <QtNetwork/QHostAddress>
 
 #include <atomic>
 
@@ -54,13 +55,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #else // Q_OS_MACOS
 #include "platform/win/update_install_win.h"
 #endif // Q_OS_WIN
-
-extern "C" {
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <openssl/bio.h>
-#include <openssl/err.h>
-} // extern "C"
 
 #ifndef Q_OS_WIN
 #include <unistd.h>
@@ -81,14 +75,22 @@ constexpr auto kMaxResponseSize = 1024 * 1024;
 #endif
 }
 
+#ifdef _DEBUG
+QString DebugPrefix;
+#endif // _DEBUG
+
 [[nodiscard]] QString UpdateHttpPrefix() {
+#ifdef _DEBUG
+	if (!DebugPrefix.isEmpty()) {
+		return DebugPrefix;
+	}
+#endif // _DEBUG
 	return cInstallBetaVersion()
 		? u"https://github.com/Kindness-Kismet/AstraGram-Desktop/releases/download/beta-updates"_q
 		: Local::readAutoupdatePrefix();
 }
 
-// Alpha and canary builds are published far more often than the eight hours
-// a stable build waits, so they ask every ten to fifteen minutes instead.
+// Canary 通道检查更新的间隔短于稳定版。
 constexpr auto kFrequentUpdateDelayConstPart = 600;
 constexpr auto kFrequentUpdateDelayRandPart = 300;
 
@@ -128,18 +130,6 @@ using Loader = MTP::AbstractDedicatedLoader;
 using namespace gi::repository;
 namespace GObject = gi::repository::GObject;
 #endif // !Q_OS_WIN && !Q_OS_MACOS
-
-struct BIODeleter {
-	void operator()(BIO *value) {
-		BIO_free(value);
-	}
-};
-
-inline auto MakeBIO(const void *buf, int len) {
-	return std::unique_ptr<BIO, BIODeleter>{
-		BIO_new_mem_buf(buf, len),
-	};
-}
 
 class Checker : public base::has_weak_ptr {
 public:
@@ -190,12 +180,9 @@ private:
 	void gotFailure(QNetworkReply::NetworkError e);
 	void clearSentRequest();
 	bool handleResponse(const QByteArray &response);
-	std::optional<QString> parseOldResponse(
-		const QByteArray &response) const;
 	std::optional<QString> parseResponse(const QByteArray &response) const;
 	QString validateLatestUrl(
 		uint64 availableVersion,
-		bool isAvailableAlpha,
 		QString url) const;
 
 	std::unique_ptr<QNetworkAccessManager> _manager;
@@ -372,24 +359,11 @@ QString FindUpdateFile() {
 	const auto list = updates.entryInfoList(QDir::Files);
 	for (const auto &info : list) {
 		static const auto RegExp = QRegularExpression(
-			"^("
-			"tupdate|"
-			"tx64upd|"
-			"tarm64upd|"
-			"tmacupd|"
-			"tarmacupd|"
-			"tlinuxupd|"
-			"tlinuxarmupd|"
-			")\\d+(_[a-z\\d]+)?$",
-			QRegularExpression::CaseInsensitiveOption
-		);
-		static const auto RegExpV2 = QRegularExpression(
 			"^td-update-(win|mac|linux)-(x86|x64|arm)-\\d+"
 			"(-beta|-canary-\\d+(-private)?)?$",
 			QRegularExpression::CaseInsensitiveOption
 		);
-		if (RegExp.match(info.fileName()).hasMatch()
-			|| RegExpV2.match(info.fileName()).hasMatch()) {
+		if (RegExp.match(info.fileName()).hasMatch()) {
 			return info.absoluteFilePath();
 		}
 	}
@@ -504,34 +478,21 @@ enum class ManifestAdoption {
 	return verified;
 }
 
-#if defined Q_OS_MACOS || defined Q_OS_WIN
 [[nodiscard]] bool VerifyKeptUpdate(
 		const QByteArray &content,
 		Platform::UpdateInstallMode mode,
 		ManifestAdoption adoption) {
-	auto version = uint64();
-	if (Updates::IsV2UpdateFile(content)) {
-		const auto verified = VerifyUpdateV2(content, adoption);
-		if (!verified) {
-			return false;
-		}
-		const auto canary
-			= (verified->envelope.channel == Updates::Channel::CanaryPublic)
-			|| (verified->envelope.channel == Updates::Channel::CanaryPrivate);
-		version = canary
-			? 0
-			: Updates::UpdateVersionBase(verified->envelope.version);
-	} else {
-		auto error = QString();
-		const auto verified = Updates::VerifyLegacyUpdate(
-			content, QByteArray(UpdatesPublicKey), AppUpdateVersion, &error);
-		if (!verified) {
-			LOG(("Update Error: %1").arg(error));
-			return false;
-		}
-		version = verified->version;
+	const auto verified = VerifyUpdateV2(content, adoption);
+	if (!verified) {
+		return false;
 	}
-#ifdef Q_OS_WIN
+	const auto canary
+		= (verified->envelope.channel == Updates::Channel::CanaryPublic)
+		|| (verified->envelope.channel == Updates::Channel::CanaryPrivate);
+	const auto version = canary
+		? 0
+		: Updates::UpdateVersionBase(verified->envelope.version);
+#if !defined Q_OS_MACOS
 	if (mode == Platform::UpdateInstallMode::Protected) {
 		auto error = QString();
 		if (!Platform::ValidateProtectedUpdate(
@@ -542,11 +503,10 @@ enum class ManifestAdoption {
 			return false;
 		}
 	}
-#endif // Q_OS_WIN
+#endif // !Q_OS_MACOS
 	VerifiedReadyVersion = version;
 	return true;
 }
-#endif // Q_OS_MACOS || Q_OS_WIN
 
 [[nodiscard]] bool UnpackUpdateV2(
 		const QString &filepath,
@@ -604,38 +564,6 @@ enum class ManifestAdoption {
 	return true;
 }
 
-// 发布流程仍生成旧格式包，仅接受本应用的签名密钥。
-[[nodiscard]] bool UnpackLegacyUpdate(
-		const QString &filepath,
-		const QByteArray &compressed) {
-	auto error = QString();
-	const auto verified = Updates::VerifyLegacyUpdate(
-		compressed, QByteArray(UpdatesPublicKey), AppUpdateVersion, &error);
-	if (!verified) {
-		LOG(("Update Error: %1").arg(error));
-		return false;
-	}
-	const auto version = verified->version;
-	const auto temporary = cWorkingDir() + u"tupdates/temp"_q;
-	base::Platform::DeleteDirectory(temporary);
-	auto directory = QDir(temporary);
-	if (directory.exists() || !QDir().mkpath(temporary)) {
-		LOG(("Update Error: could not prepare the update directory."));
-		return false;
-	}
-	if (!Updates::ExtractUpdateFiles(verified->uncompressed,
-			Updates::MakeUpdateVersion(version, 0), temporary, &error)) {
-		LOG(("Update Error: %1").arg(error));
-		return false;
-	}
-	if (!WriteUpdateVersionFile(temporary, version, 0)
-		|| !WriteUpdateReadyFile(temporary + u"/ready"_q)) {
-		return false;
-	}
-	QFile::remove(filepath);
-	return true;
-}
-
 #endif // !TDESKTOP_DISABLE_AUTOUPDATE
 
 bool UnpackUpdate(const QString &filepath) {
@@ -644,7 +572,6 @@ bool UnpackUpdate(const QString &filepath) {
 		return true;
 	}
 
-#if defined Q_OS_MACOS || defined Q_OS_WIN
 	auto error = QString();
 	const auto mode = Platform::GetUpdateInstallMode(
 		cExeDir() + cExeName(),
@@ -657,9 +584,20 @@ bool UnpackUpdate(const QString &filepath) {
 	if (!content) {
 		LOG(("Update Error: %1").arg(error));
 		return false;
-	} else if (!VerifyKeptUpdate(*content, mode, ManifestAdoption::Queued)) {
+	}
+	if (!VerifyKeptUpdate(*content, mode, ManifestAdoption::Queued)) {
 		return false;
 	}
+#if !defined Q_OS_WIN && !defined Q_OS_MACOS
+	if (mode == Platform::UpdateInstallMode::Protected) {
+		if (!Platform::PrepareProtectedUpdate(
+				cWorkingDir(), filepath, *content, cInstallBetaVersion(), error)) {
+			LOG(("Update Error: %1").arg(error));
+			return false;
+		}
+		return true;
+	}
+#endif // !Q_OS_WIN && !Q_OS_MACOS
 	const auto ready = Platform::ReadyUpdatePackagePath(cWorkingDir());
 	QFile::remove(ready);
 	if (!QFile::rename(filepath, ready)) {
@@ -667,37 +605,6 @@ bool UnpackUpdate(const QString &filepath) {
 		return false;
 	}
 	return true;
-#else // Q_OS_MACOS || Q_OS_WIN
-	auto error = QString();
-	const auto mode = KSandbox::isInside()
-		? Platform::UpdateInstallMode::Writable
-		: Platform::GetUpdateInstallMode(cExeDir() + cExeName(), error);
-	if (mode == Platform::UpdateInstallMode::Refused) {
-		LOG(("Update Error: %1").arg(error));
-		return false;
-	}
-	const auto content = Platform::ReadUpdatePackage(filepath, error);
-	if (!content) {
-		LOG(("Update Error: %1").arg(error));
-		return false;
-	} else if (mode == Platform::UpdateInstallMode::Protected) {
-		if (!Platform::PrepareProtectedUpdate(
-				cWorkingDir(),
-				filepath,
-				*content,
-				cInstallBetaVersion(),
-				error)) {
-			LOG(("Update Error: %1").arg(error));
-			return false;
-		}
-		return true;
-	}
-	const auto &compressed = *content;
-	if (!Updates::IsV2UpdateFile(compressed)) {
-		return UnpackLegacyUpdate(filepath, compressed);
-	}
-	return UnpackUpdateV2(filepath, compressed, ManifestAdoption::Queued);
-#endif // !Q_OS_MACOS && !Q_OS_WIN
 #else // !TDESKTOP_DISABLE_AUTOUPDATE
 	return false;
 #endif // TDESKTOP_DISABLE_AUTOUPDATE
@@ -731,15 +638,9 @@ bool ParseCommonMap(
 		return false;
 	}
 	const auto types = (*it).toObject();
-	const auto list = [&]() -> std::vector<QString> {
-		if (cAlphaVersion()) {
-			return { "alpha", "beta", "stable" };
-		} else if (cInstallBetaVersion()) {
-			return { "beta", "stable" };
-		}
-		return { "stable" };
-	}();
-	auto bestIsAvailableAlpha = false;
+	const auto list = (AppBetaVersion || cInstallBetaVersion())
+		? std::vector<QString>{ "beta", "stable" }
+		: std::vector<QString>{ "stable" };
 	auto bestAvailableVersion = 0ULL;
 	for (const auto &type : list) {
 		const auto it = types.constFind(type);
@@ -756,7 +657,6 @@ bool ParseCommonMap(
 		if (version == map.constEnd()) {
 			continue;
 		}
-		const auto isAvailableAlpha = (type == "alpha");
 		const auto availableVersion = [&] {
 			if ((*version).isString()) {
 				const auto string = (*version).toString();
@@ -774,16 +674,9 @@ bool ParseCommonMap(
 				).arg(platform).arg(type).arg(key));
 			return false;
 		}
-		const auto compare = isAvailableAlpha
-			? availableVersion
-			: availableVersion * 1000;
-		const auto bestCompare = bestIsAvailableAlpha
-			? bestAvailableVersion
-			: bestAvailableVersion * 1000;
-		if (compare > bestCompare) {
+		if (availableVersion > bestAvailableVersion) {
 			bestAvailableVersion = availableVersion;
-			bestIsAvailableAlpha = isAvailableAlpha;
-			if (!callback(availableVersion, isAvailableAlpha, map)) {
+			if (!callback(availableVersion, map)) {
 				return false;
 			}
 		}
@@ -883,16 +776,12 @@ void HttpChecker::gotResponse() {
 }
 
 bool HttpChecker::handleResponse(const QByteArray &response) {
-	const auto handle = [&](const QString &url) {
-		done(url.isEmpty() ? nullptr : std::make_shared<HttpLoader>(url));
-		return true;
-	};
-	if (const auto url = parseOldResponse(response)) {
-		return handle(*url);
-	} else if (const auto url = parseResponse(response)) {
-		return handle(*url);
+	const auto url = parseResponse(response);
+	if (!url) {
+		return false;
 	}
-	return false;
+	done(url->isEmpty() ? nullptr : std::make_shared<HttpLoader>(*url));
+	return true;
 }
 
 void HttpChecker::clearSentRequest() {
@@ -922,35 +811,14 @@ void HttpChecker::gotFailure(QNetworkReply::NetworkError e) {
 	fail();
 }
 
-std::optional<QString> HttpChecker::parseOldResponse(
-		const QByteArray &response) const {
-	const auto string = QString::fromLatin1(response);
-	const auto old = QRegularExpression(
-		u"^\\s*(\\d+)\\s*:\\s*([\\x21-\\x7f]+)\\s*$"_q
-	).match(string);
-	if (!old.hasMatch()) {
-		return std::nullopt;
-	}
-	const auto availableVersion = old.captured(1).toULongLong();
-	const auto url = old.captured(2);
-	const auto isAvailableAlpha = url.startsWith(qstr("beta_"));
-	return validateLatestUrl(
-		availableVersion,
-		isAvailableAlpha,
-		isAvailableAlpha ? url.mid(5) + "_{signature}" : url);
-}
-
 std::optional<QString> HttpChecker::parseResponse(
 		const QByteArray &response) const {
 	auto bestAvailableVersion = 0ULL;
-	auto bestIsAvailableAlpha = false;
 	auto bestLink = QString();
 	const auto accumulate = [&](
 			uint64 version,
-			bool isAlpha,
 			const QJsonObject &map) {
 		bestAvailableVersion = version;
-		bestIsAvailableAlpha = isAlpha;
 		const auto link = map.constFind("link");
 		if (link == map.constEnd()) {
 			LOG(("Update Error: Link not found for version %1."
@@ -970,7 +838,6 @@ std::optional<QString> HttpChecker::parseResponse(
 	}
 	return validateLatestUrl(
 		bestAvailableVersion,
-		bestIsAvailableAlpha,
 		bestLink.startsWith(u"https://"_q)
 			? bestLink
 			: UpdateHttpPrefix() + bestLink);
@@ -978,24 +845,11 @@ std::optional<QString> HttpChecker::parseResponse(
 
 QString HttpChecker::validateLatestUrl(
 		uint64 availableVersion,
-		bool isAvailableAlpha,
 		QString url) const {
-	const auto myVersion = isAvailableAlpha
-		? cAlphaVersion()
-		: uint64(AppUpdateVersion);
-	const auto validVersion = (cAlphaVersion() || !isAvailableAlpha);
-	if (!validVersion || availableVersion <= myVersion) {
+	if (availableVersion <= uint64(AppUpdateVersion)) {
 		return QString();
 	}
-	const auto versionUrl = url.replace(
-		"{version}",
-		QString::number(availableVersion));
-	const auto finalUrl = isAvailableAlpha
-		? QString(versionUrl).replace(
-			"{signature}",
-			countAlphaVersionSignature(availableVersion))
-		: versionUrl;
-	return finalUrl;
+	return url.replace("{version}", QString::number(availableVersion));
 }
 
 HttpChecker::~HttpChecker() {
@@ -1200,12 +1054,7 @@ auto MtpChecker::parseText(const QByteArray &text) const
 	auto bestLocation = FileLocation();
 	const auto accumulate = [&](
 			uint64 version,
-			bool isAlpha,
 			const QJsonObject &map) {
-		if (isAlpha) {
-			LOG(("Update Error: MTP closed alpha found."));
-			return false;
-		}
 		bestAvailableVersion = version;
 		const auto key = testing() ? "testing" : "released";
 		const auto entry = map.constFind(key);
@@ -1727,7 +1576,7 @@ private:
 	Implementation _mtpImplementation;
 	Implementation _flatpakImplementation;
 	std::shared_ptr<Loader> _activeLoader;
-	bool _usingMtprotoLoader = (cAlphaVersion() != 0);
+	bool _usingMtprotoLoader = false;
 	base::weak_ptr<Main::Session> _session;
 
 	rpl::lifetime _lifetime;
@@ -1861,7 +1710,7 @@ void Updater::start(bool forceWait, bool manual) {
 	}
 
 	_retryTimer.cancel();
-	const auto frequent = cAlphaVersion() || BuildIsCanary;
+	const auto frequent = BuildIsCanary;
 	const auto constDelay = frequent
 		? kFrequentUpdateDelayConstPart
 		: UpdateDelayConstPart;
@@ -1902,7 +1751,7 @@ void Updater::start(bool forceWait, bool manual) {
 				&_httpImplementation,
 				std::make_unique<HttpChecker>(_testing));
 
-			// 官方 MTP 包用上游 v2 根密钥能验签通过，装上会覆盖成原版。
+			// 稳定版和测试版只使用本项目的 HTTP 更新源。
 			startImplementation(&_mtpImplementation, nullptr);
 		}
 
@@ -2217,25 +2066,10 @@ namespace {
 	QString curUpdater = (cExeDir() + u"Updater"_q);
 	QFileInfo updater(cWorkingDir() + u"tupdates/temp/Updater"_q);
 #endif // else for Q_OS_WIN || Q_OS_MACOS
-	if (!updater.exists()) {
-		QFileInfo current(curUpdater);
-		if (!current.exists()) {
-			ClearAll();
-			return false;
-		}
-#if !defined Q_OS_WIN && !defined Q_OS_MACOS
-		if (!KSandbox::isInside()) {
-			if (!current.isFile() || !current.isExecutable()) {
-				ClearAll();
-				return false;
-			}
-			return true;
-		}
-#endif // !Q_OS_WIN && !Q_OS_MACOS
-		if (!QFile(current.absoluteFilePath()).copy(updater.absoluteFilePath())) {
-			ClearAll();
-			return false;
-		}
+	if (!updater.isFile()) {
+		LOG(("Update Error: the authenticated package carries no update helper."));
+		ClearAll();
+		return false;
 	}
 #ifdef Q_OS_WIN
 	if (CopyFile(updater.absoluteFilePath().toStdWString().c_str(), curUpdater.toStdWString().c_str(), FALSE) == FALSE) {
@@ -2279,7 +2113,7 @@ namespace {
 }
 #endif // !TDESKTOP_DISABLE_AUTOUPDATE || (!Q_OS_WIN && !Q_OS_MACOS)
 
-#if (defined Q_OS_MACOS || defined Q_OS_WIN) && !defined TDESKTOP_DISABLE_AUTOUPDATE
+#ifndef TDESKTOP_DISABLE_AUTOUPDATE
 [[nodiscard]] bool CheckKeptUpdatePackage() {
 	VerifiedReadyVersion = 0;
 	const auto working = cWorkingDir();
@@ -2313,77 +2147,18 @@ namespace {
 	}
 	return true;
 }
-#endif // (Q_OS_MACOS || Q_OS_WIN) && !TDESKTOP_DISABLE_AUTOUPDATE
+#endif // !TDESKTOP_DISABLE_AUTOUPDATE
 
 } // namespace
 
 bool checkReadyUpdate() {
-#if defined Q_OS_MACOS || defined Q_OS_WIN
 #ifndef TDESKTOP_DISABLE_AUTOUPDATE
 	return CheckKeptUpdatePackage();
 #else // !TDESKTOP_DISABLE_AUTOUPDATE
 	return false;
 #endif // TDESKTOP_DISABLE_AUTOUPDATE
-#else // Q_OS_MACOS || Q_OS_WIN
-	if (!KSandbox::isInside()) {
-		const auto packagePresent = Platform::ReadyUpdatePackagePresent(
-			cWorkingDir());
-		const auto temp = QFileInfo(cWorkingDir() + u"tupdates/temp"_q);
-		const auto legacy = QFileInfo(cWorkingDir() + u"tupdates/ready"_q);
-		if (!packagePresent
-			&& !temp.exists() && !temp.isSymLink()
-			&& !legacy.exists() && !legacy.isSymLink()) {
-			return false;
-		}
-		auto error = QString();
-		const auto reject = [&] {
-			LOG(("Update Error: %1").arg(error));
-			ClearAll();
-			return false;
-		};
-		const auto mode = Platform::GetUpdateInstallMode(
-			cExeDir() + cExeName(),
-			error);
-		if (mode == Platform::UpdateInstallMode::Refused) {
-			return reject();
-		} else if (packagePresent) {
-			if (!Platform::ClearUpdateData(cWorkingDir(), error, true)) {
-				return reject();
-			}
-			const auto package = Platform::ReadyUpdatePackagePath(cWorkingDir());
-			const auto content = Platform::ReadUpdatePackage(package, error);
-			if (!content) {
-				return reject();
-			} else if (mode == Platform::UpdateInstallMode::Protected) {
-				if (!Platform::ValidateProtectedUpdate(
-						*content,
-						cInstallBetaVersion(),
-						error)) {
-					return reject();
-				}
-				return true;
-			}
-#ifndef TDESKTOP_DISABLE_AUTOUPDATE
-			const auto unpacked = Updates::IsV2UpdateFile(*content)
-				? UnpackUpdateV2(package, *content, ManifestAdoption::Immediate)
-				: UnpackLegacyUpdate(package, *content);
-			if (!unpacked
-				|| (Platform::ReadyUpdatePackagePresent(cWorkingDir())
-					&& !QFile::remove(package))) {
-				error = u"Could not unpack and retire the ready update package."_q;
-				return reject();
-			}
-#endif // !TDESKTOP_DISABLE_AUTOUPDATE
-		} else if (mode == Platform::UpdateInstallMode::Protected) {
-			error = u"An unpacked update cannot be installed with privilege."_q;
-			return reject();
-		}
-	}
-	return PromoteReadyUpdater();
-#endif // !Q_OS_MACOS && !Q_OS_WIN
 }
 
-#if defined Q_OS_MACOS || defined Q_OS_WIN
 ReadyUpdateInstall prepareReadyUpdate() {
 #ifndef TDESKTOP_DISABLE_AUTOUPDATE
 	const auto working = cWorkingDir();
@@ -2403,7 +2178,7 @@ ReadyUpdateInstall prepareReadyUpdate() {
 		ClearAll();
 		return ReadyUpdateInstall::Failed;
 	}
-#ifdef Q_OS_WIN
+#if !defined Q_OS_MACOS
 	if (mode == Platform::UpdateInstallMode::Protected) {
 		if (!VerifyKeptUpdate(*content, mode, ManifestAdoption::Immediate)) {
 			ClearAll();
@@ -2411,10 +2186,9 @@ ReadyUpdateInstall prepareReadyUpdate() {
 		}
 		return ReadyUpdateInstall::Protected;
 	}
-#endif // Q_OS_WIN
-	const auto unpacked = Updates::IsV2UpdateFile(*content)
-		? UnpackUpdateV2(package, *content, ManifestAdoption::Immediate)
-		: UnpackLegacyUpdate(package, *content);
+#endif // !Q_OS_MACOS
+	const auto unpacked = UnpackUpdateV2(
+		package, *content, ManifestAdoption::Immediate);
 	if (!unpacked || Platform::ReadyUpdatePackagePresent(working)) {
 		LOG(("Update Error: could not unpack and retire the kept update package."));
 		ClearAll();
@@ -2427,7 +2201,6 @@ ReadyUpdateInstall prepareReadyUpdate() {
 	return ReadyUpdateInstall::Failed;
 #endif // TDESKTOP_DISABLE_AUTOUPDATE
 }
-#endif // Q_OS_MACOS || Q_OS_WIN
 
 void UpdateApplication() {
 	if (UpdaterDisabled()) {
@@ -2466,69 +2239,35 @@ void UpdateApplication() {
 	}
 }
 
-uint64 ReadyUpdateVersion() {
-#if defined Q_OS_WIN || defined Q_OS_MACOS
-	return VerifiedReadyVersion.load();
-#else // Q_OS_WIN || Q_OS_MACOS
-	auto file = QFile(cWorkingDir() + u"tupdates/temp/tdata/version"_q);
-	auto version = VersionInt();
-	if (!file.open(QIODevice::ReadOnly)
-		|| file.read((char*)&version, sizeof(VersionInt)) != sizeof(VersionInt)
-		|| !version
-		|| version == VersionInt(kVersionFileCanaryMarker)) {
-		return 0;
+#ifdef _DEBUG
+bool SetDebugUpdatePrefix(const QString &prefix) {
+	if (!cDebugProfile() || !cDebugOffline()) {
+		return false;
 	}
-	return uint64(version);
-#endif // Q_OS_WIN || Q_OS_MACOS
+	const auto url = QUrl(prefix);
+	if (!prefix.isEmpty()
+		&& (url.scheme() != u"http"_q
+			|| !QHostAddress(url.host()).isLoopback()
+			|| !url.userInfo().isEmpty()
+			|| url.hasQuery()
+			|| url.hasFragment())) {
+		return false;
+	}
+	UpdateChecker().stop();
+	DebugPrefix = prefix;
+	while (DebugPrefix.endsWith('/')) {
+		DebugPrefix.chop(1);
+	}
+	return true;
 }
 
-QString countAlphaVersionSignature(uint64 version) { // duplicated in packer.cpp
-	if (cAlphaPrivateKey().isEmpty()) {
-		LOG(("Error: Trying to count alpha version signature without alpha private key!"));
-		return QString();
-	}
+QString DebugUpdatePrefix() {
+	return DebugPrefix;
+}
+#endif // _DEBUG
 
-	QByteArray signedData = (qstr("TelegramBeta_") + QString::number(version, 16).toLower()).toUtf8();
-
-	static const int32 shaSize = 20, keySize = 128;
-
-	uchar sha1Buffer[shaSize];
-	hashSha1(signedData.constData(), signedData.size(), sha1Buffer); // count sha1
-
-	uint32 siglen = 0;
-
-	RSA *prKey = [] {
-		const auto bio = MakeBIO(
-			const_cast<char*>(cAlphaPrivateKey().constData()),
-			-1);
-		return PEM_read_bio_RSAPrivateKey(bio.get(), 0, 0, 0);
-	}();
-	if (!prKey) {
-		LOG(("Error: Could not read alpha private key!"));
-		return QString();
-	}
-	if (RSA_size(prKey) != keySize) {
-		LOG(("Error: Bad alpha private key size: %1").arg(RSA_size(prKey)));
-		RSA_free(prKey);
-		return QString();
-	}
-	QByteArray signature;
-	signature.resize(keySize);
-	if (RSA_sign(NID_sha1, (const uchar*)(sha1Buffer), shaSize, (uchar*)(signature.data()), &siglen, prKey) != 1) { // count signature
-		LOG(("Error: Counting alpha version signature failed!"));
-		RSA_free(prKey);
-		return QString();
-	}
-	RSA_free(prKey);
-
-	if (siglen != keySize) {
-		LOG(("Error: Bad alpha version signature length: %1").arg(siglen));
-		return QString();
-	}
-
-	signature = signature.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-	signature = signature.replace('-', '8').replace('_', 'B');
-	return QString::fromUtf8(signature.mid(19, 32));
+uint64 ReadyUpdateVersion() {
+	return VerifiedReadyVersion.load();
 }
 
 } // namespace Core

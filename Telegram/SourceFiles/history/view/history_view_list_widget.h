@@ -389,6 +389,10 @@ public:
 	}
 	[[nodiscard]] Ui::ChatPaintHighlight debugItemHighlight(
 		not_null<Element*> view) const;
+	[[nodiscard]] const std::vector<QString> &debugAnimationEvents() const {
+		return _debugAnimationEvents;
+	}
+	void debugTraceAnimation(const QString &event);
 #endif
 	bool isAbovePosition(Data::MessagePosition position) const;
 	bool isBelowPosition(Data::MessagePosition position) const;
@@ -1086,6 +1090,9 @@ private:
 	Tgw::ScrollFlight _scrollToFlight;
 	Ui::Animations::Simple _scrollToAnimation;
 	QPointer<Ui::RpWidget> _cacheRefreshFade;
+#ifdef _DEBUG
+	std::vector<QString> _debugAnimationEvents;
+#endif
 	bool _scrollToBottomAnimation = false;
 	Fn<bool()> _overrideInitialScroll;
 

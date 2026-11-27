@@ -14,8 +14,9 @@
 |---|---|---|
 | `app.ping` | 空 | 心跳检测，返回 `pong`，验证服务端连通性。 |
 | `app.info` | 空 | 返回版本、配置、工作目录、会话与窗口状态 JSON。 |
-| `app.check-update` | 空 | 手动触发一次更新检查，不修改自动检查偏好，链接与包校验按当前构建的发布语义走。 |
-| `app.update-info` | 空 | 报告自动检查偏好 `autoCheckUpdates`，以及 `tdata/prefix` 的内容与内存里解析出的地址。 |
+| `app.check-update` | `[http://127.0.0.1:端口]` | 手动触发正式更新检查；回环源仅允许独立离线配置，签名和安装规则保持不变。 |
+| `app.update-info` | 空 | 报告更新源、下载状态与字节数，以及已通过验签的 `readyVersion`。 |
+| `app.install-update` | 空 | 独立离线配置中重新核验就绪包，再沿正式重启和 Updater 流程安装。 |
 | `app.help` | 空 | 列出服务端已注册的全部指令名。 |
 | `app.quit` | 空 | 让应用走正常退出流程；退出动作排在事件循环尾部，确保 `OK` 写完 socket 再退。 |
 | `window.resize` | `[width height]` | 报告窗口尺寸与最大化状态；给出尺寸时按逻辑像素调整窗口。 |
@@ -38,11 +39,11 @@
 口令状态另含 `passcodeLocked`、`hasPasscode` 和 `appLockEnabled`，分别表示当前已锁定、设置了口令和启用了应用锁。
 `windowMaterialActive` 表示主窗口的材质实际生效状态，可与 `windowMaterial` 设置对照；截图不包含系统合成的桌面背景。
 
-`app.check-update` 只触发不等待：下载与验签是异步的，结果看工作目录下 `tupdates/`
-保存的文件和应用日志。更新被禁用时返回 `updater is disabled`。
+`app.check-update` 只触发不等待；`app.update-info` 的 `state` 为 `idle`、`downloading` 或 `ready`，另有 `downloadedBytes`、`totalBytes` 与 `readyVersion`。失败原因看应用日志，更新禁用时返回 `updater is disabled`。
 
-`app.update-info` 用来定位更新检查会打到哪个地址：`tdata/prefix` 里写的内容与
-`resolvedPrefix` 不一致时，说明前缀在运行时被固定值覆写过，改文件不会生效。
+指定回环 HTTP 前缀时，实例必须同时使用独立 profile 和 `--offline`。前缀只存本次进程内的 `debugPrefix`，`resolvedPrefix` 仍表示正常持久更新源；`http://127.0.0.1:20101` 这样的地址不会绕过 V2 验签。服务提供 `current6` 和使用相对链接的新格式更新包。
+
+验收安装时，先把完整 Dev 产物复制到独立调试根，使用 `AYUGRAM_DEBUG_ROOT` 绑定该副本；不复制真实 `tdata`。原始包保存在 `tupdates/ready-package`，安装前再次验签，解压后必须包含主程序、Updater、WidgetHelper 以及 Windows x64 的 D3D 模块。`app.install-update` 会退出并重新启动该副本，检查重启后的 `isolatedDebug`、`offline`、`focus_mode`、安装文件摘要和 Updater 日志。
 
 `window.resize` 与 `window.maximize` 用来把窗口摆到指定状态，验证依赖窗口
 宽度的行为（宽屏布局、栏位折叠）。尺寸是 Qt 逻辑像素，与 `control.list` 的几何同一

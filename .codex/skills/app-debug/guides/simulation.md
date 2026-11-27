@@ -166,6 +166,11 @@ simulation.widget state + screenshot.take
 
 ## 验证入口
 
+`simulation.history-jump` 仅在独立模拟配置中分步构造内存历史缺口，不发送真实消息。
+`prepare <1..500>` 保留 80 条旧历史和最新一条摘要，直接返回样本状态与编号，可按编号打开旧消息。
+点击置底后用 `deliver <1..500>` 向正式消息索引交付指定数量的尾部历史，可重复交付检验视图是否重建；`incoming` 插入一条实时来信，`state` 查询当前编号。
+配合 `cache.layout.animationEvents` 核对切片与入场事件；该样本不触发磁盘缓存刷新，数据由模拟会话持有，重启后消失。
+
 `simulation.message-order` 仅在独立模拟配置分步构造并发消息，固定使用 `group` 场景；不发送或自动确认消息。
 先执行 `prepare <我方类型> <对方类型> <before|same|after> [--with caseId]`，类型支持 `text`、`long`、`sticker`、`photo`、`file`，分别为短文字、十二行文字、内存静态贴纸、图片、文本文件。
 最后一项控制我方本地时间相对来信早一秒、同秒或晚一秒；我方正式编号始终比来信大。返回 `caseId` 和 `peerId`，用 `chat.open` 打开对应会话并滚到最底部。

@@ -95,6 +95,9 @@ int main(int argc, const char * argv[]) {
 	pid_t procId = 0;
 	BOOL update = YES, toSettings = NO, autoStart = NO, startInTray = NO;
 	BOOL customWorkingDir = NO;
+#ifdef _DEBUG
+	BOOL debugProfile = NO, debugOffline = NO, noFocus = NO;
+#endif
 	NSString *key = nil;
 	for (int i = 0; i < argc; ++i) {
 		if ([@"-workpath" isEqualToString:[NSString stringWithUTF8String:argv[i]]]) {
@@ -115,6 +118,14 @@ int main(int argc, const char * argv[]) {
 			autoStart = YES;
 		} else if ([@"-debug" isEqualToString:[NSString stringWithUTF8String:argv[i]]]) {
 			_debug = YES;
+#ifdef _DEBUG
+		} else if ([@"-debugprofile" isEqualToString:[NSString stringWithUTF8String:argv[i]]]) {
+			debugProfile = YES;
+		} else if ([@"-debugoffline" isEqualToString:[NSString stringWithUTF8String:argv[i]]]) {
+			debugOffline = YES;
+		} else if ([@"--no-focus" isEqualToString:[NSString stringWithUTF8String:argv[i]]]) {
+			noFocus = YES;
+#endif
 		} else if ([@"-startintray" isEqualToString:[NSString stringWithUTF8String:argv[i]]]) {
 			startInTray = YES;
 		} else if ([@"-workdir_custom" isEqualToString:[NSString stringWithUTF8String:argv[i]]]) {
@@ -154,13 +165,12 @@ int main(int argc, const char * argv[]) {
 		NSFileManager *fileManager = [NSFileManager defaultManager];
 		NSString *readyFilePath = [workDir stringByAppendingString:@"tupdates/temp/ready"];
 		NSString *srcDir = [workDir stringByAppendingString:@"tupdates/temp/"], *srcEnum = [workDir stringByAppendingString:@"tupdates/temp"];
-		if ([fileManager fileExistsAtPath:readyFilePath]) {
-			writeLog([@"Ready file found! Using new path: " stringByAppendingString: srcEnum]);
-		} else {
-			srcDir = [workDir stringByAppendingString:@"tupdates/ready/"]; // old
-			srcEnum = [workDir stringByAppendingString:@"tupdates/ready"];
-			writeLog([@"Ready file not found! Using old path: " stringByAppendingString: srcEnum]);
+		if (![fileManager fileExistsAtPath:readyFilePath]) {
+			writeLog([@"Ready file not found: " stringByAppendingString:readyFilePath]);
+			closeLog();
+			return -1;
 		}
+		writeLog([@"Ready file found: " stringByAppendingString:readyFilePath]);
 
 		writeLog([@"Starting update files iteration, path: " stringByAppendingString: srcEnum]);
 
@@ -250,6 +260,15 @@ int main(int argc, const char * argv[]) {
 	RemoveQuarantineFromBundle(appPath);
 
 	NSMutableArray *args = [[NSMutableArray alloc] initWithObjects: @"-noupdate", nil];
+	NSWorkspaceLaunchOptions launchOptions = NSWorkspaceLaunchDefault;
+#ifdef _DEBUG
+	if (debugProfile) [args addObject:@"-debugprofile"];
+	if (debugOffline) [args addObject:@"-debugoffline"];
+	if (noFocus) {
+		[args addObject:@"--no-focus"];
+		launchOptions |= NSWorkspaceLaunchWithoutActivation;
+	}
+#endif
 	if (toSettings) [args addObject:@"-tosettings"];
 	if (_debug) [args addObject:@"-debug"];
 	if (startInTray) [args addObject:@"-startintray"];
@@ -268,7 +287,7 @@ int main(int argc, const char * argv[]) {
 		NSError *error = nil;
 		NSRunningApplication *result = [[NSWorkspace sharedWorkspace]
 					launchApplicationAtURL:[NSURL fileURLWithPath:appPath]
-					options:NSWorkspaceLaunchDefault
+					options:launchOptions
 					configuration:[NSDictionary
 								   dictionaryWithObject:args
 								   forKey:NSWorkspaceLaunchConfigurationArguments]

@@ -41,7 +41,7 @@ function(extras_override_version file)
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/extras_app_version.h.in"
         "${generated_dir}/extras_app_version.h"
         @ONLY)
-    include_directories("${generated_dir}")
+    set(extras_version_include_dir "${generated_dir}" PARENT_SCOPE)
 
     set(desktop_app_version_int "${app_version}" PARENT_SCOPE)
     set(desktop_app_version_beta_bool ${beta} PARENT_SCOPE)

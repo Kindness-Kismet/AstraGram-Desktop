@@ -21,6 +21,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #endif // ShellExecute
 
 bool _debug = false;
+#ifdef _DEBUG
+bool _debugNoFocus = false;
+#endif
 
 wstring updaterName, updaterDir, updateTo, exeName, customWorkingDir, customKeyFile;
 
@@ -48,6 +51,11 @@ wstring FormatUpdateError(const wstring &message, DWORD errorCode) {
 }
 
 void updateError(const WCHAR *msg, DWORD errorCode) {
+#ifdef _DEBUG
+	if (_debugNoFocus) {
+		return;
+	}
+#endif
 	const auto text = FormatUpdateError(msg, errorCode);
 	MessageBox(0, text.c_str(), L"Update error!", MB_ICONERROR);
 }
@@ -292,24 +300,19 @@ bool update() {
 	wstring updDir = L"tupdates\\temp", readyFilePath = L"tupdates\\temp\\ready", tdataDir = L"tupdates\\temp\\tdata";
 	{
 		HANDLE readyFile = CreateFile(readyFilePath.c_str(), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-		if (readyFile != INVALID_HANDLE_VALUE) {
-			CloseHandle(readyFile);
-		} else {
-			updDir = L"tupdates\\ready"; // old
-			tdataDir = L"tupdates\\ready\\tdata";
+		if (readyFile == INVALID_HANDLE_VALUE) {
+			writeLog(L"Ready file not found: '" + readyFilePath + L"'");
+			return false;
 		}
+		CloseHandle(readyFile);
 	}
 
 	HANDLE versionFile = CreateFile((tdataDir + L"\\version").c_str(), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 	if (versionFile != INVALID_HANDLE_VALUE) {
 		if (!ReadFile(versionFile, &versionNum, sizeof(DWORD), &readLen, NULL) || readLen != sizeof(DWORD)) {
 			versionNum = 0;
-		} else {
-			if (versionNum == 0x7FFFFFFF) { // alpha version
-
-			} else if (versionNum == 0x7FFFFFFE) { // v2 canary version
-
-			} else if (!ReadFile(versionFile, &versionLen, sizeof(DWORD), &readLen, NULL) || readLen != sizeof(DWORD) || versionLen > 63) {
+		} else if (versionNum != 0x7FFFFFFE) {
+			if (!ReadFile(versionFile, &versionLen, sizeof(DWORD), &readLen, NULL) || readLen != sizeof(DWORD) || versionLen > 63) {
 				versionNum = 0;
 			} else if (!ReadFile(versionFile, versionStr, versionLen, &readLen, NULL) || readLen != versionLen) {
 				versionNum = 0;
@@ -341,9 +344,6 @@ bool update() {
 		HANDLE findHandle = FindFirstFileEx((dir + L"\\*").c_str(), FindExInfoStandard, &findData, FindExSearchNameMatch, 0, 0);
 		if (findHandle == INVALID_HANDLE_VALUE) {
 			DWORD errorCode = GetLastError();
-			if (errorCode == ERROR_PATH_NOT_FOUND) { // no update is ready
-				return true;
-			}
 			writeLog(L"Error: failed to find update files :(");
 			updateError(L"Failed to find update files", errorCode);
 			delFolder();
@@ -435,11 +435,15 @@ bool update() {
 						+ fname + L"\nTo:\n" + tofname,
 					errorCode);
 				writeLog(error);
-				if (MessageBox(
-						0,
-						error.c_str(),
-						L"Update error!",
-						MB_ICONERROR | MB_RETRYCANCEL) != IDRETRY) {
+				if (
+#ifdef _DEBUG
+						_debugNoFocus ||
+#endif
+						MessageBox(
+							0,
+							error.c_str(),
+							L"Update error!",
+							MB_ICONERROR | MB_RETRYCANCEL) != IDRETRY) {
 					delFolder();
 					return false;
 				}
@@ -452,60 +456,103 @@ bool update() {
 	return true;
 }
 
-void updateRegistry() {
-	if (versionNum && versionNum != 0x7FFFFFFF && versionNum != 0x7FFFFFFE) {
-		writeLog(L"Updating registry..");
-		normalizeUpdateVersionString();
-		versionStr[versionLen / 2] = 0;
-		HKEY rkey;
-		LSTATUS status = RegOpenKeyEx(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{53F49750-6209-4FBF-9CA8-7A333C87D1ED}_is1", 0, KEY_QUERY_VALUE | KEY_SET_VALUE, &rkey);
-		if (status == ERROR_SUCCESS) {
-			writeLog(L"Checking registry install location..");
-			static const int bufSize = 4096;
-			DWORD locationType, locationSize = bufSize * 2;
-			WCHAR locationStr[bufSize], exp[bufSize];
-			if (RegQueryValueEx(rkey, L"InstallLocation", 0, &locationType, (BYTE*)locationStr, &locationSize) == ERROR_SUCCESS) {
-				locationSize /= 2;
-				if (locationStr[locationSize - 1]) {
-					locationStr[locationSize++] = 0;
-				}
-				if (locationType == REG_EXPAND_SZ) {
-					DWORD copy = ExpandEnvironmentStrings(locationStr, exp, bufSize);
-					if (copy <= bufSize) {
-						memcpy(locationStr, exp, copy * sizeof(WCHAR));
-					}
-				}
-				if (locationType == REG_EXPAND_SZ || locationType == REG_SZ) {
-					if (PathCanonicalize(exp, locationStr)) {
-						memcpy(locationStr, exp, bufSize * sizeof(WCHAR));
-						if (GetFullPathName(L".", bufSize, exp, 0) < bufSize) {
-							wstring installpath = locationStr, mypath = exp;
-							if (installpath == mypath + L"\\" || true) { // always update reg info, if we found it
-								WCHAR nameStr[bufSize], dateStr[bufSize], publisherStr[bufSize], icongroupStr[bufSize];
-								SYSTEMTIME stLocalTime;
-								GetLocalTime(&stLocalTime);
-								RegSetValueEx(rkey, L"DisplayVersion", 0, REG_SZ, (const BYTE*)versionStr, ((versionLen / 2) + 1) * sizeof(WCHAR));
-								wsprintf(nameStr, L"Telegram Desktop");
-								RegSetValueEx(rkey, L"DisplayName", 0, REG_SZ, (const BYTE*)nameStr, (wcslen(nameStr) + 1) * sizeof(WCHAR));
-								wsprintf(publisherStr, L"Telegram FZ-LLC");
-								RegSetValueEx(rkey, L"Publisher", 0, REG_SZ, (const BYTE*)publisherStr, (wcslen(publisherStr) + 1) * sizeof(WCHAR));
-								wsprintf(icongroupStr, L"Telegram Desktop");
-								RegSetValueEx(rkey, L"Inno Setup: Icon Group", 0, REG_SZ, (const BYTE*)icongroupStr, (wcslen(icongroupStr) + 1) * sizeof(WCHAR));
-								wsprintf(dateStr, L"%04d%02d%02d", stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay);
-								RegSetValueEx(rkey, L"InstallDate", 0, REG_SZ, (const BYTE*)dateStr, (wcslen(dateStr) + 1) * sizeof(WCHAR));
+namespace {
 
-								const WCHAR *appURL = L"https://desktop.telegram.org";
-								RegSetValueEx(rkey, L"HelpLink", 0, REG_SZ, (const BYTE*)appURL, (wcslen(appURL) + 1) * sizeof(WCHAR));
-								RegSetValueEx(rkey, L"URLInfoAbout", 0, REG_SZ, (const BYTE*)appURL, (wcslen(appURL) + 1) * sizeof(WCHAR));
-								RegSetValueEx(rkey, L"URLUpdateInfo", 0, REG_SZ, (const BYTE*)appURL, (wcslen(appURL) + 1) * sizeof(WCHAR));
-							}
-						}
-					}
-				}
-			}
-			RegCloseKey(rkey);
+[[nodiscard]] wstring NormalizedDirectory(const wstring &directory) {
+	if (directory.empty()) {
+		return {};
+	}
+	constexpr auto kPathCapacity = DWORD(4096);
+	WCHAR fullPath[kPathCapacity] = {};
+	const auto length = GetFullPathName(
+		directory.c_str(),
+		kPathCapacity,
+		fullPath,
+		nullptr);
+	if (!length || length >= kPathCapacity) {
+		return {};
+	}
+	auto result = wstring(fullPath, length);
+	for (auto &ch : result) {
+		if (ch == L'/') {
+			ch = L'\\';
 		}
 	}
+	while (!result.empty() && result.back() == L'\\') {
+		result.pop_back();
+	}
+	return result;
+}
+
+[[nodiscard]] bool RegisteredInstallMatches(HKEY key, const wstring &directory) {
+	constexpr auto kPathCapacity = DWORD(4096);
+	WCHAR location[kPathCapacity] = {};
+	auto type = DWORD(0);
+	auto size = DWORD(sizeof(location) - sizeof(WCHAR));
+	if (RegQueryValueEx(
+			key,
+			L"InstallLocation",
+			nullptr,
+			&type,
+			reinterpret_cast<BYTE*>(location),
+			&size) != ERROR_SUCCESS
+		|| (type != REG_SZ && type != REG_EXPAND_SZ)
+		|| size % sizeof(WCHAR)) {
+		return false;
+	}
+	auto installPath = wstring(location);
+	if (type == REG_EXPAND_SZ) {
+		WCHAR expanded[kPathCapacity] = {};
+		const auto length = ExpandEnvironmentStrings(
+			location,
+			expanded,
+			kPathCapacity);
+		if (!length || length > kPathCapacity) {
+			return false;
+		}
+		installPath = expanded;
+	}
+	installPath = NormalizedDirectory(installPath);
+	return !installPath.empty()
+		&& equal(installPath, NormalizedDirectory(directory));
+}
+
+} // namespace
+
+void updateRegistry() {
+	if (!versionNum || versionNum == 0x7FFFFFFE) {
+		return;
+	}
+	writeLog(L"Updating registry..");
+	normalizeUpdateVersionString();
+	versionStr[versionLen / 2] = 0;
+	HKEY rkey;
+	const auto status = RegOpenKeyEx(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{53F49750-6209-4FBF-9CA8-7A333C87D1ED}_is1", 0, KEY_QUERY_VALUE | KEY_SET_VALUE, &rkey);
+	if (status != ERROR_SUCCESS) {
+		return;
+	}
+	writeLog(L"Checking registry install location..");
+	if (RegisteredInstallMatches(rkey, updateTo)) {
+		static const int bufSize = 4096;
+		WCHAR nameStr[bufSize], dateStr[bufSize], publisherStr[bufSize], icongroupStr[bufSize];
+		SYSTEMTIME stLocalTime;
+		GetLocalTime(&stLocalTime);
+		RegSetValueEx(rkey, L"DisplayVersion", 0, REG_SZ, (const BYTE*)versionStr, ((versionLen / 2) + 1) * sizeof(WCHAR));
+		wsprintf(nameStr, L"Telegram Desktop");
+		RegSetValueEx(rkey, L"DisplayName", 0, REG_SZ, (const BYTE*)nameStr, (wcslen(nameStr) + 1) * sizeof(WCHAR));
+		wsprintf(publisherStr, L"Telegram FZ-LLC");
+		RegSetValueEx(rkey, L"Publisher", 0, REG_SZ, (const BYTE*)publisherStr, (wcslen(publisherStr) + 1) * sizeof(WCHAR));
+		wsprintf(icongroupStr, L"Telegram Desktop");
+		RegSetValueEx(rkey, L"Inno Setup: Icon Group", 0, REG_SZ, (const BYTE*)icongroupStr, (wcslen(icongroupStr) + 1) * sizeof(WCHAR));
+		wsprintf(dateStr, L"%04d%02d%02d", stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay);
+		RegSetValueEx(rkey, L"InstallDate", 0, REG_SZ, (const BYTE*)dateStr, (wcslen(dateStr) + 1) * sizeof(WCHAR));
+
+		const WCHAR *appURL = L"https://desktop.telegram.org";
+		RegSetValueEx(rkey, L"HelpLink", 0, REG_SZ, (const BYTE*)appURL, (wcslen(appURL) + 1) * sizeof(WCHAR));
+		RegSetValueEx(rkey, L"URLInfoAbout", 0, REG_SZ, (const BYTE*)appURL, (wcslen(appURL) + 1) * sizeof(WCHAR));
+		RegSetValueEx(rkey, L"URLUpdateInfo", 0, REG_SZ, (const BYTE*)appURL, (wcslen(appURL) + 1) * sizeof(WCHAR));
+	}
+	RegCloseKey(rkey);
 }
 
 namespace {
@@ -646,7 +693,8 @@ template <typename Interface>
 [[nodiscard]] bool LaunchUnelevated(
 		const wstring &executable,
 		const wstring &arguments,
-		const wstring &directory) {
+		const wstring &directory,
+		int showCommand) {
 	const auto shell = DesktopShellDispatch();
 	if (!shell) {
 		return false;
@@ -661,7 +709,7 @@ template <typename Interface>
 	}
 	auto show = VARIANT();
 	show.vt = VT_I4;
-	show.lVal = SW_SHOWNORMAL;
+	show.lVal = showCommand;
 	const auto result = shell->ShellExecute(
 		file.get(),
 		BstrVariant(parameters),
@@ -682,12 +730,8 @@ template <typename Interface>
 int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE prevInstance, LPWSTR cmdParamarg, int cmdShow) {
 	base::Platform::InitDynamicLibraries();
 
-	openLog();
-
 	_oldWndExceptionFilter = SetUnhandledExceptionFilter(_exceptionFilter);
 //	CAPIHook apiHook("kernel32.dll", "SetUnhandledExceptionFilter", (PROC)RedirectedSetUnhandledExceptionFilter);
-
-	writeLog(L"Updaters started..");
 
 	auto argsCount = 0;
 	auto processId = DWORD(0);
@@ -696,13 +740,16 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE prevInstance, LPWSTR cmdPara
 
 	bool needupdate = false, autostart = false, debug = false, writeprotected = false, startintray = false;
 	bool justupdate = false, updated = false;
+#ifdef _DEBUG
+	auto debugProfile = false;
+	auto debugOffline = false;
+#endif
 	const auto args = CommandLineToArgvW(GetCommandLine(), &argsCount);
 	const auto argsGuard = std::unique_ptr<void, decltype(&LocalFree)>(
 		args,
 		&LocalFree);
 	if (args) {
 		for (int i = 1; i < argsCount; ++i) {
-			writeLog(std::wstring(L"Argument: ") + args[i]);
 			if (equal(args[i], L"-update")) {
 				needupdate = true;
 			} else if (equal(args[i], L"-finishprocess")) {
@@ -715,8 +762,7 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE prevInstance, LPWSTR cmdPara
 						processCreated)) {
 					processArgumentsValid = false;
 				} else {
-					writeLog(std::wstring(L"Argument: ") + args[++i]);
-					writeLog(std::wstring(L"Argument: ") + args[++i]);
+					i += 2;
 				}
 			} else if (equal(args[i], L"-autostart")) {
 				autostart = true;
@@ -724,11 +770,17 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE prevInstance, LPWSTR cmdPara
 				justupdate = true;
 			} else if (equal(args[i], L"-debug")) {
 				debug = _debug = true;
-				openLog();
+#ifdef _DEBUG
+			} else if (equal(args[i], L"-debugprofile")) {
+				debugProfile = true;
+			} else if (equal(args[i], L"-debugoffline")) {
+				debugOffline = true;
+			} else if (equal(args[i], L"--no-focus")) {
+				_debugNoFocus = true;
+#endif
 			} else if (equal(args[i], L"-startintray")) {
 				startintray = true;
 			} else if (equal(args[i], L"-writeprotected") && ++i < argsCount) {
-				writeLog(std::wstring(L"Argument: ") + args[i]);
 				writeprotected = true;
 				updateTo = args[i];
 				for (int j = 0, l = updateTo.size(); j < l; ++j) {
@@ -737,13 +789,10 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE prevInstance, LPWSTR cmdPara
 					}
 				}
 			} else if (equal(args[i], L"-workdir") && ++i < argsCount) {
-				writeLog(std::wstring(L"Argument: ") + args[i]);
 				customWorkingDir = args[i];
 			} else if (equal(args[i], L"-key") && ++i < argsCount) {
-				writeLog(std::wstring(L"Argument: ") + args[i]);
 				customKeyFile = args[i];
 			} else if (equal(args[i], L"-exename") && ++i < argsCount) {
-				writeLog(std::wstring(L"Argument: ") + args[i]);
 				exeName = args[i];
 				for (int j = 0, l = exeName.size(); j < l; ++j) {
 					if (exeName[j] == L'/' || exeName[j] == L'\\') {
@@ -752,6 +801,11 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE prevInstance, LPWSTR cmdPara
 					}
 				}
 			}
+		}
+		openLog();
+		writeLog(L"Updater started..");
+		for (auto i = 1; i < argsCount; ++i) {
+			writeLog(wstring(L"Argument: ") + args[i]);
 		}
 		if (exeName.empty()) {
 			exeName = L"AstraGram.exe";
@@ -807,6 +861,15 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE prevInstance, LPWSTR cmdPara
 	}
 
 	wstring targs;
+	auto showCommand = SW_SHOWNORMAL;
+#ifdef _DEBUG
+	if (debugProfile) targs += L" -debugprofile";
+	if (debugOffline) targs += L" -debugoffline";
+	if (_debugNoFocus) {
+		targs += L" --no-focus";
+		showCommand = SW_SHOWNOACTIVATE;
+	}
+#endif
 	if (autostart) targs += L" -autostart";
 	if (debug) targs += L" -debug";
 	if (startintray) targs += L" -startintray";
@@ -829,7 +892,8 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE prevInstance, LPWSTR cmdPara
 			executed = LaunchUnelevated(
 				updateTo + exeName,
 				targs.size() ? targs.substr(1) : targs,
-				updateTo);
+				updateTo,
+				showCommand);
 			if (executed) {
 				writeLog(L"Executed un-elevated through the desktop shell.");
 			}
@@ -845,7 +909,7 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE prevInstance, LPWSTR cmdPara
 			(updateTo + exeName).c_str(),
 			(L"-noupdate" + targs).c_str(),
 			updateTo.empty() ? nullptr : updateTo.c_str(),
-			SW_SHOWNORMAL);
+			showCommand);
 	}
 
 	writeLog(L"Closing log and quitting..");

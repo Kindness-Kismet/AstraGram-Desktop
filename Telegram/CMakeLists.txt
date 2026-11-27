@@ -460,6 +460,7 @@ set(extras_files
         extras/debug/commands/simulation_commands.cpp
         extras/debug/commands/simulation_cache_checks.cpp
         extras/debug/commands/simulation_message_order.cpp
+        extras/debug/commands/simulation_history_jump.cpp
         extras/debug/dialogs_preview.cpp
         extras/debug/dialogs_preview.h
         extras/debug/simulation_scenarios.cpp
@@ -3360,7 +3361,11 @@ set(entitlement_sources
 target_sources(Telegram PRIVATE ${entitlement_sources})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Telegram PREFIX Resources FILES ${entitlement_sources})
 
-target_include_directories(Telegram PRIVATE ${src_loc})
+target_include_directories(Telegram
+PRIVATE
+    ${src_loc}
+    "${extras_version_include_dir}"
+)
 
 target_compile_definitions(Telegram
 PRIVATE

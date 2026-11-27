@@ -233,10 +233,15 @@ echo cl %%%%%%** >> cpp.bat
         name="dav1d",
         location="Libraries",
         version="0",
-        dependencies=["patches/dav1d.patch", "python/Scripts/activate.bat"],
-        commands=r"""git clone -b 1.5.4 https://code.videolan.org/videolan/dav1d.git
+        dependencies=[
+            "patches/dav1d.patch",
+            "python/Scripts/activate.bat",
+            str(ROOT / "scripts/build_support/patches/dav1d_msvc.diff"),
+        ],
+        commands=rf"""git clone -b 1.5.4 https://code.videolan.org/videolan/dav1d.git
 cd dav1d
 git apply ../patches/dav1d.patch
+git apply "{ROOT}/scripts/build_support/patches/dav1d_msvc.diff"
 SET "TARGET=x86_64"
 SET "DAV1D_ASM_DISABLE="
 set FILE=cross-file.txt

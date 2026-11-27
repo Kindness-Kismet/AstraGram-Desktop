@@ -12,7 +12,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <cstdlib>
 #include <unistd.h>
 #include <dirent.h>
-#include <pwd.h>
 #include <string>
 #include <deque>
 #include <vector>
@@ -245,14 +244,12 @@ bool update() {
 	string updDir = workDir + "tupdates/temp", readyFilePath = workDir + "tupdates/temp/ready", tdataDir = workDir + "tupdates/temp/tdata";
 	{
 		FILE *readyFile = fopen(readyFilePath.c_str(), "rb");
-		if (readyFile) {
-			fclose(readyFile);
-			writeLog("Ready file found! Using new path '%s'..", updDir.c_str());
-		} else {
-			updDir = workDir + "tupdates/ready"; // old
-			tdataDir = workDir + "tupdates/ready/tdata";
-			writeLog("Ready file not found! Using old path '%s'..", updDir.c_str());
+		if (!readyFile) {
+			writeLog("Ready file not found: '%s'", readyFilePath.c_str());
+			return false;
 		}
+		fclose(readyFile);
+		writeLog("Ready file found: '%s'", readyFilePath.c_str());
 	}
 
 	deque<string> dirs;
@@ -436,6 +433,12 @@ int main(int argc, char *argv[]) {
 	if (needupdate) writeLog("Need to update!");
 	if (autostart) writeLog("From autostart!");
 	if (writeprotected) writeLog("Write Protected folder!");
+	if (needupdate && workDir.empty()) {
+		writeLog("Update working path is not specified.");
+		fprintf(stderr, "Update working path is not specified.\n");
+		closeLog();
+		return 1;
+	}
 
 	updaterName = CurrentExecutablePath(argc, argv);
 	writeLog("Updater binary full path is: %s", updaterName.c_str());
@@ -453,39 +456,7 @@ int main(int argc, char *argv[]) {
 				writeLog("Using updater binary dir.", exePath.c_str());
 			}
 			if (needupdate) {
-				if (workDir.empty()) { // old app launched, update prepared in tupdates/ready (not in tupdates/temp)
-					customWorkingDir = false;
-
-					writeLog("No workdir, trying to figure it out");
-					struct passwd *pw = getpwuid(getuid());
-					if (pw && pw->pw_dir && strlen(pw->pw_dir)) {
-						string tryDir = pw->pw_dir + string("/.TelegramDesktop/");
-						struct stat statbuf;
-						writeLog("Trying to use '%s' as workDir, getting stat() for tupdates/ready", tryDir.c_str());
-						if (!stat((tryDir + "tupdates/ready").c_str(), &statbuf)) {
-							writeLog("Stat got");
-							if (S_ISDIR(statbuf.st_mode)) {
-								writeLog("It is directory, using home work dir");
-								workDir = tryDir;
-							}
-						}
-					}
-					if (workDir.empty()) {
-						workDir = exePath;
-
-						struct stat statbuf;
-						writeLog("Trying to use current as workDir, getting stat() for tupdates/ready");
-						if (!stat("tupdates/ready", &statbuf)) {
-							writeLog("Stat got");
-							if (S_ISDIR(statbuf.st_mode)) {
-								writeLog("It is directory, using current dir");
-								workDir = string();
-							}
-						}
-					}
-				} else {
-					writeLog("Passed workpath is '%s'", workDir.c_str());
-				}
+				writeLog("Passed workpath is '%s'", workDir.c_str());
 				if (!update()) {
 					writeLog("Update installation failed.");
 					fprintf(stderr, "Update installation failed.\n");

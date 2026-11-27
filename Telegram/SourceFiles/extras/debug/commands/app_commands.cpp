@@ -54,13 +54,33 @@ using json = nlohmann::json;
 	return Result::Ok(u"pong"_q);
 }
 
-[[nodiscard]] Result CheckUpdate(const QStringList &) {
+[[nodiscard]] Result CheckUpdate(const QStringList &args) {
+	if (args.size() > 1) {
+		return Result::Err(u"usage: app.check-update [http://127.0.0.1:port]"_q);
+	}
 	if (Core::UpdaterDisabled()) {
 		return Result::Err(u"updater is disabled"_q);
 	}
-	// 检查是异步的，这里只负责触发，结果看 tupdates 目录与日志。
+	if (!args.isEmpty() && !Core::SetDebugUpdatePrefix(args.front())) {
+		return Result::Err(u"local updates require an isolated offline profile and a loopback HTTP prefix"_q);
+	}
+	// 只触发正式检查，下载与验签结果由状态查询报告。
 	Core::UpdateChecker().checkNow();
 	return Result::Ok(u"update check started"_q);
+}
+
+[[nodiscard]] Result installUpdate(const QStringList &args) {
+	if (!args.isEmpty()) {
+		return Result::Err(u"usage: app.install-update"_q);
+	}
+	if (!cDebugProfile() || !cDebugOffline()) {
+		return Result::Err(u"update installation requires an isolated offline profile"_q);
+	}
+	if (Core::UpdaterDisabled() || !Core::checkReadyUpdate()) {
+		return Result::Err(u"no verified update is ready"_q);
+	}
+	crl::on_main([] { Core::Restart(); });
+	return Result::Ok(u"verified update restart scheduled"_q);
 }
 
 // 报告更新源配置：文件内容与内存里解析出的前缀不一致时，说明前缀被固定值
@@ -77,8 +97,17 @@ using json = nlohmann::json;
 	if (QFile f(file); f.open(QIODevice::ReadOnly)) {
 		content = QString::fromUtf8(f.readAll()).trimmed();
 	}
+	const auto checker = Core::UpdateChecker();
+	const auto state = checker.state();
 	return Result::Ok(Compact(json{
 		{ "autoCheckUpdates", cAutoUpdate() },
+		{ "debugPrefix", Core::DebugUpdatePrefix().toStdString() },
+		{ "state", state == Core::UpdateChecker::State::Ready
+			? "ready"
+			: state == Core::UpdateChecker::State::Download ? "downloading" : "idle" },
+		{ "downloadedBytes", checker.already() },
+		{ "totalBytes", checker.size() },
+		{ "readyVersion", Core::ReadyUpdateVersion() },
 		{ "prefixFile", file.toStdString() },
 		{ "prefixFileContent", content.toStdString() },
 		{ "resolvedPrefix", Local::readAutoupdatePrefix().toStdString() },
@@ -118,6 +147,7 @@ const HandlerMap &AppHandlers() {
 		{ u"app.quit"_q, &Quit },
 		{ u"app.info"_q, &AppInfo },
 		{ u"app.check-update"_q, &CheckUpdate },
+		{ u"app.install-update"_q, &installUpdate },
 		{ u"app.update-info"_q, &UpdateInfo },
 		{ u"app.help"_q, &Help },
 		{ u"crash.log"_q, &crashLog },
