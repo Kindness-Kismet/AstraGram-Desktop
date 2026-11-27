@@ -1,11 +1,7 @@
-- Adapted to official Telegram Desktop 7.4.6
-- Improved Story draft confirmation menus, which now follow the light or dark theme and use the shared menu layout
-- Fixed an issue with disabled Stories that previously left publishing actions visible on profile pages
-- Improved update installation, which now verifies the signed package before unpacking and installing updates
+- Changed the update package format; if you are upgrading from a version that uses the old format, **download and install this release manually once from the [Releases page](https://github.com/Kindness-Kismet/AstraGram-Desktop/releases/latest)** to continue receiving automatic updates
+- Fixed an issue with hover feedback in the light theme that previously caused settings rows to briefly show their hover color before turning white
 
 ---
 
-- 适配了官方 Telegram Desktop 7.4.6
-- 对动态草稿确认菜单进行了改善，这使得菜单能够跟随浅色或深色主题并采用统一布局
-- 修复了关于禁用动态的错误，该问题曾导致资料页仍显示发布入口
-- 对更新安装进行了改善，这使得更新包会在解压和安装前完成签名验证
+- 调整了更新包格式，使用旧更新格式的版本升级时，**需要从 [Releases 页面](https://github.com/Kindness-Kismet/AstraGram-Desktop/releases/latest)手动下载并安装本版本一次**，之后即可继续使用自动更新
+- 修复了关于浅色主题悬停反馈的错误，该问题曾导致设置项短暂显示悬停颜色后变为白色
