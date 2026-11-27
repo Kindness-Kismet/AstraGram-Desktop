@@ -188,7 +188,7 @@ private:
 	void animate() {
 		if (_button->isDisabled() || !_button->isEnabled()) { return; }
 		const auto down = _down && (_over || _keyboard);
-		const auto to = down ? 1. : _feedback == Feedback::Luminance && _over ? -0.08 / 0.18 : 0.;
+		const auto to = down ? 1. : 0.;
 		if (to == _level) { return; }
 		const auto from = _animation.value(_level);
 		_level = to;
